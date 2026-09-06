@@ -21,6 +21,11 @@ use Symfony\Component\Console\Command\Command as ConsoleCommand;
 // this file is the control instead. Every claim below is settled against the
 // LIVE console application by reflection, never against a grep of the source.
 
+// The registry declares nine arguments and fixed flags between its thirteen
+// commands, and the floor sits under that: a walk that resolved no command
+// inspects nothing and reports every name it never checked as declared.
+const DEV_CONSOLE_ARGUMENT_FLOOR = 5;
+
 /**
  * @return list<CommandSpec>
  */
@@ -110,8 +115,8 @@ it('resolves every registered name against the live console application', functi
     $specs = devConsoleRegisteredSpecs();
     $live = devConsoleLiveCommands();
 
-    expect($specs)->not->toBe([]);
-    expect($live)->not->toBe([]);
+    expect($specs)->not->toBe([], 'The registry offers no command at all, so every rule below reads an empty list and passes.');
+    expect($live)->not->toBe([], 'Artisan answered with no commands, so every rule below resolves nothing and passes.');
 
     $unresolved = [];
     foreach ($specs as $spec) {
@@ -212,7 +217,11 @@ it('names only arguments and options the command declares, and every argument it
         }
     }
 
-    expect($inspected)->toBeGreaterThan(0);
+    expect($inspected)->toBeGreaterThan(
+        DEV_CONSOLE_ARGUMENT_FLOOR,
+        'The reader inspected '.$inspected.' declared arguments and fixed flags across the whole registry, which is '
+        .'what a walk that resolved no command looks like.'
+    );
     expect($offenders)->toBe([], implode("\n  ", array_merge(
         ['The runner builds its command line from argsSchema and fixedFlags alone, so a name the',
             'command does not declare is a run that always exits non-zero — and an unreachable',
@@ -248,7 +257,11 @@ it('registers no command that refuses to run without a terminal', function (): v
         }
     }
 
-    expect($read)->toBe(count(devConsoleRegisteredSpecs()));
+    expect($read)->toBe(
+        count(devConsoleRegisteredSpecs()),
+        'The walk read the source of '.$read.' of the '.count(devConsoleRegisteredSpecs())
+        .' registered commands, so the verdict below is silent about the rest.'
+    );
     expect($offenders)->toBe([], implode("\n  ", array_merge(
         ['The spawner redirects the child\'s stdin from /dev/null, so a prompt reads EOF and the',
             'run dies on Symfony\'s "Aborted." Either give the command a flag the registry can pass',
@@ -279,19 +292,29 @@ it('exempts no prompting command the walk does not reach', function (): void {
     )));
 });
 
-it('can see each shape it exists to refuse', function (): void {
-    expect(devConsoleDropsTheSchema('$this->call(\'db:wipe\', []);'))->toBeTrue();
-    expect(devConsoleDropsTheSchema('$schema->dropAllTables();'))->toBeTrue();
-    expect(devConsoleDropsTheSchema('DB::statement("DROP TABLE transactions");'))->toBeTrue();
-    expect(devConsoleDropsTheSchema('$this->call(\'migrate\', [\'--force\' => true]);'))->toBeFalse();
+it('can see each shape it exists to refuse', function (string $reader, string $source, bool $flagged): void {
+    $answer = match ($reader) {
+        'drops the schema' => devConsoleDropsTheSchema($source),
+        'refuses without a terminal' => devConsoleRefusesWithoutATerminal($source),
+        default => devConsoleAsksAQuestion($source),
+    };
 
-    expect(devConsoleRefusesWithoutATerminal('if (! $this->input->isInteractive()) {'))->toBeTrue();
-    expect(devConsoleRefusesWithoutATerminal('$this->info(\'interactive\');'))->toBeFalse();
-
-    expect(devConsoleAsksAQuestion('$password = $this->secret(\'New password\');'))->toBeTrue();
-    expect(devConsoleAsksAQuestion('$ok = $this->confirm(\'Sure?\', false);'))->toBeTrue();
-    expect(devConsoleAsksAQuestion('$this->line(\'no question here\');'))->toBeFalse();
-});
+    expect($answer)->toBe(
+        $flagged,
+        'The "'.$reader.'" reader answered '.var_export(! $flagged, true).' for a line it has to read as '
+        .($flagged ? 'the shape it refuses' : 'something else').': '.$source
+    );
+})->with([
+    'a call to db:wipe' => ['drops the schema', '$this->call(\'db:wipe\', []);', true],
+    'the schema builder emptying itself' => ['drops the schema', '$schema->dropAllTables();', true],
+    'raw SQL' => ['drops the schema', 'DB::statement("DROP TABLE transactions");', true],
+    'an ordinary migrate' => ['drops the schema', '$this->call(\'migrate\', [\'--force\' => true]);', false],
+    'a terminal check' => ['refuses without a terminal', 'if (! $this->input->isInteractive()) {', true],
+    'the word interactive in prose' => ['refuses without a terminal', '$this->info(\'interactive\');', false],
+    'a secret prompt' => ['asks a question', '$password = $this->secret(\'New password\');', true],
+    'a confirmation' => ['asks a question', '$ok = $this->confirm(\'Sure?\', false);', true],
+    'a line of output' => ['asks a question', '$this->line(\'no question here\');', false],
+]);
 
 it('supplies db:restore with both flags its own handler demands', function (): void {
     /** @var DevCommandRegistry $registry */
@@ -299,8 +322,16 @@ it('supplies db:restore with both flags its own handler demands', function (): v
 
     $spec = $registry->find('db:restore');
 
-    expect($spec->fixedFlags)->toBe(['--confirm', '--force-maintenance']);
+    expect($spec->fixedFlags)->toBe(
+        ['--confirm', '--force-maintenance'],
+        'db:restore refuses a run missing either flag, and the runner passes only what the registry names, so a '
+        .'dropped flag is a console entry that can never succeed.'
+    );
 
     $names = array_map(static fn (ArgSpec $arg): string => $arg->name, $spec->argsSchema);
-    expect($names)->toBe(['path']);
+
+    expect($names)->toBe(
+        ['path'],
+        'db:restore takes one positional, and artisan answers "Too many arguments" to a second.'
+    );
 });

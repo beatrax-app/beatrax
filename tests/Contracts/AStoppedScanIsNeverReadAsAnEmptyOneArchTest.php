@@ -27,7 +27,7 @@ use Modules\Core\Public\Support\PatternScan;
 // Its backtracking accumulates across a whole subject, so a file that grows
 // crosses the limit -- that is the failure this tree has actually shipped --
 // and `=== false` then `continue` is the shape it shipped as: the file leaves
-// the walk and nothing in the output says which files were left. The 309
+// the walk and nothing in the output says which files were left. The 314
 // single-shot preg_match reads left raw stop at the first hit; they are held
 // to the two rules below and to the tree-wide one, not to this.
 //
@@ -53,24 +53,43 @@ const STOPPED_SCAN_PCRE = ['preg_match_all', 'preg_match', 'preg_replace', 'preg
 // drops the whitespace.
 const STOPPED_SCAN_EMPTY_FALLBACKS = ["''", '""', '['];
 
+// A guard is written in one of five places: the repo-wide tree, the two shared
+// directories a guard reads its subject through, and the two a rule reading only
+// its own module may live in. Modules/*/tests/Contracts held thirteen guards
+// this walk never opened; tests/Helpers held a stylesheet reader blanking a
+// whole file, and five CSS guards read the blank and reported it clean.
+//
+// Modules/*/tests/Feature and /Unit stay out, and not for want of asking: they
+// hold 27 sites of the shapes below, which are bugs in a test rather than the
+// false green in a guard this file is written about.
 /** @return list<string> every file the repository's guards are written in */
 function stoppedScanGuardFiles(): array
 {
-    $files = [];
+    $roots = [base_path('tests/Contracts'), base_path('tests/Helpers'), base_path('tests/Support')];
 
-    $walk = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(base_path('tests/Contracts'), FilesystemIterator::SKIP_DOTS)
-    );
-
-    /** @var SplFileInfo $file */
-    foreach ($walk as $file) {
-        if ($file->isFile() && str_ends_with($file->getPathname(), '.php')) {
-            $files[] = $file->getPathname();
+    foreach (['Arch', 'Contracts'] as $name) {
+        foreach ((array) glob(base_path('Modules/*/tests/'.$name)) as $directory) {
+            $roots[] = (string) $directory;
         }
     }
 
-    foreach ((array) glob(base_path('Modules/*/tests/Arch/*.php')) as $path) {
-        $files[] = (string) $path;
+    $files = [];
+
+    foreach ($roots as $root) {
+        if (! is_dir($root)) {
+            continue;
+        }
+
+        $walk = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)
+        );
+
+        /** @var SplFileInfo $file */
+        foreach ($walk as $file) {
+            if ($file->isFile() && str_ends_with($file->getPathname(), '.php')) {
+                $files[] = $file->getPathname();
+            }
+        }
     }
 
     sort($files);
@@ -120,7 +139,12 @@ function stoppedScanMatcherCalls(array $tokens): array
     $count = count($tokens);
 
     for ($i = 0; $i < $count; $i++) {
-        if ($tokens[$i][0] !== T_STRING || ! in_array($tokens[$i][1], STOPPED_SCAN_PCRE, true)) {
+        // PHP 8 hands back a leading-backslash call as one T_NAME_FULLY_QUALIFIED
+        // token spelled `\preg_match_all`, so a reader keyed on T_STRING alone
+        // cannot see the one spelling a contributor reaches for to escape it.
+        $name = ltrim($tokens[$i][1], '\\');
+
+        if (! in_array($tokens[$i][0], [T_STRING, T_NAME_FULLY_QUALIFIED], true) || ! in_array($name, STOPPED_SCAN_PCRE, true)) {
             continue;
         }
 
@@ -164,7 +188,7 @@ function stoppedScanMatcherCalls(array $tokens): array
         $ends = $after[0] === null && $after[1] === ';';
 
         $calls[] = [
-            'name' => $tokens[$i][1],
+            'name' => $name,
             'line' => $tokens[$i][2],
             'discarded' => $opens && $ends,
             'emptied' => stoppedScanBlanksTheSubject($tokens, $i - 1, $close),
@@ -199,8 +223,8 @@ function stoppedScanBlanksTheSubject(array $tokens, int $before, int $close): bo
 
 // A sweep that reads nothing reports the same clean tree as a sweep that found
 // nothing, which is the failure this whole file exists to name. Both counts are
-// therefore asserted before either verdict is read: the walk below sees 221
-// files holding 347 PCRE calls, and the floors sit far enough under those that
+// therefore asserted before either verdict is read: the walk below sees 296
+// files holding 366 PCRE calls, and the floors sit far enough under those that
 // only a broken walk or a broken tokeniser trips them.
 const STOPPED_SCAN_FILE_FLOOR = 150;
 
@@ -312,6 +336,24 @@ it('tells a subject that was blanked from one that was read', function (string $
     'a coalesce to the subject' => ['return preg_replace($p, $r, $s) ?? $s;', false],
     'an elvis to a named fallback' => ['return preg_split($p, $s) ?: $parts;', false],
     'a checked assignment' => ['$x = preg_split($p, $s); return $x === false ? [$s] : $x;', false],
+]);
+
+// The other two verdicts are read off the matcher's name and one more boolean,
+// and a reader that quietly stopped finding calls would answer no to both while
+// the floors above still passed on the files it did open.
+it('names the matcher it found and tells a discarded answer from a read one', function (string $body, string $name, bool $discarded): void {
+    $calls = stoppedScanMatcherCalls(stoppedScanTokens('<?php '.$body));
+
+    expect($calls)->toHaveCount(1)
+        ->and($calls[0]['name'])->toBe($name)
+        ->and($calls[0]['discarded'])->toBe($discarded);
+})->with([
+    'a whole-subject scan standing as its own statement' => ['preg_match_all($p, $s, $m);', 'preg_match_all', true],
+    'the same scan written fully qualified' => ['\preg_match_all($p, $s, $m);', 'preg_match_all', true],
+    'a replace whose answer nothing takes' => ['$x = 1; preg_replace($p, $r, $s);', 'preg_replace', true],
+    'an answer read as a condition' => ['if (preg_match($p, $s) === 1) { return true; }', 'preg_match', false],
+    'an answer taken into a variable' => ['$n = preg_match_all($p, $s, $m);', 'preg_match_all', false],
+    'a method that merely shares the name' => ['$this->preg_match($p, $s); return preg_split($p, $s);', 'preg_split', false],
 ]);
 
 it('leaves the seam itself the one place the PCRE functions are called raw', function (): void {

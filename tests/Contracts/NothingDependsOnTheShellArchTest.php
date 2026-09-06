@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * @link ../../.docs/architecture/navigation-destinations.md
@@ -61,31 +62,22 @@ function shellInboundReferences(array $paths): array
     return $hits;
 }
 
-// BackendSourceFiles reaches Modules/ and app/, and a Blade template ends in
-// .php so it is already in that set. The application's own layouts are not, and
-// they are where a shared view would name the shell's own classes.
-/** @return list<string> absolute paths to the layouts outside the module tree */
-function shellInboundLayoutFiles(): array
-{
-    $root = base_path('resources');
-    $files = [];
-
-    /** @var SplFileInfo $file */
-    foreach (new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
-    ) as $file) {
-        if ($file->isFile() && str_ends_with($file->getPathname(), '.php')) {
-            $files[] = $file->getPathname();
-        }
-    }
-    sort($files);
-
-    return $files;
-}
-
 it('lets nothing outside the Shell module import the Shell module', function (): void {
-    $files = array_merge(BackendSourceFiles::all(), shellInboundLayoutFiles());
-    expect($files)->not->toBeEmpty();
+    // Every root that ships, from the one place a scope is declared. The walk
+    // was BackendSourceFiles plus a hand-written second pass over resources/,
+    // which is two root lists for one rule and left routes/, config/ and
+    // bootstrap/ — three places a provider is wired — outside a guard whose
+    // claim is "nothing".
+    $files = RepoTree::files(RepoTree::PRODUCTION_PHP);
+
+    // Read before the verdict: this rule compares against a pinned array, and
+    // an empty walk fails it loudly — but only because the pin is non-empty.
+    // The floor is what holds if the pin is ever emptied. It sits far under
+    // today's 6,681.
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'RepoTree returned '.count($files).' shipped PHP files, which is too few to have read the tree.'
+    );
 
     expect(shellInboundReferences($files))->toBe(
         SHELL_INBOUND_PINNED,

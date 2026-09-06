@@ -96,12 +96,11 @@ function bladeSpeakingEchoLiterals(string $source, int &$echoes): array
 // them reaches a reader as a word. A camelCase identifier is excluded by the
 // hump that makes it one, which is why `$rule->active` and `createPot` are not
 // mistaken for a sentence.
+// The allow-list is applied at the call site rather than here, so the walk can
+// see which of its entries it still reaches: a name nobody echoes any more is
+// an exemption excusing nothing, and it reads as considered.
 function bladeSpeakingReadsAsCopy(string $literal): bool
 {
-    if (in_array($literal, BLADE_LITERAL_NOT_COPY, true)) {
-        return false;
-    }
-
     if (! PatternScan::matches('/^[A-Za-z][A-Za-z0-9 \'’.,!?()-]+$/u', $literal)) {
         return false;
     }
@@ -113,19 +112,32 @@ function bladeSpeakingReadsAsCopy(string $literal): bool
 it('never echoes a word it typed for itself', function (): void {
     $echoes = 0;
     $offenders = [];
+    $excused = [];
 
     foreach (bladeSpeakingFiles() as $file) {
         $relative = str_replace(base_path().'/', '', $file->getPathname());
         $source = bladeSpeakingSource((string) $file->getContents());
 
         foreach (bladeSpeakingEchoLiterals($source, $echoes) as $literal) {
-            if (bladeSpeakingReadsAsCopy($literal)) {
-                $offenders[] = $relative.' — "'.$literal.'"';
+            if (! bladeSpeakingReadsAsCopy($literal)) {
+                continue;
             }
+
+            if (in_array($literal, BLADE_LITERAL_NOT_COPY, true)) {
+                $excused[$literal] = true;
+
+                continue;
+            }
+
+            $offenders[] = $relative.' — "'.$literal.'"';
         }
     }
 
     $offenders = array_values(array_unique($offenders));
+    $reached = array_keys($excused);
+    sort($reached);
+    $listed = BLADE_LITERAL_NOT_COPY;
+    sort($listed);
 
     // Thousands of echoes stand in these templates. A run that reads none of
     // them found nothing because it stopped, not because it is clean.
@@ -153,6 +165,14 @@ it('never echoes a word it typed for itself', function (): void {
         'method, an aria value. A name the app does not own goes in',
         'BLADE_LITERAL_NOT_COPY at the top of this file, with the argument for it.',
     ]));
+
+    // A name nobody echoes any more excuses nothing, and it reads as an
+    // exception somebody argued for. The list may shrink; it may not rot.
+    expect($reached)->toBe(
+        $listed,
+        'An entry in BLADE_LITERAL_NOT_COPY is no longer echoed by any template, so it excuses nothing. Delete it '
+        .'rather than leave a standing permission the next reader will take for a decision.',
+    );
 });
 
 it('never puts a sentence a reader hears into an attribute of its own', function (): void {
@@ -215,7 +235,11 @@ it('never puts a sentence a reader hears into an attribute of its own', function
 
     // A pin nobody reaches any more is a claim about the tree that stopped
     // being true, and it would otherwise sit here forever.
-    expect(array_keys($pinned))->toBe(array_keys(BLADE_ATTRIBUTE_PINS));
+    expect(array_keys($pinned))->toBe(
+        array_keys(BLADE_ATTRIBUTE_PINS),
+        'A pinned file no longer holds a visible attribute this rule would read, so the pin excuses nothing. '
+        .'Delete the entry rather than leave a waiver standing over a file the rule would otherwise be reading.',
+    );
 });
 
 it('still holds each pinned exemption to the reason it was granted for', function (): void {

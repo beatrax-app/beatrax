@@ -25,6 +25,11 @@ use Tests\Contracts\Support\UnlayeredCss;
 it('wraps a strip of tabs instead of clipping the last one', function (): void {
     $css = UnlayeredCss::read();
 
+    expect(strlen($css))->toBeGreaterThan(
+        1_000,
+        'The unlayered read returned almost nothing, so the missing-parts list below is about a stylesheet nobody read.',
+    );
+
     $start = strpos($css, "[role='tablist'],");
 
     expect($start)->not->toBeFalse('No unlayered wrap rule for a tab strip.');
@@ -42,8 +47,9 @@ it('wraps a strip of tabs instead of clipping the last one', function (): void {
     expect($missing)->toBe([], 'The wrap rule does not reach: '.implode(', ', $missing));
 });
 
-// A rule keyed on a role guards nothing if the strips stop carrying it.
-it('still has strips that answer to the role it selects', function (): void {
+// A rule keyed on a role guards nothing if the strips stop carrying it, and a
+// selector naming a class guards nothing if no element carries that class.
+it('still has strips that answer to every selector the wrap rule names', function (): void {
     $views = [];
     foreach (['Modules', 'resources'] as $root) {
         $directory = new RecursiveDirectoryIterator(base_path($root), FilesystemIterator::SKIP_DOTS);
@@ -54,14 +60,22 @@ it('still has strips that answer to the role it selects', function (): void {
         }
     }
 
+    expect(count($views))->toBeGreaterThan(
+        100,
+        'The walk opened almost no Blade views, so the three counts below are about a tree nobody read.',
+    );
+
     $tablists = 0;
     $radiogroups = 0;
+    $toolbars = 0;
     foreach ($views as $view) {
         $source = (string) file_get_contents($view);
         $tablists += substr_count($source, 'role="tablist"');
         $radiogroups += substr_count($source, 'role="radiogroup"');
+        $toolbars += substr_count($source, 'cal-toolbar');
     }
 
-    expect($tablists)->toBeGreaterThan(0)
-        ->and($radiogroups)->toBeGreaterThan(0);
+    expect($tablists)->toBeGreaterThan(0, 'No view carries role="tablist", so that half of the wrap rule selects nothing.')
+        ->and($radiogroups)->toBeGreaterThan(0, 'No view carries role="radiogroup", so that half of the wrap rule selects nothing.')
+        ->and($toolbars)->toBeGreaterThan(0, 'No view carries .cal-toolbar, so the third selector in the wrap rule selects nothing — drop it from the rule.');
 });

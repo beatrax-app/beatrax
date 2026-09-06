@@ -20,7 +20,21 @@ function userColumnsOnDisk(): array
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
-    return array_values($db->connection()->getSchemaBuilder()->getColumnListing('users'));
+    $columns = array_values($db->connection()->getSchemaBuilder()->getColumnListing('users'));
+
+    // Read before any verdict is: every rule below is a set difference against
+    // this listing, so an empty or truncated one reports every column placed,
+    // every list free of phantoms and no column claimed twice -- three clean
+    // answers off a table nobody read.
+    expect($columns)->toContain('id')->toContain('email');
+
+    expect(count($columns))->toBeGreaterThan(
+        10,
+        'The `users` column listing came back with '.count($columns).' columns, which is fewer than the '
+        .'migration that creates the table adds. The rules below would be read off a schema nobody built.'
+    );
+
+    return $columns;
 }
 
 it('places every users column in exactly one of synced, device-local, or asked of every joiner', function (): void {
@@ -72,8 +86,14 @@ it('claims no users column twice', function (): void {
 it('keeps every column it does sync off the never-on-the-wire answer', function (): void {
     $registry = new MergeRulesRegistry;
 
-    expect(array_values(array_intersect(
+    $both = array_values(array_intersect(
         $registry->syncedColumns('users'),
         $registry->columnsNeverOnTheWire('users'),
-    )))->toBe([]);
+    ));
+
+    expect($both)->toBe([], sprintf(
+        "These `users` columns are declared synced and never-on-the-wire at once. The two answers "
+        ."contradict each other, and which one holds is whichever the sender consults:\n  - %s",
+        implode("\n  - ", $both),
+    ));
 });

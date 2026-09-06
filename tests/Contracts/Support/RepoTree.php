@@ -34,7 +34,11 @@ final class RepoTree
     public const string RUNTIME_DOMAIN_PHP = 'the code that writes to a database at runtime';
 
     /**
-     * @var array<string, array{extension: string, covers: list<string>, declines: array<string, string>, skips: list<string>}>
+     * A skip carries its reason for the same reason a decline does: it is a
+     * refusal a hundred guards inherit without ever reading it, and the only
+     * ones a reader can audit are the ones that say what they are for.
+     *
+     * @var array<string, array{extension: string, covers: list<string>, declines: array<string, string>, skips: array<string, string>}>
      */
     public const array SCOPES = [
         self::EVERY_PHP_FILE => [
@@ -49,13 +53,19 @@ final class RepoTree
             'declines' => [
                 'tests' => 'the suite asserts about production code, and its doubles name the forbidden shapes on purpose, so a rule about shipped behaviour reads its own fixtures as offenders',
             ],
-            'skips' => ['/tests/', '/Database/Migrations/', '/migrations/'],
+            'skips' => [
+                '/tests/' => 'the same refusal as the declined tests root, spelled as a fragment because a module keeps its own suite inside Modules/, which this scope covers',
+                '/Database/Migrations/' => 'a migration declares the schema and seeds the first rows, including the columns whose later mutation these rules restrict, so it reads as an offender for doing its job',
+                '/migrations/' => 'the same files under the shared database/ root, which spells the directory in lower case',
+            ],
         ],
         self::EVERY_BLADE_VIEW => [
             'extension' => '.blade.php',
             'covers' => ['Modules', 'resources'],
             'declines' => [],
-            'skips' => ['/tests/'],
+            'skips' => [
+                '/tests/' => 'a fixture template is not a view a reader is shown, and a guard that plants a violation into one would read its own plant as an offender',
+            ],
         ],
         self::RUNTIME_DOMAIN_PHP => [
             'extension' => '.php',
@@ -74,15 +84,18 @@ final class RepoTree
                 'tests' => 'the guards themselves, and the fixtures that name a violation on purpose',
                 'tools' => 'toolchain stubs, analysed by nothing at runtime',
             ],
-            'skips' => ['/tests/', '/Database/Migrations/', '/Database/Seeders/', '/Database/Factories/'],
+            'skips' => [
+                '/tests/' => 'the same refusal as the declined tests root, spelled as a fragment because a module keeps its own suite inside Modules/, which this scope covers',
+                '/Database/Migrations/' => 'schema replayed by every test rather than a write against a reader\'s data',
+                '/Database/Seeders/' => 'reference and demo rows, which is how those rows are meant to arrive',
+                '/Database/Factories/' => 'row builders the suite calls, which never run beside a reader\'s database',
+            ],
         ],
     ];
 
-    // mobile-app is the second Composer root, and reaches this same tree
-    // through symlinks -- whole directories for Modules and tests, one file at
-    // a time for fifteen of its eighteen configs. Following one reports every
-    // shared file a second time under a second spelling, and a guard naming the
-    // same offender twice is a guard nobody trusts the count of.
+    // Somebody else's code, checked out inside this tree: fifty thousand files
+    // of PHP no scope here has anything to say about, and the one root a walk
+    // that forgot them spends all its time in.
     private const array NEVER_WALKED = ['/vendor/', '/node_modules/'];
 
     /** @var array<string, list<string>> */
@@ -134,14 +147,14 @@ final class RepoTree
      * rather than over the filesystem, so the guard can plant one of each and
      * watch the reader find it.
      *
-     * @param  array{extension: string, covers: list<string>, declines: array<string, string>, skips: list<string>}  $scope
+     * @param  array{extension: string, covers: list<string>, declines: array<string, string>, skips: array<string, string>}  $scope
      * @param  list<string>  $tracked  repo-relative paths git says this repository holds
      * @param  list<string>  $walked  repo-relative paths the scope's walk reached
      * @return array{unaccounted: list<string>, stale: list<string>, silent: list<string>}
      */
     public static function account(array $scope, array $tracked, array $walked): array
     {
-        $holding = self::rootsIn($tracked, $scope['skips']);
+        $holding = self::rootsIn($tracked, array_keys($scope['skips']));
         $reached = self::rootsIn($walked, []);
         $accounted = [...$scope['covers'], ...array_keys($scope['declines'])];
 
@@ -190,7 +203,7 @@ final class RepoTree
     }
 
     /**
-     * @return array{extension: string, covers: list<string>, declines: array<string, string>, skips: list<string>}
+     * @return array{extension: string, covers: list<string>, declines: array<string, string>, skips: array<string, string>}
      */
     public static function scope(string $scope): array
     {
@@ -214,7 +227,7 @@ final class RepoTree
             }
 
             foreach (self::under($directory) as $path) {
-                if (str_ends_with($path, $declared['extension']) && ! self::skipped($path, $declared['skips'])) {
+                if (str_ends_with($path, $declared['extension']) && ! self::skipped($path, array_keys($declared['skips']))) {
                     $files[] = $path;
                 }
             }
@@ -237,6 +250,11 @@ final class RepoTree
         return $files;
     }
 
+    // A link is never followed. mobile-app is the second Composer root and
+    // reaches this same tree through symlinks -- whole directories for Modules
+    // and tests, one file at a time for fifteen of its eighteen configs --
+    // and following one reports every shared file a second time under a second
+    // spelling, which is a count nobody can trust.
     /**
      * @return list<string>
      */

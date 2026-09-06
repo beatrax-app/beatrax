@@ -29,6 +29,43 @@ function clickStems(): array
     ];
 }
 
+/** @return list<string> every locale a module ships a lang directory for */
+function clickStemLocales(): array
+{
+    $locales = [];
+
+    foreach (glob(base_path('Modules/*/Resources/lang/*'), GLOB_ONLYDIR) ?: [] as $directory) {
+        $locales[basename($directory)] = true;
+    }
+
+    $found = array_keys($locales);
+    sort($found);
+
+    return $found;
+}
+
+// A map keyed on a list of locales cannot see a locale that is not in it, and
+// a locale added without a stem is skipped in silence — which reads exactly
+// like a locale with no offender in it.
+it('carries a word for a click in every locale the tree ships', function (): void {
+    $locales = clickStemLocales();
+
+    expect(count($locales))->toBeGreaterThan(
+        20,
+        'Almost no locale directories were found, so the comparison below is about a tree nobody walked.',
+    );
+
+    expect(array_values(array_diff($locales, array_keys(clickStems()))))->toBe([], implode("\n  ", [
+        'These locales ship translations and no stem for the word "click", so the rule below skips them',
+        'without saying so. Add the locale\'s own word for a click to clickStems().',
+    ]));
+
+    expect(array_values(array_diff(array_keys(clickStems()), $locales)))->toBe([], implode("\n  ", [
+        'These stems name a locale the tree no longer ships. The entry matches nothing and reads as',
+        'coverage — delete it.',
+    ]));
+});
+
 it('never leaves a click inside a line named for touch', function (): void {
     $stems = clickStems();
     $offenders = [];
@@ -63,7 +100,10 @@ it('never leaves a click inside a line named for touch', function (): void {
     }
 
     // A walk that checked nothing would pass while proving nothing.
-    expect($checked)->toBeGreaterThan(100);
+    expect($checked)->toBeGreaterThan(
+        100,
+        'No _touch line was read, so the offender list below is empty because the scan stopped, not because the tree is clean.',
+    );
 
     sort($offenders);
 
@@ -75,6 +115,7 @@ it('never leaves a click inside a line named for touch', function (): void {
 
 it('gives every touch key a plain twin to fall back to on the desktop', function (): void {
     $orphans = [];
+    $touchKeys = 0;
 
     foreach (glob(base_path('Modules/*/Resources/lang/*/*.php')) ?: [] as $file) {
         /** @var array<string, mixed> $loaded */
@@ -88,6 +129,7 @@ it('gives every touch key a plain twin to fall back to on the desktop', function
                 continue;
             }
 
+            $touchKeys++;
             $plain = substr($key, 0, -strlen('_touch'));
 
             if (! array_key_exists($plain, $flat)) {
@@ -96,8 +138,25 @@ it('gives every touch key a plain twin to fall back to on the desktop', function
         }
     }
 
+    expect($touchKeys)->toBeGreaterThan(
+        100,
+        'No _touch key was read, so the orphan list below is empty because the scan stopped, not because every twin is there.',
+    );
+
     expect($orphans)->toBe([], implode("\n  ", [
         'A touch line with no plain twin leaves the desktop reading a phone instruction:',
         ...$orphans,
     ]));
+});
+
+// The rule is one PatternScan::matches call per line, and a stem that stopped
+// compiling would answer false for every locale at once — the same answer a
+// clean tree gives.
+it('reads a click written in the locale it is checking, and leaves a clean line alone', function (): void {
+    $stems = clickStems();
+
+    expect(PatternScan::matches('/'.$stems['nl'].'/iu', 'Klik op een categorie'))->toBeTrue('a Dutch click went unreported');
+    expect(PatternScan::matches('/'.$stems['nl'].'/iu', 'Tik op een categorie'))->toBeFalse('a Dutch tap was read as a click');
+    expect(PatternScan::matches('/'.$stems['uk'].'/iu', 'Клацніть на категорію'))->toBeTrue('a Cyrillic click went unreported');
+    expect(PatternScan::matches('/'.$stems['en'].'/iu', 'Tap a category'))->toBeFalse('an English tap was read as a click');
 });

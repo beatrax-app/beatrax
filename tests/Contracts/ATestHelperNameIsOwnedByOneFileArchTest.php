@@ -9,7 +9,12 @@ declare(strict_types=1);
 // run of either file on its own.
 
 /**
- * @return array<string, list<string>> helper name => the test files declaring it
+ * Every file Pest loads into that one namespace: the *Test.php files and the
+ * Pest.php bootstraps beside them, which declare helpers too — `tests/Pest.php`
+ * declares two — and were read by nothing here, so a *Test.php redeclaring one
+ * of them was a fatal this rule could not see.
+ *
+ * @return array<string, list<string>> helper name => the files declaring it
  */
 function globalTestHelperDeclarations(): array
 {
@@ -29,7 +34,7 @@ function globalTestHelperDeclarations(): array
         foreach ($iterator as $file) {
             $path = $file->getPathname();
 
-            if (! $file->isFile() || ! str_ends_with($path, 'Test.php')) {
+            if (! $file->isFile() || (! str_ends_with($path, 'Test.php') && ! str_ends_with($path, '/Pest.php'))) {
                 continue;
             }
 
@@ -111,8 +116,16 @@ function nextNameToken(array $tokens, int $index): ?string
 
 it('gives every global test helper a single owning file', function (): void {
     $clashes = [];
+    $declarations = globalTestHelperDeclarations();
 
-    foreach (globalTestHelperDeclarations() as $name => $files) {
+    // Thousands of free helper functions carry this suite. A run that read a
+    // handful found no clash because it stopped, not because every name is owned.
+    expect(count($declarations))->toBeGreaterThan(
+        500,
+        'The walk found almost no global test helper, so the empty clash list below is a suite nobody read.',
+    );
+
+    foreach ($declarations as $name => $files) {
         $files = array_values(array_unique($files));
 
         if (count($files) > 1) {
@@ -132,4 +145,41 @@ it('gives every global test helper a single owning file', function (): void {
         'Clashes:',
         '  '.implode("\n  ", $clashes),
     ]));
+});
+
+// The reader counts brace depth over a token stream, and a reader that lost its
+// depth reports every method as a global function or none at all. Both are the
+// same answer a clean file gives, so each is planted here.
+it('reads a declaration outside every brace and nothing inside one', function (): void {
+    $probe = tempnam(sys_get_temp_dir(), 'helper-names').'.php';
+
+    try {
+        file_put_contents($probe, <<<'PHP'
+            <?php
+
+            function ownedHelperOne(): string
+            {
+                $interpolated = "a {$brace} and a ${older} one";
+
+                return $interpolated;
+            }
+
+            final class NotAHelper
+            {
+                public function methodIsNotGlobal(): void {}
+            }
+
+            $closure = function (): void {};
+
+            function ownedHelperTwo(): void {}
+            PHP);
+
+        expect(topLevelFunctionNames($probe))->toBe(
+            ['ownedHelperOne', 'ownedHelperTwo'],
+            'the reader must see both global helpers and none of: a method, a closure, or a name after an '
+            .'interpolated brace it lost count of',
+        );
+    } finally {
+        @unlink($probe);
+    }
 });

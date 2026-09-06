@@ -143,14 +143,14 @@ function recurringOccurrenceVerb(string $statement): ?string
 
 it('writes recurring_series_occurrences from exactly one production class, and only by appending', function (): void {
     $writer = base_path('Modules/Recurring/Internal/Detectors/OccurrenceWriter.php');
-    // A demo fixture builds the rows a real detection would have produced, on a
-    // database no peer ever pairs with.
-    $demoSeeder = base_path('Modules/DriftAlerts/Database/Seeders/Demo/DemoDriftAlertsSeeder.php');
 
     $foreignWriters = [];
     $writerVerbs = [];
+    $scanned = recurringOccurrenceScannedFiles();
 
-    foreach (recurringOccurrenceScannedFiles() as $path) {
+    expect(count($scanned))->toBeGreaterThan(2000, 'The walk read almost no PHP, so an empty foreign-writer list below is the walk being broken rather than the tree being right.');
+
+    foreach ($scanned as $path) {
         $writes = recurringOccurrenceWrites((string) file_get_contents($path));
 
         if ($writes === []) {
@@ -164,10 +164,6 @@ it('writes recurring_series_occurrences from exactly one production class, and o
                 $writerVerbs[] = $label.':'.$write;
             }
 
-            continue;
-        }
-
-        if ($path === $demoSeeder) {
             continue;
         }
 

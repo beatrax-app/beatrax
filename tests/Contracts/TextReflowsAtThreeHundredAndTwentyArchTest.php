@@ -25,19 +25,22 @@ use Tests\Contracts\Support\UnlayeredCss;
 
 function reflowRule(): string
 {
-    $css = UnlayeredCss::read();
+    // Read through UnlayeredCss rather than by hand: its ruleAt() answers null
+    // when the block never closes, where a `strpos(…, '}')` of `false` cast to
+    // int made the rule the empty string and every assertion below it a
+    // question about nothing.
+    $rule = UnlayeredCss::ruleAt('h1,'."\n".'    h2,'."\n".'    h3,');
 
-    $start = strpos($css, 'h1,'."\n".'    h2,'."\n".'    h3,');
+    expect($rule)->not->toBeNull('No unlayered reflow rule; a layered one loses to the utilities beside it.');
 
-    expect($start)->not->toBeFalse('No unlayered reflow rule; a layered one loses to the utilities beside it.');
-
-    $end = strpos($css, '}', (int) $start);
-
-    return substr($css, (int) $start, (int) $end - (int) $start);
+    return (string) $rule;
 }
 
 it('lets an unbreakable run break rather than take the page sideways', function (): void {
-    expect(reflowRule())->toContain('overflow-wrap: anywhere');
+    expect(str_contains(reflowRule(), 'overflow-wrap: anywhere'))->toBeTrue(
+        'The reflow rule no longer says `anywhere`, so a flex or grid parent goes back to '
+        .'sizing itself to an unbreakable run and eleven routes scroll sideways at 320px.',
+    );
 });
 
 it('covers the prose and the machine strings, not only the headings', function (): void {
@@ -59,5 +62,9 @@ it('covers the prose and the machine strings, not only the headings', function (
 // break-word is the near-identical value that does not work here, and it is
 // what a later edit would reach for.
 it('does not settle for break-word, which measured no change on five of six', function (): void {
-    expect(reflowRule())->not->toContain('break-word');
+    expect(str_contains(reflowRule(), 'break-word'))->toBeFalse(
+        'break-word breaks a word that overflows its line box and is ignored when the browser '
+        .'computes min-content, so the flex and grid parents keep sizing themselves to the '
+        .'unbroken run. Only `anywhere` counts there.',
+    );
 });

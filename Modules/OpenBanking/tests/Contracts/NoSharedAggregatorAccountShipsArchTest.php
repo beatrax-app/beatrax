@@ -131,8 +131,12 @@ it('ships no aggregator private key of its own', function (): void {
     $sources = noSharedAggregatorSources();
 
     // Counted first: a walk that resolved nothing reports a tree with no
-    // shipped key, which is the answer a clean tree gives too.
-    expect($sources)->not->toBeEmpty();
+    // shipped key, which is the answer a clean tree gives too. A floor of one
+    // does not separate them either -- the module is ninety-odd files.
+    expect(count($sources))->toBeGreaterThan(
+        50,
+        'The walk over Modules/OpenBanking reached '.count($sources).' files, which is too few to be the module.'
+    );
 
     $carriers = [];
     foreach ($sources as $path) {
@@ -158,7 +162,11 @@ it('ships no aggregator private key of its own', function (): void {
 
 it('reads no aggregator credential out of the environment or a config file', function (): void {
     $sources = noSharedAggregatorSources();
-    expect($sources)->not->toBeEmpty();
+
+    expect(count($sources))->toBeGreaterThan(
+        50,
+        'The walk over Modules/OpenBanking reached '.count($sources).' files, which is too few to be the module.'
+    );
 
     $ambient = [];
     foreach ($sources as $path) {

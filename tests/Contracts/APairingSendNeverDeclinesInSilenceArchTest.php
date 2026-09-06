@@ -21,6 +21,14 @@ const PAIRING_SEND_SEAMS = [
     PairingGateway::class,
 ];
 
+// Both denominators, so a reader that stopped recognising a send fails on what
+// it found rather than reporting every caller clean: the two seams declare four
+// identity-reading sends between them, and the analysed tree calls them five
+// times. Both floors sit under those and above zero.
+const PAIRING_SEND_METHOD_FLOOR = 4;
+
+const PAIRING_SEND_CALL_SITE_FLOOR = 3;
+
 // Two other classes answer to the same method names. PairingFrameCourier's
 // sends throw rather than decline, and PairingPeerErrands' own refusals sit
 // behind a guard its one caller has already run. Pinned by the receiver that
@@ -85,6 +93,45 @@ function pairingSendNames(): array
     return array_keys($names);
 }
 
+/**
+ * Every line of $source calling one of $names on an object and letting the
+ * answer go nowhere, each marked with whether $excused — the other receiver
+ * this file is pinned for — is the one being called on that line.
+ *
+ * A call that opens a statement and closes it, or opens one and runs on to its
+ * own closing line, is a call whose answer goes nowhere. Assigned, returned or
+ * passed as an argument, the line never begins with the variable it hangs off.
+ *
+ * @param  list<string>  $names
+ * @return list<array{line: int, statement: string, excused: bool}>
+ */
+function pairingSendCallSites(string $source, array $names, ?string $excused): array
+{
+    $sites = [];
+
+    foreach (explode("\n", $source) as $index => $line) {
+        $statement = trim($line);
+
+        if (! str_ends_with($statement, ');') && ! str_ends_with($statement, '(')) {
+            continue;
+        }
+
+        foreach ($names as $name) {
+            if (preg_match('/^\$\w+(->\w+)*->'.preg_quote($name, '/').'\(/', $statement) !== 1) {
+                continue;
+            }
+
+            $sites[] = [
+                'line' => $index + 1,
+                'statement' => $statement,
+                'excused' => $excused !== null && str_contains($statement, $excused),
+            ];
+        }
+    }
+
+    return $sites;
+}
+
 it('lets no pairing send that can find no identity answer with a bare return', function (): void {
     $offenders = [];
     $inspected = 0;
@@ -105,7 +152,11 @@ it('lets no pairing send that can find no identity answer with a bare return', f
 
     // A walk that matched nothing reports exactly what a clean tree reports,
     // and both seams renaming their sends is how that happens.
-    expect($inspected)->toBeGreaterThanOrEqual(4);
+    expect($inspected)->toBeGreaterThanOrEqual(
+        PAIRING_SEND_METHOD_FLOOR,
+        'Reflection found '.$inspected.' sends that read this device\'s identity across '
+        .count(PAIRING_SEND_SEAMS).' seams, so the verdict below is read off almost nothing.'
+    );
 
     expect($offenders)->toBe([], 'a pairing send that reads this device\'s own identity can find none — the '
         .'app-lock holds the key, or sync was never enabled here — and a caller re-emitting on a three-second '
@@ -116,38 +167,31 @@ it('lets no pairing send that can find no identity answer with a bare return', f
 it('lets no caller drop the answer on the floor', function (): void {
     $names = pairingSendNames();
 
-    expect($names)->not->toBe([]);
+    expect($names)->not->toBe(
+        [],
+        'Neither seam declares a send at all, so the scan below has no name to look for and reports every caller clean.'
+    );
 
     $discards = [];
+    $sites = 0;
 
     foreach (SonarSourceFiles::all() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
-        $notTheSeam = PAIRING_SEND_OTHER_RECEIVERS[$relative] ?? null;
 
-        foreach (explode("\n", (string) file_get_contents($path)) as $index => $line) {
-            $statement = trim($line);
+        foreach (pairingSendCallSites((string) file_get_contents($path), $names, PAIRING_SEND_OTHER_RECEIVERS[$relative] ?? null) as $site) {
+            $sites++;
 
-            // A call that opens a statement and closes it — or opens one and
-            // runs on to its own closing line — is a call whose answer goes
-            // nowhere. Assigned, returned or passed as an argument, the line
-            // never begins with the variable the call hangs off.
-            if (! str_ends_with($statement, ');') && ! str_ends_with($statement, '(')) {
-                continue;
-            }
-
-            foreach ($names as $name) {
-                if (preg_match('/^\$\w+(->\w+)*->'.$name.'\(/', $statement) !== 1) {
-                    continue;
-                }
-
-                if ($notTheSeam !== null && str_contains($statement, $notTheSeam)) {
-                    continue;
-                }
-
-                $discards[] = $relative.':'.($index + 1).' — '.trim($line);
+            if (! $site['excused']) {
+                $discards[] = $relative.':'.$site['line'].' — '.$site['statement'];
             }
         }
     }
+
+    expect($sites)->toBeGreaterThanOrEqual(
+        PAIRING_SEND_CALL_SITE_FLOOR,
+        'The reader recognised '.$sites.' send call sites in the whole analysed tree, which is what a line scan '
+        .'that stopped matching looks like: no call found is no call to judge.'
+    );
 
     expect($discards)->toBe([], 'the answer to "did this device\'s half of the ceremony leave" was thrown away '
         .'here, which is the silence the typed return replaced. Render it, or hand it to something that will: '
@@ -155,10 +199,48 @@ it('lets no caller drop the answer on the floor', function (): void {
 });
 
 it('keeps every pin pointing at the send it excuses', function (): void {
-    foreach (PAIRING_SEND_OTHER_RECEIVERS as $relative => $receiver) {
-        $reaches = str_contains((string) file_get_contents(base_path($relative)), $receiver.'send');
+    expect(PAIRING_SEND_OTHER_RECEIVERS)->not->toBe(
+        [],
+        'The pin map is empty, so this rule proves nothing about it.'
+    );
 
-        expect($reaches)->toBeTrue($relative.' no longer reaches '.$receiver.'send, so its pin excuses nothing '
-            .'and would hide whatever takes its place');
+    $idle = [];
+
+    foreach (PAIRING_SEND_OTHER_RECEIVERS as $relative => $receiver) {
+        $excused = array_filter(
+            pairingSendCallSites((string) file_get_contents(base_path($relative)), pairingSendNames(), $receiver),
+            static fn (array $site): bool => $site['excused'],
+        );
+
+        if ($excused === []) {
+            $idle[] = $relative.' waves on no '.$receiver.'send at all';
+        }
     }
+
+    expect($idle)->toBe(
+        [],
+        'A pin that excuses nothing reads as considered while it waves on whatever moves into the file it names. '
+        ."Delete it, or point it at wherever the call went:\n  ".implode("\n  ", $idle)
+    );
 });
+
+// A guard that cannot go red says nothing, and both verdicts above are read off
+// this one reader. It is checked against the shapes it was written for rather
+// than against the tree.
+it('finds a send whose answer goes nowhere and leaves a read one alone', function (string $line, int $sites, bool $excused): void {
+    $found = pairingSendCallSites('<?php'."\n".$line, ['sendConfirm'], 'frameCourier->');
+
+    expect($found)->toHaveCount($sites);
+
+    if ($sites === 1) {
+        expect($found[0]['excused'])->toBe($excused);
+    }
+})->with([
+    'a discarded send' => ['        $this->peerLink->sendConfirm($a, $b);', 1, false],
+    'a send opening a multi-line call' => ['        $this->peerLink->sendConfirm(', 1, false],
+    'the pinned other receiver' => ['        $this->frameCourier->sendConfirm($a, $b);', 1, true],
+    'an assigned answer' => ['        $sent = $this->peerLink->sendConfirm($a, $b);', 0, false],
+    'a returned answer' => ['        return $this->peerLink->sendConfirm($a, $b);', 0, false],
+    'a send handed on as an argument' => ['        $this->render($this->peerLink->sendConfirm($a, $b));', 0, false],
+    'a static call of the same name' => ['        Courier::sendConfirm($a, $b);', 0, false],
+]);

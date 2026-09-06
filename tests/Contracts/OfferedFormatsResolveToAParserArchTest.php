@@ -141,8 +141,15 @@ it('offers no source format that nothing in the app can parse', function (): voi
     $registry = $this->app->make(SourceAdapterRegistry::class);
     $parseable = [...$registry->supportedFormats(), ...offeredFormatReceiptArm()];
 
+    $offered = offeredFormatsByComponent();
+
+    // Read before the verdict: a glob that stops matching answers with an empty
+    // picker list, which is indistinguishable from every picker being correct.
+    expect(count(offeredFormatComponentFiles()))->toBeGreaterThan(60, 'The Livewire component walk found almost nothing, so a clean answer below means nothing.')
+        ->and(count($offered))->toBeGreaterThan(2, 'No upload picker was read as offering a format, so the rule below can only pass vacuously.');
+
     $orphans = [];
-    foreach (offeredFormatsByComponent() as $relative => $formats) {
+    foreach ($offered as $relative => $formats) {
         foreach ($formats as $format) {
             if (! in_array($format, $parseable, strict: true)) {
                 $orphans[] = $relative.' offers '.$format;
@@ -181,4 +188,18 @@ it('binds a parser for every format the SourceFormat enum names', function (): v
         .'IngestionServiceProvider or delete the case. Orphans:'
         ."\n  ".implode("\n  ", $orphans),
     );
+});
+
+it('reads a format written as a constant as the same offer as one written out', function (): void {
+    $qualify = offeredFormatImportMap("<?php\n\nuse ".SourceFormat::class.";\n");
+
+    expect(array_key_exists('SourceFormat', $qualify))->toBeTrue('The import map no longer resolves a short class name, so every constant below reads as unresolved.');
+
+    // The three spellings a picker uses, and the one the scan must refuse to
+    // guess at: an unimported name resolves to no constant and is reported
+    // rather than dropped, so a renamed enum surfaces as an orphan.
+    expect(offeredFormatValues("['camt053', SourceFormat::Mt940, SourceFormat::IcsPdf->value]", $qualify))
+        ->toBe(['camt053', 'mt940', 'ics-pdf'])
+        ->and(offeredFormatValues('[Unimported::Whatever]', $qualify))
+        ->toBe(['UNRESOLVED Unimported::Whatever']);
 });

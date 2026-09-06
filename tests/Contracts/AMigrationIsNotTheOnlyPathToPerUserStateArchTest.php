@@ -215,10 +215,18 @@ function perUserSweepReachableNames(string $fqcn, string $classFile): array
     return array_values(array_unique($names));
 }
 
-/** @param list<string> $names */
+/**
+ * Comments are stripped first, the way every grep-style invariant in this tree
+ * reads a file: a docblock naming the class it replaced, or a `// see
+ * SeedBundledExchangeRates` above the code that no longer calls it, would
+ * otherwise answer for the runtime caller that is missing.
+ *
+ * @param  list<string>  $names
+ */
 function perUserSweepIsReachedFrom(string $path, array $names): bool
 {
-    $lines = explode("\n", (string) file_get_contents($path));
+    $source = PatternScan::replace('#/\*.*?\*/|//[^\n]*#s', '', (string) file_get_contents($path));
+    $lines = explode("\n", $source);
 
     foreach ($lines as $line) {
         if (preg_match('/^\s*use\s/', $line) === 1) {
@@ -279,6 +287,23 @@ function perUserSweepGates(array $paths): array
 }
 
 /**
+ * The pinned gate columns nothing sweeps on. Read over data rather than over
+ * the tree, so the reader can be driven with a fabricated pair while the pin
+ * list itself is empty.
+ *
+ * @param  array<string, list<string>>  $gates
+ * @param  list<string>  $pinned
+ * @return list<string>
+ */
+function perUserSweepUnreachedGatePins(array $gates, array $pinned): array
+{
+    return array_values(array_filter(
+        $pinned,
+        static fn (string $column): bool => ! array_key_exists($column, $gates),
+    ));
+}
+
+/**
  * Every production file that writes a row into `users`.
  *
  * @param  list<string>  $paths
@@ -307,11 +332,14 @@ function usersRowCreators(array $paths): array
 
 it('never leaves a migration as the only thing that runs a class', function (): void {
     $migrations = perUserSweepMigrationFiles();
-    expect(count($migrations))->toBeGreaterThan(150);
+    expect(count($migrations))->toBeGreaterThan(
+        150,
+        'Read '.count($migrations).' migrations, too few for an empty offender list to mean anything.',
+    );
 
     $executed = classesMigrationsExecute($migrations);
     $production = BackendSourceFiles::all();
-    expect($production)->not->toBeEmpty();
+    expect($production)->not->toBeEmpty('The production walk read no file at all, so every class would read as migration-only.');
 
     $offenders = [];
     $pinned = [];
@@ -362,7 +390,7 @@ it('never leaves a migration as the only thing that runs a class', function (): 
 
     // Below the count of module classes migrations actually execute, so a walk
     // that stops reading fails here instead of reporting a clean tree.
-    expect($walked)->toBeGreaterThan(3);
+    expect($walked)->toBeGreaterThan(3, 'Resolved '.$walked.' executed classes to a file, too few to have read the migrations.');
 
     expect($offenders)->toBe([], implode("\n  ", [
         'A migration runs once, over the rows that existed when it ran. A class only a',
@@ -400,7 +428,7 @@ it('leaves a reader who signed up matching no per-user sweep gate', function ():
 
     // Derived, not listed: the columns come out of the sweeps themselves, so a
     // sweep added tomorrow is covered without anyone remembering this file.
-    expect($gates)->not->toBeEmpty();
+    expect($gates)->not->toBeEmpty('No sweep gate was read at all, so a reader answering every one of them proves nothing.');
     expect($gates)->toHaveKey('envelope_activated_at');
 
     /** @var SignupAction $signup */
@@ -437,9 +465,13 @@ it('leaves a reader who signed up matching no per-user sweep gate', function ():
         ...$unestablished,
     ]));
 
-    foreach (array_keys(PER_USER_SWEEP_GATE_PINS) as $column) {
-        expect($gates)->toHaveKey($column, 'a gate pin for a column nothing sweeps on — delete the entry');
-    }
+    // Not toHaveKey(): its second argument is the expected VALUE, so the message
+    // written there was being asserted as the column's list of files, and the
+    // empty pin list is what kept anyone from finding out.
+    expect(perUserSweepUnreachedGatePins($gates, array_keys(PER_USER_SWEEP_GATE_PINS)))->toBe(
+        [],
+        'PER_USER_SWEEP_GATE_PINS names a column no sweep gates on, so the pin excuses nothing — delete the entry.',
+    );
 });
 
 it('still holds each pinned and handed-over class to what was written about it', function (): void {
@@ -485,7 +517,10 @@ it('dispatches the install event from every path that creates a reader', functio
 
     // Below the number of paths that mint a `users` row today, so a walk that
     // matched nothing cannot report a tree where every path is covered.
-    expect(count($creators))->toBeGreaterThan(3);
+    expect(count($creators))->toBeGreaterThan(
+        3,
+        'Found '.count($creators).' paths that create a reader, too few for an empty offender list to mean anything.',
+    );
 
     $offenders = [];
     $pinned = [];
@@ -497,7 +532,15 @@ it('dispatches the install event from every path that creates a reader', functio
             continue;
         }
 
-        if (! str_contains((string) file_get_contents(base_path($relative)), 'UserInstalled')) {
+        // Comments stripped: a file naming the event in a docblock while
+        // dispatching nothing is the shape AddUserAction shipped as.
+        $source = PatternScan::replace(
+            '#/\*.*?\*/|//[^\n]*#s',
+            '',
+            (string) file_get_contents(base_path($relative)),
+        );
+
+        if (! str_contains($source, 'UserInstalled')) {
             $offenders[] = $relative;
         }
     }
@@ -571,8 +614,26 @@ it('reads a planted sweep and its runtime caller, and is not fooled by a binding
         @unlink($caller);
     }
 
-    expect(array_keys($executed))->toBe(['Modules\Planted\Public\Services\PlantedSweepService']);
-    expect(array_keys($gates))->toBe(['planted_swept_at']);
-    expect($seenThroughRegistration)->toBeFalse();
-    expect($seenThroughCaller)->toBeTrue();
+    expect(array_keys($executed))->toBe(
+        ['Modules\Planted\Public\Services\PlantedSweepService'],
+        'the class a migration resolves from the container is read through the migration own imports',
+    );
+    expect(array_keys($gates))->toBe(
+        ['planted_swept_at'],
+        'the "not done yet" predicate is the whereNull in the same statement as the users table',
+    );
+    expect($seenThroughRegistration)->toBeFalse(
+        'a container binding says how to build a class, not that anything builds it, or a singleton() line would answer for the runtime path that does not exist',
+    );
+    expect($seenThroughCaller)->toBeTrue(
+        'a constructor type-hint is a caller, and the whole rule turns on telling the two apart',
+    );
+
+    expect(perUserSweepUnreachedGatePins(
+        ['planted_swept_at' => ['Modules/Planted/Database/Migrations/2026_01_01_000000_sweep.php']],
+        ['planted_swept_at', 'planted_never_swept_at'],
+    ))->toBe(
+        ['planted_never_swept_at'],
+        'a gate pin naming a column nothing sweeps on excuses nothing; the empty pin list must not be what hides the reader',
+    );
 });

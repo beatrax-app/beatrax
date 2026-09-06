@@ -38,13 +38,22 @@ function moneyColumnsByTable(): array
 
         $tables[$name] = [
             'minor' => $minor,
-            'currency' => array_values(array_filter($columns, static fn (string $c): bool => str_contains($c, 'currency'))),
+            'currency' => array_values(array_filter($columns, moneyColumnNamesACurrency(...))),
         ];
     }
 
     ksort($tables);
 
     return $tables;
+}
+
+// The column has to BE a currency, not merely contain the word. `str_contains`
+// counted users.default_currency_view — a view preference holding 'eur_only' —
+// as the currency beside two minor-unit columns, which is the shape of an
+// amount answered for by a column that does not denominate it.
+function moneyColumnNamesACurrency(string $column): bool
+{
+    return $column === 'currency' || str_ends_with($column, '_currency');
 }
 
 /**
@@ -69,15 +78,27 @@ it('transactions table has both native and settled money columns', function (): 
     $connection = $this->app->make(DatabaseManager::class)->connection();
     $columns = collect($connection->getSchemaBuilder()->getColumns('transactions'))->pluck('name');
 
-    expect($columns)->toContain('amount_minor');
-    expect($columns)->toContain('currency');
-    expect($columns)->toContain('settled_amount_minor');
-    expect($columns)->toContain('settled_currency');
+    expect($columns->count())->toBeGreaterThan(
+        10,
+        'the transactions table introspected to '.$columns->count().' columns, which is too few to have been migrated.'
+    );
+
+    expect($columns)
+        ->toContain('amount_minor')
+        ->toContain('currency')
+        ->toContain('settled_amount_minor')
+        ->toContain('settled_currency');
 });
 
 it('stores every minor-unit amount the schema declares beside a currency code', function (): void {
     $tables = moneyColumnsByTable();
-    expect($tables)->not->toBeEmpty('the probe found no money columns at all, which cannot be right');
+
+    // Read before the verdict: the floor sits far under today's 21, so a probe
+    // that read no schema at all fails here rather than reporting a clean one.
+    expect(count($tables))->toBeGreaterThan(
+        10,
+        'the probe found '.count($tables).' tables carrying a minor-unit column, which cannot be right.'
+    );
 
     expect(moneyTablesMissingCurrency($tables))->toBe(
         [],
@@ -87,7 +108,7 @@ it('stores every minor-unit amount the schema declares beside a currency code', 
     );
 });
 
-it('sees a table whose amount has no currency beside it', function (): void {
+it('sees a table whose amount has no currency beside it, and one answered for by a column that is not one', function (): void {
     // Without this the probe above passes on a schema it cannot read at all,
     // which is indistinguishable from a schema that is clean.
     /** @var DatabaseManager $db */
@@ -99,11 +120,42 @@ it('sees a table whose amount has no currency beside it', function (): void {
         $table->bigInteger('amount_minor');
     });
 
+    // The second probe is the narrowing: a column merely holding the word is
+    // not the code the amount is denominated in.
+    $schema->create('money_columns_near_miss_probe', static function (Blueprint $table): void {
+        $table->id();
+        $table->bigInteger('amount_minor');
+        $table->string('default_currency_view');
+    });
+
+    $schema->create('money_columns_answered_probe', static function (Blueprint $table): void {
+        $table->id();
+        $table->bigInteger('amount_minor');
+        $table->string('settled_currency');
+    });
+
     try {
         $offenders = moneyTablesMissingCurrency(moneyColumnsByTable());
     } finally {
         $schema->drop('money_columns_probe');
+        $schema->drop('money_columns_near_miss_probe');
+        $schema->drop('money_columns_answered_probe');
     }
 
-    expect($offenders)->toContain('money_columns_probe (amount_minor)');
+    expect($offenders)
+        ->toContain('money_columns_probe (amount_minor)')
+        ->toContain('money_columns_near_miss_probe (amount_minor)');
+
+    expect(in_array('money_columns_answered_probe (amount_minor)', $offenders, true))->toBeFalse(
+        'a table whose amount sits beside a *_currency column is answered for, and reporting it is the rule being wrong.'
+    );
+});
+
+it('tells a currency column from a column that merely names one', function (): void {
+    expect(moneyColumnNamesACurrency('currency'))->toBeTrue()
+        ->and(moneyColumnNamesACurrency('settled_currency'))->toBeTrue()
+        ->and(moneyColumnNamesACurrency('base_currency'))->toBeTrue()
+        ->and(moneyColumnNamesACurrency('default_currency_view'))->toBeFalse()
+        ->and(moneyColumnNamesACurrency('currency_id'))->toBeFalse()
+        ->and(moneyColumnNamesACurrency('amount_minor'))->toBeFalse();
 });

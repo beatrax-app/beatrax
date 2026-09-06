@@ -19,10 +19,22 @@ final class SonarSourceFiles
     private const ROOTS = ['app', 'Modules', 'config', 'routes', 'database'];
 
     /**
-     * `sonar.exclusions`, plus the test roots. The code-smell rules these
-     * guards stand in for have never raised a single finding in a test file
-     * across this project's whole issue history, so the fakes and spies living
-     * there would be failures the dashboard is never going to agree with.
+     * The half of `sonar.exclusions` a `.php` walk over ROOTS can reach, plus
+     * the test roots. The mobile-app and public/build entries are left out
+     * because neither is a root here; `/vendor/`, `/node_modules/` and
+     * `/database/schema/` match no PHP under these five roots today and are
+     * carried anyway, because this list is a transcription of another file and
+     * a transcription with holes in it is one nobody can check against the
+     * original.
+     *
+     * The test roots are this repository's own addition. The code-smell rules
+     * these guards stand in for have never raised a single finding in a test
+     * file across this project's whole issue history, so the fakes and spies
+     * living there would be failures the dashboard is never going to agree
+     * with. The shared root's own `database/migrations/` is deliberately NOT
+     * skipped: Sonar's glob is case-sensitive, so the exclusion written for
+     * the modules' capitalised spelling never matched it, and the dashboard
+     * reports them.
      *
      * @var list<string>
      */

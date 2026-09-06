@@ -23,6 +23,24 @@ function settledTerms(): array
     ];
 }
 
+/** Whether a translated line still uses the English term the locale has a word of its own for. */
+function settledTermSaysEnglish(string $value, string $english): bool
+{
+    return preg_match('/\b'.$english.'/iu', $value) === 1;
+}
+
+/** Whether the English source line uses the term at all, singular or plural. */
+function settledTermIsInSource(string $english, string $term): bool
+{
+    return preg_match('/\b'.$term.'s?\b/iu', $english) === 1;
+}
+
+/** Whether the locale's answer uses the one word it settled on. */
+function settledTermAnswersWith(string $value, string $native): bool
+{
+    return preg_match('/'.$native.'/iu', $value) === 1;
+}
+
 /**
  * @return array<string, string>
  */
@@ -51,12 +69,15 @@ function flattenedStrings(string $file): array
 
 it('does not fall back to the English word for a term the locale already translates', function (): void {
     $leaks = [];
+    $read = 0;
 
     foreach (settledTerms() as $locale => $terms) {
         foreach (glob(base_path("Modules/*/Resources/lang/{$locale}/*.php")) ?: [] as $file) {
             foreach (flattenedStrings($file) as $key => $value) {
+                $read++;
+
                 foreach ($terms as $english => $native) {
-                    if (preg_match('/\b'.$english.'/iu', $value) !== 1) {
+                    if (! settledTermSaysEnglish($value, $english)) {
                         continue;
                     }
 
@@ -68,6 +89,10 @@ it('does not fall back to the English word for a term the locale already transla
     }
 
     sort($leaks);
+
+    // A locale ships thousands of lines. A glob that answered nothing would
+    // report every one of them as translated.
+    expect($read)->toBeGreaterThan(500, 'Read '.$read.' translated lines, too few for an empty offender list to mean anything.');
 
     expect($leaks)->toBe(
         [],
@@ -101,7 +126,7 @@ it('answers an English term with the one word the locale settled on, not a secon
 
             foreach (flattenedStrings($source) as $key => $english) {
                 foreach ($terms as $term => $native) {
-                    if (preg_match('/\\b'.$term.'s?\\b/iu', $english) !== 1) {
+                    if (! settledTermIsInSource($english, $term)) {
                         continue;
                     }
 
@@ -113,7 +138,7 @@ it('answers an English term with the one word the locale settled on, not a secon
 
                     $compared++;
 
-                    if (preg_match('/'.$native.'/iu', $value) === 1) {
+                    if (settledTermAnswersWith($value, $native)) {
                         continue;
                     }
 
@@ -125,7 +150,7 @@ it('answers an English term with the one word the locale settled on, not a secon
     }
 
     // A walk that compared nothing would pass while proving nothing.
-    expect($compared)->toBeGreaterThan(15);
+    expect($compared)->toBeGreaterThan(15, 'Compared '.$compared.' translated answers against their English source, too few to have read the pairs.');
 
     sort($offenders);
 
@@ -134,4 +159,27 @@ it('answers an English term with the one word the locale settled on, not a secon
         "One English term, more than one word for it in this locale:\n  "
         .implode("\n  ", $offenders)
     );
+});
+
+it('reads the English word left in a translation, and the second native word beside the settled one', function (): void {
+    expect(settledTermSaysEnglish('Gedeelde merchantlijst', 'merchant'))
+        ->toBeTrue('the compound is the shape it shipped as, and a word boundary in front of it is all this can ask');
+
+    expect(settledTermSaysEnglish('Gedeelde winkelierslijst', 'merchant'))
+        ->toBeFalse('the translated line is what every other locale writes');
+
+    expect(settledTermIsInSource('Shared merchant list', 'merchant'))
+        ->toBeTrue('the source line is what says the term is in play at all');
+
+    expect(settledTermIsInSource('Shared merchants list', 'merchant'))
+        ->toBeTrue('the plural is the same term, and reading only the singular missed half the pairs');
+
+    expect(settledTermIsInSource('Shared counterparty list', 'merchant'))
+        ->toBeFalse('a line that never names the term is not one this rule compares');
+
+    expect(settledTermAnswersWith('kennis over verkopers', 'winkelier'))
+        ->toBeFalse('a second Dutch word for the same term is real Dutch, in perfect parity, and still the defect');
+
+    expect(settledTermAnswersWith('Gedeelde winkelierslijst', 'winkelier'))
+        ->toBeTrue('the settled word answers the term, which is the whole rule');
 });

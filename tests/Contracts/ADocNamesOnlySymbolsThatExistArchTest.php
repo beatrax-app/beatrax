@@ -243,8 +243,11 @@ it('derives its prefixes from the suite, and covers every name the suite declare
 });
 
 // A test class this repository does not own, named for comparison rather than
-// as a claim about this suite. The reason is re-checked: a name that stops
-// being a stranger has to be argued again rather than inherited.
+// as a claim about this suite, as `class name => why it is a stranger`. Empty,
+// and that is the current state of the pages rather than a disabled rule. The
+// case below re-checks both halves of every entry, so a name that stops being
+// cited and a name that becomes a real file both fail here.
+/** @var array<string, string> */
 const DOC_TEST_CLASSES_FROM_ELSEWHERE = [];
 
 it('names a test class that exists, everywhere a page cites one', function (): void {
@@ -268,6 +271,35 @@ it('names a test class that exists, everywhere a page cites one', function (): v
             .'that resolves to nothing sends them looking for a guard that was renamed or never written. Point at '
             .'the real file, or say what actually covers it:',
         ...$missing,
+    ]));
+});
+
+// The exemption above is the only way a citation escapes the rule, so it is
+// held to both halves of what earned it: a name no page cites excuses nothing,
+// and a name a file now answers to was never a stranger.
+it('keeps no stranger a page stopped citing, and none the suite has since grown', function (): void {
+    $cited = docSymbolsNamed(DOC_SYMBOL_TEST_PATTERN);
+    $files = array_flip(array_map(
+        static fn (string $path): string => basename($path, '.php'),
+        docSymbolSuiteFiles(),
+    ));
+
+    $stale = [];
+
+    foreach (DOC_TEST_CLASSES_FROM_ELSEWHERE as $name => $reason) {
+        if (! array_key_exists($name, $cited)) {
+            $stale[] = $name.' is exempt because "'.$reason.'", and no page cites it any more';
+        }
+
+        if (array_key_exists($name, $files)) {
+            $stale[] = $name.' is exempt as a class this repository does not own, and a file now answers to it';
+        }
+    }
+
+    expect($stale)->toBe([], implode("\n  ", [
+        'An exemption that excuses nothing reads as a decision somebody made about this tree, and the next reader',
+        'trusts it. Delete the entry:',
+        ...$stale,
     ]));
 });
 

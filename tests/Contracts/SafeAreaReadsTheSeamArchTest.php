@@ -89,17 +89,27 @@ function safeAreaClassEdges(): array
     );
 }
 
+// Case-insensitive with optional inner whitespace: CSS function names are ASCII
+// case-insensitive and `env( safe-area-inset-top )` is the same declaration, so
+// a literal lowercase match let both through.
+function safeAreaEnvReadsIn(string $template): bool
+{
+    return preg_match('/\benv\(\s*safe-area-inset-/i', safeAreaMarkup($template)) === 1;
+}
+
 it('never reads env(safe-area-inset-*) outside the seam that fills it in', function (): void {
     $offenders = [];
+    $read = 0;
 
     foreach (safeAreaTemplates() as $file) {
-        // Case-insensitive with optional inner whitespace: CSS function names
-        // are ASCII case-insensitive and `env( safe-area-inset-top )` is the
-        // same declaration, so a literal lowercase match let both through.
-        if (preg_match('/\benv\(\s*safe-area-inset-/i', safeAreaMarkup((string) $file->getContents())) === 1) {
+        $read++;
+
+        if (safeAreaEnvReadsIn((string) $file->getContents())) {
             $offenders[] = $file->getRelativePathname();
         }
     }
+
+    expect($read)->toBeGreaterThan(150, 'The template walk read almost nothing, so a clean answer below is the walk being broken rather than the templates being right.');
 
     expect($offenders)->toBe([], implode("\n", [
         'These templates read env(safe-area-inset-*) directly:',
@@ -111,6 +121,22 @@ it('never reads env(safe-area-inset-*) outside the seam that fills it in', funct
         'bars. Use var(--safe-top|bottom|left|right), which resources/css/app.css',
         'defines as max() of the two sources and is correct on both platforms.',
     ]));
+});
+
+it('reads a bare env() a template really writes and not one it documents', function (): void {
+    $bare = '<div style="padding-top: env(safe-area-inset-top)">';
+    // The two the reader has to keep telling apart: the spelling a literal
+    // lowercase match let through, and the prose in a Blade comment that a
+    // template documenting this very rule carries.
+    $spaced = '<div style="padding-top: ENV( safe-area-inset-top )">';
+    $documented = '{{-- never env(safe-area-inset-top): the Android shell leaves it at zero --}}'."\n"
+        .'<div class="safe-screen">';
+    $seam = '<div style="padding-top: var(--safe-top)">';
+
+    expect(safeAreaEnvReadsIn($bare))->toBeTrue('The reader stopped seeing the bare env() this rule exists to forbid.')
+        ->and(safeAreaEnvReadsIn($spaced))->toBeTrue('An uppercase env with inner whitespace is the same declaration and is being let through.')
+        ->and(safeAreaEnvReadsIn($documented))->toBeFalse('Prose about the anti-pattern is being read as the anti-pattern.')
+        ->and(safeAreaEnvReadsIn($seam))->toBeFalse('A template padding through the seam is being reported as reading env() directly.');
 });
 
 it('keeps the seam those templates depend on', function (): void {
@@ -175,12 +201,17 @@ it('paints the strip .safe-screen only reserves', function (): void {
 // because Livewire re-renders the component and never the layout.
 it('never reserves the top bar height in place of the status-bar inset', function (): void {
     $offenders = [];
+    $read = 0;
 
     foreach (safeAreaTemplates() as $file) {
+        $read++;
+
         if (preg_match('/(?:padding-top|\bpt-\[)[^;"\']*var\(--top-bar-h\)/', safeAreaMarkup((string) $file->getContents())) === 1) {
             $offenders[] = $file->getRelativePathname();
         }
     }
+
+    expect($read)->toBeGreaterThan(150, 'The template walk read almost nothing, so a clean answer below is the walk being broken rather than the templates being right.');
 
     expect($offenders)->toBe([], implode("\n", [
         'These templates reserve --top-bar-h at the top of the page:',
@@ -196,8 +227,11 @@ it('never reserves the top bar height in place of the status-bar inset', functio
 
 it('pads an inset per edge rather than mirroring one of them', function (): void {
     $offenders = [];
+    $read = 0;
 
     foreach (safeAreaTemplates() as $file) {
+        $read++;
+
         // px- AND py-: the vertical form is the same defect and the more
         // reachable one, because the top and bottom insets differ on every
         // notched phone held in portrait.
@@ -205,6 +239,8 @@ it('pads an inset per edge rather than mirroring one of them', function (): void
             $offenders[] = $file->getRelativePathname();
         }
     }
+
+    expect($read)->toBeGreaterThan(150, 'The template walk read almost nothing, so a clean answer below is the walk being broken rather than the templates being right.');
 
     expect($offenders)->toBe([], implode("\n", [
         'These templates set two paddings from one edge:',
@@ -240,6 +276,9 @@ it('pads all four edges in every view layouts.lock reserves nothing for', functi
     foreach ($components as $file) {
         $relative = $file->getRelativePathname();
 
+        // A harness that extends layouts.lock to exercise the lock screen is
+        // not a screen a reader is shown, and its view is often a stub with no
+        // markup at all.
         if (str_contains(str_replace('\\', '/', $relative), '/tests/')) {
             continue;
         }
@@ -283,7 +322,11 @@ it('pads all four edges in every view layouts.lock reserves nothing for', functi
         }
     }
 
-    expect($checked)->toBeGreaterThan(0, 'No layouts.lock consumer was found, so this rule checked nothing.');
+    // Six consumers today. A floor of one would let five of them fall out of
+    // the Finder's sight while the rule went on reporting a clean answer.
+    expect($checked)->toBeGreaterThan(3, 'Almost no layouts.lock consumer was found, so this rule checked next to nothing.');
+
+    expect(count($classEdges))->toBeGreaterThan(3, 'app.css yielded almost no class that pads an edge, so every view below is judged as if only an inline var(--safe-*) counted.');
 
     expect([...$unreadable, ...$unpadded])->toBe([], implode("\n", [
         'These components extend layouts.lock without padding every edge:',
@@ -302,8 +345,11 @@ it('pads all four edges in every view layouts.lock reserves nothing for', functi
 // that string lives now; this arm is what keeps it from being retyped.
 it('takes all four edges from .safe-screen rather than typing them onto an element', function (): void {
     $offenders = [];
+    $read = 0;
 
     foreach (safeAreaTemplates() as $file) {
+        $read++;
+
         $attributes = PatternScan::all('/class="([^"]*)"/', safeAreaMarkup((string) $file->getContents()));
 
         foreach ($attributes[1] as $attribute) {
@@ -320,6 +366,8 @@ it('takes all four edges from .safe-screen rather than typing them onto an eleme
             }
         }
     }
+
+    expect($read)->toBeGreaterThan(150, 'The template walk read almost nothing, so a clean answer below is the walk being broken rather than the templates being right.');
 
     expect($offenders)->toBe([], implode("\n", [
         'These templates spell all four insets onto one element:',

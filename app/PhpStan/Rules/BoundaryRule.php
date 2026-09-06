@@ -53,8 +53,11 @@ final class BoundaryRule implements Rule
         }
 
         return [
+            // Named for what it forbids. The message used to read "Internal/Models
+            // import forbidden", which names Models as barred when Models is half
+            // of the surface this rule exists to allow.
             RuleErrorBuilder::message(sprintf(
-                'Cross-module Internal/Models import forbidden: %s cannot use %s',
+                'Cross-module import forbidden: %s cannot use %s — a module is reachable only through its Public and Models namespaces',
                 $importerModule,
                 $imported,
             ))->identifier('beatrax.boundary')->build(),

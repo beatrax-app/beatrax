@@ -11,20 +11,39 @@ use Tests\Contracts\Support\BackendSourceFiles;
  * for '', so deleting the "duplicate" would have flipped null to '' with
  * nothing to catch it. The rule is the fix: name the difference, or share it.
  *
- * @return list<string> one entry per class method shadowing a trait's
+ * @param  list<string>  $paths
+ * @return array{using: int, unresolved: list<string>, hits: list<string>} the
+ *                                                                        class-likes reached that use a first-party trait, the first-party traits
+ *                                                                        the autoloader could not reach, and every shadowed method found
  */
-function traitShadowViolations(array $paths): array
+function traitShadowScan(array $paths): array
 {
+    $using = 0;
+    $unresolved = [];
     $hits = [];
 
     foreach ($paths as $path) {
         foreach (traitShadowDeclarations($path) as $declaration) {
+            $firstParty = false;
+
             foreach ($declaration['traits'] as $trait) {
                 // First-party traits only. A framework trait's same-named
                 // method is usually its documented override hook — Eloquent's
                 // HasFactory::newFactory() is exactly that — and we do not own
                 // the semantics a vendor trait promises either way.
                 if (! str_starts_with($trait, 'Modules\\') && ! str_starts_with($trait, 'App\\')) {
+                    continue;
+                }
+
+                $firstParty = true;
+
+                // A trait the autoloader cannot reach yields no method names,
+                // so the class using it is waved through in silence. Named
+                // rather than skipped, because "no shadow found" and "nothing
+                // to compare against" are the same empty answer otherwise.
+                if (! trait_exists($trait)) {
+                    $unresolved[] = "{$path} uses {$trait}, which does not resolve";
+
                     continue;
                 }
 
@@ -36,10 +55,23 @@ function traitShadowViolations(array $paths): array
                     $hits[] = "{$path}:{$declaration['methods'][$method]} {$declaration['name']} redeclares {$trait}::{$method}()";
                 }
             }
+
+            if ($firstParty) {
+                $using++;
+            }
         }
     }
 
-    return $hits;
+    return ['using' => $using, 'unresolved' => array_values(array_unique($unresolved)), 'hits' => $hits];
+}
+
+/**
+ * @param  list<string>  $paths
+ * @return list<string> one entry per class method shadowing a trait's
+ */
+function traitShadowViolations(array $paths): array
+{
+    return traitShadowScan($paths)['hits'];
 }
 
 /**
@@ -219,6 +251,31 @@ function traitShadowNamespace(array $tokens): string
 }
 
 /**
+ * The alias this one `use` statement declares, read no further than its own
+ * semicolon. Scanned across the whole file instead, the first `as` in it keyed
+ * EVERY import under that one alias — so in the 242 production files carrying
+ * an aliased import, no short name resolved, every first-party trait read as
+ * `<current namespace>\<short name>`, `trait_exists` said no and the class was
+ * waved through. `ActualSqliteReader` uses CoercesScalars, which is the trait
+ * the shipped defect this guard is named for was found in.
+ *
+ * @param  list<array{0:int,1:string,2:int}|string>  $tokens
+ */
+function traitShadowAliasIn(array $tokens, int $index): ?string
+{
+    for ($i = $index + 1, $count = count($tokens); $i < $count; $i++) {
+        if ($tokens[$i] === ';') {
+            return null;
+        }
+        if (is_array($tokens[$i]) && $tokens[$i][0] === T_AS) {
+            return traitShadowDeclaredName($tokens, $i);
+        }
+    }
+
+    return null;
+}
+
+/**
  * @param  list<array{0:int,1:string,2:int}|string>  $tokens
  * @return array<string, string> short name (or alias) => fully qualified
  */
@@ -238,14 +295,7 @@ function traitShadowImports(array $tokens): array
         }
 
         $names = traitShadowUsedNames($tokens, $index);
-        $alias = null;
-        foreach ($tokens as $i => $candidate) {
-            if ($i > $index && is_array($candidate) && $candidate[0] === T_AS) {
-                $alias = traitShadowDeclaredName($tokens, $i);
-
-                break;
-            }
-        }
+        $alias = traitShadowAliasIn($tokens, $index);
 
         foreach ($names as $name) {
             $parts = explode('\\', $name);
@@ -276,22 +326,52 @@ function traitShadowResolve(string $short, string $namespace, array $imports): s
 }
 
 it('never lets a class quietly redeclare a method its trait already provides', function (): void {
-    expect(traitShadowViolations(BackendSourceFiles::all()))->toBe([]);
+    $files = BackendSourceFiles::all();
+
+    expect(count($files))->toBeGreaterThan(2000, 'the backend walk read almost nothing — the roots are wrong, not the tree.');
+
+    $scan = traitShadowScan($files);
+
+    // 312 classes use one of the 40 first-party traits today. Read before the
+    // verdict: the brace walk goes off by one on an interpolated string, and
+    // when it does every class after it reads as having no methods at all —
+    // which is an empty hit list and a clean-looking tree.
+    expect($scan['using'])->toBeGreaterThan(100, 'almost no class was read as using a first-party trait — the declaration walk is broken, not the tree.');
+
+    expect($scan['unresolved'])->toBe(
+        [],
+        "A first-party trait does not autoload, so every class using it is compared against no\n".
+        "method names at all and passes this rule without being read. Fix the name or the psr-4\n".
+        "mapping — a trait the autoloader cannot reach is also a trait `use` cannot apply:\n  ".
+        implode("\n  ", $scan['unresolved']),
+    );
+
+    expect($scan['hits'])->toBe(
+        [],
+        "A class declares a method its trait already provides. PHP prefers the class, silently:\n".
+        "no error, no warning, and every call site still reads `\$this->method()`. Name the\n".
+        "difference, or move it into the trait so there is one answer. Offenders:\n  ".
+        implode("\n  ", $scan['hits']),
+    );
 });
 
-it('sees a planted shadow, including through an interpolated string', function (): void {
+it('sees a planted shadow, including through an interpolated string and past an aliased import', function (): void {
     $planted = tempnam(sys_get_temp_dir(), 'trait-shadow').'.php';
+    // The `as` is load-bearing: one aliased import used to key every other
+    // import in the file under that alias, so the trait below resolved to
+    // Planted\CoercesScalars, did not autoload, and the class was waved on.
     file_put_contents($planted, <<<'PHP'
         <?php
         namespace Planted;
         use Modules\Core\Public\Concerns\CoercesScalars;
+        use Modules\Core\Public\Support\PatternScan as Scan;
         final class PlantedTraitShadow
         {
             use CoercesScalars;
 
             public function label(mixed $value): string
             {
-                return "value: {$value}";
+                return "value: {$value}".Scan::class;
             }
 
             private static function toString(mixed $value): string
@@ -307,6 +387,6 @@ it('sees a planted shadow, including through an interpolated string', function (
         @unlink($planted);
     }
 
-    expect($found)->toHaveCount(1);
+    expect($found)->toHaveCount(1, 'The reader must flag the shadowed toString() and nothing else in the planted class.');
     expect($found[0])->toContain('redeclares Modules\Core\Public\Concerns\CoercesScalars::toString()');
 });

@@ -78,7 +78,10 @@ function confirmedPeerKeyRelative(string $path): string
 it('reads a peer static key out of the confirmed registry and combines it with nothing', function (): void {
     $sources = confirmedPeerKeySources();
 
-    expect($sources)->not->toBeEmpty();
+    expect(count($sources))->toBeGreaterThan(
+        1000,
+        'The walk opened '.count($sources).' shipped files, which is too few to have read the tree at all.',
+    );
 
     $shapes = [
         '/\A\$\w+\s*=\s*\$[\w>-]+->deviceX25519Keys\([^()]*\)\z/',
@@ -121,7 +124,7 @@ it('reads a peer static key out of the confirmed registry and combines it with n
 it('anchors that one source on the confirmation the pairing ceremony writes', function (): void {
     $path = base_path('Modules/Sync/Public/Services/DeviceRegistryService.php');
 
-    expect(is_file($path))->toBeTrue();
+    expect(is_file($path))->toBeTrue('DeviceRegistryService is gone, so the one source this rule anchors on cannot be read.');
 
     $stripped = confirmedPeerKeyStripped($path);
     $at = strpos($stripped, 'function deviceX25519Keys(');
@@ -142,5 +145,54 @@ it('anchors that one source on the confirmation the pairing ceremony writes', fu
 
     expect(PatternScan::matches("/->where\(\s*'user_id'\s*,/", $body))->toBeTrue(
         'one household confirming a device says nothing about another, so the lookup carries its owner',
+    );
+});
+
+// The statement reader and the three safe shapes are the whole of the verdict,
+// so they are driven over one of each rather than assumed. Every widening below
+// is a trust root pairing never established.
+it('sees a peer key widened after it was read, and leaves a plain read alone', function (): void {
+    $shapes = [
+        '/\A\$\w+\s*=\s*\$[\w>-]+->deviceX25519Keys\([^()]*\)\z/',
+        '/\Aforeach\s*\(\s*\$[\w>-]+->deviceX25519Keys\([^()]*\)\s+as\s+[^()]*\)\z/',
+        '/\Areturn\s+\$[\w>-]+->deviceX25519Keys\([^()]*\)\z/',
+    ];
+
+    $safe = static function (string $source) use ($shapes): bool {
+        $offsets = PatternScan::allWithOffsets('/->deviceX25519Keys\(/', $source)[0] ?? [];
+
+        expect($offsets)->toHaveCount(1, 'The planted source has one lookup in it, so the reader has to find one.');
+
+        $statement = confirmedPeerKeyStatementAt($source, (int) $offsets[0][1]);
+
+        foreach ($shapes as $shape) {
+            if (PatternScan::matches($shape, $statement)) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    // Each opens on the brace that closes whatever stood before it, which is
+    // what a real call site has and a bare fragment does not.
+    expect($safe('{ $keys = $this->registry->deviceX25519Keys($userId); }'))->toBeTrue(
+        'The plain read this rule exists to allow was reported as a widening.',
+    );
+    expect($safe('{ foreach ($this->registry->deviceX25519Keys($userId) as $device => $key) { } }'))->toBeTrue(
+        'Iterating the answer as it was read is not a widening, and it was reported as one.',
+    );
+    expect($safe('{ return $this->registry->deviceX25519Keys($userId); }'))->toBeTrue(
+        'Handing the answer straight back is not a widening, and it was reported as one.',
+    );
+
+    expect($safe('{ $keys = $this->registry->deviceX25519Keys($userId) + $this->configured(); }'))->toBeFalse(
+        'A second map merged into the answer is a trust root nobody paired with, and it was read as a plain lookup.',
+    );
+    expect($safe('{ $keys = [...$this->registry->deviceX25519Keys($userId), ...$stored]; }'))->toBeFalse(
+        'A spread into a literal is the same widening under a different spelling.',
+    );
+    expect($safe('{ $keys = $this->registry->deviceX25519Keys($userId) ?: $this->fromDisk(); }'))->toBeFalse(
+        'A fallback key is admitted exactly as a real peer would be, and it was read as a plain lookup.',
     );
 });

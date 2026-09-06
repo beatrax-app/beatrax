@@ -55,9 +55,15 @@ function scannerRootNames(): array
 }
 
 /**
- * The top-level root names $source writes out as string literals. Read from
- * the token stream so a root named in prose is not mistaken for one named in
- * code.
+ * The top-level root names $source writes out as a string literal OF ITS OWN.
+ * Read from the token stream so a root named in prose is not mistaken for one
+ * named in code.
+ *
+ * A root name inside a longer path — `base_path('Modules/*\/Models/*.php')` —
+ * is not read as naming a root, and deliberately: matching on the literal's
+ * first segment reports six support classes that name one FILE under a root,
+ * which is not a root list at all. The narrowing a glob like that one performs
+ * is a real gap and is unguarded here.
  *
  * @param  list<string>  $roots
  * @return list<string>
@@ -108,7 +114,10 @@ function scannersNamingRootsByHand(): array
 }
 
 it('accounts for every root holding first-party code, in every scope a guard can ask for', function (): void {
-    expect(RepoTree::SCOPES)->not->toBeEmpty();
+    expect(RepoTree::SCOPES)->not->toBeEmpty(
+        'RepoTree declares no scope at all, so the loop below runs over nothing and this rule passes without '
+        .'accounting for a single root.'
+    );
 
     foreach (array_keys(RepoTree::SCOPES) as $scope) {
         $account = RepoTree::accountOf($scope);
@@ -136,8 +145,8 @@ it('accounts for every root holding first-party code, in every scope a guard can
 
 // A scope that reads almost nothing reports the same clean tree as a scope that
 // found nothing wrong, so the walk's own size is asserted before any guard
-// reads a verdict off it. The floors sit far under today's counts -- 9,333,
-// 6,500, 276 and 6,333 -- so only a broken walk trips them.
+// reads a verdict off it. The floors sit far under today's counts -- 9,655,
+// 6,667, 279 and 6,419 -- so only a broken walk trips them.
 it('gives every scope a floor its walk cannot quietly fall under', function (string $scope, int $floor): void {
     expect(count(RepoTree::files($scope)))->toBeGreaterThan(
         $floor,
@@ -177,7 +186,11 @@ it('finds each way a scope stops describing the tree', function (): void {
         ->toBe(['gone'], 'an exemption excusing a root that holds nothing went unreported');
 
     expect(RepoTree::account($scope, $tracked, ['Modules/A.php', 'scripts/B.php']))
-        ->toBe(['unaccounted' => ['newroot'], 'stale' => [], 'silent' => []]);
+        ->toBe(
+            ['unaccounted' => ['newroot'], 'stale' => [], 'silent' => []],
+            'the three answers are read off one walk, so a reader that conflated two of them would report a '
+            .'drift under the wrong heading and the rule above would say the wrong thing about it'
+        );
 });
 
 it('reads a root named in code and not one named in prose', function (): void {
@@ -187,10 +200,24 @@ it('reads a root named in code and not one named in prose', function (): void {
 
     $names = "<?php\n// walks Modules and app\n/** @return list<string> under scripts */\n\$roots = ['config', 'routes'];\n";
 
-    expect(rootsNamedByHandIn($names, $roots))->toBe(['config', 'routes']);
+    expect(rootsNamedByHandIn($names, $roots))->toBe(
+        ['config', 'routes'],
+        'a root named in a comment or a docblock is prose about the tree, not a claim the code makes, and reading '
+        .'one as a hand-written root list is how a regex over source answered wrong in the first place'
+    );
 });
 
-it('leaves the seam the one place a shared scanner writes a root name out', function (): void {
+it('leaves the seam the one place a shared scanner writes a root name out as a literal of its own', function (): void {
+    // The one file stepped over here, held to the house rule for a pin: it has
+    // to still excuse something. RepoTree is where every root is written out,
+    // so the day it names none the step-over is hiding an empty file.
+    expect(rootsNamedByHandIn((string) file_get_contents(RepoTree::root().'/'.SCANNER_SEAM), scannerRootNames()))
+        ->not->toBe(
+            [],
+            SCANNER_SEAM.' writes out no root name at all, so the step-over above excuses nothing while still '
+            .'hiding the one file whose whole job is to name them.'
+        );
+
     $offenders = [];
 
     foreach (scannersNamingRootsByHand() as $scanner => $named) {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Tests\Contracts\Support\BackendSourceFiles;
 
+const SYSTEM_ALERT_WRITER_SEAM = 'Modules/Core/Public/Services/SystemAlertWriter.php';
+
 /**
  * system_alerts is two tables wearing one name. A row with an owner says
  * something about the account and must travel to the paired device, which only
@@ -20,7 +22,11 @@ function systemAlertWritesOutsideTheSeam(array $paths): array
     $hits = [];
 
     foreach ($paths as $path) {
-        if (str_ends_with($path, 'Core/Public/Services/SystemAlertWriter.php')) {
+        // The seam itself, by its one repo-relative path rather than by a
+        // suffix: a suffix excuses any module that happens to grow a
+        // Core/Public/Services/ directory of its own, which is a second writer
+        // waved through by the exemption written for the first.
+        if (str_ends_with($path, '/'.SYSTEM_ALERT_WRITER_SEAM)) {
             continue;
         }
 
@@ -107,13 +113,30 @@ function systemAlertReceiverIsTheModel(array $tokens, int $index): bool
 
 it('raises every user-owned system alert through SystemAlertWriter', function (): void {
     $files = BackendSourceFiles::all();
-    expect($files)->not->toBeEmpty();
 
-    expect(systemAlertWritesOutsideTheSeam($files))->toBe(
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'The backend walk returned '.count($files).' files, which is too few to have read the tree. '
+        .'The verdict below is read off this list, so a walk that stopped reports a clean tree rather '
+        .'than failing on the walk.'
+    );
+
+    // The exemption above excuses one file. If it stops naming a file this
+    // walk reaches, it excuses nothing and the writer it was granted for has
+    // moved out from under every rule below.
+    expect(array_filter($files, static fn (string $path): bool => str_ends_with($path, '/'.SYSTEM_ALERT_WRITER_SEAM)))
+        ->not->toBe([], 'The seam this rule exempts is not in the walk any more: '.SYSTEM_ALERT_WRITER_SEAM
+            .' either moved or stopped being backend source. The exemption now excuses nothing, and whatever '
+            .'replaced the writer is unguarded.');
+
+    $offenders = systemAlertWritesOutsideTheSeam($files);
+
+    expect($offenders)->toBe(
         [],
         "An owned alert written outside SystemAlertWriter never reaches the op log,\n".
         "so it never reaches the paired device. Route it through the writer, or make\n".
-        'it machine-local with a literal user_id => null. Offenders:',
+        "it machine-local with a literal user_id => null. Offenders:\n  ".
+        implode("\n  ", $offenders),
     );
 });
 

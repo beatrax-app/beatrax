@@ -14,11 +14,22 @@ function cardListItemPhoneRule(): string
 {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
+    // Read before any offset is taken off it: an unreadable stylesheet answers
+    // the empty string, and every `not->toContain` below passes over one.
+    expect(strlen($css))->toBeGreaterThan(
+        50000,
+        'The stylesheet read back '.strlen($css).' bytes, which is not the compiled sheet this rule measures.',
+    );
+
     $start = strpos($css, '.card-list-item .primary {'."\n".'            overflow-wrap: anywhere;');
 
     expect($start)->not->toBeFalse('No phone-width .card-list-item .primary rule carries overflow-wrap.');
 
     $end = strpos($css, '}', (int) $start);
+
+    // A rule with no closing brace would otherwise be read as a negative
+    // length, which substr() answers by trimming the tail off the whole sheet.
+    expect($end)->not->toBeFalse('The phone-width .card-list-item .primary rule is never closed.');
 
     return substr($css, (int) $start, (int) $end - (int) $start);
 }

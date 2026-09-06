@@ -12,9 +12,7 @@ use Tests\Contracts\Support\ThemeColour;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-pair-of-colours-declared-together-is-measurable-without-a-browser
- */
-
-/**
+ *
  * @return list<array{file: string, line: int, themes: list<string>, background: string, color: string}>
  */
 function colourPairsInEveryTemplate(): array
@@ -51,7 +49,7 @@ it('converts an oklch value rather than reading its numbers as channels', functi
     $blue = ThemeColour::resolve('var(--color-blue)', ThemeColour::DARK);
     $nearWhite = ThemeColour::resolve('oklch(99% 0 0)', ThemeColour::DARK);
 
-    expect($nearWhite)->not->toBeNull();
+    expect($nearWhite)->not->toBeNull('The oklch reader answered nothing, so every ratio below is measured off a colour it never resolved.');
     expect(array_map('round', array_slice((array) $nearWhite, 0, 3)))->toBe([252.0, 252.0, 252.0]);
 
     expect(round(ThemeColour::ratio($nearWhite, $blue), 2))->toBe(2.47);
@@ -97,7 +95,7 @@ it('pairs the branches of a condition rather than crossing them', function (): v
 
     expect($report['measured'])->toBe(2, 'The Save button and the emerald branch of the year chip. '
         .'The other branch is transparent, and a crossed reading would make a third.');
-    expect($report['failing'])->toHaveCount(1);
+    expect($report['failing'])->toHaveCount(1, 'Crossing the branches of the condition would report a second, unreadable pairing no render produces.');
 });
 
 it('never lets a template declare a pair that vanishes in one theme', function (): void {

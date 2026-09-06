@@ -34,12 +34,12 @@ function destinationIdsByCaseName(): array
     return $byName;
 }
 
-/** @return list<string> every destination the sidebar template names, as palette ids */
-function sidebarDestinationIds(): array
+/** @return list<string> every destination one template names, as palette ids */
+function sidebarDestinationIdsIn(string $source): array
 {
     $byName = destinationIdsByCaseName();
 
-    $matches = PatternScan::all('/Destination::([A-Za-z][A-Za-z0-9]*)/', sidebarTemplateSource());
+    $matches = PatternScan::all('/Destination::([A-Za-z][A-Za-z0-9]*)/', $source);
 
     $ids = [];
     foreach (array_unique($matches[1]) as $caseName) {
@@ -51,6 +51,12 @@ function sidebarDestinationIds(): array
     sort($ids);
 
     return array_values(array_unique($ids));
+}
+
+/** @return list<string> every destination the sidebar template names, as palette ids */
+function sidebarDestinationIds(): array
+{
+    return sidebarDestinationIdsIn(sidebarTemplateSource());
 }
 
 /** @return list<string> every navigation id the registry carries, dev rows included */
@@ -86,8 +92,8 @@ it('offers the same destinations in the command palette as in the sidebar', func
 
     // A scan that found nothing would agree with a palette that offers nothing,
     // so the roster has to be a roster before the comparison means anything.
-    expect(count($sidebar))->toBeGreaterThan(20);
-    expect(count($palette))->toBeGreaterThan(20);
+    expect(count($sidebar))->toBeGreaterThan(20, 'The sidebar template yielded almost no destinations, so the comparison below is the reader being broken rather than the two rosters agreeing.');
+    expect(count($palette))->toBeGreaterThan(20, 'The navigation registry yielded almost no destinations, so the comparison below is the registry being empty rather than the two rosters agreeing.');
 
     $absentFromPalette = array_values(array_diff($sidebar, $palette));
     $absentFromSidebar = array_values(array_diff($palette, $sidebar));
@@ -101,7 +107,7 @@ it('offers the same destinations in the command palette as in the sidebar', func
 // would be invisible to the comparison above, so it is banned outright.
 it('sends every sidebar row through the shared navigation roster', function (): void {
     $source = sidebarTemplateSource();
-    expect($source)->not->toBe('');
+    expect($source)->not->toBe('', 'The sidebar template was not found, so every assertion below reads an empty string as a clean rail.');
 
     // Sign out posts a form; it is an action, not a place.
     $allowed = ['logout'];
@@ -125,8 +131,8 @@ it('resolves every declared destination to a route', function (): void {
     }
     sort($resolved);
 
-    expect($declared)->not->toBe([]);
-    expect($resolved)->toBe($declared);
+    expect($declared)->not->toBe([], 'The Destination enum declares no case, so the comparison below is vacuous.');
+    expect($resolved)->toBe($declared, 'AppNavigation resolves a different set of destinations than the Destination enum declares. A case the roster does not build is a screen the palette offers and the router cannot reach; a destination the roster builds that the enum does not declare cannot be named by the sidebar template at all.');
 });
 
 // The comparison above drops dev.* rows. If the registry ever stopped carrying
@@ -141,4 +147,19 @@ it('keeps the developer rows in the registry for the payload filter to drop', fu
     expect($devIds)->toContain('dev.overview');
     expect($devIds)->toContain('dev.sql');
     expect(paletteDestinationIds())->not->toContain('dev.sql');
+});
+
+it('reads a destination a template names and resolves nothing for one it does not', function (): void {
+    $names = "<a wire:navigate href=\"{{ Destination::Dashboard->route() }}\">Dashboard</a>\n"
+        ."<a wire:navigate href=\"{{ Destination::Transactions->route() }}\">Transactions</a>";
+
+    // Two near misses: a row that names its route directly is invisible to this
+    // reader — which is why the rule above bans that shape outright — and a case
+    // name the enum does not declare resolves to no id rather than to a guess.
+    $direct = '<a wire:navigate href="{{ route(\'transactions.index\') }}">Transactions</a>';
+    $unknown = '<a href="{{ Destination::NoSuchScreen->route() }}">?</a>';
+
+    expect(sidebarDestinationIdsIn($names))->toBe(['dashboard', 'transactions.index'])
+        ->and(sidebarDestinationIdsIn($direct))->toBe([])
+        ->and(sidebarDestinationIdsIn($unknown))->toBe([]);
 });

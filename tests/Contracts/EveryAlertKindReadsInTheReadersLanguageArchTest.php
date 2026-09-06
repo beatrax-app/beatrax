@@ -68,6 +68,9 @@ function alertKindLiteralsWrittenInProduction(): array
         if (! $file->isFile() || ! str_ends_with($path, '.php')) {
             continue;
         }
+        // A seeder writes the demo corpus rather than raising an alert a reader
+        // is shown, and its rows carry the kinds the writers below already
+        // declare — reading it would only report each of them a second time.
         if (str_contains($path, '/tests/') || str_contains($path, '/Seeders/')) {
             continue;
         }
@@ -111,8 +114,17 @@ it('gives every alert kind the app can write its own localised case', function (
         'Modules/Core/Resources/views/livewire/partials/system-alert-message.blade.php',
     ));
 
+    $kinds = alertKindsTheBannerMustRender();
+
+    // Three enums and the writers' own literals name 20 kinds between them today.
+    // A reader that found none of them reports every kind handled without opening one.
+    expect(count($kinds))->toBeGreaterThan(
+        10,
+        'No alert kind was found at all, so this rule held the banner to nothing.'
+    );
+
     $unhandled = [];
-    foreach (alertKindsTheBannerMustRender() as $kind => $reference) {
+    foreach ($kinds as $kind => $reference) {
         if (! str_contains($blade, $reference)) {
             $unhandled[] = $kind;
         }
@@ -131,13 +143,27 @@ it('backs each of those cases with a key every locale carries', function (): voi
 
     $matches = PatternScan::all("/core::alerts\.messages\.([a-z0-9_]+)/", $blade);
 
-    expect(count($matches[1]))->toBeGreaterThan(0);
+    // The banner names 25 message keys today. A run that read none of them has
+    // nothing to hold the locales to and reports every one of them present.
+    expect(count($matches[1]))->toBeGreaterThan(
+        10,
+        'The banner names no localised message key at all, so this rule checked nothing.'
+    );
 
     $keys = array_values(array_unique($matches[1]));
     sort($keys);
 
+    $files = (array) glob(base_path('Modules/Core/Resources/lang/*/alerts.php'));
+
+    // 26 languages ship. A glob that came back short would report the missing
+    // ones as complete rather than as missing.
+    expect(count($files))->toBeGreaterThan(
+        20,
+        'Almost no locale alerts file was found, so a missing line would read as present.'
+    );
+
     $missing = [];
-    foreach ((array) glob(base_path('Modules/Core/Resources/lang/*/alerts.php')) as $file) {
+    foreach ($files as $file) {
         /** @var array{messages?: array<string, string>} $translations */
         $translations = require $file;
         $locale = basename(dirname((string) $file));
@@ -150,5 +176,12 @@ it('backs each of those cases with a key every locale carries', function (): voi
         }
     }
 
-    expect($missing)->toBe([]);
+    expect($missing)->toBe([], implode("\n  ", [
+        'The banner names these keys and their locale carries no line for them:',
+        ...$missing,
+        '',
+        'Lang::get returns the key itself when nothing answers to it, so the banner',
+        'prints "core::alerts.messages.x" to that reader — at critical severity, in',
+        'place of the sentence telling them their tokens may be unredacted.',
+    ]));
 });

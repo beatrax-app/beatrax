@@ -53,7 +53,14 @@ final class PcreCallSites
     {
         $token = $tokens[$index];
 
-        if ($token['id'] !== T_STRING || ! in_array(strtolower($token['text']), $names, true)) {
+        // PHP 8 hands back a leading-backslash call as one T_NAME_FULLY_QUALIFIED
+        // token spelled `\preg_match`, so a reader keyed on T_STRING alone cannot
+        // see the one spelling a contributor reaches for to escape the rule.
+        if (! in_array($token['id'], [T_STRING, T_NAME_FULLY_QUALIFIED], true)) {
+            return null;
+        }
+
+        if (! in_array(strtolower(ltrim($token['text'], '\\')), $names, true)) {
             return null;
         }
 

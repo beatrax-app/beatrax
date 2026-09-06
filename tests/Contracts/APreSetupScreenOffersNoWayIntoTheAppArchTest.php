@@ -7,6 +7,7 @@ use Illuminate\Testing\TestResponse;
 use Modules\Auth\Public\Recovery\PendingRecoveryCodes;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Navigation\PreSetupSurface;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\RenderedMarkup;
 
 /**
@@ -38,6 +39,11 @@ function preSetupReach(): array
         'mobile.database-incomplete' => ['signedIn' => true, 'owedCodes' => false, 'uri' => '/mobile/database-incomplete', 'unreachable' => ''],
     ];
 }
+
+// The shell layout mounts eight components; the floor sits under that and above
+// zero, so a reader that stopped matching fails here rather than reporting every
+// one of them accounted for.
+const PRE_SETUP_SHELL_MOUNT_FLOOR = 5;
 
 /**
  * @return list<array{0: string, 1: string}>
@@ -124,7 +130,7 @@ it('withholds the shell from exactly the surfaces it can name a route for', func
     sort($declared);
     sort($mapped);
 
-    expect($declared)->not->toBe([])
+    expect($declared)->not->toBe([], 'PreSetupSurface declares no surface at all, so every case here compares two empty lists.')
         ->and($mapped)->toBe($declared, implode("\n", [
             'Every surface the layout withholds the shell from needs a row in preSetupReach()',
             'saying how a test reaches it, or the sweep below never visits it and goes green',
@@ -162,19 +168,34 @@ it('draws no menubar and no search on a screen a reader reaches before the app i
 
 // A wire:snapshot is a bearer token for the component it names, so a screen
 // mounting the application's modals hands out their endpoints whether or not it
-// draws a control for them. The OAuth wizard modal is not on this list because
-// the wizard shell mounts its own copy on purpose, and a rule cannot tell from
-// the rendered page which shell put it there.
-it('mounts none of the application machinery the shell supplies to a page inside it', function (string $routeName, string $uri): void {
-    $global = [
+// draws a control for them.
+/** @return list<string> */
+function preSetupShellMachinery(): array
+{
+    return [
         'core.system-alerts-banner',
         'categorization.rule-form-modal',
         'receipts.receipt-conflict-toast',
         'community.suggest-mapping-modal',
+        'dev.command-arg-prompt-modal',
     ];
+}
 
+/**
+ * @return array<string, string> component => why the sweep does not look for it
+ */
+function preSetupShellMountsAnsweredElsewhere(): array
+{
+    return [
+        'dev.command-palette-modal' => 'preSetupWaysIn() already reads it, as one of the seven ways into the app',
+        'search.palette-search-endpoint' => 'preSetupWaysIn() already reads it, as one of the seven ways into the app',
+        'email-scan.oauth-client-wizard-modal' => 'the wizard shell mounts its own copy on purpose, and a rendered page cannot say which shell put it there',
+    ];
+}
+
+it('mounts none of the application machinery the shell supplies to a page inside it', function (string $routeName, string $uri): void {
     $mounted = preSetupMounts(RenderedMarkup::of((string) preSetupResponse($routeName)->getContent()));
-    $offenders = array_values(array_intersect($global, $mounted));
+    $offenders = array_values(array_intersect(preSetupShellMachinery(), $mounted));
 
     expect($offenders)->toBe([], implode("\n", [
         $uri.' mounts components the reader has no application to use them from:',
@@ -184,6 +205,39 @@ it('mounts none of the application machinery the shell supplies to a page inside
         'have not created. A first-run screen that needs a modal mounts it itself.',
     ]));
 })->with(preSetupRenderable());
+
+// The list above is a list, and a list cannot see a component added beside the
+// ones it names. Read against the layout that mounts them, so the eighth arrives
+// here rather than in nobody's scan.
+it('accounts for every component the shell layout mounts', function (): void {
+    $layout = base_path('resources/views/layouts/app.blade.php');
+
+    $mounted = PatternScan::all(
+        '/@livewire\(\s*\'([^\']+)\'/',
+        PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($layout)),
+    )[1];
+
+    expect(count($mounted))->toBeGreaterThan(
+        PRE_SETUP_SHELL_MOUNT_FLOOR,
+        'The reader found '.count($mounted).' mounts in the shell layout, so the check below compares two lists '
+        .'against nothing.'
+    );
+
+    $unaccounted = array_values(array_diff(
+        $mounted,
+        preSetupShellMachinery(),
+        array_keys(preSetupShellMountsAnsweredElsewhere()),
+    ));
+
+    expect($unaccounted)->toBe([], implode("\n", [
+        'The shell mounts these and no rule here says what a pre-setup screen does about them:',
+        ...$unaccounted,
+        '',
+        'A wire:snapshot is a bearer token, so a component the shell supplies is one a',
+        'withheld screen must not hand out. Add it to preSetupShellMachinery(), or to',
+        'preSetupShellMountsAnsweredElsewhere() with the reason another rule covers it.',
+    ]));
+});
 
 // The control the sweep above needs. Every marker it looks for is absent from a
 // page that failed to render at all, so without an ordinary page proving the

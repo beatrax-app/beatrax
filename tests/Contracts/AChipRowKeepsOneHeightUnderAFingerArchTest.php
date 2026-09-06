@@ -27,7 +27,21 @@ const FLOOR_RELEASE_ANCHOR = '.cleared-badge-toggle,';
 
 beforeEach(function (): void {
     $this->css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    // Read before any verdict: CssRule answers '' for a selector it cannot
+    // find, and a `toContain` over the empty string is the only failure this
+    // file could not tell apart from a released chip.
+    expect(strlen($this->css))->toBeGreaterThan(
+        50000,
+        'The stylesheet read back '.strlen($this->css).' bytes, which is not the compiled sheet this rule measures.',
+    );
+
     $this->released = CssRule::selectorListFor($this->css, FLOOR_RELEASE_ANCHOR);
+
+    expect($this->released)->not->toBe(
+        '',
+        'No rule releases '.FLOOR_RELEASE_ANCHOR.' from the touch floor, so the chips below are checked against nothing.',
+    );
 });
 
 it('releases the chips only where a finger is the pointer', function (): void {

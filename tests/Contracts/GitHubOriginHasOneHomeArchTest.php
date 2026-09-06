@@ -27,6 +27,13 @@ const PROJECT_LINKS_ORG = 'beatrax-app';
 
 const PROJECT_LINKS_ANY_ORG_PATTERN = '#github\.com[/:]([A-Za-z0-9._-]+)/beatrax\b#';
 
+// Every root holding first-party source of the kinds below. lang/ is here
+// because the twenty-six locale files that shipped the wrong org are lang
+// files, and a rule written after that failure walked past them.
+const PROJECT_LINKS_ROOTS = ['.claude', 'Modules', 'app', 'bootstrap', 'config', 'database', 'lang', 'public', 'resources', 'routes', 'scripts', 'tools'];
+
+const PROJECT_LINKS_EXTENSIONS = ['php', 'js', 'mjs', 'json', 'yml', 'yaml'];
+
 /**
  * @return list<string> repo-relative paths, tests and build output excluded
  */
@@ -36,10 +43,9 @@ function projectLinksScannedFiles(): array
     // this tree, so resolving it gives the one root both roots agree on.
     $repoRoot = dirname((string) realpath(base_path('Modules')));
 
-    $extensions = ['php', 'js', 'mjs', 'json', 'yml', 'yaml'];
     $files = [];
 
-    foreach (['Modules', 'app', 'config', 'routes', 'database', 'bootstrap', 'resources', 'scripts'] as $directory) {
+    foreach (PROJECT_LINKS_ROOTS as $directory) {
         $root = $repoRoot.'/'.$directory;
         if (! is_dir($root)) {
             continue;
@@ -51,40 +57,84 @@ function projectLinksScannedFiles(): array
         /** @var SplFileInfo $file */
         foreach ($iterator as $file) {
             $path = $file->getPathname();
-            if (! $file->isFile() || ! in_array(strtolower($file->getExtension()), $extensions, true)) {
+            if (! $file->isFile() || $file->isLink() || ! in_array(strtolower($file->getExtension()), PROJECT_LINKS_EXTENSIONS, true)) {
                 continue;
             }
 
             $relative = str_replace($repoRoot.'/', '', $path);
             // A test naming the URL is asserting about it rather than shipping
-            // it, and compiled Blade under storage/ and the bootstrap config
-            // cache are build output that regenerate from what is scanned here.
-            if (preg_match('#(?:^|/)(?:tests|vendor|node_modules|storage|build|cache)/#', $relative) === 1) {
+            // it. The other four are generated: node_modules and vendor are
+            // somebody else's source, public/build is the Vite bundle every
+            // packaged shell carries, and bootstrap/cache holds the compiled
+            // config — each regenerates from a file this walk already reads,
+            // and each is absent from a clean checkout and present in a built
+            // one, which is why they are skipped rather than deleted for
+            // excusing nothing here today.
+            if (preg_match('#(?:^|/)(?:tests|vendor|node_modules|build|cache)/#', $relative) === 1) {
                 continue;
             }
 
             $files[] = $relative;
         }
     }
+
     sort($files);
 
-    return $files;
+    return array_values(array_unique($files));
+}
+
+/** @return list<int> the 1-based lines on which $source spells the origin out */
+function projectLinksOriginLinesIn(string $source): array
+{
+    $lines = [];
+
+    foreach (PatternScan::allWithOffsets(PROJECT_LINKS_ORIGIN_PATTERN, $source)[0] as [, $offset]) {
+        $lines[] = substr_count(substr($source, 0, (int) $offset), "\n") + 1;
+    }
+
+    return $lines;
+}
+
+/** @return list<array{org: string, line: int}> the Beatrax links $source points at another org */
+function projectLinksForeignOrgsIn(string $source): array
+{
+    $matches = PatternScan::allWithOffsets(PROJECT_LINKS_ANY_ORG_PATTERN, $source);
+    $found = [];
+
+    foreach ($matches[1] as $index => [$org]) {
+        if ($org === PROJECT_LINKS_ORG) {
+            continue;
+        }
+
+        [, $offset] = $matches[0][$index];
+        $found[] = ['org' => $org, 'line' => substr_count(substr($source, 0, (int) $offset), "\n") + 1];
+    }
+
+    return $found;
 }
 
 it('writes the GitHub origin once, in ProjectLinks', function (): void {
     $repoRoot = dirname((string) realpath(base_path('Modules')));
+    $files = projectLinksScannedFiles();
+
+    // Read before the verdict: a walk that resolved nothing reports the same
+    // single home a tree with one copy does. The floor sits far under today's
+    // 7,144.
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'the walk resolved '.count($files).' files, which is too few to be this repository.'
+    );
 
     $offenders = [];
-    foreach (projectLinksScannedFiles() as $relative) {
+    foreach ($files as $relative) {
         if ($relative === PROJECT_LINKS_CLASS) {
             continue;
         }
 
         $source = (string) file_get_contents($repoRoot.'/'.$relative);
-        $matches = PatternScan::allWithOffsets(PROJECT_LINKS_ORIGIN_PATTERN, $source);
 
-        foreach ($matches[0] as [, $offset]) {
-            $offenders[] = $relative.':'.(substr_count(substr($source, 0, $offset), "\n") + 1);
+        foreach (projectLinksOriginLinesIn($source) as $line) {
+            $offenders[] = $relative.':'.$line;
         }
     }
 
@@ -130,10 +180,22 @@ it('keeps every site that had its own copy reading it from ProjectLinks', functi
     ]));
 });
 
-it('finds the file it scans from either Composer root', function (): void {
+// ProjectLinks is exempted from the rule above by path, which is the widest
+// exemption shape there is. It earns that by being where the origin is
+// written, and this is what re-checks the earning: when the constant moves,
+// the exemption is excusing a file that no longer holds the thing.
+it('finds the file it scans from either Composer root, and finds the origin in it', function (): void {
+    $repoRoot = dirname((string) realpath(base_path('Modules')));
+
     expect(projectLinksScannedFiles())
         ->toContain(PROJECT_LINKS_CLASS)
         ->toContain('config/community.php');
+
+    expect(projectLinksOriginLinesIn((string) file_get_contents($repoRoot.'/'.PROJECT_LINKS_CLASS)))->not->toBe(
+        [],
+        PROJECT_LINKS_CLASS.' no longer spells the origin out, so the one file exempted from the rule '
+        .'above is exempted for something it no longer does — and the real home of the constant is unguarded.'
+    );
 });
 
 it('never points a Beatrax link at an org that does not host it', function (): void {
@@ -141,16 +203,8 @@ it('never points a Beatrax link at an org that does not host it', function (): v
 
     $offenders = [];
     foreach (projectLinksScannedFiles() as $relative) {
-        $source = (string) file_get_contents($repoRoot.'/'.$relative);
-        $matches = PatternScan::allWithOffsets(PROJECT_LINKS_ANY_ORG_PATTERN, $source);
-
-        foreach ($matches[1] as $index => [$org]) {
-            if ($org === PROJECT_LINKS_ORG) {
-                continue;
-            }
-
-            [, $offset] = $matches[0][$index];
-            $offenders[] = $relative.':'.(substr_count(substr($source, 0, $offset), "\n") + 1).'  → '.$org.'/beatrax';
+        foreach (projectLinksForeignOrgsIn((string) file_get_contents($repoRoot.'/'.$relative)) as $found) {
+            $offenders[] = $relative.':'.$found['line'].'  → '.$found['org'].'/beatrax';
         }
     }
 
@@ -160,4 +214,27 @@ it('never points a Beatrax link at an org that does not host it', function (): v
         PROJECT_LINKS_ORG.'. These name a different one:',
         ...$offenders,
     ]));
+});
+
+// Both rules report on a tree that has been cleaned of what they look for, so
+// the readers are driven against planted sources. The near-misses are the two
+// shapes that must stay legible: the org that does host it, and a link to
+// somewhere else on github.com entirely.
+it('sees a second copy of the origin and a link to an org that does not host it', function (): void {
+    $origin = 'github.com'.'/beatrax-app/beatrax';
+
+    expect(projectLinksOriginLinesIn("<?php\n\$url = 'https://".$origin."/releases';"))->toBe([2])
+        ->and(projectLinksOriginLinesIn('git@'.'github.com'.':beatrax-app/beatrax.git'))->toBe([1])
+        ->and(projectLinksOriginLinesIn('<?php $url = ProjectLinks::REPO_URL;'))->toBe([]);
+
+    // Assembled rather than written out, so no whole URL to a repository that
+    // does not exist sits in this file for a link checker to resolve.
+    $host = 'https://'.'github.com';
+
+    expect(projectLinksForeignOrgsIn($host.'/nightworks/beatrax-community/compare'))
+        ->toBe([['org' => 'nightworks', 'line' => 1]])
+        ->and(projectLinksForeignOrgsIn("\n\n".$host.'/beatrax/beatrax/issues'))
+        ->toBe([['org' => 'beatrax', 'line' => 3]])
+        ->and(projectLinksForeignOrgsIn('https://'.$origin.'/issues'))->toBe([])
+        ->and(projectLinksForeignOrgsIn($host.'/laravel/framework'))->toBe([]);
 });

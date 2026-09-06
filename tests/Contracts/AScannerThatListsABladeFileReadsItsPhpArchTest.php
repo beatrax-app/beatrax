@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\BladePhpSource;
 use Tests\Contracts\Support\BackendSourceFiles;
 
-// Every walk in this tree that says `.php` already holds the 276 Blade
-// templates -- `.blade.php` ends in `.php` -- and `token_get_all` reads all 276
+// Every walk in this tree that says `.php` already holds the 279 Blade
+// templates -- `.blade.php` ends in `.php` -- and `token_get_all` reads all of them
 // as one T_INLINE_HTML, because PHP mode opens at a literal `<?php` and a Blade
 // island is not one. A guard built that way lists a template, reads none of the
 // code in it, and reports it clean.
@@ -184,13 +184,11 @@ it('leaves no guard tokenising a walk that holds a template without reading its 
     $offenders = [];
     $exempt = [];
 
+    // This file is in the walk like any other. It tokenises a planted template
+    // on purpose and takes it through the seam to do so, which is what the rule
+    // asks for -- a step-over would excuse nothing and hide the rest of it.
     foreach ($files as $path) {
         $relative = str_replace(base_path().'/', '', $path);
-
-        if ($relative === str_replace(base_path().'/', '', __FILE__)) {
-            continue;
-        }
-
         $source = (string) file_get_contents($path);
 
         if (! bladeScannerTokenisesDirectly($source)) {
@@ -229,10 +227,17 @@ it('leaves no guard tokenising a walk that holds a template without reading its 
     sort($exempt);
     $declared = array_keys(BLADE_SCANNER_WALKS_NO_TEMPLATE);
     sort($declared);
-    expect($exempt)->toBe($declared);
+
+    expect($exempt)->toBe(
+        $declared,
+        'An exemption the walk no longer reaches excuses nothing while still waving on whatever moves into the '
+        .'file it names, and one the walk reaches that is not declared is a guard reading a template blind.'
+    );
 });
 
 it('still holds each exempted walk to the reason it was granted for', function (): void {
+    expect(BLADE_SCANNER_WALKS_NO_TEMPLATE)->not->toBe([], 'The exemption map is empty, so this rule proves nothing about it.');
+
     foreach (BLADE_SCANNER_WALKS_NO_TEMPLATE as $relative => $exemption) {
         $source = (string) file_get_contents(base_path($relative));
 
@@ -244,7 +249,11 @@ it('still holds each exempted walk to the reason it was granted for', function (
 // than against the tree: a guard that stopped recognising a call would report
 // no tokenising guard at all, and read as a tree with nothing to fix.
 it('tells a call to the tokeniser from its name merely written down', function (string $body, bool $tokenises): void {
-    expect(bladeScannerTokenisesDirectly('<?php '.$body))->toBe($tokenises);
+    expect(bladeScannerTokenisesDirectly('<?php '.$body))->toBe(
+        $tokenises,
+        'The reader answered '.var_export(! $tokenises, true).' for a line it has to read as '
+        .($tokenises ? 'a call to the tokeniser' : 'the name merely written down').': '.$body
+    );
 })->with([
     'a direct call' => ['$t = token_get_all($source);', true],
     'the static one' => ['$t = PhpToken::tokenize($source);', true],
@@ -264,15 +273,26 @@ it('finds in a template the calls the raw tokeniser cannot see', function (): vo
     // The raw reading finds line 12 and nothing else: that line opens PHP mode
     // with a literal `<?php`, and it is the only construct in the template that
     // does. Six calls stand above it and the tokeniser reaches none of them.
-    expect(bladeScannerCallLines($template))->toBe([12]);
+    expect(bladeScannerCallLines($template))->toBe(
+        [12],
+        'The raw tokeniser reached more than the one line that opens PHP mode with a literal <?php, so the two '
+        .'readings below no longer say anything about each other.'
+    );
 
     // The seam adds lines 6, 8, 9, 10 and 11: an @php body, an echo, a raw echo,
     // a directive argument and an @php expression. The comment, the @verbatim
     // body and the two escapes above them are text Blade prints rather than code
     // it compiles, so none of those appears in either reading.
-    expect(bladeScannerCallLines(BladePhpSource::of($template)))->toBe([6, 8, 9, 10, 11, 12]);
+    expect(bladeScannerCallLines(BladePhpSource::of($template)))->toBe(
+        [6, 8, 9, 10, 11, 12],
+        'The seam missed a Blade construct that holds code, which is the blindness this whole file is about — one '
+        .'construct short is a file reported part-read.'
+    );
 
-    expect(substr_count(BladePhpSource::of($template), "\n"))->toBe(substr_count($template, "\n"));
+    expect(substr_count(BladePhpSource::of($template), "\n"))->toBe(
+        substr_count($template, "\n"),
+        'The seam answers on the lines the Blade wrote, so an offender it reports can be opened at the line it names.'
+    );
 });
 
 // The reading above is only worth having if it is the one the guards actually
@@ -292,7 +312,11 @@ it('reads a planted template through the seam every guard shares', function (): 
             }
         }
 
-        expect(array_values(array_unique($names)))->toBe(['preg_quote']);
+        expect(array_values(array_unique($names)))->toBe(
+            ['preg_quote'],
+            'The shared walk read something other than the one call planted in every construct of that template, '
+            .'so the reading proved above is not the reading the guards get.'
+        );
     } finally {
         unlink($planted);
     }

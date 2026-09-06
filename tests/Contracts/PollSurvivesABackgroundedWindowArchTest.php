@@ -98,7 +98,7 @@ function pollKeepAliveBarePolls(string $source, string $label): array
 
 it('keeps every poll alive behind a backgrounded window', function (): void {
     $files = pollKeepAliveBladeFiles();
-    expect($files)->not->toBe([]);
+    expect(count($files))->toBeGreaterThan(150, 'The Blade walk found almost nothing, so a clean answer below is the walk being broken rather than every poll being kept alive.');
 
     $hits = [];
     $polls = 0;
@@ -113,7 +113,7 @@ it('keeps every poll alive behind a backgrounded window', function (): void {
         }
     }
 
-    expect($polls)->toBeGreaterThan(0);
+    expect($polls)->toBeGreaterThan(5, 'Almost no poll was read out of the tree, so an empty offender list below says nothing about the polls this app actually runs.');
     expect($hits)->toBe([], "Livewire runs a poll on a hidden tab at one tick in twenty — a mean interval of a minute against a stated two or three seconds. That is not a slower refresh, it is a stalled one: a pairing ceremony asks the reader to pick up the other device, and a progress strip is watched by someone who has gone to do something else, so in both cases the window that has to notice is the one guaranteed not to be in front. Add .keep-alive. Offenders:\n  ".implode("\n  ", $hits));
 });
 

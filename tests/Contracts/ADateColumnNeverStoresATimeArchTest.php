@@ -111,7 +111,9 @@ function dateColumnModelsByTable(): array
 
 it('gives every DATE column in the schema a model cast, or a stated reason it has none', function (): void {
     $columns = dateColumnsInSchema();
-    expect($columns)->not->toBeEmpty();
+    expect($columns)->not->toBeEmpty(
+        'The migrated schema reports no DATE column at all, so this rule read a database nobody migrated.',
+    );
 
     $models = dateColumnModelsByTable();
     $exempt = dateColumnsWithNoModelCast();
@@ -142,6 +144,7 @@ it('never lets a DATE column cast store more than the ten characters of a day', 
     $models = dateColumnModelsByTable();
     $exempt = dateColumnsWithNoModelCast();
     $wrong = [];
+    $exercised = 0;
 
     // Every shape a writer can hold a day in. The string with a time is what a
     // reader of a legacy nineteen-character row hands straight back.
@@ -159,6 +162,8 @@ it('never lets a DATE column cast store more than the ten characters of a day', 
             if (isset($exempt[$table.'.'.$column]) || $model === null || ! (new $model)->hasCast($column)) {
                 continue;
             }
+
+            $exercised++;
 
             foreach ($inputs as $shape => $input) {
                 $instance = new $model;
@@ -185,11 +190,42 @@ it('never lets a DATE column cast store more than the ten characters of a day', 
         }
     }
 
+    // Ten DATE columns carry DateOnlyCast today. A run that exercised none of
+    // them stores nothing wrongly, which is the answer a correct tree gives.
+    expect($exercised)->toBeGreaterThan(
+        5,
+        'The run put '.$exercised.' cast DATE columns through the five shapes a writer can hold a day in, so the '
+        .'model reader stopped rather than the tree getting smaller.',
+    );
+
     expect($wrong)->toBe(
         [],
         "Stored as anything but Y-m-d, a DATE column loses its own boundary day to\n".
-        'every range that compares against a bare date. Wrong shape:',
+        "every range that compares against a bare date. Wrong shape:\n  ".implode("\n  ", $wrong),
     );
+});
+
+// The other way this list stops describing the tree: a column that has since
+// been given a cast is a column the exemption waves past the rule for no
+// reason, and the reason it carries has stopped being the one that applies.
+it('carries no exemption for a DATE column a model now casts', function (): void {
+    $models = dateColumnModelsByTable();
+    $covered = [];
+
+    foreach (dateColumnsWithNoModelCast() as $column => $reason) {
+        [$table, $name] = explode('.', $column, 2);
+        $model = $models[$table] ?? null;
+
+        if ($model !== null && (new $model)->hasCast($name)) {
+            $covered[] = $column.' is exempt as "'.$reason.'", and '.$model.' casts it now';
+        }
+    }
+
+    expect($covered)->toBe([], implode("\n  ", [
+        'An exemption that excuses nothing reads as a decision somebody made about this column, and it hides the',
+        'cast from the shape check above. Delete the entry:',
+        ...$covered,
+    ]));
 });
 
 it('carries no exemption for a DATE column the schema no longer has', function (): void {
@@ -200,6 +236,7 @@ it('carries no exemption for a DATE column the schema no longer has', function (
         }
     }
 
-    expect(array_values(array_diff(array_keys(dateColumnsWithNoModelCast()), $present)))
-        ->toBe([], 'Remove the exemption for a DATE column that no longer exists:');
+    $gone = array_values(array_diff(array_keys(dateColumnsWithNoModelCast()), $present));
+
+    expect($gone)->toBe([], 'Remove the exemption for a DATE column that no longer exists: '.implode(', ', $gone));
 });

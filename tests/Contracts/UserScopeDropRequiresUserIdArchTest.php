@@ -86,44 +86,71 @@ function userScopeFunctionBodies(string $source): array
     return $bodies;
 }
 
-it('re-asserts the owner wherever it drops the user scope', function (): void {
+/**
+ * @return array{sites: int, offenders: list<string>} the scope drops read, and
+ *                                                    the ones whose enclosing function never names the owner
+ */
+function userScopeUnownedDrops(string $file, string $source): array
+{
+    if (! str_contains($source, 'withoutGlobalScope')) {
+        return ['sites' => 0, 'offenders' => []];
+    }
+
+    $bodies = userScopeFunctionBodies($source);
+    $sites = 0;
     $offenders = [];
 
-    foreach (userScopeShippedFiles() as $file) {
-        $source = BladePhpSource::forPath($file, (string) file_get_contents(base_path($file)));
+    foreach (explode("\n", $source) as $number => $line) {
+        $lineNumber = $number + 1;
+        $code = trim($line);
 
-        if (! str_contains($source, 'withoutGlobalScope')) {
+        // A comment naming the rule is prose about it, not a call site of it.
+        if (! str_contains($line, 'withoutGlobalScope') || str_starts_with($code, '//') || str_starts_with($code, '*')) {
             continue;
         }
 
-        $bodies = userScopeFunctionBodies($source);
+        $sites++;
+        $guarded = false;
 
-        foreach (explode("\n", $source) as $number => $line) {
-            $lineNumber = $number + 1;
-            $code = trim($line);
-
-            if (! str_contains($line, 'withoutGlobalScope') || str_starts_with($code, '//') || str_starts_with($code, '*')) {
+        foreach ($bodies as $scope) {
+            if ($lineNumber < $scope['from'] || $lineNumber > $scope['to']) {
                 continue;
             }
 
-            $guarded = false;
-
-            foreach ($bodies as $scope) {
-                if ($lineNumber < $scope['from'] || $lineNumber > $scope['to']) {
-                    continue;
-                }
-
-                if (str_contains($scope['body'], 'user_id')) {
-                    $guarded = true;
-                    break;
-                }
-            }
-
-            if (! $guarded) {
-                $offenders[] = $file.':'.$lineNumber.' — '.$code;
+            if (str_contains($scope['body'], 'user_id')) {
+                $guarded = true;
+                break;
             }
         }
+
+        if (! $guarded) {
+            $offenders[] = $file.':'.$lineNumber.' — '.$code;
+        }
     }
+
+    return ['sites' => $sites, 'offenders' => $offenders];
+}
+
+it('re-asserts the owner wherever it drops the user scope', function (): void {
+    $files = userScopeShippedFiles();
+
+    // 6,688 shipped files today, 24 of them dropping the scope. Both floored
+    // far under, and both read before the verdict: a walk that lost a root and
+    // a `withoutGlobalScope` renamed out from under this scan produce the same
+    // empty offender list a tree that names its owner everywhere produces.
+    expect(count($files))->toBeGreaterThan(2000, 'the shipped-file walk read almost nothing — the roots are wrong, not the tree.');
+
+    $sites = 0;
+    $offenders = [];
+
+    foreach ($files as $file) {
+        $verdict = userScopeUnownedDrops($file, BladePhpSource::forPath($file, (string) file_get_contents(base_path($file))));
+
+        $sites += $verdict['sites'];
+        $offenders = [...$offenders, ...$verdict['offenders']];
+    }
+
+    expect($sites)->toBeGreaterThan(8, 'no scope drop was found anywhere in the shipped tree, so this rule just judged nothing.');
 
     sort($offenders);
 
@@ -135,5 +162,49 @@ it('re-asserts the owner wherever it drops the user scope', function (): void {
         "check the read cannot run without. A model looked up by an id the\n".
         "browser supplied and no owner named is an IDOR. Offenders:\n  ".
         implode("\n  ", $offenders),
+    );
+});
+
+it('sees a drop whose method never names the owner, and a closure judged by the method holding it', function (): void {
+    $planted = <<<'PHP'
+        <?php
+        final class PlantedScopeDrops
+        {
+            public function unowned(int $id): ?Transaction
+            {
+                return Transaction::withoutGlobalScope(UserScope::class)->find($id);
+            }
+
+            public function owned(int $id, int $userId): ?Transaction
+            {
+                return Transaction::withoutGlobalScope(UserScope::class)
+                    ->where('user_id', $userId)
+                    ->find($id);
+            }
+
+            public function ownedThroughItsCaller(int $userId): void
+            {
+                $this->db->transaction(function () use ($userId): void {
+                    Transaction::withoutGlobalScope(UserScope::class)->where('user_id', $userId)->delete();
+                });
+            }
+
+            // withoutGlobalScope in a comment is prose about the rule.
+            public function documented(): void {}
+        }
+        PHP;
+
+    $verdict = userScopeUnownedDrops('planted.php', $planted);
+
+    expect($verdict['sites'])->toBe(3, 'The reader must count the three real drops and not the one named in a comment.');
+
+    expect($verdict['offenders'])->toHaveCount(
+        1,
+        'The reader must flag only the method that never names user_id: a where() in the same '
+        .'method and a closure whose enclosing method names the owner are both answered.',
+    );
+
+    expect(str_contains($verdict['offenders'][0], 'planted.php:6'))->toBeTrue(
+        'The reader flagged a drop, but not the one on the line that has no owner beside it: '.$verdict['offenders'][0],
     );
 });

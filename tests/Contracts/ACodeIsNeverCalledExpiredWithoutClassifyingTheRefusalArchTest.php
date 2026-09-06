@@ -40,7 +40,10 @@ it('keeps the line it guards in the copy it is guarding', function (): void {
 it('lets no screen call a code unknown or expired without classifying the refusal', function (): void {
     $files = SonarSourceFiles::all();
 
-    expect($files)->not->toBe([]);
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The walk opened '.count($files).' analysed files, which is too few to have read the tree at all.',
+    );
 
     $named = 0;
     $offenders = [];
@@ -74,4 +77,19 @@ it('lets no screen call a code unknown or expired without classifying the refusa
         .'classified first: the reader who is told it, and told to fetch a replacement, abandons a ceremony that '
         .'was still live on the other device. Route the line through PairingAcceptRefusal: '
         .implode(' | ', $offenders));
+});
+
+// The arm is the whole of what the rule accepts, so it is driven over one of
+// each rather than assumed: the shape it must recognise, and the two bare
+// spellings that are the defect it was written for.
+it('recognises a classified arm and refuses the bare calls it replaced', function (): void {
+    $classified = "            PairingAcceptRefusal::NotLiveHere => 'sync::pairing.invalid_code',";
+    $mobile = "            PairingAcceptRefusal::NotLiveHere => 'mobile::pairing.errors.invalid_code',";
+    $bare = "        return Lang::get('sync::pairing.invalid_code');";
+    $arrayed = "        'error' => 'sync::pairing.invalid_code',";
+
+    expect(PatternScan::matches(UNKNOWN_CODE_ARM, $classified))->toBeTrue('The arm this rule exists to require went unread.');
+    expect(PatternScan::matches(UNKNOWN_CODE_ARM, $mobile))->toBeTrue('The mobile spelling of the same arm went unread.');
+    expect(PatternScan::matches(UNKNOWN_CODE_ARM, $bare))->toBeFalse('A bare translator call was read as a classified refusal.');
+    expect(PatternScan::matches(UNKNOWN_CODE_ARM, $arrayed))->toBeFalse('An unclassified array value was read as a classified refusal.');
 });

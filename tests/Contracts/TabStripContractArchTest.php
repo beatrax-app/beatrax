@@ -69,6 +69,70 @@ function tabStripLineOf(string $source, int $offset): int
     return substr_count(substr($source, 0, $offset), "\n") + 1;
 }
 
+/**
+ * What the three rules below have between them read, counted before any of
+ * them reads a verdict. All three answer "no offenders" when the tag reader
+ * stops recognising a tag, which is the same answer they give for a tree where
+ * every strip is complete — and the Sonar rule that would otherwise notice a
+ * broken accessibility contract does not exist for tabs.
+ *
+ * @return array{files: int, tags: int, tablists: int, tabs: int, panels: int}
+ */
+function tabStripDenominators(): array
+{
+    $seen = ['files' => 0, 'tags' => 0, 'tablists' => 0, 'tabs' => 0, 'panels' => 0];
+
+    foreach (tabStripBladeFiles() as $path) {
+        $seen['files']++;
+
+        foreach (tabStripOpenTags((string) file_get_contents($path)) as [$tag, $attributes, $_]) {
+            $seen['tags']++;
+
+            if (str_contains($attributes, 'role="tablist"')) {
+                $seen['tablists']++;
+            }
+            if ($tag === 'x-core::tab' || str_contains($attributes, 'role="tab"')) {
+                $seen['tabs']++;
+            }
+            if (str_contains($attributes, 'role="tabpanel"')) {
+                $seen['panels']++;
+            }
+        }
+    }
+
+    return $seen;
+}
+
+it('reads a strip, its tabs and their panels out of the tree at all', function (): void {
+    $seen = tabStripDenominators();
+
+    expect($seen['files'])->toBeGreaterThan(100, 'The walk opened '.$seen['files'].' templates, which is too few to be the Blade tree.')
+        ->and($seen['tags'])->toBeGreaterThan(1000, 'The reader recognised '.$seen['tags'].' open tags in the whole tree, which is what a broken tag pattern looks like.')
+        ->and($seen['tablists'])->toBeGreaterThan(2, 'The reader found '.$seen['tablists'].' role="tablist" elements, so the first rule below judged almost nothing.')
+        ->and($seen['tabs'])->toBeGreaterThan(3, 'The reader found '.$seen['tabs'].' tabs, so the second and third rules below judged almost nothing.')
+        ->and($seen['panels'])->toBeGreaterThan(2, 'The reader found '.$seen['panels'].' role="tabpanel" elements, so every aria-controls below would resolve to nothing and the third rule would report the whole tree.');
+});
+
+// The tag reader is what all three rules turn on, and the two shapes that
+// break a naive one are both written in this tree: a ">" inside a Blade
+// condition guarding an attribute, and a ">" inside a quoted Alpine
+// expression. Either one splits the tag early, and the half that carried
+// role="tablist" then reads as an element with no attributes — which is a rule
+// passing over a strip it never saw.
+it('reads a tag past an angle bracket in a directive and in a quoted value', function (): void {
+    $source = <<<'BLADE'
+        <div role="tablist" @if (count($views) > 1) aria-label="Views" @endif x-data="tabStrip()">
+        <x-core::tab id="a" aria-controls="p" tabindex="0" x-on:click="open = $event.detail > 0" />
+        </div>
+        BLADE;
+
+    $tags = tabStripOpenTags($source);
+
+    expect(array_column($tags, 0))->toBe(['div', 'x-core::tab'])
+        ->and(str_contains($tags[0][1], 'x-data="tabStrip()"'))->toBeTrue('the ">" inside the Blade condition closed the tag early, so everything after it was lost')
+        ->and(str_contains($tags[1][1], 'aria-controls="p"'))->toBeTrue('the tag was read whole past the ">" in the quoted Alpine expression');
+});
+
 // The strip is the only thing that knows how many tabs there are, so the arrow
 // keys have to live on it. Without them the strip renders tabindex="-1" on
 // every tab but one and the rest become unreachable.
@@ -105,7 +169,16 @@ it('gives every tab strip the arrow-key handler its roving tabindex depends on',
         }
     }
 
-    expect($offenders)->toBe([], "Offenders:\n  ".implode("\n  ", $offenders));
+    expect($offenders)->toBe([], implode("\n", [
+        'A role="tablist" is a promise that the strip behaves like one. The strip renders',
+        'tabindex="-1" on every tab but the selected one, so without the arrow-key handler',
+        'that moves the selection, every other tab is unreachable from the keyboard — and',
+        'the strip is the only thing that knows how many tabs there are, so the handler',
+        'cannot live on a tab. Give it x-data="tabStrip()", x-on:keydown="onKey($event)"',
+        'and an aria-label naming what the strip switches between:',
+        '',
+        ...$offenders,
+    ]));
 });
 
 // x-core::tab supplies role and aria-selected; id, aria-controls and the roving
@@ -146,7 +219,14 @@ it('points every tab at the panel it governs and keeps exactly one of them tabba
         }
     }
 
-    expect($offenders)->toBe([], "Offenders:\n  ".implode("\n  ", $offenders));
+    expect($offenders)->toBe([], implode("\n", [
+        'x-core::tab supplies role and aria-selected; the rest cannot be supplied by the',
+        'component because only the call site knows which panel this tab governs. Without',
+        'id and aria-controls a screen reader announces a tab that governs nothing, and',
+        'without tabindex the roving focus the strip moves has nothing to move:',
+        '',
+        ...$offenders,
+    ]));
 });
 
 // aria-controls that resolves to nothing is worse than none at all: the reader
@@ -183,5 +263,13 @@ it('backs every aria-controls on a tab with a named tabpanel in the same templat
         }
     }
 
-    expect($offenders)->toBe([], "Offenders:\n  ".implode("\n  ", $offenders));
+    expect($offenders)->toBe([], implode("\n", [
+        'An aria-controls naming no element is worse than none at all: the reader is',
+        'offered a jump to a region that is not there. A tabpanel with no aria-labelledby',
+        'is the same promise broken the other way — the reader arrives and is told nothing',
+        'about what they arrived at. Point each tab at a role="tabpanel" in the same',
+        'template, and label that panel with the tab id:',
+        '',
+        ...$offenders,
+    ]));
 });

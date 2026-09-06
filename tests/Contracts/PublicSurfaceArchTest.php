@@ -29,7 +29,10 @@ function publicSurfaceSources(): array
     $repoRoot = dirname((string) realpath(base_path('Modules')));
 
     $sources = [];
-    foreach (['Modules', 'app', 'routes', 'config', 'tests', 'database', 'bootstrap', 'resources', 'lang', 'nativephp', 'mobile-app', 'scripts'] as $directory) {
+    // `nativephp` is not in this list: it is a gitignored build output, absent
+    // here and absent in CI, so it was a covered root naming nothing — and in a
+    // built tree it would answer for a Public class with a copy of the app.
+    foreach (['Modules', 'app', 'routes', 'config', 'tests', 'database', 'bootstrap', 'resources', 'lang', 'mobile-app', 'scripts'] as $directory) {
         if (! is_dir($repoRoot.'/'.$directory)) {
             continue;
         }
@@ -75,9 +78,7 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Anomaly/Public/Events/AnomalyAlertSnoozed.php',
         'Modules/Anomaly/Public/Services/AnomalySuppressionRuleQuery.php',
         'Modules/Auth/Public/Actions/AddUserAction.php',
-        'Modules/Auth/Public/Actions/DeleteAccountAction.php',
         'Modules/Auth/Public/Actions/LoginAction.php',
-        'Modules/Auth/Public/Actions/LogoutAction.php',
         'Modules/Auth/Public/Actions/RegenerateRecoveryCodesAction.php',
         'Modules/Auth/Public/Actions/ResetPasswordAction.php',
         'Modules/Budgets/Public/Dto/EnvelopeMoveRow.php',
@@ -102,13 +103,10 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Categorization/Public/Enums/ActionType.php',
         'Modules/Categorization/Public/Enums/ConditionOperator.php',
         'Modules/Categorization/Public/Enums/ConditionValueType.php',
-        'Modules/Categorization/Public/Enums/NoteMode.php',
         'Modules/Categorization/Public/Enums/RuleCombinator.php',
-        'Modules/Categorization/Public/Events/TransactionCategorized.php',
         'Modules/Categorization/Public/Services/CategorizationRuleQuery.php',
         'Modules/Categorization/Public/Services/UncategorizedTriageQuery.php',
         'Modules/Chains/Public/Actions/ConfirmChainLink.php',
-        'Modules/Chains/Public/Actions/DismissChainLinkHint.php',
         'Modules/Chains/Public/Actions/RejectChainLink.php',
         'Modules/Chains/Public/Dto/ChainLinkHintRow.php',
         'Modules/Chains/Public/Dto/ChainLinkRow.php',
@@ -117,9 +115,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Chains/Public/Dto/SeriesFunderLink.php',
         'Modules/Chains/Public/Dto/StatementSettlement.php',
         'Modules/Chains/Public/Enums/CardStatementCreditReason.php',
-        'Modules/Chains/Public/Enums/CardStatementState.php',
-        'Modules/Chains/Public/Enums/ChainLinkKind.php',
-        'Modules/Chains/Public/Enums/ChainLinkState.php',
         // The declared type of ChainTreeNode::$confidenceTier. That DTO is
         // Public and a Public class may not expose an Internal type, so the
         // enum has to live here even though the tier is derived, rendered and
@@ -128,26 +123,16 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Community/Public/Dto/MerchantContactDto.php',
         'Modules/Community/Public/Dto/SuggestMappingDto.php',
         'Modules/Community/Public/Events/MysteryMerchantSubmitted.php',
-        'Modules/Core/Public/Controllers/HealthController.php',
-        'Modules/Core/Public/Enums/SystemAlertSeverity.php',
-        'Modules/Core/Public/Enums/Theme.php',
         'Modules/Core/Public/Enums/TransitionActor.php',
-        'Modules/Core/Public/Enums/UpdateAlertKind.php',
         'Modules/Core/Public/Exceptions/BackupCorruptException.php',
-        'Modules/Core/Public/Exceptions/BackupFormatException.php',
-        'Modules/Core/Public/Exceptions/BackupIoException.php',
         'Modules/Core/Public/Exceptions/BackupNotSupportedException.php',
         'Modules/Core/Public/Exceptions/LockStoreNotConfiguredException.php',
         'Modules/Core/Public/Exceptions/RestoreFailedException.php',
-        'Modules/Core/Public/Exceptions/StrandedEncryptionEpochException.php',
         'Modules/Core/Public/Exceptions/UnsafeBackupPathException.php',
         'Modules/Core/Public/Services/Concerns/ProvidesInstancePathAccessors.php',
         'Modules/Core/Public/Services/CurrentUserService.php',
-        'Modules/Core/Public/Services/LocaleNegotiator.php',
         'Modules/Core/Public/Services/PassthroughSecretShield.php',
-        'Modules/Core/Public/Services/RestoreEncryptedBackup.php',
         'Modules/Core/Public/Support/AppChrome.php',
-        'Modules/Core/Public/Support/LegalLinks.php',
         'Modules/Counterparties/Public/Dto/CounterpartyResolutionDto.php',
         'Modules/Counterparties/Public/Enums/CounterpartyType.php',
         'Modules/Counterparties/Public/Events/CounterpartyResolved.php',
@@ -156,20 +141,15 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Counterparties/Public/Queries/CounterpartyIndexRow.php',
         'Modules/Counterparties/Public/Queries/CounterpartyProfileDto.php',
         'Modules/Counterparties/Public/Queries/TriageSuggestion.php',
-        'Modules/Desktop/Public/Events/NotificationDeepLink.php',
         'Modules/DevMode/Public/Contracts/AppActionRegistry.php',
         'Modules/DevMode/Public/Contracts/AuditWriter.php',
-        'Modules/DevMode/Public/Contracts/DevCommandRegistry.php',
         'Modules/DevMode/Public/Dto/AppAction.php',
-        'Modules/DevMode/Public/Dto/ArgSpec.php',
         'Modules/DevMode/Public/Dto/CommandRunAudit.php',
-        'Modules/DevMode/Public/Dto/CommandSpec.php',
         'Modules/DriftAlerts/Public/Actions/SnoozeDriftAlert.php',
         'Modules/DriftAlerts/Public/Dto/CancellationImpactDto.php',
         'Modules/DriftAlerts/Public/Dto/DriftAlertDto.php',
         'Modules/DriftAlerts/Public/Dto/SavingsInsight.php',
         'Modules/DriftAlerts/Public/Dto/SubscriptionDriftRow.php',
-        'Modules/DriftAlerts/Public/Enums/DriftAlertState.php',
         'Modules/DriftAlerts/Public/Events/DriftAlertAcknowledged.php',
         'Modules/DriftAlerts/Public/Events/DriftAlertSnoozed.php',
         'Modules/DriftAlerts/Public/Services/CancellationImpactQuery.php',
@@ -184,9 +164,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/EmailScan/Public/Dto/KnownSenderDto.php',
         'Modules/EmailScan/Public/Dto/ScanCursor.php',
         'Modules/EmailScan/Public/Enums/DiscoveredSenderState.php',
-        'Modules/EmailScan/Public/Enums/InboxScanStatus.php',
-        'Modules/EmailScan/Public/Enums/MailProvider.php',
-        'Modules/EmailScan/Public/Events/InboxTokenFailed.php',
         'Modules/EmailScan/Public/Exceptions/EmlBlobWriteException.php',
         'Modules/EmailScan/Public/Services/DiscoveredSenderQuery.php',
         'Modules/EmailScan/Public/Services/InboxQuery.php',
@@ -201,28 +178,22 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/FX/Public/Exceptions/RateFetchException.php',
         'Modules/Forecasting/Public/Actions/SetAccountForecastBuffer.php',
         'Modules/Forecasting/Public/Actions/SetAccountOpeningBalance.php',
-        'Modules/Forecasting/Public/Dto/AccountBalanceLine.php',
         'Modules/Forecasting/Public/Dto/BalanceAnchorDto.php',
         'Modules/Forecasting/Public/Dto/ForecastDto.php',
         'Modules/Forecasting/Public/Dto/ForecastHighlightsDto.php',
         'Modules/Forecasting/Public/Dto/ForecastPointDto.php',
-        'Modules/Forecasting/Public/Dto/NetWorth.php',
         'Modules/Forecasting/Public/Dto/ScenarioDto.php',
         'Modules/Forecasting/Public/Dto/ScenarioMutationDto.php',
         'Modules/Forecasting/Public/Dto/ScenarioMutationPayload/ScenarioMutationPayload.php',
         'Modules/Forecasting/Public/Dto/SeriesConfidenceDto.php',
         'Modules/Forecasting/Public/Dto/ShortfallWindowDto.php',
         'Modules/Forecasting/Public/Enums/ShiftScope.php',
-        'Modules/Forecasting/Public/Events/ScenarioCreated.php',
-        'Modules/Forecasting/Public/Events/ScenarioDeleted.php',
-        'Modules/Forecasting/Public/Events/ScenarioMutated.php',
         'Modules/Goals/Public/Dto/GoalAttributionRow.php',
         'Modules/Goals/Public/Dto/GoalProgressRow.php',
         // The vocabulary of GoalProgressRow::$progressState, which is a Public
         // DTO field: a reader outside Goals has to be able to name the values
         // it compares against.
         'Modules/Goals/Public/Enums/GoalProgressState.php',
-        'Modules/Goals/Public/Enums/GoalStatus.php',
         'Modules/Goals/Public/Exceptions/GoalNotFoundException.php',
         'Modules/Goals/Public/Exceptions/InvalidGoalAmountException.php',
         'Modules/Goals/Public/Exceptions/InvalidGoalNameException.php',
@@ -232,11 +203,7 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Goals/Public/Services/GoalProgressQuery.php',
         'Modules/Goals/Public/Services/GoalProjectionService.php',
         'Modules/Import/Public/Actions/ConfirmImport.php',
-        'Modules/Import/Public/Actions/CreateMerchantAlias.php',
-        'Modules/Import/Public/Actions/DiscardImport.php',
-        'Modules/Import/Public/Actions/MergeMerchantAliases.php',
         'Modules/Import/Public/Actions/RunImport.php',
-        'Modules/Import/Public/Contracts/DetectsStartingBalance.php',
         'Modules/Import/Public/Contracts/NamesAccounts.php',
         'Modules/Import/Public/Dto/AliasMatchPreviewResultDto.php',
         'Modules/Import/Public/Dto/DuplicateDisposition.php',
@@ -244,29 +211,17 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Import/Public/Dto/FingerprintDisposition.php',
         'Modules/Import/Public/Dto/NewRowDisposition.php',
         'Modules/Import/Public/Dto/PaymentTypeHint.php',
-        // The declared type of PreviewRowDto::$errorReason and
-        // ImportPreviewResult::$fileFailureReason. Both DTOs are Public and
-        // cross to Onboarding and OpenBanking, so the enum is consumed
-        // through them by value and by ->label() without being named.
-        'Modules/Import/Public/Enums/ImportFailureReason.php',
         'Modules/Import/Public/Services/AccountNamer.php',
         'Modules/Import/Public/Services/AliasMatchPreviewQuery.php',
         'Modules/Import/Public/Services/EloquentAccountResolver.php',
         'Modules/Import/Public/Services/SourceRefRanker.php',
         'Modules/Ingestion/Public/Contracts/SourceAdapter.php',
-        'Modules/Ingestion/Public/Dto/CsvPreset.php',
-        // The declared return of CsvPresetRegistry::positional() and
-        // ::allPositional(). The upload wizard and both onboarding connector
-        // steps call those to render the CSV-layout picker, reading ->format
-        // and ->label off the result without ever naming the type.
-        'Modules/Ingestion/Public/Dto/PositionalCsvPreset.php',
         'Modules/Ingestion/Public/Dto/SniffResult.php',
         'Modules/Ingestion/Public/Exceptions/UnsupportedFormatException.php',
         // The declared return of PaypalCsvEventTypeMap::classify(), which is
         // Public. Import's ClassifyTransactionType holds the map but only ever
         // calls transactionType(), so the enum is named nowhere outside here.
         'Modules/Ingestion/Public/Paypal/PaypalEventAction.php',
-        'Modules/Ingestion/Public/Services/CsvPresetRegistry.php',
         'Modules/Ingestion/Public/Services/HeaderSniffer.php',
         // The four write actions behind Ledger's Public contracts. Their
         // callers name the contract, never the action.
@@ -274,23 +229,14 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Ledger/Public/Actions/ReassignCounterparty.php',
         'Modules/Ledger/Public/Actions/SetTransactionNote.php',
         'Modules/Ledger/Public/Actions/UpdateTransactionCategory.php',
-        // Public alongside its four sibling mutator contracts, which is where a
-        // neighbour needing to delete a transaction would look; today only the
-        // detail page inside Ledger names it.
-        'Modules/Ledger/Public/Contracts/DeletesTransaction.php',
         'Modules/Ledger/Public/Dto/CategoryDelta.php',
         'Modules/Ledger/Public/Dto/PeriodResolution.php',
-        'Modules/Ledger/Public/Dto/RecordResult.php',
         'Modules/Ledger/Public/Dto/SpendTrend.php',
-        'Modules/Ledger/Public/Dto/TopCategoryRow.php',
         'Modules/Ledger/Public/Dto/TransactionListPage.php',
         'Modules/Ledger/Public/Dto/TransactionRowDto.php',
-        'Modules/Ledger/Public/Enums/ClearedStatus.php',
         'Modules/Ledger/Public/Exceptions/CurrencyMismatchException.php',
-        'Modules/Ledger/Public/Exceptions/SplitSumMismatchException.php',
         'Modules/Ledger/Public/Services/ReconciliationWriter.php',
         'Modules/Ledger/Public/Services/StatementSummaryWriter.php',
-        'Modules/Ledger/Public/Services/TopCategoriesByPeriodQuery.php',
         'Modules/Ledger/Public/Services/TransactionListQuery.php',
         'Modules/Notifications/Public/Actions/DismissNotification.php',
         'Modules/Notifications/Public/Actions/MarkNotificationRead.php',
@@ -309,9 +255,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Pots/Public/Dto/PotMovementRow.php',
         'Modules/Pots/Public/Dto/PotRow.php',
         'Modules/Pots/Public/Dto/ReconciliationRow.php',
-        // The declared type of PotMovementRow::$kind, a Public DTO field.
-        'Modules/Pots/Public/Enums/PotMovementKind.php',
-        'Modules/Pots/Public/Enums/PotStatus.php',
         'Modules/Pots/Public/Exceptions/InsufficientUnallocatedException.php',
         // Documented @throws of PotWriter, which is Public and whose
         // transfer() Sync already calls. A caller outside Pots that wants to
@@ -326,16 +269,12 @@ it('does not allow a Public class without a consumer outside its own module (pin
         // module is not allowed to write.
         'Modules/Pots/Public/Exceptions/TargetPotNotFoundException.php',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php',
-        'Modules/Receipts/Public/Contracts/SenderMatcher.php',
-        'Modules/Receipts/Public/Dto/MatchOutcomeDto.php',
         'Modules/Receipts/Public/Dto/MatcherInputDto.php',
         'Modules/Receipts/Public/Dto/ParsedReceiptDto.php',
         'Modules/Receipts/Public/Exceptions/MboxReadException.php',
         'Modules/Receipts/Public/Pipeline/EmlMimeReader.php',
         'Modules/Receipts/Public/Pipeline/FileDropEmlBlobStore.php',
         'Modules/Receipts/Public/Pipeline/ParsedMimeMessage.php',
-        'Modules/Receipts/Public/Services/ReceiptConflictQuery.php',
-        'Modules/Recurring/Public/Actions/ApproveRecurringSeries.php',
         'Modules/Recurring/Public/Actions/EditRecurringSeriesName.php',
         'Modules/Recurring/Public/Actions/EditRecurringSeriesVarianceTolerance.php',
         'Modules/Recurring/Public/Actions/RejectRecurringSeries.php',
@@ -354,11 +293,14 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Tax/Public/Dto/TaxTagData.php',
         'Modules/Tax/Public/Dto/TaxYearData.php',
         'Modules/Tax/Public/Dto/TaxYearSummary.php',
-        'Modules/Tax/Public/Events/TransactionTagged.php',
-        'Modules/Tax/Public/Events/TransactionUntagged.php',
     ];
 
     $sources = publicSurfaceSources();
+
+    // Both denominators, before either verdict. A walk that read nothing finds
+    // no Public class, so every one of them is consumed, so nothing was added —
+    // a clean answer the tree never earned.
+    expect(count($sources))->toBeGreaterThan(5000, 'The walk read almost nothing, so the consumer scan below has no corpus to find a consumer in.');
 
     $declared = [];
     $referenced = [];
@@ -390,6 +332,8 @@ it('does not allow a Public class without a consumer outside its own module (pin
     }
     ksort($declared);
 
+    expect(count($declared))->toBeGreaterThan(400, 'The declaration scan found almost no Public class, so the pinned list below is being measured against nothing.');
+
     $unconsumed = [];
     foreach ($declared as $fqcn => $relative) {
         if (! isset($referenced[$fqcn])) {
@@ -409,9 +353,18 @@ it('does not allow a Public class without a consumer outside its own module (pin
         .implode("\n  ", $added),
     );
 
-    // Only the direction that matters is enforced: a pinned class that finds a
-    // consumer may leave its line behind, but one whose file is gone is a stale
-    // pin, and stale pins are how a list like this stops meaning anything.
+    // The list only shrinks, and this is what makes that true rather than
+    // aspirational. Fifty-four of these lines had found a consumer and excused
+    // nothing, which reads as considered: a reviewer cannot tell dead surface
+    // from surface that came alive while nobody was looking.
+    $consumedNow = array_values(array_diff($pinnedUnconsumed, $unconsumed));
+
+    expect($consumedNow)->toBe(
+        [],
+        'These pinned classes now have a consumer outside their own module, so the pin excuses nothing. '
+        ."Delete the lines — the surface is public after all:\n  ".implode("\n  ", $consumedNow),
+    );
+
     $repoRoot = dirname((string) realpath(base_path('Modules')));
     $vanished = array_values(array_filter(
         $pinnedUnconsumed,

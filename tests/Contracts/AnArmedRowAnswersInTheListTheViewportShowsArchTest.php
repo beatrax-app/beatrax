@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\RepoTree;
 
 // Two pages draw their rows twice — once for the phone, once for the desktop —
 // and a media query hides whichever list the viewport is not. A row action that
@@ -39,24 +40,29 @@ function armedRowGatesIn(string $blade, int $from, int $to): array
 it('draws a row action\'s answer in whichever of the two lists the viewport shows', function (): void {
     $blades = [];
 
-    foreach ((array) glob(base_path('Modules/*/Resources/views/livewire/*.blade.php')) as $path) {
-        $source = (string) file_get_contents((string) $path);
+    // Every view a reader is shown, not the one glob depth the two known pages
+    // happen to sit at: the rule claims a third page adopting the idiom is
+    // covered the day it is written, and a deeper path was outside the old walk.
+    foreach (RepoTree::files(RepoTree::EVERY_BLADE_VIEW) as $path) {
+        $source = (string) file_get_contents($path);
 
         if (preg_match(BREAKPOINT_SPLIT_STYLE, $source, $m) === 1) {
-            $blades[(string) $path] = $m[1];
+            $blades[$path] = $m[1];
         }
     }
 
     // The idiom is spelled in CSS, so a rename would leave this scanning
     // nothing and passing. Both known pages have to be found for it to mean
     // anything, and the count is the assertion that it read a real tree.
-    expect($blades)->toHaveCount(2);
+    expect($blades)->toHaveCount(2, 'Goals and Pots draw their rows twice and are the two pages this rule is derived from. '
+        .'Finding some other number means either a page adopted the idiom and belongs here, or the CSS class was '
+        .'renamed and this scanned nothing at all.');
 
     $unanswered = [];
 
     foreach ($blades as $path => $prefix) {
         $blade = (string) file_get_contents($path);
-        $relative = str_replace(base_path().'/', '', $path);
+        $relative = str_replace(RepoTree::root().'/', '', $path);
 
         $phoneAt = preg_match('~class="[^"]*'.$prefix.'-phone-list~', $blade, $pm, PREG_OFFSET_CAPTURE) === 1
             ? $pm[0][1] : null;
@@ -87,4 +93,28 @@ it('draws a row action\'s answer in whichever of the two lists the viewport show
     }
 
     expect($unanswered)->toBe([], "A row action arms a state whose answer the viewport cannot paint:\n  ".implode("\n  ", $unanswered));
+});
+
+it('reads the gates of one region without borrowing the other one', function (): void {
+    $blade = <<<'BLADE'
+        <div class="a-phone-list">
+            @if ($archivingPotId === $pot->id)
+        </div>
+        <div class="a-desktop-list">
+            @if ($archivingGoalId === $goal->id)
+        {{-- end .a-desktop-list --}}
+        BLADE;
+
+    $phoneAt = (int) strpos($blade, 'a-phone-list');
+    $desktopAt = (int) strpos($blade, 'a-desktop-list');
+    $desktopEnd = (int) strpos($blade, 'end .a-desktop-list');
+
+    expect(armedRowGatesIn($blade, $phoneAt, $desktopAt))
+        ->toBe(['archivingPotId'], 'the phone region answers for its own gate and for nothing written below it');
+
+    expect(armedRowGatesIn($blade, $desktopAt, $desktopEnd))
+        ->toBe(['archivingGoalId'], 'a gate drawn in the desktop list only is exactly what the rule reports');
+
+    expect(armedRowGatesIn($blade, $desktopEnd, strlen($blade)))
+        ->toBe([], 'past the end marker there is no list left to answer in');
 });

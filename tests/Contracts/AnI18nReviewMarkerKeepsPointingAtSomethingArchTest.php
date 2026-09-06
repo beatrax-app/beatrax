@@ -15,7 +15,20 @@ use Modules\Core\Public\Support\PatternScan;
 // it claims is the locale it sits in, and the key it names is still in the file
 // under it.
 
-/** @return list<array{file: string, line: int, locale: string, keys: string}> */
+/**
+ * The locale and keys a marker addresses, or null when the address does not fit
+ * on the line the marker opens.
+ *
+ * @return array{locale: string, keys: string}|null
+ */
+function i18nReviewMarkerAddress(string $line): ?array
+{
+    $match = PatternScan::first('/i18n-review:\s*([a-z]{2})\s*·\s*([^—]+)—/u', $line);
+
+    return $match === [] ? null : ['locale' => $match[1], 'keys' => trim($match[2])];
+}
+
+/** @return list<array{file: string, line: int, locale: ?string, keys: string}> */
 function i18nReviewMarkers(): array
 {
     $markers = [];
@@ -46,20 +59,18 @@ function i18nReviewMarkers(): array
                 continue;
             }
 
-            $match = PatternScan::first('/i18n-review:\s*([a-z]{2})\s*·\s*([^—]+)—/u', $line);
+            $address = i18nReviewMarkerAddress($line);
 
             // A marker whose address runs past the first line used to be no
             // marker at all: the address is read one line at a time, so an em
             // dash that wrapped meant the whole thing was skipped and its keys
             // were never checked against the file. It is reported instead.
-            $markers[] = $match === []
-                ? ['file' => $path, 'line' => $index + 1, 'locale' => null, 'keys' => '']
-                : [
-                    'file' => $path,
-                    'line' => $index + 1,
-                    'locale' => $match[1],
-                    'keys' => trim($match[2]),
-                ];
+            $markers[] = [
+                'file' => $path,
+                'line' => $index + 1,
+                'locale' => $address['locale'] ?? null,
+                'keys' => $address['keys'] ?? '',
+            ];
         }
     }
 
@@ -96,7 +107,7 @@ it('leaves every review marker naming the locale it sits in and a key that is st
 
     // A walk that found nothing would pass while saying nothing. These exist in
     // quantity; the floor asserts the scan read a tree rather than an empty one.
-    expect(count($markers))->toBeGreaterThan(50);
+    expect(count($markers))->toBeGreaterThan(50, 'Read '.count($markers).' markers, too few for an empty offender list to mean anything.');
 
     $offenders = [];
 
@@ -138,4 +149,18 @@ it('leaves every review marker naming the locale it sits in and a key that is st
         'answer and delete the marker, or repoint it at the line it now means:',
         ...$offenders,
     ]));
+});
+
+it('reads the address a marker opens with, and reports one that ran past its own line', function (): void {
+    expect(i18nReviewMarkerAddress('    // i18n-review: nl · errors.amount_unreadable, nav.* — is this the register a bank uses?'))
+        ->toBe(
+            ['locale' => 'nl', 'keys' => 'errors.amount_unreadable, nav.*'],
+            'the locale and the keys are the two halves a marker can be held to',
+        );
+
+    expect(i18nReviewMarkerAddress('    // i18n-review: nl · errors.amount_unreadable'))
+        ->toBeNull('an address with no em dash closing it never named its keys, and is reported rather than skipped');
+
+    expect(i18nReviewMarkerAddress('    // A plain comment about the line below.'))
+        ->toBeNull('a comment that is not a marker addresses nothing');
 });

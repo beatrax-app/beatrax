@@ -16,6 +16,20 @@ use Tests\Helpers\ShellEventGraph;
 // window-focus flag was read as its constructed `true` by every notification
 // the desktop ever decided not to show.
 
+// The three holders whose mutable state this rule was written after. Named
+// rather than counted: a count survives a graph that quietly stopped resolving
+// one and picked up something else, and an unresolved class is skipped in
+// silence below.
+/** @return list<class-string> */
+function shellStateAnchors(): array
+{
+    return [
+        'Modules\\Desktop\\Internal\\Native\\WindowFocusState',
+        'Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert',
+        'Modules\\Desktop\\Internal\\Native\\ShellState',
+    ];
+}
+
 /**
  * @return list<string>
  */
@@ -24,6 +38,10 @@ function shellStateOffences(): array
     $offences = [];
 
     foreach (ShellEventGraph::reach() as $class => $seed) {
+        // A name the graph reached but the autoloader cannot resolve carries no
+        // properties to read, so it is skipped rather than reported. The rule
+        // below asserts the three anchors do resolve, because a walk that
+        // resolved none of them reports the same clean tree a correct one does.
         if (ShellEventGraph::classFile($class) === null || ! class_exists($class)) {
             continue;
         }
@@ -47,9 +65,24 @@ function shellStateOffences(): array
 it('reaches the state a shell event actually writes', function (): void {
     $reach = ShellEventGraph::reach();
 
-    expect($reach)->toHaveKey('Modules\\Desktop\\Internal\\Native\\WindowFocusState');
-    expect($reach)->toHaveKey('Modules\\Desktop\\Internal\\Listeners\\SurfaceWorkerCrashAlert');
-    expect($reach)->toHaveKey('Modules\\Desktop\\Internal\\Native\\ShellState');
+    foreach (shellStateAnchors() as $class) {
+        expect($reach)->toHaveKey($class);
+    }
+
+    // Reaching a name is half of it. The walk below reads properties by
+    // reflection and steps silently over anything it cannot resolve, so a graph
+    // that reached all three and resolved none reports the same clean tree a
+    // correct one does.
+    $unresolved = array_values(array_filter(
+        shellStateAnchors(),
+        static fn (string $class): bool => ShellEventGraph::classFile($class) === null || ! class_exists($class),
+    ));
+
+    expect($unresolved)->toBe(
+        [],
+        'The graph names these and the reader cannot open them, so their properties are never read and the rule '
+        ."below reports them clean without looking:\n  ".implode("\n  ", $unresolved)
+    );
 });
 
 it('never lets a shell event keep state in something that ends with the request', function (): void {

@@ -9,6 +9,34 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 // columns were written that way: community_settings never left the device the
 // toggle was flipped on, and envelope_activated_at — the carryover fold's
 // genesis anchor — reached a peer only if that peer paired after activation.
+
+// WriteUserPreference is the announcement and MergeRulesRegistry is the list it
+// is checked against; neither writes a reader's settings itself. Whole repo
+// paths rather than filename suffixes: `str_ends_with($path, 'X.php')` excuses
+// any file in any module whose path happens to end that way.
+const SYNCED_USER_COLUMN_SEAMS = [
+    'Modules/Core/Public/Actions/WriteUserPreference.php',
+    'Modules/Sync/Internal/Config/MergeRulesRegistry.php',
+];
+
+// A file that reaches WriteUserPreference, or dispatches EntityMutated, or
+// calls announce() at all, is taken as covering the write beside it — which is
+// a claim about the FILE, and the next write added to that file inherits it for
+// free. So the sites it currently waves through are pinned, compared in both
+// directions: a new unannounced write into one of these files fails here, and a
+// site that stops needing the exemption fails too.
+const ANNOUNCED_USER_COLUMN_WRITES = [
+    'Modules/Budgets/Public/Services/EnvelopeActivationService.php :: envelope_activated_at',
+    'Modules/Community/Internal/Http/Livewire/SharedListSettingsPanel.php :: community_settings',
+    'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php :: receipt_conflict_resolution',
+    'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: base_currency',
+    'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: default_currency_view',
+    'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: drift_alert_threshold_percent',
+    'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: period_start_day',
+    'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: recurring_detection_window_months',
+    'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: recurring_income_min_amount_minor',
+];
+
 /**
  * @return list<string>
  */
@@ -29,6 +57,11 @@ function syncedUserColumns(): array
 }
 
 /**
+ * Every production file that could persist a users column. Tests assert about
+ * these writes, and a migration, a seeder or a factory builds the row the
+ * production path would have announced — none of them is a mutation a peer
+ * should hear about.
+ *
  * @return list<string>
  */
 function userColumnWriterFiles(): array
@@ -68,45 +101,88 @@ function userColumnOffenders(string $column, string $source): bool
     return $viaBuilder || $viaModel;
 }
 
-it('announces every synced users column its writers persist', function (): void {
+/**
+ * Every users-column write outside the two seams, split by whether the file it
+ * sits in announces anything at all.
+ *
+ * @return array{unannounced: list<string>, excused: list<string>, files: int}
+ */
+function userColumnWriteSites(): array
+{
     $columns = syncedUserColumns();
-    expect($columns)->not->toBeEmpty();
+    $unannounced = [];
+    $excused = [];
+    $files = 0;
 
-    // WriteUserPreference is the announcement, and the registry is the list it
-    // is checked against; neither writes a reader's settings itself.
-    $seams = ['WriteUserPreference.php', 'MergeRulesRegistry.php'];
-
-    $offenders = [];
     foreach (userColumnWriterFiles() as $file) {
-        foreach ($seams as $seam) {
-            if (str_ends_with($file, $seam)) {
-                continue 2;
-            }
-        }
+        $relative = str_replace(base_path().'/', '', $file);
 
-        $source = (string) file_get_contents($file);
-
-        // WriteUserPreference::write() announces what it wrote, so a caller
-        // reaching for that seam at all is already covered.
-        if (preg_match('/->announce\(|EntityMutated\(|WriteUserPreference/', $source) === 1) {
+        if (in_array($relative, SYNCED_USER_COLUMN_SEAMS, true)) {
             continue;
         }
 
+        $files++;
+        $source = (string) file_get_contents($file);
+        $announces = preg_match('/->announce\(|EntityMutated\(|WriteUserPreference/', $source) === 1;
+
         foreach ($columns as $column) {
-            if (userColumnOffenders($column, $source)) {
-                $offenders[] = str_replace(base_path().'/', '', $file).' writes '.$column.' and announces nothing';
+            if (! userColumnOffenders($column, $source)) {
+                continue;
             }
+
+            $site = $relative.' :: '.$column;
+            $announces ? $excused[] = $site : $unannounced[] = $site;
         }
     }
 
-    sort($offenders);
+    sort($unannounced);
+    sort($excused);
 
-    expect($offenders)->toBe([], implode("\n", [
+    return ['unannounced' => $unannounced, 'excused' => $excused, 'files' => $files];
+}
+
+it('announces every synced users column its writers persist', function (): void {
+    $columns = syncedUserColumns();
+
+    expect(count($columns))->toBeGreaterThan(
+        5,
+        'The merge registry named almost no synced users column, so the verdict below is about a rule that checked nothing.',
+    );
+
+    $sites = userColumnWriteSites();
+
+    expect($sites['files'])->toBeGreaterThan(
+        2_000,
+        'The walk read almost none of Modules/, so the empty offender list below is a tree nobody looked at.',
+    );
+
+    expect($sites['unannounced'])->toBe([], implode("\n", [
         'These writers persist a synced users column without announcing it, so it',
         'stays on the device it was written on:',
-        ...$offenders,
+        ...$sites['unannounced'],
         '',
         'Call WriteUserPreference::announce($userId, [$column]) after the write.',
+    ]));
+});
+
+// The bypass above is the widest thing in this file, so what it covers is the
+// half held to a list rather than the half left to a substring.
+it('waves through only the writes already pinned as announced', function (): void {
+    $excused = userColumnWriteSites()['excused'];
+
+    $added = array_values(array_diff($excused, ANNOUNCED_USER_COLUMN_WRITES));
+    $gone = array_values(array_diff(ANNOUNCED_USER_COLUMN_WRITES, $excused));
+
+    expect($excused)->toBe(ANNOUNCED_USER_COLUMN_WRITES, implode("\n  ", [
+        'A file that announces one column is treated as announcing every column it writes, which is a',
+        'claim about the file rather than about the write. The sites that claim buys are pinned, so a new',
+        'one is a decision somebody makes rather than a line that inherits an exemption.',
+        '',
+        'NEW, not pinned — check the write really is announced, then add the line:',
+        ...($added === [] ? ['-'] : $added),
+        '',
+        'PINNED but no longer reached — the write moved or the file stopped announcing; delete the line:',
+        ...($gone === [] ? ['-'] : $gone),
     ]));
 });
 

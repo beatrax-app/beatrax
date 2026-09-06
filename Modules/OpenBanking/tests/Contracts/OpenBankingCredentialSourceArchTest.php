@@ -100,9 +100,13 @@ function credentialSourceGuardMethodsReturning(array $candidates, string $return
 
 it('never lands a credential-shaped column in the live open_banking_connections schema', function (): void {
     foreach (credentialSourceGuardOpenBankingTables() as $table) {
-        if (! Schema::hasTable($table)) {
-            continue;
-        }
+        // A missing table used to skip the case, which read as a clean live
+        // schema. The table is created by this module's own migration, so its
+        // absence means the schema was never built and the rule never ran.
+        expect(Schema::hasTable($table))->toBeTrue(
+            "Req 10 is asserted against the LIVE schema, and `{$table}` is not in it. The rule below would "
+            .'have passed over a table nobody created.'
+        );
 
         $columns = array_map(
             static fn (array $column): string => (string) $column['name'],
@@ -136,12 +140,21 @@ it('never lands a credential-shaped column in the live open_banking_connections 
         $safeColumns,
         static fn (string $column): bool => preg_match(OB_CREDENTIAL_SOURCE_FORBIDDEN_COLUMN_PATTERN, $column) === 1,
     ));
-    expect($safeHits)->toBe([]);
+    expect($safeHits)->toBe([], 'The credential-column pattern now fires on ordinary columns too, so the '
+        .'rule above reports every table it reads and nobody can read its offender list.');
 });
 
 it('makes OpenBankingSecretsRepository::load() the ONLY method in the module returning OpenBankingCredentials', function (): void {
     $candidates = credentialSourceGuardDiscoverClasses('Modules/OpenBanking');
-    expect($candidates)->not->toBeEmpty('Sanity check: class discovery must find at least the repository itself.');
+
+    // Counted, not merely non-empty: discovery resolves a class only when it
+    // autoloads, so a broken autoloader answers with a handful of classes and
+    // an empty offender list that reads exactly like a clean module.
+    expect(count($candidates))->toBeGreaterThan(
+        30,
+        'Class discovery over Modules/OpenBanking resolved '.count($candidates).' classes, which is too few '
+        .'to be the module. The offender list below would be read off classes nobody loaded.'
+    );
 
     $offenders = credentialSourceGuardMethodsReturning(
         $candidates,
@@ -178,5 +191,9 @@ it('makes OpenBankingSecretsRepository::load() the ONLY method in the module ret
         OpenBankingCredentials::class,
         allowList: [OpenBankingSecretsRepository::class],
     );
-    expect($violatingOffenders)->not->toBe([]);
+    expect($violatingOffenders)->not->toBe(
+        [],
+        'The reflection reader no longer sees a method declaring OpenBankingCredentials as its return type, '
+        .'so the rule above would report a clean module however many classes fabricated credentials.'
+    );
 });

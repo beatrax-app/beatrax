@@ -14,6 +14,17 @@ use Modules\Forecasting\Tests\Support\ForecastCorpus;
 // triple is derived from the documented arithmetic rather than approximated.
 const FPCT_TOLERANCE_MINOR = 5;
 
+// The corpus fixture this pipeline does not project, with what earns the
+// omission and a pattern re-read against the file. The list of names below was
+// a hand-written subset of a directory: eleven fixtures on disk, ten named, and
+// nothing said which one was missing or why.
+const FPCT_FIXTURES_NOT_PROJECTED = [
+    'ics-settlement-chain' => [
+        'reason' => 'its expected projection is calibrated against a chain_state payload fpctSeedFixture() does not seed, so running it here would compare the pipeline against a ledger this seeder cannot build; the fixture\'s own shape is held by Modules/Forecasting/tests/Unit/FixtureCorpusTest.php',
+        'proves' => "'chain_state'",
+    ],
+];
+
 /**
  * @return array<string, array{0: string}>
  */
@@ -244,16 +255,12 @@ function fpctSeedFixture(DatabaseManager $db, User $user, string $fixtureName): 
     return ['accountIdMap' => $accountIdMap, 'fixture' => $fixture];
 }
 
-it('projects the fixture corpus subset end-to-end and matches expected.projection within ±2 minor', function (string $fixtureName): void {
-    // The fixture's expected.projection values are calibrated off the accounts'
-    // opening_balance_as_of_date, so the clock has to be frozen to that same
-    // anchor for the pipeline's asOf to line up.
-    CarbonImmutable::setTestNow(ForecastCorpus::clock());
-
+function fpctProject(string $fixtureName): void
+{
     /** @var DatabaseManager $db */
-    $db = $this->app->make(DatabaseManager::class);
+    $db = app(DatabaseManager::class);
     /** @var ForecastQuery $forecastQuery */
-    $forecastQuery = $this->app->make(ForecastQuery::class);
+    $forecastQuery = app(ForecastQuery::class);
 
     $user = fpctUser();
     $seeded = fpctSeedFixture($db, $user, $fixtureName);
@@ -269,6 +276,7 @@ it('projects the fixture corpus subset end-to-end and matches expected.projectio
     Bus::dispatchSync(new ProjectForecastJob(userId: $user->id, scenarioId: null, horizonDays: 90));
 
     $expectedProjection = is_array($fixture['expected']['projection'] ?? null) ? $fixture['expected']['projection'] : [];
+    $compared = 0;
 
     foreach ($expectedProjection as $expected) {
         if (! is_array($expected)) {
@@ -282,7 +290,9 @@ it('projects the fixture corpus subset end-to-end and matches expected.projectio
         }
 
         $dto = $forecastQuery->forUser($dbAccountId, $horizonDays, null, $user);
-        expect($dto->isComputing)->toBeFalse();
+        expect($dto->isComputing)->toBeFalse(
+            "fixture '{$fixtureName}' horizon {$horizonDays}: the projection is still computing, so the points below are not the ones the job wrote",
+        );
 
         $matchDate = (string) ($expected['date'] ?? '');
         $expectedLow = (int) ($expected['low_minor'] ?? 0);
@@ -302,6 +312,9 @@ it('projects the fixture corpus subset end-to-end and matches expected.projectio
         if ($matched === null) {
             continue;
         }
+
+        $compared++;
+
         expect(abs($matched->lowMinor - $expectedLow))->toBeLessThanOrEqual(
             FPCT_TOLERANCE_MINOR,
             "fixture '{$fixtureName}' day {$matchDate}: low {$matched->lowMinor} vs expected {$expectedLow}",
@@ -315,6 +328,17 @@ it('projects the fixture corpus subset end-to-end and matches expected.projectio
             "fixture '{$fixtureName}' day {$matchDate}: high {$matched->highMinor} vs expected {$expectedHigh}",
         );
     }
+
+    // Every fixture in the corpus declares at least three expected triples, and
+    // every one of the loop's three `continue`s is silent: a renamed
+    // `expected.projection` key, a row that is not an array, or an account id
+    // the seeder never mapped each leave this case green having asserted
+    // nothing at all about the pipeline it exists to run.
+    expect($compared)->toBeGreaterThan(
+        0,
+        "fixture '{$fixtureName}': not one expected projection triple was compared. The fixture declares ".
+        count($expectedProjection).' rows, and every one of them was skipped, so this run proved nothing.',
+    );
 
     // Deliberately tolerant: only that at least one window row exists for the
     // (account, buffer_used_minor) pair. Daily-fold and envelope timing can shift
@@ -340,6 +364,70 @@ it('projects the fixture corpus subset end-to-end and matches expected.projectio
             "fixture '{$fixtureName}' expected at least one forecast_shortfall_windows row with buffer={$expectedSf['buffer_used_minor']}",
         );
     }
+}
 
-    CarbonImmutable::setTestNow();
-})->with(fpctFixtures());
+it('projects every fixture it names end-to-end, matching expected.projection within ±'.FPCT_TOLERANCE_MINOR.' minor', function (string $fixtureName): void {
+    // The fixture's expected.projection values are calibrated off the accounts'
+    // opening_balance_as_of_date, so the clock has to be frozen to that same
+    // anchor for the pipeline's asOf to line up. Released in a finally: a
+    // failing expectation throws, and every later test in this worker would
+    // then run at the fixture's notional today.
+    CarbonImmutable::setTestNow(ForecastCorpus::clock());
+
+    try {
+        fpctProject($fixtureName);
+    } finally {
+        CarbonImmutable::setTestNow();
+    }
+})->with(fpctFixtures())->group('phase-2');
+
+// A hand-written subset of a directory is a claim about that directory nothing
+// re-checks: the corpus grew to eleven and this list stayed at ten, so one
+// fixture was neither run nor recorded as skipped.
+it('accounts for every fixture in the corpus, and holds each omission to its reason', function (): void {
+    $onDisk = array_map(
+        static fn (string $path): string => basename($path, '.php'),
+        ForecastCorpus::paths(),
+    );
+    sort($onDisk);
+
+    expect(count($onDisk))->toBeGreaterThan(
+        5,
+        'the corpus resolved '.count($onDisk).' fixtures, which is too few to be this directory.'
+    );
+
+    $accounted = [...array_keys(fpctFixtures()), ...array_keys(FPCT_FIXTURES_NOT_PROJECTED)];
+    sort($accounted);
+
+    expect($accounted)->toBe($onDisk, implode("
+", [
+        'The fixtures this file runs, plus the ones it records as skipped, are not the fixtures the corpus',
+        'holds. Unaccounted for: '.(implode(', ', array_diff($onDisk, $accounted)) ?: 'none').'.',
+        'Named and absent from disk: '.(implode(', ', array_diff($accounted, $onDisk)) ?: 'none').'.',
+        '',
+        'Add it to fpctFixtures() to project it, or to FPCT_FIXTURES_NOT_PROJECTED with the reason and a',
+        'pattern that proves the reason still reads.',
+    ]));
+
+    $expired = [];
+
+    foreach (FPCT_FIXTURES_NOT_PROJECTED as $name => $pin) {
+        $path = ForecastCorpus::path($name);
+
+        if (! is_file($path)) {
+            $expired[] = $name.' is gone, and it was skipped because '.$pin['reason'];
+
+            continue;
+        }
+
+        if (! str_contains((string) file_get_contents($path), $pin['proves'])) {
+            $expired[] = $name.' no longer holds '.$pin['proves'].', so it is no longer true that '.$pin['reason'];
+        }
+    }
+
+    expect($expired)->toBe([], implode("
+", [
+        'These fixtures are skipped for a reason that has stopped reading:',
+        ...$expired,
+    ]));
+});

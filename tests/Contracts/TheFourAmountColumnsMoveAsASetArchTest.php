@@ -71,7 +71,10 @@ it('assembles the four amount columns in the one place that keeps them in step',
         }
     }
 
-    expect($counted)->toBeGreaterThan(5);
+    // The denominator, read before the verdict below it. A tokeniser that
+    // stopped resolving keyed array literals reports the same empty offender
+    // list a tree that assembles the four columns in one place reports.
+    expect($counted)->toBeGreaterThan(5, 'almost no array literal was read as naming two of the four amount columns — the token walk is broken, not the tree.');
 
     expect($offenders)->toBe([], implode("\n  ", [
         'The native pair, the settled pair and the rate between them are one fact.',
@@ -83,15 +86,77 @@ it('assembles the four amount columns in the one place that keeps them in step',
 
     // A pin nobody reaches any more is a claim about the tree that stopped
     // being true, and it would otherwise sit here forever.
-    expect(array_keys($pinned))->toBe(array_keys(AMOUNT_COLUMN_PINS));
+    expect(array_keys($pinned))->toBe(array_keys(AMOUNT_COLUMN_PINS), implode("\n  ", [
+        'A pinned exemption no longer excuses anything, or a pin was reached that is not declared here.',
+        'The list is compared in both directions on purpose: an entry that stopped being needed reads',
+        'as considered by every reader after it, and is exactly how a pin outlives the reason it was',
+        'granted for. Reached: '.implode(', ', array_keys($pinned)),
+    ]));
 });
 
 it('still holds each pinned exemption to the reason it was granted for', function (): void {
     foreach (AMOUNT_COLUMN_PINS as $relative => $pin) {
+        expect(is_file(base_path($relative)))->toBeTrue($relative.' is pinned here and no longer exists — remove the entry or repoint it.');
+
         $source = (string) file_get_contents(base_path($relative));
 
         expect($source)->toMatch($pin['proves'], $relative.' no longer reads as "'.$pin['reason'].'"');
     }
+});
+
+/**
+ * @return list<string> `line names a, b` for every literal naming two or more
+ *                      of the four, driving the same reader the real walk drives
+ */
+function amountColumnSetsNamedIn(string $path): array
+{
+    $found = [];
+
+    foreach (MoneySourceShape::keyedArrayLiterals(BackendSourceFiles::codeTokens($path)) as $line => $keys) {
+        $named = array_values(array_intersect(AMOUNT_COLUMN_SET, $keys));
+
+        if (count($named) >= 2) {
+            $found[] = $line.' names '.implode(', ', $named);
+        }
+    }
+
+    return $found;
+}
+
+it('sees a payload assembling the four columns by hand, and lets one leg alone', function (): void {
+    $planted = tempnam(sys_get_temp_dir(), 'amount-set').'.php';
+    file_put_contents($planted, <<<'PHP'
+        <?php
+        final class PlantedAmountWrites
+        {
+            public function store(): void
+            {
+                $this->db->table('transactions')->insert([
+                    'amount_minor' => -3000,
+                    'settled_amount_minor' => 2723,
+                    'settled_currency' => 'EUR',
+                    'fx_rate_used' => 0.9077,
+                ]);
+
+                $this->db->table('transactions')->insert([
+                    'amount_minor' => -3000,
+                    'note' => 'one leg is not the set',
+                ]);
+            }
+        }
+        PHP);
+
+    try {
+        $found = amountColumnSetsNamedIn($planted);
+    } finally {
+        @unlink($planted);
+    }
+
+    expect($found)->toHaveCount(1, 'The reader must flag the payload spelling all four out and leave the single-leg one alone.');
+
+    expect(str_contains($found[0], 'amount_minor, settled_amount_minor, settled_currency, fx_rate_used'))->toBeTrue(
+        'The reader flagged a literal but did not name the four columns it found in it: '.implode(' | ', $found),
+    );
 });
 
 // A declaration of the rate, rather than a read of one: a promoted property, a
@@ -147,7 +212,7 @@ it('declares the rate those two legs derive in exactly one place', function (): 
     }
 
     // The seam declares one. A walk finding none is reading nothing.
-    expect($counted)->toBeGreaterThan(0);
+    expect($counted)->toBeGreaterThan(0, 'no declaration of $fxRateUsed was found anywhere, and the seam declares one — the token walk is broken, not the tree.');
 
     expect($declaring)->toBe([], implode("\n  ", [
         'The rate is derived from the two legs, never carried beside them: a class',
@@ -162,7 +227,11 @@ it('declares the rate those two legs derive in exactly one place', function (): 
 it('lets every transaction be born through that same seam', function (): void {
     $canonical = (string) file_get_contents(base_path('Modules/Ledger/Public/Dto/CanonicalTransaction.php'));
 
-    expect($canonical)->toContain('TransactionAmount::relate(');
+    expect(str_contains($canonical, 'TransactionAmount::relate('))->toBeTrue(
+        'CanonicalTransaction no longer relates its two legs through the seam, so the rate beside '
+        .'them is whatever its caller passed rather than the ratio of the pair it stores.',
+    );
+
     expect(str_contains($canonical, '$this->amount()->toColumns()'))->toBeTrue(implode("\n  ", [
         'CanonicalTransaction::toAttributes() is the payload every insert into',
         'transactions is made from — import, receipts, the cash book and the',

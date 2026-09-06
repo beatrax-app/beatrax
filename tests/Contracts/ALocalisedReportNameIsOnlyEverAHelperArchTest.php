@@ -59,11 +59,19 @@ function outsideDutchMarkup(string $line): string
     return PatternScan::replace('/<([a-z]+)[^>]*\blang="nl"[^>]*>.*?<\/\1>/su', '', $line);
 }
 
-it('never asks a reader to look for a Dutch report name without saying it is Dutch', function (): void {
+// The walk is the wizard's own lang files, which is where the defect shipped
+// and what the description says. HeaderSniffer raises two English exception
+// messages naming both reports; they are outside this rule and are reported
+// rather than swept in, because widening the walk to production strings is a
+// change to those strings, not to this guard.
+it('never asks a reader to look for a Dutch report name in a wizard line without saying it is Dutch', function (): void {
     $offenders = [];
+    $lines = 0;
 
     foreach (glob(base_path('Modules/Onboarding/Resources/lang/*/*.php')) ?: [] as $file) {
         foreach (wizardLinesIn($file) as $key => $line) {
+            $lines++;
+
             $bare = outsideDutchMarkup($line);
             foreach (dutchReportNames() as $name) {
                 if (! str_contains($bare, $name)) {
@@ -77,6 +85,10 @@ it('never asks a reader to look for a Dutch report name without saying it is Dut
 
     sort($offenders);
 
+    // Five thousand seven hundred wizard lines ship across twenty-six locales.
+    // A glob that answered nothing would report every one of them as tagged.
+    expect($lines)->toBeGreaterThan(1000, 'Read '.$lines.' wizard lines, too few for an empty offender list to mean anything.');
+
     expect($offenders)->toBe([], implode("\n  ", [
         'A PayPal report name written in Dutch reached a reader with nothing saying so.',
         'Describe the report by what it is — the per-transaction activity export, not the',
@@ -85,4 +97,18 @@ it('never asks a reader to look for a Dutch report name without saying it is Dut
         'the name either. Offenders:',
         ...$offenders,
     ]));
+});
+
+it('reads a report name written outside the markup that says it is Dutch, and leaves a tagged one alone', function (): void {
+    $tagged = 'Kies <em lang="nl">Rapport Transactiegegevens</em>, niet <span lang="nl">Saldorapport</span>.';
+    $bare = 'Download the Rapport Transactiegegevens export before you continue.';
+
+    expect(str_contains(outsideDutchMarkup($tagged), 'Rapport Transactiegegevens'))
+        ->toBeFalse('a name inside lang="nl" markup is announced as Dutch, which is the whole allowance');
+
+    expect(str_contains(outsideDutchMarkup($tagged), 'Saldorapport'))
+        ->toBeFalse('the second tagged element is stripped too, or one strip would answer for both');
+
+    expect(str_contains(outsideDutchMarkup($bare), 'Rapport Transactiegegevens'))
+        ->toBeTrue('an untagged name is the defect, and the strip has to leave it where the scan can see it');
 });

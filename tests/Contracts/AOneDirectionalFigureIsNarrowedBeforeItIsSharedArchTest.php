@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\BackendSourceFiles;
+use Tests\Contracts\Support\RepoTree;
 
 // Spend is signed on purpose: a refund is counted beside the expense it
 // reverses, with the sign it already carries, which is what makes it reduce
@@ -78,35 +79,48 @@ function directionalShareSites(): array
     $sites = [];
 
     foreach (BackendSourceFiles::all() as $path) {
-        $relative = str_replace(base_path().'/', '', $path);
-        $tokens = BackendSourceFiles::codeTokens($path);
-        $texts = array_map(
-            static fn (array|string $token): string => is_array($token) ? $token[1] : $token,
-            $tokens,
-        );
-        $count = count($tokens);
+        $sites = array_merge($sites, directionalShareSitesIn(
+            str_replace(base_path().'/', '', $path),
+            BackendSourceFiles::codeTokens($path),
+        ));
+    }
 
-        for ($i = 0; $i < $count; $i++) {
-            if ($texts[$i] !== '/') {
-                continue;
-            }
+    return $sites;
+}
 
-            $left = directionalShareOperand($texts, $i, forwards: false);
-            if (preg_match(DIRECTIONAL_MONEY_IDENTIFIER, $left) !== 1) {
-                continue;
-            }
+/**
+ * @param  list<array{0:int,1:string,2:int}|string>  $tokens
+ * @return list<array{path: string, line: int, expression: string}>
+ */
+function directionalShareSitesIn(string $relative, array $tokens): array
+{
+    $sites = [];
+    $texts = array_map(
+        static fn (array|string $token): string => is_array($token) ? $token[1] : $token,
+        $tokens,
+    );
+    $count = count($tokens);
 
-            $right = directionalShareOperand($texts, $i, forwards: true);
-            if (preg_match('/^\s*[0-9_.]+\s*$/', $right) === 1) {
-                continue;
-            }
-
-            $sites[] = [
-                'path' => $relative,
-                'line' => directionalShareLine($tokens, $i),
-                'expression' => trim(PatternScan::replace('/\s+/', ' ', $left.' / '.$right)),
-            ];
+    for ($i = 0; $i < $count; $i++) {
+        if ($texts[$i] !== '/') {
+            continue;
         }
+
+        $left = directionalShareOperand($texts, $i, forwards: false);
+        if (preg_match(DIRECTIONAL_MONEY_IDENTIFIER, $left) !== 1) {
+            continue;
+        }
+
+        $right = directionalShareOperand($texts, $i, forwards: true);
+        if (preg_match('/^\s*[0-9_.]+\s*$/', $right) === 1) {
+            continue;
+        }
+
+        $sites[] = [
+            'path' => $relative,
+            'line' => directionalShareLine($tokens, $i),
+            'expression' => trim(PatternScan::replace('/\s+/', ' ', $left.' / '.$right)),
+        ];
     }
 
     return $sites;
@@ -179,7 +193,9 @@ function directionalBarBindings(): array
     $bindings = [];
 
     foreach (directionalBladeFiles() as $path) {
-        $relative = str_replace(base_path().'/', '', $path);
+        // RepoTree answers with the repository's own root, which is not
+        // base_path() under the second Composer root.
+        $relative = str_replace(RepoTree::root().'/', '', $path);
         $source = PatternScan::replace('/\{\{--.*?--\}\}/s', '', (string) file_get_contents($path));
 
         foreach (MarkupSource::elements($source, 'x-core::progress-bar') as $bar) {
@@ -219,24 +235,9 @@ function directionalBarBindings(): array
  */
 function directionalBladeFiles(): array
 {
-    $files = [];
-
-    /** @var SplFileInfo $file */
-    foreach (new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(base_path('Modules'), RecursiveDirectoryIterator::SKIP_DOTS),
-    ) as $file) {
-        $path = $file->getPathname();
-
-        if (! $file->isFile() || ! str_ends_with($path, '.blade.php') || str_contains($path, '/tests/')) {
-            continue;
-        }
-
-        $files[] = $path;
-    }
-
-    sort($files);
-
-    return $files;
+    // The roots come from RepoTree: a bar drawn from resources/ is a bar a
+    // reader is shown, and the Modules-only walk this replaced could not see it.
+    return RepoTree::files(RepoTree::EVERY_BLADE_VIEW);
 }
 
 it('cuts every share of a money figure in the one place that narrows it first', function (): void {
@@ -246,7 +247,7 @@ it('cuts every share of a money figure in the one place that narrows it first', 
     // The seam divides money by money itself, so it has to be in what the walk
     // found before any verdict here means anything.
     expect(array_column($sites, 'path'))->toContain(DIRECTIONAL_SHARE_SEAM);
-    expect(count($sites))->toBeGreaterThan(3);
+    expect(count($sites))->toBeGreaterThan(3, 'Read '.count($sites).' money divisions, too few for an empty offender list to mean anything.');
 
     $offenders = [];
     $pinned = [];
@@ -280,7 +281,10 @@ it('cuts every share of a money figure in the one place that narrows it first', 
 
     // A pin nobody reaches any more is a claim about the tree that stopped
     // being true, and it would otherwise sit here forever.
-    expect(array_keys($pinned))->toBe(array_keys(DIRECTIONAL_SHARE_PINS));
+    expect(array_keys($pinned))->toBe(
+        array_keys(DIRECTIONAL_SHARE_PINS),
+        'A pinned share is no longer reached by the rule it was written for, so the entry excuses nothing and goes.',
+    );
 });
 
 it('lets no template work out the bar it is drawing', function (): void {
@@ -288,8 +292,11 @@ it('lets no template work out the bar it is drawing', function (): void {
 
     // A walk that stops reading finds no bars at all, and the component every
     // bar is drawn by is the one file it cannot honestly miss.
-    expect(count($bindings))->toBeGreaterThan(9);
-    expect(count(array_unique(array_column($bindings, 'path'))))->toBeGreaterThan(4);
+    expect(count($bindings))->toBeGreaterThan(9, 'Read '.count($bindings).' bar bindings, too few for an empty offender list to mean anything.');
+    expect(count(array_unique(array_column($bindings, 'path'))))->toBeGreaterThan(
+        4,
+        'The bar bindings came from too few templates for this walk to have covered the product.',
+    );
     expect(array_column($bindings, 'path'))->toContain(DIRECTIONAL_BAR_SEAM);
 
     $offenders = [];
@@ -326,7 +333,10 @@ it('lets no template work out the bar it is drawing', function (): void {
         ...$offenders,
     ]));
 
-    expect(array_keys($pinned))->toBe(array_keys(DIRECTIONAL_BAR_PINS));
+    expect(array_keys($pinned))->toBe(
+        array_keys(DIRECTIONAL_BAR_PINS),
+        'A pinned bar is no longer reached by the rule it was written for, so the entry excuses nothing and goes.',
+    );
 });
 
 /**
@@ -363,4 +373,57 @@ it('still holds each pinned share and each pinned bar to the reason it was grant
             expect($source)->toMatch($pin['proves'], $relative.' no longer reads as "'.$pin['reason'].'"');
         }
     }
+});
+
+it('reads a share cut from a money figure and a bar the template works out, and leaves the handed-in ones alone', function (): void {
+    $source = <<<'PHP'
+        <?php
+        final class PlantedShare
+        {
+            public function of(int $spentMinor, int $totalMinor, int $parts): float
+            {
+                $share = $spentMinor / $totalMinor;
+                $euros = $spentMinor / 100;
+                $each = $parts / $totalMinor;
+
+                return $share + $euros + $each;
+            }
+        }
+        PHP;
+
+    expect(array_column(directionalShareSitesIn('Planted.php', token_get_all($source)), 'expression'))->toBe(
+        ['$spentMinor / $totalMinor'],
+        'a money figure over something that is not a constant is one figure as a fraction of another; a hundredth is '
+        .'a unit conversion, and a divisor that reads as money says nothing about the numerator',
+    );
+
+    expect(directionalBarFault([
+        'path' => 'a.blade.php',
+        'line' => 1,
+        'attribute' => 'width',
+        'expression' => 'max(2, min(100, $pct))',
+        'source' => '<div style="width: {{ max(2, min(100, $pct)) }}%"></div>',
+    ]))->toBe(
+        'the expression is worked out here rather than handed in',
+        'the clamp that keeps a bar inside its track is also what hides whatever produced it',
+    );
+
+    expect(directionalBarFault([
+        'path' => 'a.blade.php',
+        'line' => 1,
+        'attribute' => ':value',
+        'expression' => '$pct',
+        'source' => '@php($pct = 100)',
+    ]))->toBe(
+        '$pct is assigned in this same template',
+        'a value the template works out a line earlier is the same defect one line up',
+    );
+
+    expect(directionalBarFault([
+        'path' => 'a.blade.php',
+        'line' => 1,
+        'attribute' => ':value',
+        'expression' => '$row->barWidth',
+        'source' => '<x-core::progress-bar :value="$row->barWidth" />',
+    ]))->toBeNull('a row answering for its own bar is what the rule asks for');
 });

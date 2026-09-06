@@ -591,14 +591,21 @@ function ledgerDayJudge(array $found, array $pins, string $noun): array
 
 it('names no booking stamp on a type a reader is shown a row of', function (): void {
     $files = ledgerDayRowTypes(ledgerDayBackendFiles());
-    expect(count($files))->toBeGreaterThan(150);
+
+    expect(count($files))->toBeGreaterThan(
+        150,
+        'The walk found '.count($files).' row types in the backend tree, so a clean answer here is a walk that read almost none of them.'
+    );
 
     $walk = ledgerDayCarriersIn($files);
     $verdict = ledgerDayJudge($walk['booking'], LEDGER_DAY_CARRIER_PINS, 'booking-stamp fields');
 
     // Below what the row types of this tree actually declare, so a walk that
     // stops reading fails here instead of reporting a clean tree.
-    expect($walk['counted'])->toBeGreaterThan(2000);
+    expect($walk['counted'])->toBeGreaterThan(
+        2000,
+        'The reader recognised '.$walk['counted'].' declared fields across those types, which is what a tokeniser that stopped reading looks like.'
+    );
 
     expect($verdict['offenders'])->toBe([], implode("\n  ", [
         'A row type named the issuer\'s booking stamp. The day a reader is shown is',
@@ -607,17 +614,27 @@ it('names no booking stamp on a type a reader is shown a row of', function (): v
         ...$verdict['offenders'],
     ]));
 
-    expect($verdict['reached'])->toBe(array_keys(LEDGER_DAY_CARRIER_PINS));
+    expect($verdict['reached'])->toBe(
+        array_keys(LEDGER_DAY_CARRIER_PINS),
+        'A pinned carrier the walk no longer reaches excuses nothing while still hiding whatever moves into the file it names.'
+    );
 });
 
 it('prints no booking stamp on a screen except the one that labels it', function (): void {
     $files = ledgerDayViewFiles();
-    expect(count($files))->toBeGreaterThan(200);
+
+    expect(count($files))->toBeGreaterThan(
+        200,
+        'The walk opened '.count($files).' templates, so a clean answer here is a walk that read almost none of what a reader is shown.'
+    );
 
     $walk = ledgerDayViewReadsIn($files);
     $verdict = ledgerDayJudge($walk['booking'], LEDGER_DAY_VIEW_PINS, 'booking-stamp reads');
 
-    expect($walk['counted'])->toBeGreaterThan(15);
+    expect($walk['counted'])->toBeGreaterThan(
+        15,
+        'The reader recognised '.$walk['counted'].' day reads across those templates, which is too few to have read them.'
+    );
 
     expect($verdict['offenders'])->toBe([], implode("\n  ", [
         'A view printed the issuer\'s booking stamp. Unlabelled, it is a date the',
@@ -626,7 +643,10 @@ it('prints no booking stamp on a screen except the one that labels it', function
         ...$verdict['offenders'],
     ]));
 
-    expect($verdict['reached'])->toBe(array_keys(LEDGER_DAY_VIEW_PINS));
+    expect($verdict['reached'])->toBe(
+        array_keys(LEDGER_DAY_VIEW_PINS),
+        'The one view pinned to print a labelled booking stamp no longer prints one, so its pin excuses nothing.'
+    );
 });
 
 it('feeds no postedAt from the booking stamp', function (): void {
@@ -634,7 +654,10 @@ it('feeds no postedAt from the booking stamp', function (): void {
     $walk = ledgerDayFedFromBookingIn($files);
     $verdict = ledgerDayJudge($walk['fed'], LEDGER_DAY_SINGLE_DAY_SOURCE_PINS, 'single-day feeds');
 
-    expect($walk['counted'])->toBeGreaterThan(30);
+    expect($walk['counted'])->toBeGreaterThan(
+        30,
+        'The reader recognised '.$walk['counted'].' postedAt feeds in the backend tree, which is what a walk that stopped reading looks like.'
+    );
 
     expect($verdict['offenders'])->toBe([], implode("\n  ", [
         'A field called postedAt was fed from booked_at. Renaming the field and',
@@ -643,7 +666,10 @@ it('feeds no postedAt from the booking stamp', function (): void {
         ...$verdict['offenders'],
     ]));
 
-    expect($verdict['reached'])->toBe(array_keys(LEDGER_DAY_SINGLE_DAY_SOURCE_PINS));
+    expect($verdict['reached'])->toBe(
+        array_keys(LEDGER_DAY_SINGLE_DAY_SOURCE_PINS),
+        'A single-day source the walk no longer reaches excuses nothing while still hiding whatever moves into the file it names.'
+    );
 });
 
 it('routes every day a row is built with through the one seam that names it', function (): void {
@@ -651,7 +677,10 @@ it('routes every day a row is built with through the one seam that names it', fu
 
     $walk = ledgerDayRowConstructionsIn(ledgerDayBackendFiles());
 
-    expect($walk['counted'])->toBeGreaterThan(10);
+    expect($walk['counted'])->toBeGreaterThan(
+        10,
+        'The reader recognised '.$walk['counted'].' row constructions, which is too few to have read the tree that builds them.'
+    );
 
     $offenders = [];
     foreach ($walk['astray'] as $sites) {
@@ -698,7 +727,10 @@ it('declares no field on a row type that nothing ever puts a value in', function
     // Below the number of named arguments the row constructions of this tree
     // actually pass, so a walk that stops reading fails here rather than
     // reporting that every declared field is populated.
-    expect($walk['counted'])->toBeGreaterThan(200);
+    expect($walk['counted'])->toBeGreaterThan(
+        200,
+        'The reader recognised '.$walk['counted'].' named arguments across every row construction, which is what a walk that stopped reading looks like.'
+    );
 
     $offenders = [];
     foreach ($walk['dead'] as $sites) {
@@ -716,8 +748,18 @@ it('declares no field on a row type that nothing ever puts a value in', function
     ]));
 });
 
+/**
+ * A scratch file outside every root a guard walks. tempnam() would leave a
+ * second, suffixless file behind on every run, and a plant under Modules or
+ * resources is a file the next parallel guard lists and then finds deleted.
+ */
+function ledgerDayScratchPath(string $label, string $suffix): string
+{
+    return sys_get_temp_dir().'/ledger-day-'.$label.'-'.bin2hex(random_bytes(8)).$suffix;
+}
+
 it('sees a planted carrier, print, feed and empty slot, and leaves a converted one alone', function (): void {
-    $plantedType = tempnam(sys_get_temp_dir(), 'ledger-day').'Row.php';
+    $plantedType = ledgerDayScratchPath('type', 'Row.php');
     file_put_contents($plantedType, <<<'PHP'
         <?php
         final class PlantedPreviewRow
@@ -729,7 +771,7 @@ it('sees a planted carrier, print, feed and empty slot, and leaves a converted o
         }
         PHP);
 
-    $cleanType = tempnam(sys_get_temp_dir(), 'ledger-day-clean').'Row.php';
+    $cleanType = ledgerDayScratchPath('clean', 'Row.php');
     file_put_contents($cleanType, <<<'PHP'
         <?php
         final class PlantedLedgerRow
@@ -743,7 +785,7 @@ it('sees a planted carrier, print, feed and empty slot, and leaves a converted o
 
     // One file so the walk that needs a declaration and the walk that needs a
     // construction site both see the pair they are written about.
-    $plantedFeed = tempnam(sys_get_temp_dir(), 'ledger-day-feed').'Row.php';
+    $plantedFeed = ledgerDayScratchPath('feed', 'Row.php');
     file_put_contents($plantedFeed, <<<'PHP'
         <?php
         final class PlantedFeedRow
@@ -776,7 +818,7 @@ it('sees a planted carrier, print, feed and empty slot, and leaves a converted o
         }
         PHP);
 
-    $plantedView = tempnam(sys_get_temp_dir(), 'ledger-day-view').'.blade.php';
+    $plantedView = ledgerDayScratchPath('view', '.blade.php');
     file_put_contents($plantedView, '<td>{{ $row->bookedAt }}</td><td>{{ $other->posted_at }}</td>');
 
     try {
@@ -786,10 +828,11 @@ it('sees a planted carrier, print, feed and empty slot, and leaves a converted o
         $views = ledgerDayViewReadsIn([$plantedView]);
         $empty = ledgerDayNeverPopulatedIn([$plantedFeed]);
     } finally {
-        @unlink($plantedType);
-        @unlink($cleanType);
-        @unlink($plantedFeed);
-        @unlink($plantedView);
+        foreach ([$plantedType, $cleanType, $plantedFeed, $plantedView] as $scratch) {
+            if (is_file($scratch)) {
+                unlink($scratch);
+            }
+        }
     }
 
     expect(ledgerDayByBasename($carriers['booking']))->toBe([basename($plantedType) => 1]);

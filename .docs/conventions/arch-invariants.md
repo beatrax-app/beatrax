@@ -108,8 +108,8 @@ fully-qualified class names — never a glob, never a directory prefix:
 
 ```php
 $allowList = [
-    'Modules/Auth/Public/Actions/LoginAction.php',
-    'Modules/Auth/Internal/Fortify/Authenticator.php',
+    'Modules/Community/Public/Actions/OpenExternalUrlAction.php',
+    'Modules/Community/Internal/Shell/NoOpShell.php',
 ];
 ```
 
@@ -197,9 +197,18 @@ biases toward a false positive somebody investigates rather than a silent green.
 
 `AStoppedScanIsNeverReadAsAnEmptyOneArchTest` holds the guard tree itself to a
 stricter rule than the tree-wide one, because a wrong answer here is a false
-green rather than a bug. It tokenises every file under `tests/Contracts/` and
-`Modules/*/tests/Arch/` and fails on a direct `preg_match_all` call in any form,
-on any PCRE call whose answer is discarded, and on any whose answer is turned
+green rather than a bug. A guard is not only a file under `tests/Contracts/`, so
+it tokenises `tests/Contracts/`, `tests/Helpers/`, `tests/Support/` and both
+`Modules/*/tests/Arch/` and `Modules/*/tests/Contracts/` — the last two of those
+held thirteen guards the walk had never opened, and `tests/Helpers/CssRule.php`
+held the exact shape the rule bars, a `(string) preg_replace_callback(…)` that
+blanks a whole stylesheet on a give-up and leaves five CSS guards reporting a
+clean sheet. `Modules/*/tests/{Feature,Unit}` stays out on evidence rather than
+by omission: twenty-seven call sites there would fail these rules, and a
+behaviour test is not a guard. It fails on a direct `preg_match_all` call in any
+form — including the fully-qualified `\preg_match_all(`, which PHP hands back as
+one `T_NAME_FULLY_QUALIFIED` token a reader keyed on `T_STRING` cannot see — on
+any PCRE call whose answer is discarded, and on any whose answer is turned
 into an empty subject by a `(string)` cast or a `?? ''`. `preg_match_all` is
 barred outright rather than merely checked because its backtracking accumulates
 across a whole subject, so a file that grows crosses the limit — that is the

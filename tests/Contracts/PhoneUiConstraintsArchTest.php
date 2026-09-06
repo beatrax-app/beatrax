@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\UnlayeredCss;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#two-phone-constraints-and-three-dialog-naming-failures
@@ -44,28 +45,13 @@ function phoneUiBalancedSpans(string $css, string $opening): array
     return $spans;
 }
 
-/**
- * @return string the stylesheet with every balanced `@layer name { ... }` block
- *                removed, so what is left is exactly the unlayered rules
- */
-function phoneUiUnlayeredCss(): string
-{
-    $css = (string) file_get_contents(base_path('resources/css/app.css'));
-
-    $out = '';
-    $offset = 0;
-    foreach (phoneUiBalancedSpans($css, '/@layer\s+[a-z]+\s*\{/') as [$start, $length]) {
-        $out .= substr($css, $offset, $start - $offset);
-        $offset = $start + $length;
-    }
-
-    return $out.substr($css, $offset);
-}
-
 /** @return list<string> every `@media (pointer: coarse)` block that is not inside a cascade layer */
 function phoneUiCoarsePointerBlocks(): array
 {
-    $css = phoneUiUnlayeredCss();
+    // The layer strip was a fourth copy of UnlayeredCss::read(), byte-identical
+    // over the 225 kB stylesheet. The brace counter below stays, because the
+    // coarse-pointer question is this file's own and no shared reader answers it.
+    $css = UnlayeredCss::read();
 
     $blocks = [];
     foreach (phoneUiBalancedSpans($css, '/@media \(pointer: coarse\)\s*\{/') as [$start, $length]) {
@@ -219,7 +205,7 @@ it('gives every touch button a 44px hit area', function (): void {
 
 it('names the bottom sheet dialog by its heading rather than by a second copy of it', function (): void {
     $sheet = file_get_contents(base_path('Modules/Core/Resources/views/components/bottom-sheet.blade.php'));
-    expect($sheet)->toBeString();
+    expect($sheet)->toBeString('The bottom-sheet component was not found, so both assertions below would read an unreadable file as a correctly named dialog.');
 
     // The same sheet is both "create" and "edit", and a duplicated name went
     // stale on the round-trip that updated the heading.
@@ -251,7 +237,7 @@ it('backs every open-sheet dispatch with a sheet that answers to that name', fun
         }
     }
 
-    expect($files)->not->toBeEmpty();
+    expect(count($files))->toBeGreaterThan(150, 'The Blade walk found almost nothing, so an empty orphan list below is the walk being broken rather than every sheet answering.');
 
     // A dispatched sheet name that only a flux:modal carries is inert on a
     // phone, and the page still looks complete.
@@ -279,10 +265,16 @@ it('keeps the 44px floor from deforming controls the design draws smaller', func
     // The floor inflates the border box, so a fixed-size pill-radius control
     // becomes a circle and its positioned children strand. Anything it would
     // deform opts out and takes its touch reach from a pseudo-element.
-    $css = phoneUiUnlayeredCss();
+    $css = UnlayeredCss::read();
 
     $drawnSmall = [];
     $rules = PatternScan::sets('/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/', $css);
+
+    // Both denominators, before the verdict: an unlayered stylesheet that read
+    // as empty and a Blade walk that found no touch control would each answer
+    // "nothing is deformed" for a reason that is not the design.
+    expect(count($rules))->toBeGreaterThan(80, 'The unlayered stylesheet yielded almost no rules, so nothing below could be found to be drawn small.');
+
     foreach ($rules as $rule) {
         $selector = trim($rule['selector']);
         $name = PatternScan::first('/^\.([a-zA-Z0-9_-]+)$/', $selector);
@@ -299,8 +291,12 @@ it('keeps the 44px floor from deforming controls the design draws smaller', func
         }
     }
 
+    $classLists = phoneUiTouchControlClassLists();
+
+    expect(count($classLists))->toBeGreaterThan(300, 'The touch-control walk read almost no class lists, so nothing below could be found sitting on a control.');
+
     $onButtons = [];
-    foreach (phoneUiTouchControlClassLists() as $classList) {
+    foreach ($classLists as $classList) {
         foreach (PatternScan::split('/\s+/', $classList) as $class) {
             if (isset($drawnSmall[$class])) {
                 $onButtons[$class] = true;
@@ -427,10 +423,34 @@ it('defines the drawn chevron in both colour schemes', function (): void {
     // A background-image reading a custom property nothing defines paints
     // nothing at all, and the control loses its arrow rather than its height —
     // which looks like a design choice from every angle except a device.
-    $css = phoneUiUnlayeredCss();
+    $css = UnlayeredCss::read();
 
-    expect($css)->toMatch('/:root\s*\{[^{}]*--select-chevron:/');
-    expect($css)->toMatch('/:root\.dark\s*\{[^{}]*--select-chevron:/');
+    expect($css)->toMatch('/:root\s*\{[^{}]*--select-chevron:/', 'app.css defines no --select-chevron on :root, so the drawn arrow paints nothing in the light scheme and the select loses its arrow rather than its height.');
+    expect($css)->toMatch('/:root\.dark\s*\{[^{}]*--select-chevron:/', 'app.css defines no --select-chevron on :root.dark, so the drawn arrow paints nothing in the dark scheme and the select loses its arrow rather than its height.');
+});
+
+// The reader below is what the whole file rests on: the coarse-pointer floor
+// grew past PCRE's JIT stack once already, and a pattern-based reader answered
+// with a truncated list rather than failing.
+it('counts braces to the end of a block that holds a nested at-rule', function (): void {
+    $css = ':root { --a: 1px; }'
+        ."\n".'@media (pointer: coarse) { button { min-height: 44px; } @supports (x: y) { a { color: red; } } }'
+        ."\n".'.after { color: blue; }';
+
+    $spans = phoneUiBalancedSpans($css, '/@media \(pointer: coarse\)\s*\{/');
+
+    expect($spans)->toHaveCount(1);
+
+    [$start, $length] = $spans[0];
+    $block = substr($css, $start, $length);
+
+    expect(str_ends_with($block, '} }'))->toBeTrue('The reader stopped at the first closing brace, so a coarse-pointer block holding a nested at-rule is read short and its later rules disappear.')
+        ->and(str_contains($block, '@supports'))->toBeTrue('The nested at-rule one of these blocks really holds fell outside the span.')
+        ->and(str_contains($block, '.after'))->toBeFalse('The reader ran past the end of the block and swallowed the rule after it.');
+
+    // The near miss: no coarse-pointer block at all is an empty answer, not a
+    // span covering the whole stylesheet.
+    expect(phoneUiBalancedSpans(':root { --a: 1px; }', '/@media \(pointer: coarse\)\s*\{/'))->toBe([]);
 });
 
 /** @return list<string> every class token an element carries */
@@ -708,7 +728,7 @@ it('gives every link that is only as tall as its own text a 44px reach', functio
 it('lets the reader\'s text-size choice reach the type scale', function (): void {
     // Every --text-* token is a rem, so the scale follows the root — and
     // nothing moved the root, which is why Larger Text did nothing at all.
-    $css = phoneUiUnlayeredCss();
+    $css = UnlayeredCss::read();
     $at = strpos($css, '@supports (font: -apple-system-body)');
 
     expect($at)->toBeInt(

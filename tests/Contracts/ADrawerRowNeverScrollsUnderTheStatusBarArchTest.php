@@ -14,6 +14,13 @@ use Tests\Helpers\CssRule;
 it('spends the drawer inset on the panel, not on the list that scrolls inside it', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
+    // Read before any verdict: an unreadable stylesheet answers the empty
+    // string, and the `not->toContain` below passes over one.
+    expect(strlen($css))->toBeGreaterThan(
+        50000,
+        'The stylesheet read back '.strlen($css).' bytes, which is not the compiled sheet this rule measures.',
+    );
+
     $scroller = CssRule::blockFor($css, '.drawer-container .side');
     expect($scroller)->not->toBe('', 'The drawer no longer sizes the sidebar inside it.')
         ->and($scroller)->toContain('height: 100%;')
@@ -23,6 +30,8 @@ it('spends the drawer inset on the panel, not on the list that scrolls inside it
     // block: `.drawer-container` is also the reduced-motion rule and the
     // desktop sidebar, so the first one in the file is neither of these.
     $at = strpos($css, '.drawer-container .side');
+    expect($at)->not->toBeFalse('The drawer no longer declares a sidebar rule to read the panel around.');
+
     $panel = substr($css, (int) $at, 900);
 
     expect($panel)->toContain('padding-top: var(--safe-top);')
@@ -31,6 +40,11 @@ it('spends the drawer inset on the panel, not on the list that scrolls inside it
 
 it('keeps that inset off the desktop sidebar the same class becomes', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    expect(strlen($css))->toBeGreaterThan(
+        50000,
+        'The stylesheet read back '.strlen($css).' bytes, which is not the compiled sheet this rule measures.',
+    );
 
     expect(CssRule::atRuleEnclosing($css, '.drawer-container .side'))->toContain('max-width: 1023px');
 });

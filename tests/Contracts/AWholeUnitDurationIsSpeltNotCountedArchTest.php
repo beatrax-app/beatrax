@@ -22,16 +22,20 @@ const DURATION_NAME_TOKENS = 'SECOND|TTL|TIMEOUT|LIFETIME|DECAY|GRACE';
 // token match and neither is one.
 const DURATION_NAME_EXCLUSIONS = 'MINUTE|HOUR|DAY|MAX_PER|PER_|COUNT|LIMIT|ATTEMPT';
 
-// Tuned numbers that happen to be whole units are still tuned numbers: a
-// backoff schedule of [60, 300, 900, 3600] is one shape and taking two of its
-// four terms to the enum would leave it saying less than it does now.
-// ATuningNumberIsNamedOnceAndAnswersToTheRealStatement owns those.
-/** @var array<string, string> */
-const DURATION_LITERAL_PINS = [
-    'Modules/EmailScan/Internal/InboxScanStateMachine.php' => 'BACKOFF_SCHEDULE [60, 300, 900, 3600] — a curve, not four durations; 300 and 900 have no case to reach for.',
-];
+// There is deliberately no pin list. The one entry this carried named
+// InboxScanStateMachine for its BACKOFF_SCHEDULE, and that constant matches
+// neither half of the rule — its name carries no duration token and its value
+// is an array rather than a bare literal — so the exemption excused nothing
+// while reading as a decision somebody had taken. Tuned curves are
+// ATuningNumberIsNamedOnceAndAnswersToTheRealStatement's to hold.
 
-/** @return list<string> */
+/**
+ * Modules and app, minus the three subtrees that describe rather than decide:
+ * a test's fixture, a migration's schema and a lang file's data. Duration.php
+ * is where the enum states the conversion, so it is the one file allowed to.
+ *
+ * @return list<string>
+ */
 function durationScannedFiles(): array
 {
     $paths = [];
@@ -65,38 +69,54 @@ function durationScannedFiles(): array
     return $paths;
 }
 
+/**
+ * Terminated by `;` alone, so a parameter default is not swept in: PHP constant
+ * expressions cannot call a method, so `int $retryAfterSeconds = 60` has no enum
+ * form to move to and flagging it would be an instruction to do the impossible.
+ * Class constants are excluded for the same reason and answer it differently —
+ * they become a static method, the way JobProgressCache::ttlSeconds() already does.
+ *
+ * @return list<string> one `NAME = value` per whole-unit duration counted out
+ */
+function durationLiteralsNamedInSeconds(string $source): array
+{
+    $pattern = '/(?<name>[A-Za-z_]*(?:'.DURATION_NAME_TOKENS.')[A-Za-z_]*)\s*=\s*(?<value>60|3_?600|86_?400)\s*;/i';
+    $found = [];
+
+    foreach (PatternScan::sets($pattern, $source) as $match) {
+        if (preg_match('/'.DURATION_NAME_EXCLUSIONS.'/i', $match['name']) === 1) {
+            continue;
+        }
+
+        $found[] = trim($match['name']).' = '.$match['value'];
+    }
+
+    return $found;
+}
+
+/** `* 60 * 1000` and `* 60_000` are the same minute, spelled twice. */
+function handWrittenMinuteMillisecondCount(string $source): int
+{
+    return PatternScan::count('/\*\s*(?:60\s*\*\s*1000|60_?000)\b/', $source);
+}
+
 it('reaches for the enum wherever a whole-unit duration is named', function (): void {
     $files = durationScannedFiles();
 
     // A scan that walked nothing would report a clean tree. The floor is the
-    // assertion that it read one.
-    expect(count($files))->toBeGreaterThan(500);
+    // assertion that it read one. Two thousand four hundred files stand here.
+    expect(count($files))->toBeGreaterThan(
+        500,
+        'The walk read almost nothing, so the empty offender list below is a tree nobody opened.',
+    );
 
-    // Terminated by `;` alone, so a parameter default is not swept in: PHP
-    // constant expressions cannot call a method, so `int $retryAfterSeconds =
-    // 60` has no enum form to move to and flagging it would be an instruction
-    // to do the impossible. Class constants are excluded for the same reason
-    // and answer it differently — they become a static method, the way
-    // JobProgressCache::ttlSeconds() already does.
-    $pattern = '/(?<name>[A-Za-z_]*(?:'.DURATION_NAME_TOKENS.')[A-Za-z_]*)\s*=\s*(?<value>60|3_?600|86_?400)\s*;/i';
     $offenders = [];
 
     foreach ($files as $path) {
         $relative = str_replace(base_path().'/', '', $path);
 
-        if (array_key_exists($relative, DURATION_LITERAL_PINS)) {
-            continue;
-        }
-
-        $source = (string) file_get_contents($path);
-        $matches = PatternScan::sets($pattern, $source);
-
-        foreach ($matches as $match) {
-            if (preg_match('/'.DURATION_NAME_EXCLUSIONS.'/i', $match['name']) === 1) {
-                continue;
-            }
-
-            $offenders[] = $relative.' — '.trim($match['name']).' = '.$match['value'];
+        foreach (durationLiteralsNamedInSeconds((string) file_get_contents($path)) as $named) {
+            $offenders[] = $relative.' — '.$named;
         }
     }
 
@@ -104,14 +124,18 @@ it('reaches for the enum wherever a whole-unit duration is named', function (): 
 });
 
 it('converts minutes to milliseconds through the enum rather than by hand', function (): void {
+    $files = durationScannedFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        500,
+        'The walk read almost nothing, so the empty offender list below is a tree nobody opened.',
+    );
+
     $offenders = [];
 
-    foreach (durationScannedFiles() as $path) {
-        $source = (string) file_get_contents($path);
-
-        // `* 60 * 1000` and `* 60_000` are the same minute, spelled twice. Both
-        // were in the app-lock idle window, in three files, in two spellings.
-        $found = PatternScan::count('/\*\s*(?:60\s*\*\s*1000|60_?000)\b/', $source);
+    foreach ($files as $path) {
+        // Both spellings were in the app-lock idle window, in three files.
+        $found = handWrittenMinuteMillisecondCount((string) file_get_contents($path));
 
         if ($found > 0) {
             $offenders[] = str_replace(base_path().'/', '', $path).' — '.$found.' hand-written minute-to-millisecond conversion(s)';
@@ -121,9 +145,29 @@ it('converts minutes to milliseconds through the enum rather than by hand', func
     expect($offenders)->toBe([], "Duration::Minute->milliseconds() is the one home for this:\n  ".implode("\n  ", $offenders));
 });
 
-it('keeps every pin pointing at a file that still exists', function (): void {
-    foreach (DURATION_LITERAL_PINS as $relative => $why) {
-        expect(is_file(base_path($relative)))->toBeTrue($relative.' is pinned but no longer here — delete the pin.');
-        expect($why)->not->toBe('');
-    }
+// Both verdicts above are read off lists that are empty on a clean tree and on a
+// scan that stopped. These plant each thing the readers have to see, and each
+// near miss they have to leave alone — the exclusion list in particular, which
+// carries the whole rule's usefulness and is otherwise proved by nothing.
+it('sees a duration counted out in seconds, and leaves the shapes that are not one alone', function (): void {
+    expect(durationLiteralsNamedInSeconds('<?php $sessionTtlSeconds = 86_400;'))
+        ->toBe(['sessionTtlSeconds = 86_400'], 'a day counted out in seconds went unreported');
+
+    expect(durationLiteralsNamedInSeconds('<?php const SECONDS_PER_HOUR = 3600;'))
+        ->toBe([], 'a name the exclusion list covers was reported anyway');
+
+    expect(durationLiteralsNamedInSeconds('<?php function retry(int $retryAfterSeconds = 60): void {}'))
+        ->toBe([], 'a parameter default has no enum form to move to and must not be reported');
+
+    expect(durationLiteralsNamedInSeconds('<?php $targetMinor = 3600;'))
+        ->toBe([], 'a number whose name says nothing about time was read as a duration');
+
+    expect(handWrittenMinuteMillisecondCount('<?php $idle = $minutes * 60 * 1000;'))
+        ->toBe(1, 'a minute spelled as * 60 * 1000 went uncounted');
+
+    expect(handWrittenMinuteMillisecondCount('<?php $idle = $minutes * 60_000;'))
+        ->toBe(1, 'the same minute spelled as * 60_000 went uncounted');
+
+    expect(handWrittenMinuteMillisecondCount('<?php $window = Duration::Minute->milliseconds();'))
+        ->toBe(0, 'the enum form was read as a hand-written conversion');
 });

@@ -52,22 +52,36 @@ const ROUTE_QUERY_CONCAT_PATTERN = '/route\s*\((?:[^()]|\([^()]*\))*\)\s*\.\s*[\
 // it. Bounded to a single echo so a later `?` on the same line cannot match.
 const ROUTE_QUERY_BLADE_PATTERN = '/\{\{(?:(?!\}\})[\s\S])*?\broute\s*\((?:(?!\}\})[\s\S])*?\}\}\?/';
 
-it('appends a query parameter through route() rather than gluing it on afterwards', function (): void {
+/**
+ * @return list<string> "$label:$line" for every hand-glued query the source writes
+ */
+function routeQueryConcatLinesIn(string $source, string $label): array
+{
     $offenders = [];
-    $scanned = 0;
 
-    foreach (routeQueryConcatFiles() as $path) {
-        $source = (string) file_get_contents($path);
-        $scanned++;
+    foreach ([ROUTE_QUERY_CONCAT_PATTERN, ROUTE_QUERY_BLADE_PATTERN] as $pattern) {
+        /** @var array{0: string, 1: int} $match */
+        foreach (PatternScan::allWithOffsets($pattern, $source)[0] as $match) {
+            $offenders[] = $label.':'.(substr_count(substr($source, 0, $match[1]), "\n") + 1);
+        }
+    }
 
-        foreach ([ROUTE_QUERY_CONCAT_PATTERN, ROUTE_QUERY_BLADE_PATTERN] as $pattern) {
-            $matches = PatternScan::allWithOffsets($pattern, $source);
+    return $offenders;
+}
 
-            /** @var array{0: string, 1: int} $match */
-            foreach ($matches[0] as $match) {
-                $line = substr_count(substr($source, 0, $match[1]), "\n") + 1;
-                $offenders[] = str_replace(base_path().'/', '', $path).':'.$line;
-            }
+it('appends a query parameter through route() rather than gluing it on afterwards', function (): void {
+    $files = routeQueryConcatFiles();
+
+    // Read before the verdict, not after it: a scan that matched nothing reads
+    // exactly like a clean tree, and an assertion below the verdict is one the
+    // failure report never reaches.
+    expect(count($files))->toBeGreaterThan(1000, 'The walk found almost nothing, so a clean answer below is the walk being broken rather than the call sites being right.');
+
+    $offenders = [];
+
+    foreach ($files as $path) {
+        foreach (routeQueryConcatLinesIn((string) file_get_contents($path), str_replace(base_path().'/', '', $path)) as $offender) {
+            $offenders[] = $offender;
         }
     }
 
@@ -77,7 +91,19 @@ it('appends a query parameter through route() rather than gluing it on afterward
         ."carries a query of its own, and `b` stops being readable at all. Offenders:\n  "
         .implode("\n  ", $offenders),
     );
+});
 
-    // A scan that matches nothing reads exactly like a clean tree.
-    expect($scanned)->toBeGreaterThan(100);
+it('reads both halves of the glue and leaves the parameter passed to route() alone', function (): void {
+    $concatenated = "<?php\n\$url = route('transactions.index').'?tag='.\$tag;\n";
+    $inBlade = "<a href=\"{{ route('transactions.index') }}?tag={{ \$tag }}\">Tagged</a>";
+
+    // The near misses: the shape this rule asks for, and a `?` far enough away
+    // that it belongs to something else on the line.
+    $passed = "<?php\n\$url = route('transactions.index', ['tag' => \$tag]);\n";
+    $unrelated = "<a href=\"{{ route('transactions.index') }}\">{{ \$count > 0 ? 'some' : 'none' }}</a>";
+
+    expect(routeQueryConcatLinesIn($concatenated, 'v'))->toBe(['v:2'])
+        ->and(routeQueryConcatLinesIn($inBlade, 'v'))->toBe(['v:1'])
+        ->and(routeQueryConcatLinesIn($passed, 'v'))->toBe([])
+        ->and(routeQueryConcatLinesIn($unrelated, 'v'))->toBe([]);
 });

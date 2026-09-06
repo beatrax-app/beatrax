@@ -8,6 +8,8 @@ use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
 /**
+ * @return list<string>
+ *
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-count-beside-a-noun-that-never-declared-itself-plural
  */
 function countedNounSourceFiles(): array
@@ -134,6 +136,7 @@ it('declares a plural before it puts a count next to a noun', function (): void 
     expect($files)->not->toBeEmpty('No English lang file was found, so this rule checked nothing.');
 
     $offenders = [];
+    $read = 0;
 
     foreach ($files as $file) {
         $translations = require $file;
@@ -144,6 +147,8 @@ it('declares a plural before it puts a count next to a noun', function (): void 
         $relative = str_replace(base_path().'/', '', $file);
 
         foreach (countedNounStrings($translations) as $path => $line) {
+            $read++;
+
             if (str_contains($line, '|')) {
                 continue;
             }
@@ -154,6 +159,14 @@ it('declares a plural before it puts a count next to a noun', function (): void 
             }
         }
     }
+
+    // The 154 English files hold about 4,000 lines between them. A flattener
+    // that came back with none of them found no offence because it read
+    // nothing, and the empty list below would read as a clean tree.
+    expect($read)->toBeGreaterThan(
+        1500,
+        'No English line was read at all, so this rule checked nothing.'
+    );
 
     expect($offenders)->toBe([], implode("\n", [
         'These English strings interpolate a count beside a bare plural noun and carry no | selector:',
@@ -661,4 +674,32 @@ it('never sets a browser-rendered number beside a line that has no form to choos
         'and hit.amount does not. A call is not matched — humanBytes(bytes) is a size, not',
         'a count of the noun beside it — and the gap does not cross an opening tag.',
     ]));
+});
+
+// Every rule in this file reads its verdict off one of four pure functions, and
+// an empty offender list is what a broken one returns. The shapes that must and
+// must not trip each of them are asserted here rather than assumed, so a pattern
+// that stopped matching fails on the probe instead of reporting a clean tree.
+it('reads a counted noun where there is one, and leaves the rewords alone', function (): void {
+    expect(countedNounOffence(':count errors were skipped'))->toBe(':count errors were skipped');
+    expect(countedNounOffence('Imported :total transactions'))->toBe(':total transactions');
+
+    expect(countedNounOffence('Between :min and :max characters'))->toBeNull();
+    expect(countedNounOffence(':name dips to zero this period'))->toBeNull();
+    expect(countedNounOffence(':count selected'))->toBeNull();
+    expect(countedNounOffence('Files selected: :count'))->toBeNull();
+    expect(countedNounOffence(':count row imported'))->toBeNull();
+
+    expect(countedNounReadsAsPlural('rows'))->toBeTrue();
+    expect(countedNounReadsAsPlural('status'))->toBeFalse();
+    expect(countedNounReadsAsPlural('is'))->toBeFalse();
+
+    expect(countedNounIsCountVariable('openCount'))->toBeTrue();
+    expect(countedNounIsCountVariable('stats.allFiles.count'))->toBeTrue();
+    expect(countedNounIsCountVariable('preview->dedupedTotalCount'))->toBeTrue();
+    expect(countedNounIsCountVariable('rows'))->toBeFalse();
+    expect(countedNounIsCountVariable('hit.amount'))->toBeFalse();
+
+    expect(countedNounHasExplicitRange('{0} none|:count row|:count rows'))->toBeTrue();
+    expect(countedNounHasExplicitRange(':count row|:count rows'))->toBeFalse();
 });

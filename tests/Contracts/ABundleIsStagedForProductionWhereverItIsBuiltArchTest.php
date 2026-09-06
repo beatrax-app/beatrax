@@ -148,7 +148,7 @@ const SHIPPED_ENV_ACTION = '.github/actions/stage-shipped-env';
 it('overrides the development environment in every job that builds a bundle', function (): void {
     $files = bundlingWorkflowFiles();
 
-    expect($files)->not->toBeEmpty();
+    expect($files)->not->toBeEmpty('Neither bundling workflow was found, so every job below went unchecked.');
 
     $unstaged = [];
     $staged = 0;
@@ -188,7 +188,11 @@ it('overrides the development environment in every job that builds a bundle', fu
     // Named positively rather than counting offenders: a job that stages
     // nothing at all is the case the old shape of this rule could not see,
     // because it looked for a copy that a job doing nothing never makes.
-    expect($staged)->toBeGreaterThan(4);
+    expect($staged)->toBeGreaterThan(
+        4,
+        'Only '.$staged.' bundling job stages the shipped environment, so the job reader stopped rather than the '
+        .'workflows getting smaller.',
+    );
 
     expect($unstaged)->toBe([], implode("\n", [
         'These jobs build an installable bundle without overriding the',
@@ -226,6 +230,7 @@ it('keeps the override inside the action both workflows name, and proves it by r
     $script = shippedEnvScript((string) file_get_contents($action));
 
     expect($script)->toContain('.env.bundled');
+
 
     $directory = sys_get_temp_dir().'/beatrax-shipped-env-'.bin2hex(random_bytes(6));
     mkdir($directory, 0o755, true);
@@ -349,7 +354,10 @@ it('refuses a template it cannot stage, rather than shipping it', function (): v
             'No .env.bundled at all is the clearest form of "there is nothing to ship from".',
         );
     } finally {
+        // shippedEnvRun() writes the script it runs into the same directory, so
+        // leaving it behind is what stops the rmdir and leaks a temp tree.
         @unlink($directory.'/.env');
+        @unlink($directory.'/run.sh');
         @rmdir($directory);
     }
 });
@@ -416,8 +424,8 @@ it('leaves no key in the development template that the bundle would ship on a de
 
         // Asserted before the diff: two empty reads diff to nothing, and
         // nothing is the answer a correct pair gives too.
-        expect(count($bundled))->toBeGreaterThan(10)
-            ->and(count($example))->toBeGreaterThan(10);
+        expect(count($bundled))->toBeGreaterThan(10, $root.'/.env.bundled declares '.count($bundled).' keys, which is not a template.')
+            ->and(count($example))->toBeGreaterThan(10, $root.'/.env.example declares '.count($example).' keys, which is not a template.');
 
         foreach (array_keys($example) as $key) {
             if (! array_key_exists($key, $bundled) && ! array_key_exists($key, BUNDLED_TEMPLATE_OMITS)) {
@@ -434,6 +442,69 @@ it('leaves no key in the development template that the bundle would ship on a de
         '',
         'Add the value the bundle should carry, or pin the key in',
         'BUNDLED_TEMPLATE_OMITS with why the bundle is right not to carry it.',
+    ]));
+});
+
+/**
+ * Everything a Vite build can read a VITE_ key from: the bundles it compiles
+ * and the templates they are mounted in.
+ *
+ * @return list<string>
+ */
+function bundledOmissionFrontEndFiles(): array
+{
+    $files = [];
+
+    foreach (new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(base_path('resources'), FilesystemIterator::SKIP_DOTS),
+    ) as $file) {
+        $path = $file instanceof SplFileInfo ? $file->getPathname() : '';
+
+        foreach (['.js', '.ts', '.vue', '.blade.php'] as $extension) {
+            if ($path !== '' && str_ends_with($path, $extension)) {
+                $files[] = $path;
+            }
+        }
+    }
+
+    sort($files);
+
+    return $files;
+}
+
+// The reason an omission carries is a claim about the tree, and the VITE_ one
+// is a claim a scan can settle: the front end reads such a key through
+// import.meta, so a key nothing names there is a key the bundle is right to
+// leave out. Read rather than trusted, because the day something reads it the
+// bundle ships on a framework default with nothing saying so.
+it('holds each omission to the reading that earned it', function (): void {
+    $files = bundledOmissionFrontEndFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        10,
+        'The walk opened '.count($files).' front-end files under resources/, which is too few to have read it at all.',
+    );
+
+    $read = [];
+
+    foreach (array_keys(BUNDLED_TEMPLATE_OMITS) as $key) {
+        if (! str_starts_with($key, 'VITE_')) {
+            continue;
+        }
+
+        foreach ($files as $path) {
+            if (str_contains((string) file_get_contents($path), $key)) {
+                $read[] = $key.' is named in '.str_replace(base_path().'/', '', $path);
+            }
+        }
+    }
+
+    expect($read)->toBe([], implode("\n", [
+        'An omission pinned as "nothing reads it" is now read by the front end, so the bundle ships without a',
+        'value this product chose and nothing says so:',
+        ...$read,
+        '',
+        'Give .env.bundled the value the bundle should carry, and delete the entry.',
     ]));
 });
 
@@ -463,7 +534,7 @@ it('holds no omission whose reason has stopped being true', function (): void {
 it('hands the macOS signature check an identifier to check against', function (): void {
     $files = bundlingWorkflowFiles();
 
-    expect($files)->not->toBeEmpty();
+    expect($files)->not->toBeEmpty('Neither bundling workflow was found, so every step below went unchecked.');
 
     $offenders = [];
 

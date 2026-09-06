@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\UnlayeredCss;
+
 // Measured on an SM-S928B at the two largest settings its own sliders offer —
 // font size 2.0 and screen zoom 720dpi, which is a 320px viewport with 32px
 // text. The currency toggle on /transactions is one non-wrapping row of two
@@ -16,43 +18,16 @@ declare(strict_types=1);
 // The same control is also 32px tall at default text: the coarse-pointer floor
 // lists buttons, and a radio is not one.
 
-/** @return string app.css with every balanced `@layer name { ... }` block removed */
-function segmentedToggleUnlayeredCss(): string
-{
-    $css = (string) file_get_contents(base_path('resources/css/app.css'));
-
-    $out = '';
-    $offset = 0;
-    while (preg_match('/@layer\s+[a-z]+\s*\{/', $css, $match, PREG_OFFSET_CAPTURE, $offset) === 1) {
-        $out .= substr($css, $offset, $match[0][1] - $offset);
-
-        $cursor = $match[0][1] + strlen($match[0][0]);
-        $depth = 1;
-        while ($depth > 0 && $cursor < strlen($css)) {
-            if ($css[$cursor] === '{') {
-                $depth++;
-            } elseif ($css[$cursor] === '}') {
-                $depth--;
-            }
-            $cursor++;
-        }
-        $offset = $cursor;
-    }
-
-    return $out.substr($css, $offset);
-}
-
+// Read through the shared reader rather than by hand: the twenty lines that
+// discount the layers were carried in three copies of this file, and three
+// copies of a reading of one stylesheet are three answers waiting to disagree.
 function segmentedToggleRule(string $selector): string
 {
-    $css = segmentedToggleUnlayeredCss();
+    $rule = UnlayeredCss::ruleAt($selector.' {');
 
-    $start = strpos($css, $selector.' {');
+    expect($rule)->not->toBeNull("No unlayered rule for {$selector}; a layered one loses to Flux's own utilities.");
 
-    expect($start)->not->toBeFalse("No unlayered rule for {$selector}; a layered one loses to Flux's own utilities.");
-
-    $end = strpos($css, '}', (int) $start);
-
-    return substr($css, (int) $start, (int) $end - (int) $start);
+    return (string) $rule;
 }
 
 it('lets the segmented toggle wrap instead of running off the right edge', function (): void {
@@ -74,6 +49,10 @@ it('puts the segmented options on the touch floor the surrounding buttons stand 
         ->toContain('min-height: 44px');
 });
 
+// The two roots hold 279 templates, and the floor sits far under that: a walk
+// that opened none of them finds no segmented group either.
+const SEGMENTED_TOGGLE_TEMPLATE_FLOOR = 150;
+
 // Flux emits the marker attribute, not a class we own, so a Flux upgrade that
 // renamed it would leave both rules selecting nothing at all.
 it('still has a control the rules can select', function (): void {
@@ -86,6 +65,11 @@ it('still has a control the rules can select', function (): void {
             }
         }
     }
+
+    expect(count($views))->toBeGreaterThan(
+        SEGMENTED_TOGGLE_TEMPLATE_FLOOR,
+        'The walk opened '.count($views).' templates, so finding no segmented group says nothing about whether one is drawn.'
+    );
 
     $segmented = array_values(array_filter(
         $views,

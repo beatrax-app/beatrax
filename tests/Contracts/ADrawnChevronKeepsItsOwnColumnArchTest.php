@@ -24,6 +24,13 @@ const BARE_SELECT_RULE = "\n    select {";
 
 beforeEach(function (): void {
     $this->css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    // Read before any verdict: CssRule answers '' for a selector it cannot
+    // find, and every `not->toContain` below passes over an empty sheet.
+    expect(strlen($this->css))->toBeGreaterThan(
+        50000,
+        'The stylesheet read back '.strlen($this->css).' bytes, which is not the compiled sheet this rule measures.',
+    );
 });
 
 it('reserves the chevron column for every select a finger can reach', function (): void {
@@ -42,6 +49,10 @@ it('repeats it above the utility padding the call sites carry', function (): voi
 // with no class keeps everything the base rule gives it.
 it('leaves the classless selects everything but that one repeat', function (): void {
     $repeat = CssRule::blockFor($this->css, 'select[class] {');
+
+    // Asserted before the three refusals below it: an absent rule reads back as
+    // the empty string, and the empty string contains none of them either.
+    expect($repeat)->not->toBe('', 'The higher-specificity select[class] repeat is gone.');
 
     expect($repeat)->not->toContain('appearance')
         ->and($repeat)->not->toContain('min-height')

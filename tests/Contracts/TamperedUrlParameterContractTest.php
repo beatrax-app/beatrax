@@ -18,6 +18,22 @@ use Modules\Ledger\Models\Account;
  */
 
 /**
+ * Whether a file binds a Livewire property to the query string. Named rather
+ * than written inline so the control at the foot of this file drives the same
+ * reader the walk drives: an attribute renamed, a comment left unstripped or a
+ * pattern that stopped matching all read as "no components bind a parameter",
+ * which is the same answer as a tree where none of them can be tampered with.
+ */
+function tamperedUrlBindsAQueryParameter(string $source): bool
+{
+    // The codebase's own prose names the attribute — this file does — so an
+    // unstripped comment reads as a binding.
+    $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source) ?? $source;
+
+    return preg_match('/#\[Url\b[^\n]*\]\s*public\s/', $stripped) === 1;
+}
+
+/**
  * @return list<string>
  */
 function urlBoundComponentFiles(): array
@@ -30,14 +46,14 @@ function urlBoundComponentFiles(): array
     foreach (new RecursiveIteratorIterator($directory) as $file) {
         $path = $file->getPathname();
 
+        // Modules/ and not the tree: a Livewire component is a class under a
+        // module's Http/Livewire directory by construction, and the suite's own
+        // doubles bind #[Url] to prove a rule rather than to ship a screen.
         if (! $file->isFile() || ! str_ends_with($path, '.php') || str_contains($path, '/tests/')) {
             continue;
         }
 
-        $source = (string) file_get_contents($path);
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source) ?? $source;
-
-        if (preg_match('/#\[Url\b[^\n]*\]\s*public\s/', $stripped) !== 1) {
+        if (! tamperedUrlBindsAQueryParameter((string) file_get_contents($path))) {
             continue;
         }
 
@@ -469,7 +485,15 @@ it('renders every component that binds a query parameter, whatever the parameter
         ...$offenders,
     ]));
 
-    expect($driven)->not->toBe([]);
+    // The denominator, after the verdicts because a drive that raised is
+    // counted as an offender rather than as a drive. Every arm above reports
+    // the same clean tree when the discovery returns nothing, so the number of
+    // parameters actually driven is asserted rather than assumed.
+    expect(count($driven))->toBeGreaterThan(
+        100,
+        'Only '.count($driven).' parameter drives completed across the whole walk, which is what a broken '
+        .'discovery looks like rather than a tree with almost nothing bound to the address bar.'
+    );
 });
 
 // The loud failure is a 500. The quiet one returns 200: a parameter naming a
@@ -545,7 +569,11 @@ it('answers with none of a neighbouring reader\'s rows when a parameter names on
         ...$leaks,
     ]));
 
-    expect($checked)->not->toBe([]);
+    expect(count($checked))->toBeGreaterThan(
+        20,
+        'Only '.count($checked).' parameter/id pairs were rendered, so this arm read almost nothing and '
+        .'would report a clean screen for a page it never mounted.'
+    );
 });
 
 // The loud failure is a 500 and the leaky one is a neighbour's row. The third
@@ -628,17 +656,32 @@ it('lists the same rows for a date parameter that is not a date as for no parame
 
     // Discovered rather than listed, so a picker added to a #[Url] property
     // joins this arm on its own; an empty walk means the discovery broke.
-    expect($dateProperties)->not->toBe([]);
-    expect($checked)->not->toBe([]);
+    expect(count($dateProperties))->toBeGreaterThan(
+        5,
+        'The Blade walk found '.count($dateProperties).' properties bound to a date picker, which is what a '
+        .'renamed component or a broken attribute read looks like rather than a tree that stopped offering dates.'
+    );
+
+    expect($checked)->not->toBe(
+        [],
+        'No date parameter was driven at all. The arm intersects the pickers above with the bound '
+        .'properties, so an empty intersection means one of the two discoveries stopped answering and this '
+        .'rule is reporting a clean list it never built.'
+    );
 });
 
 it('finds the components by walking the tree rather than from a list', function (): void {
     $files = urlBoundComponentFiles();
 
     // Pinning the count would rot into a number nobody reads. What the scan
-    // must not do is quietly return nothing — a renamed attribute, a moved
-    // directory or a broken regex all read as "no offenders" otherwise.
-    expect($files)->not->toBe([]);
+    // must not do is quietly shrink — a renamed attribute, a moved directory
+    // or a broken regex all read as "no offenders" otherwise, and the floor
+    // sits far under today's count so only a broken walk trips it.
+    expect(count($files))->toBeGreaterThan(
+        5,
+        'The walk found '.count($files).' components binding a query parameter, which is too few to be this '
+        .'tree. Every arm in this file is read off that list.'
+    );
 
     $resolved = array_values(array_filter(
         array_map(urlBoundComponentClass(...), $files),
@@ -652,3 +695,18 @@ it('finds the components by walking the tree rather than from a list', function 
         implode("\n  ", $files),
     ));
 });
+
+// The discovery is what every arm above is read off, and it is a pattern over
+// source: a renamed attribute, an unstripped comment or a lost `\b` all answer
+// "no component binds a parameter", which is the same answer as a tree with
+// nothing tamperable in it. Driven here against a string rather than against
+// the tree, so a rewrite of the reader cannot quietly stop finding them.
+it('reads a bound query parameter and none of the shapes that only look like one', function (string $source, bool $bound): void {
+    expect(tamperedUrlBindsAQueryParameter($source))->toBe($bound);
+})->with([
+    'a bound property' => ["<?php\nclass C { #[Url] public string \$mode = 'a'; }", true],
+    'a property bound under another name' => ["<?php\nclass C { #[Url(as: 'q')] public string \$mode = 'a'; }", true],
+    'the attribute named in a comment' => ["<?php\nclass C { // #[Url] public string \$mode = 'a';\n public string \$other = 'b'; }", false],
+    'a non-public property carrying it' => ["<?php\nclass C { #[Url] protected string \$mode = 'a'; }", false],
+    'a different Livewire attribute' => ["<?php\nclass C { #[Computed] public function mode(): string { return 'a'; } }", false],
+]);

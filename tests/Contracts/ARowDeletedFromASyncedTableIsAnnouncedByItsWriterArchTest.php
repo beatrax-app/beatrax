@@ -64,6 +64,11 @@ function announcesADelete(string $source): bool
         || (str_contains($source, 'DependentRowCascade') && PatternScan::matches('/->\s*dispatch\(/', $source));
 }
 
+// The runtime-domain walk opens 6,419 files, and the floor sits far under that:
+// a walk that opened none of them finds no delete and reports the same clean
+// tree a correct one does.
+const DELETE_WRITER_FILE_FLOOR = 1_000;
+
 // The one delete that must NOT be announced. A `users` tombstone is refused by
 // the applier outright — a peer may edit the reader's settings, never remove
 // the reader — so an op for it would be written, sent and dropped.
@@ -77,7 +82,11 @@ function deletesNoPeerMayApply(): array
 
 it('announces every row it deletes from a table that travels', function (): void {
     $tables = tablesThatTravel();
-    expect($tables)->not->toBeEmpty();
+
+    expect($tables)->not->toBeEmpty(
+        'The merge registry named no travelling table at all, so the sweep below has nothing to look for and '
+        .'reports every writer clean.'
+    );
 
     $offenders = [];
     foreach (deleteWriterFiles() as $file) {
@@ -141,9 +150,17 @@ it('reports a delete that leaves a travelling table unannounced', function (): v
 
     // The walk has to reach both roots, and say so: this rule read no file of
     // app/ at all while claiming to hold the codebase.
-    expect(deleteWriterFiles())->not->toBeEmpty()
-        ->and(RepoTree::accountOf(RepoTree::RUNTIME_DOMAIN_PHP))
-        ->toBe(['unaccounted' => [], 'stale' => [], 'silent' => []]);
+    expect(count(deleteWriterFiles()))->toBeGreaterThan(
+        DELETE_WRITER_FILE_FLOOR,
+        'The walk opened '.count(deleteWriterFiles()).' runtime-domain files, so a clean answer above is a walk '
+        .'that read almost nothing.'
+    );
+
+    expect(RepoTree::accountOf(RepoTree::RUNTIME_DOMAIN_PHP))->toBe(
+        ['unaccounted' => [], 'stale' => [], 'silent' => []],
+        'A root holding runtime-domain PHP that the scope neither covers nor declines is a root this rule is '
+        .'silent about, which is how app/ went unread for the whole life of the rule.'
+    );
 
     $roots = [];
     foreach (deleteWriterFiles() as $file) {
@@ -151,5 +168,33 @@ it('reports a delete that leaves a travelling table unannounced', function (): v
         $roots[substr($relative, 0, (int) strpos($relative, '/'))] = true;
     }
 
-    expect(array_keys($roots))->toEqualCanonicalizing(RepoTree::scope(RepoTree::RUNTIME_DOMAIN_PHP)['covers']);
+    expect(array_keys($roots))->toEqualCanonicalizing(
+        RepoTree::scope(RepoTree::RUNTIME_DOMAIN_PHP)['covers'],
+        'The walk reached files under '.implode(', ', array_keys($roots)).', which is not the set of roots the '
+        .'scope claims to open.'
+    );
+});
+
+it('keeps no exemption for a writer that no longer deletes the row it is excused for', function (): void {
+    $idle = [];
+
+    foreach (deletesNoPeerMayApply() as $relative => $table) {
+        $path = base_path($relative);
+
+        if (! is_file($path)) {
+            $idle[] = $relative.' is not there any more, and its exemption is still excusing '.$table;
+
+            continue;
+        }
+
+        if (! deletesFromTable($table, (string) file_get_contents($path))) {
+            $idle[] = $relative.' no longer deletes from '.$table;
+        }
+    }
+
+    expect($idle)->toBe(
+        [],
+        'An exemption that excuses nothing reads as considered while it waves on whatever moves into the file it '
+        ."names. Delete it, or point it at wherever the purge went:\n  ".implode("\n  ", $idle)
+    );
 });

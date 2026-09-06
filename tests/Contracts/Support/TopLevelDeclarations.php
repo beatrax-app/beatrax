@@ -72,15 +72,20 @@ final class TopLevelDeclarations
                 continue;
             }
 
-            // `Foo::class`, `new class {…}` and `#[Attr] class` all put the
-            // keyword in a position that declares nothing nameable, and an
-            // anonymous class is the shape a test double is allowed to take.
+            // `Foo::class` and `new class {…}` put the keyword in a position
+            // that declares nothing nameable, and an anonymous class is the
+            // shape a test double is allowed to take. An attributed
+            // declaration is not one of them: `#[Attr]` closes on `]` before
+            // the keyword, so `#[Attr] final class Foo` reaches the name test
+            // below and is read like any other.
             $previous = self::significantBefore($tokens, $index);
 
-            if ($previous !== null && in_array($previous->id, [T_DOUBLE_COLON, T_NEW, T_ATTRIBUTE], true)) {
+            if ($previous !== null && in_array($previous->id, [T_DOUBLE_COLON, T_NEW], true)) {
                 continue;
             }
 
+            // What settles `new #[Attr] class {…}`, whose `]` hides the `new`:
+            // a declaration nothing can name is not a declaration.
             $next = self::significantAfter($tokens, $index);
 
             if ($next === null || $next->id !== T_STRING) {

@@ -14,15 +14,16 @@ use Illuminate\Database\DatabaseManager;
 function userIdExemptTables(): array
 {
     return [
-        // Laravel's own plumbing. Queue, cache, session and migration state
-        // belong to the installation, not to a person in it.
+        // Laravel's own plumbing. Queue, cache and migration state belong to
+        // the installation, not to a person in it. `sessions` was listed here
+        // and did not belong: Laravel's own sessions table carries a user_id,
+        // so the entry excused nothing and read as a considered decision.
         'cache' => 'framework cache store',
         'cache_locks' => 'framework cache store',
         'failed_jobs' => 'framework queue state',
         'job_batches' => 'framework queue state',
         'jobs' => 'framework queue state',
         'migrations' => 'framework schema ledger',
-        'sessions' => 'framework session store',
         'password_reset_tokens' => 'keyed by e-mail before any account is proven',
 
         // The account table itself, and the reference data every account reads.
@@ -111,7 +112,10 @@ it('gives every table the schema declares a user_id, or a stated reason it has n
     $schema = $db->connection()->getSchemaBuilder();
 
     $tables = userIdSchemaTables();
-    expect($tables)->not->toBeEmpty();
+
+    // Sixty-odd tables today. Floored far under: a schema read that answered
+    // nothing would report every table as carrying its owner.
+    expect(count($tables))->toBeGreaterThan(20, 'the schema read found almost no tables — the connection is wrong, not the schema.');
 
     $exempt = userIdExemptTables();
     $missing = [];
@@ -165,4 +169,34 @@ it('carries no exemption for a table the schema no longer has', function (): voi
         ->toBe([], 'Remove the exemption for a table that no longer exists:');
     expect(array_values(array_diff(userIdMustStayNullable(), $tables)))
         ->toBe([], 'Remove the nullable requirement for a table that no longer exists:');
+});
+
+it('carries no exemption for a table that grew a user_id after all', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $schema = $db->connection()->getSchemaBuilder();
+
+    $tables = userIdSchemaTables();
+    $excusingNothing = [];
+
+    foreach (userIdExemptTables() as $table => $reason) {
+        if (! in_array($table, $tables, true)) {
+            continue;
+        }
+
+        if (collect($schema->getColumns($table))->firstWhere('name', 'user_id') !== null) {
+            $excusingNothing[] = $table.' — excused as "'.$reason.'", and carries user_id';
+        }
+    }
+
+    // The other half of the staleness check above. A table that grew the column
+    // is no longer excused by anything; leaving the entry means the day it
+    // LOSES the column again, nothing says so. `sessions` sat here for exactly
+    // that reason: Laravel's own table has carried a user_id all along.
+    expect($excusingNothing)->toBe([], implode("\n  ", [
+        'These tables are exempted from needing a user_id and have one. The exemption excuses',
+        'nothing, and a reason nobody can trip reads as considered to every reader after it.',
+        'Delete the entry:',
+        ...$excusingNothing,
+    ]));
 });
