@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Modules\Mobile\Internal\Boot\ShippedBundleContents;
-use ZipArchive;
 
 // An exclusion list is a claim about a build, and the claim has been wrong: a
 // shipped iPhone build carried the build machine's own encrypted sync

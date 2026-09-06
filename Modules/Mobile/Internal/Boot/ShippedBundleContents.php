@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Boot;
 
+use Modules\Core\Public\Services\UserDataPathService;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
@@ -40,6 +41,14 @@ final readonly class ShippedBundleContents
      */
     public function refusals(string $path): array
     {
+        // The seam question, asked before the class that needs the extension is
+        // reached. The mobile PHP build carries no ext-zip, and this reports
+        // that rather than dying on it — an artifact nothing could open has not
+        // been shown to be clean.
+        if (! class_exists(ZipArchive::class)) {
+            return ['no ext-zip in this PHP build, so the artifact was never read: '.$path];
+        }
+
         $unpacked = $this->unpack($path);
 
         if ($unpacked === null) {
@@ -154,7 +163,12 @@ final readonly class ShippedBundleContents
             return null;
         }
 
-        $target = sys_get_temp_dir().'/shipped-bundle-'.bin2hex(random_bytes(8));
+        // Not the shared temp directory: /tmp is 1777, so an unpacked bundle
+        // leaks every entry's name and size to anyone on the machine — and the
+        // entries are exactly what this is looking for.
+        $target = UserDataPathService::appPath('tmp-inspect-bundle/'.bin2hex(random_bytes(8)));
+        mkdir($target, 0700, true);
+
         $zip->extractTo($target);
         $zip->close();
 
