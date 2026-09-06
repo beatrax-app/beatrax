@@ -20,23 +20,7 @@ final class CheckPermissionsCommand extends Command
         /** @var string $path */
         $path = $this->argument('dump');
 
-        if (! is_file($path)) {
-            $this->components->error('mobile:check-permissions: no dump at '.$path);
-
-            return self::FAILURE;
-        }
-
-        $requested = $permissions->requestedIn((string) file_get_contents($path));
-
-        // An empty read is the shape a changed aapt2 output takes, and it
-        // would otherwise pass every rule below by naming nothing.
-        if ($requested === []) {
-            $this->components->error('mobile:check-permissions: the dump names no permission at all.');
-
-            return self::FAILURE;
-        }
-
-        $refusals = $permissions->refusals($requested);
+        $refusals = $this->refusals($permissions, $path);
 
         if ($refusals !== []) {
             foreach ($refusals as $refusal) {
@@ -46,8 +30,28 @@ final class CheckPermissionsCommand extends Command
             return self::FAILURE;
         }
 
-        $this->components->info('Requests '.count($requested).' permissions, each with a consumer that ships.');
+        $this->components->info('Every permission the artifact requests has a consumer that ships.');
 
         return self::SUCCESS;
+    }
+
+    // The three ways this can refuse, answered as one list: a caller reading
+    // them wants the reason, not which of the three produced it.
+    /**
+     * @return list<string>
+     */
+    private function refusals(ShippedPermissions $permissions, string $path): array
+    {
+        if (! is_file($path)) {
+            return ['mobile:check-permissions: no dump at '.$path];
+        }
+
+        $requested = $permissions->requestedIn((string) file_get_contents($path));
+
+        // An empty read is the shape a changed aapt2 output takes, and it
+        // would otherwise pass every rule by naming none of them.
+        return $requested === []
+            ? ['mobile:check-permissions: the dump names no permission at all.']
+            : $permissions->refusals($requested);
     }
 }
