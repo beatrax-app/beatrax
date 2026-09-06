@@ -33,6 +33,13 @@ return [
         'help' => 'Ändrar orden på skärmen och hur belopp skrivs. System följer språket i din webbläsare eller ditt operativsystem, med engelska som standard.',
     ],
 
+    'timezone' => [
+        'heading' => 'Tidszon',
+        'label' => 'Tidszon för den här installationen',
+        'help' => 'Avgör vilken dag en transaktion hamnar på och i vilken ram tider sparas. Parkopplade enheter delar den här inställningen, så båda läser samma dag.',
+        'this_machine' => 'Den här datorn (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Exempeldata',
         'help' => 'Fyller det här kontot med en påhittad bok — konton, transaktioner, budgetar, mål och varningar — så att det finns något att titta på. Det läggs till det som redan finns, och inget av det är en verklig persons uppgifter.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Ange ett belopp från :zero och uppåt.',
         'period_day' => 'Välj en dag från 1 till 28.',
         'currency_view' => 'Välj ett av de tillgängliga alternativen.',
+        'timezone' => 'Välj en tidszon i listan.',
     ],
 ];

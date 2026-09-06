@@ -33,6 +33,13 @@ return [
         'help' => 'Ændrer ordene på skærmen og måden, beløb skrives på. System følger sproget i din browser eller dit styresystem med engelsk som standard.',
     ],
 
+    'timezone' => [
+        'heading' => 'Tidszone',
+        'label' => 'Tidszone for denne installation',
+        'help' => 'Bestemmer hvilken dag en postering falder på, og hvilken ramme tidspunkter gemmes i. Parrede enheder deler denne indstilling, så begge læser den samme dag.',
+        'this_machine' => 'Denne maskine (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Eksempeldata',
         'help' => 'Fylder denne konto med et opfundet regnskab — konti, posteringer, budgetter, mål og varsler — så der er noget at se på. Det lægges oveni det, der allerede er, og intet af det er en virkelig persons data.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Indtast et beløb fra :zero og opefter.',
         'period_day' => 'Vælg en dag fra 1 til 28.',
         'currency_view' => 'Vælg en af de tilgængelige muligheder.',
+        'timezone' => 'Vælg en tidszone fra listen.',
     ],
 ];

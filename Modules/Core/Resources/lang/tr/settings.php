@@ -33,6 +33,13 @@ return [
         'help' => 'Ekrandaki kelimeleri ve tutarların yazılış biçimini değiştirir. Sistem, tarayıcının veya işletim sisteminin dilini izler; varsayılan olarak İngilizce kullanılır.',
     ],
 
+    'timezone' => [
+        'heading' => 'Saat dilimi',
+        'label' => 'Bu kurulumun saat dilimi',
+        'help' => 'Bir işlemin hangi güne düştüğüne ve saatlerin hangi çerçevede saklandığına karar verir. Eşleştirilmiş cihazlar bu ayarı paylaşır, böylece ikisi de aynı günü okur.',
+        'this_machine' => 'Bu cihaz (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Örnek veri',
         'help' => 'Bu hesabı uydurma bir defterle doldurur — hesaplar, işlemler, bütçeler, hedefler ve uyarılar — bakacak bir şey olsun diye. Zaten olanın üstüne eklenir ve hiçbiri gerçek bir kişinin verisi değildir.',
@@ -218,5 +225,6 @@ return [
         'amount' => ':zero ve üzeri bir tutar gir.',
         'period_day' => '1 ile 28 arasında bir gün seç.',
         'currency_view' => 'Mevcut seçeneklerden birini seç.',
+        'timezone' => 'Listeden bir saat dilimi seç.',
     ],
 ];

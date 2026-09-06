@@ -33,6 +33,13 @@ return [
         'help' => "Cambia le parole che vedi sullo schermo e il modo in cui vengono scritti gli importi. «Sistema» segue la lingua del browser o del sistema operativo, con l'inglese come impostazione predefinita.",
     ],
 
+    'timezone' => [
+        'heading' => 'Fuso orario',
+        'label' => 'Fuso orario di questa installazione',
+        'help' => 'Decide in che giorno cade una transazione e in quale riferimento vengono salvati gli orari. I dispositivi accoppiati condividono questa impostazione, così entrambi leggono lo stesso giorno.',
+        'this_machine' => 'Questo dispositivo (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Dati di esempio',
         'help' => 'Riempie questo conto con un registro inventato — conti, transazioni, budget, obiettivi e avvisi — così c’è qualcosa da guardare. Si somma a quello che c’è già e nulla appartiene a una persona reale.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Inserisci un importo da :zero in su.',
         'period_day' => 'Scegli un giorno da 1 a 28.',
         'currency_view' => 'Scegli una delle opzioni disponibili.',
+        'timezone' => 'Scegli un fuso orario dall’elenco.',
     ],
 ];

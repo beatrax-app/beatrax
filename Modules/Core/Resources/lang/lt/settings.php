@@ -33,6 +33,13 @@ return [
         'help' => 'Keičia ekrane matomus žodžius ir tai, kaip rašomos sumos. Sistemos parinktis seka tavo naršyklės arba operacinės sistemos kalbą; numatytoji — anglų.',
     ],
 
+    'timezone' => [
+        'heading' => 'Laiko juosta',
+        'label' => 'Šio įdiegimo laiko juosta',
+        'help' => 'Nustato, kuriai dienai priklauso operacija ir kokiu pagrindu saugomas laikas. Susieti įrenginiai dalijasi šiuo nustatymu, todėl abu skaito tą pačią dieną.',
+        'this_machine' => 'Šis įrenginys (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Pavyzdiniai duomenys',
         'help' => 'Užpildo šią paskyrą sugalvota knyga — sąskaitomis, operacijomis, biudžetais, tikslais ir įspėjimais — kad būtų į ką pažiūrėti. Pridedama prie to, kas jau yra, ir niekas iš to nėra tikro žmogaus duomenys.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Įvesk sumą nuo :zero ir daugiau.',
         'period_day' => 'Pasirink dieną nuo 1 iki 28.',
         'currency_view' => 'Pasirink vieną iš galimų parinkčių.',
+        'timezone' => 'Pasirink laiko juostą iš sąrašo.',
     ],
 ];

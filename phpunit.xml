@@ -212,6 +212,11 @@
              APP_URL pointed at the dev server. -->
         <env name="APP_URL" value="https://beatrax.test" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <!-- Forced: without it the suite ran at whatever the developer's .env said
+             and at UTC on the runner, so a day-boundary assertion could pass on
+             one and fail on the other. It is also what tells InstallTimezone the
+             frame was chosen rather than detected. -->
+        <env name="APP_TIMEZONE" value="UTC" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <!--
             force="true" so the suite always runs with the Dev Console off,

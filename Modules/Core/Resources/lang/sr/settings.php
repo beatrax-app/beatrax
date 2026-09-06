@@ -33,6 +33,13 @@ return [
         'help' => 'Menja reči na ekranu i način na koji se pišu iznosi. Sistemsko podešavanje prati jezik tvog pregledača ili operativnog sistema, a podrazumevano je engleski.',
     ],
 
+    'timezone' => [
+        'heading' => 'Vremenska zona',
+        'label' => 'Vremenska zona ove instalacije',
+        'help' => 'Određuje na koji dan pada transakcija i u kom okviru se čuvaju vremena. Upareni uređaji dele ovo podešavanje, pa oba čitaju isti dan.',
+        'this_machine' => 'Ovaj uređaj (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Probni podaci',
         'help' => 'Puni ovaj račun izmišljenom knjigom — računi, transakcije, budžeti, ciljevi i upozorenja — da ima šta da se pogleda. Dodaje se onome što već postoji i ništa od toga nisu podaci stvarne osobe.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Unesi iznos od :zero naviše.',
         'period_day' => 'Izaberi dan od 1 do 28.',
         'currency_view' => 'Izaberi jednu od dostupnih opcija.',
+        'timezone' => 'Izaberi vremensku zonu sa liste.',
     ],
 ];

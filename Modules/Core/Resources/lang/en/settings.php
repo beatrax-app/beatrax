@@ -33,6 +33,13 @@ return [
         'help' => 'Changes the words on screen, and how amounts are written. System follows your browser or operating system language, defaulting to English.',
     ],
 
+    'timezone' => [
+        'heading' => 'Time zone',
+        'label' => 'Time zone for this installation',
+        'help' => 'Decides which day a transaction falls on, and the frame times are stored in. Paired devices share this setting, so both read the same day.',
+        'this_machine' => 'This machine (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Sample data',
         'help' => 'Fills this account with an invented ledger — accounts, transactions, budgets, goals and alerts — so there is something to look at. It adds to what is already here, and none of it is any real person\'s data.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Enter an amount from :zero upward.',
         'period_day' => 'Choose a day from 1 to 28.',
         'currency_view' => 'Pick one of the available options.',
+        'timezone' => 'Choose a time zone from the list.',
     ],
 ];

@@ -33,6 +33,13 @@ return [
         'help' => 'Vaihtaa näytöllä näkyvät sanat ja sen, miten summat kirjoitetaan. Järjestelmä seuraa selaimesi tai käyttöjärjestelmäsi kieltä ja käyttää oletuksena englantia.',
     ],
 
+    'timezone' => [
+        'heading' => 'Aikavyöhyke',
+        'label' => 'Tämän asennuksen aikavyöhyke',
+        'help' => 'Ratkaisee, mille päivälle tapahtuma osuu ja missä kehyksessä ajat tallennetaan. Pariliitetyt laitteet jakavat tämän asetuksen, joten molemmat lukevat saman päivän.',
+        'this_machine' => 'Tämä laite (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Esimerkkidata',
         'help' => 'Täyttää tämän tilin keksityllä kirjanpidolla — tilit, tapahtumat, budjetit, tavoitteet ja ilmoitukset — jotta katsottavaa on. Se lisätään olemassa olevaan, eikä mikään siitä ole oikean ihmisen tietoja.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Anna summa, joka on vähintään :zero.',
         'period_day' => 'Valitse päivä väliltä 1–28.',
         'currency_view' => 'Valitse jokin käytettävissä olevista vaihtoehdoista.',
+        'timezone' => 'Valitse aikavyöhyke luettelosta.',
     ],
 ];

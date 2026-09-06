@@ -96,6 +96,30 @@
         </section>
     </div>
 
+    {{-- ===== Time zone ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2">
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.timezone.heading') }}</h2>
+            <div class="space-y-1">
+                <label for="settings-timezone-select" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.timezone.label') }}</label>
+                {{-- Beneath Language and above the rest for a reason: both
+                     answer "what does this screen mean by a word or a day",
+                     and neither is a preference about money. --}}
+                <x-core::timezone-select
+                    labelled
+                    field-id="settings-timezone-select"
+                    :selected="$timezone"
+                    select-class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                    wire:change="setTimezone($event.target.value)"
+                />
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.timezone.help') }}</p>
+                @error('timezone')
+                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
+                @enderror
+            </div>
+        </section>
+    </div>
+
     {{-- ===== Sample data ===== --}}
     <div class="{{ $card }}">
         <section>

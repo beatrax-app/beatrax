@@ -33,6 +33,13 @@ return [
         'help' => 'Spremeni besede na zaslonu in način zapisa zneskov. Sistemska nastavitev sledi jeziku tvojega brskalnika ali operacijskega sistema, privzeto pa je angleščina.',
     ],
 
+    'timezone' => [
+        'heading' => 'Časovni pas',
+        'label' => 'Časovni pas te namestitve',
+        'help' => 'Določa, na kateri dan pade transakcija in v katerem okviru se shranjujejo časi. Seznanjene naprave si delijo to nastavitev, zato obe bereta isti dan.',
+        'this_machine' => 'Ta naprava (:zone)',
+    ],
+
     'sample_data' => [
         'heading' => 'Vzorčni podatki',
         'help' => 'Napolni ta račun z izmišljeno knjigo — računi, transakcije, proračuni, cilji in opozorila — da je kaj videti. Doda se k temu, kar že je, in nič od tega niso podatki resnične osebe.',
@@ -218,5 +225,6 @@ return [
         'amount' => 'Vnesi znesek od :zero navzgor.',
         'period_day' => 'Izberi dan od 1 do 28.',
         'currency_view' => 'Izberi eno od razpoložljivih možnosti.',
+        'timezone' => 'Izberi časovni pas s seznama.',
     ],
 ];

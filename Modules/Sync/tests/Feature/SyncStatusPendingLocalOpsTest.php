@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\SyncStatusService;
 
@@ -15,7 +17,19 @@ uses(RefreshDatabase::class);
 // The fixtures keep the two formats the tables really write — sessions ISO8601
 // with an offset, the op log a space — because ' ' sorts before 'T' as a string.
 
+// The op-log side is DERIVED from the session's own moment rather than written
+// out, because the op log stores an app-local stamp: a literal that reads as
+// "before the session closed" in one zone reads as after it in another, and the
+// suite used to run at the one it was written in.
+
 const SSP_SELF = 'self-device-id';
+
+const SSP_CLOSED_AT = '2026-08-19T00:36:58+02:00';
+
+function sspOpStampOffsetBy(int $minutes): string
+{
+    return Instant::appLocal(CarbonImmutable::parse(SSP_CLOSED_AT)->addMinutes($minutes));
+}
 
 function sspUser(): User
 {
@@ -78,7 +92,7 @@ it('reports up to date when nothing has changed since the last session', functio
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = sspUser();
-    sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
+    sspClosedSession($db, (int) $user->id, SSP_CLOSED_AT);
 
     expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::AllSynced);
 });
@@ -87,8 +101,8 @@ it('does not report up to date while this device holds a change made since', fun
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = sspUser();
-    sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
-    sspOp($db, (int) $user->id, SSP_SELF, '2026-08-19 00:42:56');
+    sspClosedSession($db, (int) $user->id, SSP_CLOSED_AT);
+    sspOp($db, (int) $user->id, SSP_SELF, sspOpStampOffsetBy(6));
 
     expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::Behind);
 });
@@ -97,8 +111,8 @@ it('ignores ops that arrived FROM a peer — those are not ours to deliver', fun
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = sspUser();
-    sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
-    sspOp($db, (int) $user->id, 'peer-device-id', '2026-08-19 00:42:56');
+    sspClosedSession($db, (int) $user->id, SSP_CLOSED_AT);
+    sspOp($db, (int) $user->id, 'peer-device-id', sspOpStampOffsetBy(6));
 
     expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::AllSynced);
 });
@@ -107,8 +121,8 @@ it('ignores our own ops that predate the last session, since they went with it',
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = sspUser();
-    sspClosedSession($db, (int) $user->id, '2026-08-19T00:36:58+02:00');
-    sspOp($db, (int) $user->id, SSP_SELF, '2026-08-19 00:10:00');
+    sspClosedSession($db, (int) $user->id, SSP_CLOSED_AT);
+    sspOp($db, (int) $user->id, SSP_SELF, sspOpStampOffsetBy(-26));
 
     expect(app(SyncStatusService::class)->overallStatus((int) $user->id))->toBe(SyncOverallStatus::AllSynced);
 });

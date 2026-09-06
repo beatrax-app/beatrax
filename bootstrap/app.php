@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Modules\Auth\Internal\Http\Middleware\ForgetsSpentRecoveryCodes;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
+use Modules\Core\Internal\Http\Middleware\SetInstallTimezone;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Bootstrap\EnsurePrivateDatabaseFile;
@@ -61,6 +62,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // the whole history on every tick of a running import.
         $middleware->web(append: [
             SetLocale::class,
+            // Beside SetLocale and for the same reason: both answer a question
+            // the whole response depends on. This one binds the zone a DATETIME
+            // column is written in, so it has to be bound before anything
+            // reads a clock rather than after the route has already run.
+            SetInstallTimezone::class,
             EnsureDatabaseReady::class,
             RecoverSealedLedger::class,
             // Same seam, one layer up: that one re-seals rows a keyless writer
