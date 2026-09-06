@@ -49,6 +49,7 @@ $patches = [
     'nativephp_ios_app_category',
     'nativephp_ios_purpose_string_localisations',
     'nativephp_dedupe_background_task_identifiers',
+    'nativephp_require_icu_runtime',
 ];
 
 $failed = [];
