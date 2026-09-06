@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax pajautā laidienu plūsmai, vai pastāv jaunāka parakstīta versija. Nekas netiek lejupielādēts, kamēr jūs pats neizvēlaties to instalēt.',
         'check_off' => 'Atjauninājumi netiek meklēti un nekas nepamet šo ierīci. Jaunās versijas atradīsiet, pats atverot laidienu lapu.',
         'open_releases' => 'Atvērt laidienu lapu →',
+        'channel_label' => 'Atjauninājumu kanāls',
+        'channel_help' => 'Stabilais ir noklusējums un piedāvā laidienus, kurus ir pārskatījis cilvēks. Priekšskatījums piedāvā laidienu kandidātus, tiklīdz tie ir publicēti.',
+        'channel_stable' => 'Stabilais',
+        'channel_preview' => 'Priekšskatījums',
+        'channel_preview_note' => 'Priekšskatījuma versijas tiek testētas mazāk nekā stabilās un var saturēt nepabeigtu darbu. Pirms kaut kas tiek instalēts, tās tiek pārbaudītas ar to pašu izdevēja parakstu.',
     ],
 
     'privacy' => [

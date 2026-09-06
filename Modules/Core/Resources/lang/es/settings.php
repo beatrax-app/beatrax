@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax pregunta al canal de versiones si existe una versión firmada más reciente. No se descarga nada hasta que tú elijas instalarla.',
         'check_off' => 'No se comprueba si hay actualizaciones y nada sale de este dispositivo. Las nuevas versiones se encuentran abriendo tú mismo la página de versiones.',
         'open_releases' => 'Abrir la página de versiones →',
+        'channel_label' => 'Canal de actualizaciones',
+        'channel_help' => 'Estable es la opción predeterminada y ofrece versiones que una persona ha revisado. Vista previa ofrece candidatas a versión en cuanto se publican.',
+        'channel_stable' => 'Estable',
+        'channel_preview' => 'Vista previa',
+        'channel_preview_note' => 'Las compilaciones de vista previa se prueban menos que las estables y pueden contener trabajo sin terminar. Se comprueban con la misma firma del editor antes de instalar nada.',
     ],
 
     'privacy' => [

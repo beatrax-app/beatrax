@@ -43,6 +43,7 @@ use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Http\Livewire\ExportEverythingDownload;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
+use Modules\Core\Public\Http\Livewire\UpdateChannelSettingsSection;
 use Modules\Core\Public\Http\Livewire\UpdateCheckSettingsSection;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\CurrentUserService;
@@ -177,6 +178,7 @@ final class CoreServiceProvider extends ServiceProvider
         $livewire->component('core.system-alerts-banner', SystemAlertsBanner::class);
         $livewire->component('core.help-data-locations', HelpDataLocations::class);
         $livewire->component('core.update-check-settings-section', UpdateCheckSettingsSection::class);
+        $livewire->component('core.update-channel-settings-section', UpdateChannelSettingsSection::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([

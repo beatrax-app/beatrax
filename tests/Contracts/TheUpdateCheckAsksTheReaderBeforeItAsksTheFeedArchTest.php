@@ -337,7 +337,10 @@ it('leaves no key in the update configuration that no runtime code reads', funct
     // A config key that reads as a control and controls nothing is worse than
     // an absent one: it is what made the missing off switch hard to see, and
     // this file is the one whose keys are Beatrax's own to answer for.
-    expect(count($keys))->toBeGreaterThan(2, 'the update configuration was read as having almost no keys — the scan is wrong, not the file');
+    // Two, since the channel left this file for `users.update_channel`: an
+    // env var baked into a bundle's own .env was never a choice a reader could
+    // make. Zero or one would mean the scan is wrong rather than the file.
+    expect(count($keys))->toBeGreaterThan(1, 'the update configuration was read as having almost no keys — the scan is wrong, not the file');
 
     $unread = [];
     foreach ($keys as $key) {

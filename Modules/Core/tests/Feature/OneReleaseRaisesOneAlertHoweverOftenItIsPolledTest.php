@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
 use Modules\Core\Public\Dto\UpdateManifestDto;
 use Modules\Core\Public\Enums\UpdateAlertKind;
+use Modules\Core\Public\Enums\UpdateChannel;
 
 uses(RefreshDatabase::class);
 
@@ -27,7 +28,7 @@ function releaseManifest(string $version): UpdateManifestDto
         latestVersion: $version,
         sha512Hex: str_repeat('a', 128),
         publishedAt: CarbonImmutable::parse('2026-09-01 09:00:00'),
-        channel: 'stable',
+        channel: UpdateChannel::Stable,
     );
 }
 

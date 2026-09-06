@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\CurrencyView;
 
@@ -34,6 +35,7 @@ use Modules\Ledger\Public\Enums\CurrencyView;
  * @property string|null $locale
  * @property string|null $close_behavior
  * @property bool $auto_update_check_enabled
+ * @property string $update_channel
  * @property array<string, mixed>|null $community_settings
  * @property string|null $remember_token
  * @property Carbon|null $created_at
@@ -73,6 +75,7 @@ final class User extends Authenticatable
         'locale',
         'close_behavior',
         'auto_update_check_enabled',
+        'update_channel',
         'community_settings',
     ];
 
@@ -90,6 +93,7 @@ final class User extends Authenticatable
         'anomaly_min_amount_minor' => 1000,
         'theme' => 'system',
         'auto_update_check_enabled' => true,
+        'update_channel' => UpdateChannel::Stable->value,
         'base_currency' => Currency::Eur->value,
         // create() does not read the row back, so without this a just-created
         // model carries null where the column's DB default is BaseOnly, and
@@ -119,6 +123,7 @@ final class User extends Authenticatable
             'locale' => 'string',
             'close_behavior' => 'string',
             'auto_update_check_enabled' => 'boolean',
+            'update_channel' => 'string',
             'community_settings' => 'array',
         ];
     }

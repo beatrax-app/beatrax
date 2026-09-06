@@ -22,13 +22,11 @@ declare(strict_types=1);
  * So the keys are literals here, and there is no `env()` call to override:
  * no feed to reach, and no publisher key, because a build that installs
  * nothing verifies nothing and a trust anchor it cannot use is an invitation
- * to find a use for it. The channel name is kept only because
- * ElectronUpdateChannel::channel() is shared code that reads it.
+ * to find a use for it. The channel is not here either: it is the reader's
+ * answer now, on a screen a store build does not draw.
  */
 return [
     'publisher_public_key_hex' => null,
-
-    'update_channel' => 'stable',
 
     'manifest_feed_url' => null,
 ];

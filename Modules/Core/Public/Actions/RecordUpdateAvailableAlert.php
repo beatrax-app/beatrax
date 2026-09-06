@@ -36,7 +36,7 @@ final readonly class RecordUpdateAvailableAlert
         $versions = array_filter([
             'currentVersion' => $installedVersion === '' ? null : $installedVersion,
             'latestVersion' => $manifest->latestVersion,
-            'channel' => $manifest->channel,
+            'channel' => $manifest->channel->value,
             'publishedAt' => $manifest->publishedAt->toIso8601String(),
         ], static fn (?string $value): bool => $value !== null);
 

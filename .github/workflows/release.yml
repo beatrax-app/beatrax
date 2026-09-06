@@ -29,12 +29,14 @@
 #      `disableDifferentialDownload: true` — full-binary auto-update
 #      bypasses OS-signature validation that ad-hoc-signed bundles
 #      would otherwise fail.
-#   2. The publish job signs the publisher manifests (`latest.yml` +
-#      per-platform variants) with the Ed25519 private key sourced from
-#      the `ED25519_PRIVATE_KEY` repo secret; the matching public hex
-#      lives in `config/auto_update.php` so installed bundles verify
-#      the signature via `sodium_crypto_sign_verify_detached` on every
-#      poll.
+#   2. The publish job signs the publisher manifests with the Ed25519
+#      private key sourced from the `ED25519_PRIVATE_KEY` repo secret;
+#      the matching public hex lives in `config/auto_update.php` so
+#      installed bundles verify the signature via
+#      `sodium_crypto_sign_verify_detached` on every poll. Both channels'
+#      sets are signed by that one key and re-verified by the same job:
+#      `latest*.yml` for stable, `beta*.yml` for preview. A stable tag
+#      writes both, a preview tag writes only the preview set.
 #   3. A manifest binds only the one installer its `path:` names, so the
 #      publish job also writes a SHA-256 checksum file over every
 #      downloaded artefact and signs that with the same key. It is what
@@ -349,7 +351,7 @@ jobs:
                   artifact-path: nativephp/electron/dist/*.dmg
                   expected-identifier: ${{ steps.app-identity.outputs.identifier }}
 
-            - name: Emit auto-update manifest (latest-mac.yml)
+            - name: Emit auto-update manifests (latest-mac.yml, beta-mac.yml)
               # electron-builder skips writing the publisher manifest
               # when invoked with `-p never` (NativePHP's default
               # build:* npm scripts). Switching to `-p always` would
@@ -385,9 +387,26 @@ jobs:
                       echo "path: ${INSTALLER}"
                       echo "sha512: ${SHA512_B64}"
                       echo "releaseDate: '${RELEASE_DATE}'"
-                  } > latest-mac.yml
-                  echo "--- latest-mac.yml ---"
-                  cat latest-mac.yml
+                  } > manifest.yml
+
+                  # The channel a tag belongs to is its shape: a hyphen makes it a preview.
+                  # Both names can be written from the one manifest because a stable release
+                  # is also the newest build on the preview channel, while a prerelease must
+                  # never appear under the name the stable channel resolves. Before this the
+                  # `latest` set was written for every tag shape and the `beta` set for none,
+                  # so a bundle on preview asked for a file no release had ever carried.
+                  cp manifest.yml beta-mac.yml
+                  case "$VERSION" in
+                      *-*) echo "preview tag ${VERSION}: publishing beta-mac.yml only" ;;
+                      *) cp manifest.yml latest-mac.yml ;;
+                  esac
+                  rm manifest.yml
+
+                  for emitted in latest-mac.yml beta-mac.yml; do
+                      [ -f "$emitted" ] || continue
+                      echo "--- ${emitted} ---"
+                      cat "$emitted"
+                  done
 
             - name: Upload macOS artifacts (arm64)
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
@@ -396,6 +415,7 @@ jobs:
                   path: |
                       nativephp/electron/dist/*.dmg
                       nativephp/electron/dist/latest-mac.yml
+                      nativephp/electron/dist/beta-mac.yml
                   if-no-files-found: error
 
     build-windows:
@@ -495,7 +515,7 @@ jobs:
                   platform: windows
                   artifact-path: nativephp/electron/dist/*.exe
 
-            - name: Emit auto-update manifest (latest.yml)
+            - name: Emit auto-update manifests (latest.yml, beta.yml)
               shell: bash
               env:
                   TAG_REF: ${{ github.ref_name }}
@@ -521,9 +541,26 @@ jobs:
                       echo "path: ${INSTALLER}"
                       echo "sha512: ${SHA512_B64}"
                       echo "releaseDate: '${RELEASE_DATE}'"
-                  } > latest.yml
-                  echo "--- latest.yml ---"
-                  cat latest.yml
+                  } > manifest.yml
+
+                  # The channel a tag belongs to is its shape: a hyphen makes it a preview.
+                  # Both names can be written from the one manifest because a stable release
+                  # is also the newest build on the preview channel, while a prerelease must
+                  # never appear under the name the stable channel resolves. Before this the
+                  # `latest` set was written for every tag shape and the `beta` set for none,
+                  # so a bundle on preview asked for a file no release had ever carried.
+                  cp manifest.yml beta.yml
+                  case "$VERSION" in
+                      *-*) echo "preview tag ${VERSION}: publishing beta.yml only" ;;
+                      *) cp manifest.yml latest.yml ;;
+                  esac
+                  rm manifest.yml
+
+                  for emitted in latest.yml beta.yml; do
+                      [ -f "$emitted" ] || continue
+                      echo "--- ${emitted} ---"
+                      cat "$emitted"
+                  done
 
             - name: Upload Windows artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
@@ -533,6 +570,7 @@ jobs:
                       nativephp/electron/dist/*.exe
                       nativephp/electron/dist/*.msi
                       nativephp/electron/dist/latest.yml
+                      nativephp/electron/dist/beta.yml
                   if-no-files-found: error
 
     build-linux:
@@ -630,7 +668,7 @@ jobs:
                       echo 'the .deb are covered by the Ed25519-signed checksum file.'
                   } >> "$GITHUB_STEP_SUMMARY"
 
-            - name: Emit auto-update manifest (latest-linux.yml)
+            - name: Emit auto-update manifests (latest-linux.yml, beta-linux.yml)
               env:
                   TAG_REF: ${{ github.ref_name }}
               run: |
@@ -655,9 +693,26 @@ jobs:
                       echo "path: ${INSTALLER}"
                       echo "sha512: ${SHA512_B64}"
                       echo "releaseDate: '${RELEASE_DATE}'"
-                  } > latest-linux.yml
-                  echo "--- latest-linux.yml ---"
-                  cat latest-linux.yml
+                  } > manifest.yml
+
+                  # The channel a tag belongs to is its shape: a hyphen makes it a preview.
+                  # Both names can be written from the one manifest because a stable release
+                  # is also the newest build on the preview channel, while a prerelease must
+                  # never appear under the name the stable channel resolves. Before this the
+                  # `latest` set was written for every tag shape and the `beta` set for none,
+                  # so a bundle on preview asked for a file no release had ever carried.
+                  cp manifest.yml beta-linux.yml
+                  case "$VERSION" in
+                      *-*) echo "preview tag ${VERSION}: publishing beta-linux.yml only" ;;
+                      *) cp manifest.yml latest-linux.yml ;;
+                  esac
+                  rm manifest.yml
+
+                  for emitted in latest-linux.yml beta-linux.yml; do
+                      [ -f "$emitted" ] || continue
+                      echo "--- ${emitted} ---"
+                      cat "$emitted"
+                  done
 
             - name: Upload Linux artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
@@ -667,6 +722,7 @@ jobs:
                       nativephp/electron/dist/*.AppImage
                       nativephp/electron/dist/*.deb
                       nativephp/electron/dist/latest-linux.yml
+                      nativephp/electron/dist/beta-linux.yml
                   if-no-files-found: error
 
     build-android:
@@ -903,7 +959,7 @@ jobs:
                   # `latest.yml` / `latest-mac.yml` / `latest-linux.yml`
                   # regardless of where they landed. Each `.sig` sibling is
                   # written in place next to the file it covers.
-                  mapfile -t SIGNABLE < <(find artifacts -type f \( -name 'latest*.yml' -o -name '*-checksums.txt' \))
+                  mapfile -t SIGNABLE < <(find artifacts -type f \( -name 'latest*.yml' -o -name 'beta*.yml' -o -name '*-checksums.txt' \))
                   if [ "${#SIGNABLE[@]}" -eq 0 ]; then
                       echo "No publisher manifests or checksum file found under artifacts/ — nothing to sign."
                       exit 1
@@ -972,6 +1028,7 @@ jobs:
                   files: |
                       artifacts/**/*
                       artifacts/**/latest*.yml.sig
+                      artifacts/**/beta*.yml.sig
 
             - name: Flip prerelease draft to published
               if: contains(github.ref_name, '-')
@@ -1023,6 +1080,8 @@ jobs:
                       --dir verify \
                       --pattern 'latest*.yml' \
                       --pattern 'latest*.yml.sig' \
+                      --pattern 'beta*.yml' \
+                      --pattern 'beta*.yml.sig' \
                       --pattern '*-checksums.txt' \
                       --pattern '*-checksums.txt.sig'
 
@@ -1038,7 +1097,7 @@ jobs:
                       echo "Could not extract publisher_public_key_hex from config/auto_update.php"
                       exit 1
                   fi
-                  mapfile -t SIGNED < <(find verify -type f -not -name '*.sig' \( -name 'latest*.yml' -o -name '*-checksums.txt' \))
+                  mapfile -t SIGNED < <(find verify -type f -not -name '*.sig' \( -name 'latest*.yml' -o -name 'beta*.yml' -o -name '*-checksums.txt' \))
                   if [ "${#SIGNED[@]}" -eq 0 ]; then
                       echo "Neither a manifest nor a checksum file was downloaded — verification cannot run."
                       exit 1

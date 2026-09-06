@@ -16,6 +16,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
 use Modules\Core\Public\Dto\UpdateManifestDto;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -96,7 +97,7 @@ it('leaves a machine-local alert off the log entirely', function (): void {
         latestVersion: '0.2.0',
         sha512Hex: str_repeat('a', 128),
         publishedAt: CarbonImmutable::now(),
-        channel: 'stable',
+        channel: UpdateChannel::Stable,
     ));
 
     expect(systemAlertOps((int) $user->id))->toBeEmpty(
