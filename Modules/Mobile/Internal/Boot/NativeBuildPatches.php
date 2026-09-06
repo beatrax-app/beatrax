@@ -56,6 +56,7 @@ final readonly class NativeBuildPatches
         'nativephp_ios_app_category.php',
         'nativephp_ios_purpose_string_localisations.php',
         'nativephp_dedupe_background_task_identifiers.php',
+        'nativephp_require_icu_runtime.php',
     ];
 
     // A cosmetic patch that fails degrades to the unpatched shell, which is
