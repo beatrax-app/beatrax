@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Ahel: :name',
     'heading' => 'Ahel',
 
-    'unresolved_heading' => 'Ahel pole veel lahendatud',
-    'unresolved_body' => 'Ahelate lahendaja töötab veel. Ava ülevaatusjärjekord või värskenda hetke pärast.',
+    'unresolved_heading' => 'Ühtegi tehingut pole valitud',
+    'unresolved_body' => 'Vali tehingute loendist rida, et näha, millega see maksti.',
 
     'none_heading' => 'Rahastusahelat ei leitud',
     'none_body' => 'Sellel tehingul ei tuvastatud rahastusahelat. Kui ootasid seda, esita kandidaat ülevaatusjärjekorrast.',

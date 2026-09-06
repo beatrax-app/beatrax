@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Suggérer une correspondance',
-    'intro' => 'Ouvre GitHub dans ton navigateur pour envoyer la suggestion sous forme de PR brouillon. Ton nom et ton e-mail ne quittent jamais cet appareil.',
+    'intro' => "Ouvre GitHub dans ton navigateur avec la suggestion déjà remplie. Seuls le motif, le nom, la catégorie et la région ci-dessus partent avec elle — et le motif est la description telle que ton relevé l'a écrite. Ton nom et ton e-mail ne quittent jamais cet appareil.",
 
     'pattern' => 'Motif',
     'name' => 'Nom lisible',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Aperçu YAML',
 
     'cancel' => 'Annuler',
-    'submit' => 'Envoyer comme PR brouillon',
+    'submit' => 'Ouvrir sur GitHub',
 
     'toast' => 'Suggestion ouverte dans ton navigateur.',
 

@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'System alerts',
 
     'actions' => [
-        'install_next_launch' => 'Install on next launch',
-        'install_next_launch_aria' => 'Install on next launch — marks system alert #:id as resolved',
+        'download_and_install' => 'Download and install',
+        'download_and_install_aria' => 'Download and install — marks system alert #:id as resolved',
         'skip_version' => 'Skip this version',
         'release_notes' => 'Release notes →',
         'update_now' => 'Update now',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Update available — Beatrax :version is ready. It will install on next launch.',
+        'update_available' => 'Update available — Beatrax :version. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.',
         'update_stale' => "You're on version :current — version :latest has been available for 30 days. Update now.",
         'update_critical' => 'Critical update available — version :version fixes :summary. Install as soon as possible.',
         'backup_corrupt_with_path' => 'The backup written at :timestamp failed integrity check. Inspect :path. Resolve before relying on backups.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Your PIN cannot open the app lock on this device: the stored key is unreadable. Sign in with your account password to set a new PIN.',
         'sync_gdk_rewrap_failed' => 'GDK keyring re-wrap failed after an app-lock passphrase change — encrypted data may be unrecoverable until the keyring is re-wrapped.',
         'worker_crashed' => 'Beatrax\'s background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.',
-        'auth_lock_key_material_stranded' => 'At-rest encryption is active for this account but no app-lock wrap still holds the data key, so every encrypted note, description and counterparty detail reads as empty. Pairing with a device that still holds the key is the only way back.',
+        'auth_lock_key_material_stranded' => 'At-rest encryption is active for this account but no app-lock wrap still holds the data key, so every encrypted note, description and counterparty detail reads as empty. Restore an encrypted backup made while the key still worked, or set this account up again on a device that still holds it.',
         'auth_lock_recovery_wrap_stale' => 'The account password changed without the app-lock recovery wrap being re-wrapped, so that password no longer opens the app lock. The PIN still does. Re-link the account password from the app-lock settings while the PIN is still known, or a forgotten PIN leaves nothing behind it.',
         'reconnect_link' => 'Reconnect →',
         'pots_category_link_retired' => 'Envelope budgeting has replaced category-linked pots. :amount from :count archived pot is unallocated again, and waiting for you to assign it.|Envelope budgeting has replaced category-linked pots. :amount from :count archived pots is unallocated again, and waiting for you to assign it.',

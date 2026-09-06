@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Se reaplică regulile… :checked din :count tranzacție verificată|Se reaplică regulile… :checked din :count tranzacții verificate|Se reaplică regulile… :checked din :count de tranzacții verificate',
 
     'empty_heading' => 'Încă nicio regulă',
-    'empty_body' => 'Regulile potrivesc tranzacțiile pe baza mai multor condiții și aplică automat modificări de categorie, contraparte, notă și etichetă fiscală — la import și oricând le reaplici pe istoricul tău existent.',
+    'empty_body' => 'Regulile potrivesc tranzacțiile pe baza mai multor condiții și aplică automat modificări de categorie, contraparte și notă la import. O modificare de etichetă fiscală ajunge abia când reaplici regulile pe istoricul tău existent.',
     'empty_cta' => 'Creează prima ta regulă',
 
     'col_priority' => 'Prioritate',

@@ -65,7 +65,7 @@ return [
     'sync' => [
         'review_import' => 'Vaata import üle',
         'reconnect_first' => 'Ühenda kõigepealt uuesti',
-        'auto_caption' => 'Sünkroonib automaatselt kord päevas.',
+        'auto_caption' => 'Sünkroonimist üritatakse automaatselt kord päevas.',
         'sync_now' => 'Sünkrooni kohe',
 
         'consent_expired' => 'Nõusolek on aegunud — ühenda uuesti.',
@@ -138,10 +138,10 @@ return [
         'institution_id_placeholder' => 'Asutuse id',
 
         'step5_title' => 'Anna nõusolek oma brauseris',
-        'step5_body' => 'Klõpsa allpool, et avada oma panga sisselogimise ja nõusoleku ekraan. Tee sisselogimine ja võimalik kaheastmeline kinnitus ning sind tuuakse automaatselt siia tagasi, et pangaliidese lubamine lõpetada.',
+        'step5_body' => 'Klõpsa allpool, et avada oma panga sisselogimise ja nõusoleku ekraan. Tee sisselogimine ja võimalik kaheastmeline kinnitus ning tule siis sellesse aknasse tagasi, et pangaliidese lubamine lõpetada.',
         // i18n-review: et · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Puuduta allpool, et avada oma panga sisselogimise ja nõusoleku ekraan. Tee sisselogimine ja võimalik kaheastmeline kinnitus ning sind tuuakse automaatselt siia tagasi, et pangaliidese lubamine lõpetada.',
+        'step5_body_touch' => 'Puuduta allpool, et avada oma panga sisselogimise ja nõusoleku ekraan. Tee sisselogimine ja võimalik kaheastmeline kinnitus, seejärel tule Beatraxi tagasi ja ava see ekraan uuesti, et pangaliidese lubamine lõpetada.',
 
         'cancel' => 'Tühista',
         'continue' => 'Jätka →',

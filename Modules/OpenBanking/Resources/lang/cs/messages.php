@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Zkontrolovat import',
         'reconnect_first' => 'Nejdřív se připoj znovu',
-        'auto_caption' => 'Synchronizuje se automaticky jednou denně.',
+        'auto_caption' => 'Jednou denně proběhne automatický pokus o synchronizaci.',
         'sync_now' => 'Synchronizovat teď',
 
         'consent_expired' => 'Souhlas vypršel — připoj se znovu.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'Identifikátor instituce',
 
         'step5_title' => 'Dokonči souhlas v prohlížeči',
-        'step5_body' => 'Klikni níž a otevře se přihlášení a obrazovka souhlasu tvé banky. Dokonči přihlášení i případné dvoufázové ověření a pak se sem automaticky vrátíš, ať můžeš zapínání Open Bankingu dokončit.',
+        'step5_body' => 'Klikni níž a otevře se přihlášení a obrazovka souhlasu tvé banky. Dokonči přihlášení i případné dvoufázové ověření a pak se vrať do tohoto okna, ať můžeš zapínání Open Bankingu dokončit.',
         // i18n-review: cs · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Klepni níž a otevře se přihlášení a obrazovka souhlasu tvé banky. Dokonči přihlášení i případné dvoufázové ověření a pak se sem automaticky vrátíš, ať můžeš zapínání Open Bankingu dokončit.',
+        'step5_body_touch' => 'Klepni níž a otevře se přihlášení a obrazovka souhlasu tvé banky. Dokonči přihlášení i případné dvoufázové ověření, pak se přepni zpět do Beatraxu a znovu otevři tuhle obrazovku, ať můžeš zapínání Open Bankingu dokončit.',
 
         'cancel' => 'Zrušit',
         'continue' => 'Pokračovat →',

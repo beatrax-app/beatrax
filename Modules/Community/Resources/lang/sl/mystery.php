@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Prikazanih je prvih :shown od :total.',
 
-    'footer' => 'Skupni seznam je datoteka YAML, ki je priložena Beatraxu. Pošiljanje predloga odpre GitHub v tvojem brskalniku; nič drugega ne zapusti te naprave.',
+    'footer' => 'Skupni seznam je datoteka YAML, ki je priložena Beatraxu. Pošiljanje predloga odpre GitHub v tvojem brskalniku in s seboj vzame ta opis; nič drugega ne zapusti te naprave.',
 
     'card' => [
         'seen_times' => 'Zaznano :count krat|Zaznano :count krat|Zaznano :count krat|Zaznano :count krat',

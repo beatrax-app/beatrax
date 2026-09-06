@@ -63,8 +63,8 @@ return [
     'add_another' => 'Ajouter une autre boîte de réception',
     'gmail_card_body' => 'Connecte un compte Gmail pour que Beatrax puisse y chercher des reçus.',
     'microsoft_card_body' => 'Connecte un compte Microsoft 365 ou Outlook.com pour que Beatrax puisse y chercher des reçus.',
-    'gmail_card_body_phone' => "Gmail est analysé par l'application de bureau. Un compte connecté ici n'est jamais analysé tout seul.",
-    'microsoft_card_body_phone' => "Microsoft 365 et Outlook.com sont analysés par l'application de bureau. Un compte connecté ici n'est jamais analysé tout seul.",
+    'gmail_card_body_phone' => "Gmail est analysé par l'application de bureau. Connecte-le là-bas — ce téléphone montre ce qu'elle trouve.",
+    'microsoft_card_body_phone' => "Microsoft 365 et Outlook.com sont analysés par l'application de bureau. Connecte-les là-bas — ce téléphone montre ce qu'elle trouve.",
 
     'discovered_heading' => 'Expéditeurs détectés',
 

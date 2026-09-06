@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Los cambios esperan cifrados en tu relay hasta que el otro dispositivo vuelve a estar en línea. Este dispositivo los recoge la próxima vez que toques :action.',
     'no_relay_title' => 'Cuando estás fuera',
     'no_relay_body' => 'Los cambios esperan en este dispositivo hasta que ambos coincidan en tu red doméstica y toques :action aquí.',
-    'encrypted_title' => 'Solo tus dispositivos pueden leerlo',
-    'encrypted_body' => 'Todo se cifra antes de salir de un dispositivo, y solo tus dispositivos vinculados tienen las claves.',
+    'encrypted_title' => 'Sellado entre tus dispositivos',
+    'encrypted_body' => 'Todo lo que pasa entre tus dispositivos va cifrado, y solo tus dispositivos vinculados tienen las claves. Un relay puede ver cuál de tus dispositivos habla con cuál, y cuándo — nunca qué se dicen.',
     'continue' => 'Empezar a usar Beatrax',
     'peer_fallback' => 'tu otro dispositivo',
 ];

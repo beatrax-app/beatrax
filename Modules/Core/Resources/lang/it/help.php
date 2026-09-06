@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Dove sono i miei dati?',
-    'intro' => 'Beatrax salva tutto su questo dispositivo. Non esiste un server Beatrax né un account nel cloud. Esce solo ciò che colleghi tu — una casella di posta, una banca tramite Enable Banking, i dispositivi che associ per la sincronizzazione — più una richiesta giornaliera dei tassi di cambio. Ogni collegamento lo dice nella schermata in cui lo attivi.',
+    'intro' => 'Beatrax salva tutto su questo dispositivo. Non esiste un server Beatrax né un account nel cloud. Una sola chiamata parte da sola — il controllo di una nuova versione, che puoi disattivare. Tutto il resto aspetta te: una casella di posta, una banca tramite Enable Banking, una richiesta giornaliera dei tassi di cambio, i dispositivi che associ per la sincronizzazione, un relay che configuri tu e qualsiasi link su cui fai clic. Ognuno lo dice nella schermata in cui lo attivi.',
 
     'lives_here' => 'I tuoi dati si trovano qui',
     'copy' => 'Copia',

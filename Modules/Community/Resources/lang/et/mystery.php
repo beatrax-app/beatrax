@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Kuvatud on esimesed :shown / :total.',
 
-    'footer' => 'Jagatud nimekiri on Beatraxiga kaasas olev YAML-fail. Ettepaneku saatmine avab brauseris GitHubi; muud sellest seadmest ei välju.',
+    'footer' => 'Jagatud nimekiri on Beatraxiga kaasas olev YAML-fail. Ettepaneku saatmine avab brauseris GitHubi ja võtab selle kirjelduse kaasa; muud sellest seadmest ei välju.',
 
     'card' => [
         'seen_times' => 'Nähtud :count kord|Nähtud :count korda',

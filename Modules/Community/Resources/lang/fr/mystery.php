@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Affichage des :shown premiers sur :total.',
 
-    'footer' => 'La liste partagée est un fichier YAML fourni avec Beatrax. Envoyer une suggestion ouvre GitHub dans ton navigateur ; rien d\'autre ne quitte cet appareil.',
+    'footer' => "La liste partagée est un fichier YAML fourni avec Beatrax. Envoyer une suggestion ouvre GitHub dans ton navigateur et emporte cette description avec elle ; rien d'autre ne quitte cet appareil.",
 
     'card' => [
         'seen_times' => 'Vu :count fois|Vu :count fois',

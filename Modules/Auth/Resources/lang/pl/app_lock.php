@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Zachowaj blokadę aplikacji',
 
     'forgot_modal_heading' => 'Zresetuj PIN — potwierdź hasłem do konta',
-    'forgot_modal_body' => 'Hasło do konta odzyskuje klucz blokady, więc reset PIN-u nigdy nie powoduje utraty danych.',
+    'forgot_modal_body' => 'Hasło do konta odzyskuje klucz blokady, więc reset PIN-u nie powoduje utraty danych — o ile to hasło nadal otwiera blokadę. Hasło zresetowane kodem odzyskiwania albo ustawione za Ciebie przez właściciela konta już jej nie otwiera.',
     'confirm_new_pin_label' => 'Potwierdź nowy PIN',
     'reset_pin' => 'Zresetuj PIN',
     'cancel' => 'Anuluj',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Reset PIN-u nie powiódł się — klucz odzyskiwania jest niedostępny.',
     'error_enable_first' => 'Najpierw włącz blokadę PIN, zanim zarejestrujesz biometrię.',
     'error_disable_blocked_by_encryption' => 'Twoje notatki i dane kontrahentów są zaszyfrowane kluczem, który przechowuje ta blokada aplikacji, więc jej wyłączenie uczyniłoby je nieczytelnymi. Blokada zostaje włączona — zamiast tego zmień PIN.',
-    'error_key_material_lost' => 'To urządzenie nie przechowuje już klucza otwierającego Twoje zaszyfrowane dane, więc nowy PIN nie sprawi, że staną się znowu czytelne. Sparuj to urządzenie z takim, które wciąż ma klucz, aby je odzyskać.',
+    'error_key_material_lost' => 'To urządzenie nie przechowuje już klucza otwierającego Twoje zaszyfrowane dane, więc nowy PIN nie sprawi, że staną się znowu czytelne. Przywróć zaszyfrowaną kopię zapasową zrobioną, gdy klucz jeszcze działał — parowanie tego urządzenia z powrotem nie uratuje, bo parowanie wymaga właśnie blokady aplikacji, którą ten klucz otwiera.',
     'error_recovery_wrap_stale' => 'Hasło do konta nie otwiera już tej blokady aplikacji — zostało zmienione po jej skonfigurowaniu. PIN nadal działa, ale jeśli go zapomnisz, nic za nim nie zostanie. Połącz hasło do konta na nowo.',
     'relink_recovery' => 'Połącz hasło do konta na nowo',
     'relink_modal_heading' => 'Połącz hasło do konta na nowo — potwierdź PIN-em',

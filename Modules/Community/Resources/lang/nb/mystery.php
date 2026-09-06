@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Viser de øverste :shown av :total.',
 
-    'footer' => 'Den delte listen er en medfølgende YAML-fil som leveres med Beatrax. Når du sender inn et forslag, åpnes GitHub i nettleseren din; ingenting annet forlater denne enheten.',
+    'footer' => 'Den delte listen er en medfølgende YAML-fil som leveres med Beatrax. Når du sender inn et forslag, åpnes GitHub i nettleseren din og tar med seg den beskrivelsen; ingenting annet forlater denne enheten.',
 
     'card' => [
         'seen_times' => 'Sett :count gang|Sett :count ganger',

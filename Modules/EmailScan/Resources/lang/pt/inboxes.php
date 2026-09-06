@@ -63,8 +63,8 @@ return [
     'add_another' => 'Adicionar outra caixa de entrada',
     'gmail_card_body' => 'Liga uma conta do Gmail para o Beatrax a poder analisar à procura de recibos.',
     'microsoft_card_body' => 'Liga uma conta do Microsoft 365 ou do Outlook.com para o Beatrax a poder analisar à procura de recibos.',
-    'gmail_card_body_phone' => 'O Gmail é analisado pela aplicação de computador. Uma conta ligada aqui nunca é analisada sozinha.',
-    'microsoft_card_body_phone' => 'O Microsoft 365 e o Outlook.com são analisados pela aplicação de computador. Uma conta ligada aqui nunca é analisada sozinha.',
+    'gmail_card_body_phone' => 'O Gmail é analisado pela aplicação de computador. Liga-o lá — este telemóvel mostra o que ela encontrar.',
+    'microsoft_card_body_phone' => 'O Microsoft 365 e o Outlook.com são analisados pela aplicação de computador. Liga-os lá — este telemóvel mostra o que ela encontrar.',
 
     'discovered_heading' => 'Remetentes descobertos',
 

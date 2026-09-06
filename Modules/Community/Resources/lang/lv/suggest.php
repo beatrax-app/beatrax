@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Ieteikt atbilstību',
-    'intro' => 'Atver GitHub jūsu pārlūkā, lai varētu iesniegt ieteikumu kā melnraksta pull request. Jūsu vārds un e-pasta adrese šo ierīci nekad nepamet.',
+    'intro' => 'Atver GitHub jūsu pārlūkā ar jau aizpildītu ieteikumu. Līdzi dodas tikai augstāk redzamais šablons, nosaukums, kategorija un reģions — un šablons ir tas apraksts, kā to uzrakstījis jūsu konta izraksts. Jūsu vārds un e-pasta adrese šo ierīci nekad nepamet.',
 
     'pattern' => 'Šablons',
     'name' => 'Saprotams nosaukums',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML priekšskatījums',
 
     'cancel' => 'Atcelt',
-    'submit' => 'Iesniegt kā melnraksta pull request',
+    'submit' => 'Atvērt GitHub',
 
     'toast' => 'Ieteikums atvērts jūsu pārlūkā.',
 

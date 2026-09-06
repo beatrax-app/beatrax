@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Sugerir una correspondencia',
-    'intro' => 'Abre GitHub en tu navegador para que puedas enviar la sugerencia como PR en borrador. Tu nombre y tu correo nunca salen de este dispositivo.',
+    'intro' => 'Abre GitHub en tu navegador con la sugerencia ya rellenada. Solo van con ella el patrón, el nombre, la categoría y la región de arriba — y el patrón es la descripción tal como la escribió tu extracto. Tu nombre y tu correo nunca salen de este dispositivo.',
 
     'pattern' => 'Patrón',
     'name' => 'Nombre legible',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Vista previa del YAML',
 
     'cancel' => 'Cancelar',
-    'submit' => 'Enviar como PR en borrador',
+    'submit' => 'Abrir en GitHub',
 
     'toast' => 'Sugerencia abierta en tu navegador.',
 

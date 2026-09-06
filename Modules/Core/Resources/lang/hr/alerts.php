@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Upozorenja sustava',
 
     'actions' => [
-        'install_next_launch' => 'Instaliraj pri sljedećem pokretanju',
-        'install_next_launch_aria' => 'Instaliraj pri sljedećem pokretanju — označava upozorenje sustava br. :id kao riješeno',
+        'download_and_install' => 'Preuzmi i instaliraj',
+        'download_and_install_aria' => 'Preuzmi i instaliraj — označava upozorenje sustava br. :id kao riješeno',
         'skip_version' => 'Preskoči ovu verziju',
         'release_notes' => 'Bilješke uz izdanje →',
         'update_now' => 'Ažuriraj sada',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Dostupno je ažuriranje — Beatrax :version je spreman. Instalirat će se pri sljedećem pokretanju.',
+        'update_available' => 'Dostupno je ažuriranje — Beatrax :version. Ništa se ne preuzima dok ne odabereš instalaciju; nakon toga Beatrax se zatvara i ponovno otvara u novoj verziji.',
         'update_stale' => 'Koristiš verziju :current — verzija :latest dostupna je već 30 dana. Ažuriraj sada.',
         'update_critical' => 'Dostupno je kritično ažuriranje — verzija :version ispravlja :summary. Instaliraj je što prije.',
         'backup_corrupt_with_path' => 'Sigurnosna kopija zapisana u :timestamp nije prošla provjeru cjelovitosti. Pregledaj :path. Riješi to prije nego što se osloniš na sigurnosne kopije.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Vaš PIN ne može otključati aplikaciju na ovom uređaju: pohranjeni ključ nije čitljiv. Prijavite se lozinkom računa kako biste postavili novi PIN.',
         'sync_gdk_rewrap_failed' => 'Ponovno omatanje GDK privjeska ključeva nije uspjelo nakon promjene zaporke zaključavanja aplikacije — šifrirani podaci možda se neće moći vratiti dok se privjesak ponovno ne omota.',
         'worker_crashed' => 'Beatraxova pozadinska obrada neočekivano je prestala. Uvozi i skeniranja e-pošte su pauzirani. Ponovno otvorite aplikaciju da biste je pokrenuli.',
-        'auth_lock_key_material_stranded' => 'Šifriranje u mirovanju aktivno je za ovaj račun, ali nijedan omotač zaključavanja aplikacije više ne drži ključ podataka, pa se svaka šifrirana bilješka, opis i podatak o drugoj strani čitaju kao prazni. Uparivanje s uređajem koji još drži ključ jedini je put natrag.',
+        'auth_lock_key_material_stranded' => 'Šifriranje u mirovanju aktivno je za ovaj račun, ali nijedan omotač zaključavanja aplikacije više ne drži ključ podataka, pa se svaka šifrirana bilješka, opis i podatak o drugoj strani čitaju kao prazni. Vratite šifriranu sigurnosnu kopiju napravljenu dok je ključ još radio ili ponovno postavite ovaj račun na uređaju koji ga još drži.',
         'auth_lock_recovery_wrap_stale' => 'Lozinka računa promijenjena je bez ponovnog omatanja omotača za oporavak zaključavanja aplikacije, pa ta lozinka više ne otključava aplikaciju. PIN i dalje otključava. Ponovno povežite lozinku računa u postavkama zaključavanja dok je PIN još poznat — inače zaboravljeni PIN ne ostavlja ništa iza sebe.',
         'reconnect_link' => 'Poveži ponovno →',
         'pots_category_link_retired' => 'Proračun po omotnicama zamijenio je kasice povezane s kategorijom. Iznos :amount iz :count arhivirane kasice ponovno je neraspoređen i čeka da ga rasporediš.|Proračun po omotnicama zamijenio je kasice povezane s kategorijom. Iznos :amount iz :count arhivirane kasice ponovno je neraspoređen i čeka da ga rasporediš.|Proračun po omotnicama zamijenio je kasice povezane s kategorijom. Iznos :amount iz :count arhiviranih kasica ponovno je neraspoređen i čeka da ga rasporediš.',

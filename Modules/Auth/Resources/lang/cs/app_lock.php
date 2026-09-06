@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Ponechat zámek aplikace',
 
     'forgot_modal_heading' => 'Resetovat PIN — potvrď heslem k účtu',
-    'forgot_modal_body' => 'Heslo k účtu obnoví klíč zámku, takže při resetu PINu nikdy nepřijdeš o data.',
+    'forgot_modal_body' => 'Heslo k účtu obnoví klíč zámku, takže při resetu PINu o žádná data nepřijdeš — pokud tím heslem zámek pořád jde otevřít. Heslo obnovené záložním kódem nebo nastavené vlastníkem účtu už ho neotevře.',
     'confirm_new_pin_label' => 'Potvrď nový PIN',
     'reset_pin' => 'Resetovat PIN',
     'cancel' => 'Zrušit',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Reset PINu se nezdařil — obnovovací klíč není dostupný.',
     'error_enable_first' => 'Než zaregistruješ biometriku, zapni nejdřív zámek PINem.',
     'error_disable_blocked_by_encryption' => 'Tvoje poznámky a údaje o protistranách jsou šifrované klíčem, který drží tento zámek aplikace, takže jeho vypnutí by je nechalo nečitelné. Zámek zůstává zapnutý — místo toho si změň PIN.',
-    'error_key_material_lost' => 'Toto zařízení už nedrží klíč, který otevírá tvoje šifrovaná data, takže nový PIN je znovu čitelnými neudělá. Spáruj toto zařízení s jiným, které klíč stále má, a obnov je.',
+    'error_key_material_lost' => 'Toto zařízení už nedrží klíč, který otevírá tvoje šifrovaná data, takže nový PIN je znovu čitelnými neudělá. Obnov šifrovanou zálohu pořízenou v době, kdy klíč ještě fungoval — spárováním se toto zařízení zpátky nedostane, protože párování potřebuje zámek aplikace, který ten klíč otevírá.',
     'error_recovery_wrap_stale' => 'Heslo k účtu už tento zámek aplikace neotevře — bylo změněno až po jeho nastavení. Tvůj PIN stále funguje, ale pokud ho zapomeneš, nezůstane za ním nic. Propoj heslo k účtu znovu.',
     'relink_recovery' => 'Znovu propojit heslo k účtu',
     'relink_modal_heading' => 'Znovu propojit heslo k účtu — potvrď PINem',

@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Taisyklės taikomos iš naujo… :checked iš :count operacijos patikrinta|Taisyklės taikomos iš naujo… :checked iš :count operacijų patikrinta|Taisyklės taikomos iš naujo… :checked iš :count operacijų patikrinta',
 
     'empty_heading' => 'Kol kas taisyklių nėra',
-    'empty_body' => 'Taisyklės atrenka operacijas pagal kelias sąlygas ir automatiškai pritaiko kategorijos, kitos šalies, pastabos ir mokesčių žymos pakeitimus — importuojant ir kaskart, kai jas iš naujo pritaikai esamai istorijai.',
+    'empty_body' => 'Taisyklės atrenka operacijas pagal kelias sąlygas ir importuojant automatiškai pritaiko kategorijos, kitos šalies ir pastabos pakeitimus. Mokesčių žyma pasikeičia tada, kai iš naujo pritaikai taisykles esamai istorijai.',
     'empty_cta' => 'Sukurti pirmąją taisyklę',
 
     'col_priority' => 'Prioritetas',

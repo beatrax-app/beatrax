@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Hol vannak az adataim?',
-    'intro' => 'A Beatrax mindent ezen az eszközön tárol. Nincs Beatrax-kiszolgáló és nincs felhőfiók. Kifelé csak az megy, amit te magad kötsz össze — egy postafiók, egy bank az Enable Bankingen keresztül, az eszközök, amelyeket szinkronizálásra párosítasz — és ezen felül egy napi árfolyam-lekérdezés. Minden kapcsolat elmondja ezt azon a képernyőn, ahol bekapcsolod.',
+    'intro' => 'A Beatrax mindent ezen az eszközön tárol. Nincs Beatrax-kiszolgáló és nincs felhőfiók. Egyetlen hívás indul magától — az új verzió ellenőrzése, amelyet ki is kapcsolhatsz. Minden más rád vár: egy postafiók, egy bank az Enable Bankingen keresztül, a napi árfolyam-lekérdezés, az eszközök, amelyeket szinkronizálásra párosítasz, az általad beállított relé, és minden hivatkozás, amelyre rákattintasz. Mindegyik elmondja ezt azon a képernyőn, ahol bekapcsolod.',
 
     'lives_here' => 'Az adataid itt vannak',
     'copy' => 'Másolás',

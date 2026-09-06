@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Lukk',
         'install_app' => 'Installer appen',
 
-        'desktop_html' => 'Åpne Beatrax i nettleseren på mobilen og trykk på "Legg til på Hjem-skjerm" — eller trykk på <strong style="color: var(--color-text);">⚡</strong>-ikonet i delingsmenyen i Safari.',
+        'desktop_html' => 'Åpne Beatrax i nettleseren på mobilen og velg <strong style="color: var(--color-text);">Legg til på Hjem-skjerm</strong> fra delingsmenyen.',
     ],
 
     'topbar' => [

@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Przejrzyj import',
         'reconnect_first' => 'Najpierw połącz ponownie',
-        'auto_caption' => 'Synchronizuje się automatycznie raz dziennie.',
+        'auto_caption' => 'Raz dziennie automatycznie podejmowana jest próba synchronizacji.',
         'sync_now' => 'Synchronizuj teraz',
 
         'consent_expired' => 'Zgoda wygasła — połącz ponownie.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'Identyfikator instytucji',
 
         'step5_title' => 'Dokończ udzielanie zgody w przeglądarce',
-        'step5_body' => 'Kliknij poniżej, aby otworzyć ekran logowania i zgody Twojego banku. Zaloguj się, przejdź weryfikację dwuskładnikową, a potem wrócisz tutaj automatycznie, aby dokończyć włączanie Open Bankingu.',
+        'step5_body' => 'Kliknij poniżej, aby otworzyć ekran logowania i zgody Twojego banku. Zaloguj się, przejdź weryfikację dwuskładnikową, a potem wróć do tego okna, aby dokończyć włączanie Open Bankingu.',
         // i18n-review: pl · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Dotknij poniżej, aby otworzyć ekran logowania i zgody Twojego banku. Zaloguj się, przejdź weryfikację dwuskładnikową, a potem wrócisz tutaj automatycznie, aby dokończyć włączanie Open Bankingu.',
+        'step5_body_touch' => 'Dotknij poniżej, aby otworzyć ekran logowania i zgody Twojego banku. Zaloguj się, przejdź weryfikację dwuskładnikową, a potem wróć do Beatraxa i otwórz ten ekran ponownie, aby dokończyć włączanie Open Bankingu.',
 
         'cancel' => 'Anuluj',
         'continue' => 'Dalej →',

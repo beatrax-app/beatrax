@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Muudatused ootavad krüpteeritult sinu releel, kuni teine seade taas võrku tuleb. See seade võtab need vastu järgmisel korral, kui puudutad :action.',
     'no_relay_title' => 'Kui oled väljas',
     'no_relay_body' => 'Muudatused ootavad selles seadmes, kuni mõlemad on koos sinu koduvõrgus ja sa puudutad siin :action.',
-    'encrypted_title' => 'Lugeda saavad ainult sinu seadmed',
-    'encrypted_body' => 'Kõik krüpteeritakse enne seadmest lahkumist ja võtmeid hoiavad ainult sinu seotud seadmed.',
+    'encrypted_title' => 'Pitseeritud sinu seadmete vahel',
+    'encrypted_body' => 'Kõik, mis sinu seadmete vahel liigub, on krüpteeritud, ja võtmeid hoiavad ainult sinu seotud seadmed. Relee näeb, milline sinu seade millisega ja millal suhtleb — mitte kunagi seda, mida nad räägivad.',
     'continue' => 'Hakka Beatraxi kasutama',
     'peer_fallback' => 'sinu teine seade',
 ];

@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'A legfelső :shown látszik a következőből: :total.',
 
-    'footer' => 'A megosztott lista egy a Beatraxszal együtt szállított YAML-fájl. A javaslat beküldése megnyitja a GitHubot a böngésződben; ezen kívül semmi nem hagyja el ezt az eszközt.',
+    'footer' => 'A megosztott lista egy a Beatraxszal együtt szállított YAML-fájl. A javaslat beküldése megnyitja a GitHubot a böngésződben, és viszi magával azt a leírást; ezen kívül semmi nem hagyja el ezt az eszközt.',
 
     'card' => [
         'seen_times' => 'Előfordult :count alkalommal|Előfordult :count alkalommal',

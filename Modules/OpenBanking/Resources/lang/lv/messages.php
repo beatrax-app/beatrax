@@ -65,7 +65,7 @@ return [
     'sync' => [
         'review_import' => 'Pārskatīt importu',
         'reconnect_first' => 'Vispirms savienojiet no jauna',
-        'auto_caption' => 'Sinhronizējas automātiski reizi dienā.',
+        'auto_caption' => 'Reizi dienā automātiski tiek mēģināta sinhronizācija.',
         'sync_now' => 'Sinhronizēt tagad',
 
         'consent_expired' => 'Piekrišanas termiņš beidzies — savienojiet no jauna.',
@@ -138,10 +138,10 @@ return [
         'institution_id_placeholder' => 'Iestādes id',
 
         'step5_title' => 'Pabeidziet piekrišanu pārlūkā',
-        'step5_body' => 'Noklikšķiniet zemāk, lai atvērtu savas bankas pieteikšanās un piekrišanas ekrānu. Pabeidziet pieteikšanos un divpakāpju apstiprinājumu, un jūs automātiski atgriezīsieties šeit, lai pabeigtu atvērtās banku saskarnes ieslēgšanu.',
+        'step5_body' => 'Noklikšķiniet zemāk, lai atvērtu savas bankas pieteikšanās un piekrišanas ekrānu. Pabeidziet pieteikšanos un divpakāpju apstiprinājumu, tad atgriezieties šajā logā, lai pabeigtu atvērtās banku saskarnes ieslēgšanu.',
         // i18n-review: lv · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Pieskarieties zemāk, lai atvērtu savas bankas pieteikšanās un piekrišanas ekrānu. Pabeidziet pieteikšanos un divpakāpju apstiprinājumu, un jūs automātiski atgriezīsieties šeit, lai pabeigtu atvērtās banku saskarnes ieslēgšanu.',
+        'step5_body_touch' => 'Pieskarieties zemāk, lai atvērtu savas bankas pieteikšanās un piekrišanas ekrānu. Pabeidziet pieteikšanos un divpakāpju apstiprinājumu, tad atgriezieties Beatrax un atveriet šo ekrānu no jauna, lai pabeigtu atvērtās banku saskarnes ieslēgšanu.',
 
         'cancel' => 'Atcelt',
         'continue' => 'Turpināt →',

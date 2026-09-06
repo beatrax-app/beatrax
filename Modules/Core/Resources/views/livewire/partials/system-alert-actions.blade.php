@@ -53,9 +53,9 @@
                 wire:click="install('{{ $alert->id }}')"
                 wire:loading.attr="disabled"
                 wire:target="install('{{ $alert->id }}')"
-                aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
+                aria-label="{{ Lang::get('core::alerts.actions.download_and_install_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
-            >{{ Lang::get('core::alerts.actions.install_next_launch') }}</x-core::neutral-button>
+            >{{ Lang::get('core::alerts.actions.download_and_install') }}</x-core::neutral-button>
             <button
                 type="button"
                 wire:click="skipVersion('{{ $alert->id }}')"
@@ -100,10 +100,10 @@
                 wire:click="install('{{ $alert->id }}')"
                 wire:loading.attr="disabled"
                 wire:target="install('{{ $alert->id }}')"
-                aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
+                aria-label="{{ Lang::get('core::alerts.actions.download_and_install_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-700 dark:bg-rose-600"
-            >{{ Lang::get('core::alerts.actions.install_next_launch') }}</button>
+            >{{ Lang::get('core::alerts.actions.download_and_install') }}</button>
         </div>
         @break
     @case (PotAlertKind::CategoryLinkRetired->value)

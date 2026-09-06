@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Tarkista tuonti',
         'reconnect_first' => 'Yhdistä ensin uudelleen',
-        'auto_caption' => 'Synkronoi automaattisesti kerran päivässä.',
+        'auto_caption' => 'Synkronointia yritetään automaattisesti kerran päivässä.',
         'sync_now' => 'Synkronoi nyt',
 
         'consent_expired' => 'Suostumus vanhentunut — yhdistä uudelleen.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'Pankin tunnus',
 
         'step5_title' => 'Viimeistele suostumus selaimessa',
-        'step5_body' => 'Avaa pankkisi kirjautumis- ja suostumusnäkymä alta olevasta painikkeesta. Kirjaudu sisään ja tee mahdollinen kaksivaiheinen tunnistus, niin palaat tänne automaattisesti viimeistelemään pankkiyhteyden käyttöönoton.',
+        'step5_body' => 'Avaa pankkisi kirjautumis- ja suostumusnäkymä alta olevasta painikkeesta. Kirjaudu sisään ja tee mahdollinen kaksivaiheinen tunnistus, ja palaa sitten tähän ikkunaan viimeistelemään pankkiyhteyden käyttöönoton.',
         // i18n-review: fi · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Avaa pankkisi kirjautumis- ja suostumusnäkymä alta olevasta painikkeesta. Kirjaudu sisään ja tee mahdollinen kaksivaiheinen tunnistus, niin palaat tänne automaattisesti viimeistelemään pankkiyhteyden käyttöönoton.',
+        'step5_body_touch' => 'Avaa pankkisi kirjautumis- ja suostumusnäkymä alta olevasta painikkeesta. Kirjaudu sisään ja tee mahdollinen kaksivaiheinen tunnistus, palaa sitten Beatraxiin ja avaa tämä näkymä uudelleen viimeistelemään pankkiyhteyden käyttöönoton.',
 
         'cancel' => 'Peruuta',
         'continue' => 'Jatka →',

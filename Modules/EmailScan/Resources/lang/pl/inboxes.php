@@ -63,8 +63,8 @@ return [
     'add_another' => 'Dodaj kolejną skrzynkę',
     'gmail_card_body' => 'Połącz konto Gmail, aby Beatrax mógł skanować je w poszukiwaniu paragonów.',
     'microsoft_card_body' => 'Połącz konto Microsoft 365 lub Outlook.com, aby Beatrax mógł skanować je w poszukiwaniu paragonów.',
-    'gmail_card_body_phone' => 'Gmaila skanuje aplikacja na komputer. Konto połączone tutaj nigdy nie jest skanowane samo z siebie.',
-    'microsoft_card_body_phone' => 'Microsoft 365 i Outlook.com skanuje aplikacja na komputer. Konto połączone tutaj nigdy nie jest skanowane samo z siebie.',
+    'gmail_card_body_phone' => 'Gmaila skanuje aplikacja na komputer. Połącz go tam — ten telefon pokazuje to, co ona znajdzie.',
+    'microsoft_card_body_phone' => 'Microsoft 365 i Outlook.com skanuje aplikacja na komputer. Połącz je tam — ten telefon pokazuje to, co ona znajdzie.',
 
     'discovered_heading' => 'Wykryci nadawcy',
 

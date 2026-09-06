@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Kedja för :name',
     'heading' => 'Kedja',
 
-    'unresolved_heading' => 'Kedjan är inte löst ännu',
-    'unresolved_body' => 'Kedjelösaren körs fortfarande. Öppna granskningskön eller uppdatera om en stund.',
+    'unresolved_heading' => 'Ingen transaktion vald',
+    'unresolved_body' => 'Välj en rad i transaktionslistan för att se vad som betalade den.',
 
     'none_heading' => 'Ingen finansieringskedja hittades',
     'none_body' => 'Ingen finansieringskedja har upptäckts för den här transaktionen. Om du väntade dig en, skicka in en kandidat från granskningskön.',

@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Cadeia de :name',
     'heading' => 'Cadeia',
 
-    'unresolved_heading' => 'Cadeia ainda não resolvida',
-    'unresolved_body' => 'O resolvedor de cadeias ainda está a correr. Abre a fila de revisão ou atualiza daqui a pouco.',
+    'unresolved_heading' => 'Nenhuma transação escolhida',
+    'unresolved_body' => 'Escolhe uma linha na lista de transações para veres o que a pagou.',
 
     'none_heading' => 'Não foi encontrada nenhuma cadeia de financiamento',
     'none_body' => 'Esta transação não tem nenhuma cadeia de financiamento detetada. Se esperavas uma, submete uma candidata a partir da fila de revisão.',

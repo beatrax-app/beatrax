@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Obvestilo o zasebnosti za osebni stik',
-        'body' => '🔒 To je osebni stik. IBAN in osebni podatki so privzeto skriti in nikoli niso vključeni v izvoze.',
+        'body' => '🔒 To je osebni stik. IBAN je skrit, dokler ga ne prikažeš, in ne pride v izvoze. Ime stika se še vedno pojavi povsod, kjer se pojavijo njegove transakcije.',
     ],
 
     'self_stub' => [

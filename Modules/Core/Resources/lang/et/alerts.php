@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Süsteemi hoiatused',
 
     'actions' => [
-        'install_next_launch' => 'Paigalda järgmisel käivitamisel',
-        'install_next_launch_aria' => 'Paigalda järgmisel käivitamisel — märgib süsteemi hoiatuse #:id lahendatuks',
+        'download_and_install' => 'Laadi alla ja paigalda',
+        'download_and_install_aria' => 'Laadi alla ja paigalda — märgib süsteemi hoiatuse #:id lahendatuks',
         'skip_version' => 'Jäta see versioon vahele',
         'release_notes' => 'Väljalaske märkmed →',
         'update_now' => 'Uuenda kohe',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Uuendus on saadaval — Beatrax :version on valmis. See paigaldatakse järgmisel käivitamisel.',
+        'update_available' => 'Uuendus on saadaval — Beatrax :version. Midagi ei laadita alla enne, kui otsustad selle paigaldada; seejärel Beatrax sulgub ja avaneb uuesti uues versioonis.',
         'update_stale' => 'Kasutad versiooni :current — versioon :latest on olnud saadaval 30 päeva. Uuenda kohe.',
         'update_critical' => 'Saadaval on kriitiline uuendus — versioon :version parandab: :summary. Paigalda esimesel võimalusel.',
         'backup_corrupt_with_path' => 'Varukoopia, mis kirjutati :timestamp, ei läbinud terviklikkuse kontrolli. Kontrolli asukohta :path. Lahenda see enne, kui varukoopiatele toetud.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Sinu PIN-kood ei ava selles seadmes rakenduse lukku: salvestatud võti ei ole loetav. Logi sisse konto parooliga, et määrata uus PIN-kood.',
         'sync_gdk_rewrap_failed' => 'GDK võtmehoidja ümberpakkimine ebaõnnestus pärast rakenduseluku paroolifraasi muutmist — krüpteeritud andmed võivad olla taastamatud, kuni võtmehoidja on uuesti pakitud.',
         'worker_crashed' => 'Beatraxi taustatöötlus peatus ootamatult. Importimine ja e-kirjade skannimine on peatatud. Taaskäivitamiseks ava rakendus uuesti.',
-        'auth_lock_key_material_stranded' => 'Selle konto puhul on puhkeoleku krüptimine aktiivne, kuid ükski rakenduseluku ümbris ei hoia enam andmevõtit, seega loetakse iga krüpteeritud märkus, kirjeldus ja vastaspoole detail tühjaks. Ainus tee tagasi on siduda seade, mis võtit veel hoiab.',
+        'auth_lock_key_material_stranded' => 'Selle konto puhul on puhkeoleku krüptimine aktiivne, kuid ükski rakenduseluku ümbris ei hoia enam andmevõtit, seega loetakse iga krüpteeritud märkus, kirjeldus ja vastaspoole detail tühjaks. Taasta krüpteeritud varukoopia, mis tehti ajal, mil võti veel töötas, või seadista see konto uuesti seadmes, kus võti on veel alles.',
         'auth_lock_recovery_wrap_stale' => 'Konto parool muutus ilma, et rakenduseluku taasteümbris oleks uuesti pakitud, seega see parool enam rakenduse lukku ei ava. PIN-kood avab endiselt. Seo konto parool rakenduseluku seadetes uuesti, kuni PIN-kood on veel teada — muidu ei jää unustatud PIN-koodi taha midagi.',
         'reconnect_link' => 'Ühenda uuesti →',
         'pots_category_link_retired' => 'Ümbrikutega eelarvestamine on asendanud kategooriaga seotud kogumispotid. :count arhiveeritud potist vabanenud :amount on taas jaotamata ja ootab, et sa selle ära jagaksid.|Ümbrikutega eelarvestamine on asendanud kategooriaga seotud kogumispotid. :count arhiveeritud potist vabanenud :amount on taas jaotamata ja ootab, et sa selle ära jagaksid.',

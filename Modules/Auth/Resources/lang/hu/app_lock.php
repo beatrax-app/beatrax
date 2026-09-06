@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Alkalmazászár megtartása',
 
     'forgot_modal_heading' => 'PIN-kód visszaállítása — erősítsd meg a fiókjelszavaddal',
-    'forgot_modal_body' => 'A fiókjelszavad visszaállítja a zárolási kulcsot, így a PIN-kód visszaállításakor soha nem vész el adat.',
+    'forgot_modal_body' => 'A fiókjelszavad visszaállítja a zárolási kulcsot, így a PIN-kód visszaállításakor nem vész el adat — feltéve, hogy az a jelszó még nyitja a zárat. Az a jelszó, amelyet helyreállítási kóddal állítottál vissza, vagy amelyet a fiók tulajdonosa állított be neked, már nem nyitja.',
     'confirm_new_pin_label' => 'Új PIN-kód megerősítése',
     'reset_pin' => 'PIN-kód visszaállítása',
     'cancel' => 'Mégse',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'A PIN-kód visszaállítása sikertelen — a helyreállítási kulcs nem érhető el.',
     'error_enable_first' => 'Előbb kapcsold be a PIN-zárat, mielőtt biometriát regisztrálsz.',
     'error_disable_blocked_by_encryption' => 'A jegyzeteid és a partnereid adatai azzal a kulccsal vannak titkosítva, amelyet ez az alkalmazászár őriz, így a zár kikapcsolása olvashatatlanná tenné őket. A zár bekapcsolva marad — inkább a PIN-kódodat változtasd meg.',
-    'error_key_material_lost' => 'Ez az eszköz már nem őrzi a titkosított adataidat nyitó kulcsot, ezért egy új PIN-kód sem teszi őket újra olvashatóvá. Párosítsd ezt az eszközt olyannal, amelyen a kulcs még megvan, hogy visszakapd őket.',
+    'error_key_material_lost' => 'Ez az eszköz már nem őrzi a titkosított adataidat nyitó kulcsot, ezért egy új PIN-kód sem teszi őket újra olvashatóvá. Állíts vissza egy titkosított biztonsági mentést, amely még a kulcs működése idején készült — párosítással ez az eszköz nem tud visszajutni, mert a párosításhoz az az alkalmazászár kell, amelyet ez a kulcs nyit.',
     'error_recovery_wrap_stale' => 'A fiókjelszavad már nem nyitja ezt az alkalmazászárat — a zár beállítása után változott meg. A PIN-kódod még működik, de ha elfelejted, nincs mögötte semmi. Kösd össze újra a fiókjelszavadat.',
     'relink_recovery' => 'Fiókjelszó újbóli összekötése',
     'relink_modal_heading' => 'Fiókjelszó újbóli összekötése — erősítsd meg PIN-kóddal',

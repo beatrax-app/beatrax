@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Kæde for :name',
     'heading' => 'Kæde',
 
-    'unresolved_heading' => 'Kæden er endnu ikke løst',
-    'unresolved_body' => 'Kædeløseren kører stadig. Åbn gennemgangskøen, eller genindlæs om et øjeblik.',
+    'unresolved_heading' => 'Ingen transaktion valgt',
+    'unresolved_body' => 'Vælg en række på transaktionslisten for at se, hvad der betalte for den.',
 
     'none_heading' => 'Der blev ikke fundet nogen finansieringskæde',
     'none_body' => 'Der er ikke fundet nogen finansieringskæde for denne transaktion. Hvis du forventede en, kan du indsende en kandidat fra gennemgangskøen.',

@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Datenschutzhinweis für privaten Kontakt',
-        'body' => '🔒 Das ist ein privater Kontakt. IBAN und persönliche Daten sind standardmäßig ausgeblendet und werden nie in Exporte übernommen.',
+        'body' => '🔒 Das ist ein privater Kontakt. Die IBAN bleibt ausgeblendet, bis du sie einblendest, und sie kommt nicht in Exporte. Der Name erscheint weiterhin überall dort, wo auch die Transaktionen des Kontakts erscheinen.',
     ],
 
     'self_stub' => [

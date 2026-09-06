@@ -6,8 +6,8 @@ return [
     'heading_named' => ':name grandinė',
     'heading' => 'Grandinė',
 
-    'unresolved_heading' => 'Grandinė dar neišspręsta',
-    'unresolved_body' => 'Grandinių sprendiklis vis dar veikia. Atverk peržiūros eilę arba po akimirkos atnaujink.',
+    'unresolved_heading' => 'Nepasirinkta jokia operacija',
+    'unresolved_body' => 'Operacijų sąraše pasirink eilutę, kad pamatytum, kas ją apmokėjo.',
 
     'none_heading' => 'Finansavimo grandinės nerasta',
     'none_body' => 'Šiai operacijai finansavimo grandinės neaptikta. Jei jos tikėjaisi, pateik kandidatą iš peržiūros eilės.',

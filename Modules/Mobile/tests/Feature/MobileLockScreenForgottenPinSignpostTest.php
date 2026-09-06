@@ -75,6 +75,19 @@ it('says on the lock screen itself that the way back in signs you out', function
         ->and($copy)->toContain('account password');
 });
 
+// The phone says the same thing the desktop lock screen says, and it was wrong
+// in the same way: after a recovery-code reset or an owner-set password the
+// account password opens nothing, so "No data is lost" sent the reader at the
+// one door that cannot open. The two lines are kept in step here.
+it('names the resets that leave nothing behind the PIN, in step with the desktop lock screen', function (): void {
+    $copy = Lang::get('mobile::lock.forgot_pin');
+
+    expect($copy)->toBe(Lang::get('auth::lock_screen.forgot_pin'))
+        ->and($copy)->toContain('recovery code')
+        ->and($copy)->toContain('account owner')
+        ->and($copy)->not->toContain('No data is lost');
+});
+
 it('routes the forgotten-code control through the POST sign-out, never a bare link', function (): void {
     lockedOutPhoneUser('forgot-phone-post-only');
 

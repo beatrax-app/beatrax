@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Keten voor :name',
     'heading' => 'Keten',
 
-    'unresolved_heading' => 'Keten nog niet opgelost',
-    'unresolved_body' => 'De keten-resolver is nog bezig. Open de beoordelingswachtrij of vernieuw over een moment.',
+    'unresolved_heading' => 'Geen transactie gekozen',
+    'unresolved_body' => 'Kies een rij in de transactielijst om te zien waarmee die is betaald.',
 
     'none_heading' => 'Geen financieringsketen gevonden',
     'none_body' => 'Voor deze transactie is geen financieringsketen gevonden. Als je er een verwachtte, dien dan een kandidaat in vanuit de beoordelingswachtrij.',

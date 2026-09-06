@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Proponi una corrispondenza',
-    'intro' => 'Apre GitHub nel tuo browser così puoi inviare la proposta come bozza di PR. Il tuo nome e la tua email non lasciano mai questo dispositivo.',
+    'intro' => "Apre GitHub nel tuo browser con la proposta già compilata. Con essa partono solo lo schema, il nome, la categoria e la regione qui sopra — e lo schema è la descrizione così come l'ha scritta il tuo estratto conto. Il tuo nome e la tua email non lasciano mai questo dispositivo.",
 
     'pattern' => 'Schema',
     'name' => 'Nome leggibile',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Anteprima YAML',
 
     'cancel' => 'Annulla',
-    'submit' => 'Invia come bozza di PR',
+    'submit' => 'Apri su GitHub',
 
     'toast' => 'Proposta aperta nel tuo browser.',
 

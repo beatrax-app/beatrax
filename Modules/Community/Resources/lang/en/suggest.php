@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Suggest a mapping',
-    'intro' => 'Opens GitHub in your browser so you can submit the suggestion as a draft PR. Your name and email never leave this device.',
+    'intro' => 'Opens GitHub in your browser with the suggestion filled in. Only the pattern, name, category and region above go with it — and the pattern is the description as your statement wrote it. Your name and email never leave this device.',
 
     'pattern' => 'Pattern',
     'name' => 'Friendly name',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML preview',
 
     'cancel' => 'Cancel',
-    'submit' => 'Submit as draft PR',
+    'submit' => 'Open on GitHub',
 
     'toast' => 'Suggestion opened in your browser.',
 

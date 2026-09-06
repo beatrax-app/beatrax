@@ -7,7 +7,7 @@ return [
     'native_unlock_failed' => 'Nepodarilo sa odomknúť. Zadaj namiesto toho PIN.',
     'page_title' => 'Odomknutie · Beatrax',
     'sign_out' => 'Odhlásiť sa',
-    'forgot_pin' => 'Zabudol si PIN? Odhlás sa — znova sa prihlásiš heslom k účtu a nastavíš si nový PIN. O žiadne údaje neprídeš.',
+    'forgot_pin' => 'Zabudol si PIN? Odhlás sa — ak heslom k účtu tento zámok stále otvoríš, znova sa prihlásiš, nastavíš si nový PIN a o nič neprídeš. Heslo obnovené pomocou obnovovacieho kódu alebo nastavené za teba vlastníkom účtu ho už neotvorí.',
 
     'digits_entered' => '{1} zadaná :count číslica|[2,4] zadané :count číslice|[5,*] zadaných :count číslic',
     'pad_label' => 'Klávesnica PIN',

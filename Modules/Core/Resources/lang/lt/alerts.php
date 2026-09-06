@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Sistemos įspėjimai',
 
     'actions' => [
-        'install_next_launch' => 'Įdiegti kitą kartą paleidus',
-        'install_next_launch_aria' => 'Įdiegti kitą kartą paleidus — sistemos įspėjimas #:id pažymimas kaip išspręstas',
+        'download_and_install' => 'Atsisiųsti ir įdiegti',
+        'download_and_install_aria' => 'Atsisiųsti ir įdiegti — sistemos įspėjimas #:id pažymimas kaip išspręstas',
         'skip_version' => 'Praleisti šią versiją',
         'release_notes' => 'Versijos aprašas →',
         'update_now' => 'Atnaujinti dabar',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Yra atnaujinimas — Beatrax :version paruošta. Ji bus įdiegta kitą kartą paleidus.',
+        'update_available' => 'Yra atnaujinimas — Beatrax :version. Nieko neatsisiunčiama, kol nepasirenki įdiegti; tada Beatrax užsidaro ir vėl atsidaro su nauja versija.',
         'update_stale' => 'Naudoji :current versiją — :latest versija prieinama jau 30 dienų. Atnaujink dabar.',
         'update_critical' => 'Yra svarbus atnaujinimas — :version versija ištaiso: :summary. Įdiek kuo greičiau.',
         'backup_corrupt_with_path' => 'Atsarginė kopija, sukurta :timestamp, neišlaikė vientisumo patikros. Patikrink :path. Išspręsk tai, kol nepradėjai pasikliauti atsarginėmis kopijomis.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Jūsų PIN kodas negali atrakinti programos šiame įrenginyje: išsaugotas raktas neįskaitomas. Prisijunkite paskyros slaptažodžiu ir nustatykite naują PIN kodą.',
         'sync_gdk_rewrap_failed' => 'Nepavyko iš naujo supakuoti GDK raktinės po programos užrakto slaptafrazės keitimo — užšifruoti duomenys gali būti neatkuriami, kol raktinė nebus supakuota iš naujo.',
         'worker_crashed' => '„Beatrax“ fone vykdomas apdorojimas netikėtai sustojo. Importavimas ir el. laiškų nuskaitymas pristabdyti. Kad paleistumėte iš naujo, vėl atidarykite programą.',
-        'auth_lock_key_material_stranded' => 'Šiai paskyrai įjungtas ramybės būsenos šifravimas, tačiau nė vienas programos užrakto apvalkalas nebeturi duomenų rakto, todėl kiekviena užšifruota pastaba, aprašas ir sandorio šalies informacija rodoma tuščia. Vienintelis kelias atgal – susieti įrenginį, kuris vis dar turi raktą.',
+        'auth_lock_key_material_stranded' => 'Šiai paskyrai įjungtas ramybės būsenos šifravimas, tačiau nė vienas programos užrakto apvalkalas nebeturi duomenų rakto, todėl kiekviena užšifruota pastaba, aprašas ir sandorio šalies informacija rodoma tuščia. Atkurkite užšifruotą atsarginę kopiją, sukurtą dar veikiant raktui, arba iš naujo nustatykite šią paskyrą įrenginyje, kuris raktą vis dar turi.',
         'auth_lock_recovery_wrap_stale' => 'Paskyros slaptažodis pasikeitė, o programos užrakto atkūrimo apvalkalas nebuvo supakuotas iš naujo, todėl tas slaptažodis nebeatrakina programos. PIN kodas vis dar atrakina. Iš naujo susiekite paskyros slaptažodį užrakto nustatymuose, kol PIN kodas dar žinomas — kitaip už pamiršto PIN kodo nieko nelieka.',
         'reconnect_link' => 'Prijungti iš naujo →',
         'pots_category_link_retired' => 'Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotos taupyklės vėl nepaskirstyta ir laukia, kol ją paskirstysite.|Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotų taupyklių vėl nepaskirstyta ir laukia, kol ją paskirstysite.|Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotų taupyklių vėl nepaskirstyta ir laukia, kol ją paskirstysite.',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Predloži mapiranje',
-    'intro' => 'Otvara GitHub u tvom pregledniku za slanje prijedloga kao skice PR-a. Tvoje ime i e-pošta nikad ne napuštaju ovaj uređaj.',
+    'intro' => 'Otvara GitHub u tvom pregledniku s već ispunjenim prijedlogom. S njim idu samo uzorak, naziv, kategorija i regija odozgo — a uzorak je opis onako kako ga je zapisao tvoj izvod. Tvoje ime i e-pošta nikad ne napuštaju ovaj uređaj.',
 
     'pattern' => 'Uzorak',
     'name' => 'Razumljiv naziv',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Pregled YAML-a',
 
     'cancel' => 'Odustani',
-    'submit' => 'Pošalji kao skicu PR-a',
+    'submit' => 'Otvori na GitHubu',
 
     'toast' => 'Prijedlog je otvoren u tvom pregledniku.',
 

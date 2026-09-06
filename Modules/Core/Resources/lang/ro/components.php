@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Închide',
         'install_app' => 'Instalează aplicația',
 
-        'desktop_html' => 'Deschide Beatrax în browserul telefonului și atinge „Adaugă pe ecranul principal” — sau atinge pictograma <strong style="color: var(--color-text);">⚡</strong> din meniul de partajare al Safari.',
+        'desktop_html' => 'Deschide Beatrax în browserul telefonului și alege <strong style="color: var(--color-text);">Adaugă pe ecranul principal</strong> din meniul de partajare.',
     ],
 
     'topbar' => [
