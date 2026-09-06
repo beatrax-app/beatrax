@@ -12,9 +12,10 @@ uses(RefreshDatabase::class);
 // paired device, and every device-local diagnostic must be written system-wide.
 //
 // The demo seeder gave all of its rows a user_id. A freshly paired iPhone then
-// showed the desktop's "SQLite is not in WAL mode — run php artisan
-// beatrax:doctor", which is another machine's database and a terminal the
-// phone does not have.
+// showed the desktop's WAL-mode warning, which is a fact about another
+// machine's database. The sentence itself has since been rewritten — it used to
+// end by naming a terminal command, which no reader of a shipped bundle can
+// run — but the ownership defect this file holds is the separate one.
 
 // Each kind against the production writer whose ownership the demo must copy.
 const ALERT_OWNERSHIP = [
