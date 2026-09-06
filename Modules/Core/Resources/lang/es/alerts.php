@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'La copia de seguridad verificada más reciente tiene :hoursh de antigüedad. Beatrax hace esta copia solo, una vez al día, mientras la app está abierta — no hay nada que ejecutar a mano. Si sigue con esta antigüedad, la app no ha estado abierta cuando tocaba la ejecución diaria.',
         'backup_none_found' => 'No se ha encontrado ninguna copia de seguridad verificada en la carpeta de copias. Beatrax hace esta copia solo, una vez al día, mientras la app está abierta — no hay nada que ejecutar a mano.',
-        'wal_mode_missing' => 'SQLite no está en modo WAL (actualmente :mode). Las escrituras simultáneas pueden bloquearse. Ejecuta <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> para obtener ayuda.',
-        'synchronous_misconfigured' => 'El nivel synchronous de SQLite es :level (se esperaba NORMAL/1). La durabilidad puede comportarse de forma distinta a la configurada. Ejecuta <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> para obtener ayuda.',
+        'wal_mode_missing' => 'La base de datos no está en modo WAL (actualmente :mode), por lo que guardar puede detenerse mientras se ejecuta una tarea en segundo plano. Beatrax activa WAL en cada inicio, así que reiniciar suele resolverlo.',
+        'synchronous_misconfigured' => 'El nivel de durabilidad de la base de datos es :level en lugar del NORMAL esperado. Beatrax lo ajusta en cada inicio, así que reiniciar suele resolverlo.',
         'oauth_scrub_set_failed' => 'La ocultación de secretos de OAuth está fuera de servicio. Los registros y los extractos de auditoría pueden contener tokens sin ocultar hasta la próxima carga correcta.',
         'oauth_reauth_required' => 'Los secretos de OAuth se han movido al almacenamiento por usuario. Vuelve a autorizar Gmail y Microsoft para reanudar el análisis del correo. El archivo de secretos anterior se renombró a :file para poder revertir.',
         'oauth_reconsent' => 'Vuelve a conectar tu :provider',

@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'The most recent verified backup is :hoursh old. Beatrax makes this backup itself, once a day, while the app is open — there is nothing to run by hand. If it stays this old, the app has not been open when a daily run came round.',
         'backup_none_found' => 'No verified backup was found in the backups folder. Beatrax makes this backup itself, once a day, while the app is open — there is nothing to run by hand.',
-        'wal_mode_missing' => 'SQLite is not in WAL mode (currently :mode). Concurrent writes may stall. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> for guidance.',
-        'synchronous_misconfigured' => 'SQLite synchronous level is :level (expected NORMAL/1). Durability semantics may differ from config. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> for guidance.',
+        'wal_mode_missing' => 'The database is not in WAL mode (currently :mode), so saving can pause while a background task is running. Beatrax sets WAL every time it starts, so restarting usually clears this.',
+        'synchronous_misconfigured' => 'The database durability level is :level rather than the expected NORMAL. Beatrax sets this every time it starts, so restarting usually clears it.',
         'oauth_scrub_set_failed' => 'OAuth secret redaction is offline. Logs and audit excerpts may contain unredacted tokens until the next successful load.',
         'oauth_reauth_required' => 'OAuth secrets moved to per-user storage. Re-authorize Gmail and Microsoft to resume email scanning. The old secrets file was renamed to :file for rollback.',
         'oauth_reconsent' => 'Reconnect your :provider',

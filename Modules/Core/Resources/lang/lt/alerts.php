@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Naujausiai patikrintai atsarginei kopijai jau :hoursh. Beatrax šią kopiją daro pati, kartą per dieną, kol programėlė atidaryta — ranka nieko paleisti nereikia. Jei ji lieka tokia sena, programėlė nebuvo atidaryta, kai atėjo kasdienis paleidimas.',
         'backup_none_found' => 'Atsarginių kopijų aplanke nerasta nė vienos patikrintos kopijos. Beatrax šią kopiją daro pati, kartą per dieną, kol programėlė atidaryta — ranka nieko paleisti nereikia.',
-        'wal_mode_missing' => 'SQLite veikia ne WAL režimu (dabar :mode). Lygiagretus rašymas gali stringti. Paleisk <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>, kad gautum nurodymų.',
-        'synchronous_misconfigured' => 'SQLite synchronous lygis yra :level (tikėtasi NORMAL/1). Patvarumo elgsena gali skirtis nuo konfigūracijos. Paleisk <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>, kad gautum nurodymų.',
+        'wal_mode_missing' => 'Duomenų bazė neveikia WAL režimu (šiuo metu :mode), todėl išsaugojimas gali sustoti, kol vykdoma fono užduotis. Beatrax nustato WAL kiekvieno paleidimo metu, todėl paleidimas iš naujo tai paprastai išsprendžia.',
+        'synchronous_misconfigured' => 'Duomenų bazės patvarumo lygis yra :level vietoj laukiamo NORMAL. Beatrax jį nustato kiekvieno paleidimo metu, todėl paleidimas iš naujo tai paprastai išsprendžia.',
         'oauth_scrub_set_failed' => 'OAuth paslapčių slėpimas neveikia. Žurnaluose ir audito ištraukose iki kito sėkmingo įkėlimo gali būti nepaslėptų prieigos raktų.',
         'oauth_reauth_required' => 'OAuth paslaptys perkeltos į atskiro naudotojo saugyklą. Iš naujo autorizuokite „Gmail“ ir „Microsoft“, kad būtų tęsiamas el. laiškų nuskaitymas. Senas paslapčių failas pervadintas į :file, kad būtų galima grįžti atgal.',
         'oauth_reconsent' => 'Iš naujo prijunkite savo :provider',

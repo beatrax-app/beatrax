@@ -284,7 +284,11 @@ it('resolves a stored line on the alerts card instead of printing its envelope',
 
     $html = (string) $this->actingAs($user)->get('/dev')->getContent();
 
-    expect($html)->toContain('SQLite is not in WAL mode')
+    // Asserted against the resolved line rather than against a copy of its
+    // words, so a reword of the sentence does not read as the card printing an
+    // envelope. The markup check stays: the copy carries none now, so an
+    // escaped tag on the page would mean one came back.
+    expect($html)->toContain(e($walLine->sentence()))
         ->and($html)->not->toContain('@copy')
         ->and($html)->not->toContain('&lt;code');
 });

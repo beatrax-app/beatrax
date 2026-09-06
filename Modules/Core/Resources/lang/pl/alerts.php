@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Ostatnia zweryfikowana kopia zapasowa ma :hoursh. Beatrax robi tę kopię sam, raz dziennie, gdy aplikacja jest otwarta — nie ma nic do uruchomienia ręcznie. Jeśli nadal jest tak stara, aplikacja nie była otwarta, gdy przypadało codzienne uruchomienie.',
         'backup_none_found' => 'W folderze kopii zapasowych nie znaleziono żadnej zweryfikowanej kopii. Beatrax robi tę kopię sam, raz dziennie, gdy aplikacja jest otwarta — nie ma nic do uruchomienia ręcznie.',
-        'wal_mode_missing' => 'SQLite nie działa w trybie WAL (obecnie :mode). Równoległe zapisy mogą się zatrzymywać. Uruchom <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>, aby uzyskać wskazówki.',
-        'synchronous_misconfigured' => 'Poziom synchronous w SQLite to :level (oczekiwano NORMAL/1). Gwarancje trwałości mogą różnić się od konfiguracji. Uruchom <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>, aby uzyskać wskazówki.',
+        'wal_mode_missing' => 'Baza danych nie działa w trybie WAL (obecnie :mode), więc zapisywanie może się zatrzymać, gdy działa zadanie w tle. Beatrax ustawia WAL przy każdym starcie, więc ponowne uruchomienie zwykle to naprawia.',
+        'synchronous_misconfigured' => 'Poziom trwałości bazy danych to :level zamiast oczekiwanego NORMAL. Beatrax ustawia go przy każdym starcie, więc ponowne uruchomienie zwykle to naprawia.',
         'oauth_scrub_set_failed' => 'Maskowanie sekretów OAuth nie działa. Dzienniki i fragmenty audytu mogą zawierać niezamaskowane tokeny do następnego udanego wczytania.',
         'oauth_reauth_required' => 'Sekrety OAuth przeniesiono do magazynu przypisanego do użytkownika. Autoryzuj ponownie Gmail i Microsoft, aby wznowić skanowanie poczty. Stary plik sekretów zmieniono na :file, aby umożliwić wycofanie zmian.',
         'oauth_reconsent' => 'Połącz ponownie swoje konto :provider',

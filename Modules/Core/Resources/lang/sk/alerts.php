@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Najnovšia overená záloha je :hoursh stará. Beatrax si túto zálohu robí sám, raz denne, kým je aplikácia otvorená — ručne nie je čo spúšťať. Ak zostane takto stará, aplikácia nebola otvorená, keď mal prísť denný beh.',
         'backup_none_found' => 'V priečinku so zálohami sa nenašla žiadna overená záloha. Beatrax si túto zálohu robí sám, raz denne, kým je aplikácia otvorená — ručne nie je čo spúšťať.',
-        'wal_mode_missing' => 'SQLite nie je v režime WAL (aktuálne :mode). Súbežné zápisy sa môžu zaseknúť. Pokyny získaš spustením <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
-        'synchronous_misconfigured' => 'Úroveň synchronous v SQLite je :level (očakáva sa NORMAL/1). Sémantika trvanlivosti sa môže líšiť od konfigurácie. Pokyny získaš spustením <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
+        'wal_mode_missing' => 'Databáza nie je v režime WAL (aktuálne :mode), takže ukladanie sa môže pozastaviť, kým beží úloha na pozadí. Beatrax nastavuje WAL pri každom spustení, takže reštart to zvyčajne vyrieši.',
+        'synchronous_misconfigured' => 'Úroveň trvanlivosti databázy je :level namiesto očakávanej NORMAL. Beatrax ju nastavuje pri každom spustení, takže reštart to zvyčajne vyrieši.',
         'oauth_scrub_set_failed' => 'Maskovanie tajomstiev OAuth nefunguje. Denníky a výňatky z auditu môžu až do ďalšieho úspešného načítania obsahovať nemaskované tokeny.',
         'oauth_reauth_required' => 'Tajomstvá OAuth sa presunuli do úložiska pre jednotlivých používateľov. Znova autorizujte Gmail a Microsoft, aby sa obnovilo skenovanie e-mailov. Starý súbor s tajomstvami bol premenovaný na :file pre prípad návratu.',
         'oauth_reconsent' => 'Znova pripojte svoj účet :provider',

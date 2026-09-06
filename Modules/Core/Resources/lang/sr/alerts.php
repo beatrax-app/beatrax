@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Najnovija proverena rezervna kopija stara je :hoursh. Beatrax ovu kopiju pravi sam, jednom dnevno, dok je aplikacija otvorena — ručno nema šta da se pokreće. Ako ostane ovoliko stara, aplikacija nije bila otvorena kad je došlo dnevno pokretanje.',
         'backup_none_found' => 'U fascikli sa rezervnim kopijama nije pronađena nijedna proverena kopija. Beatrax ovu kopiju pravi sam, jednom dnevno, dok je aplikacija otvorena — ručno nema šta da se pokreće.',
-        'wal_mode_missing' => 'SQLite nije u WAL režimu (trenutno :mode). Istovremeni upisi mogu da zastanu. Za uputstva pokreni <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
-        'synchronous_misconfigured' => 'SQLite nivo synchronous je :level (očekuje se NORMAL/1). Ponašanje trajnosti može da se razlikuje od konfiguracije. Za uputstva pokreni <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
+        'wal_mode_missing' => 'Baza podataka nije u WAL režimu (trenutno :mode), pa čuvanje može da zastane dok se izvršava pozadinski zadatak. Beatrax postavlja WAL pri svakom pokretanju, pa ponovno pokretanje to obično reši.',
+        'synchronous_misconfigured' => 'Nivo trajnosti baze podataka je :level umesto očekivanog NORMAL. Beatrax ga postavlja pri svakom pokretanju, pa ponovno pokretanje to obično reši.',
         'oauth_scrub_set_failed' => 'Prikrivanje OAuth tajni ne radi. Zapisi i izvodi revizije mogu sadržati neprikrivene tokene do sledećeg uspešnog učitavanja.',
         'oauth_reauth_required' => 'OAuth tajne su premeštene u skladište po korisniku. Ponovo autorizujte Gmail i Microsoft da bi se nastavilo skeniranje e-pošte. Stara datoteka sa tajnama preimenovana je u :file radi vraćanja.',
         'oauth_reconsent' => 'Ponovo povežite svoj :provider',

@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Cea mai recentă copie de rezervă verificată are o vechime de :hoursh. Beatrax face singur această copie, o dată pe zi, cât timp aplicația este deschisă — nu ai nimic de rulat manual. Dacă rămâne atât de veche, aplicația nu a fost deschisă când a venit rularea zilnică.',
         'backup_none_found' => 'În folderul copiilor de rezervă nu a fost găsită nicio copie verificată. Beatrax face singur această copie, o dată pe zi, cât timp aplicația este deschisă — nu ai nimic de rulat manual.',
-        'wal_mode_missing' => 'SQLite nu rulează în modul WAL (momentan :mode). Scrierile simultane se pot bloca. Rulează <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> pentru îndrumare.',
-        'synchronous_misconfigured' => 'Nivelul synchronous al SQLite este :level (așteptat NORMAL/1). Semantica durabilității poate diferi de configurație. Rulează <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> pentru îndrumare.',
+        'wal_mode_missing' => 'Baza de date nu este în modul WAL (momentan :mode), așa că salvarea se poate opri cât timp rulează o sarcină în fundal. Beatrax setează WAL la fiecare pornire, deci o repornire rezolvă de obicei acest lucru.',
+        'synchronous_misconfigured' => 'Nivelul de durabilitate al bazei de date este :level în loc de NORMAL, cel așteptat. Beatrax îl setează la fiecare pornire, deci o repornire rezolvă de obicei problema.',
         'oauth_scrub_set_failed' => 'Mascarea secretelor OAuth nu funcționează. Jurnalele și extrasele de audit pot conține jetoane nemascate până la următoarea încărcare reușită.',
         'oauth_reauth_required' => 'Secretele OAuth au fost mutate în stocarea per utilizator. Autorizează din nou Gmail și Microsoft pentru a relua scanarea e-mailului. Vechiul fișier de secrete a fost redenumit în :file pentru revenire.',
         'oauth_reconsent' => 'Reconectează-ți contul :provider',
