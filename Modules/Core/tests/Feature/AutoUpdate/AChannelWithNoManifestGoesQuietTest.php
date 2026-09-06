@@ -71,7 +71,13 @@ function quietChannelFetcher(EuvRecordingLogger $logger): HttpPublisherManifestF
 {
     return new HttpPublisherManifestFetcher(
         app(HttpClient::class),
-        new Repository(['auto_update' => ['manifest_feed_url' => QUIET_CHANNEL_FEED]]),
+        // Both channels are pointed at the one origin on purpose: the subject
+        // here is a 404 for a manifest, and a channel left with no feed at all
+        // would go quiet for a different reason and prove nothing.
+        new Repository(['auto_update' => [
+            'manifest_feed_url' => QUIET_CHANNEL_FEED,
+            'preview_feed_url' => QUIET_CHANNEL_FEED,
+        ]]),
         $logger,
         app(UpdateCheckPreference::class),
         platformFamily: 'Darwin',

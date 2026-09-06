@@ -122,11 +122,27 @@ returns `null` for a 404 exactly as it does for being offline, `poll()` returns
 publish the missing file nor fetch it, so there is nothing there for them to
 act on.
 
-**Known gap.** GitHub's `releases/latest/download` alias — the feed origin the
-release workflow bakes into each bundle — resolves the newest *non-prerelease*
-release, so a `beta*.yml` sitting on a prerelease page is not reachable through
-it. A preview reader therefore verifies against the newest stable release's
-preview manifest until the feed origin can address a release by tag.
+**The two channels do not share an origin, and cannot.** GitHub's
+`releases/latest/download` alias resolves the newest *non-prerelease* release,
+so a `beta*.yml` sitting on a release-candidate page is unreachable through it
+however it is named — a reader on preview would poll the newest stable build's
+manifest and be offered a stable build.
+
+A direct tag URL does serve a prerelease. So the preview channel has an origin
+of its own, `releases/download/preview`, and the `move-preview-feed` job keeps
+one rolling `preview` release carrying the current preview set. It runs **after**
+`verify-published`, so the feed only ever points at bytes already re-verified
+against the embedded publisher key, and it re-verifies again against what the
+release actually serves — the reader fetches that release, so that release is
+the subject. A stable tag leaves the rolling release where it is: a stable
+build is published under both names on its own page, and a preview reader is
+never moved backwards onto one.
+
+Which origin a channel asks is `UpdateChannel::feedConfigKey()`, beside the
+manifest prefix, so a third channel cannot be added without being given a feed.
+An unset feed behaves like an unset stable feed: the fetch yields `null` and
+nothing is surfaced, rather than falling back to the other channel's origin and
+offering a reader a build they did not opt into.
 
 ## The off switch
 

@@ -98,6 +98,15 @@ env:
     # nothing until a human publishes it. Appended to the bundled `.env` in
     # each desktop staging step below.
     AUTO_UPDATE_FEED_URL: https://github.com/${{ github.repository }}/releases/latest/download
+    # The preview channel needs an origin of its own, because that alias also
+    # skips a *prerelease* — it resolves the newest non-prerelease release, so
+    # a release candidate is unreachable through it however the manifest is
+    # named, and a reader on preview would be served the newest stable build.
+    # A direct tag URL does serve a prerelease, so `move-preview-feed` keeps
+    # one rolling `preview` release carrying the verified beta set and this
+    # addresses it by name.
+    AUTO_UPDATE_PREVIEW_FEED_URL: https://github.com/${{ github.repository }}/releases/download/preview
+    PREVIEW_FEED_TAG: preview
 
 jobs:
     spec-gate:
@@ -283,6 +292,7 @@ jobs:
               with:
                   extra: |
                       AUTO_UPDATE_FEED_URL=${{ env.AUTO_UPDATE_FEED_URL }}
+                      AUTO_UPDATE_PREVIEW_FEED_URL=${{ env.AUTO_UPDATE_PREVIEW_FEED_URL }}
                       NATIVEPHP_UPDATER_ENABLED=${{ env.NATIVEPHP_UPDATER_ENABLED }}
 
             - name: Stage the NativePHP electron scaffold
@@ -466,6 +476,7 @@ jobs:
               with:
                   extra: |
                       AUTO_UPDATE_FEED_URL=${{ env.AUTO_UPDATE_FEED_URL }}
+                      AUTO_UPDATE_PREVIEW_FEED_URL=${{ env.AUTO_UPDATE_PREVIEW_FEED_URL }}
                       NATIVEPHP_UPDATER_ENABLED=${{ env.NATIVEPHP_UPDATER_ENABLED }}
 
             - name: Stage the NativePHP electron scaffold
@@ -612,6 +623,7 @@ jobs:
               with:
                   extra: |
                       AUTO_UPDATE_FEED_URL=${{ env.AUTO_UPDATE_FEED_URL }}
+                      AUTO_UPDATE_PREVIEW_FEED_URL=${{ env.AUTO_UPDATE_PREVIEW_FEED_URL }}
                       NATIVEPHP_UPDATER_ENABLED=${{ env.NATIVEPHP_UPDATER_ENABLED }}
 
             - name: Stage the NativePHP electron scaffold
@@ -1163,3 +1175,119 @@ jobs:
                       exit 1
                   fi
                   echo "Every published asset is covered by the signed checksum file."
+
+    # `releases/latest/download` resolves the newest NON-prerelease release, so
+    # the preview manifests published on a release-candidate page cannot be
+    # reached through it however they are named. This keeps one rolling
+    # `preview` release carrying the current preview set, which a direct tag
+    # URL does serve, and it runs after verify-published so the feed only ever
+    # points at bytes that have already been re-verified against the embedded
+    # publisher key.
+    move-preview-feed:
+        name: move the preview feed
+        needs: verify-published
+        # A hyphen in the tag is what makes it a prerelease, the same test the
+        # manifest-emitting steps use. A stable release also writes the preview
+        # set on its own page, and the rolling tag is left where it is: a
+        # preview reader is not moved backwards onto a stable build.
+        if: contains(github.ref_name, '-')
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: write
+        steps:
+            - name: Check out the source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+            - name: Set up PHP (libsodium for manifest verification)
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2.37.2
+              with:
+                  php-version: '8.5'
+                  extensions: mbstring, sodium
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Take the verified preview set off the tagged release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  # Via env, never inline: a crafted tag name must not reach the
+                  # shell as executable $()/backtick text.
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  mkdir -p preview
+                  gh release download "$TAG" \
+                      --dir preview \
+                      --pattern 'beta*.yml' \
+                      --pattern 'beta*.yml.sig'
+
+                  # These are the bytes verify-published already checked. A tag
+                  # that carried none would leave the rolling release empty and
+                  # the feed answering 404 to every reader on preview.
+                  mapfile -t MANIFESTS < <(find preview -type f -name 'beta*.yml')
+                  if [ "${#MANIFESTS[@]}" -eq 0 ]; then
+                      echo "::error::no preview manifest was published for ${TAG}, so there is nothing to move the feed onto."
+                      exit 1
+                  fi
+                  for manifest in "${MANIFESTS[@]}"; do
+                      [ -f "${manifest}.sig" ] || { echo "::error::missing signature for ${manifest}"; exit 1; }
+                  done
+                  echo "Moving the preview feed onto ${#MANIFESTS[@]} manifest(s) from ${TAG}."
+
+            - name: Move the rolling preview release onto this build
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ github.ref_name }}
+                  REPO: ${{ github.repository }}
+                  FEED_TAG: ${{ env.PREVIEW_FEED_TAG }}
+              run: |
+                  set -euo pipefail
+                  # Deleted and recreated rather than edited: an asset of the
+                  # same name cannot be replaced in place, and a release left
+                  # holding one build's manifest beside another's is worse than
+                  # the seconds this is absent, which read as "offline" and
+                  # surface nothing.
+                  gh release delete "$FEED_TAG" --repo "$REPO" --yes --cleanup-tag || true
+                  gh release create "$FEED_TAG" \
+                      --repo "$REPO" \
+                      --prerelease \
+                      --title "Preview channel feed" \
+                      --notes "The current preview manifests, moved here by the release workflow from ${TAG}. Not a release: it carries no installer, only the signed manifests a bundle on the preview channel polls." \
+                      preview/*
+
+            - name: Re-verify what the preview feed now serves
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  REPO: ${{ github.repository }}
+                  FEED_TAG: ${{ env.PREVIEW_FEED_TAG }}
+              run: |
+                  set -euo pipefail
+                  # The same pass verify-published runs, against what the feed
+                  # actually serves rather than against what was uploaded: the
+                  # reader fetches this release, so this release is the subject.
+                  PUBLIC_HEX=$(grep -oE "'[0-9a-f]{64}'" config/auto_update.php | head -1 | tr -d "'")
+                  if [ -z "$PUBLIC_HEX" ]; then
+                      echo "Could not extract publisher_public_key_hex from config/auto_update.php"
+                      exit 1
+                  fi
+                  mkdir -p served
+                  gh release download "$FEED_TAG" --repo "$REPO" --dir served \
+                      --pattern 'beta*.yml' --pattern 'beta*.yml.sig'
+                  mapfile -t SERVED < <(find served -type f -name 'beta*.yml')
+                  if [ "${#SERVED[@]}" -eq 0 ]; then
+                      echo "::error::the preview feed serves no manifest, so a reader on preview polls a 404."
+                      exit 1
+                  fi
+                  for signed in "${SERVED[@]}"; do
+                      [ -f "${signed}.sig" ] || { echo "::error::missing signature for ${signed}"; exit 1; }
+                      echo "Verifying ${signed}"
+                      # shellcheck disable=SC2016  # inline PHP: $body is a PHP variable, not a shell one
+                      PUBLIC_HEX="$PUBLIC_HEX" php -r '
+                          $body = file_get_contents($argv[1]);
+                          $sigHex = trim((string) file_get_contents($argv[1] . ".sig"));
+                          $public = sodium_hex2bin(getenv("PUBLIC_HEX"));
+                          $sig = sodium_hex2bin($sigHex);
+                          exit(sodium_crypto_sign_verify_detached($sig, $body, $public) ? 0 : 1);
+                      ' -- "$signed"
+                  done
+                  echo "The preview feed serves ${#SERVED[@]} manifest(s), every one verifying against the embedded publisher public key."
