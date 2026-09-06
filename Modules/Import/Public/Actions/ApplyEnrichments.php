@@ -91,24 +91,11 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
                 ->lockForUpdate()
                 ->first(self::LOCKED_ROW_COLUMNS);
 
-            if ($row === null) {
-                return false;
-            }
-
-            // A reconcile is the reader's own assertion that this row and a
-            // statement agree, so a later file carrying a stronger reference
-            // must not rewrite the figure they checked. The receipt sibling of
-            // this write already refuses; this one adopted the amount instead.
-            if (TransactionStatusQuery::locksEdits($row->status)) {
-                $this->logger->debug('Skipping enrichment: the transaction is reconciled', [
-                    'transaction_id' => $enrichment->existingTransactionId,
-                    'incoming_format' => $enrichment->sourceFormat,
-                ]);
-
-                return false;
-            }
-
-            if (! $this->shouldEnrich($row, $enrichment)) {
+            // Order matters and short-circuits: a row that is not here cannot
+            // be read for a status, and a reconciled row is refused before its
+            // reference is ranked, because the ranking is about which file wins
+            // and this is about the reader's own assertion outranking both.
+            if ($row === null || $this->lockedByAReconcile($row, $enrichment) || ! $this->shouldEnrich($row, $enrichment)) {
                 return false;
             }
 
@@ -118,6 +105,24 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         });
 
         return $applied === true;
+    }
+
+    // A reconcile is the reader's own assertion that this row and a statement
+    // agree, so a later file carrying a stronger reference must not rewrite the
+    // figure they checked. The receipt sibling of this write already refuses;
+    // this one adopted the amount instead.
+    private function lockedByAReconcile(stdClass $row, PendingEnrichment $enrichment): bool
+    {
+        if (! TransactionStatusQuery::locksEdits($row->status)) {
+            return false;
+        }
+
+        $this->logger->debug('Skipping enrichment: the transaction is reconciled', [
+            'transaction_id' => $enrichment->existingTransactionId,
+            'incoming_format' => $enrichment->sourceFormat,
+        ]);
+
+        return true;
     }
 
     // Ranked again at write time, not just against the preview snapshot: a
