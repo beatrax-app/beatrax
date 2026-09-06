@@ -6959,8 +6959,9 @@ The listener compared the arriving alias against a constant of its own,
 comparison was false on every exit the product will ever see.
 
 What made it survive is that **every case built the event out of the same
-constant it was checking**. `new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS)`
-is true of itself whatever the constant says. The suite was not weak about the
+constant it was checking** — the listener's own alias constant, passed as the
+`alias` argument of the event it was then asserted against. That is true of
+itself whatever the constant says. The suite was not weak about the
 threshold, the window, the bounded bucket or the raise-once rule — it was
 complete about all four and silent about the one value that comes from outside
 the process. A fixture that supplies the field's value from the code under test
