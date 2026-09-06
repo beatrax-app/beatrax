@@ -71,12 +71,20 @@ const MIGRATION_ONLY_EXECUTION_PINS = [
 /** @var array<class-string, array{owner: string, sites: int, proves: list<string>}> */
 const MIGRATION_ONLY_EXECUTION_HANDOVERS = [];
 
-// A per-user sweep gates itself on "this user is not done yet". Nothing is
-// pinned: the whole point of the rule is that a fresh signup must satisfy every
-// such gate, and a column that legitimately stays null after signup is a column
-// no migration sweeps on.
+// A per-user sweep gates itself on "this user is not done yet", so a fresh
+// signup has to satisfy every such gate. The exception is a column whose null
+// is an answer rather than an absence: a sweep reading it as "not done" and a
+// reader reading it as "defer to the machine" want the same row left alone.
 /** @var array<string, array{reason: string, proves: list<string>}> */
-const PER_USER_SWEEP_GATE_PINS = [];
+const PER_USER_SWEEP_GATE_PINS = [
+    'timezone' => [
+        'reason' => 'null is the answer here, not an unfinished state: it means this installation '
+            .'defers to the zone of the machine it runs on, which is what a first run must do. The '
+            .'sweep beside it is a one-time upgrade backfill gating on "did this install exist before '
+            .'the column did", and a reader who signs up afterwards is exactly who should keep null.',
+        'proves' => ["/whereNull\('timezone'\)/"],
+    ],
+];
 
 // The third reading. Establishing per-user state on a seam is worth nothing to
 // a reader created by a path that does not reach the seam, and `AddUserAction`
@@ -437,8 +445,24 @@ it('leaves a reader who signed up matching no per-user sweep gate', function ():
         ...$unestablished,
     ]));
 
-    foreach (array_keys(PER_USER_SWEEP_GATE_PINS) as $column) {
-        expect($gates)->toHaveKey($column, 'a gate pin for a column nothing sweeps on — delete the entry');
+    foreach (PER_USER_SWEEP_GATE_PINS as $column => $claim) {
+        // `toHaveKey`'s second argument is an expected value, not a message,
+        // so the key is asserted through `array_key_exists` to keep the
+        // sentence a reader sees on failure.
+        expect(array_key_exists($column, $gates))
+            ->toBeTrue('a gate pin for '.$column.', a column nothing sweeps on — delete the entry');
+
+        // Held to its claim like every other pin here: the sweep it excuses has
+        // to still read the way the reason says, or the entry is excusing a
+        // sweep that has since been rewritten into something else.
+        $sweeps = implode("\n", array_map(
+            static fn (string $file): string => (string) file_get_contents(base_path($file)),
+            $gates[$column] ?? [],
+        ));
+
+        foreach ($claim['proves'] as $pattern) {
+            expect($sweeps)->toMatch($pattern, 'the sweep on '.$column.' no longer reads the way its pin describes it');
+        }
     }
 });
 
