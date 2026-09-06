@@ -114,6 +114,7 @@ final class SyncRebuildCommand extends Command
             replayer: new OpLogReplayer(
                 db: $this->db,
                 deviceKeys: $this->registry->signatureVerificationKeys($userId),
+                deviceKeysUserId: $userId,
                 rules: $registry,
             ),
             registry: $registry,

@@ -67,6 +67,8 @@ final readonly class OpLogReplayer
     /**
      * @param  DatabaseManager  $db  Raw DB access (bypasses Eloquent model events).
      * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
+     * @param  int|null  $deviceKeysUserId  The user $deviceKeys was read for, checked against the
+     *                                      $userId each replay() is scoped to before any entry is admitted.
      * @param  MergeRulesRegistry|null  $rules  Config-driven strategy registry (default: new instance).
      * @param  Clock|null  $wallClock  Clock for recorded_at timestamps (default: resolved from container).
      * @param  SearchIndexWriterContract|null  $searchWriter  FTS5 freshness hook.
@@ -84,6 +86,7 @@ final readonly class OpLogReplayer
         ?Clock $wallClock = null,
         ?SearchIndexWriterContract $searchWriter = null,
         ?OpLogReplayCrypto $crypto = null,
+        ?int $deviceKeysUserId = null,
     ) {
         $this->db = $db;
         $rules ??= new MergeRulesRegistry;
@@ -112,6 +115,7 @@ final readonly class OpLogReplayer
             new RegisteredColumns($db),
             $sensitiveFields,
             $deviceKeys,
+            $deviceKeysUserId,
             new DeviceKeySigner,
             $fieldCrypto,
             $keyringService,
