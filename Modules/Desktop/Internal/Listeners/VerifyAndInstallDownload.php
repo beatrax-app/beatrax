@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal\Listeners;
 
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
+use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\StoredCopy;
 use Native\Desktop\AutoUpdater;
 use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
 use Psr\Log\LoggerInterface;
@@ -21,6 +25,7 @@ final readonly class VerifyAndInstallDownload
         private PublisherManifestFetcher $fetcher,
         private AutoUpdater $autoUpdater,
         private LoggerInterface $logger,
+        private SystemAlertWriter $alerts,
     ) {}
 
     public function handle(UpdateDownloaded $event): void
@@ -51,6 +56,19 @@ final readonly class VerifyAndInstallDownload
             $this->logger->critical('VerifyAndInstallDownload: refused an update that failed publisher verification.', [
                 'version' => $event->version,
             ]);
+
+            // A log line is not a reader. They consented to an install, waited
+            // through a download, and were told nothing at all — which reads as
+            // "it worked" and invites the same click again. The one branch that
+            // may mean tampering is the one branch that has to surface.
+            $line = CopyLine::of('core::alerts.messages.update_refused', ['version' => $event->version]);
+
+            $this->alerts->raiseOnceSystemWide(
+                kind: UpdateAlertKind::Refused->value,
+                severity: UpdateAlertKind::Refused->severity()->value,
+                message: $line->sentence(),
+                metadata: StoredCopy::inParams($line) + ['refusedVersion' => $event->version],
+            );
 
             return;
         }

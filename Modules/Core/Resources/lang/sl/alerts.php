@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Na voljo je posodobitev — Beatrax :version. Nič se ne prenese, dokler sam ne izbereš namestitve; Beatrax se nato zapre in znova odpre v novi različici.',
+        'update_refused' => 'Beatrax je prenesel različico :version in je ni namestil — datoteka se ni ujemala s podpisom izdajatelja, zato se na tej napravi ni nič spremenilo. To lahko povzroči poškodovan prenos. Če se ponavlja, Beatraxa ne nameščaj iz tega vira.',
         'update_stale' => 'Uporabljaš različico :current — različica :latest je na voljo že 30 dni. Posodobi zdaj.',
         'update_critical' => 'Na voljo je kritična posodobitev — različica :version popravlja :summary. Namesti jo čim prej.',
         'backup_corrupt_with_path' => 'Varnostna kopija, zapisana ob :timestamp, ni prestala preverjanja celovitosti. Preglej :path. Reši to, preden se zaneseš na varnostne kopije.',

@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Yra atnaujinimas — Beatrax :version. Nieko neatsisiunčiama, kol nepasirenki įdiegti; tada Beatrax užsidaro ir vėl atsidaro su nauja versija.',
+        'update_refused' => 'Beatrax atsisiuntė :version versiją ir atsisakė ją įdiegti — failas neatitiko leidėjo parašo, todėl šiame įrenginyje niekas nebuvo pakeista. Tai gali sukelti sugadintas atsisiuntimas. Jei kartojasi, nediek Beatrax iš to šaltinio.',
         'update_stale' => 'Naudoji :current versiją — :latest versija prieinama jau 30 dienų. Atnaujink dabar.',
         'update_critical' => 'Yra svarbus atnaujinimas — :version versija ištaiso: :summary. Įdiek kuo greičiau.',
         'backup_corrupt_with_path' => 'Atsarginė kopija, sukurta :timestamp, neišlaikė vientisumo patikros. Patikrink :path. Išspręsk tai, kol nepradėjai pasikliauti atsarginėmis kopijomis.',
