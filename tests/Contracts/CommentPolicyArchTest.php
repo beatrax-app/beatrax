@@ -1068,29 +1068,36 @@ function commentPolicyDocsLinkTargets(string $path): array
 }
 
 it('has every @link .md target resolving to a real .docs file (M6)', function (): void {
-    $files = commentPolicyBackendFiles();
-
-    expect(count($files))->toBeGreaterThan(
-        1000,
-        'The backend walk opened almost nothing, so no @link was read at all.'
-    );
-
     $hits = [];
-    foreach ($files as $path) {
+    $cited = 0;
+
+    // The same reach as the fragment rule below, and for the same reason: a
+    // citation is a citation whether it is written in a docblock or on a `//`
+    // line, and whether the file that carries it ships or guards.
+    foreach (RepoTree::files(RepoTree::EVERY_PHP_FILE) as $path) {
         foreach (token_get_all((string) file_get_contents($path)) as $token) {
-            if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
+            if (! is_array($token) || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
                 continue;
             }
             $m = PatternScan::all('/@link\s+(\S+\.md)/', $token[1]);
 
             foreach ($m[1] as $target) {
+                $cited++;
                 $resolved = realpath(dirname($path).'/'.$target);
                 if ($resolved === false || ! is_file($resolved)) {
-                    $hits[] = $path.':'.$token[2].' → '.$target;
+                    $hits[] = str_replace(RepoTree::root().'/', '', $path).':'.$token[2].' → '.$target;
                 }
             }
         }
     }
+
+    // 934 citations today. A walk that found none reports the same clean answer
+    // as a tree whose every citation lands on a page that exists.
+    expect($cited)->toBeGreaterThan(
+        500,
+        'The walk found '.$cited.' doc citations, which is too few to have read the tree.'
+    );
+
     expect($hits)->toBe([], "@link .md targets must exist under .docs. Broken links:\n  ".implode("\n  ", $hits));
 });
 
