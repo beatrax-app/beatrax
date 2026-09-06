@@ -12,6 +12,7 @@ use Livewire\Livewire;
 use Modules\Categorization\Models\CategorizationRule;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -1121,24 +1122,41 @@ it('does not bleed the owner peer device name or record count into the partner /
     $seedPeer($this->owner->id, 'owner-peer-device-done', 'Owner Secret Laptop');
     $seedPeer($this->partner->id, 'partner-peer-device-done', 'Partner Visible Laptop');
 
-    $this->db->connection()->table('mobile_sync_progress')->insert([
-        'user_id' => $this->owner->id,
-        'peer_device_id' => 'owner-peer-device-done',
-        'records_expected' => 4242,
-        'records_applied' => 4242,
-        'last_hlc_l' => 4242,
-        'last_hlc_c' => 0,
-        'phase' => 'complete',
-        'created_at' => '2026-07-11T09:55:00Z',
-        'updated_at' => '2026-07-11T10:00:00Z',
-    ]);
+    // Nine digits, not four. The needle is checked against the whole rendered
+    // document, and that document carries Livewire snapshot checksums in hex —
+    // so a four-digit decimal appears in one by chance often enough to have
+    // failed a shard once and passed on a re-run of the same commit.
+    $ownerRecords = 918273645;
+    $partnerRecords = 135792468;
+
+    $seedProgress = function (int $userId, string $deviceId, int $records): void {
+        $this->db->connection()->table('mobile_sync_progress')->insert([
+            'user_id' => $userId,
+            'peer_device_id' => $deviceId,
+            'records_expected' => $records,
+            'records_applied' => $records,
+            'last_hlc_l' => $records,
+            'last_hlc_c' => 0,
+            'phase' => 'complete',
+            'created_at' => '2026-07-11T09:55:00Z',
+            'updated_at' => '2026-07-11T10:00:00Z',
+        ]);
+    };
+
+    $seedProgress($this->owner->id, 'owner-peer-device-done', $ownerRecords);
+    // The partner's own row is the positive control: without it the screen
+    // shows no count at all, and "the owner's count is absent" passes against a
+    // page that could not have shown one.
+    $seedProgress($this->partner->id, 'partner-peer-device-done', $partnerRecords);
 
     $this->actingAs($this->partner)
         ->get('/mobile/setup/done')
         ->assertOk()
         ->assertSee('Partner Visible Laptop')
+        ->assertSee((string) $partnerRecords)
         ->assertDontSee('Owner Secret Laptop')
-        ->assertDontSee('4242');
+        ->assertDontSee((string) $ownerRecords)
+        ->assertDontSee(Fmt::number($ownerRecords));
 });
 
 it('does not bleed the owner spend into the partner reports CSV export', function (): void {
