@@ -7,10 +7,12 @@ namespace Modules\Sync\Internal\Pairing;
 use Illuminate\Http\Client\Response;
 use InvalidArgumentException;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
+use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerAdvertisementLimits;
 use Modules\Sync\Internal\Transport\PairingHttpStatus;
 use Modules\Sync\Internal\Transport\PairingOfferRequestHandler;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
+use Modules\Sync\Public\Support\PeerAddress;
 use Throwable;
 
 // Recovers the initiator's public identity for a token the user typed, by
@@ -44,7 +46,7 @@ final readonly class LanPairingOfferFetcher
     /**
      * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
-    public function fetchForWordCode(string $wordCode): array|PairingOfferLookup
+    public function fetchForWordCode(string $wordCode, ?PeerAddress $typed = null): array|PairingOfferLookup
     {
         try {
             $tokenHex = $this->wordEncoder->decode($wordCode);
@@ -54,7 +56,7 @@ final readonly class LanPairingOfferFetcher
             return PairingOfferLookup::CodeMalformed;
         }
 
-        return $this->askEveryPeer($tokenHex);
+        return $this->askEveryPeer($tokenHex, $typed);
     }
 
     // An identity ends the sweep where it is found, but WHICH refusal to report
@@ -64,12 +66,12 @@ final readonly class LanPairingOfferFetcher
     /**
      * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
-    private function askEveryPeer(string $tokenHex): array|PairingOfferLookup
+    private function askEveryPeer(string $tokenHex, ?PeerAddress $typed): array|PairingOfferLookup
     {
         $anyPeerAnswered = false;
         $anyPeerLimited = false;
 
-        foreach ($this->peers->eachConnectablePeer(self::MAX_PEERS_ASKED_FOR_AN_OFFER) as $peer) {
+        foreach ($this->everyAddress($typed) as $peer) {
             $attempt = $this->attempt($peer, $tokenHex);
 
             if (is_array($attempt)) {
@@ -92,6 +94,24 @@ final readonly class LanPairingOfferFetcher
         // answered at all is "are both devices on the same network?" the
         // question worth asking.
         return $anyPeerAnswered ? PairingOfferLookup::CodeNotAccepted : PairingOfferLookup::NoPeerReached;
+    }
+
+    // The browse first and the typed address after it, which is the order the
+    // ladder names: a browse answer is the live one, and a reader types an
+    // address precisely for the network where no browse answers at all. Both
+    // are candidates the handshake still has to prove.
+    /**
+     * @return iterable<DiscoveredPeer>
+     */
+    private function everyAddress(?PeerAddress $typed): iterable
+    {
+        yield from $this->peers->eachConnectablePeer(self::MAX_PEERS_ASKED_FOR_AN_OFFER);
+
+        // No device id: which device answers is what the offer is being asked,
+        // and a typed address names a place rather than a peer.
+        if ($typed !== null) {
+            yield new DiscoveredPeer('', $typed->host, $typed->port, DiscoveryMode::Manual);
+        }
     }
 
     // Keeps WHICH ending happened: a peer that answered at all, even to refuse,

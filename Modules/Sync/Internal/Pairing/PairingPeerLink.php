@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Identity\DeviceNameDetector;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Enums\PairingFrameSend;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
+use Modules\Sync\Public\Support\PeerAddress;
 
 // Every road PairingGateway has to the other device, with the collaborators
 // that carry them. Injected, not mixed in: as a trait on the gateway these
@@ -34,9 +35,9 @@ final readonly class PairingPeerLink
     /**
      * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
-    public function discoverInitiatorOnLan(string $wordCode): array|PairingOfferLookup
+    public function discoverInitiatorOnLan(string $wordCode, ?PeerAddress $typed = null): array|PairingOfferLookup
     {
-        return $this->lanOfferFetcher->fetchForWordCode($wordCode);
+        return $this->lanOfferFetcher->fetchForWordCode($wordCode, $typed);
     }
 
     public function hasRelayRoad(): bool

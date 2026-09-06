@@ -15,6 +15,7 @@ use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
+use Modules\Sync\Public\Support\PeerAddress;
 
 uses(RefreshDatabase::class);
 
@@ -304,4 +305,94 @@ it('still returns the identity when one peer 429s and another answers with the o
 
     expect($result)->toBeArray();
     expect($result['token'])->toBe($tokenHex);
+});
+
+// The rung between the browse and the relay. A network that answers no browse
+// left a typed code with nowhere to ask at all, which on iPhone — where the
+// browse never answers — is every network there is.
+
+it('asks the address a reader typed when the browse found nobody', function (): void {
+    $asked = [];
+
+    Http::fake(function ($request) use (&$asked) {
+        $asked[] = $request->url();
+
+        return Http::response([
+            'device_id' => 'desktop-typed',
+            'ed25519' => str_repeat('c', 64),
+            'x25519' => str_repeat('d', 64),
+            'name' => 'Typed Mac',
+        ]);
+    });
+
+    [$wordCode, $tokenHex] = lanOfferCode();
+
+    $offer = lanOfferFetcher()->fetchForWordCode($wordCode, PeerAddress::parse('192.0.2.77:51337'));
+
+    expect($offer)->toBeArray();
+    expect($offer['token'])->toBe($tokenHex);
+    expect($offer['deviceId'])->toBe('desktop-typed');
+
+    // The address it reached, never the one the reply claimed: the sync that
+    // follows has no other way to learn where the offer actually came from.
+    expect($offer['lanHost'])->toBe('192.0.2.77');
+    expect($offer['lanPort'])->toBe(51337);
+
+    expect($asked)->toHaveCount(1);
+    expect(str_contains($asked[0], '192.0.2.77:51337'))->toBeTrue($asked[0]);
+});
+
+it('asks the browse first and the typed address only after it', function (): void {
+    $asked = [];
+
+    Http::fake(function ($request) use (&$asked) {
+        $asked[] = $request->url();
+
+        return Http::response([
+            'device_id' => 'desktop-lan',
+            'ed25519' => str_repeat('a', 64),
+            'x25519' => str_repeat('b', 64),
+            'name' => 'Studio Mac',
+        ]);
+    });
+
+    [$wordCode] = lanOfferCode();
+
+    $offer = lanOfferFetcher([lanOfferPeer()])->fetchForWordCode($wordCode, PeerAddress::parse('192.0.2.77:51337'));
+
+    expect($offer)->toBeArray();
+
+    // A browse answer ends the sweep, so the typed address is never asked: it
+    // is the rung below, not a second opinion on the one above.
+    expect($asked)->toHaveCount(1);
+    expect(str_contains($asked[0], '192.0.2.44'))->toBeTrue($asked[0]);
+});
+
+it('still reports nothing reached when neither the browse nor the typed address answers', function (): void {
+    Http::fake(fn () => throw new ConnectionException('refused'));
+
+    [$wordCode] = lanOfferCode();
+
+    expect(lanOfferFetcher()->fetchForWordCode($wordCode, PeerAddress::parse('192.0.2.77:51337')))
+        ->toBe(PairingOfferLookup::NoPeerReached);
+});
+
+it('carries no relay bootstrap out of a typed address either', function (): void {
+    // The typed address is a place a reader named, not a channel this device
+    // trusts: it is exactly as unable to hand over a relay as the browse is.
+    Http::fake(['*' => Http::response([
+        'device_id' => 'desktop-typed',
+        'ed25519' => str_repeat('c', 64),
+        'x25519' => str_repeat('d', 64),
+        'relay' => 'https://attacker.invalid',
+        'rpin' => 'stolen-pin',
+    ])]);
+
+    [$wordCode] = lanOfferCode();
+
+    $offer = lanOfferFetcher()->fetchForWordCode($wordCode, PeerAddress::parse('192.0.2.77:51337'));
+
+    expect($offer)->toBeArray();
+    expect($offer['relayEndpoint'])->toBeNull();
+    expect($offer['relayPin'])->toBeNull();
 });

@@ -89,6 +89,14 @@ final class MobilePairingScan extends Component
 
     public string $wordCode = '';
 
+    // Where the desktop is, for the network that answers no browse. Offered
+    // only once a submit has come back with nothing reached, because that is
+    // the one refusal it answers and the reader has no way to know it before.
+    public string $initiatorAddress = '';
+
+    #[Locked]
+    public bool $offerNeedsAnAddress = false;
+
     // Separate from $flashMessage so an invalid-code error is never
     // overwritten by (or confused with) the amber camera notice.
     public bool $cameraUnavailableNotice = false;

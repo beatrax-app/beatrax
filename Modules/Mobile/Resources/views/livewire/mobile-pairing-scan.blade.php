@@ -206,6 +206,39 @@
             @endif
         </div>
 
+        {{-- Offered only after a submit reached nothing: before that it is a
+             field for a problem the reader does not have, and after it is the
+             one road left on a network that answers no browse. --}}
+        @if ($offerNeedsAnAddress)
+            <div class="space-y-1">
+                <label
+                    for="mobile-initiator-address-input"
+                    class="block text-sm font-semibold text-slate-900 dark:text-slate-100"
+                >
+                    {{ Lang::get('mobile::pairing.initiator_address') }}
+                </label>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    {{ Lang::get('mobile::pairing.initiator_address_help') }}
+                </p>
+                <input
+                    id="mobile-initiator-address-input"
+                    type="text"
+                    inputmode="url"
+                    autocapitalize="none"
+                    autocomplete="off"
+                    spellcheck="false"
+                    wire:model="initiatorAddress"
+                    placeholder="192.168.1.20:8100"
+                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
+                           placeholder:text-slate-500 dark:placeholder:text-slate-400
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                           dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400
+                           dark:focus-visible:ring-slate-100"
+                    data-testid="initiator-address-input"
+                />
+            </div>
+        @endif
+
         <div class="flex gap-3">
             <x-core::neutral-button
                 block="flex"
