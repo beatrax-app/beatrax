@@ -21,6 +21,7 @@ use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Commands\RelayServeCommand;
+use Modules\Sync\Commands\SyncRebuildCommand;
 use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
@@ -437,7 +438,7 @@ final class SyncServiceProvider extends ServiceProvider
     // app/Console/Kernel.php, per the module boundary rule.
     private function registerConsoleCommands(): void
     {
-        $this->commands([SyncServeCommand::class, RelayServeCommand::class]);
+        $this->commands([SyncServeCommand::class, RelayServeCommand::class, SyncRebuildCommand::class]);
     }
 
     // Resolve the authenticated user id for the OpLogReplayer device-key

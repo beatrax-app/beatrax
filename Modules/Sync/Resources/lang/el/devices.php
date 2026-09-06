@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Σε αναμονή επιβεβαίωσης',
     'safety_number_words' => 'Λέξεις αριθμού ασφαλείας:',
     'paired' => 'Συζευγμένη',
+    'last_seen' => 'Τελευταία εμφάνιση :when',
+    'last_seen_never' => 'Δεν έχει συνδεθεί ακόμη',
     'remove_aria' => 'Αφαίρεση: :name',
     'remove' => 'Αφαίρεση',
     'pair_new_device' => 'Σύζευξη νέας συσκευής',

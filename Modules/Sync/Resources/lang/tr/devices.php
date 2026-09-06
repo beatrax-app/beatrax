@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Onay bekleniyor',
     'safety_number_words' => 'Güvenlik numarası kelimeleri:',
     'paired' => 'Eşleştirildi',
+    'last_seen' => 'Son görülme :when',
+    'last_seen_never' => 'Henüz bağlanmadı',
     'remove_aria' => ':name cihazını kaldır',
     'remove' => 'Kaldır',
     'pair_new_device' => 'Yeni bir cihaz eşleştir',

@@ -6,9 +6,9 @@ namespace Modules\Core\Public\Services;
 
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\QueryException;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Support\HostTimezone;
+use Psr\Log\LoggerInterface;
 
 // Answers which zone this installation reads and writes its days in. It is one
 // answer per install rather than per reader: `app.timezone` is the frame a
@@ -22,7 +22,13 @@ final class InstallTimezone
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Repository $config,
+        private readonly LoggerInterface $logger,
     ) {}
+
+    private function owner(): OwnerAccount
+    {
+        return new OwnerAccount($this->db, $this->logger);
+    }
 
     // An environment naming a zone wins, then the stored choice, then the
     // machine. Nothing seeds the row for that last arm on purpose: a device
@@ -71,22 +77,12 @@ final class InstallTimezone
 
     public function ownerId(): ?int
     {
-        try {
-            $id = $this->db->connection()->table('users')->orderBy('id')->value('id');
-        } catch (QueryException) {
-            return null;
-        }
-
-        return is_numeric($id) ? (int) $id : null;
+        return $this->owner()->id();
     }
 
     private function ownerColumn(): mixed
     {
-        try {
-            return $this->db->connection()->table('users')->orderBy('id')->value('timezone');
-        } catch (QueryException) {
-            return null;
-        }
+        return $this->owner()->column('timezone');
     }
 
     // Both, because they are read by different callers and neither reads the

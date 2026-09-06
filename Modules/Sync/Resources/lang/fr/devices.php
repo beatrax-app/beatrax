@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'En attente de confirmation',
     'safety_number_words' => 'Mots du numéro de sécurité :',
     'paired' => 'Appairé',
+    'last_seen' => 'Vu pour la dernière fois :when',
+    'last_seen_never' => 'Pas encore connecté',
     'remove_aria' => 'Supprimer :name',
     'remove' => 'Supprimer',
     'pair_new_device' => 'Appairer un nouvel appareil',

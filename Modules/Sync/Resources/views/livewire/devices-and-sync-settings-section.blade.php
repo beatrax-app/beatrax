@@ -310,6 +310,19 @@
                                         {{ Lang::get('sync::devices.paired') }} {{ \Carbon\CarbonImmutable::parse($device['paired_at'])->translatedFormat('j M Y') }}
                                     </p>
                                 @endif
+
+                                {{-- Last-seen meta. This device is answering the
+                                     request, so its own row is always "now" and
+                                     saying so would be noise. --}}
+                                @if (! ($device['is_self'] ?? false))
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                                        @if ($device['last_seen_at'] !== '')
+                                            {{ Lang::get('sync::devices.last_seen', ['when' => \Carbon\CarbonImmutable::parse($device['last_seen_at'])->diffForHumans()]) }}
+                                        @else
+                                            {{ Lang::get('sync::devices.last_seen_never') }}
+                                        @endif
+                                    </p>
+                                @endif
                             </div>
 
                             {{-- Surface C: per-row Remove action.

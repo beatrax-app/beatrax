@@ -7,9 +7,7 @@ namespace Modules\Core\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Enums\UpdateChannel;
-use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
-use Throwable;
 
 /**
  * @link ../../../../.docs/features/desktop/auto-update.md#the-two-channels
@@ -22,6 +20,11 @@ final readonly class UpdateChannelPreference
         private DatabaseManager $db,
         private LoggerInterface $logger,
     ) {}
+
+    private function owner(): OwnerAccount
+    {
+        return new OwnerAccount($this->db, $this->logger);
+    }
 
     // The owner's row and nobody else's, the way the install's timezone is:
     // which manifest set this bundle asks for is one answer per installation.
@@ -47,9 +50,7 @@ final readonly class UpdateChannelPreference
 
     private function ownerId(): ?int
     {
-        $id = $this->ownerColumn('id');
-
-        return is_numeric($id) ? (int) $id : null;
+        return $this->owner()->id();
     }
 
     private function storedValue(): ?string
@@ -61,18 +62,6 @@ final readonly class UpdateChannelPreference
 
     private function ownerColumn(string $column): mixed
     {
-        try {
-            return $this->db->connection()->table('users')->orderBy('id')->value($column);
-        } catch (Throwable $e) {
-            // First launch reaches this before the table exists, which is a real
-            // state and not a refusal. Logged rather than swallowed so a column
-            // that has genuinely gone missing is visible.
-            $this->logger->warning(
-                'UpdateChannelPreference: could not read the stored answer, assuming the shipped default.',
-                SafeExceptionContext::describe($e),
-            );
-
-            return null;
-        }
+        return $this->owner()->column($column);
     }
 }

@@ -28,6 +28,11 @@ const CONFIRMED_KEY_SOURCE_FLOOR = 1_000;
 
 const CONFIRMED_KEY_REPLAY_SITES = [
     'Modules/Mobile/Internal/Sync/LanSyncClient.php',
+    // The rebuild command replays this device's own stored log rather than
+    // anything arriving from a peer, and it still reads the confirmed-only map:
+    // an entry signed by a device this installation never confirmed is exactly
+    // the one a rebuild must refuse rather than admit by re-reading it.
+    'Modules/Sync/Commands/SyncRebuildCommand.php',
     'Modules/Sync/Internal/Transport/SyncWebSocketHandler.php',
     'Modules/Sync/Providers/SyncServiceProvider.php',
     'Modules/Sync/Public/Services/HistoryReprojector.php',

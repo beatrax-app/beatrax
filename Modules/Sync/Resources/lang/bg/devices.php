@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Очаква потвърждение',
     'safety_number_words' => 'Думи на кода за безопасност:',
     'paired' => 'Сдвоено',
+    'last_seen' => 'Последно видяно :when',
+    'last_seen_never' => 'Още не е свързано',
     'remove_aria' => 'Премахни :name',
     'remove' => 'Премахни',
     'pair_new_device' => 'Сдвои ново устройство',

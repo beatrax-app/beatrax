@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Laukiama patvirtinimo',
     'safety_number_words' => 'Saugos numerio žodžiai:',
     'paired' => 'Susieta',
+    'last_seen' => 'Paskutinį kartą matyta :when',
+    'last_seen_never' => 'Dar neprisijungta',
     'remove_aria' => 'Pašalinti :name',
     'remove' => 'Pašalinti',
     'pair_new_device' => 'Susieti naują įrenginį',

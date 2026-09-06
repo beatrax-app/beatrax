@@ -22,6 +22,11 @@ const INTRODUCED_KEY_READERS = [
 // device advertises it can verify — which must be the same set or the device
 // asks for ops it will refuse.
 const INTRODUCED_KEY_CALL_SITES = [
+    // Builds the author map for a rebuild of this device's own log. The grant
+    // it reads is the same signature-verification one every site here reads,
+    // and it grants nothing further: a rebuild sends nothing and asks for
+    // nothing.
+    'Modules/Sync/Commands/SyncRebuildCommand.php',
     'Modules/Sync/Providers/SyncServiceProvider.php',
     'Modules/Sync/Internal/Transport/SyncWebSocketHandler.php',
     'Modules/Sync/Internal/Transport/IntroductionOffers.php',
