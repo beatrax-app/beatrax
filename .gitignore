@@ -115,3 +115,10 @@ yarn-error.log
 # Device-test rounds: screenshots, per-screen audit dumps and the account
 # notes a walk-through needs. Kept on the machine that captured them.
 .device-test/
+
+# Live application data. `UserDataPathService` puts the store at
+# `dirname(base_path())/persisted_data`, and the mobile Composer root's
+# base_path is `mobile-app/`, so booting anything from there lands the
+# ledger, the keyring and the sync identity right here at the repository
+# root — one `git add -A` away from being committed.
+/persisted_data
