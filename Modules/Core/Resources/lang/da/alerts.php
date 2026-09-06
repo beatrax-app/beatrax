@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Luk — systemadvarsel #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'budgetadvarslerne',
+        'daily-triggers' => 'de daglige påmindelser og oversigten',
+    ],
+
     'messages' => [
         'update_available' => 'Opdatering tilgængelig — Beatrax :version er klar. Den installeres ved næste opstart.',
         'update_stale' => 'Du kører version :current — version :latest har været tilgængelig i 30 dage. Opdatér nu.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Kontoadgangskoden blev ændret, uden at applåsens gendannelsesindpakning blev pakket om, så den adgangskode åbner ikke længere applåsen. Det gør PIN-koden stadig. Sammenkæd kontoadgangskoden igen i applåsindstillingerne, mens PIN-koden stadig kendes — ellers efterlader en glemt PIN intet.',
         'reconnect_link' => 'Tilslut igen →',
         'pots_category_link_retired' => 'Kuvertbudgettering har afløst puljer, der var knyttet til en kategori. :amount fra :count arkiveret pulje er ufordelt igen og venter på, at du fordeler beløbet.|Kuvertbudgettering har afløst puljer, der var knyttet til en kategori. :amount fra :count arkiverede puljer er ufordelt igen og venter på, at du fordeler beløbet.',
+        'notifications_deferred_pass_failed' => 'Beatrax kunne ikke beregne :pass på denne enhed, så nogle mangler måske. Den prøver igen, hver gang du åbner appen.',
     ],
 ];

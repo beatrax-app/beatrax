@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Închide — alerta de sistem #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'alertele de buget',
+        'daily-triggers' => 'mementourile zilnice și rezumatul',
+    ],
+
     'messages' => [
         'update_available' => 'Actualizare disponibilă — Beatrax :version este gata. Se va instala la următoarea pornire.',
         'update_stale' => 'Folosești versiunea :current — versiunea :latest este disponibilă de 30 de zile. Actualizează acum.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Parola contului s-a schimbat fără ca învelișul de recuperare al blocării aplicației să fie reîmpachetat, așa că acea parolă nu mai deschide blocarea. PIN-ul încă o deschide. Reasociază parola contului din setările de blocare cât timp PIN-ul este încă știut — altfel un PIN uitat nu lasă nimic în urmă.',
         'reconnect_link' => 'Reconectează →',
         'pots_category_link_retired' => 'Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count pușculiță arhivată este din nou nealocată și așteaptă să o aloci.|Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count pușculițe arhivate este din nou nealocată și așteaptă să o aloci.|Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count de pușculițe arhivate este din nou nealocată și așteaptă să o aloci.',
+        'notifications_deferred_pass_failed' => 'Beatrax nu a putut calcula :pass pe acest dispozitiv, așa că unele pot lipsi. Încearcă din nou de fiecare dată când deschizi aplicația.',
     ],
 ];

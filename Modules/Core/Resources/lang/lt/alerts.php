@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Slėpti — sistemos įspėjimas #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'biudžeto įspėjimų',
+        'daily-triggers' => 'kasdienių priminimų ir suvestinės',
+    ],
+
     'messages' => [
         'update_available' => 'Yra atnaujinimas — Beatrax :version paruošta. Ji bus įdiegta kitą kartą paleidus.',
         'update_stale' => 'Naudoji :current versiją — :latest versija prieinama jau 30 dienų. Atnaujink dabar.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Paskyros slaptažodis pasikeitė, o programos užrakto atkūrimo apvalkalas nebuvo supakuotas iš naujo, todėl tas slaptažodis nebeatrakina programos. PIN kodas vis dar atrakina. Iš naujo susiekite paskyros slaptažodį užrakto nustatymuose, kol PIN kodas dar žinomas — kitaip už pamiršto PIN kodo nieko nelieka.',
         'reconnect_link' => 'Prijungti iš naujo →',
         'pots_category_link_retired' => 'Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotos taupyklės vėl nepaskirstyta ir laukia, kol ją paskirstysite.|Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotų taupyklių vėl nepaskirstyta ir laukia, kol ją paskirstysite.|Biudžetas vokuose pakeitė su kategorija susietas taupykles. Suma :amount iš :count archyvuotų taupyklių vėl nepaskirstyta ir laukia, kol ją paskirstysite.',
+        'notifications_deferred_pass_failed' => '„Beatrax“ šiame įrenginyje negalėjo apskaičiuoti :pass, todėl kai kurių gali trūkti. Bandys dar kartą kaskart atidarius programėlę.',
     ],
 ];

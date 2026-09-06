@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Lukk — systemvarsel #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'budsjettvarslene',
+        'daily-triggers' => 'de daglige påminnelsene og sammendraget',
+    ],
+
     'messages' => [
         'update_available' => 'Oppdatering tilgjengelig — Beatrax :version er klar. Den installeres ved neste oppstart.',
         'update_stale' => 'Du bruker versjon :current — versjon :latest har vært tilgjengelig i 30 dager. Oppdater nå.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Kontopassordet ble endret uten at applåsens gjenopprettingsinnpakning ble pakket om, så det passordet åpner ikke lenger applåsen. PIN-koden gjør det fortsatt. Koble kontopassordet på nytt fra applåsinnstillingene mens PIN-koden fortsatt er kjent — ellers etterlater en glemt PIN-kode ingenting.',
         'reconnect_link' => 'Koble til på nytt →',
         'pots_category_link_retired' => 'Konvoluttbudsjettering har erstattet sparepotter som var knyttet til en kategori. :amount fra :count arkivert sparepott er ufordelt igjen og venter på at du fordeler beløpet.|Konvoluttbudsjettering har erstattet sparepotter som var knyttet til en kategori. :amount fra :count arkiverte sparepotter er ufordelt igjen og venter på at du fordeler beløpet.',
+        'notifications_deferred_pass_failed' => 'Beatrax klarte ikke å regne ut :pass på denne enheten, så noen kan mangle. Den prøver igjen hver gang du åpner appen.',
     ],
 ];

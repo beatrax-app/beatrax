@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Sluiten — systeemmelding #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'je budgetmeldingen',
+        'daily-triggers' => 'je dagelijkse herinneringen en overzicht',
+    ],
+
     'messages' => [
         'update_available' => 'Update beschikbaar — Beatrax :version staat klaar. Deze wordt bij de volgende start geïnstalleerd.',
         'update_stale' => 'Je gebruikt versie :current — versie :latest is al 30 dagen beschikbaar. Werk nu bij.',
@@ -47,5 +52,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Het accountwachtwoord is gewijzigd zonder dat de herstelwikkel van de appvergrendeling opnieuw is ingepakt, dus dat wachtwoord opent de appvergrendeling niet meer. De pincode nog wel. Koppel het accountwachtwoord opnieuw via de instellingen van de appvergrendeling zolang de pincode nog bekend is — anders laat een vergeten pincode niets achter.',
         'reconnect_link' => 'Opnieuw koppelen →',
         'pots_category_link_retired' => 'Envelopbudgettering heeft potjes die aan een categorie hingen vervangen. :amount uit :count gearchiveerd potje is weer niet-toegewezen en wacht tot je het toewijst.|Envelopbudgettering heeft potjes die aan een categorie hingen vervangen. :amount uit :count gearchiveerde potjes is weer niet-toegewezen en wacht tot je het toewijst.',
+        'notifications_deferred_pass_failed' => 'Beatrax kon :pass op dit apparaat niet berekenen, dus er ontbreken er mogelijk een paar. Bij elke keer dat je de app opent, wordt het opnieuw geprobeerd.',
     ],
 ];

@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Opusti — sistemsko opozorilo št. :id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'proračunska opozorila',
+        'daily-triggers' => 'dnevne opomnike in povzetek',
+    ],
+
     'messages' => [
         'update_available' => 'Na voljo je posodobitev — Beatrax :version je pripravljen. Namestil se bo ob naslednjem zagonu.',
         'update_stale' => 'Uporabljaš različico :current — različica :latest je na voljo že 30 dni. Posodobi zdaj.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Geslo računa se je spremenilo, ne da bi bil ovoj za obnovitev zaklepanja aplikacije ponovno ovit, zato to geslo ne odklene več aplikacije. PIN jo še vedno odklene. Znova povežite geslo računa v nastavitvah zaklepanja, dokler je PIN še znan — sicer za pozabljenim PIN-om ne ostane nič.',
         'reconnect_link' => 'Poveži znova →',
         'pots_category_link_retired' => 'Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranega hranilnika je spet nerazporejen in čaka, da ga razporediš.|Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranih hranilnikov je spet nerazporejen in čaka, da ga razporediš.|Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranih hranilnikov je spet nerazporejen in čaka, da ga razporediš.|Proračun po ovojnicah je nadomestil hranilnike, vezane na kategorijo. Znesek :amount iz :count arhiviranih hranilnikov je spet nerazporejen in čaka, da ga razporediš.',
+        'notifications_deferred_pass_failed' => 'Beatrax na tej napravi ni mogel izračunati :pass, zato jih nekaj morda manjka. Poskusil bo znova vsakič, ko odprete aplikacijo.',
     ],
 ];

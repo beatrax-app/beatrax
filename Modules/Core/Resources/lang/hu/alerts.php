@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Elvetés — #:id rendszerüzenet',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'a költségvetési értesítéseket',
+        'daily-triggers' => 'a napi emlékeztetőket és az összefoglalót',
+    ],
+
     'messages' => [
         'update_available' => 'Elérhető frissítés — a Beatrax :version készen áll. A következő indításkor települ.',
         'update_stale' => 'A(z) :current verziót használod — a(z) :latest verzió 30 napja elérhető. Frissíts most.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'A fiók jelszava úgy változott meg, hogy az alkalmazászár helyreállítási burka nem lett újracsomagolva, ezért az a jelszó már nem nyitja az alkalmazászárat. A PIN-kód még igen. Kösse össze újra a fiókjelszót az alkalmazászár beállításaiban, amíg a PIN-kód ismert — különben egy elfelejtett PIN mögött nem marad semmi.',
         'reconnect_link' => 'Újracsatlakozás →',
         'pots_category_link_retired' => 'A borítékos költségvetés felváltotta a kategóriához kötött perselyeket. A(z) :count archivált perselyből felszabadult :amount ismét kiosztatlan, és arra vár, hogy kiossza.|A borítékos költségvetés felváltotta a kategóriához kötött perselyeket. A(z) :count archivált perselyből felszabadult :amount ismét kiosztatlan, és arra vár, hogy kiossza.',
+        'notifications_deferred_pass_failed' => 'A Beatrax ezen az eszközön nem tudta kiszámítani :pass, ezért néhány hiányozhat. Az alkalmazás minden megnyitásakor újra próbálkozik.',
     ],
 ];

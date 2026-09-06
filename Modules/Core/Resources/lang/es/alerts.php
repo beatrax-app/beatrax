@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Descartar — alerta del sistema n.º :id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'los avisos de presupuesto',
+        'daily-triggers' => 'los recordatorios diarios y el resumen',
+    ],
+
     'messages' => [
         'update_available' => 'Actualización disponible — Beatrax :version está lista. Se instalará en el próximo inicio.',
         'update_stale' => 'Tienes la versión :current — la versión :latest lleva 30 días disponible. Actualiza ahora.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'La contraseña de la cuenta cambió sin que se reempaquetara la envoltura de recuperación del bloqueo de la aplicación, así que esa contraseña ya no abre el bloqueo. El PIN sí. Vuelve a vincular la contraseña de la cuenta desde los ajustes del bloqueo mientras aún conozcas el PIN; de lo contrario, un PIN olvidado no deja nada detrás.',
         'reconnect_link' => 'Volver a conectar →',
         'pots_category_link_retired' => 'El presupuesto por sobres ha sustituido a las huchas vinculadas a una categoría. :amount de :count hucha archivada vuelve a estar sin asignar y espera a que lo asignes.|El presupuesto por sobres ha sustituido a las huchas vinculadas a una categoría. :amount de :count huchas archivadas vuelve a estar sin asignar y espera a que lo asignes.',
+        'notifications_deferred_pass_failed' => 'Beatrax no pudo calcular :pass en este dispositivo, así que puede que falten algunos. Lo intenta de nuevo cada vez que abres la aplicación.',
     ],
 ];

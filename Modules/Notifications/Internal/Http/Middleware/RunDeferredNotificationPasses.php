@@ -40,11 +40,12 @@ final readonly class RunDeferredNotificationPasses extends AfterResponseMiddlewa
         try {
             $this->passes->runOutstanding($this->currentUser->id(), ($this->session)());
         } catch (Throwable $e) {
-            // The marks of any pass that did not finish are still standing, so
-            // the next request takes them again. What this must not do is turn
+            // The outer net. A pass that throws is caught per pass, raises an
+            // alert and leaves its mark standing; what reaches here is the walk
+            // around them failing, and what this must not do either way is turn
             // a page somebody asked for into a 500 over work they did not.
             $this->log->warning(
-                'RunDeferredNotificationPasses: a deferred pass did not complete.',
+                'RunDeferredNotificationPasses: the deferred-pass walk did not complete.',
                 SafeExceptionContext::describe($e),
             );
         }

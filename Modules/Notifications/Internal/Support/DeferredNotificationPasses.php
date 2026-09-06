@@ -10,8 +10,11 @@ use Illuminate\Contracts\Session\Session;
 use Modules\Core\Public\Scheduling\DailyLocalWindow;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\Enums\DeferredNotificationPass;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * @link ../../../../.docs/features/mobile/background-sync-cannot-hold-the-key.md#the-scheduled-passes-that-cannot-write-either
@@ -29,6 +32,7 @@ final readonly class DeferredNotificationPasses
         private EncryptionMigrationService $encryption,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
+        private LoggerInterface $log,
     ) {}
 
     // Asked BEFORE the pass reads anything. That ordering is the privacy
@@ -84,12 +88,34 @@ final readonly class DeferredNotificationPasses
         $runner = $this->container->make(DeferredNotificationPassRunner::class);
 
         foreach ($outstanding as $pass) {
-            $runner->run($userId, $pass);
-
-            // Cleared after the run, so a pass that threw leaves its mark
-            // standing and the next keyed request takes it again.
-            $this->cache->forget(self::key($userId, $pass));
+            $this->runOne($runner, $userId, $pass);
         }
+    }
+
+    // Caught per pass rather than around the loop: one pass that cannot finish
+    // used to take the others down with it, and they have nothing to do with
+    // each other beyond the request that got round to both.
+    private function runOne(DeferredNotificationPassRunner $runner, int $userId, DeferredNotificationPass $pass): void
+    {
+        $alerts = $this->container->make(DeferredNotificationPassAlerts::class);
+
+        try {
+            $runner->run($userId, $pass);
+        } catch (Throwable $e) {
+            // The mark is left standing, so the next keyed request takes it
+            // again. The alert is the difference between retrying forever and
+            // retrying forever in silence.
+            $this->log->warning(
+                'DeferredNotificationPasses: a deferred pass did not complete.',
+                ['pass' => $pass->value] + SafeExceptionContext::describe($e),
+            );
+            $alerts->passDidNotComplete($userId, $pass);
+
+            return;
+        }
+
+        $this->cache->forget(self::key($userId, $pass));
+        $alerts->passCompleted($userId, $pass);
     }
 
     // The two halves the codec itself distinguishes. A user who never enabled

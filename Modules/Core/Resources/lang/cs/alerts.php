@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Zamítnout — systémové upozornění #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'rozpočtová upozornění',
+        'daily-triggers' => 'denní připomínky a souhrn',
+    ],
+
     'messages' => [
         'update_available' => 'Je dostupná aktualizace — Beatrax :version je připravený. Nainstaluje se při příštím spuštění.',
         'update_stale' => 'Máš verzi :current — verze :latest je dostupná už 30 dní. Aktualizuj teď.',
@@ -52,5 +57,6 @@ return [
         // named "spořicí obálky" here to keep the two apart. A Czech reader settles
         // whether that reads or whether the pots want a different noun.
         'pots_category_link_retired' => 'Rozpočtování po obálkách nahradilo spořicí obálky navázané na kategorii. Částka :amount z :count archivované spořicí obálky je opět nepřiřazená a čeká, až ji přiřadíte.|Rozpočtování po obálkách nahradilo spořicí obálky navázané na kategorii. Částka :amount z :count archivovaných spořicích obálek je opět nepřiřazená a čeká, až ji přiřadíte.|Rozpočtování po obálkách nahradilo spořicí obálky navázané na kategorii. Částka :amount z :count archivovaných spořicích obálek je opět nepřiřazená a čeká, až ji přiřadíte.',
+        'notifications_deferred_pass_failed' => 'Beatrax na tomto zařízení nedokázal sestavit :pass, takže některá mohou chybět. Zkusí to znovu při každém otevření aplikace.',
     ],
 ];
