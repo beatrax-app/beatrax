@@ -77,7 +77,7 @@ final class InstallTimezone
             return null;
         }
 
-        return is_int($id) ? $id : (is_numeric($id) ? (int) $id : null);
+        return is_numeric($id) ? (int) $id : null;
     }
 
     private function ownerColumn(): mixed

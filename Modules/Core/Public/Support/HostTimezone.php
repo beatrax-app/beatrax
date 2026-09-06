@@ -79,12 +79,7 @@ final class HostTimezone
         }
 
         $target = @readlink(self::ZONEINFO_LINK);
-
-        if (! is_string($target)) {
-            return null;
-        }
-
-        $segments = explode('/', str_replace('\\', '/', $target));
+        $segments = is_string($target) ? explode('/', str_replace('\\', '/', $target)) : [];
 
         for ($take = 3; $take >= 2; $take--) {
             $candidate = implode('/', array_slice($segments, -$take));
