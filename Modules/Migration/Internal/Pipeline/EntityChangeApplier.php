@@ -13,6 +13,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Services\SourceMapWriter;
@@ -32,6 +33,7 @@ final readonly class EntityChangeApplier
         private LoggerInterface $logger,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
+        private TransactionStatusQuery $statusQuery,
     ) {}
 
     /**
@@ -51,6 +53,20 @@ final readonly class EntityChangeApplier
             : $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, $entityType, $sourceExternalId));
 
         if ($table === null || $beatraxId === null) {
+            return false;
+        }
+
+        // Re-running a migration restates what the source says; a row the
+        // reader has since matched against a statement by hand is theirs, and
+        // a file cannot walk that back silently. The staged status already
+        // refuses here, and the description and the amount now do too.
+        if ($table === 'transactions' && $this->statusQuery->isReconciled($user->id, $beatraxId)) {
+            $this->logger->debug('EntityChangeApplier: left a reconciled transaction as it stands.', [
+                'transaction_id' => $beatraxId,
+                'user_id' => $user->id,
+                'fields' => array_keys($fields),
+            ]);
+
             return false;
         }
 
@@ -117,7 +133,10 @@ final readonly class EntityChangeApplier
             ->where('user_id', $user->id)
             ->first();
 
-        if ($row === null) {
+        // Asked again of the row this method already holds, because it is a
+        // public entry point of its own: the correction screen reaches it
+        // directly, without the resolution above ever running.
+        if ($row === null || TransactionStatusQuery::locksEdits($row->status)) {
             return false;
         }
 

@@ -1177,6 +1177,27 @@ it mergeable. Re-deriving that decision on this side would make the two
 devices disagree about what the merge decided, so
 `OpLogEntryApplier` is pinned as the one admitted second writer.
 
+**The writers the lock does not bind are a list, not a habit.**
+`Public/Support/ReconciledRowExemptions` holds them, keyed by the
+requirement that admits each: the status writer's own un-reconcile, the
+schema's `nullOnDelete()` repair of a pointer to a removed category or
+partner, the Chains retyping healing pass, the two Transfers writers
+that touch the partner of the named row, and the arriving-op appliers.
+Every entry carries the pattern that earned it, so a pin whose proof
+stops matching fails rather than quietly outliving its reason.
+
+`AWriterThatReachesAReconciledRowNamesTheRequirementThatAllowsItArchTest`
+reads the tree back against that list. Its subject is a write that names
+one row — `where('id', …)` — and either deletes it or sets a column the
+reader matched against the statement; a sweep narrowing by an import
+run, a parent id or a chunk it derived for itself is acting on the table
+rather than on one reader's assertion, and refusing it there would
+strand the row instead. Writing that rule down found two writers nothing
+admitted: `ApplyEnrichments` adopted a later file's amount onto a
+reconciled row, and `EntityChangeApplier` restated a re-run migration's
+description and amount over one. Both now refuse, the way the receipt
+sibling `ApplyReceiptConflictResolution` already did.
+
 **CRDT correctness**: a bulk status transition is never represented as
 a single synthetic sync event — every transitioned row gets its own
 `TransactionMutated('edit', ['status' => 'reconciled'])`, dispatched in

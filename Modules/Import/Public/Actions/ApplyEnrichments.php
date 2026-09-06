@@ -17,6 +17,7 @@ use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Events\ReceiptConflictDetected;
@@ -45,6 +46,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         'settled_currency',
         'fx_rate_used',
         'counterparty_normalized',
+        'status',
     ];
 
     public function __construct(
@@ -89,7 +91,24 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
                 ->lockForUpdate()
                 ->first(self::LOCKED_ROW_COLUMNS);
 
-            if ($row === null || ! $this->shouldEnrich($row, $enrichment)) {
+            if ($row === null) {
+                return false;
+            }
+
+            // A reconcile is the reader's own assertion that this row and a
+            // statement agree, so a later file carrying a stronger reference
+            // must not rewrite the figure they checked. The receipt sibling of
+            // this write already refuses; this one adopted the amount instead.
+            if (TransactionStatusQuery::locksEdits($row->status)) {
+                $this->logger->debug('Skipping enrichment: the transaction is reconciled', [
+                    'transaction_id' => $enrichment->existingTransactionId,
+                    'incoming_format' => $enrichment->sourceFormat,
+                ]);
+
+                return false;
+            }
+
+            if (! $this->shouldEnrich($row, $enrichment)) {
                 return false;
             }
 

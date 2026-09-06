@@ -15,7 +15,9 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\Services\TransactionStatusWriter;
 
 uses(RefreshDatabase::class);
 
@@ -163,4 +165,59 @@ it('recomposes the fingerprint when prefer_receipt rewrites the amount the tuple
             'EUR',
             $stored->counterpartyNormalized,
         ));
+});
+
+// The receipt sibling of this write already refuses a reconciled row and this
+// one adopted the figure instead: a later file carrying a stronger reference
+// walked the amount the reader had matched against a bank statement, and the
+// run reported it as enriched.
+it('leaves a reconciled row\'s amount alone when a later file carries a stronger reference', function (): void {
+    $run = aefRun($this->fixtureUser, 'asn-csv');
+    $stored = aefCanonical(
+        aefSourceRow('Albert Heijn', 'CSV-REF'),
+        $this->account->id,
+        $this->fixtureUser,
+        $run->id,
+        'asn-csv',
+    );
+    ($this->record)([$stored], $this->fixtureUser);
+
+    /** @var Transaction $tx */
+    $tx = Transaction::query()->firstOrFail();
+    aefPreferReceipt($this->fixtureUser);
+
+    app(DatabaseManager::class)->connection()
+        ->table('transactions')
+        ->where('id', $tx->id)
+        ->update(['status' => ClearedStatus::Cleared->value]);
+
+    // Locked through the flow the reader would use, not by writing the column:
+    // a fixture that stamps the value by hand proves the guard reads a string,
+    // not that the reconcile path produces one this import then walks back.
+    expect(app(TransactionStatusWriter::class)->reconcileClearedUpTo(
+        $this->fixtureUser,
+        $this->account->id,
+        CarbonImmutable::parse('2026-03-10'),
+    ))->toBe(1);
+
+    $enrichment = new PendingEnrichment(
+        existingTransactionId: $tx->id,
+        newSourceRef: 'PAYID-AMOUNT',
+        importRunId: $run->id,
+        sourceFormat: SourceFormat::Eml->value,
+        conflictingFields: [
+            'amount_minor' => ['stored' => -2500, 'incoming' => -2750],
+        ],
+    );
+
+    expect(($this->app->make(AppliesEnrichments::class))([$enrichment], $this->fixtureUser))->toBe(0)
+        ->and(Transaction::query()->findOrFail($tx->id)->amount_minor)->toBe(-2500)
+        ->and(Transaction::query()->findOrFail($tx->id)->source_ref)->toBe($tx->source_ref);
+
+    // The counter-case: a refusal that also refuses an unlocked row says
+    // nothing about the lock.
+    app(TransactionStatusWriter::class)->unreconcile($this->fixtureUser, $tx->id);
+
+    expect(($this->app->make(AppliesEnrichments::class))([$enrichment], $this->fixtureUser))->toBe(1)
+        ->and(Transaction::query()->findOrFail($tx->id)->amount_minor)->toBe(-2750);
 });
