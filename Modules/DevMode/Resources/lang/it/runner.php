@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Svuota la cache delle viste', 'description' => 'Svuota la cache delle viste Blade compilate.'],
         'queue_retry' => ['label' => 'Riprova i job falliti', 'description' => 'Riprova un job fallito per id, oppure tutti i job falliti se passi `all`.'],
         'rederive_fingerprints' => ['label' => 'Ricalcola le impronte', 'description' => "Ricalcola l'impronta di ogni transazione ancora al di sotto dell'attuale versione di normalizzazione. Eseguito da qui, riporta il numero e non scrive nulla."],
+        'demo_seed' => ['label' => 'Carica dati di esempio', 'description' => 'Aggiunge un registro di esempio — conti, transazioni, budget, obiettivi e avvisi — inventato per guardare l’applicazione con qualcosa dentro. Si somma a quello che c’è già invece di sostituirlo, e nulla appartiene a una persona reale.'],
         'db_restore' => ['label' => 'Ripristina il database', 'description' => 'Sostituisce il database attuale con il file di backup indicato.'],
         'regenerate_recovery_codes' => ['label' => 'Rigenera i codici di recupero', 'description' => 'Rigenera i 10 codici di recupero monouso di un utente.'],
         'grant_dev' => ['label' => "Concedi l'accesso sviluppatore", 'description' => "Imposta is_developer=true per l'utente indicato."],

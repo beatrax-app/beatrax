@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Tühjenda vaadete vahemälu', 'description' => 'Tühjendab kompileeritud Blade-vaadete vahemälu.'],
         'queue_retry' => ['label' => 'Proovi ebaõnnestunud töid uuesti', 'description' => 'Proovib ID järgi uuesti ühte ebaõnnestunud tööd või kõiki, kui sisestad `all`.'],
         'rederive_fingerprints' => ['label' => 'Arvuta sõrmejäljed uuesti', 'description' => 'Arvutab uuesti sõrmejälje igale tehingule, mille normaliseerimisversioon on veel praegusest väiksem. Siit käivitatud jooks teatab arvu ega kirjuta midagi.'],
+        'demo_seed' => ['label' => 'Laadi näidisandmed', 'description' => 'Lisab näidisraamatu — kontod, tehingud, eelarved, eesmärgid ja teated — välja mõeldud selleks, et näha rakendust millegagi sees. See lisandub olemasolevale, mitte ei asenda seda, ja miski sellest pole tegeliku inimese andmed.'],
         'db_restore' => ['label' => 'Taasta andmebaas', 'description' => 'Asendab praeguse andmebaasi antud varukoopiafailiga.'],
         'regenerate_recovery_codes' => ['label' => 'Loo taastekoodid uuesti', 'description' => 'Loob kasutaja 10 ühekordset taastekoodi uuesti.'],
         'grant_dev' => ['label' => 'Anna arendaja õigused', 'description' => 'Määrab antud kasutajale is_developer=true.'],
