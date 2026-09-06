@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Chain for :name',
     'heading' => 'Chain',
 
-    'unresolved_heading' => 'Chain not yet resolved',
-    'unresolved_body' => 'The chain resolver is still running. Open the review queue or refresh in a moment.',
+    'unresolved_heading' => 'No transaction chosen',
+    'unresolved_body' => 'Pick a row on the transactions list to see what paid for it.',
 
     'none_heading' => 'No funding chain found',
     'none_body' => 'This transaction has no detected funding chain. If you expected one, file a candidate from the review queue.',

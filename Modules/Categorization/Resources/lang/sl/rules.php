@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Ponovna uporaba pravil… :checked od :count preverjene transakcije|Ponovna uporaba pravil… :checked od :count preverjenih transakcij|Ponovna uporaba pravil… :checked od :count preverjenih transakcij|Ponovna uporaba pravil… :checked od :count preverjenih transakcij',
 
     'empty_heading' => 'Pravil še ni',
-    'empty_body' => 'Pravila prepoznajo transakcije po več pogojih in samodejno uveljavijo spremembe kategorije, nasprotne stranke, opombe in davčne oznake — ob uvozu in vsakič, ko jih znova uporabiš na obstoječi zgodovini.',
+    'empty_body' => 'Pravila prepoznajo transakcije po več pogojih in ob uvozu samodejno uveljavijo spremembe kategorije, nasprotne stranke in opombe. Sprememba davčne oznake se uveljavi, ko pravila znova uporabiš na obstoječi zgodovini.',
     'empty_cta' => 'Ustvari svoje prvo pravilo',
 
     'col_priority' => 'Prioriteta',

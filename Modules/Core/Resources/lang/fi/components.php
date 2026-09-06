@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Ohita',
         'install_app' => 'Asenna sovellus',
 
-        'desktop_html' => 'Avaa Beatrax puhelimesi selaimessa ja valitse ”Lisää Koti-valikkoon” — tai napauta <strong style="color: var(--color-text);">⚡</strong>-kuvaketta Safarin jakovalikossa.',
+        'desktop_html' => 'Avaa Beatrax puhelimesi selaimessa ja valitse jakovalikosta <strong style="color: var(--color-text);">Lisää Koti-valikkoon</strong>.',
     ],
 
     'topbar' => [

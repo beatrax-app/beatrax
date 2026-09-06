@@ -52,7 +52,7 @@ return [
     'keep_lock' => 'Obdrži zaklepanje',
 
     'forgot_modal_heading' => 'Ponastavi PIN — potrdi z geslom računa',
-    'forgot_modal_body' => 'Geslo tvojega računa obnovi ključ zaklepanja, zato ponastavitev PIN-a nikoli ne izgubi podatkov.',
+    'forgot_modal_body' => 'Geslo tvojega računa obnovi ključ zaklepanja, zato ponastavitev PIN-a ne izgubi podatkov — dokler to geslo še odpira zaklep. Geslo, ponastavljeno s kodo za obnovitev ali nastavljeno zate od lastnika računa, ga ne odpre več.',
     'confirm_new_pin_label' => 'Potrdi nov PIN',
     'reset_pin' => 'Ponastavi PIN',
     'cancel' => 'Prekliči',
@@ -71,7 +71,7 @@ return [
     'error_forgot_failed' => 'Ponastavitev PIN-a ni uspela — ključ za obnovitev ni na voljo.',
     'error_enable_first' => 'Pred vpisom biometrije vklopi zaklepanje s PIN-om.',
     'error_disable_blocked_by_encryption' => 'Tvoji zapiski in podatki o nasprotnih strankah so šifrirani s ključem, ki ga hrani ta zaklep aplikacije, zato bi jih izklop pustil neberljive. Zaklep ostane vklopljen — raje zamenjaj PIN.',
-    'error_key_material_lost' => 'Ta naprava ne hrani več ključa, ki odpira tvoje šifrirane podatke, zato jih nov PIN ne bo znova naredil berljivih. Napravo poveži s tako, ki ključ še ima, da jih obnoviš.',
+    'error_key_material_lost' => 'Ta naprava ne hrani več ključa, ki odpira tvoje šifrirane podatke, zato jih nov PIN ne bo znova naredil berljivih. Obnovi šifrirano varnostno kopijo, narejeno, ko je ključ še deloval — s seznanitvijo se ta naprava ne more vrniti nazaj, ker seznanjanje potrebuje prav tisti zaklep aplikacije, ki ga ta ključ odpira.',
     'error_recovery_wrap_stale' => 'Geslo računa tega zaklepanja aplikacije ne odpre več — spremenjeno je bilo po tem, ko je bilo zaklepanje nastavljeno. PIN še vedno deluje, a za njim ne ostane nič, če ga pozabiš. Znova poveži geslo računa zdaj.',
     'relink_recovery' => 'Znova poveži geslo računa',
     'relink_modal_heading' => 'Znova poveži geslo računa — potrdi s PIN-om',

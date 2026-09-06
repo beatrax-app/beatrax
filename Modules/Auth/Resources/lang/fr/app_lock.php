@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Conserver le verrouillage',
 
     'forgot_modal_heading' => 'Réinitialiser le PIN — confirme avec le mot de passe du compte',
-    'forgot_modal_body' => 'Le mot de passe de ton compte récupère la clé de verrouillage : réinitialiser le PIN ne fait donc jamais perdre de données.',
+    'forgot_modal_body' => "Le mot de passe de ton compte récupère la clé de verrouillage : réinitialiser le PIN ne fait donc perdre aucune donnée, tant que ce mot de passe ouvre encore le verrou. Un mot de passe réinitialisé avec un code de récupération, ou défini pour toi par le propriétaire du compte, ne l'ouvre plus.",
     'confirm_new_pin_label' => 'Confirme le nouveau PIN',
     'reset_pin' => 'Réinitialiser le PIN',
     'cancel' => 'Annuler',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Échec de la réinitialisation du PIN — la clé de récupération est indisponible.',
     'error_enable_first' => 'Active d\'abord le verrouillage par PIN avant la biométrie.',
     'error_disable_blocked_by_encryption' => 'Tes notes et les détails de tes tiers sont chiffrés avec la clé que détient ce verrou d\'application ; le désactiver les rendrait illisibles. Le verrou reste actif — change plutôt ton code PIN.',
-    'error_key_material_lost' => 'Cet appareil ne détient plus la clé qui ouvre tes données chiffrées, donc un nouveau code PIN ne les rendra pas lisibles. Associe cet appareil à un autre qui détient encore la clé pour les récupérer.',
+    'error_key_material_lost' => "Cet appareil ne détient plus la clé qui ouvre tes données chiffrées, donc un nouveau code PIN ne les rendra pas lisibles. Restaure une sauvegarde chiffrée réalisée pendant que la clé fonctionnait encore — cet appareil ne peut pas revenir par un appairage, car l'appairage a besoin du verrou d'application que cette clé ouvre.",
     'error_recovery_wrap_stale' => 'Ton mot de passe du compte n\'ouvre plus ce verrouillage de l\'app — il a été changé après la mise en place du verrou. Ton PIN fonctionne encore, mais il n\'y a plus rien derrière si tu l\'oublies. Relie ton mot de passe du compte maintenant.',
     'relink_recovery' => 'Relier le mot de passe du compte',
     'relink_modal_heading' => 'Relier le mot de passe du compte — confirme avec ton PIN',

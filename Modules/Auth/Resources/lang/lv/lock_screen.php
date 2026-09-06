@@ -11,7 +11,7 @@ return [
     // word, but the same verb is this app's word for cancelling a subscription
     // (drift-alerts cancel_impact). A native reader should say whether all three
     // sign_out labels want "Izrakstīties" instead.
-    'forgot_pin' => 'Aizmirsāt PIN kodu? Atteikties — varat pieteikties atkārtoti ar konta paroli un iestatīt jaunu PIN kodu. Dati netiek zaudēti.',
+    'forgot_pin' => 'Aizmirsāt PIN kodu? Atteikties — ja konta parole vēl atver šo bloķēšanu, varat pieteikties atkārtoti, iestatīt jaunu PIN kodu un neko nezaudēt. Parole, kas atiestatīta ar atkopšanas kodu vai ko jums iestatījis konta īpašnieks, to vairs neatver.',
 
     'digits_entered' => '{0} ievadīti :count ciparu|{1} ievadīts :count cipars|[2,*] ievadīti :count cipari',
     'pad_label' => 'PIN koda tastatūra',

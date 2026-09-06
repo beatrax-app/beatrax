@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Elvetés',
         'install_app' => 'Alkalmazás telepítése',
 
-        'desktop_html' => 'Nyisd meg a Beatraxot a telefonod böngészőjében, és koppints a „Hozzáadás a kezdőképernyőhöz” lehetőségre — vagy koppints a <strong style="color: var(--color-text);">⚡</strong> ikonra a Safari megosztási menüjében.',
+        'desktop_html' => 'Nyisd meg a Beatraxot a telefonod böngészőjében, és válaszd a megosztási menü <strong style="color: var(--color-text);">Hozzáadás a kezdőképernyőhöz</strong> pontját.',
     ],
 
     'topbar' => [

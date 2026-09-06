@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Systemmeldungen',
 
     'actions' => [
-        'install_next_launch' => 'Beim nächsten Start installieren',
-        'install_next_launch_aria' => 'Beim nächsten Start installieren — markiert Systemmeldung #:id als erledigt',
+        'download_and_install' => 'Herunterladen und installieren',
+        'download_and_install_aria' => 'Herunterladen und installieren — markiert Systemmeldung #:id als erledigt',
         'skip_version' => 'Diese Version überspringen',
         'release_notes' => 'Versionshinweise →',
         'update_now' => 'Jetzt aktualisieren',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Update verfügbar — Beatrax :version steht bereit. Es wird beim nächsten Start installiert.',
+        'update_available' => 'Update verfügbar — Beatrax :version. Es wird nichts heruntergeladen, bis du dich für die Installation entscheidest; Beatrax schließt sich dann und öffnet sich in der neuen Version wieder.',
         'update_stale' => 'Du nutzt Version :current — Version :latest ist seit 30 Tagen verfügbar. Aktualisiere jetzt.',
         'update_critical' => 'Kritisches Update verfügbar — Version :version behebt :summary. Installiere es so bald wie möglich.',
         'backup_corrupt_with_path' => 'Das um :timestamp geschriebene Backup hat die Integritätsprüfung nicht bestanden. Prüfe :path. Behebe das, bevor du dich auf Backups verlässt.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Ihre PIN kann die App-Sperre auf diesem Gerät nicht öffnen: der gespeicherte Schlüssel ist unlesbar. Melden Sie sich mit Ihrem Kontopasswort an, um eine neue PIN festzulegen.',
         'sync_gdk_rewrap_failed' => 'Das erneute Verpacken des GDK-Schlüsselbunds nach einer Änderung der App-Sperr-Passphrase ist fehlgeschlagen — verschlüsselte Daten sind möglicherweise nicht wiederherstellbar, bis der Schlüsselbund neu verpackt wurde.',
         'worker_crashed' => 'Die Hintergrundverarbeitung von Beatrax wurde unerwartet beendet. Importe und E-Mail-Scans sind pausiert. Öffnen Sie die App erneut, um sie neu zu starten.',
-        'auth_lock_key_material_stranded' => 'Die Verschlüsselung im Ruhezustand ist für dieses Konto aktiv, aber keine App-Sperr-Hülle hält mehr den Datenschlüssel, sodass jede verschlüsselte Notiz, Beschreibung und Gegenpartei-Angabe als leer gelesen wird. Die Kopplung mit einem Gerät, das den Schlüssel noch hat, ist der einzige Weg zurück.',
+        'auth_lock_key_material_stranded' => 'Die Verschlüsselung im Ruhezustand ist für dieses Konto aktiv, aber keine App-Sperr-Hülle hält mehr den Datenschlüssel, sodass jede verschlüsselte Notiz, Beschreibung und Gegenpartei-Angabe als leer gelesen wird. Stellen Sie ein verschlüsseltes Backup wieder her, das erstellt wurde, solange der Schlüssel noch funktionierte, oder richten Sie dieses Konto erneut auf einem Gerät ein, das ihn noch hat.',
         'auth_lock_recovery_wrap_stale' => 'Das Kontopasswort wurde geändert, ohne dass die Wiederherstellungs-Hülle der App-Sperre neu verpackt wurde, sodass dieses Passwort die App-Sperre nicht mehr öffnet. Die PIN tut es weiterhin. Verknüpfen Sie das Kontopasswort in den App-Sperr-Einstellungen erneut, solange die PIN noch bekannt ist — sonst bleibt nach einer vergessenen PIN nichts übrig.',
         'reconnect_link' => 'Erneut verbinden →',
         'pots_category_link_retired' => 'Die Umschlag-Budgetierung hat kategoriegebundene Rücklagen abgelöst. Der Betrag von :amount aus :count archivierter Rücklage ist wieder nicht zugeteilt und wartet darauf, dass Sie ihn zuweisen.|Die Umschlag-Budgetierung hat kategoriegebundene Rücklagen abgelöst. Der Betrag von :amount aus :count archivierten Rücklagen ist wieder nicht zugeteilt und wartet darauf, dass Sie ihn zuweisen.',

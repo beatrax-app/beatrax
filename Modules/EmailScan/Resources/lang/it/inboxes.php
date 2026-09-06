@@ -63,8 +63,8 @@ return [
     'add_another' => "Aggiungi un'altra casella",
     'gmail_card_body' => 'Collega un account Gmail così Beatrax può scansionarlo alla ricerca di ricevute.',
     'microsoft_card_body' => 'Collega un account Microsoft 365 o Outlook.com così Beatrax può scansionarlo alla ricerca di ricevute.',
-    'gmail_card_body_phone' => "Gmail viene scansionato dall'app desktop. Un account collegato qui non viene mai scansionato da solo.",
-    'microsoft_card_body_phone' => "Microsoft 365 e Outlook.com vengono scansionati dall'app desktop. Un account collegato qui non viene mai scansionato da solo.",
+    'gmail_card_body_phone' => "Gmail viene scansionato dall'app desktop. Collegalo lì — questo telefono mostra ciò che trova.",
+    'microsoft_card_body_phone' => "Microsoft 365 e Outlook.com vengono scansionati dall'app desktop. Collegali lì — questo telefono mostra ciò che trova.",
 
     'discovered_heading' => 'Mittenti rilevati',
 

@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Näytetään ensimmäiset :shown / :total.',
 
-    'footer' => 'Jaettu lista on Beatraxin mukana toimitettava YAML-tiedosto. Ehdotuksen lähettäminen avaa GitHubin selaimeesi; mitään muuta ei lähde tältä laitteelta.',
+    'footer' => 'Jaettu lista on Beatraxin mukana toimitettava YAML-tiedosto. Ehdotuksen lähettäminen avaa GitHubin selaimeesi ja vie kyseisen kuvauksen mukanaan; mitään muuta ei lähde tältä laitteelta.',
 
     'card' => [
         'seen_times' => 'Nähty :count kerran|Nähty :count kertaa',

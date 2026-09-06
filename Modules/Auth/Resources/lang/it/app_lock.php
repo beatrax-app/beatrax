@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Mantieni il blocco app',
 
     'forgot_modal_heading' => "Reimposta il PIN — conferma con la password dell'account",
-    'forgot_modal_body' => 'La password del tuo account recupera la chiave di blocco, quindi reimpostare il PIN non fa mai perdere dati.',
+    'forgot_modal_body' => "La password del tuo account recupera la chiave di blocco, quindi reimpostare il PIN non fa perdere dati — a patto che quella password apra ancora il blocco. Una password reimpostata con un codice di recupero, o impostata per te dal titolare dell'account, non lo apre.",
     'confirm_new_pin_label' => 'Conferma il nuovo PIN',
     'reset_pin' => 'Reimposta il PIN',
     'cancel' => 'Annulla',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Reimpostazione del PIN non riuscita — la chiave di recupero non è disponibile.',
     'error_enable_first' => 'Attiva prima il blocco con PIN, poi registra la biometria.',
     'error_disable_blocked_by_encryption' => 'Le tue note e i dati delle controparti sono cifrati con la chiave che questo blocco dell\'app custodisce, quindi disattivarlo li renderebbe illeggibili. Il blocco resta attivo — cambia invece il tuo PIN.',
-    'error_key_material_lost' => 'Questo dispositivo non custodisce più la chiave che apre i tuoi dati cifrati, quindi un nuovo PIN non li renderà di nuovo leggibili. Associa questo dispositivo a uno che ha ancora la chiave per recuperarli.',
+    'error_key_material_lost' => "Questo dispositivo non custodisce più la chiave che apre i tuoi dati cifrati, quindi un nuovo PIN non li renderà di nuovo leggibili. Ripristina un backup cifrato creato quando la chiave funzionava ancora — questo dispositivo non può tornare indietro abbinandosi, perché l'abbinamento richiede il blocco app che quella chiave apre.",
     'error_recovery_wrap_stale' => 'La password dell\'account non apre più questo blocco app — è stata cambiata dopo che il blocco era già attivo. Il tuo PIN funziona ancora, ma dietro non resta nulla se lo dimentichi. Ricollega ora la password dell\'account.',
     'relink_recovery' => 'Ricollega la password dell\'account',
     'relink_modal_heading' => 'Ricollega la password dell\'account — conferma con il PIN',

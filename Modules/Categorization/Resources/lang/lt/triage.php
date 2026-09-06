@@ -23,6 +23,6 @@ return [
     'select_category' => 'Pasirink kategoriją',
     'help_others' => '❋ Padėk kitiems tai atpažinti',
 
-    'shortcuts' => '1–9 priskirti pagrindines kategorijas · ↑/↓ judėti · Enter išsaugoti · / ieškoti · Esc išvalyti',
+    'shortcuts' => '1–9 priskirti pagrindines kategorijas · ↑/↓ judėti · Enter išsaugoti · Esc išvalyti',
     'load_more' => 'Įkelti daugiau',
 ];

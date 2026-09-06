@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Tietosuojahuomautus henkilöyhteystiedosta',
-        'body' => '🔒 Tämä on henkilöyhteystieto. IBAN ja henkilötiedot ovat oletuksena piilossa, eikä niitä jaeta koskaan vienneissä.',
+        'body' => '🔒 Tämä on henkilöyhteystieto. IBAN on piilossa, kunnes paljastat sen, eikä se tule mukaan vienteihin. Nimi näkyy silti kaikkialla, missä sen tapahtumatkin näkyvät.',
     ],
 
     'self_stub' => [

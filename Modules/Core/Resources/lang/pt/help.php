@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Onde estão os meus dados?',
-    'intro' => 'O Beatrax guarda tudo neste dispositivo. Não existe servidor do Beatrax nem conta na nuvem. Só sai o que és tu a ligar — uma caixa de entrada, um banco através do Enable Banking, os dispositivos que emparelhas para sincronização — e ainda uma consulta diária das taxas de câmbio. Cada ligação di-lo no ecrã onde a ativas.',
+    'intro' => 'O Beatrax guarda tudo neste dispositivo. Não existe servidor do Beatrax nem conta na nuvem. Só uma chamada sai por si — uma verificação de nova versão, que podes desligar. Tudo o resto espera por ti: uma caixa de entrada, um banco através do Enable Banking, uma consulta diária das taxas de câmbio, os dispositivos que emparelhas para sincronização, um relay que configuras e qualquer hiperligação em que clicas. Cada um di-lo no ecrã onde o ativas.',
 
     'lives_here' => 'Os teus dados estão aqui',
     'copy' => 'Copiar',

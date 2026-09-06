@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Foreslå en kobling',
-    'intro' => 'Åpner GitHub i nettleseren din så du kan sende inn forslaget som et PR-utkast. Navnet og e-postadressen din forlater aldri denne enheten.',
+    'intro' => 'Åpner GitHub i nettleseren din med forslaget ferdig utfylt. Bare mønsteret, navnet, kategorien og regionen ovenfor følger med — og mønsteret er beskrivelsen slik kontoutskriften din skrev den. Navnet og e-postadressen din forlater aldri denne enheten.',
 
     'pattern' => 'Mønster',
     'name' => 'Forståelig navn',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML-forhåndsvisning',
 
     'cancel' => 'Avbryt',
-    'submit' => 'Send inn som PR-utkast',
+    'submit' => 'Åpne på GitHub',
 
     'toast' => 'Forslaget er åpnet i nettleseren din.',
 

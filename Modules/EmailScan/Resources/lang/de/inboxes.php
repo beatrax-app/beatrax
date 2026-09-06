@@ -63,8 +63,8 @@ return [
     'add_another' => 'Weiteres Postfach hinzufügen',
     'gmail_card_body' => 'Verbinde ein Gmail-Konto, damit Beatrax es nach Belegen durchsuchen kann.',
     'microsoft_card_body' => 'Verbinde ein Microsoft-365- oder Outlook.com-Konto, damit Beatrax es nach Belegen durchsuchen kann.',
-    'gmail_card_body_phone' => 'Gmail wird von der Desktop-App durchsucht. Ein hier verbundenes Konto wird nie von selbst durchsucht.',
-    'microsoft_card_body_phone' => 'Microsoft 365 und Outlook.com werden von der Desktop-App durchsucht. Ein hier verbundenes Konto wird nie von selbst durchsucht.',
+    'gmail_card_body_phone' => 'Gmail wird von der Desktop-App durchsucht. Verbinde es dort — dieses Handy zeigt, was sie findet.',
+    'microsoft_card_body_phone' => 'Microsoft 365 und Outlook.com werden von der Desktop-App durchsucht. Verbinde sie dort — dieses Handy zeigt, was sie findet.',
 
     'discovered_heading' => 'Entdeckte Absender',
 

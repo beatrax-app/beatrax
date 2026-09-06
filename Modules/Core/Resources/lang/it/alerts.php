@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Avvisi di sistema',
 
     'actions' => [
-        'install_next_launch' => 'Installa al prossimo avvio',
-        'install_next_launch_aria' => "Installa al prossimo avvio — segna l'avviso di sistema #:id come risolto",
+        'download_and_install' => 'Scarica e installa',
+        'download_and_install_aria' => "Scarica e installa — segna l'avviso di sistema #:id come risolto",
         'skip_version' => 'Salta questa versione',
         'release_notes' => 'Note di rilascio →',
         'update_now' => 'Aggiorna ora',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Aggiornamento disponibile — Beatrax :version è pronto. Verrà installato al prossimo avvio.',
+        'update_available' => 'Aggiornamento disponibile — Beatrax :version. Non viene scaricato nulla finché non scegli di installarlo; Beatrax poi si chiude e si riapre sulla nuova versione.',
         'update_stale' => 'Stai usando la versione :current — la versione :latest è disponibile da 30 giorni. Aggiorna ora.',
         'update_critical' => 'Aggiornamento critico disponibile — la versione :version corregge :summary. Installalo il prima possibile.',
         'backup_corrupt_with_path' => 'Il backup scritto il :timestamp non ha superato il controllo di integrità. Controlla :path. Risolvi prima di fare affidamento sui backup.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Il tuo PIN non può aprire il blocco dell’app su questo dispositivo: la chiave salvata non è leggibile. Accedi con la password del tuo account per impostare un nuovo PIN.',
         'sync_gdk_rewrap_failed' => 'Il re-wrap del portachiavi GDK non è riuscito dopo la modifica della passphrase del blocco app — i dati cifrati potrebbero essere irrecuperabili finché il portachiavi non viene re-wrappato.',
         'worker_crashed' => 'L’elaborazione in background di Beatrax si è interrotta in modo imprevisto. Importazioni e scansioni delle email sono in pausa. Riapri l’app per riavviarla.',
-        'auth_lock_key_material_stranded' => 'La cifratura a riposo è attiva per questo account, ma nessun wrap del blocco app conserva più la chiave dei dati, quindi ogni nota, descrizione e dettaglio di controparte cifrato risulta vuoto. L’unico ritorno è l’abbinamento con un dispositivo che possiede ancora la chiave.',
+        'auth_lock_key_material_stranded' => 'La cifratura a riposo è attiva per questo account, ma nessun wrap del blocco app conserva più la chiave dei dati, quindi ogni nota, descrizione e dettaglio di controparte cifrato risulta vuoto. Ripristina un backup cifrato creato quando la chiave funzionava ancora, oppure configura di nuovo questo account su un dispositivo che la possiede ancora.',
         'auth_lock_recovery_wrap_stale' => 'La password dell’account è cambiata senza che il wrap di recupero del blocco app venisse re-wrappato, quindi quella password non apre più il blocco. Il PIN sì. Ricollega la password dell’account dalle impostazioni del blocco finché il PIN è ancora noto, altrimenti un PIN dimenticato non lascia nulla dietro di sé.',
         'reconnect_link' => 'Ricollega →',
         'pots_category_link_retired' => 'Il budget a buste ha sostituito i salvadanai collegati a una categoria. :amount da :count salvadanaio archiviato è di nuovo non assegnato e aspetta che tu lo assegni.|Il budget a buste ha sostituito i salvadanai collegati a una categoria. :amount da :count salvadanai archiviati è di nuovo non assegnato e aspetta che tu lo assegni.',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Siūlyti susiejimą',
-    'intro' => 'Naršyklėje atveria GitHub, kad galėtum pateikti pasiūlymą kaip juodraštinį PR. Tavo vardas ir el. pašto adresas niekada neišeina iš šio įrenginio.',
+    'intro' => 'Naršyklėje atveria GitHub su jau užpildytu pasiūlymu. Kartu keliauja tik viršuje esantis šablonas, pavadinimas, kategorija ir regionas — o šablonas yra tas aprašas, kaip jį užrašė tavo sąskaitos išrašas. Tavo vardas ir el. pašto adresas niekada neišeina iš šio įrenginio.',
 
     'pattern' => 'Šablonas',
     'name' => 'Aiškus pavadinimas',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML peržiūra',
 
     'cancel' => 'Atšaukti',
-    'submit' => 'Pateikti kaip juodraštinį PR',
+    'submit' => 'Atverti GitHub',
 
     'toast' => 'Pasiūlymas atvertas tavo naršyklėje.',
 

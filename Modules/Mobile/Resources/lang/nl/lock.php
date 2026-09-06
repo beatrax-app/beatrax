@@ -12,7 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — pincode bevestigen',
     'sign_out' => 'Afmelden',
-    'forgot_pin' => 'Pincode vergeten? Meld je af — met je accountwachtwoord log je weer in en stel je een nieuwe pincode in. Er gaan geen gegevens verloren.',
+    'forgot_pin' => 'Pincode vergeten? Meld je af — als je accountwachtwoord deze vergrendeling nog opent, log je weer in, stel je een nieuwe pincode in en verlies je niets. Een wachtwoord dat met een herstelcode is gereset of dat de accounteigenaar voor je heeft ingesteld, opent de vergrendeling niet meer.',
 
     'errors' => [
         'pin_length' => 'De pincode moet minimaal 6 cijfers hebben.',

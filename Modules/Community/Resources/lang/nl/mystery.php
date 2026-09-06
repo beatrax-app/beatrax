@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'De bovenste :shown van :total worden getoond.',
 
-    'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met Beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser; verder verlaat er niets dit apparaat.',
+    'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met Beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser en neemt die omschrijving mee; verder verlaat er niets dit apparaat.',
 
     'card' => [
         'seen_times' => 'Gezien :count keer|Gezien :count keer',

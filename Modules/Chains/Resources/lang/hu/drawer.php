@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Lánc ehhez: :name',
     'heading' => 'Lánc',
 
-    'unresolved_heading' => 'A lánc még nincs feloldva',
-    'unresolved_body' => 'A láncfeloldó még fut. Nyisd meg az áttekintési sort, vagy frissíts kis idő múlva.',
+    'unresolved_heading' => 'Nincs kiválasztott tranzakció',
+    'unresolved_body' => 'Válassz egy sort a tranzakciólistán, hogy lásd, mi fedezte.',
 
     'none_heading' => 'Nem található fedezeti lánc',
     'none_body' => 'Ehhez a tranzakcióhoz nem található fedezeti lánc. Ha számítottál rá, jelents be egy jelöltet az áttekintési sorból.',

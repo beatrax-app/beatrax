@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Revisar la importación',
         'reconnect_first' => 'Vuelve a conectar primero',
-        'auto_caption' => 'Se sincroniza automáticamente una vez al día.',
+        'auto_caption' => 'Se intenta sincronizar automáticamente una vez al día.',
         'sync_now' => 'Sincronizar ahora',
 
         'consent_expired' => 'Consentimiento caducado — vuelve a conectar.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'ID de la entidad',
 
         'step5_title' => 'Completa el consentimiento en tu navegador',
-        'step5_body' => 'Haz clic abajo para abrir la pantalla de acceso y consentimiento de tu banco. Completa el acceso y cualquier paso de doble factor y volverás aquí automáticamente para terminar de activar el Open Banking.',
+        'step5_body' => 'Haz clic abajo para abrir la pantalla de acceso y consentimiento de tu banco. Completa el acceso y cualquier paso de doble factor y vuelve luego a esta ventana para terminar de activar el Open banking.',
         // i18n-review: es · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Toca abajo para abrir la pantalla de acceso y consentimiento de tu banco. Completa el acceso y cualquier paso de doble factor y volverás aquí automáticamente para terminar de activar el Open Banking.',
+        'step5_body_touch' => 'Toca abajo para abrir la pantalla de acceso y consentimiento de tu banco. Completa el acceso y cualquier paso de doble factor, vuelve luego a Beatrax y abre otra vez esta pantalla para terminar de activar el Open banking.',
 
         'cancel' => 'Cancelar',
         'continue' => 'Continuar →',

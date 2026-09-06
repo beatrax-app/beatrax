@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Kje so moji podatki?',
-    'intro' => 'Beatrax vse shranjuje na tej napravi. Strežnika Beatrax in računa v oblaku ni. Ven gre samo tisto, kar sam povežeš — nabiralnik, banka prek Enable Bankinga, naprave, ki jih seznaniš za sinhronizacijo — in poleg tega dnevna poizvedba za menjalne tečaje. Vsaka povezava to pove na zaslonu, kjer jo vklopiš.',
+    'intro' => 'Beatrax vse shranjuje na tej napravi. Strežnika Beatrax in računa v oblaku ni. Sam od sebe gre ven en sam klic — preverjanje, ali je na voljo nova različica, ki ga lahko izklopiš. Vse drugo čaka nate: nabiralnik, banka prek Enable Bankinga, dnevna poizvedba za menjalne tečaje, naprave, ki jih seznaniš za sinhronizacijo, relej, ki ga nastaviš, in vsaka povezava, ki jo klikneš. Vsako od tega to pove na zaslonu, kjer ga vklopiš.',
 
     'lives_here' => 'Tvoji podatki živijo tukaj',
     'copy' => 'Kopiraj',

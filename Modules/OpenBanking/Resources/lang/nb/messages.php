@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Gjennomgå importen',
         'reconnect_first' => 'Koble til på nytt først',
-        'auto_caption' => 'Synkroniserer automatisk én gang om dagen.',
+        'auto_caption' => 'Det forsøkes en synkronisering automatisk én gang om dagen.',
         'sync_now' => 'Synkroniser nå',
 
         'consent_expired' => 'Samtykket er utløpt — koble til på nytt.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'Institusjons-ID',
 
         'step5_title' => 'Fullfør samtykket i nettleseren din',
-        'step5_body' => 'Klikk nedenfor for å åpne bankens pålogging og samtykkeside. Fullfør påloggingen og et eventuelt tofaktortrinn, så føres du automatisk tilbake hit for å fullføre aktiveringen av Open Banking.',
+        'step5_body' => 'Klikk nedenfor for å åpne bankens pålogging og samtykkeside. Fullfør påloggingen og et eventuelt tofaktortrinn, og kom så tilbake til dette vinduet for å fullføre aktiveringen av Open Banking.',
         // i18n-review: nb · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Trykk nedenfor for å åpne bankens pålogging og samtykkeside. Fullfør påloggingen og et eventuelt tofaktortrinn, så føres du automatisk tilbake hit for å fullføre aktiveringen av Open Banking.',
+        'step5_body_touch' => 'Trykk nedenfor for å åpne bankens pålogging og samtykkeside. Fullfør påloggingen og et eventuelt tofaktortrinn, bytt så tilbake til Beatrax og åpne denne skjermen på nytt for å fullføre aktiveringen av Open Banking.',
 
         'cancel' => 'Avbryt',
         'continue' => 'Fortsett →',

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Predlagaj preslikavo',
-    'intro' => 'Odpre GitHub v tvojem brskalniku, kjer lahko oddaš predlog kot osnutek PR. Tvoje ime in e-pošta nikoli ne zapustita te naprave.',
+    'intro' => 'Odpre GitHub v tvojem brskalniku z že izpolnjenim predlogom. Z njim gredo samo vzorec, ime, kategorija in regija zgoraj — vzorec pa je opis tako, kot ga je zapisal tvoj izpisek. Tvoje ime in e-pošta nikoli ne zapustita te naprave.',
 
     'pattern' => 'Vzorec',
     'name' => 'Razumljivo ime',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Predogled YAML',
 
     'cancel' => 'Prekliči',
-    'submit' => 'Oddaj kot osnutek PR',
+    'submit' => 'Odpri na GitHubu',
 
     'toast' => 'Predlog je odprt v tvojem brskalniku.',
 

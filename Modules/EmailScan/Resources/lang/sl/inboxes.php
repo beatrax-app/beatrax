@@ -63,8 +63,8 @@ return [
     'add_another' => 'Dodaj še en nabiralnik',
     'gmail_card_body' => 'Poveži račun Gmail, da ga Beatrax lahko pregleduje in išče potrdila.',
     'microsoft_card_body' => 'Poveži račun Microsoft 365 ali Outlook.com, da ga Beatrax lahko pregleduje in išče potrdila.',
-    'gmail_card_body_phone' => 'Gmail pregleduje namizna aplikacija. Račun, povezan tukaj, se nikoli ne pregleda sam od sebe.',
-    'microsoft_card_body_phone' => 'Microsoft 365 in Outlook.com pregleduje namizna aplikacija. Račun, povezan tukaj, se nikoli ne pregleda sam od sebe.',
+    'gmail_card_body_phone' => 'Gmail pregleduje namizna aplikacija. Poveži ga tam — ta telefon prikaže, kar najde.',
+    'microsoft_card_body_phone' => 'Microsoft 365 in Outlook.com pregleduje namizna aplikacija. Poveži ju tam — ta telefon prikaže, kar najde.',
 
     'discovered_heading' => 'Odkriti pošiljatelji',
 

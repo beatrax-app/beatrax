@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Privatumo pranešimas apie asmeninį kontaktą',
-        'body' => '🔒 Tai asmeninis kontaktas. IBAN ir asmens duomenys pagal numatytuosius nustatymus paslėpti ir niekada neįtraukiami į eksportus.',
+        'body' => '🔒 Tai asmeninis kontaktas. IBAN lieka paslėptas, kol jo neparodai, ir į eksportus nepatenka. Vardas ir toliau matomas visur, kur matomos šio kontakto operacijos.',
     ],
 
     'self_stub' => [

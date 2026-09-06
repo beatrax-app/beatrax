@@ -23,6 +23,6 @@ return [
     'select_category' => 'Vali kategooria',
     'help_others' => '❋ Aita teistel see tuvastada',
 
-    'shortcuts' => '1–9 määrab peamised kategooriad · ↑/↓ liigub · Enter salvestab · / otsib · Esc tühjendab',
+    'shortcuts' => '1–9 määrab peamised kategooriad · ↑/↓ liigub · Enter salvestab · Esc tühjendab',
     'load_more' => 'Laadi veel',
 ];

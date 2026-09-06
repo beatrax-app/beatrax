@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Descartar',
         'install_app' => 'Instalar la app',
 
-        'desktop_html' => 'Abre Beatrax en el navegador de tu móvil y toca "Añadir a pantalla de inicio", o toca el icono <strong style="color: var(--color-text);">⚡</strong> en el menú de compartir de Safari.',
+        'desktop_html' => 'Abre Beatrax en el navegador de tu móvil y elige <strong style="color: var(--color-text);">Añadir a pantalla de inicio</strong> en el menú de compartir.',
     ],
 
     'topbar' => [

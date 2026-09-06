@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Où sont mes données ?',
-    'intro' => 'Beatrax stocke tout sur cet appareil. Il n\'y a pas de serveur Beatrax ni de compte dans le cloud. Ce qui sort, c\'est seulement ce que tu connectes toi-même — une boîte de réception, une banque via Enable Banking, les appareils que tu associes pour la synchronisation — plus une consultation quotidienne des taux de change. Chaque connexion le dit sur l\'écran où tu l\'actives.',
+    'intro' => "Beatrax stocke tout sur cet appareil. Il n'y a pas de serveur Beatrax ni de compte dans le cloud. Un seul appel part de lui-même — une vérification de nouvelle version, que tu peux désactiver. Tout le reste t'attend : une boîte de réception, une banque via Enable Banking, une consultation quotidienne des taux de change, les appareils que tu associes pour la synchronisation, un relais que tu configures et chaque lien sur lequel tu cliques. Chacun le dit sur l'écran où tu l'actives.",
 
     'lives_here' => 'Tes données sont ici',
     'copy' => 'Copier',

@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Kurallar yeniden uygulanıyor… :checked / :count işlem kontrol edildi',
 
     'empty_heading' => 'Henüz kural yok',
-    'empty_body' => 'Kurallar işlemleri birden fazla koşula göre eşleştirir ve kategori, karşı taraf, not ve vergi etiketi değişikliklerini otomatik olarak uygular — içe aktarma sırasında ve mevcut geçmişine her yeniden uyguladığında.',
+    'empty_body' => 'Kurallar işlemleri birden fazla koşula göre eşleştirir ve içe aktarma sırasında kategori, karşı taraf ve not değişikliklerini otomatik olarak uygular. Vergi etiketi değişikliği ise kuralları mevcut geçmişine yeniden uyguladığında gerçekleşir.',
     'empty_cta' => 'İlk kuralını oluştur',
 
     'col_priority' => 'Öncelik',

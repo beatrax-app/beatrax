@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Rodoma pirmieji :shown iš :total.',
 
-    'footer' => 'Bendras sąrašas — tai kartu su Beatrax pateikiamas YAML failas. Pateikus pasiūlymą naršyklėje atsidaro GitHub; daugiau niekas iš šio įrenginio neišeina.',
+    'footer' => 'Bendras sąrašas — tai kartu su Beatrax pateikiamas YAML failas. Pateikus pasiūlymą naršyklėje atsidaro GitHub ir kartu iškeliauja tas aprašas; daugiau niekas iš šio įrenginio neišeina.',
 
     'card' => [
         'seen_times' => 'Matyta :count kartą|Matyta :count kartus|Matyta :count kartų',

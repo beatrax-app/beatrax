@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Waar staan mijn gegevens?',
-    'intro' => 'Beatrax bewaart alles op dit apparaat. Er is geen Beatrax-server en geen cloudaccount. Naar buiten gaat alleen wat je zelf koppelt — een postvak, een bank via Enable Banking, de apparaten die je koppelt voor synchronisatie — plus een dagelijkse opvraging van wisselkoersen. Elke verbinding zegt dat op het scherm waar je hem aanzet.',
+    'intro' => 'Beatrax bewaart alles op dit apparaat. Er is geen Beatrax-server en geen cloudaccount. Eén verbinding gaat vanzelf naar buiten — een controle op een nieuwe versie, die je kunt uitzetten. De rest wacht op jou: een postvak, een bank via Enable Banking, een dagelijkse opvraging van wisselkoersen, de apparaten die je koppelt voor synchronisatie, een relay die je instelt, en elke link die je aanklikt. Elk daarvan zegt dat op het scherm waar je het aanzet.',
 
     'lives_here' => 'Je gegevens staan hier',
     'copy' => 'Kopiëren',

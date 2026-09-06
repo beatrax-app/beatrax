@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
@@ -104,6 +105,7 @@ final readonly class TaxYearQuery
                 'cp.display_name AS counterparty_name',
                 'cp.metadata AS counterparty_metadata',
                 'cp.iban AS counterparty_iban',
+                'cp.type AS counterparty_type',
             ])
             ->get();
     }
@@ -258,7 +260,7 @@ final readonly class TaxYearQuery
             'postedAt' => self::toStringOrNull($row->posted_at),
             'accountName' => self::toStringOrNull($row->account_name),
             'counterpartyName' => $this->counterpartyName($row, $userId),
-            'counterpartyIban' => $this->decryptOrNull('counterparties', 'iban', $row->counterparty_iban, $userId),
+            'counterpartyIban' => $this->counterpartyIban($row, $userId),
             'description' => $this->decryptOrNull('transactions', 'description', $row->description, $userId),
             'note' => $this->decryptOrNull('tax_transaction_tags', 'note', $row->note, $userId),
             'settledAmountMinor' => $signedMinor,
@@ -468,5 +470,18 @@ final readonly class TaxYearQuery
         $stored = $this->decryptOrNull('counterparties', 'display_name', $row->counterparty_name, $userId);
 
         return $stored === null ? null : CounterpartyDefaultName::resolve($stored, $row->counterparty_metadata);
+    }
+
+    // The counterparty card tells the reader a personal contact's IBAN is
+    // never shared in an export, and this row is exported: to a CSV an
+    // accountant reads, and on a phone into the operating system's share
+    // sheet. The promise is kept here, upstream of both render sites.
+    private function counterpartyIban(\stdClass $row, int $userId): ?string
+    {
+        if (self::toStringOrNull($row->counterparty_type) === CounterpartyType::Personal->value) {
+            return null;
+        }
+
+        return $this->decryptOrNull('counterparties', 'iban', $row->counterparty_iban, $userId);
     }
 }

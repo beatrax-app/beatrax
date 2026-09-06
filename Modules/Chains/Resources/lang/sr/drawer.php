@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Lanac za :name',
     'heading' => 'Lanac',
 
-    'unresolved_heading' => 'Lanac još nije razrešen',
-    'unresolved_body' => 'Razrešivač lanaca još radi. Otvori red za pregled ili osveži za koji trenutak.',
+    'unresolved_heading' => 'Nijedna transakcija nije izabrana',
+    'unresolved_body' => 'Izaberi red na listi transakcija da vidiš čime je plaćena.',
 
     'none_heading' => 'Nije pronađen lanac finansiranja',
     'none_body' => 'Za ovu transakciju nije otkriven lanac finansiranja. Ako si ga očekivao, prijavi kandidata iz reda za pregled.',

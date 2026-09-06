@@ -15,7 +15,7 @@ return [
     // i18n-review: bg · forgot_pin — the sentence says "Излез" and the button says
     // "Изход". Same root, and twenty other locales pair an imperative with a noun
     // label the same way, but a native should confirm the pairing reads.
-    'forgot_pin' => 'Забрави ли ПИН кода? Излез — можеш да влезеш отново с паролата за профила и да зададеш нов ПИН код. Не се губят данни.',
+    'forgot_pin' => 'Забрави ли ПИН кода? Излез — ако паролата за профила ти още отваря това заключване, можеш да влезеш отново, да зададеш нов ПИН код и да не загубиш нищо. Парола, нулирана с код за възстановяване или зададена ти от собственика на профила, вече не го отваря.',
 
     'errors' => [
         'pin_length' => 'ПИН кодът трябва да е поне 6 цифри.',

@@ -63,8 +63,8 @@ return [
     'add_another' => 'Lisa veel üks postkast',
     'gmail_card_body' => 'Ühenda Gmaili konto, et Beatrax saaks sealt kviitungeid otsida.',
     'microsoft_card_body' => 'Ühenda Microsoft 365 või Outlook.com konto, et Beatrax saaks sealt kviitungeid otsida.',
-    'gmail_card_body_phone' => 'Gmaili skannib lauaarvuti rakendus. Siia ühendatud kontot ei skannita kunagi iseenesest.',
-    'microsoft_card_body_phone' => 'Microsoft 365 ja Outlook.com skannib lauaarvuti rakendus. Siia ühendatud kontot ei skannita kunagi iseenesest.',
+    'gmail_card_body_phone' => 'Gmaili skannib lauaarvuti rakendus. Ühenda see seal — see telefon näitab, mida rakendus leiab.',
+    'microsoft_card_body_phone' => 'Microsoft 365 ja Outlook.com skannib lauaarvuti rakendus. Ühenda need seal — see telefon näitab, mida rakendus leiab.',
 
     'discovered_heading' => 'Leitud saatjad',
 
