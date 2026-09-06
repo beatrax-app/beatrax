@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Păstrează blocarea aplicației',
 
     'forgot_modal_heading' => 'Resetează codul PIN — confirmă cu parola contului',
-    'forgot_modal_body' => 'Parola contului recuperează cheia de blocare, așa că resetarea codului PIN nu duce niciodată la pierderea datelor.',
+    'forgot_modal_body' => 'Parola contului recuperează cheia de blocare, așa că resetarea codului PIN nu duce la pierderea datelor — atât timp cât parola aceea încă deschide blocarea. O parolă resetată cu un cod de recuperare sau setată pentru tine de proprietarul contului nu o mai deschide.',
     'confirm_new_pin_label' => 'Confirmă noul cod PIN',
     'reset_pin' => 'Resetează codul PIN',
     'cancel' => 'Anulează',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Resetarea codului PIN a eșuat — cheia de recuperare nu este disponibilă.',
     'error_enable_first' => 'Activează mai întâi blocarea cu cod PIN, apoi înrolează biometria.',
     'error_disable_blocked_by_encryption' => 'Notițele tale și datele contrapărților sunt criptate cu cheia pe care o păstrează această blocare a aplicației, așa că dezactivarea ei le-ar lăsa ilizibile. Blocarea rămâne activă — schimbă-ți mai bine PIN-ul.',
-    'error_key_material_lost' => 'Acest dispozitiv nu mai păstrează cheia care deschide datele tale criptate, așa că un PIN nou nu le va face din nou lizibile. Asociază acest dispozitiv cu unul care încă are cheia pentru a le recupera.',
+    'error_key_material_lost' => 'Acest dispozitiv nu mai păstrează cheia care deschide datele tale criptate, așa că un PIN nou nu le va face din nou lizibile. Restaurează o copie de rezervă criptată făcută cât timp cheia încă funcționa — dispozitivul nu se poate întoarce prin împerechere, fiindcă împerecherea are nevoie tocmai de blocarea aplicației pe care o deschide acea cheie.',
     'error_recovery_wrap_stale' => 'Parola contului nu mai deschide această blocare a aplicației — a fost schimbată după configurarea blocării. Codul PIN încă funcționează, dar în spatele lui nu mai rămâne nimic dacă îl uiți. Reconectează acum parola contului.',
     'relink_recovery' => 'Reconectează parola contului',
     'relink_modal_heading' => 'Reconectează parola contului — confirmă cu codul PIN',

@@ -12,7 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — bekreft PIN-koden',
     'sign_out' => 'Logg ut',
-    'forgot_pin' => 'Har du glemt PIN-koden? Logg ut — du kan logge inn igjen med kontopassordet ditt og velge en ny PIN-kode. Ingen data går tapt.',
+    'forgot_pin' => 'Har du glemt PIN-koden? Logg ut — hvis kontopassordet ditt fortsatt åpner denne låsen, kan du logge inn igjen, velge en ny PIN-kode og ikke miste noe. Et passord som er tilbakestilt med en gjenopprettingskode, eller satt for deg av kontoeieren, åpner den ikke lenger.',
 
     'errors' => [
         'pin_length' => 'PIN-koden må ha minst 6 sifre.',

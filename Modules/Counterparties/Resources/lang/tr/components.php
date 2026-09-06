@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Özel kişi için gizlilik bildirimi',
-        'body' => '🔒 Bu bir özel kişidir. IBAN ve kişisel bilgiler varsayılan olarak gizlidir ve dışa aktarmalarda asla paylaşılmaz.',
+        'body' => '🔒 Bu bir özel kişidir. IBAN, sen gösterene kadar gizlidir ve dışa aktarmalara girmez. Kişinin adı ise işlemlerinin göründüğü her yerde görünmeye devam eder.',
     ],
 
     'self_stub' => [

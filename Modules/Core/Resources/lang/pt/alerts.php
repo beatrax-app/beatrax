@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Alertas do sistema',
 
     'actions' => [
-        'install_next_launch' => 'Instalar no próximo arranque',
-        'install_next_launch_aria' => 'Instalar no próximo arranque — marca o alerta do sistema n.º :id como resolvido',
+        'download_and_install' => 'Transferir e instalar',
+        'download_and_install_aria' => 'Transferir e instalar — marca o alerta do sistema n.º :id como resolvido',
         'skip_version' => 'Ignorar esta versão',
         'release_notes' => 'Notas da versão →',
         'update_now' => 'Atualizar agora',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Atualização disponível — o Beatrax :version está pronto. Vai ser instalado no próximo arranque.',
+        'update_available' => 'Atualização disponível — Beatrax :version. Nada é transferido até escolheres instalar; o Beatrax fecha-se depois e reabre na versão nova.',
         'update_stale' => 'Estás na versão :current — a versão :latest já está disponível há 30 dias. Atualiza agora.',
         'update_critical' => 'Atualização crítica disponível — a versão :version corrige :summary. Instala assim que possível.',
         'backup_corrupt_with_path' => 'A cópia de segurança escrita a :timestamp não passou na verificação de integridade. Inspeciona :path. Resolve isto antes de confiares nas cópias de segurança.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'O seu PIN não consegue abrir o bloqueio da aplicação neste dispositivo: a chave guardada está ilegível. Inicie sessão com a palavra-passe da conta para definir um novo PIN.',
         'sync_gdk_rewrap_failed' => 'O reempacotamento do porta-chaves GDK falhou após uma alteração da frase-passe do bloqueio da aplicação — os dados cifrados podem ser irrecuperáveis até o porta-chaves ser reempacotado.',
         'worker_crashed' => 'O processamento em segundo plano do Beatrax parou inesperadamente. As importações e as análises de e-mail estão em pausa. Reabra a aplicação para o reiniciar.',
-        'auth_lock_key_material_stranded' => 'A cifragem em repouso está ativa nesta conta, mas nenhum invólucro do bloqueio da aplicação retém já a chave de dados, pelo que cada nota, descrição e detalhe de contraparte cifrado é lido como vazio. Emparelhar com um dispositivo que ainda tenha a chave é o único caminho de volta.',
+        'auth_lock_key_material_stranded' => 'A cifragem em repouso está ativa nesta conta, mas nenhum invólucro do bloqueio da aplicação retém já a chave de dados, pelo que cada nota, descrição e detalhe de contraparte cifrado é lido como vazio. Restaure uma cópia de segurança cifrada feita enquanto a chave ainda funcionava, ou volte a configurar esta conta num dispositivo que ainda a tenha.',
         'auth_lock_recovery_wrap_stale' => 'A palavra-passe da conta foi alterada sem que o invólucro de recuperação do bloqueio da aplicação fosse reempacotado, pelo que essa palavra-passe já não abre o bloqueio. O PIN ainda abre. Volte a associar a palavra-passe da conta nas definições de bloqueio enquanto o PIN ainda for conhecido — caso contrário, um PIN esquecido não deixa nada atrás de si.',
         'reconnect_link' => 'Voltar a ligar →',
         'pots_category_link_retired' => 'O orçamento por envelopes substituiu as reservas ligadas a uma categoria. :amount de :count reserva arquivada volta a estar não alocado e espera que o atribua.|O orçamento por envelopes substituiu as reservas ligadas a uma categoria. :amount de :count reservas arquivadas volta a estar não alocado e espera que o atribua.',

@@ -63,8 +63,8 @@ return [
     'add_another' => 'Nog een postvak toevoegen',
     'gmail_card_body' => 'Koppel een Gmail-account zodat Beatrax het op bonnen kan scannen.',
     'microsoft_card_body' => 'Koppel een Microsoft 365- of Outlook.com-account zodat Beatrax het op bonnen kan scannen.',
-    'gmail_card_body_phone' => 'Gmail wordt gescand door de desktop-app. Een account dat je hier koppelt wordt nooit vanzelf gescand.',
-    'microsoft_card_body_phone' => 'Microsoft 365 en Outlook.com worden gescand door de desktop-app. Een account dat je hier koppelt wordt nooit vanzelf gescand.',
+    'gmail_card_body_phone' => 'Gmail wordt gescand door de desktop-app. Koppel het daar — deze telefoon toont wat die vindt.',
+    'microsoft_card_body_phone' => 'Microsoft 365 en Outlook.com worden gescand door de desktop-app. Koppel ze daar — deze telefoon toont wat die vindt.',
 
     'discovered_heading' => 'Ontdekte afzenders',
 

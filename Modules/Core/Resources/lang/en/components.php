@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Dismiss',
         'install_app' => 'Install app',
 
-        'desktop_html' => 'Open Beatrax in your phone\'s browser and tap "Add to Home Screen" — or tap the <strong style="color: var(--color-text);">⚡</strong> icon in Safari\'s share sheet.',
+        'desktop_html' => "Open Beatrax in your phone's browser and choose <strong style=\"color: var(--color-text);\">Add to Home Screen</strong> from the share menu.",
     ],
 
     'topbar' => [

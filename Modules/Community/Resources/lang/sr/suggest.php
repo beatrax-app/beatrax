@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Predloži mapiranje',
-    'intro' => 'Otvara GitHub u tvom pregledaču za slanje predloga kao skice PR-a. Tvoje ime i e-pošta nikada ne napuštaju ovaj uređaj.',
+    'intro' => 'Otvara GitHub u tvom pregledaču sa već popunjenim predlogom. Sa njim idu samo šablon, naziv, kategorija i region iznad — a šablon je opis onako kako ga je zapisao tvoj izvod. Tvoje ime i e-pošta nikada ne napuštaju ovaj uređaj.',
 
     'pattern' => 'Šablon',
     'name' => 'Razumljiv naziv',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Pregled YAML-a',
 
     'cancel' => 'Otkaži',
-    'submit' => 'Pošalji kao skicu PR-a',
+    'submit' => 'Otvori na GitHubu',
 
     'toast' => 'Predlog je otvoren u tvom pregledaču.',
 

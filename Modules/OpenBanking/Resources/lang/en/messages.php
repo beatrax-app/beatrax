@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Review import',
         'reconnect_first' => 'Reconnect first',
-        'auto_caption' => 'Syncs automatically once a day.',
+        'auto_caption' => 'A sync is attempted automatically once a day.',
         'sync_now' => 'Sync now',
 
         'consent_expired' => 'Consent expired — reconnect.',
@@ -135,8 +135,8 @@ return [
         'institution_id_placeholder' => 'Institution id',
 
         'step5_title' => 'Complete consent in your browser',
-        'step5_body' => "Click below to open your bank's login and consent screen. Complete the login and any 2-factor step, then you'll be brought back here automatically to finish enabling Open Banking.",
-        'step5_body_touch' => "Tap below to open your bank's login and consent screen. Complete the login and any 2-factor step, then you'll be brought back here automatically to finish enabling Open Banking.",
+        'step5_body' => "Click below to open your bank's login and consent screen. Complete the login and any 2-factor step, then come back to this window to finish enabling Open Banking.",
+        'step5_body_touch' => "Tap below to open your bank's login and consent screen. Complete the login and any 2-factor step, then switch back to Beatrax and reopen this screen to finish enabling Open Banking.",
 
         'cancel' => 'Cancel',
         'continue' => 'Continue →',

@@ -12,7 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — PIN bestätigen',
     'sign_out' => 'Abmelden',
-    'forgot_pin' => 'PIN vergessen? Melde dich ab — mit deinem Kontopasswort meldest du dich wieder an und legst eine neue PIN fest. Es gehen keine Daten verloren.',
+    'forgot_pin' => 'PIN vergessen? Melde dich ab — wenn dein Kontopasswort diese Sperre noch öffnet, meldest du dich wieder an, legst eine neue PIN fest und verlierst nichts. Ein Passwort, das mit einem Wiederherstellungscode zurückgesetzt oder dir vom Kontoinhaber gesetzt wurde, öffnet sie nicht mehr.',
 
     'errors' => [
         'pin_length' => 'Die PIN muss mindestens 6 Ziffern haben.',

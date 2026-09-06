@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'A reaplicar as regras… :checked de :count transação verificada|A reaplicar as regras… :checked de :count transações verificadas',
 
     'empty_heading' => 'Ainda não há regras',
-    'empty_body' => 'As regras encontram transações através de várias condições e aplicam automaticamente alterações de categoria, contraparte, nota e etiqueta fiscal — na importação e sempre que as reaplicares ao teu histórico existente.',
+    'empty_body' => 'As regras encontram transações através de várias condições e aplicam automaticamente alterações de categoria, contraparte e nota na importação. Uma alteração de etiqueta fiscal só chega quando reaplicares as regras ao teu histórico existente.',
     'empty_cta' => 'Cria a tua primeira regra',
 
     'col_priority' => 'Prioridade',

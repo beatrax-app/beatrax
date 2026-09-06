@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Prikazano je prvih :shown od :total.',
 
-    'footer' => 'Zajednička lista je YAML datoteka koja dolazi uz Beatrax. Slanje predloga otvara GitHub u tvom pregledaču; ništa drugo ne napušta ovaj uređaj.',
+    'footer' => 'Zajednička lista je YAML datoteka koja dolazi uz Beatrax. Slanje predloga otvara GitHub u tvom pregledaču i nosi taj opis sa sobom; ništa drugo ne napušta ovaj uređaj.',
 
     'card' => [
         'seen_times' => 'Viđeno :count put|Viđeno :count puta|Viđeno :count puta',

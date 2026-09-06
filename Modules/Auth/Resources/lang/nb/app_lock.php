@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Behold applås',
 
     'forgot_modal_heading' => 'Tilbakestill PIN-kode — bekreft med kontopassord',
-    'forgot_modal_body' => 'Kontopassordet ditt gjenoppretter låsenøkkelen, så du mister aldri data når du tilbakestiller PIN-koden.',
+    'forgot_modal_body' => 'Kontopassordet ditt gjenoppretter låsenøkkelen, så du mister ingen data når du tilbakestiller PIN-koden — så lenge det passordet fortsatt åpner låsen. Et passord som er tilbakestilt med en gjenopprettingskode, eller satt for deg av kontoeieren, gjør ikke det.',
     'confirm_new_pin_label' => 'Bekreft ny PIN-kode',
     'reset_pin' => 'Tilbakestill PIN-kode',
     'cancel' => 'Avbryt',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Tilbakestilling av PIN-koden mislyktes — gjenopprettingsnøkkelen er ikke tilgjengelig.',
     'error_enable_first' => 'Slå på PIN-låsen før du registrerer biometri.',
     'error_disable_blocked_by_encryption' => 'Notatene dine og motpartsopplysningene er kryptert med nøkkelen denne app-låsen holder, så å slå av låsen ville gjort dem uleselige. Låsen blir stående på — bytt PIN-kode i stedet.',
-    'error_key_material_lost' => 'Denne enheten holder ikke lenger nøkkelen som åpner de krypterte dataene dine, så en ny PIN-kode gjør dem ikke lesbare igjen. Par denne enheten med en som fortsatt har nøkkelen for å hente dem tilbake.',
+    'error_key_material_lost' => 'Denne enheten holder ikke lenger nøkkelen som åpner de krypterte dataene dine, så en ny PIN-kode gjør dem ikke lesbare igjen. Gjenopprett en kryptert sikkerhetskopi som ble laget mens nøkkelen fortsatt virket — denne enheten kan ikke pare seg tilbake, fordi paring krever applåsen den nøkkelen åpner.',
     'error_recovery_wrap_stale' => 'Kontopassordet ditt åpner ikke lenger denne applåsen — det ble endret etter at låsen ble satt opp. PIN-koden din virker fortsatt, men det er ingenting bak den om du glemmer den. Koble til kontopassordet på nytt nå.',
     'relink_recovery' => 'Koble til kontopassordet på nytt',
     'relink_modal_heading' => 'Koble til kontopassordet på nytt — bekreft med PIN-kode',

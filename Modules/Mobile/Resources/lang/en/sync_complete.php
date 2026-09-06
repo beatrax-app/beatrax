@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Changes wait, encrypted, on your relay until the other device comes back online. This device collects them the next time you tap :action.',
     'no_relay_title' => 'When you are out',
     'no_relay_body' => 'Changes wait on this device until both are on your home network together and you tap :action here.',
-    'encrypted_title' => 'Only your devices can read it',
-    'encrypted_body' => 'Everything is encrypted before it leaves a device, and only your paired devices hold the keys.',
+    'encrypted_title' => 'Sealed between your devices',
+    'encrypted_body' => 'Everything crossing between your devices is encrypted, and only your paired devices hold the keys. A relay can see which of your devices is talking to which, and when — never what they say.',
     'continue' => 'Start using Beatrax',
     'peer_fallback' => 'your other device',
 ];

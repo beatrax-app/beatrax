@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Systemvarsler',
 
     'actions' => [
-        'install_next_launch' => 'Installer ved neste oppstart',
-        'install_next_launch_aria' => 'Installer ved neste oppstart — merker systemvarsel #:id som løst',
+        'download_and_install' => 'Last ned og installer',
+        'download_and_install_aria' => 'Last ned og installer — merker systemvarsel #:id som løst',
         'skip_version' => 'Hopp over denne versjonen',
         'release_notes' => 'Versjonsnotater →',
         'update_now' => 'Oppdater nå',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Oppdatering tilgjengelig — Beatrax :version er klar. Den installeres ved neste oppstart.',
+        'update_available' => 'Oppdatering tilgjengelig — Beatrax :version. Ingenting lastes ned før du velger å installere; Beatrax lukkes så og åpnes igjen på den nye versjonen.',
         'update_stale' => 'Du bruker versjon :current — versjon :latest har vært tilgjengelig i 30 dager. Oppdater nå.',
         'update_critical' => 'Kritisk oppdatering tilgjengelig — versjon :version retter :summary. Installer så snart som mulig.',
         'backup_corrupt_with_path' => 'Sikkerhetskopien som ble skrevet :timestamp, besto ikke integritetssjekken. Undersøk :path. Løs dette før du stoler på sikkerhetskopier.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'PIN-koden din kan ikke åpne applåsen på denne enheten: den lagrede nøkkelen kan ikke leses. Logg inn med kontopassordet ditt for å angi en ny PIN-kode.',
         'sync_gdk_rewrap_failed' => 'Ompakking av GDK-nøkkelringen mislyktes etter en endring av applåsens passfrase — krypterte data kan være uopprettelige til nøkkelringen er pakket om.',
         'worker_crashed' => 'Bakgrunnsbehandlingen i Beatrax stoppet uventet. Import og e-postskanning er satt på pause. Åpne appen på nytt for å starte den igjen.',
-        'auth_lock_key_material_stranded' => 'Kryptering i hvile er aktiv for denne kontoen, men ingen applås-innpakning holder lenger datanøkkelen, så hvert kryptert notat, beskrivelse og motpartsdetalj leses som tomt. Paring med en enhet som fortsatt har nøkkelen, er eneste vei tilbake.',
+        'auth_lock_key_material_stranded' => 'Kryptering i hvile er aktiv for denne kontoen, men ingen applås-innpakning holder lenger datanøkkelen, så hvert kryptert notat, beskrivelse og motpartsdetalj leses som tomt. Gjenopprett en kryptert sikkerhetskopi som ble laget mens nøkkelen fortsatt virket, eller sett opp denne kontoen på nytt på en enhet som fortsatt har den.',
         'auth_lock_recovery_wrap_stale' => 'Kontopassordet ble endret uten at applåsens gjenopprettingsinnpakning ble pakket om, så det passordet åpner ikke lenger applåsen. PIN-koden gjør det fortsatt. Koble kontopassordet på nytt fra applåsinnstillingene mens PIN-koden fortsatt er kjent — ellers etterlater en glemt PIN-kode ingenting.',
         'reconnect_link' => 'Koble til på nytt →',
         'pots_category_link_retired' => 'Konvoluttbudsjettering har erstattet sparepotter som var knyttet til en kategori. :amount fra :count arkivert sparepott er ufordelt igjen og venter på at du fordeler beløpet.|Konvoluttbudsjettering har erstattet sparepotter som var knyttet til en kategori. :amount fra :count arkiverte sparepotter er ufordelt igjen og venter på at du fordeler beløpet.',

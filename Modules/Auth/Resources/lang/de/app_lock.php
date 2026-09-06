@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'App-Sperre behalten',
 
     'forgot_modal_heading' => 'PIN zurücksetzen — mit Kontopasswort bestätigen',
-    'forgot_modal_body' => 'Dein Kontopasswort stellt den Sperrschlüssel wieder her, sodass beim Zurücksetzen der PIN keine Daten verloren gehen.',
+    'forgot_modal_body' => 'Dein Kontopasswort stellt den Sperrschlüssel wieder her, sodass beim Zurücksetzen der PIN keine Daten verloren gehen — solange dieses Passwort die Sperre noch öffnet. Ein Passwort, das mit einem Wiederherstellungscode zurückgesetzt oder dir vom Kontoinhaber gesetzt wurde, öffnet sie nicht mehr.',
     'confirm_new_pin_label' => 'Neue PIN bestätigen',
     'reset_pin' => 'PIN zurücksetzen',
     'cancel' => 'Abbrechen',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Zurücksetzen der PIN fehlgeschlagen — der Wiederherstellungsschlüssel ist nicht verfügbar.',
     'error_enable_first' => 'Aktiviere zuerst die PIN-Sperre, bevor du Biometrie registrierst.',
     'error_disable_blocked_by_encryption' => 'Deine Notizen und Zahlungspartner-Daten sind mit dem Schlüssel verschlüsselt, den diese App-Sperre hält — sie auszuschalten würde sie unlesbar machen. Die Sperre bleibt an; ändere stattdessen deine PIN.',
-    'error_key_material_lost' => 'Dieses Gerät hält den Schlüssel zu deinen verschlüsselten Daten nicht mehr, deshalb macht eine neue PIN sie nicht wieder lesbar. Koppele dieses Gerät mit einem, das den Schlüssel noch hat, um sie wiederherzustellen.',
+    'error_key_material_lost' => 'Dieses Gerät hält den Schlüssel zu deinen verschlüsselten Daten nicht mehr, deshalb macht eine neue PIN sie nicht wieder lesbar. Stelle ein verschlüsseltes Backup wieder her, das erstellt wurde, solange der Schlüssel noch funktionierte — durch Koppeln kommt dieses Gerät nicht zurück, denn das Koppeln braucht die App-Sperre, die dieser Schlüssel öffnet.',
     'error_recovery_wrap_stale' => 'Dein Kontopasswort öffnet diese App-Sperre nicht mehr — es wurde nach dem Einrichten der Sperre geändert. Deine PIN funktioniert noch, aber dahinter liegt nichts mehr, falls du sie vergisst. Verknüpfe dein Kontopasswort jetzt neu.',
     'relink_recovery' => 'Kontopasswort neu verknüpfen',
     'relink_modal_heading' => 'Kontopasswort neu verknüpfen — mit PIN bestätigen',

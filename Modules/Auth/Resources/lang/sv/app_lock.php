@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Behåll applås',
 
     'forgot_modal_heading' => 'Återställ PIN-kod — bekräfta med kontolösenord',
-    'forgot_modal_body' => 'Ditt kontolösenord återskapar låsnyckeln, så du förlorar aldrig data när du återställer PIN-koden.',
+    'forgot_modal_body' => 'Ditt kontolösenord återskapar låsnyckeln, så du förlorar inga data när du återställer PIN-koden — så länge det lösenordet fortfarande öppnar låset. Ett lösenord som återställts med en återställningskod, eller satts åt dig av kontots ägare, gör det inte längre.',
     'confirm_new_pin_label' => 'Bekräfta ny PIN-kod',
     'reset_pin' => 'Återställ PIN-kod',
     'cancel' => 'Avbryt',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Återställningen av PIN-koden misslyckades — återställningsnyckeln är inte tillgänglig.',
     'error_enable_first' => 'Aktivera PIN-låset innan du registrerar biometri.',
     'error_disable_blocked_by_encryption' => 'Dina anteckningar och motpartsuppgifter är krypterade med nyckeln som det här applåset håller, så att stänga av låset skulle göra dem oläsliga. Låset förblir på — byt PIN-kod i stället.',
-    'error_key_material_lost' => 'Den här enheten håller inte längre nyckeln som öppnar dina krypterade data, så en ny PIN-kod gör dem inte läsbara igen. Parkoppla den här enheten med en som fortfarande har nyckeln för att få tillbaka dem.',
+    'error_key_material_lost' => 'Den här enheten håller inte längre nyckeln som öppnar dina krypterade data, så en ny PIN-kod gör dem inte läsbara igen. Återställ en krypterad säkerhetskopia som gjordes medan nyckeln fortfarande fungerade — enheten kan inte parkoppla sig tillbaka, eftersom parkoppling kräver just det applås som nyckeln öppnar.',
     'error_recovery_wrap_stale' => 'Ditt kontolösenord öppnar inte längre det här applåset — det byttes efter att låset sattes upp. Din PIN-kod fungerar fortfarande, men det finns ingenting bakom den om du glömmer den. Koppla om ditt kontolösenord nu.',
     'relink_recovery' => 'Koppla om kontolösenordet',
     'relink_modal_heading' => 'Koppla om kontolösenordet — bekräfta med PIN-kod',

@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Rādīti pirmie :shown no :total.',
 
-    'footer' => 'Kopīgotais saraksts ir YAML fails, kas nāk komplektā ar Beatrax. Ieteikuma iesniegšana atver GitHub jūsu pārlūkā; nekas cits šo ierīci nepamet.',
+    'footer' => 'Kopīgotais saraksts ir YAML fails, kas nāk komplektā ar Beatrax. Ieteikuma iesniegšana atver GitHub jūsu pārlūkā un ņem līdzi šo aprakstu; nekas cits šo ierīci nepamet.',
 
     'card' => [
         'seen_times' => 'Redzēts :count reižu|Redzēts :count reizi|Redzēts :count reizes',

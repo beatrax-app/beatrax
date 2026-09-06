@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Peržiūrėti importą',
         'reconnect_first' => 'Pirma prisijunk iš naujo',
-        'auto_caption' => 'Sinchronizuojama automatiškai kartą per dieną.',
+        'auto_caption' => 'Kartą per dieną automatiškai bandoma sinchronizuoti.',
         'sync_now' => 'Sinchronizuoti dabar',
 
         'consent_expired' => 'Sutikimas nustojo galioti — prisijunk iš naujo.',
@@ -139,10 +139,10 @@ return [
         'institution_id_placeholder' => 'Įstaigos id',
 
         'step5_title' => 'Užbaik sutikimą naršyklėje',
-        'step5_body' => 'Spustelėk žemiau, kad atvertum savo banko prisijungimo ir sutikimo langą. Prisijunk, atlik dviejų veiksnių patvirtinimą, ir būsi automatiškai grąžinti čia užbaigti atvirosios bankininkystės įjungimo.',
+        'step5_body' => 'Spustelėk žemiau, kad atvertum savo banko prisijungimo ir sutikimo langą. Prisijunk, atlik dviejų veiksnių patvirtinimą ir grįžk į šį langą, kad užbaigtum atvirosios bankininkystės įjungimą.',
         // i18n-review: lt · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Palieski žemiau, kad atvertum savo banko prisijungimo ir sutikimo langą. Prisijunk, atlik dviejų veiksnių patvirtinimą, ir būsi automatiškai grąžinti čia užbaigti atvirosios bankininkystės įjungimo.',
+        'step5_body_touch' => 'Palieski žemiau, kad atvertum savo banko prisijungimo ir sutikimo langą. Prisijunk, atlik dviejų veiksnių patvirtinimą, tada grįžk į Beatrax ir vėl atverk šį langą, kad užbaigtum atvirosios bankininkystės įjungimą.',
 
         'cancel' => 'Atšaukti',
         'continue' => 'Tęsti →',

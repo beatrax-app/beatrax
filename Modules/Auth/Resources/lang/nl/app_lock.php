@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'App-vergrendeling behouden',
 
     'forgot_modal_heading' => 'Pincode opnieuw instellen — bevestig met accountwachtwoord',
-    'forgot_modal_body' => 'Je accountwachtwoord herstelt de vergrendelingssleutel, zodat het opnieuw instellen van de pincode nooit gegevens verliest.',
+    'forgot_modal_body' => 'Je accountwachtwoord herstelt de vergrendelingssleutel, dus het opnieuw instellen van de pincode kost je geen gegevens — zolang dat wachtwoord de vergrendeling nog opent. Een wachtwoord dat met een herstelcode is gereset of dat de accounteigenaar voor je heeft ingesteld, doet dat niet.',
     'confirm_new_pin_label' => 'Nieuwe pincode bevestigen',
     'reset_pin' => 'Pincode opnieuw instellen',
     'cancel' => 'Annuleren',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Pincode opnieuw instellen mislukt — de herstelsleutel is niet beschikbaar.',
     'error_enable_first' => 'Schakel eerst de pincodevergrendeling in voordat je biometrie registreert.',
     'error_disable_blocked_by_encryption' => 'Je notities en tegenpartijgegevens zijn versleuteld met de sleutel die deze app-vergrendeling bewaart, dus de vergrendeling uitzetten zou ze onleesbaar maken. De vergrendeling blijft aan — wijzig in plaats daarvan je pincode.',
-    'error_key_material_lost' => 'Dit apparaat heeft de sleutel die je versleutelde gegevens opent niet meer, dus een nieuwe pincode maakt ze niet weer leesbaar. Koppel dit apparaat aan een apparaat dat de sleutel nog wel heeft om ze terug te krijgen.',
+    'error_key_material_lost' => 'Dit apparaat heeft de sleutel die je versleutelde gegevens opent niet meer, dus een nieuwe pincode maakt ze niet weer leesbaar. Zet een versleutelde back-up terug die is gemaakt toen de sleutel nog werkte — koppelen brengt dit apparaat er niet terug, want koppelen heeft juist de app-vergrendeling nodig die die sleutel opent.',
     'error_recovery_wrap_stale' => 'Je accountwachtwoord opent deze app-vergrendeling niet meer — het is gewijzigd nadat de vergrendeling was ingesteld. Je pincode werkt nog, maar er zit niets meer achter als je die vergeet. Koppel je accountwachtwoord nu opnieuw.',
     'relink_recovery' => 'Accountwachtwoord opnieuw koppelen',
     'relink_modal_heading' => 'Accountwachtwoord opnieuw koppelen — bevestig met pincode',

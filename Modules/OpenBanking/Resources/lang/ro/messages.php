@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Verifică importul',
         'reconnect_first' => 'Reconectează-te întâi',
-        'auto_caption' => 'Se sincronizează automat o dată pe zi.',
+        'auto_caption' => 'O sincronizare este încercată automat o dată pe zi.',
         'sync_now' => 'Sincronizează acum',
 
         'consent_expired' => 'Consimțământul a expirat — reconectează-te.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'ID instituție',
 
         'step5_title' => 'Finalizează consimțământul în browser',
-        'step5_body' => 'Dă clic mai jos pentru a deschide ecranul de autentificare și consimțământ al băncii tale. Finalizează autentificarea și eventualul pas de verificare în doi pași, apoi vei fi adus automat înapoi aici pentru a termina activarea open banking.',
+        'step5_body' => 'Dă clic mai jos pentru a deschide ecranul de autentificare și consimțământ al băncii tale. Finalizează autentificarea și eventualul pas de verificare în doi pași, apoi revino la această fereastră pentru a termina activarea open banking.',
         // i18n-review: ro · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Atinge mai jos pentru a deschide ecranul de autentificare și consimțământ al băncii tale. Finalizează autentificarea și eventualul pas de verificare în doi pași, apoi vei fi adus automat înapoi aici pentru a termina activarea open banking.',
+        'step5_body_touch' => 'Atinge mai jos pentru a deschide ecranul de autentificare și consimțământ al băncii tale. Finalizează autentificarea și eventualul pas de verificare în doi pași, apoi întoarce-te în Beatrax și redeschide acest ecran pentru a termina activarea open banking.',
 
         'cancel' => 'Anulează',
         'continue' => 'Continuă →',

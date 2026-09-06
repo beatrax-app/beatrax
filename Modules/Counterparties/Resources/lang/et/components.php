@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Privaatsusteade eraisikust kontakti kohta',
-        'body' => '🔒 See on eraisikust kontakt. IBAN ja isikuandmed on vaikimisi peidetud ning neid ei jagata kunagi eksportides.',
+        'body' => '🔒 See on eraisikust kontakt. IBAN on peidetud, kuni sa selle nähtavaks teed, ja eksportidesse see ei jõua. Nimi on endiselt näha kõikjal, kus on näha ka selle kontakti tehingud.',
     ],
 
     'self_stub' => [

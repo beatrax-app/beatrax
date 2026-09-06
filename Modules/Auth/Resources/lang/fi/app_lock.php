@@ -52,7 +52,7 @@ return [
     'keep_lock' => 'Säilytä sovelluslukko',
 
     'forgot_modal_heading' => 'Nollaa PIN-koodi — vahvista tilin salasanalla',
-    'forgot_modal_body' => 'Tilisi salasana palauttaa lukitusavaimen, joten PIN-koodin nollaus ei koskaan hävitä tietoja.',
+    'forgot_modal_body' => 'Tilisi salasana palauttaa lukitusavaimen, joten PIN-koodin nollaus ei hävitä tietoja — kunhan salasana yhä avaa lukon. Palautuskoodilla nollattu tai tilin omistajan puolestasi asettama salasana ei sitä enää avaa.',
     'confirm_new_pin_label' => 'Vahvista uusi PIN-koodi',
     'reset_pin' => 'Nollaa PIN-koodi',
     'cancel' => 'Peruuta',
@@ -71,7 +71,7 @@ return [
     'error_forgot_failed' => 'PIN-koodin nollaus epäonnistui — palautusavain ei ole käytettävissä.',
     'error_enable_first' => 'Ota PIN-lukko käyttöön ennen biometrisen avauksen käyttöönottoa.',
     'error_disable_blocked_by_encryption' => 'Muistiinpanosi ja vastapuolten tiedot on salattu avaimella, jota tämä sovelluslukitus pitää, joten lukituksen poistaminen jättäisi ne lukukelvottomiksi. Lukitus jää päälle — vaihda mieluummin PIN-koodisi.',
-    'error_key_material_lost' => 'Tämä laite ei enää pidä avainta, joka avaa salatut tietosi, joten uusi PIN-koodi ei tee niistä taas luettavia. Muodosta laitepari sellaisen laitteen kanssa, jolla avain on yhä tallessa, niin saat ne takaisin.',
+    'error_key_material_lost' => 'Tämä laite ei enää pidä avainta, joka avaa salatut tietosi, joten uusi PIN-koodi ei tee niistä taas luettavia. Palauta salattu varmuuskopio, joka on tehty avaimen vielä toimiessa — laitepari ei tuo tätä laitetta takaisin, koska parin muodostaminen tarvitsee sen sovelluslukon, jonka kyseinen avain avaa.',
     'error_recovery_wrap_stale' => 'Tilin salasana ei enää avaa tätä sovelluslukkoa — se vaihdettiin lukon käyttöönoton jälkeen. PIN-koodisi toimii yhä, mutta sen takana ei ole mitään, jos unohdat sen. Liitä tilin salasana uudelleen nyt.',
     'relink_recovery' => 'Liitä tilin salasana uudelleen',
     'relink_modal_heading' => 'Liitä tilin salasana uudelleen — vahvista PIN-koodilla',

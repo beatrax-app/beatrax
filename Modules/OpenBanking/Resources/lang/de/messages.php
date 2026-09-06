@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Import prüfen',
         'reconnect_first' => 'Zuerst erneut verbinden',
-        'auto_caption' => 'Wird automatisch einmal am Tag synchronisiert.',
+        'auto_caption' => 'Einmal am Tag wird automatisch eine Synchronisierung versucht.',
         'sync_now' => 'Jetzt synchronisieren',
 
         'consent_expired' => 'Einwilligung abgelaufen — erneut verbinden.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'Instituts-ID',
 
         'step5_title' => 'Schließe die Einwilligung im Browser ab',
-        'step5_body' => 'Klicke unten, um den Login- und Einwilligungsbildschirm deiner Bank zu öffnen. Schließe den Login und einen eventuellen 2-Faktor-Schritt ab, dann wirst du automatisch hierher zurückgebracht, um die Aktivierung von Open Banking abzuschließen.',
+        'step5_body' => 'Klicke unten, um den Login- und Einwilligungsbildschirm deiner Bank zu öffnen. Schließe den Login und einen eventuellen 2-Faktor-Schritt ab und komm dann in dieses Fenster zurück, um die Aktivierung von Open Banking abzuschließen.',
         // i18n-review: de · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Tippe unten, um den Login- und Einwilligungsbildschirm deiner Bank zu öffnen. Schließe den Login und einen eventuellen 2-Faktor-Schritt ab, dann wirst du automatisch hierher zurückgebracht, um die Aktivierung von Open Banking abzuschließen.',
+        'step5_body_touch' => 'Tippe unten, um den Login- und Einwilligungsbildschirm deiner Bank zu öffnen. Schließe den Login und einen eventuellen 2-Faktor-Schritt ab, wechsle dann zurück zu Beatrax und öffne diesen Bildschirm erneut, um die Aktivierung von Open Banking abzuschließen.',
 
         'cancel' => 'Abbrechen',
         'continue' => 'Weiter →',

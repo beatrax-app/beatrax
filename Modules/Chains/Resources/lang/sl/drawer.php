@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Veriga za :name',
     'heading' => 'Veriga',
 
-    'unresolved_heading' => 'Veriga še ni razrešena',
-    'unresolved_body' => 'Razreševalnik verig še teče. Odpri čakalno vrsto za pregled ali osveži čez trenutek.',
+    'unresolved_heading' => 'Nobena transakcija ni izbrana',
+    'unresolved_body' => 'Izberi vrstico na seznamu transakcij, da vidiš, kaj jo je plačalo.',
 
     'none_heading' => 'Veriga financiranja ni bila najdena',
     'none_body' => 'Za to transakcijo ni zaznane verige financiranja. Če si jo pričakoval, prijavi kandidata iz čakalne vrste za pregled.',

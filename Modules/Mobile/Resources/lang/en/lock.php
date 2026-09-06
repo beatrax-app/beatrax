@@ -12,7 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — confirm PIN',
     'sign_out' => 'Sign out',
-    'forgot_pin' => 'Forgot your PIN? Sign out — you can sign back in with your account password and set a new PIN. No data is lost.',
+    'forgot_pin' => 'Forgot your PIN? Sign out — if your account password still opens this lock you can sign back in, set a new PIN, and lose nothing. A password reset with a recovery code, or set for you by the account owner, no longer opens it.',
 
     'errors' => [
         'pin_length' => 'PIN must be at least 6 digits.',

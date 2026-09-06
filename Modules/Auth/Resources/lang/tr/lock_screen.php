@@ -7,7 +7,7 @@ return [
     'native_unlock_failed' => 'Kilit açılamadı. Bunun yerine PIN kodunu gir.',
     'page_title' => 'Kilidi aç · Beatrax',
     'sign_out' => 'Çıkış yap',
-    'forgot_pin' => 'PIN kodunu mu unuttun? Çıkış yap — hesap parolanla tekrar giriş yapıp yeni bir PIN belirleyebilirsin. Hiçbir veri kaybolmaz.',
+    'forgot_pin' => 'PIN kodunu mu unuttun? Çıkış yap — hesap parolan bu kilidi hâlâ açıyorsa tekrar giriş yapıp yeni bir PIN belirleyebilir ve hiçbir şey kaybetmezsin. Kurtarma koduyla sıfırlanan ya da hesap sahibi tarafından senin için belirlenen bir parola onu artık açmaz.',
 
     'digits_entered' => ':count hane girildi',
     'pad_label' => 'PIN tuş takımı',

@@ -13,7 +13,7 @@ return [
     // file, but the em-dash list of connections and "ikdienas valūtas kursu
     // pieprasījums" are both constructions of mine. A native should say whether
     // the apposition reads, or wants a colon list instead.
-    'intro' => 'Beatrax glabā visu šajā ierīcē. Nav ne Beatrax servera, ne mākoņa konta. Ārpus ierīces nonāk tikai tas, ko pievienojat pats — pastkaste, banka caur Enable Banking, ierīces, ko sapārojat sinhronizācijai — kā arī ikdienas valūtas kursu pieprasījums. Katrs savienojums to pasaka ekrānā, kurā to ieslēdzat.',
+    'intro' => 'Beatrax glabā visu šajā ierīcē. Nav ne Beatrax servera, ne mākoņa konta. Pats no sevis aiziet tikai viens pieprasījums — jaunas versijas pārbaude, ko varat izslēgt. Viss pārējais gaida jūs: pastkaste, banka caur Enable Banking, ikdienas valūtas kursu pieprasījums, ierīces, ko sapārojat sinhronizācijai, retranslators, ko konfigurējat, un ikviena saite, uz kuras noklikšķināt. Katrs no tiem to pasaka ekrānā, kurā to ieslēdzat.',
 
     'lives_here' => 'Jūsu dati atrodas šeit',
     'copy' => 'Kopēt',

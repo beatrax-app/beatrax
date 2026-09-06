@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Ehdota vastaavuutta',
-    'intro' => 'Avaa GitHubin selaimeesi, jotta voit lähettää ehdotuksen luonnoksena olevana pull requestina. Nimesi ja sähköpostiosoitteesi eivät koskaan poistu tältä laitteelta.',
+    'intro' => 'Avaa GitHubin selaimeesi ehdotus valmiiksi täytettynä. Mukaan lähtevät vain yllä oleva kuvio, nimi, kategoria ja alue — ja kuvio on kuvaus sellaisena kuin tiliotteesi sen kirjoitti. Nimesi ja sähköpostiosoitteesi eivät koskaan poistu tältä laitteelta.',
 
     'pattern' => 'Kuvio',
     'name' => 'Selkeä nimi',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML-esikatselu',
 
     'cancel' => 'Peruuta',
-    'submit' => 'Lähetä luonnoksena olevana pull requestina',
+    'submit' => 'Avaa GitHubissa',
 
     'toast' => 'Ehdotus avattu selaimeesi.',
 

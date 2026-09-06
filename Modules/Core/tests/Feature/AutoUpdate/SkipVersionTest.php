@@ -54,7 +54,7 @@ it('writes the dismissed version into user_preferences.skipped_update_versions A
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
     ]);
 
@@ -100,7 +100,7 @@ it('suppresses a subsequent update.available row for an already-skipped version'
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
     ]);
 
@@ -112,7 +112,7 @@ it('suppresses a subsequent update.available row for an already-skipped version'
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
         'created_at' => '2026-05-28 02:00:00',
     ]);
@@ -136,13 +136,13 @@ it('still renders update.available for a different version after skipping one ve
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — Beatrax 0.1.2 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.2. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.',
         'metadata' => json_encode(['latestVersion' => '0.1.2']),
         'created_at' => '2026-05-28 03:00:00',
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertSee('Beatrax 0.1.2 is ready')
+        ->assertSee('Beatrax 0.1.2.')
         ->assertSeeHtml('data-testid="resolve-alert-'.$newId.'"');
 });
 

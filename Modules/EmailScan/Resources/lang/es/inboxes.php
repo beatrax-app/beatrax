@@ -63,8 +63,8 @@ return [
     'add_another' => 'Añadir otra bandeja de entrada',
     'gmail_card_body' => 'Conecta una cuenta de Gmail para que Beatrax pueda buscar recibos en ella.',
     'microsoft_card_body' => 'Conecta una cuenta de Microsoft 365 o de Outlook.com para que Beatrax pueda buscar recibos en ella.',
-    'gmail_card_body_phone' => 'Gmail lo analiza la aplicación de escritorio. Una cuenta conectada aquí nunca se analiza por su cuenta.',
-    'microsoft_card_body_phone' => 'Microsoft 365 y Outlook.com los analiza la aplicación de escritorio. Una cuenta conectada aquí nunca se analiza por su cuenta.',
+    'gmail_card_body_phone' => 'Gmail lo analiza la aplicación de escritorio. Conéctalo allí: este teléfono muestra lo que encuentra.',
+    'microsoft_card_body_phone' => 'Microsoft 365 y Outlook.com los analiza la aplicación de escritorio. Conéctalos allí: este teléfono muestra lo que encuentra.',
 
     'discovered_heading' => 'Remitentes descubiertos',
 

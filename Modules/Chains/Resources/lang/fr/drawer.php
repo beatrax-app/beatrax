@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Chaîne pour :name',
     'heading' => 'Chaîne',
 
-    'unresolved_heading' => 'Chaîne pas encore résolue',
-    'unresolved_body' => 'Le résolveur de chaînes tourne encore. Ouvre la file de vérification ou actualise dans un instant.',
+    'unresolved_heading' => 'Aucune transaction sélectionnée',
+    'unresolved_body' => "Choisis une ligne dans la liste des transactions pour voir ce qui l'a payée.",
 
     'none_heading' => 'Aucune chaîne de financement trouvée',
     'none_body' => 'Aucune chaîne de financement n\'a été détectée pour cette transaction. Si tu en attendais une, propose un candidat depuis la file de vérification.',

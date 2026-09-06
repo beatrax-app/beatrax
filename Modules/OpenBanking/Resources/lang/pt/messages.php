@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Rever a importação',
         'reconnect_first' => 'Volta a ligar primeiro',
-        'auto_caption' => 'Sincroniza automaticamente uma vez por dia.',
+        'auto_caption' => 'É tentada automaticamente uma sincronização uma vez por dia.',
         'sync_now' => 'Sincronizar agora',
 
         'consent_expired' => 'Consentimento expirado — volta a ligar.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'ID da instituição',
 
         'step5_title' => 'Conclui o consentimento no teu navegador',
-        'step5_body' => 'Clica aqui em baixo para abrires o ecrã de início de sessão e consentimento do teu banco. Conclui o início de sessão e qualquer passo de autenticação de 2 fatores; depois voltas para aqui automaticamente para acabares de ativar o Open Banking.',
+        'step5_body' => 'Clica aqui em baixo para abrires o ecrã de início de sessão e consentimento do teu banco. Conclui o início de sessão e qualquer passo de autenticação de 2 fatores; depois volta a esta janela para acabares de ativar o Open Banking.',
         // i18n-review: pt · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Toca aqui em baixo para abrires o ecrã de início de sessão e consentimento do teu banco. Conclui o início de sessão e qualquer passo de autenticação de 2 fatores; depois voltas para aqui automaticamente para acabares de ativar o Open Banking.',
+        'step5_body_touch' => 'Toca aqui em baixo para abrires o ecrã de início de sessão e consentimento do teu banco. Conclui o início de sessão e qualquer passo de autenticação de 2 fatores; depois volta ao Beatrax e reabre este ecrã para acabares de ativar o Open Banking.',
 
         'cancel' => 'Cancelar',
         'continue' => 'Continuar →',

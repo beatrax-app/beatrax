@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Re-applying rules… :checked of :count transaction checked|Re-applying rules… :checked of :count transactions checked',
 
     'empty_heading' => 'No rules yet',
-    'empty_body' => 'Rules match transactions on multiple conditions and apply category, counterparty, note, and tax-tag changes automatically — on import, and any time you re-apply them to your existing history.',
+    'empty_body' => 'Rules match transactions on multiple conditions and apply category, counterparty and note changes automatically on import. A tax-tag change lands when you re-apply the rules to your existing history.',
     'empty_cta' => 'Create your first rule',
 
     'col_priority' => 'Priority',

@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Palikti programėlės užraktą',
 
     'forgot_modal_heading' => 'Nustatyti PIN kodą iš naujo — patvirtink paskyros slaptažodžiu',
-    'forgot_modal_body' => 'Paskyros slaptažodis atkuria užrakto raktą, todėl iš naujo nustatant PIN kodą duomenys niekada neprarandami.',
+    'forgot_modal_body' => 'Paskyros slaptažodis atkuria užrakto raktą, tad iš naujo nustatant PIN kodą duomenys neprarandami — jei tas slaptažodis vis dar atrakina užraktą. Slaptažodis, atstatytas su atkūrimo kodu arba nustatytas tau paskyros savininko, jo nebeatrakina.',
     'confirm_new_pin_label' => 'Patvirtink naują PIN kodą',
     'reset_pin' => 'Nustatyti PIN kodą iš naujo',
     'cancel' => 'Atšaukti',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Nepavyko iš naujo nustatyti PIN kodo — atkūrimo raktas nepasiekiamas.',
     'error_enable_first' => 'Prieš registruodamas biometriją, pirmiausia įjunk PIN kodo užraktą.',
     'error_disable_blocked_by_encryption' => 'Tavo užrašai ir kitų šalių duomenys užšifruoti raktu, kurį saugo šis programos užraktas, todėl jį išjungus jie taptų neįskaitomi. Užraktas lieka įjungtas — verčiau pasikeisk PIN kodą.',
-    'error_key_material_lost' => 'Šis įrenginys nebesaugo rakto, kuris atrakina tavo užšifruotus duomenis, tad naujas PIN kodas jų vėl įskaitomų nepadarys. Susiek šį įrenginį su tuo, kuris raktą dar turi, kad juos atkurtum.',
+    'error_key_material_lost' => 'Šis įrenginys nebesaugo rakto, kuris atrakina tavo užšifruotus duomenis, tad naujas PIN kodas jų vėl įskaitomų nepadarys. Atkurk užšifruotą atsarginę kopiją, sukurtą dar veikiant raktui — susiejimu šis įrenginys atgal nebegrįš, nes susiejimui reikia to programėlės užrakto, kurį atrakina šis raktas.',
     'error_recovery_wrap_stale' => 'Paskyros slaptažodis nebeatrakina šio programėlės užrakto — jis buvo pakeistas jau nustačius užraktą. PIN kodas dar veikia, bet už jo nieko nelieka, jei jį pamirši. Susiek paskyros slaptažodį iš naujo dabar.',
     'relink_recovery' => 'Susieti paskyros slaptažodį iš naujo',
     'relink_modal_heading' => 'Susieti paskyros slaptažodį iš naujo — patvirtink PIN kodu',

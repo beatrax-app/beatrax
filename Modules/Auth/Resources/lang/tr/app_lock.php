@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Uygulama kilidini koru',
 
     'forgot_modal_heading' => 'PIN sıfırla — hesap parolasıyla onayla',
-    'forgot_modal_body' => 'Hesap parolan kilit anahtarını kurtarır, bu yüzden PIN sıfırlamak asla veri kaybettirmez.',
+    'forgot_modal_body' => 'Hesap parolan kilit anahtarını kurtarır, bu yüzden PIN sıfırlamak veri kaybettirmez — o parola kilidi hâlâ açtığı sürece. Kurtarma koduyla sıfırlanan ya da hesap sahibi tarafından senin için belirlenen bir parola bunu artık yapmaz.',
     'confirm_new_pin_label' => 'Yeni PIN doğrulama',
     'reset_pin' => 'PIN sıfırla',
     'cancel' => 'İptal',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'PIN sıfırlama başarısız — kurtarma anahtarı kullanılamıyor.',
     'error_enable_first' => 'Biyometri kaydetmeden önce PIN kilidini etkinleştir.',
     'error_disable_blocked_by_encryption' => 'Notların ve karşı taraf bilgilerin bu uygulama kilidinin tuttuğu anahtarla şifreli, bu yüzden kilidi kapatmak onları okunamaz hâle getirir. Kilit açık kalıyor — bunun yerine PIN kodunu değiştir.',
-    'error_key_material_lost' => 'Bu cihaz artık şifreli verilerini açan anahtarı tutmuyor, bu yüzden yeni bir PIN onları yeniden okunur hâle getirmez. Geri almak için bu cihazı anahtarı hâlâ olan bir cihazla eşleştir.',
+    'error_key_material_lost' => 'Bu cihaz artık şifreli verilerini açan anahtarı tutmuyor, bu yüzden yeni bir PIN onları yeniden okunur hâle getirmez. Anahtar hâlâ çalışırken alınmış şifreli bir yedeği geri yükle — bu cihaz eşleşerek geri dönemez, çünkü eşleştirme tam da o anahtarın açtığı uygulama kilidini gerektirir.',
     'error_recovery_wrap_stale' => 'Hesap parolan artık bu uygulama kilidini açmıyor — kilit kurulduktan sonra değiştirildi. PIN kodun hâlâ çalışıyor, ama unutursan arkasında hiçbir şey kalmıyor. Hesap parolanı şimdi yeniden bağla.',
     'relink_recovery' => 'Hesap parolasını yeniden bağla',
     'relink_modal_heading' => 'Hesap parolasını yeniden bağla — PIN ile onayla',

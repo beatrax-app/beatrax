@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Ausblenden',
         'install_app' => 'App installieren',
 
-        'desktop_html' => 'Öffne Beatrax im Browser deines Handys und tippe auf "Zum Home-Bildschirm" — oder tippe auf das <strong style="color: var(--color-text);">⚡</strong>-Symbol im Teilen-Menü von Safari.',
+        'desktop_html' => 'Öffne Beatrax im Browser deines Handys und wähle im Teilen-Menü <strong style="color: var(--color-text);">Zum Home-Bildschirm</strong>.',
     ],
 
     'topbar' => [

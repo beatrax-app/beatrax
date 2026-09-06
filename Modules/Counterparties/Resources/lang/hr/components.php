@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Obavijest o privatnosti za osobni kontakt',
-        'body' => '🔒 Ovo je osobni kontakt. IBAN i osobni podaci skriveni su prema zadanome i nikad se ne dijele u izvozima.',
+        'body' => '🔒 Ovo je osobni kontakt. IBAN je skriven dok ga ne prikažeš i ne ulazi u izvoze. Ime se i dalje pojavljuje svugdje gdje se pojavljuju transakcije tog kontakta.',
     ],
 
     'self_stub' => [

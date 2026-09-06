@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Volviendo a aplicar las reglas… :checked de :count transacción revisada|Volviendo a aplicar las reglas… :checked de :count transacciones revisadas',
 
     'empty_heading' => 'Aún no hay reglas',
-    'empty_body' => 'Las reglas comparan las transacciones con varias condiciones y aplican cambios de categoría, contraparte, nota y etiqueta fiscal automáticamente: al importar y cada vez que las vuelves a aplicar a tu historial.',
+    'empty_body' => 'Las reglas comparan las transacciones con varias condiciones y aplican cambios de categoría, contraparte y nota automáticamente al importar. Un cambio de etiqueta fiscal llega cuando vuelves a aplicar las reglas a tu historial existente.',
     'empty_cta' => 'Crea tu primera regla',
 
     'col_priority' => 'Prioridad',

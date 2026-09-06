@@ -66,8 +66,8 @@ return [
     'add_another' => 'Başka bir gelen kutusu ekle',
     'gmail_card_body' => "Beatrax'ın fiş araması yapabilmesi için bir Gmail hesabı bağla.",
     'microsoft_card_body' => "Beatrax'ın fiş araması yapabilmesi için bir Microsoft 365 veya Outlook.com hesabı bağla.",
-    'gmail_card_body_phone' => "Gmail'i masaüstü uygulaması tarar. Burada bağlanan bir hesap kendiliğinden asla taranmaz.",
-    'microsoft_card_body_phone' => "Microsoft 365 ve Outlook.com'u masaüstü uygulaması tarar. Burada bağlanan bir hesap kendiliğinden asla taranmaz.",
+    'gmail_card_body_phone' => "Gmail'i masaüstü uygulaması tarar. Onu orada bağla — bu telefon, bulduklarını gösterir.",
+    'microsoft_card_body_phone' => "Microsoft 365 ve Outlook.com'u masaüstü uygulaması tarar. Onları orada bağla — bu telefon, bulduklarını gösterir.",
 
     'discovered_heading' => 'Keşfedilen gönderenler',
 

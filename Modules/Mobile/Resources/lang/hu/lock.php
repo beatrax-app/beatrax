@@ -16,7 +16,7 @@ return [
     // app_lock forgot_modal_body, so it is at least consistent; standing alone
     // without "soha" it is terse, and a native may want "Semmilyen adat nem vész
     // el" instead.
-    'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki — a fiókjelszavaddal újra bejelentkezhetsz, és beállíthatsz egy új PIN-kódot. Nem vész el adat.',
+    'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki — ha a fiókjelszavad még nyitja ezt a zárat, újra bejelentkezhetsz, beállíthatsz egy új PIN-kódot, és semmi nem vész el. Az a jelszó, amelyet helyreállítási kóddal állítottál vissza, vagy amelyet a fiók tulajdonosa állított be neked, már nem nyitja.',
 
     'errors' => [
         'pin_length' => 'A PIN-kódnak legalább 6 számjegyből kell állnia.',

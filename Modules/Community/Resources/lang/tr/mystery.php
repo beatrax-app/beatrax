@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'İlk :shown / :total gösteriliyor.',
 
-    'footer' => "Paylaşılan liste, Beatrax ile birlikte gelen bir YAML dosyasıdır. Bir öneri göndermek tarayıcında GitHub'ı açar; bunun dışında hiçbir şey bu cihazdan çıkmaz.",
+    'footer' => "Paylaşılan liste, Beatrax ile birlikte gelen bir YAML dosyasıdır. Bir öneri göndermek tarayıcında GitHub'ı açar ve o açıklamayı da yanında götürür; bunun dışında hiçbir şey bu cihazdan çıkmaz.",
 
     'card' => [
         'seen_times' => 'Görülme :count kez',

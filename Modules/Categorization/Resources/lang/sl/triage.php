@@ -23,6 +23,6 @@ return [
     'select_category' => 'Izberi kategorijo',
     'help_others' => '❋ Pomagaj drugim to prepoznati',
 
-    'shortcuts' => '1–9 dodeli glavne kategorije · ↑/↓ premik · Enter shrani · / iskanje · Esc počisti',
+    'shortcuts' => '1–9 dodeli glavne kategorije · ↑/↓ premik · Enter shrani · Esc počisti',
     'load_more' => 'Naloži več',
 ];

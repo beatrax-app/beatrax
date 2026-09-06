@@ -31,7 +31,7 @@ it('renders the verbatim local-only intro paragraph', function (): void {
     $user = hdlUser(false, 'hdl-intro');
 
     Livewire::actingAs($user)->test(HelpDataLocations::class)
-        ->assertSeeText('Beatrax stores everything on this device. There is no Beatrax server and no cloud account. What goes out is what you connect it to — a mailbox, a bank through Enable Banking, the devices you pair for sync — plus a daily exchange-rate lookup. Each connection says so on the screen where you turn it on.');
+        ->assertSeeText('Beatrax stores everything on this device. There is no Beatrax server and no cloud account. One call goes out on its own — a check for a new version, which you can turn off. Everything else waits for you: a mailbox, a bank through Enable Banking, a daily exchange-rate lookup, the devices you pair for sync, a relay you configure, and any link you click. Each one says so on the screen where you turn it on.');
 });
 
 it('shows every durable location the inventory holds, resolved', function (): void {

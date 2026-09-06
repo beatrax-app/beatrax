@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Upozornenie o súkromí pri osobnom kontakte',
-        'body' => '🔒 Toto je osobný kontakt. IBAN a osobné údaje sú predvolene skryté a nikdy sa nedostanú do exportov.',
+        'body' => '🔒 Toto je osobný kontakt. IBAN zostáva skrytý, kým ho nezobrazíš, a do exportov sa nedostane. Meno kontaktu sa naďalej zobrazuje všade, kde sa zobrazujú jeho transakcie.',
     ],
 
     'self_stub' => [

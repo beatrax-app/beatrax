@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Kette für :name',
     'heading' => 'Kette',
 
-    'unresolved_heading' => 'Kette noch nicht aufgelöst',
-    'unresolved_body' => 'Die Kettenauflösung läuft noch. Öffne die Prüfwarteschlange oder aktualisiere gleich noch einmal.',
+    'unresolved_heading' => 'Keine Transaktion ausgewählt',
+    'unresolved_body' => 'Wähle eine Zeile in der Transaktionsliste, um zu sehen, was sie bezahlt hat.',
 
     'none_heading' => 'Keine Finanzierungskette gefunden',
     'none_body' => 'Für diese Transaktion wurde keine Finanzierungskette erkannt. Wenn du eine erwartet hast, lege aus der Prüfwarteschlange einen Kandidaten an.',

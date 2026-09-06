@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Järjestelmähälytykset',
 
     'actions' => [
-        'install_next_launch' => 'Asenna seuraavalla käynnistyksellä',
-        'install_next_launch_aria' => 'Asenna seuraavalla käynnistyksellä — merkitsee järjestelmähälytyksen #:id ratkaistuksi',
+        'download_and_install' => 'Lataa ja asenna',
+        'download_and_install_aria' => 'Lataa ja asenna — merkitsee järjestelmähälytyksen #:id ratkaistuksi',
         'skip_version' => 'Ohita tämä versio',
         'release_notes' => 'Julkaisutiedot →',
         'update_now' => 'Päivitä nyt',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Päivitys saatavilla — Beatrax :version on valmiina. Se asennetaan seuraavalla käynnistyksellä.',
+        'update_available' => 'Päivitys saatavilla — Beatrax :version. Mitään ei ladata ennen kuin valitset asennuksen; sen jälkeen Beatrax sulkeutuu ja avautuu uudelleen uudessa versiossa.',
         'update_stale' => 'Käytössäsi on versio :current — versio :latest on ollut saatavilla 30 päivää. Päivitä nyt.',
         'update_critical' => 'Kriittinen päivitys saatavilla — versio :version korjaa :summary. Asenna mahdollisimman pian.',
         'backup_corrupt_with_path' => 'Kello :timestamp kirjoitettu varmuuskopio ei läpäissyt eheystarkistusta. Tarkista :path. Ratkaise ongelma ennen kuin luotat varmuuskopioihin.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'PIN-koodisi ei avaa sovelluslukitusta tällä laitteella: tallennettu avain ei ole luettavissa. Kirjaudu sisään tilisi salasanalla ja aseta uusi PIN-koodi.',
         'sync_gdk_rewrap_failed' => 'GDK-avainnipun uudelleenkäärintä epäonnistui sovelluslukituksen tunnuslauseen vaihdon jälkeen — salatut tiedot voivat olla palautuskelvottomia, kunnes avainnippu on kääritty uudelleen.',
         'worker_crashed' => 'Beatraxin taustakäsittely pysähtyi odottamatta. Tuonnit ja sähköpostien skannaus ovat tauolla. Käynnistä se uudelleen avaamalla sovellus uudestaan.',
-        'auth_lock_key_material_stranded' => 'Levossa oleva salaus on käytössä tällä tilillä, mutta mikään sovelluslukituksen kääre ei enää pidä datan avainta, joten jokainen salattu muistiinpano, kuvaus ja vastapuolitieto luetaan tyhjänä. Ainoa paluutie on laitepari, jolla avain vielä on.',
+        'auth_lock_key_material_stranded' => 'Levossa oleva salaus on käytössä tällä tilillä, mutta mikään sovelluslukituksen kääre ei enää pidä datan avainta, joten jokainen salattu muistiinpano, kuvaus ja vastapuolitieto luetaan tyhjänä. Palauta salattu varmuuskopio, joka on tehty avaimen vielä toimiessa, tai määritä tämä tili uudelleen laitteella, jolla avain on yhä tallessa.',
         'auth_lock_recovery_wrap_stale' => 'Tilin salasana vaihtui ilman, että sovelluslukituksen palautuskääre käärittiin uudelleen, joten kyseinen salasana ei enää avaa sovelluslukitusta. PIN-koodi avaa yhä. Liitä tilin salasana uudelleen sovelluslukituksen asetuksista, kun PIN-koodi on vielä tiedossa — muuten unohtuneen PIN-koodin taakse ei jää mitään.',
         'reconnect_link' => 'Yhdistä uudelleen →',
         'pots_category_link_retired' => 'Kuoribudjetointi on korvannut kategoriaan sidotut säästöpotit. :count arkistoidusta potista vapautunut :amount on taas jakamatta ja odottaa, että jaat sen.|Kuoribudjetointi on korvannut kategoriaan sidotut säästöpotit. :count arkistoidusta potista vapautunut :amount on taas jakamatta ja odottaa, että jaat sen.',

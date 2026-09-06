@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Değişiklikler, diğer cihaz yeniden çevrimiçi olana kadar relay sunucunda şifreli olarak bekler. Bu cihaz, :action düğmesine bir sonraki dokunuşunda onları alır.',
     'no_relay_title' => 'Dışarıdayken',
     'no_relay_body' => 'Değişiklikler bu cihazda bekler; her iki cihaz ev ağında bir araya gelip burada :action düğmesine dokunduğunda senkronize olur.',
-    'encrypted_title' => 'Yalnızca cihazların okuyabilir',
-    'encrypted_body' => 'Her şey bir cihazdan ayrılmadan önce şifrelenir ve anahtarlar yalnızca eşleştirdiğin cihazlarda bulunur.',
+    'encrypted_title' => 'Cihazlarının arasında mühürlü',
+    'encrypted_body' => 'Cihazlarının arasında geçen her şey şifrelidir ve anahtarlar yalnızca eşleştirdiğin cihazlarda bulunur. Bir relay, hangi cihazının hangisiyle ve ne zaman konuştuğunu görebilir — ne konuştuklarını asla.',
     'continue' => "Beatrax'ı kullanmaya başla",
     'peer_fallback' => 'diğer cihazın',
 ];

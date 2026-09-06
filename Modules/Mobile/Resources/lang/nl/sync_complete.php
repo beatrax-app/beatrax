@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Wijzigingen wachten versleuteld op je relay tot het andere apparaat weer online is. Dit apparaat haalt ze op zodra je de volgende keer op :action tikt.',
     'no_relay_title' => 'Als je onderweg bent',
     'no_relay_body' => 'Wijzigingen wachten op dit apparaat tot beide samen op je thuisnetwerk zijn en je hier op :action tikt.',
-    'encrypted_title' => 'Alleen jouw apparaten kunnen het lezen',
-    'encrypted_body' => 'Alles wordt versleuteld voordat het een apparaat verlaat, en alleen je gekoppelde apparaten hebben de sleutels.',
+    'encrypted_title' => 'Verzegeld tussen je apparaten',
+    'encrypted_body' => 'Alles wat tussen je apparaten heen en weer gaat is versleuteld, en alleen je gekoppelde apparaten hebben de sleutels. Een relay kan zien welk van je apparaten met welk praat, en wanneer — nooit wat ze zeggen.',
     'continue' => 'Beatrax gaan gebruiken',
     'peer_fallback' => 'je andere apparaat',
 ];

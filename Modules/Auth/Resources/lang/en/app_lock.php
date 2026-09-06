@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Keep app lock',
 
     'forgot_modal_heading' => 'Reset PIN — confirm with account password',
-    'forgot_modal_body' => 'Your account password recovers the lock key, so resetting the PIN never loses data.',
+    'forgot_modal_body' => 'Your account password recovers the lock key, so resetting the PIN loses no data — as long as that password still opens the lock. A password reset with a recovery code, or one set for you by the account owner, does not.',
     'confirm_new_pin_label' => 'Confirm new PIN',
     'reset_pin' => 'Reset PIN',
     'cancel' => 'Cancel',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'PIN reset failed — the recovery key is unavailable.',
     'error_enable_first' => 'Enable the PIN lock first before enrolling biometrics.',
     'error_disable_blocked_by_encryption' => 'Your notes and counterparty details are encrypted with the key this app lock holds, so turning the lock off would leave them unreadable. The lock stays on — change your PIN instead.',
-    'error_key_material_lost' => 'This device no longer holds the key that opens your encrypted data, so a new PIN cannot make it readable again. Pair this device with one that still holds the key to recover it.',
+    'error_key_material_lost' => 'This device no longer holds the key that opens your encrypted data, so a new PIN cannot make it readable again. Restore an encrypted backup made while the key still worked — this device cannot pair its way back, because pairing needs the app lock that key opens.',
     'error_recovery_wrap_stale' => 'Your account password no longer opens this app lock — it was changed after the lock was set up. Your PIN still works, but there is nothing behind it if you forget it. Re-link your account password now.',
     'relink_recovery' => 'Re-link account password',
     'relink_modal_heading' => 'Re-link account password — confirm with PIN',

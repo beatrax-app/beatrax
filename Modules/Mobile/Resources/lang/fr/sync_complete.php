@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Les changements attendent, chiffrés, sur ton relais jusqu\'à ce que l\'autre appareil revienne en ligne. Cet appareil les récupère la prochaine fois que tu appuies sur :action.',
     'no_relay_title' => 'Quand tu es dehors',
     'no_relay_body' => 'Les changements attendent sur cet appareil jusqu\'à ce que les deux soient ensemble sur ton réseau domestique et que tu appuies ici sur :action.',
-    'encrypted_title' => 'Seuls tes appareils peuvent le lire',
-    'encrypted_body' => 'Tout est chiffré avant de quitter un appareil, et seuls tes appareils appairés détiennent les clés.',
+    'encrypted_title' => 'Scellé entre tes appareils',
+    'encrypted_body' => "Tout ce qui passe entre tes appareils est chiffré, et seuls tes appareils appairés détiennent les clés. Un relais peut voir lequel de tes appareils parle à quel autre, et quand — jamais ce qu'ils se disent.",
     'continue' => 'Commencer à utiliser Beatrax',
     'peer_fallback' => 'ton autre appareil',
 ];

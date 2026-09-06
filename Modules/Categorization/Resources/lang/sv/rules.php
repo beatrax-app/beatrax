@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Tillämpar regler igen… :checked av :count transaktion kontrollerad|Tillämpar regler igen… :checked av :count transaktioner kontrollerade',
 
     'empty_heading' => 'Inga regler ännu',
-    'empty_body' => 'Regler matchar transaktioner mot flera villkor och tillämpar automatiskt ändringar av kategori, motpart, anteckning och skatteetikett — vid import och varje gång du tillämpar dem på din befintliga historik igen.',
+    'empty_body' => 'Regler matchar transaktioner mot flera villkor och tillämpar automatiskt ändringar av kategori, motpart och anteckning vid import. En ändring av skatteetikett slår igenom när du tillämpar reglerna på din befintliga historik igen.',
     'empty_cta' => 'Skapa din första regel',
 
     'col_priority' => 'Prioritet',

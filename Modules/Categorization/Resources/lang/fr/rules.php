@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Réapplication des règles… :checked sur :count transaction vérifiée|Réapplication des règles… :checked sur :count transactions vérifiées',
 
     'empty_heading' => 'Aucune règle pour l\'instant',
-    'empty_body' => 'Les règles comparent les transactions sur plusieurs conditions et appliquent automatiquement les changements de catégorie, de tiers, de note et de marquage fiscal — à l\'import, et chaque fois que tu les réappliques à ton historique existant.',
+    'empty_body' => "Les règles comparent les transactions sur plusieurs conditions et appliquent automatiquement les changements de catégorie, de tiers et de note à l'import. Un changement de marquage fiscal n'arrive que lorsque tu réappliques les règles à ton historique existant.",
     'empty_cta' => 'Créer ta première règle',
 
     'col_priority' => 'Priorité',

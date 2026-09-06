@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Kjede for :name',
     'heading' => 'Kjede',
 
-    'unresolved_heading' => 'Kjeden er ikke løst ennå',
-    'unresolved_body' => 'Kjedeløseren kjører fortsatt. Åpne gjennomgangskøen eller last inn på nytt om et øyeblikk.',
+    'unresolved_heading' => 'Ingen transaksjon er valgt',
+    'unresolved_body' => 'Velg en rad i transaksjonslisten for å se hva som betalte for den.',
 
     'none_heading' => 'Fant ingen finansieringskjede',
     'none_body' => 'Det er ikke funnet noen finansieringskjede for denne transaksjonen. Hvis du ventet en, kan du sende inn en kandidat fra gjennomgangskøen.',

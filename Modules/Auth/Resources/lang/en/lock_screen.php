@@ -7,7 +7,7 @@ return [
     'native_unlock_failed' => 'Could not unlock. Enter your PIN instead.',
     'page_title' => 'Unlock · Beatrax',
     'sign_out' => 'Sign out',
-    'forgot_pin' => 'Forgot your PIN? Sign out — you can sign back in with your account password and set a new PIN. No data is lost.',
+    'forgot_pin' => 'Forgot your PIN? Sign out — if your account password still opens this lock you can sign back in, set a new PIN, and lose nothing. A password reset with a recovery code, or set for you by the account owner, no longer opens it.',
 
     'digits_entered' => ':count digit entered|:count digits entered',
     'pad_label' => 'PIN pad',

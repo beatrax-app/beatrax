@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Systeemmeldingen',
 
     'actions' => [
-        'install_next_launch' => 'Installeren bij volgende start',
-        'install_next_launch_aria' => 'Installeren bij volgende start — markeert systeemmelding #:id als opgelost',
+        'download_and_install' => 'Downloaden en installeren',
+        'download_and_install_aria' => 'Downloaden en installeren — markeert systeemmelding #:id als opgelost',
         'skip_version' => 'Deze versie overslaan',
         'release_notes' => 'Release-opmerkingen →',
         'update_now' => 'Nu bijwerken',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Update beschikbaar — Beatrax :version staat klaar. Deze wordt bij de volgende start geïnstalleerd.',
+        'update_available' => 'Update beschikbaar — Beatrax :version. Er wordt niets gedownload totdat je kiest om te installeren; Beatrax sluit dan af en opent opnieuw op de nieuwe versie.',
         'update_stale' => 'Je gebruikt versie :current — versie :latest is al 30 dagen beschikbaar. Werk nu bij.',
         'update_critical' => 'Kritieke update beschikbaar — versie :version verhelpt :summary. Installeer zo snel mogelijk.',
         'backup_corrupt_with_path' => 'De back-up gemaakt op :timestamp is niet door de integriteitscontrole gekomen. Bekijk :path. Los dit op voordat je op back-ups vertrouwt.',
@@ -48,7 +48,7 @@ return [
         'auth_lock_corrupted_key' => 'Je pincode kan de appvergrendeling op dit apparaat niet openen: de opgeslagen sleutel is onleesbaar. Meld je aan met je accountwachtwoord om een nieuwe pincode in te stellen.',
         'sync_gdk_rewrap_failed' => 'Het opnieuw inpakken van de GDK-sleutelbos is mislukt na een wijziging van de wachtwoordzin van de appvergrendeling — versleutelde gegevens zijn mogelijk onherstelbaar totdat de sleutelbos opnieuw is ingepakt.',
         'worker_crashed' => 'De achtergrondverwerking van Beatrax is onverwacht gestopt. Imports en e-mailscans staan stil. Open de app opnieuw om die te herstarten.',
-        'auth_lock_key_material_stranded' => 'Versleuteling in rust is actief voor dit account, maar geen enkele wikkel van de appvergrendeling houdt de gegevenssleutel nog vast, dus elke versleutelde notitie, omschrijving en tegenpartijgegevens worden als leeg gelezen. Koppelen met een apparaat dat de sleutel nog heeft, is de enige weg terug.',
+        'auth_lock_key_material_stranded' => 'Versleuteling in rust is actief voor dit account, maar geen enkele wikkel van de appvergrendeling houdt de gegevenssleutel nog vast, dus elke versleutelde notitie, omschrijving en tegenpartijgegevens worden als leeg gelezen. Zet een versleutelde back-up terug die is gemaakt toen de sleutel nog werkte, of zet dit account opnieuw op een apparaat dat de sleutel nog heeft.',
         'auth_lock_recovery_wrap_stale' => 'Het accountwachtwoord is gewijzigd zonder dat de herstelwikkel van de appvergrendeling opnieuw is ingepakt, dus dat wachtwoord opent de appvergrendeling niet meer. De pincode nog wel. Koppel het accountwachtwoord opnieuw via de instellingen van de appvergrendeling zolang de pincode nog bekend is — anders laat een vergeten pincode niets achter.',
         'reconnect_link' => 'Opnieuw koppelen →',
         'pots_category_link_retired' => 'Envelopbudgettering heeft potjes die aan een categorie hingen vervangen. :amount uit :count gearchiveerd potje is weer niet-toegewezen en wacht tot je het toewijst.|Envelopbudgettering heeft potjes die aan een categorie hingen vervangen. :amount uit :count gearchiveerde potjes is weer niet-toegewezen en wacht tot je het toewijst.',

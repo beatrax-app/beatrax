@@ -15,7 +15,7 @@ return [
     // i18n-review: fi · forgot_pin — "Tietoja ei häviä" is grammatical, with the
     // partitive the negation wants. Whether a Finnish reader would sooner see
     // "Tietoja ei katoa" or "Tiedot säilyvät" is the open question.
-    'forgot_pin' => 'Unohditko PIN-koodin? Kirjaudu ulos — voit kirjautua takaisin sisään tilisi salasanalla ja asettaa uuden PIN-koodin. Tietoja ei häviä.',
+    'forgot_pin' => 'Unohditko PIN-koodin? Kirjaudu ulos — jos tilisi salasana yhä avaa tämän lukon, voit kirjautua takaisin sisään, asettaa uuden PIN-koodin, eikä mitään häviä. Palautuskoodilla nollattu tai tilin omistajan puolestasi asettama salasana ei sitä enää avaa.',
 
     'errors' => [
         'pin_length' => 'PIN-koodissa on oltava vähintään 6 numeroa.',

@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Rakendan reegleid uuesti… :checked / :count tehing kontrollitud|Rakendan reegleid uuesti… :checked / :count tehingut kontrollitud',
 
     'empty_heading' => 'Reegleid veel pole',
-    'empty_body' => 'Reeglid sobitavad tehinguid mitme tingimuse alusel ning muudavad automaatselt kategooriat, vastaspoolt, märkust ja maksumärgendit — nii importimisel kui ka iga kord, kui rakendad need olemasolevale ajaloole.',
+    'empty_body' => 'Reeglid sobitavad tehinguid mitme tingimuse alusel ning muudavad importimisel automaatselt kategooriat, vastaspoolt ja märkust. Maksumärgendi muutus jõuab kohale siis, kui rakendad reeglid uuesti olemasolevale ajaloole.',
     'empty_cta' => 'Loo oma esimene reegel',
 
     'col_priority' => 'Prioriteet',

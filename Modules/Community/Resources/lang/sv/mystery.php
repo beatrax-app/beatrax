@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Visar de översta :shown av :total.',
 
-    'footer' => 'Den delade listan är en medföljande YAML-fil som levereras med Beatrax. När du skickar in ett förslag öppnas GitHub i din webbläsare; inget annat lämnar den här enheten.',
+    'footer' => 'Den delade listan är en medföljande YAML-fil som levereras med Beatrax. När du skickar in ett förslag öppnas GitHub i din webbläsare och beskrivningen följer med; inget annat lämnar den här enheten.',
 
     'card' => [
         'seen_times' => 'Sedd :count gång|Sedd :count gånger',

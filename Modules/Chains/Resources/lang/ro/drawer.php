@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Lanț pentru :name',
     'heading' => 'Lanț',
 
-    'unresolved_heading' => 'Lanțul nu este încă rezolvat',
-    'unresolved_body' => 'Rezolvatorul de lanțuri încă rulează. Deschide coada de verificare sau reîmprospătează peste câteva momente.',
+    'unresolved_heading' => 'Nicio tranzacție selectată',
+    'unresolved_body' => 'Alege un rând din lista de tranzacții ca să vezi din ce a fost plătit.',
 
     'none_heading' => 'Niciun lanț de finanțare găsit',
     'none_body' => 'Această tranzacție nu are un lanț de finanțare detectat. Dacă te așteptai la unul, trimite un candidat din coada de verificare.',

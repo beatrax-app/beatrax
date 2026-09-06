@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Modificările așteaptă, criptate, pe releul tău până când celălalt dispozitiv revine online. Acest dispozitiv le preia data următoare când atingi :action.',
     'no_relay_title' => 'Când ești plecat',
     'no_relay_body' => 'Modificările așteaptă pe acest dispozitiv până când ambele sunt împreună în rețeaua ta de acasă și atingi :action aici.',
-    'encrypted_title' => 'Doar dispozitivele tale îl pot citi',
-    'encrypted_body' => 'Totul este criptat înainte să părăsească un dispozitiv, iar cheile le au doar dispozitivele tale împerecheate.',
+    'encrypted_title' => 'Sigilat între dispozitivele tale',
+    'encrypted_body' => 'Tot ce trece între dispozitivele tale este criptat, iar cheile le au doar dispozitivele tale împerecheate. Un releu poate vedea care dintre dispozitivele tale vorbește cu care și când — niciodată ce își spun.',
     'continue' => 'Începe să folosești Beatrax',
     'peer_fallback' => 'celălalt dispozitiv al tău',
 ];

@@ -23,6 +23,6 @@ return [
     'select_category' => 'Välj kategori',
     'help_others' => '❋ Hjälp andra att känna igen den här',
 
-    'shortcuts' => '1–9 tilldela toppkategorier · ↑/↓ flytta · Enter spara · / sök · Esc rensa',
+    'shortcuts' => '1–9 tilldela toppkategorier · ↑/↓ flytta · Enter spara · Esc rensa',
     'load_more' => 'Ladda fler',
 ];

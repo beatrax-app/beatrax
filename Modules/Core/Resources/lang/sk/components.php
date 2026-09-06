@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Zamietnuť',
         'install_app' => 'Nainštalovať aplikáciu',
 
-        'desktop_html' => 'Otvor Beatrax v prehliadači svojho telefónu a ťukni na „Pridať na plochu“ — alebo ťukni na ikonu <strong style="color: var(--color-text);">⚡</strong> v ponuke zdieľania Safari.',
+        'desktop_html' => 'Otvor Beatrax v prehliadači svojho telefónu a vyber <strong style="color: var(--color-text);">Pridať na plochu</strong> v ponuke zdieľania.',
     ],
 
     'topbar' => [

@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Bruker regler på nytt… :checked av :count transaksjon kontrollert|Bruker regler på nytt… :checked av :count transaksjoner kontrollert',
 
     'empty_heading' => 'Ingen regler ennå',
-    'empty_body' => 'Regler matcher transaksjoner på flere betingelser og gjør endringer av kategori, motpart, notat og skattemerke automatisk — ved import og hver gang du bruker dem på den eksisterende historikken din på nytt.',
+    'empty_body' => 'Regler matcher transaksjoner på flere betingelser og gjør endringer av kategori, motpart og notat automatisk ved import. Endring av skattemerke skjer når du bruker reglene på den eksisterende historikken din på nytt.',
     'empty_cta' => 'Opprett din første regel',
 
     'col_priority' => 'Prioritet',

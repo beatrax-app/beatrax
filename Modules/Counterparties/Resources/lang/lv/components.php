@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Privātuma paziņojums par privātu kontaktu',
-        'body' => '🔒 Šis ir privāts kontakts. IBAN un personas dati pēc noklusējuma ir paslēpti un nekad netiek iekļauti eksportos.',
+        'body' => '🔒 Šis ir privāts kontakts. IBAN paliek paslēpts, līdz to parādāt, un eksportos tas nenonāk. Vārds joprojām redzams visur, kur redzami šī kontakta darījumi.',
     ],
 
     'self_stub' => [

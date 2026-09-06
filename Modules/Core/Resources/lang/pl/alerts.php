@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Alerty systemowe',
 
     'actions' => [
-        'install_next_launch' => 'Zainstaluj przy następnym uruchomieniu',
-        'install_next_launch_aria' => 'Zainstaluj przy następnym uruchomieniu — oznacza alert systemowy #:id jako rozwiązany',
+        'download_and_install' => 'Pobierz i zainstaluj',
+        'download_and_install_aria' => 'Pobierz i zainstaluj — oznacza alert systemowy #:id jako rozwiązany',
         'skip_version' => 'Pomiń tę wersję',
         'release_notes' => 'Informacje o wydaniu →',
         'update_now' => 'Zaktualizuj teraz',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Dostępna aktualizacja — Beatrax :version jest gotowy. Zainstaluje się przy następnym uruchomieniu.',
+        'update_available' => 'Dostępna aktualizacja — Beatrax :version. Nic nie zostanie pobrane, dopóki nie zdecydujesz się zainstalować; Beatrax zamknie się wtedy i otworzy ponownie w nowej wersji.',
         'update_stale' => 'Używasz wersji :current — wersja :latest jest dostępna od 30 dni. Zaktualizuj teraz.',
         'update_critical' => 'Dostępna krytyczna aktualizacja — wersja :version naprawia: :summary. Zainstaluj jak najszybciej.',
         'backup_corrupt_with_path' => 'Kopia zapasowa zapisana :timestamp nie przeszła kontroli integralności. Sprawdź :path. Rozwiąż to, zanim zaczniesz polegać na kopiach zapasowych.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Twój PIN nie może odblokować aplikacji na tym urządzeniu: zapisany klucz jest nieczytelny. Zaloguj się hasłem do konta, aby ustawić nowy PIN.',
         'sync_gdk_rewrap_failed' => 'Ponowne opakowanie pęku kluczy GDK nie powiodło się po zmianie hasła blokady aplikacji — zaszyfrowane dane mogą być nie do odzyskania, dopóki pęk nie zostanie opakowany ponownie.',
         'worker_crashed' => 'Przetwarzanie w tle w Beatraxie nieoczekiwanie się zatrzymało. Importy i skanowanie poczty są wstrzymane. Otwórz aplikację ponownie, aby je uruchomić.',
-        'auth_lock_key_material_stranded' => 'Szyfrowanie w spoczynku jest aktywne dla tego konta, ale żadne opakowanie blokady aplikacji nie przechowuje już klucza danych, więc każda zaszyfrowana notatka, opis i dane kontrahenta odczytują się jako puste. Jedyną drogą powrotu jest sparowanie z urządzeniem, które wciąż ma klucz.',
+        'auth_lock_key_material_stranded' => 'Szyfrowanie w spoczynku jest aktywne dla tego konta, ale żadne opakowanie blokady aplikacji nie przechowuje już klucza danych, więc każda zaszyfrowana notatka, opis i dane kontrahenta odczytują się jako puste. Przywróć zaszyfrowaną kopię zapasową zrobioną, gdy klucz jeszcze działał, albo skonfiguruj to konto od nowa na urządzeniu, które wciąż go ma.',
         'auth_lock_recovery_wrap_stale' => 'Hasło konta zmieniono bez ponownego opakowania odzyskiwania blokady aplikacji, więc to hasło nie otwiera już blokady. PIN nadal ją otwiera. Ponownie powiąż hasło konta w ustawieniach blokady, póki PIN jest jeszcze znany — inaczej za zapomnianym PIN-em nie zostanie nic.',
         'reconnect_link' => 'Połącz ponownie →',
         'pots_category_link_retired' => 'Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanej skarbonki znów jest nieprzydzielona i czeka, aż ją przypiszesz.|Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanych skarbonek znów jest nieprzydzielona i czeka, aż ją przypiszesz.|Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanych skarbonek znów jest nieprzydzielona i czeka, aż ją przypiszesz.',

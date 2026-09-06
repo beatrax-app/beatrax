@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Behold applås',
 
     'forgot_modal_heading' => 'Nulstil PIN-kode — bekræft med kontoadgangskode',
-    'forgot_modal_body' => 'Din kontoadgangskode gendanner låsenøglen, så du aldrig mister data, når du nulstiller PIN-koden.',
+    'forgot_modal_body' => 'Din kontoadgangskode gendanner låsenøglen, så du ikke mister data, når du nulstiller PIN-koden — så længe den adgangskode stadig åbner låsen. En adgangskode, der er nulstillet med en gendannelseskode eller sat for dig af kontoejeren, gør det ikke længere.',
     'confirm_new_pin_label' => 'Bekræft ny PIN-kode',
     'reset_pin' => 'Nulstil PIN-kode',
     'cancel' => 'Annullér',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Nulstilling af PIN-koden mislykkedes — gendannelsesnøglen er ikke tilgængelig.',
     'error_enable_first' => 'Slå PIN-låsen til, før du registrerer biometri.',
     'error_disable_blocked_by_encryption' => 'Dine noter og modpartsoplysninger er krypteret med den nøgle, denne app-lås holder, så at slå låsen fra ville gøre dem ulæselige. Låsen bliver på — skift din PIN-kode i stedet.',
-    'error_key_material_lost' => 'Denne enhed har ikke længere nøglen, der åbner dine krypterede data, så en ny PIN-kode gør dem ikke læselige igen. Par denne enhed med en, der stadig har nøglen, for at gendanne dem.',
+    'error_key_material_lost' => 'Denne enhed har ikke længere nøglen, der åbner dine krypterede data, så en ny PIN-kode gør dem ikke læselige igen. Gendan en krypteret sikkerhedskopi, der blev lavet, mens nøglen stadig virkede — denne enhed kan ikke parre sig tilbage, for parring kræver den applås, som nøglen åbner.',
     'error_recovery_wrap_stale' => 'Din kontoadgangskode åbner ikke længere denne applås — den blev ændret, efter låsen blev sat op. Din PIN-kode virker stadig, men der er intet bag den, hvis du glemmer den. Tilknyt din kontoadgangskode igen nu.',
     'relink_recovery' => 'Tilknyt kontoadgangskode igen',
     'relink_modal_heading' => 'Tilknyt kontoadgangskode igen — bekræft med PIN-kode',

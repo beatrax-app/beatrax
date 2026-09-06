@@ -20,7 +20,7 @@ return [
     'reapply_progress' => 'Piemēro noteikumus… :checked no :count darījumiem pārbaudīti|Piemēro noteikumus… :checked no :count darījuma pārbaudīts|Piemēro noteikumus… :checked no :count darījumiem pārbaudīti',
 
     'empty_heading' => 'Vēl nav neviena noteikuma',
-    'empty_body' => 'Noteikumi atlasa darījumus pēc vairākiem nosacījumiem un automātiski maina kategoriju, darījuma partneri, piezīmi un nodokļu atzīmi — importa laikā un ikreiz, kad tos piemēro esošajai vēsturei.',
+    'empty_body' => 'Noteikumi atlasa darījumus pēc vairākiem nosacījumiem un importa laikā automātiski maina kategoriju, darījuma partneri un piezīmi. Nodokļu atzīme mainās tad, kad noteikumus atkārtoti piemēro esošajai vēsturei.',
     'empty_cta' => 'Izveidojiet pirmo noteikumu',
 
     'col_priority' => 'Prioritāte',

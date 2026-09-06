@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Adatvédelmi tájékoztatás magánszemély kapcsolathoz',
-        'body' => '🔒 Ez egy magánszemély kapcsolat. Az IBAN és a személyes adatok alapértelmezés szerint rejtve vannak, és exportáláskor soha nem kerülnek megosztásra.',
+        'body' => '🔒 Ez egy magánszemély kapcsolat. Az IBAN rejtve marad, amíg meg nem jeleníted, és az exportokból is kimarad. A neve ott továbbra is látszik, ahol a tranzakciói is.',
     ],
 
     'self_stub' => [

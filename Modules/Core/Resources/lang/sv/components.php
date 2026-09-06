@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Stäng',
         'install_app' => 'Installera appen',
 
-        'desktop_html' => 'Öppna Beatrax i mobilens webbläsare och tryck på "Lägg till på hemskärmen" — eller tryck på ikonen <strong style="color: var(--color-text);">⚡</strong> i Safaris delningsmeny.',
+        'desktop_html' => 'Öppna Beatrax i mobilens webbläsare och välj <strong style="color: var(--color-text);">Lägg till på hemskärmen</strong> i delningsmenyn.',
     ],
 
     'topbar' => [

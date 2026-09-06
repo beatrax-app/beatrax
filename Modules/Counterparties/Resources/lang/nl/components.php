@@ -65,7 +65,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Privacymelding voor persoonlijk contact',
-        'body' => '🔒 Dit is een persoonlijk contact. IBAN en persoonlijke gegevens zijn standaard verborgen en worden nooit gedeeld in exports.',
+        'body' => '🔒 Dit is een persoonlijk contact. Het IBAN blijft verborgen tot je het toont en blijft buiten exports. De naam verschijnt nog wel overal waar de transacties van dit contact staan.',
     ],
 
     'self_stub' => [

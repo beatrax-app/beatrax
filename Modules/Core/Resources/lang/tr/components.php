@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Kapat',
         'install_app' => 'Uygulamayı yükle',
 
-        'desktop_html' => 'Beatrax uygulamasını telefonunun tarayıcısında aç ve "Ana Ekrana Ekle" seçeneğine dokun — ya da Safari paylaşım menüsündeki <strong style="color: var(--color-text);">⚡</strong> simgesine dokun.',
+        'desktop_html' => 'Beatrax uygulamasını telefonunun tarayıcısında aç ve paylaşım menüsünden <strong style="color: var(--color-text);">Ana Ekrana Ekle</strong> seçeneğini seç.',
     ],
 
     'topbar' => [

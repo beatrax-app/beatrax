@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Kde jsou moje data?',
-    'intro' => 'Beatrax ukládá všechno na tomto zařízení. Neexistuje žádný server Beatraxu ani účet v cloudu. Ven jde jen to, k čemu si ho připojíš — poštovní schránka, banka přes Enable Banking, zařízení, která spáruješ pro synchronizaci — a k tomu denní dotaz na směnné kurzy. Každé připojení to říká na obrazovce, kde ho zapínáš.',
+    'intro' => 'Beatrax ukládá všechno na tomto zařízení. Neexistuje žádný server Beatraxu ani účet v cloudu. Sám od sebe odchází jediný požadavek — kontrola nové verze, kterou můžeš vypnout. Všechno ostatní čeká na tebe: poštovní schránka, banka přes Enable Banking, denní dotaz na směnné kurzy, zařízení, která spáruješ pro synchronizaci, relay, který si nastavíš, a každý odkaz, na který klikneš. Každé z nich to říká na obrazovce, kde ho zapínáš.',
 
     'lives_here' => 'Tvoje data jsou tady',
     'copy' => 'Kopírovat',

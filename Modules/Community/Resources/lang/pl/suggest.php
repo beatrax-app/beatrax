@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Zaproponuj mapowanie',
-    'intro' => 'Otwiera GitHub w przeglądarce, aby zgłosić propozycję jako szkic PR. Twoje imię i adres e-mail nigdy nie opuszczają tego urządzenia.',
+    'intro' => 'Otwiera GitHub w przeglądarce z wypełnioną propozycją. Idą z nią tylko wzorzec, nazwa, kategoria i region powyżej — a wzorzec to opis w takiej postaci, w jakiej zapisał go Twój wyciąg. Twoje imię i adres e-mail nigdy nie opuszczają tego urządzenia.',
 
     'pattern' => 'Wzorzec',
     'name' => 'Czytelna nazwa',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Podgląd YAML',
 
     'cancel' => 'Anuluj',
-    'submit' => 'Zgłoś jako szkic PR',
+    'submit' => 'Otwórz na GitHubie',
 
     'toast' => 'Propozycja otwarta w przeglądarce.',
 

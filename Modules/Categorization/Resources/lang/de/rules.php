@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Regeln werden erneut angewendet… :checked von :count Transaktion geprüft|Regeln werden erneut angewendet… :checked von :count Transaktionen geprüft',
 
     'empty_heading' => 'Noch keine Regeln',
-    'empty_body' => 'Regeln prüfen Transaktionen anhand mehrerer Bedingungen und übernehmen Änderungen an Kategorie, Zahlungspartner, Notiz und Steuer-Markierung automatisch — beim Import und jedes Mal, wenn du sie erneut auf deinen bestehenden Verlauf anwendest.',
+    'empty_body' => 'Regeln prüfen Transaktionen anhand mehrerer Bedingungen und übernehmen Änderungen an Kategorie, Zahlungspartner und Notiz automatisch beim Import. Eine geänderte Steuer-Markierung greift, wenn du die Regeln erneut auf deinen bestehenden Verlauf anwendest.',
     'empty_cta' => 'Erste Regel erstellen',
 
     'col_priority' => 'Priorität',

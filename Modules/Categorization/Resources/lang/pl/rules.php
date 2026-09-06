@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Ponowne stosowanie reguł… :checked z :count sprawdzonej transakcji|Ponowne stosowanie reguł… :checked z :count sprawdzonych transakcji|Ponowne stosowanie reguł… :checked z :count sprawdzonych transakcji',
 
     'empty_heading' => 'Brak reguł',
-    'empty_body' => 'Reguły dopasowują transakcje na podstawie wielu warunków i automatycznie zmieniają kategorię, kontrahenta, notatkę oraz znacznik podatkowy — podczas importu i przy każdym ponownym zastosowaniu do istniejącej historii.',
+    'empty_body' => 'Reguły dopasowują transakcje na podstawie wielu warunków i automatycznie zmieniają kategorię, kontrahenta i notatkę podczas importu. Zmiana znacznika podatkowego pojawia się dopiero wtedy, gdy zastosujesz reguły ponownie do istniejącej historii.',
     'empty_cta' => 'Utwórz pierwszą regułę',
 
     'col_priority' => 'Priorytet',

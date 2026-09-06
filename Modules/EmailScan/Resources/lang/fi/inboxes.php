@@ -63,8 +63,8 @@ return [
     'add_another' => 'Lisää toinen postilaatikko',
     'gmail_card_body' => 'Yhdistä Gmail-tili, jotta Beatrax voi skannata siitä kuitteja.',
     'microsoft_card_body' => 'Yhdistä Microsoft 365- tai Outlook.com-tili, jotta Beatrax voi skannata siitä kuitteja.',
-    'gmail_card_body_phone' => 'Gmailin skannaa työpöytäsovellus. Tänne yhdistettyä tiliä ei skannata koskaan itsestään.',
-    'microsoft_card_body_phone' => 'Microsoft 365- ja Outlook.com-tilit skannaa työpöytäsovellus. Tänne yhdistetty tili ei skannaudu koskaan itsestään.',
+    'gmail_card_body_phone' => 'Gmailin skannaa työpöytäsovellus. Yhdistä se siellä — tämä puhelin näyttää, mitä se löytää.',
+    'microsoft_card_body_phone' => 'Microsoft 365- ja Outlook.com-tilit skannaa työpöytäsovellus. Yhdistä ne siellä — tämä puhelin näyttää, mitä se löytää.',
 
     'discovered_heading' => 'Löydetyt lähettäjät',
 

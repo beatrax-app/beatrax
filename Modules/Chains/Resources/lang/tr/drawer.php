@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Zincir: :name',
     'heading' => 'Zincir',
 
-    'unresolved_heading' => 'Zincir henüz çözülmedi',
-    'unresolved_body' => 'Zincir çözümleyici hâlâ çalışıyor. İnceleme kuyruğunu aç veya birazdan sayfayı yenile.',
+    'unresolved_heading' => 'Hiçbir işlem seçilmedi',
+    'unresolved_body' => 'Neyin ödediğini görmek için işlemler listesinden bir satır seç.',
 
     'none_heading' => 'Finansman zinciri bulunamadı',
     'none_body' => 'Bu işlem için finansman zinciri tespit edilmedi. Bir zincir bekliyorduysan inceleme kuyruğundan aday gönder.',

@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Zadrži zaključavanje',
 
     'forgot_modal_heading' => 'Resetuj PIN — potvrdi lozinkom naloga',
-    'forgot_modal_body' => 'Lozinka tvog naloga vraća ključ zaključavanja, pa resetovanje PIN-a nikad ne gubi podatke.',
+    'forgot_modal_body' => 'Lozinka tvog naloga vraća ključ zaključavanja, pa resetovanje PIN-a ne gubi podatke — dok god ta lozinka i dalje otvara zaključavanje. Lozinka resetovana kodom za oporavak ili ona koju ti je postavio vlasnik naloga više ga ne otvara.',
     'confirm_new_pin_label' => 'Potvrdi novi PIN',
     'reset_pin' => 'Resetuj PIN',
     'cancel' => 'Otkaži',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Resetovanje PIN-a nije uspelo — ključ za oporavak nije dostupan.',
     'error_enable_first' => 'Pre upisa biometrije uključi zaključavanje PIN-om.',
     'error_disable_blocked_by_encryption' => 'Tvoje beleške i podaci o drugim stranama šifrovani su ključem koji čuva ovo zaključavanje aplikacije, pa bi njegovo isključivanje ostavilo te podatke nečitljivima. Zaključavanje ostaje uključeno — umesto toga promeni PIN.',
-    'error_key_material_lost' => 'Ovaj uređaj više ne čuva ključ koji otvara tvoje šifrovane podatke, pa ih nov PIN neće ponovo učiniti čitljivima. Upari ovaj uređaj sa onim koji još ima ključ da ih vratiš.',
+    'error_key_material_lost' => 'Ovaj uređaj više ne čuva ključ koji otvara tvoje šifrovane podatke, pa ih nov PIN neće ponovo učiniti čitljivima. Vrati šifrovanu rezervnu kopiju napravljenu dok je ključ još radio — uparivanjem se ovaj uređaj ne može vratiti, jer uparivanje traži upravo ono zaključavanje aplikacije koje taj ključ otvara.',
     'error_recovery_wrap_stale' => 'Lozinka naloga više ne otvara ovo zaključavanje aplikacije — promenjena je nakon što je zaključavanje podešeno. PIN i dalje radi, ali iza njega ne ostaje ništa ako ga zaboraviš. Ponovo poveži lozinku naloga sada.',
     'relink_recovery' => 'Ponovo poveži lozinku naloga',
     'relink_modal_heading' => 'Ponovo poveži lozinku naloga — potvrdi PIN-om',

@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Szabályok újraalkalmazása… :checked / :count tranzakció ellenőrizve|Szabályok újraalkalmazása… :checked / :count tranzakció ellenőrizve',
 
     'empty_heading' => 'Még nincsenek szabályok',
-    'empty_body' => 'A szabályok több feltétel alapján illeszkednek a tranzakciókra, és automatikusan alkalmazzák a kategória-, partner-, megjegyzés- és adócímke-változtatásokat — importáláskor, és bármikor, amikor újraalkalmazod őket a meglévő előzményeidre.',
+    'empty_body' => 'A szabályok több feltétel alapján illeszkednek a tranzakciókra, és importáláskor automatikusan alkalmazzák a kategória-, partner- és megjegyzésváltoztatásokat. Az adócímke akkor változik, amikor újraalkalmazod a szabályokat a meglévő előzményeidre.',
     'empty_cta' => 'Hozd létre az első szabályodat',
 
     'col_priority' => 'Prioritás',

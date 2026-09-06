@@ -63,8 +63,8 @@ return [
     'add_another' => 'Tilføj endnu en indbakke',
     'gmail_card_body' => 'Forbind en Gmail-konto, så Beatrax kan scanne den for kvitteringer.',
     'microsoft_card_body' => 'Forbind en Microsoft 365- eller Outlook.com-konto, så Beatrax kan scanne den for kvitteringer.',
-    'gmail_card_body_phone' => 'Gmail scannes af computerappen. En konto, du forbinder her, bliver aldrig scannet af sig selv.',
-    'microsoft_card_body_phone' => 'Microsoft 365 og Outlook.com scannes af computerappen. En konto, du forbinder her, bliver aldrig scannet af sig selv.',
+    'gmail_card_body_phone' => 'Gmail scannes af computerappen. Forbind den der — denne telefon viser, hvad den finder.',
+    'microsoft_card_body_phone' => 'Microsoft 365 og Outlook.com scannes af computerappen. Forbind dem der — denne telefon viser, hvad den finder.',
 
     'discovered_heading' => 'Fundne afsendere',
 

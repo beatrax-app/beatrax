@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Änderungen warten verschlüsselt auf deinem Relay, bis das andere Gerät wieder online ist. Dieses Gerät holt sie ab, sobald du das nächste Mal auf :action tippst.',
     'no_relay_title' => 'Wenn du unterwegs bist',
     'no_relay_body' => 'Änderungen warten auf diesem Gerät, bis beide gemeinsam in deinem Heimnetz sind und du hier auf :action tippst.',
-    'encrypted_title' => 'Nur deine Geräte können es lesen',
-    'encrypted_body' => 'Alles wird verschlüsselt, bevor es ein Gerät verlässt, und nur deine gekoppelten Geräte haben die Schlüssel.',
+    'encrypted_title' => 'Versiegelt zwischen deinen Geräten',
+    'encrypted_body' => 'Alles, was zwischen deinen Geräten unterwegs ist, ist verschlüsselt, und nur deine gekoppelten Geräte haben die Schlüssel. Ein Relay sieht, welches deiner Geräte mit welchem spricht und wann — nie, was sie sagen.',
     'continue' => 'Beatrax nutzen',
     'peer_fallback' => 'deinem anderen Gerät',
 ];

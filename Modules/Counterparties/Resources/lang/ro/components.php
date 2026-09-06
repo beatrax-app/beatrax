@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Notificare de confidențialitate pentru contact personal',
-        'body' => '🔒 Acesta este un contact personal. IBAN-ul și datele personale sunt ascunse implicit și nu sunt niciodată incluse în exporturi.',
+        'body' => '🔒 Acesta este un contact personal. IBAN-ul rămâne ascuns până îl dezvălui și nu ajunge în exporturi. Numele apare în continuare oriunde apar tranzacțiile acestui contact.',
     ],
 
     'self_stub' => [

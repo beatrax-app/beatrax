@@ -65,7 +65,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Privacy notice for personal contact',
-        'body' => '🔒 This is a personal contact. IBAN and personal details are hidden by default and never shared in exports.',
+        'body' => '🔒 This is a personal contact. The IBAN is hidden until you reveal it, and it stays out of exports. Their name still appears wherever their transactions do.',
     ],
 
     'self_stub' => [

@@ -23,6 +23,6 @@ return [
     'select_category' => 'Izvēlieties kategoriju',
     'help_others' => '❋ Palīdziet citiem to atpazīt',
 
-    'shortcuts' => '1–9 piešķir biežākās kategorijas · ↑/↓ pārvietoties · Enter saglabāt · / meklēt · Esc notīrīt',
+    'shortcuts' => '1–9 piešķir biežākās kategorijas · ↑/↓ pārvietoties · Enter saglabāt · Esc notīrīt',
     'load_more' => 'Ielādēt vairāk',
 ];

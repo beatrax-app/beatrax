@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Navrhnout přiřazení',
-    'intro' => 'Otevře GitHub v prohlížeči, abys mohl návrh poslat jako koncept PR. Tvé jméno ani e-mail toto zařízení nikdy neopustí.',
+    'intro' => 'Otevře GitHub v prohlížeči s předvyplněným návrhem. Odejde s ním jen vzor, název, kategorie a region uvedené výše — a vzor je popis přesně tak, jak ho zapsal tvůj výpis. Tvé jméno ani e-mail toto zařízení nikdy neopustí.',
 
     'pattern' => 'Vzor',
     'name' => 'Srozumitelný název',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Náhled YAML',
 
     'cancel' => 'Zrušit',
-    'submit' => 'Odeslat jako koncept PR',
+    'submit' => 'Otevřít na GitHubu',
 
     'toast' => 'Návrh se otevřel v prohlížeči.',
 

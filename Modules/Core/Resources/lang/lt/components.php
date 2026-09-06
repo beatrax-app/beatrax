@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Slėpti',
         'install_app' => 'Įdiegti programėlę',
 
-        'desktop_html' => 'Atverk Beatrax telefono naršyklėje ir paliesk „Pridėti į pradžios ekraną“ — arba Safari bendrinimo lange paliesk <strong style="color: var(--color-text);">⚡</strong> piktogramą.',
+        'desktop_html' => 'Atverk Beatrax telefono naršyklėje ir bendrinimo meniu pasirink <strong style="color: var(--color-text);">Pridėti į pradžios ekraną</strong>.',
     ],
 
     'topbar' => [

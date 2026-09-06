@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Sugerează o mapare',
-    'intro' => 'Deschide GitHub în browser ca să poți trimite sugestia sub formă de PR ciornă. Numele și adresa ta de e-mail nu părăsesc niciodată acest dispozitiv.',
+    'intro' => 'Deschide GitHub în browser cu sugestia deja completată. Merg cu ea doar tiparul, numele, categoria și regiunea de mai sus — iar tiparul este descrierea așa cum a scris-o extrasul tău. Numele și adresa ta de e-mail nu părăsesc niciodată acest dispozitiv.',
 
     'pattern' => 'Tipar',
     'name' => 'Nume prietenos',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Previzualizare YAML',
 
     'cancel' => 'Anulează',
-    'submit' => 'Trimite ca PR ciornă',
+    'submit' => 'Deschide pe GitHub',
 
     'toast' => 'Sugestia s-a deschis în browser.',
 

@@ -52,7 +52,7 @@ return [
     'keep_lock' => 'Jäta lukk alles',
 
     'forgot_modal_heading' => 'Lähtesta PIN-kood — kinnita konto parooliga',
-    'forgot_modal_body' => 'Sinu konto parool taastab luku võtme, seega PIN-koodi lähtestamine ei kaota kunagi andmeid.',
+    'forgot_modal_body' => 'Sinu konto parool taastab luku võtme, seega PIN-koodi lähtestamine ei kaota andmeid — seni kuni see parool luku veel avab. Taastekoodiga lähtestatud või konto omaniku poolt sinu eest määratud parool seda enam ei ava.',
     'confirm_new_pin_label' => 'Kinnita uus PIN-kood',
     'reset_pin' => 'Lähtesta PIN-kood',
     'cancel' => 'Tühista',
@@ -71,7 +71,7 @@ return [
     'error_forgot_failed' => 'PIN-koodi lähtestamine ebaõnnestus — taastevõti pole saadaval.',
     'error_enable_first' => 'Enne biomeetria registreerimist lülita PIN-lukk sisse.',
     'error_disable_blocked_by_encryption' => 'Sinu märkmed ja vastaspoolte andmed on krüpteeritud võtmega, mida see rakenduse lukk hoiab, seega luku väljalülitamine muudaks need loetamatuks. Lukk jääb sisse — muuda selle asemel oma PIN-koodi.',
-    'error_key_material_lost' => 'See seade ei hoia enam võtit, mis su krüpteeritud andmed avab, seega uus PIN-kood ei tee neid uuesti loetavaks. Seo see seade seadmega, millel on võti veel alles, et need taastada.',
+    'error_key_material_lost' => 'See seade ei hoia enam võtit, mis su krüpteeritud andmed avab, seega uus PIN-kood ei tee neid uuesti loetavaks. Taasta krüpteeritud varukoopia, mis tehti ajal, mil võti veel töötas — sidumine siit tagasi ei too, sest sidumine vajab rakenduse lukku, mille see võti avab.',
     'error_recovery_wrap_stale' => 'Sinu konto parool ei ava enam seda rakenduse lukku — see vahetati pärast luku seadistamist. PIN-kood töötab veel, aga selle taga pole enam midagi, kui selle unustad. Seo konto parool nüüd uuesti.',
     'relink_recovery' => 'Seo konto parool uuesti',
     'relink_modal_heading' => 'Seo konto parool uuesti — kinnita PIN-koodiga',

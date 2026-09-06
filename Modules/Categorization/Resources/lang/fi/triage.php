@@ -23,6 +23,6 @@ return [
     'select_category' => 'Valitse kategoria',
     'help_others' => '❋ Auta muita tunnistamaan tämä',
 
-    'shortcuts' => '1–9 määritä yleisimmät kategoriat · ↑/↓ siirry · Enter tallenna · / hae · Esc tyhjennä',
+    'shortcuts' => '1–9 määritä yleisimmät kategoriat · ↑/↓ siirry · Enter tallenna · Esc tyhjennä',
     'load_more' => 'Lataa lisää',
 ];

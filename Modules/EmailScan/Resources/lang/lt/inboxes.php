@@ -63,8 +63,8 @@ return [
     'add_another' => 'Pridėti kitą pašto dėžutę',
     'gmail_card_body' => 'Prijunk Gmail paskyrą, kad Beatrax galėtų joje ieškoti kvitų.',
     'microsoft_card_body' => 'Prijunk Microsoft 365 arba Outlook.com paskyrą, kad Beatrax galėtų joje ieškoti kvitų.',
-    'gmail_card_body_phone' => 'Gmail skenuoja kompiuterio programa. Čia prijungta paskyra niekada nėra skenuojama savaime.',
-    'microsoft_card_body_phone' => 'Microsoft 365 ir Outlook.com skenuoja kompiuterio programa. Čia prijungta paskyra niekada nėra skenuojama savaime.',
+    'gmail_card_body_phone' => 'Gmail skenuoja kompiuterio programa. Prijunk jį ten — šiame telefone matysi, ką ji randa.',
+    'microsoft_card_body_phone' => 'Microsoft 365 ir Outlook.com skenuoja kompiuterio programa. Prijunk juos ten — šiame telefone matysi, ką ji randa.',
 
     'discovered_heading' => 'Aptikti siuntėjai',
 

@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Alertas del sistema',
 
     'actions' => [
-        'install_next_launch' => 'Instalar en el próximo inicio',
-        'install_next_launch_aria' => 'Instalar en el próximo inicio — marca la alerta del sistema n.º :id como resuelta',
+        'download_and_install' => 'Descargar e instalar',
+        'download_and_install_aria' => 'Descargar e instalar — marca la alerta del sistema n.º :id como resuelta',
         'skip_version' => 'Omitir esta versión',
         'release_notes' => 'Notas de la versión →',
         'update_now' => 'Actualizar ahora',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Actualización disponible — Beatrax :version está lista. Se instalará en el próximo inicio.',
+        'update_available' => 'Actualización disponible — Beatrax :version. No se descarga nada hasta que elijas instalarla; después Beatrax se cierra y se vuelve a abrir en la versión nueva.',
         'update_stale' => 'Tienes la versión :current — la versión :latest lleva 30 días disponible. Actualiza ahora.',
         'update_critical' => 'Actualización crítica disponible — la versión :version corrige :summary. Instálala cuanto antes.',
         'backup_corrupt_with_path' => 'La copia de seguridad escrita el :timestamp no ha superado la comprobación de integridad. Revisa :path. Resuélvelo antes de confiar en las copias de seguridad.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Tu PIN no puede abrir el bloqueo de la aplicación en este dispositivo: la clave guardada no se puede leer. Inicia sesión con la contraseña de tu cuenta para establecer un PIN nuevo.',
         'sync_gdk_rewrap_failed' => 'Ha fallado el reempaquetado del llavero GDK tras cambiar la frase de contraseña del bloqueo de la aplicación: los datos cifrados podrían ser irrecuperables hasta que se reempaquete el llavero.',
         'worker_crashed' => 'El procesamiento en segundo plano de Beatrax se detuvo inesperadamente. Las importaciones y los análisis de correo están en pausa. Vuelve a abrir la aplicación para reiniciarlo.',
-        'auth_lock_key_material_stranded' => 'El cifrado en reposo está activo para esta cuenta, pero ninguna envoltura del bloqueo de la aplicación conserva ya la clave de datos, por lo que cada nota, descripción y dato de contraparte cifrado se lee como vacío. Emparejar con un dispositivo que aún tenga la clave es la única vuelta atrás.',
+        'auth_lock_key_material_stranded' => 'El cifrado en reposo está activo para esta cuenta, pero ninguna envoltura del bloqueo de la aplicación conserva ya la clave de datos, por lo que cada nota, descripción y dato de contraparte cifrado se lee como vacío. Restaura una copia de seguridad cifrada hecha mientras la clave aún funcionaba, o vuelve a configurar esta cuenta en un dispositivo que todavía la tenga.',
         'auth_lock_recovery_wrap_stale' => 'La contraseña de la cuenta cambió sin que se reempaquetara la envoltura de recuperación del bloqueo de la aplicación, así que esa contraseña ya no abre el bloqueo. El PIN sí. Vuelve a vincular la contraseña de la cuenta desde los ajustes del bloqueo mientras aún conozcas el PIN; de lo contrario, un PIN olvidado no deja nada detrás.',
         'reconnect_link' => 'Volver a conectar →',
         'pots_category_link_retired' => 'El presupuesto por sobres ha sustituido a las huchas vinculadas a una categoría. :amount de :count hucha archivada vuelve a estar sin asignar y espera a que lo asignes.|El presupuesto por sobres ha sustituido a las huchas vinculadas a una categoría. :amount de :count huchas archivadas vuelve a estar sin asignar y espera a que lo asignes.',

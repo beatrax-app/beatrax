@@ -63,8 +63,8 @@ return [
     'add_another' => 'Dodaj još jedno prijemno sanduče',
     'gmail_card_body' => 'Poveži Gmail nalog da bi Beatrax mogao da ga skenira u potrazi za potvrdama.',
     'microsoft_card_body' => 'Poveži Microsoft 365 ili Outlook.com nalog da bi Beatrax mogao da ga skenira u potrazi za potvrdama.',
-    'gmail_card_body_phone' => 'Gmail skenira aplikacija za računar. Nalog povezan ovde nikada se ne skenira sam od sebe.',
-    'microsoft_card_body_phone' => 'Microsoft 365 i Outlook.com skenira aplikacija za računar. Nalog povezan ovde nikada se ne skenira sam od sebe.',
+    'gmail_card_body_phone' => 'Gmail skenira aplikacija za računar. Poveži ga tamo — ovaj telefon prikazuje šta ona pronađe.',
+    'microsoft_card_body_phone' => 'Microsoft 365 i Outlook.com skenira aplikacija za računar. Poveži ih tamo — ovaj telefon prikazuje šta ona pronađe.',
 
     'discovered_heading' => 'Otkriveni pošiljaoci',
 

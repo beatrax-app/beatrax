@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Paku seost',
-    'intro' => 'Avab brauseris GitHubi, et saaksid ettepaneku esitada mustandina pull request’ina. Sinu nimi ja e-posti aadress ei lahku sellest seadmest.',
+    'intro' => 'Avab brauseris GitHubi, kus ettepanek on juba täidetud. Kaasa lähevad ainult ülal olev muster, nimi, kategooria ja piirkond — ja muster on kirjeldus täpselt nii, nagu su väljavõte selle kirjutas. Sinu nimi ja e-posti aadress ei lahku sellest seadmest.',
 
     'pattern' => 'Muster',
     'name' => 'Arusaadav nimi',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML-i eelvaade',
 
     'cancel' => 'Tühista',
-    'submit' => 'Esita mustandina',
+    'submit' => 'Ava GitHubis',
 
     'toast' => 'Ettepanek avanes sinu brauseris.',
 

@@ -19,7 +19,7 @@ return [
     'reapply_progress' => 'Regels opnieuw toepassen… :checked van :count transactie gecontroleerd|Regels opnieuw toepassen… :checked van :count transacties gecontroleerd',
 
     'empty_heading' => 'Nog geen regels',
-    'empty_body' => 'Regels vergelijken transacties op meerdere voorwaarden en passen automatisch categorie-, tegenpartij-, notitie- en belastinglabelwijzigingen toe — bij het importeren, en telkens wanneer je ze opnieuw op je bestaande geschiedenis toepast.',
+    'empty_body' => 'Regels vergelijken transacties op meerdere voorwaarden en passen categorie-, tegenpartij- en notitiewijzigingen automatisch toe bij het importeren. Een wijziging van het belastinglabel komt pas aan wanneer je de regels opnieuw op je bestaande geschiedenis toepast.',
     'empty_cta' => 'Maak je eerste regel',
 
     'col_priority' => 'Prioriteit',

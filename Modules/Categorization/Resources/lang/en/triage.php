@@ -23,6 +23,6 @@ return [
     'select_category' => 'Select category',
     'help_others' => '❋ Help others identify this',
 
-    'shortcuts' => '1–9 assign top categories · ↑/↓ move · Enter save · / search · Esc clear',
+    'shortcuts' => '1–9 assign top categories · ↑/↓ move · Enter save · Esc clear',
     'load_more' => 'Load more',
 ];

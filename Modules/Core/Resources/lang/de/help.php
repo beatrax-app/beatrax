@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Wo liegen meine Daten?',
-    'intro' => 'Beatrax speichert alles auf diesem Gerät. Es gibt keinen Beatrax-Server und kein Cloud-Konto. Nach draußen geht nur das, was du selbst verbindest — ein Postfach, eine Bank über Enable Banking, die Geräte, die du zur Synchronisierung koppelst — dazu eine tägliche Abfrage der Wechselkurse. Jede Verbindung sagt es auf dem Bildschirm, auf dem du sie einschaltest.',
+    'intro' => 'Beatrax speichert alles auf diesem Gerät. Es gibt keinen Beatrax-Server und kein Cloud-Konto. Nur eine Abfrage geht von selbst hinaus — die Prüfung auf eine neue Version, die du abschalten kannst. Alles andere wartet auf dich: ein Postfach, eine Bank über Enable Banking, eine tägliche Abfrage der Wechselkurse, die Geräte, die du zur Synchronisierung koppelst, ein Relay, das du einrichtest, und jeder Link, den du anklickst. Jedes davon sagt es auf dem Bildschirm, auf dem du es einschaltest.',
 
     'lives_here' => 'Deine Daten liegen hier',
     'copy' => 'Kopieren',

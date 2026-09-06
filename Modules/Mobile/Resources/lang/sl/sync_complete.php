@@ -21,8 +21,8 @@ return [
     'relay_body' => 'Spremembe šifrirane čakajo na tvojem releju, dokler se druga naprava znova ne poveže. Ta naprava jih prevzame, ko se naslednjič dotakneš :action.',
     'no_relay_title' => 'Ko te ni doma',
     'no_relay_body' => 'Spremembe čakajo na tej napravi, dokler nista obe skupaj v tvojem domačem omrežju in se tu ne dotakneš :action.',
-    'encrypted_title' => 'Bere lahko samo tvoje naprave',
-    'encrypted_body' => 'Vse je šifrirano, preden zapusti napravo, ključe pa imajo samo tvoje seznanjene naprave.',
+    'encrypted_title' => 'Zapečateno med tvojimi napravami',
+    'encrypted_body' => 'Vse, kar potuje med tvojimi napravami, je šifrirano, ključe pa imajo samo tvoje seznanjene naprave. Relej vidi, katera od tvojih naprav se pogovarja s katero in kdaj — nikoli pa, kaj si povesta.',
     'continue' => 'Začni uporabljati Beatrax',
     'peer_fallback' => 'tvoja druga naprava',
 ];

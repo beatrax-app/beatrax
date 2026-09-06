@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => '¿Dónde están mis datos?',
-    'intro' => 'Beatrax lo guarda todo en este dispositivo. No hay ningún servidor de Beatrax ni cuenta en la nube. Solo sale lo que tú conectas — una bandeja de entrada, un banco a través de Enable Banking, los dispositivos que emparejas para sincronizar — más una consulta diaria de los tipos de cambio. Cada conexión lo dice en la pantalla donde la activas.',
+    'intro' => 'Beatrax lo guarda todo en este dispositivo. No hay ningún servidor de Beatrax ni cuenta en la nube. Una sola llamada sale por su cuenta — la comprobación de si hay una versión nueva, que puedes desactivar. Todo lo demás espera a que tú lo pidas: una bandeja de entrada, un banco a través de Enable Banking, una consulta diaria de los tipos de cambio, los dispositivos que emparejas para sincronizar, un relay que configures y cualquier enlace en el que hagas clic. Cada uno lo dice en la pantalla donde lo activas.',
 
     'lives_here' => 'Tus datos están aquí',
     'copy' => 'Copiar',

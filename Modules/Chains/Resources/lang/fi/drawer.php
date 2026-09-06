@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Ketju kohteelle :name',
     'heading' => 'Ketju',
 
-    'unresolved_heading' => 'Ketjua ei ole vielä ratkaistu',
-    'unresolved_body' => 'Ketjunratkaisija on yhä käynnissä. Avaa tarkistusjono tai päivitä hetken kuluttua.',
+    'unresolved_heading' => 'Tapahtumaa ei ole valittu',
+    'unresolved_body' => 'Valitse rivi tapahtumaluettelosta, niin näet, millä se on maksettu.',
 
     'none_heading' => 'Rahoitusketjua ei löytynyt',
     'none_body' => 'Tälle tapahtumalle ei havaittu rahoitusketjua. Jos odotit sellaista, tee ehdotus tarkistusjonosta.',

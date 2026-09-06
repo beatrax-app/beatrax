@@ -23,6 +23,6 @@ return [
     'select_category' => 'Vælg kategori',
     'help_others' => '❋ Hjælp andre med at genkende denne',
 
-    'shortcuts' => '1–9 tildel topkategorier · ↑/↓ flyt · Enter gem · / søg · Esc ryd',
+    'shortcuts' => '1–9 tildel topkategorier · ↑/↓ flyt · Enter gem · Esc ryd',
     'load_more' => 'Indlæs flere',
 ];

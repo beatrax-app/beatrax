@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Privatlivsmeddelelse for privat kontakt',
-        'body' => '🔒 Dette er en privat kontakt. IBAN og personoplysninger er skjult som standard og deles aldrig i eksporter.',
+        'body' => '🔒 Dette er en privat kontakt. IBAN er skjult, indtil du viser det, og det kommer ikke med i eksporter. Navnet vises fortsat alle de steder, hvor kontaktens transaktioner vises.',
     ],
 
     'self_stub' => [

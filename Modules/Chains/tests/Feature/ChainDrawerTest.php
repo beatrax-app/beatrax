@@ -140,10 +140,10 @@ it('renders the "No funding chain found" empty state when no chain_links exist f
         ->assertSee('No funding chain found');
 });
 
-it('renders the "Chain not yet resolved" empty state when transactionId is null (pre-mount)', function (): void {
+it('renders the "No transaction chosen" empty state when transactionId is null (pre-mount)', function (): void {
     Livewire::actingAs($this->user)
         ->test(ChainDrawer::class)
-        ->assertSee('Chain not yet resolved');
+        ->assertSee('No transaction chosen');
 });
 
 it('renders the three-tier confidence chips (Deterministic / Confirmed / Candidate)', function (): void {

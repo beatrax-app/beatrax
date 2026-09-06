@@ -63,8 +63,8 @@ return [
     'add_another' => 'További postafiók hozzáadása',
     'gmail_card_body' => 'Csatlakoztass egy Gmail-fiókot, hogy a Beatrax bizonylatokat kereshessen benne.',
     'microsoft_card_body' => 'Csatlakoztass egy Microsoft 365- vagy Outlook.com-fiókot, hogy a Beatrax bizonylatokat kereshessen benne.',
-    'gmail_card_body_phone' => 'A Gmailt az asztali alkalmazás vizsgálja. Az itt csatlakoztatott fiókot semmi sem vizsgálja magától.',
-    'microsoft_card_body_phone' => 'A Microsoft 365-öt és az Outlook.comot az asztali alkalmazás vizsgálja. Az itt csatlakoztatott fiókot semmi sem vizsgálja magától.',
+    'gmail_card_body_phone' => 'A Gmailt az asztali alkalmazás vizsgálja. Ott csatlakoztasd — ez a telefon azt mutatja, amit talál.',
+    'microsoft_card_body_phone' => 'A Microsoft 365-öt és az Outlook.comot az asztali alkalmazás vizsgálja. Ott csatlakoztasd őket — ez a telefon azt mutatja, amit talál.',
 
     'discovered_heading' => 'Felfedezett feladók',
 

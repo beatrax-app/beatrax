@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Systémové upozornenia',
 
     'actions' => [
-        'install_next_launch' => 'Nainštalovať pri ďalšom spustení',
-        'install_next_launch_aria' => 'Nainštalovať pri ďalšom spustení — označí systémové upozornenie #:id ako vyriešené',
+        'download_and_install' => 'Stiahnuť a nainštalovať',
+        'download_and_install_aria' => 'Stiahnuť a nainštalovať — označí systémové upozornenie #:id ako vyriešené',
         'skip_version' => 'Preskočiť túto verziu',
         'release_notes' => 'Poznámky k vydaniu →',
         'update_now' => 'Aktualizovať teraz',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Je dostupná aktualizácia — Beatrax :version je pripravený. Nainštaluje sa pri ďalšom spustení.',
+        'update_available' => 'Je dostupná aktualizácia — Beatrax :version. Kým sa nerozhodneš inštalovať, nič sa nesťahuje; Beatrax sa potom zavrie a znova otvorí v novej verzii.',
         'update_stale' => 'Používaš verziu :current — verzia :latest je dostupná už 30 dní. Aktualizuj teraz.',
         'update_critical' => 'Je dostupná kritická aktualizácia — verzia :version opravuje: :summary. Nainštaluj ju čo najskôr.',
         'backup_corrupt_with_path' => 'Záloha zapísaná o :timestamp neprešla kontrolou integrity. Skontroluj :path. Vyrieš to skôr, než sa na zálohy spoľahneš.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Váš PIN nedokáže na tomto zariadení odomknúť aplikáciu: uložený kľúč je nečitateľný. Prihláste sa heslom k účtu a nastavte nový PIN.',
         'sync_gdk_rewrap_failed' => 'Opätovné zabalenie zväzku kľúčov GDK po zmene prístupovej frázy zámku aplikácie zlyhalo — šifrované údaje môžu byť neobnoviteľné, kým sa zväzok znova nezabalí.',
         'worker_crashed' => 'Spracovanie na pozadí v Beatraxe sa neočakávane zastavilo. Importy a skenovanie e-mailov sú pozastavené. Reštartujte ich opätovným otvorením aplikácie.',
-        'auth_lock_key_material_stranded' => 'Šifrovanie v pokoji je pre tento účet aktívne, ale kľúč k údajom už nedrží žiadny obal zámku aplikácie, takže každá šifrovaná poznámka, popis aj údaj o protistrane sa čítajú ako prázdne. Jedinou cestou späť je spárovanie so zariadením, ktoré kľúč stále drží.',
+        'auth_lock_key_material_stranded' => 'Šifrovanie v pokoji je pre tento účet aktívne, ale kľúč k údajom už nedrží žiadny obal zámku aplikácie, takže každá šifrovaná poznámka, popis aj údaj o protistrane sa čítajú ako prázdne. Obnov zašifrovanú zálohu vytvorenú v čase, keď kľúč ešte fungoval, alebo tento účet nastav znova na zariadení, ktoré ho stále drží.',
         'auth_lock_recovery_wrap_stale' => 'Heslo k účtu sa zmenilo bez toho, aby sa obnovovací obal zámku aplikácie znova zabalil, takže tým heslom už zámok neotvoríte. PIN áno. Znova prepojte heslo k účtu v nastaveniach zámku, kým PIN ešte poznáte — inak po zabudnutom PIN-e nezostane nič.',
         'reconnect_link' => 'Znova pripojiť →',
         // i18n-review: sk · pots_category_link_retired — "obálka" is this app's

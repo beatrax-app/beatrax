@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Ķēde: :name',
     'heading' => 'Ķēde',
 
-    'unresolved_heading' => 'Ķēde vēl nav atrisināta',
-    'unresolved_body' => 'Ķēžu atrisinātājs vēl darbojas. Atveriet pārskatīšanas rindu vai pēc brīža atsvaidziniet lapu.',
+    'unresolved_heading' => 'Nav izvēlēts neviens darījums',
+    'unresolved_body' => 'Izvēlieties rindu darījumu sarakstā, lai redzētu, kas to apmaksāja.',
 
     'none_heading' => 'Finansējuma ķēde nav atrasta',
     'none_body' => 'Šim darījumam nav atklāta neviena finansējuma ķēde. Ja to gaidījāt, iesniedziet kandidātu no pārskatīšanas rindas.',

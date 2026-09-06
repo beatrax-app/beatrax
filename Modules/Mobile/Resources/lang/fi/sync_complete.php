@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Muutokset odottavat salattuina välityspalvelimellasi, kunnes toinen laite palaa verkkoon. Tämä laite noutaa ne seuraavalla kerralla, kun napautat :action.',
     'no_relay_title' => 'Kun olet poissa',
     'no_relay_body' => 'Muutokset odottavat tällä laitteella, kunnes molemmat ovat yhtä aikaa kotiverkossasi ja napautat tässä :action.',
-    'encrypted_title' => 'Vain laitteesi voivat lukea sen',
-    'encrypted_body' => 'Kaikki salataan ennen kuin se poistuu laitteelta, ja vain paritetuilla laitteillasi on avaimet.',
+    'encrypted_title' => 'Sinetöity laitteidesi välillä',
+    'encrypted_body' => 'Kaikki laitteidesi välillä kulkeva on salattua, ja vain paritetuilla laitteillasi on avaimet. Välityspalvelin näkee, mikä laitteistasi puhuu millekin ja milloin — ei koskaan sitä, mitä ne sanovat.',
     'continue' => 'Aloita Beatraxin käyttö',
     'peer_fallback' => 'toinen laitteesi',
 ];

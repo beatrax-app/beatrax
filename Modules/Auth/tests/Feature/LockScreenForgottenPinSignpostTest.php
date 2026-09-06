@@ -74,6 +74,28 @@ it('says on the lock screen itself that the way back in signs you out', function
         ->and($copy)->toContain('account password');
 });
 
+// The line used to end "No data is lost." Three of the six paths that write a
+// password stamp the recovery wrap stale, and after any of them the account
+// password opens nothing: the reader is told to go and do the one thing that
+// cannot work. The caveat is what makes the rest of the sentence true.
+it('names the resets that leave nothing behind the PIN', function (): void {
+    $copy = Lang::get('auth::lock_screen.forgot_pin');
+
+    $stalePaths = [
+        'Modules/Auth/Public/Actions/ResetPasswordAction.php',
+        'Modules/Auth/Internal/Http/Livewire/ManageUserPage.php',
+        'Modules/Auth/Internal/Console/ResetPasswordCommand.php',
+    ];
+
+    foreach ($stalePaths as $path) {
+        expect((string) file_get_contents(base_path($path)))->toContain('markRecoveryWrapStale');
+    }
+
+    expect($copy)->toContain('recovery code')
+        ->and($copy)->toContain('account owner')
+        ->and($copy)->not->toContain('No data is lost');
+});
+
 it('lands the reader on login, where the account password unlocks without the code', function (): void {
     $user = lockedOutUser('forgot-desktop-round-trip');
 

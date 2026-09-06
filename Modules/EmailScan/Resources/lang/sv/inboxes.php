@@ -63,8 +63,8 @@ return [
     'add_another' => 'Lägg till en inkorg till',
     'gmail_card_body' => 'Anslut ett Gmail-konto så att Beatrax kan söka igenom det efter kvitton.',
     'microsoft_card_body' => 'Anslut ett Microsoft 365- eller Outlook.com-konto så att Beatrax kan söka igenom det efter kvitton.',
-    'gmail_card_body_phone' => 'Gmail söks igenom av skrivbordsappen. Ett konto du kopplar här söks aldrig igenom av sig självt.',
-    'microsoft_card_body_phone' => 'Microsoft 365 och Outlook.com söks igenom av skrivbordsappen. Ett konto du kopplar här söks aldrig igenom av sig självt.',
+    'gmail_card_body_phone' => 'Gmail söks igenom av skrivbordsappen. Anslut kontot där — den här telefonen visar vad den hittar.',
+    'microsoft_card_body_phone' => 'Microsoft 365 och Outlook.com söks igenom av skrivbordsappen. Anslut kontona där — den här telefonen visar vad den hittar.',
 
     'discovered_heading' => 'Upptäckta avsändare',
 

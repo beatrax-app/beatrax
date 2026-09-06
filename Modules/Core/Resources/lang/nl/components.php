@@ -20,7 +20,7 @@ return [
         'dismiss_aria' => 'Installatietip sluiten',
         'dismiss_caption' => 'Sluiten',
         'install_app' => 'App installeren',
-        'desktop_html' => 'Open Beatrax in de browser van je telefoon en tik op "Zet op beginscherm" — of tik op het <strong style="color: var(--color-text);">⚡</strong>-icoon in het deelmenu van Safari.',
+        'desktop_html' => 'Open Beatrax in de browser van je telefoon en kies <strong style="color: var(--color-text);">Zet op beginscherm</strong> in het deelmenu.',
     ],
 
     'topbar' => [

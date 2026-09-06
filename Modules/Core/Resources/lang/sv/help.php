@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Var finns mina data?',
-    'intro' => 'Beatrax lagrar allt på den här enheten. Det finns ingen Beatrax-server och inget molnkonto. Det enda som lämnar enheten är det du själv kopplar — en inkorg, en bank via Enable Banking, de enheter du parkopplar för synkronisering — plus en daglig hämtning av växelkurser. Varje koppling säger det på skärmen där du slår på den.',
+    'intro' => 'Beatrax lagrar allt på den här enheten. Det finns ingen Beatrax-server och inget molnkonto. Ett enda anrop går ut av sig själv — en kontroll av om det finns en ny version, som du kan stänga av. Allt annat väntar på dig: en inkorg, en bank via Enable Banking, en daglig hämtning av växelkurser, de enheter du parkopplar för synkronisering, en relay du ställer in och varje länk du klickar på. Var och en säger det på skärmen där du slår på den.',
 
     'lives_here' => 'Dina data finns här',
     'copy' => 'Kopiera',

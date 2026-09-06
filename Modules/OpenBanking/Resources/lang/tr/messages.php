@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'İçe aktarmayı incele',
         'reconnect_first' => 'Önce yeniden bağlan',
-        'auto_caption' => 'Günde bir kez otomatik olarak senkronize olur.',
+        'auto_caption' => 'Günde bir kez otomatik olarak senkronizasyon denenir.',
         'sync_now' => 'Şimdi senkronize et',
 
         'consent_expired' => 'Onay süresi doldu — yeniden bağlan.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'Kurum kimliği',
 
         'step5_title' => 'Onayı tarayıcında tamamla',
-        'step5_body' => 'Bankanın giriş ve onay ekranını açmak için aşağıya tıkla. Girişi ve varsa 2 adımlı doğrulamayı tamamla, ardından Open Banking kurulumunu bitirmek için otomatik olarak buraya geri getirilirsin.',
+        'step5_body' => 'Bankanın giriş ve onay ekranını açmak için aşağıya tıkla. Girişi ve varsa 2 adımlı doğrulamayı tamamla, ardından Open Banking kurulumunu bitirmek için bu pencereye geri dön.',
         // i18n-review: tr · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Bankanın giriş ve onay ekranını açmak için aşağıya dokun. Girişi ve varsa 2 adımlı doğrulamayı tamamla, ardından Open Banking kurulumunu bitirmek için otomatik olarak buraya geri getirilirsin.',
+        'step5_body_touch' => 'Bankanın giriş ve onay ekranını açmak için aşağıya dokun. Girişi ve varsa 2 adımlı doğrulamayı tamamla, sonra Beatrax uygulamasına dön ve Open Banking kurulumunu bitirmek için bu ekranı yeniden aç.',
 
         'cancel' => 'İptal',
         'continue' => 'Devam →',

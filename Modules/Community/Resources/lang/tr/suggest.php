@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Bir eşleşme öner',
-    'intro' => 'Öneriyi taslak PR olarak gönderebilmen için tarayıcında GitHub açılır. Adın ve e-posta adresin bu cihazdan asla çıkmaz.',
+    'intro' => 'Öneri hazır doldurulmuş olarak tarayıcında GitHub açılır. Yalnızca yukarıdaki desen, ad, kategori ve bölge onunla birlikte gider — desen ise açıklamanın hesap ekstrende yazıldığı hâlidir. Adın ve e-posta adresin bu cihazdan asla çıkmaz.',
 
     'pattern' => 'Desen',
     'name' => 'Anlaşılır ad',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML önizlemesi',
 
     'cancel' => 'İptal',
-    'submit' => 'Taslak PR olarak gönder',
+    'submit' => "GitHub'da aç",
 
     'toast' => 'Öneri tarayıcında açıldı.',
 

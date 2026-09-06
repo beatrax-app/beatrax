@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Ignora',
         'install_app' => 'Installa app',
 
-        'desktop_html' => 'Apri Beatrax nel browser del telefono e tocca "Aggiungi a Home" — oppure tocca il simbolo <strong style="color: var(--color-text);">⚡</strong> nel menu di condivisione di Safari.',
+        'desktop_html' => 'Apri Beatrax nel browser del telefono e scegli <strong style="color: var(--color-text);">Aggiungi a Home</strong> dal menu di condivisione.',
     ],
 
     'topbar' => [

@@ -63,8 +63,8 @@ return [
     'add_another' => 'Dodaj još jedan ulazni pretinac',
     'gmail_card_body' => 'Poveži Gmail račun kako bi ga Beatrax mogao skenirati u potrazi za potvrdama.',
     'microsoft_card_body' => 'Poveži Microsoft 365 ili Outlook.com račun kako bi ga Beatrax mogao skenirati u potrazi za potvrdama.',
-    'gmail_card_body_phone' => 'Gmail skenira aplikacija za računalo. Račun povezan ovdje nikad se ne skenira sam od sebe.',
-    'microsoft_card_body_phone' => 'Microsoft 365 i Outlook.com skenira aplikacija za računalo. Račun povezan ovdje nikad se ne skenira sam od sebe.',
+    'gmail_card_body_phone' => 'Gmail skenira aplikacija za računalo. Poveži ga ondje — ovaj telefon pokazuje što ona nađe.',
+    'microsoft_card_body_phone' => 'Microsoft 365 i Outlook.com skenira aplikacija za računalo. Poveži ih ondje — ovaj telefon pokazuje što ona nađe.',
 
     'discovered_heading' => 'Otkriveni pošiljatelji',
 

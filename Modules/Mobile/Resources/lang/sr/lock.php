@@ -12,7 +12,7 @@ return [
     'ok' => 'U redu',
     'ok_aria' => 'U redu — potvrdi PIN',
     'sign_out' => 'Odjavi se',
-    'forgot_pin' => 'Zaboravio si PIN? Odjavi se — možeš ponovo da se prijaviš lozinkom svog naloga i postaviš novi PIN. Podaci se ne gube.',
+    'forgot_pin' => 'Zaboravio si PIN? Odjavi se — ako lozinka tvog naloga i dalje otvara ovo zaključavanje, možeš ponovo da se prijaviš, postaviš novi PIN i ništa ne izgubiš. Lozinka resetovana kodom za oporavak ili ona koju ti je postavio vlasnik naloga više ga ne otvara.',
 
     'errors' => [
         'pin_length' => 'PIN mora da ima bar 6 cifre.',

@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Gdje su moji podaci?',
-    'intro' => 'Beatrax sve pohranjuje na ovom uređaju. Ne postoji Beatraxov poslužitelj ni račun u oblaku. Van odlazi samo ono što sam povežeš — pristigla pošta, banka preko Enable Bankinga, uređaji koje upariš za sinkronizaciju — te dnevni upit za tečajeve. Svaka veza to kaže na zaslonu na kojem je uključuješ.',
+    'intro' => 'Beatrax sve pohranjuje na ovom uređaju. Ne postoji Beatraxov poslužitelj ni račun u oblaku. Sam od sebe odlazi samo jedan poziv — provjera postoji li nova verzija, koju možeš isključiti. Sve ostalo čeka tebe: pristigla pošta, banka preko Enable Bankinga, dnevni upit za tečajeve, uređaji koje upariš za sinkronizaciju, relej koji sam postaviš i svaka poveznica na koju klikneš. Svaka od njih to kaže na zaslonu na kojem je uključuješ.',
 
     'lives_here' => 'Tvoji podaci nalaze se ovdje',
     'copy' => 'Kopiraj',

@@ -23,6 +23,6 @@ return [
     'select_category' => 'Kategori seç',
     'help_others' => '❋ Bunu tanımlamaya yardım et',
 
-    'shortcuts' => '1–9 en üst kategorileri ata · ↑/↓ hareket · Enter kaydet · / ara · Esc temizle',
+    'shortcuts' => '1–9 en üst kategorileri ata · ↑/↓ hareket · Enter kaydet · Esc temizle',
     'load_more' => 'Daha fazla yükle',
 ];

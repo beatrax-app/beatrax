@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Rendszerüzenetek',
 
     'actions' => [
-        'install_next_launch' => 'Telepítés a következő indításkor',
-        'install_next_launch_aria' => 'Telepítés a következő indításkor — a #:id rendszerüzenetet megoldottnak jelöli',
+        'download_and_install' => 'Letöltés és telepítés',
+        'download_and_install_aria' => 'Letöltés és telepítés — a #:id rendszerüzenetet megoldottnak jelöli',
         'skip_version' => 'Verzió kihagyása',
         'release_notes' => 'Kiadási megjegyzések →',
         'update_now' => 'Frissítés most',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Elérhető frissítés — a Beatrax :version készen áll. A következő indításkor települ.',
+        'update_available' => 'Elérhető frissítés — Beatrax :version. Semmi nem töltődik le, amíg nem választod a telepítést; a Beatrax ezután bezárul, és az új verzióval nyílik meg újra.',
         'update_stale' => 'A(z) :current verziót használod — a(z) :latest verzió 30 napja elérhető. Frissíts most.',
         'update_critical' => 'Kritikus frissítés érhető el — a(z) :version verzió javítja ezt: :summary. Telepítsd mielőbb.',
         'backup_corrupt_with_path' => 'A(z) :timestamp időpontban írt biztonsági mentés megbukott az integritás-ellenőrzésen. Vizsgáld meg ezt: :path. Oldd meg, mielőtt a mentésekre támaszkodnál.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'A PIN-kódja nem tudja feloldani az alkalmazászárat ezen az eszközön: a tárolt kulcs olvashatatlan. Jelentkezzen be a fiókjelszavával, és állítson be új PIN-kódot.',
         'sync_gdk_rewrap_failed' => 'A GDK-kulcstartó újracsomagolása sikertelen volt az alkalmazászár jelmondatának módosítása után — a titkosított adatok visszaállíthatatlanok lehetnek, amíg a kulcstartót újra nem csomagolják.',
         'worker_crashed' => 'A Beatrax háttérfeldolgozása váratlanul leállt. Az importálások és az e-mail-vizsgálatok szünetelnek. Az újraindításhoz nyissa meg újra az alkalmazást.',
-        'auth_lock_key_material_stranded' => 'A nyugalmi állapotú titkosítás aktív ehhez a fiókhoz, de már egyetlen alkalmazászár-burok sem tartja az adatkulcsot, ezért minden titkosított jegyzet, leírás és partneradat üresként olvasható. Az egyetlen visszaút a párosítás olyan eszközzel, amely még őrzi a kulcsot.',
+        'auth_lock_key_material_stranded' => 'A nyugalmi állapotú titkosítás aktív ehhez a fiókhoz, de már egyetlen alkalmazászár-burok sem tartja az adatkulcsot, ezért minden titkosított jegyzet, leírás és partneradat üresként olvasható. Állítson vissza egy titkosított biztonsági mentést, amely még a kulcs működése idején készült, vagy állítsa be újra ezt a fiókot egy olyan eszközön, amely még őrzi a kulcsot.',
         'auth_lock_recovery_wrap_stale' => 'A fiók jelszava úgy változott meg, hogy az alkalmazászár helyreállítási burka nem lett újracsomagolva, ezért az a jelszó már nem nyitja az alkalmazászárat. A PIN-kód még igen. Kösse össze újra a fiókjelszót az alkalmazászár beállításaiban, amíg a PIN-kód ismert — különben egy elfelejtett PIN mögött nem marad semmi.',
         'reconnect_link' => 'Újracsatlakozás →',
         'pots_category_link_retired' => 'A borítékos költségvetés felváltotta a kategóriához kötött perselyeket. A(z) :count archivált perselyből felszabadult :amount ismét kiosztatlan, és arra vár, hogy kiossza.|A borítékos költségvetés felváltotta a kategóriához kötött perselyeket. A(z) :count archivált perselyből felszabadult :amount ismét kiosztatlan, és arra vár, hogy kiossza.',

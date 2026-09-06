@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Se afișează primele :shown din :total.',
 
-    'footer' => 'Lista comună este un fișier YAML livrat împreună cu Beatrax. Trimiterea unei sugestii deschide GitHub în browser; nimic altceva nu părăsește acest dispozitiv.',
+    'footer' => 'Lista comună este un fișier YAML livrat împreună cu Beatrax. Trimiterea unei sugestii deschide GitHub în browser și ia cu ea acea descriere; nimic altceva nu părăsește acest dispozitiv.',
 
     'card' => [
         'seen_times' => 'Văzut o dată|Văzut de :count ori|Văzut de :count de ori',

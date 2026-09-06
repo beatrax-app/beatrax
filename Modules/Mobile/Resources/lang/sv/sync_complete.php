@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Ändringar väntar krypterade på din relay tills den andra enheten är online igen. Den här enheten hämtar dem nästa gång du trycker på :action.',
     'no_relay_title' => 'När du är borta',
     'no_relay_body' => 'Ändringar väntar på den här enheten tills båda är på ditt hemnätverk samtidigt och du trycker på :action här.',
-    'encrypted_title' => 'Bara dina enheter kan läsa det',
-    'encrypted_body' => 'Allt krypteras innan det lämnar en enhet, och bara dina parkopplade enheter har nycklarna.',
+    'encrypted_title' => 'Förseglat mellan dina enheter',
+    'encrypted_body' => 'Allt som passerar mellan dina enheter är krypterat, och bara dina parkopplade enheter har nycklarna. En relay kan se vilken av dina enheter som pratar med vilken, och när — aldrig vad de säger.',
     'continue' => 'Börja använda Beatrax',
     'peer_fallback' => 'din andra enhet',
 ];

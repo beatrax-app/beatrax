@@ -63,8 +63,8 @@ return [
     'add_another' => 'Pridať ďalšiu schránku',
     'gmail_card_body' => 'Pripoj účet Gmail, aby ho Beatrax mohol prehľadávať a hľadať v ňom účtenky.',
     'microsoft_card_body' => 'Pripoj účet Microsoft 365 alebo Outlook.com, aby ho Beatrax mohol prehľadávať a hľadať v ňom účtenky.',
-    'gmail_card_body_phone' => 'Gmail prehľadáva aplikácia pre počítač. Účet pripojený tu sa nikdy neprehľadáva sám od seba.',
-    'microsoft_card_body_phone' => 'Microsoft 365 a Outlook.com prehľadáva aplikácia pre počítač. Účet pripojený tu sa nikdy neprehľadáva sám od seba.',
+    'gmail_card_body_phone' => 'Gmail prehľadáva aplikácia pre počítač. Pripoj ho tam — tento telefón ukáže, čo nájde.',
+    'microsoft_card_body_phone' => 'Microsoft 365 a Outlook.com prehľadáva aplikácia pre počítač. Pripoj ich tam — tento telefón ukáže, čo nájde.',
 
     'discovered_heading' => 'Objavení odosielatelia',
 

@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Riapplicazione delle regole… :checked di :count transazione controllata|Riapplicazione delle regole… :checked di :count transazioni controllate',
 
     'empty_heading' => 'Ancora nessuna regola',
-    'empty_body' => "Le regole confrontano le transazioni su più condizioni e applicano automaticamente modifiche a categoria, controparte, nota ed etichetta fiscale — durante l'importazione e ogni volta che le riapplichi alla cronologia esistente.",
+    'empty_body' => "Le regole confrontano le transazioni su più condizioni e applicano automaticamente le modifiche a categoria, controparte e nota durante l'importazione. La modifica dell'etichetta fiscale arriva quando riapplichi le regole alla cronologia esistente.",
     'empty_cta' => 'Crea la tua prima regola',
 
     'col_priority' => 'Priorità',

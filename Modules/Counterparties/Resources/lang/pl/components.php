@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Informacja o prywatności kontaktu osobistego',
-        'body' => '🔒 To jest kontakt osobisty. IBAN i dane osobowe są domyślnie ukryte i nigdy nie trafiają do eksportów.',
+        'body' => '🔒 To jest kontakt osobisty. IBAN pozostaje ukryty, dopóki go nie wyświetlisz, i nie trafia do eksportów. Nazwa tego kontaktu nadal pojawia się wszędzie tam, gdzie pojawiają się jego transakcje.',
     ],
 
     'self_stub' => [

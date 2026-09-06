@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Ændringer venter krypteret på din relay, indtil den anden enhed er online igen. Denne enhed henter dem, næste gang du trykker på :action.',
     'no_relay_title' => 'Når du er ude',
     'no_relay_body' => 'Ændringer venter på denne enhed, indtil begge er på dit hjemmenetværk samtidig, og du trykker på :action her.',
-    'encrypted_title' => 'Kun dine enheder kan læse det',
-    'encrypted_body' => 'Alt bliver krypteret, før det forlader en enhed, og kun dine parrede enheder har nøglerne.',
+    'encrypted_title' => 'Forseglet mellem dine enheder',
+    'encrypted_body' => 'Alt, der går mellem dine enheder, er krypteret, og kun dine parrede enheder har nøglerne. En relay kan se, hvilke af dine enheder der taler med hinanden, og hvornår — aldrig hvad de siger.',
     'continue' => 'Begynd at bruge Beatrax',
     'peer_fallback' => 'din anden enhed',
 ];

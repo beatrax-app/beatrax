@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Alertes système',
 
     'actions' => [
-        'install_next_launch' => 'Installer au prochain démarrage',
-        'install_next_launch_aria' => 'Installer au prochain démarrage — marque l\'alerte système #:id comme résolue',
+        'download_and_install' => 'Télécharger et installer',
+        'download_and_install_aria' => "Télécharger et installer — marque l'alerte système #:id comme résolue",
         'skip_version' => 'Ignorer cette version',
         'release_notes' => 'Notes de version →',
         'update_now' => 'Mettre à jour maintenant',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Mise à jour disponible — Beatrax :version est prêt. Il s\'installera au prochain démarrage.',
+        'update_available' => "Mise à jour disponible — Beatrax :version. Rien n'est téléchargé tant que tu ne choisis pas de l'installer ; ensuite Beatrax se ferme et se rouvre dans la nouvelle version.",
         'update_stale' => 'Tu utilises la version :current — la version :latest est disponible depuis 30 jours. Mets à jour maintenant.',
         'update_critical' => 'Mise à jour critique disponible — la version :version corrige :summary. Installe-la dès que possible.',
         'backup_corrupt_with_path' => 'La sauvegarde écrite le :timestamp n\'a pas passé le contrôle d\'intégrité. Examine :path. Règle le problème avant de compter sur tes sauvegardes.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Votre code PIN ne peut pas ouvrir le verrouillage de l’application sur cet appareil : la clé enregistrée est illisible. Connectez-vous avec le mot de passe de votre compte pour définir un nouveau code PIN.',
         'sync_gdk_rewrap_failed' => 'Le ré-emballage du trousseau GDK a échoué après un changement de phrase secrète du verrouillage de l’application — les données chiffrées peuvent être irrécupérables tant que le trousseau n’est pas ré-emballé.',
         'worker_crashed' => 'Le traitement en arrière-plan de Beatrax s’est arrêté de façon inattendue. Les imports et les analyses d’e-mails sont en pause. Rouvrez l’application pour le relancer.',
-        'auth_lock_key_material_stranded' => 'Le chiffrement au repos est actif pour ce compte, mais plus aucune enveloppe de verrouillage d’application ne détient la clé de données : chaque note, description et détail de contrepartie chiffré est donc lu comme vide. L’appairage avec un appareil qui détient encore la clé est le seul retour possible.',
+        'auth_lock_key_material_stranded' => 'Le chiffrement au repos est actif pour ce compte, mais plus aucune enveloppe de verrouillage d’application ne détient la clé de données : chaque note, description et détail de contrepartie chiffré est donc lu comme vide. Restaurez une sauvegarde chiffrée réalisée pendant que la clé fonctionnait encore, ou reconfigurez ce compte sur un appareil qui la détient toujours.',
         'auth_lock_recovery_wrap_stale' => 'Le mot de passe du compte a changé sans que l’enveloppe de récupération du verrouillage soit ré-emballée : ce mot de passe n’ouvre donc plus le verrouillage de l’application. Le code PIN, lui, fonctionne toujours. Reliez à nouveau le mot de passe du compte depuis les réglages de verrouillage tant que le code PIN est connu, sinon un code PIN oublié ne laisse rien derrière lui.',
         'reconnect_link' => 'Reconnecter →',
         'pots_category_link_retired' => 'La budgétisation par enveloppes a remplacé les cagnottes liées à une catégorie. :amount provenant de :count cagnotte archivée est de nouveau non affecté et attend que vous l’affectiez.|La budgétisation par enveloppes a remplacé les cagnottes liées à une catégorie. :amount provenant de :count cagnottes archivées est de nouveau non affecté et attend que vous l’affectiez.',

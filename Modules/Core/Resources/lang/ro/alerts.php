@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Alerte de sistem',
 
     'actions' => [
-        'install_next_launch' => 'Instalează la următoarea pornire',
-        'install_next_launch_aria' => 'Instalează la următoarea pornire — marchează alerta de sistem #:id ca rezolvată',
+        'download_and_install' => 'Descarcă și instalează',
+        'download_and_install_aria' => 'Descarcă și instalează — marchează alerta de sistem #:id ca rezolvată',
         'skip_version' => 'Omite această versiune',
         'release_notes' => 'Note de versiune →',
         'update_now' => 'Actualizează acum',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Actualizare disponibilă — Beatrax :version este gata. Se va instala la următoarea pornire.',
+        'update_available' => 'Actualizare disponibilă — Beatrax :version. Nu se descarcă nimic până nu alegi să instalezi; Beatrax se închide apoi și se redeschide pe versiunea nouă.',
         'update_stale' => 'Folosești versiunea :current — versiunea :latest este disponibilă de 30 de zile. Actualizează acum.',
         'update_critical' => 'Actualizare critică disponibilă — versiunea :version rezolvă :summary. Instaleaz-o cât mai curând.',
         'backup_corrupt_with_path' => 'Copia de rezervă scrisă la :timestamp nu a trecut verificarea de integritate. Verifică :path. Rezolvă problema înainte să te bazezi pe copiile de rezervă.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'PIN-ul tău nu poate debloca aplicația pe acest dispozitiv: cheia stocată nu poate fi citită. Conectează-te cu parola contului pentru a seta un PIN nou.',
         'sync_gdk_rewrap_failed' => 'Reîmpachetarea inelului de chei GDK a eșuat după schimbarea frazei de acces a blocării aplicației — datele criptate pot fi irecuperabile până când inelul este reîmpachetat.',
         'worker_crashed' => 'Procesarea în fundal a Beatrax s-a oprit neașteptat. Importurile și scanările de e-mail sunt în pauză. Redeschide aplicația pentru a o reporni.',
-        'auth_lock_key_material_stranded' => 'Criptarea în repaus este activă pentru acest cont, dar niciun înveliș al blocării aplicației nu mai deține cheia de date, așa că fiecare notă, descriere și detaliu de contraparte criptat se citește ca gol. Împerecherea cu un dispozitiv care încă deține cheia este singura cale de întoarcere.',
+        'auth_lock_key_material_stranded' => 'Criptarea în repaus este activă pentru acest cont, dar niciun înveliș al blocării aplicației nu mai deține cheia de date, așa că fiecare notă, descriere și detaliu de contraparte criptat se citește ca gol. Restaurează o copie de rezervă criptată făcută cât timp cheia încă funcționa sau configurează din nou acest cont pe un dispozitiv care încă o deține.',
         'auth_lock_recovery_wrap_stale' => 'Parola contului s-a schimbat fără ca învelișul de recuperare al blocării aplicației să fie reîmpachetat, așa că acea parolă nu mai deschide blocarea. PIN-ul încă o deschide. Reasociază parola contului din setările de blocare cât timp PIN-ul este încă știut — altfel un PIN uitat nu lasă nimic în urmă.',
         'reconnect_link' => 'Reconectează →',
         'pots_category_link_retired' => 'Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count pușculiță arhivată este din nou nealocată și așteaptă să o aloci.|Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count pușculițe arhivate este din nou nealocată și așteaptă să o aloci.|Bugetarea pe plicuri a înlocuit pușculițele legate de o categorie. Suma :amount din :count de pușculițe arhivate este din nou nealocată și așteaptă să o aloci.',

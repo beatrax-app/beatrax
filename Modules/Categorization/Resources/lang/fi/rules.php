@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Sääntöjä käytetään uudelleen… :checked / :count tapahtuma tarkistettu|Sääntöjä käytetään uudelleen… :checked / :count tapahtumaa tarkistettu',
 
     'empty_heading' => 'Ei vielä sääntöjä',
-    'empty_body' => 'Säännöt tunnistavat tapahtumia useilla ehdoilla ja tekevät kategoria-, vastapuoli-, muistiinpano- ja verotunnistemuutokset automaattisesti — tuonnin yhteydessä ja aina kun käytät niitä uudelleen olemassa olevaan historiaasi.',
+    'empty_body' => 'Säännöt tunnistavat tapahtumia useilla ehdoilla ja tekevät kategoria-, vastapuoli- ja muistiinpanomuutokset automaattisesti tuonnin yhteydessä. Verotunnisteen muutos toteutuu vasta, kun käytät sääntöjä uudelleen olemassa olevaan historiaasi.',
     'empty_cta' => 'Luo ensimmäinen sääntösi',
 
     'col_priority' => 'Prioriteetti',

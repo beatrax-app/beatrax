@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Catena per :name',
     'heading' => 'Catena',
 
-    'unresolved_heading' => 'Catena non ancora risolta',
-    'unresolved_body' => 'Il risolutore delle catene è ancora in esecuzione. Apri la coda di revisione oppure aggiorna tra un momento.',
+    'unresolved_heading' => 'Nessuna transazione selezionata',
+    'unresolved_body' => "Scegli una riga nella lista delle transazioni per vedere che cosa l'ha pagata.",
 
     'none_heading' => 'Nessuna catena di finanziamento trovata',
     'none_body' => 'Per questa transazione non è stata rilevata nessuna catena di finanziamento. Se te ne aspettavi una, proponi un candidato dalla coda di revisione.',

@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Promjene čekaju šifrirane na tvom releju dok se drugi uređaj ponovno ne poveže. Ovaj ih uređaj preuzima sljedeći put kad dodirneš :action.',
     'no_relay_title' => 'Kad si izvan kuće',
     'no_relay_body' => 'Promjene čekaju na ovom uređaju dok oba ne budu zajedno na tvojoj kućnoj mreži i dok ovdje ne dodirneš :action.',
-    'encrypted_title' => 'Samo tvoji uređaji to mogu pročitati',
-    'encrypted_body' => 'Sve se šifrira prije nego što napusti uređaj, a ključeve imaju samo tvoji upareni uređaji.',
+    'encrypted_title' => 'Zapečaćeno između tvojih uređaja',
+    'encrypted_body' => 'Sve što prelazi između tvojih uređaja šifrirano je, a ključeve imaju samo tvoji upareni uređaji. Relej može vidjeti koji tvoj uređaj razgovara s kojim i kada — nikad što govore.',
     'continue' => 'Počni koristiti Beatrax',
     'peer_fallback' => 'tvoj drugi uređaj',
 ];

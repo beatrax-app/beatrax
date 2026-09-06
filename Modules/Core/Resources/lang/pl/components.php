@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Odrzuć',
         'install_app' => 'Zainstaluj aplikację',
 
-        'desktop_html' => 'Otwórz Beatrax w przeglądarce na telefonie i wybierz „Dodaj do ekranu początkowego” — albo dotknij ikony <strong style="color: var(--color-text);">⚡</strong> w menu udostępniania w Safari.',
+        'desktop_html' => 'Otwórz Beatrax w przeglądarce na telefonie i wybierz <strong style="color: var(--color-text);">Dodaj do ekranu początkowego</strong> w menu udostępniania.',
     ],
 
     'topbar' => [

@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Ignorer',
         'install_app' => 'Installer l\'app',
 
-        'desktop_html' => 'Ouvre Beatrax dans le navigateur de ton téléphone et touche « Sur l\'écran d\'accueil » — ou touche l\'icône <strong style="color: var(--color-text);">⚡</strong> dans le menu de partage de Safari.',
+        'desktop_html' => "Ouvre Beatrax dans le navigateur de ton téléphone et choisis <strong style=\"color: var(--color-text);\">Sur l'écran d'accueil</strong> dans le menu de partage.",
     ],
 
     'topbar' => [

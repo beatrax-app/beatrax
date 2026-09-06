@@ -7,7 +7,7 @@ return [
     'native_unlock_failed' => 'Odklepanje ni uspelo. Namesto tega vnesi PIN.',
     'page_title' => 'Odklepanje · Beatrax',
     'sign_out' => 'Odjavi se',
-    'forgot_pin' => 'Si pozabil PIN? Odjavi se — znova se lahko prijaviš z geslom svojega računa in nastaviš nov PIN. Podatki se ne izgubijo.',
+    'forgot_pin' => 'Si pozabil PIN? Odjavi se — če geslo tvojega računa še odpira ta zaklep, se lahko znova prijaviš, nastaviš nov PIN in nič ne izgubiš. Geslo, ponastavljeno s kodo za obnovitev ali nastavljeno zate od lastnika računa, ga ne odpre več.',
 
     'digits_entered' => '{1} vnesena :count števka|{2} vneseni :count števki|[3,4] vnesene :count števke|[5,*] vnesenih :count števk',
     'pad_label' => 'Tipkovnica PIN',

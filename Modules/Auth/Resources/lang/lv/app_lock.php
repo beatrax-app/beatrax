@@ -52,7 +52,7 @@ return [
     'keep_lock' => 'Paturēt lietotnes bloķēšanu',
 
     'forgot_modal_heading' => 'Atiestatīt PIN kodu — apstipriniet ar konta paroli',
-    'forgot_modal_body' => 'Konta parole atgūst bloķēšanas atslēgu, tāpēc PIN koda atiestatīšana nekad nezaudē datus.',
+    'forgot_modal_body' => 'Konta parole atgūst bloķēšanas atslēgu, tāpēc PIN koda atiestatīšana nezaudē datus — ja vien šī parole vēl atver bloķēšanu. Parole, kas atiestatīta ar atkopšanas kodu vai ko jums iestatījis konta īpašnieks, to vairs neatver.',
     'confirm_new_pin_label' => 'Apstipriniet jauno PIN kodu',
     'reset_pin' => 'Atiestatīt PIN kodu',
     'cancel' => 'Atcelt',
@@ -71,7 +71,7 @@ return [
     'error_forgot_failed' => 'PIN koda atiestatīšana neizdevās — atkopšanas atslēga nav pieejama.',
     'error_enable_first' => 'Vispirms ieslēdziet PIN koda bloķēšanu un tikai tad reģistrējiet biometriju.',
     'error_disable_blocked_by_encryption' => 'Tavas piezīmes un darījuma partneru dati ir šifrēti ar atslēgu, ko glabā šī lietotnes bloķēšana, tāpēc tās izslēgšana padarītu tos nelasāmus. Bloķēšana paliek ieslēgta — labāk nomaini savu PIN.',
-    'error_key_material_lost' => 'Šī ierīce vairs neglabā atslēgu, kas atver tavus šifrētos datus, tāpēc jauns PIN tos atkal lasāmus nepadarīs. Savieno šo ierīci ar tādu, kurai atslēga vēl ir, lai tos atgūtu.',
+    'error_key_material_lost' => 'Šī ierīce vairs neglabā atslēgu, kas atver tavus šifrētos datus, tāpēc jauns PIN tos atkal lasāmus nepadarīs. Atjauno šifrētu dublējumu, kas izveidots, kamēr atslēga vēl darbojās — ar sapārošanu šī ierīce atpakaļ netiks, jo sapārošanai vajag to pašu lietotnes bloķēšanu, ko šī atslēga atver.',
     'error_recovery_wrap_stale' => 'Tava konta parole vairs neatver šo lietotnes bloķēšanu — tā tika nomainīta pēc bloķēšanas iestatīšanas. PIN kods vēl darbojas, bet aiz tā nekas nepaliek, ja to aizmirsti. Piesaisti konta paroli no jauna tagad.',
     'relink_recovery' => 'Piesaistīt konta paroli no jauna',
     'relink_modal_heading' => 'Piesaistīt konta paroli no jauna — apstiprini ar PIN kodu',

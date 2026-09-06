@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Sistem uyarıları',
 
     'actions' => [
-        'install_next_launch' => 'Sonraki açılışta yükle',
-        'install_next_launch_aria' => 'Sonraki açılışta yükle — #:id numaralı sistem uyarısını çözüldü olarak işaretler',
+        'download_and_install' => 'İndir ve yükle',
+        'download_and_install_aria' => 'İndir ve yükle — #:id numaralı sistem uyarısını çözüldü olarak işaretler',
         'skip_version' => 'Bu sürümü atla',
         'release_notes' => 'Sürüm notları →',
         'update_now' => 'Şimdi güncelle',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Güncelleme mevcut — Beatrax :version hazır. Sonraki açılışta yüklenecek.',
+        'update_available' => 'Güncelleme mevcut — Beatrax :version. Sen kurmayı seçene kadar hiçbir şey indirilmez; ardından Beatrax kapanır ve yeni sürümle yeniden açılır.',
         'update_stale' => ':current sürümünü kullanıyorsun — :latest sürümü 30 gündür mevcut. Şimdi güncelle.',
         'update_critical' => 'Kritik güncelleme mevcut — :version sürümü şunu düzeltiyor: :summary. En kısa sürede yükle.',
         'backup_corrupt_with_path' => ':timestamp tarihinde yazılan yedek bütünlük denetimini geçemedi. :path yolunu incele. Yedeklere güvenmeden önce sorunu gider.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'PIN kodunuz bu cihazda uygulama kilidini açamıyor: kayıtlı anahtar okunamıyor. Yeni bir PIN belirlemek için hesap parolanızla oturum açın.',
         'sync_gdk_rewrap_failed' => 'Uygulama kilidi parolası değiştirildikten sonra GDK anahtarlığının yeniden sarılması başarısız oldu — anahtarlık yeniden sarılana kadar şifrelenmiş veriler kurtarılamayabilir.',
         'worker_crashed' => 'Beatrax arka plan işlemleri beklenmedik şekilde durdu. İçe aktarmalar ve e-posta taramaları duraklatıldı. Yeniden başlatmak için uygulamayı tekrar açın.',
-        'auth_lock_key_material_stranded' => 'Bu hesap için bekleyen veri şifrelemesi etkin, ancak veri anahtarını artık hiçbir uygulama kilidi sargısı tutmuyor; bu nedenle her şifreli not, açıklama ve karşı taraf ayrıntısı boş görünüyor. Geri dönüşün tek yolu, anahtarı hâlâ tutan bir cihazla eşleşmektir.',
+        'auth_lock_key_material_stranded' => 'Bu hesap için bekleyen veri şifrelemesi etkin, ancak veri anahtarını artık hiçbir uygulama kilidi sargısı tutmuyor; bu nedenle her şifreli not, açıklama ve karşı taraf ayrıntısı boş görünüyor. Anahtar hâlâ çalışırken alınmış şifreli bir yedeği geri yükleyin ya da bu hesabı, anahtarı hâlâ tutan bir cihazda yeniden kurun.',
         'auth_lock_recovery_wrap_stale' => 'Hesap parolası, uygulama kilidinin kurtarma sargısı yeniden sarılmadan değiştirildi; bu nedenle o parola artık uygulama kilidini açmıyor. PIN hâlâ açıyor. PIN hâlâ biliniyorken hesap parolasını uygulama kilidi ayarlarından yeniden bağlayın; aksi hâlde unutulan bir PIN’in ardında hiçbir şey kalmaz.',
         'reconnect_link' => 'Yeniden bağlan →',
         'pots_category_link_retired' => 'Zarf bütçeleme, kategoriye bağlı kumbaraların yerini aldı. Arşivlenen :count kumbaradan gelen :amount yeniden dağıtılmamış durumda ve dağıtmanızı bekliyor.',

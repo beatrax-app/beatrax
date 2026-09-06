@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Import beoordelen',
         'reconnect_first' => 'Eerst opnieuw verbinden',
-        'auto_caption' => 'Synchroniseert automatisch één keer per dag.',
+        'auto_caption' => 'Eén keer per dag wordt automatisch een synchronisatie geprobeerd.',
         'sync_now' => 'Nu synchroniseren',
         'consent_expired' => 'Toestemming verlopen — opnieuw verbinden.',
         'unavailable' => 'Enable Banking is tijdelijk niet beschikbaar. Probeer het zo weer.',
@@ -134,8 +134,8 @@ return [
         'institution_id_placeholder' => 'Instellings-ID',
 
         'step5_title' => 'Voltooi de toestemming in je browser',
-        'step5_body' => 'Klik hieronder om het inlog- en toestemmingsscherm van je bank te openen. Voltooi het inloggen en een eventuele 2-factorstap, dan word je hier automatisch teruggebracht om Open Banking af te ronden.',
-        'step5_body_touch' => 'Tik hieronder om het inlog- en toestemmingsscherm van je bank te openen. Voltooi het inloggen en een eventuele 2-factorstap, dan word je hier automatisch teruggebracht om Open Banking af te ronden.',
+        'step5_body' => 'Klik hieronder om het inlog- en toestemmingsscherm van je bank te openen. Voltooi het inloggen en een eventuele 2-factorstap en kom dan terug naar dit venster om Open Banking af te ronden.',
+        'step5_body_touch' => 'Tik hieronder om het inlog- en toestemmingsscherm van je bank te openen. Voltooi het inloggen en een eventuele 2-factorstap, schakel daarna terug naar Beatrax en open dit scherm opnieuw om Open Banking af te ronden.',
 
         'cancel' => 'Annuleren',
         'continue' => 'Doorgaan →',

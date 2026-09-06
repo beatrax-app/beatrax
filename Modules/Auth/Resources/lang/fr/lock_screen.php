@@ -7,7 +7,7 @@ return [
     'native_unlock_failed' => 'Déverrouillage impossible. Saisis plutôt ton PIN.',
     'page_title' => 'Déverrouiller · Beatrax',
     'sign_out' => 'Se déconnecter',
-    'forgot_pin' => 'PIN oublié ? Déconnecte-toi : tu peux te reconnecter avec le mot de passe de ton compte et définir un nouveau PIN. Aucune donnée n\'est perdue.',
+    'forgot_pin' => "PIN oublié ? Déconnecte-toi : si le mot de passe de ton compte ouvre encore ce verrou, tu peux te reconnecter, définir un nouveau PIN et ne rien perdre. Un mot de passe réinitialisé avec un code de récupération, ou défini pour toi par le propriétaire du compte, ne l'ouvre plus.",
 
     'digits_entered' => ':count chiffre saisi|:count chiffres saisis',
     'pad_label' => 'Pavé PIN',

@@ -12,7 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — confirmer le PIN',
     'sign_out' => 'Se déconnecter',
-    'forgot_pin' => 'PIN oublié ? Déconnecte-toi : tu peux te reconnecter avec le mot de passe de ton compte et définir un nouveau PIN. Aucune donnée n\'est perdue.',
+    'forgot_pin' => "PIN oublié ? Déconnecte-toi : si le mot de passe de ton compte ouvre encore ce verrou, tu peux te reconnecter, définir un nouveau PIN et ne rien perdre. Un mot de passe réinitialisé avec un code de récupération, ou défini pour toi par le propriétaire du compte, ne l'ouvre plus.",
 
     'errors' => [
         'pin_length' => 'Le PIN doit comporter au moins 6 chiffres.',

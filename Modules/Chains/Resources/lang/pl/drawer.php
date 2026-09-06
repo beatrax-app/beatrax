@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Łańcuch — :name',
     'heading' => 'Łańcuch',
 
-    'unresolved_heading' => 'Łańcuch jeszcze nierozwiązany',
-    'unresolved_body' => 'Mechanizm łańcuchów wciąż pracuje. Otwórz kolejkę przeglądu albo odśwież za chwilę.',
+    'unresolved_heading' => 'Nie wybrano transakcji',
+    'unresolved_body' => 'Wybierz wiersz na liście transakcji, aby zobaczyć, z czego została opłacona.',
 
     'none_heading' => 'Nie znaleziono łańcucha finansowania',
     'none_body' => 'Dla tej transakcji nie wykryto łańcucha finansowania. Jeśli miał się pojawić, zgłoś kandydata z kolejki przeglądu.',
