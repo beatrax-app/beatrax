@@ -187,7 +187,7 @@ final readonly class OpLogEntryApplier
         int $userId,
         string $now,
     ): ?array {
-        $refused = ($tomb !== null && $this->tombstoneWins($tomb, $fields))
+        $refused = ($tomb !== null && $this->tombstoneWins($table, $tomb, $fields))
             || ! $this->createRowComplete($table, $pk, $fields, $userId, $now);
 
         $payload = $refused ? null : $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
@@ -292,13 +292,14 @@ final readonly class OpLogEntryApplier
         return false;
     }
 
-    // Delete-wins: true when the tombstone HLC is >= the highest field HLC
-    // (including an exact tie). Shared by the create-shadow check and the
-    // field-merge delete path so both use one total-order comparison.
+    // A strictly later tombstone always wins and an earlier one never does; the
+    // table's `_delete_wins` decides the exact tie alone. `accounts` sets it
+    // false, so an edit made at the same instant keeps a row that carries a
+    // ledger. Both delete paths read this, for one order and one rule.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    private function tombstoneWins(OpLogEntry $tomb, array $fields): bool
+    private function tombstoneWins(string $table, OpLogEntry $tomb, array $fields): bool
     {
         $max = null;
 
@@ -317,10 +318,12 @@ final readonly class OpLogEntryApplier
             return false;
         }
 
-        return HybridLogicalClock::compare(
+        $order = HybridLogicalClock::compare(
             $tomb->hlcL, $tomb->hlcC, $tomb->deviceId,
             $max->hlcL, $max->hlcC, $max->deviceId,
-        ) >= 0;
+        );
+
+        return $order > 0 || ($order === 0 && $this->rules->deleteWins($table));
     }
 
     // A CreateRow needs every required column, minus the ones
@@ -437,7 +440,7 @@ final readonly class OpLogEntryApplier
             foreach ($rows as $pk => $fields) {
                 $tomb = $tombstones[$table][$pk] ?? null;
 
-                if ($tomb !== null && $this->tombstoneWins($tomb, $fields)) {
+                if ($tomb !== null && $this->tombstoneWins($table, $tomb, $fields)) {
                     $pendingDeletes[$table][$pk] = $tomb;
 
                     continue;
@@ -549,7 +552,7 @@ final readonly class OpLogEntryApplier
                 // created; preserving the op's pk makes it match.
                 $create = $creates[$table][$pk] ?? null;
 
-                if ($create !== null && ! $this->tombstoneWins($tomb, $create)) {
+                if ($create !== null && ! $this->tombstoneWins($table, $tomb, $create)) {
                     continue;
                 }
 
