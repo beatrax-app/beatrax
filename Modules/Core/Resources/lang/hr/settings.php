@@ -33,6 +33,13 @@ return [
         'help' => 'Mijenja riječi na zaslonu i način na koji se pišu iznosi. Sustavska postavka prati jezik tvog preglednika ili operativnog sustava, a zadano je engleski.',
     ],
 
+    'timezone' => [
+        'heading' => 'Vremenska zona',
+        'label' => 'Vremenska zona ove instalacije',
+        'help' => 'Određuje na koji dan pada transakcija i u kojem se okviru spremaju vremena. Upareni uređaji dijele ovu postavku, pa oba čitaju isti dan.',
+        'this_machine' => 'Ovaj uređaj (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Država',
         'label' => 'Tvoja država',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Unesi iznos od :zero naviše.',
         'period_day' => 'Odaberi dan od 1 do 28.',
         'currency_view' => 'Odaberi jednu od dostupnih opcija.',
+        'timezone' => 'Odaberi vremensku zonu s popisa.',
     ],
 ];

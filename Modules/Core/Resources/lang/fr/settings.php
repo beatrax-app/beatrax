@@ -33,6 +33,13 @@ return [
         'help' => "Change les mots affichés à l'écran et la façon dont les montants sont écrits. Système suit la langue de ton navigateur ou de ton système d'exploitation, avec l'anglais par défaut.",
     ],
 
+    'timezone' => [
+        'heading' => 'Fuseau horaire',
+        'label' => 'Fuseau horaire de cette installation',
+        'help' => 'Détermine le jour auquel une transaction appartient et le référentiel dans lequel les heures sont enregistrées. Les appareils appairés partagent ce réglage, pour que les deux lisent le même jour.',
+        'this_machine' => 'Cet appareil (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Pays',
         'label' => 'Ton pays',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Saisis un montant à partir de :zero.',
         'period_day' => 'Choisis un jour de 1 à 28.',
         'currency_view' => 'Choisis l\'une des options disponibles.',
+        'timezone' => 'Choisis un fuseau horaire dans la liste.',
     ],
 ];

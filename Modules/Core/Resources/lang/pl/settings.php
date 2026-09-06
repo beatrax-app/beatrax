@@ -33,6 +33,13 @@ return [
         'help' => 'Zmienia słowa widoczne na ekranie oraz sposób zapisu kwot. Ustawienie systemowe podąża za językiem przeglądarki lub systemu operacyjnego, a domyślnie używa angielskiego.',
     ],
 
+    'timezone' => [
+        'heading' => 'Strefa czasowa',
+        'label' => 'Strefa czasowa tej instalacji',
+        'help' => 'Decyduje, na który dzień przypada transakcja i w jakich ramach zapisywane są godziny. Sparowane urządzenia współdzielą to ustawienie, więc oba odczytują ten sam dzień.',
+        'this_machine' => 'To urządzenie (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Kraj',
         'label' => 'Twój kraj',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Podaj kwotę od :zero wzwyż.',
         'period_day' => 'Wybierz dzień od 1 do 28.',
         'currency_view' => 'Wybierz jedną z dostępnych opcji.',
+        'timezone' => 'Wybierz strefę czasową z listy.',
     ],
 ];

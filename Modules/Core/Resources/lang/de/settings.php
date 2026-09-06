@@ -33,6 +33,13 @@ return [
         'help' => 'Ändert die Wörter auf dem Bildschirm und die Schreibweise von Beträgen. System folgt der Sprache deines Browsers oder Betriebssystems, standardmäßig Englisch.',
     ],
 
+    'timezone' => [
+        'heading' => 'Zeitzone',
+        'label' => 'Zeitzone dieser Installation',
+        'help' => 'Bestimmt, auf welchen Tag eine Buchung fällt und in welchem Rahmen Zeiten gespeichert werden. Gekoppelte Geräte teilen diese Einstellung, damit beide denselben Tag lesen.',
+        'this_machine' => 'Dieses Gerät (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Dein Land',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Gib einen Betrag ab :zero ein.',
         'period_day' => 'Wähle einen Tag von 1 bis 28.',
         'currency_view' => 'Wähle eine der verfügbaren Optionen.',
+        'timezone' => 'Wähle eine Zeitzone aus der Liste.',
     ],
 ];
