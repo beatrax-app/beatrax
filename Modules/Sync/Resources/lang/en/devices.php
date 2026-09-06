@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Relay endpoint URL',
     'relay_insecure_warning' => 'This relay endpoint uses plain HTTP. While the relay never decrypts your data, an insecure connection exposes encrypted sizes and timing to network observers. Use an <strong>https://</strong> endpoint for best privacy.',
 
+    'manual_peer_address' => 'Other device address',
+    'manual_peer_address_help' => 'Optional. The other device as host and port, for a network where the two cannot find each other automatically. Discovery is tried first and this is used when it finds nothing. Leave empty to rely on discovery alone.',
+
     'enable_at_rest' => 'Enable at-rest encryption',
     'enable_at_rest_body' => 'Your data will be encrypted using your app-lock passphrase. A pre-migration backup will be created automatically.',
     'no_recovery_warning' => 'If you lose your app-lock passphrase and have no backup or other trusted device, your data cannot be recovered.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Relay endpoint cleared.',
         'relay_saved' => 'Relay endpoint saved.',
         'relay_save_failed' => 'Failed to save relay endpoint: :message',
+        'manual_peer_saved' => 'Device address saved.',
+        'manual_peer_cleared' => 'Device address cleared.',
+        'manual_peer_invalid' => 'Enter an address as host and port, for example 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'No other device is paired yet.',
     ],
     'app_lock_permanent' => 'Once your data is encrypted, the app lock can no longer be turned off — it holds the only key, and there is no way back to unencrypted.',
     'backlog_heading' => 'Waiting to be added',

@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL del endpoint del relay',
     'relay_insecure_warning' => 'Este endpoint de relay usa HTTP sin cifrar. Aunque el relay nunca descifra tus datos, una conexión insegura expone los tamaños cifrados y los tiempos a quien observe la red. Usa un endpoint <strong>https://</strong> para tener la mejor privacidad.',
 
+    'manual_peer_address' => 'Dirección del otro dispositivo',
+    'manual_peer_address_help' => 'Opcional. El otro dispositivo como host y puerto, para una red en la que ambos no se encuentran automáticamente. Primero se intenta la detección y esto se usa cuando no encuentra nada. Déjalo vacío para depender solo de la detección.',
+
     'enable_at_rest' => 'Activar el cifrado en reposo',
     'enable_at_rest_body' => 'Tus datos se cifrarán con la contraseña del bloqueo de la app. Se creará automáticamente una copia de seguridad antes de la migración.',
     'no_recovery_warning' => 'Si pierdes la contraseña del bloqueo de la app y no tienes copia de seguridad ni otro dispositivo de confianza, tus datos no se podrán recuperar.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Endpoint del relay borrado.',
         'relay_saved' => 'Endpoint del relay guardado.',
         'relay_save_failed' => 'No se ha podido guardar el endpoint del relay: :message',
+        'manual_peer_saved' => 'Dirección del dispositivo guardada.',
+        'manual_peer_cleared' => 'Dirección del dispositivo borrada.',
+        'manual_peer_invalid' => 'Introduce una dirección como host y puerto, por ejemplo 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Todavía no hay ningún otro dispositivo vinculado.',
     ],
     'app_lock_permanent' => 'Una vez cifrados tus datos, el bloqueo de la app ya no se puede desactivar — guarda la única clave, y no hay vuelta a datos sin cifrar.',
     'backlog_heading' => 'Pendiente de añadirse',

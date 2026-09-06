@@ -21,6 +21,15 @@ Ed25519 gate.
 Once an entry is past that gate its `userId` is **overwritten** with the replay scope rather
 than compared against it.
 
+That overwrite is why the key map itself has to name a scope. `$deviceKeys` is read once, for
+one user, when the replayer is constructed; the user to write into arrives per `replay()` call,
+and nothing used to hold the two together. A replayer built for one member and replayed into
+the other's scope admitted an author that member had never confirmed, re-stamped the entry onto
+the victim's `user_id`, and persisted it there under it. `OpLogReplayer` now takes
+`deviceKeysUserId` beside the keys, and a disagreement quarantines as `cross_user` ahead of the
+table, signature and column gates — the replayer's first guard. An arch test pins the binding at
+every production construction, and fails when it finds no construction to judge.
+
 The one exception is system cascade ops. Those are generated locally, bypass the signature
 gate, and therefore keep the `user_id` comparison — for them it is a real check, not a
 formality.

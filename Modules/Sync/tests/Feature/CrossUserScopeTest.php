@@ -13,10 +13,10 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
-// Two independent guards keep a replay off another user's rows: entries scoped
-// to a different user are dropped before verification, and every UPDATE carries
-// WHERE user_id anyway, so a bypass of the first still matches no row. Each is
-// exercised on its own, because either alone would hide a break in the other.
+// Two independent guards keep a replay off another user's rows: the confirmed
+// key set is bound to the one scope it may admit into, checked ahead of
+// everything, and every UPDATE carries WHERE user_id anyway, so a bypass of the
+// first still matches no row. Each is exercised alone, or one hides the other.
 
 function scopeUser(string $username): User
 {
@@ -225,7 +225,8 @@ it('hostile cross-user entry (userId=u2 in replay($entries, u1->id)) does NOT mu
 
     $replayer = new OpLogReplayer($db, $this->deviceKeys);
 
-    // The scope filter drops the entry before any write happens.
+    // Built without a bound scope on purpose: this case is here to prove the
+    // WHERE user_id guard holds on its own, with the first gate standing down.
     $replayer->replay([$hostileEntry], (int) $this->u1->id);
 
     $u2CatIdAfter = $db->connection()

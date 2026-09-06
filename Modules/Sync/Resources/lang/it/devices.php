@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL endpoint del relay',
     'relay_insecure_warning' => 'Questo endpoint del relay usa HTTP in chiaro. Anche se il relay non decritta mai i tuoi dati, una connessione non sicura espone le dimensioni crittografate e i tempi a chi osserva la rete. Usa un endpoint <strong>https://</strong> per la massima privacy.',
 
+    'manual_peer_address' => "Indirizzo dell'altro dispositivo",
+    'manual_peer_address_help' => "Facoltativo. L'altro dispositivo come host e porta, per una rete in cui i due non si trovano automaticamente. Prima si tenta il rilevamento e questo viene usato quando non trova nulla. Lascia vuoto per affidarti solo al rilevamento.",
+
     'enable_at_rest' => 'Attiva la crittografia a riposo',
     'enable_at_rest_body' => "I tuoi dati verranno crittografati con la passphrase di blocco dell'app. Verrà creato automaticamente un backup prima della migrazione.",
     'no_recovery_warning' => "Se perdi la passphrase di blocco dell'app e non hai un backup né un altro dispositivo attendibile, i tuoi dati non potranno essere recuperati.",
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Endpoint del relay cancellato.',
         'relay_saved' => 'Endpoint del relay salvato.',
         'relay_save_failed' => "Impossibile salvare l'endpoint del relay: :message",
+        'manual_peer_saved' => 'Indirizzo del dispositivo salvato.',
+        'manual_peer_cleared' => 'Indirizzo del dispositivo cancellato.',
+        'manual_peer_invalid' => 'Inserisci un indirizzo come host e porta, ad esempio 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Nessun altro dispositivo è ancora associato.',
     ],
     'app_lock_permanent' => 'Una volta cifrati i dati, il blocco app non può più essere disattivato — custodisce l\'unica chiave, e non si torna in chiaro.',
     'backlog_heading' => 'In attesa di essere aggiunti',

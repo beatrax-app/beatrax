@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL till relay-slutpunkt',
     'relay_insecure_warning' => 'Den här relay-slutpunkten använder vanlig HTTP. Relayen dekrypterar aldrig dina data, men en osäker anslutning avslöjar krypterade storlekar och tidpunkter för den som avlyssnar nätverket. Använd en <strong>https://</strong>-slutpunkt för bästa integritet.',
 
+    'manual_peer_address' => 'Den andra enhetens adress',
+    'manual_peer_address_help' => 'Valfritt. Den andra enheten som host och port, för ett nätverk där de två inte hittar varandra automatiskt. Sökning görs först och det här används när den inte hittar något. Lämna tomt för att bara förlita dig på sökning.',
+
     'enable_at_rest' => 'Aktivera kryptering i vila',
     'enable_at_rest_body' => 'Dina data krypteras med lösenfrasen för ditt applås. En säkerhetskopia skapas automatiskt före migreringen.',
     'no_recovery_warning' => 'Om du tappar bort lösenfrasen för ditt applås och saknar säkerhetskopia och andra betrodda enheter går dina data inte att återställa.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Relay-slutpunkten rensades.',
         'relay_saved' => 'Relay-slutpunkten sparades.',
         'relay_save_failed' => 'Det gick inte att spara relay-slutpunkten: :message',
+        'manual_peer_saved' => 'Enhetens adress sparad.',
+        'manual_peer_cleared' => 'Enhetens adress rensad.',
+        'manual_peer_invalid' => 'Ange en adress som host och port, till exempel 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Ingen annan enhet är ihopparad ännu.',
     ],
     'app_lock_permanent' => 'När dina data väl är krypterade kan applåset inte stängas av — det håller den enda nyckeln, och det finns ingen väg tillbaka till okrypterat.',
     'backlog_heading' => 'Väntar på att läggas till',

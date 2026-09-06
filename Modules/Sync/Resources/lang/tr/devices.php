@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Relay uç noktası URL adresi',
     'relay_insecure_warning' => 'Bu relay uç noktası düz HTTP kullanıyor. Relay verilerinin şifresini hiçbir zaman çözmese de güvenli olmayan bir bağlantı, şifreli veri boyutlarını ve zamanlamayı ağı izleyenlere açık eder. En iyi gizlilik için <strong>https://</strong> uç noktası kullan.',
 
+    'manual_peer_address' => 'Diğer cihazın adresi',
+    'manual_peer_address_help' => 'İsteğe bağlı. İki cihazın birbirini otomatik bulamadığı bir ağ için diğer cihaz, host ve port olarak. Önce keşif denenir, bu ise keşif bir şey bulamadığında kullanılır. Yalnızca keşfe güvenmek için boş bırak.',
+
     'enable_at_rest' => 'Durağan hal şifrelemesini etkinleştir',
     'enable_at_rest_body' => 'Verilerin uygulama kilidi parolan kullanılarak şifrelenecek. Geçiş öncesinde otomatik olarak bir yedek oluşturulacak.',
     'no_recovery_warning' => 'Uygulama kilidi parolanı kaybedersen ve yedeğin ya da güvendiğin başka bir cihazın yoksa verilerin kurtarılamaz.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Relay uç noktası temizlendi.',
         'relay_saved' => 'Relay uç noktası kaydedildi.',
         'relay_save_failed' => 'Relay uç noktası kaydedilemedi: :message',
+        'manual_peer_saved' => 'Cihaz adresi kaydedildi.',
+        'manual_peer_cleared' => 'Cihaz adresi temizlendi.',
+        'manual_peer_invalid' => 'Adresi host ve port olarak gir, örneğin 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Henüz başka bir cihaz eşleştirilmedi.',
     ],
     'app_lock_permanent' => 'Verilerin bir kez şifrelendiğinde uygulama kilidi artık kapatılamaz — tek anahtarı o tutar ve şifresiz hâle dönüş yoktur.',
     'backlog_heading' => 'Eklenmeyi bekliyor',

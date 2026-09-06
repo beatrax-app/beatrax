@@ -21,6 +21,8 @@ final readonly class OpLogEntryVerifier
 {
     /**
      * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
+     * @param  int|null  $deviceKeysUserId  The user $deviceKeys was read for. Null leaves the
+     *                                      scope unstated, which only a caller passing no keys may do.
      */
     public function __construct(
         private DatabaseManager $db,
@@ -28,6 +30,7 @@ final readonly class OpLogEntryVerifier
         private RegisteredColumns $columns,
         private SensitiveFieldRegistry $sensitiveFields,
         private array $deviceKeys,
+        private ?int $deviceKeysUserId,
         private DeviceKeySigner $signer,
         private ?OpLogFieldCrypto $fieldCrypto,
         private ?GdkKeyringService $keyringService,
@@ -136,19 +139,35 @@ final readonly class OpLogEntryVerifier
         return $entry;
     }
 
+    // Ahead of every other gate, because the entry is re-scoped onto $userId
+    // once it passes: a key set read for another user would admit an author
+    // this one never confirmed, and the write would land in their ledger. A
+    // system op bypasses Ed25519, so its own user id is the only scope it has.
+    private function userScopeReason(OpLogEntry $entry, int $userId): ?QuarantineReason
+    {
+        $keysAnswerForAnotherUser = $this->deviceKeysUserId !== null
+            && $this->deviceKeysUserId !== $userId;
+
+        $systemOpLeftItsScope = $this->isSystemDevice($entry->deviceId)
+            && $entry->userId !== $userId;
+
+        return $keysAnswerForAnotherUser || $systemOpLeftItsScope
+            ? QuarantineReason::CrossUser
+            : null;
+    }
+
     // Membership is proven by the DEVICE: $deviceKeys is confirmed-only and
-    // user-scoped, so the entry's user_id — a per-device autoincrement whose
-    // comparison rejected every op a paired peer sent — is not checked. System
-    // cascade ops are local, bypass the Ed25519 gate, and keep that check.
+    // user-scoped, so the entry's own user_id — a per-device autoincrement
+    // whose comparison rejected every op a paired peer sent — is never the
+    // thing compared. Which user the key set answers for is.
     private function rejectionReason(OpLogEntry $entry, int $userId): ?QuarantineReason
     {
-        $reason = match (true) {
-            ! $this->rules->isRegistered($entry->table) => QuarantineReason::UnknownTable,
-            $this->isSystemDevice($entry->deviceId) => $entry->userId === $userId
-                ? null
-                : QuarantineReason::CrossUser,
-            default => $this->authorReason($entry, $userId),
-        };
+        $reason = $this->userScopeReason($entry, $userId)
+            ?? match (true) {
+                ! $this->rules->isRegistered($entry->table) => QuarantineReason::UnknownTable,
+                $this->isSystemDevice($entry->deviceId) => null,
+                default => $this->authorReason($entry, $userId),
+            };
 
         if ($reason !== null) {
             return $reason;

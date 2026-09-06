@@ -126,6 +126,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         $replayer = new OpLogReplayer(
             db: $this->db,
             deviceKeys: $deviceKeys,
+            deviceKeysUserId: $this->userId,
             rules: $this->rules,
             searchWriter: $this->searchWriter,
         );

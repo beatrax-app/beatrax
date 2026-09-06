@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL-ul punctului final al releului',
     'relay_insecure_warning' => 'Acest punct final al releului folosește HTTP simplu. Deși releul nu îți decriptează niciodată datele, o conexiune nesecurizată expune dimensiunile criptate și momentele transferurilor celor care observă rețeaua. Folosește un punct final <strong>https://</strong> pentru cea mai bună confidențialitate.',
 
+    'manual_peer_address' => 'Adresa celuilalt dispozitiv',
+    'manual_peer_address_help' => 'Opțional. Celălalt dispozitiv ca host și port, pentru o rețea în care cele două nu se găsesc automat. Mai întâi se încearcă descoperirea, iar aceasta se folosește când nu găsește nimic. Lasă gol pentru a te baza doar pe descoperire.',
+
     'enable_at_rest' => 'Activează criptarea în repaus',
     'enable_at_rest_body' => 'Datele tale vor fi criptate folosind fraza de acces a blocării aplicației. O copie de rezervă dinaintea migrării va fi creată automat.',
     'no_recovery_warning' => 'Dacă pierzi fraza de acces a blocării aplicației și nu ai nicio copie de rezervă sau alt dispozitiv de încredere, datele tale nu pot fi recuperate.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Punctul final al releului a fost șters.',
         'relay_saved' => 'Punctul final al releului a fost salvat.',
         'relay_save_failed' => 'Salvarea punctului final al releului a eșuat: :message',
+        'manual_peer_saved' => 'Adresa dispozitivului a fost salvată.',
+        'manual_peer_cleared' => 'Adresa dispozitivului a fost ștearsă.',
+        'manual_peer_invalid' => 'Introdu o adresă ca host și port, de exemplu 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Niciun alt dispozitiv nu este încă asociat.',
     ],
     'app_lock_permanent' => 'Odată ce datele sunt criptate, blocarea aplicației nu mai poate fi dezactivată — deține singura cheie și nu există drum înapoi la date necriptate.',
     'backlog_heading' => 'Așteaptă să fie adăugat',

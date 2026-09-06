@@ -429,6 +429,58 @@
                     >{{ $relayFlashMessage }}</p>
                 @endif
             </div>
+
+            {{-- ===== Manual peer address: rung two of the transport ladder,
+                 for a network whose discovery never answers (default none) ===== --}}
+            @if ($hasPeerDevice)
+                <div class="space-y-3 pt-2">
+                    <div>
+                        <label
+                            for="manual-peer-address"
+                            class="block text-sm font-semibold text-slate-900 dark:text-slate-100"
+                        >
+                            {{ Lang::get('sync::devices.manual_peer_address') }}
+                        </label>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            {{ Lang::get('sync::devices.manual_peer_address_help') }}
+                        </p>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input
+                            id="manual-peer-address"
+                            type="text"
+                            inputmode="url"
+                            autocapitalize="none"
+                            autocomplete="off"
+                            spellcheck="false"
+                            wire:model="manualPeerAddress"
+                            placeholder="192.168.1.20:8100"
+                            class="block min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
+                                   placeholder:text-slate-500 dark:placeholder:text-slate-400
+                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                                   dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400
+                                   dark:focus-visible:ring-slate-100"
+                            data-testid="manual-peer-address-input"
+                        />
+                        <x-core::neutral-button
+                            class="min-h-[44px] flex-shrink-0"
+                            wire:click="saveManualPeerAddress"
+                            data-testid="manual-peer-address-save"
+                        >
+                            {{ Lang::get('sync::devices.save') }}
+                        </x-core::neutral-button>
+                    </div>
+
+                    @if ($manualPeerFlashMessage !== '')
+                        <p
+                            class="text-xs text-slate-600 dark:text-slate-400"
+                            aria-live="polite" aria-atomic="true"
+                            data-testid="manual-peer-address-flash"
+                        >{{ $manualPeerFlashMessage }}</p>
+                    @endif
+                </div>
+            @endif
         </div>
     @endif
 

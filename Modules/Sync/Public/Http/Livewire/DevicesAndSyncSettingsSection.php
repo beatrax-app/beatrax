@@ -24,6 +24,7 @@ use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Exceptions\DeviceIdentityUnreadableException;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesDeviceRenaming;
+use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesManualPeerAddress;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -33,6 +34,7 @@ use Modules\Sync\Internal\Support\DevicesScreenOpening;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
+use Modules\Sync\Public\Services\PeerLanAddressBook;
 use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
 
@@ -40,6 +42,7 @@ final class DevicesAndSyncSettingsSection extends Component
 {
     use HoldsFlashMessage;
     use ManagesDeviceRenaming;
+    use ManagesManualPeerAddress;
     use ReadsDeviceState;
 
     public bool $syncEnabled = false;
@@ -128,6 +131,7 @@ final class DevicesAndSyncSettingsSection extends Component
         AppLockClientConfig $lockConfig,
         DeviceRegistryService $registry,
         RelayConfig $relayConfig,
+        PeerLanAddressBook $addresses,
         PairingGateway $pairing,
         DeviceIdentityLoader $identityLoader,
         Session $session,
@@ -147,6 +151,11 @@ final class DevicesAndSyncSettingsSection extends Component
 
         $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
         $this->relayIsInsecure = $relayConfig->isInsecure();
+
+        $peerDeviceId = $this->firstPeerDeviceId($registry, $userId);
+        $manual = $peerDeviceId === null ? null : $addresses->manual($userId, $peerDeviceId);
+        $this->manualPeerAddress = $manual === null ? '' : $manual['host'].':'.$manual['port'];
+        $this->hasPeerDevice = $peerDeviceId !== null;
         $this->onPhone = UserDataPathService::platform() !== null;
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);

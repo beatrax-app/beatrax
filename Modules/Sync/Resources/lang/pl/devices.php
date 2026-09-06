@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Adres URL przekaźnika',
     'relay_insecure_warning' => 'Ten adres przekaźnika używa zwykłego HTTP. Przekaźnik nigdy nie odszyfrowuje Twoich danych, ale niezabezpieczone połączenie ujawnia obserwatorom sieci rozmiary i czasy zaszyfrowanych przesyłek. Dla najlepszej prywatności użyj adresu <strong>https://</strong>.',
 
+    'manual_peer_address' => 'Adres drugiego urządzenia',
+    'manual_peer_address_help' => 'Opcjonalne. Drugie urządzenie jako host i port, dla sieci, w której oba nie znajdują się automatycznie. Najpierw próbowane jest wykrywanie, a tego używa się, gdy nic nie znajdzie. Zostaw puste, aby polegać wyłącznie na wykrywaniu.',
+
     'enable_at_rest' => 'Włącz szyfrowanie w spoczynku',
     'enable_at_rest_body' => 'Twoje dane zostaną zaszyfrowane hasłem blokady aplikacji. Kopia zapasowa sprzed migracji powstanie automatycznie.',
     'no_recovery_warning' => 'Jeśli zgubisz hasło blokady aplikacji i nie masz kopii zapasowej ani innego zaufanego urządzenia, danych nie da się odzyskać.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Adres przekaźnika wyczyszczony.',
         'relay_saved' => 'Adres przekaźnika zapisany.',
         'relay_save_failed' => 'Nie udało się zapisać adresu przekaźnika: :message',
+        'manual_peer_saved' => 'Adres urządzenia zapisany.',
+        'manual_peer_cleared' => 'Adres urządzenia wyczyszczony.',
+        'manual_peer_invalid' => 'Podaj adres jako host i port, na przykład 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Żadne inne urządzenie nie jest jeszcze sparowane.',
     ],
     'app_lock_permanent' => 'Gdy dane są już zaszyfrowane, blokady aplikacji nie da się wyłączyć — przechowuje jedyny klucz, a powrotu do danych niezaszyfrowanych nie ma.',
     'backlog_heading' => 'Czeka na dodanie',
