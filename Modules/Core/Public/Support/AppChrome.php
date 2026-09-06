@@ -19,4 +19,17 @@ final readonly class AppChrome
         // system", so seeding it needs the choice rather than the outcome.
         public string $theme = 'system',
     ) {}
+
+    // Three answers, because a boolean cannot say "not yet known". Writing
+    // `light` for the unknown case is what every `html:not(.light)` guard
+    // reads as "the reader chose light", which disarms the pre-paint script
+    // and style that exist to answer precisely that case.
+    public function rootThemeClass(): string
+    {
+        if ($this->isDark) {
+            return 'dark';
+        }
+
+        return $this->needsPrePaintScript ? '' : 'light';
+    }
 }

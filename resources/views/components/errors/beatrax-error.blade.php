@@ -30,7 +30,7 @@
 <!doctype html>
 <html
     lang="{{ $chrome->locale }}"
-    class="beatrax-shell text-slate-900 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
+    class="beatrax-shell text-slate-900 dark:text-slate-100 {{ $chrome->rootThemeClass() }}"
     style="font-feature-settings: 'tnum';"
 >
     <head>
