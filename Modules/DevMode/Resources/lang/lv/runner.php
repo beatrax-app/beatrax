@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Notīrīt veidņu kešatmiņu', 'description' => 'Iztukšo kompilēto Blade veidņu kešatmiņu.'],
         'queue_retry' => ['label' => 'Atkārtot neizdevušos uzdevumus', 'description' => 'Atkārto vienu neizdevušos uzdevumu pēc id vai visus, ja norādāt `all`.'],
         'rederive_fingerprints' => ['label' => 'Atkārtoti atvasināt nospiedumus', 'description' => 'Pārrēķina nospiedumu katram darījumam, kas joprojām ir zem pašreizējās normalizācijas versijas. No šejienes palaista komanda ziņo skaitu un neko neieraksta.'],
+        'demo_seed' => ['label' => 'Ielādēt paraugdatus', 'description' => 'Pievieno parauga grāmatu — kontus, darījumus, budžetus, mērķus un brīdinājumus — izdomātu, lai lietotni varētu apskatīt ar kaut ko iekšā. Tā pievienojas jau esošajam, nevis to aizstāj, un nekas no tā nav reālas personas dati.'],
         'db_restore' => ['label' => 'Atjaunot datubāzi', 'description' => 'Aizstāj pašreizējo datubāzi ar norādīto dublējuma failu.'],
         'regenerate_recovery_codes' => ['label' => 'Ģenerēt jaunus atkopšanas kodus', 'description' => 'No jauna ģenerē lietotāja 10 vienreiz lietojamos atkopšanas kodus.'],
         'grant_dev' => ['label' => 'Piešķirt izstrādātāja piekļuvi', 'description' => 'Norādītajam lietotājam iestata is_developer=true.'],

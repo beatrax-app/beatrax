@@ -57,6 +57,7 @@ return [
         'view_clear' => ['label' => 'Clear view cache', 'description' => 'Flush the compiled Blade-view cache.'],
         'queue_retry' => ['label' => 'Retry failed jobs', 'description' => 'Retry one failed job by id, or every failed job by passing `all`.'],
         'rederive_fingerprints' => ['label' => 'Rederive fingerprints', 'description' => 'Re-compute the fingerprint of every transaction still below the current normalization version. A run from here reports the count and writes nothing.'],
+        'demo_seed' => ['label' => 'Load sample data', 'description' => 'Add a sample ledger — accounts, transactions, budgets, goals and alerts — invented for looking at the application with something in it. It adds to what is already here rather than replacing it, and none of it is any real person\'s data.'],
         'db_restore' => ['label' => 'Restore database', 'description' => 'Replace the current database with the given backup file.'],
         'regenerate_recovery_codes' => ['label' => 'Regenerate recovery codes', 'description' => 'Regenerate the 10 single-use recovery codes for a user.'],
         'grant_dev' => ['label' => 'Grant developer access', 'description' => 'Set is_developer=true for the given user.'],
