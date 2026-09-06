@@ -66,3 +66,27 @@ it('gives the switch track the same band, since it is 44 wide and 26 tall', func
         ->and(CssRule::blockFor($css, ".tap-link,\n    .switch,\n    td > a:only-child {"))
         ->toContain('position: relative;');
 });
+
+// An inline box split across two lines gives the band a containing block that
+// is only its FIRST fragment, so the band is placed across the break and lands
+// on neither line. Three call sites carry a hand-written `inline-block` for
+// this; a device sweep on an iPhone 12 mini found the two nobody had spotted —
+// the drift lifecycle panel at 2 of 4 band corners reachable and the recurring
+// empty state at 0 of 4. An inline-block does not fragment.
+it('keeps a wrapped link from fragmenting out of its own band', function (): void {
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    $missing = [];
+
+    foreach (['        .tap-link {', '    .tap-link {'] as $selector) {
+        if (! str_contains(CssRule::blockFor($css, $selector), 'display: inline-block;')) {
+            $missing[] = trim($selector);
+        }
+    }
+
+    expect($missing)->toBe(
+        [],
+        'A touch block no longer stops .tap-link fragmenting, so a link that wraps is '
+        .'placed across the break and answers a finger on neither line.',
+    );
+});
