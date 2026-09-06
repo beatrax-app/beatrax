@@ -43,13 +43,13 @@ it('renders the update.available banner with the verbatim copy and the install +
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertSee('Update available — Beatrax 0.1.1 is ready. It will install on next launch.', escape: false)
-        ->assertSee('Install on next launch')
+        ->assertSee('Update available — Beatrax 0.1.1. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.', escape: false)
+        ->assertSee('Download and install')
         ->assertSee('Skip this version')
         ->assertSee('Release notes')
         // Quoted: a system_alerts id is derived and runs past 2^53, which a
@@ -85,7 +85,7 @@ it('renders the update.critical banner with the rose severity and only the insta
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
         ->assertSee('Critical update available — version 0.1.2 fixes data corruption on import. Install as soon as possible.', escape: false)
-        ->assertSee('Install on next launch')
+        ->assertSee('Download and install')
         ->assertDontSee('Skip this version')
         ->assertSeeHtml('border-rose-200');
 });

@@ -54,14 +54,15 @@ it('reads the counterparties IBAN column in exactly one shipped place', function
 });
 
 it('withholds it there for the contact type the page names', function (): void {
-    foreach (personalIbanReadSites() as $path) {
-        $source = (string) file_get_contents($path);
+    $unasked = [];
 
-        expect($source)->toContain(
-            'CounterpartyType::Personal',
-            $path.' reads a counterparty IBAN without asking whether the contact is a personal one',
-        );
+    foreach (personalIbanReadSites() as $path) {
+        if (! str_contains((string) file_get_contents($path), 'CounterpartyType::Personal')) {
+            $unasked[] = $path;
+        }
     }
+
+    expect($unasked)->toBe([], "these read a counterparty IBAN without asking whether the contact is a personal one:\n  ".implode("\n  ", $unasked));
 });
 
 it('still makes the promise this guard keeps', function (): void {

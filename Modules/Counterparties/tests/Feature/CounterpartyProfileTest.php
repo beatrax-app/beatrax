@@ -59,7 +59,7 @@ it('Test 9: personal profile shows privacy banner + IBAN hidden by default', fun
     $component = Livewire::actingAs($user)
         ->test(CounterpartyProfile::class, ['slug' => 'alex-jordan']);
 
-    $component->assertSee('🔒 This is a personal contact. IBAN and personal details are hidden by default and never shared in exports.', escape: false);
+    $component->assertSee('🔒 This is a personal contact. The IBAN is hidden until you reveal it, and it stays out of exports. Their name still appears wherever their transactions do.', escape: false);
 
     // The full IBAN does ride in the Alpine x-show payload, so the dotted
     // glyph is what proves the render starts hidden behind x-cloak.

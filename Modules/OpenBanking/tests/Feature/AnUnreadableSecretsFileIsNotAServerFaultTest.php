@@ -79,10 +79,15 @@ it('flashes a translated line rather than the parser sentence and the file path'
         ->assertRedirect(route('settings.open-banking'))
         ->assertSessionHas(
             'open_banking_failed',
-            Lang::get('openbanking::messages.page.credentials_unreadable'),
+            Lang::get('openbanking::messages.page.credentials_unreadable')
+                .' '.Lang::get('openbanking::messages.page.credentials_unreadable_next'),
         );
 
-    expect(session('open_banking_failed'))->not->toContain(dirname($path));
+    // The settings banner renders the situation and the remedy as two lines of
+    // its own; a flash has one line to say both in. A reader who pressed
+    // Connect was told what broke and nothing about what to do.
+    expect(session('open_banking_failed'))->not->toContain(dirname($path))
+        ->and(session('open_banking_failed'))->toContain(Lang::get('openbanking::messages.page.credentials_unreadable_next'));
 });
 
 // One reader's damaged file is not another's problem: the path names an owner,
