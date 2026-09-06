@@ -58,6 +58,13 @@ final class SyncRebuildCommand extends Command
             return self::SUCCESS;
         }
 
+        return $this->rebuildAndReport($userId);
+    }
+
+    // Split from handle() so the decisions — is there an account, did the
+    // operator agree — read as decisions, and the work reads as work.
+    private function rebuildAndReport(int $userId): int
+    {
         try {
             $this->rebuilderFor($userId)->rebuild($userId);
         } catch (Throwable $e) {

@@ -160,3 +160,44 @@ it('refuses when there is no account to rebuild', function (): void {
         ->expectsOutputToContain('No account to rebuild')
         ->assertFailed();
 });
+
+// `--user` is typed by a human at a terminal. A non-numeric one is a mistake,
+// and rebuilding the owner's account because the argument did not parse is the
+// worst available reading of it.
+it('refuses a --user that is not an account id rather than falling back to the owner', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    rboInstall($db);
+
+    $this->artisan('sync:rebuild', ['--user' => 'not-a-number', '--force' => true])
+        ->expectsOutputToContain('No account to rebuild')
+        ->assertFailed();
+});
+
+// The other half: no --user at all resolves the owner, which is the single
+// account a desktop install has.
+it('rebuilds the owner when no account is named', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $install = rboInstall($db);
+
+    $categoryId = $db->connection()->table('categories')->insertGetId([
+        'user_id' => $install['userId'],
+        'name' => 'Owner default',
+        'slug' => 'owner-default',
+        'kind' => 'expense',
+        'created_at' => '2026-08-01 12:00:00',
+        'updated_at' => '2026-08-01 12:00:00',
+    ]);
+
+    $hlc = 1000;
+    foreach (['name' => 'Owner default', 'slug' => 'owner-default', 'kind' => 'expense'] as $field => $value) {
+        rboRecordOp($db, $install['sk'], $install['userId'], $categoryId, $field,
+            json_encode($value), $hlc++, OpType::CreateRow);
+    }
+
+    $this->artisan('sync:rebuild', ['--force' => true])->assertSuccessful();
+
+    expect($db->connection()->table('categories')->where('id', $categoryId)->value('name'))
+        ->toBe('Owner default');
+});
