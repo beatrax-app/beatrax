@@ -107,26 +107,48 @@ final readonly class SystemAlertWriter
      */
     public function withdrawForUser(int $userId, string $kind, CarbonImmutable $withdrawnAt): int
     {
-        $stamp = $withdrawnAt->toDateTimeString();
-        $connection = $this->db->connection();
-
-        $openIds = $connection->table('system_alerts')
+        $openIds = $this->db->connection()->table('system_alerts')
             ->where('user_id', $userId)
             ->where('kind', $kind)
             ->whereNull('acknowledged_at')
             ->pluck('id');
 
+        $closed = 0;
+
         foreach ($openIds as $id) {
-            $alertId = self::toInt($id);
-
-            $connection->table('system_alerts')
-                ->where('id', $alertId)
-                ->update(['acknowledged_at' => $stamp]);
-
-            $this->captureAcknowledgement($alertId, $userId, $stamp);
+            $closed += $this->acknowledgeForUser(self::toInt($id), $userId, $withdrawnAt) ? 1 : 0;
         }
 
-        return count($openIds);
+        return $closed;
+    }
+
+    // The one write of `acknowledged_at`, so the stamp and the op carrying it
+    // cannot come apart: the banner's button used to write the column itself and
+    // then ask this class to announce it. A trigger releases the dedup key off
+    // this column, so the write takes its own transaction and the capture waits.
+    /**
+     * @return bool whether this call is the one that closed the row
+     */
+    public function acknowledgeForUser(int $alertId, ?int $userId, CarbonImmutable $acknowledgedAt): bool
+    {
+        $stamp = $acknowledgedAt->toDateTimeString();
+        $connection = $this->db->connection();
+        $stamped = 0;
+
+        $connection->transaction(static function () use ($connection, $alertId, $stamp, &$stamped): void {
+            $stamped = $connection->table('system_alerts')
+                ->where('id', $alertId)
+                ->whereNull('acknowledged_at')
+                ->update(['acknowledged_at' => $stamp]);
+        });
+
+        if ($stamped === 0) {
+            return false;
+        }
+
+        $this->captureAcknowledgement($alertId, $userId, $stamp);
+
+        return true;
     }
 
     // The system-wide counterpart, and the only seam a standing machine-local

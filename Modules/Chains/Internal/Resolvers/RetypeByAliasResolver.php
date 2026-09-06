@@ -8,10 +8,10 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\TransactionTypeWriter;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -22,15 +22,13 @@ final readonly class RetypeByAliasResolver
 {
     use CoercesScalars;
 
-    private const int UPDATE_BATCH_SIZE = RowChunk::DEFAULT_SIZE;
-
     private const int CANDIDATE_CHUNK_SIZE = RowChunk::DEFAULT_SIZE;
 
     public function __construct(
         private DatabaseManager $db,
-        private Clock $clock,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
+        private TransactionTypeWriter $types,
     ) {}
 
     /**
@@ -39,7 +37,6 @@ final readonly class RetypeByAliasResolver
     public function resolveForUser(User $user): int
     {
         $connection = $this->db->connection();
-        $now = $this->clock->now()->toDateTimeString();
 
         // The early return is load-bearing, not an optimisation: with no aliases
         // there is nothing to match, and the pass below would decrypt every
@@ -85,11 +82,8 @@ final readonly class RetypeByAliasResolver
                 }
             });
 
-        $touched = 0;
-        $touched += $this->applyRetype($connection, $transferOutIds, TransactionType::TransferOut->value, $now);
-        $touched += $this->applyRetype($connection, $transferInIds, TransactionType::TransferIn->value, $now);
-
-        return $touched;
+        return $this->types->retype($user->id, $transferOutIds, TransactionType::TransferOut)
+            + $this->types->retype($user->id, $transferInIds, TransactionType::TransferIn);
     }
 
     /**
@@ -191,26 +185,5 @@ final readonly class RetypeByAliasResolver
         }
 
         return $map;
-    }
-
-    /**
-     * @param  list<int>  $ids
-     */
-    private function applyRetype(Connection $connection, array $ids, string $type, string $now): int
-    {
-        if ($ids === []) {
-            return 0;
-        }
-
-        $touched = 0;
-        foreach (array_chunk($ids, self::UPDATE_BATCH_SIZE) as $batch) {
-            $placeholders = implode(',', array_fill(0, count($batch), '?'));
-            $touched += $connection->update(
-                "UPDATE transactions SET type = ?, updated_at = ? WHERE id IN ({$placeholders})",
-                [$type, $now, ...$batch],
-            );
-        }
-
-        return $touched;
     }
 }
