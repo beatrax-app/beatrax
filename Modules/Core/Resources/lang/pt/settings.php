@@ -33,6 +33,13 @@ return [
         'help' => 'Muda as palavras no ecrã e a forma como os valores são escritos. O modo Sistema segue o idioma do teu navegador ou sistema operativo, usando o inglês por predefinição.',
     ],
 
+    'timezone' => [
+        'heading' => 'Fuso horário',
+        'label' => 'Fuso horário desta instalação',
+        'help' => 'Decide em que dia cai uma transação e em que referência as horas são guardadas. Os dispositivos emparelhados partilham esta definição, por isso ambos leem o mesmo dia.',
+        'this_machine' => 'Este dispositivo (:zone)',
+    ],
+
     'country' => [
         'heading' => 'País',
         'label' => 'O teu país',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Introduz um montante a partir de :zero.',
         'period_day' => 'Escolhe um dia de 1 a 28.',
         'currency_view' => 'Escolhe uma das opções disponíveis.',
+        'timezone' => 'Escolhe um fuso horário da lista.',
     ],
 ];

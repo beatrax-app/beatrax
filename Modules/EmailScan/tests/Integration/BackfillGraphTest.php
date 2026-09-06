@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Sleep;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Instant;
 use Modules\EmailScan\Internal\Clients\FakeGraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
@@ -106,19 +107,21 @@ it('walks Graph pages, persists .eml + inbox_messages rows, establishes the delt
 
     // The provider-stamped receivedDateTime drives internal_date, never the
     // message's own in-body Date: header — and it is stored in the app's own
-    // frame, which is what reads it back, not the UTC Graph sent it in.
-    expect($paypal->internal_date)->toBe('2026-05-11 11:14:21');
+    // frame, which is what reads it back, not the UTC Graph sent it in. Derived
+    // rather than spelled out, because a literal only says "the app's own
+    // frame" in the one zone it was written in.
+    expect($paypal->internal_date)->toBe(Instant::appLocal(CarbonImmutable::parse('2026-05-11T09:14:21Z')));
 
     $ics = $byId['ics-sample-statement-notice'];
     expect($ics->sender_email)->toBe('noreply@ics.nl');
     expect($ics->sender_name)->toBe('ICS Cards');
     expect($ics->subject)->toBe('Je nieuwe maandafschrift staat klaar');
-    expect($ics->internal_date)->toBe('2026-05-12 08:00:13');
+    expect($ics->internal_date)->toBe(Instant::appLocal(CarbonImmutable::parse('2026-05-12T06:00:13Z')));
 
     $play = $byId['googleplay-sample-purchase'];
     expect($play->sender_email)->toBe('googleplay-noreply@google.com');
     expect($play->subject)->toBe('Your Google Play Order Receipt');
-    expect($play->internal_date)->toBe('2026-05-13 19:45:49');
+    expect($play->internal_date)->toBe(Instant::appLocal(CarbonImmutable::parse('2026-05-13T17:45:49Z')));
 
     $inboxAfter = $db->connection()->table('inboxes')->where('id', $inboxId)->first(['backfill_progress']);
     expect($inboxAfter)->not->toBeNull();

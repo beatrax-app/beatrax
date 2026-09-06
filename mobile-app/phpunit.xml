@@ -35,6 +35,9 @@
         <env name="APP_KEY" value="base64:vQc4qXIjcS1Wt2kPQzGpL3yvqW6CrLqzqkEYqFqW7DA="/>
         <env name="APP_URL" value="https://beatrax.test" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <!-- Same pin as the root suite: the frame a DATETIME column is written
+             in must not be whatever the machine running the tests is in. -->
+        <env name="APP_TIMEZONE" value="UTC" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BEATRAX_DEV_MODE" value="false" force="true"/>
         <env name="CACHE_STORE" value="array"/>
