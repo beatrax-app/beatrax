@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Das letzte geprüfte Backup ist :hoursh alt. Beatrax erstellt dieses Backup selbst, einmal am Tag, solange die App geöffnet ist — von Hand ist nichts auszuführen. Bleibt es so alt, war die App nicht geöffnet, als ein täglicher Lauf anstand.',
         'backup_none_found' => 'Im Backup-Ordner wurde kein geprüftes Backup gefunden. Beatrax erstellt dieses Backup selbst, einmal am Tag, solange die App geöffnet ist — von Hand ist nichts auszuführen.',
-        'wal_mode_missing' => 'SQLite läuft nicht im WAL-Modus (aktuell :mode). Gleichzeitige Schreibvorgänge können hängen bleiben. Führe <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> für Hinweise aus.',
-        'synchronous_misconfigured' => 'Der SQLite-synchronous-Level ist :level (erwartet NORMAL/1). Die Dauerhaftigkeitssemantik kann von der Konfiguration abweichen. Führe <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> für Hinweise aus.',
+        'wal_mode_missing' => 'Die Datenbank läuft nicht im WAL-Modus (aktuell :mode), daher kann das Speichern stocken, während eine Hintergrundaufgabe läuft. Beatrax setzt WAL bei jedem Start, ein Neustart behebt das also meistens.',
+        'synchronous_misconfigured' => 'Die Haltbarkeitsstufe der Datenbank ist :level statt des erwarteten NORMAL. Beatrax setzt das bei jedem Start, ein Neustart behebt es also meistens.',
         'oauth_scrub_set_failed' => 'Die Schwärzung von OAuth-Geheimnissen ist außer Betrieb. Protokolle und Audit-Auszüge können bis zum nächsten erfolgreichen Laden ungeschwärzte Tokens enthalten.',
         'oauth_reauth_required' => 'OAuth-Geheimnisse wurden in benutzerspezifischen Speicher verschoben. Autorisieren Sie Gmail und Microsoft erneut, um das E-Mail-Scannen fortzusetzen. Die alte Geheimnisdatei wurde für ein Rollback in :file umbenannt.',
         'oauth_reconsent' => 'Verbinden Sie Ihr :provider-Konto erneut',

@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'En son doğrulanmış yedeğin üzerinden :hourssa geçti. Beatrax bu yedeği, uygulama açıkken günde bir kez kendisi alır — elle çalıştırılacak bir şey yok. Bu kadar eski kalıyorsa, günlük çalışma sırası geldiğinde uygulama açık değildi.',
         'backup_none_found' => 'Yedek klasöründe doğrulanmış bir yedek bulunamadı. Beatrax bu yedeği, uygulama açıkken günde bir kez kendisi alır — elle çalıştırılacak bir şey yok.',
-        'wal_mode_missing' => 'SQLite WAL modunda değil (şu anda :mode). Eş zamanlı yazma işlemleri takılabilir. Yönlendirme için <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> komutunu çalıştır.',
-        'synchronous_misconfigured' => 'SQLite synchronous düzeyi :level (NORMAL/1 bekleniyordu). Kalıcılık davranışı yapılandırmadan farklı olabilir. Yönlendirme için <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> komutunu çalıştır.',
+        'wal_mode_missing' => 'Veritabanı WAL modunda değil (şu anda :mode), bu yüzden bir arka plan görevi çalışırken kaydetme duraklayabilir. Beatrax her açılışta WAL\'ı ayarlar, bu yüzden yeniden başlatmak genelde bunu giderir.',
+        'synchronous_misconfigured' => 'Veritabanının dayanıklılık düzeyi beklenen NORMAL yerine :level. Beatrax bunu her açılışta ayarlar, bu yüzden yeniden başlatmak genelde giderir.',
         'oauth_scrub_set_failed' => 'OAuth gizli anahtarlarının maskelenmesi çalışmıyor. Günlükler ve denetim alıntıları, bir sonraki başarılı yüklemeye kadar maskelenmemiş belirteçler içerebilir.',
         'oauth_reauth_required' => 'OAuth gizli anahtarları kullanıcı başına depolamaya taşındı. E-posta taramasını sürdürmek için Gmail ve Microsoft yetkilendirmesini yenileyin. Eski gizli anahtar dosyası, geri alma için :file olarak yeniden adlandırıldı.',
         'oauth_reconsent' => ':provider hesabınızı yeniden bağlayın',

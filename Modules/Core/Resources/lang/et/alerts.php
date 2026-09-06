@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Viimane kontrollitud varukoopia on :hoursh vana. Beatrax teeb selle koopia ise, kord päevas, sel ajal kui rakendus on avatud — käsitsi pole midagi käivitada. Kui see jääb nii vanaks, ei olnud rakendus avatud siis, kui igapäevane käivitus kätte jõudis.',
         'backup_none_found' => 'Varukoopiate kaustast ei leitud ühtki kontrollitud varukoopiat. Beatrax teeb selle koopia ise, kord päevas, sel ajal kui rakendus on avatud — käsitsi pole midagi käivitada.',
-        'wal_mode_missing' => 'SQLite ei ole WAL-režiimis (praegu :mode). Samaaegsed kirjutamised võivad takerduda. Juhiste saamiseks käivita <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
-        'synchronous_misconfigured' => 'SQLite synchronous-tase on :level (oodatud NORMAL/1). Andmete püsivus võib konfiguratsioonist erineda. Juhiste saamiseks käivita <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
+        'wal_mode_missing' => 'Andmebaas ei ole WAL-režiimis (praegu :mode), seega salvestamine võib peatuda, kuni taustaülesanne töötab. Beatrax seab WAL-i igal käivitusel, nii et taaskäivitamine lahendab selle tavaliselt.',
+        'synchronous_misconfigured' => 'Andmebaasi vastupidavustase on :level oodatud NORMAL-i asemel. Beatrax seab selle igal käivitusel, nii et taaskäivitamine lahendab selle tavaliselt.',
         'oauth_scrub_set_failed' => 'OAuth-saladuste varjamine ei tööta. Logid ja auditi väljavõtted võivad kuni järgmise õnnestunud laadimiseni sisaldada varjamata lubasid.',
         'oauth_reauth_required' => 'OAuth-saladused viidi kasutajapõhisesse hoidlasse. Autoriseeri Gmail ja Microsoft uuesti, et e-kirjade skannimine jätkuks. Vana saladuste fail nimetati tagasipööramiseks ümber failiks :file.',
         'oauth_reconsent' => 'Ühenda oma :provider uuesti',

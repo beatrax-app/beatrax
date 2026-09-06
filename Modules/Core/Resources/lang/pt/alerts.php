@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'A cópia de segurança verificada mais recente tem :hoursh. O Beatrax faz esta cópia sozinho, uma vez por dia, enquanto a app está aberta — não há nada para executares à mão. Se continuar com esta idade, a app não esteve aberta quando calhou a execução diária.',
         'backup_none_found' => 'Não foi encontrada nenhuma cópia de segurança verificada na pasta de cópias. O Beatrax faz esta cópia sozinho, uma vez por dia, enquanto a app está aberta — não há nada para executares à mão.',
-        'wal_mode_missing' => 'O SQLite não está em modo WAL (atualmente :mode). As escritas simultâneas podem bloquear. Executa <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> para obteres ajuda.',
-        'synchronous_misconfigured' => 'O nível synchronous do SQLite é :level (esperava-se NORMAL/1). A durabilidade pode comportar-se de forma diferente da configurada. Executa <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> para obteres ajuda.',
+        'wal_mode_missing' => 'A base de dados não está em modo WAL (atualmente :mode), por isso guardar pode parar enquanto decorre uma tarefa em segundo plano. O Beatrax define WAL sempre que arranca, por isso reiniciar costuma resolver.',
+        'synchronous_misconfigured' => 'O nível de durabilidade da base de dados é :level em vez do NORMAL esperado. O Beatrax define-o sempre que arranca, por isso reiniciar costuma resolver.',
         'oauth_scrub_set_failed' => 'A ocultação de segredos OAuth está fora de serviço. Os registos e os extratos de auditoria podem conter tokens não ocultados até ao próximo carregamento bem-sucedido.',
         'oauth_reauth_required' => 'Os segredos OAuth foram movidos para armazenamento por utilizador. Volte a autorizar o Gmail e a Microsoft para retomar a análise de e-mail. O ficheiro de segredos anterior foi renomeado para :file para permitir a reversão.',
         'oauth_reconsent' => 'Volte a ligar o seu :provider',

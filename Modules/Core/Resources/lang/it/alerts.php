@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Il backup verificato più recente risale a :hoursh fa. Beatrax fa questo backup da solo, una volta al giorno, mentre l\'app è aperta — non c\'è nulla da eseguire a mano. Se resta così vecchio, l\'app non era aperta quando toccava l\'esecuzione giornaliera.',
         'backup_none_found' => 'Nella cartella dei backup non è stato trovato nessun backup verificato. Beatrax fa questo backup da solo, una volta al giorno, mentre l\'app è aperta — non c\'è nulla da eseguire a mano.',
-        'wal_mode_missing' => 'SQLite non è in modalità WAL (attualmente :mode). Le scritture simultanee potrebbero bloccarsi. Esegui <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> per assistenza.',
-        'synchronous_misconfigured' => 'Il livello synchronous di SQLite è :level (previsto NORMAL/1). La semantica di durabilità potrebbe differire dalla configurazione. Esegui <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> per assistenza.',
+        'wal_mode_missing' => 'Il database non è in modalità WAL (attualmente :mode), quindi il salvataggio può bloccarsi mentre è in corso un\'attività in background. Beatrax imposta WAL a ogni avvio, quindi riavviare di solito risolve.',
+        'synchronous_misconfigured' => 'Il livello di durabilità del database è :level invece del NORMAL previsto. Beatrax lo imposta a ogni avvio, quindi riavviare di solito risolve.',
         'oauth_scrub_set_failed' => 'L’oscuramento dei segreti OAuth non è attivo. I log e gli estratti di audit potrebbero contenere token non oscurati fino al prossimo caricamento riuscito.',
         'oauth_reauth_required' => 'I segreti OAuth sono stati spostati nell’archivio per utente. Autorizza di nuovo Gmail e Microsoft per riprendere la scansione della posta. Il vecchio file dei segreti è stato rinominato in :file per consentire il ripristino.',
         'oauth_reconsent' => 'Ricollega il tuo :provider',
