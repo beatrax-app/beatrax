@@ -1177,7 +1177,7 @@ it('has every #fragment in a doc link naming a heading that exists (M6)', functi
                 [$file, $anchor] = explode('#', $target, 2);
                 $resolved = realpath(dirname($path).'/'.$file);
                 if ($resolved !== false && ! in_array($anchor, commentPolicyHeadingSlugs($resolved), true)) {
-                    $hits[] = str_replace(base_path().'/', '', $path).':'.$token[2].' → '.$target;
+                    $hits[] = str_replace(RepoTree::root().'/', '', $path).':'.$token[2].' → '.$target;
                 }
             }
         }
@@ -1192,8 +1192,11 @@ it('has every #fragment in a doc link naming a heading that exists (M6)', functi
     );
 
     // The reader itself, over a heading that exists and one that does not, so
-    // an empty offender list is never a slug reader that answers nothing.
-    $slugs = commentPolicyHeadingSlugs(base_path('.docs/conventions/arch-invariants.md'));
+    // an empty offender list is never a slug reader that answers nothing. The
+    // page is named from the repository root rather than from base_path(): the
+    // second Composer root has no .docs of its own, and a control that cannot
+    // open its subject there would fail on the root rather than on the rule.
+    $slugs = commentPolicyHeadingSlugs(RepoTree::root().'/.docs/conventions/arch-invariants.md');
 
     expect($slugs)->toContain('a-scanner-accounts-for-the-whole-tree')
         ->and($slugs)->not->toContain('a-heading-this-page-has-never-carried');
