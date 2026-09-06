@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Відхилити',
         'install_app' => 'Встановити застосунок',
 
-        'desktop_html' => 'Відкрий Beatrax у браузері на телефоні й натисни «Додати на початковий екран» — або натисни піктограму <strong style="color: var(--color-text);">⚡</strong> у меню поширення Safari.',
+        'desktop_html' => 'Відкрий Beatrax у браузері на телефоні й у меню поширення вибери <strong style="color: var(--color-text);">Додати на початковий екран</strong>.',
     ],
 
     'topbar' => [

@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Odbaci',
         'install_app' => 'Instaliraj aplikaciju',
 
-        'desktop_html' => 'Otvori Beatrax u pregledaču na telefonu i dodirni „Dodaj na početni ekran” — ili dodirni ikonu <strong style="color: var(--color-text);">⚡</strong> u Safarijevom meniju za deljenje.',
+        'desktop_html' => 'Otvori Beatrax u pregledaču na telefonu i u meniju za deljenje izaberi <strong style="color: var(--color-text);">Dodaj na početni ekran</strong>.',
     ],
 
     'topbar' => [

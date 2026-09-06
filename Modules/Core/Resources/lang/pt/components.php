@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Dispensar',
         'install_app' => 'Instalar a app',
 
-        'desktop_html' => 'Abre o Beatrax no navegador do telemóvel e toca em "Adicionar ao ecrã principal" — ou toca no ícone <strong style="color: var(--color-text);">⚡</strong> no menu de partilha do Safari.',
+        'desktop_html' => 'Abre o Beatrax no navegador do telemóvel e escolhe <strong style="color: var(--color-text);">Adicionar ao ecrã principal</strong> no menu de partilha.',
     ],
 
     'topbar' => [

@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Peida',
         'install_app' => 'Paigalda rakendus',
 
-        'desktop_html' => 'Ava Beatrax telefoni brauseris ja puuduta „Lisa avakuvale“ — või puuduta Safari jagamismenüüs ikooni <strong style="color: var(--color-text);">⚡</strong>.',
+        'desktop_html' => 'Ava Beatrax telefoni brauseris ja vali jagamismenüüst <strong style="color: var(--color-text);">Lisa avakuvale</strong>.',
     ],
 
     'topbar' => [

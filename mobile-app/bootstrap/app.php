@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Modules\Auth\Internal\Http\Middleware\ForgetsSpentRecoveryCodes;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
+use Modules\Core\Internal\Http\Middleware\SetInstallTimezone;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Bootstrap\EnsurePrivateDatabaseFile;
@@ -100,6 +101,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // translator on config('app.locale'): the language switcher wrote
             // session('locale') and nothing read it.
             SetLocale::class,
+            SetInstallTimezone::class,
             // The import ceremony leaves the recovery-codes step by a plain
             // link, so nothing of that screen's ever runs again to clear them.
             ForgetsSpentRecoveryCodes::class,

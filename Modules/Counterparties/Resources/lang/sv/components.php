@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Integritetsmeddelande för privat kontakt',
-        'body' => '🔒 Det här är en privat kontakt. IBAN och personuppgifter är dolda som standard och delas aldrig i exporter.',
+        'body' => '🔒 Det här är en privat kontakt. IBAN är dolt tills du visar det, och det följer inte med i exporter. Namnet syns fortfarande överallt där kontaktens transaktioner dyker upp.',
     ],
 
     'self_stub' => [

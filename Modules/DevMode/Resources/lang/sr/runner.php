@@ -62,6 +62,7 @@ return [
         // files already use for a key and a biometric fingerprint; here it names the
         // transaction fingerprint. Confirm the same noun carries all three.
         'rederive_fingerprints' => ['label' => 'Ponovo izvedi otiske', 'description' => 'Ponovo računa otisak svake transakcije koja je i dalje ispod trenutne verzije normalizacije. Pokretanje odavde prijavljuje broj i ništa ne upisuje.'],
+        'demo_seed' => ['label' => 'Učitaj probne podatke', 'description' => 'Dodaje probnu knjigu — račune, transakcije, budžete, ciljeve i upozorenja — izmišljenu da aplikaciju pogledaš sa nečim u njoj. Dodaje se na ono što već postoji umesto da ga zameni, i ništa od toga nisu podaci stvarne osobe.'],
         'db_restore' => ['label' => 'Vrati bazu podataka', 'description' => 'Zamenjuje trenutnu bazu podataka zadatom datotekom rezervne kopije.'],
         'regenerate_recovery_codes' => ['label' => 'Ponovo generiši kodove za oporavak', 'description' => 'Ponovo generiše 10 jednokratnih kodova za oporavak za korisnika.'],
         'grant_dev' => ['label' => 'Dodeli programerski pristup', 'description' => 'Postavlja is_developer=true za zadatog korisnika.'],

@@ -57,6 +57,7 @@ return [
         'view_clear' => ['label' => 'View-cache leegmaken', 'description' => 'Leegt de cache met gecompileerde Blade-views.'],
         'queue_retry' => ['label' => 'Mislukte jobs opnieuw proberen', 'description' => 'Probeert één mislukte job op id opnieuw, of elke mislukte job als je `all` opgeeft.'],
         'rederive_fingerprints' => ['label' => 'Fingerprints opnieuw afleiden', 'description' => 'Berekent de fingerprint opnieuw van elke transactie die nog onder de huidige normalisatieversie zit. Een run vanaf hier meldt het aantal en schrijft niets.'],
+        'demo_seed' => ['label' => 'Voorbeeldgegevens laden', 'description' => 'Voegt een voorbeeldadministratie toe — rekeningen, transacties, budgetten, doelen en meldingen — verzonnen om de app met iets erin te bekijken. Het komt bij wat er al staat in plaats van het te vervangen, en niets ervan zijn gegevens van een echt persoon.'],
         'db_restore' => ['label' => 'Database terugzetten', 'description' => 'Vervangt de huidige database door het opgegeven back-upbestand.'],
         'regenerate_recovery_codes' => ['label' => 'Herstelcodes opnieuw genereren', 'description' => 'Genereert de 10 eenmalige herstelcodes van een gebruiker opnieuw.'],
         'grant_dev' => ['label' => 'Ontwikkelaarstoegang verlenen', 'description' => 'Zet is_developer=true voor de opgegeven gebruiker.'],

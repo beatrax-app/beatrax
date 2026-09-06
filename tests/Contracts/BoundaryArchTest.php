@@ -2233,7 +2233,6 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // could not grow: the listener that owns the memory now find-or-creates
         // the merchant its NOT NULL FK points at, beside the memory itself.
         'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchants 1',
-        'Modules/Chains/Internal/Resolvers/RetypeByAliasResolver.php transactions 1',
         'Modules/Core/Internal/Console/FailedJobsCommand.php failed_jobs 1',
         // The enable-time sweep and its rollback restore reach six tables this
         // module does not own, all through one table-agnostic batched writer in
@@ -2655,6 +2654,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'tests/Contracts/ASyncedRowIsAnnouncedWhicheverWayItIsWrittenArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         // The guard reads the printed due date off the committed statement
         // through the same named anchor the adapter reads it through, so a
@@ -2701,6 +2701,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/SelectOnlyValidatorContractTest.php -> Modules\\DevMode\\Internal\\Sql\\SelectOnlyValidator',
         'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
+        'tests/Contracts/Support/UnannouncedWrites.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        'tests/Contracts/Support/UnannouncedWrites.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Feature/AnonymisedFixtureSweepTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\PdfTextExtractor',
         'tests/Feature/InstallLaunchdCommandTest.php -> Modules\\Core\\Internal\\Console\\InstallCommand',
         'tests/Feature/TrustedHostGuardTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\TrustedHostGuard',
@@ -2735,6 +2737,10 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // would claim a dependency on OpenBanking this file does not have.
         'tests/Contracts/AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest.php -> Modules\\OpenBanking\\Internal\\Events\\OpenBankingConsentFailed',
         'tests/Contracts/AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest.php -> Modules\\OpenBanking\\Internal\\Events\\OpenBankingImportedNothing',
+        // Read out of bootstrap/app.php as text, never called. The case asserts
+        // the middleware is still registered there, and importing it would
+        // prove nothing about what that file says.
+        'tests/Contracts/NoShippedTemplatePinsTheReadersTimeZoneArchTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\SetInstallTimezone',
     ];
 
     $inlineReferences = [];

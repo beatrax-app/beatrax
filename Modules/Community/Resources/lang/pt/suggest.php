@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Sugerir um mapeamento',
-    'intro' => 'Abre o GitHub no teu navegador para poderes submeter a sugestão como PR de rascunho. O teu nome e o teu e-mail nunca saem deste dispositivo.',
+    'intro' => 'Abre o GitHub no teu navegador com a sugestão já preenchida. Só seguem com ela o padrão, o nome, a categoria e a região acima — e o padrão é a descrição tal como o teu extrato a escreveu. O teu nome e o teu e-mail nunca saem deste dispositivo.',
 
     'pattern' => 'Padrão',
     'name' => 'Nome legível',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'Pré-visualização do YAML',
 
     'cancel' => 'Cancelar',
-    'submit' => 'Submeter como PR de rascunho',
+    'submit' => 'Abrir no GitHub',
 
     'toast' => 'Sugestão aberta no teu navegador.',
 

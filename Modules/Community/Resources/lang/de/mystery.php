@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Angezeigt werden die obersten :shown von :total.',
 
-    'footer' => 'Die gemeinsame Liste ist eine YAML-Datei, die Beatrax mitliefert. Beim Abschicken eines Vorschlags öffnet sich GitHub in deinem Browser; sonst verlässt nichts dieses Gerät.',
+    'footer' => 'Die gemeinsame Liste ist eine YAML-Datei, die Beatrax mitliefert. Beim Abschicken eines Vorschlags öffnet sich GitHub in deinem Browser und nimmt diese Beschreibung mit; sonst verlässt nichts dieses Gerät.',
 
     'card' => [
         'seen_times' => 'Gesehen :count Mal|Gesehen :count Mal',

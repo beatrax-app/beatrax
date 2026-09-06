@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Manter bloqueio',
 
     'forgot_modal_heading' => 'Repor o PIN — confirma com a palavra-passe da conta',
-    'forgot_modal_body' => 'A palavra-passe da conta recupera a chave de bloqueio, por isso repor o PIN nunca perde dados.',
+    'forgot_modal_body' => 'A palavra-passe da conta recupera a chave de bloqueio, por isso repor o PIN não perde dados — desde que essa palavra-passe ainda abra o bloqueio. Uma palavra-passe reposta com um código de recuperação, ou definida pelo dono da conta, já não o abre.',
     'confirm_new_pin_label' => 'Confirmar o novo PIN',
     'reset_pin' => 'Repor PIN',
     'cancel' => 'Cancelar',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Não foi possível repor o PIN — a chave de recuperação não está disponível.',
     'error_enable_first' => 'Ativa primeiro o bloqueio por PIN antes de registares a biometria.',
     'error_disable_blocked_by_encryption' => 'As tuas notas e os dados das contrapartes estão cifrados com a chave que este bloqueio da aplicação guarda, por isso desligá-lo deixaria tudo ilegível. O bloqueio fica ativo — muda antes o teu PIN.',
-    'error_key_material_lost' => 'Este dispositivo já não guarda a chave que abre os teus dados cifrados, por isso um PIN novo não os volta a tornar legíveis. Emparelha este dispositivo com um que ainda tenha a chave para os recuperares.',
+    'error_key_material_lost' => 'Este dispositivo já não guarda a chave que abre os teus dados cifrados, por isso um PIN novo não os volta a tornar legíveis. Restaura uma cópia de segurança cifrada feita enquanto a chave ainda funcionava — este dispositivo não consegue emparelhar para voltar atrás, porque o emparelhamento precisa do bloqueio da aplicação que essa chave abre.',
     'error_recovery_wrap_stale' => 'A palavra-passe da conta já não abre este bloqueio da aplicação — foi alterada depois de o bloqueio estar configurado. O teu PIN continua a funcionar, mas não fica nada por trás dele se o esqueceres. Volta a ligar a palavra-passe da conta agora.',
     'relink_recovery' => 'Voltar a ligar a palavra-passe',
     'relink_modal_heading' => 'Voltar a ligar a palavra-passe — confirma com o PIN',

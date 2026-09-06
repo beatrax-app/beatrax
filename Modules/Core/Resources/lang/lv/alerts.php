@@ -6,8 +6,8 @@ return [
     'banner_aria' => 'Sistēmas brīdinājumi',
 
     'actions' => [
-        'install_next_launch' => 'Instalēt nākamajā palaišanas reizē',
-        'install_next_launch_aria' => 'Instalēt nākamajā palaišanas reizē — atzīmē sistēmas brīdinājumu #:id kā atrisinātu',
+        'download_and_install' => 'Lejupielādēt un instalēt',
+        'download_and_install_aria' => 'Lejupielādēt un instalēt — atzīmē sistēmas brīdinājumu #:id kā atrisinātu',
         'skip_version' => 'Izlaist šo versiju',
         'release_notes' => 'Laidiena piezīmes →',
         'update_now' => 'Atjaunināt tagad',
@@ -26,7 +26,7 @@ return [
     ],
 
     'messages' => [
-        'update_available' => 'Pieejams atjauninājums — Beatrax :version ir gatavs. Tas tiks instalēts nākamajā palaišanas reizē.',
+        'update_available' => 'Pieejams atjauninājums — Beatrax :version. Nekas netiek lejupielādēts, kamēr neizvēlaties instalēt; pēc tam Beatrax aizveras un atveras no jauna ar jauno versiju.',
         'update_stale' => 'Jūs izmantojat versiju :current — versija :latest ir pieejama jau 30 dienas. Atjauniniet tagad.',
         'update_critical' => 'Pieejams kritisks atjauninājums — versija :version novērš :summary. Instalējiet to pēc iespējas ātrāk.',
         'backup_corrupt_with_path' => 'Dublējums, kas izveidots :timestamp, neizturēja integritātes pārbaudi. Pārbaudiet :path. Atrisiniet to, pirms paļaujaties uz dublējumiem.',
@@ -49,7 +49,7 @@ return [
         'auth_lock_corrupted_key' => 'Jūsu PIN nevar atbloķēt lietotni šajā ierīcē: saglabātā atslēga nav nolasāma. Piesakieties ar konta paroli, lai iestatītu jaunu PIN.',
         'sync_gdk_rewrap_failed' => 'Pēc lietotnes bloķēšanas paroles frāzes maiņas neizdevās atkārtoti ietīt GDK atslēgu saišķi — šifrētie dati var nebūt atgūstami, līdz saišķis tiek atkārtoti ietīts.',
         'worker_crashed' => 'Beatrax fona apstrāde negaidīti apstājās. Importēšana un e-pasta skenēšana ir pauzēta. Lai to restartētu, atveriet lietotni vēlreiz.',
-        'auth_lock_key_material_stranded' => 'Šim kontam ir aktīva miera stāvokļa šifrēšana, taču neviens lietotnes bloķēšanas apvalks vairs netur datu atslēgu, tāpēc katra šifrētā piezīme, apraksts un darījuma partnera informācija tiek nolasīta kā tukša. Vienīgais ceļš atpakaļ ir savienot pārī ierīci, kurai atslēga vēl ir.',
+        'auth_lock_key_material_stranded' => 'Šim kontam ir aktīva miera stāvokļa šifrēšana, taču neviens lietotnes bloķēšanas apvalks vairs netur datu atslēgu, tāpēc katra šifrētā piezīme, apraksts un darījuma partnera informācija tiek nolasīta kā tukša. Atjaunojiet šifrētu dublējumu, kas izveidots, kamēr atslēga vēl darbojās, vai iestatiet šo kontu no jauna ierīcē, kurai atslēga vēl ir.',
         'auth_lock_recovery_wrap_stale' => 'Konta parole tika mainīta, neietinot atkārtoti lietotnes bloķēšanas atkopšanas apvalku, tāpēc šī parole vairs neatver lietotnes bloķēšanu. PIN joprojām atver. Atkārtoti sasaistiet konta paroli bloķēšanas iestatījumos, kamēr PIN vēl ir zināms — citādi aiz aizmirsta PIN nepaliek nekas.',
         'reconnect_link' => 'Pievienot atkārtoti →',
         // i18n-review: lv · pots_category_link_retired — Latvian selects the FIRST

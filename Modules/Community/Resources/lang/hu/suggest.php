@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Megfeleltetés javaslása',
-    'intro' => 'Megnyitja a GitHubot a böngésződben, hogy piszkozat PR-ként beküldhesd a javaslatot. A neved és az e-mail-címed soha nem hagyja el ezt az eszközt.',
+    'intro' => 'Megnyitja a GitHubot a böngésződben, a javaslattal együtt kitöltve. Csak a fenti minta, név, kategória és régió megy vele — a minta pedig az a leírás, ahogy a kivonatod írta. A neved és az e-mail-címed soha nem hagyja el ezt az eszközt.',
 
     'pattern' => 'Minta',
     'name' => 'Beszédes név',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML-előnézet',
 
     'cancel' => 'Mégse',
-    'submit' => 'Beküldés piszkozat PR-ként',
+    'submit' => 'Megnyitás a GitHubon',
 
     'toast' => 'A javaslat megnyílt a böngésződben.',
 

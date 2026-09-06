@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Stel een koppeling voor',
-    'intro' => 'Opent GitHub in je browser zodat je de suggestie als concept-PR kunt insturen. Je naam en e-mailadres verlaten dit apparaat nooit.',
+    'intro' => 'Opent GitHub in je browser met de suggestie al ingevuld. Alleen het patroon, de naam, de categorie en de regio hierboven gaan mee — en het patroon is de omschrijving zoals je afschrift die schreef. Je naam en e-mailadres verlaten dit apparaat nooit.',
 
     'pattern' => 'Patroon',
     'name' => 'Herkenbare naam',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML-voorbeeld',
 
     'cancel' => 'Annuleren',
-    'submit' => 'Insturen als concept-PR',
+    'submit' => 'Openen op GitHub',
 
     'toast' => 'Suggestie geopend in je browser.',
 

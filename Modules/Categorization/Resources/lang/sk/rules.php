@@ -16,7 +16,7 @@ return [
     'reapply_progress' => 'Pravidlá sa znova aplikujú… :checked z :count skontrolovanej transakcie|Pravidlá sa znova aplikujú… :checked z :count skontrolovaných transakcií|Pravidlá sa znova aplikujú… :checked z :count skontrolovaných transakcií',
 
     'empty_heading' => 'Zatiaľ žiadne pravidlá',
-    'empty_body' => 'Pravidlá porovnávajú transakcie s viacerými podmienkami a automaticky menia kategóriu, protistranu, poznámku aj daňovú značku — pri importe a vždy, keď ich znova použiješ na svoju doterajšiu históriu.',
+    'empty_body' => 'Pravidlá porovnávajú transakcie s viacerými podmienkami a pri importe automaticky menia kategóriu, protistranu aj poznámku. Zmena daňovej značky sa prejaví, až keď pravidlá znova použiješ na svoju doterajšiu históriu.',
     'empty_cta' => 'Vytvor prvé pravidlo',
 
     'col_priority' => 'Priorita',

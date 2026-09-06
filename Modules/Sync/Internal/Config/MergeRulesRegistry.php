@@ -657,6 +657,11 @@ final class MergeRulesRegistry
                 'anomaly_sensitivity_percent' => ['nullable' => false],
                 'anomaly_min_amount_minor' => ['nullable' => false],
                 'community_settings' => ['nullable' => true],
+                // Synced, unlike `locale` and `theme` above, because it is not
+                // a matter of taste: `app.timezone` is the frame a DATETIME
+                // column is written in, so two devices holding different
+                // answers store two different strings for the same instant.
+                'timezone' => ['nullable' => true],
                 // The carryover fold's genesis anchor. Absent from here, a
                 // device that joined by pairing held it null forever and read
                 // every synced assignment as zero.

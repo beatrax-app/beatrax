@@ -12,7 +12,7 @@ return [
     // i18n-review: et · intro — "the devices you pair for sync" became the
     // relative "seadmed, mille sünkroonimiseks seod". A native should say
     // whether that reads inside an em-dash list, or wants a clause of its own.
-    'intro' => 'Beatrax hoiab kõike selles seadmes. Beatraxi serverit ega pilvekontot ei ole. Välja läheb ainult see, mille sa ise ühendad — postkast, pank Enable Bankingu kaudu, seadmed, mille sünkroonimiseks seod — ja lisaks igapäevane vahetuskursside päring. Iga ühendus ütleb seda ekraanil, kus sa selle sisse lülitad.',
+    'intro' => 'Beatrax hoiab kõike selles seadmes. Beatraxi serverit ega pilvekontot ei ole. Omal algatusel läheb välja üksainus päring — kontroll, kas on olemas uus versioon, ja selle saad välja lülitada. Kõik muu ootab sind: postkast, pank Enable Bankingu kaudu, igapäevane vahetuskursside päring, seadmed, mille sünkroonimiseks seod, sinu seadistatud relee ja iga link, millele klõpsad. Igaüks neist ütleb seda ekraanil, kus sa selle sisse lülitad.',
 
     'lives_here' => 'Sinu andmed asuvad siin',
     'copy' => 'Kopeeri',

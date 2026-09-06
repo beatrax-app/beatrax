@@ -33,6 +33,24 @@ return [
         'help' => 'Zmienia słowa widoczne na ekranie oraz sposób zapisu kwot. Ustawienie systemowe podąża za językiem przeglądarki lub systemu operacyjnego, a domyślnie używa angielskiego.',
     ],
 
+    'timezone' => [
+        'heading' => 'Strefa czasowa',
+        'label' => 'Strefa czasowa tej instalacji',
+        'help' => 'Decyduje, na który dzień przypada transakcja i w jakich ramach zapisywane są godziny. Sparowane urządzenia współdzielą to ustawienie, więc oba odczytują ten sam dzień.',
+        'this_machine' => 'To urządzenie (:zone)',
+    ],
+
+    'sample_data' => [
+        'heading' => 'Dane przykładowe',
+        'help' => 'Wypełnia to konto wymyśloną księgą — konta, transakcje, budżety, cele i alerty — żeby było na co patrzeć. Dokłada się do tego, co już jest, i nic z tego nie jest danymi prawdziwej osoby.',
+        'warning' => 'To zapisuje w twojej własnej księdze i trafia na sparowane urządzenia. Na tym ekranie nie ma cofnięcia.',
+        'confirm' => 'Dodaj do tego konta',
+        'cancel' => 'Anuluj',
+        'load' => 'Wczytaj dane przykładowe',
+        'working' => 'Budowanie księgi przykładowej. To chwilę potrwa.',
+        'loaded' => 'Dane przykładowe dodane (:count).',
+    ],
+
     'country' => [
         'heading' => 'Kraj',
         'label' => 'Twój kraj',
@@ -207,5 +225,6 @@ return [
         'amount' => 'Podaj kwotę od :zero wzwyż.',
         'period_day' => 'Wybierz dzień od 1 do 28.',
         'currency_view' => 'Wybierz jedną z dostępnych opcji.',
+        'timezone' => 'Wybierz strefę czasową z listy.',
     ],
 ];

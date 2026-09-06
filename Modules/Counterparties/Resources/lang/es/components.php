@@ -67,7 +67,7 @@ return [
 
     'privacy_banner' => [
         'aria' => 'Aviso de privacidad para contactos personales',
-        'body' => '🔒 Este es un contacto personal. El IBAN y los datos personales están ocultos por defecto y nunca se comparten en las exportaciones.',
+        'body' => '🔒 Este es un contacto personal. El IBAN está oculto hasta que lo muestres, y no entra en las exportaciones. El nombre del contacto sigue apareciendo allí donde aparecen sus transacciones.',
     ],
 
     'self_stub' => [

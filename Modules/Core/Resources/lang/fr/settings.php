@@ -33,6 +33,24 @@ return [
         'help' => "Change les mots affichés à l'écran et la façon dont les montants sont écrits. Système suit la langue de ton navigateur ou de ton système d'exploitation, avec l'anglais par défaut.",
     ],
 
+    'timezone' => [
+        'heading' => 'Fuseau horaire',
+        'label' => 'Fuseau horaire de cette installation',
+        'help' => 'Détermine le jour auquel une transaction appartient et le référentiel dans lequel les heures sont enregistrées. Les appareils appairés partagent ce réglage, pour que les deux lisent le même jour.',
+        'this_machine' => 'Cet appareil (:zone)',
+    ],
+
+    'sample_data' => [
+        'heading' => 'Données d’exemple',
+        'help' => 'Remplit ce compte avec un livre inventé — comptes, transactions, budgets, objectifs et alertes — pour qu’il y ait quelque chose à regarder. Cela s’ajoute à ce qui est déjà là, et rien n’appartient à une personne réelle.',
+        'warning' => 'Cela écrit dans ton propre livre et atteint tes appareils appairés. Il n’y a pas d’annulation depuis cet écran.',
+        'confirm' => 'L’ajouter à ce compte',
+        'cancel' => 'Annuler',
+        'load' => 'Charger des données d’exemple',
+        'working' => 'Construction du livre d’exemple. Cela prend un instant.',
+        'loaded' => 'Données d’exemple ajoutées (:count).',
+    ],
+
     'country' => [
         'heading' => 'Pays',
         'label' => 'Ton pays',
@@ -207,5 +225,6 @@ return [
         'amount' => 'Saisis un montant à partir de :zero.',
         'period_day' => 'Choisis un jour de 1 à 28.',
         'currency_view' => 'Choisis l\'une des options disponibles.',
+        'timezone' => 'Choisis un fuseau horaire dans la liste.',
     ],
 ];

@@ -63,8 +63,8 @@ return [
     'add_another' => 'Pievienot vēl vienu pastkasti',
     'gmail_card_body' => 'Pievienojiet Gmail kontu, lai Beatrax tajā varētu meklēt čekus.',
     'microsoft_card_body' => 'Pievienojiet Microsoft 365 vai Outlook.com kontu, lai Beatrax tajā varētu meklēt čekus.',
-    'gmail_card_body_phone' => 'Gmail skenē datora lietotne. Šeit pievienots konts nekad netiek skenēts pats no sevis.',
-    'microsoft_card_body_phone' => 'Microsoft 365 un Outlook.com skenē datora lietotne. Šeit pievienots konts nekad netiek skenēts pats no sevis.',
+    'gmail_card_body_phone' => 'Gmail skenē datora lietotne. Pievienojiet to tur — šis telefons rāda, ko tā atrod.',
+    'microsoft_card_body_phone' => 'Microsoft 365 un Outlook.com skenē datora lietotne. Pievienojiet tos tur — šis telefons rāda, ko tā atrod.',
 
     'discovered_heading' => 'Atklātie sūtītāji',
 

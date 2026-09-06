@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Zobrazených je prvých :shown z :total.',
 
-    'footer' => 'Zdieľaný zoznam je priložený YAML súbor, ktorý sa dodáva s aplikáciou Beatrax. Odoslanie návrhu otvorí GitHub v prehliadači; nič iné toto zariadenie neopustí.',
+    'footer' => 'Zdieľaný zoznam je priložený YAML súbor, ktorý sa dodáva s aplikáciou Beatrax. Odoslanie návrhu otvorí GitHub v prehliadači a vezme so sebou ten popis; nič iné toto zariadenie neopustí.',
 
     'card' => [
         'seen_times' => 'Videné :count krát|Videné :count krát|Videné :count krát',

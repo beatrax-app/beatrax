@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Luk',
         'install_app' => 'Installér app',
 
-        'desktop_html' => 'Åbn Beatrax i telefonens browser, og tryk på "Føj til hjemmeskærm" — eller tryk på ikonet <strong style="color: var(--color-text);">⚡</strong> i Safaris delingsmenu.',
+        'desktop_html' => 'Åbn Beatrax i telefonens browser, og vælg <strong style="color: var(--color-text);">Føj til hjemmeskærm</strong> i delingsmenuen.',
     ],
 
     'topbar' => [

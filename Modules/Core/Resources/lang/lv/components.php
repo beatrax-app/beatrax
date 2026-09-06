@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Aizvērt',
         'install_app' => 'Instalēt lietotni',
 
-        'desktop_html' => 'Atveriet Beatrax telefona pārlūkā un pieskarieties „Pievienot sākuma ekrānam” — vai pieskarieties ikonai <strong style="color: var(--color-text);">⚡</strong> Safari koplietošanas izvēlnē.',
+        'desktop_html' => 'Atveriet Beatrax telefona pārlūkā un koplietošanas izvēlnē izvēlieties <strong style="color: var(--color-text);">Pievienot sākuma ekrānam</strong>.',
     ],
 
     'topbar' => [

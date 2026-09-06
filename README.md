@@ -39,10 +39,12 @@ visible in one place instead of buried across statements.
 
 It runs on your own machine. No telemetry, no Beatrax server, no cloud
 account: the SQLite database, the OAuth tokens and the cached email
-receipts live on the device you installed it on. What goes out is what
-you connect it to — a mailbox, a bank through Enable Banking, the
-devices you pair for sync — plus a daily exchange-rate lookup. Each
-connection says so on the screen where you turn it on.
+receipts live on the device you installed it on. One call goes out on
+its own — a check for a new version, which you can turn off. Everything
+else waits for you: a mailbox, a bank through Enable Banking, a daily
+exchange-rate lookup, the devices you pair for sync, a relay you
+configure, and any link you click. Each one says so on the screen where
+you turn it on.
 
 The product is **source-available**, not open-source in the OSI sense.
 The full source is here for you to read, run, and modify; the license

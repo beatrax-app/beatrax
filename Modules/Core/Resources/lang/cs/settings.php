@@ -33,6 +33,24 @@ return [
         'help' => 'Mění slova na obrazovce i způsob zápisu částek. Systémový se řídí jazykem prohlížeče nebo operačního systému, výchozí je angličtina.',
     ],
 
+    'timezone' => [
+        'heading' => 'Časové pásmo',
+        'label' => 'Časové pásmo této instalace',
+        'help' => 'Určuje, do kterého dne transakce spadá a v jakém rámci se ukládají časy. Spárovaná zařízení sdílejí toto nastavení, takže obě čtou stejný den.',
+        'this_machine' => 'Toto zařízení (:zone)',
+    ],
+
+    'sample_data' => [
+        'heading' => 'Ukázková data',
+        'help' => 'Naplní tento účet vymyšlenou knihou — účty, transakcemi, rozpočty, cíli a upozorněními — aby bylo na co se dívat. Přidává k tomu, co už tu je, a nic z toho nejsou data skutečné osoby.',
+        'warning' => 'Zapisuje to do tvé vlastní knihy a dostane se to na spárovaná zařízení. Z této obrazovky to nelze vrátit.',
+        'confirm' => 'Přidat k tomuto účtu',
+        'cancel' => 'Zrušit',
+        'load' => 'Načíst ukázková data',
+        'working' => 'Sestavuje se ukázková kniha. Chvíli to potrvá.',
+        'loaded' => 'Ukázková data přidána (:count).',
+    ],
+
     'country' => [
         'heading' => 'Země',
         'label' => 'Tvoje země',
@@ -207,5 +225,6 @@ return [
         'amount' => 'Zadej částku od :zero výš.',
         'period_day' => 'Zvol den od 1 do 28.',
         'currency_view' => 'Vyber jednu z dostupných možností.',
+        'timezone' => 'Vyber časové pásmo ze seznamu.',
     ],
 ];

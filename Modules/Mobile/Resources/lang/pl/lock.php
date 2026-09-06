@@ -12,7 +12,7 @@ return [
     'ok' => 'OK',
     'ok_aria' => 'OK — potwierdź PIN',
     'sign_out' => 'Wyloguj się',
-    'forgot_pin' => 'Nie pamiętasz PIN-u? Wyloguj się — możesz zalogować się ponownie hasłem do konta i ustawić nowy PIN. Żadne dane nie zostaną utracone.',
+    'forgot_pin' => 'Nie pamiętasz PIN-u? Wyloguj się — jeśli hasło do konta nadal otwiera tę blokadę, możesz zalogować się ponownie, ustawić nowy PIN i nic nie stracić. Hasło zresetowane kodem odzyskiwania albo ustawione za Ciebie przez właściciela konta już jej nie otwiera.',
 
     'errors' => [
         'pin_length' => 'PIN musi mieć co najmniej 6 cyfry.',

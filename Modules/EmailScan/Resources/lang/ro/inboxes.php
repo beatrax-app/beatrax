@@ -63,8 +63,8 @@ return [
     'add_another' => 'Adaugă altă căsuță poștală',
     'gmail_card_body' => 'Conectează un cont Gmail ca Beatrax să îl poată scana după bonuri.',
     'microsoft_card_body' => 'Conectează un cont Microsoft 365 sau Outlook.com ca Beatrax să îl poată scana după bonuri.',
-    'gmail_card_body_phone' => 'Gmail este scanat de aplicația pentru computer. Un cont conectat aici nu este scanat niciodată de la sine.',
-    'microsoft_card_body_phone' => 'Microsoft 365 și Outlook.com sunt scanate de aplicația pentru computer. Un cont conectat aici nu este scanat niciodată de la sine.',
+    'gmail_card_body_phone' => 'Gmail este scanat de aplicația pentru computer. Conectează-l acolo — telefonul acesta arată ce găsește ea.',
+    'microsoft_card_body_phone' => 'Microsoft 365 și Outlook.com sunt scanate de aplicația pentru computer. Conectează-le acolo — telefonul acesta arată ce găsește ea.',
 
     'discovered_heading' => 'Expeditori descoperiți',
 

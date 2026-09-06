@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Zmiany czekają zaszyfrowane na Twoim przekaźniku, aż drugie urządzenie wróci do sieci. To urządzenie odbierze je, gdy następnym razem dotkniesz :action.',
     'no_relay_title' => 'Gdy jesteś poza domem',
     'no_relay_body' => 'Zmiany czekają na tym urządzeniu, aż oba znajdą się razem w Twojej sieci domowej i dotkniesz tu :action.',
-    'encrypted_title' => 'Tylko Twoje urządzenia mogą to odczytać',
-    'encrypted_body' => 'Wszystko jest szyfrowane, zanim opuści urządzenie, a klucze mają wyłącznie Twoje sparowane urządzenia.',
+    'encrypted_title' => 'Zapieczętowane między Twoimi urządzeniami',
+    'encrypted_body' => 'Wszystko, co przechodzi między Twoimi urządzeniami, jest zaszyfrowane, a klucze mają wyłącznie Twoje sparowane urządzenia. Przekaźnik widzi, które z Twoich urządzeń rozmawia z którym i kiedy — nigdy to, co mówią.',
     'continue' => 'Zacznij korzystać z Beatrax',
     'peer_fallback' => 'drugie urządzenie',
 ];

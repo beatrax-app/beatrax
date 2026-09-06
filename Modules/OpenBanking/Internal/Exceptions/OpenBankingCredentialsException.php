@@ -14,7 +14,8 @@ use Throwable;
 // rather than left to whichever caller happens to hold one.
 final class OpenBankingCredentialsException extends RuntimeException
 {
-    private function __construct(string $message, private readonly string $readerKey, ?Throwable $previous = null)
+    /** @param  list<string>  $readerKeys  the situation, then the next action */
+    private function __construct(string $message, private readonly array $readerKeys, ?Throwable $previous = null)
     {
         parent::__construct($message, 0, $previous);
     }
@@ -23,7 +24,7 @@ final class OpenBankingCredentialsException extends RuntimeException
     {
         return new self(
             'No Enable Banking application credentials are persisted.',
-            'openbanking::messages.errors.wizard_incomplete',
+            ['openbanking::messages.errors.wizard_incomplete'],
         );
     }
 
@@ -33,7 +34,7 @@ final class OpenBankingCredentialsException extends RuntimeException
     {
         return new self(
             "No Enable Banking consent is stored for institution {$institutionId}.",
-            'openbanking::messages.errors.bank_not_linked',
+            ['openbanking::messages.errors.bank_not_linked'],
         );
     }
 
@@ -44,13 +45,22 @@ final class OpenBankingCredentialsException extends RuntimeException
     {
         return new self(
             "Failed to parse the Enable Banking secrets file at {$path}.",
-            'openbanking::messages.page.credentials_unreadable',
+            [
+                'openbanking::messages.page.credentials_unreadable',
+                'openbanking::messages.page.credentials_unreadable_next',
+            ],
             $previous,
         );
     }
 
+    // The settings screen renders the situation and the remedy as two lines of
+    // its own. A flashed refusal has only this, so the remedy travels with the
+    // situation rather than reaching one surface out of two.
     public function readerMessage(): string
     {
-        return Lang::get($this->readerKey);
+        return implode(' ', array_map(
+            static fn (string $key): string => Lang::get($key),
+            $this->readerKeys,
+        ));
     }
 }

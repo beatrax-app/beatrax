@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Pokazano pierwsze :shown z :total.',
 
-    'footer' => 'Wspólna lista to plik YAML dołączony do Beatrax. Wysłanie propozycji otwiera GitHub w przeglądarce; poza tym nic nie opuszcza tego urządzenia.',
+    'footer' => 'Wspólna lista to plik YAML dołączony do Beatrax. Wysłanie propozycji otwiera GitHub w przeglądarce i zabiera ze sobą ten opis; poza tym nic nie opuszcza tego urządzenia.',
 
     'card' => [
         'seen_times' => 'Widziano :count raz|Widziano :count razy|Widziano :count razy',

@@ -33,6 +33,24 @@ return [
         'help' => 'Endrer ordene på skjermen og hvordan beløp skrives. System følger språket i nettleseren eller operativsystemet ditt, med engelsk som standard.',
     ],
 
+    'timezone' => [
+        'heading' => 'Tidssone',
+        'label' => 'Tidssone for denne installasjonen',
+        'help' => 'Avgjør hvilken dag en transaksjon havner på, og hvilken ramme tidspunkter lagres i. Sammenkoblede enheter deler denne innstillingen, så begge leser samme dag.',
+        'this_machine' => 'Denne maskinen (:zone)',
+    ],
+
+    'sample_data' => [
+        'heading' => 'Eksempeldata',
+        'help' => 'Fyller denne kontoen med en oppdiktet bok — kontoer, transaksjoner, budsjetter, mål og varsler — så det er noe å se på. Det legges til det som allerede er der, og ingenting av det er en virkelig persons data.',
+        'warning' => 'Dette skriver i din egen bok og når de sammenkoblede enhetene dine. Det finnes ingen angring på denne skjermen.',
+        'confirm' => 'Legg det til denne kontoen',
+        'cancel' => 'Avbryt',
+        'load' => 'Last inn eksempeldata',
+        'working' => 'Bygger eksempelboken. Det tar et øyeblikk.',
+        'loaded' => 'Eksempeldata lagt til (:count).',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Landet ditt',
@@ -207,5 +225,6 @@ return [
         'amount' => 'Skriv inn et beløp fra :zero og oppover.',
         'period_day' => 'Velg en dag fra 1 til 28.',
         'currency_view' => 'Velg ett av de tilgjengelige alternativene.',
+        'timezone' => 'Velg en tidssone fra listen.',
     ],
 ];

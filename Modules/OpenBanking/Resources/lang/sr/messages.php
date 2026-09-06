@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Pregledaj uvoz',
         'reconnect_first' => 'Prvo se poveži ponovo',
-        'auto_caption' => 'Sinhronizuje se automatski jednom dnevno.',
+        'auto_caption' => 'Sinhronizacija se automatski pokušava jednom dnevno.',
         'sync_now' => 'Sinhronizuj sada',
 
         'consent_expired' => 'Saglasnost je istekla — poveži ponovo.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'ID institucije',
 
         'step5_title' => 'Završi saglasnost u pregledaču',
-        'step5_body' => 'Klikni ispod da otvoriš ekran za prijavu i saglasnost svoje banke. Završi prijavu i eventualnu dvofaktorsku potvrdu, nakon čega ćeš se automatski vratiti ovde da završiš uključivanje otvorenog bankarstva.',
+        'step5_body' => 'Klikni ispod da otvoriš ekran za prijavu i saglasnost svoje banke. Završi prijavu i eventualnu dvofaktorsku potvrdu, pa se vrati u ovaj prozor da završiš uključivanje otvorenog bankarstva.',
         // i18n-review: sr · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Dodirni ispod da otvoriš ekran za prijavu i saglasnost svoje banke. Završi prijavu i eventualnu dvofaktorsku potvrdu, nakon čega ćeš se automatski vratiti ovde da završiš uključivanje otvorenog bankarstva.',
+        'step5_body_touch' => 'Dodirni ispod da otvoriš ekran za prijavu i saglasnost svoje banke. Završi prijavu i eventualnu dvofaktorsku potvrdu, pa se vrati u Beatrax i ponovo otvori ovaj ekran da završiš uključivanje otvorenog bankarstva.',
 
         'cancel' => 'Otkaži',
         'continue' => 'Nastavi →',

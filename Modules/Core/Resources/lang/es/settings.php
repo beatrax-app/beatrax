@@ -33,6 +33,24 @@ return [
         'help' => 'Cambia las palabras que ves en pantalla y cómo se escriben los importes. «Sistema» sigue el idioma de tu navegador o de tu sistema operativo, con el inglés por defecto.',
     ],
 
+    'timezone' => [
+        'heading' => 'Zona horaria',
+        'label' => 'Zona horaria de esta instalación',
+        'help' => 'Decide en qué día cae una transacción y en qué marco se guardan las horas. Los dispositivos emparejados comparten este ajuste, así que ambos leen el mismo día.',
+        'this_machine' => 'Este equipo (:zone)',
+    ],
+
+    'sample_data' => [
+        'heading' => 'Datos de ejemplo',
+        'help' => 'Llena esta cuenta con un libro inventado — cuentas, transacciones, presupuestos, metas y avisos — para que haya algo que mirar. Se suma a lo que ya hay y nada de ello son datos de una persona real.',
+        'warning' => 'Esto escribe en tu propio libro y llega a tus dispositivos emparejados. En esta pantalla no hay deshacer.',
+        'confirm' => 'Añadirlo a esta cuenta',
+        'cancel' => 'Cancelar',
+        'load' => 'Cargar datos de ejemplo',
+        'working' => 'Construyendo el libro de ejemplo. Tarda un momento.',
+        'loaded' => 'Datos de ejemplo añadidos (:count).',
+    ],
+
     'country' => [
         'heading' => 'País',
         'label' => 'Tu país',
@@ -207,5 +225,6 @@ return [
         'amount' => 'Introduce un importe a partir de :zero.',
         'period_day' => 'Elige un día del 1 al 28.',
         'currency_view' => 'Elige una de las opciones disponibles.',
+        'timezone' => 'Elige una zona horaria de la lista.',
     ],
 ];

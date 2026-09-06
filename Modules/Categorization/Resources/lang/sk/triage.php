@@ -23,6 +23,6 @@ return [
     'select_category' => 'Vyber kategóriu',
     'help_others' => '❋ Pomôž ostatným ju rozpoznať',
 
-    'shortcuts' => '1–9 priradiť hlavné kategórie · ↑/↓ pohyb · Enter uložiť · / hľadať · Esc vymazať',
+    'shortcuts' => '1–9 priradiť hlavné kategórie · ↑/↓ pohyb · Enter uložiť · Esc vymazať',
     'load_more' => 'Načítať ďalšie',
 ];

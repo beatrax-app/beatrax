@@ -21,7 +21,7 @@ return [
         'dismiss_caption' => 'Отхвърли',
         'install_app' => 'Инсталирай приложението',
 
-        'desktop_html' => 'Отвори Beatrax в браузъра на телефона си и докосни „Добавяне към началния екран“ — или докосни иконата <strong style="color: var(--color-text);">⚡</strong> в менюто за споделяне на Safari.',
+        'desktop_html' => 'Отвори Beatrax в браузъра на телефона си и избери <strong style="color: var(--color-text);">Добавяне към началния екран</strong> от менюто за споделяне.',
     ],
 
     'topbar' => [

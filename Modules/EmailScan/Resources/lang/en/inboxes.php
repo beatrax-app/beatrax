@@ -63,8 +63,8 @@ return [
     'add_another' => 'Add another inbox',
     'gmail_card_body' => 'Connect a Gmail account so Beatrax can scan it for receipts.',
     'microsoft_card_body' => 'Connect a Microsoft 365 or Outlook.com account so Beatrax can scan it for receipts.',
-    'gmail_card_body_phone' => 'Gmail is scanned by the desktop app. An account connected here is never scanned on its own.',
-    'microsoft_card_body_phone' => 'Microsoft 365 and Outlook.com are scanned by the desktop app. An account connected here is never scanned on its own.',
+    'gmail_card_body_phone' => 'Gmail is scanned by the desktop app. Connect it there — this phone shows what it finds.',
+    'microsoft_card_body_phone' => 'Microsoft 365 and Outlook.com are scanned by the desktop app. Connect them there — this phone shows what it finds.',
 
     'discovered_heading' => 'Discovered senders',
 

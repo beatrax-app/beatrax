@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Pakeitimai užšifruoti laukia tavo retransliavimo serveryje, kol kitas įrenginys vėl prisijungs. Šis įrenginys juos pasiima kitą kartą, kai paliesi :action.',
     'no_relay_title' => 'Kai tavo nėra namie',
     'no_relay_body' => 'Pakeitimai laukia šiame įrenginyje, kol abu bus kartu tavo namų tinkle ir kol čia paliesi :action.',
-    'encrypted_title' => 'Perskaityti gali tik tavo įrenginiai',
-    'encrypted_body' => 'Viskas užšifruojama dar prieš išsiunčiant iš įrenginio, o raktus turi tik tavo susieti įrenginiai.',
+    'encrypted_title' => 'Užantspauduota tarp tavo įrenginių',
+    'encrypted_body' => 'Viskas, kas keliauja tarp tavo įrenginių, yra užšifruota, o raktus turi tik tavo susieti įrenginiai. Retransliavimo serveris mato, kuris tavo įrenginys su kuriuo kalbasi ir kada — bet niekada to, ką jie sako.',
     'continue' => 'Pradėti naudotis Beatrax',
     'peer_fallback' => 'kito tavo įrenginio',
 ];

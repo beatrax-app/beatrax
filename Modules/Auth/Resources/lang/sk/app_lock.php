@@ -48,7 +48,7 @@ return [
     'keep_lock' => 'Ponechať zámok aplikácie',
 
     'forgot_modal_heading' => 'Obnoviť PIN — potvrď heslom k účtu',
-    'forgot_modal_body' => 'Heslo k účtu obnoví kľúč zámku, takže obnovením PIN-u nikdy neprídeš o údaje.',
+    'forgot_modal_body' => 'Heslo k účtu obnoví kľúč zámku, takže obnovením PIN-u neprídeš o údaje — pokiaľ tým heslom zámok stále otvoríš. Heslo obnovené pomocou obnovovacieho kódu alebo nastavené za teba vlastníkom účtu ho už neotvorí.',
     'confirm_new_pin_label' => 'Potvrď nový PIN',
     'reset_pin' => 'Obnoviť PIN',
     'cancel' => 'Zrušiť',
@@ -67,7 +67,7 @@ return [
     'error_forgot_failed' => 'Obnovenie PIN-u zlyhalo — obnovovací kľúč nie je dostupný.',
     'error_enable_first' => 'Najprv zapni zámok PIN-om, až potom registruj biometriu.',
     'error_disable_blocked_by_encryption' => 'Tvoje poznámky a údaje o protistranách sú šifrované kľúčom, ktorý drží tento zámok aplikácie, takže jeho vypnutie by ich nechalo nečitateľné. Zámok zostáva zapnutý — radšej si zmeň PIN.',
-    'error_key_material_lost' => 'Toto zariadenie už nedrží kľúč, ktorý otvára tvoje šifrované údaje, takže nový PIN ich znova čitateľnými neurobí. Spáruj toto zariadenie s takým, ktoré kľúč ešte má, a obnov ich.',
+    'error_key_material_lost' => 'Toto zariadenie už nedrží kľúč, ktorý otvára tvoje šifrované údaje, takže nový PIN ich znova čitateľnými neurobí. Obnov zašifrovanú zálohu vytvorenú v čase, keď kľúč ešte fungoval — späť sa toto zariadenie spárovaním nedostane, lebo párovanie potrebuje práve ten zámok aplikácie, ktorý daný kľúč otvára.',
     'error_recovery_wrap_stale' => 'Heslo k účtu už tento zámok aplikácie neotvorí — bolo zmenené až po jeho nastavení. Tvoj PIN stále funguje, ale ak ho zabudneš, nezostane za ním nič. Prepoj heslo k účtu znova.',
     'relink_recovery' => 'Znova prepojiť heslo k účtu',
     'relink_modal_heading' => 'Znova prepojiť heslo k účtu — potvrď PINom',

@@ -315,6 +315,30 @@ clips nothing, and the page never scrolls sideways.
 `Modules/Counterparties/tests/Feature/TheTriageCardDrawsOnePrimaryOnOneEdgeTest.php`
 holds the structure that measurement depends on.
 
+## What the personal-contact banner promises
+
+`counterparties::components.privacy_banner.body` is the sentence a reader
+sees above a personal contact: the IBAN is hidden until they reveal it,
+and it stays out of exports. The first half is the reveal control on the
+profile page. The second half was not true anywhere — `TaxCsvExporter` declares a
+`counterparty_iban` column and wrote the decrypted value for every tagged
+row, so a personal contact tagged into one tax year left their IBAN in a
+CSV handed to an accountant, and on a phone in whatever the share sheet
+was pointed at.
+
+The type check now sits in `TaxYearQuery::counterpartyIban()`, upstream of
+both the CSV and the PDF rather than at either render site. The column
+stays in the export: a merchant's IBAN is what half the rows are
+reconciled against, and dropping the header would break a spreadsheet the
+reader already has.
+
+`tests/Contracts/APersonalContactsIbanStaysOutOfTheExportItIsPromisedToArchTest.php`
+holds both halves — that the counterparties table's IBAN column is read in
+exactly one shipped place, and that the place names
+`CounterpartyType::Personal`. One reader is what makes one check enough; a
+second export is a second promise to keep, and the guard fails until
+somebody has decided how.
+
 ## Retention
 
 Nothing prunes `counterparties`, and nothing on a timer writes to

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Shell\Internal\Http\Livewire;
 
+use DateTimeZone;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Budgets\Public\Services\EnvelopePeriodRekeyer;
@@ -20,6 +22,7 @@ use Modules\Core\Public\Enums\Country;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Enums\Theme;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
+use Modules\Core\Public\Services\InstallTimezone;
 use Modules\Core\Public\Services\LocaleNegotiator;
 use Modules\Core\Public\Services\UserCountry;
 use Modules\Core\Public\Support\DriftThresholdOptions;
@@ -66,6 +69,13 @@ final class SettingsPage extends Component
     // a language is added.
     public string $locale = LocaleNegotiator::SYSTEM;
 
+    // In rules() for the same reason: the allow-list is every identifier the
+    // platform's zone database knows, which is not a constant expression and
+    // is not ours to freeze into a second copy. Locked because the choice
+    // arrives as an action argument, never as a bound property.
+    #[Locked]
+    public string $timezone = InstallTimezone::THIS_MACHINE;
+
     // Empty is a real state, not a missing one: with no country chosen the
     // classification falls back to every region rather than guessing one.
     public string $country = '';
@@ -98,6 +108,7 @@ final class SettingsPage extends Component
         DatabaseManager $db,
         BaseCurrency $baseCurrency,
         UserCountry $countries,
+        InstallTimezone $installTimezone,
     ): void {
         $user = $currentUser->user();
         $this->defaultCurrencyView = $user->default_currency_view->value;
@@ -107,12 +118,33 @@ final class SettingsPage extends Component
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
         $this->theme = $user->theme;
         $this->locale = $user->locale ?? LocaleNegotiator::SYSTEM;
+        // The stored choice, not the resolved zone: a reader who has chosen
+        // nothing must open on the sentinel, or there is no way back to it.
+        $this->timezone = $installTimezone->chosen() ?? InstallTimezone::THIS_MACHINE;
         $this->country = $countries->current($user->id);
         $this->isDeveloper = $user->is_developer === true;
         $this->baseCurrency = $baseCurrency->forUser($user);
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
 
         $this->loadFxLastUpdated($db);
+    }
+
+    // One answer per installation, on the owner's row whoever opened the
+    // screen: `app.timezone` is the frame a DATETIME column is written in, so
+    // a household holding two answers writes one ledger in two frames. The
+    // sentinel persists as NULL, handing the answer back to the machine.
+    public function setTimezone(
+        string $timezone,
+        InstallTimezone $installTimezone,
+        WriteUserPreference $writeUserPreference,
+    ): void {
+        $this->timezone = $timezone;
+        $this->validateOnly('timezone');
+
+        $installTimezone->choose(
+            $writeUserPreference,
+            $this->timezone === InstallTimezone::THIS_MACHINE ? null : $this->timezone,
+        );
     }
 
     public function setTheme(string $theme, CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
@@ -451,6 +483,7 @@ final class SettingsPage extends Component
             'periodStartDay' => 'required|integer|min:'.PeriodQuery::MIN_START_DAY.'|max:'.PeriodQuery::MAX_START_DAY,
             'theme' => 'required|in:'.implode(',', Theme::values()),
             'locale' => 'required|in:'.LocaleNegotiator::SYSTEM.','.implode(',', Locale::codes()),
+            'timezone' => 'required|in:'.InstallTimezone::THIS_MACHINE.','.implode(',', DateTimeZone::listIdentifiers()),
             'driftAlertThresholdPercent' => 'required|integer|in:'.implode(',', DriftThresholdOptions::PERCENTS),
         ];
     }
@@ -468,6 +501,7 @@ final class SettingsPage extends Component
         $threshold = Lang::get('core::settings.errors.threshold');
         $currencyRequired = Lang::get('core::settings.errors.currency_required');
         $currencyView = Lang::get('core::settings.errors.currency_view');
+        $timezone = Lang::get('core::settings.errors.timezone');
 
         return [
             'periodStartDay.required' => $periodDay,
@@ -490,6 +524,8 @@ final class SettingsPage extends Component
             'baseCurrency.size' => $currencyRequired,
             'baseCurrency.exists' => $currencyRequired,
             'baseCurrency.string' => $currencyRequired,
+            'timezone.required' => $timezone,
+            'timezone.in' => $timezone,
         ];
     }
 }

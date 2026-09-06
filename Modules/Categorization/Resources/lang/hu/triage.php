@@ -23,6 +23,6 @@ return [
     'select_category' => 'Válassz kategóriát',
     'help_others' => '❋ Segíts másoknak felismerni ezt',
 
-    'shortcuts' => '1–9 fő kategóriák hozzárendelése · ↑/↓ mozgás · Enter mentés · / keresés · Esc törlés',
+    'shortcuts' => '1–9 fő kategóriák hozzárendelése · ↑/↓ mozgás · Enter mentés · Esc törlés',
     'load_more' => 'Továbbiak betöltése',
 ];

@@ -23,6 +23,6 @@ return [
     'select_category' => 'Kies categorie',
     'help_others' => '❋ Help anderen dit herkennen',
 
-    'shortcuts' => '1–9 topcategorieën toewijzen · ↑/↓ verplaatsen · Enter opslaan · / zoeken · Esc wissen',
+    'shortcuts' => '1–9 topcategorieën toewijzen · ↑/↓ verplaatsen · Enter opslaan · Esc wissen',
     'load_more' => 'Meer laden',
 ];

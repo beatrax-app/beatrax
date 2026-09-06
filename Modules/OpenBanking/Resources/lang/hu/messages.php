@@ -62,7 +62,7 @@ return [
     'sync' => [
         'review_import' => 'Import áttekintése',
         'reconnect_first' => 'Előbb csatlakozz újra',
-        'auto_caption' => 'Naponta egyszer automatikusan szinkronizál.',
+        'auto_caption' => 'Naponta egyszer automatikus szinkronizálási kísérlet történik.',
         'sync_now' => 'Szinkronizálás most',
 
         'consent_expired' => 'A hozzájárulás lejárt — csatlakozz újra.',
@@ -135,10 +135,10 @@ return [
         'institution_id_placeholder' => 'Intézményazonosító',
 
         'step5_title' => 'Fejezd be a hozzájárulást a böngésződben',
-        'step5_body' => 'Kattints alább a bankod bejelentkezési és hozzájárulási képernyőjének megnyitásához. Végezd el a bejelentkezést és az esetleges kétlépcsős azonosítást, utána automatikusan visszakerülsz ide, hogy befejezd a nyílt bankolás bekapcsolását.',
+        'step5_body' => 'Kattints alább a bankod bejelentkezési és hozzájárulási képernyőjének megnyitásához. Végezd el a bejelentkezést és az esetleges kétlépcsős azonosítást, majd térj vissza ehhez az ablakhoz a nyílt bankolás bekapcsolásának befejezéséhez.',
         // i18n-review: hu · step5_body_touch — the same line for a touch
         // screen; check the verb governs this case.
-        'step5_body_touch' => 'Koppints alább a bankod bejelentkezési és hozzájárulási képernyőjének megnyitásához. Végezd el a bejelentkezést és az esetleges kétlépcsős azonosítást, utána automatikusan visszakerülsz ide, hogy befejezd a nyílt bankolás bekapcsolását.',
+        'step5_body_touch' => 'Koppints alább a bankod bejelentkezési és hozzájárulási képernyőjének megnyitásához. Végezd el a bejelentkezést és az esetleges kétlépcsős azonosítást, majd válts vissza a Beatraxra, és nyisd meg újra ezt a képernyőt a nyílt bankolás bekapcsolásának befejezéséhez.',
 
         'cancel' => 'Mégse',
         'continue' => 'Folytatás →',

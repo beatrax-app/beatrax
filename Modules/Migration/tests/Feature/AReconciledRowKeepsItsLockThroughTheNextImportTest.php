@@ -15,6 +15,7 @@ use Modules\Migration\Internal\Actions\StartMigrationRun;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Enums\MigrationSourceProduct;
 use Modules\Migration\Internal\Enums\UnmappedItemType;
+use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 // A YNAB4 row's identity is its account, date, payee and category; its
@@ -73,6 +74,31 @@ function statusOfPromotedRow(int $transactionId): string
     return (string) test()->db->connection()->table('transactions')
         ->where('id', $transactionId)
         ->value('status');
+}
+
+function sourceExternalIdOfPromotedRow(int $runId, string $postedDate, int $amountMinor): string
+{
+    /** @var object $staged */
+    $staged = test()->db->connection()->table('migration_staging_transactions')
+        ->where('user_id', test()->user->id)
+        ->where('migration_run_id', $runId)
+        ->whereNull('parent_source_external_id')
+        ->whereDate('posted_at', $postedDate)
+        ->where('amount_minor', $amountMinor)
+        ->firstOrFail(['source_external_id']);
+
+    return (string) $staged->source_external_id;
+}
+
+/** @return array{description: string, amountMinor: int} */
+function ledgerCopyOfPromotedRow(int $transactionId): array
+{
+    /** @var object $row */
+    $row = test()->db->connection()->table('transactions')
+        ->where('id', $transactionId)
+        ->firstOrFail(['description', 'amount_minor']);
+
+    return ['description' => (string) $row->description, 'amountMinor' => (int) $row->amount_minor];
 }
 
 /** @return list<string> the reasons this run recorded against the reconciled-lock key */
@@ -170,4 +196,47 @@ it('still carries the source flag across for a row the reader never reconciled',
     // the case above would still read as "the lock held".
     expect(statusOfPromotedRow($groceryTxId))->toBe(ClearedStatus::Cleared->value)
         ->and(reconciledLockRefusalsIn($secondRun))->toBe([]);
+});
+
+// The staged status was refused and the rest of the row was not: a re-run could
+// still restate the description, and the correction screen could still move the
+// amount, on a row the reader had matched against a statement by hand. Both
+// went through EntityChangeApplier, which asked nothing about the lock.
+it('leaves a reconciled row\'s description and amount as the reader left them', function (): void {
+    $firstRun = importYnab4Export('v1');
+    $groceryTxId = promotedTransactionId($firstRun, '2026-01-15', -4500);
+    $sourceExternalId = sourceExternalIdOfPromotedRow($firstRun, '2026-01-15', -4500);
+
+    expect(lockTheJanuaryStatement($groceryTxId))->toBeGreaterThan(0)
+        ->and(statusOfPromotedRow($groceryTxId))->toBe(ClearedStatus::Reconciled->value);
+
+    $before = ledgerCopyOfPromotedRow($groceryTxId);
+    $applier = app(EntityChangeApplier::class);
+
+    expect($applier->apply(
+        $this->user,
+        MigrationSourceProduct::Ynab4->value,
+        MigrationEntityType::Transaction->value,
+        $sourceExternalId,
+        ['description' => 'Renamed by a later export'],
+    ))->toBeFalse()
+        ->and($applier->applyTransactionAmount($this->user, $groceryTxId, -5500))->toBeFalse()
+        ->and(ledgerCopyOfPromotedRow($groceryTxId))->toBe($before);
+
+    // The counter-case: a refusal that also refuses an unlocked row says
+    // nothing about the lock, and both writes have to land once it is off.
+    app(TransactionStatusWriter::class)->unreconcile($this->user, $groceryTxId);
+
+    expect($applier->apply(
+        $this->user,
+        MigrationSourceProduct::Ynab4->value,
+        MigrationEntityType::Transaction->value,
+        $sourceExternalId,
+        ['description' => 'Renamed by a later export'],
+    ))->toBeTrue()
+        ->and($applier->applyTransactionAmount($this->user, $groceryTxId, -5500))->toBeTrue()
+        ->and(ledgerCopyOfPromotedRow($groceryTxId))->toBe([
+            'description' => 'Renamed by a later export',
+            'amountMinor' => -5500,
+        ]);
 });

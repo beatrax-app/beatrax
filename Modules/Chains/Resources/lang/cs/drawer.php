@@ -6,8 +6,8 @@ return [
     'heading_named' => 'Řetězec — :name',
     'heading' => 'Řetězec',
 
-    'unresolved_heading' => 'Řetězec zatím není vyhodnocen',
-    'unresolved_body' => 'Vyhodnocování řetězců stále běží. Otevři frontu ke kontrole nebo za chvíli obnov stránku.',
+    'unresolved_heading' => 'Není vybraná žádná transakce',
+    'unresolved_body' => 'Vyber řádek v seznamu transakcí a uvidíš, co ho zaplatilo.',
 
     'none_heading' => 'Nenalezen žádný řetězec financování',
     'none_body' => 'U této transakce nebyl zjištěn žádný řetězec financování. Pokud tu nějaký měl být, podej kandidáta z fronty ke kontrole.',

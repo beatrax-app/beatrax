@@ -20,7 +20,7 @@ return [
 
     'showing_capped' => 'Showing the top :shown of :total.',
 
-    'footer' => 'The shared list is a bundled YAML file that ships with Beatrax. Submitting a suggestion opens GitHub in your browser; nothing else leaves this device.',
+    'footer' => 'The shared list is a bundled YAML file that ships with Beatrax. Submitting a suggestion opens GitHub in your browser and takes that description with it; nothing else leaves this device.',
 
     'card' => [
         'seen_times' => 'Seen :count time|Seen :count times',

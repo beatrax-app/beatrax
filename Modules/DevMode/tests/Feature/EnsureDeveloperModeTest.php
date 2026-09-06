@@ -59,8 +59,10 @@ it('resolves all four Public contracts via the container', function (): void {
     /** @var DevCommandRegistry $commands */
     $commands = app(DevCommandRegistry::class);
     expect($commands)->toBeInstanceOf(DevCommandRegistry::class);
-    expect($commands->safe())->toHaveCount(9);
-    expect($commands->destructive())->toHaveCount(4);
+    // Non-empty, not counted: this case is about the container resolving the
+    // contract, and CommandRegistryTest owns which commands are in each tier.
+    expect($commands->safe())->not->toBeEmpty();
+    expect($commands->destructive())->not->toBeEmpty();
 
     /** @var NavigationRegistry $nav */
     $nav = app(NavigationRegistry::class);

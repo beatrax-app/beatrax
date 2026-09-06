@@ -18,8 +18,8 @@ return [
     'relay_body' => 'A módosítások titkosítva várakoznak a reléden, amíg a másik eszköz újra online nem lesz. Ez az eszköz akkor veszi át őket, amikor legközelebb a :action gombra koppintasz.',
     'no_relay_title' => 'Amikor úton vagy',
     'no_relay_body' => 'A módosítások ezen az eszközön várakoznak, amíg mindkettő együtt nem lesz az otthoni hálózatodon, és itt a :action gombra nem koppintasz.',
-    'encrypted_title' => 'Csak a te eszközeid tudják elolvasni',
-    'encrypted_body' => 'Minden titkosítva lesz, mielőtt elhagyja az eszközt, és a kulcsok csak a párosított eszközeidnél vannak meg.',
+    'encrypted_title' => 'Lezárva az eszközeid között',
+    'encrypted_body' => 'Minden titkosítva halad az eszközeid között, és a kulcsok csak a párosított eszközeidnél vannak meg. A relé látja, melyik eszközöd melyikkel beszél, és mikor — azt soha, hogy mit mondanak.',
     'continue' => 'A Beatrax használatának megkezdése',
     'peer_fallback' => 'a másik eszközöd',
 ];

@@ -23,6 +23,6 @@ return [
     'select_category' => 'Wybierz kategorię',
     'help_others' => '❋ Pomóż innym to rozpoznać',
 
-    'shortcuts' => '1–9 przypisz główne kategorie · ↑/↓ przejdź · Enter zapisz · / szukaj · Esc wyczyść',
+    'shortcuts' => '1–9 przypisz główne kategorie · ↑/↓ przejdź · Enter zapisz · Esc wyczyść',
     'load_more' => 'Wczytaj więcej',
 ];

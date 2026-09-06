@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Gde su moji podaci?',
-    'intro' => 'Beatrax sve čuva na ovom uređaju. Ne postoji Beatrax server niti nalog u oblaku. Napolje odlazi samo ono što sam povežeš — prijemno sanduče, banka preko Enable Bankinga, uređaji koje upariš za sinhronizaciju — i uz to dnevni upit za kurseve. Svaka veza to kaže na ekranu na kom je uključuješ.',
+    'intro' => 'Beatrax sve čuva na ovom uređaju. Ne postoji Beatrax server niti nalog u oblaku. Sam od sebe napolje odlazi samo jedan poziv — provera da li postoji nova verzija, koju možeš i da isključiš. Sve ostalo čeka na tebe: prijemno sanduče, banka preko Enable Bankinga, dnevni upit za kurseve, uređaji koje upariš za sinhronizaciju, relej koji podesiš i svaki link koji klikneš. Svaka od tih stavki to kaže na ekranu na kom je uključuješ.',
 
     'lives_here' => 'Tvoji podaci se nalaze ovde',
     'copy' => 'Kopiraj',

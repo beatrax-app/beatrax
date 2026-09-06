@@ -9,7 +9,7 @@ return [
     ],
 
     'page_title' => 'Where is my data?',
-    'intro' => 'Beatrax stores everything on this device. There is no Beatrax server and no cloud account. What goes out is what you connect it to — a mailbox, a bank through Enable Banking, the devices you pair for sync — plus a daily exchange-rate lookup. Each connection says so on the screen where you turn it on.',
+    'intro' => 'Beatrax stores everything on this device. There is no Beatrax server and no cloud account. One call goes out on its own — a check for a new version, which you can turn off. Everything else waits for you: a mailbox, a bank through Enable Banking, a daily exchange-rate lookup, the devices you pair for sync, a relay you configure, and any link you click. Each one says so on the screen where you turn it on.',
 
     'lives_here' => 'Your data lives here',
     'copy' => 'Copy',

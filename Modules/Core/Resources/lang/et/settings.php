@@ -33,6 +33,24 @@ return [
         'help' => 'Muudab ekraanil olevaid sõnu ja summade kirjapilti. Süsteemne järgib brauseri või operatsioonisüsteemi keelt, vaikimisi inglise keelt.',
     ],
 
+    'timezone' => [
+        'heading' => 'Ajavöönd',
+        'label' => 'Selle paigalduse ajavöönd',
+        'help' => 'Määrab, millisesse päeva tehing langeb ja millises raamistikus kellaajad salvestatakse. Seotud seadmed jagavad seda sätet, nii et mõlemad loevad sama päeva.',
+        'this_machine' => 'See seade (:zone)',
+    ],
+
+    'sample_data' => [
+        'heading' => 'Näidisandmed',
+        'help' => 'Täidab selle konto väljamõeldud raamatuga — kontod, tehingud, eelarved, eesmärgid ja teated — et oleks midagi vaadata. See lisandub olemasolevale ja miski sellest pole tegeliku inimese andmed.',
+        'warning' => 'See kirjutab sinu enda raamatusse ja jõuab seotud seadmetesse. Sellel ekraanil tagasivõtmist pole.',
+        'confirm' => 'Lisa see sellele kontole',
+        'cancel' => 'Loobu',
+        'load' => 'Laadi näidisandmed',
+        'working' => 'Näidisraamatut koostatakse. See võtab hetke.',
+        'loaded' => 'Näidisandmed lisatud (:count).',
+    ],
+
     'country' => [
         'heading' => 'Riik',
         'label' => 'Sinu riik',
@@ -207,5 +225,6 @@ return [
         'amount' => 'Sisesta summa alates :zero.',
         'period_day' => 'Vali päev 1 kuni 28.',
         'currency_view' => 'Vali üks saadaolevatest valikutest.',
+        'timezone' => 'Vali loendist ajavöönd.',
     ],
 ];

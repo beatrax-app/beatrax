@@ -18,8 +18,8 @@ return [
     'relay_body' => 'Změny čekají zašifrované na tvém relay serveru, dokud se druhé zařízení nevrátí online. Toto zařízení si je vyzvedne, až příště klepneš na :action.',
     'no_relay_title' => 'Když jsi pryč',
     'no_relay_body' => 'Změny počkají na tomto zařízení, dokud nebudou obě spolu v tvé domácí síti a dokud tu neklepneš na :action.',
-    'encrypted_title' => 'Přečíst to můžou jen tvá zařízení',
-    'encrypted_body' => 'Všechno se zašifruje, než opustí zařízení, a klíče mají jen tvá spárovaná zařízení.',
+    'encrypted_title' => 'Zapečetěné mezi tvými zařízeními',
+    'encrypted_body' => 'Všechno, co mezi tvými zařízeními putuje, je zašifrované a klíče mají jen tvá spárovaná zařízení. Relay vidí, které z tvých zařízení mluví s kterým a kdy — nikdy to, co si říkají.',
     'continue' => 'Začít používat Beatrax',
     'peer_fallback' => 'tvé druhé zařízení',
 ];

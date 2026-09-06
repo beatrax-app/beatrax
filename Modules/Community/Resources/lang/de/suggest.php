@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Zuordnung vorschlagen',
-    'intro' => 'Öffnet GitHub in deinem Browser, damit du den Vorschlag als Entwurfs-PR abschicken kannst. Dein Name und deine E-Mail-Adresse verlassen dieses Gerät nie.',
+    'intro' => 'Öffnet GitHub in deinem Browser mit ausgefülltem Vorschlag. Mit dabei sind nur Muster, Name, Kategorie und Region von oben — und das Muster ist der Text, so wie ihn dein Kontoauszug geschrieben hat. Dein Name und deine E-Mail-Adresse verlassen dieses Gerät nie.',
 
     'pattern' => 'Muster',
     'name' => 'Verständlicher Name',
@@ -20,7 +20,7 @@ return [
     'yaml_preview' => 'YAML-Vorschau',
 
     'cancel' => 'Abbrechen',
-    'submit' => 'Als Entwurfs-PR abschicken',
+    'submit' => 'Auf GitHub öffnen',
 
     'toast' => 'Vorschlag in deinem Browser geöffnet.',
 
