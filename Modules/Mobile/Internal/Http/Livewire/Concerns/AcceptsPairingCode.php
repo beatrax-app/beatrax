@@ -74,31 +74,16 @@ trait AcceptsPairingCode
         $typed = trim($this->initiatorAddress);
         $address = $typed === '' ? null : PeerAddress::parse($typed);
 
-        // Refused here rather than dialled: an address the socket cannot be
-        // built from would come back as "nothing answered", which is the one
-        // answer that sends this reader looking at their network.
-        if ($typed !== '' && $address === null) {
-            $this->flashMessage = Lang::get('mobile::pairing.errors.initiator_address_invalid');
-
-            return false;
-        }
-
         // A typed code carries the token alone, so ask the LAN for the public
         // half it cannot carry — by browse, then at the address the reader
-        // gave. An answer proves nothing either way: the safety-number
-        // comparison is still the only trust gate.
-        $discovered = $gateway->discoverInitiatorOnLan($this->wordCode, $address);
+        // gave. Null short-circuits that: an address the socket cannot be built
+        // from is this device's own refusal, and nothing is dialled for it.
+        $discovered = $typed !== '' && $address === null
+            ? null
+            : $gateway->discoverInitiatorOnLan($this->wordCode, $address);
 
-        if ($discovered instanceof PairingOfferLookup) {
-            // A typed code names no device, so a peer that answered and refused
-            // may simply be the wrong desktop. "Invalid or expired" was the
-            // confident version of that guess; this one is true either way.
-            $this->flashMessage = Lang::get(match ($discovered) {
-                PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.code_not_accepted',
-                PairingOfferLookup::CodeMalformed => 'mobile::pairing.errors.code_incomplete',
-                PairingOfferLookup::NoPeerReached => $this->nothingAnsweredKey($gateway),
-                PairingOfferLookup::RateLimited => 'mobile::pairing.errors.rate_limited',
-            });
+        if ($discovered === null || $discovered instanceof PairingOfferLookup) {
+            $this->flashMessage = Lang::get($this->typedRefusalKey($discovered, $gateway));
 
             // The one refusal an address can answer, and the only one worth
             // offering it for: nothing was reached, so where the desktop is is
@@ -109,6 +94,21 @@ trait AcceptsPairingCode
         }
 
         return $discovered;
+    }
+
+    // Null is the refusal this device made before it dialled anything; the rest
+    // are what the network answered. A typed code names no device, so a peer
+    // that answered and refused may simply be the wrong desktop — "invalid or
+    // expired" was the confident version of that guess.
+    private function typedRefusalKey(?PairingOfferLookup $discovered, PairingGateway $gateway): string
+    {
+        return match ($discovered) {
+            null => 'mobile::pairing.errors.initiator_address_invalid',
+            PairingOfferLookup::CodeNotAccepted => 'mobile::pairing.errors.code_not_accepted',
+            PairingOfferLookup::CodeMalformed => 'mobile::pairing.errors.code_incomplete',
+            PairingOfferLookup::NoPeerReached => $this->nothingAnsweredKey($gateway),
+            PairingOfferLookup::RateLimited => 'mobile::pairing.errors.rate_limited',
+        };
     }
 
     // Nothing answered is the EXPECTED outcome on iOS, which drops the app's
