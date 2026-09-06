@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 return [
     'share_title' => 'Beatrax-Export',
-    'share_message' => 'Speichere diese Datei dort, wo du sie wiederfindest.',
+    'share_message' => 'Diese Datei ist nicht verschlüsselt — wer sie öffnet, kann sie lesen. Bewahre sie an einem privaten Ort auf.',
+    'share_message_encrypted' => 'Diese Datei ist verschlüsselt. Bewahre ihr Passwort sicher auf — ohne es kann niemand die Datei wieder öffnen, auch du nicht.',
 
     'shared' => 'Dein Gerät fragt, wo die Datei gespeichert werden soll.',
     'unsupported' => 'Diese App kann deinem Gerät keine Datei übergeben, es wurde also nichts gespeichert. Exportiere stattdessen in der Desktop-App.',

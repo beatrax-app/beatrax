@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Den senaste verifierade säkerhetskopian är :hoursh gammal. Beatrax gör den här säkerhetskopian själv, en gång om dagen, medan appen är öppen — det finns inget att köra för hand. Om den fortsätter vara så gammal har appen inte varit öppen när den dagliga körningen kom.',
         'backup_none_found' => 'Ingen verifierad säkerhetskopia hittades i säkerhetskopiemappen. Beatrax gör den här säkerhetskopian själv, en gång om dagen, medan appen är öppen — det finns inget att köra för hand.',
-        'wal_mode_missing' => 'SQLite är inte i WAL-läge (för närvarande :mode). Samtidiga skrivningar kan fastna. Kör <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> för vägledning.',
-        'synchronous_misconfigured' => 'SQLites synchronous-nivå är :level (förväntat NORMAL/1). Hållbarheten kan skilja sig från konfigurationen. Kör <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> för vägledning.',
+        'wal_mode_missing' => 'Databasen är inte i WAL-läge (just nu :mode), så sparandet kan pausa medan en bakgrundsuppgift körs. Beatrax sätter WAL vid varje start, så en omstart brukar lösa det.',
+        'synchronous_misconfigured' => 'Databasens hållbarhetsnivå är :level i stället för förväntad NORMAL. Beatrax sätter den vid varje start, så en omstart brukar lösa det.',
         'oauth_scrub_set_failed' => 'Maskeringen av OAuth-hemligheter är ur funktion. Loggar och granskningsutdrag kan innehålla omaskerade token fram till nästa lyckade inläsning.',
         'oauth_reauth_required' => 'OAuth-hemligheter har flyttats till lagring per användare. Auktorisera Gmail och Microsoft på nytt för att återuppta e-postskanningen. Den gamla hemlighetsfilen bytte namn till :file för återställning.',
         'oauth_reconsent' => 'Återanslut din :provider',

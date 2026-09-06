@@ -14,6 +14,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Tests\Support\BackupShareSheet;
@@ -162,4 +163,36 @@ it('says why when the handover fails, and keeps no encrypted copy in the contain
         ->and($component->error)->toBe(FileExportOutcome::Failed->message())
         ->and($component->notice)->toBe('')
         ->and(glob(UserDataPathService::appPath('tmp-backups').'/*.enc') ?: [])->toBe([]);
+});
+
+// Six exports hand a file to the OS share sheet and four of them are plaintext:
+// a tax CSV, a report CSV, an alias file. All six carried one sentence — "save
+// this file somewhere you can find it again" — which is true of a file and says
+// nothing about who else can read it. The default now warns, because a forgotten
+// flag then over-warns rather than reassuring about a readable file.
+it('hands an encrypted backup a sentence about its passphrase, not the plaintext warning', function (): void {
+    $sheet = new BackupShareSheet;
+
+    $component = Livewire::test(EncryptedBackupDownload::class)
+        ->set('passphrase', 'a-good-passphrase')
+        ->set('confirmPassphrase', 'a-good-passphrase')
+        ->instance();
+
+    backupDownloadFor($component, $sheet);
+
+    expect($sheet->handedMessages)->toHaveCount(1)
+        ->and($sheet->handedMessages[0])->toBe(Lang::get('mobile::export.share_message_encrypted'))
+        ->and($sheet->handedMessages[0])->not->toBe(Lang::get('mobile::export.share_message'));
+});
+
+// The other half of the pair, and the one that matters more: the sentence a
+// plaintext export gets by saying nothing has to be the one that warns.
+it('keeps the default share sentence a warning rather than a reassurance', function (): void {
+    $default = Lang::get('mobile::export.share_message');
+    $encrypted = Lang::get('mobile::export.share_message_encrypted');
+
+    expect($default)->not->toBe($encrypted, 'both sentences resolve the same, so an encrypted export and a readable one tell the reader the same thing')
+        ->and(str_contains($default, 'not encrypted'))->toBeTrue(
+            'the default sentence no longer says the file is readable, and it is what every export that passes no message hands the reader.',
+        );
 });

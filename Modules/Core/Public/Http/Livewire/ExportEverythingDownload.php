@@ -77,7 +77,13 @@ final class ExportEverythingDownload extends Component
                 ->deleteFileAfterSend();
         }
 
-        $outcome = $shareSheet->exportFile($zipPath, $filename);
+        // Built with a passphrase, so it carries the encrypted sentence
+        // rather than the default, which warns that a file is readable.
+        $outcome = $shareSheet->exportFile(
+            $zipPath,
+            $filename,
+            shareMessage: Lang::get('mobile::export.share_message_encrypted'),
+        );
         if ($outcome === FileExportOutcome::Shared) {
             $this->notice = $outcome->message();
         } else {

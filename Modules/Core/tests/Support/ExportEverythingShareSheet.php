@@ -12,6 +12,12 @@ final class ExportEverythingShareSheet extends ShareSheetExport
     /** @var list<string> */
     public array $handed = [];
 
+    // Recorded so a case can assert WHICH sentence an export hands the reader:
+    // the default warns that a file is readable, and an encrypted export has to
+    // say something else or it reassures about the wrong thing.
+    /** @var list<?string> */
+    public array $handedMessages = [];
+
     public function __construct(
         private readonly bool $dropsDownloads = true,
         private readonly bool $available = true,

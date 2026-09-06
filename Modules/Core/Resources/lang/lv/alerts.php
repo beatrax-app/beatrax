@@ -36,8 +36,8 @@ return [
 
         'backup_overdue' => 'Jaunākais pārbaudītais dublējums ir :hoursh vecs. Beatrax šo dublējumu izveido pati, reizi dienā, kamēr lietotne ir atvērta — ar roku nekas nav jāpalaiž. Ja tas paliek tik vecs, lietotne nav bijusi atvērta brīdī, kad pienāca ikdienas izpilde.',
         'backup_none_found' => 'Dublējumu mapē netika atrasts neviens pārbaudīts dublējums. Beatrax šo dublējumu izveido pati, reizi dienā, kamēr lietotne ir atvērta — ar roku nekas nav jāpalaiž.',
-        'wal_mode_missing' => 'SQLite nedarbojas WAL režīmā (pašlaik :mode). Vienlaicīgi ieraksti var apstāties. Norādēm palaidiet <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
-        'synchronous_misconfigured' => 'SQLite synchronous līmenis ir :level (gaidīts NORMAL/1). Datu noturība var atšķirties no konfigurācijā norādītās. Norādēm palaidiet <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code>.',
+        'wal_mode_missing' => 'Datubāze nav WAL režīmā (pašlaik :mode), tāpēc saglabāšana var apstāties, kamēr darbojas fona uzdevums. Beatrax iestata WAL katrā palaišanas reizē, tāpēc restartēšana to parasti atrisina.',
+        'synchronous_misconfigured' => 'Datubāzes noturības līmenis ir :level, nevis gaidītais NORMAL. Beatrax to iestata katrā palaišanas reizē, tāpēc restartēšana to parasti atrisina.',
         'oauth_scrub_set_failed' => 'OAuth noslēpumu maskēšana nedarbojas. Žurnālos un audita izrakstos līdz nākamajai veiksmīgajai ielādei var būt nemaskētas pilnvaras.',
         'oauth_reauth_required' => 'OAuth noslēpumi ir pārvietoti uz katra lietotāja krātuvi. Atkārtoti autorizējiet Gmail un Microsoft, lai atsāktu e-pasta skenēšanu. Vecais noslēpumu fails atgriešanai tika pārdēvēts par :file.',
         'oauth_reconsent' => 'Atkārtoti savienojiet savu :provider',

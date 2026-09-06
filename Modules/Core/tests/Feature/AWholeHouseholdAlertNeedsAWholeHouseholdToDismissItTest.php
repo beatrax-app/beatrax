@@ -10,6 +10,7 @@ use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Public\Services\SystemAlertQuery;
+use Modules\Core\Public\Support\Lang;
 
 // The system-wide alerts are the infrastructure ones — WAL mode missing,
 // PRAGMA drift, a failed OAuth scrub. One row addressed to everybody, with
@@ -26,6 +27,14 @@ function householdMember(string $username): User
     ]);
 }
 
+// What the banner actually prints for this alert. It renders the copy key
+// rather than the stored `message`, so a case pinning the English sentence is
+// pinning a string the screen never reads.
+function walBannerSentence(): string
+{
+    return Lang::get('core::alerts.messages.wal_mode_missing', ['mode' => 'delete']);
+}
+
 function machineWideAlert(): SystemAlert
 {
     /** @var SystemAlert $alert */
@@ -33,7 +42,7 @@ function machineWideAlert(): SystemAlert
         'user_id' => null,
         'kind' => 'wal_mode_missing',
         'severity' => SystemAlertSeverity::Warning->value,
-        'message' => "SQLite is not in WAL mode (currently 'delete').",
+        'message' => walBannerSentence(),
         'metadata' => ['current_mode' => 'delete'],
     ]);
 
@@ -74,10 +83,10 @@ it('takes the same reader through the banner and leaves the other one alone', fu
 
     Livewire::actingAs($first)->test(SystemAlertsBanner::class)
         ->call('acknowledge', $alert->id)
-        ->assertDontSee('SQLite is not in WAL mode');
+        ->assertDontSee(walBannerSentence());
 
     Livewire::actingAs($second)->test(SystemAlertsBanner::class)
-        ->assertSee('SQLite is not in WAL mode');
+        ->assertSee(walBannerSentence());
 });
 
 it('does not raise on a second dismissal by the same reader', function (): void {

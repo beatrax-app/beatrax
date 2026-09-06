@@ -127,9 +127,10 @@
                 ? $metadata['current_mode']
                 : 'unknown';
         @endphp
-        {{-- App-static copy with an inline <code> span; the operator-controlled
-             :mode value is escaped with e() before substitution. --}}
-        {!! Lang::get('core::alerts.messages.wal_mode_missing', ['mode' => e($currentMode)]) !!}
+        {{-- Escaped output: the sentence carries no markup, so the pragma value
+             reaches the reader through Blade rather than through an e() call
+             whose result is then printed unescaped. --}}
+        {{ Lang::get('core::alerts.messages.wal_mode_missing', ['mode' => $currentMode]) }}
         @break
     @case ('synchronous_misconfigured')
         @php
@@ -138,8 +139,8 @@
                 ? (int) $metadata['current_level']
                 : -1;
         @endphp
-        {{-- App-static copy with an inline <code> span; :level is an integer. --}}
-        {!! Lang::get('core::alerts.messages.synchronous_misconfigured', ['level' => $currentLevel]) !!}
+        {{-- Escaped output, for the same reason as the pragma above. --}}
+        {{ Lang::get('core::alerts.messages.synchronous_misconfigured', ['level' => $currentLevel]) }}
         @break
     @case (OAuthAlertKind::ReconsentRequired->value)
         {{--

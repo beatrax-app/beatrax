@@ -128,7 +128,14 @@ final class EncryptedBackupDownload extends Component
     // does not silently accumulate whole databases nobody can reach.
     private function handToShareSheet(ShareSheetExport $shareSheet, string $encPath, string $filename): null
     {
-        $outcome = $shareSheet->exportFile($encPath, $filename);
+        // The default sentence is true of a plaintext export, which is what
+        // most of them are. This one is passphrase-protected, and the reader
+        // needs to know the passphrase is the only way back in.
+        $outcome = $shareSheet->exportFile(
+            $encPath,
+            $filename,
+            shareMessage: Lang::get('mobile::export.share_message_encrypted'),
+        );
 
         if ($outcome === FileExportOutcome::Shared) {
             $this->notice = $outcome->message();
