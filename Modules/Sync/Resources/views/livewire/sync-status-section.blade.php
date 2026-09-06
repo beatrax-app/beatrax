@@ -116,14 +116,13 @@
         <ul class="divide-y divide-slate-100 dark:divide-slate-800" data-testid="sync-peer-list">
             @foreach ($peerStatuses as $peer)
                 @php
-                    $status        = is_string($peer['status'] ?? null) ? $peer['status'] : '';
                     $peerDeviceId  = is_string($peer['peer_device_id'] ?? null) ? $peer['peer_device_id'] : '';
                     $displayName   = is_string($peer['display_name'] ?? null) ? $peer['display_name'] : $peerDeviceId;
                     $isKnownPeer   = ($peer['is_known'] ?? false) === true;
                     $lastSeenHuman = is_string($peer['last_seen_human'] ?? null) ? $peer['last_seen_human'] : null;
                     $errorLabel    = is_string($peer['error_label'] ?? null) ? $peer['error_label'] : '';
-                    $isActive      = in_array($status, ['active', 'connecting', 'handshaking'], true);
-                    $isFailed      = $status === 'failed';
+                    $isActive      = ($peer['is_live'] ?? false) === true;
+                    $isFailed      = ($peer['is_failed'] ?? false) === true;
                 @endphp
                 <li class="flex items-start justify-between gap-4 py-3" data-testid="sync-peer-row" wire:key="peer-{{ $peerDeviceId }}">
                     <div class="flex min-w-0 flex-1 items-center gap-3">

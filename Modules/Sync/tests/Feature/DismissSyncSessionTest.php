@@ -79,7 +79,7 @@ it('sweeps sessions no confirmed device backs and keeps the live one', function 
     dismissConfirmedDevice($db, $userId, 'live-peer');
     dismissSession($db, $userId, 'live-peer', 'active');
     dismissSession($db, $userId, 'removed-peer-a', 'failed');
-    dismissSession($db, $userId, 'removed-peer-b', 'offline');
+    dismissSession($db, $userId, 'removed-peer-b', 'closed');
 
     /** @var SyncStatusService $status */
     $status = app(SyncStatusService::class);

@@ -5,10 +5,26 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 uses(RefreshDatabase::class);
+
+// An active row is a claim about right now, so the ranking is read against a
+// fixed instant rather than the wall clock — a seed dated 2026 would otherwise
+// answer differently every day the suite runs.
+const SSS_NOW = '2026-07-19T06:00:00Z';
+
+beforeEach(function (): void {
+    app()->bind(Clock::class, fn (): Clock => new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse(SSS_NOW);
+        }
+    });
+});
 
 // SyncStatusSectionTest never reaches 'offline' and asserts lastSyncedHuman()
 // only as null. Both gaps matter to whoever reads the panel: offline versus
@@ -52,16 +68,22 @@ it('ranks an errored peer above a syncing one, a syncing one above an unreachabl
 })->with([
     'failed to verify' => [[['status' => 'failed', 'error_message' => 'handshake rejected']], SyncOverallStatus::Error],
     'error outranks syncing' => [[
-        ['status' => 'active'],
+        ['status' => 'active', 'last_seen_at' => SSS_NOW],
         ['status' => 'failed', 'error_message' => 'handshake rejected'],
     ], SyncOverallStatus::Error],
-    'connecting' => [[['status' => 'connecting']], SyncOverallStatus::Syncing],
-    'handshaking' => [[['status' => 'handshaking']], SyncOverallStatus::Syncing],
-    'active' => [[['status' => 'active']], SyncOverallStatus::Syncing],
+    'active' => [[['status' => 'active', 'last_seen_at' => SSS_NOW]], SyncOverallStatus::Syncing],
     'syncing outranks finished' => [[
         ['status' => 'closed'],
-        ['status' => 'connecting'],
+        ['status' => 'active', 'last_seen_at' => SSS_NOW],
     ], SyncOverallStatus::Syncing],
+    // close() is what moves a row off active, and the process that would have
+    // run it is the one that died — so an active row nothing has stamped for
+    // an hour is a strand, and it used to hold this surface on "syncing" for
+    // the life of the install while outranking both answers below it.
+    'a strand no process is behind' => [
+        [['status' => 'active', 'last_seen_at' => '2026-07-19T05:00:00Z']],
+        SyncOverallStatus::Offline,
+    ],
     'closed' => [[['status' => 'closed']], SyncOverallStatus::AllSynced],
     // What the arm could not say. A peer that finished an exchange and cannot
     // be reached now was reported as up to date, over a row the same screen
@@ -99,7 +121,7 @@ it('scopes the status to the asking user', function (): void {
 });
 
 it('has no last-synced time before any peer has been seen', function (): void {
-    sssSeed(1, [['status' => 'connecting', 'last_seen_at' => null]]);
+    sssSeed(1, [['status' => 'active', 'last_seen_at' => null]]);
 
     expect(sssService()->lastSyncedHuman(CarbonImmutable::parse('2026-07-19 06:00:00'), 1))->toBeNull();
 });
@@ -139,7 +161,7 @@ it('takes the newest last_seen_at across peers', function (): void {
 
 it('ignores peers with no last_seen_at when picking the newest', function (): void {
     sssSeed(1, [
-        ['status' => 'connecting', 'last_seen_at' => null],
+        ['status' => 'active', 'last_seen_at' => null],
         ['status' => 'closed', 'last_seen_at' => '2026-07-19 11:00:00'],
     ]);
 

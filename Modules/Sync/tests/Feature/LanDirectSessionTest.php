@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Enums\SyncSessionStatus;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -142,7 +143,7 @@ it('both loopback peers authenticate each other against device_registry X25519 k
         'Device A must be authenticated by device B — its X25519 key is in confirmed device_registry'
     );
     expect($sessionB->peerDeviceId())->toBe('device-a', 'peerDeviceId() must resolve to device-a');
-    expect($sessionB->status())->toBe('active', 'Session must be active after successful auth');
+    expect($sessionB->status())->toBe(SyncSessionStatus::Active, 'Session must be active after successful auth');
 });
 
 it('loopback session transfers a plaintext OpLogEntry payload end-to-end', function (): void {

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Enums\SyncSessionStatus;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
@@ -105,7 +106,7 @@ it('refuses a handshaken peer whose static key pairing never put in the registry
         'a key nobody paired with is a key nothing may admit: the handshake proves possession, and possession is not trust',
     );
 
-    expect($syncSession->status())->toBe('failed');
+    expect($syncSession->status())->toBe(SyncSessionStatus::Failed);
     expect($syncSession->peerDeviceId())->toBeNull(
         'a refused session must name no peer, or the frames behind it would be attributed to one',
     );
@@ -129,7 +130,7 @@ it('admits the same handshake once pairing has confirmed that key, and no sooner
     $syncSession = admissionSyncSession();
 
     expect($syncSession->authenticate($noiseSession, (int) $user->id, 'admission-local-device'))->toBeTrue();
-    expect($syncSession->status())->toBe('active');
+    expect($syncSession->status())->toBe(SyncSessionStatus::Active);
     expect($syncSession->peerDeviceId())->toBe($deviceId);
 });
 
@@ -145,7 +146,7 @@ it('refuses a peer another user confirmed, because the registry the session read
     expect($syncSession->authenticate($noiseSession, (int) $owner->id, 'admission-local-device'))->toBeFalse(
         'one household confirming a device says nothing about another household, so the lookup carries the owner',
     );
-    expect($syncSession->status())->toBe('failed');
+    expect($syncSession->status())->toBe(SyncSessionStatus::Failed);
 });
 
 it('refuses a peer whose confirmation was withdrawn, on the next session it opens', function (): void {
@@ -163,5 +164,5 @@ it('refuses a peer whose confirmation was withdrawn, on the next session it open
     expect($syncSession->authenticate($noiseSession, (int) $user->id, 'admission-local-device'))->toBeFalse(
         'a row left in the registry with its confirmation cleared is a device that was removed, not one that is trusted',
     );
-    expect($syncSession->status())->toBe('failed');
+    expect($syncSession->status())->toBe(SyncSessionStatus::Failed);
 });

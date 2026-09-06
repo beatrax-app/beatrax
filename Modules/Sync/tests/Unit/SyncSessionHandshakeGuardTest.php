@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Sync\Internal\Enums\SyncSessionStatus;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -35,7 +36,7 @@ function guardEntry(): OpLogEntry
 }
 
 it('starts out handshaking, with no peer identified', function (): void {
-    expect($this->session->status())->toBe('handshaking')
+    expect($this->session->status())->toBeNull()
         ->and($this->session->peerDeviceId())->toBeNull();
 });
 
@@ -58,7 +59,7 @@ it('can be closed before it was ever opened', function (): void {
     // and there is no session row to update yet.
     $this->session->close();
 
-    expect($this->session->status())->toBe('closed');
+    expect($this->session->status())->toBe(SyncSessionStatus::Closed);
 });
 
 it('stays closed for encryption after close', function (): void {
