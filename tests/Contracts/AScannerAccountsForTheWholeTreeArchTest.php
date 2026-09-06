@@ -191,36 +191,32 @@ it('refuses the code this repository did not write, and refuses nothing it no lo
         ...array_slice($leaked, 0, 20),
     ]));
 
-    $proven = [];
-    $excusesNothing = [];
+    // Put to the reader rather than to the filesystem. Whether one of these
+    // directories holds a file today is a fact about the machine -- a checkout
+    // with no `composer install` has no vendor/, and the cache empties -- and a
+    // rule read off that answers about the build rather than about the refusal.
+    $unread = [];
 
     foreach (RepoTree::NEVER_WALKED as $fragment => $reason) {
-        expect($reason)->not->toBe('', 'The refusal of '.$fragment.' carries no reason, and a refusal nobody wrote a reason for reads as considered.');
+        expect($reason)->not->toBe(
+            '',
+            'The refusal of '.$fragment.' carries no reason, and a refusal nobody wrote a reason for reads as considered.'
+        );
 
-        $directory = RepoTree::root().rtrim($fragment, '/');
-
-        if (! is_dir($directory)) {
-            continue;
+        if (! RepoTree::refuses(RepoTree::root().$fragment.'Planted.php')) {
+            $unread[] = $fragment.' is listed as refused and the reader walks straight past it';
         }
 
-        $proven[] = $fragment;
-
-        if (glob($directory.'/*') === []) {
-            $excusesNothing[] = $fragment.' is refused and holds nothing at all';
+        if (RepoTree::refuses(RepoTree::root().'/Modules/Core/Public/Support/'.trim($fragment, '/').'Name.php')) {
+            $unread[] = $fragment.' refuses a first-party file whose name merely starts the same way';
         }
     }
 
-    expect($excusesNothing)->toBe([], implode("\n  ", [
-        'These refusals have outlived what earned them. A path is refused because walking it reads somebody '
-            .'else\'s files or a generated one, and there are none left to read:',
-        ...$excusesNothing,
+    expect($unread)->toBe([], implode("\n  ", [
+        'The refusal list and the reader that applies it have come apart. A fragment nothing refuses excuses '
+            .'nothing, and one that refuses a first-party file hides code this tree does own:',
+        ...$unread,
     ]));
-
-    expect($proven)->not->toBe(
-        [],
-        'Not one refused path exists in this checkout, so the rule above proved nothing: it would report the '
-        .'same clean result against a list of paths that were never there.'
-    );
 });
 
 // A guard that cannot go red is a guard that says nothing, and the three

@@ -279,12 +279,24 @@ final class RepoTree
         foreach ($walk as $file) {
             $path = $file->getPathname();
 
-            if ($file->isFile() && ! $file->isLink() && ! self::skipped($path, array_keys(self::NEVER_WALKED))) {
+            if ($file->isFile() && ! $file->isLink() && ! self::refuses($path)) {
                 $paths[] = $path;
             }
         }
 
         return $paths;
+    }
+
+    /**
+     * Whether a path is code this repository did not write. Public so the guard
+     * beside this class can put a path to the reader itself: the refusal is
+     * measured against paths, and asking whether one of these directories
+     * happens to hold a file today answers about a build machine rather than
+     * about the rule.
+     */
+    public static function refuses(string $path): bool
+    {
+        return self::skipped($path, array_keys(self::NEVER_WALKED));
     }
 
     /**
