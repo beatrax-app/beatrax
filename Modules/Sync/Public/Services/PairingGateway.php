@@ -22,6 +22,7 @@ use Modules\Sync\Public\Enums\LanDiscoveryReach;
 use Modules\Sync\Public\Enums\PairingAcceptRefusal;
 use Modules\Sync\Public\Enums\PairingFrameSend;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
+use Modules\Sync\Public\Support\PeerAddress;
 use stdClass;
 
 // The one door into pairing for every screen on both clients, which is why it
@@ -105,9 +106,9 @@ final readonly class PairingGateway
     /**
      * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: null, relayPin: null, lanHost: string, lanPort: int}|PairingOfferLookup
      */
-    public function discoverInitiatorOnLan(string $wordCode): array|PairingOfferLookup
+    public function discoverInitiatorOnLan(string $wordCode, ?PeerAddress $typed = null): array|PairingOfferLookup
     {
-        return $this->peerLink->discoverInitiatorOnLan($wordCode);
+        return $this->peerLink->discoverInitiatorOnLan($wordCode, $typed);
     }
 
     // No new trust decision: a relay learned from a QR is a delivery address,

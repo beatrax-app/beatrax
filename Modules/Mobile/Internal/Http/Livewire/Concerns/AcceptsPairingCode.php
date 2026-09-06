@@ -15,6 +15,7 @@ use Modules\Sync\Public\Enums\PairingAcceptRefusal;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
+use Modules\Sync\Public\Support\PeerAddress;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -70,10 +71,23 @@ trait AcceptsPairingCode
             return null;
         }
 
+        $typed = trim($this->initiatorAddress);
+        $address = $typed === '' ? null : PeerAddress::parse($typed);
+
+        // Refused here rather than dialled: an address the socket cannot be
+        // built from would come back as "nothing answered", which is the one
+        // answer that sends this reader looking at their network.
+        if ($typed !== '' && $address === null) {
+            $this->flashMessage = Lang::get('mobile::pairing.errors.initiator_address_invalid');
+
+            return false;
+        }
+
         // A typed code carries the token alone, so ask the LAN for the public
-        // half it cannot carry. An mDNS answer proves nothing — the
-        // safety-number comparison is still the only trust gate.
-        $discovered = $gateway->discoverInitiatorOnLan($this->wordCode);
+        // half it cannot carry — by browse, then at the address the reader
+        // gave. An answer proves nothing either way: the safety-number
+        // comparison is still the only trust gate.
+        $discovered = $gateway->discoverInitiatorOnLan($this->wordCode, $address);
 
         if ($discovered instanceof PairingOfferLookup) {
             // A typed code names no device, so a peer that answered and refused
@@ -85,6 +99,11 @@ trait AcceptsPairingCode
                 PairingOfferLookup::NoPeerReached => $this->nothingAnsweredKey($gateway),
                 PairingOfferLookup::RateLimited => 'mobile::pairing.errors.rate_limited',
             });
+
+            // The one refusal an address can answer, and the only one worth
+            // offering it for: nothing was reached, so where the desktop is is
+            // the question this reader can still answer themselves.
+            $this->offerNeedsAnAddress = $discovered === PairingOfferLookup::NoPeerReached;
 
             return false;
         }

@@ -126,8 +126,22 @@ covers — an IP rather than the SRV record's `.local` name, because resolving a
 again. Trust is unchanged: an address decides which machine is asked, never
 which one is trusted, and the safety number remains the only gate.
 
-It is the typed-code arm, which depends on finding the peer, that has nothing
-to find.
+It is the typed-code arm, which depends on finding the peer, that had nothing
+to find. A QR carries the initiator's address; a code a reader types carries a
+token and nothing else, so the browse was its only road and on this platform
+the browse never answers.
+
+It now has a second road, and it is the reader's: once a submit comes back
+having reached nobody — the one refusal an address answers — the screen asks
+where the other device is, and `LanPairingOfferFetcher` asks that address after
+the browse has come up empty. It is the same rung the ladder already names
+between discovery and the relay, reaching pairing at last.
+
+The address changes nothing about trust, here or anywhere else on this page: it
+decides which machine is asked, never which one is believed, and the offer it
+returns still carries no relay bootstrap — that is `LanPairingOfferFetcher`
+dropping every relay field the reply names, because a fetched answer is not the
+out-of-band channel a scanned QR is. The safety number remains the only gate.
 
 ### The same address, needed again on the way back
 
