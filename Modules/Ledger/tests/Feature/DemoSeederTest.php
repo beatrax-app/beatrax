@@ -217,6 +217,14 @@ function demoSeedPlantUnreferencedRows(int $userId): array
     return $planted;
 }
 
+// A column the database constrains cannot take the placeholder. What this probe
+// is about is the reset sweeping a planted row away, not what the row says, so
+// the value only has to be admissible. A new constraint fails here with the
+// column named, which is what asks for the line.
+const DEMO_SEED_PROBE_VALUES = [
+    'sync_sessions' => ['status' => 'closed'],
+];
+
 /**
  * @return array<string, int|string>
  */
@@ -242,7 +250,8 @@ function demoSeedProbeRow(string $table, int $userId): array
             continue;
         }
 
-        $row[$column['name']] = str_contains($column['type_name'], 'int') ? 1 : 'demo-reset-probe';
+        $row[$column['name']] = DEMO_SEED_PROBE_VALUES[$table][$column['name']]
+            ?? (str_contains($column['type_name'], 'int') ? 1 : 'demo-reset-probe');
     }
 
     return $row;

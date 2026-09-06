@@ -17,7 +17,7 @@ return new class extends ModuleMigration
             $table->string('local_device_id');
             $table->string('peer_device_id');
             // Application-validated TEXT, never a database enum:
-            // connecting | handshaking | active | closed | failed.
+            // active | closed | failed.
             $table->string('status', 32);
             $table->text('error_message')->nullable();
             // The instant a valid encrypted message last arrived on this

@@ -13,6 +13,7 @@ use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Crypto\GdkWrapRecipient;
+use Modules\Sync\Internal\Enums\SyncSessionStatus;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -245,7 +246,7 @@ it('refuses a Noise session to a device that is only introduced', function (): v
     expect(app(DeviceRegistryService::class)->deviceX25519Keys($userId))->toHaveCount(1)
         ->and($admitted)->toBeFalse()
         ->and($session->peerDeviceId())->toBeNull()
-        ->and($session->status())->toBe('failed')
+        ->and($session->status())->toBe(SyncSessionStatus::Failed)
         ->and($db->connection()->table('sync_sessions')->where('user_id', $userId)->value('peer_device_id'))
         ->toBe('unknown');
 });

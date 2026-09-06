@@ -96,6 +96,19 @@ it('shows syncing status when a session is active', function (): void {
         'last_seen_at' => '2026-06-15T10:00:00Z',
     ]);
 
+    // An active row claims a peer is mid-exchange right now, so it is only
+    // read as one near the instant that stamped it.
+    $now = CarbonImmutable::parse('2026-06-15T10:00:30Z');
+    $this->app->bind(Clock::class, fn () => new class($now) implements Clock
+    {
+        public function __construct(private readonly CarbonImmutable $frozen) {}
+
+        public function now(): CarbonImmutable
+        {
+            return $this->frozen;
+        }
+    });
+
     Livewire::test(SyncStatusSection::class)
         ->assertSet('overallStatus', 'syncing');
 });

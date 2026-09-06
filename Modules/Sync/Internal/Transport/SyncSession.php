@@ -7,13 +7,14 @@ namespace Modules\Sync\Internal\Transport;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\Instant;
+use Modules\Sync\Internal\Enums\SyncSessionStatus;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\PriorAuthorship;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Internal\Status\SessionLiveness;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -27,21 +28,15 @@ final class SyncSession
 
     private ?NoiseSession $noiseSession = null;
 
-    // A peer reconnects every couple of seconds; without this it would mean
-    // a database write every couple of seconds, purely for bookkeeping.
-    // How often a live session bothers to write its last-seen stamp.
-    private static function lastSeenThrottleSeconds(): int
-    {
-        return Duration::Minute->seconds();
-    }
-
     private ?string $peerDeviceId = null;
 
     private ?string $localDeviceId = null;
 
     private ?PriorAuthorship $authorship = null;
 
-    private string $status = 'handshaking';
+    private ?SyncSessionStatus $status = null;
+
+    private ?int $lastSeenStampedAt = null;
 
     private ?int $sessionRowId = null;
 
@@ -77,12 +72,12 @@ final class SyncSession
         $now = Instant::zulu($this->clock->now());
 
         if ($matchedDeviceId === null) {
-            $this->status = 'failed';
+            $this->status = SyncSessionStatus::Failed;
             $this->upsertSessionRow(
                 userId: $userId,
                 localDeviceId: $localDeviceId,
                 peerDeviceId: 'unknown',
-                status: 'failed',
+                status: SyncSessionStatus::Failed,
                 errorMessage: 'Peer X25519 static key not in confirmed device_registry.',
                 connectedAt: null,
                 lastSeenAt: $now,
@@ -94,7 +89,7 @@ final class SyncSession
         $this->noiseSession = $noiseSession;
         $this->peerDeviceId = $matchedDeviceId;
         $this->localDeviceId = $localDeviceId;
-        $this->status = 'active';
+        $this->status = SyncSessionStatus::Active;
 
         // Bookkeeping only, deliberately best-effort: losing a race for the
         // SQLite write lock used to throw straight out of the handshake and
@@ -106,11 +101,13 @@ final class SyncSession
             userId: $userId,
             localDeviceId: $localDeviceId,
             peerDeviceId: $matchedDeviceId,
-            status: 'active',
+            status: SyncSessionStatus::Active,
             errorMessage: null,
             connectedAt: $now,
             lastSeenAt: $now,
         );
+
+        $this->lastSeenStampedAt = $this->clock->now()->getTimestamp();
 
         return true;
     }
@@ -131,7 +128,7 @@ final class SyncSession
             if (is_string($lastSeen) && $lastSeen !== '') {
                 $age = $this->clock->now()->diffInSeconds(CarbonImmutable::parse($lastSeen), absolute: true);
 
-                if ($age < self::lastSeenThrottleSeconds()) {
+                if ($age < SessionLiveness::stampIntervalSeconds()) {
                     return;
                 }
             }
@@ -188,6 +185,9 @@ final class SyncSession
         }
 
         $frame = $this->noiseSession->decrypt($ciphertext);
+
+        $this->stampSessionLastSeen();
+
         $entries = $this->framer->decode($frame);
 
         // The caller's map is the whole gate. A key the registry merely RETAINS
@@ -313,7 +313,7 @@ final class SyncSession
 
     public function close(): void
     {
-        $this->status = 'closed';
+        $this->status = SyncSessionStatus::Closed;
         $this->noiseSession = null;
 
         if ($this->sessionRowId !== null) {
@@ -322,19 +322,19 @@ final class SyncSession
                 ->table('sync_sessions')
                 ->where('id', $this->sessionRowId)
                 ->update([
-                    'status' => 'closed',
+                    'status' => SyncSessionStatus::Closed->value,
                     'last_seen_at' => $now,
                     'updated_at' => $now,
                 ]);
         }
     }
 
-    /**
-     * @return 'handshaking'|'active'|'closed'|'failed'
-     */
-    public function status(): string
+    // Null until authenticate() runs, because until then no row exists to
+    // hold a status. The handshake used to answer with a sixth value that the
+    // column could not hold and no writer ever wrote, which is what let two
+    // readers branch on a state nothing could reach.
+    public function status(): ?SyncSessionStatus
     {
-        /** @var 'handshaking'|'active'|'closed'|'failed' */
         return $this->status;
     }
 
@@ -343,11 +343,46 @@ final class SyncSession
         return $this->peerDeviceId;
     }
 
+    // The column's own schema calls this the instant a valid encrypted message
+    // last arrived, and only the handshake and the close ever wrote it — so a
+    // session carrying frames for an hour was indistinguishable from one whose
+    // process died in its first minute, which is what the reader now dates.
+    private function stampSessionLastSeen(): void
+    {
+        if ($this->sessionRowId === null) {
+            return;
+        }
+
+        $now = $this->clock->now();
+
+        if ($this->lastSeenStampedAt !== null
+            && $now->getTimestamp() - $this->lastSeenStampedAt < SessionLiveness::stampIntervalSeconds()) {
+            return;
+        }
+
+        $this->lastSeenStampedAt = $now->getTimestamp();
+        $stamp = Instant::zulu($now);
+
+        // Bookkeeping only, never a precondition for the exchange: losing a
+        // race for the single SQLite writer must not end a session that is
+        // otherwise carrying ops perfectly well.
+        try {
+            $this->db->connection()
+                ->table('sync_sessions')
+                ->where('id', $this->sessionRowId)
+                ->update(['last_seen_at' => $stamp, 'updated_at' => $stamp]);
+        } catch (Throwable $e) {
+            $this->logger?->debug('SyncSession: session last-seen stamp skipped.', [
+                'reason' => $e::class,
+            ]);
+        }
+    }
+
     private function upsertSessionRow(
         int $userId,
         string $localDeviceId,
         string $peerDeviceId,
-        string $status,
+        SyncSessionStatus $status,
         ?string $errorMessage,
         ?string $connectedAt,
         string $lastSeenAt,
@@ -359,7 +394,7 @@ final class SyncSession
                 ->table('sync_sessions')
                 ->where('id', $this->sessionRowId)
                 ->update([
-                    'status' => $status,
+                    'status' => $status->value,
                     'error_message' => $errorMessage,
                     'connected_at' => $connectedAt,
                     'last_seen_at' => $lastSeenAt,
@@ -385,7 +420,7 @@ final class SyncSession
         // otherwise ready to sync.
         try {
             $connection->table('sync_sessions')->updateOrInsert($identity, [
-                'status' => $status,
+                'status' => $status->value,
                 'error_message' => $errorMessage,
                 'connected_at' => $connectedAt,
                 'last_seen_at' => $lastSeenAt,
