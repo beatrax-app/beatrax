@@ -90,3 +90,22 @@ it('keeps a wrapped link from fragmenting out of its own band', function (): voi
         .'placed across the break and answers a finger on neither line.',
     );
 });
+
+// Two bands centred 19px apart overlap, and the later one in the DOM paints
+// over its neighbour's own text. Measured on an iPhone 12 mini at /forecast:
+// a tap on the centre of "importing a statement" resolved to the link on the
+// line below it. A target inline in a sentence is exempt from the floor, so a
+// pair of them drops the band instead of fighting over it. Scoped to a
+// paragraph: /chains puts two in a flex row, side by side, where they never
+// fight and must keep theirs.
+it('drops the band where two links share a parent and would cover each other', function (): void {
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    $suppressions = substr_count($css, 'p:has(> a.tap-link ~ a.tap-link) > a.tap-link::after');
+
+    expect($suppressions)->toBe(
+        2,
+        'Each touch block that defines the 44px band must also drop it for a pair of '
+        .'sibling links, or the later band covers the earlier link\'s own text.',
+    );
+});
