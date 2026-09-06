@@ -4120,6 +4120,22 @@ td.date,
             transform: translateY(-50%);
         }
 
+        /*
+         * Two bands centred 19px apart overlap, and the later one in the DOM
+         * paints over its neighbour's own text: measured on /forecast, a tap on
+         * the centre of "importing a statement" reached the link on the line
+         * below instead of the link under the finger. A target inline in a
+         * sentence is exempt from the floor (WCAG 2.5.8) precisely because the
+         * text around it constrains its size, so a pair of them drops the band
+         * rather than fighting over it. Scoped to a paragraph, because that is
+         * what makes them share a line box: /chains puts two of these in a flex
+         * row, side by side at the same top, where they never fight and keep
+         * their bands.
+         */
+        p:has(> a.tap-link ~ a.tap-link) > a.tap-link::after {
+            content: none;
+        }
+
         /* The transaction row is one flex line: the name link shrinks (min-w-0)
            while the tax badge, status pill and amount do not. At phone width
            those three took ~230px of 324 and left the counterparty name 28px
@@ -6175,6 +6191,11 @@ mark {
         transform: translate(-50%, -50%);
     }
 
+    /* The same pair, at a coarse pointer wider than a phone. */
+    p:has(> a.tap-link ~ a.tap-link) > a.tap-link::after {
+        content: none;
+    }
+
     /*
      * This close button sits beside the chip it clears, so a halo wide enough
      * to reach 44px would swallow taps meant for the chip. It grows only in
@@ -6269,6 +6290,7 @@ mark {
         height: 44px;
         transform: translate(-50%, -50%);
     }
+
 
     /*
      * The halo cannot help a flush-stacked list: 26 nav rows at a 31px pitch
