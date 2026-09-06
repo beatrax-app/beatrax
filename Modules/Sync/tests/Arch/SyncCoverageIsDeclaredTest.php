@@ -89,6 +89,7 @@ function deviceLocalByDesignTables(): array
         'file_imports' => 'Names a receipt file staged on this device\'s filesystem.',
         'system_alert_acknowledgements' => 'Written only for a system-wide alert, which is about the machine that noticed the fault and never leaves it.',
         'wizard_progress' => 'The phone joins by pairing rather than by signing up and seeds its own steps; a finished desktop must not skip it through a setup it never ran.',
+        'mobile_notification_grant' => 'What one operating system answered about showing this install\'s notifications; a peer\'s grant permits nothing here, and a refusal there would silence a device that was allowed.',
     ];
 }
 
