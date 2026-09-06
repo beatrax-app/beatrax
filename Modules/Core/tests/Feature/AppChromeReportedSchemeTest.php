@@ -76,3 +76,26 @@ it('reads the scheme the browser actually sends, through the middleware stack', 
         ->and($matches[1])->toContain('dark')
         ->and($matches[1])->not->toContain('light');
 });
+
+// On a WebView served from a custom scheme the reported-scheme cookie can
+// never be written, so this branch is every render the phone ever does. The
+// pre-paint script stands down when `light` is already on the root, so
+// spelling the unknown case `light` left it unable to ever apply dark.
+it('writes no theme class onto the root while the pre-paint script is the authority', function (): void {
+    $user = User::query()->create([
+        'username' => 'scheme-'.bin2hex(random_bytes(4)),
+        'password' => 'fixture',
+        'theme' => Theme::System->value,
+    ]);
+
+    $html = (string) test()->actingAs($user)
+        ->followingRedirects()
+        ->get('/')
+        ->getContent();
+
+    $matches = PatternScan::first('/<html\b[^>]*\bclass="([^"]*)"/i', $html);
+
+    expect($matches)->toHaveCount(2)
+        ->and($matches[1])->not->toContain('light')
+        ->and($html)->toContain('html:not(.light)');
+});

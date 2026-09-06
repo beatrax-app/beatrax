@@ -10,7 +10,7 @@
 <!doctype html>
 <html
     lang="{{ $chrome->locale }}"
-    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
+    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->rootThemeClass() }}"
     style="font-feature-settings: 'tnum';"
 >
     <head>
