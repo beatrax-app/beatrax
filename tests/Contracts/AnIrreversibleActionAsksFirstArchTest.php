@@ -64,6 +64,13 @@ it('gives every one of those questions a line in all 26 languages', function ():
         $locales[] = basename((string) $dir);
     }
 
+    // The description says 26. A glob answering with fewer would leave the
+    // sentence describing a walk nobody ran.
+    expect(count($locales))->toBeGreaterThanOrEqual(
+        26,
+        'Found '.count($locales).' shipped locales; this rule claims all 26, so either a locale was dropped or the glob read nothing.',
+    );
+
     $silent = [];
 
     foreach (ACTIONS_THAT_ASK_FIRST as $actions) {
@@ -158,6 +165,52 @@ function confirmationShapePinnedMethods(): array
     return $methods;
 }
 
+/** @return list<string> every confirmation one template spells outside the three shapes */
+function confirmationShapeHandRolledIn(string $path, string $source): array
+{
+    $found = [];
+
+    foreach (PatternScan::setsWithOffsets('~window\.confirm\b~', $source) as $match) {
+        $found[] = confirmationShapeWhere($path, $source, $match[0][1]).' — window.confirm';
+    }
+
+    foreach (PatternScan::setsWithOffsets(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source) as $handler) {
+        if (PatternScan::setsWithOffsets('~(?<![\w.$])confirm\s*\(~', $handler[1][0]) === []) {
+            continue;
+        }
+
+        $found[] = confirmationShapeWhere($path, $source, $handler[0][1]).' — confirm() in an Alpine handler';
+    }
+
+    return $found;
+}
+
+/**
+ * @param  list<string>  $pinned
+ * @return array{handlers: int, ungated: list<string>}
+ */
+function confirmationShapeUngatedIn(string $path, string $source, array $pinned): array
+{
+    $handlers = 0;
+    $ungated = [];
+
+    foreach (PatternScan::setsWithOffsets(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source) as $handler) {
+        $handlers++;
+
+        foreach (PatternScan::setsWithOffsets('~\$wire\.(?:call\(\s*[\'"])?([A-Za-z_]\w*)~', $handler[1][0]) as $call) {
+            $method = $call[1][0];
+
+            if (! in_array($method, $pinned, true) && ! confirmationShapeIsDestructive($method)) {
+                continue;
+            }
+
+            $ungated[] = confirmationShapeWhere($path, $source, $handler[0][1]).' — $wire.'.$method.'()';
+        }
+    }
+
+    return ['handlers' => $handlers, 'ungated' => $ungated];
+}
+
 it('spells no confirmation a fourth way', function (): void {
     $files = confirmationShapeBladeFiles();
     $denominator = count($files);
@@ -168,19 +221,7 @@ it('spells no confirmation a fourth way', function (): void {
     $handRolled = [];
 
     foreach ($files as $path) {
-        $source = (string) file_get_contents($path);
-
-        foreach (PatternScan::setsWithOffsets('~window\.confirm\b~', $source) as $match) {
-            $handRolled[] = confirmationShapeWhere($path, $source, $match[0][1]).' — window.confirm';
-        }
-
-        foreach (PatternScan::setsWithOffsets(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source) as $handler) {
-            if (PatternScan::setsWithOffsets('~(?<![\w.$])confirm\s*\(~', $handler[1][0]) === []) {
-                continue;
-            }
-
-            $handRolled[] = confirmationShapeWhere($path, $source, $handler[0][1]).' — confirm() in an Alpine handler';
-        }
+        $handRolled = array_merge($handRolled, confirmationShapeHandRolledIn($path, (string) file_get_contents($path)));
     }
 
     expect($handRolled)->toBe([], implode("\n", [
@@ -199,21 +240,9 @@ it('reaches no destructive action through an Alpine handler, where none of the t
     $ungated = [];
 
     foreach ($files as $path) {
-        $source = (string) file_get_contents($path);
-
-        foreach (PatternScan::setsWithOffsets(CONFIRMATION_SHAPE_HANDLER_PATTERN, $source) as $handler) {
-            $handlers++;
-
-            foreach (PatternScan::setsWithOffsets('~\$wire\.(?:call\(\s*[\'"])?([A-Za-z_]\w*)~', $handler[1][0]) as $call) {
-                $method = $call[1][0];
-
-                if (! in_array($method, $pinned, true) && ! confirmationShapeIsDestructive($method)) {
-                    continue;
-                }
-
-                $ungated[] = confirmationShapeWhere($path, $source, $handler[0][1]).' — $wire.'.$method.'()';
-            }
-        }
+        $read = confirmationShapeUngatedIn($path, (string) file_get_contents($path), $pinned);
+        $handlers += $read['handlers'];
+        $ungated = array_merge($ungated, $read['ungated']);
     }
 
     expect($handlers > CONFIRMATION_SHAPE_HANDLER_FLOOR)
@@ -225,4 +254,33 @@ it('reaches no destructive action through an Alpine handler, where none of the t
         '',
         'Move the call to wire:click so wire:confirm or the strip can gate it.',
     ]));
+});
+
+it('reads a hand-rolled confirmation and a destructive call no shape can gate, and leaves a Blade directive alone', function (): void {
+    $blade = <<<'BLADE'
+        <div @if ($ready) data-ready @endif>
+            <button x-on:click="if (confirm('Sure?')) $wire.deleteAll()">Delete</button>
+            <button x-on:click="$wire.refresh()">Refresh</button>
+        </div>
+        BLADE;
+
+    expect(confirmationShapeHandRolledIn('a.blade.php', $blade))->toBe(
+        ['a.blade.php:2 — confirm() in an Alpine handler'],
+        'a browser confirm() is not the fourth shape, it is no shape at all',
+    );
+
+    $read = confirmationShapeUngatedIn('a.blade.php', $blade, ['triggerReapply']);
+
+    expect($read['handlers'])->toBe(
+        2,
+        'the two x-on:click handlers are read and the @if is not one; the event names are a closed list so a Blade directive cannot be read as a handler',
+    );
+
+    expect($read['ungated'])->toBe(
+        ['a.blade.php:2 — $wire.deleteAll()'],
+        'a destructive verb called on $wire is ungated by construction, whatever else the element carries',
+    );
+
+    expect(confirmationShapeIsDestructive('deleteAll'))->toBeTrue('the verb list is what makes this derived rather than pinned');
+    expect(confirmationShapeIsDestructive('deferReminder'))->toBeFalse('a verb that only starts like one of them undoes nothing');
 });

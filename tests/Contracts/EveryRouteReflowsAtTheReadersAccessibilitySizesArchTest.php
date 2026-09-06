@@ -25,7 +25,9 @@ use Tests\Contracts\Support\UnlayeredCss;
 // Font sizes are untouched on purpose. The reader asked for 53px text; giving
 // them less of it is not a fix.
 
-/** @return list<string> every class list in $source, markup attribute or merged array value */
+/**
+ * @return list<string> every class list in $source, markup attribute or merged array value
+ */
 function accessibilityReflowClassAttributes(string $source): array
 {
     $attributes = PatternScan::all('/class="([^"]*)"/', $source);
@@ -36,8 +38,12 @@ function accessibilityReflowClassAttributes(string $source): array
 
 function accessibilityReflowHasWrappingRow(string $relativePath, string ...$tokens): bool
 {
-    $source = (string) file_get_contents(base_path($relativePath));
+    return accessibilityReflowRowHasTokens((string) file_get_contents(base_path($relativePath)), ...$tokens);
+}
 
+/** @return bool whether any class list in $source wraps and carries every one of $tokens */
+function accessibilityReflowRowHasTokens(string $source, string ...$tokens): bool
+{
     foreach (accessibilityReflowClassAttributes($source) as $classes) {
         $present = PatternScan::split('/\s+/', trim($classes));
         if (in_array('flex-wrap', $present, true) && array_diff($tokens, $present) === []) {
@@ -95,6 +101,9 @@ it('measures a gutter in the px the spacing tokens are written in', function ():
 });
 
 it('keeps the rows that had to wrap wrapping', function (): void {
+    // The thirteen rows measured past the screen at AX5, each with the class
+    // pair that identifies it. A path here that no longer exists is a row whose
+    // wrap nothing checks, so the file is read rather than assumed.
     $rows = [
         'Modules/Pots/Resources/views/livewire/pots-page.blade.php' => ['items-start', 'justify-between'],
         'Modules/Goals/Resources/views/livewire/goals-page.blade.php' => ['items-start', 'justify-between'],
@@ -110,6 +119,16 @@ it('keeps the rows that had to wrap wrapping', function (): void {
         'Modules/Shell/Resources/views/livewire/dashboard.blade.php' => ['shrink-0', 'items-center', 'gap-1'],
         'Modules/Budgets/Resources/views/livewire/budgets-page.blade.php' => ['shrink-0', 'items-center', 'gap-1'],
     ];
+
+    $missing = array_values(array_filter(
+        array_keys($rows),
+        static fn (string $path): bool => ! is_file(base_path($path)),
+    ));
+
+    expect($missing)->toBe([], implode("\n  ", [
+        'These templates no longer exist, so the wrap this rule pins is checked on nothing:',
+        ...$missing,
+    ]));
 
     $offenders = [];
     foreach ($rows as $path => $tokens) {
@@ -139,7 +158,9 @@ it('never buys the fit by squeezing a box to one glyph per line', function (): v
 it('keeps a restacked row wide enough to read its own subject', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    expect($css)->toContain('--restacked-row-subject: minmax(min(100%, 8rem), 1fr);');
+    expect(str_contains($css, '--restacked-row-subject: minmax(min(100%, 8rem), 1fr);'))->toBeTrue(
+        'The restacked-row subject track has no floor token, so a subject column can be squeezed to nothing.'
+    );
 
     // Every table that restacks reads the track from the token; a bare
     // `minmax(0, 1fr)` beside an `auto` is the shape that had no floor.
@@ -148,10 +169,27 @@ it('keeps a restacked row wide enough to read its own subject', function (): voi
     // max-content cannot shrink, so on /rules the Dutch pair "Bewerken
     // Verwijderen" sized the row and pushed the destructive action 29px past
     // the screen -- reachable only by a horizontal drag nothing advertises.
-    expect(substr_count($css, 'grid-template-columns: var(--restacked-row-subject) minmax(0, max-content);'))->toBe(4)
-        ->and($css)->not->toContain('grid-template-columns: var(--restacked-row-subject) max-content;')
-        ->and($css)->not->toContain('grid-template-columns: minmax(0, 1fr) auto;')
-        ->and($css)->not->toContain('grid-template-columns: var(--restacked-row-subject) auto;');
+    // Four tables restack; every one of them reads the track from the token.
+    expect(substr_count($css, 'grid-template-columns: var(--restacked-row-subject) minmax(0, max-content);'))->toBe(
+        4,
+        'A restacking table no longer takes its subject track from the shared token, so its floor is whatever that one rule says.'
+    );
+
+    $shapesWithNoFloor = array_values(array_filter([
+        'grid-template-columns: var(--restacked-row-subject) max-content;',
+        'grid-template-columns: minmax(0, 1fr) auto;',
+        'grid-template-columns: var(--restacked-row-subject) auto;',
+    ], static fn (string $shape): bool => str_contains($css, $shape)));
+
+    expect($shapesWithNoFloor)->toBe([], implode("\n  ", [
+        'These restacked-row shapes are back in the stylesheet:',
+        ...$shapesWithNoFloor,
+        '',
+        'A bare max-content cannot shrink, so on /rules the Dutch pair "Bewerken',
+        'Verwijderen" sized the row and pushed the destructive action 29px past the',
+        'screen — reachable only by a horizontal drag nothing advertises. An `auto`',
+        'beside a bare minmax(0, 1fr) is the shape that had no floor at all.',
+    ]));
 });
 
 // shrink-0 is deliberate on all three: a pill is one short word and a page
@@ -193,7 +231,7 @@ it('caps the three controls whose shrink-0 is load-bearing', function (): void {
 // size, not only at an accessibility one.
 it('lets a control ask for its widest word before it breaks one', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
-    expect($css)->not->toBe('');
+    expect($css)->not->toBe('', 'The stylesheet is unreadable from this Composer root, so nothing below was measured.');
 
     // Walked back from each declaration to the selector list that owns it.
     // These rules sit inside @media, so top-level block matching finds the
@@ -221,7 +259,13 @@ it('lets a control ask for its widest word before it breaks one', function (): v
         $mode = trim(strtok(substr($css, $at + strlen('overflow-wrap:')), ';') ?: '');
         $rules[] = [array_map(trim(...), explode(',', $prelude)), $mode];
     }
-    expect($rules)->not->toBe([]);
+    // Every overflow-wrap declaration in the sheet is walked back to the
+    // selector list that owns it. A walk that found none of them would report
+    // each selector below as having no rule, so the floor is read first.
+    expect(count($rules))->toBeGreaterThan(
+        3,
+        'No overflow-wrap declaration was found at all, so this rule read nothing.'
+    );
 
     foreach (['button', 'summary', "[role='button']", "[role='radio']", "[role='tab']"] as $selector) {
         $modes = [];
@@ -235,4 +279,27 @@ it('lets a control ask for its widest word before it breaks one', function (): v
         expect(array_values(array_unique($modes)))->toBe(['break-word'],
             $selector.' must use break-word: anywhere lets a flex row split its label mid-word.');
     }
+});
+
+// Both pinned-row rules read their verdict off one class-list reader, and a
+// reader that found nothing would report every row as having lost its wrap.
+it('reads a wrapping row where there is one, and not where a token is missing', function (): void {
+    $source = <<<'BLADE'
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <h2>Pots</h2>
+            <x-core::button>New pot</x-core::button>
+        </div>
+        <div {{ $attributes->merge(['class' => "flex items-center justify-between"]) }}>
+            <span>No wrap here</span>
+        </div>
+        BLADE;
+
+    expect(accessibilityReflowClassAttributes($source))->toBe([
+        'flex flex-wrap items-start justify-between gap-2',
+        'flex items-center justify-between',
+    ]);
+
+    expect(accessibilityReflowRowHasTokens($source, 'items-start', 'justify-between'))->toBeTrue();
+    expect(accessibilityReflowRowHasTokens($source, 'items-center', 'justify-between'))->toBeFalse();
+    expect(accessibilityReflowRowHasTokens($source, 'items-start', 'gap-3'))->toBeFalse();
 });

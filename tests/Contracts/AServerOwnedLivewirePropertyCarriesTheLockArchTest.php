@@ -25,6 +25,11 @@ const SERVER_OWNED_BINDING_PATTERNS = [
     '/\$wire\.([A-Za-z_][A-Za-z0-9_]*)\s*=(?!=)/',
 ];
 
+// The module tree holds 157 Livewire component files, and the floor sits far
+// under that: a reflection walk that resolved none of them finds no property to
+// lock and reports the same clean tree a correct one does.
+const SERVER_OWNED_COMPONENT_FLOOR = 80;
+
 // A property no binding names, read back by an action, and not under #[Locked]
 // is one the browser chooses for the server. Most of the tree is not that: the
 // entries below say, per property, what makes the client's value harmless.
@@ -209,17 +214,27 @@ function serverOwnedUnlockedProperties(): array
         $methods = WireCallableMethods::invokableOn($component);
 
         foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            // A static or readonly property is not part of the snapshot the
+            // browser sends back, so no payload can choose it.
             if ($property->isStatic() || $property->isReadOnly()) {
                 continue;
             }
 
+            // Livewire's own base class declares public properties of its own;
+            // they belong to the package's contract rather than to this
+            // component, and locking one is not this repository's to do.
             $declaredIn = str_replace(DIRECTORY_SEPARATOR, '/', (string) $property->getDeclaringClass()->getFileName());
             if ($declaredIn === '' || str_contains($declaredIn, '/vendor/')) {
                 continue;
             }
+
+            // #[Locked] is the answer this rule asks for. #[Url] is the opposite
+            // answer given deliberately: the property IS the query string, so
+            // the reader writes it by navigating and it cannot be locked.
             if ($property->getAttributes(Locked::class) !== [] || $property->getAttributes(Url::class) !== []) {
                 continue;
             }
+
             if (isset($bound[$property->getName()])) {
                 continue;
             }
@@ -240,7 +255,17 @@ it('locks every public Livewire property the server writes and an action reads',
     $exempt = serverOwnedPropertyExemptions();
     $found = serverOwnedUnlockedProperties();
 
-    expect($found)->not->toBe([]);
+    expect(count(WireCallableMethods::components()))->toBeGreaterThan(
+        SERVER_OWNED_COMPONENT_FLOOR,
+        'The walk resolved '.count(WireCallableMethods::components()).' Livewire components, so a clean answer '
+        .'here is a walk that opened almost none of them.'
+    );
+
+    expect($found)->not->toBe(
+        [],
+        'No server-written property is read by any action anywhere, which is what a reflection walk that stopped '
+        .'resolving looks like: nothing found is nothing to lock.'
+    );
 
     $offenders = [];
     foreach ($found as $property => $readers) {
@@ -278,7 +303,40 @@ it('keeps every exemption pointing at a property that still exists', function ()
 });
 
 it('gives every exemption a reason a reader can weigh', function (): void {
+    expect(serverOwnedPropertyExemptions())->not->toBe([], 'The exemption map is empty, so this rule proves nothing about it.');
+
     foreach (serverOwnedPropertyExemptions() as $entry => $reason) {
         expect(strlen($reason))->toBeGreaterThan(20, "{$entry} is exempt without saying why the client's value is harmless.");
     }
 });
+
+// A guard that cannot go red says nothing, and the whole rule turns on which
+// property names the client is taken to write: a pattern that stopped matching
+// makes a client-written property look server-owned, and one that matched too
+// widely excuses a real offender. Both are checked against the spellings the
+// patterns were written for.
+it('reads every spelling a template writes a property with', function (string $markup, string $property): void {
+    $names = [];
+
+    foreach (SERVER_OWNED_BINDING_PATTERNS as $pattern) {
+        foreach (PatternScan::all($pattern, $markup)[1] as $name) {
+            $names[$name] = true;
+        }
+    }
+
+    expect(array_keys($names))->toBe(
+        $property === '' ? [] : [$property],
+        'The binding reader answered '.json_encode(array_keys($names)).' for: '.$markup
+    );
+})->with([
+    'a plain wire:model' => ['<input wire:model="search">', 'search'],
+    'a modified wire:model' => ['<input wire:model.live.debounce.300ms="search">', 'search'],
+    'an Alpine model' => ['<input x-model="draft">', 'draft'],
+    'a set from the wire object' => ["<button x-on:click=\"\$wire.set('tab', 'all')\">", 'tab'],
+    'the bare set helper' => ['<button x-on:click="$set(\'tab\', \'all\')">', 'tab'],
+    'an entangled value' => ['<div x-data="{ open: @entangle(\'showModal\') }">', 'showModal'],
+    'a toggle' => ["<button x-on:click=\"\$wire.toggle('expanded')\">", 'expanded'],
+    'a direct assignment' => ['<button x-on:click="$wire.cursor = 3">', 'cursor'],
+    'a read with no write' => ['<span x-text="$wire.total"></span>', ''],
+    'a method call rather than a property' => ["<button wire:click=\"save('x')\">", ''],
+]);

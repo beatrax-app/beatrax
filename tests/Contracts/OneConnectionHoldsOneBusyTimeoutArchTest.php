@@ -27,25 +27,40 @@ declare(strict_types=1);
 
 it('sets the busy timeout in exactly the two places that open their own PDO', function (): void {
     $offenders = [];
+    $walked = 0;
 
-    $directory = new RecursiveDirectoryIterator(base_path('Modules'), FilesystemIterator::SKIP_DOTS);
+    // Every root that ships PHP able to reach a connection, not Modules alone:
+    // a scheduler script or a bootstrap file opening its own PDO would lower the
+    // timeout for the process just as effectively, and the old walk could not
+    // see one.
+    foreach (['Modules', 'app', 'bootstrap', 'config', 'database', 'routes', 'scripts'] as $root) {
+        $directory = base_path($root);
 
-    /** @var SplFileInfo $file */
-    foreach (new RecursiveIteratorIterator($directory) as $file) {
-        $path = $file->getPathname();
-
-        if (! $file->isFile() || ! str_ends_with($path, '.php') || str_contains($path, '/tests/')) {
+        if (! is_dir($directory)) {
             continue;
         }
 
-        if (! str_contains((string) file_get_contents($path), 'PRAGMA busy_timeout')) {
-            continue;
-        }
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS)) as $file) {
+            $path = $file->getPathname();
 
-        $offenders[] = str_replace(base_path().'/', '', $path);
+            if (! $file->isFile() || ! str_ends_with($path, '.php') || str_contains($path, '/tests/')) {
+                continue;
+            }
+
+            $walked++;
+
+            if (! str_contains((string) file_get_contents($path), 'PRAGMA busy_timeout')) {
+                continue;
+            }
+
+            $offenders[] = str_replace(base_path().'/', '', $path);
+        }
     }
 
     sort($offenders);
+
+    expect($walked)->toBeGreaterThan(2000, 'The walk read almost no PHP, so the pinned pair below would be missing for a reason that is not the tree.');
 
     expect($offenders)->toBe(
         [

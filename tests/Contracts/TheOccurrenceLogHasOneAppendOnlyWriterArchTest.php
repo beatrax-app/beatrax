@@ -21,7 +21,9 @@ function occurrenceLogScannedSources(): array
             $path = $file->getPathname();
 
             // Migrations build and backfill the table once; the invariant here
-            // is about the steady-state write path Sync replicates.
+            // is about the steady-state write path Sync replicates. The suite
+            // writes occurrence rows directly on purpose, in factories and in
+            // the fixtures that assert on the detector's own output.
             if (str_contains($path, '/tests/') || str_contains($path, '/Database/Migrations/')) {
                 continue;
             }
@@ -35,7 +37,11 @@ function occurrenceLogScannedSources(): array
 
 // A statement is everything from the table name to the next semicolon, because
 // a builder chain puts the verb several lines below the ->table() call.
-function occurrenceLogWriteSites(): array
+/**
+ * @param  array<string, string>  $sources  repo-relative path => source
+ * @return array<string, list<string>> path => the write verbs it aims at the log
+ */
+function occurrenceLogWriteSites(array $sources): array
 {
     $verbs = [
         'insertOrIgnore', 'insertGetId', 'insertUsing', 'insert',
@@ -43,7 +49,7 @@ function occurrenceLogWriteSites(): array
     ];
     $sites = [];
 
-    foreach (occurrenceLogScannedSources() as $path => $source) {
+    foreach ($sources as $path => $source) {
         $offset = 0;
 
         while (($at = strpos($source, 'recurring_series_occurrences', $offset)) !== false) {
@@ -66,12 +72,15 @@ function occurrenceLogWriteSites(): array
 // A sweep that reads its table list off the live schema clears the occurrence
 // log without ever naming it, so the scan above is blind to it — and that is
 // the shape the teardown paths now take.
-/** @return list<string> */
-function occurrenceLogSchemaWideDeleters(): array
+/**
+ * @param  array<string, string>  $sources  repo-relative path => source
+ * @return list<string>
+ */
+function occurrenceLogSchemaWideDeleters(array $sources): array
 {
     $deleters = [];
 
-    foreach (occurrenceLogScannedSources() as $path => $source) {
+    foreach ($sources as $path => $source) {
         if (! str_contains($source, 'getTableListing(')) {
             continue;
         }
@@ -94,12 +103,24 @@ function occurrenceLogSchemaWideDeleters(): array
 }
 
 it('finds the writer it is named for, so a silent scan cannot pass this file', function (): void {
-    expect(occurrenceLogWriteSites())->toHaveKey('Modules/Recurring/Internal/Detectors/OccurrenceWriter.php');
+    $sources = occurrenceLogScannedSources();
+
+    // 6,471 production files today, thirteen of which name the table. Floored
+    // far under: a walk that lost a root reports the same empty offender lists
+    // the three rules below report on a tree with one writer.
+    expect(count($sources))->toBeGreaterThan(2000, 'the production walk read almost nothing — the roots are wrong, not the tree.');
+
+    $writers = array_keys(occurrenceLogWriteSites($sources));
+
+    expect(in_array('Modules/Recurring/Internal/Detectors/OccurrenceWriter.php', $writers, true))->toBeTrue(
+        'The one writer this rule is written around was not found by the statement scan, so the '
+        .'three verdicts below are read off a walk that reached nothing. Found: '.implode(', ', $writers),
+    );
 });
 
 it('lets nothing but the detector append to the occurrence log', function (): void {
     $appenders = [];
-    foreach (occurrenceLogWriteSites() as $path => $verbs) {
+    foreach (occurrenceLogWriteSites(occurrenceLogScannedSources()) as $path => $verbs) {
         if (array_intersect($verbs, ['insertOrIgnore', 'insertGetId', 'insertUsing', 'insert', 'updateOrInsert', 'upsert']) !== []) {
             $appenders[] = $path;
         }
@@ -122,7 +143,7 @@ it('lets nothing but the detector append to the occurrence log', function (): vo
 
 it('never rewrites an occurrence in place', function (): void {
     $mutators = [];
-    foreach (occurrenceLogWriteSites() as $path => $verbs) {
+    foreach (occurrenceLogWriteSites(occurrenceLogScannedSources()) as $path => $verbs) {
         if (array_intersect($verbs, ['update', 'updateOrInsert', 'upsert']) !== []) {
             $mutators[] = $path;
         }
@@ -141,8 +162,9 @@ it('never rewrites an occurrence in place', function (): void {
 });
 
 it('keeps deletion to the account-scoped purge', function (): void {
-    $deleters = occurrenceLogSchemaWideDeleters();
-    foreach (occurrenceLogWriteSites() as $path => $verbs) {
+    $sources = occurrenceLogScannedSources();
+    $deleters = occurrenceLogSchemaWideDeleters($sources);
+    foreach (occurrenceLogWriteSites($sources) as $path => $verbs) {
         if (array_intersect($verbs, ['delete', 'truncate']) !== []) {
             $deleters[] = $path;
         }
@@ -161,4 +183,47 @@ it('keeps deletion to the account-scoped purge', function (): void {
         'that does delete them, and a scan blind to a legitimate deleter would',
         'be blind to an illegitimate one.',
     ]));
+});
+
+it('sees a second appender, an in-place rewrite and a schema-wide sweep', function (): void {
+    $sources = [
+        'planted/SecondAppender.php' => <<<'PHP'
+            <?php
+            $this->db->table('recurring_series_occurrences')->insert(['series_id' => 1]);
+            PHP,
+        'planted/InPlaceRewrite.php' => <<<'PHP'
+            <?php
+            $this->db->table('recurring_series_occurrences')
+                ->where('series_id', $id)
+                ->where('transaction_id', $transaction)
+                ->update(['matched_at' => $now]);
+            PHP,
+        'planted/SchemaWideSweep.php' => <<<'PHP'
+            <?php
+            foreach ($schema->getTableListing() as $table) {
+                $this->db->table($table)->where('user_id', $userId)->delete();
+            }
+            PHP,
+        'planted/ReadsOnly.php' => <<<'PHP'
+            <?php
+            $rows = $this->db->table('recurring_series_occurrences')->where('series_id', $id)->get();
+            PHP,
+    ];
+
+    $sites = occurrenceLogWriteSites($sources);
+
+    expect(array_keys($sites))->toBe(
+        ['planted/SecondAppender.php', 'planted/InPlaceRewrite.php'],
+        'The statement reader must find the appender and the rewrite, must reach the verb past three '
+        .'where() clauses, and must not call a read a write.',
+    );
+
+    expect($sites['planted/SecondAppender.php'])->toBe(['insert'], 'The appender was read as some other verb.');
+    expect($sites['planted/InPlaceRewrite.php'])->toBe(['update'], 'The in-place rewrite was read as some other verb.');
+
+    expect(occurrenceLogSchemaWideDeleters($sources))->toBe(
+        ['planted/SchemaWideSweep.php'],
+        'A sweep that reads its table list off the live schema clears this log without naming it, '
+        .'which is the whole reason the second reader exists.',
+    );
 });

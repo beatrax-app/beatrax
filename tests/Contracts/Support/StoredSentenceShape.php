@@ -24,10 +24,15 @@ final class StoredSentenceShape
         'upsert', 'create', 'forceCreate', 'firstOrCreate', 'fill',
     ];
 
-    // A lang file and a blade are text by definition and neither is a payload.
-    // A demo seeder writes the demo user's own DATA — a merchant, a note they
-    // would have typed — which is the same text in every language, exactly
-    // like the real rows beside it.
+    // The demo seeders are the half that excuses real writes: a demo seeder
+    // writes the demo user's own DATA — a merchant, a note they would have
+    // typed — which is the same text in every language, exactly like the real
+    // rows beside it.
+    //
+    // A lang file and a blade are text by definition and neither is a payload;
+    // neither half holds a write this rule would report today, and both are
+    // refused here rather than below because asked first they keep four
+    // thousand translation arrays out of a twelve-pattern scan.
     public static function isPayloadFile(string $relative): bool
     {
         return ! str_contains($relative, '/Resources/lang/')

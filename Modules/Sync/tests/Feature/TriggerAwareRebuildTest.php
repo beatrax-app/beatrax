@@ -396,7 +396,7 @@ it(
 );
 
 it(
-    'forged-signature entry is skipped — the DB row is not mutated (T-10-01 proof)',
+    'forged-signature entry is skipped — the DB row is not mutated',
     function (): void {
         /** @var DatabaseManager $db */
         $db = app(DatabaseManager::class);

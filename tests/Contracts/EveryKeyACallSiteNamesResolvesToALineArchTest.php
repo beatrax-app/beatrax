@@ -193,7 +193,12 @@ it('has a line behind every key a translation call spells out', function (): voi
     $translator = app(Translator::class);
 
     $files = callSiteKeySourceFiles();
-    expect($files)->not->toBe([]);
+
+    // The floor sits far under the 2,700 files this walk opens.
+    expect(count($files))->toBeGreaterThan(
+        800,
+        'The call-site walk opened almost nothing, so no key was read at all.'
+    );
 
     $counted = ['blade' => 0, 'php' => 0];
     $unresolved = [];
@@ -215,9 +220,12 @@ it('has a line behind every key a translation call spells out', function (): voi
 
     // Both halves of the scan, because Blade reaches the tokeniser only after
     // its own compiler and a break there would empty that side alone.
-    expect($counted['blade'])->toBeGreaterThan(0)
-        ->and($counted['php'])->toBeGreaterThan(0)
-        ->and($counted['blade'] + $counted['php'])->toBeGreaterThan(CALL_SITE_KEY_SCAN_FLOOR);
+    expect($counted['blade'])->toBeGreaterThan(0, 'No Blade template spelled a key, so the compiler half of the scan read nothing.')
+        ->and($counted['php'])->toBeGreaterThan(0, 'No PHP file spelled a key, so the tokeniser half of the scan read nothing.')
+        ->and($counted['blade'] + $counted['php'])->toBeGreaterThan(
+            CALL_SITE_KEY_SCAN_FLOOR,
+            'Fewer than '.CALL_SITE_KEY_SCAN_FLOOR.' keys were read across both halves, so the pattern has stopped matching.'
+        );
 
     $unresolved = array_values(array_unique($unresolved));
     sort($unresolved);
@@ -234,14 +242,24 @@ it('has a line behind every key a translation call spells out', function (): voi
 });
 
 it('reaches a line through every prefix a translation call builds a key on', function (): void {
+    $files = callSiteKeySourceFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        800,
+        'The call-site walk opened almost nothing, so no prefix was read at all.'
+    );
+
     $unreachable = [];
-    foreach (callSiteKeySourceFiles() as $path) {
+    $prefixes = 0;
+
+    foreach ($files as $path) {
         $executable = callSiteKeyExecutableSource(
             (string) file_get_contents($path),
             str_ends_with($path, '.blade.php')
         );
 
         foreach (array_unique(callSiteKeyReferencesIn($executable)['prefixes']) as $prefix) {
+            $prefixes++;
             [$group, $remainder] = callSiteKeyGroupAndRemainder($prefix);
 
             $reaches = false;
@@ -261,6 +279,14 @@ it('reaches a line through every prefix a translation call builds a key on', fun
 
     $unreachable = array_values(array_unique($unreachable));
     sort($unreachable);
+
+    // A prefix is the rarer shape and the one no literal names, so the floor
+    // is low on purpose — but a scan that found none of them is a scan that
+    // stopped, not a tree that spells every key out.
+    expect($prefixes)->toBeGreaterThan(
+        5,
+        'No call site builds a key on a prefix at all, so this rule checked nothing.'
+    );
 
     expect($unreachable)->toBe([], implode("\n", [
         'These call sites build a key on a prefix no line sits under:',

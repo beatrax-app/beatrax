@@ -22,7 +22,7 @@ const SONAR_METHOD_ENTITY_PATTERN = '/#\[\s*(?:ORM\\\\)?Entity\b|@(?:ORM\\\\)?En
 
 it('leaves no class with more methods than the analyser allows', function (): void {
     $files = SonarSourceFiles::all();
-    expect($files)->not->toBe([]);
+    expect($files)->not->toBe([], 'The walk opened no analysed file at all, so this rule read nothing.');
 
     $offenders = [];
     $counted = 0;
@@ -53,6 +53,10 @@ it('leaves no class with more methods than the analyser allows', function (): vo
                 continue;
             }
 
+            // The analyser exempts a class of nothing but accessors, and this
+            // stands in for the analyser rather than judging it: a data holder
+            // has one method per field by construction, and the count says
+            // nothing about it that the field count does not already say.
             $accessorsOnly = true;
             foreach ($methods as $method) {
                 $name = strtolower($method['name']);
@@ -76,8 +80,15 @@ it('leaves no class with more methods than the analyser allows', function (): vo
     // A walk that stops reading finds no class at all and reports a clean
     // tree. These say it ran: the tree holds well over a thousand types, and
     // the largest of them sits near the ceiling rather than nowhere near it.
-    expect($counted)->toBeGreaterThan(500);
-    expect($largest)->toBeGreaterThanOrEqual(15);
+    expect($counted)->toBeGreaterThan(
+        500,
+        'The walk classified '.$counted.' types, which is too few to have read the tree at all.',
+    );
+    expect($largest)->toBeGreaterThanOrEqual(
+        15,
+        'The largest class the walk found declares '.$largest.' methods, nowhere near the ceiling — the method '
+        .'reader stopped counting rather than the tree getting smaller.',
+    );
 
     expect($offenders)->toBe([], implode("\n", [
         'These classes declare more than '.SONAR_METHOD_CEILING.' methods:',
@@ -119,7 +130,7 @@ it('counts a non-public method and a method the interface only declares', functi
 
     $interfaceTokens = SonarSourceFiles::tokens($interface);
     $interfaceTypes = SonarClassShape::types($interfaceTokens, SonarSourceFiles::brackets($interfaceTokens));
-    expect($interfaceTypes[0]['kind'])->toBe('interface');
+    expect($interfaceTypes[0]['kind'])->toBe('interface', 'An interface read as another kind falls outside the counted set entirely.');
     expect(SonarClassShape::methods($interfaceTokens, SonarSourceFiles::brackets($interfaceTokens), $interfaceTypes[0]['open'], $interfaceTypes[0]['close']))->toHaveCount(2);
 });
 

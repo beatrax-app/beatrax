@@ -122,22 +122,33 @@ function dispatchAfterCommitCallSpan(array $tokens, int $index): array
     return [null, null];
 }
 
-// The rule guards side effects a rollback cannot reach. This dispatch has one
-// listener, it writes one table through the same connection, and both are
-// inside the transaction — so a rollback undoes the seed as cleanly as the
-// write, which is the whole reason the two were put together.
+// The rule guards side effects a rollback cannot reach. Each entry names a file
+// whose dispatch is not one of those, and why. The `proves` pattern re-checks
+// the reason on every run: when the file stops matching, the exemption has
+// outlived what earned it and this fails rather than waving it on.
 const DISPATCH_AFTER_COMMIT_PINNED = [
-    'Modules/Core/Public/Services/UserCountry.php',
+    'Modules/Core/Public/Services/UserCountry.php' => [
+        'reason' => 'the country-changed dispatch has one listener, it seeds one table through the same connection, and both are inside the transaction — so a rollback undoes the seed as cleanly as the write, which is the whole reason the two were put together',
+        'proves' => '/\$this->db->connection\(\)->transaction\(/',
+    ],
 ];
 
 it('never dispatches from inside the transaction that caused it', function (): void {
     $files = dispatchAfterCommitFiles();
-    expect($files)->not->toBeEmpty();
+
+    // The floor sits far under the 6,400 backend files this walk opens. A run
+    // that reached none of them reports a clean tree over code nobody read.
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The backend walk opened almost nothing, so no transaction body was read at all.'
+    );
+
+    $found = dispatchesInsideATransaction($files);
 
     $offenders = array_values(array_filter(
-        dispatchesInsideATransaction($files),
+        $found,
         static function (string $offender): bool {
-            foreach (DISPATCH_AFTER_COMMIT_PINNED as $pinned) {
+            foreach (array_keys(DISPATCH_AFTER_COMMIT_PINNED) as $pinned) {
                 if (str_contains($offender, $pinned)) {
                     return false;
                 }
@@ -149,15 +160,58 @@ it('never dispatches from inside the transaction that caused it', function (): v
 
     expect($offenders)->toBe(
         [],
-        "Collect what happened during the transaction and dispatch it after the\n".
-        'commit returns. Offenders:',
+        implode("\n  ", [
+            'These dispatch from inside the transaction that caused them:',
+            ...$offenders,
+            '',
+            'Listeners run synchronously here, so a rollback after the dispatch leaves the',
+            'search index, the transfer pairing and the sync op log describing rows that no',
+            'longer exist — and the op log is replayed onto the paired device, which then',
+            'holds them forever. Collect what happened during the transaction and dispatch',
+            'it after the commit returns; if the side effect is undone by the same rollback,',
+            'pin the file above with a reason and a `proves` pattern that re-checks it.',
+        ]),
     );
+});
+
+it('still holds each pinned exemption to the reason it was granted for', function (): void {
+    foreach (DISPATCH_AFTER_COMMIT_PINNED as $relative => $pin) {
+        $source = (string) file_get_contents(base_path($relative));
+
+        expect($source)->toMatch($pin['proves'], $relative.' no longer reads as "'.$pin['reason'].'"');
+    }
+});
+
+// A pin the walk no longer reaches is a claim about the tree that stopped being
+// true, and it would otherwise sit here forever.
+it('keeps no pin the walk no longer reaches', function (): void {
+    $found = dispatchesInsideATransaction(dispatchAfterCommitFiles());
+
+    $reached = array_values(array_filter(
+        array_keys(DISPATCH_AFTER_COMMIT_PINNED),
+        static function (string $pinned) use ($found): bool {
+            foreach ($found as $offender) {
+                if (str_contains($offender, $pinned)) {
+                    return true;
+                }
+            }
+
+            return false;
+        },
+    ));
+
+    expect($reached)->toBe(array_keys(DISPATCH_AFTER_COMMIT_PINNED), implode("\n  ", [
+        'A pinned file that no longer dispatches from inside a transaction has outlived',
+        'its exemption. Delete the pin rather than leave a claim standing that the next',
+        'reader will trust.',
+    ]));
 });
 
 it('sees a dispatch that a transaction closure hides', function (): void {
     // The guard above is worth exactly as much as its ability to go red, and a
     // brace-matching scanner that silently matched nothing would not.
-    $planted = tempnam(sys_get_temp_dir(), 'after-commit').'.php';
+    $seed = (string) tempnam(sys_get_temp_dir(), 'after-commit');
+    $planted = $seed.'.php';
     file_put_contents($planted, <<<'PHP'
         <?php
         final class PlantedTransactionDispatch
@@ -178,6 +232,7 @@ it('sees a dispatch that a transaction closure hides', function (): void {
         $found = dispatchesInsideATransaction([$planted]);
     } finally {
         @unlink($planted);
+        @unlink($seed);
     }
 
     expect($found)->toHaveCount(1, 'the dispatch after the closing brace is not a violation');

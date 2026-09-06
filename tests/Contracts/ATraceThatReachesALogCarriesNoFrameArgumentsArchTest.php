@@ -14,15 +14,22 @@ use Modules\Core\Public\Support\BladePhpSource;
 // of the reader's bank statement. SafeTrace::cap() builds from the frames.
 
 /**
+ * Every first-party PHP file that could reach a logger. `routes`, `config`,
+ * `bootstrap`, `database` and `scripts` are here beside Modules and app because
+ * a catch block anywhere writes to the same 0644 daily log; a rule reading two
+ * roots and claiming the tree is the shape this file is guarding against.
+ *
  * @return list<string>
  */
 function rawTraceSources(): array
 {
     $files = [];
 
-    foreach ([base_path('Modules'), base_path('app')] as $root) {
-        if (is_dir($root)) {
-            $files = array_merge($files, rawTraceWalk($root));
+    foreach (['Modules', 'app', 'routes', 'config', 'bootstrap', 'database', 'scripts'] as $root) {
+        $absolute = base_path($root);
+
+        if (is_dir($absolute)) {
+            $files = array_merge($files, rawTraceWalk($absolute));
         }
     }
 
@@ -90,10 +97,33 @@ function rawTraceCallLines(string $source): array
     return $lines;
 }
 
+// The reader is a token walk, and a token walk that stops answers "no calls" in
+// the same words a clean tree does. Both halves are planted here: a call the
+// walk must see, and the two shapes a text scan would report and it must not.
+it('reads a getTraceAsString call and not the prose or the string that names one', function (): void {
+    $calls = rawTraceCallLines("<?php\n\nfinal class PlantedTraceLog\n{\n    public function log(Throwable \$e): string\n    {\n        return \$e->getTraceAsString();\n    }\n}\n");
+
+    expect($calls)->toBe([7], 'the walk must see a real getTraceAsString() call, on the line it sits on');
+
+    expect(rawTraceCallLines("<?php\n// Assembled frame by frame rather than from getTraceAsString(), which\n\$safe = SafeTrace::cap(\$e);\n"))
+        ->toBe([], 'a method named in a comment is not a call site');
+
+    expect(rawTraceCallLines("<?php\n\$name = 'getTraceAsString';\n"))
+        ->toBe([], 'a method named inside a string literal is not a call site');
+});
+
 it('renders no stack trace through getTraceAsString', function (): void {
     $hits = [];
+    $files = rawTraceSources();
 
-    foreach (rawTraceSources() as $path) {
+    // Every catch block in this tree stands behind this count. A walk that read
+    // a handful of files found nothing because it stopped, not because it is clean.
+    expect(count($files))->toBeGreaterThan(
+        2_000,
+        'The walk read almost nothing, so the empty offender list below is a tree nobody opened.',
+    );
+
+    foreach ($files as $path) {
         foreach (rawTraceCallLines(BladePhpSource::forPath($path, (string) file_get_contents($path))) as $line) {
             $hits[] = str_replace(base_path().'/', '', $path).':'.$line;
         }

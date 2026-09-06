@@ -147,11 +147,40 @@ it('asserts the expected expense + income series counts for each synthesised fix
         ->where('direction', 'income')
         ->count();
 
-    expect($actualExpense)->toBe($expectedExpenseSeriesCount);
-    expect($actualIncome)->toBe($expectedIncomeSeriesCount);
+    expect($actualExpense)->toBe(
+        $expectedExpenseSeriesCount,
+        "{$fixtureName}: the expense detector clustered {$actualExpense} series where this fixture is built to yield {$expectedExpenseSeriesCount}. Too few and a subscription the reader pays every month stops being watched for drift; too many and one payment is announced as several.",
+    );
+    expect($actualIncome)->toBe(
+        $expectedIncomeSeriesCount,
+        "{$fixtureName}: the income detector clustered {$actualIncome} series where this fixture is built to yield {$expectedIncomeSeriesCount}. A salary read as two series doubles every forecast that reaches for it.",
+    );
 
     CarbonImmutable::setTestNow();
 })->with(rdctExpenseFixtureExpectations());
+
+// The table above is a hand-written list, and a fixture nobody added to it is a
+// case the detector is never asked about while the corpus reads as covered.
+it('states an expectation for every synthesised fixture on disk', function (): void {
+    $onDisk = array_map(
+        static fn (string $path): string => basename($path, '.php'),
+        glob(base_path('Modules/Recurring/tests/fixtures/synthesised/*.php')) ?: [],
+    );
+    sort($onDisk);
+
+    $expected = array_keys(rdctExpenseFixtureExpectations());
+    sort($expected);
+
+    expect(count($onDisk))->toBeGreaterThan(5, 'The fixture glob matched almost nothing, so the comparison below is vacuous.');
+
+    expect($expected)->toBe(
+        $onDisk,
+        'The expectation table and the synthesised fixture corpus have drifted apart. A fixture on disk with '
+        .'no row above is a detector behaviour nobody asserts; a row above with no fixture is a case that '
+        ."fails on a missing file rather than on the detector.\n  on disk:   ".implode(', ', $onDisk)
+        ."\n  expected:  ".implode(', ', $expected),
+    );
+});
 
 it('produces no duplicate series rows when the full fixture corpus runs twice through DetectRecurringSeriesJob (full-corpus idempotency)', function (): void {
     CarbonImmutable::setTestNow('2026-05-17 12:00:00');
@@ -195,12 +224,15 @@ it('produces no duplicate series rows when the full fixture corpus runs twice th
 
     // The detector keys on (user_id, direction, cluster_key, latest_currency), so
     // a re-run collapses onto the same rows.
-    expect($afterSecondRun)->toBe($afterFirstRun);
+    expect($afterSecondRun)->toBe(
+        $afterFirstRun,
+        "A second detection run over the same ledger left {$afterSecondRun} series where the first left {$afterFirstRun}. Detection runs on every import, so a run that adds rows duplicates every series the reader already approved.",
+    );
 
     // No exact count: merging every fixture into one user namespace legitimately
     // collapses series that share a counterparty across fixtures. The per-fixture
     // test above covers exact counts; this one covers idempotency on re-run.
-    expect($afterFirstRun)->toBeGreaterThan(0);
+    expect($afterFirstRun)->toBeGreaterThan(3, 'The whole fixture corpus detected almost no series, so the equality above is two zeroes agreeing rather than a re-run being absorbed.');
 
     CarbonImmutable::setTestNow();
 })->group('full-corpus-idempotency');

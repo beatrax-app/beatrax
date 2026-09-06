@@ -45,25 +45,34 @@ function pageShellFiles(): array
     return $files;
 }
 
+// Anchored on `class="mx-auto`, this read seven page containers as having no
+// column at all: `max-w-5xl mx-auto px-6` puts the width first, and
+// /settings/aliases shipped the 24px phone gutter this rule exists to forbid
+// while the rule reported green.
+/** @return list<string> the class attribute of every centred column the source draws */
+function pagePaddingColumnsIn(string $source): array
+{
+    return PatternScan::all('/class="[^"]*\bmx-auto\b[^"]*"/', $source)[0];
+}
+
+// A responsive bump (sm:px-8) is the intended shape; a bare px-6/px-8 applies
+// at every width, phone included.
+function pagePaddingIsWideOnAPhone(string $classAttribute): bool
+{
+    return preg_match('/(?<!:)px-[68]\b/', $classAttribute) === 1;
+}
+
 it('never starts a page shell wider than px-4 on a phone', function (): void {
     $offenders = [];
     $columns = 0;
 
     foreach (pageShellFiles() as $path) {
-        $source = (string) file_get_contents($path);
+        $attributes = pagePaddingColumnsIn((string) file_get_contents($path));
 
-        // Anchored on `class="mx-auto`, this read seven page containers as
-        // having no column at all: `max-w-5xl mx-auto px-6` puts the width
-        // first, and /settings/aliases shipped the 24px phone gutter this rule
-        // exists to forbid while the rule reported green.
-        $matches = PatternScan::all('/class="[^"]*\bmx-auto\b[^"]*"/', $source);
+        $columns += count($attributes);
 
-        $columns += count($matches[0]);
-
-        foreach ($matches[0] as $class) {
-            // A responsive bump (sm:px-8) is the intended shape; a bare
-            // px-6/px-8 applies at every width, phone included.
-            if (preg_match('/(?<!:)px-[68]\b/', $class) === 1) {
+        foreach ($attributes as $class) {
+            if (pagePaddingIsWideOnAPhone($class)) {
                 $offenders[] = str_replace(base_path().'/', '', $path).' — '.$class;
             }
         }
@@ -75,4 +84,14 @@ it('never starts a page shell wider than px-4 on a phone', function (): void {
         "These page shells are wider than px-4 at phone width:\n  - %s",
         implode("\n  - ", $offenders),
     ));
+});
+
+it('finds the column whatever order its classes are written in, and spares a responsive bump', function (): void {
+    // The width-first spelling is the one that shipped the defect while the
+    // rule reported green, so it is the one the control plants.
+    expect(pagePaddingColumnsIn('<div class="max-w-5xl mx-auto px-6">'))->toBe(['class="max-w-5xl mx-auto px-6"'])
+        ->and(pagePaddingColumnsIn('<div class="px-6">'))->toBe([]);
+
+    expect(pagePaddingIsWideOnAPhone('class="max-w-5xl mx-auto px-6"'))->toBeTrue('A bare px-6 gutter is no longer read as applying at phone width.')
+        ->and(pagePaddingIsWideOnAPhone('class="mx-auto px-4 sm:px-8"'))->toBeFalse('A responsive bump is being reported as a phone gutter.');
 });

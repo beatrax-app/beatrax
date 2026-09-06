@@ -174,8 +174,8 @@ it('writes every locale in the script that locale ships in', function (): void {
     // stopped compiling: each of them reports a clean tree from a walk that
     // read nothing at all. The floors are what makes that silence audible,
     // and the per-locale one catches a single locale dropping out.
-    expect($files)->toBeGreaterThan(2000);
-    expect($bytes)->toBeGreaterThan(4000000);
+    expect($files)->toBeGreaterThan(2000, 'Read '.$files.' lang files, too few for an empty offender list to mean anything.');
+    expect($bytes)->toBeGreaterThan(4000000, 'Read '.$bytes.' bytes of copy, too few to have opened the locales this rule names.');
     expect(min($perLocale))->toBeGreaterThan(100, 'A shipped locale contributed almost no files: '.json_encode($perLocale));
 
     expect($offenders)->toBe([], implode("\n", [
@@ -237,7 +237,7 @@ it('finds each non-Latin locale actually written in the script it declares', fun
         }
     }
 
-    expect($checked)->toBeGreaterThan(400);
+    expect($checked)->toBeGreaterThan(400, 'Read '.$checked.' files across the non-Latin locales, too few for an empty list to mean anything.');
 
     expect($silent)->toBe([], implode("\n", [
         'These files are in a locale that ships in a non-Latin script and carry',
@@ -261,7 +261,22 @@ it('finds each non-Latin locale actually written in the script it declares', fun
 
     // A pin nobody reaches any more is a claim about the tree that stopped
     // being true, and it would otherwise sit here forever.
-    expect($reached)->toBe($granted);
+    expect($reached)->toBe($granted, 'A pinned file is no longer reached by the rule it was written for: '
+        .implode(', ', array_diff($granted, $reached)).'. Delete the entry, or restore what earned it.');
+});
+
+it('reads a letter of the wrong script, and is not fooled by the separator or by Latin', function (): void {
+    expect(localeScriptLettersIn('Cyrillic', 'Здраво'))
+        ->not->toBe([], 'twenty-six Serbian lines were Cyrillic, and finding one is the whole rule');
+
+    expect(localeScriptLettersIn('Cyrillic', 'Zdravo, Beatrax'))
+        ->toBe([], 'Latin is legal in every locale, so the rule stays one-directional');
+
+    expect(localeScriptLettersIn('Greek', 'Beatrax · Instellingen'))
+        ->toBe([], 'the separator answers to \p{Greek} through script extensions, and a bare class reported 1,189 offences on a clean tree');
+
+    expect(localeScriptLettersIn('Greek', 'Ρυθμίσεις'))
+        ->not->toBe([], 'the other half: a Greek file has to be findable as Greek, or the silent-file rule proves nothing');
 });
 
 it('holds every pinned exemption to the reason it was granted for', function (): void {

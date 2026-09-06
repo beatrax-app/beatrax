@@ -21,7 +21,14 @@ function syncStatusSurface(): string
 it('draws every aggregate status the service can return, in a branch of its own', function (): void {
     $blade = syncStatusSurface();
 
-    expect($blade)->not->toBe('');
+    expect($blade)->not->toBe('', 'The surface that draws the aggregate status is unreadable, so every case below would read as undrawn.');
+
+    // The enum is the denominator, and an empty one would report every case
+    // drawn without naming any.
+    expect(count(SyncOverallStatus::cases()))->toBeGreaterThan(
+        2,
+        'The aggregate status enum has almost no case, so this rule held the surface to nothing.'
+    );
 
     $missing = [];
     $shared = [];
@@ -50,6 +57,11 @@ it('draws every aggregate status the service can return, in a branch of its own'
 });
 
 it('gives every aggregate status a line of its own to render', function (): void {
+    expect(count(SyncOverallStatus::cases()))->toBeGreaterThan(
+        2,
+        'The aggregate status enum has almost no case, so this rule checked nothing.'
+    );
+
     $unresolved = [];
     $shared = [];
     $seen = [];
@@ -85,7 +97,9 @@ it('carries a line for every aggregate status in every locale that ships', funct
         static fn (string $entry): bool => $entry !== '.' && $entry !== '..' && is_dir($root.'/'.$entry),
     ));
 
-    expect(count($locales))->toBeGreaterThan(20);
+    // 26 languages ship. A scandir that came back short would report the
+    // locales it never opened as carrying every line.
+    expect(count($locales))->toBeGreaterThan(20, 'Almost no locale directory was found, so a missing line would read as present.');
 
     $gaps = [];
 
@@ -103,5 +117,13 @@ it('carries a line for every aggregate status in every locale that ships', funct
         }
     }
 
-    expect($gaps)->toBe([], implode("\n", $gaps));
+    expect($gaps)->toBe([], implode("\n  ", [
+        'These locales carry no line for a status their surface can be asked to draw:',
+        ...$gaps,
+        '',
+        'Parity compares the locales to each other, so a key missing from all of them is',
+        'in parity by construction. This asks the other question, and the answer a reader',
+        'gets without it is the raw key on the screen that tells them whether their two',
+        'devices agree.',
+    ]));
 });

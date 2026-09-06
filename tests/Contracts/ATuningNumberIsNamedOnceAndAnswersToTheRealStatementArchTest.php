@@ -25,6 +25,8 @@ const TUNING_NUMBER_VOCABULARY = '/(?:^|_)(DAYS|WINDOW|GRACE|TOLERANCE|THRESHOLD
 // of a real Mijn ICS consumer-portal monthly statement".
 const REAL_ICS_STATEMENT = 'Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt';
 
+const REAL_ICS_PERIOD_START = '2026-01-15';
+
 const REAL_ICS_PERIOD_END = '2026-02-12';
 
 const REAL_ICS_PRINTED_DUE = '2026-03-08';
@@ -227,7 +229,7 @@ function realIcsStatementFacts(): array
     // previous year — the same roll the adapter applies.
     $header = PatternScan::first('/(\d{1,2})\s+februari\s+(\d{4})/', $text);
 
-    expect($header)->not->toBeEmpty();
+    expect($header)->not->toBeEmpty('the committed statement no longer carries its February header date, so every fact below is read off a file this reader did not recognise');
     $headerYear = (int) $header[2];
     $headerMonth = 2;
 
@@ -256,7 +258,7 @@ function realIcsStatementFacts(): array
         .'[^\n]*?(\d{1,2})\s+maart\s+(\d{4})/u';
     $due = PatternScan::first($pattern, $text);
 
-    expect($due)->not->toBeEmpty();
+    expect($due)->not->toBeEmpty('the minimum-due paragraph IcsPdfExtractionMap names is no longer in the committed statement, so the printed deadline below is read off nothing');
 
     return [
         'periodStart' => $days[0] ?? '',
@@ -267,7 +269,7 @@ function realIcsStatementFacts(): array
 
 it('declares every tuning number once', function (): void {
     $files = tuningNumberFiles();
-    expect($files)->not->toBeEmpty();
+    expect($files)->not->toBeEmpty('The walk opened no file at all, so every verdict below is about a tree nobody read.');
 
     $walk = tuningNumbersIn($files);
     $offenders = [];
@@ -303,7 +305,10 @@ it('declares every tuning number once', function (): void {
 
     // Below what this tree actually declares, so a walk that reads nothing
     // fails here instead of reporting a tree with no duplicates in it.
-    expect($walk['counted'])->toBeGreaterThan(200);
+    expect($walk['counted'])->toBeGreaterThan(
+        200,
+        'Almost no tuning constant was read, so the empty collision list below is a scan that stopped rather than a tree that names each number once.',
+    );
 
     expect($offenders)->toBe([], implode("\n  ", [
         'A tolerance, window or bound declared in two classes is one rule with two',
@@ -315,7 +320,10 @@ it('declares every tuning number once', function (): void {
     ]));
 
     // A pin nobody reaches is a claim about the tree that stopped being true.
-    expect(array_keys($reached))->toBe(array_keys(TUNING_NUMBER_PINS));
+    expect(array_keys($reached))->toBe(
+        array_keys(TUNING_NUMBER_PINS),
+        'a pinned collision the walk no longer produces has been merged or renamed — delete the entry rather than leave a claim standing',
+    );
 
     expect(array_keys($handed))->toBe(
         array_keys(TUNING_NUMBER_HANDOVERS),
@@ -340,7 +348,10 @@ it('still holds each pinned and handed-over collision to what was written about 
 
     // Counted rather than left implicit, so an entry whose `proves` list was
     // emptied cannot pass as an entry that was re-proved.
-    expect($reproved)->toBeGreaterThanOrEqual(count($claims) * 2);
+    expect($reproved)->toBeGreaterThanOrEqual(
+        count($claims) * 2,
+        'an entry whose `proves` list was emptied re-proves nothing and must not pass as an entry that was re-proved',
+    );
 });
 
 it('sees two classes declaring one number, and leaves a derived constant and a lone one alone', function (): void {
@@ -383,19 +394,25 @@ it('sees two classes declaring one number, and leaves a derived constant and a l
         @unlink($derived);
     }
 
-    expect(array_keys($walk['collisions']))->toBe(['SETTLE_WINDOW_DAYS = 10']);
+    expect(array_keys($walk['collisions']))->toBe(
+        ['SETTLE_WINDOW_DAYS = 10'],
+        'the reader has to see the one number two classes declare, and see neither the lone grace nor the derived window nor the cache key',
+    );
     expect($walk['collisions']['SETTLE_WINDOW_DAYS = 10'])->toHaveCount(2);
 
     // Three numeric tuning declarations across the three files: two colliding
     // windows and one lone grace. The CACHE_KEY_PREFIX is not a tuning number
     // and the derived window is already single-sourced, so neither is counted.
-    expect($walk['counted'])->toBe(3);
+    expect($walk['counted'])->toBe(
+        3,
+        'three numeric tuning declarations stand across the three files: two colliding windows and one lone grace. The CACHE_KEY_PREFIX is not a tuning number and the derived window is already single-sourced, so neither is counted',
+    );
 });
 
 it('reads the committed real statement, not the synthesised one it was tuned against', function (): void {
     $facts = realIcsStatementFacts();
 
-    expect($facts['periodStart'])->toBe('2026-01-15');
+    expect($facts['periodStart'])->toBe(REAL_ICS_PERIOD_START);
     expect($facts['periodEnd'])->toBe(REAL_ICS_PERIOD_END);
     expect($facts['printedDue'])->toBe(REAL_ICS_PRINTED_DUE);
 
@@ -441,15 +458,25 @@ it('dates the real statement by the day it printed, and only falls back where no
 
 it('keeps the day rule and the matching window in one place', function (): void {
     $offenders = [];
+    $home = 'Modules/Chains/Public/Support/StatementDueDate.php';
+    $declaration = '/const\s+(?:int|float)?\s*[A-Z0-9_]*(?:GRACE_DAYS|DUE_GRACE|PERIOD_WINDOW_DAYS|MATCH_WINDOW_DAYS)[A-Z0-9_]*\s*=\s*[0-9]/';
+
+    // The one file this rule excuses has to be the one file that still states
+    // the rule. Once it stops, "every other file" is a ban on a number nobody
+    // owns, and the exemption is excusing a file that needs no excuse.
+    expect(PatternScan::matches($declaration, (string) file_get_contents(base_path($home))))->toBeTrue(
+        $home.' no longer declares the grace or the matching window, so the exemption below excuses nothing '
+        .'and this rule now forbids a constant that has no home to move to.',
+    );
 
     foreach (tuningNumberFiles() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
-        if ($relative === 'Modules/Chains/Public/Support/StatementDueDate.php') {
+        if ($relative === $home) {
             continue;
         }
 
         $source = (string) file_get_contents($path);
-        if (preg_match('/const\s+(?:int|float)?\s*[A-Z0-9_]*(?:GRACE_DAYS|DUE_GRACE|PERIOD_WINDOW_DAYS|MATCH_WINDOW_DAYS)[A-Z0-9_]*\s*=\s*[0-9]/', $source) === 1) {
+        if (preg_match($declaration, $source) === 1) {
             $offenders[] = $relative;
         }
     }

@@ -140,6 +140,11 @@ it('gives one counterparty word per locale across the screens that sit together'
     ];
 
     $offenders = [];
+    $compared = 0;
+
+    // A locale glob that stops matching agrees with every locale being
+    // consistent, so the roster has to be a roster before the verdict is read.
+    expect(count(counterpartyWordLocales()))->toBeGreaterThan(20, 'The locale walk found almost nothing, so a clean answer below means nothing.');
 
     foreach (counterpartyWordLocales() as $locale) {
         $found = [];
@@ -157,10 +162,14 @@ it('gives one counterparty word per locale across the screens that sit together'
             }
         }
 
+        $compared += count($found) > 1 ? 1 : 0;
+
         if (count($found) > 1 && count(array_unique($found)) > 1) {
             $offenders[] = $locale.' — '.json_encode($found, JSON_UNESCAPED_UNICODE);
         }
     }
+
+    expect($compared)->toBeGreaterThan(20, 'Almost no locale offered two of these labels to compare, so the rule below can only pass vacuously.');
 
     expect($offenders)->toBe([], implode("\n  ", [
         'One English word, more than one in this locale, on controls that sit beside each other:',

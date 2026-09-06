@@ -96,6 +96,10 @@ final class WireCallableMethods
             if ($file === false || str_contains(str_replace(DIRECTORY_SEPARATOR, '/', $file), '/vendor/')) {
                 continue;
             }
+            // None of these three is reachable from an update payload:
+            // Livewire resolves the call against the hydrated instance, so a
+            // static, the constructor and the magic methods are not endpoints
+            // and an unreferenced one is not an unreachable feature.
             if ($method->isStatic() || $method->isConstructor() || str_starts_with($method->getName(), '__')) {
                 continue;
             }
@@ -125,6 +129,9 @@ final class WireCallableMethods
         foreach ([base_path('Modules'), base_path('resources')] as $root) {
             foreach (['.blade.php', '.js'] as $extension) {
                 foreach (self::filesUnder($root, $extension) as $path) {
+                    // A fixture template naming a method is not a screen a
+                    // reader can reach it from, and counting one would let a
+                    // method stay live on the strength of its own harness.
                     if (str_contains($path, '/tests/') || str_contains($path, '/Tests/')) {
                         continue;
                     }

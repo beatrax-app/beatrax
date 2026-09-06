@@ -29,11 +29,14 @@ it('never stages a shipped bundle without forcing production and debug off', fun
     $lines = explode("\n", $workflow);
 
     $unhardened = [];
+    $staging = 0;
 
     foreach ($lines as $index => $line) {
         if (! str_contains($line, 'cp .env.example .env')) {
             continue;
         }
+
+        $staging++;
 
         // A run step that only copies is one that ships the template's debug
         // default, so the neutralising lines must follow within the window.
@@ -51,6 +54,12 @@ it('never stages a shipped bundle without forcing production and debug off', fun
 
         $unhardened[] = 'release.yml line '.($index + 1);
     }
+
+    // The whole rule keys on one literal command. A workflow that stages its
+    // .env some other way -- a heredoc, a composite action, `install -m` --
+    // gives this loop nothing to examine and an empty offender list, which
+    // reads exactly like a release that hardens every bundle it builds.
+    expect($staging)->toBeGreaterThan(0, 'release.yml no longer stages a bundled .env with `cp .env.example .env`, so this rule examined no step at all. Point it at whatever command stages the file now.');
 
     expect($unhardened)->toBe([], sprintf(
         "These steps stage a bundled .env from the template without forcing APP_DEBUG=false:\n  - %s",

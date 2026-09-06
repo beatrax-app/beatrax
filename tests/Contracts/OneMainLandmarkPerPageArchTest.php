@@ -49,18 +49,25 @@ function mainLandmarkCandidateBlades(): array
 }
 
 // A <main> named in a blade comment, an HTML comment or a @php block is prose
-// about the landmark, not one being opened, and the walk steps over all three.
-function mainLandmarkOpensOne(string $relativePath): bool
+// about the landmark, not one being opened, and the reader steps over all three.
+function mainLandmarkSourceOpensOne(string $source): bool
 {
-    $source = (string) file_get_contents(dirname(__DIR__, 2).'/'.$relativePath);
-
     return MarkupSource::elements($source, 'main') !== [];
 }
 
+function mainLandmarkOpensOne(string $relativePath): bool
+{
+    return mainLandmarkSourceOpensOne((string) file_get_contents(dirname(__DIR__, 2).'/'.$relativePath));
+}
+
 it('opens a main landmark only where the view is the page root', function (): void {
+    $candidates = mainLandmarkCandidateBlades();
+
+    expect(count($candidates))->toBeGreaterThan(150, 'The Blade walk found almost nothing, so a clean answer below is the walk being broken rather than the views being right.');
+
     $offenders = [];
 
-    foreach (mainLandmarkCandidateBlades() as $blade) {
+    foreach ($candidates as $blade) {
         if (in_array($blade, MAIN_LANDMARK_PAGE_ROOTS, true)) {
             continue;
         }
@@ -69,12 +76,43 @@ it('opens a main landmark only where the view is the page root', function (): vo
         }
     }
 
-    expect($offenders)->toBe([]);
+    expect($offenders)->toBe([], implode("\n", [
+        'layouts.app already wraps the page in a <main>, so a view mounted inside it that',
+        'opens its own ships two unlabelled landmarks for a screen reader to choose between.',
+        'Use x-core::page-shell, or add the view to MAIN_LANDMARK_PAGE_ROOTS with the reason',
+        'it is a page root written above the line. Offenders:',
+        ...$offenders,
+    ]));
 });
 
 it('keeps every pinned page root real, so the list cannot outlive its files', function (): void {
+    $stale = [];
+
     foreach (MAIN_LANDMARK_PAGE_ROOTS as $blade) {
-        expect(file_exists(dirname(__DIR__, 2).'/'.$blade))->toBeTrue();
-        expect(mainLandmarkOpensOne($blade))->toBeTrue();
+        if (! file_exists(dirname(__DIR__, 2).'/'.$blade)) {
+            $stale[] = $blade.'  (file is gone)';
+
+            continue;
+        }
+        if (! mainLandmarkOpensOne($blade)) {
+            $stale[] = $blade.'  (no longer opens a <main>, so the exemption excuses nothing)';
+        }
     }
+
+    expect($stale)->toBe([], implode("\n", [
+        'A pinned page root has stopped being what earned it the exemption. Delete the line',
+        'so the scan covers the file again, or move the pin to wherever the landmark went:',
+        ...$stale,
+    ]));
+});
+
+it('reads a landmark a view opens and not one it only writes about', function (): void {
+    $opens = "<x-core::page-shell>\n<main class=\"px-4\">content</main>\n</x-core::page-shell>";
+    // The three near misses the reader has to step over, all in one view: the
+    // landmark named in a Blade comment, in an HTML comment, and in a @php
+    // block that builds the string rather than emitting the element.
+    $describes = "{{-- wraps a <main> --}}\n<!-- <main> -->\n@php \$tag = '<main>'; @endphp\n<div>content</div>";
+
+    expect(mainLandmarkSourceOpensOne($opens))->toBeTrue('The reader stopped seeing a <main> a view really opens.')
+        ->and(mainLandmarkSourceOpensOne($describes))->toBeFalse('The reader is counting prose about the landmark as one being opened.');
 });

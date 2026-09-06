@@ -37,23 +37,46 @@ it('names a colour emoji face for every platform on the mark that asks for one',
     expect($missing)->toBe([], 'A platform whose face is unnamed draws nothing at all.');
 });
 
-// The stylesheet is one file for both shells, so a second rule asking for the
-// presentation without naming a face would reintroduce the same asymmetry
-// somewhere else on the page.
-it('leaves no rule asking for emoji presentation from a stack that has no emoji in it', function (): void {
-    $css = PatternScan::replace('~/\*.*?\*/~s', '', $this->css);
-
-    $matches = PatternScan::sets('/([^{}]+)\{([^{}]*font-variant-emoji\s*:\s*emoji[^{}]*)\}/', $css);
-
-    expect($matches)->not->toBeEmpty('No rule asks for emoji presentation at all — the mark has lost its own rule.');
-
+/**
+ * @return list<string> the selector of every rule asking for emoji presentation
+ *                      without naming a face to draw it with
+ */
+function emojiPresentationRulesWithoutAFace(string $css): array
+{
+    $stripped = PatternScan::replace('~/\*.*?\*/~s', '', $css);
     $unnamed = [];
 
-    foreach ($matches as $match) {
+    foreach (PatternScan::sets('/([^{}]+)\{([^{}]*font-variant-emoji\s*:\s*emoji[^{}]*)\}/', $stripped) as $match) {
         if (! str_contains($match[2], 'font-family')) {
             $unnamed[] = trim($match[1]);
         }
     }
 
-    expect($unnamed)->toBe([]);
+    return $unnamed;
+}
+
+// resources/css/app.css is the one stylesheet both shells ship, so a second
+// rule asking for the presentation without naming a face would reintroduce the
+// same asymmetry somewhere else on the page.
+it('leaves no rule in the shipped stylesheet asking for emoji presentation from a stack that has no emoji in it', function (): void {
+    expect(PatternScan::count('/font-variant-emoji\s*:\s*emoji/', $this->css))
+        ->toBeGreaterThan(0, 'No rule asks for emoji presentation at all — the mark has lost its own rule.');
+
+    expect(emojiPresentationRulesWithoutAFace($this->css))->toBe([], implode("\n", [
+        'These ask for emoji presentation from whatever family the element inherited.',
+        'The body stack is system faces with no emoji in it, and an Android WebView has',
+        'nothing to fall through to, so the glyph draws as a monochrome box. Name the',
+        'face in the same rule: font-family: var(--font-emoji).',
+    ]));
+});
+
+it('reads a rule that asks for the presentation without naming a face, and leaves the named one alone', function (): void {
+    expect(emojiPresentationRulesWithoutAFace('.a { font-variant-emoji: emoji; }'))
+        ->toBe(['.a'], 'the faceless rule is the whole defect, and the scan has to find it');
+
+    expect(emojiPresentationRulesWithoutAFace('.b { font-variant-emoji: emoji; font-family: var(--font-emoji); }'))
+        ->toBe([], 'a rule naming the face is what the mark already does');
+
+    expect(emojiPresentationRulesWithoutAFace('/* .c { font-variant-emoji: emoji; } */'))
+        ->toBe([], 'a rule inside a comment draws nothing at all');
 });

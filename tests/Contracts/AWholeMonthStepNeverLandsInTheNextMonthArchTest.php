@@ -85,13 +85,18 @@ function wholeMonthStepMethods(): array
  * 30th and 31st than on the 1st, so a bare step in a test is a suite that
  * passes twenty-eight days a month — which is not a suite that passes.
  *
+ * The four roots beside them hold PHP that runs: a scheduled closure in routes,
+ * a seeder under database, a horizon in a config array. The rule reads "every
+ * whole-month step", and a walk that opened three roots while saying so is the
+ * shape the file below is about.
+ *
  * @return list<string>
  */
 function wholeMonthStepFiles(): array
 {
     $paths = [];
 
-    foreach (['Modules', 'app', 'tests'] as $root) {
+    foreach (['Modules', 'app', 'tests', 'routes', 'database', 'config', 'bootstrap'] as $root) {
         $directory = base_path($root);
         if (! is_dir($directory)) {
             continue;
@@ -179,7 +184,7 @@ function wholeMonthStepsIn(array $paths): array
 
 it('takes every whole-month step off a day the target month is certain to have', function (): void {
     $files = wholeMonthStepFiles();
-    expect($files)->not->toBeEmpty();
+    expect($files)->not->toBeEmpty('The walk opened no file at all, so every verdict below is about a tree nobody read.');
 
     $walk = wholeMonthStepsIn($files);
     $offenders = [];
@@ -215,7 +220,10 @@ it('takes every whole-month step off a day the target month is certain to have',
 
     // Below the count of steps this tree actually takes, so a walk that stops
     // reading fails here instead of reporting a clean tree.
-    expect($walk['counted'])->toBeGreaterThan(100);
+    expect($walk['counted'])->toBeGreaterThan(
+        100,
+        'Almost no whole-unit step was read, so the empty offender list below is a scan that stopped rather than a tree that clamps.',
+    );
 
     expect($offenders)->toBe([], implode("\n  ", [
         'A whole-month or whole-year step off the 29th, 30th or 31st overflows into',
@@ -229,7 +237,10 @@ it('takes every whole-month step off a day the target month is certain to have',
     ]));
 
     // A pin nobody reaches is a claim about the tree that stopped being true.
-    expect(array_keys($reached))->toBe(array_keys(WHOLE_MONTH_STEP_PINS));
+    expect(array_keys($reached))->toBe(
+        array_keys(WHOLE_MONTH_STEP_PINS),
+        'a pin nobody reaches excuses nothing while reading as considered — delete the entry',
+    );
 
     expect(array_keys($handed))->toBe(
         array_keys(WHOLE_MONTH_STEP_HANDOVERS),
@@ -307,8 +318,14 @@ it('sees a bare step and a unit argument, and leaves a clamped step and a fixed-
         $offenders[basename($relative)] = count($sites);
     }
 
-    expect($offenders)->toBe([basename($planted) => 2]);
-    expect($walk['counted'])->toBe(3);
+    expect($offenders)->toBe(
+        [basename($planted) => 2],
+        'the reader has to see the bare month step and the generic add() with a unit argument, and see neither the clamped step nor the fixed-length ones',
+    );
+    expect($walk['counted'])->toBe(
+        3,
+        'the denominator has to count the clamped step too, or a tree that clamps everything reads as a tree nobody scanned',
+    );
 });
 
 it('reads the test tree, not only the code under it', function (): void {
@@ -320,9 +337,9 @@ it('reads the test tree, not only the code under it', function (): void {
     // The first scope this guard shipped with excluded the test tree, and the
     // tree then held eighty bare steps nothing was reading. Both halves are
     // asserted so a walk narrowed back to production fails loudly here.
-    expect(count($tests))->toBeGreaterThan(500);
-    expect(count($production))->toBeGreaterThan(500);
+    expect(count($tests))->toBeGreaterThan(500, 'the test tree fell out of the walk, and it held eighty bare steps the first scope never read');
+    expect(count($production))->toBeGreaterThan(500, 'the production tree fell out of the walk');
 
     $clamped = wholeMonthStepsIn(array_values($tests));
-    expect($clamped['counted'])->toBeGreaterThan(60);
+    expect($clamped['counted'])->toBeGreaterThan(60, 'the test tree contributed almost no step, so the walk reads it in name only');
 });

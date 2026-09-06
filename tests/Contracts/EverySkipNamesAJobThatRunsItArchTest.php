@@ -68,13 +68,34 @@ it('accounts for every skip marker in the tree', function (): void {
     $pinned = array_map(static fn (array $entry): int => $entry['markers'], skipBudgetPins()['files']);
     ksort($pinned);
 
-    expect($found)->not->toBe([]);
+    // 32 files carry a skip marker today. A walk that found none of them and a
+    // budget that pins none would agree with each other about an empty tree.
+    expect(count($found))->toBeGreaterThan(
+        10,
+        'The suite walk found no skip marker at all, so the comparison below holds an empty budget to an empty tree.'
+    );
+    expect(count($pinned))->toBeGreaterThan(
+        10,
+        'The budget pins no file at all, so the comparison below holds an empty tree to an empty budget.'
+    );
 
     expect($found)->toBe($pinned, 'The skip markers in the tree and the budget in '.SKIP_BUDGET.' disagree. A skip is counted in the same line as a pass, so a capability no job supplies reads in every report as a guarantee that holds — which is why each one has to be written down with the job that still runs it. Add the file, correct its `markers` count, or drop the entry with the marker.');
 });
 
 it('gives every pinned skip a job that runs the tests it retires', function (): void {
     $budget = skipBudgetPins();
+
+    // Both halves of the budget, read before the verdict: with no pinned file
+    // the loop below never runs and reports a clean budget over an empty one.
+    expect(count($budget['jobs']))->toBeGreaterThan(
+        1,
+        'The budget declares no job at all, so every entry below would be held to an empty list of them.'
+    );
+    expect(count($budget['files']))->toBeGreaterThan(
+        10,
+        'The budget pins no file at all, so this rule checked nothing.'
+    );
+
     $wrong = [];
 
     foreach ($budget['files'] as $path => $entry) {

@@ -118,7 +118,7 @@ it('never shows the recovery codes a second time when the pairing ceremony is ca
     expect($html)->toContain('import-already-provisioned');
 
     foreach ($codes as $code) {
-        expect($html)->not->toContain($code, 'a screen that promised its codes are shown once must not print them again on the way back');
+        expect(str_contains($html, $code))->toBeFalse('a screen that promised its codes are shown once must not print them again on the way back');
     }
 
     expect(session('auth.signup.recovery_codes_plain'))->toBeNull('the ceremony is over, so the plaintext copy goes with it');

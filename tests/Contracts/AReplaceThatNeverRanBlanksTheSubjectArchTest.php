@@ -18,6 +18,18 @@ use Tests\Contracts\Support\ReplaceReturnSites;
 // The sibling rule for `preg_match` is ARegexThatNeverRanIsNotNoMatchArchTest,
 // and the guard tree's own copy is AStoppedScanIsNeverReadAsAnEmptyOneArchTest.
 // This one covers the code that ships.
+//
+// The sibling steps over PatternScan; this rule does not, and that is deliberate.
+// The seam compares every replacer answer with `=== null` or `=== false` a line
+// below, which is the reading asked for here, so a step-over would excuse nothing
+// while hiding the one file this rule's own advice points at.
+
+// A walk that read nothing reports the same clean tree as a walk that found
+// nothing, so both denominators are asserted before the verdict: the walk opens
+// 6,667 files and the reader recognises 79 replacer calls in them.
+const REPLACE_NEVER_RAN_FILE_FLOOR = 1_000;
+
+const REPLACE_NEVER_RAN_CALL_FLOOR = 25;
 
 it('leaves no preg_replace or preg_split whose failure reaches the program as an empty answer', function (): void {
     $files = ReplaceReturnSites::files();
@@ -28,11 +40,6 @@ it('leaves no preg_replace or preg_split whose failure reaches the program as an
 
     foreach ($files as $path) {
         $relative = str_replace($root, '', $path);
-
-        if ($relative === ReplaceReturnSites::SEAM) {
-            continue;
-        }
-
         $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
 
         if (! str_contains($source, 'preg_replace') && ! str_contains($source, 'preg_split')) {
@@ -46,8 +53,16 @@ it('leaves no preg_replace or preg_split whose failure reaches the program as an
         }
     }
 
-    expect(count($files))->toBeGreaterThan(1000, 'The walk narrowed to part of the tree, so its verdict covers only that part.');
-    expect($calls)->toBeGreaterThan(0, 'The reader recognised no calls anywhere, which is what a broken tokeniser looks like.');
+    expect(count($files))->toBeGreaterThan(
+        REPLACE_NEVER_RAN_FILE_FLOOR,
+        'The walk opened '.count($files).' files, so its verdict covers only part of the tree.'
+    );
+
+    expect($calls)->toBeGreaterThan(
+        REPLACE_NEVER_RAN_CALL_FLOOR,
+        'The reader recognised '.$calls.' replacer calls in '.count($files)
+        .' files, which is what a broken tokeniser looks like: a walk finding nothing cannot report anything.'
+    );
 
     expect($offenders)->toBe([], implode("\n", [
         'These calls let a PCRE give-up reach the program as an ordinary empty answer:',

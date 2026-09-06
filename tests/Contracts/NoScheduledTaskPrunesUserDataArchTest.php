@@ -112,6 +112,11 @@ function filesAScheduledCommandReaches(string $commandString): array
 // Every `->table('x')` opens a chain, and the chain belongs to that table until
 // the next one opens. Reading only the first occurrence missed the notification
 // sweep, whose delete is on its second: it plucks the ids, then deletes them.
+//
+// A query-builder chain and nothing else. `Model::query()->…->delete()` names
+// no table in the source, so a sweep written that way is invisible here --
+// PruneDevAuditCommand is one, on a table this rule does not guard. The
+// description and the message below say "builds no query" for that reason.
 /**
  * @param  list<string>  $guarded
  * @return list<string> the guarded tables this source deletes from or empties a column of
@@ -176,7 +181,12 @@ function scheduledOffendersAgainst(array $guarded): array
 it('names tables that exist, so a rename cannot empty this guard', function (): void {
     $guarded = tablesHoldingUserData();
 
-    expect($guarded)->toHaveCount(14);
+    expect($guarded)->toHaveCount(
+        14,
+        'tablesHoldingUserData() names '.count($guarded).' tables. The list is pinned so that adding or '
+        .'removing one is a visible diff a reviewer has to agree with, rather than a rule quietly '
+        .'covering less than it did.'
+    );
 
     $missing = array_values(array_filter(
         $guarded,
@@ -189,7 +199,10 @@ it('names tables that exist, so a rename cannot empty this guard', function (): 
 it('finds the scheduler, so an empty schedule cannot pass this guard', function (): void {
     $commands = scheduledCommandStrings();
 
-    expect(count($commands))->toBeGreaterThanOrEqual(8);
+    expect(count($commands))->toBeGreaterThanOrEqual(
+        8,
+        'the scheduler resolved '.count($commands).' commands, which is too few to be this application.'
+    );
 
     $unreachable = array_values(array_filter(
         $commands,
@@ -205,7 +218,12 @@ it('finds the scheduler, so an empty schedule cannot pass this guard', function 
 it('exempts only tables an exception is written down for', function (): void {
     $exceptions = tablesAnAutomaticSweepMayPrune();
 
-    expect($exceptions)->toHaveCount(1);
+    expect($exceptions)->toHaveCount(
+        1,
+        'tablesAnAutomaticSweepMayPrune() holds '.count($exceptions).' exemptions. Each one is a table the '
+        .'product stops promising to keep, so growing the list is a product decision and pinning the count '
+        .'is what makes it one somebody signs off.'
+    );
 
     $unguarded = array_values(array_diff(array_keys($exceptions), tablesHoldingUserData()));
 
@@ -222,8 +240,20 @@ it('exempts only tables an exception is written down for', function (): void {
     expect($offenders)->not->toBe([], 'No scheduled task prunes an exempted table, so every exemption here is dead.');
 });
 
-it('runs no scheduled task that deletes a row of user data or erases a column of it', function (): void {
+it('builds no query in a scheduled task that deletes a row of user data or erases a column of it', function (): void {
     $guarded = array_values(array_diff(tablesHoldingUserData(), array_keys(tablesAnAutomaticSweepMayPrune())));
+
+    // Read here as well as in the case above, because this is where the verdict
+    // is: an empty offender list means the same thing over a broken scheduler
+    // as over a well-behaved one, and the two cases can fail independently.
+    expect(count(scheduledCommandStrings()))->toBeGreaterThanOrEqual(
+        8,
+        'the scheduler resolved '.count(scheduledCommandStrings()).' commands, which is too few to be this '
+        .'application — the verdict below would be read off a schedule nobody registered.'
+    );
+
+    expect($guarded)->not->toBe([], 'every table is exempted, so this rule guards nothing.');
+
     $offenders = scheduledOffendersAgainst($guarded);
 
     expect($offenders)->toBe([], implode("\n", [
@@ -236,6 +266,9 @@ it('runs no scheduled task that deletes a row of user data or erases a column of
         'deletes what the peer is still using. An operational artefact with a written',
         'window belongs in tablesAnAutomaticSweepMayPrune(), naming the page that',
         'documents it.',
+        '',
+        'This reads query-builder chains: an Eloquent Model::query()->delete() names no table in the',
+        'source and is not seen here. A sweep written that way is still the same defect.',
     ]));
 });
 

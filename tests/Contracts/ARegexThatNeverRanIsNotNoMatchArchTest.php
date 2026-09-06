@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Public\Exceptions\PatternScanFailedException;
 use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\PcreCallSites;
 use Tests\Contracts\Support\RegexReturnSites;
 
 // `preg_match` and `preg_match_all` return false when PCRE stops part-way --
@@ -16,11 +17,19 @@ use Tests\Contracts\Support\RegexReturnSites;
 //
 // It has happened here twice. This is the rule that stops the third.
 
+// A walk that read nothing reports the same clean tree as a walk that found
+// nothing, so both denominators are asserted before the verdict below: the walk
+// opens 9,655 PHP files and the reader recognises 573 matcher calls in them,
+// far enough above the floors that only a narrowed walk trips them.
+const REGEX_NEVER_RAN_FILE_FLOOR = 5_000;
+
+const REGEX_NEVER_RAN_CALL_FLOOR = 200;
+
 it('leaves no preg_match whose answer cannot tell a failed scan from an empty one', function (): void {
     $files = RegexReturnSites::files();
-    expect($files)->not->toBe([]);
 
     $offenders = [];
+    $calls = 0;
     $root = base_path().'/';
 
     foreach ($files as $path) {
@@ -36,10 +45,27 @@ it('leaves no preg_match whose answer cannot tell a failed scan from an empty on
             continue;
         }
 
+        $tokens = PcreCallSites::significantTokens($source);
+
+        foreach (array_keys($tokens) as $index) {
+            $calls += PcreCallSites::callOpensAt($tokens, $index, RegexReturnSites::SCANNED_FUNCTIONS) === null ? 0 : 1;
+        }
+
         foreach (RegexReturnSites::uncheckedIn($source) as $site) {
             $offenders[] = $relative.':'.$site['line'].'  '.$site['call'].'(…) '.$site['followedBy'];
         }
     }
+
+    expect(count($files))->toBeGreaterThan(
+        REGEX_NEVER_RAN_FILE_FLOOR,
+        'The walk opened '.count($files).' files, so its verdict covers a fraction of the tree.'
+    );
+
+    expect($calls)->toBeGreaterThan(
+        REGEX_NEVER_RAN_CALL_FLOOR,
+        'The reader recognised '.$calls.' matcher calls in '.count($files)
+        .' files, which is what a broken tokeniser looks like: a walk finding nothing reports nothing.'
+    );
 
     expect($offenders)->toBe([], implode("\n", [
         'These calls read a PCRE answer that may be `false`, in a position where false is',
@@ -58,6 +84,25 @@ it('leaves no preg_match whose answer cannot tell a failed scan from an empty on
         'bare `if` all fold false into the answer, and a discarded return folds it into',
         '$matches.',
     ]));
+});
+
+// The rule grants one exemption and it is a whole file, so it is held to the
+// house rule for a pin: it has to still excuse something. PatternScan hands each
+// raw matcher answer to `self::tally(…)` as an argument rather than comparing
+// it, and the day that stops being true the step-over goes.
+it('still needs the one file it steps over', function (): void {
+    $seam = base_path(RegexReturnSites::SEAM);
+
+    expect(is_file($seam))->toBeTrue(
+        RegexReturnSites::SEAM.' is the file this rule steps over, and it is not there any more. '
+        .'Delete the step-over, or point it at wherever the checked reading moved to.'
+    );
+
+    expect(RegexReturnSites::uncheckedIn((string) file_get_contents($seam)))->not->toBe(
+        [],
+        RegexReturnSites::SEAM.' no longer reads a matcher answer this rule would refuse, so the step-over above '
+        .'excuses nothing while still hiding the whole file. Delete it and let the seam be walked like the rest.'
+    );
 });
 
 // The rule above sends every contributor it stops to one class. That advice is

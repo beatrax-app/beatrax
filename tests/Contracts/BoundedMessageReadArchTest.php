@@ -40,6 +40,26 @@ function boundedMessageReadSources(): array
     return $sources;
 }
 
+/** @return list<string> every live provider client in the mailbox directory */
+function boundedMessageProviderClients(): array
+{
+    $found = [];
+
+    foreach (glob(base_path('Modules/EmailScan/Internal/Clients/*ApiClient.php')) ?: [] as $path) {
+        $name = basename($path);
+
+        // A Fake* client replays an .eml fixture out of this repo, which is the
+        // one case where the length is not somebody else's to choose.
+        if (! str_starts_with($name, 'Fake')) {
+            $found[] = 'Modules/EmailScan/Internal/Clients/'.$name;
+        }
+    }
+
+    sort($found);
+
+    return $found;
+}
+
 it('does not allow a provider or drop-folder message to be materialised outside BoundedRead', function (): void {
     // Each pattern is a way a whole body reaches one PHP string with nothing
     // between the sender's length and the heap. A hit is not automatically a
@@ -54,6 +74,10 @@ it('does not allow a provider or drop-folder message to be materialised outside 
         '$this->files->get(',
     ];
 
+    // Deliberately empty: no hit on these paths is currently a legitimate
+    // unbounded read, and an entry here would name one with the reason it is
+    // bounded by something real. Spelled out rather than absent so the failure
+    // message below has a list to point at.
     $pinned = [];
 
     $found = [];
@@ -90,4 +114,25 @@ it('scans the client and job files the ceiling is meant to cover', function (): 
         ->toContain('Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php')
         ->and($sources['Modules/Receipts/Internal/Jobs/ScanInboxDropFolderJob.php'])
         ->toContain('BoundedRead::file(');
+});
+
+// `G*ApiClient.php` is a hand-written narrowing of the clients directory, and a
+// hand-written narrowing cannot see a provider added under another initial. The
+// glob's answer is held to the directory's own contents instead.
+it('reaches every live provider client the mailbox directory holds', function (): void {
+    $clients = boundedMessageProviderClients();
+
+    expect(count($clients))->toBeGreaterThan(
+        1,
+        'Almost no provider client was found, so the comparison below is about a directory nobody read.',
+    );
+
+    $missed = array_values(array_diff($clients, array_keys(boundedMessageReadSources())));
+
+    expect($missed)->toBe([], implode("\n  ", [
+        'These provider clients fetch a message body whose length a mail provider chooses, and the glob',
+        'above does not reach them — so the ceiling rule is silent about the one path it exists for.',
+        'Widen the pattern in boundedMessageReadSources() to name them:',
+        ...$missed,
+    ]));
 });

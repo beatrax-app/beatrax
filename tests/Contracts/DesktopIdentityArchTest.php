@@ -73,5 +73,13 @@ it('keeps the desktop and mobile bundle ids distinct', function (): void {
     /** @var array{app_id: string} $mobileConfig */
     $mobileConfig = require base_path('mobile-app/config/nativephp.php');
 
-    expect($desktop)->not->toBe($mobileConfig['app_id']);
+    expect($desktop)->not->toBe('', 'The desktop bundle id is unset, so the comparison below would pass on two empty strings.');
+    expect($mobileConfig['app_id'])->not->toBe('', 'The mobile bundle id is unset, so the comparison below would pass on two empty strings.');
+
+    expect($desktop)->not->toBe(
+        $mobileConfig['app_id'],
+        'The phone and the desktop ship the same bundle id ('.$desktop.'), so they are one application to the '.
+        'operating system and to the update feed: the installer for one can replace the other, and a notification '.
+        'raised by one is attributed to whichever registered the id last.'
+    );
 });

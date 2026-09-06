@@ -183,6 +183,6 @@ it('renders the Horizon sidebar nav item WITHOUT nav-disabled when the dev.horiz
 
     expect($matches[0])->not->toBeEmpty('Horizon sidebar entry should render when dev.horizon is registered');
     foreach ($matches[1] as $classes) {
-        expect($classes)->not->toContain('nav-disabled', 'Horizon nav item should not be nav-disabled when its route is registered');
+        expect(str_contains($classes, 'nav-disabled'))->toBeFalse('Horizon nav item should not be nav-disabled when its route is registered');
     }
 });

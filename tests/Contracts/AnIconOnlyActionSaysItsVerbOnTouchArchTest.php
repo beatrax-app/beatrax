@@ -54,7 +54,7 @@ function touchCaptionCallSites(): array
             $caption = touchCaptionLangKey($action->attribute(':caption'));
 
             $sites[] = [
-                'file' => $path,
+                'file' => str_replace(base_path().'/', '', $path),
                 'line' => $action->line($source),
                 'label' => $label,
                 'caption' => $caption === '' ? $label : $caption,
@@ -88,13 +88,22 @@ function touchCaptionLocales(): array
 
     sort($locales);
 
+    // The two rules below say "in all 26 languages", and a glob that answered
+    // with fewer would make that sentence a claim about a walk nobody ran.
+    expect(count($locales))->toBeGreaterThanOrEqual(
+        26,
+        'Found '.count($locales).' shipped locales; the rules here claim all 26, so either a locale was dropped or the glob read nothing.',
+    );
+
     return $locales;
 }
 
 it('finds a resolvable label on every icon-only action', function (): void {
     $sites = touchCaptionCallSites();
 
-    expect($sites)->not->toBe([]);
+    // Twenty-six call sites draw one today. A walk that found none would report
+    // every label as resolvable, and the two rules below would agree.
+    expect($sites)->not->toBe([], 'No icon-only action was found at all, so nothing below this read a template.');
 
     $unresolvable = [];
     foreach ($sites as $site) {
@@ -203,6 +212,17 @@ it('keeps every caption down to the one word a 44px mark can carry', function ()
     ));
 });
 
+it('reads the lang key a bound label names, and nothing from an expression that names none', function (): void {
+    expect(touchCaptionLangKey("Lang::get('pots::actions.archive')"))
+        ->toBe('pots::actions.archive', 'the key is what lets the caption be read in all 26 languages');
+
+    expect(touchCaptionLangKey('$this->label'))
+        ->toBe('', 'a label built anywhere but in a Lang::get is one this rule cannot read, and says so');
+
+    expect(touchCaptionLangKey(null))
+        ->toBe('', 'an action with no bound label at all names no key either');
+});
+
 it('places the tip against the viewport rather than inside what clips it', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
@@ -241,8 +261,10 @@ it('lets a row of five actions wrap rather than clip its last one', function ():
         }
     }
 
-    expect($rows)->toHaveCount(1)
-        ->and($rows[0])->toContain('flex-wrap');
+    expect($rows)->toHaveCount(
+        1,
+        'One row of actions is drawn on the pots page. Finding another means this rule is reading a second row it has not measured, and finding none means the class list it is keyed on has moved.',
+    )->and($rows[0])->toContain('flex-wrap');
 });
 
 /** @return string every unlayered `(pointer: coarse)` block in the stylesheet, concatenated */

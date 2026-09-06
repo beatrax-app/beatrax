@@ -90,6 +90,11 @@ final class FirstPartySymbols
      * under database/ or scripts/ read as absent, and the comment naming it
      * reported as naming nothing.
      *
+     * Migrations are the one thing dropped, in both spellings the tree uses,
+     * and dropping them cannot invent an offender either: a migration is
+     * `return new class extends Migration`, so it declares no name a comment
+     * or a page could cite and contributes nothing to the map below.
+     *
      * @return list<string>
      */
     public static function phpFiles(): array

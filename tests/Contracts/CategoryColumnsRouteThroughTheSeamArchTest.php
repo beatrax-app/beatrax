@@ -19,23 +19,45 @@ const CATEGORY_COLUMN_SEAM_ALLOWED = [
     'Modules/Ledger/Models/Category.php',
 ];
 
-it('selects the category name parts through the seam that owns them, everywhere', function (): void {
+// "Everywhere" is the backend tree: Modules and app, module Blade views
+// included, minus tests and migrations. A view under resources/ is not read.
+it('selects the category name parts through the seam that owns them, everywhere the backend tree reaches', function (): void {
     $parts = CategoryDisplayName::bareColumns();
+    $files = BackendSourceFiles::all();
     $offenders = [];
+    $literals = 0;
 
-    foreach (BackendSourceFiles::all() as $path) {
+    expect(count($parts))->toBeGreaterThan(
+        1,
+        'The seam names fewer than two parts, so `array_diff($parts, $elements) === []` matches almost any array literal or none at all.',
+    );
+
+    expect(count($files))->toBeGreaterThan(
+        2_000,
+        'The walk read almost nothing, so the empty offender list below is a tree nobody opened.',
+    );
+
+    foreach ($files as $path) {
         $relative = str_replace(base_path().'/', '', $path);
 
         if (in_array($relative, CATEGORY_COLUMN_SEAM_ALLOWED, true)) {
             continue;
         }
 
-        foreach (categorySeamArrayLiterals(BackendSourceFiles::codeTokens($path)) as $line => $elements) {
+        $found = categorySeamArrayLiterals(BackendSourceFiles::codeTokens($path));
+        $literals += count($found);
+
+        foreach ($found as $line => $elements) {
             if (array_diff($parts, $elements) === []) {
                 $offenders[] = $relative.':'.$line;
             }
         }
     }
+
+    expect($literals)->toBeGreaterThan(
+        500,
+        'The token reader found almost no array literal at all, so the verdict below is about source nobody parsed.',
+    );
 
     expect($offenders)->toBe(
         [],
@@ -114,3 +136,50 @@ function categorySeamNeighbour(array $tokens, int $index, int $step): string
 
     return '';
 }
+
+// A file allowed to name the parts and no longer naming them is excused for
+// something it stopped doing, and it stands ready to excuse a hand-written
+// select somebody adds there next.
+it('keeps no seam exemption for a file that no longer names the parts', function (): void {
+    $parts = CategoryDisplayName::bareColumns();
+    $dead = [];
+
+    foreach (CATEGORY_COLUMN_SEAM_ALLOWED as $relative) {
+        $path = base_path($relative);
+
+        if (! is_file($path)) {
+            $dead[] = $relative.' is no longer in the tree';
+
+            continue;
+        }
+
+        $names = false;
+        foreach (categorySeamArrayLiterals(BackendSourceFiles::codeTokens($path)) as $elements) {
+            $names = $names || array_diff($parts, $elements) === [];
+        }
+
+        if (! $names) {
+            $dead[] = $relative.' no longer lists the category name parts in an array literal';
+        }
+    }
+
+    expect($dead)->toBe([], implode("\n  ", [
+        'These files are excused from routing through CategoryDisplayName and no longer name the parts at',
+        'all, so the exemption covers nothing while reading as considered:',
+        ...$dead,
+    ]));
+});
+
+// The reader is a token walk over bracket depth, and a walk that stopped
+// answers "no array literal" in the same words a file with none does.
+it('reads the bare elements of an array literal and not the keys of a map', function (): void {
+    $literals = categorySeamArrayLiterals(BackendSourceFiles::tokensOf(
+        'Planted.php',
+        "<?php\n\$columns = ['name', 'parent_name', 'group_name'];\n\$map = ['name' => \$a, 'parent_name' => \$b];\n",
+    ));
+
+    expect(array_values($literals))->toBe(
+        [['name', 'parent_name', 'group_name']],
+        'the reader has to see the bare column list and none of the keys of the map beside it',
+    );
+});

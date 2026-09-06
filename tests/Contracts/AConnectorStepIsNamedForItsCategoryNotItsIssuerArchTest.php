@@ -65,24 +65,47 @@ const CONNECTOR_CATEGORY_HEADINGS = [
 ];
 
 it('names the card step after the category, never after the one issuer it reads', function (): void {
-    $offenders = [];
+    $locales = connectorLocales();
 
-    foreach (connectorLocales() as $locale) {
+    // The wizard ships twenty-six languages. A glob that answered nothing would
+    // leave every case below reading no line at all and reporting a clean tree.
+    expect(count($locales))->toBeGreaterThan(
+        20,
+        'The walk found '.count($locales).' wizard locales, which is too few to be the set this app ships.',
+    );
+
+    $offenders = [];
+    $missing = [];
+
+    foreach ($locales as $locale) {
         foreach (CONNECTOR_CATEGORY_HEADINGS as $group => $keys) {
             $file = base_path("Modules/Onboarding/Resources/lang/{$locale}/{$group}.php");
             $lines = connectorLinesIn($file);
             foreach ($keys as $key) {
-                $line = $lines[$key] ?? '';
-                if (preg_match('/\bICS\b/', $line) !== 1) {
+                // A key that has moved reads back as the empty string, which
+                // names no issuer and passes — so the absence is the offence.
+                if (! isset($lines[$key])) {
+                    $missing[] = "{$locale} {$group}.{$key}";
+
                     continue;
                 }
 
-                $offenders[] = "{$locale} {$group}.{$key}: {$line}";
+                if (preg_match('/\bICS\b/', $lines[$key]) !== 1) {
+                    continue;
+                }
+
+                $offenders[] = "{$locale} {$group}.{$key}: {$lines[$key]}";
             }
         }
     }
 
+    sort($missing);
     sort($offenders);
+
+    expect($missing)->toBe([], implode("\n  ", [
+        'A heading this rule reads is gone, so the rule is checking nothing where it stands:',
+        ...$missing,
+    ]));
 
     expect($offenders)->toBe([], implode("\n  ", [
         'A heading naming the category named one issuer instead. Offenders:',
@@ -92,8 +115,14 @@ it('names the card step after the category, never after the one issuer it reads'
 
 it('still tells the reader which issuer the card step can read', function (): void {
     $silent = [];
+    $locales = connectorLocales();
 
-    foreach (connectorLocales() as $locale) {
+    expect(count($locales))->toBeGreaterThan(
+        20,
+        'The walk found '.count($locales).' wizard locales, which is too few to be the set this app ships.',
+    );
+
+    foreach ($locales as $locale) {
         $body = implode(' ', connectorLinesIn(base_path("Modules/Onboarding/Resources/lang/{$locale}/connect_card.php")));
         if (str_contains($body, 'ICS')) {
             continue;

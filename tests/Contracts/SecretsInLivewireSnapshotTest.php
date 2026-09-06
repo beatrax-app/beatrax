@@ -38,11 +38,16 @@ it('keeps the static accessor and the DI-shim instance method in sync', function
     expect($registry->all())->toBe(SecretsColumnRegistry::columns());
 });
 
-it('does not allow production Livewire components to expose registry columns via public properties, listeners, or queryString (noSecretsInLivewireSnapshot)', function (): void {
-    /** @var array<class-string, list<string>> $allowList */
-    $allowList = [
-        // An entry is justified only when the snapshot value is what the user
-        // just typed into the form, never an echo of a stored secret.
+// Per CLASS and per PROPERTY, never per class alone: an entry is justified only
+// when that one snapshot value is what the reader just typed into the form, and
+// never an echo of a stored secret. A second property on the same component is
+// a new decision somebody has to make, and a new line here.
+/**
+ * @return array<class-string, list<string>>
+ */
+function livewireSnapshotAllowList(): array
+{
+    return [
         LoginPage::class => [
             'password',
         ],
@@ -80,6 +85,9 @@ it('does not allow production Livewire components to expose registry columns via
             'password',
         ],
         AppLockSettingsSection::class => [
+            // Re-typed to authorise enabling, re-linking or re-wrapping the app
+            // lock, and zeroed on every one of those six paths the moment the
+            // provisioner has consumed it.
             'accountPassword',
         ],
         MobileImportBootstrap::class => [
@@ -89,6 +97,10 @@ it('does not allow production Livewire components to expose registry columns via
             'passwordConfirmation',
         ],
     ];
+}
+
+it('does not allow production Livewire components to expose registry columns via public properties, listeners, or queryString (noSecretsInLivewireSnapshot)', function (): void {
+    $allowList = livewireSnapshotAllowList();
 
     $registryColumns = SecretsColumnRegistry::columns();
 
@@ -104,6 +116,12 @@ it('does not allow production Livewire components to expose registry columns via
     $columnNameForms = array_values(array_unique($columnNameForms));
 
     $componentClasses = discoverLivewireComponentClassesUnderModules();
+
+    // Read before the verdict: a walk that resolved no component finds no
+    // property, and an empty hit list then reads as every component being clean.
+    expect(count($componentClasses))->toBeGreaterThan(80, 'The component walk resolved almost no Livewire class, so a clean answer below is the walk being broken rather than the components being right.');
+
+    expect(count($columnNameForms))->toBeGreaterThan(5, 'The registry yielded almost no column name to match against, so no property could have been flagged.');
 
     $hits = [];
     foreach ($componentClasses as $fqcn) {
@@ -174,6 +192,36 @@ it('does not allow production Livewire components to expose registry columns via
     );
 });
 
+it('still holds every allow-listed property to the class it was granted on', function (): void {
+    $stale = [];
+
+    foreach (livewireSnapshotAllowList() as $fqcn => $properties) {
+        if (! class_exists($fqcn)) {
+            $stale[] = $fqcn.'  (class is gone)';
+
+            continue;
+        }
+
+        $declared = array_map(
+            static fn (ReflectionProperty $property): string => $property->getName(),
+            (new ReflectionClass($fqcn))->getProperties(ReflectionProperty::IS_PUBLIC),
+        );
+
+        foreach ($properties as $property) {
+            if (! in_array($property, $declared, true)) {
+                $stale[] = $fqcn.'::$'.$property.'  (no such public property)';
+            }
+        }
+    }
+
+    expect($stale)->toBe(
+        [],
+        'An allow-listed snapshot property has stopped existing, so its line excuses nothing and reads as a '
+        .'decision somebody made about a field that is no longer there. Delete the line, or move it to '
+        ."whatever replaced the field:\n  ".implode("\n  ", $stale),
+    );
+});
+
 it('catches synthetic violators living outside the production tree', function (): void {
     $registryColumns = SecretsColumnRegistry::columns();
     $bareNames = array_map(
@@ -200,7 +248,7 @@ it('catches synthetic violators living outside the production tree', function ()
             }
         }
     }
-    expect($matchA)->toBeTrue();
+    expect($matchA)->toBeTrue('The property matcher no longer flags a public property carrying a registry column name, so the rule above can only ever report an empty list.');
 
     $reflectionB = new ReflectionClass(SyntheticListenerViolator::class);
     $defaultsB = $reflectionB->getDefaultProperties();

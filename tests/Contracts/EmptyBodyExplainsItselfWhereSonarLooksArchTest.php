@@ -134,6 +134,7 @@ function sonarEmptyBodyOffenders(string $source, string $label = ''): array
             $pendingScope = null;
             $sawAbstract = false;
         } elseif ($id === T_FUNCTION) {
+            sonarEmptyBodyDeclarationsRead(1);
             $hit = sonarEmptyBodyInspect($tokens, $i, $scopes, $label);
 
             if ($hit !== null) {
@@ -143,6 +144,18 @@ function sonarEmptyBodyOffenders(string $source, string $label = ''): array
     }
 
     return $hits;
+}
+
+/** Adds to, and reads back, how many declarations the whole walk has inspected. */
+function sonarEmptyBodyDeclarationsRead(?int $add = null): int
+{
+    static $total = 0;
+
+    if ($add !== null) {
+        $total += $add;
+    }
+
+    return $total;
 }
 
 /**
@@ -442,12 +455,27 @@ function sonarEmptyBodySignificantId(array $tokens, int $from, int $step): int|s
 
 it('leaves no empty body the hosted analyser would report', function (): void {
     $files = sonarEmptyBodyFiles();
-    expect($files)->not->toBe([]);
+
+    // The floor sits far under the 2,490 files these roots hold. A walk that
+    // opened none of them reports a clean tree over code nobody read.
+    expect(count($files))->toBeGreaterThan(
+        800,
+        'The main-sources walk opened almost nothing, so no body was inspected at all.'
+    );
 
     // Widening this to the test roots reads as thoroughness and is not. The
     // rule reports main sources only, so every fake and spy it turned up there
     // would be a failure the hosted analysis is never going to raise.
-    expect(array_values(array_filter($files, static fn (string $path): bool => str_contains($path, '/tests/'))))->toBe([]);
+    $fromTests = array_values(array_filter($files, static fn (string $path): bool => str_contains($path, '/tests/')));
+
+    expect($fromTests)->toBe([], implode("\n  ", [
+        'The walk reached the test roots, which S1186 does not report on:',
+        ...array_slice($fromTests, 0, 10),
+        '',
+        'Every empty fake and spy under them would be reported here as a failure the',
+        'hosted analysis is never going to raise, and the rule would stop meaning what',
+        'its name says.',
+    ]));
 
     $hits = [];
     foreach ($files as $path) {
@@ -455,6 +483,13 @@ it('leaves no empty body the hosted analyser would report', function (): void {
             $hits[] = $hit;
         }
     }
+
+    // Around 9,100 declarations stand under these roots. A tokeniser that read
+    // none of them found no empty body because it never looked at one.
+    expect(sonarEmptyBodyDeclarationsRead())->toBeGreaterThan(
+        2000,
+        'No function declaration was inspected, so this rule checked nothing.'
+    );
 
     expect($hits)->toBe([], "An empty body must say why it is empty, in one of the two places the analyser actually reads: the last comment between the braces, or the last comment directly above the declaration with no blank line between them. Anywhere else is invisible to it and the build fails in CI instead of here. The comment must contain three consecutive word characters, so a final line that is only punctuation, an arrow or a bare URL reads as no comment at all. Offenders:\n  ".implode("\n  ", $hits));
 });

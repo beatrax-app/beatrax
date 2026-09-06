@@ -18,11 +18,18 @@ use Illuminate\Contracts\Events\Dispatcher;
  * null when it never reaches one. Transitive, because a singleton holding a
  * transient that holds the dispatcher has captured it just the same.
  *
+ * First-party constructor parameters only. A binding that reaches the
+ * dispatcher through a framework or package class is a chain this walk does not
+ * follow, and the rule below says "a first-party chain" rather than "a chain"
+ * because of it.
+ *
  * @param  array<string, true>  $seen
  * @return list<string>|null
  */
 function dispatcherChain(string $class, array $seen = []): ?array
 {
+    // A name no autoloader answers to carries no constructor to read, and a
+    // class already on this chain is a cycle rather than a second capture.
     if (isset($seen[$class]) || ! class_exists($class)) {
         return null;
     }
@@ -87,7 +94,7 @@ function appOwnedSharedBindings(): array
     return $shared;
 }
 
-it('leaves no singleton holding a dispatcher a fake would have to replace', function (): void {
+it('leaves no singleton holding a dispatcher through a first-party chain a fake would have to replace', function (): void {
     $shared = appOwnedSharedBindings();
 
     // A container with nothing registered would pass every assertion below it.
@@ -123,6 +130,13 @@ it('sees a singleton that holds one, so the walk is not simply finding nothing',
         public function __construct(private Dispatcher $events) {}
     };
 
-    expect(dispatcherChain($planted::class))->not->toBeNull()
-        ->and(dispatcherChain(stdClass::class))->toBeNull();
+    expect(dispatcherChain($planted::class))->not->toBeNull(
+        'The reader did not see a constructor taking a Dispatcher, so the sweep above is finding nothing rather '
+        .'than finding the container clean.'
+    );
+
+    expect(dispatcherChain(stdClass::class))->toBeNull(
+        'The reader reported a chain out of a class with no constructor at all, so every binding above would be '
+        .'reported as capturing the dispatcher.'
+    );
 });

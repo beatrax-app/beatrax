@@ -304,8 +304,26 @@ it('tells a reader with no developer flag about every reason an operation can be
     );
 });
 
+// The waiver list is empty today, and the case is written anyway: an entry
+// added for a reason that later stops naming a live case would sit here
+// excusing nothing while reading as a decision somebody made.
+it('names a live reason in every deliberate waiver', function (): void {
+    $values = array_map(static fn (QuarantineReason $reason): string => $reason->value, QuarantineReason::cases());
+
+    $stale = array_values(array_diff(array_keys(QUARANTINE_READER_DELIBERATELY_UNREAD), $values));
+
+    expect($stale)->toBe([], implode("\n  ", [
+        'These waivers name a reason the enum no longer has:',
+        ...$stale,
+        '',
+        'A waiver for a case nobody can be refused by excuses nothing, and the argument',
+        'written beside it reads as covering a decision that is still live.',
+    ]));
+});
+
 it('does not credit a projection named only in a comment', function (): void {
-    $planted = tempnam(sys_get_temp_dir(), 'quarantine-reader').'.blade.php';
+    $seed = (string) tempnam(sys_get_temp_dir(), 'quarantine-reader');
+    $planted = $seed.'.blade.php';
     file_put_contents($planted, <<<'BLADE'
         {{-- QuarantineOutcome is named here inside a comment and must not count --}}
         <p>{{ Lang::get('sync::quarantine.last_seen') }}</p>
@@ -316,6 +334,7 @@ it('does not credit a projection named only in a comment', function (): void {
         $inCode = quarantineReaderNames([$planted], 'sync::quarantine.last_seen');
     } finally {
         @unlink($planted);
+        @unlink($seed);
     }
 
     expect($inComment)->toBeFalse('a symbol mentioned in a Blade comment was credited as copy a reader can see')

@@ -33,6 +33,28 @@ function translatedLineNamespaces(): array
     return $namespaces;
 }
 
+/** @return list<string> modules shipping English lines under a namespace no provider registers */
+function translatedLineUnregisteredModules(): array
+{
+    $namespaces = translatedLineNamespaces();
+    $orphans = [];
+
+    foreach (glob(translatedLineRepoRoot().'/Modules/*/Resources/lang/en/*.php') ?: [] as $file) {
+        if (preg_match('#/Modules/([^/]+)/Resources/lang/en/#', $file, $found) !== 1) {
+            continue;
+        }
+
+        if (! isset($namespaces[$found[1]])) {
+            $orphans[$found[1]] = true;
+        }
+    }
+
+    $named = array_keys($orphans);
+    sort($named);
+
+    return $named;
+}
+
 /**
  * @param  array<array-key, mixed>  $lines
  * @return list<string>
@@ -60,6 +82,10 @@ function translatedLineDeclaredKeys(): array
         if (preg_match('#/Modules/([^/]+)/Resources/lang/en/([^/]+)\.php#', $file, $found) !== 1) {
             continue;
         }
+        // A module registering no namespace has no key to build, and the rule
+        // below cannot name a line it cannot spell. That is a defect in its
+        // own right rather than an exemption, so it is reported separately
+        // instead of skipped quietly here.
         if (! isset($namespaces[$found[1]])) {
             continue;
         }
@@ -115,6 +141,42 @@ const TRANSLATED_LINE_KEY = '[a-z][a-z0-9\-]*::[a-z0-9_\-]+\.[A-Za-z0-9_.\-]*';
 const TRANSLATED_LINE_GROUP = '[a-z][a-z0-9\-]*::[a-z0-9_\-]+';
 
 /**
+ * @return array{exact: array<string, true>, prefixes: array<string, true>}
+ */
+function translatedLineReferencesIn(string $source): array
+{
+    $exact = [];
+    $prefixes = [];
+
+    // A whole literal is that key — and, when it names a branch rather than
+    // a leaf, the subtree under it: labelKey('anomaly::alerts.reasons')
+    // appends the leaf inside the enum, where no literal key exists.
+    foreach (PatternScan::all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]/', $source)[1] as $key) {
+        $exact[$key] = true;
+        $prefixes[rtrim($key, '.').'.'] = true;
+    }
+
+    // A literal the code then concatenates onto, or opens an interpolation
+    // in, is a prefix: 'recurring::fixed_payments.empty_'.$arm reaches
+    // empty_all and empty_this_month without spelling either.
+    foreach (PatternScan::all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]\s*\./', $source)[1] as $key) {
+        $prefixes[$key] = true;
+    }
+
+    foreach (PatternScan::all('/"('.TRANSLATED_LINE_KEY.')(?=[{$])/', $source)[1] as $key) {
+        $prefixes[$key] = true;
+    }
+
+    // A group named without any key under it is read whole, by Lang::group
+    // or by a helper that appends: labelKey('recurring::review').
+    foreach (PatternScan::all('/[\'"]('.TRANSLATED_LINE_GROUP.')[\'"]/', $source)[1] as $group) {
+        $prefixes[$group.'.'] = true;
+    }
+
+    return ['exact' => $exact, 'prefixes' => $prefixes];
+}
+
+/**
  * Every key path production code can reach, as a set of exact keys and a set of
  * prefixes covering the subtrees it reaches without naming a leaf.
  *
@@ -126,51 +188,50 @@ function translatedLineReferences(): array
     $prefixes = [];
 
     foreach (translatedLineSourceFiles() as $path) {
-        $source = (string) file_get_contents($path);
+        $found = translatedLineReferencesIn((string) file_get_contents($path));
 
-        // A whole literal is that key — and, when it names a branch rather than
-        // a leaf, the subtree under it: labelKey('anomaly::alerts.reasons')
-        // appends the leaf inside the enum, where no literal key exists.
-        $found = PatternScan::all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]/', $source);
-
-        foreach ($found[1] as $key) {
-            $exact[$key] = true;
-            $prefixes[rtrim($key, '.').'.'] = true;
-        }
-
-        // A literal the code then concatenates onto, or opens an interpolation
-        // in, is a prefix: 'recurring::fixed_payments.empty_'.$arm reaches
-        // empty_all and empty_this_month without spelling either.
-        $found = PatternScan::all('/[\'"]('.TRANSLATED_LINE_KEY.')[\'"]\s*\./', $source);
-
-        foreach ($found[1] as $key) {
-            $prefixes[$key] = true;
-        }
-
-        $found = PatternScan::all('/"('.TRANSLATED_LINE_KEY.')(?=[{$])/', $source);
-
-        foreach ($found[1] as $key) {
-            $prefixes[$key] = true;
-        }
-
-        // A group named without any key under it is read whole, by Lang::group
-        // or by a helper that appends: labelKey('recurring::review').
-        $found = PatternScan::all('/[\'"]('.TRANSLATED_LINE_GROUP.')[\'"]/', $source);
-
-        foreach ($found[1] as $group) {
-            $prefixes[$group.'.'] = true;
-        }
+        $exact += $found['exact'];
+        $prefixes += $found['prefixes'];
     }
 
     return ['exact' => $exact, 'prefixes' => $prefixes];
 }
 
+// A module whose provider registers no namespace ships lines with no key to
+// resolve them by. The rule below cannot report those lines, because it cannot
+// spell them — so the silence is reported here rather than inside the walk.
+it('registers a lang namespace for every module that ships English lines', function (): void {
+    expect(translatedLineUnregisteredModules())->toBe([], implode("\n", [
+        'These modules ship Resources/lang/en files and their provider calls no loadModuleResources(),',
+        'so nothing resolves the lines and the rule below cannot name them:',
+        ...translatedLineUnregisteredModules(),
+    ]));
+});
+
 it('has a call site for every line it asks twenty-six translators to carry', function (): void {
     $declared = translatedLineDeclaredKeys();
-    expect($declared)->not->toBeEmpty();
+    $files = translatedLineSourceFiles();
+
+    // Three denominators before the verdict: the keys, the files the callers
+    // are read from, and the callers themselves. Each of them empty makes the
+    // offender list below empty for a reason that is not a clean tree. The
+    // floors sit far under today's 4,040 keys, 2,783 files and 3,869 callers.
+    expect(count($declared))->toBeGreaterThan(
+        1000,
+        'the walk declared '.count($declared).' English keys, which is too few to be this tree.'
+    );
+
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'the walk opened '.count($files).' source files to read callers from, which is too few to be this tree.'
+    );
 
     ['exact' => $exact, 'prefixes' => $prefixes] = translatedLineReferences();
-    expect($exact)->not->toBeEmpty();
+
+    expect(count($exact))->toBeGreaterThan(
+        1000,
+        'the walk found '.count($exact).' referenced keys, which is too few — every declared line would read as unreached.'
+    );
 
     $unreachable = [];
     foreach ($declared as $key => $file) {
@@ -188,4 +249,32 @@ it('has a call site for every line it asks twenty-six translators to carry', fun
     sort($unreachable);
 
     expect($unreachable)->toBe([], "translated lines nothing renders:\n  ".implode("\n  ", $unreachable));
+});
+
+// The verdict is a list that is empty over a tree where every line is reached
+// and empty over a reader that stopped reading, so the reader is driven against
+// planted sources. Each of the four shapes below was a real call site the first
+// draft reported as absent.
+it('reads a key spelled whole, one concatenated onto, one interpolated, and a group read whole', function (): void {
+    $whole = translatedLineReferencesIn('<?php Lang::get(\'ledger::transactions.title\');');
+    expect($whole['exact'])->toHaveKey('ledger::transactions.title')
+        ->and($whole['prefixes'])->toHaveKey('ledger::transactions.title.');
+
+    $joined = translatedLineReferencesIn('<?php Lang::get(\'recurring::fixed_payments.empty_\'.$arm);');
+    expect($joined['prefixes'])->toHaveKey('recurring::fixed_payments.empty_');
+
+    $interpolated = translatedLineReferencesIn('<?php $k = "anomaly::alerts.reason_{$case->value}";');
+    expect($interpolated['prefixes'])->toHaveKey('anomaly::alerts.reason_');
+
+    $group = translatedLineReferencesIn('<?php labelKey(\'recurring::review\');');
+    expect($group['prefixes'])->toHaveKey('recurring::review.');
+
+    $none = translatedLineReferencesIn('<?php $x = \'not a key at all\';');
+    expect($none['exact'])->toBe([])
+        ->and($none['prefixes'])->toBe([]);
+});
+
+it('flattens a nested lang array to the key paths a caller spells', function (): void {
+    expect(translatedLineKeyPaths(['a' => ['b' => 'one', 'c' => ['d' => 'two']], 'e' => 'three']))
+        ->toBe(['a.b', 'a.c.d', 'e']);
 });

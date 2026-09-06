@@ -48,10 +48,21 @@ it('names no first-party symbol that does not exist', function (): void {
     $classes = FirstPartySymbols::classes();
     $pages = docsSymbolsPages();
 
-    expect($classes)->not->toBe([]);
-    expect($pages)->not->toBe([]);
+    // Both denominators, read before the verdict. A vocabulary that came back
+    // short answers "not first-party, skip" to every mention, and a page walk
+    // that opened nothing reports clean prose. The floors sit well under the
+    // ~2,100 class names and 210 pages this tree carries today.
+    expect(count($classes))->toBeGreaterThan(
+        800,
+        'Almost no first-party class was found, so every mention below would be skipped as foreign.'
+    );
+    expect(count($pages))->toBeGreaterThan(
+        50,
+        'The .docs walk opened almost no page, so no prose was read at all.'
+    );
 
     $hits = [];
+    $mentions = 0;
 
     foreach ($pages as $page) {
         $prose = docsSymbolsProse((string) file_get_contents($page));
@@ -59,6 +70,8 @@ it('names no first-party symbol that does not exist', function (): void {
 
         foreach (PatternScan::split('/\R/', $prose) as $offset => $line) {
             foreach (docsSymbolsMentions($line) as [$class, $member]) {
+                $mentions++;
+
                 if (! isset($classes[$class]) || FirstPartySymbols::hasMember($classes[$class], $member)) {
                     continue;
                 }
@@ -67,6 +80,13 @@ it('names no first-party symbol that does not exist', function (): void {
             }
         }
     }
+
+    // Around 2,400 inline-code mentions stand across these pages. A run that
+    // read none of them found no stale name because it read nothing.
+    expect($mentions)->toBeGreaterThan(
+        500,
+        'No page named a Class::member at all, so the mention reader has stopped matching.'
+    );
 
     expect($hits)->toBe([], "A documentation page names a method, constant or property that its class does not have. M6 proves a LINK resolves; nothing proved that PROSE does, and a page describing code that was renamed reads exactly like a page describing code that ships — prose carries no version. Only first-party classes are checked, and only inline-code mentions outside fenced blocks; a framework facade or an illustrative snippet is not the subject. Offenders:\n  ".implode("\n  ", $hits));
 });
@@ -80,13 +100,6 @@ const DOCS_SYMBOLS_NAMING_NO_CLASS_BY_DESIGN = [
     'WebResourceResponse',
 ];
 
-/**
- * Both roots' optimised classmaps, plus the module directories, because
- * `Import::NormalizeStage` names a namespace segment rather than a class and
- * is the densest mention shape in .docs.
- *
- * @return array<string, true>
- */
 // Both roots' classmaps. The shard jobs install only this one, so the mobile
 // root's vocabulary is missing there and every NativePHP mobile class a page
 // names would read as invented.
@@ -110,6 +123,13 @@ function docsSymbolsUnreadableRoots(): array
     return $missing;
 }
 
+/**
+ * Both roots' optimised classmaps, plus the module directories, because
+ * `Import::NormalizeStage` names a namespace segment rather than a class and
+ * is the densest mention shape in .docs.
+ *
+ * @return array<string, true>
+ */
 function docsSymbolsResolvableNames(): array
 {
     $names = [];
@@ -164,8 +184,16 @@ it('names no class that exists in neither Composer root', function (): void {
     $resolvable = docsSymbolsResolvableNames();
     $pages = docsSymbolsPages();
 
-    expect($resolvable)->not->toBe([]);
-    expect($pages)->not->toBe([]);
+    // A vocabulary built from two classmaps runs to thousands of names; one
+    // that came back short would call every framework mention invented.
+    expect(count($resolvable))->toBeGreaterThan(
+        1500,
+        'The class vocabulary came back short, so a mention of a real class would read as invented.'
+    );
+    expect(count($pages))->toBeGreaterThan(
+        50,
+        'The .docs walk opened almost no page, so no prose was read at all.'
+    );
 
     $hits = [];
 
@@ -234,4 +262,32 @@ it('counts an inherited member as present', function (): void {
     expect($classes)->toHaveKey('User');
     expect(FirstPartySymbols::hasMember($classes['User'], 'save'))->toBeTrue();
     expect(FirstPartySymbols::hasMember($classes['User'], 'thisIsNotAMethodAnywhere'))->toBeFalse();
+});
+
+// A pin nothing reaches any more is a claim about the pages that stopped being
+// true, and it would otherwise sit here excusing a name nobody writes.
+it('keeps no by-design pin the pages no longer name', function (): void {
+    $named = [];
+
+    foreach (docsSymbolsPages() as $page) {
+        $prose = docsSymbolsProse((string) file_get_contents($page));
+
+        foreach (PatternScan::split('/\R/', $prose) as $line) {
+            foreach (docsSymbolsMentions($line) as [$class]) {
+                $named[$class] = true;
+            }
+        }
+    }
+
+    $reached = array_values(array_filter(
+        DOCS_SYMBOLS_NAMING_NO_CLASS_BY_DESIGN,
+        static fn (string $allowed): bool => isset($named[$allowed]),
+    ));
+
+    expect($reached)->toBe(DOCS_SYMBOLS_NAMING_NO_CLASS_BY_DESIGN, implode("\n  ", [
+        'A name pinned as naming no class by design is no longer written on any page.',
+        'Delete the entry rather than leave a waiver standing for a mention nobody',
+        'makes: the next class genuinely spelled that way would be waved straight',
+        'through by a list that reads as considered.',
+    ]));
 });

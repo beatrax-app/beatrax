@@ -6,23 +6,26 @@ use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
 use Tests\Contracts\Fixtures\Livewire\SyntheticUnreachableActionViolator;
 use Tests\Contracts\Support\WireCallableMethods;
 
+// An entry is justified only when the method must stay public AND must stay
+// callerless. "Nothing calls it yet" is the defect, not the excuse. Held to a
+// method that would otherwise be reported, below, so an entry that stops
+// excusing anything is deleted rather than left reading as considered.
+/** @var array<class-string, list<string>> */
+const UNREACHABLE_WIRE_ACTION_ALLOW_LIST = [
+    SharedListSettingsPanel::class => [
+        // The disabled checkbox is only the user-facing speed bump; this
+        // no-op is what stops a forged Livewire call writing the column,
+        // so its having no caller is the whole point of it.
+        'toggleUpdateOnAppUpdates',
+    ],
+];
+
 /**
+ * @param  array<class-string, list<string>>  $allowList
  * @return list<string>
  */
-function unreachableWireActions(): array
+function unreachableWireActions(array $allowList): array
 {
-    // An entry is justified only when the method must stay public AND must
-    // stay callerless. "Nothing calls it yet" is the defect, not the excuse.
-    /** @var array<class-string, list<string>> $allowList */
-    $allowList = [
-        SharedListSettingsPanel::class => [
-            // The disabled checkbox is only the user-facing speed bump; this
-            // no-op is what stops a forged Livewire call writing the column,
-            // so its having no caller is the whole point of it.
-            'toggleUpdateOnAppUpdates',
-        ],
-    ];
-
     $reachable = WireCallableMethods::namesTemplatesCanReach() + WireCallableMethods::namesProductionPhpReaches();
 
     $offenders = [];
@@ -50,11 +53,43 @@ function unreachableWireActions(): array
     return $offenders;
 }
 
+// Three denominators, because the verdict below is a list that is empty over a
+// clean tree and empty over a walk that resolved no component, reflected no
+// method, or read no caller. The floors sit far under today's 157 components
+// and the names two walks find between them.
+it('reads the component tree, the methods on it, and the callers of them', function (): void {
+    expect(count(WireCallableMethods::components()))->toBeGreaterThan(
+        50,
+        'the walk resolved '.count(WireCallableMethods::components()).' Livewire components, which is too few to be this tree.'
+    );
+
+    $invokable = 0;
+
+    foreach (WireCallableMethods::components() as $component) {
+        $invokable += count(WireCallableMethods::invokableOn($component));
+    }
+
+    expect($invokable)->toBeGreaterThan(
+        100,
+        'reflection found '.$invokable.' invokable methods across every component, which is too few to be this tree.'
+    );
+
+    expect(count(WireCallableMethods::namesTemplatesCanReach()))->toBeGreaterThan(
+        100,
+        'the template walk found no method name a control reaches, so every method reads as unreachable.'
+    );
+
+    expect(count(WireCallableMethods::namesProductionPhpReaches()))->toBeGreaterThan(
+        100,
+        'the PHP walk found no method name a caller reaches, so every method reads as unreachable.'
+    );
+});
+
 /**
  * @link ../../.docs/conventions/a-public-livewire-method-is-a-public-endpoint.md
  */
 it('leaves no public Livewire method the UI cannot reach', function (): void {
-    $offenders = unreachableWireActions();
+    $offenders = unreachableWireActions(UNREACHABLE_WIRE_ACTION_ALLOW_LIST);
 
     expect($offenders)->toBe([], sprintf(
         "Livewire dispatches by method name, so a public method no control reaches is both a feature\n".
@@ -64,12 +99,36 @@ it('leaves no public Livewire method the UI cannot reach', function (): void {
     ));
 });
 
+// An allow-list entry that excuses nothing reads as a decision and does
+// nothing, and the method it names has usually been wired or deleted since.
+it('still holds every allow-list entry to a method the scan would otherwise report', function (): void {
+    $unallowed = implode("\n", unreachableWireActions([]));
+
+    $dead = [];
+
+    foreach (UNREACHABLE_WIRE_ACTION_ALLOW_LIST as $component => $methods) {
+        foreach ($methods as $method) {
+            if (! str_contains($unallowed, $component.'::'.$method.'()')) {
+                $dead[] = $component.'::'.$method;
+            }
+        }
+    }
+
+    expect($dead)->toBe([], implode("\n", [
+        'These are allow-listed and the scan does not report them anyway — they are reached, or gone:',
+        ...$dead,
+        '',
+        'Delete the entry. An exemption whose subject has moved is the shape that lets the next one',
+        'through unread.',
+    ]));
+});
+
 // The scan is generous on purpose, and a guard that cries wolf is a guard
 // nobody reads. Each of these is reached by something that does not read like
 // a call, and every one of them was reported by a first draft of the scan.
 
 it('does not mistake a caller a grep cannot see for an absent one', function (): void {
-    $offenders = implode("\n", unreachableWireActions());
+    $offenders = implode("\n", unreachableWireActions(UNREACHABLE_WIRE_ACTION_ALLOW_LIST));
 
     $reachedAnyway = [
         // x-on:click="$wire.markRead()" on the row anchor.
@@ -88,8 +147,7 @@ it('does not mistake a caller a grep cannot see for an absent one', function ():
     ];
 
     foreach ($reachedAnyway as $reached) {
-        expect($offenders)->not->toContain(
-            $reached,
+        expect(str_contains($offenders, $reached))->toBeFalse(
             $reached.' IS reached, by something that does not read like a call. Reporting it is the scan being wrong.',
         );
     }

@@ -85,6 +85,10 @@ final class ColourPairs
         $pairs = [];
 
         foreach ($rules as $rule) {
+            // A `.dark .thing` rule is not a pair of its own: it is the night
+            // half of the `.thing` rule below, which is measured through it by
+            // darkOverrides(). Reading it twice reports the override's own
+            // partial declarations as a pairing no render produces.
             if ($rule['themes'] === [ThemeColour::DARK] && self::overridesABaseRule($rule['selector'])) {
                 continue;
             }

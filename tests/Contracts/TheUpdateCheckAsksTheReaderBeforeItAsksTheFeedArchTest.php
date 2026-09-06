@@ -81,24 +81,33 @@ function updateSwitchDesktopRoot(): string
         : base_path('..');
 }
 
-/** @return list<string> every Blade template in the module tree */
+/**
+ * Every Blade template a mount could be written in. resources/views is in the
+ * walk because the app layout mounts nine components of its own: read from the
+ * module tree alone, a screen mounted only from there answers "nothing mounts
+ * it" and the rule below reports a control the reader cannot reach when they
+ * can.
+ *
+ * @return list<string>
+ */
 function updateSwitchBladeFiles(): array
 {
     $blades = [];
 
-    $root = base_path('Modules');
+    foreach ([base_path('Modules'), base_path('resources')] as $root) {
+        if (! is_dir($root)) {
+            continue;
+        }
 
-    if (! is_dir($root)) {
-        return [];
-    }
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
+        ) as $file) {
+            $path = $file->getPathname();
 
-    foreach (new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
-    ) as $file) {
-        $path = $file->getPathname();
-
-        if ($file->isFile() && str_ends_with($path, '.blade.php')) {
-            $blades[] = $path;
+            if ($file->isFile() && str_ends_with($path, '.blade.php')) {
+                $blades[] = $path;
+            }
         }
     }
 
@@ -301,13 +310,21 @@ it('reads a planted caller and is not fooled by one that only mentions the seam'
         @unlink($mentioning);
     }
 
-    expect(str_contains($consultingCode, "'".UPDATE_SWITCH_FEED_KEY."'"))->toBeTrue();
-    expect(str_contains($mentioningCode, "'".UPDATE_SWITCH_FEED_KEY."'"))->toBeTrue();
+    expect(str_contains($consultingCode, "'".UPDATE_SWITCH_FEED_KEY."'"))->toBeTrue(
+        'the reader stopped finding the feed key in a file that composes the URL, so the rule above scans past every real caller.',
+    );
+    expect(str_contains($mentioningCode, "'".UPDATE_SWITCH_FEED_KEY."'"))->toBeTrue(
+        'the reader stopped finding the feed key in the file it is meant to catch, so the rule above cannot fail at all.',
+    );
 
     // The point of stripping comments: the second file names the seam in prose
     // and calls nothing, which is exactly the shape a laxer scan would clear.
-    expect(PatternScan::matches('/\bUpdateCheckPreference\b/', $mentioningCode))->toBeFalse();
-    expect(PatternScan::matches('/\bpreference->enabled\(\)/', $consultingCode))->toBeTrue();
+    expect(PatternScan::matches('/\bUpdateCheckPreference\b/', $mentioningCode))->toBeFalse(
+        'a file naming the seam only in a comment reads as consulting it, which clears the exact shape this rule exists for.',
+    );
+    expect(PatternScan::matches('/\bpreference->enabled\(\)/', $consultingCode))->toBeTrue(
+        'the comment strip took the code with it, so a file that really does consult the switch would be reported as one that does not.',
+    );
 });
 
 it('leaves no key in the update configuration that no runtime code reads', function (): void {

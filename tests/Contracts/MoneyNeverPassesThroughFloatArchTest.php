@@ -1,69 +1,72 @@
 <?php
 
 declare(strict_types=1);
+
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#money-formatted-through-a-float
  */
 
 // SCOPE. Banned: money reaching a float formatter, and a float landing in a
-// minor-unit-named variable. Out of scope: a CHART COORDINATE, which is a
-// pixel position rather than a money value — a y-axis needs a number, and the
-// loss sits orders of magnitude below display resolution.
-//
-// The sites relying on that boundary, so a reader can re-check it rather than
-// take it on trust. Every chart in the repo now reaches its coordinate through
-// Money::majorUnits(), which asks the money value object for the currency's own
-// scale instead of dividing by a hardcoded 100 — a JPY row was drawn at a
-// hundredth of itself beside an axis already labelled in yen:
-//   Modules/Ledger/Public/ValueObjects/Money.php (majorUnits)
-//   Modules/Reports/Internal/Support/ChartAmount.php
-//   Modules/Forecasting/Internal/Support/ForecastChartView.php
-//   Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php
-//   Modules/Recurring/Internal/Http/Livewire/RecurringSeriesDetailPage.php
-//
-// The boundary holds only while the float stays a coordinate. It does here:
-// every one of those charts renders its LABELS through the currency formatter
-// window.beatraxLocaliseChart() installs on the y-axis (resources/js/app.js) —
-// which ApexCharts also falls back to for tooltip values — and none of them
-// enables dataLabels, the one path that would print the raw number. A chart
-// that turns dataLabels on, or sets its own formatter, has left this scope.
+// minor-unit-named variable. Out of scope: a CHART COORDINATE, which is a pixel
+// position rather than a money value — a y-axis needs a number, and the loss
+// sits orders of magnitude below display resolution.
 
-/** @return list<string> repo-relative PHP and Blade files that ship */
+// The sites that boundary rests on, each with what earns it and a pattern
+// re-read against the file. It was a list in a comment for as long as the rule
+// existed: five paths and two conditions nothing re-checked, which is a claim
+// about the tree that goes quiet the day one of them moves.
+const FLOAT_MONEY_CHART_COORDINATE_SITES = [
+    'Modules/Ledger/Public/ValueObjects/Money.php' => [
+        'reason' => 'the seam itself: it asks the currency for its own scale instead of dividing by a hardcoded 100, which is what drew a JPY row at a hundredth of itself beside an axis already labelled in yen',
+        'proves' => 'majorUnits',
+    ],
+    'Modules/Reports/Internal/Support/ChartAmount.php' => [
+        'reason' => 'the reports coordinate, taken through the seam',
+        'proves' => 'majorUnits',
+    ],
+    'Modules/Forecasting/Internal/Support/ForecastChartView.php' => [
+        'reason' => 'the forecast coordinate, taken through the seam',
+        'proves' => 'majorUnits',
+    ],
+    'Modules/Forecasting/Resources/views/livewire/partials/aggregate-line-chart.blade.php' => [
+        'reason' => 'the aggregate line, taken through the seam',
+        'proves' => 'majorUnits',
+    ],
+    'Modules/Recurring/Internal/Http/Livewire/RecurringSeriesDetailPage.php' => [
+        'reason' => 'the series detail chart, taken through the seam',
+        'proves' => 'majorUnits',
+    ],
+    'resources/js/app.js' => [
+        'reason' => 'the other half of the boundary: every axis label, and the tooltip ApexCharts falls back to, renders through the currency formatter this installs rather than through the raw coordinate',
+        'proves' => 'beatraxLocaliseChart',
+    ],
+];
+
+// The one option that would print the coordinate itself. While every chart
+// leaves it off, the float above a chart never reaches a reader as a number.
+const FLOAT_MONEY_RAW_LABEL_PATTERN = '/[\'"]?dataLabels[\'"]?\s*(?:=>|:)\s*[\[{][^\]}]*[\'"]?enabled[\'"]?\s*(?:=>|:)\s*true/is';
+
+const FLOAT_MONEY_SUPPRESSED_LABEL_PATTERN = '/[\'"]?dataLabels[\'"]?\s*(?:=>|:)\s*[\[{][^\]}]*[\'"]?enabled[\'"]?\s*(?:=>|:)\s*false/is';
+
+/** @return list<string> absolute paths to the PHP and Blade that ships */
 function floatMoneyShippedFiles(): array
 {
-    $files = [];
+    return RepoTree::files(RepoTree::PRODUCTION_PHP);
+}
 
-    foreach (['Modules', 'app', 'resources'] as $root) {
-        $absolute = base_path($root);
-        if (! is_dir($absolute)) {
-            continue;
-        }
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($absolute, FilesystemIterator::SKIP_DOTS),
-        );
-
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            $path = $file->getPathname();
-            if ($file->isFile() && str_ends_with($path, '.php') && ! str_contains($path, '/tests/')) {
-                $files[] = str_replace(base_path().'/', '', $path);
-            }
-        }
-    }
-
-    sort($files);
-
-    return $files;
+function floatMoneyRelative(string $path): string
+{
+    return str_replace(RepoTree::root().'/', '', $path);
 }
 
 /** @return string the file's source with comments removed */
-function floatMoneySource(string $relativePath): string
+function floatMoneySource(string $path): string
 {
-    $source = (string) file_get_contents(base_path($relativePath));
+    $source = (string) file_get_contents($path);
 
     return preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $source) ?? $source;
 }
@@ -151,30 +154,96 @@ function floatMoneyTaintedNames(string $source): array
     return array_values(array_unique($tainted));
 }
 
-it('renders no money through a float formatter', function (): void {
+/** @return list<string> `line — formatter(args)` for each money value handed to a float formatter */
+function floatMoneyFormatterOffendersIn(string $source): array
+{
+    $tainted = floatMoneyTaintedNames($source);
     $offenders = [];
 
-    foreach (floatMoneyShippedFiles() as $file) {
-        $source = floatMoneySource($file);
-        $tainted = floatMoneyTaintedNames($source);
+    foreach (['number_format', 'formatCurrency'] as $formatter) {
+        foreach (floatMoneyCallsTo($source, $formatter) as $call) {
+            $divides = preg_match('#/\s*'.FLOAT_MONEY_DIVISOR.'\b#', $call['args']) === 1;
+            $namesMinor = stripos($call['args'], 'minor') !== false;
 
-        foreach (['number_format', 'formatCurrency'] as $formatter) {
-            foreach (floatMoneyCallsTo($source, $formatter) as $call) {
-                $divides = preg_match('#/\s*'.FLOAT_MONEY_DIVISOR.'\b#', $call['args']) === 1;
-                $namesMinor = stripos($call['args'], 'minor') !== false;
-
-                $carriesTaint = false;
-                foreach ($tainted as $name) {
-                    if (preg_match('/'.preg_quote($name, '/').'\b/', $call['args']) === 1) {
-                        $carriesTaint = true;
-                        break;
-                    }
-                }
-
-                if (($divides && $namesMinor) || $carriesTaint || $formatter === 'formatCurrency') {
-                    $offenders[] = $file.':'.$call['line'].' — '.$formatter.'('.trim(PatternScan::replace('/\s+/', ' ', $call['args'])).')';
+            $carriesTaint = false;
+            foreach ($tainted as $name) {
+                if (preg_match('/'.preg_quote($name, '/').'\b/', $call['args']) === 1) {
+                    $carriesTaint = true;
+                    break;
                 }
             }
+
+            if (($divides && $namesMinor) || $carriesTaint || $formatter === 'formatCurrency') {
+                $offenders[] = $call['line'].' — '.$formatter.'('.trim(PatternScan::replace('/\s+/', ' ', $call['args'])).')';
+            }
+        }
+    }
+
+    return $offenders;
+}
+
+/** @return list<string> `line — statement` for each minor-unit amount derived from a float */
+function floatMoneyMinorFromFloatOffendersIn(string $source): array
+{
+    // The clauses below look for where the result LANDS — a minor-unit name,
+    // or a return out of a float — so scaling a ratio into a percentage lands
+    // in neither and stays legible.
+    $rounds = '/\b(?:round|floor|ceil)\s*\(/';
+    $scales = '/\*\s*'.FLOAT_MONEY_DIVISOR.'\b/';
+    $intoMinor = '/\$\w*[Mm]inor\w*\s*=[^=]/';
+    $outOfFloat = '/\breturn\b[^;]*\(float\)/';
+
+    $offenders = [];
+
+    foreach (floatMoneyStatements($source) as [$text, $line]) {
+        if (preg_match($rounds, $text, $match, PREG_OFFSET_CAPTURE) !== 1 || preg_match($scales, $text) !== 1) {
+            continue;
+        }
+
+        if (preg_match($intoMinor, $text) === 1 || preg_match($outOfFloat, $text) === 1) {
+            $offset = (int) $match[0][1];
+            $offenders[] = ($line + substr_count($text, "\n", 0, $offset)).' — '.
+                trim(PatternScan::replace('/\s+/', ' ', substr($text, (int) strrpos(substr($text, 0, $offset), "\n"))));
+        }
+    }
+
+    return $offenders;
+}
+
+/** @return list<string> `line — text` for each typed amount cast to a float */
+function floatMoneyCastOffendersIn(string $source): array
+{
+    // (float) '1.234,56' is 1.234 in PHP. Every amount a user types can carry
+    // a thousands separator, so the cast is a silent hundredfold error.
+    $pattern = '/\(float\)\s*\(?\s*\$[\w>\-\[\]\'"()?\s]*?(?:amount|balance|total)/i';
+
+    $offenders = [];
+
+    foreach (explode("\n", $source) as $number => $line) {
+        if (preg_match($pattern, $line) === 1) {
+            $offenders[] = ($number + 1).' — '.trim($line);
+        }
+    }
+
+    return $offenders;
+}
+
+it('renders no money through a float formatter', function (): void {
+    // Every root that ships, from the one place a scope is declared. The walk
+    // opened Modules/, app/ and resources/, so a seeder or a route closure
+    // formatting an amount sat outside all three of these rules.
+    $files = floatMoneyShippedFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'RepoTree returned '.count($files).' shipped PHP files, which is too few to have read the tree.'
+    );
+
+    $offenders = [];
+
+    foreach ($files as $path) {
+        foreach (floatMoneyFormatterOffendersIn(floatMoneySource($path)) as $offender) {
+            $offenders[] = floatMoneyRelative($path).':'.$offender;
         }
     }
 
@@ -192,31 +261,26 @@ it('renders no money through a float formatter', function (): void {
 });
 
 it('derives no minor-unit amount from a float', function (): void {
+    $files = floatMoneyShippedFiles();
+    $statements = 0;
     $offenders = [];
 
-    // The clauses below look for where the result LANDS — a minor-unit name,
-    // or a return out of a float — so scaling a ratio into a percentage lands
-    // in neither and stays legible.
-    $rounds = '/\b(?:round|floor|ceil)\s*\(/';
-    $scales = '/\*\s*'.FLOAT_MONEY_DIVISOR.'\b/';
-    $intoMinor = '/\$\w*[Mm]inor\w*\s*=[^=]/';
-    $outOfFloat = '/\breturn\b[^;]*\(float\)/';
+    foreach ($files as $path) {
+        $source = floatMoneySource($path);
+        $statements += count(floatMoneyStatements($source));
 
-    foreach (floatMoneyShippedFiles() as $file) {
-        foreach (floatMoneyStatements(floatMoneySource($file)) as $statement) {
-            [$text, $line] = $statement;
-
-            if (preg_match($rounds, $text, $match, PREG_OFFSET_CAPTURE) !== 1 || preg_match($scales, $text) !== 1) {
-                continue;
-            }
-
-            if (preg_match($intoMinor, $text) === 1 || preg_match($outOfFloat, $text) === 1) {
-                $offset = (int) $match[0][1];
-                $offenders[] = $file.':'.($line + substr_count($text, "\n", 0, $offset)).' — '.
-                    trim(PatternScan::replace('/\s+/', ' ', substr($text, (int) strrpos(substr($text, 0, $offset), "\n"))));
-            }
+        foreach (floatMoneyMinorFromFloatOffendersIn($source) as $offender) {
+            $offenders[] = floatMoneyRelative($path).':'.$offender;
         }
     }
+
+    // Read before the verdict: this rule splits on `;` and drops any chunk over
+    // 400 characters, so a reader that stopped splitting would report a clean
+    // tree over nothing. The floor sits far under today's 65,166.
+    expect($statements)->toBeGreaterThan(
+        10000,
+        'the walk read '.$statements.' statements across '.count($files).' files, which is too few to be this tree.'
+    );
 
     sort($offenders);
 
@@ -230,21 +294,24 @@ it('derives no minor-unit amount from a float', function (): void {
 });
 
 it('casts no typed amount to a float', function (): void {
+    $files = floatMoneyShippedFiles();
+    $lines = 0;
     $offenders = [];
 
-    // (float) '1.234,56' is 1.234 in PHP. Every amount a user types can carry
-    // a thousands separator, so the cast is a silent hundredfold error.
-    $pattern = '/\(float\)\s*\(?\s*\$[\w>\-\[\]\'"()?\s]*?(?:amount|balance|total)/i';
+    foreach ($files as $path) {
+        $source = floatMoneySource($path);
+        $lines += substr_count($source, "\n") + 1;
 
-    foreach (floatMoneyShippedFiles() as $file) {
-        $source = floatMoneySource($file);
-
-        foreach (explode("\n", $source) as $number => $line) {
-            if (preg_match($pattern, $line) === 1) {
-                $offenders[] = $file.':'.($number + 1).' — '.trim($line);
-            }
+        foreach (floatMoneyCastOffendersIn($source) as $offender) {
+            $offenders[] = floatMoneyRelative($path).':'.$offender;
         }
     }
+
+    // The floor sits far under today's 410,240.
+    expect($lines)->toBeGreaterThan(
+        50000,
+        'the walk read '.$lines.' lines across '.count($files).' files, which is too few to be this tree.'
+    );
 
     sort($offenders);
 
@@ -255,6 +322,95 @@ it('casts no typed amount to a float', function (): void {
         "MoneyInput::tryToMinor(), which returns null rather than a guess.\n".
         "Offenders:\n  ".implode("\n  ", $offenders),
     );
+});
+
+it('still holds each chart-coordinate site to the seam that puts it outside these rules', function (): void {
+    $expired = [];
+
+    foreach (FLOAT_MONEY_CHART_COORDINATE_SITES as $relative => $pin) {
+        $path = RepoTree::root().'/'.$relative;
+
+        if (! is_file($path)) {
+            $expired[] = $relative.' is gone, and it was '.$pin['reason'];
+
+            continue;
+        }
+
+        if (! str_contains((string) file_get_contents($path), $pin['proves'])) {
+            $expired[] = $relative.' no longer holds "'.$pin['proves'].'", so it is no longer '.$pin['reason'];
+        }
+    }
+
+    expect($expired)->toBe([], implode("\n", [
+        'The chart-coordinate boundary rests on these, and one of them has stopped doing what put it',
+        'outside the three rules above:',
+        ...$expired,
+    ]));
+});
+
+// The boundary holds only while the float stays a coordinate. A chart that
+// turns dataLabels on prints the raw number beside the axis, and the loss that
+// sits below display resolution is suddenly on the screen as digits.
+it('lets no chart print the coordinate itself', function (): void {
+    $files = floatMoneyShippedFiles();
+    $suppressed = 0;
+    $offenders = [];
+
+    foreach ($files as $path) {
+        $source = (string) file_get_contents($path);
+
+        if (PatternScan::matches(FLOAT_MONEY_SUPPRESSED_LABEL_PATTERN, $source)) {
+            $suppressed++;
+        }
+
+        if (PatternScan::matches(FLOAT_MONEY_RAW_LABEL_PATTERN, $source)) {
+            $offenders[] = floatMoneyRelative($path);
+        }
+    }
+
+    // Read before the verdict: with no chart configuring dataLabels at all, an
+    // empty offender list says nothing about whether the reader can see one.
+    expect($suppressed)->toBeGreaterThan(
+        0,
+        'no chart in the tree switches dataLabels off, so this reader has never matched the shape it looks for.'
+    );
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These enable ApexCharts dataLabels, which prints the coordinate itself rather than the label',
+        'window.beatraxLocaliseChart() formats:',
+        ...$offenders,
+        '',
+        'A chart coordinate is allowed to be a float because no reader ever sees the number. Turning',
+        'the labels on ends that, and the amount belongs back on Money::ofMinor(...)->format().',
+    ]));
+});
+
+// All three rules above are lists that come back empty over a clean tree and
+// empty over a reader that stopped reading, so the readers are driven against
+// planted sources. Each near-miss is a shape the tree really carries: a chart
+// coordinate, a percentage scaled by 100, and a date cast.
+it('sees money reaching a float formatter, a float becoming cents, and an amount cast to one', function (): void {
+    expect(floatMoneyFormatterOffendersIn('<?php echo number_format($amountMinor / 100, 2);'))
+        ->toBe(['1 — number_format($amountMinor / 100, 2)'])
+        ->and(floatMoneyFormatterOffendersIn("<?php \$euros = \$amountMinor / 100;\necho number_format(\$euros, 2);"))
+        ->toBe(['2 — number_format($euros, 2)'])
+        ->and(floatMoneyFormatterOffendersIn('<?php echo formatCurrency($x);'))
+        ->toBe(['1 — formatCurrency($x)'])
+        ->and(floatMoneyFormatterOffendersIn('<?php $y = $money->majorUnits();'))->toBe([])
+        ->and(floatMoneyFormatterOffendersIn('<?php echo number_format($count, 0);'))->toBe([]);
+
+    expect(floatMoneyMinorFromFloatOffendersIn('<?php $amountMinor = (int) round($typed * 100);'))
+        ->toHaveCount(1)
+        ->and(floatMoneyMinorFromFloatOffendersIn('<?php $percent = round($ratio * 100, 1);'))->toBe([]);
+
+    expect(floatMoneyCastOffendersIn('<?php $v = (float) $row->amount;'))
+        ->toBe(['1 — <?php $v = (float) $row->amount;'])
+        ->and(floatMoneyCastOffendersIn('<?php $v = (float) $row->confidence;'))->toBe([])
+        ->and(floatMoneyCastOffendersIn('<?php $v = (int) $row->amount_minor;'))->toBe([]);
+
+    expect(PatternScan::matches(FLOAT_MONEY_RAW_LABEL_PATTERN, "'dataLabels' => ['enabled' => true],"))->toBeTrue()
+        ->and(PatternScan::matches(FLOAT_MONEY_RAW_LABEL_PATTERN, 'dataLabels: { enabled: true },'))->toBeTrue()
+        ->and(PatternScan::matches(FLOAT_MONEY_RAW_LABEL_PATTERN, "'dataLabels' => ['enabled' => false],"))->toBeFalse();
 });
 
 it('keeps MoneyInput a round trip', function (int $minor): void {

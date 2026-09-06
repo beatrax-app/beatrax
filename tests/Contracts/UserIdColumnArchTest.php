@@ -14,15 +14,16 @@ use Illuminate\Database\DatabaseManager;
 function userIdExemptTables(): array
 {
     return [
-        // Laravel's own plumbing. Queue, cache, session and migration state
-        // belong to the installation, not to a person in it.
+        // Laravel's own plumbing. Queue, cache and migration state belong to
+        // the installation, not to a person in it. `sessions` was listed here
+        // and did not belong: Laravel's own sessions table carries a user_id,
+        // so the entry excused nothing and read as a considered decision.
         'cache' => 'framework cache store',
         'cache_locks' => 'framework cache store',
         'failed_jobs' => 'framework queue state',
         'job_batches' => 'framework queue state',
         'jobs' => 'framework queue state',
         'migrations' => 'framework schema ledger',
-        'sessions' => 'framework session store',
         'password_reset_tokens' => 'keyed by e-mail before any account is proven',
 
         // The account table itself, and the reference data every account reads.
@@ -44,15 +45,12 @@ function userIdExemptTables(): array
         'relay_mailbox' => 'zero-knowledge relay: device_id routing only, never a user',
         'dev_mode_audit' => 'records what this machine did, not what an account did',
 
-        // Import scratch space, truncated per run and never synced. The run
-        // that owns them is identified by the import itself.
-        'migration_staging_accounts' => 'per-run import staging, never synced',
-        'migration_staging_budget_assignments' => 'per-run import staging, never synced',
-        'migration_staging_categories' => 'per-run import staging, never synced',
-        'migration_staging_goals' => 'per-run import staging, never synced',
-        'migration_staging_payees' => 'per-run import staging, never synced',
-        'migration_staging_transactions' => 'per-run import staging, never synced',
-        'migration_staging_unmapped_items' => 'per-run import staging, never synced',
+        // The seven `migration_staging_*` tables were listed here too, excused
+        // as per-run scratch space. Every one of them has carried a nullable
+        // user_id since the day it was created — six through `scopeColumns()`
+        // in the migration that creates them together, the goals table through
+        // its own — so the excuse covered nothing. The last rule below is what
+        // said so, and it is in this file because nothing said it before.
     ];
 }
 
@@ -111,7 +109,10 @@ it('gives every table the schema declares a user_id, or a stated reason it has n
     $schema = $db->connection()->getSchemaBuilder();
 
     $tables = userIdSchemaTables();
-    expect($tables)->not->toBeEmpty();
+
+    // Sixty-odd tables today. Floored far under: a schema read that answered
+    // nothing would report every table as carrying its owner.
+    expect(count($tables))->toBeGreaterThan(20, 'the schema read found almost no tables — the connection is wrong, not the schema.');
 
     $exempt = userIdExemptTables();
     $missing = [];
@@ -165,4 +166,34 @@ it('carries no exemption for a table the schema no longer has', function (): voi
         ->toBe([], 'Remove the exemption for a table that no longer exists:');
     expect(array_values(array_diff(userIdMustStayNullable(), $tables)))
         ->toBe([], 'Remove the nullable requirement for a table that no longer exists:');
+});
+
+it('carries no exemption for a table that grew a user_id after all', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $schema = $db->connection()->getSchemaBuilder();
+
+    $tables = userIdSchemaTables();
+    $excusingNothing = [];
+
+    foreach (userIdExemptTables() as $table => $reason) {
+        if (! in_array($table, $tables, true)) {
+            continue;
+        }
+
+        if (collect($schema->getColumns($table))->firstWhere('name', 'user_id') !== null) {
+            $excusingNothing[] = $table.' — excused as "'.$reason.'", and carries user_id';
+        }
+    }
+
+    // The other half of the staleness check above. A table that grew the column
+    // is no longer excused by anything; leaving the entry means the day it
+    // LOSES the column again, nothing says so. `sessions` sat here for exactly
+    // that reason: Laravel's own table has carried a user_id all along.
+    expect($excusingNothing)->toBe([], implode("\n  ", [
+        'These tables are exempted from needing a user_id and have one. The exemption excuses',
+        'nothing, and a reason nobody can trip reads as considered to every reader after it.',
+        'Delete the entry:',
+        ...$excusingNothing,
+    ]));
 });

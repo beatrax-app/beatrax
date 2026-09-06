@@ -158,9 +158,16 @@ it('keeps no pin the walk no longer reaches', function (): void {
 // The seam has to be reachable from every module, or a caller writes its own
 // sentence because the alternative was an import it could not make.
 it('keeps the stored-copy seam on the kernel every module already depends on', function (): void {
-    expect(is_file(base_path('Modules/Core/Public/Support/StoredCopy.php')))->toBeTrue();
-    expect(is_file(base_path('Modules/Core/Public/Support/CopyLine.php')))->toBeTrue();
-    expect(is_file(base_path('Modules/Core/Public/Support/CopyParam.php')))->toBeTrue();
+    $missing = array_values(array_filter(
+        ['StoredCopy', 'CopyLine', 'CopyParam'],
+        static fn (string $class): bool => ! is_file(base_path('Modules/Core/Public/Support/'.$class.'.php')),
+    ));
+
+    expect($missing)->toBe([], implode("\n  ", [
+        'The failure message above tells a contributor to reach for these, so a name it points at has to exist',
+        'or the rule is asking for something nobody can write:',
+        ...$missing,
+    ]));
 
     $storedCopy = (string) file_get_contents(base_path('Modules/Core/Public/Support/StoredCopy.php'));
 

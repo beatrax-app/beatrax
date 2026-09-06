@@ -149,13 +149,21 @@ function writesAStampedTable(array $tokens, array $tables): bool
 }
 
 /**
+ * The writer count is returned beside the offenders rather than counted in a
+ * pass of its own: it is the denominator the verdict is read off — a statement
+ * reader that stopped pairing a table name with its verb finds no writer at all
+ * and reports a tree that routes every stamp through the seam — and a second
+ * walk would tokenise six thousand files twice for one integer.
+ *
  * @param  list<string>  $paths
  * @param  list<string>  $tables
- * @return list<string> one relative path per writer that renders a stamp itself
+ * @return array{writers: int, offenders: list<string>} one relative path per
+ *                                                      writer that renders a stamp itself, and how many writers were read at all
  */
 function stampsWrittenPastTheSeam(array $paths, array $tables): array
 {
     $banned = localOffsetRenderings();
+    $writers = 0;
     $offenders = [];
 
     foreach ($paths as $path) {
@@ -164,6 +172,8 @@ function stampsWrittenPastTheSeam(array $paths, array $tables): array
         if (! writesAStampedTable($tokens, $tables)) {
             continue;
         }
+
+        $writers++;
 
         foreach ($tokens as $index => $token) {
             if (! is_array($token) || $token[0] !== T_STRING || ! in_array($token[1], $banned, true)) {
@@ -181,7 +191,7 @@ function stampsWrittenPastTheSeam(array $paths, array $tables): array
 
     sort($offenders);
 
-    return $offenders;
+    return ['writers' => $writers, 'offenders' => $offenders];
 }
 
 /**
@@ -199,11 +209,13 @@ function storedStampFormats(): array
 /**
  * @param  list<string>  $paths
  * @param  list<string>  $tables
- * @return list<string> one relative path per writer rendering its own stamp
+ * @return array{writers: int, offenders: list<string>} one relative path per
+ *                                                      writer rendering its own stamp, and how many writers were read at all
  */
 function appZoneStampsWrittenPastTheSeam(array $paths, array $tables): array
 {
     $stored = storedStampFormats();
+    $writers = 0;
     $offenders = [];
 
     foreach ($paths as $path) {
@@ -212,6 +224,8 @@ function appZoneStampsWrittenPastTheSeam(array $paths, array $tables): array
         if (! writesAStampedTable($tokens, $tables)) {
             continue;
         }
+
+        $writers++;
 
         foreach ($tokens as $index => $token) {
             if (! is_array($token) || $token[0] !== T_STRING || $token[1] !== 'format') {
@@ -233,24 +247,38 @@ function appZoneStampsWrittenPastTheSeam(array $paths, array $tables): array
 
     sort($offenders);
 
-    return array_values(array_unique($offenders));
+    return ['writers' => $writers, 'offenders' => array_values(array_unique($offenders))];
 }
 
 it('finds the tables whose timestamps the schema stores as text, and those it stores as DATETIME', function (): void {
     $text = stringStampedTables();
+    $appZone = appZoneStampedTables();
 
-    expect($text)->toContain('device_registry');
-    expect($text)->toContain('pairing_tokens');
-    expect($text)->toContain('relay_mailbox');
+    // Named rather than counted: a schema read that lost a storage class would
+    // still return tables, and the count it reported would look healthy.
+    $missing = [];
+
+    foreach (['device_registry', 'pairing_tokens', 'relay_mailbox'] as $table) {
+        if (! in_array($table, $text, true)) {
+            $missing[] = $table.' is no longer read as storing its timestamps as TEXT';
+        }
+    }
 
     // The three tables carrying internal_date. None of them ends in _at, which
     // is exactly why the original selector could not see them.
-    $appZone = appZoneStampedTables();
+    foreach (['inbox_messages', 'file_imports', 'discovered_senders'] as $table) {
+        if (! in_array($table, $appZone, true)) {
+            $missing[] = $table.' is no longer read as storing its timestamps as DATETIME';
+        }
+    }
 
-    expect($appZone)->toContain('inbox_messages');
-    expect($appZone)->toContain('file_imports');
-    expect($appZone)->toContain('discovered_senders');
-    expect(array_intersect($text, $appZone))->toBe([]);
+    expect($missing)->toBe([], "The schema read no longer finds the tables the two rules below are written around:\n  ".implode("\n  ", $missing));
+
+    expect(array_intersect($text, $appZone))->toBe(
+        [],
+        'A table was read as storing timestamps in BOTH storage classes, so one of the two rules '
+        .'below is being applied to a column the other one owns.',
+    );
 });
 
 it('sees a stamp column the schema grows, in either storage class and under any of the suffixes', function (): void {
@@ -287,26 +315,41 @@ it('sees a stamp column the schema grows, in either storage class and under any 
         $schema->drop('unstamped_probe');
     }
 
-    expect($text)->toContain('text_stamp_probe');
-    expect($text)->toContain('text_dated_probe');
-    expect($text)->not->toContain('datetime_stamp_probe');
-    expect($appZone)->toContain('datetime_stamp_probe');
-    expect($appZone)->not->toContain('text_stamp_probe');
-    expect($text)->not->toContain('unstamped_probe');
-    expect($appZone)->not->toContain('unstamped_probe');
+    $wrong = [];
+
+    foreach ([
+        'text_stamp_probe read as TEXT-stamped' => in_array('text_stamp_probe', $text, true),
+        'text_dated_probe read as TEXT-stamped under _date' => in_array('text_dated_probe', $text, true),
+        'datetime_stamp_probe kept out of the TEXT set' => ! in_array('datetime_stamp_probe', $text, true),
+        'datetime_stamp_probe read as DATETIME-stamped' => in_array('datetime_stamp_probe', $appZone, true),
+        'text_stamp_probe kept out of the DATETIME set' => ! in_array('text_stamp_probe', $appZone, true),
+        'unstamped_probe kept out of the TEXT set' => ! in_array('unstamped_probe', $text, true),
+        'unstamped_probe kept out of the DATETIME set' => ! in_array('unstamped_probe', $appZone, true),
+    ] as $expectation => $held) {
+        if (! $held) {
+            $wrong[] = $expectation;
+        }
+    }
+
+    expect($wrong)->toBe([], "The schema reader no longer separates the two storage classes:\n  ".implode("\n  ", $wrong));
 });
 
 it('stamps every text timestamp column through the seam', function (): void {
     $files = BackendSourceFiles::all();
-    expect($files)->not->toBeEmpty();
+    $tables = stringStampedTables();
+
+    expect(count($files))->toBeGreaterThan(2000, 'the backend walk read almost nothing — the roots are wrong, not the tree.');
+
+    $scan = stampsWrittenPastTheSeam($files, $tables);
+
+    // Twelve writers today, over the tables the live schema declares.
+    expect($scan['writers'])->toBeGreaterThan(3, 'nothing anywhere was read as writing a TEXT-stamped table, so the verdict below is read off a scan that found no writers.');
 
     // Empty, and it shrinks only. The two Modules\Mobile writers that sat here
     // were pinned because ZuluTimestamp lived in Modules\Sync\Internal, which
     // Mobile may not import; the seam is Modules\Core\Public now, so they went.
-    $pinned = [];
-
-    expect(stampsWrittenPastTheSeam($files, stringStampedTables()))->toBe(
-        $pinned,
+    expect($scan['offenders'])->toBe(
+        [],
         "A timestamp stored as TEXT is sorted and ranged as a string, so a local\n".
         "offset sorts by its own hour digits against a Zulu sibling and the column\n".
         "silently reorders. Instant::zulu() converts and asserts in one call\n".
@@ -316,18 +359,21 @@ it('stamps every text timestamp column through the seam', function (): void {
 
 it('writes every DATETIME column in the frame it is read back in', function (): void {
     $files = BackendSourceFiles::all();
-    expect($files)->not->toBeEmpty();
+    $tables = appZoneStampedTables();
 
-    // Shrinks only. Each entry is a writer rendering its own stored stamp,
-    // with the reason it was not routed through Instant::appLocal().
-    $pinned = [
-        // Not a stored stamp: the Y-m-d is rendered back out of a parsed
-        // user-typed string and compared against that string, which is how a
-        // date like 2026-02-31 is rejected rather than rolled into March.
-    ];
+    expect(count($files))->toBeGreaterThan(2000, 'the backend walk read almost nothing — the roots are wrong, not the tree.');
 
-    expect(appZoneStampsWrittenPastTheSeam($files, appZoneStampedTables()))->toBe(
-        $pinned,
+    $scan = appZoneStampsWrittenPastTheSeam($files, $tables);
+
+    // Seven writers today, over the tables the live schema declares.
+    expect($scan['writers'])->toBeGreaterThan(2, 'nothing anywhere was read as writing a DATETIME-stamped table, so the verdict below is read off a scan that found no writers.');
+
+    // No pins. The reason that used to sit here — a Y-m-d rendered back out of
+    // a parsed user-typed string, which is a validation and not a stored stamp
+    // — named no entry, and a written reason with nothing under it reads as an
+    // exemption somebody granted.
+    expect($scan['offenders'])->toBe(
+        [],
         "A DATETIME column is read back with CarbonImmutable::parse or a datetime\n".
         "cast, both of which apply the app's offset. A writer that formats a\n".
         "foreign instant itself stores the SENDER's wall clock under that reading:\n".
@@ -379,16 +425,23 @@ it('sees a foreign instant stored without moving it into the app zone', function
         PHP);
 
     try {
-        $found = appZoneStampsWrittenPastTheSeam([$planted, $clean, $display], ['inbox_messages']);
+        $scan = appZoneStampsWrittenPastTheSeam([$planted, $clean, $display], ['inbox_messages']);
     } finally {
         @unlink($planted);
         @unlink($clean);
         @unlink($display);
     }
 
-    $names = array_map(static fn (string $path): string => basename($path), $found);
+    expect($scan['writers'])->toBe(3, 'All three planted files write inbox_messages; the reader saw a different number of writers.');
 
-    expect($names)->toBe([basename($planted)]);
+    $names = array_map(static fn (string $path): string => basename($path), $scan['offenders']);
+
+    expect($names)->toBe(
+        [basename($planted)],
+        'The reader must flag only the file that formats a foreign instant itself. The one routing '
+        .'through Instant::appLocal() and the one formatting a display label beside an unrelated '
+        .'write are both correct, and flagging either turns this rule into noise.',
+    );
 });
 
 it('sees a stamp a writer rendered itself', function (): void {
@@ -450,7 +503,7 @@ it('sees a stamp a writer rendered itself', function (): void {
         PHP);
 
     try {
-        $found = stampsWrittenPastTheSeam([$planted, $chained, $clean, $unrelated], ['device_registry']);
+        $scan = stampsWrittenPastTheSeam([$planted, $chained, $clean, $unrelated], ['device_registry']);
     } finally {
         @unlink($planted);
         @unlink($chained);
@@ -458,9 +511,15 @@ it('sees a stamp a writer rendered itself', function (): void {
         @unlink($unrelated);
     }
 
-    $names = array_map(static fn (string $path): string => basename($path), $found);
+    // Three of the four write device_registry; the fourth writes transactions.
+    expect($scan['writers'])->toBe(3, 'The reader counted a different number of device_registry writers than the three planted here.');
 
-    expect($names)->toHaveCount(2);
-    expect($names)->toContain(basename($chained));
-    expect($names)->toContain(basename($planted));
+    $names = array_map(static fn (string $path): string => basename($path), $scan['offenders']);
+
+    expect($names)->toHaveCount(
+        2,
+        'The reader must flag the direct write and the one whose verb sits three where() clauses '
+        .'below the table name, and must leave both the seam call and the unrelated table alone.',
+    );
+    expect($names)->toContain(basename($chained))->toContain(basename($planted));
 });

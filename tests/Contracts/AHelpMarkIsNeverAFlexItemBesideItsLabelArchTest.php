@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\RepoTree;
 
 // The mark is lifted onto the cap height of the text beside it by an offset
 // written in that text's own units, which only works while the mark and the
@@ -13,19 +14,37 @@ use Modules\Core\Public\Support\PatternScan;
 // 5.98px low beside a 28px heading, and on a heading that wrapped it was also
 // squeezed from 18px to 14.56px, because a flex item with no basis gives way.
 
-/** @return list<string> every blade that draws a help mark */
+// A mark whose parent is a component takes its type from that component's own
+// template, so the class list written at the call site is not what lays it out.
+// Each entry names why, and a `proves` pattern re-run against the template that
+// answers for the mark — a blanket "any x- parent" skip excused four sites and
+// checked one.
+const HELP_MARK_PARENT_PINS = [
+    'x-core::th' => [
+        'reason' => 'the column-header component, which declares one font-size for everything it draws',
+        'file' => 'Modules/Core/Resources/views/components/th.blade.php',
+        'proves' => '/\btext-(xs|sm|base|md|lg|xl)\b/',
+    ],
+    'x-slot:tip' => [
+        'reason' => 'the tip slot of x-core::page-heading, which moves the mark onto a block of its own beside the heading rather than laying it out here',
+        'file' => 'Modules/Core/Resources/views/components/page-heading.blade.php',
+        'proves' => '/heading-with-tip/',
+    ],
+];
+
+/**
+ * Every blade that draws a help mark. The roots come from RepoTree: the rule is
+ * about every view a reader is shown, and resources/ was outside the walk.
+ *
+ * @return list<string>
+ */
 function helpMarkBlades(): array
 {
     $files = [];
-    /** @var Iterator<SplFileInfo> $found */
-    $found = new RegexIterator(
-        new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules'))),
-        '/\.blade\.php$/',
-    );
-    foreach ($found as $file) {
-        $source = (string) file_get_contents($file->getPathname());
-        if (str_contains($source, '<x-core::help-tip')) {
-            $files[] = $file->getPathname();
+
+    foreach (RepoTree::files(RepoTree::EVERY_BLADE_VIEW) as $path) {
+        if (str_contains((string) file_get_contents($path), '<x-core::help-tip')) {
+            $files[] = $path;
         }
     }
 
@@ -36,7 +55,7 @@ function helpMarkBlades(): array
 // than by taking a window before it: the row that used to hold a mark opens
 // four tags above the one that used to be its parent.
 /** @return list<array{line: int, tag: string, class: string}> */
-function helpMarkParents(string $source): array
+function helpMarkParents(string $source, string $where): array
 {
     $source = PatternScan::replaceCallback(
         '~\{\{--.*?--\}\}~s',
@@ -59,7 +78,7 @@ function helpMarkParents(string $source): array
 
         if ($name === 'x-core::help-tip') {
             $parent = end($stack);
-            expect($parent)->not->toBeFalse('A help mark sits outside every element in '.$name.'.');
+            expect($parent)->not->toBeFalse($where.' writes a help mark outside every element, so nothing lays it out.');
 
             $parents[] = [
                 'line' => substr_count(substr($source, 0, $offset), "\n") + 1,
@@ -86,11 +105,20 @@ function helpMarkParents(string $source): array
 }
 
 it('never writes a help mark as a flex item beside the label it explains', function (): void {
+    $blades = helpMarkBlades();
+    $marks = 0;
     $offenders = [];
+    $pinned = [];
 
-    foreach (helpMarkBlades() as $path) {
-        foreach (helpMarkParents((string) file_get_contents($path)) as $parent) {
-            if (str_starts_with($parent['tag'], 'x-')) {
+    foreach ($blades as $path) {
+        $relative = str_replace(RepoTree::root().'/', '', $path);
+
+        foreach (helpMarkParents((string) file_get_contents($path), $relative) as $parent) {
+            $marks++;
+
+            if (array_key_exists($parent['tag'], HELP_MARK_PARENT_PINS)) {
+                $pinned[$parent['tag']] = true;
+
                 continue;
             }
 
@@ -98,23 +126,59 @@ it('never writes a help mark as a flex item beside the label it explains', funct
                 continue;
             }
 
-            $offenders[] = str_replace(base_path().'/', '', $path).':'.$parent['line']
+            $offenders[] = $relative.':'.$parent['line']
                 .' — <'.$parent['tag'].' class="'.$parent['class'].'">';
         }
     }
+
+    // Four templates draw five marks today. A walk that found none of them
+    // would report every mark as correctly placed.
+    expect($marks)->toBeGreaterThan(2, 'Read '.$marks.' help marks across '.count($blades).' templates, too few to have proved anything.');
 
     sort($offenders);
 
     expect($offenders)->toBe(
         [],
         "These marks are laid out by a row instead of by the line of text they explain:\n  ".implode("\n  ", $offenders)
+        ."\n\nA component parent is pinned in HELP_MARK_PARENT_PINS with the template that answers for the mark; "
+        .'a new one is pinned there or the mark moves out of the row.'
     );
+
+    $reached = array_keys($pinned);
+    $granted = array_keys(HELP_MARK_PARENT_PINS);
+    sort($reached);
+    sort($granted);
+
+    // A pinned parent nothing writes any more excuses nothing, and would sit
+    // here excusing whatever came to be written under that tag later.
+    expect($reached)->toBe($granted, 'A pinned help-mark parent is no longer reached by the walk that granted it: '
+        .implode(', ', array_diff($granted, $reached)));
 });
 
-// The two marks whose parent is a component take their type from it, so the
-// component has to carry one.
-it('gives the column header a size of its own, since the mark inside it inherits one', function (): void {
-    $th = (string) file_get_contents(base_path('Modules/Core/Resources/views/components/th.blade.php'));
+it('still holds each pinned parent to the template that answers for the mark inside it', function (): void {
+    foreach (HELP_MARK_PARENT_PINS as $tag => $pin) {
+        $source = (string) file_get_contents(base_path($pin['file']));
 
-    expect(PatternScan::matches('/\btext-(xs|sm|base|md|lg|xl)\b/', $th))->toBeTrue();
+        expect(PatternScan::matches($pin['proves'], $source))
+            ->toBeTrue($tag.' no longer reads as "'.$pin['reason'].'" in '.$pin['file']);
+    }
+});
+
+it('reads the element a mark is written inside, not the row that opened four tags above it', function (): void {
+    $nested = <<<'BLADE'
+        <div class="flex items-center gap-2">
+            <h2 class="text-lg">Label</h2>
+            <span class="text-sm">
+                <x-core::help-tip topic="x" />
+            </span>
+        </div>
+        BLADE;
+
+    expect(array_column(helpMarkParents($nested, 'a.blade.php'), 'tag'))
+        ->toBe(['span'], 'the parent is the element the mark sits inside, and the flex row four tags up is not it');
+
+    $flexed = '<div class="flex items-center"><x-core::help-tip topic="x" /></div>';
+
+    expect(helpMarkParents($flexed, 'a.blade.php'))
+        ->toBe([['line' => 1, 'tag' => 'div', 'class' => 'flex items-center']], 'the flex parent is the whole defect, with the class list the failure names');
 });

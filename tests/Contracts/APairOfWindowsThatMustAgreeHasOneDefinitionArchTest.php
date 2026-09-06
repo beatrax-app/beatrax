@@ -312,6 +312,24 @@ function windowRuleFiles(): array
 // Read off the source with comments stripped: the prose above several of these
 // sites names the very call it is explaining, and a walk that counted those
 // would report the explanation as the offence.
+function windowRuleStrippedSource(string $path): string
+{
+    $stripped = '';
+
+    foreach (token_get_all(BladePhpSource::forPath($path, (string) file_get_contents($path))) as $token) {
+        $stripped .= is_array($token)
+            ? (in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true) ? '' : $token[1])
+            : $token;
+    }
+
+    return $stripped;
+}
+
+function windowRuleCountsAMonthHorizon(string $source): bool
+{
+    return preg_match('/->startOfMonth\(\)->addMonths?\(/', $source) === 1;
+}
+
 /** @return array<string, list<string>> spelling => the relative paths that call it */
 function windowRuleCallSites(): array
 {
@@ -319,13 +337,7 @@ function windowRuleCallSites(): array
     $found = [];
 
     foreach (windowRuleFiles() as $path) {
-        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
-        $stripped = '';
-        foreach (token_get_all($source) as $token) {
-            $stripped .= is_array($token)
-                ? (in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true) ? '' : $token[1])
-                : $token;
-        }
+        $stripped = windowRuleStrippedSource($path);
 
         foreach ($spellings as $spelling) {
             if (str_contains($stripped, '->'.$spelling.'(')) {
@@ -337,14 +349,28 @@ function windowRuleCallSites(): array
     return $found;
 }
 
+// The two walks below read the same 6,471 files, and a walk that opened none of
+// them reports the same clean tree a walk that found nothing does.
+const WINDOW_RULE_FILE_FLOOR = 1_000;
+
+// A year from a 1st, plus the leap day and the days either side of it.
+const WINDOW_SWEEP_DAY_COUNT = 368;
+
+it('sweeps a whole year rather than a date somebody picked', function (): void {
+    expect(windowSweepDays())->toHaveCount(WINDOW_SWEEP_DAY_COUNT);
+});
+
 it('spells a calendar year and a week boundary in one place each (oneWindowDefinition)', function (): void {
     $callSites = windowRuleCallSites();
 
     // The walk ran and can see the definitions it is guarding. Without this a
     // stripped or renamed tree reports a clean sweep it never took.
-    expect(windowRuleFiles())->toHaveCount(count(windowRuleFiles()))
-        ->and(count(windowRuleFiles()))->toBeGreaterThan(1000)
-        ->and($callSites['startOfYear'] ?? [])->toContain('Modules/Ledger/Public/Services/CalendarSpan.php')
+    expect(count(windowRuleFiles()))->toBeGreaterThan(
+        WINDOW_RULE_FILE_FLOOR,
+        'The walk opened '.count(windowRuleFiles()).' files, so a clean answer here is a walk that read almost nothing.'
+    );
+
+    expect($callSites['startOfYear'] ?? [])->toContain('Modules/Ledger/Public/Services/CalendarSpan.php')
         ->and($callSites['startOfWeek'] ?? [])->toContain('Modules/Core/Public/Support/WeekStart.php');
 
     $exempt = windowRuleExemptions();
@@ -376,20 +402,20 @@ it('spells a calendar year and a week boundary in one place each (oneWindowDefin
 // derived from the supply instead, so nothing may count one again.
 it('counts no forward horizon in whole months (noMonthCountedHorizon)', function (): void {
     $offenders = [];
+    $walked = 0;
 
     foreach (windowRuleFiles() as $path) {
-        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
-        $stripped = '';
-        foreach (token_get_all($source) as $token) {
-            $stripped .= is_array($token)
-                ? (in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true) ? '' : $token[1])
-                : $token;
-        }
+        $walked++;
 
-        if (preg_match('/->startOfMonth\(\)->addMonths?\(/', $stripped) === 1) {
+        if (windowRuleCountsAMonthHorizon(windowRuleStrippedSource($path))) {
             $offenders[] = str_replace(base_path().'/', '', $path);
         }
     }
+
+    expect($walked)->toBeGreaterThan(
+        WINDOW_RULE_FILE_FLOOR,
+        'The walk opened '.$walked.' files, so a clean answer here is a walk that read almost nothing.'
+    );
 
     expect($offenders)->toBe([], implode("\n", [
         'A horizon stepped forward in whole months off the first of the month reached past',
@@ -415,4 +441,31 @@ it('carries no exemption for a site that no longer spells the rule (noStaleWindo
     }
 
     expect($stale)->toBe([], "An exemption that stops being true waves a real second copy through. Remove:\n  ".implode("\n  ", $stale));
+});
+
+// A guard that cannot go red says nothing, and the two readers above are each
+// read off one boolean. They are checked against the shapes they were written
+// for rather than against the tree.
+it('finds a month-counted horizon and leaves a derived reach alone', function (string $body, bool $counts): void {
+    expect(windowRuleCountsAMonthHorizon($body))->toBe($counts);
+})->with([
+    'months added to the first of the month' => ['$end = $now->startOfMonth()->addMonths(6);', true],
+    'the singular spelling' => ['$end = $now->startOfMonth()->addMonth();', true],
+    'a reach derived from the supply' => ['$end = CalendarGrid::endFor($window->ceilingMonth());', false],
+    'months added to something that is not a month start' => ['$end = $now->addMonths(6);', false],
+    'a month start with nothing after it' => ['$start = $now->startOfMonth();', false],
+]);
+
+it('reads past the prose that names the call it explains', function (): void {
+    $path = sys_get_temp_dir().'/window-rule-'.bin2hex(random_bytes(8)).'.php';
+
+    try {
+        file_put_contents($path, "<?php\n// this used to be \$now->startOfYear();\n\$year = CalendarSpan::year(\$now);\n");
+
+        expect(windowRuleStrippedSource($path))->not->toContain('->startOfYear(');
+    } finally {
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
 });

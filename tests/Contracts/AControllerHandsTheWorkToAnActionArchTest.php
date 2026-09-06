@@ -23,7 +23,10 @@ it('leaves no controller carrying work an action should own', function (): void 
     $files = ControllerShape::files();
 
     // A walk that stops reading finds no controller and reports a clean tree.
-    expect(count($files))->toBeGreaterThan(10);
+    expect(count($files))->toBeGreaterThan(
+        10,
+        'The walk found '.count($files).' controllers, which is too few to have read the tree at all.',
+    );
 
     $offenders = [];
 

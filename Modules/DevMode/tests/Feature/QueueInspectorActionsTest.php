@@ -217,7 +217,7 @@ it('enables the Queue sidebar item (drops nav-disabled when dev.queue is registe
 
     expect($matches[0])->not->toBeEmpty('Queue sidebar entry should render');
     foreach ($matches[1] as $classes) {
-        expect($classes)->not->toContain('nav-disabled', 'Queue sidebar entry should NOT have nav-disabled when dev.queue is registered');
+        expect(str_contains($classes, 'nav-disabled'))->toBeFalse('Queue sidebar entry should NOT have nav-disabled when dev.queue is registered');
     }
 });
 

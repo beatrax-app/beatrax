@@ -61,6 +61,9 @@ final class ControllerShape
                 continue;
             }
 
+            // The constructor is not one of the methods the count is about: it
+            // is where a controller declares what it depends on, and a class
+            // that takes one more collaborator has not taken on one more job.
             $methods = array_values(array_filter(
                 SonarClassShape::methods($tokens, $brackets, $type['open'], $type['close']),
                 static fn (array $method): bool => $method['name'] !== '__construct',

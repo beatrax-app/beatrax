@@ -14,6 +14,17 @@ use Tests\Helpers\ShellEventGraph;
 // them wrote session state anyway: the app-lock listener, whose lock nobody
 // could see, and the OS file-open intent, which was remembered nowhere.
 
+// The two the graph has to reach for the rule below to be reading anything: the
+// listener the file-open intent arrives at, and the holder it hands the fact to.
+/** @return list<class-string> */
+function shellSessionAnchors(): array
+{
+    return [
+        'Modules\\Desktop\\Internal\\Listeners\\HandleNativeOpenFile',
+        'Modules\\Desktop\\Internal\\Native\\FileOpenHandoff',
+    ];
+}
+
 it('reaches the shell-event listeners it is written to judge', function (): void {
     $reach = ShellEventGraph::reach();
 
@@ -21,8 +32,24 @@ it('reaches the shell-event listeners it is written to judge', function (): void
         'No listener matched. The binding syntax this scans for has changed, '.
         'and a guard that finds nothing reports nothing.',
     );
-    expect($reach)->toHaveKey('Modules\\Desktop\\Internal\\Listeners\\HandleNativeOpenFile');
-    expect($reach)->toHaveKey('Modules\\Desktop\\Internal\\Native\\FileOpenHandoff');
+
+    foreach (shellSessionAnchors() as $class) {
+        expect($reach)->toHaveKey($class);
+    }
+
+    // Reaching a name is half of it. The rule below opens each reached class and
+    // steps silently over one it cannot find on disk, so a graph that reached
+    // all of them and opened none reports the same clean tree a correct one does.
+    $unopenable = array_values(array_filter(
+        shellSessionAnchors(),
+        static fn (string $class): bool => ShellEventGraph::classFile($class) === null,
+    ));
+
+    expect($unopenable)->toBe(
+        [],
+        'The graph names these and the reader cannot open them, so their source is never read and the rule below '
+        ."reports them clean without looking:\n  ".implode("\n  ", $unopenable)
+    );
 });
 
 it('never hands a shell event to a closure, which no walk can follow', function (): void {
@@ -49,7 +76,11 @@ it('never hands a shell event to a closure, which no walk can follow', function 
     ])));
 });
 
-it('never lets a shell event reach session or auth state', function (): void {
+// Named symbols and the two bare helpers, which is what the rule can hold: a
+// window's session reached through some third symbol -- a package facade, a
+// contract nothing here imports -- is a shape this list cannot see, and the
+// wording says symbols rather than "any session or auth state" for that reason.
+it('never lets a shell event name a session or auth symbol', function (): void {
     $forbidden = [
         'Illuminate\\Contracts\\Session\\Session',
         'Illuminate\\Session\\',
@@ -63,6 +94,9 @@ it('never lets a shell event reach session or auth state', function (): void {
     $offences = [];
 
     foreach (ShellEventGraph::reach() as $class => $seed) {
+        // A name the graph reached that is not a first-party file on disk --
+        // a framework or package class pulled in by an import -- has no source
+        // here to read. The rule above holds the two anchors to being openable.
         $file = ShellEventGraph::classFile($class);
         if ($file === null) {
             continue;

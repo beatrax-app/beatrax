@@ -28,7 +28,6 @@ const DECLARATIONS_NO_AUTOLOADER_REACHES = [
     'app/PhpStan/Rules/Fixtures/BadPageLayoutFixture.php declares BadPageLayoutFixture' => 'the page-layout rule reads a Livewire full-page component, which is a module-private class by construction; PhpStanPageLayoutMacroTest analyses the file by path',
     'app/PhpStan/Rules/Fixtures/GoodBoundaryFixture.php declares GoodBoundaryFixture' => 'the clean half of the BoundaryRule pair, which has to sit in the same namespace as the offending half or it would prove the rule silent for the wrong reason',
     'app/PhpStan/Rules/Fixtures/GoodPageLayoutFixture.php declares GoodPageLayoutFixture' => 'the clean half of the page-layout pair, same reason',
-    'tests/Feature/InstallLaunchdCommandTest.php declares CaptureBootstrapInstallCommand' => 'the file is being edited by open PR #377, which moving the class would conflict with. This pin is temporary: it comes out with the move, and until then it fails the moment anyone else touches the declaration',
 ];
 
 it('walks the tree it is about to read a verdict off', function (): void {
@@ -145,5 +144,8 @@ it('holds every pin to a declaration that is still where it was pinned', functio
         ...$stale,
     ]));
 
-    expect(DECLARATIONS_NO_AUTOLOADER_REACHES)->not->toBeEmpty();
+    expect(DECLARATIONS_NO_AUTOLOADER_REACHES)->not->toBeEmpty(
+        'The pin table is empty, so the two cases above compare every declaration against nothing and the '
+        .'stale check has nothing to be stale.',
+    );
 });

@@ -192,7 +192,8 @@ module-boundary contract. Selected examples:
   through `InboxScanStateMachine` only. Same shape applies to
   `recurring_series.state`, `drift_alerts.state`, and `card_statements.state`.
 - **`noAuthFacadeOrHelper`** — the `Auth` facade and `auth()`/`session()`
-  helpers are forbidden across `Modules/*` outside an explicit allow-list.
+  helpers are forbidden across `Modules/*`, with no allow-list: the eight-file
+  one this carried had been converted file by file until it excused nothing.
   This enforces [ADR 0002](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0002-di-only-rule.md).
 - **`noFacadeCallsFromCoreConsoleCommands`** /
   **`noLaravelGlobalHelpersInCoreConsoleCommands`** — even the

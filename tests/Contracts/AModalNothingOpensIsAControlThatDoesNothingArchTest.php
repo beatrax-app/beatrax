@@ -72,10 +72,24 @@ function modalOpenPatterns(string $name): array
     ];
 }
 
+/** Whether one file opens the named modal, in any of the three ways this app has. */
+function modalSourceShowsModal(string $source, string $name): bool
+{
+    foreach (modalOpenPatterns($name) as $probe) {
+        if (preg_match($probe, $source) === 1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function moduleShowsModal(string $module, string $name): bool
 {
     // A name built at runtime ends in the separator its id is glued to; there
     // is no literal to match, so it is not something a static scan can answer.
+    // Two names are spelled that way today: oauth-client-wizard- and
+    // backfill-window-, so the exemption still excuses something.
     if (str_ends_with($name, '-')) {
         return true;
     }
@@ -86,10 +100,8 @@ function moduleShowsModal(string $module, string $name): bool
                 continue;
             }
 
-            foreach (modalOpenPatterns($name) as $probe) {
-                if (preg_match($probe, $contents) === 1) {
-                    return true;
-                }
+            if (modalSourceShowsModal($contents, $name)) {
+                return true;
             }
         }
     }
@@ -114,4 +126,28 @@ it('opens every modal it knows how to close', function (): void {
     }
 
     expect($unopenable)->toBe([], implode("\n  ", ['A modal with no way in is a control that does nothing:', ...$unopenable]));
+});
+
+it('reads each of the three ways a modal is opened, and reads a close as none of them', function (): void {
+    $dispatched = <<<'PHP'
+        $this->dispatch('modal-show', name: 'pot-form');
+        PHP;
+
+    $flux = <<<'JS'
+        $flux.modal('pot-form').show()
+        JS;
+
+    $sheet = <<<'BLADE'
+        <button x-on:click="$dispatch('open-sheet', { name: 'pot-form' })">Fund</button>
+        BLADE;
+
+    $closed = <<<'PHP'
+        $this->dispatch('modal-close', name: 'pot-form');
+        PHP;
+
+    expect(modalSourceShowsModal($dispatched, 'pot-form'))->toBeTrue('the component own modal-show is how most of them open');
+    expect(modalSourceShowsModal($flux, 'pot-form'))->toBeTrue('Flux own client-side show() is the second way');
+    expect(modalSourceShowsModal($sheet, 'pot-form'))->toBeTrue('the bottom sheet a phone gets instead is the third');
+    expect(modalSourceShowsModal($closed, 'pot-form'))->toBeFalse('closing a modal is the half that already exists; it is the opening this rule looks for');
+    expect(modalSourceShowsModal($dispatched, 'goal-form'))->toBeFalse('a name nothing shows is not answered by a neighbour that is shown');
 });

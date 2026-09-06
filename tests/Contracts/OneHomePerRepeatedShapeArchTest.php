@@ -17,14 +17,36 @@ const FLATTEN_TO_DAY_HOMES = [
     'Modules/Calendar/Internal/Services/CalendarGrid.php',
 ];
 
-it('flattens a parsed date to its day through SafeDate and nowhere else', function (): void {
+/** Both spellings of the same flatten, so reaching for SafeDate first does not hide one. */
+const FLATTEN_TO_DAY_SHAPES = [
+    '~parseOrNull\([^;]*\)\?->startOfDay\(\)~',
+    '~CarbonImmutable::parse\([^;]*?\)->startOfDay\(\)~',
+];
 
-    $shapes = [
-        '~parseOrNull\([^;]*\)\?->startOfDay\(\)~',
-        '~CarbonImmutable::parse\([^;]*?\)->startOfDay\(\)~',
-    ];
-
+/**
+ * @return list<string> "$label:$line  $hit" for every flatten the source writes
+ */
+function flattenToDayOffendersIn(string $source, string $label): array
+{
     $offenders = [];
+
+    foreach (FLATTEN_TO_DAY_SHAPES as $shape) {
+        foreach (PatternScan::allWithOffsets($shape, $source)[0] as [$hit, $offset]) {
+            $offenders[] = sprintf(
+                '%s:%d  %s',
+                $label,
+                substr_count(substr($source, 0, $offset), "\n") + 1,
+                trim($hit),
+            );
+        }
+    }
+
+    return $offenders;
+}
+
+it('flattens a parsed date to its day through SafeDate and nowhere else', function (): void {
+    $offenders = [];
+    $walked = 0;
 
     foreach ([base_path('Modules'), base_path('app')] as $root) {
         if (! is_dir($root)) {
@@ -43,27 +65,20 @@ it('flattens a parsed date to its day through SafeDate and nowhere else', functi
                 continue;
             }
 
+            $walked++;
+
             $relative = str_replace(base_path().'/', '', $path);
             if (in_array($relative, FLATTEN_TO_DAY_HOMES, true)) {
                 continue;
             }
 
-            $source = (string) file_get_contents($path);
-
-            foreach ($shapes as $shape) {
-                $matches = PatternScan::allWithOffsets($shape, $source);
-
-                foreach ($matches[0] as [$hit, $offset]) {
-                    $offenders[] = sprintf(
-                        '%s:%d  %s',
-                        $relative,
-                        substr_count(substr($source, 0, $offset), "\n") + 1,
-                        trim($hit),
-                    );
-                }
+            foreach (flattenToDayOffendersIn((string) file_get_contents($path), $relative) as $offender) {
+                $offenders[] = $offender;
             }
         }
     }
+
+    expect($walked)->toBeGreaterThan(2000, 'The walk read almost no PHP, so a clean answer below is the walk being broken rather than the tree being right.');
 
     expect($offenders)->toBe([], implode("\n", [
         'A date-only field flattened to its day is SafeDate::normalisedDayOrNull(),',
@@ -84,7 +99,10 @@ it('keeps every allowed flatten-to-day home present and still flattening', funct
 
             continue;
         }
-        if (preg_match('~CarbonImmutable::parse\([^;]*?\)->startOfDay\(\)~', (string) file_get_contents($path)) !== 1) {
+        // Re-proved through the detector the scan above drives, not through a
+        // second copy of one of its two patterns: a home that moved to the
+        // other spelling was still exempted and no longer re-checked.
+        if (flattenToDayOffendersIn((string) file_get_contents($path), $relative) === []) {
             $stale[] = $relative.'  (no longer flattens a parse to a day)';
         }
     }
@@ -96,8 +114,20 @@ it('keeps every allowed flatten-to-day home present and still flattening', funct
     ]));
 });
 
+it('reads both spellings of the flatten and leaves a guarded one alone', function (): void {
+    $bare = "<?php\n\$d = CarbonImmutable::parse(\$row['posted_at'])->startOfDay();\n";
+    $reaching = "<?php\n\$d = SafeDate::parseOrNull(\$row['posted_at'])?->startOfDay();\n";
+    // The near miss: the seam's own call, which flattens nothing here.
+    $guarded = "<?php\n\$d = SafeDate::normalisedDayOrNull(\$row['posted_at']);\n";
+
+    expect(flattenToDayOffendersIn($bare, 'v'))->toBe(["v:2  CarbonImmutable::parse(\$row['posted_at'])->startOfDay()"])
+        ->and(flattenToDayOffendersIn($reaching, 'v'))->toBe(["v:2  parseOrNull(\$row['posted_at'])?->startOfDay()"])
+        ->and(flattenToDayOffendersIn($guarded, 'v'))->toBe([]);
+});
+
 it('spells the snooze windows once, in the enum that owns them', function (): void {
     $offenders = [];
+    $walked = 0;
 
     foreach ([base_path('Modules'), base_path('app'), base_path('resources')] as $root) {
         if (! is_dir($root)) {
@@ -112,6 +142,8 @@ it('spells the snooze windows once, in the enum that owns them', function (): vo
             if (! $file->isFile() || ! PatternScan::matches('~\.(?:php|blade\.php)$~', $path)) {
                 continue;
             }
+            $walked++;
+
             if (str_ends_with($path, 'Public/Enums/SnoozeWindow.php')) {
                 continue;
             }
@@ -131,6 +163,8 @@ it('spells the snooze windows once, in the enum that owns them', function (): vo
         }
     }
 
+    expect($walked)->toBeGreaterThan(2000, 'The walk read almost nothing, so a clean answer below is the walk being broken rather than the tree being right.');
+
     expect($offenders)->toBe([], implode("\n", [
         'SnoozeWindow holds the three windows and their wire values. A comment',
         'that lists them again is a copy that goes stale the moment a fourth is',
@@ -145,6 +179,7 @@ it('spells the snooze windows once, in the enum that owns them', function (): vo
 // assertion that reaches for the constant proves nothing about the render.
 it('spells the brand title suffix once, in the class that owns it', function (): void {
     $offenders = [];
+    $walked = 0;
 
     foreach ([base_path('Modules'), base_path('app'), base_path('resources')] as $root) {
         if (! is_dir($root)) {
@@ -166,6 +201,8 @@ it('spells the brand title suffix once, in the class that owns it', function ():
                 continue;
             }
 
+            $walked++;
+
             $source = (string) file_get_contents($path);
             $matches = PatternScan::allWithOffsets('~ \xc2\xb7 Beatrax~', $source);
 
@@ -182,6 +219,8 @@ it('spells the brand title suffix once, in the class that owns it', function ():
             }
         }
     }
+
+    expect($walked)->toBeGreaterThan(2000, 'The walk read almost nothing, so a clean answer below is the walk being broken rather than the tree being right.');
 
     expect($offenders)->toBe([], implode("\n", [
         'Brand::TITLE_SUFFIX is the tail a titled page appends, and Brand::NAME',

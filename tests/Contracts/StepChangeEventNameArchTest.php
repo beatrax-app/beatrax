@@ -106,17 +106,30 @@ function stepChangeScannedFiles(): array
 
     sort($blades);
 
-    return [...BackendSourceFiles::all(), ...$blades];
+    // Uniqued because a `.blade.php` file ends in `.php`, so every template
+    // under Modules/ is already in the backend walk; without this, each one is
+    // read twice and every offender under Modules/ is named twice.
+    return array_values(array_unique([...BackendSourceFiles::all(), ...$blades]));
 }
 
 it('announces every step change under the one name the bundle listens for', function (): void {
     $files = stepChangeScannedFiles();
-    expect($files)->not->toBeEmpty();
 
-    expect(stepChangeNamesByAnotherSpelling($files))->toBe([], implode("\n", [
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'The walk returned '.count($files).' files, which is too few to have read the backend and the '
+        .'templates. Every verdict below is read off this list, so a walk that stopped reports a clean '
+        .'tree over code nobody opened.'
+    );
+
+    $offenders = stepChangeNamesByAnotherSpelling($files);
+
+    expect($offenders)->toBe([], implode("\n", [
         'A step change announced under any other name reaches no listener, and the only',
         'symptom is a screen that opens already scrolled — which reads as a layout bug',
         'anywhere except a device. Announce it through AnnouncesStepChanges. Offenders:',
+        '',
+        ...$offenders,
     ]));
 });
 
@@ -125,8 +138,15 @@ it('binds that exact name once, in the bundle rather than on a screen', function
     // something still moves the viewport when the name arrives.
     $bundle = (string) file_get_contents(base_path('resources/js/app.js'));
 
-    expect($bundle)->toContain("addEventListener('".STEP_CHANGED_EVENT_NAME."'")
-        ->and($bundle)->toContain('window.scrollTo({ top: 0 })');
+    expect(str_contains($bundle, "addEventListener('".STEP_CHANGED_EVENT_NAME."'"))->toBeTrue(
+        'Nothing in the bundle listens for the name the whole rule above pins, so every correctly '
+        .'spelled announcement reaches nobody and the rule is guarding a name with no reader.'
+    );
+
+    expect(str_contains($bundle, 'window.scrollTo({ top: 0 })'))->toBeTrue(
+        'The listener exists but moves nothing. The symptom of both halves is identical — a step that '
+        .'opens already scrolled — so the listener is asserted to do the one thing it is for.'
+    );
 });
 
 it('writes that name in exactly one place on the server side', function (): void {
@@ -139,7 +159,14 @@ it('writes that name in exactly one place on the server side', function (): void
     }
 
     // A second literal is how the pair drifts: one of them gets renamed.
-    expect($spelled)->toBe(['Modules/Core/Public/Http/Livewire/Concerns/AnnouncesStepChanges.php']);
+    expect($spelled)->toBe(
+        ['Modules/Core/Public/Http/Livewire/Concerns/AnnouncesStepChanges.php'],
+        "The server side writes '".STEP_CHANGED_EVENT_NAME."' in these places:\n  "
+        .implode("\n  ", $spelled)."\n"
+        .'It is pinned in both directions on purpose. A second literal is a second spelling waiting to '
+        .'be renamed on its own, and none at all means the concern that announces the change has stopped '
+        .'naming the event the bundle listens for.'
+    );
 });
 
 it('sees a step change announced under a near-miss name', function (): void {

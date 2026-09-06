@@ -100,11 +100,17 @@ it('names no envelope column for a figure the fold works out', function (): void
     $tables = envelopeStoredColumnsByTable();
     $columns = array_merge(...array_values($tables));
 
-    expect(count($columns))->toBeGreaterThan(20);
+    expect(count($columns))->toBeGreaterThan(
+        20,
+        'Read '.count($columns).' envelope columns, too few for an empty offender list to mean anything.',
+    );
 
-    expect(envelopeDerivedFigureColumns($tables))->toBe([], implode("\n", [
+    $offenders = envelopeDerivedFigureColumns($tables);
+
+    expect($offenders)->toBe([], implode("\n", [
         'These columns name a figure CarryoverQuery derives. Storing one makes the',
         'stored copy and the fold two answers to the same question. Offenders:',
+        ...$offenders,
     ]));
 });
 

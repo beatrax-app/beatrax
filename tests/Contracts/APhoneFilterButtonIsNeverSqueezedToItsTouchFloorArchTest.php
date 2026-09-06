@@ -45,14 +45,24 @@ it('never lets the filter button give up width', function (): void {
 // Tailwind's layered `hidden`, so the hide has to sit on a wrapper — the same
 // trap the desktop chip row beside it already documents.
 it('hides the phone button from a wrapper rather than from the button', function (): void {
-    $blade = (string) file_get_contents(
-        base_path('Modules/Ledger/Resources/views/livewire/partials/search-toolbar.blade.php'),
+    $toolbar = base_path('Modules/Ledger/Resources/views/livewire/partials/search-toolbar.blade.php');
+
+    expect(is_file($toolbar))->toBeTrue(
+        $toolbar.' is the template this rule is written about, and it is not there. A missing file reads as a '
+        .'toolbar drawing no button at all, which every assertion below would then be silent about.'
     );
+
+    $blade = (string) file_get_contents($toolbar);
 
     $matches = PatternScan::all('/class="([^"]*\bsrch-filters-btn\b[^"]*)"/', $blade);
 
-    expect($matches[1])->toHaveCount(1)
-        ->and($matches[1][0])->not->toContain('md:hidden');
+    expect($matches[1])->toHaveCount(
+        1,
+        'The toolbar draws '.count($matches[1]).' filter buttons. One is the shape this rule was measured on; a '
+        .'second is a copy the rule below says nothing about.'
+    );
+
+    expect($matches[1][0])->not->toContain('md:hidden');
 
     expect($blade)->toContain('class="md:hidden flex items-center gap-2 srch-phone-filters"');
 });

@@ -25,6 +25,11 @@ function headingWrapSelectors(): array
 it('lets a heading hyphenate before it falls back to breaking anywhere', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
+    expect(strlen($css))->toBeGreaterThan(
+        50000,
+        'The stylesheet read back '.strlen($css).' bytes, which is not the compiled sheet this rule measures.',
+    );
+
     [$reflowSelector, $headingSelector] = headingWrapSelectors();
     // The reflow rule is what stops a long word taking the page sideways;
     // hyphenation only chooses a better break within it.
@@ -46,6 +51,10 @@ it('does not hyphenate anything that prints a value', function (): void {
 
     [$reflowSelector, $headingSelector] = headingWrapSelectors();
     $reflow = CssRule::blockFor($css, $reflowSelector);
+
+    // Asserted before the refusal below it: an absent reflow rule reads back as
+    // the empty string, which contains no `hyphens` either.
+    expect($reflow)->not->toBe('', 'The reflow rule this one narrows is gone, so the refusal below checks nothing.');
 
     expect($reflow)->not->toContain('hyphens');
 

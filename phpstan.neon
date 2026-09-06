@@ -117,8 +117,8 @@ parameters:
         # The larastan-strict-rules `noFacadeRule` flags every
         # `Native\Desktop\Facades\X::y()` call individually; the message
         # shape is `Native\Desktop\Facades\<Facade> facade should not be
-        # used.` — a single regex covers all four facades the carve-out
-        # admits (Menu, Window, System, Notification, App).
+        # used.` — a single regex covers the six facades the carve-out
+        # admits (Menu, Window, System, Notification, App, ChildProcess).
         -
             message: '#Native\\Desktop\\Facades\\(Menu|Window|System|Notification|App|ChildProcess) facade should not be used\.#'
             paths:
@@ -126,7 +126,6 @@ parameters:
                 - Modules/Desktop/Internal/Native/AppMenuBuilder.php
                 - Modules/Desktop/Internal/Native/OsThemeProbe.php
                 - Modules/Desktop/Internal/Native/NativeBiometricUnlock.php
-                - Modules/Desktop/Internal/Native/DesktopKeyCustodian.php
                 - Modules/Desktop/Internal/Native/SyncListenerProcess.php
                 - Modules/Desktop/Internal/Native/RelayListenerProcess.php
                 - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
@@ -255,7 +254,7 @@ parameters:
         # should one). The crossing is confined to the Mobile module's own
         # sync-transport classes.
         -
-            message: '#Cross-module Internal/Models import forbidden: Mobile cannot use Modules\\Sync\\Internal\\(Config\\MergeRulesRegistry|Identity\\(DeviceIdentityDto|DeviceIdentityLoader|DeviceIdentityState)|Merge\\OpLogReplayer|Signing\\DeviceKeySigner|Transport\\(Frame\\TransportFramer|Noise\\(NoiseHandshakeState|NoiseSession)|PeerCatchUpExchanger|SyncSession|Relay\\(RelayClient|RelayConfig)))#'
+            message: '#Cross-module import forbidden: Mobile cannot use Modules\\Sync\\Internal\\(Config\\MergeRulesRegistry|Identity\\(DeviceIdentityDto|DeviceIdentityLoader|DeviceIdentityState)|Merge\\OpLogReplayer|Signing\\DeviceKeySigner|Transport\\(Frame\\TransportFramer|Noise\\(NoiseHandshakeState|NoiseSession)|PeerCatchUpExchanger|SyncSession|Relay\\(RelayClient|RelayConfig)))#'
             path: Modules/Mobile/Internal/Sync/*.php
             reportUnmatched: false
     allowedGlobalFunctions:

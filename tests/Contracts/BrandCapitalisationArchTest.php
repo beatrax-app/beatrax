@@ -25,19 +25,24 @@ function brandProsePattern(): string
 
 /**
  * Directory names that never hold hand-written prose: third-party code, build
- * output, caches, generated NativePHP scaffolding, snapshot baselines, and the
- * agent tooling under .claude (whose sketch sources are frozen pre-rename
- * mockups).
+ * output, caches, generated NativePHP scaffolding and snapshot baselines.
  *
  * @return list<string>
  */
 function brandSkippedDirectories(): array
 {
     return [
-        '.git', '.claude', '.phpstan-cache', '.phpunit.cache', '.playwright-mcp', 'vendor',
+        '.git', '.phpstan-cache', '.phpunit.cache', '.playwright-mcp', 'vendor',
         'node_modules', 'build', 'cache', 'storage', 'snapshots', 'nativephp',
     ];
 }
+
+// The whole of .claude used to be skipped for a reason that is true of one
+// directory inside it: the sketch sources are frozen HTML mockups captured
+// before the rename, and re-flipping them would rewrite a record of what was
+// shown rather than a page anybody reads. Everything else the agent tooling
+// carries is prose a contributor reads, so it is in scope.
+const BRAND_FROZEN_MOCKUPS = '.claude/skills/sketch-findings-beatrax/sources/';
 
 /**
  * Every prose-bearing file in the repository. .env templates, .properties,
@@ -50,6 +55,8 @@ function brandSkippedDirectories(): array
 function brandScannedFiles(): array
 {
     $extensions = ['.md', '.php', '.json', '.webmanifest', '.html', '.js', '.swift', '.kt', '.yml', '.yaml'];
+    // Two generated dependency manifests, and this file, which has to spell the
+    // lowercase form out in its own pattern and in its own dataset.
     $skippedNames = ['composer.lock', 'package-lock.json', basename(__FILE__)];
     $skipped = brandSkippedDirectories();
 
@@ -65,6 +72,9 @@ function brandScannedFiles(): array
         $path = $file->getPathname();
 
         if (! $file->isFile() || in_array($file->getFilename(), $skippedNames, true)) {
+            continue;
+        }
+        if (str_starts_with(str_replace(base_path().'/', '', $path), BRAND_FROZEN_MOCKUPS)) {
             continue;
         }
         foreach ($extensions as $extension) {
@@ -134,8 +144,15 @@ function brandProseLines(string $relative, string $contents): array
 
 it('writes the product name as "Beatrax" wherever it appears in prose', function (): void {
     $offenders = [];
+    $files = brandScannedFiles();
 
-    foreach (brandScannedFiles() as $path) {
+    // Ten thousand prose-bearing files stand behind the empty list below.
+    expect(count($files))->toBeGreaterThan(
+        3_000,
+        'The walk read almost nothing, so the empty offender list below is a tree nobody opened.',
+    );
+
+    foreach ($files as $path) {
         $relative = str_replace(base_path().'/', '', $path);
 
         foreach (brandProseLines($relative, (string) file_get_contents($path)) as $line) {
@@ -177,4 +194,30 @@ it('passes every identifier form and fails the prose forms', function (): void {
 
     expect(brandProseLines('sample.txt', $allowed))->toBe([])
         ->and(brandProseLines('sample.txt', $rejected))->toBe([1, 2, 3, 4, 5]);
+});
+
+// The one path-shaped exemption in this file, held to the reason it was granted
+// for: a frozen mockup that no longer spells the old brand needs no exemption,
+// and the prefix then covers whatever is written under it next.
+it('keeps the frozen-mockup exemption only while the mockups are still frozen', function (): void {
+    $frozen = glob(base_path(BRAND_FROZEN_MOCKUPS).'*/index.html') ?: [];
+
+    expect(count($frozen))->toBeGreaterThan(
+        1,
+        BRAND_FROZEN_MOCKUPS.' holds almost no captured mockup, so the exemption covers nothing.',
+    );
+
+    $stillLowercase = 0;
+
+    foreach ($frozen as $path) {
+        $relative = str_replace(base_path().'/', '', $path);
+        $stillLowercase += brandProseLines($relative, (string) file_get_contents($path)) === [] ? 0 : 1;
+    }
+
+    expect($stillLowercase)->toBeGreaterThan(
+        0,
+        'Every captured mockup now writes the brand the way the rule asks, so the exemption excuses '
+        .'nothing while standing ready to excuse the next capture. Delete BRAND_FROZEN_MOCKUPS and the '
+        .'skip beside it.',
+    );
 });

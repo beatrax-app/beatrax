@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Tests\Contracts\Support\RepoTree;
 
 // An imported statement is copied to a stable location so the ledger can point
 // at its source. Which location that is comes from the filesystem disk, and the
@@ -13,35 +14,26 @@ use Modules\Core\Public\Services\UserDataPathService;
 // storage_path() names the unpacked bundle -- the half an app update replaces.
 // The durable half is persisted_data/, which is what the path service answers.
 
-/** @return list<string> production files that resolve a filesystem disk by name */
+/** Whether the file resolves a filesystem disk by name, in either spelling. */
+function uploadedArtefactNamesADisk(string $source): bool
+{
+    return preg_match('/(?:Storage::disk|->disk)\s*\(/', $source) === 1;
+}
+
+/**
+ * The roots come from RepoTree rather than from app/ and Modules/: the rule
+ * says no caller anywhere has gone unaccounted for, and a disk named from
+ * routes/, config/ or scripts/ was outside the walk that stated it.
+ *
+ * @return list<string> production files that resolve a filesystem disk by name
+ */
 function uploadedArtefactDiskCallers(): array
 {
     $found = [];
 
-    foreach (['app', 'Modules'] as $directory) {
-        $root = base_path($directory);
-
-        if (! is_dir($root)) {
-            continue;
-        }
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
-        );
-
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            $path = $file->getPathname();
-
-            if (! $file->isFile() || ! str_ends_with($path, '.php') || str_contains($path, '/tests/')) {
-                continue;
-            }
-
-            $source = (string) file_get_contents($path);
-
-            if (preg_match('/(?:Storage::disk|->disk)\s*\(/', $source) === 1) {
-                $found[] = str_replace(base_path().'/', '', $path);
-            }
+    foreach (RepoTree::files(RepoTree::PRODUCTION_PHP) as $path) {
+        if (uploadedArtefactNamesADisk((string) file_get_contents($path))) {
+            $found[] = str_replace(RepoTree::root().'/', '', $path);
         }
     }
 
@@ -70,8 +62,12 @@ it('binds a root that a phone would otherwise resolve somewhere else', function 
     putenv('NATIVEPHP_STORAGE_PATH');
 
     try {
-        expect(UserDataPathService::isMobileRuntime())->toBeTrue()
-            ->and(UserDataPathService::appPath('private'))->not->toBe(storage_path('app/private'))
+        expect(UserDataPathService::isMobileRuntime())
+            ->toBeTrue('the mobile branch has to be reachable, or the two assertions below prove nothing about a phone')
+            ->and(UserDataPathService::appPath('private'))->not->toBe(
+                storage_path('app/private'),
+                'on a phone storage_path() names the unpacked bundle, which an app update replaces, so the two must not be the same directory',
+            )
             ->and(UserDataPathService::appPath('private'))->toContain('persisted_data');
     } finally {
         $platform === false ? putenv('NATIVEPHP_PLATFORM') : putenv('NATIVEPHP_PLATFORM='.$platform);
@@ -92,5 +88,24 @@ it('keeps the binding where the container can apply it before a disk resolves', 
 it('has no filesystem-disk caller that has not been accounted for', function (): void {
     $callers = uploadedArtefactDiskCallers();
 
-    expect($callers)->toBe(['Modules/Import/Public/Actions/RunImport.php']);
+    expect($callers)->toBe(['Modules/Import/Public/Actions/RunImport.php'], implode("\n  ", [
+        'One place in the product resolves a filesystem disk by name, and the binding above',
+        'is what decides where that disk is rooted. A second caller either inherits the same',
+        'root — in which case it belongs in this list, with the reader having checked that a',
+        'phone would put its file somewhere an app update does not replace — or names a disk',
+        'of its own, which this rule then says nothing about. Compared in both directions:',
+        'a caller that disappeared fails here as loudly as one that appeared.',
+        'Found: '.implode(', ', $callers),
+    ]));
+});
+
+it('reads a disk resolved by name in both spellings, and leaves a method that merely starts with one alone', function (): void {
+    expect(uploadedArtefactNamesADisk("<?php Storage::disk('local')->put(\$path, \$body);"))
+        ->toBeTrue('the facade spelling is one of the two ways a disk is named');
+
+    expect(uploadedArtefactNamesADisk('<?php $this->storage->disk(self::STORAGE_DISK);'))
+        ->toBeTrue('the injected-manager spelling is the one RunImport uses');
+
+    expect(uploadedArtefactNamesADisk('<?php $report->diskUsageInBytes();'))
+        ->toBeFalse('a method whose name merely starts with disk resolves nothing');
 });

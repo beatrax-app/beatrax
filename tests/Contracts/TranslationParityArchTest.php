@@ -149,9 +149,14 @@ function translationParitySourceFiles(): array
 
 it('ships every en translation key in every supported locale, per module lang file', function (): void {
     $enFiles = translationParitySourceFiles();
-    expect($enFiles)->not->toBeEmpty();
-    expect(translationParityTargetLocales())->not->toBeEmpty();
 
+    // 154 en files across 26 locales today, both floored far under. A glob that
+    // stopped matching, or an enum that stopped listing, empties every loop
+    // below it and reports parity over a comparison nobody made.
+    expect(count($enFiles))->toBeGreaterThan(50, 'the en lang glob matched almost nothing — the pattern is wrong, not the tree.');
+    expect(count(translationParityTargetLocales()))->toBeGreaterThan(5, 'the Locale enum lists almost no locales — parity is being asserted against nearly nothing.');
+
+    $compared = 0;
     $problems = [];
     foreach (translationParityTargetLocales() as $locale) {
         foreach ($enFiles as $enFile) {
@@ -172,6 +177,8 @@ it('ships every en translation key in every supported locale, per module lang fi
                 continue;
             }
 
+            $compared++;
+
             $enKeys = translationParityKeyPaths($en);
             $targetKeys = translationParityKeyPaths($translated);
             sort($enKeys);
@@ -187,6 +194,11 @@ it('ships every en translation key in every supported locale, per module lang fi
             }
         }
     }
+
+    // The denominator that matters: every file could be found and every pair
+    // still skipped for a missing counterpart, which is reported above — but a
+    // require that stopped returning arrays skips silently.
+    expect($compared)->toBeGreaterThan(500, 'almost no en/locale file pair was actually compared — the lang files stopped loading, not the translations.');
 
     expect($problems)->toBe([], "translation parity broken:\n  ".implode("\n  ", $problems));
 });
@@ -356,7 +368,12 @@ it('has no translation file without an en counterpart', function (): void {
         }
     }
 
-    expect($orphans)->toBe([]);
+    expect($orphans)->toBe([], implode("\n  ", [
+        'A translated file has no en counterpart, so nothing states what its keys are supposed to',
+        'say and the parity rule above compares it against nothing. Add the en file, or delete the',
+        'translation with the feature it belonged to. Orphans:',
+        ...$orphans,
+    ]));
 });
 
 it('declares every locale whose translation is finished', function (): void {
@@ -392,4 +409,96 @@ it('declares every locale whose translation is finished', function (): void {
         [],
         'complete but undeclared locales: '.implode(', ', $finishedButUndeclared)
     );
+});
+
+it('still holds each glued-unit exemption to the line that earned it', function (): void {
+    $stale = [];
+
+    foreach (TRANSLATION_PARITY_GLUED_UNIT_KEYS as $pin => $token) {
+        [$file, $path] = explode('|', $pin);
+
+        if (! is_file(base_path($file))) {
+            $stale[] = $pin.' — no such lang file';
+
+            continue;
+        }
+
+        $lines = translationParityStrings((array) require base_path($file));
+
+        if (! array_key_exists($path, $lines)) {
+            $stale[] = $pin.' — the key is gone from the en file';
+
+            continue;
+        }
+
+        if (! str_contains($lines[$path], $token)) {
+            $stale[] = $pin.' — the line no longer carries '.$token;
+
+            continue;
+        }
+
+        // The half a test can hold: the pin is only earned while the plain
+        // reader would give a different answer. Once the unit stops being
+        // glued on, the entry excuses nothing and the key should be read the
+        // way every other key is.
+        if (translationParityPlaceholders($lines[$path], null) === translationParityPlaceholders($lines[$path], $token)) {
+            $stale[] = $pin.' — the token is no longer glued to a suffix, so this entry excuses nothing';
+        }
+    }
+
+    expect($stale)->toBe([], implode("\n  ", [
+        'A glued-unit exemption has outlived the line it was granted for. Each entry says "read',
+        'this key for one token only", which is a narrowing of the placeholder rule, and a',
+        'narrowing whose reason has stopped being true is a hole. Repoint it or delete it:',
+        ...$stale,
+    ]));
+});
+
+it('reads a placeholder, a range, an amount and a plural count the way the rules above assume', function (): void {
+    $wrong = [];
+
+    // Placeholders: a set, formats included, and the glued reading narrowed to
+    // the one token the caller interpolates.
+    if (translationParityPlaceholders('Due in :count days, :count of :total', null) !== [':count', ':total']) {
+        $wrong[] = 'placeholders are no longer read as a deduplicated, sorted set';
+    }
+    if (translationParityPlaceholders('%s of %d done', null) !== ['%d', '%s']) {
+        $wrong[] = 'printf-style formats are no longer read as placeholders';
+    }
+    if (translationParityPlaceholders('retrying in :ns', ':n') !== [':n']) {
+        $wrong[] = 'a glued key no longer reads its one token, which is the whole of what the exemption buys';
+    }
+    if (translationParityPlaceholders('retrying in :ns', null) !== [':ns']) {
+        $wrong[] = 'the plain reader no longer swallows the unit suffix, so the glued exemptions excuse nothing';
+    }
+
+    // Ranges: an explicit {0} or [2,*] is matched before the rule table.
+    foreach (['{0} none', '[2,*] many', '{1}one'] as $segment) {
+        if (! translationParityCarriesRange($segment)) {
+            $wrong[] = 'a segment carrying an explicit range reads as carrying none: '.$segment;
+        }
+    }
+    foreach (['one thing', ' {not a range'] as $segment) {
+        if (translationParityCarriesRange($segment)) {
+            $wrong[] = 'a segment carrying no range reads as carrying one: '.$segment;
+        }
+    }
+
+    // Amounts: a numeral glued to a currency sign is a price, not a count.
+    if (translationParityWithoutAmounts('Balance dips below €0 on :count days') !== 'Balance dips below  on :count days') {
+        $wrong[] = 'an amount is no longer cut before the numeral scan, so €0 reads as a hard-coded count';
+    }
+    if (! str_contains(translationParityWithoutAmounts('1 payment of €5 due'), '1 payment')) {
+        $wrong[] = 'the amount cut now takes a leading numeral with it, so a hard-coded count would be missed';
+    }
+
+    // Plural forms, asked of Laravel's own rule table.
+    if (translationParityPluralForms('en') !== 2) {
+        $wrong[] = 'English is no longer read as needing two plural forms';
+    }
+    if (translationParityPluralForms('pl') <= 2) {
+        $wrong[] = 'Polish is no longer read as needing more forms than English, which is the case the rule exists for';
+    }
+
+    expect($wrong)->toBe([], "The readers the parity rules are built on answer differently now:\n  ".implode("\n  ", $wrong));
 });

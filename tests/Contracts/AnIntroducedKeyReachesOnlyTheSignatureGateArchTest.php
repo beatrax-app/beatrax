@@ -88,24 +88,28 @@ function introducedKeyStripped(string $relativePath): string
 // One method's source, ending at its own four-space closing brace rather than at
 // the next declaration: a body that ran on to the following method would pass a
 // scan for what it must not contain by borrowing the neighbour's text.
-function introducedKeyBodyOf(string $relativePath, string $method): string
+function introducedKeyBodyIn(string $source, string $method): string
 {
-    $stripped = introducedKeyStripped($relativePath);
-    $at = strpos($stripped, 'function '.$method.'(');
+    $at = strpos($source, 'function '.$method.'(');
 
     if ($at === false) {
         return '';
     }
 
-    $end = strpos($stripped, "\n    }\n", $at);
+    $end = strpos($source, "\n    }\n", $at);
 
-    return substr($stripped, $at, ($end === false ? strlen($stripped) : $end) - $at);
+    return substr($source, $at, ($end === false ? strlen($source) : $end) - $at);
+}
+
+function introducedKeyBodyOf(string $relativePath, string $method): string
+{
+    return introducedKeyBodyIn(introducedKeyStripped($relativePath), $method);
 }
 
 it('lets nothing but the registry and its own service read a relayed key', function (): void {
     $sources = introducedKeySources();
 
-    expect($sources)->not->toBeEmpty();
+    expect($sources)->not->toBeEmpty('The walk read no production file at all, so the reader list below would be empty whatever the tree holds.');
 
     $readers = [];
 
@@ -157,7 +161,8 @@ it('keeps the transport and epoch anchors reading the paired-only registry', fun
 it('offers a relayed identity no transport key to carry', function (): void {
     $migrations = (array) glob(base_path('Modules/Sync/Database/Migrations/*introduce*.php'));
 
-    expect($migrations)->toHaveCount(1);
+    expect($migrations)->toHaveCount(1, 'One migration declares the introductions table. Finding none means this rule read nothing; '
+        .'finding two means the shape is declared twice and the column check below covers one of them.');
 
     $source = (string) file_get_contents((string) $migrations[0]);
 
@@ -198,6 +203,32 @@ it('gives the courier device ids and no key to compose an identity from', functi
             .'introduction offer is built from into the one set that spans both doors, and a vouch composed '
             .'from it would be this device vouching on the strength of somebody else\'s vouch',
         );
+});
+
+it('reads one method body without borrowing the next one', function (): void {
+    $source = <<<'PHP'
+        final class PlantedRegistry
+        {
+            public function deviceKeys(): array
+            {
+                return $this->rows('device_registry');
+            }
+
+            public function authorIdsWithAKeyOnFile(): array
+            {
+                return $this->rows('device_introductions');
+            }
+        }
+        PHP;
+
+    expect(str_contains(introducedKeyBodyIn($source, 'deviceKeys'), 'device_introductions'))
+        ->toBeFalse('the anchored method is the paired-only one, and a body running on to its neighbour would read as introducing keys');
+
+    expect(str_contains(introducedKeyBodyIn($source, 'authorIdsWithAKeyOnFile'), 'device_introductions'))
+        ->toBeTrue('the courier set does read the introductions table, and a reader that found nothing would pass both halves');
+
+    expect(introducedKeyBodyIn($source, 'aMethodThatIsNotThere'))
+        ->toBe('', 'a method that is gone reads as an empty body, which every case above asserts against before reading it');
 });
 
 it('composes an introduction offer from the paired-only map alone', function (): void {

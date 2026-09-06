@@ -59,7 +59,13 @@ function bundleConfigFiles(): array
 }
 
 it('finds both shells to check, from whichever root is running', function (): void {
-    expect(array_keys(bundleConfigFiles()))->toEqualCanonicalizing(['desktop', 'mobile']);
+    $shells = array_keys(bundleConfigFiles());
+    sort($shells);
+
+    expect($shells)->toBe(
+        ['desktop', 'mobile'],
+        'A shell whose nativephp config this file cannot find is a shell every case below silently skips.',
+    );
 });
 
 // toContain takes needles, never a trailing explanation: a message passed
@@ -83,7 +89,29 @@ it('keeps durable user data out of every shipped bundle', function (): void {
 // its durable data. Pinning that the two still name the same place keeps the
 // exclusion honest rather than merely present.
 it('excludes the directory the path service actually resolves to', function (): void {
-    expect(UserDataPathService::appPath('sync'))->toEndWith('storage/app/sync');
+    expect(str_ends_with(UserDataPathService::appPath('sync'), 'storage/app/sync'))->toBeTrue(
+        'The exclusion above is the literal `storage/app`, so the path service moving is the exclusion silently '
+        .'stopping covering the durable data it names. It now resolves to '.UserDataPathService::appPath('sync'),
+    );
+});
+
+// The matcher is the whole of what decides which directory is examined at all,
+// so it is driven over both spellings the two packagers use and the near-misses
+// a prefix match would swallow.
+it('matches a top-level name the way both packagers do, and no more than that', function (): void {
+    expect(bundleExcludesEntry(['storage/app'], 'storage'))->toBeFalse(
+        'A pattern naming a subdirectory would excuse the whole tree above it, which is how storage/app shipped.',
+    );
+    expect(bundleExcludesEntry(['/nativephp'], 'nativephp'))->toBeTrue(
+        'rsync anchors a leading slash to the transfer root, so the anchored spelling still names the top-level entry.',
+    );
+    expect(bundleExcludesEntry(['nativephp'], 'nativephp'))->toBeTrue('The bare spelling names it at any depth.');
+    expect(bundleExcludesEntry(['*/tests'], 'tests'))->toBeFalse(
+        'A pattern requiring a parent segment does not name the top-level entry, and reading it as one would '
+        .'excuse a directory the packager still copies.',
+    );
+    expect(bundleExcludesEntry(['build'], 'build-secrets'))->toBeFalse('A prefix is not a name, and treating it as one excuses a neighbour.');
+    expect(bundleExcludesEntry([], 'anything'))->toBeFalse('An empty pattern list excuses nothing.');
 });
 
 /**
@@ -182,7 +210,7 @@ it('excludes every working directory whose contents are not in the repository', 
     $configs = bundleConfigFiles();
     $allowed = bundleDirectoriesAllowedThrough();
 
-    expect($roots)->toHaveCount(2);
+    expect($roots)->toHaveCount(2, 'One of the two shells was not found, so its whole tree went unexamined.');
 
     $shipping = [];
     $examined = 0;
@@ -209,7 +237,11 @@ it('excludes every working directory whose contents are not in the repository', 
 
     // A run that classified nothing would report a clean tree, which is the
     // answer a correctly excluded tree gives.
-    expect($examined)->toBeGreaterThan(0)
+    expect($examined)->toBeGreaterThan(
+        0,
+        'Every top-level directory of both shells was excluded or declared before anything was classified, so '
+        .'this rule read nothing.',
+    )
         ->and($shipping)->toBe([], implode("\n  ", array_merge(
             ['These directories hold no source and are copied into a shipped bundle.',
                 'Exclude them in that shell\'s cleanup_exclude_files, or declare why they belong:'],

@@ -110,3 +110,27 @@ it('dispatches synchronously only jobs whose failure a JobFailed listener can he
         implode("\n  ", $sites['offenders']),
     );
 });
+
+it('reads a job named at a dispatchSync call, and is not fooled by a comment', function (): void {
+    $source = <<<'PHP'
+        <?php
+        use Modules\Planted\Public\Jobs\PlantedJob;
+        final class PlantedCaller
+        {
+            public function run(): void
+            {
+                PlantedJob::dispatchSync(1);
+                dispatchSync(new PlantedOther);
+                // PlantedCommented::dispatchSync();
+            }
+        }
+        PHP;
+
+    expect(synchronouslyDispatchedJobs($source))->toBe(
+        ['Modules\Planted\Public\Jobs\PlantedJob', 'PlantedOther'],
+        'the resolved name is what the ShouldQueue check is made against, and an unresolvable one is kept verbatim so it reads as an offender',
+    );
+
+    expect(synchronouslyDispatchedJobs('<?php // Nothing::dispatchSync();'))
+        ->toBe([], 'a commented call dispatches nothing, and reading one would put a name nobody dispatches on the list');
+});

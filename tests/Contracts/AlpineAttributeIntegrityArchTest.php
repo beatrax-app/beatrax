@@ -49,36 +49,47 @@ function alpineAttributeBladeFiles(): array
 // than a class list or a URL.
 const ALPINE_SCRIPTING_ATTRIBUTES = ['x-data', 'x-init', 'x-effect'];
 
+/** @return list<string> every scripting attribute in one template that HTML does not deliver whole */
+function alpineAttributeFaults(string $where, string $source): array
+{
+    $faults = [];
+
+    foreach (ALPINE_SCRIPTING_ATTRIBUTES as $attribute) {
+        $offset = 0;
+
+        while (($start = strpos($source, $attribute.'="', $offset)) !== false) {
+            $valueStart = $start + strlen($attribute) + 2;
+            $valueEnd = strpos($source, '"', $valueStart);
+            $offset = $valueEnd === false ? $valueStart : $valueEnd + 1;
+
+            if ($valueEnd === false) {
+                $faults[] = $where.':'.alpineAttributeLine($source, $start).' — '.$attribute.' is never closed';
+
+                continue;
+            }
+
+            // The value HTML actually delivers, which is the only thing Alpine
+            // gets to parse.
+            $value = substr($source, $valueStart, $valueEnd - $valueStart);
+
+            if (alpineBraceBalance($value) !== 0) {
+                $faults[] = $where.':'.alpineAttributeLine($source, $start)
+                    .' — '.$attribute.' is cut short by a quote inside it, so HTML ends the attribute mid-expression';
+            }
+        }
+    }
+
+    return $faults;
+}
+
 it('closes every Alpine attribute where its author meant to close it', function (): void {
     $offenders = [];
 
     foreach (alpineAttributeBladeFiles() as $path) {
-        $source = (string) file_get_contents($path);
-
-        foreach (ALPINE_SCRIPTING_ATTRIBUTES as $attribute) {
-            $offset = 0;
-
-            while (($start = strpos($source, $attribute.'="', $offset)) !== false) {
-                $valueStart = $start + strlen($attribute) + 2;
-                $valueEnd = strpos($source, '"', $valueStart);
-                $offset = $valueEnd === false ? $valueStart : $valueEnd + 1;
-
-                if ($valueEnd === false) {
-                    $offenders[] = $path.':'.alpineAttributeLine($source, $start).' — '.$attribute.' is never closed';
-
-                    continue;
-                }
-
-                // The value HTML actually delivers, which is the only thing
-                // Alpine gets to parse.
-                $value = substr($source, $valueStart, $valueEnd - $valueStart);
-
-                if (alpineBraceBalance($value) !== 0) {
-                    $offenders[] = $path.':'.alpineAttributeLine($source, $start)
-                        .' — '.$attribute.' is cut short by a quote inside it, so HTML ends the attribute mid-expression';
-                }
-            }
-        }
+        $offenders = array_merge($offenders, alpineAttributeFaults(
+            str_replace(base_path().'/', '', $path),
+            (string) file_get_contents($path),
+        ));
     }
 
     expect($offenders)->toBe(
@@ -120,5 +131,26 @@ it('scans the Alpine attributes it claims to scan', function (): void {
         $seen += substr_count((string) file_get_contents($path), 'x-data="');
     }
 
-    expect($seen)->toBeGreaterThan(50);
+    expect($seen)->toBeGreaterThan(50, 'Read '.$seen.' x-data attributes, too few to have covered the product.');
+});
+
+it('reads an attribute a quote cuts short, and leaves a whole one alone', function (): void {
+    $cut = <<<'HTML'
+        <div x-data="{ open: false, label: 'a "quoted" phrase' }"></div>
+        HTML;
+
+    $whole = <<<'HTML'
+        <div x-data="{ open: false, label: 'a quoted phrase' }"></div>
+        HTML;
+
+    $unclosed = '<div x-data="{ open: false }>';
+
+    expect(alpineAttributeFaults('a.blade.php', $cut))
+        ->toHaveCount(1, 'a double quote inside the value ends the attribute, and the rest spills into the page as text');
+
+    expect(alpineAttributeFaults('a.blade.php', $whole))
+        ->toBe([], 'the expression HTML delivers whole is what every other template writes');
+
+    expect(alpineAttributeFaults('a.blade.php', $unclosed))
+        ->toHaveCount(1, 'an attribute with no closing quote at all is the same defect one step further on');
 });

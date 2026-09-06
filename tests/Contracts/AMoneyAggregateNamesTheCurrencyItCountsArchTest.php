@@ -45,6 +45,14 @@ const CROSS_CURRENCY_SUM_PINS = [
     ],
 ];
 
+// The three shapes a sum says which currency it counts in — a where, a GROUP BY,
+// or a select that buckets by the column — all spell that column as a quoted
+// literal. Reading the bare word anywhere in the enclosing function also
+// excused a `$currency` parameter that never reached the query; measured over
+// the tree, all thirty-seven sites the loose read excused name the column in
+// quotes, so nothing legitimate is lost by asking for the quotes.
+const MONEY_AGGREGATE_NAMES_A_CURRENCY_COLUMN = '/[\'"][^\'"]*currenc[^\'"]*[\'"]/i';
+
 /**
  * Every SUM in the tree, as "path::function" => the aggregate's source text.
  * A builder `->sum('col')` and a `SUM(...)` written into SQL are the same act.
@@ -56,41 +64,54 @@ function moneyAggregateSites(): array
     $sites = [];
 
     foreach (BackendSourceFiles::all() as $path) {
-        $relative = str_replace(base_path().'/', '', $path);
-        $tokens = BackendSourceFiles::codeTokens($path);
-        $functions = MoneySourceShape::functions($tokens);
-        $count = count($tokens);
+        $sites = array_merge($sites, moneyAggregateSitesIn(
+            str_replace(base_path().'/', '', $path),
+            BackendSourceFiles::codeTokens($path),
+        ));
+    }
 
-        for ($i = 0; $i < $count; $i++) {
-            $token = $tokens[$i];
-            if (! is_array($token)) {
-                continue;
-            }
+    return $sites;
+}
 
-            $isBuilderSum = $token[0] === T_STRING
-                && $token[1] === 'sum'
-                && moneyAggregateFollowsAnArrow($tokens, $i);
-            $isSqlSum = in_array($token[0], [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE], true)
-                && preg_match('/\bSUM\s*\(/i', $token[1]) === 1;
+/**
+ * @param  list<array{0:int,1:string,2:int}|string>  $tokens
+ * @return list<array{key: string, path: string, line: int, body: string}>
+ */
+function moneyAggregateSitesIn(string $relative, array $tokens): array
+{
+    $sites = [];
+    $functions = MoneySourceShape::functions($tokens);
+    $count = count($tokens);
 
-            if (! $isBuilderSum && ! $isSqlSum) {
-                continue;
-            }
-
-            // The named declaration, not the builder closure the sum sits in:
-            // the currency predicate is written a few lines above it, in the
-            // method a reader would open.
-            $enclosing = MoneySourceShape::enclosing($functions, $i);
-            $sites[] = [
-                'key' => $relative.'::'.MoneySourceShape::enclosingName($functions, $i),
-                'path' => $relative,
-                'line' => $token[2],
-                'body' => $enclosing['body'] ?? implode('', array_map(
-                    static fn (array|string $t): string => is_array($t) ? $t[1] : $t,
-                    $tokens,
-                )),
-            ];
+    for ($i = 0; $i < $count; $i++) {
+        $token = $tokens[$i];
+        if (! is_array($token)) {
+            continue;
         }
+
+        $isBuilderSum = $token[0] === T_STRING
+            && $token[1] === 'sum'
+            && moneyAggregateFollowsAnArrow($tokens, $i);
+        $isSqlSum = in_array($token[0], [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE], true)
+            && preg_match('/\bSUM\s*\(/i', $token[1]) === 1;
+
+        if (! $isBuilderSum && ! $isSqlSum) {
+            continue;
+        }
+
+        // The named declaration, not the builder closure the sum sits in:
+        // the currency predicate is written a few lines above it, in the
+        // method a reader would open.
+        $enclosing = MoneySourceShape::enclosing($functions, $i);
+        $sites[] = [
+            'key' => $relative.'::'.MoneySourceShape::enclosingName($functions, $i),
+            'path' => $relative,
+            'line' => $token[2],
+            'body' => $enclosing['body'] ?? implode('', array_map(
+                static fn (array|string $t): string => is_array($t) ? $t[1] : $t,
+                $tokens,
+            )),
+        ];
     }
 
     return $sites;
@@ -119,13 +140,13 @@ it('names the currency every money sum in the tree is counting', function (): vo
 
     // A walk that reads nothing reports a clean tree. The ledger alone sums
     // money in well over a dozen places.
-    expect(count($sites))->toBeGreaterThan(30);
+    expect(count($sites))->toBeGreaterThan(30, 'Read '.count($sites).' money sums, too few for an empty offender list to mean anything.');
 
     $offenders = [];
     $pinned = [];
 
     foreach ($sites as $site) {
-        if (preg_match('/currency/i', $site['body']) === 1) {
+        if (preg_match(MONEY_AGGREGATE_NAMES_A_CURRENCY_COLUMN, $site['body']) === 1) {
             continue;
         }
 
@@ -148,7 +169,10 @@ it('names the currency every money sum in the tree is counting', function (): vo
         ...$offenders,
     ]));
 
-    expect(array_keys($pinned))->toBe(array_keys(MONEY_AGGREGATE_PINS));
+    expect(array_keys($pinned))->toBe(
+        array_keys(MONEY_AGGREGATE_PINS),
+        'A pinned aggregate is no longer reached by the rule it was written for, so the entry excuses nothing and goes.',
+    );
 });
 
 it('adds a map keyed by currency only where that is a decision somebody made', function (): void {
@@ -178,7 +202,7 @@ it('adds a map keyed by currency only where that is a decision somebody made', f
         $offenders[] = $relative;
     }
 
-    expect($counted)->toBeGreaterThan(10);
+    expect($counted)->toBeGreaterThan(10, 'Read '.$counted.' array_sum() calls, too few for an empty offender list to mean anything.');
 
     expect($offenders)->toBe([], implode("\n  ", [
         'array_sum() over a map keyed by currency adds euro-cents to yen. Convert',
@@ -187,7 +211,10 @@ it('adds a map keyed by currency only where that is a decision somebody made', f
         ...$offenders,
     ]));
 
-    expect(array_keys($pinned))->toBe(array_keys(CROSS_CURRENCY_SUM_PINS));
+    expect(array_keys($pinned))->toBe(
+        array_keys(CROSS_CURRENCY_SUM_PINS),
+        'The one place that knowingly adds a map keyed by currency no longer does, so the entry excuses nothing and goes.',
+    );
 });
 
 it('still holds each pinned aggregate to the reason it was granted for', function (): void {
@@ -203,4 +230,41 @@ it('still holds each pinned aggregate to the reason it was granted for', functio
 
         expect($source)->toMatch($pin['proves'], $relative.' no longer reads as "'.$pin['reason'].'"');
     }
+});
+
+it('reads both spellings of a money sum, and asks the currency column be named rather than the word', function (): void {
+    $source = <<<'PHP'
+        <?php
+        final class PlantedTotals
+        {
+            public function unscoped(): int
+            {
+                return $this->db->table('transactions')->sum('amount_minor');
+            }
+
+            public function scoped(string $currency): int
+            {
+                return (int) $this->db->table('transactions')
+                    ->where('settled_currency', $currency)
+                    ->selectRaw('SUM(amount_minor) as total')
+                    ->value('total');
+            }
+        }
+        PHP;
+
+    $sites = moneyAggregateSitesIn('Planted.php', BackendSourceFiles::tokensOf('Planted.php', $source));
+
+    expect(array_column($sites, 'key'))->toBe(
+        ['Planted.php::unscoped', 'Planted.php::scoped'],
+        'a builder sum and a SUM written into SQL are the same act, each read against the function a reader would open',
+    );
+
+    expect(preg_match(MONEY_AGGREGATE_NAMES_A_CURRENCY_COLUMN, $sites[0]['body']) === 1)
+        ->toBeFalse('a sum naming no currency column is the defect this rule exists for');
+
+    expect(preg_match(MONEY_AGGREGATE_NAMES_A_CURRENCY_COLUMN, $sites[1]['body']) === 1)
+        ->toBeTrue('a where on the currency column is one of the three ways a sum says what it counted');
+
+    expect(preg_match(MONEY_AGGREGATE_NAMES_A_CURRENCY_COLUMN, 'function f(string $currency): int { return $q->sum($amountMinor); }') === 1)
+        ->toBeFalse('a parameter named currency that never reaches the query says nothing about what was summed');
 });

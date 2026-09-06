@@ -25,7 +25,13 @@ function minorUnitScaleSources(): array
     $root = minorUnitScaleRepoRoot();
 
     $sources = [];
-    foreach (['Modules', 'app', 'database', 'config', 'routes'] as $directory) {
+    // Every root that ships PHP or Blade. "Exactly once" is a claim about the
+    // whole application, and a view or a release script turning a scale into a
+    // decimal count is the same second reader as a service doing it.
+    foreach (['Modules', 'app', 'database', 'config', 'routes', 'resources', 'bootstrap', 'lang', 'scripts'] as $directory) {
+        if (! is_dir($root.'/'.$directory)) {
+            continue;
+        }
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($root.'/'.$directory, RecursiveDirectoryIterator::SKIP_DOTS),
         );
@@ -40,13 +46,16 @@ function minorUnitScaleSources(): array
     return $sources;
 }
 
-it('keeps the fallback to a hundred inside the seam and the value object that defines it', function (): void {
-    $seam = 'Modules/Ledger/Public/ValueObjects/CurrencyScale.php';
-    $definition = 'Modules/Ledger/Public/ValueObjects/Money.php';
+const MINOR_UNIT_SCALE_SEAM = 'Modules/Ledger/Public/ValueObjects/CurrencyScale.php';
+
+it('keeps the fallback to a hundred inside the seam that answers the scale', function (): void {
+    $sources = minorUnitScaleSources();
+
+    expect(count($sources))->toBeGreaterThan(2000, 'The walk read almost nothing, so a clean answer below is the walk being broken rather than the tree being right.');
 
     $readers = [];
-    foreach (minorUnitScaleSources() as $path => $source) {
-        if ($path === $seam || $path === $definition) {
+    foreach ($sources as $path => $source) {
+        if ($path === MINOR_UNIT_SCALE_SEAM) {
             continue;
         }
         if (str_contains($source, 'minorUnitsPerMajor() ?? Money::MINOR_UNITS_PER_MAJOR')) {
@@ -54,20 +63,46 @@ it('keeps the fallback to a hundred inside the seam and the value object that de
         }
     }
 
-    expect($readers)->toBe([]);
+    expect($readers)->toBe(
+        [],
+        'CurrencyScale::minorUnitsPerMajor() is the one place the two-decimal assumption is made for a '
+        .'currency Brick does not know. A second site spelling the fallback out is a second reader of one '
+        ."fact, and the one that drifts renders a yen at a hundredth of itself. Offenders:\n  "
+        .implode("\n  ", $readers),
+    );
 });
 
 it('writes the log10 that turns a scale into a decimal count exactly once', function (): void {
-    $seam = 'Modules/Ledger/Public/ValueObjects/CurrencyScale.php';
+    $sources = minorUnitScaleSources();
+
+    expect(count($sources))->toBeGreaterThan(2000, 'The walk read almost nothing, so a clean answer below is the walk being broken rather than the tree being right.');
 
     $writers = [];
-    foreach (minorUnitScaleSources() as $path => $source) {
-        if ($path !== $seam && str_contains($source, 'log10')) {
+    foreach ($sources as $path => $source) {
+        if ($path !== MINOR_UNIT_SCALE_SEAM && str_contains($source, 'log10')) {
             $writers[] = $path;
         }
     }
 
-    expect($writers)->toBe([]);
+    expect($writers)->toBe(
+        [],
+        'CurrencyScale::decimalsOfScale() is the one conversion from a minor-unit scale to a decimal count. '
+        ."Three classes each wrote their own log10 once already, and they drifted. Offenders:\n  "
+        .implode("\n  ", $writers),
+    );
+});
+
+// The two rules above are exemptions with one file named in each. A pin that
+// excuses nothing is worse than no pin: it reads as considered.
+it('still holds the seam to both of the things its exemption was granted for', function (): void {
+    $seam = minorUnitScaleSources()[MINOR_UNIT_SCALE_SEAM] ?? null;
+
+    expect($seam)->toBeString(MINOR_UNIT_SCALE_SEAM.' is exempted from both rules above and the walk no longer reaches it.');
+
+    expect(str_contains((string) $seam, 'minorUnitsPerMajor() ?? Money::MINOR_UNITS_PER_MAJOR'))
+        ->toBeTrue('The seam no longer makes the two-decimal fallback, so its exemption from the first rule excuses nothing. Delete it, or move it to wherever the fallback went.')
+        ->and(str_contains((string) $seam, 'log10'))
+        ->toBeTrue('The seam no longer turns a scale into a decimal count, so its exemption from the second rule excuses nothing. Delete it, or move it to wherever the conversion went.');
 });
 
 it('answers the same scale and decimal count for a zero-, two- and three-decimal currency', function (string $code, int $scale, int $decimals): void {

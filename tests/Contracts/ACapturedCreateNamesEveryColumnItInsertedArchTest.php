@@ -31,6 +31,7 @@ function capturedCreateOffenders(string $root): array
 
     $offenders = [];
     foreach (capturedCreatePhpFiles($root) as $file) {
+        capturedCreateWalkRead(1, 0);
         $source = (string) file_get_contents($file);
         if (! str_contains($source, 'dirtyFields:')) {
             continue;
@@ -42,6 +43,8 @@ function capturedCreateOffenders(string $root): array
             continue;
         }
 
+        capturedCreateWalkRead(0, 1);
+
         $missing = array_values(array_diff($inserted, $announced, $suppliedElsewhere));
         if ($missing !== []) {
             sort($missing);
@@ -52,6 +55,23 @@ function capturedCreateOffenders(string $root): array
     ksort($offenders);
 
     return $offenders;
+}
+
+/**
+ * Adds to, and reads back, what the whole walk opened: the files it read, and
+ * the ones holding both an insert payload and a create event to compare it
+ * against. A walk that compared nothing reports a clean tree.
+ *
+ * @return array{files: int, compared: int}
+ */
+function capturedCreateWalkRead(int $files = 0, int $compared = 0): array
+{
+    static $total = ['files' => 0, 'compared' => 0];
+
+    $total['files'] += $files;
+    $total['compared'] += $compared;
+
+    return $total;
 }
 
 /**
@@ -100,8 +120,23 @@ function capturedCreateKeys(string $source, string $opener): array
 
 it('announces every column a captured create actually inserted', function (): void {
     $unpinned = [];
+    $offenders = capturedCreateOffenders(base_path('Modules'));
+    $walk = capturedCreateWalkRead();
 
-    foreach (capturedCreateOffenders(base_path('Modules')) as $file => $columns) {
+    // Far under the ~6,600 files and 16 insert/announce pairs the tree holds. A
+    // walk that opened nothing, or a brace reader that found no payload, both
+    // report the same empty offender list a correct tree does.
+    expect($walk['files'])->toBeGreaterThan(
+        2000,
+        'The walk opened '.$walk['files'].' files under Modules/, which is too few to have read the tree at all.',
+    );
+    expect($walk['compared'])->toBeGreaterThan(
+        5,
+        'The walk compared '.$walk['compared'].' insert payloads against their own create events, so the array '
+        .'reader stopped rather than the tree getting cleaner.',
+    );
+
+    foreach ($offenders as $file => $columns) {
         $left = array_values(array_diff($columns, CREATES_CAPTURED_WHOLESALE[$file]['columns'] ?? []));
 
         if ($left !== []) {
@@ -181,6 +216,9 @@ it('reports a create that leaves one of its inserted columns unannounced', funct
     unlink($planted.'/Writer.php');
     rmdir($planted);
 
-    expect($offenders)->toHaveCount(1);
-    expect($offenders['Writer.php'])->toBe(['memo']);
+    expect($offenders)->toHaveCount(1, 'The planted writer inserts a column its own create event never names, and the reader missed it.');
+    expect($offenders['Writer.php'])->toBe(
+        ['memo'],
+        'The reader either missed the unannounced column or reported an announced one beside it.',
+    );
 });

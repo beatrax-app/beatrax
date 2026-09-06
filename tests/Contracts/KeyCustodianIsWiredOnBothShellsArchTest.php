@@ -30,9 +30,19 @@ function shellProviderSources(): array
     foreach (['desktop' => 'Desktop', 'mobile' => 'Mobile'] as $shell => $module) {
         $path = base_path("Modules/{$module}/Providers/{$module}ServiceProvider.php");
 
-        expect($path)->toBeReadableFile();
+        expect($path)->toBeReadableFile($module.'ServiceProvider.php is not readable, so the bindings this file asserts about were never opened.');
 
-        $sources[$shell] = (string) file_get_contents($path);
+        $source = (string) file_get_contents($path);
+
+        // Read before any pattern: an empty read matches nothing, and every
+        // rule below is a pattern that must match. A provider that came back
+        // blank would fail them all with the wrong reason.
+        expect(strlen($source))->toBeGreaterThan(
+            200,
+            $module.'ServiceProvider.php read back '.strlen($source).' bytes, which is too few to be a provider.'
+        );
+
+        $sources[$shell] = $source;
     }
 
     return $sources;
@@ -64,8 +74,16 @@ it('points the custody contract at the mobile adapter on device', function (): v
         .'unlocked data key is back in the sessions table on every phone.');
 });
 
-it('resolves the pass-through custodian everywhere else', function (): void {
-    expect(app(KeyCustodian::class))->toBeInstanceOf(NullKeyCustodian::class);
+// "Everywhere else" is what the two gates above leave, and this asserts it
+// where a test can: the container resolves the pass-through when no shell has
+// answered. Local dev, CI and the self-hosted web app are that same case.
+it('resolves the pass-through custodian when no shell has bound one', function (): void {
+    expect(app(KeyCustodian::class))->toBeInstanceOf(
+        NullKeyCustodian::class,
+        'Outside a bundle the custody contract must resolve to the pass-through. A different binding here '
+        .'means the suite has been running against a platform adapter, and every custody assertion in it '
+        .'has been answering for somebody else\'s platform.'
+    );
 });
 
 // An adapter inheriting the answer instead of giving one would report whatever
@@ -74,14 +92,32 @@ it('resolves the pass-through custodian everywhere else', function (): void {
 it('has each platform adapter answering the custody question itself', function (string $adapter): void {
     $declaring = (new ReflectionClass($adapter))->getMethod('custody')->getDeclaringClass()->getName();
 
-    expect($declaring)->toBe($adapter);
+    expect($declaring)->toBe(
+        $adapter,
+        $adapter.'::custody() is inherited from '.$declaring.', so it answers for whichever platform that '
+        .'class was written for rather than for its own.'
+    );
 })->with([DesktopKeyCustodian::class, SecureStorageKeyCustodian::class, NullKeyCustodian::class]);
 
 it('treats only operating-system custody as protection at rest', function (): void {
+    $cases = KeyCustody::cases();
+
+    // Read before the verdict: with one case the filter below cannot tell a
+    // considered answer from an enum that has lost its other arms.
+    expect(count($cases))->toBeGreaterThan(
+        1,
+        'KeyCustody declares '.count($cases).' cases, so "only operating-system custody" is a claim about '
+        .'a set with nothing to exclude.'
+    );
+
     $protecting = array_values(array_filter(
-        KeyCustody::cases(),
+        $cases,
         static fn (KeyCustody $custody): bool => $custody->protectsAtRest(),
     ));
 
-    expect($protecting)->toBe([KeyCustody::OperatingSystem]);
+    expect($protecting)->toBe(
+        [KeyCustody::OperatingSystem],
+        'Only custody held by the operating system protects the key at rest. Another case answering true '
+        .'here tells the reader their data key is protected when it is following the session.'
+    );
 });

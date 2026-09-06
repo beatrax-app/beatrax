@@ -19,7 +19,7 @@ it('names every Sync class it binds by ::class, with no runtime-built name and n
     $literals = PatternScan::all("~'((?:Modules|Native|Beatrax)\\\\\\\\[^']*)'~", $source);
     expect($literals[1])->toBe([], 'the provider builds a class name as a string instead of using ::class');
 
-    expect($source)->not->toContain('singletonIfExists', 'the guarded-binding helper outlived its guards');
+    expect(str_contains($source, 'singletonIfExists'))->toBeFalse('the guarded-binding helper outlived its guards');
 });
 
 it('has every Sync class its provider imports on disk in this Composer root', function (): void {

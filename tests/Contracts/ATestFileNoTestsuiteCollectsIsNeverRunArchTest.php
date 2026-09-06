@@ -89,8 +89,14 @@ function everyTestFileInTheTree(): array
 // what it claims. The floors are deliberately far below the real counts —
 // they catch a broken scan, not a deleted module.
 it('finds the testsuites and the test files it is about to check', function (): void {
-    expect(count(everyTestFileSuiteDirectories()))->toBeGreaterThan(20)
-        ->and(count(everyTestFileInTheTree()))->toBeGreaterThan(1500);
+    expect(count(everyTestFileSuiteDirectories()))->toBeGreaterThan(
+        20,
+        'phpunit.xml parsed to almost no testsuite, so the collection check below would call every file uncollected or none.',
+    )
+        ->and(count(everyTestFileInTheTree()))->toBeGreaterThan(
+            1_500,
+            'The walk found almost no test file, so the empty uncollected list below is a tree nobody read.',
+        );
 });
 
 it('collects every test file the repository holds into a testsuite', function (): void {
@@ -143,6 +149,11 @@ it('hands every testsuite to exactly one shard', function (): void {
     $sorted = $assigned;
     sort($sorted);
 
-    expect($sorted)->toBe($names)
+    expect($sorted)->toBe(
+        $names,
+        'The three shards between them must resolve to exactly the testsuites phpunit.xml declares. A '
+        .'suite the resolver drops runs nowhere, and the run it never joined still reports green with a '
+        .'slightly smaller number nobody was watching.',
+    )
         ->and($assigned)->toHaveCount(count(array_unique($assigned)));
 });

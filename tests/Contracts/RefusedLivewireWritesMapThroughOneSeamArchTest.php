@@ -14,6 +14,11 @@ function refusalSeamRoots(): array
 
 it('maps the refused-write family through the shared seam on both roots', function (): void {
     foreach (refusalSeamRoots() as $root) {
+        // Named ahead of the read: an unreadable file answers as an empty
+        // string, and the two assertions below would then report a bundle that
+        // does not map the refusal rather than a bundle nobody could find.
+        expect(is_file(base_path($root)))->toBeTrue("{$root} was not found, so this rule has no bootstrap file to read the exception mapping out of.");
+
         $contents = (string) file_get_contents(base_path($root));
 
         expect(str_contains($contents, 'LivewireClientRefusal::refusal('))->toBeTrue(

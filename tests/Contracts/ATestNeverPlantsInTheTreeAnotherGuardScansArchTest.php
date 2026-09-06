@@ -69,11 +69,17 @@ function basePathAssignments(string $source): array
     return $assigned;
 }
 
+// Removing a file races a scan exactly as badly as adding one, so unlink and
+// rmdir stand here beside the creators. `fopen` deliberately does not: the mode
+// is its second argument and this reads only the first, so every fixture opened
+// for reading would report as a plant. `(?<![>:$\w])` keeps the ban to the
+// global-function form — $disk->copy() and File::copy() are unrelated methods
+// that merely share a name, and the \w half stops `link` matching `symlink`.
 /** @return list<string> one line per write, naming the file, its line and the root it plants in */
 function plantsInGuardedRoots(string $label, string $source): array
 {
     $matches = PatternScan::setsWithOffsets(
-        '/\b(file_put_contents|mkdir|touch|copy|rename|symlink)\s*\(\s*([^,)]+)/',
+        '/(?<![>:$\w])(file_put_contents|mkdir|touch|copy|rename|symlink|link|unlink|rmdir)\s*\(\s*([^,)]+)/',
         $source,
     );
 
@@ -83,9 +89,10 @@ function plantsInGuardedRoots(string $label, string $source): array
     foreach ($matches as $match) {
         $target = plantTargetOf(trim($match[2][0]), $assigned);
 
-        // A write under a tests/ directory is in nobody's scan: every guard that
-        // walks a source root skips those paths already.
-        if ($target === null || str_contains($target, '/tests/') || ! in_array(explode('/', $target)[0], guardedSourceRoots(), true)) {
+        // No tests/ carve-out: a module's own tests/ tree is walked by
+        // pinnedCrossModuleInternalImports, by the helper-name guard and by the
+        // testsuite-collection guard, so a file planted there races them too.
+        if ($target === null || ! in_array(explode('/', $target)[0], guardedSourceRoots(), true)) {
             continue;
         }
 
@@ -135,26 +142,38 @@ it('never writes a file into a directory another guard is scanning', function ()
     ]));
 });
 
-// Both fixtures are assembled rather than written out, so this file does not
-// read as a planting test to the scan above — the guard has to hold for itself
-// before it is worth applying to anything else.
-it('goes red on a planted write and stays green on a temp-dir one', function (): void {
+// Every fixture is assembled rather than written out, so this file does not read
+// as a planting test to the scan above — the guard has to hold for itself before
+// it is worth applying to anything else. The write NAMES are assembled too: the
+// near-miss below plants under storage/, and spelling the call out would make
+// this file its own offender.
+it('goes red on a planted write and stays green on a temp-dir and an unguarded root', function (): void {
     $write = 'file_put_'.'contents';
+    $remove = 'un'.'link';
+    $make = 'mk'.'dir';
     $root = sys_get_temp_dir().'/planting-guard-'.bin2hex(random_bytes(6));
     mkdir($root, 0o777, true);
 
     $plants = "<?php\n\$probe = base_path('Modules/Core/Internal/ScratchProbe.php');\n".$write."(\$probe, '<?php');\n";
+    $deletes = "<?php\n".$remove."(base_path('resources/views/layouts/app.blade.php'));\n";
     $behaves = "<?php\n\$probe = sys_get_temp_dir().'/ScratchProbe.php';\n".$write."(\$probe, '<?php');\n"
-        ."mkdir(base_path('Modules/Core/tests/scratch'));\n";
+        .$make."(base_path('storage/app/scratch'));\n";
 
     file_put_contents($root.'/PlantsTest.php', $plants);
+    file_put_contents($root.'/DeletesTest.php', $deletes);
     file_put_contents($root.'/BehavesTest.php', $behaves);
 
     try {
-        expect(guardedRootPlantings($root)['offenders'])
-            ->toBe(['PlantsTest.php:3 writes Modules/Core/Internal/ScratchProbe.php']);
+        expect(guardedRootPlantings($root)['offenders'])->toBe([
+            'DeletesTest.php:2 writes resources/views/layouts/app.blade.php',
+            'PlantsTest.php:3 writes Modules/Core/Internal/ScratchProbe.php',
+        ], implode("\n  ", [
+            'The scan has to see a creation and a deletion under a guarded root, and see neither the',
+            'temp-dir write nor the one under storage/, which no guard walks.',
+        ]));
     } finally {
         unlink($root.'/PlantsTest.php');
+        unlink($root.'/DeletesTest.php');
         unlink($root.'/BehavesTest.php');
         rmdir($root);
     }

@@ -194,6 +194,15 @@ function tablesWithNoIdentity(): array
 }
 
 it('gives every covered table a way to tell two devices rows apart', function (): void {
+    // Counted first: every verdict here is read off the covered set, and an
+    // empty registry walks no table and reports no offender, which is what a
+    // fully-identified set reports too.
+    expect(count(app(MergeRulesRegistry::class)->rules()))->toBeGreaterThan(
+        20,
+        'The merge registry declared '.count(app(MergeRulesRegistry::class)->rules()).' covered tables, '
+        .'which is too few to be the covered set. The rule below would pass over tables nobody listed.'
+    );
+
     expect(tablesWithNoIdentity())->toBe([], implode("\n", [
         'These covered tables have an autoincrement primary key, no other unique index,',
         'and no derived or minted id. Two devices used while apart will hand one id to',
@@ -206,5 +215,10 @@ it('gives every covered table a way to tell two devices rows apart', function ()
 // the argument written above it, and taking one off needs an id scheme rather
 // than a smaller list.
 it('leaves no covered table exposed', function (): void {
-    expect(stillExposed())->toBe([]);
+    expect(stillExposed())->toBe([], implode("\n", [
+        'stillExposed() has reached nothing and only shrinks. An entry here is a covered table two',
+        'devices can hand the same id to, kept only until it gets one of the three answers above —',
+        'so adding one needs the argument written beside it, not a name appended to the list:',
+        ...stillExposed(),
+    ]));
 });

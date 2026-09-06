@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -81,6 +82,15 @@ it('formats a chart axis exactly as Money formats the same amount, in every ship
     // side it lands on and everything around it byte for byte.
     $ours = ['EUR' => '€', 'GBP' => '£', 'CHF' => 'CHF'];
 
+    // The product ships 26 languages. A run that compared none of them found no
+    // disagreement because it read nothing, not because the two agree.
+    expect(count(Locale::cases()))->toBeGreaterThan(
+        20,
+        'No shipped language was compared, so this rule checked nothing.'
+    );
+
+    $compared = 0;
+
     foreach (Locale::cases() as $locale) {
         app()->setLocale($locale->value);
 
@@ -103,7 +113,13 @@ it('formats a chart axis exactly as Money formats the same amount, in every ship
                     $axis,
                     $currency.' reads one way on a '.$locale->value.' chart and another everywhere else on the page.'
                 );
+                $compared++;
             }
         }
     }
+
+    expect($compared)->toBeGreaterThan(
+        100,
+        'The locale/currency/sign walk produced no comparison at all, so a divergence would read as agreement.'
+    );
 });

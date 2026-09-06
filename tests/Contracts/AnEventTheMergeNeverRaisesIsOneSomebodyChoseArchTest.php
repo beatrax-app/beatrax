@@ -33,7 +33,12 @@ function eventsAProviderWiresUp(): array
     $found = [];
 
     foreach (BackendSourceFiles::all() as $path) {
-        if (! str_ends_with($path, 'ServiceProvider.php')) {
+        // Every provider, not only the ones spelled ServiceProvider: a listener
+        // is wired from SqliteOptimizationsProvider too, and a rule about every
+        // listened-for event cannot read half the files that wire one. Measured
+        // before widening — no file ending Provider.php outside the
+        // ServiceProvider set names a module Events class, so this adds none.
+        if (! str_ends_with($path, 'Provider.php')) {
             continue;
         }
 
@@ -405,6 +410,46 @@ it('re-runs the pattern behind every pin that claims another seam covers it', fu
         'can hold, and it stopped holding:',
         ...$stale,
     ]));
+});
+
+it('reads both spellings a provider reaches an event by, and neither a binding nor a comment', function (): void {
+    $base = tempnam(sys_get_temp_dir(), 'planted-provider');
+    $planted = $base.'.php';
+
+    file_put_contents($planted, <<<'PHP'
+        <?php
+        use Modules\Planted\Public\Events\PlantedHappened;
+        use Modules\Planted\Public\Services\PlantedService;
+        final class PlantedServiceProvider
+        {
+            public function boot(): void
+            {
+                Event::listen(PlantedHappened::class, PlantedListener::class);
+                Event::listen('Modules\Planted\Public\Events\PlantedQuietly', PlantedListener::class);
+                $this->app->singleton(PlantedService::class);
+                // Modules\Planted\Public\Events\PlantedCommented::class is gone.
+            }
+        }
+        PHP);
+
+    try {
+        $named = eventNamesIn($planted);
+    } finally {
+        @unlink($planted);
+        @unlink($base);
+    }
+
+    expect($named)->toBe([
+        'Modules\Planted\Public\Events\PlantedHappened',
+        'Modules\Planted\Public\Events\PlantedQuietly',
+    ], implode("\n", [
+        'A provider reaches an event by an imported X::class and by the fully-qualified string a',
+        'class-string constant holds when the module declaring it may be absent from the build.',
+        'A service that is not an event, and an event named only in a comment, are neither.',
+    ]));
+
+    expect(isAnEventClassName('Modules\Planted\Public\Services\PlantedService'))
+        ->toBeFalse('a class outside an Events namespace is not one of these, or every wiring would read as a listener');
 });
 
 it('finds the event the merge does raise, so neither half of the walk is simply empty', function (): void {

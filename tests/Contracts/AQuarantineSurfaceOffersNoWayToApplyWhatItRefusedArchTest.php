@@ -120,7 +120,8 @@ it('lists the refused operations from a component the browser can call nothing o
 
 it('draws the refused operations with a template that offers no control at all', function (): void {
     $components = quarantineSurfaceComponents();
-    expect($components)->not->toBe([]);
+
+    expect($components)->not->toBe([], 'no component was found reading '.QUARANTINE_TABLE.', so this guard read nothing at all');
 
     $templates = [];
 
@@ -150,18 +151,31 @@ it('draws the refused operations with a template that offers no control at all',
     );
 });
 
-it('sees a control planted into a quarantine template', function (): void {
-    $planted = tempnam(sys_get_temp_dir(), 'quarantine-surface').'.blade.php';
-    file_put_contents($planted, <<<'BLADE'
-        {{-- wire:click here is inside a comment and must not count --}}
-        <button type="button" wire:click="forceApply({{ $skip->id }})">Apply anyway</button>
-        BLADE);
+// A guard that cannot go red says nothing. The reader is checked against the
+// control it was written to find, and against the comment that names one — the
+// templates it walks explain their own absent buttons in prose.
+it('sees a control planted into a quarantine template', function (string $markup, array $found): void {
+    // sys_get_temp_dir, never the tree: a .blade.php written under Modules or
+    // resources is listed by every other template walk, which in a parallel run
+    // reads as a violation in whichever guard got there first.
+    $planted = sys_get_temp_dir().'/quarantine-surface-'.bin2hex(random_bytes(8)).'.blade.php';
 
     try {
-        $found = quarantineSurfaceActionsIn($planted);
-    } finally {
-        @unlink($planted);
-    }
+        file_put_contents($planted, $markup);
 
-    expect($found)->toBe(['wire:click']);
-});
+        expect(quarantineSurfaceActionsIn($planted))->toBe($found);
+    } finally {
+        if (is_file($planted)) {
+            unlink($planted);
+        }
+    }
+})->with([
+    'a wire action beside a comment naming one' => [
+        "{{-- wire:click here is inside a comment and must not count --}}\n"
+        .'<button type="button" wire:click="forceApply(1)">Apply anyway</button>',
+        ['wire:click'],
+    ],
+    'a plain read-out' => ['<ul><li>a refused operation</li></ul>', []],
+    'a comment and nothing else' => ['{{-- wire:click was removed on purpose --}}<p>nothing here</p>', []],
+    'a posted form' => ['<form method="POST"><button type="submit">Retry</button></form>', ['<form', 'type="submit"']],
+]);

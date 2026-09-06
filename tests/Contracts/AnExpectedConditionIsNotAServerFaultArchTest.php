@@ -57,8 +57,17 @@ it('lets no HTTP entry point raise an exception that carries no answer of its ow
     /** @var Router $router */
     $router = app(Router::class);
     $offences = [];
+    $files = HttpEntryPointThrows::files($router);
 
-    foreach (HttpEntryPointThrows::files($router) as $file) {
+    // Two hundred and eight files sit under an Http/ directory today, before
+    // the routed classes are added. A walk that opened none of them would
+    // report every entry point as answering for itself.
+    expect(count($files))->toBeGreaterThan(
+        50,
+        'Only '.count($files).' HTTP entry points were read, so an empty offender list says nothing.',
+    );
+
+    foreach ($files as $file) {
         foreach (HttpEntryPointThrows::unguarded((string) file_get_contents($file)) as $throw) {
             if (expectedConditionCarriesItsOwnAnswer($throw['class'])) {
                 continue;
@@ -91,5 +100,55 @@ it('answers each trusted family under 500', function (): void {
 
 it('answers an exception carrying no status of its own with a 500', function (): void {
     expect(expectedConditionStatusFor(new RuntimeException('A genuine fault.')))
-        ->toBe(Response::HTTP_INTERNAL_SERVER_ERROR);
+        ->toBe(
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            'the generic handler has one answer, and the rule above is only worth something while it is this one',
+        );
+});
+
+it('reads a throw nothing catches, and leaves a guarded one and a trusted family alone', function (): void {
+    // The planted namespace says Public deliberately: pinnedCrossModuleInternalImports
+    // scans this file too, and reads an inline Modules\<X>\Internal\ reference — a
+    // heredoc included — as a boundary crossing nobody pinned.
+    $raising = <<<'PHP'
+        <?php
+        namespace Modules\Planted\Public\Http;
+        use RuntimeException;
+        final class PlantedEntryPoint
+        {
+            public function __invoke(): void
+            {
+                throw new RuntimeException('nothing answers for this');
+            }
+        }
+        PHP;
+
+    $guarded = <<<'PHP'
+        <?php
+        namespace Modules\Planted\Public\Http;
+        use RuntimeException;
+        final class PlantedGuardedEntryPoint
+        {
+            public function __invoke(): void
+            {
+                try {
+                    throw new RuntimeException('answered where the reader is');
+                } catch (RuntimeException $e) {
+                    $this->flash($e);
+                }
+            }
+        }
+        PHP;
+
+    expect(array_column(HttpEntryPointThrows::unguarded($raising), 'class'))
+        ->toBe(['RuntimeException'], 'the unguarded raise is the whole defect, and the reader has to find it');
+
+    expect(HttpEntryPointThrows::unguarded($guarded))
+        ->toBe([], 'a throw its own file catches never reaches the generic handler');
+
+    expect(expectedConditionCarriesItsOwnAnswer('RuntimeException'))
+        ->toBeFalse('a RuntimeException names no status, which is why it can only be answered 500');
+
+    expect(expectedConditionCarriesItsOwnAnswer(NotFoundHttpException::class))
+        ->toBeTrue('the three trusted families are what an entry point may let out');
 });

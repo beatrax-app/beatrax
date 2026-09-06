@@ -9,6 +9,10 @@ use Tests\Contracts\Support\SonarSourceFiles;
  * @link ../../.docs/conventions/analyser-rules-enforced-locally.md#s3776--cognitive-complexity
  */
 
+// The hosted analyser's own threshold, named once rather than typed into the
+// comparison and again into three lines of the message it prints.
+const SONAR_COMPLEXITY_CEILING = 15;
+
 // A local stand-in for the hosted analyser's cognitive-complexity rule, which
 // is the single largest source of findings this project has had: 116 of them,
 // every one discovered on the dashboard after the branch had already merged.
@@ -16,7 +20,7 @@ use Tests\Contracts\Support\SonarSourceFiles;
 // and checked against the number it publishes for all 2072 analysed files.
 it('leaves no function harder to follow than the analyser allows', function (): void {
     $files = SonarSourceFiles::all();
-    expect($files)->not->toBe([]);
+    expect($files)->not->toBe([], 'The walk opened no analysed file at all, so this rule read nothing.');
 
     $offenders = [];
     $measured = 0;
@@ -29,7 +33,7 @@ it('leaves no function harder to follow than the analyser allows', function (): 
             $measured++;
             $highest = max($highest, $function['value']);
 
-            if ($function['value'] > 15) {
+            if ($function['value'] > SONAR_COMPLEXITY_CEILING) {
                 $offenders[] = str_replace(base_path().'/', '', $path)
                     .':'.$function['line'].' '.$function['name'].'() scores '.$function['value'];
             }
@@ -40,11 +44,18 @@ it('leaves no function harder to follow than the analyser allows', function (): 
     // a green build looks like. These two say the walk actually ran: the tree
     // holds thousands of functions, and the hardest of them scores well into
     // double figures.
-    expect($measured)->toBeGreaterThan(1000);
-    expect($highest)->toBeGreaterThanOrEqual(10);
+    expect($measured)->toBeGreaterThan(
+        1000,
+        'The walk scored '.$measured.' functions, which is too few to have read the tree at all.',
+    );
+    expect($highest)->toBeGreaterThanOrEqual(
+        10,
+        'The hardest function the walk found scores '.$highest.', nowhere near the ceiling — the scorer stopped '
+        .'reading rather than the tree getting simpler.',
+    );
 
     expect($offenders)->toBe([], implode("\n", [
-        'These functions score above 15 on cognitive complexity:',
+        'These functions score above '.SONAR_COMPLEXITY_CEILING.' on cognitive complexity:',
         ...$offenders,
         '',
         'Cognitive complexity is not a line count. It charges 1 for each branch',
@@ -54,12 +65,12 @@ it('leaves no function harder to follow than the analyser allows', function (): 
         'is nearly free; the same conditions nested three deep are not.',
         '',
         'This is a local stand-in for the hosted rule, not a second opinion:',
-        'the scoring is the analyser\'s own algorithm and its threshold of 15,',
+        'the scoring is the analyser\'s own algorithm and its threshold of '.SONAR_COMPLEXITY_CEILING.',',
         'and it agrees with the published per-file figure on every analysed',
         'file. Anything failing here fails the hosted analysis on merge.',
         '',
         'There is no pinned list to add to. The default branch carries no',
-        'function above 15 — ten sit exactly on it — so every entry above is',
+        'function above '.SONAR_COMPLEXITY_CEILING.' — ten sit exactly on it — so every entry above is',
         'something this branch introduced.',
     ]));
 });

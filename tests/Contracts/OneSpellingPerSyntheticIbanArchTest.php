@@ -11,12 +11,11 @@ declare(strict_types=1);
 // $root is injectable for one reason only: the red-proof below needs a tree it
 // can plant a file in, and planting under Modules/ races every other arch guard
 // scanning that tree in a parallel worker.
-/** @return list<string> production PHP files under $root, relative to its parent, that contain $literal */
-function filesWritingIbanLiteral(string $literal, ?string $root = null): array
+/** @return list<string> every production PHP file under $root, relative to its parent */
+function syntheticIbanProductionFiles(?string $root = null): array
 {
     $root ??= base_path('Modules');
     $relativeTo = dirname($root).'/';
-    $needle = "'".$literal."'";
     $found = [];
 
     $iterator = new RecursiveIteratorIterator(
@@ -29,15 +28,33 @@ function filesWritingIbanLiteral(string $literal, ?string $root = null): array
         if (! $file->isFile() || ! str_ends_with($path, '.php') || str_contains($path, '/tests/')) {
             continue;
         }
-        if (str_contains((string) file_get_contents($path), $needle)) {
-            $found[] = str_replace($relativeTo, '', $path);
-        }
+        $found[] = str_replace($relativeTo, '', $path);
     }
 
     sort($found);
 
     return $found;
 }
+
+/** @return list<string> production PHP files under $root, relative to its parent, that contain $literal */
+function filesWritingIbanLiteral(string $literal, ?string $root = null): array
+{
+    $prefix = dirname($root ?? base_path('Modules')).'/';
+    $needle = "'".$literal."'";
+
+    return array_values(array_filter(
+        syntheticIbanProductionFiles($root),
+        static fn (string $relative): bool => str_contains((string) file_get_contents($prefix.$relative), $needle),
+    ));
+}
+
+it('reads the whole module tree before any of the pinned spellings are read off it', function (): void {
+    // The three pins below are `toBe()` against a literal list, so a walk that
+    // stopped reading would already fail them -- but it would fail naming a
+    // file that had supposedly lost its spelling, which sends the reader to the
+    // wrong place. The floor names the walk instead.
+    expect(count(syntheticIbanProductionFiles()))->toBeGreaterThan(2000, 'The module walk read almost no PHP, so the pinned lists below would be short for a reason that is not the tree.');
+});
 
 it('writes the ICS card own-IBAN with one spelling in every module that knows it', function (): void {
     expect(filesWritingIbanLiteral('ICS-CARD'))->toBe([

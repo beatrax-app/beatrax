@@ -31,17 +31,37 @@ function minorUnitScaleCopy(string $locale): array
     ];
 }
 
+// The stem list is the whole of the verdict, so it is driven over the words it
+// has to catch and the ones it must not: a stored figure is described in minor
+// units, and a locale naming the unit that way is the fix, not the defect.
+it('reads a hundredth in every script it ships, and leaves the minor unit alone', function (): void {
+    $hundredths = ['cents', 'centen', 'céntimos', 'centesimi', 'centavos', 'senten', 'λεπτά', 'центи'];
+    $units = ['minor units', 'minorenheden', 'unidades menores', 'μικρές μονάδες', 'дрібні одиниці'];
+
+    $missed = array_values(array_filter(
+        $hundredths,
+        static fn (string $word): bool => preg_match(MINOR_UNIT_HUNDREDTH_STEMS, $word) !== 1,
+    ));
+    $wrongly = array_values(array_filter(
+        $units,
+        static fn (string $word): bool => preg_match(MINOR_UNIT_HUNDREDTH_STEMS, $word) === 1,
+    ));
+
+    expect($missed)->toBe([], 'These name a hundredth of a unit and the stem list no longer reads them: '.implode(', ', $missed));
+    expect($wrongly)->toBe([], 'These name the minor unit, which is the fix rather than the defect, and were flagged: '.implode(', ', $wrongly));
+});
+
 it('names no hundredth of a unit in copy describing a stored minor-unit figure', function (): void {
     $claims = [];
 
     foreach (Locale::cases() as $case) {
         foreach (minorUnitScaleCopy($case->value) as $file => $paths) {
             $lines = require base_path($file);
-            expect($lines)->toBeArray();
+            expect($lines)->toBeArray($file.' no longer returns a lang array, so every key below reads as empty.');
 
             foreach ($paths as $path) {
                 $line = (string) data_get($lines, $path);
-                expect($line)->not->toBe('');
+                expect($line)->not->toBe('', $file.' ['.$path.'] is gone, so this rule is reading nothing where it stands.');
 
                 if (preg_match(MINOR_UNIT_HUNDREDTH_STEMS, $line) === 1) {
                     $claims[] = $file." [{$path}]: ".$line;

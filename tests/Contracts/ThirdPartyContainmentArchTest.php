@@ -10,6 +10,13 @@ use Modules\Core\Public\Support\PatternScan;
 
 // The runtime the application is written in, rather than a dependency it
 // chose: you cannot wrap what you extend or what the container hands you.
+//
+// Every entry has to be reached by the walk below, and four were not: `Pest`,
+// `PHPUnit`, `Termwind` and `Flux` excused nothing anywhere in this tree —
+// Flux is written in Blade and never as a PHP namespace, Termwind was named
+// only by this list, and neither test runner appears under its own namespace.
+// An exemption nobody reaches reads as considered, which is how the next
+// package to answer to one of those prefixes inherits the excuse.
 /**
  * @return array<string, string> namespace prefix => why it is the runtime
  */
@@ -24,11 +31,7 @@ function thirdPartyRuntimeLayer(): array
         'Laravel' => 'First-party Laravel packages (Fortify, Horizon, Prompts).',
         'Nwidart' => 'The module system this repo is structured by.',
         'Spatie\LaravelData' => 'A DTO base class ~120 DTOs extend. You cannot wrap a parent.',
-        'Pest' => 'The test runner.',
-        'PHPUnit' => 'The test runner.',
         'Mockery' => 'The test runner.',
-        'Termwind' => 'Console rendering, resolved by the framework.',
-        'Flux' => 'The Livewire component library the views are written in.',
     ];
 }
 
@@ -156,6 +159,10 @@ function thirdPartySourceFiles(string $root, bool $wantTests): array
         if (! $file->isFile() || ! str_ends_with($path, '.php')) {
             continue;
         }
+        // Generated, and generated from the very manifests this rule reads: the
+        // compiled package and service manifests name every installed package
+        // by namespace, so a walk that opened them would report the whole
+        // vendor directory as reaching past its seam.
         if (str_contains($path, '/bootstrap/cache/')) {
             continue;
         }
@@ -176,7 +183,15 @@ function thirdPartySourceFiles(string $root, bool $wantTests): array
  */
 function thirdPartyPrefixesIn(string $relativePath, array $installed): array
 {
-    $source = (string) file_get_contents(base_path($relativePath));
+    return thirdPartyPrefixesInSource((string) file_get_contents(base_path($relativePath)), $installed);
+}
+
+/**
+ * @param  list<string>  $installed  longest first
+ * @return list<string>
+ */
+function thirdPartyPrefixesInSource(string $source, array $installed): array
+{
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source) ?? $source;
 
     // A separator is only a separator when an identifier follows it. Without
@@ -233,21 +248,44 @@ function thirdPartyIsModuleEntrypoint(string $relativePath): bool
         || str_ends_with($relativePath, 'Command.php');
 }
 
-// bootstrap/ and app/Providers/ are the application's composition root: their
-// whole job is naming the packages the container assembles. Nothing else in
-// app/ gets this.
+// Named files, not the two directories they sit in. "bootstrap/ and
+// app/Providers/ are the composition root" excused eleven files to buy one:
+// across both directories exactly one names a package with a seam, and every
+// file added to either would have inherited the excuse without a diff.
+/**
+ * @return array<string, array{reason: string, proves: string}>
+ */
+function thirdPartyCompositionRoots(): array
+{
+    return [
+        'app/Providers/NativeServiceProvider.php' => [
+            'reason' => 'NativePHP\'s published plugin-registration stub: its plugins() return type names the mobile plugin provider classes verbatim per the vendor contract, and those packages install only under mobile-app/vendor',
+            'proves' => '/function plugins\(\)/',
+        ],
+    ];
+}
+
 function thirdPartyIsCompositionRoot(string $relativePath): bool
 {
-    return str_starts_with($relativePath, 'bootstrap/') || str_starts_with($relativePath, 'app/Providers/');
+    return array_key_exists($relativePath, thirdPartyCompositionRoots());
 }
 
 it('reaches every third-party package through a seam of ours', function (): void {
     $installed = thirdPartyInstalledPrefixes();
     $seams = thirdPartySeams();
     $offenders = [];
+    $walked = 0;
+
+    // 249 installed prefixes and 6,692 production files today, both floored far
+    // under. An empty manifest read makes every file name no package at all,
+    // and a walk that lost a root reports the same clean tree a clean tree
+    // reports — with nothing else in the output looking wrong.
+    expect(count($installed))->toBeGreaterThan(50, 'almost no package namespaces were read out of the composer manifest — the read is broken, not the install.');
 
     foreach (['app', 'Modules', 'bootstrap', 'routes'] as $root) {
         foreach (thirdPartySourceFiles($root, wantTests: false) as $file) {
+            $walked++;
+
             if (thirdPartyIsCompositionRoot($file)) {
                 continue;
             }
@@ -289,6 +327,8 @@ it('reaches every third-party package through a seam of ours', function (): void
     }
 
     sort($offenders);
+
+    expect($walked)->toBeGreaterThan(2000, 'the production walk read almost nothing — the roots are wrong, not the tree.');
 
     expect($offenders)->toBe(
         [],
@@ -461,5 +501,124 @@ it('still has the Native\\Desktop rule this one defers to', function (): void {
         "This file defers a namespace to a rule that no longer exists, so the\n".
         "namespace is now governed by nothing. Restore the rule or bring the\n".
         "package back into thirdPartySeams(). Offenders:\n  ".implode("\n  ", $missing),
+    );
+});
+
+it('declares no runtime-layer namespace that nothing in this repository names', function (): void {
+    $installed = thirdPartyInstalledPrefixes();
+    $reached = [];
+
+    // Production plus the module suites, because two of these entries are
+    // reached only from a test: Mockery by seven, Nwidart by the one that
+    // asserts the phone's module wiring. A production-only count would read
+    // both as excusing nothing and delete two correct entries.
+    foreach ([['app', false], ['Modules', false], ['bootstrap', false], ['routes', false], ['Modules', true]] as [$root, $wantTests]) {
+        foreach (thirdPartySourceFiles($root, wantTests: $wantTests) as $file) {
+            foreach (thirdPartyPrefixesIn($file, $installed) as $namespace) {
+                $owner = thirdPartyOwnerOf($namespace);
+
+                if ($owner !== '') {
+                    $reached[$owner] = true;
+                }
+            }
+        }
+    }
+
+    $excusingNothing = array_values(array_filter(
+        array_keys(thirdPartyRuntimeLayer()),
+        static fn (string $prefix): bool => ! isset($reached[$prefix]),
+    ));
+
+    expect($excusingNothing)->toBe(
+        [],
+        "A namespace declared as the runtime is named by nothing in this repository, so it\n".
+        "excuses nothing and reads as considered to everybody after it — which is how the next\n".
+        "package answering to that prefix inherits the excuse. Delete the entry, or the\n".
+        "dependency. The seam map is held to the same rule two cases up. Offenders:\n  ".
+        implode("\n  ", $excusingNothing),
+    );
+});
+
+it('reads a package named inline as well as imported, and no package out of an escaped quote', function (): void {
+    $installed = ['GuzzleHttp', 'Native\Mobile', 'Illuminate'];
+
+    $planted = <<<'PHP'
+        <?php
+        use GuzzleHttp\Client;
+
+        final class PlantedReach
+        {
+            public function run(): void
+            {
+                $native = \Native\Mobile\Facades\Dialog::class;
+                $title = 'NativePHP\'s own transport';
+                $escaped = 'App\\\\Models\\\\User';
+            }
+        }
+        PHP;
+
+    expect(thirdPartyPrefixesInSource($planted, $installed))->toBe(
+        ['GuzzleHttp', 'Native\Mobile'],
+        'The reader must see the import and the inline fully-qualified reference — a `use` scan '
+        .'alone is blind to the second, which is how a package reaches a file nothing declared it '
+        .'in — and must read neither an escaped quote nor an escaped separator as a namespace.',
+    );
+
+    expect(thirdPartyPrefixesInSource("<?php\n// GuzzleHttp\\Client is what this comment is about.\n", $installed))->toBe(
+        [],
+        'A package named in prose reads as a call site, so a comment explaining a seam would be an offender against it.',
+    );
+});
+
+it('still holds each composition root to the reason it was granted for', function (): void {
+    $installed = thirdPartyInstalledPrefixes();
+    $seams = thirdPartySeams();
+    $stale = [];
+
+    foreach (thirdPartyCompositionRoots() as $relative => $pin) {
+        if (! is_file(base_path($relative))) {
+            $stale[] = $relative.' — no such file';
+
+            continue;
+        }
+
+        if (! PatternScan::matches($pin['proves'], (string) file_get_contents(base_path($relative)))) {
+            $stale[] = $relative.' — no longer reads as "'.$pin['reason'].'"';
+
+            continue;
+        }
+
+        // The other half: a composition root that has stopped naming a seamed
+        // package outside its seam is excusing nothing, and an exemption that
+        // excuses nothing is the next file's inherited excuse.
+        $excuses = false;
+
+        foreach (thirdPartyPrefixesIn($relative, $installed) as $namespace) {
+            $owner = thirdPartyOwnerOf($namespace);
+
+            if ($owner === '' || ! isset($seams[$owner])) {
+                continue;
+            }
+
+            foreach ($seams[$owner] as $seam) {
+                if ($relative === $seam || str_starts_with($relative, $seam.'/')) {
+                    continue 2;
+                }
+            }
+
+            $excuses = true;
+            break;
+        }
+
+        if (! $excuses) {
+            $stale[] = $relative.' — names no package outside its seam, so the entry excuses nothing';
+        }
+    }
+
+    expect($stale)->toBe(
+        [],
+        "A composition root is pinned here and no longer earns it. The pin is a hole in the rule\n".
+        "two cases up, so it lasts exactly as long as the reason does — repoint it, or delete it:\n  ".
+        implode("\n  ", $stale),
     );
 });

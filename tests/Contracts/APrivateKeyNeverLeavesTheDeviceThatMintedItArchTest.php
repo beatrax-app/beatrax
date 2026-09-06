@@ -13,6 +13,11 @@ use Modules\Core\Public\Support\PatternScan;
 
 const PRIVATE_KEY_HALF_PATTERN = '/(?:ed25519|x25519)SecretKeyHex|(?:ed25519|x25519)_secret_key_hex/i';
 
+// The two shipped roots hold 6,688 PHP files with the suite left out, and the
+// floor sits far under that: a walk that opened none of them reports the same
+// tree a walk that found no travelling key reports.
+const PRIVATE_KEY_SOURCE_FLOOR = 1_000;
+
 // Each entry names a file that reads a private half and what it does with it
 // that ends on this machine. The `proves` pattern re-checks the reason: when
 // the file stops matching, the exemption has outlived what earned it and this
@@ -115,7 +120,11 @@ it('keeps the private half of a device identity to the files that spend it here'
 
     // Counted first: a walk that resolved nothing would report a tree where no
     // private key travels, which is the answer a clean tree gives.
-    expect($sources)->not->toBeEmpty();
+    expect(count($sources))->toBeGreaterThan(
+        PRIVATE_KEY_SOURCE_FLOOR,
+        'The walk opened '.count($sources).' files of the two shipped roots, so a clean answer here is a walk '
+        .'that read almost nothing.'
+    );
 
     $holders = [];
 
@@ -136,7 +145,7 @@ it('keeps the private half of a device identity to the files that spend it here'
 });
 
 it('still holds each private-key holder to the reason it was granted for', function (): void {
-    expect(PRIVATE_KEY_HOLDERS)->not->toBe([]);
+    expect(PRIVATE_KEY_HOLDERS)->not->toBe([], 'The pin map is empty, so this rule proves nothing about it.');
 
     foreach (PRIVATE_KEY_HOLDERS as $relative => $pin) {
         $source = (string) file_get_contents(base_path($relative));
@@ -148,7 +157,11 @@ it('still holds each private-key holder to the reason it was granted for', funct
 it('assembles a device identity only by minting one or by opening this install own key file', function (): void {
     $sources = privateKeyScannedSources();
 
-    expect($sources)->not->toBeEmpty();
+    expect(count($sources))->toBeGreaterThan(
+        PRIVATE_KEY_SOURCE_FLOOR,
+        'The walk opened '.count($sources).' files of the two shipped roots, so a clean answer here is a walk '
+        .'that read almost nothing.'
+    );
 
     $builders = [];
 
@@ -180,5 +193,37 @@ it('keys that file to the install rather than to any peer', function (): void {
 
     // A path taking a peer device id would be a per-peer key store, which is
     // the shape an escrow takes before anybody calls it one.
-    expect($loader)->toMatch('#sync/identity/\{\$userId\}\.enc#');
+    expect($loader)->toMatch(
+        '#sync/identity/\{\$userId\}\.enc#',
+        'DeviceIdentityLoader no longer keys the sealed key file to the signed-in account alone. A path taking a '
+        .'peer device id is a per-peer key store, which is an escrow before anybody calls it one.'
+    );
 });
+
+// A guard that cannot go red says nothing, and the sweeps above are read off one
+// pattern and one stripper. Both are checked against the shapes they were
+// written for rather than against the tree.
+it('reads a private half, and reads neither a public one nor a comment naming one', function (string $line, bool $holds): void {
+    $path = sys_get_temp_dir().'/private-key-'.bin2hex(random_bytes(8)).'.php';
+
+    try {
+        file_put_contents($path, "<?php\n".$line."\n");
+
+        expect(PatternScan::matches(PRIVATE_KEY_HALF_PATTERN, privateKeyCode($path)))->toBe(
+            $holds,
+            'The reader answered '.var_export(! $holds, true).' for a line it has to read as '
+            .($holds ? 'a private half' : 'something else').': '.$line
+        );
+    } finally {
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
+})->with([
+    'the signing half, camelCase' => ['$key = $identity->ed25519SecretKeyHex;', true],
+    'the transport half, snake_case' => ["\$key = \$row['x25519_secret_key_hex'];", true],
+    'the same name in a different case' => ['$key = $identity->Ed25519SecretKeyHex;', true],
+    'the public half' => ['$key = $identity->ed25519PublicKeyHex;', false],
+    'prose naming the half it forbids' => ['// never copy ed25519SecretKeyHex to a peer', false],
+    'a docblock naming it' => ['/** @var string $ed25519SecretKeyHex */', false],
+]);

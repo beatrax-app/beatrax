@@ -75,7 +75,10 @@ it('takes every unique job lock in the store the app keeps locks in', function (
 
     // A floor, because the failure a hand-written list cannot have is the one
     // this replaces: the walk finding nothing and reporting no offenders.
-    expect($jobs)->toHaveCount(count($jobs))->and(count($jobs))->toBeGreaterThanOrEqual(20);
+    expect(count($jobs))->toBeGreaterThanOrEqual(
+        20,
+        'The walk resolved almost no ShouldBeUnique job, so the empty offender list below is a tree nobody read.',
+    );
 
     $configured = LockStore::forUniqueJobs()->getStore();
 
@@ -126,10 +129,17 @@ it('reports a unique job that never says where its lock lives', function (): voi
         }
     };
 
-    expect(lockStoreOf($withoutUniqueVia::class))->toBeNull()
-        ->and(lockStoreOf($intoTheWrongStore::class))->not->toBe(LockStore::forUniqueJobs()->getStore());
+    expect(lockStoreOf($withoutUniqueVia::class))->toBeNull(
+        'a job declaring no uniqueVia() must read as taking no named store, which is the offence above',
+    )
+        ->and(lockStoreOf($intoTheWrongStore::class))->not->toBe(
+            LockStore::forUniqueJobs()->getStore(),
+            'a job naming a store that is not the configured one must not compare equal to it',
+        );
 
     // The walk reads files, so an anonymous class cannot reach it — the pair
     // above pins the predicate, and this pins that the walk still finds jobs.
-    expect(jobsAskingForUniqueness())->toContain(ReapplyRulesJob::class);
+    expect(in_array(ReapplyRulesJob::class, jobsAskingForUniqueness(), true))->toBeTrue(
+        'The walk no longer finds a job it has always found, so it is resolving classes rather than reading a clean tree.',
+    );
 });

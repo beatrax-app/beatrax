@@ -43,12 +43,20 @@ const OUTBOUND_PROBE_URIS = ['up', 'health', 'healthz', 'health-check', 'healthc
 
 const OUTBOUND_BOOTSTRAP_ROOTS = ['bootstrap/app.php', 'mobile-app/bootstrap/app.php'];
 
-/** @return list<array{path: string, source: string}> */
+/**
+ * mobile-app/resources is deliberately absent: it is a symlink onto the root
+ * `resources`, and walking both reported every shared file twice under two
+ * spellings -- eleven templates, one stylesheet and ten scripts -- so an
+ * offender in one of them would have been named twice and the walk's own
+ * denominator inflated by the same eleven.
+ *
+ * @return list<array{path: string, source: string}>
+ */
 function outboundShippedFiles(string $extension): array
 {
     $found = [];
 
-    foreach (['Modules', 'resources', 'mobile-app/resources'] as $root) {
+    foreach (['Modules', 'resources'] as $root) {
         $absolute = base_path($root);
 
         if (! is_dir($absolute)) {
@@ -105,12 +113,21 @@ function outboundThirdPartyHost(string $value): ?string
 
 it('names no third-party host in anything a browser fetches on its own', function (): void {
     $offenders = [];
-    $templates = 0;
     $elements = 0;
 
-    foreach (outboundShippedFiles('.blade.php') as $template) {
-        $templates++;
+    $walked = outboundShippedFiles('.blade.php');
 
+    // A walk that examined nothing reads exactly like a clean tree, and this
+    // one is a lexer rather than a pattern, so a parse that stopped early would
+    // report the same empty list a repo with nothing to find does. Read here
+    // rather than after the verdict: an assertion that runs only when the list
+    // above is empty is an assertion the failing case never reaches.
+    expect(count($walked))->toBeGreaterThan(
+        100,
+        'the walk resolved '.count($walked).' templates, which is too few to be this tree.'
+    );
+
+    foreach ($walked as $template) {
         foreach (MarkupSource::tags($template['source']) as $element) {
             $elements++;
 
@@ -127,6 +144,11 @@ it('names no third-party host in anything a browser fetches on its own', functio
         }
     }
 
+    expect($elements)->toBeGreaterThan(
+        1000,
+        'the lexer returned '.$elements.' elements over '.count($walked).' templates, which is too few to have parsed them.'
+    );
+
     sort($offenders);
 
     expect($offenders)->toBe(
@@ -135,21 +157,32 @@ it('names no third-party host in anything a browser fetches on its own', functio
         "Vendor the asset into resources/ and let Vite build it, or inline it as\n".
         "a data: URI. Offenders:\n  ".implode("\n  ", $offenders),
     );
-
-    // A walk that examined nothing reads exactly like a clean tree, and this
-    // one is a lexer rather than a pattern, so a parse that stopped early would
-    // report the same empty list a repo with nothing to find does.
-    expect($templates)->toBeGreaterThan(100);
-    expect($elements)->toBeGreaterThan(1000);
 });
 
 it('pulls no stylesheet, font or script into a bundle from a third party', function (): void {
     $offenders = [];
+    $stylesheets = outboundShippedFiles('.css');
+    $scripts = outboundShippedFiles('.js');
+    $targets = 0;
 
-    foreach (outboundShippedFiles('.css') as $stylesheet) {
-        $targets = PatternScan::all('/url\(\s*[\'"]?([^\'")]+)|@import\s+[\'"]([^\'"]+)/i', $stylesheet['source']);
+    // Read before the verdict, as above. There is one stylesheet and ten
+    // scripts, and the tree holds no absolute URL in either, so the script
+    // half has no denominator of its own beyond the files it opened.
+    expect(count($stylesheets))->toBeGreaterThan(
+        0,
+        'the walk resolved no stylesheet at all, so the url() half of this rule read nothing.'
+    );
 
-        foreach (array_merge($targets[1], $targets[2]) as $target) {
+    expect(count($scripts))->toBeGreaterThan(
+        4,
+        'the walk resolved '.count($scripts).' scripts, which is too few to be this tree.'
+    );
+
+    foreach ($stylesheets as $stylesheet) {
+        $found = PatternScan::all('/url\(\s*[\'"]?([^\'")]+)|@import\s+[\'"]([^\'"]+)/i', $stylesheet['source']);
+
+        foreach (array_filter(array_merge($found[1], $found[2])) as $target) {
+            $targets++;
             $host = outboundThirdPartyHost($target);
 
             if ($host !== null) {
@@ -158,7 +191,12 @@ it('pulls no stylesheet, font or script into a bundle from a third party', funct
         }
     }
 
-    foreach (outboundShippedFiles('.js') as $script) {
+    expect($targets)->toBeGreaterThan(
+        0,
+        'the walk read '.$targets.' url() or @import targets, so a stylesheet pulling one in would not have been seen.'
+    );
+
+    foreach ($scripts as $script) {
         foreach (PatternScan::all('/[\'"`](https?:\/\/[^\'"`\s]+)/i', $script['source'])[1] as $literal) {
             $host = outboundThirdPartyHost($literal);
 
@@ -228,7 +266,11 @@ it('serves exactly one health endpoint, and it is one this repository wrote', fu
         'one. Found: '.(($probes === []) ? 'none at all' : implode(', ', array_keys($probes))),
     );
 
-    expect($probes['health'] ?? '')->toStartWith(HealthController::class);
+    expect($probes['health'] ?? '')->toStartWith(
+        HealthController::class,
+        'The /health route resolves to '.($probes['health'] ?? 'nothing').'. This application answers its own '
+        .'probe so the framework\'s stock page, which preconnects to two CDNs, is never the one served.'
+    );
 });
 
 it('goes red on the three lines that broke the claim and stays quiet on a link the reader clicks', function (): void {

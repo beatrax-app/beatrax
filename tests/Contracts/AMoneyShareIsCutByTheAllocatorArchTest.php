@@ -63,43 +63,56 @@ function moneyShareCuts(): array
     $cuts = [];
 
     foreach (BackendSourceFiles::all() as $path) {
-        $relative = str_replace(base_path().'/', '', $path);
-        $tokens = BackendSourceFiles::codeTokens($path);
-        $count = count($tokens);
-        $texts = array_map(
-            static fn (array|string $token): string => is_array($token) ? $token[1] : $token,
-            $tokens,
-        );
+        $cuts = array_merge($cuts, moneyShareCutsIn(
+            str_replace(base_path().'/', '', $path),
+            BackendSourceFiles::codeTokens($path),
+        ));
+    }
 
-        for ($i = 0; $i < $count; $i++) {
-            if (! is_array($tokens[$i])) {
-                continue;
-            }
+    return $cuts;
+}
 
-            $isIntdiv = $tokens[$i][0] === T_STRING && $tokens[$i][1] === 'intdiv';
-            $isCast = $tokens[$i][0] === T_INT_CAST;
+/**
+ * @param  list<array{0:int,1:string,2:int}|string>  $tokens
+ * @return list<array{path: string, line: int, expression: string}>
+ */
+function moneyShareCutsIn(string $relative, array $tokens): array
+{
+    $cuts = [];
+    $count = count($tokens);
+    $texts = array_map(
+        static fn (array|string $token): string => is_array($token) ? $token[1] : $token,
+        $tokens,
+    );
 
-            if (! $isIntdiv && ! $isCast) {
-                continue;
-            }
-
-            $expression = $isIntdiv
-                ? moneyShareCallArguments($texts, $i)
-                : moneyShareCastOperand($texts, $i);
-
-            if (preg_match('/[A-Za-z_]+_?[Mm]inor\b/', $expression) !== 1) {
-                continue;
-            }
-            if (preg_match('#[*/]#', $expression) !== 1) {
-                continue;
-            }
-
-            $cuts[] = [
-                'path' => $relative,
-                'line' => $tokens[$i][2],
-                'expression' => trim(preg_replace('/\s+/', ' ', $expression) ?? $expression),
-            ];
+    for ($i = 0; $i < $count; $i++) {
+        if (! is_array($tokens[$i])) {
+            continue;
         }
+
+        $isIntdiv = $tokens[$i][0] === T_STRING && $tokens[$i][1] === 'intdiv';
+        $isCast = $tokens[$i][0] === T_INT_CAST;
+
+        if (! $isIntdiv && ! $isCast) {
+            continue;
+        }
+
+        $expression = $isIntdiv
+            ? moneyShareCallArguments($texts, $i)
+            : moneyShareCastOperand($texts, $i);
+
+        if (preg_match('/[A-Za-z_]+_?[Mm]inor\b/', $expression) !== 1) {
+            continue;
+        }
+        if (preg_match('#[*/]#', $expression) !== 1) {
+            continue;
+        }
+
+        $cuts[] = [
+            'path' => $relative,
+            'line' => $tokens[$i][2],
+            'expression' => trim(preg_replace('/\s+/', ' ', $expression) ?? $expression),
+        ];
     }
 
     return $cuts;
@@ -168,7 +181,7 @@ it('cuts a money share in the one place that hands the remainder back', function
     $cuts = moneyShareCuts();
 
     // A walk that reads nothing finds no arithmetic and reports a clean tree.
-    expect(count($cuts))->toBeGreaterThan(10);
+    expect(count($cuts))->toBeGreaterThan(10, 'Read '.count($cuts).' truncating money expressions, too few for an empty offender list to mean anything.');
 
     $offenders = [];
     $pinned = [];
@@ -197,7 +210,10 @@ it('cuts a money share in the one place that hands the remainder back', function
         ...$offenders,
     ]));
 
-    expect(array_keys($pinned))->toBe(array_keys(MONEY_SHARE_PINS));
+    expect(array_keys($pinned))->toBe(
+        array_keys(MONEY_SHARE_PINS),
+        'A pinned cut is no longer reached by the rule it was written for, so the entry excuses nothing and goes.',
+    );
 });
 
 it('still holds each pinned cut to the reason it was granted for', function (): void {
@@ -206,6 +222,35 @@ it('still holds each pinned cut to the reason it was granted for', function (): 
 
         expect($source)->toMatch($pin['proves'], $relative.' no longer reads as "'.$pin['reason'].'"');
     }
+});
+
+it('reads a minor-unit figure cut into parts, and leaves a figure that is not money alone', function (): void {
+    $source = <<<'PHP'
+        <?php
+        final class PlantedShare
+        {
+            public function cut(int $totalMinor, int $share, int $parts): int
+            {
+                return intdiv($totalMinor * $share, $parts);
+            }
+
+            public function version(int $minor, int $parts): int
+            {
+                return intdiv($minor * 2, $parts);
+            }
+
+            public function whole(int $totalMinor): int
+            {
+                return (int) $totalMinor;
+            }
+        }
+        PHP;
+
+    expect(array_column(moneyShareCutsIn('Planted.php', BackendSourceFiles::tokensOf('Planted.php', $source)), 'expression'))->toBe(
+        ['$totalMinor * $share, $parts'],
+        'a minor-unit figure multiplied and truncated is the cut this rule is about; a semantic version minor '
+        .'is not money, and a cast with no arithmetic in it divides nothing',
+    );
 });
 
 it('keeps that one allocator answering more than one module', function (): void {

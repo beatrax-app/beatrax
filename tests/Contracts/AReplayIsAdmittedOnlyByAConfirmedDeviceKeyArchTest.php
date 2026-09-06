@@ -21,6 +21,11 @@ use Modules\Core\Public\Support\PatternScan;
 // replayer admits a revoked device's new writes as ordinary traffic, and no
 // reader ever decided that. It is the one that stays out.
 
+// The two shipped roots hold 6,688 PHP files with the suite left out, and the
+// floor sits far under that: a walk that opened none of them finds no replayer
+// and reports the same clean tree a correct one does.
+const CONFIRMED_KEY_SOURCE_FLOOR = 1_000;
+
 const CONFIRMED_KEY_REPLAY_SITES = [
     'Modules/Mobile/Internal/Sync/LanSyncClient.php',
     'Modules/Sync/Internal/Transport/SyncWebSocketHandler.php',
@@ -68,7 +73,11 @@ it('builds every shipped replayer from the confirmed-only device-key map', funct
 
     // Counted first: a walk that resolved nothing would report that no replayer
     // is built from the wider map, which is what a correct tree also reports.
-    expect($sources)->not->toBeEmpty();
+    expect(count($sources))->toBeGreaterThan(
+        CONFIRMED_KEY_SOURCE_FLOOR,
+        'The walk opened '.count($sources).' files of the two shipped roots, so a clean answer here is a walk '
+        .'that read almost nothing.'
+    );
 
     $sites = [];
     $wide = [];

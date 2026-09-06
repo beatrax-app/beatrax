@@ -16,16 +16,19 @@ use Modules\Core\Public\Support\PatternScan;
 // already uses, and the one a fifth path is most likely to be written in. It
 // was invisible, and the InstallCommand exemption sat there proving nothing.
 
+// Keyed on the path rather than on the class name: a basename excuses every
+// future file that happens to share it, and the four below sit in three modules
+// that each already own a second class named for what it does.
 /**
- * @return array<string, string> class => why it needs no wrap decision
+ * @return array<string, string> repo-relative path => why it needs no wrap decision
  */
 function passwordWritersWithNoWrapToCarry(): array
 {
     return [
-        'SignupAction' => 'creates the account; there is no app lock yet',
-        'AddUserAction' => 'creates a household member; their lock does not exist yet',
-        'InstallCommand' => 'first-run creation, and it refuses to change an existing password',
-        'MobileImportBootstrap' => 'stashes the typed account password in the session so a failed provisioning can be retried; writes no users row',
+        'Modules/Auth/Public/Actions/SignupAction.php' => 'creates the account; there is no app lock yet',
+        'Modules/Auth/Public/Actions/AddUserAction.php' => 'creates a household member; their lock does not exist yet',
+        'Modules/Core/Internal/Console/InstallCommand.php' => 'first-run creation, and it refuses to change an existing password',
+        'Modules/Mobile/Internal/Http/Livewire/MobileImportBootstrap.php' => 'stashes the typed account password in the session so a failed provisioning can be retried; writes no users row',
     ];
 }
 
@@ -61,8 +64,11 @@ function filesWritingANewPasswordHash(): array
         foreach ($files as $file) {
             $path = (string) $file;
 
+            // A seeder writes the demo household's password when it builds it,
+            // which is a first creation with no lock behind it, and it is the
+            // only write under Database/ the pattern below reaches.
             if (! str_ends_with($path, '.php') || str_contains($path, '/tests/')
-                || str_contains($path, '/Database/') || str_contains($path, '/Resources/')) {
+                || str_contains($path, '/Database/')) {
                 continue;
             }
 
@@ -84,48 +90,60 @@ function filesWritingANewPasswordHash(): array
 }
 
 /**
- * @return list<string> class basename of every file the walk produced
+ * @return list<string> every file the walk produced, relative to the repository root
  */
-function passwordWriterClassNames(): array
+function passwordWriterPaths(): array
 {
     return array_map(
-        static fn (string $path): string => basename($path, '.php'),
+        static fn (string $path): string => str_replace(base_path().'/', '', $path),
         filesWritingANewPasswordHash(),
     );
 }
 
-it('can see both shapes a new password is written in, and neither shape that is not one', function (): void {
-    $pattern = passwordWriteKeyPattern();
-
-    expect(PatternScan::matches($pattern, "'password' => \$this->hasher->make(\$p),"))->toBeTrue();
-    expect(PatternScan::matches($pattern, "'password' => Hash::make(\$p),"))->toBeTrue();
-    expect(PatternScan::matches($pattern, "'password' => \$password,"))->toBeTrue();
-    expect(PatternScan::matches($pattern, "'password'  =>   \$hashed,"))->toBeTrue();
-
+it('can see both shapes a new password is written in, and neither shape that is not one', function (string $line, bool $writes): void {
+    expect(PatternScan::matches(passwordWriteKeyPattern(), $line))->toBe(
+        $writes,
+        'The reader answered '.var_export(! $writes, true).' for a line it has to read as '
+        .($writes ? 'a password write' : 'something else').': '.$line
+    );
+})->with([
+    'hashed at the call site' => ["'password' => \$this->hasher->make(\$p),", true],
+    'hashed through the facade' => ["'password' => Hash::make(\$p),", true],
+    'left to the model cast' => ["'password' => \$password,", true],
+    'spaced out' => ["'password'  =>   \$hashed,", true],
     // A greedy `\s*` OUTSIDE the lookahead backtracks to zero and lets the
     // space itself satisfy it, so both of these matched before the whitespace
     // moved inside — and the two loudest false positives in the tree were read
     // as password writers.
-    expect(PatternScan::matches($pattern, "'password' => Lang::get('auth::x.y'),"))->toBeFalse();
-    expect(PatternScan::matches($pattern, "'password' => 'hashed',"))->toBeFalse();
-});
+    'a translated field label' => ["'password' => Lang::get('auth::x.y'),", false],
+    'the model declaring the cast' => ["'password' => 'hashed',", false],
+]);
 
 it('finds the password writers it is meant to be checking', function (): void {
-    $found = passwordWriterClassNames();
+    $found = passwordWriterPaths();
 
     // The four that must decide, named rather than counted: a count survives a
     // walk that quietly stopped seeing one and picked up something else.
-    foreach (['ResetPasswordCommand', 'ResetPasswordAction', 'ChangePasswordPage', 'ManageUserPage'] as $writer) {
+    foreach ([
+        'Modules/Auth/Internal/Console/ResetPasswordCommand.php',
+        'Modules/Auth/Public/Actions/ResetPasswordAction.php',
+        'Modules/Auth/Internal/Http/Livewire/ChangePasswordPage.php',
+        'Modules/Auth/Internal/Http/Livewire/ManageUserPage.php',
+    ] as $writer) {
         expect($found)->toContain($writer);
     }
 
-    expect(count($found))->toBeGreaterThanOrEqual(4 + count(passwordWritersWithNoWrapToCarry()));
+    expect(count($found))->toBeGreaterThanOrEqual(
+        4 + count(passwordWritersWithNoWrapToCarry()),
+        'The walk produced '.count($found).' password writers, which is fewer than the four that must decide plus '
+        .'the '.count(passwordWritersWithNoWrapToCarry()).' excused: it has stopped seeing one of them.'
+    );
 });
 
 it('exempts no password writer the walk does not reach', function (): void {
     $stale = array_values(array_diff(
         array_keys(passwordWritersWithNoWrapToCarry()),
-        passwordWriterClassNames(),
+        passwordWriterPaths(),
     ));
 
     expect($stale)->toBe([], implode("\n  ", array_merge(
@@ -142,9 +160,9 @@ it('has every password writer either carry the recovery wrap or stamp it stale',
     $offenders = [];
 
     foreach (filesWritingANewPasswordHash() as $path) {
-        $class = basename($path, '.php');
+        $relative = str_replace(base_path().'/', '', $path);
 
-        if (array_key_exists($class, $exempt)) {
+        if (array_key_exists($relative, $exempt)) {
             continue;
         }
 

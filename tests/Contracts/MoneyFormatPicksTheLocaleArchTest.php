@@ -1,39 +1,14 @@
 <?php
 
 declare(strict_types=1);
+
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-locale-argument-passed-to-moneyformat
  */
-
-/** @return list<string> repo-relative PHP and Blade files under Modules/, app/ and resources/ */
-function moneyFormatRenderingFiles(): array
-{
-    $files = [];
-
-    foreach (['Modules', 'app', 'resources'] as $root) {
-        $absolute = base_path($root);
-        if (! is_dir($absolute)) {
-            continue;
-        }
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($absolute, FilesystemIterator::SKIP_DOTS),
-        );
-
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            if ($file->isFile() && str_ends_with($file->getPathname(), '.php')) {
-                $files[] = str_replace(base_path().'/', '', $file->getPathname());
-            }
-        }
-    }
-
-    sort($files);
-
-    return $files;
-}
 
 /**
  * @return list<array{args: string, line: int}> every ->format(...) call, argument text intact
@@ -66,24 +41,59 @@ function moneyFormatCalls(string $source): array
     return $calls;
 }
 
-it('hands format() no locale to override the reader\'s own', function (): void {
+/**
+ * Any locale anywhere in the argument list, not just a bare literal — a
+ * computed one is the shape that survived the rule's first pass.
+ *
+ * @return list<array{locale: string, line: int}>
+ */
+function moneyFormatLocaleOffendersIn(string $source): array
+{
+    $stripped = preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $source) ?? $source;
     $offenders = [];
 
-    foreach (moneyFormatRenderingFiles() as $file) {
-        $source = (string) file_get_contents(base_path($file));
-        $stripped = preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $source) ?? $source;
+    foreach (moneyFormatCalls($stripped) as $call) {
+        $named = PatternScan::first('/[\'"]([a-z]{2}[_-][A-Z]{2})[\'"]/', $call['args']);
 
-        foreach (moneyFormatCalls($stripped) as $call) {
-            // Any locale anywhere in the argument list, not just a bare
-            // literal — a computed one is the shape that survived the rule's
-            // first pass.
-            if (preg_match('/[\'"]([a-z]{2}[_-][A-Z]{2})[\'"]/', $call['args'], $match) !== 1) {
-                continue;
-            }
-
-            $offenders[] = $file.':'.$call['line'].' — format(… '.$match[1].' …)';
+        if ($named !== []) {
+            $offenders[] = ['locale' => (string) $named[1], 'line' => $call['line']];
         }
     }
+
+    return $offenders;
+}
+
+it('hands format() no locale to override the reader\'s own', function (): void {
+    // Every root that ships. The walk opened Modules/, app/ and resources/,
+    // which left routes/, config/ and the second composer root's own config
+    // outside a rule whose subject is "wherever an amount is rendered".
+    $files = RepoTree::files(RepoTree::PRODUCTION_PHP);
+
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'RepoTree returned '.count($files).' shipped PHP files, which is too few to have read the tree.'
+    );
+
+    $calls = 0;
+    $offenders = [];
+
+    foreach ($files as $path) {
+        $source = (string) file_get_contents($path);
+        $relative = str_replace(RepoTree::root().'/', '', $path);
+        $calls += count(moneyFormatCalls($source));
+
+        foreach (moneyFormatLocaleOffendersIn($source) as $offender) {
+            $offenders[] = $relative.':'.$offender['line'].' — format(… '.$offender['locale'].' …)';
+        }
+    }
+
+    // Read before the verdict: the walk is a balanced-paren reader rather than
+    // a pattern, and one that stopped at the first file reports the same empty
+    // list a clean tree does. The floor sits far under today's 154 calls.
+    expect($calls)->toBeGreaterThan(
+        50,
+        'the walk found '.$calls.' ->format() calls, which is too few to be this tree.'
+    );
 
     sort($offenders);
 
@@ -106,4 +116,23 @@ it('gives Money::format() no locale parameter to pass in the first place', funct
         'here is an invitation to override that per call site, which is exactly '.
         'how thirty of them came to render USD with Dutch separators.',
     );
+});
+
+// Thirty call sites were fixed and nothing was left to find, so the reader is
+// driven against planted sources. The near-misses are the shapes that share the
+// method name and must stay legible: a date format string, a locale in a
+// comment, and a nested call whose closing paren the reader has to walk to.
+it('finds a locale anywhere in the argument list, and nowhere else', function (): void {
+    expect(moneyFormatLocaleOffendersIn('<?php echo $money->format(\'nl_NL\');'))
+        ->toBe([['locale' => 'nl_NL', 'line' => 1]])
+        ->and(moneyFormatLocaleOffendersIn('<?php echo $money->format($this->pick(\'de_DE\'), 2);'))
+        ->toBe([['locale' => 'de_DE', 'line' => 1]])
+        ->and(moneyFormatLocaleOffendersIn('<?php echo $date->format(\'Y-m-d\');'))->toBe([])
+        ->and(moneyFormatLocaleOffendersIn('<?php echo $money->format();'))->toBe([])
+        ->and(moneyFormatLocaleOffendersIn("<?php // \$money->format('nl_NL') used to be here\n"))->toBe([]);
+
+    // The reader walks to the balanced close rather than the next `)`, so a
+    // callable argument is one call and not two halves of one.
+    expect(moneyFormatCalls('<?php $a->format(fn () => g(1, 2));'))
+        ->toBe([['args' => 'fn () => g(1, 2)', 'line' => 1]]);
 });

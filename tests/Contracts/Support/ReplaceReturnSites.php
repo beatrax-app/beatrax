@@ -15,10 +15,6 @@ final class ReplaceReturnSites
 {
     public const array SCANNED_FUNCTIONS = ['preg_replace', 'preg_replace_callback', 'preg_split'];
 
-    // The one home for the checked reading. Its own calls are the checked
-    // ones, so it is the single file the guard steps over.
-    public const string SEAM = 'Modules/Core/Public/Support/PatternScan.php';
-
     private const array EMPTY_FALLBACKS = ["''", '""', 'null', '[', 'array'];
 
     private const array NAMES_THE_FAILURE = ['null', 'false'];

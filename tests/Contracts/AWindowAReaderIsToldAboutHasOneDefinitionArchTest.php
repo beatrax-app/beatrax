@@ -122,14 +122,20 @@ function readerWindowLeadingNumeral(string $label): ?int
 }
 
 it('names at least one window a reader is told about, and resolves everything it names', function (): void {
-    expect(WINDOWS_A_READER_IS_TOLD_ABOUT)->not->toBeEmpty();
+    expect(WINDOWS_A_READER_IS_TOLD_ABOUT)->not->toBeEmpty(
+        'The table is empty, so every case in this file iterates nothing and passes without reading a line.',
+    );
 
     foreach (WINDOWS_A_READER_IS_TOLD_ABOUT as $window => $declared) {
         expect(defined($declared['constant']))->toBeTrue(
             'The table names '.$declared['constant'].' as the one definition of '.$window
             .', and no such constant exists. A table pointing at nothing asserts nothing.'
         );
-        expect(constant($declared['constant']))->toBe($declared['seconds']);
+        expect(constant($declared['constant']))->toBe(
+            $declared['seconds'],
+            'The table states '.$window.' as '.$declared['seconds'].' seconds and '.$declared['constant'].' now says otherwise. '
+            .'One of the two is the definition and this table is not it.',
+        );
 
         $paths = [...array_keys($declared['named_by']), $declared['disclosed_by'], $declared['carried_from']];
 
@@ -152,7 +158,7 @@ it('discloses every window a reader is told about, in a line that interpolates i
         );
 
         $line = $lines[$declared['key']];
-        expect($line)->toBeString();
+        expect($line)->toBeString($declared['disclosed_by'].' declares '.$declared['key'].' as something other than a line of prose.');
 
         expect(str_contains((string) $line, $declared['placeholder']))->toBeTrue(
             'The line disclosing '.$window.' must take the number from '.$declared['constant'].' through '
@@ -247,7 +253,9 @@ it('agrees with the value the code selects on, in every option label that is a n
     /** @var array<string, string> $lines */
     $lines = require base_path('Modules/Auth/Resources/lang/en/app_lock.php');
 
-    expect(IdleTimeoutOptions::LABEL_KEYS)->not->toBeEmpty();
+    expect(IdleTimeoutOptions::LABEL_KEYS)->not->toBeEmpty(
+        'The option list is empty, so the loop below compares no label against the value it selects on.',
+    );
 
     foreach (IdleTimeoutOptions::LABEL_KEYS as $minutes => $labelKey) {
         $key = str_replace('auth::app_lock.', '', $labelKey);
@@ -282,6 +290,6 @@ it('finds each way a window stops having one definition', function (): void {
     expect(PatternScan::count('/(?<![\w:])\d+/', 'locks Beatrax within :window whatever this setting says'))
         ->toBe(0, 'a placeholder was read as a numeral');
 
-    expect(readerWindowLeadingNumeral('15 minutes'))->toBe(15);
-    expect(readerWindowLeadingNumeral('Fifteen minutes'))->toBeNull();
+    expect(readerWindowLeadingNumeral('15 minutes'))->toBe(15, 'a label opening with its own value went unread');
+    expect(readerWindowLeadingNumeral('Fifteen minutes'))->toBeNull('a label opening with a word has no numeral to compare and must read as none');
 });

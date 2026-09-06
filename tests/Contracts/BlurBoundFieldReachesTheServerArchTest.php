@@ -55,8 +55,15 @@ function viewsRenderedBy(string $componentPath): array
 
 it('never binds a field with wire:model.blur in a component whose updated() hook has to see it', function (): void {
     $offenders = [];
+    $components = livewireComponentFiles();
+    $viewsRead = 0;
 
-    foreach (livewireComponentFiles() as $componentPath) {
+    expect(count($components))->toBeGreaterThan(
+        100,
+        'The walk found almost no Livewire component, so the empty offender list below is a tree nobody read.',
+    );
+
+    foreach ($components as $componentPath) {
         $source = (string) file_get_contents($componentPath);
 
         if (preg_match('/function\s+updated[A-Za-z]*\s*\(/', $source) !== 1) {
@@ -65,6 +72,7 @@ it('never binds a field with wire:model.blur in a component whose updated() hook
 
         foreach (viewsRenderedBy($componentPath) as $viewPath) {
             $view = (string) file_get_contents($viewPath);
+            $viewsRead++;
 
             $matches = PatternScan::all('/wire:model((?:\.[\w]+)*)\.blur/', $view);
 
@@ -78,6 +86,14 @@ it('never binds a field with wire:model.blur in a component whose updated() hook
             }
         }
     }
+
+    // The component-to-view hop is a name lookup, and a renamed view resolves to
+    // nothing without saying so — which reads exactly like a component with no
+    // deferred binding in it.
+    expect($viewsRead)->toBeGreaterThan(
+        5,
+        'Almost no view was resolved from a component that declares an updated() hook, so the verdict below is about markup nobody opened.',
+    );
 
     expect(array_values(array_unique($offenders)))->toBe(
         [],
@@ -145,11 +161,13 @@ function deferredBindingOn(array $attributes, string $property): array
 // round trip -- which was the submit the reader was trying to avoid.
 it('binds every property an updated() hook watches so the hook can actually run', function (): void {
     $offenders = [];
+    $hooksRead = 0;
 
     foreach (livewireComponentFiles() as $componentPath) {
         $source = (string) file_get_contents($componentPath);
 
         $hooks = PatternScan::all('/function\s+updated([A-Z][A-Za-z0-9]*)\s*\(/', $source);
+        $hooksRead += count($hooks[1]);
 
         foreach (viewsRenderedBy($componentPath) as $viewPath) {
             $view = (string) file_get_contents($viewPath);
@@ -163,5 +181,37 @@ it('binds every property an updated() hook watches so the hook can actually run'
         }
     }
 
-    expect(array_values(array_unique($offenders)))->toBe([]);
+    expect($hooksRead)->toBeGreaterThan(
+        4,
+        'No property-specific updated() hook was found in any component, so this rule compared nothing against any binding.',
+    );
+
+    expect(array_values(array_unique($offenders)))->toBe([], implode("\n", [
+        'These fields are bound so the hook that validates them cannot run until the next round trip,',
+        'which is usually the submit the reader was trying to avoid. A goal refused for its date kept',
+        'saying so after a date was chosen, with aria-invalid still true:',
+        ...array_values(array_unique($offenders)),
+        '',
+        'Spell the binding wire:model.live (or .live.blur) wherever an updated<Property>() hook has to',
+        'see the value the reader just typed.',
+    ]));
+});
+
+// Both verdicts above are read off lists that are empty on a clean tree and on a
+// reader that stopped. This plants each answer the binding reader has to give.
+it('reads a deferred binding on the property a hook watches, and leaves a live one alone', function (): void {
+    expect(deferredBindingOn(['wire:model' => 'targetDate'], 'targetDate'))
+        ->toBe(['targetDate'], 'a plain wire:model on the watched property went unreported');
+
+    expect(deferredBindingOn(['wire:model.blur' => 'targetDate'], 'targetDate'))
+        ->toBe(['targetDate.blur'], 'a blur-only binding on the watched property went unreported');
+
+    expect(deferredBindingOn(['wire:model.live.blur' => 'targetDate'], 'targetDate'))
+        ->toBe([], 'a live binding reaches the server and must not be reported');
+
+    expect(deferredBindingOn(['wire:model' => 'otherField'], 'targetDate'))
+        ->toBe([], 'a binding on a property no hook watches was read as one that is watched');
+
+    expect(deferredBindingOn(['wire:submit' => 'save'], 'save'))
+        ->toBe([], 'an attribute that is not a wire:model binding was read as one');
 });

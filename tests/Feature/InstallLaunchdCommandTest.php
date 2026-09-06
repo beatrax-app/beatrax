@@ -8,48 +8,13 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\InstallCommand;
+use Tests\Support\CaptureBootstrapInstallCommand;
 
-// Three overrides keep the developer's real machine out of the test: plists go
-// to a sandbox directory instead of ~/Library/LaunchAgents, launchctl is
-// recorded rather than run, and the host's OS is answered by the test rather
-// than by the runner it happens to be on.
-//
-// The last of those is why this file exists at all in a report. Every job in
-// the pipeline runs on ubuntu, so a `PHP_OS_FAMILY !== 'Darwin'` skip in
-// beforeEach retired the whole file: four tests that were counted in every run
-// and executed in none of them, leaving the plist rendering they cover — the
-// substitutions, the --without-redis branch, the launchctl bootstrap call —
-// asserted nowhere.
-final class CaptureBootstrapInstallCommand extends InstallCommand
-{
-    /** @var list<array{uid: int, plistPath: string}> */
-    public static array $capturedBootstraps = [];
-
-    public static ?string $sandboxDir = null;
-
-    public static bool $hostIsMacOs = true;
-
-    protected function hostIsMacOs(): bool
-    {
-        return self::$hostIsMacOs;
-    }
-
-    protected function resolveLaunchAgentsDir(string $home): string
-    {
-        if (self::$sandboxDir === null) {
-            return parent::resolveLaunchAgentsDir($home);
-        }
-
-        return self::$sandboxDir;
-    }
-
-    protected function bootstrapPlist(int $uid, string $plistPath): int
-    {
-        self::$capturedBootstraps[] = ['uid' => $uid, 'plistPath' => $plistPath];
-
-        return 0;
-    }
-}
+// The double lives in tests/Support so Composer can reach it. Every job in the
+// pipeline runs on ubuntu, so a `PHP_OS_FAMILY !== 'Darwin'` skip in beforeEach
+// retired this whole file once: four tests counted in every run and executed in
+// none, leaving the plist rendering they cover — the substitutions, the
+// --without-redis branch, the launchctl bootstrap call — asserted nowhere.
 
 beforeEach(function (): void {
     CaptureBootstrapInstallCommand::$hostIsMacOs = true;

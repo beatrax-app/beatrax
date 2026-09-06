@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Helpers\CssRule;
 
 // One rule carries Dynamic Type for the whole product, and it is easy to break
@@ -50,15 +51,36 @@ it('reaches no pointer but a finger', function (): void {
     expect($enclosing)->toBe('@media (pointer: coarse)');
 });
 
+// The scale has eight tokens; a list naming them would sit at whichever number
+// it was written at, which is what this one did -- it named six, and the two it
+// could not see were free to be written in px.
+const READER_SCALE_TOKEN_FLOOR = 5;
+
 // The rule moves the root and nothing else; it reaches the type scale only
 // because the scale is expressed in rem. A token rewritten in px would leave
 // the reader's choice moving everything around the words it was set for.
 it('leaves the type scale in the unit the root can move', function (): void {
-    $css = dynamicTypeStylesheet();
-
     // Matched on the definition rather than inside a :root block: the
     // stylesheet opens several of them and only one carries the scale.
-    foreach (['--text-xs', '--text-sm', '--text-base', '--text-md', '--text-lg', '--text-xl'] as $token) {
-        expect($css)->toMatch('/'.preg_quote($token, '/').':\s*[0-9.]+rem;/');
+    $scale = PatternScan::sets('/(--text-[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/', dynamicTypeStylesheet());
+
+    $offenders = [];
+
+    foreach ($scale as $token) {
+        if (! str_ends_with(trim($token[2]), 'rem')) {
+            $offenders[] = $token[1].': '.trim($token[2]);
+        }
     }
+
+    expect(count($scale))->toBeGreaterThan(
+        READER_SCALE_TOKEN_FLOOR,
+        'The reader found '.count($scale).' type-scale tokens in the stylesheet, which is what a scan that stopped '
+        .'reading looks like: no token found is no token to judge.'
+    );
+
+    expect($offenders)->toBe(
+        [],
+        'A token written in anything but rem stops moving when the reader changes their text size, so the words '
+        ."around it grow and it does not:\n  ".implode("\n  ", $offenders)
+    );
 });

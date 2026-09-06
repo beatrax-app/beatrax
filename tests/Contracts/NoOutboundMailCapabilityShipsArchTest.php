@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\RepoTree;
 
 // The product's position is that a ledger stays on the machines its owner
 // controls, and mail is the one capability that quietly contradicts it: a
@@ -11,46 +12,23 @@ use Modules\Core\Public\Support\PatternScan;
 // send site, and the only mail package in the tree is a PARSER the inbox scan
 // reads with. What was missing is anything that keeps it that way.
 
-/** @return list<string> every PHP source file the shells ship, tests excluded */
+/**
+ * Every root that ships, from the one place a scope is declared -- which
+ * declines tests with the reason, because a test may name a transport it
+ * asserts is absent and a fixture may hold a whole message. The walk opened
+ * app/ and Modules/, and a Mailable is a class that can be declared anywhere a
+ * class can.
+ *
+ * @return list<string> every PHP source file the shells ship, tests excluded
+ */
 function outboundMailScannedSources(): array
 {
-    $found = [];
-
-    foreach (['app', 'Modules'] as $directory) {
-        $root = base_path($directory);
-
-        if (! is_dir($root)) {
-            continue;
-        }
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
-        );
-
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            $path = $file->getPathname();
-
-            if (! $file->isFile() || ! str_ends_with($path, '.php')) {
-                continue;
-            }
-
-            // A test may name a transport it asserts is absent, and a fixture
-            // may hold a whole message. Neither ships.
-            if (str_contains($path, '/tests/')) {
-                continue;
-            }
-
-            $found[] = $path;
-        }
-    }
-
-    return $found;
+    return RepoTree::files(RepoTree::PRODUCTION_PHP);
 }
 
 function outboundMailRelative(string $path): string
 {
-    return str_replace(base_path().'/', '', $path);
+    return str_replace(RepoTree::root().'/', '', $path);
 }
 
 // `Mail::` alone is one of several doors into the same room, and the others
@@ -142,8 +120,12 @@ it('ships no class that composes a message to send', function (): void {
     $sources = outboundMailScannedSources();
 
     // Counted first: a walk that resolved nothing would report a clean tree,
-    // which is the same answer a clean tree gives.
-    expect($sources)->not->toBeEmpty();
+    // which is the same answer a clean tree gives. The floor sits far under
+    // today's 6,681.
+    expect(count($sources))->toBeGreaterThan(
+        3000,
+        'RepoTree returned '.count($sources).' shipped PHP files, which is too few to have read the tree.'
+    );
 
     $composers = [];
 
@@ -159,9 +141,16 @@ it('ships no class that composes a message to send', function (): void {
 });
 
 it('ships no call that hands a message to a transport', function (): void {
+    $sources = outboundMailScannedSources();
+
+    expect(count($sources))->toBeGreaterThan(
+        3000,
+        'RepoTree returned '.count($sources).' shipped PHP files, which is too few to have read the tree.'
+    );
+
     $senders = [];
 
-    foreach (outboundMailScannedSources() as $path) {
+    foreach ($sources as $path) {
         $found = outboundMailSpellingsIn((string) file_get_contents($path), OUTBOUND_MAIL_SEND_SPELLINGS);
 
         if ($found !== []) {
@@ -229,7 +218,12 @@ it('configures no transport that could deliver a message', function (): void {
 
     // The shipped environment names one rather than leaving the key out: an
     // absent MAIL_MAILER is the framework's own default, which is smtp.
-    expect(outboundMailShippedMailer())->toBeIn(OUTBOUND_MAIL_UNREACHABLE_TRANSPORTS);
+    expect(outboundMailShippedMailer())->toBeIn(
+        OUTBOUND_MAIL_UNREACHABLE_TRANSPORTS,
+        '.env.example names '.var_export(outboundMailShippedMailer(), true).' as MAIL_MAILER. The packager copies '
+        .'this file over .env before it bundles anything, so an absent or deliverable value is the transport a '
+        ."reader's machine would send through. Name log, array or null."
+    );
 });
 
 it('tells a transport that could deliver from one that could not', function (?string $default, ?string $shipped, array $deliverable): void {

@@ -143,10 +143,22 @@ it('has a denominator to read a verdict from', function (): void {
     $sites = 0;
     unannouncedColumnWrites($sites);
 
-    expect(count(SyncedColumnWrites::writerFiles()))->toBeGreaterThan(SYNCED_COLUMN_FLOORS['files'])
-        ->and(count($tables))->toBeGreaterThan(SYNCED_COLUMN_FLOORS['tables'])
-        ->and(array_sum(array_map('count', $tables)))->toBeGreaterThan(SYNCED_COLUMN_FLOORS['columns'])
-        ->and($sites)->toBeGreaterThan(SYNCED_COLUMN_FLOORS['sites']);
+    expect(count(SyncedColumnWrites::writerFiles()))->toBeGreaterThan(
+        SYNCED_COLUMN_FLOORS['files'],
+        'the walk read almost no writer file, so every verdict in this file is about a tree nobody opened',
+    )
+        ->and(count($tables))->toBeGreaterThan(
+            SYNCED_COLUMN_FLOORS['tables'],
+            'the merge registry named almost no covered table, so the offender list below is built over nothing',
+        )
+        ->and(array_sum(array_map('count', $tables)))->toBeGreaterThan(
+            SYNCED_COLUMN_FLOORS['columns'],
+            'the registry named almost no mergeable column, so a silent writer of one would be invisible',
+        )
+        ->and($sites)->toBeGreaterThan(
+            SYNCED_COLUMN_FLOORS['sites'],
+            'the walk matched almost no write site, so it stopped reading rather than finding a tree that announces everything',
+        );
 
     // The tables whose columns most often move after the create. A scan that
     // lost them would report a clean tree in the same words a clean one does.
