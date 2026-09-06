@@ -11,6 +11,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\SystemAlert;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Sync\Public\Events\EntityMutated;
 
@@ -23,6 +24,8 @@ use Modules\Sync\Public\Events\EntityMutated;
  */
 final readonly class SystemAlertWriter
 {
+    use CoercesScalars;
+
     private const int SECONDS_PER_HOUR = 3600;
 
     public function __construct(
@@ -93,6 +96,37 @@ final readonly class SystemAlertWriter
         } catch (UniqueConstraintViolationException) {
             return null;
         }
+    }
+
+    // The machine's own answer that a fault it raised has stopped being true,
+    // written the way a reader's dismissal is: `acknowledged_at` closes the row
+    // and a trigger releases the dedup key with it, so the kind can be raised
+    // again. An alert only a human can take down teaches them not to read one.
+    /**
+     * @return int the number of open rows of this kind that were closed
+     */
+    public function withdrawForUser(int $userId, string $kind, CarbonImmutable $withdrawnAt): int
+    {
+        $stamp = $withdrawnAt->toDateTimeString();
+        $connection = $this->db->connection();
+
+        $openIds = $connection->table('system_alerts')
+            ->where('user_id', $userId)
+            ->where('kind', $kind)
+            ->whereNull('acknowledged_at')
+            ->pluck('id');
+
+        foreach ($openIds as $id) {
+            $alertId = self::toInt($id);
+
+            $connection->table('system_alerts')
+                ->where('id', $alertId)
+                ->update(['acknowledged_at' => $stamp]);
+
+            $this->captureAcknowledgement($alertId, $userId, $stamp);
+        }
+
+        return count($openIds);
     }
 
     // The system-wide counterpart, and the only seam a standing machine-local

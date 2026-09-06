@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Aizvērt — sistēmas brīdinājums #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'budžeta brīdinājumus',
+        'daily-triggers' => 'ikdienas atgādinājumus un kopsavilkumu',
+    ],
+
     'messages' => [
         'update_available' => 'Pieejams atjauninājums — Beatrax :version ir gatavs. Tas tiks instalēts nākamajā palaišanas reizē.',
         'update_stale' => 'Jūs izmantojat versiju :current — versija :latest ir pieejama jau 30 dienas. Atjauniniet tagad.',
@@ -52,5 +57,6 @@ return [
         // once a pot has released money, so it never renders; confirm the case
         // before this line is reused where zero can reach it.
         'pots_category_link_retired' => 'Aplokšņu budžets ir aizstājis ar kategoriju saistītās krājkases. Summa :amount no :count arhivētām krājkasēm atkal ir nepiešķirta un gaida, kad to sadalīsiet.|Aplokšņu budžets ir aizstājis ar kategoriju saistītās krājkases. Summa :amount no :count arhivētas krājkases atkal ir nepiešķirta un gaida, kad to sadalīsiet.|Aplokšņu budžets ir aizstājis ar kategoriju saistītās krājkases. Summa :amount no :count arhivētām krājkasēm atkal ir nepiešķirta un gaida, kad to sadalīsiet.',
+        'notifications_deferred_pass_failed' => 'Beatrax šajā ierīcē nevarēja aprēķināt :pass, tāpēc daži var trūkt. Tas mēģinās vēlreiz katru reizi, kad atvērsiet lietotni.',
     ],
 ];

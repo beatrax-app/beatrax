@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Dismiss — system alert #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'budget alerts',
+        'daily-triggers' => 'daily reminders and digest',
+    ],
+
     'messages' => [
         'update_available' => 'Update available — Beatrax :version is ready. It will install on next launch.',
         'update_stale' => "You're on version :current — version :latest has been available for 30 days. Update now.",
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'The account password changed without the app-lock recovery wrap being re-wrapped, so that password no longer opens the app lock. The PIN still does. Re-link the account password from the app-lock settings while the PIN is still known, or a forgotten PIN leaves nothing behind it.',
         'reconnect_link' => 'Reconnect →',
         'pots_category_link_retired' => 'Envelope budgeting has replaced category-linked pots. :amount from :count archived pot is unallocated again, and waiting for you to assign it.|Envelope budgeting has replaced category-linked pots. :amount from :count archived pots is unallocated again, and waiting for you to assign it.',
+        'notifications_deferred_pass_failed' => 'Beatrax could not work out your :pass on this device, so some may be missing. It tries again each time you open the app.',
     ],
 ];

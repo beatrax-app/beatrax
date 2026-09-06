@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Ignorer — alerte système #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'vos alertes de budget',
+        'daily-triggers' => 'vos rappels quotidiens et votre récapitulatif',
+    ],
+
     'messages' => [
         'update_available' => 'Mise à jour disponible — Beatrax :version est prêt. Il s\'installera au prochain démarrage.',
         'update_stale' => 'Tu utilises la version :current — la version :latest est disponible depuis 30 jours. Mets à jour maintenant.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Le mot de passe du compte a changé sans que l’enveloppe de récupération du verrouillage soit ré-emballée : ce mot de passe n’ouvre donc plus le verrouillage de l’application. Le code PIN, lui, fonctionne toujours. Reliez à nouveau le mot de passe du compte depuis les réglages de verrouillage tant que le code PIN est connu, sinon un code PIN oublié ne laisse rien derrière lui.',
         'reconnect_link' => 'Reconnecter →',
         'pots_category_link_retired' => 'La budgétisation par enveloppes a remplacé les cagnottes liées à une catégorie. :amount provenant de :count cagnotte archivée est de nouveau non affecté et attend que vous l’affectiez.|La budgétisation par enveloppes a remplacé les cagnottes liées à une catégorie. :amount provenant de :count cagnottes archivées est de nouveau non affecté et attend que vous l’affectiez.',
+        'notifications_deferred_pass_failed' => "Beatrax n'a pas pu établir :pass sur cet appareil, il se peut donc qu'il en manque. Il réessaie à chaque ouverture de l'application.",
     ],
 ];

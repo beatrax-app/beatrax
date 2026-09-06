@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Ohita — järjestelmähälytys #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'budjettihuomautuksia',
+        'daily-triggers' => 'päivittäisiä muistutuksia ja koostetta',
+    ],
+
     'messages' => [
         'update_available' => 'Päivitys saatavilla — Beatrax :version on valmiina. Se asennetaan seuraavalla käynnistyksellä.',
         'update_stale' => 'Käytössäsi on versio :current — versio :latest on ollut saatavilla 30 päivää. Päivitä nyt.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Tilin salasana vaihtui ilman, että sovelluslukituksen palautuskääre käärittiin uudelleen, joten kyseinen salasana ei enää avaa sovelluslukitusta. PIN-koodi avaa yhä. Liitä tilin salasana uudelleen sovelluslukituksen asetuksista, kun PIN-koodi on vielä tiedossa — muuten unohtuneen PIN-koodin taakse ei jää mitään.',
         'reconnect_link' => 'Yhdistä uudelleen →',
         'pots_category_link_retired' => 'Kuoribudjetointi on korvannut kategoriaan sidotut säästöpotit. :count arkistoidusta potista vapautunut :amount on taas jakamatta ja odottaa, että jaat sen.|Kuoribudjetointi on korvannut kategoriaan sidotut säästöpotit. :count arkistoidusta potista vapautunut :amount on taas jakamatta ja odottaa, että jaat sen.',
+        'notifications_deferred_pass_failed' => 'Beatrax ei pystynyt laskemaan :pass tällä laitteella, joten osa voi puuttua. Se yrittää uudelleen aina, kun avaat sovelluksen.',
     ],
 ];

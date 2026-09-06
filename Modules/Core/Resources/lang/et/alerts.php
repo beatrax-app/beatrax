@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Peida — süsteemi hoiatus #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'eelarveteateid',
+        'daily-triggers' => 'igapäevaseid meeldetuletusi ja kokkuvõtet',
+    ],
+
     'messages' => [
         'update_available' => 'Uuendus on saadaval — Beatrax :version on valmis. See paigaldatakse järgmisel käivitamisel.',
         'update_stale' => 'Kasutad versiooni :current — versioon :latest on olnud saadaval 30 päeva. Uuenda kohe.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Konto parool muutus ilma, et rakenduseluku taasteümbris oleks uuesti pakitud, seega see parool enam rakenduse lukku ei ava. PIN-kood avab endiselt. Seo konto parool rakenduseluku seadetes uuesti, kuni PIN-kood on veel teada — muidu ei jää unustatud PIN-koodi taha midagi.',
         'reconnect_link' => 'Ühenda uuesti →',
         'pots_category_link_retired' => 'Ümbrikutega eelarvestamine on asendanud kategooriaga seotud kogumispotid. :count arhiveeritud potist vabanenud :amount on taas jaotamata ja ootab, et sa selle ära jagaksid.|Ümbrikutega eelarvestamine on asendanud kategooriaga seotud kogumispotid. :count arhiveeritud potist vabanenud :amount on taas jaotamata ja ootab, et sa selle ära jagaksid.',
+        'notifications_deferred_pass_failed' => 'Beatrax ei suutnud selles seadmes arvutada :pass, seega võib mõni puududa. Ta proovib uuesti iga kord, kui rakenduse avad.',
     ],
 ];
