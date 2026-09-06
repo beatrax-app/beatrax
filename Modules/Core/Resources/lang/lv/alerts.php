@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Pieejams atjauninājums — Beatrax :version. Nekas netiek lejupielādēts, kamēr neizvēlaties instalēt; pēc tam Beatrax aizveras un atveras no jauna ar jauno versiju.',
+        'update_refused' => 'Beatrax lejupielādēja versiju :version un atteicās to instalēt — fails neatbilda izdevēja parakstam, tāpēc šajā ierīcē nekas netika mainīts. To var izraisīt bojāta lejupielāde. Ja tas atkārtojas, neinstalē Beatrax no šī avota.',
         'update_stale' => 'Jūs izmantojat versiju :current — versija :latest ir pieejama jau 30 dienas. Atjauniniet tagad.',
         'update_critical' => 'Pieejams kritisks atjauninājums — versija :version novērš :summary. Instalējiet to pēc iespējas ātrāk.',
         'backup_corrupt_with_path' => 'Dublējums, kas izveidots :timestamp, neizturēja integritātes pārbaudi. Pārbaudiet :path. Atrisiniet to, pirms paļaujaties uz dublējumiem.',

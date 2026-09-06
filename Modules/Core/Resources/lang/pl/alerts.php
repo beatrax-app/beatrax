@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Dostępna aktualizacja — Beatrax :version. Nic nie zostanie pobrane, dopóki nie zdecydujesz się zainstalować; Beatrax zamknie się wtedy i otworzy ponownie w nowej wersji.',
+        'update_refused' => 'Beatrax pobrał wersję :version i odmówił jej zainstalowania — plik nie zgadzał się z podpisem wydawcy, więc nic na tym urządzeniu nie zostało zmienione. Może to powodować uszkodzone pobieranie. Jeśli powtarza się to dalej, nie instaluj Beatraxa z tego źródła.',
         'update_stale' => 'Używasz wersji :current — wersja :latest jest dostępna od 30 dni. Zaktualizuj teraz.',
         'update_critical' => 'Dostępna krytyczna aktualizacja — wersja :version naprawia: :summary. Zainstaluj jak najszybciej.',
         'backup_corrupt_with_path' => 'Kopia zapasowa zapisana :timestamp nie przeszła kontroli integralności. Sprawdź :path. Rozwiąż to, zanim zaczniesz polegać na kopiach zapasowych.',

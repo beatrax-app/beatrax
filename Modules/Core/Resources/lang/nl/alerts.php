@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Update beschikbaar — Beatrax :version. Er wordt niets gedownload totdat je kiest om te installeren; Beatrax sluit dan af en opent opnieuw op de nieuwe versie.',
+        'update_refused' => 'Beatrax heeft versie :version gedownload en geweigerd te installeren — het bestand kwam niet overeen met de handtekening van de uitgever, dus er is niets op dit apparaat gewijzigd. Een beschadigde download kan dit veroorzaken. Blijft het gebeuren, installeer Beatrax dan niet vanaf die bron.',
         'update_stale' => 'Je gebruikt versie :current — versie :latest is al 30 dagen beschikbaar. Werk nu bij.',
         'update_critical' => 'Kritieke update beschikbaar — versie :version verhelpt :summary. Installeer zo snel mogelijk.',
         'backup_corrupt_with_path' => 'De back-up gemaakt op :timestamp is niet door de integriteitscontrole gekomen. Bekijk :path. Los dit op voordat je op back-ups vertrouwt.',

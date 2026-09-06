@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Päivitys saatavilla — Beatrax :version. Mitään ei ladata ennen kuin valitset asennuksen; sen jälkeen Beatrax sulkeutuu ja avautuu uudelleen uudessa versiossa.',
+        'update_refused' => 'Beatrax latasi version :version eikä suostunut asentamaan sitä — tiedosto ei vastannut julkaisijan allekirjoitusta, joten mitään ei muutettu tällä laitteella. Vioittunut lataus voi aiheuttaa tämän. Jos se toistuu, älä asenna Beatraxia siitä lähteestä.',
         'update_stale' => 'Käytössäsi on versio :current — versio :latest on ollut saatavilla 30 päivää. Päivitä nyt.',
         'update_critical' => 'Kriittinen päivitys saatavilla — versio :version korjaa :summary. Asenna mahdollisimman pian.',
         'backup_corrupt_with_path' => 'Kello :timestamp kirjoitettu varmuuskopio ei läpäissyt eheystarkistusta. Tarkista :path. Ratkaise ongelma ennen kuin luotat varmuuskopioihin.',

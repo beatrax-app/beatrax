@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Update available — Beatrax :version. Nothing is downloaded until you choose to install; Beatrax then closes and reopens on the new version.',
+        'update_refused' => 'Beatrax downloaded version :version and refused to install it — the file did not match the publisher signature, so nothing on this device was changed. A damaged download can cause this. If it keeps happening, do not install Beatrax from that source.',
         'update_stale' => "You're on version :current — version :latest has been available for 30 days. Update now.",
         'update_critical' => 'Critical update available — version :version fixes :summary. Install as soon as possible.',
         'backup_corrupt_with_path' => 'The backup written at :timestamp failed integrity check. Inspect :path. Resolve before relying on backups.',

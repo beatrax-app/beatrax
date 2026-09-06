@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Je dostupná aktualizácia — Beatrax :version. Kým sa nerozhodneš inštalovať, nič sa nesťahuje; Beatrax sa potom zavrie a znova otvorí v novej verzii.',
+        'update_refused' => 'Beatrax stiahol verziu :version a odmietol ju nainštalovať — súbor nezodpovedal podpisu vydavateľa, takže sa na tomto zariadení nič nezmenilo. Môže to spôsobiť poškodené stiahnutie. Ak sa to opakuje, neinštaluj Beatrax z tohto zdroja.',
         'update_stale' => 'Používaš verziu :current — verzia :latest je dostupná už 30 dní. Aktualizuj teraz.',
         'update_critical' => 'Je dostupná kritická aktualizácia — verzia :version opravuje: :summary. Nainštaluj ju čo najskôr.',
         'backup_corrupt_with_path' => 'Záloha zapísaná o :timestamp neprešla kontrolou integrity. Skontroluj :path. Vyrieš to skôr, než sa na zálohy spoľahneš.',

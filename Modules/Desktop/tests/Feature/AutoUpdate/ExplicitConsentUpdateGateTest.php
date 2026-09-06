@@ -9,6 +9,7 @@ use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
@@ -138,6 +139,7 @@ it('installs a downloaded binary only after signature and SHA512 both verify', f
         consentGateFetcher(consentGateSignedManifest('1.2.3', hash('sha512', 'the-real-installer-bytes'), $secret)),
         $updater,
         new NullLogger,
+        app(SystemAlertWriter::class),
     ))->handle(new UpdateDownloaded($file, '1.2.3', [], '2026-08-16T00:00:00.000Z'));
 
     @unlink($file);
@@ -159,6 +161,7 @@ it('refuses to install a binary whose hash does not match the signed manifest', 
         consentGateFetcher(consentGateSignedManifest('1.2.3', hash('sha512', 'the-original-installer'), $secret)),
         $updater,
         new NullLogger,
+        app(SystemAlertWriter::class),
     ))->handle(new UpdateDownloaded($file, '1.2.3', [], '2026-08-16T00:00:00.000Z'));
 
     @unlink($file);

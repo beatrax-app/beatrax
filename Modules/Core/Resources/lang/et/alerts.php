@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Uuendus on saadaval — Beatrax :version. Midagi ei laadita alla enne, kui otsustad selle paigaldada; seejärel Beatrax sulgub ja avaneb uuesti uues versioonis.',
+        'update_refused' => 'Beatrax laadis alla versiooni :version ja keeldus seda paigaldamast — fail ei vastanud avaldaja allkirjale, seega selles seadmes ei muudetud midagi. Seda võib põhjustada kahjustunud allalaadimine. Kui see kordub, ära paigalda Beatraxi sellest allikast.',
         'update_stale' => 'Kasutad versiooni :current — versioon :latest on olnud saadaval 30 päeva. Uuenda kohe.',
         'update_critical' => 'Saadaval on kriitiline uuendus — versioon :version parandab: :summary. Paigalda esimesel võimalusel.',
         'backup_corrupt_with_path' => 'Varukoopia, mis kirjutati :timestamp, ei läbinud terviklikkuse kontrolli. Kontrolli asukohta :path. Lahenda see enne, kui varukoopiatele toetud.',

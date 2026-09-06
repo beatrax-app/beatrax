@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Oppdatering tilgjengelig — Beatrax :version. Ingenting lastes ned før du velger å installere; Beatrax lukkes så og åpnes igjen på den nye versjonen.',
+        'update_refused' => 'Beatrax lastet ned versjon :version og nektet å installere den — filen stemte ikke med utgiverens signatur, så ingenting på denne enheten ble endret. En skadet nedlasting kan utløse det. Skjer det igjen, ikke installer Beatrax fra den kilden.',
         'update_stale' => 'Du bruker versjon :current — versjon :latest har vært tilgjengelig i 30 dager. Oppdater nå.',
         'update_critical' => 'Kritisk oppdatering tilgjengelig — versjon :version retter :summary. Installer så snart som mulig.',
         'backup_corrupt_with_path' => 'Sikkerhetskopien som ble skrevet :timestamp, besto ikke integritetssjekken. Undersøk :path. Løs dette før du stoler på sikkerhetskopier.',

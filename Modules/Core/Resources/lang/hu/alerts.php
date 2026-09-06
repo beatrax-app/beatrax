@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Elérhető frissítés — Beatrax :version. Semmi nem töltődik le, amíg nem választod a telepítést; a Beatrax ezután bezárul, és az új verzióval nyílik meg újra.',
+        'update_refused' => 'A Beatrax letöltötte a(z) :version verziót, és nem telepítette — a fájl nem egyezett a kiadó aláírásával, így ezen az eszközön semmi nem változott. Ezt sérült letöltés is okozhatja. Ha továbbra is előfordul, ne telepítsd a Beatraxot arról a forrásról.',
         'update_stale' => 'A(z) :current verziót használod — a(z) :latest verzió 30 napja elérhető. Frissíts most.',
         'update_critical' => 'Kritikus frissítés érhető el — a(z) :version verzió javítja ezt: :summary. Telepítsd mielőbb.',
         'backup_corrupt_with_path' => 'A(z) :timestamp időpontban írt biztonsági mentés megbukott az integritás-ellenőrzésen. Vizsgáld meg ezt: :path. Oldd meg, mielőtt a mentésekre támaszkodnál.',

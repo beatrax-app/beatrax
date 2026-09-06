@@ -16,6 +16,12 @@ enum UpdateAlertKind: string
 
     case Critical = 'update.critical';
 
+    // Not an availability kind: this one says an update was downloaded and
+    // then refused. It carries `refusedVersion` rather than `latestVersion`,
+    // so the availability guard that reads this enum cannot mistake a refusal
+    // for "the reader has already been told about this release".
+    case Refused = 'update.refused';
+
     // Severity is a property of the kind, not a separate decision a writer
     // makes: an unsupported-age release is a warning, a security-fix release
     // is critical, and a routine one is informational.
@@ -24,7 +30,7 @@ enum UpdateAlertKind: string
         return match ($this) {
             self::Available => SystemAlertSeverity::Info,
             self::Stale => SystemAlertSeverity::Warning,
-            self::Critical => SystemAlertSeverity::Critical,
+            self::Critical, self::Refused => SystemAlertSeverity::Critical,
         };
     }
 

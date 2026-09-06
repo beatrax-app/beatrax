@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Dostupno je ažuriranje — Beatrax :version. Ništa se ne preuzima dok ne odabereš instalaciju; nakon toga Beatrax se zatvara i ponovno otvara u novoj verziji.',
+        'update_refused' => 'Beatrax je preuzeo verziju :version i odbio ju instalirati — datoteka nije odgovarala potpisu izdavača, pa na ovom uređaju ništa nije promijenjeno. To može uzrokovati oštećeno preuzimanje. Ako se nastavi, nemoj instalirati Beatrax s tog izvora.',
         'update_stale' => 'Koristiš verziju :current — verzija :latest dostupna je već 30 dana. Ažuriraj sada.',
         'update_critical' => 'Dostupno je kritično ažuriranje — verzija :version ispravlja :summary. Instaliraj je što prije.',
         'backup_corrupt_with_path' => 'Sigurnosna kopija zapisana u :timestamp nije prošla provjeru cjelovitosti. Pregledaj :path. Riješi to prije nego što se osloniš na sigurnosne kopije.',
