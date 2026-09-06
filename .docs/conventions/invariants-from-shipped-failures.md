@@ -6902,6 +6902,49 @@ them, and the twenty-seven were not all the same defect: six were guards that ha
 been renamed, which reads to a grepping contributor as a guard someone deleted —
 which is how a second copy of one comes to be written.
 
+## A pin removed from a template moved a frame, not a preference
+
+Every shipped bundle set `APP_TIMEZONE=Europe/Amsterdam`, which read as a
+leftover from the machine the first one was built on. Removing it so each
+install answers from its own host is right for a new install and wrong for an
+old one, and the difference is not a matter of degree. `app.timezone` is the
+frame Eloquent serialises a `DATETIME` in and the frame
+`date_default_timezone_get()` hands to `Instant::appLocal()`, so it is not a
+display preference sitting on top of stored values — it is part of what the
+stored value means. An install upgraded and carried abroad would have kept
+every string it had already written and started reading them somewhere else.
+
+Rehearsing the migration set against a copy of a real desktop database is what
+showed it: 202 transactions, one of them booked at `2026-04-22 00:00:00`, which
+the removed pin had made `+02:00` and the host would have made `-04:00`. Six
+hours moves a midnight row into the previous day, and with it the period it
+falls in, the budget it counts against and the tax year it is filed under.
+
+The upgrade is distinguishable from a first run without a heuristic, because
+`InstallCommand` migrates and only then calls `ensureUser()`. An account
+existing when the migration runs means the install predates it; a first run
+reaches the same code with an empty table, keeps `NULL`, and resolves from the
+machine, which is the change the removal was for. Counting ledger rows would
+have been the same answer reached less exactly, and the fixture it demanded —
+an account, an import run, a fingerprint — was the sign it was the wrong
+question.
+
+`users.timezone` travels rather than sitting in `DEVICE_LOCAL_COLUMNS`, which
+is what makes one write enough: a peer inherits the upgraded install's frame on
+backfill instead of resolving its own and disagreeing with rows it already
+holds. Two devices holding different answers is the same defect wearing the
+other mask, and it is the reason the column is not device-local beside `locale`
+and `theme`.
+
+One thing about the config surface is worth keeping: `config('app.timezone')`
+cannot express "unset". It substitutes `UTC`, so it answers identically for an
+install that pinned UTC and one that pinned nothing, and the resolver needs a
+separate `app.timezone_pinned` key to tell them apart — one that lives in a
+config file rather than an `env()` call, so a cached config still carries it.
+`NoShippedTemplatePinsTheReadersTimeZoneArchTest` holds the templates, and it
+asserts each one carries `APP_ENV` first, so an absent `APP_TIMEZONE` means the
+pin is gone rather than that the file was not read.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
