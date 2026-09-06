@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Counterparties\Public\Queries\CounterpartyNameOnATransaction;
 use Modules\Ledger\Public\Dto\TransactionListPage;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\Support\CategoryPathName;
@@ -31,6 +32,7 @@ final readonly class TransactionListQuery
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
+        private CounterpartyNameOnATransaction $counterpartyName,
     ) {}
 
     public function recent(
@@ -98,6 +100,7 @@ final readonly class TransactionListQuery
             $currencyColumn,
             ...CategoryPathName::columns('categories', 'parent_categories'),
             'counterparties.slug as counterparty_slug',
+            ...CounterpartyNameOnATransaction::columns(),
         ];
 
         if ($currency === null) {
@@ -153,9 +156,13 @@ final readonly class TransactionListQuery
         $categoryName = CategoryPathName::fromRow($row);
         // Read-side decrypt — pass-through no-op when encryption is not
         // enabled for this user.
-        $counterpartyName = $row->counterparty_name === null
-            ? null
-            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, ($this->session)())['value'];
+        $counterpartyName = $this->counterpartyName->fromRow(
+            $row,
+            $row->counterparty_name === null
+                ? null
+                : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, ($this->session)())['value'],
+            $userId,
+        );
         $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
             ? self::toString($row->counterparty_slug)
             : null;

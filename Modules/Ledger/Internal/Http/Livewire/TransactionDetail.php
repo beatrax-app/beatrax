@@ -22,6 +22,7 @@ use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyDisplayName;
+use Modules\Counterparties\Public\Queries\CounterpartyNameOnATransaction;
 use Modules\Goals\Public\Services\GoalContributionQuery;
 use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Ledger\Internal\Http\Livewire\Concerns\ManagesSplitEditor;
@@ -411,6 +412,7 @@ final class TransactionDetail extends Component
         SensitiveColumnCodec $codec,
         Session $session,
         CounterpartyDisplayName $counterpartyNames,
+        CounterpartyNameOnATransaction $counterpartyName,
     ): View {
         $userId = $currentUser->user()->id;
 
@@ -435,6 +437,16 @@ final class TransactionDetail extends Component
                 $session,
             )['value'];
         }
+
+        // A description-only line names nobody, so the card drew an em dash
+        // where the counterparty screens it links to name the row perfectly
+        // well. The counterparty is already loaded above.
+        $transaction->counterparty_name = $counterpartyName->resolve(
+            is_string($transaction->counterparty_name) ? $transaction->counterparty_name : null,
+            $transaction->counterparty?->display_name,
+            $transaction->counterparty?->metadata,
+            $userId,
+        );
 
         if (is_string($transaction->description)) {
             $transaction->description = $codec->decryptValue(
