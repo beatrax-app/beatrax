@@ -26,11 +26,14 @@ lives in the release pipeline only.
 Every release publishes, alongside the installers, the per-platform
 electron-updater manifest and a detached hex signature sibling:
 
-| Platform | Manifest | Signature |
+| Platform | Stable manifest | Preview manifest |
 |---|---|---|
-| Windows | `latest.yml` | `latest.yml.sig` |
-| macOS | `latest-mac.yml` | `latest-mac.yml.sig` |
-| Linux | `latest-linux.yml` | `latest-linux.yml.sig` |
+| Windows | `latest.yml` | `beta.yml` |
+| macOS | `latest-mac.yml` | `beta-mac.yml` |
+| Linux | `latest-linux.yml` | `beta-linux.yml` |
+
+Each carries a detached hex signature beside it under the same name plus
+`.sig`, and every one of the six is signed by the one key.
 
 Those three rows are the cases of `Modules\Core\Internal\Enums\OsFamily`, and
 `updateManifestSuffix()` is the whole mapping — Windows' empty suffix is its own
@@ -40,8 +43,8 @@ answer, not a fallback. `PHP_OS_FAMILY` also reports `BSD`, `Solaris` and
 for them: the Windows SHA-512 can never match a non-Windows binary, so the
 update would fail verification on every check, forever, on that OS alone.
 
-The `preview` channel uses `beta*.yml` instead of `latest*.yml`.
-`config/auto_update.php`'s `manifest_feed_url` (env
+Which of the two sets an installation asks for is [the next
+section](#the-two-channels). `config/auto_update.php`'s `manifest_feed_url` (env
 `AUTO_UPDATE_FEED_URL`) is the base URL those sit under; the release
 workflow sets it from the GitHub context, so moving the repository
 re-points the feed rather than stranding a hardcoded owner. **Left unset
@@ -49,6 +52,81 @@ re-points the feed rather than stranding a hardcoded owner. **Left unset
 `null` and no update is ever surfaced or applied.** That is a build
 having no feed, not a failure; it is not the reader's off switch, which
 is the next section and reaches inside a bundle that does have one.
+
+## The two channels
+
+Two, by design: `stable` and `preview`. Stable resolves the `latest*.yml` set
+and preview the `beta*.yml` set. The per-platform suffix is `OsFamily`'s and the
+prefix is the channel's, so `UpdateChannel::manifestPrefix()` is the whole of
+what a channel contributes to a URL.
+
+**Which one this installation is on is a row, not a build.** It was
+`env('AUTO_UPDATE_CHANNEL')`, which made opting into preview a rebuild — nobody
+who installs a bundle can reach its `.env`. `users.update_channel` holds it now,
+defaulting to `stable`, read through `UpdateChannelPreference` and written from
+`UpdateChannelSettingsSection`, the neighbour of the off switch on the Settings
+screen.
+
+The answer is read from the **owner's row**, the way the install's timezone is:
+which manifest set this bundle asks for is one answer per installation, and a
+household holding two would leave the updater picking between them. It is
+nonetheless **device-local** in `MergeRulesRegistry::DEVICE_LOCAL_COLUMNS`,
+beside `auto_update_check_enabled` and for the same reason — a channel is a
+property of an installed binary. A desktop on preview and a phone its store
+updates are both correct at once, and a phone's answer arriving on a desktop
+would move that desktop to a channel nobody at that keyboard chose. The two
+facts are independent: one says whose answer it is, the other says it stays
+here.
+
+**A store build draws none of this.** `UpdateChannelSettingsSection` asks
+`UserDataPathService::isMobileRuntime()` — the same question the three listeners
+and the off switch ask — renders an empty element there, and refuses the write
+in `choose()` as well, because the view is not what decides who may reach a
+Livewire method.
+
+### Both halves of an update resolve the same set
+
+electron-updater's own poll runs in the Electron main process and resolves a
+manifest by channel name out of the JSON `native:config` prints. Beatrax's
+verification fetch resolves one from `auto_update.manifest_feed_url`. Two halves
+reading two channels do not install the wrong thing — `VerifyAndAnnounceUpdate`
+refuses an update whose signed manifest names a version other than the one
+offered — but they do produce an update that never arrives, over a log line
+about a disagreement nobody caused. `ApplyUpdateChannelChoiceToStartupConfig`
+narrows `nativephp.updater.providers.github.channel` at `native:config` time,
+the same seam and the same moment the off switch uses, so both halves read the
+one row. It writes only for the GitHub provider: S3 and Spaces resolve a path
+instead, and a channel written there would be a key their driver never reads.
+
+### What the release pipeline publishes
+
+`release.yml` computes each platform's manifest once and places it under the
+names the tag's shape earns:
+
+| Tag | `latest*.yml` | `beta*.yml` |
+|---|---|---|
+| `vX.Y.Z` | written | written |
+| `vX.Y.Z-<prerelease>` | — | written |
+
+A stable release is also the newest build on the preview channel, so it is
+published under both names rather than stranding a preview reader behind it; a
+prerelease must never appear under the name the stable channel resolves, which
+is what the pipeline used to do for every tag shape while writing the preview
+set for none. Both sets are signed by the one Ed25519 key in the publish job and
+re-downloaded and re-verified by `verify-published`: both channels are on one
+chain, and preview is not a weaker one.
+
+**A channel whose manifest is not on the feed ends in silence.** The fetch
+returns `null` for a 404 exactly as it does for being offline, `poll()` returns
+`null`, and neither a banner nor an error is raised. A reader can neither
+publish the missing file nor fetch it, so there is nothing there for them to
+act on.
+
+**Known gap.** GitHub's `releases/latest/download` alias — the feed origin the
+release workflow bakes into each bundle — resolves the newest *non-prerelease*
+release, so a `beta*.yml` sitting on a prerelease page is not reachable through
+it. A preview reader therefore verifies against the newest stable release's
+preview manifest until the feed origin can address a release by tag.
 
 ## The off switch
 
@@ -221,6 +299,10 @@ Either returns, leaving the file on disk uninstalled.
   `TriggerUpdateDownload.php`, `VerifyAndInstallDownload.php`
 - Verification + channel resolution:
   `Modules\Core\Public\Services\ElectronUpdateChannel`
+- The channel: `Modules\Core\Public\Enums\UpdateChannel`,
+  `Modules\Core\Public\Services\UpdateChannelPreference`,
+  `Modules\Core\Public\Http\Livewire\UpdateChannelSettingsSection`,
+  `Modules\Desktop\Internal\Listeners\ApplyUpdateChannelChoiceToStartupConfig`
 - Feed fetch + manifest parse:
   `Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher`
 - Configuration: `config/auto_update.php`, `config/nativephp.php`

@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax paklausia laidų srauto, ar yra naujesnė pasirašyta versija. Nieko neatsisiunčiama, kol pats nepasirenki įdiegti.',
         'check_off' => 'Atnaujinimai netikrinami ir niekas nepalieka šio įrenginio. Naujas versijas rasi pats atvėręs laidų puslapį.',
         'open_releases' => 'Atverti laidų puslapį →',
+        'channel_label' => 'Naujinimų kanalas',
+        'channel_help' => 'Stabilus yra numatytasis ir siūlo laidas, kurias peržiūrėjo žmogus. Peržiūra siūlo laidų kandidates iškart po jų paskelbimo.',
+        'channel_stable' => 'Stabilus',
+        'channel_preview' => 'Peržiūra',
+        'channel_preview_note' => 'Peržiūros versijos tikrinamos mažiau nei stabiliosios ir gali turėti nebaigtų darbų. Prieš ką nors įdiegiant jos patikrinamos tuo pačiu leidėjo parašu.',
     ],
 
     'privacy' => [

@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax, daha yeni imzalı bir sürüm olup olmadığını sürüm akışına sorar. Sen kurmayı seçene kadar hiçbir şey indirilmez.',
         'check_off' => 'Güncelleme denetimi yapılmaz ve bu cihazdan hiçbir şey çıkmaz. Yeni sürümleri, sürümler sayfasını kendin açarak bulursun.',
         'open_releases' => 'Sürümler sayfasını aç →',
+        'channel_label' => 'Güncelleme kanalı',
+        'channel_help' => 'Kararlı varsayılandır ve bir insanın gözden geçirdiği sürümleri sunar. Önizleme, yayımlanır yayımlanmaz sürüm adaylarını sunar.',
+        'channel_stable' => 'Kararlı',
+        'channel_preview' => 'Önizleme',
+        'channel_preview_note' => 'Önizleme sürümleri kararlı olanlardan daha az test edilir ve bitmemiş işler içerebilir. Herhangi bir kurulumdan önce aynı yayıncı imzasıyla doğrulanırlar.',
     ],
 
     'privacy' => [

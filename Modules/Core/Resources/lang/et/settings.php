@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax küsib väljalasete voolt, kas on olemas uuem allkirjastatud versioon. Midagi ei laadita alla enne, kui valid ise paigaldamise.',
         'check_off' => 'Uuenduste kontrolli ei tehta ja miski ei lahku sellest seadmest. Uued versioonid leiad, avades väljalasete lehe ise.',
         'open_releases' => 'Ava väljalasete leht →',
+        'channel_label' => 'Uuenduskanal',
+        'channel_help' => 'Stabiilne on vaikevalik ja pakub väljalaskeid, mille keegi on üle vaadanud. Eelvaade pakub väljalaskekandidaate kohe pärast avaldamist.',
+        'channel_stable' => 'Stabiilne',
+        'channel_preview' => 'Eelvaade',
+        'channel_preview_note' => 'Eelvaateversioone testitakse vähem kui stabiilseid ja need võivad sisaldada lõpetamata tööd. Enne mis tahes paigaldamist kontrollitakse neid sama avaldaja allkirjaga.',
     ],
 
     'privacy' => [

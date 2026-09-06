@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax spørger udgivelsesfeedet, om der findes en nyere signeret version. Der hentes intet, før du selv vælger at installere den.',
         'check_off' => 'Der søges ikke efter opdateringer, og intet forlader denne enhed. Nye versioner finder du ved selv at åbne udgivelsessiden.',
         'open_releases' => 'Åbn udgivelsessiden →',
+        'channel_label' => 'Opdateringskanal',
+        'channel_help' => 'Stabil er standarden og tilbyder udgivelser, som et menneske har gennemset. Forhåndsvisning tilbyder udgivelseskandidater, så snart de er offentliggjort.',
+        'channel_stable' => 'Stabil',
+        'channel_preview' => 'Forhåndsvisning',
+        'channel_preview_note' => 'Forhåndsversioner testes mindre end stabile og kan indeholde ufærdigt arbejde. De kontrolleres mod den samme udgiversignatur, før noget installeres.',
     ],
 
     'privacy' => [

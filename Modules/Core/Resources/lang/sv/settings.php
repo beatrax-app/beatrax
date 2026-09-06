@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax frågar releaseflödet om det finns en nyare signerad version. Ingenting laddas ner förrän du själv väljer att installera den.',
         'check_off' => 'Det söks inte efter uppdateringar och ingenting lämnar den här enheten. Nya versioner hittar du genom att själv öppna releasesidan.',
         'open_releases' => 'Öppna releasesidan →',
+        'channel_label' => 'Uppdateringskanal',
+        'channel_help' => 'Stabil är standardvalet och erbjuder utgåvor som en människa har granskat. Förhandsvisning erbjuder utgåvekandidater så snart de publicerats.',
+        'channel_stable' => 'Stabil',
+        'channel_preview' => 'Förhandsvisning',
+        'channel_preview_note' => 'Förhandsversioner testas mindre än stabila och kan innehålla ofärdigt arbete. De kontrolleras mot samma utgivarsignatur innan något installeras.',
     ],
 
     'privacy' => [

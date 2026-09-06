@@ -2431,6 +2431,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // writer is exactly what this guard exists to catch, and a hardcoded
         // list would go quiet the moment the two drifted.
         'tests/Contracts/APairingSendNeverDeclinesInSilenceArchTest.php -> Modules\\Sync\\Internal\\Pairing\\PairingPeerLink',
+        // Which manifest names a bundle can ask for is the product of the
+        // channel enum and OsFamily's per-platform suffixes. Listing the six in
+        // the guard would let the pipeline and the fetcher drift apart while
+        // the guard went on agreeing with itself.
+        'tests/Contracts/APreviewChannelAsksForAManifestThePipelinePublishesArchTest.php -> Modules\\Core\\Internal\\Enums\\OsFamily',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
@@ -2650,6 +2655,7 @@ it('does not allow a cross-module Livewire mount outside the pinned set (pinnedC
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Anomaly (anomaly.settings-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.delete-account-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Auth (auth.recovery-codes-section)',
+        'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Core (core.update-channel-settings-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Core (core.update-check-settings-section)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Forecasting (forecasting.opening-balance-editor)',
         'Modules/Shell/Resources/views/livewire/settings-page.blade.php -> Ledger (ledger.account-currency-editor)',

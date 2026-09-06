@@ -9,6 +9,7 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Client\Factory as HttpClient;
 use Modules\Core\Internal\Enums\OsFamily;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
@@ -32,7 +33,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         private string $platformFamily = PHP_OS_FAMILY,
     ) {}
 
-    public function fetch(string $channel): ?array
+    public function fetch(UpdateChannel $channel): ?array
     {
         $manifestUrl = $this->manifestUrl($channel);
         if ($manifestUrl === null) {
@@ -54,7 +55,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
     // unconfigured, the OS publishes none — and only the last is worth logging,
     // which is why the two silent ones refuse together. Both listeners reach
     // the feed here and nowhere else, so this is the whole outbound surface.
-    private function manifestUrl(string $channel): ?string
+    private function manifestUrl(UpdateChannel $channel): ?string
     {
         $base = $this->config->get('auto_update.manifest_feed_url');
 
@@ -66,6 +67,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         if ($manifestName === null) {
             $this->logger->warning('HttpPublisherManifestFetcher: no manifest is published for this OS family.', [
                 'platform_family' => $this->platformFamily,
+                'channel' => $channel->value,
             ]);
 
             return null;
@@ -78,7 +80,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
     // different OS's digest, so a real update would never install. An OS with
     // no case of its own therefore gets no manifest name at all, rather than
     // the one whose suffix happens to be empty.
-    private function manifestName(string $channel): ?string
+    private function manifestName(UpdateChannel $channel): ?string
     {
         $family = OsFamily::tryFrom($this->platformFamily);
 
@@ -86,7 +88,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
             return null;
         }
 
-        return ($channel === 'stable' ? 'latest' : 'beta').$family->updateManifestSuffix().'.yml';
+        return $channel->manifestPrefix().$family->updateManifestSuffix().'.yml';
     }
 
     /**
