@@ -33,6 +33,13 @@ return [
         'help' => 'Maina ekrānā redzamos vārdus un to, kā tiek rakstītas summas. Sistēmas iestatījums seko pārlūka vai operētājsistēmas valodai, pēc noklusējuma izmantojot angļu valodu.',
     ],
 
+    'timezone' => [
+        'heading' => 'Laika josla',
+        'label' => 'Šīs instalācijas laika josla',
+        'help' => 'Nosaka, kurā dienā ietilpst darījums un kādā ietvarā tiek saglabāti laiki. Sapārotās ierīces koplieto šo iestatījumu, tāpēc abas nolasa vienu un to pašu dienu.',
+        'this_machine' => 'Šī ierīce (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Valsts',
         'label' => 'Tava valsts',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Ievadiet summu no :zero un vairāk.',
         'period_day' => 'Izvēlieties dienu no 1 līdz 28.',
         'currency_view' => 'Izvēlieties vienu no pieejamajām iespējām.',
+        'timezone' => 'Izvēlies laika joslu no saraksta.',
     ],
 ];

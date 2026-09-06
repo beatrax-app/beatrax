@@ -33,6 +33,13 @@ return [
         'help' => 'Schimbă cuvintele de pe ecran și modul în care sunt scrise sumele. Sistem urmează limba browserului sau a sistemului de operare, cu engleza ca variantă implicită.',
     ],
 
+    'timezone' => [
+        'heading' => 'Fus orar',
+        'label' => 'Fusul orar al acestei instalări',
+        'help' => 'Stabilește în ce zi cade o tranzacție și în ce cadru sunt salvate orele. Dispozitivele împerecheate împart această setare, așa că amândouă citesc aceeași zi.',
+        'this_machine' => 'Acest dispozitiv (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Țară',
         'label' => 'Țara ta',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Introdu o sumă de la :zero în sus.',
         'period_day' => 'Alege o zi de la 1 la 28.',
         'currency_view' => 'Alege una dintre opțiunile disponibile.',
+        'timezone' => 'Alege un fus orar din listă.',
     ],
 ];

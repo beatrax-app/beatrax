@@ -2510,6 +2510,10 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // would claim a dependency on OpenBanking this file does not have.
         'tests/Contracts/AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest.php -> Modules\\OpenBanking\\Internal\\Events\\OpenBankingConsentFailed',
         'tests/Contracts/AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest.php -> Modules\\OpenBanking\\Internal\\Events\\OpenBankingImportedNothing',
+        // Read out of bootstrap/app.php as text, never called. The case asserts
+        // the middleware is still registered there, and importing it would
+        // prove nothing about what that file says.
+        'tests/Contracts/NoShippedTemplatePinsTheReadersTimeZoneArchTest.php -> Modules\\Core\\Internal\\Http\\Middleware\\SetInstallTimezone',
     ];
 
     $inlineReferences = [];

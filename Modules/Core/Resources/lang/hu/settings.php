@@ -33,6 +33,13 @@ return [
         'help' => 'Megváltoztatja a képernyőn megjelenő szavakat és az összegek írásmódját. A Rendszer a böngésződ vagy az operációs rendszered nyelvét követi, alapértelmezésben az angolt.',
     ],
 
+    'timezone' => [
+        'heading' => 'Időzóna',
+        'label' => 'Ennek a telepítésnek az időzónája',
+        'help' => 'Eldönti, melyik napra esik egy tranzakció, és milyen keretben tárolódnak az időpontok. A párosított eszközök osztoznak ezen a beállításon, így mindkettő ugyanazt a napot olvassa.',
+        'this_machine' => 'Ez az eszköz (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Ország',
         'label' => 'Az országod',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Adj meg egy összeget :zero-tól felfelé.',
         'period_day' => 'Válassz egy napot 1 és 28 között.',
         'currency_view' => 'Válassz az elérhető lehetőségek közül.',
+        'timezone' => 'Válassz időzónát a listából.',
     ],
 ];

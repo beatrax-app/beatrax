@@ -1132,3 +1132,41 @@ version, security-fix critical update) override an earlier dismissal.
 The component holds zero properties so it stays stateless across
 re-renders — Livewire re-runs `render()` after every action, so the
 post-acknowledge view automatically drops the dismissed row.
+
+## The zone an installation reads its days in
+
+`app.timezone` is not a display preference here. It is the frame every
+DATETIME column is written in: Eloquent serialises `Carbon::now()` through
+it, and `Instant::appLocal` converts through the process default the
+framework sets out of it. Two devices holding different answers therefore
+store two different strings for the same instant, and `created_at` is the
+column the merge reads to tell a primary-key collision from a replay.
+
+The answer is resolved in three tiers, highest first:
+
+1. **An environment that names one.** `config('app.timezone_pinned')` carries
+   `env('APP_TIMEZONE')` unchanged — including its absence, which
+   `config('app.timezone')` cannot express because it substitutes `UTC` for
+   both "unset" and "set to UTC". A server deployment and the test suite both
+   use this tier.
+2. **A stored choice**, on the owner's row (`users.timezone`, the oldest
+   account, the one `F3-R1` keeps as owner). One answer per installation
+   rather than per reader, and the settings control writes there whoever
+   opened it — two readers holding two zones would write one ledger in two
+   frames. The column is in the merge registry, so a paired device adopts it.
+3. **The machine.** `HostTimezone::detect()` asks the operating system:
+   a zone the shell supplied in `BEATRAX_HOST_TIMEZONE`, then the
+   `/etc/localtime` symlink, then `/etc/timezone`, then `tzutil` mapped
+   through ICU on Windows, and `UTC` if none of them answer. Memoized for the
+   process; a value that is not an identifier is refused rather than
+   remembered.
+
+Nothing seeds tier 2 from tier 3 on purpose. A device that wrote its host
+zone down at signup would carry a newer HLC than the install it later paired
+with, win the merge, and move the older install's day boundary.
+
+`SetInstallTimezone` applies the resolved zone on the `web` group beside
+`SetLocale`, per request rather than once at boot, so a change in settings
+takes effect without restarting the application. No shipped `.env` template
+pins `APP_TIMEZONE` — a pinned one ships the packager's day to every reader,
+which is what `Europe/Amsterdam` in the desktop template was doing.

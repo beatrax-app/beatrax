@@ -33,6 +33,13 @@ return [
         'help' => 'Mění slova na obrazovce i způsob zápisu částek. Systémový se řídí jazykem prohlížeče nebo operačního systému, výchozí je angličtina.',
     ],
 
+    'timezone' => [
+        'heading' => 'Časové pásmo',
+        'label' => 'Časové pásmo této instalace',
+        'help' => 'Určuje, do kterého dne transakce spadá a v jakém rámci se ukládají časy. Spárovaná zařízení sdílejí toto nastavení, takže obě čtou stejný den.',
+        'this_machine' => 'Toto zařízení (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Země',
         'label' => 'Tvoje země',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Zadej částku od :zero výš.',
         'period_day' => 'Zvol den od 1 do 28.',
         'currency_view' => 'Vyber jednu z dostupných možností.',
+        'timezone' => 'Vyber časové pásmo ze seznamu.',
     ],
 ];

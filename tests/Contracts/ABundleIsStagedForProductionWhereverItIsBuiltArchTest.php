@@ -365,6 +365,10 @@ const BUNDLED_TEMPLATE_OMITS = [
     // Read by nothing: no import.meta.env reference anywhere in the tree, on
     // either root. Laravel scaffolding, not a value this product ships.
     'VITE_APP_NAME' => 'nothing reads it — grep import.meta.env across resources/ before restoring it',
+    // Deliberately absent from a bundle. Pinned, it ships the packager's day to
+    // every reader who installs that build; unset, InstallTimezone reads the
+    // machine and a stored choice in settings overrides that.
+    'APP_TIMEZONE' => 'a bundle must not pin a zone — see InstallTimezone and G7-R16',
 ];
 
 /** @return array<string, string> the KEY=value pairs a template declares */

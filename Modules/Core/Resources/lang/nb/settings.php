@@ -33,6 +33,13 @@ return [
         'help' => 'Endrer ordene på skjermen og hvordan beløp skrives. System følger språket i nettleseren eller operativsystemet ditt, med engelsk som standard.',
     ],
 
+    'timezone' => [
+        'heading' => 'Tidssone',
+        'label' => 'Tidssone for denne installasjonen',
+        'help' => 'Avgjør hvilken dag en transaksjon havner på, og hvilken ramme tidspunkter lagres i. Sammenkoblede enheter deler denne innstillingen, så begge leser samme dag.',
+        'this_machine' => 'Denne maskinen (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Landet ditt',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Skriv inn et beløp fra :zero og oppover.',
         'period_day' => 'Velg en dag fra 1 til 28.',
         'currency_view' => 'Velg ett av de tilgjengelige alternativene.',
+        'timezone' => 'Velg en tidssone fra listen.',
     ],
 ];

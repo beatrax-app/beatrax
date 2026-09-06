@@ -33,6 +33,13 @@ return [
         'help' => 'Cambia las palabras que ves en pantalla y cómo se escriben los importes. «Sistema» sigue el idioma de tu navegador o de tu sistema operativo, con el inglés por defecto.',
     ],
 
+    'timezone' => [
+        'heading' => 'Zona horaria',
+        'label' => 'Zona horaria de esta instalación',
+        'help' => 'Decide en qué día cae una transacción y en qué marco se guardan las horas. Los dispositivos emparejados comparten este ajuste, así que ambos leen el mismo día.',
+        'this_machine' => 'Este equipo (:zone)',
+    ],
+
     'country' => [
         'heading' => 'País',
         'label' => 'Tu país',
@@ -207,5 +214,6 @@ return [
         'amount' => 'Introduce un importe a partir de :zero.',
         'period_day' => 'Elige un día del 1 al 28.',
         'currency_view' => 'Elige una de las opciones disponibles.',
+        'timezone' => 'Elige una zona horaria de la lista.',
     ],
 ];

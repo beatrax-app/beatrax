@@ -32,6 +32,13 @@ return [
         'help' => 'Verandert de woorden op het scherm en hoe bedragen worden geschreven. Systeem volgt de taal van je browser of besturingssysteem, met Engels als standaard.',
     ],
 
+    'timezone' => [
+        'heading' => 'Tijdzone',
+        'label' => 'Tijdzone van deze installatie',
+        'help' => 'Bepaalt op welke dag een transactie valt en in welk kader tijden worden opgeslagen. Gekoppelde apparaten delen deze instelling, zodat ze allebei dezelfde dag lezen.',
+        'this_machine' => 'Dit apparaat (:zone)',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Jouw land',
@@ -205,5 +212,6 @@ return [
         'amount' => 'Voer een bedrag in vanaf :zero.',
         'period_day' => 'Kies een dag van 1 tot 28.',
         'currency_view' => 'Kies een van de beschikbare opties.',
+        'timezone' => 'Kies een tijdzone uit de lijst.',
     ],
 ];
