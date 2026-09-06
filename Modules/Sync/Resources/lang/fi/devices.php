@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Välityspalvelimen URL-osoite',
     'relay_insecure_warning' => 'Tämä välityspalvelimen osoite käyttää salaamatonta HTTP-yhteyttä. Vaikka välityspalvelin ei koskaan pura tietojesi salausta, suojaamaton yhteys paljastaa salattujen viestien koot ja ajoituksen verkkoa tarkkaileville. Käytä <strong>https://</strong>-osoitetta parhaan yksityisyyden vuoksi.',
 
+    'manual_peer_address' => 'Toisen laitteen osoite',
+    'manual_peer_address_help' => 'Valinnainen. Toinen laite hostina ja porttina verkkoon, jossa laitteet eivät löydä toisiaan automaattisesti. Ensin kokeillaan etsintää, ja tätä käytetään, kun etsintä ei löydä mitään. Jätä tyhjäksi, jos haluat luottaa pelkkään etsintään.',
+
     'enable_at_rest' => 'Ota levysalaus käyttöön',
     'enable_at_rest_body' => 'Tietosi salataan sovelluslukkosi salalauseella. Ennen siirtoa luodaan automaattisesti varmuuskopio.',
     'no_recovery_warning' => 'Jos menetät sovelluslukkosi salalauseen eikä sinulla ole varmuuskopiota tai muuta luotettua laitetta, tietojasi ei voi palauttaa.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Välityspalvelimen osoite tyhjennetty.',
         'relay_saved' => 'Välityspalvelimen osoite tallennettu.',
         'relay_save_failed' => 'Välityspalvelimen osoitteen tallennus epäonnistui: :message',
+        'manual_peer_saved' => 'Laitteen osoite tallennettu.',
+        'manual_peer_cleared' => 'Laitteen osoite tyhjennetty.',
+        'manual_peer_invalid' => 'Anna osoite hostina ja porttina, esimerkiksi 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Toista laitetta ei ole vielä pariliitetty.',
     ],
     'app_lock_permanent' => 'Kun tietosi on kerran salattu, sovelluslukkoa ei voi enää poistaa käytöstä — se pitää ainoaa avainta, eikä salaamattomaan ole paluuta.',
     'backlog_heading' => 'Odottaa lisäämistä',

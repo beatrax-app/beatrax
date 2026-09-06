@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Relay-endpoint-URL',
     'relay_insecure_warning' => 'Dit relay-endpoint gebruikt gewoon HTTP. De relay ontsleutelt je gegevens weliswaar nooit, maar een onbeveiligde verbinding stelt versleutelde groottes en timing bloot aan waarnemers op het netwerk. Gebruik een <strong>https://</strong>-endpoint voor de beste privacy.',
 
+    'manual_peer_address' => 'Adres van het andere apparaat',
+    'manual_peer_address_help' => 'Optioneel. Het andere apparaat als host en poort, voor een netwerk waarop de twee elkaar niet automatisch vinden. Er wordt eerst gezocht en dit wordt gebruikt als dat niets oplevert. Laat leeg om alleen op zoeken te vertrouwen.',
+
     'enable_at_rest' => 'Versleuteling in rust inschakelen',
     'enable_at_rest_body' => 'Je gegevens worden versleuteld met je app-vergrendelingswachtwoord. Er wordt automatisch een back-up gemaakt voordat de migratie begint.',
     'no_recovery_warning' => 'Als je je app-vergrendelingswachtwoord verliest en geen back-up of ander vertrouwd apparaat hebt, kunnen je gegevens niet worden hersteld.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Relay-endpoint gewist.',
         'relay_saved' => 'Relay-endpoint opgeslagen.',
         'relay_save_failed' => 'Relay-endpoint opslaan mislukt: :message',
+        'manual_peer_saved' => 'Apparaatadres opgeslagen.',
+        'manual_peer_cleared' => 'Apparaatadres gewist.',
+        'manual_peer_invalid' => 'Vul een adres in als host en poort, bijvoorbeeld 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Er is nog geen ander apparaat gekoppeld.',
     ],
     'app_lock_permanent' => 'Zodra je gegevens versleuteld zijn, kan de app-vergrendeling niet meer worden uitgezet — die bewaart de enige sleutel, en terug naar onversleuteld kan niet.',
     'backlog_heading' => 'Wacht om toegevoegd te worden',

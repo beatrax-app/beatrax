@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Retranslatora adreses URL',
     'relay_insecure_warning' => 'Šī retranslatora adrese izmanto vienkāršu HTTP. Lai gan retranslators jūsu datus nekad neatšifrē, nedrošs savienojums atklāj tīkla novērotājiem šifrēto datu apjomu un laikus. Vislabākā privātuma nodrošināšanai izmantojiet <strong>https://</strong> adresi.',
 
+    'manual_peer_address' => 'Otras ierīces adrese',
+    'manual_peer_address_help' => 'Neobligāti. Otra ierīce kā hosts un ports tīklam, kurā abas ierīces viena otru automātiski neatrod. Vispirms tiek mēģināta atklāšana, un šo izmanto, kad tā neko neatrod. Atstāj tukšu, lai paļautos tikai uz atklāšanu.',
+
     'enable_at_rest' => 'Ieslēgt šifrēšanu glabāšanā',
     'enable_at_rest_body' => 'Jūsu dati tiks šifrēti, izmantojot lietotnes bloķēšanas paroles frāzi. Pirms pārveides automātiski tiks izveidots dublējums.',
     'no_recovery_warning' => 'Ja pazaudējat lietotnes bloķēšanas paroles frāzi un jums nav ne dublējuma, ne citas uzticamas ierīces, datus atgūt nebūs iespējams.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Retranslatora adrese notīrīta.',
         'relay_saved' => 'Retranslatora adrese saglabāta.',
         'relay_save_failed' => 'Neizdevās saglabāt retranslatora adresi: :message',
+        'manual_peer_saved' => 'Ierīces adrese saglabāta.',
+        'manual_peer_cleared' => 'Ierīces adrese notīrīta.',
+        'manual_peer_invalid' => 'Ievadi adresi kā hostu un portu, piemēram, 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Neviena cita ierīce vēl nav savienota pārī.',
     ],
     'app_lock_permanent' => 'Tiklīdz dati ir šifrēti, lietotnes bloķēšanu vairs nevar izslēgt — tā glabā vienīgo atslēgu, un ceļa atpakaļ uz nešifrētiem datiem nav.',
     'backlog_heading' => 'Gaida pievienošanu',

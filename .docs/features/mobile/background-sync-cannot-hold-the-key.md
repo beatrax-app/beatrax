@@ -166,6 +166,20 @@ nothing was ever reached. That fallback is not vestigial: iOS LAN discovery does
 not work at all (see [ios-lan-discovery-entitlement.md](ios-lan-discovery-entitlement.md)),
 so the endpoint the QR carried is the only address such a device will ever hold.
 
+Between those two sits the rung a reader supplies: `manual_lan_host` and
+`manual_lan_port`, typed as one `host:port` field on the devices screen and
+stored on the same registry row. It is deliberately kept in its own columns
+rather than seeded into `last_lan_host`, because `forget()` clears where the
+peer was last *reached* — and a fallback that a failed dial erases alongside the
+address that failed is not a fallback. So the order is: where the peer was last
+reached, then what the reader typed, then a guess at the same machine derived
+from the relay endpoint's host.
+
+It exists for the network the browse never answers on: a guest or corporate
+Wi-Fi that blocks mDNS, and the iOS case above where a device paired by typed
+code — carrying no relay endpoint — had no address at all and no way to be
+given one.
+
 Two methods, because the two callers want different costs. `recall()` never
 browses: `SetupProgressScreen` polls every two seconds and a browse costs
 `ProtocolTimings::BROWSE_SECONDS` in full, and the pull behind it already

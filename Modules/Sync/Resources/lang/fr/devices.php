@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL du point de terminaison du relais',
     'relay_insecure_warning' => 'Ce point de terminaison de relais utilise du HTTP simple. Même si le relais ne déchiffre jamais tes données, une connexion non sécurisée expose la taille des paquets chiffrés et leur horodatage aux observateurs du réseau. Utilise un point de terminaison <strong>https://</strong> pour une confidentialité optimale.',
 
+    'manual_peer_address' => "Adresse de l'autre appareil",
+    'manual_peer_address_help' => "Facultatif. L'autre appareil sous forme d'hôte et de port, pour un réseau où les deux ne se trouvent pas automatiquement. La découverte est tentée d'abord et ceci sert quand elle ne trouve rien. Laisse vide pour t'appuyer uniquement sur la découverte.",
+
     'enable_at_rest' => 'Activer le chiffrement au repos',
     'enable_at_rest_body' => 'Tes données seront chiffrées avec la phrase secrète de verrouillage de l\'app. Une sauvegarde préalable à la migration sera créée automatiquement.',
     'no_recovery_warning' => 'Si tu perds ta phrase secrète de verrouillage et que tu n\'as ni sauvegarde ni autre appareil de confiance, tes données seront irrécupérables.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Point de terminaison du relais effacé.',
         'relay_saved' => 'Point de terminaison du relais enregistré.',
         'relay_save_failed' => 'Impossible d\'enregistrer le point de terminaison du relais : :message',
+        'manual_peer_saved' => "Adresse de l'appareil enregistrée.",
+        'manual_peer_cleared' => "Adresse de l'appareil effacée.",
+        'manual_peer_invalid' => "Saisis une adresse sous forme d'hôte et de port, par exemple 192.168.1.20:8100.",
+        'manual_peer_no_peer' => "Aucun autre appareil n'est encore associé.",
     ],
     'app_lock_permanent' => 'Une fois tes données chiffrées, le verrouillage de l\'app ne peut plus être désactivé — il détient la seule clé, et il n\'y a pas de retour au non chiffré.',
     'backlog_heading' => 'En attente d\'intégration',

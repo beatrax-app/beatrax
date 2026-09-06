@@ -2469,6 +2469,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/AFirstSyncMustNotReportAHistoryItIsMissingTest.php -> Modules\\Sync\\Internal\\Transport\\Frame\\TransportFramer',
         'Modules/Mobile/tests/Feature/AFirstSyncMustNotReportAHistoryItIsMissingTest.php -> Modules\\Sync\\Internal\\Transport\\PeerCatchUpExchanger',
         'Modules/Mobile/tests/Feature/AFirstSyncMustNotReportAHistoryItIsMissingTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
+        'Modules/Mobile/tests/Feature/AHeldEntryIsRetiredOnThePhoneTooTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/AResumedTrustGateStillNamesBothDevicesTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/AStoreBuildCarriesNoFeedItCouldInstallFromTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
         'Modules/Mobile/tests/Feature/ImportWizardRecoveryDownloadTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
@@ -2545,6 +2546,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveredPeer',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveryMode',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\PeerDiscovery',
+        'Modules/Mobile/tests/Feature/TheLocalNetworkIsTriedBeforeTheRelayTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/TheLocalNetworkIsTriedBeforeTheRelayTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Mobile/tests/Feature/ThePhoneDerivesItsNotificationsFromARequestTest.php -> Modules\\Notifications\\Internal\\Http\\Middleware\\RunDeferredNotificationPasses',
         // ForgetsSpentRecoveryCodes is the Auth middleware whose forgetting this
         // test exists to prove, and a middleware is named by class or not at all.

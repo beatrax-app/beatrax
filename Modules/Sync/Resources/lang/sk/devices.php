@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL adresa relé',
     'relay_insecure_warning' => 'Táto adresa relé používa obyčajné HTTP. Relé tvoje údaje nikdy nedešifruje, no nezabezpečené spojenie prezradí pozorovateľom siete veľkosti a časovanie zašifrovaných prenosov. Pre najlepšie súkromie použi adresu <strong>https://</strong>.',
 
+    'manual_peer_address' => 'Adresa druhého zariadenia',
+    'manual_peer_address_help' => 'Voliteľné. Druhé zariadenie ako host a port pre sieť, v ktorej sa obe navzájom automaticky nenájdu. Najprv sa skúša vyhľadávanie a toto sa použije, keď nič nenájde. Nechaj prázdne, ak sa chceš spoliehať len na vyhľadávanie.',
+
     'enable_at_rest' => 'Zapnúť šifrovanie v pokoji',
     'enable_at_rest_body' => 'Tvoje údaje sa zašifrujú prístupovou frázou zámku aplikácie. Záloha pred migráciou vznikne automaticky.',
     'no_recovery_warning' => 'Ak stratíš prístupovú frázu zámku aplikácie a nemáš zálohu ani iné dôveryhodné zariadenie, údaje sa nedajú obnoviť.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Adresa relé vymazaná.',
         'relay_saved' => 'Adresa relé uložená.',
         'relay_save_failed' => 'Adresu relé sa nepodarilo uložiť: :message',
+        'manual_peer_saved' => 'Adresa zariadenia uložená.',
+        'manual_peer_cleared' => 'Adresa zariadenia vymazaná.',
+        'manual_peer_invalid' => 'Zadaj adresu ako host a port, napríklad 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Zatiaľ nie je spárované žiadne iné zariadenie.',
     ],
     'app_lock_permanent' => 'Len čo sú údaje šifrované, zámok aplikácie sa už nedá vypnúť — drží jediný kľúč a cesta späť k nešifrovaným údajom neexistuje.',
     'backlog_heading' => 'Čaká na pridanie',

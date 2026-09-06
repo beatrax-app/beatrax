@@ -220,6 +220,7 @@ final readonly class LanSyncClient
         $replayer = new OpLogReplayer(
             db: $this->db,
             deviceKeys: $deviceKeys,
+            deviceKeysUserId: $identity->userId,
             rules: $this->rules,
             searchWriter: $this->searchWriter,
         );

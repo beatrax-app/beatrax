@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL relay serveru',
     'relay_insecure_warning' => 'Tato adresa relay serveru používá prosté HTTP. Relay server tvá data nikdy nedešifruje, ale nezabezpečené spojení odhalí pozorovatelům v síti velikosti a časování zašifrovaných přenosů. Pro nejlepší soukromí použij adresu <strong>https://</strong>.',
 
+    'manual_peer_address' => 'Adresa druhého zařízení',
+    'manual_peer_address_help' => 'Volitelné. Druhé zařízení jako host a port pro síť, kde se obě zařízení nenajdou automaticky. Nejdřív se zkouší vyhledávání a tohle se použije, když nic nenajde. Nech prázdné, pokud chceš spoléhat jen na vyhledávání.',
+
     'enable_at_rest' => 'Zapnout šifrování v úložišti',
     'enable_at_rest_body' => 'Tvá data se zašifrují heslem zámku aplikace. Záloha před migrací vznikne automaticky.',
     'no_recovery_warning' => 'Pokud ztratíš heslo zámku aplikace a nemáš zálohu ani jiné důvěryhodné zařízení, data se obnovit nedají.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Adresa relay serveru vymazána.',
         'relay_saved' => 'Adresa relay serveru uložena.',
         'relay_save_failed' => 'Adresu relay serveru se nepodařilo uložit: :message',
+        'manual_peer_saved' => 'Adresa zařízení uložena.',
+        'manual_peer_cleared' => 'Adresa zařízení vymazána.',
+        'manual_peer_invalid' => 'Zadej adresu jako host a port, například 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Zatím není spárováno žádné druhé zařízení.',
     ],
     'app_lock_permanent' => 'Jakmile jsou data šifrovaná, zámek aplikace už nelze vypnout — drží jediný klíč a cesta zpět k nešifrovaným datům neexistuje.',
     'backlog_heading' => 'Čeká na přidání',

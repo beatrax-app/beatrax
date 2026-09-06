@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Relay-Endpunkt-URL',
     'relay_insecure_warning' => 'Dieser Relay-Endpunkt nutzt einfaches HTTP. Das Relay entschlüsselt deine Daten zwar nie, aber eine unsichere Verbindung gibt verschlüsselte Größen und Zeitpunkte gegenüber Beobachtern im Netzwerk preis. Nutze für beste Privatsphäre einen <strong>https://</strong>-Endpunkt.',
 
+    'manual_peer_address' => 'Adresse des anderen Geräts',
+    'manual_peer_address_help' => 'Optional. Das andere Gerät als Host und Port, für ein Netzwerk, in dem sich beide nicht automatisch finden. Zuerst wird gesucht, und dies wird verwendet, wenn die Suche nichts findet. Leer lassen, um nur die Suche zu nutzen.',
+
     'enable_at_rest' => 'Verschlüsselung im Ruhezustand aktivieren',
     'enable_at_rest_body' => 'Deine Daten werden mit der Passphrase deiner App-Sperre verschlüsselt. Vor der Migration wird automatisch ein Backup erstellt.',
     'no_recovery_warning' => 'Wenn du die Passphrase deiner App-Sperre verlierst und kein Backup und kein anderes vertrauenswürdiges Gerät hast, lassen sich deine Daten nicht wiederherstellen.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Relay-Endpunkt gelöscht.',
         'relay_saved' => 'Relay-Endpunkt gespeichert.',
         'relay_save_failed' => 'Relay-Endpunkt konnte nicht gespeichert werden: :message',
+        'manual_peer_saved' => 'Geräteadresse gespeichert.',
+        'manual_peer_cleared' => 'Geräteadresse gelöscht.',
+        'manual_peer_invalid' => 'Gib eine Adresse als Host und Port ein, zum Beispiel 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Es ist noch kein anderes Gerät gekoppelt.',
     ],
     'app_lock_permanent' => 'Sobald deine Daten verschlüsselt sind, lässt sich die App-Sperre nicht mehr ausschalten — sie hält den einzigen Schlüssel, und zurück zu unverschlüsselt geht es nicht.',
     'backlog_heading' => 'Wartet auf Übernahme',

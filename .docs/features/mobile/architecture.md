@@ -884,10 +884,16 @@ cached anywhere outside the session. When a LAN host/port is supplied and
 the network policy allows it, `LanSyncClient::syncOnce()` is dispatched
 with exactly one bounded retry on a retryable outcome (covering the iOS
 Local Network Privacy first-attempt connect denial, which can deny the
-very first LAN connection an install ever makes). When LAN sync is
-unavailable or still fails after that retry, the off-LAN leg drains the
-configured relay mailbox — a real, bounded operation, never a fabricated
-success. `NetworkPolicyResolver` implements the "sync on any network by
+very first LAN connection an install ever makes). The off-LAN leg then
+drains the configured relay mailbox on the same tick, whether or not the
+LAN leg succeeded — a real, bounded operation, never a fabricated
+success. The relay is a fallback in *order*, not in whether it runs: it
+carries no op-log entries at all, only epoch wraps, and skipping it on a
+working LAN once left a wrap from a device that is not this one's LAN
+peer unread for as long as the LAN stayed reachable. Both legs run before
+`SealedLedgerRecovery`, which retires what a key arriving on either of
+them has just made replayable — the desktop reaches that pass from an
+after-response middleware the mobile shell does not register. `NetworkPolicyResolver` implements the "sync on any network by
 default, unless the user opted into pause-on-cellular" policy, reading
 its toggle from a file-backed JSON policy (never `.env`) and defaulting
 to "sync now" whenever the current connection type cannot be positively

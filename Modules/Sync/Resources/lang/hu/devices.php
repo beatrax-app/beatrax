@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'A relé végpont URL-je',
     'relay_insecure_warning' => 'Ez a relé végpont sima HTTP-t használ. Bár a relé soha nem fejti vissza az adataidat, a nem biztonságos kapcsolat felfedi a titkosított adatok méretét és időzítését a hálózatot figyelők előtt. A legjobb adatvédelemhez használj <strong>https://</strong> végpontot.',
 
+    'manual_peer_address' => 'A másik eszköz címe',
+    'manual_peer_address_help' => 'Nem kötelező. A másik eszköz hostként és portként, olyan hálózaton, ahol a kettő nem találja meg egymást automatikusan. Először a felderítés fut, és ez akkor lép életbe, ha az nem talál semmit. Hagyd üresen, ha csak a felderítésre szeretnél támaszkodni.',
+
     'enable_at_rest' => 'Nyugalmi titkosítás bekapcsolása',
     'enable_at_rest_body' => 'Az adataidat az alkalmazászár jelmondatával titkosítjuk. A migrálás előtt automatikusan biztonsági mentés készül.',
     'no_recovery_warning' => 'Ha elveszíted az alkalmazászár jelmondatát, és nincs biztonsági mentésed vagy másik megbízható eszközöd, az adataid nem állíthatók helyre.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'A relé végpont törölve.',
         'relay_saved' => 'A relé végpont mentve.',
         'relay_save_failed' => 'A relé végpontot nem sikerült menteni: :message',
+        'manual_peer_saved' => 'Az eszköz címe mentve.',
+        'manual_peer_cleared' => 'Az eszköz címe törölve.',
+        'manual_peer_invalid' => 'Adj meg címet hostként és portként, például 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Még nincs párosítva másik eszköz.',
     ],
     'app_lock_permanent' => 'Ha az adataid egyszer titkosítva vannak, az alkalmazászár többé nem kapcsolható ki — nála van az egyetlen kulcs, és nincs út vissza a titkosítatlanhoz.',
     'backlog_heading' => 'Hozzáadásra vár',

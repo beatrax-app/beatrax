@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL til relay-endepunkt',
     'relay_insecure_warning' => 'Dette relay-endepunkt bruger almindelig HTTP. Relayet dekrypterer aldrig dine data, men en usikker forbindelse afslører krypterede størrelser og tidspunkter over for dem, der overvåger netværket. Brug et <strong>https://</strong>-endepunkt for det bedste privatliv.',
 
+    'manual_peer_address' => 'Den anden enheds adresse',
+    'manual_peer_address_help' => 'Valgfrit. Den anden enhed som host og port, til et netværk hvor de to ikke kan finde hinanden automatisk. Der søges først, og dette bruges, når søgningen ikke finder noget. Lad feltet stå tomt for kun at bruge søgning.',
+
     'enable_at_rest' => 'Aktivér kryptering i hvile',
     'enable_at_rest_body' => 'Dine data bliver krypteret med adgangssætningen til din app-lås. Der oprettes automatisk en sikkerhedskopi inden migreringen.',
     'no_recovery_warning' => 'Hvis du mister adgangssætningen til din app-lås og hverken har en sikkerhedskopi eller en anden betroet enhed, kan dine data ikke gendannes.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Relay-endepunktet blev ryddet.',
         'relay_saved' => 'Relay-endepunktet blev gemt.',
         'relay_save_failed' => 'Relay-endepunktet kunne ikke gemmes: :message',
+        'manual_peer_saved' => 'Enhedens adresse er gemt.',
+        'manual_peer_cleared' => 'Enhedens adresse er ryddet.',
+        'manual_peer_invalid' => 'Indtast en adresse som host og port, for eksempel 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Der er endnu ikke parret nogen anden enhed.',
     ],
     'app_lock_permanent' => 'Når dine data først er krypteret, kan applåsen ikke slås fra — den holder den eneste nøgle, og der er ingen vej tilbage til ukrypteret.',
     'backlog_heading' => 'Venter på at blive tilføjet',

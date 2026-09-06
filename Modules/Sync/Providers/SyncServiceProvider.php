@@ -176,13 +176,15 @@ final class SyncServiceProvider extends ServiceProvider
         $this->app->bind(
             OpLogReplayer::class,
             function (): OpLogReplayer {
+                $userId = $this->currentUserId();
                 $deviceKeys = $this->app->make(DeviceRegistryService::class)
-                    ->signatureVerificationKeys($this->currentUserId());
+                    ->signatureVerificationKeys($userId);
 
                 return new OpLogReplayer(
                     $this->app->make(DatabaseManager::class),
                     $deviceKeys,
                     $this->app->make(MergeRulesRegistry::class),
+                    deviceKeysUserId: $userId,
                 );
             },
         );

@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Retransliavimo adreso URL',
     'relay_insecure_warning' => 'Šis retransliavimo adresas naudoja paprastą HTTP. Nors retransliatorius tavo duomenų niekada neiššifruoja, nesaugus ryšys atskleidžia šifruotų duomenų dydžius ir laiką tinklo stebėtojams. Geriausią privatumą užtikrina <strong>https://</strong> adresas.',
 
+    'manual_peer_address' => 'Kito įrenginio adresas',
+    'manual_peer_address_help' => 'Neprivaloma. Kitas įrenginys kaip hostas ir prievadas tinklui, kuriame abu vienas kito automatiškai neranda. Pirmiausia bandoma aptikti, o tai naudojama, kai nieko nerandama. Palik tuščią, jei nori pasikliauti tik aptikimu.',
+
     'enable_at_rest' => 'Įjungti šifravimą saugykloje',
     'enable_at_rest_body' => 'Tavo duomenys bus šifruojami naudojant programėlės užrakto slaptafrazę. Prieš perkėlimą automatiškai bus sukurta atsarginė kopija.',
     'no_recovery_warning' => 'Jei pamirši programėlės užrakto slaptafrazę ir neturėsi nei atsarginės kopijos, nei kito patikimo įrenginio, duomenų atkurti nebus įmanoma.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Retransliavimo adresas išvalytas.',
         'relay_saved' => 'Retransliavimo adresas išsaugotas.',
         'relay_save_failed' => 'Nepavyko išsaugoti retransliavimo adreso: :message',
+        'manual_peer_saved' => 'Įrenginio adresas įrašytas.',
+        'manual_peer_cleared' => 'Įrenginio adresas išvalytas.',
+        'manual_peer_invalid' => 'Įvesk adresą kaip hostą ir prievadą, pavyzdžiui 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Kitas įrenginys dar nesusietas.',
     ],
     'app_lock_permanent' => 'Kai duomenys užšifruoti, programėlės užrakto nebegalima išjungti — jis saugo vienintelį raktą, o kelio atgal į nešifruotus duomenis nėra.',
     'backlog_heading' => 'Laukiama pridėjimo',

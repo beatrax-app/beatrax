@@ -457,6 +457,7 @@ final readonly class HistoryReprojector
         return new OpLogReplayer(
             db: $this->db,
             deviceKeys: $this->registry->signatureVerificationKeys($userId),
+            deviceKeysUserId: $userId,
             rules: $this->container->make(MergeRulesRegistry::class),
             searchWriter: $this->container->bound(SearchIndexWriterContract::class)
                 ? $this->container->make(SearchIndexWriterContract::class)
