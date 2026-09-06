@@ -427,9 +427,70 @@ jobs:
                   echo "signed by the expected release key"
                   echo "APK_PATH=$apk" >> "$GITHUB_ENV"
 
-            - name: Upload Android artifact
+            - name: Build and sign the store bundle
+              working-directory: mobile-app
+              env:
+                  NATIVEPHP_APP_VERSION: ${{ inputs.tag }}
+                  ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+                  ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+                  ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+              run: |
+                  set -euo pipefail
+                  export ANDROID_KEYSTORE_FILE="$GITHUB_WORKSPACE/mobile-app/credentials/app-release-key.jks"
+                  export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
+                  # Play takes an AAB and refuses an APK, so the sideloadable
+                  # artifact above is not a submission — it is the direct
+                  # download, and both ship. Same command and the same identity
+                  # checks against the shipped artifact, over the project the
+                  # APK run already generated and patched.
+                  php artisan mobile:package-android --build-type=bundle --no-interaction
+
+            - name: Verify the store bundle is signed by the release key
+              env:
+                  EXPECTED_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+              run: |
+                  set -euo pipefail
+                  aab=mobile-app/nativephp/android/app/build/outputs/bundle/release/app-release.aab
+                  if [ ! -s "$aab" ]; then
+                      echo "::error::no signed AAB was produced."
+                      exit 1
+                  fi
+
+                  # apksigner cannot read an AAB: it is a JAR-signed archive,
+                  # so the certificate comes out of keytool instead. What
+                  # keytool prints is the SHA-256 of the same DER certificate
+                  # apksigner digests for the APK, so one recorded value
+                  # answers for both artifacts.
+                  actual=$(keytool -printcert -jarfile "$aab" \
+                      | grep -i 'SHA256:' | head -1 \
+                      | sed 's/.*SHA256: *//' | tr -d ' :' | tr '[:lower:]' '[:upper:]')
+                  expected=$(printf '%s' "$EXPECTED_SHA256" | tr -d ' :' | tr '[:lower:]' '[:upper:]')
+
+                  if [ -z "$expected" ]; then
+                      echo "::error::ANDROID_SIGNING_CERT_SHA256 is not set — cannot prove which key signed this."
+                      exit 1
+                  fi
+                  # An unsigned AAB prints no certificate at all, which an
+                  # equality check alone would read as a mismatch rather than
+                  # as the worse thing it is.
+                  if [ -z "$actual" ]; then
+                      echo "::error::the AAB carries no certificate — it is unsigned."
+                      exit 1
+                  fi
+                  if [ "$actual" != "$expected" ]; then
+                      echo "::error::AAB is signed by an unexpected key."
+                      exit 1
+                  fi
+                  echo "store bundle signed by the expected release key"
+                  echo "AAB_PATH=$aab" >> "$GITHUB_ENV"
+
+            - name: Upload Android artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
                   name: android
-                  path: ${{ env.APK_PATH }}
+                  # Both shapes: the APK is the direct download and the AAB is
+                  # what Play takes. Neither stands in for the other.
+                  path: |
+                      ${{ env.APK_PATH }}
+                      ${{ env.AAB_PATH }}
                   if-no-files-found: error

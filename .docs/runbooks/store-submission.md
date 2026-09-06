@@ -142,20 +142,29 @@ described rather than discovered.
 > If Face ID is offered, granting it is optional — the PIN always works.
 >
 > **Sample data.** An empty ledger shows very little, so load the sample
-> household: *(control not yet reachable — see below.)* Every figure in it is
-> invented; it is not any real person's finances.
+> household: open **Settings**, find **Sample data**, and press *Load sample
+> data* and then *Add it to this account*. It takes a moment, then fills the
+> ledger with accounts, transactions, budgets, goals and alerts. Every figure in
+> it is invented; it is not any real person's finances.
 >
 > **What will not work in review, and why.** Syncing needs a second device of
 > your own on the same network, and pairing is by scanning a code that device
 > shows. Nothing about it reaches the internet, so there is nothing to
 > demonstrate against a server.
 
-### The sample-data control does not exist yet
+### Where the sample-data control lives
 
-`demo:seed` is an artisan command marked developer-only, reachable from a
-terminal and a Composer toolchain. Neither exists inside a signed store build,
-so a reviewer cannot load sample data at all today, and the paragraph above
-cannot be completed honestly until an in-app control exists.
+`SampleDataCard`, on the settings page, rendered by the shell a store build
+carries. It calls `SampleDataLoader::loadFor()` — the reader path, which is
+`SampleDataScope::LedgerOnly`: the ledger and everything derived from it, over
+the account already signed in. The developer path that invents its own accounts
+and rewrites install state is a different scope and stays on `demo:seed`, a Dev
+Console command and therefore absent from a store build.
+
+The control adds and never replaces. `--reset` is not on it: tearing down what
+is already there should cost more than one press, so it stays on the command
+line. The card says both things before it acts — that it adds, and that the
+write reaches paired devices.
 
 The data itself is fine: the demo seeders are hand-authored literals
 (`demo-1` / `demo-2`, a `PAYPAL-DEMO-1` sentinel pinned by
@@ -198,6 +207,24 @@ test compares it against the workflows in both directions.
 
 Nothing still warns before an identity lapses, and a store listing turns that
 from an inconvenience into an outage. Read the register before a submission.
+
+## The Android artefact shapes
+
+Two, and neither substitutes for the other. Play refuses an APK and takes an
+AAB; a reader sideloading a direct download needs the APK and cannot install an
+AAB. `mobile:package-android` builds either, and both release workflows now
+build both, verify each against the recorded signing certificate, and upload
+them together.
+
+The signature check differs by shape, and the reason is worth keeping:
+`apksigner` cannot read an AAB, which is a JAR-signed archive, so its
+certificate comes out of `keytool -printcert -jarfile`. What that prints is the
+SHA-256 of the same DER certificate `apksigner` digests for the APK, so one
+recorded fingerprint — `ANDROID_SIGNING_CERT_SHA256` — answers for both.
+
+`AStoreShapeIsBuiltBesideTheSideloadableOneArchTest` holds it there: a workflow
+that builds the APK and not the AAB fails, and so does one that builds the AAB
+without proving who signed it.
 
 ## The two desktop stores
 
