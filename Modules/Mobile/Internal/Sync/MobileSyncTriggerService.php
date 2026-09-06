@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Sync;
 
 use Illuminate\Contracts\Session\Session;
+use Modules\Core\Public\Services\SealedLedgerRecovery;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Mobile\Internal\Exceptions\LanSyncException;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
@@ -24,6 +26,7 @@ final readonly class MobileSyncTriggerService
         private RelayClient $relayClient,
         private RelayConfig $relayConfig,
         private GdkEpochDeliveryGateway $epochDelivery,
+        private SealedLedgerRecovery $sealedLedgerRecovery,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -117,9 +120,29 @@ final readonly class MobileSyncTriggerService
         // wrap an earlier, locked one had to leave in the mailbox.
         $this->epochDelivery->drainInbox($userId, $identity->deviceId, $session);
 
+        // A key this tick just took is what a held entry was waiting for. The
+        // desktop runs this after every response; the phone has no such
+        // middleware, so a gdk_decrypt_failed row — recoverable by definition —
+        // had nothing to retire it once setup was over.
+        $this->recoverHeldEntries($userId, $session);
+
         return $lanReached || $relayReached
             ? SyncAttemptOutcome::Synced
             : SyncAttemptOutcome::Unreachable;
+    }
+
+    // Never fails the tick: both legs have already run and been accounted for,
+    // and an entry this pass could not place is placed by the next one.
+    private function recoverHeldEntries(int $userId, Session $session): void
+    {
+        try {
+            $this->sealedLedgerRecovery->recover($userId, $session);
+        } catch (Throwable $e) {
+            $this->logger?->warning(
+                'MobileSyncTriggerService: held-entry recovery pass failed.',
+                SafeExceptionContext::describe($e),
+            );
+        }
     }
 
     // Re-drives exactly ONCE on a retryable outcome (the iOS Local
