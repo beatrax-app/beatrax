@@ -144,6 +144,30 @@ An unset feed behaves like an unset stable feed: the fetch yields `null` and
 nothing is surfaced, rather than falling back to the other channel's origin and
 offering a reader a build they did not opt into.
 
+**A refusal reaches the reader.** The listener declines in two places and only
+one of them may mean tampering. A missing manifest is offline, an unconfigured
+feed, or a reader who switched the check off between consenting and the download
+finishing — it is logged and nothing is surfaced, because there is nothing there
+for anyone to act on. A download that fails verification raises a critical
+system alert naming the version, because the reader consented to an install,
+waited through a download, and would otherwise be told nothing at all — which
+reads as "it worked" and invites the same click again.
+
+**Known gap — a `.deb` install is offered an update it cannot apply.** The Linux
+job publishes both an AppImage and a `.deb`, and `latest-linux.yml` describes
+**the AppImage**: its path and its digest. electron-updater's Linux support
+only replaces an AppImage in place. A reader who installed the `.deb` therefore
+polls a manifest that resolves, is offered an install, consents, downloads an
+artefact that verifies — and then `quitAndInstall()` has nothing it can do.
+
+Nothing in the tree detects which package a running bundle came from; there is
+no reference to `APPIMAGE` anywhere outside `vendor/`. The obvious probe is that
+environment variable, which the AppImage runtime sets and the Electron process
+would pass to its PHP child — but whether it survives that hop is exactly the
+kind of claim that needs a Linux desktop to settle rather than to be reasoned
+about, and getting it wrong the other way switches auto-update off for the
+readers it currently works for. It is written down here rather than guessed at.
+
 ## The off switch
 
 The check is an outbound call, and the privacy stance says it must be

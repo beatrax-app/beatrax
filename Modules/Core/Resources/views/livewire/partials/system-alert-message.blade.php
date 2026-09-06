@@ -37,6 +37,21 @@
             {{ StoredCopy::readFromParams($alert->metadata, $alert->message) }}
         @endif
         @break
+    @case (UpdateAlertKind::Refused->value)
+        @php
+            $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+            $refusedVersion = isset($metadata['refusedVersion']) && is_string($metadata['refusedVersion'])
+                ? $metadata['refusedVersion']
+                : null;
+        @endphp
+        {{-- The stored line is the fallback for a row whose metadata predates
+             the version key; the reader's own locale wins where it is there. --}}
+        @if ($refusedVersion !== null)
+            {{ Lang::get('core::alerts.messages.update_refused', ['version' => $refusedVersion]) }}
+        @else
+            {{ $alert->message }}
+        @endif
+        @break
     @case (UpdateAlertKind::Stale->value)
         @php
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];

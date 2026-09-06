@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Güncelleme mevcut — Beatrax :version. Sen kurmayı seçene kadar hiçbir şey indirilmez; ardından Beatrax kapanır ve yeni sürümle yeniden açılır.',
+        'update_refused' => 'Beatrax :version sürümünü indirdi ve kurmayı reddetti — dosya yayıncı imzasıyla eşleşmedi, bu yüzden bu cihazda hiçbir şey değişmedi. Bozuk bir indirme buna yol açabilir. Tekrarlanırsa Beatrax\'ı o kaynaktan kurma.',
         'update_stale' => ':current sürümünü kullanıyorsun — :latest sürümü 30 gündür mevcut. Şimdi güncelle.',
         'update_critical' => 'Kritik güncelleme mevcut — :version sürümü şunu düzeltiyor: :summary. En kısa sürede yükle.',
         'backup_corrupt_with_path' => ':timestamp tarihinde yazılan yedek bütünlük denetimini geçemedi. :path yolunu incele. Yedeklere güvenmeden önce sorunu gider.',

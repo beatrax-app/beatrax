@@ -27,6 +27,7 @@ return [
 
     'messages' => [
         'update_available' => 'Update verfügbar — Beatrax :version. Es wird nichts heruntergeladen, bis du dich für die Installation entscheidest; Beatrax schließt sich dann und öffnet sich in der neuen Version wieder.',
+        'update_refused' => 'Beatrax hat Version :version heruntergeladen und die Installation verweigert — die Datei stimmte nicht mit der Signatur des Herausgebers überein, es wurde also nichts auf diesem Gerät verändert. Ein beschädigter Download kann das auslösen. Wenn es weiterhin passiert, installiere Beatrax nicht aus dieser Quelle.',
         'update_stale' => 'Du nutzt Version :current — Version :latest ist seit 30 Tagen verfügbar. Aktualisiere jetzt.',
         'update_critical' => 'Kritisches Update verfügbar — Version :version behebt :summary. Installiere es so bald wie möglich.',
         'backup_corrupt_with_path' => 'Das um :timestamp geschriebene Backup hat die Integritätsprüfung nicht bestanden. Prüfe :path. Behebe das, bevor du dich auf Backups verlässt.',

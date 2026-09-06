@@ -5,14 +5,19 @@ declare(strict_types=1);
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Client\Factory as HttpClient;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Core\Public\Services\UpdateCheckPreference;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
 use Native\Desktop\AutoUpdater;
@@ -169,7 +174,7 @@ it('smoke: a downloaded binary matching the signed manifest installs', function 
     $updater = Mockery::mock(AutoUpdater::class);
     $updater->shouldReceive('quitAndInstall')->once();
 
-    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger))
+    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger, app(SystemAlertWriter::class)))
         ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
 
     @unlink($file);
@@ -185,7 +190,7 @@ it('smoke: a downloaded binary whose SHA512 disagrees with the manifest is refus
     $updater = Mockery::mock(AutoUpdater::class);
     $updater->shouldReceive('quitAndInstall')->never();
 
-    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger))
+    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger, app(SystemAlertWriter::class)))
         ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
 
     @unlink($file);
@@ -201,7 +206,7 @@ it('smoke: an unreachable feed surfaces no update and installs nothing', functio
     file_put_contents($file, 'anything');
     $updater = Mockery::mock(AutoUpdater::class);
     $updater->shouldReceive('quitAndInstall')->never();
-    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger))
+    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger, app(SystemAlertWriter::class)))
         ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
 
     expect(smokeUpdateAlertCount())->toBe(0);
@@ -231,11 +236,65 @@ it('smoke: a reader who switched the check off is announced nothing, installs no
     $updater->shouldReceive('quitAndInstall')->never();
 
     smokeAnnounce('Windows', $publicHex, '2.0.0');
-    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger))
+    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger, app(SystemAlertWriter::class)))
         ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
 
     expect(smokeUpdateAlertCount())->toBe(0);
     Http::assertNothingSent();
 
     @unlink($file);
+});
+
+// The refusal branch logged `critical` and returned. A log is not a reader:
+// they consented to an install, waited through a download, and were told
+// nothing — which reads as "it worked" and invites the same click again. Of the
+// two ways this listener declines, only one may mean tampering, and only that
+// one surfaces.
+it('tells the reader when it refuses an update, rather than only the log', function (): void {
+    [$secret, $publicHex] = smokeKeypair();
+    smokePublishManifest('Windows', '2.0.0', 'the-genuine-installer', $secret);
+
+    $file = (string) tempnam(sys_get_temp_dir(), 'smoke');
+    file_put_contents($file, 'a-swapped-installer');
+
+    $updater = Mockery::mock(AutoUpdater::class);
+    $updater->shouldReceive('quitAndInstall')->never();
+
+    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger, app(SystemAlertWriter::class)))
+        ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
+
+    @unlink($file);
+
+    $alert = DB::connection()->table('system_alerts')
+        ->where('kind', UpdateAlertKind::Refused->value)
+        ->first();
+
+    expect($alert)->not->toBeNull('the reader is told nothing when an update is refused')
+        ->and($alert->user_id)->toBeNull('a refused update is a fact about the machine, not about one reader')
+        ->and($alert->severity)->toBe(SystemAlertSeverity::Critical->value)
+        ->and($alert->message)->toBe(Lang::get('core::alerts.messages.update_refused', ['version' => '2.0.0']))
+        ->and((string) $alert->metadata)->toContain('"refusedVersion":"2.0.0"');
+});
+
+// The positive control, and the line the two branches were split for: having no
+// manifest is offline, an unconfigured feed, or a reader who switched the check
+// off between consenting and this event. None of them is a tampering signal and
+// none of them raises a critical alert.
+it('stays quiet when it simply had no manifest to check against', function (): void {
+    [, $publicHex] = smokeKeypair();
+    Http::fake([SMOKE_FEED_URL.'/*' => Http::response('', 404)]);
+
+    $file = (string) tempnam(sys_get_temp_dir(), 'smoke');
+    file_put_contents($file, 'anything-at-all');
+
+    $updater = Mockery::mock(AutoUpdater::class);
+    $updater->shouldReceive('quitAndInstall')->never();
+
+    (new VerifyAndInstallDownload(smokeChannel($publicHex), smokeFetcher('Windows'), $updater, new NullLogger, app(SystemAlertWriter::class)))
+        ->handle(new UpdateDownloaded($file, '2.0.0', [], SMOKE_RELEASE_DATE));
+
+    @unlink($file);
+
+    expect(DB::connection()->table('system_alerts')->where('kind', UpdateAlertKind::Refused->value)->exists())
+        ->toBeFalse('being offline raised a tampering alert, so the two ways of declining have been run together');
 });
