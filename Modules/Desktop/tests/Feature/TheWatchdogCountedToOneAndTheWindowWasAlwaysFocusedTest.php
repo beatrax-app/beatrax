@@ -61,7 +61,7 @@ function theWorkerExited(): void
 {
     test()->post('_native/api/events', [
         'event' => ProcessExited::class,
-        'payload' => [SurfaceWorkerCrashAlert::WORKER_ALIAS, 1],
+        'payload' => [SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', 1],
     ])->assertOk();
 }
 
