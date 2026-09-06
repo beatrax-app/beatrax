@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\OwnerAccount;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -60,10 +61,17 @@ final class SyncRebuildCommand extends Command
         try {
             $this->rebuilderFor($userId)->rebuild($userId);
         } catch (Throwable $e) {
-            // The transaction has already rolled back by the time this is
-            // reached, so the message is about what to do next rather than a
-            // warning about a half-rebuilt database.
-            $this->error('Rebuild failed and was rolled back; the database is as it was. '.$e->getMessage());
+            // Rolled back already, so this says what happened rather than
+            // warning about a half-rebuilt database. Described rather than
+            // quoted: a QueryException's message is the statement and its
+            // bindings, and console output gets redirected into logs.
+            $described = SafeExceptionContext::describe($e);
+
+            $this->error(
+                'Rebuild failed and was rolled back; the database is as it was. '
+                .$described['reason']
+                .($described['sqlstate'] === '' ? '' : ' ('.$described['sqlstate'].')'),
+            );
 
             return self::FAILURE;
         }
