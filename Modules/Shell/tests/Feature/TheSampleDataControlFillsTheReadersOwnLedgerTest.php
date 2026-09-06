@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\SampleDataLoader;
+use Modules\Core\Public\Exceptions\SampleDataAccountMissingException;
 use Modules\Ledger\Database\Seeders\Demo\DemoUsersSeeder;
 use Modules\Shell\Internal\Http\Livewire\SampleDataCard;
 
@@ -84,4 +86,14 @@ it('says how much it added', function (): void {
         ->get('loadedRows');
 
     expect($rows)->toBeInt()->toBeGreaterThan(0);
+});
+
+// An id naming no account is a caller that has lost track of who it is seeding
+// for. There is nothing to show the reader and nothing to recover, so it throws
+// its own exception rather than seeding a persona onto nobody.
+it('refuses an account that does not exist rather than seeding nobody', function (): void {
+    sdlReader('sdl-exists');
+
+    expect(fn (): array => app(SampleDataLoader::class)->loadFor(987654))
+        ->toThrow(SampleDataAccountMissingException::class);
 });

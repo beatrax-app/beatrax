@@ -20,6 +20,7 @@ use Modules\Core\Database\Seeders\Demo\DemoUserPreferencesSeeder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SampleDataLoader;
 use Modules\Core\Public\Enums\SampleDataScope;
+use Modules\Core\Public\Exceptions\SampleDataAccountMissingException;
 use Modules\Counterparties\Database\Seeders\Demo\DemoCounterpartiesSeeder;
 use Modules\DriftAlerts\Database\Seeders\Demo\DemoDriftAlertsSeeder;
 use Modules\EmailScan\Database\Seeders\Demo\DemoEmailScanSeeder;
@@ -39,7 +40,6 @@ use Modules\Receipts\Database\Seeders\Demo\DemoReceiptsSeeder;
 use Modules\Recurring\Database\Seeders\Demo\DemoRecurringSeeder;
 use Modules\Reports\Database\Seeders\Demo\DemoSavedReportsSeeder;
 use Modules\Tax\Database\Seeders\Demo\DemoTaxTagsSeeder;
-use RuntimeException;
 
 // The order the sample dataset is built in, in one place, because both callers
 // need the same one: `demo:seed` over invented accounts, and the in-application
@@ -97,7 +97,7 @@ final readonly class SampleDatasetSeeder implements SampleDataLoader
         $user = User::query()->find($userId);
 
         if (! $user instanceof User) {
-            throw new RuntimeException("Cannot load sample data for user {$userId}: no such account.");
+            throw SampleDataAccountMissingException::forUser($userId);
         }
 
         return $this->seed([self::READER_PERSONA => $user], SampleDataScope::LedgerOnly);
