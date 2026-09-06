@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax vpraša vir izdaj, ali obstaja novejša podpisana različica. Nič se ne prenese, dokler sam ne izbereš namestitve.',
         'check_off' => 'Posodobitve se ne preverjajo in nič ne zapusti te naprave. Nove različice najdeš tako, da sam odpreš stran izdaj.',
         'open_releases' => 'Odpri stran izdaj →',
+        'channel_label' => 'Kanal posodobitev',
+        'channel_help' => 'Stabilni je privzeta izbira in ponuja izdaje, ki jih je pregledal človek. Predogled ponuja kandidate za izdajo takoj, ko so objavljeni.',
+        'channel_stable' => 'Stabilni',
+        'channel_preview' => 'Predogled',
+        'channel_preview_note' => 'Predogledne različice so preizkušene manj kot stabilne in lahko vsebujejo nedokončano delo. Pred vsako namestitvijo se preverijo z istim podpisom izdajatelja.',
     ],
 
     'privacy' => [

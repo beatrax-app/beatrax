@@ -10,7 +10,9 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Enums\UpdateAlertKind;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
+use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
 use Psr\Log\NullLogger;
@@ -41,7 +43,7 @@ function staleAgeFetcher(array $manifest): PublisherManifestFetcher
         /** @param array<string, mixed> $manifest */
         public function __construct(private array $manifest) {}
 
-        public function fetch(string $channel): ?array
+        public function fetch(UpdateChannel $channel): ?array
         {
             return $this->manifest;
         }
@@ -65,9 +67,10 @@ function staleAgeChannel(string $publicKeyHex, CarbonImmutable $now, string $ins
         new NullLogger,
         $clock,
         new Repository([
-            'auto_update' => ['publisher_public_key_hex' => $publicKeyHex, 'update_channel' => 'stable'],
+            'auto_update' => ['publisher_public_key_hex' => $publicKeyHex],
             'nativephp' => ['version' => $installedVersion],
         ]),
+        app(UpdateChannelPreference::class),
     );
 }
 
