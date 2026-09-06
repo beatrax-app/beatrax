@@ -14,7 +14,9 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
+use Modules\Notifications\Public\Contracts\SystemNotificationGrantState;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
+use Modules\Notifications\Public\Enums\SystemNotificationGrant;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
 final class NotificationsSettingsSection extends Component
@@ -126,8 +128,12 @@ final class NotificationsSettingsSection extends Component
         $this->saved = true;
     }
 
-    public function render(CurrentUser $currentUser, NotificationPreferenceQuery $prefs, ViewFactory $views): View
-    {
+    public function render(
+        CurrentUser $currentUser,
+        NotificationPreferenceQuery $prefs,
+        ViewFactory $views,
+        SystemNotificationGrantState $grant,
+    ): View {
         $otherDevices = array_map(
             static fn (NotificationPreferencesDto $dto): array => [
                 'name' => $dto->deviceName !== '' ? $dto->deviceName : Lang::get('notifications::settings.other_devices.unnamed'),
@@ -136,8 +142,12 @@ final class NotificationsSettingsSection extends Component
             $prefs->forOtherDevices($currentUser->user()),
         );
 
+        // What the reader chose here is only half the answer. The other half
+        // belongs to the platform, and a screen that shows every toggle on
+        // while the OS drops all of it is telling them something untrue.
         return $views->make('notifications::livewire.notifications-settings-section', [
             'otherDevices' => $otherDevices,
+            'systemGrantRefused' => $grant->current() === SystemNotificationGrant::Refused,
         ]);
     }
 

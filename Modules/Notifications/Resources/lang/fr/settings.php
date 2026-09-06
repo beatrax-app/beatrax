@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Ce dont tu veux être averti',
     'background_note' => 'Beatrax les prépare pendant que l\'app est ouverte. Une exécution planifiée en arrière-plan ne le peut pas — le verrou de l\'app détient la seule clé —, donc ce qui est dû est repris pendant que tu continues à utiliser l\'app.',
     'background_note_phone' => 'Beatrax les prépare pendant que l\'app est ouverte. En arrière-plan, c\'est impossible — le verrou de l\'app détient la seule clé —, donc ce qui est dû arrive à la prochaine ouverture de l\'app.',
+    'system_grant_refused' => "Ton appareil n'autorise pas Beatrax à afficher des notifications, donc rien de ce qui suit ne peut te parvenir. Active-les pour Beatrax dans les réglages de l'appareil.",
 
     'reminders' => [
         'label' => 'Rappels de paiement',

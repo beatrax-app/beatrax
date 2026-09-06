@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Despre ce să te anunțăm',
     'background_note' => 'Beatrax le pregătește cât timp aplicația este deschisă. O rulare programată în fundal nu poate — blocarea aplicației păstrează singura cheie — așa că cele în așteptare sunt preluate în timp ce continui să folosești aplicația.',
     'background_note_phone' => 'Beatrax le pregătește cât timp aplicația este deschisă. În fundal nu poate — blocarea aplicației păstrează singura cheie — așa că cele în așteptare ajung data viitoare când deschizi aplicația.',
+    'system_grant_refused' => 'Dispozitivul tău nu îi permite lui Beatrax să afișeze notificări, așa că nimic din ce urmează nu ajunge la tine. Activează-le pentru Beatrax din setările dispozitivului.',
 
     'reminders' => [
         'label' => 'Memento-uri de plată',

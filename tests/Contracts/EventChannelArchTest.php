@@ -75,6 +75,12 @@ function eventChannelPinnedOneSided(): array
         'native:Native\Mobile\Events\Scanner\CodeScanned' => 'listen',
         'native:Native\Mobile\Events\Scanner\ScannerCancelled' => 'listen',
 
+        // The shell's one channel for every device-API answer: ContentView
+        // injects a CustomEvent of this name into the page. It is how the
+        // notification prompt's yes-or-no gets back to PHP, and no PHP-side
+        // event carries it, so the dispatcher is the native side.
+        'native-event' => 'listen',
+
         // Android's BiometricPrompt answers asynchronously: the native callback
         // raises these back into Livewire once it has stashed or failed to
         // stash the decrypted blob, so the dispatcher is the native side.

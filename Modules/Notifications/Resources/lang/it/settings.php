@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Di cosa vuoi essere avvisato',
     'background_note' => 'Beatrax le prepara mentre l\'app è aperta. Un\'esecuzione pianificata in background non può — il blocco app custodisce l\'unica chiave — quindi ciò che è in attesa viene recuperato mentre continui a usare l\'app.',
     'background_note_phone' => 'Beatrax le prepara mentre l\'app è aperta. In background non può — il blocco app custodisce l\'unica chiave — quindi ciò che è in attesa arriva alla prossima apertura dell\'app.',
+    'system_grant_refused' => 'Il tuo dispositivo non permette a Beatrax di mostrare notifiche, quindi niente di quanto segue può raggiungerti. Attivale per Beatrax nelle impostazioni del dispositivo.',
 
     'reminders' => [
         'label' => 'Promemoria di pagamento',

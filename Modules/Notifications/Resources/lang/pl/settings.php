@@ -6,6 +6,7 @@ return [
     'what_heading' => 'O czym powiadamiać',
     'background_note' => 'Beatrax przygotowuje je, gdy aplikacja jest otwarta. Zaplanowane uruchomienie w tle tego nie potrafi — blokada aplikacji przechowuje jedyny klucz — więc oczekujące są nadrabiane, gdy dalej korzystasz z aplikacji.',
     'background_note_phone' => 'Beatrax przygotowuje je, gdy aplikacja jest otwarta. W tle nie może — blokada aplikacji przechowuje jedyny klucz — więc oczekujące dotrą przy następnym otwarciu aplikacji.',
+    'system_grant_refused' => 'Twoje urządzenie nie pozwala Beatraxowi wyświetlać powiadomień, więc nic z poniższych do ciebie nie dotrze. Włącz je dla Beatraxa w ustawieniach urządzenia.',
 
     'reminders' => [
         'label' => 'Przypomnienia o płatnościach',

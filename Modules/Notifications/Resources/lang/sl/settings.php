@@ -6,6 +6,7 @@ return [
     'what_heading' => 'O čem naj te obveščam',
     'background_note' => 'Beatrax jih pripravi, ko je aplikacija odprta. Načrtovani zagon v ozadju tega ne zmore — zaklep aplikacije hrani edini ključ — zato se čakajoča prevzamejo, medtem ko aplikacijo uporabljaš naprej.',
     'background_note_phone' => 'Beatrax jih pripravi, ko je aplikacija odprta. V ozadju to ne gre — zaklep aplikacije hrani edini ključ — zato čakajoča prispejo, ko aplikacijo naslednjič odpreš.',
+    'system_grant_refused' => 'Tvoja naprava Beatraxu ne dovoli prikazovati obvestil, zato te nič od spodnjega ne doseže. Vklopi jih za Beatrax v nastavitvah naprave.',
 
     'reminders' => [
         'label' => 'Opomniki za plačila',

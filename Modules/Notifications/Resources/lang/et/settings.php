@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Millest sind teavitada',
     'background_note' => 'Beatrax valmistab need ette, kui rakendus on avatud. Ajastatud käivitus taustal seda ei suuda — rakenduse lukk hoiab ainsat võtit — nii et ootel olevad võetakse üles, kui rakendust edasi kasutad.',
     'background_note_phone' => 'Beatrax valmistab need ette, kui rakendus on avatud. Taustal see ei saa — rakenduse lukk hoiab ainsat võtit — nii et ootel olevad jõuavad kohale, kui rakenduse järgmine kord avad.',
+    'system_grant_refused' => 'Sinu seade ei luba Beatraxil teavitusi näidata, nii et miski allolevast ei jõua sinuni. Lülita need Beatraxi jaoks seadme seadetes sisse.',
 
     'reminders' => [
         'label' => 'Maksemeeldetuletused',

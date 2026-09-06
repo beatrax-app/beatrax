@@ -6,6 +6,7 @@ return [
     'what_heading' => 'De qué quiero recibir avisos',
     'background_note' => 'Beatrax las prepara mientras la app está abierta. Una ejecución programada en segundo plano no puede — el bloqueo de la app guarda la única clave —, así que lo pendiente se recupera mientras sigues usando la app.',
     'background_note_phone' => 'Beatrax las prepara mientras la app está abierta. En segundo plano no puede — el bloqueo de la app guarda la única clave —, así que lo pendiente llega la próxima vez que abras la app.',
+    'system_grant_refused' => 'Tu dispositivo no deja que Beatrax muestre notificaciones, así que nada de lo de abajo puede llegarte. Actívalas para Beatrax en los ajustes del dispositivo.',
 
     'reminders' => [
         'label' => 'Recordatorios de pago',
