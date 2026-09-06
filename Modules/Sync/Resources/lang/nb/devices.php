@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Venter på bekreftelse',
     'safety_number_words' => 'Ord for sikkerhetsnummer:',
     'paired' => 'Paret',
+    'last_seen' => 'Sist sett :when',
+    'last_seen_never' => 'Ikke tilkoblet ennå',
     'remove_aria' => 'Fjern :name',
     'remove' => 'Fjern',
     'pair_new_device' => 'Par en ny enhet',

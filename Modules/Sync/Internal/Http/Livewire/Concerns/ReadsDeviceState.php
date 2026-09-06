@@ -44,6 +44,10 @@ trait ReadsDeviceState
                 'name' => is_string($row->name) ? $row->name : '',
                 'safety_number_words' => is_string($row->safety_number_words) ? $row->safety_number_words : '',
                 'paired_at' => is_string($row->paired_at) ? $row->paired_at : '',
+                // Written by SyncSession on every exchange and, until now, read
+                // by nothing: the list showed a name and a fingerprint, and the
+                // requirement asks for when the device was last heard from.
+                'last_seen_at' => is_string($row->last_seen_at) ? $row->last_seen_at : '',
                 'is_self' => is_numeric($row->is_self) && (int) $row->is_self === 1,
                 'confirmed' => $row->confirmed_at !== null,
                 'removed' => false,

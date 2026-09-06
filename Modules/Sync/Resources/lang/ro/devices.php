@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Se așteaptă confirmarea',
     'safety_number_words' => 'Cuvintele numărului de siguranță:',
     'paired' => 'Împerecheat',
+    'last_seen' => 'Văzut ultima dată :when',
+    'last_seen_never' => 'Încă neconectat',
     'remove_aria' => 'Elimină :name',
     'remove' => 'Elimină',
     'pair_new_device' => 'Împerechează un dispozitiv nou',

@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Megerősítésre vár',
     'safety_number_words' => 'Biztonsági számszavak:',
     'paired' => 'Párosítva',
+    'last_seen' => 'Legutóbb látva :when',
+    'last_seen_never' => 'Még nem csatlakozott',
     'remove_aria' => ':name eltávolítása',
     'remove' => 'Eltávolítás',
     'pair_new_device' => 'Új eszköz párosítása',
