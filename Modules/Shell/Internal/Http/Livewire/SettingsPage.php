@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Budgets\Public\Services\EnvelopePeriodRekeyer;
@@ -70,7 +71,9 @@ final class SettingsPage extends Component
 
     // In rules() for the same reason: the allow-list is every identifier the
     // platform's zone database knows, which is not a constant expression and
-    // is not ours to freeze into a second copy.
+    // is not ours to freeze into a second copy. Locked because the choice
+    // arrives as an action argument, never as a bound property.
+    #[Locked]
     public string $timezone = InstallTimezone::THIS_MACHINE;
 
     // Empty is a real state, not a missing one: with no country chosen the
