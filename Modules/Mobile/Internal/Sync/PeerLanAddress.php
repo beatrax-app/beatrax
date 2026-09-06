@@ -9,10 +9,10 @@ use Modules\Sync\Public\Services\PeerLanAddressBook;
 use Modules\Sync\Public\Services\RelayEndpointHost;
 use Modules\Sync\Public\Services\SyncPorts;
 
-// Where to dial the confirmed peer on this LAN. The address this device last
-// REACHED the desktop at comes first, host and port together; the relay
-// endpoint below is a guess at the same machine, and a LAN-only pairing never
-// configures one, which is how the manual sync came to dial nothing at all.
+// Where to dial the confirmed peer on this LAN, in the order the transport
+// ladder names: where this device last REACHED the desktop, then the address a
+// reader typed for a network whose browse never answers, then a guess at the
+// same machine derived from the relay endpoint's host.
 /**
  * @link ../../../../.docs/features/mobile/background-sync-cannot-hold-the-key.md#the-address-the-button-dialled-was-a-guess
  */
@@ -33,9 +33,14 @@ final readonly class PeerLanAddress
     public function recall(int $userId): ?array
     {
         $peerDeviceId = $this->peerDeviceId($userId);
-        $recalled = $peerDeviceId === null ? null : $this->addresses->recall($userId, $peerDeviceId);
 
-        return $recalled ?? $this->fromRelayEndpoint();
+        if ($peerDeviceId === null) {
+            return $this->fromRelayEndpoint();
+        }
+
+        return $this->addresses->recall($userId, $peerDeviceId)
+            ?? $this->addresses->manual($userId, $peerDeviceId)
+            ?? $this->fromRelayEndpoint();
     }
 
     // For the press a reader is waiting on, where one browse is worth its
@@ -47,9 +52,14 @@ final readonly class PeerLanAddress
     public function locate(int $userId): ?array
     {
         $peerDeviceId = $this->peerDeviceId($userId);
-        $located = $peerDeviceId === null ? null : $this->addresses->locate($userId, $peerDeviceId);
 
-        return $located ?? $this->fromRelayEndpoint();
+        if ($peerDeviceId === null) {
+            return $this->fromRelayEndpoint();
+        }
+
+        return $this->addresses->locate($userId, $peerDeviceId)
+            ?? $this->addresses->manual($userId, $peerDeviceId)
+            ?? $this->fromRelayEndpoint();
     }
 
     // Kept, a remembered address that no longer answers is retried by every

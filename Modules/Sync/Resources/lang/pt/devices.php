@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL do endpoint do relay',
     'relay_insecure_warning' => 'Este endpoint de relay usa HTTP simples. Embora o relay nunca desencripte os teus dados, uma ligação insegura expõe os tamanhos encriptados e os tempos a quem observe a rede. Usa um endpoint <strong>https://</strong> para teres a melhor privacidade.',
 
+    'manual_peer_address' => 'Endereço do outro dispositivo',
+    'manual_peer_address_help' => 'Opcional. O outro dispositivo como host e porta, para uma rede em que os dois não se encontram automaticamente. A deteção é tentada primeiro e isto é usado quando não encontra nada. Deixa vazio para depender apenas da deteção.',
+
     'enable_at_rest' => 'Ativar a encriptação em repouso',
     'enable_at_rest_body' => 'Os teus dados vão ser encriptados com a frase-passe do bloqueio da aplicação. Será criada automaticamente uma cópia de segurança antes da migração.',
     'no_recovery_warning' => 'Se perderes a frase-passe do bloqueio da aplicação e não tiveres cópia de segurança nem outro dispositivo de confiança, os teus dados não podem ser recuperados.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Endpoint do relay limpo.',
         'relay_saved' => 'Endpoint do relay guardado.',
         'relay_save_failed' => 'Não foi possível guardar o endpoint do relay: :message',
+        'manual_peer_saved' => 'Endereço do dispositivo guardado.',
+        'manual_peer_cleared' => 'Endereço do dispositivo limpo.',
+        'manual_peer_invalid' => 'Escreve um endereço como host e porta, por exemplo 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Ainda não há outro dispositivo emparelhado.',
     ],
     'app_lock_permanent' => 'Depois de os dados estarem cifrados, o bloqueio da aplicação já não pode ser desligado — guarda a única chave, e não há regresso a dados não cifrados.',
     'backlog_heading' => 'À espera de ser adicionado',

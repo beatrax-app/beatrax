@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'Relee aadressi URL',
     'relay_insecure_warning' => 'See relee aadress kasutab tavalist HTTP-d. Kuigi relee ei dekrüpteeri kunagi sinu andmeid, paljastab ebaturvaline ühendus krüpteeritud andmete mahud ja ajastuse võrgu jälgijatele. Parima privaatsuse jaoks kasuta <strong>https://</strong> aadressi.',
 
+    'manual_peer_address' => 'Teise seadme aadress',
+    'manual_peer_address_help' => 'Valikuline. Teine seade hosti ja pordina, võrgu jaoks, kus need kaks teineteist automaatselt ei leia. Kõigepealt proovitakse otsingut ja seda kasutatakse siis, kui otsing midagi ei leia. Jäta tühjaks, et tugineda ainult otsingule.',
+
     'enable_at_rest' => 'Luba kettal krüpteerimine',
     'enable_at_rest_body' => 'Sinu andmed krüpteeritakse rakenduse luku paroolifraasiga. Enne migratsiooni luuakse automaatselt varukoopia.',
     'no_recovery_warning' => 'Kui kaotad rakenduse luku paroolifraasi ning sul pole varukoopiat ega muud usaldusväärset seadet, ei ole sinu andmeid võimalik taastada.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Relee aadress on tühjendatud.',
         'relay_saved' => 'Relee aadress on salvestatud.',
         'relay_save_failed' => 'Relee aadressi ei õnnestunud salvestada: :message',
+        'manual_peer_saved' => 'Seadme aadress salvestatud.',
+        'manual_peer_cleared' => 'Seadme aadress kustutatud.',
+        'manual_peer_invalid' => 'Sisesta aadress hosti ja pordina, näiteks 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Ühtegi teist seadet pole veel seotud.',
     ],
     'app_lock_permanent' => 'Kui andmed on kord krüpteeritud, ei saa rakenduse lukku enam välja lülitada — see hoiab ainsat võtit ja tagasiteed krüpteerimata olekusse pole.',
     'backlog_heading' => 'Ootab lisamist',

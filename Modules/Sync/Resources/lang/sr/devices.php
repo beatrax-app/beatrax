@@ -54,6 +54,9 @@ return [
     'relay_endpoint_aria' => 'URL krajnje tačke releja',
     'relay_insecure_warning' => 'Ova krajnja tačka releja koristi običan HTTP. Iako relej nikad ne dešifruje tvoje podatke, nebezbedna veza otkriva posmatračima mreže veličine šifrovanih podataka i vreme slanja. Za najbolju privatnost koristi <strong>https://</strong> krajnju tačku.',
 
+    'manual_peer_address' => 'Adresa drugog uređaja',
+    'manual_peer_address_help' => 'Opciono. Drugi uređaj kao host i port za mrežu u kojoj se dva uređaja ne pronalaze automatski. Prvo se pokušava otkrivanje, a ovo se koristi kada ono ništa ne pronađe. Ostavi prazno da se osloniš samo na otkrivanje.',
+
     'enable_at_rest' => 'Uključi šifrovanje u mirovanju',
     'enable_at_rest_body' => 'Tvoji podaci će biti šifrovani lozinkom za zaključavanje aplikacije. Rezervna kopija pre migracije napraviće se automatski.',
     'no_recovery_warning' => 'Ako izgubiš lozinku za zaključavanje aplikacije, a nemaš rezervnu kopiju ni drugi pouzdan uređaj, tvoje podatke nije moguće vratiti.',
@@ -88,6 +91,10 @@ return [
         'relay_cleared' => 'Krajnja tačka releja je uklonjena.',
         'relay_saved' => 'Krajnja tačka releja je sačuvana.',
         'relay_save_failed' => 'Čuvanje krajnje tačke releja nije uspelo: :message',
+        'manual_peer_saved' => 'Adresa uređaja je sačuvana.',
+        'manual_peer_cleared' => 'Adresa uređaja je obrisana.',
+        'manual_peer_invalid' => 'Unesi adresu kao host i port, na primer 192.168.1.20:8100.',
+        'manual_peer_no_peer' => 'Nijedan drugi uređaj još nije uparen.',
     ],
     'app_lock_permanent' => 'Kada su podaci jednom šifrovani, zaključavanje aplikacije više ne može da se isključi — drži jedini ključ, a povratka na nešifrovano nema.',
     'backlog_heading' => 'Čeka dodavanje',
