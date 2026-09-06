@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Vymazat mezipaměť šablon', 'description' => 'Vyprázdní mezipaměť zkompilovaných šablon Blade.'],
         'queue_retry' => ['label' => 'Zopakovat neúspěšné úlohy', 'description' => 'Zopakuje jednu neúspěšnou úlohu podle id, nebo každou neúspěšnou úlohu, když zadáš `all`.'],
         'rederive_fingerprints' => ['label' => 'Znovu odvodit otisky', 'description' => 'Přepočítá otisk každé transakce, která je stále pod aktuální verzí normalizace. Spuštění odsud nahlásí počet a nic nezapíše.'],
+        'demo_seed' => ['label' => 'Načíst ukázková data', 'description' => 'Přidá ukázkovou knihu — účty, transakce, rozpočty, cíle a upozornění — vymyšlenou proto, aby sis aplikaci prohlédl s něčím uvnitř. Přidává k tomu, co už tu je, místo aby to nahradilo, a nic z toho nejsou data skutečné osoby.'],
         'db_restore' => ['label' => 'Obnovit databázi', 'description' => 'Nahradí současnou databázi zadaným souborem zálohy.'],
         'regenerate_recovery_codes' => ['label' => 'Vygenerovat nové záložní kódy', 'description' => 'Vygeneruje uživateli znovu 10 jednorázových záložních kódů.'],
         'grant_dev' => ['label' => 'Udělit vývojářský přístup', 'description' => 'Nastaví zadanému uživateli is_developer=true.'],

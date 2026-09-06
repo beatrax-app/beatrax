@@ -40,6 +40,17 @@ return [
         'this_machine' => 'Este equipo (:zone)',
     ],
 
+    'sample_data' => [
+        'heading' => 'Datos de ejemplo',
+        'help' => 'Llena esta cuenta con un libro inventado — cuentas, transacciones, presupuestos, metas y avisos — para que haya algo que mirar. Se suma a lo que ya hay y nada de ello son datos de una persona real.',
+        'warning' => 'Esto escribe en tu propio libro y llega a tus dispositivos emparejados. En esta pantalla no hay deshacer.',
+        'confirm' => 'Añadirlo a esta cuenta',
+        'cancel' => 'Cancelar',
+        'load' => 'Cargar datos de ejemplo',
+        'working' => 'Construyendo el libro de ejemplo. Tarda un momento.',
+        'loaded' => 'Datos de ejemplo añadidos (:count).',
+    ],
+
     'country' => [
         'heading' => 'País',
         'label' => 'Tu país',

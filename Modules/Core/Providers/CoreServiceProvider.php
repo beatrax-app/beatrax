@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Providers;
 
 use App\Models\User;
+use App\Support\SampleData\SampleDatasetSeeder;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\MigrationsEnded;
@@ -35,6 +36,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Contracts\KdfCost;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
+use Modules\Core\Public\Contracts\SampleDataLoader;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Http\Livewire\AutoImportSettingsSection;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
@@ -88,6 +90,11 @@ final class CoreServiceProvider extends ServiceProvider
         // bundle to add the Electron safeStorage layer.
         $this->app->singleton(SecretShield::class, PassthroughSecretShield::class);
         $this->app->bind(PublisherManifestFetcher::class, HttpPublisherManifestFetcher::class);
+        // Bound here rather than at the application root because that is where
+        // the contract lives; the implementation reaches thirty seeders across
+        // a dozen modules, which is why it does not.
+        $this->app->singleton(SampleDataLoader::class, SampleDatasetSeeder::class);
+
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(UserCountry::class);
         $this->app->singleton(AppChromeResolver::class);

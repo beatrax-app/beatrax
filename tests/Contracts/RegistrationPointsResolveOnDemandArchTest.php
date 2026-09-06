@@ -291,17 +291,6 @@ it('does not let a console command or an event listener freeze a per-resolve ser
         // with one user context, so there is no second user for a frozen
         // instance to be wrong about. Three now reach it through DemoPeriodWindow,
         // the one window the demo grid and the demo rows are cut from.
-        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Budgets\\Database\\Seeders\\Demo\\DemoEnvelopeBudgetsSeeder -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoPeriodWindow -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
-
-        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Goals\\Database\\Seeders\\Demo\\DemoGoalsSeeder -> Modules\\Goals\\Public\\Services\\GoalContributionWriter -> Modules\\Pots\\Public\\Services\\PotBalanceQuery -> Modules\\Pots\\Internal\\Services\\PotRowLoader -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
-
-        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoTransactionsSeeder -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoPeriodWindow -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
-
-        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoTransferPairsSeeder -> Modules\\Ledger\\Database\\Seeders\\Demo\\DemoPeriodWindow -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
-
-        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Notifications\\Database\\Seeders\\Demo\\DemoNotificationsSeeder -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
-
-        'App\\Console\\Commands\\DemoSeedCommand -> Modules\\Pots\\Database\\Seeders\\Demo\\DemoPotsSeeder -> Modules\\Pots\\Public\\Services\\PotWriter -> Modules\\Pots\\Public\\Services\\PotBalanceQuery -> Modules\\Pots\\Internal\\Services\\PotRowLoader -> Modules\\Ledger\\Public\\Services\\PeriodQuery',
 
         // FingerprintRederiveService is per-resolve by habit rather than by
         // need: its whole graph is FingerprintComposer (a singleton) and the

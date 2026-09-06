@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Tøm view-hurtiglageret', 'description' => 'Tømmer hurtiglageret med kompilerte Blade-visninger.'],
         'queue_retry' => ['label' => 'Prøv feilede jobber på nytt', 'description' => 'Prøver én feilet jobb på nytt ut fra id, eller alle feilede jobber hvis du oppgir `all`.'],
         'rederive_fingerprints' => ['label' => 'Beregn fingeravtrykk på nytt', 'description' => 'Beregner fingeravtrykket på nytt for hver transaksjon som fortsatt ligger under den gjeldende normaliseringsversjonen. En kjøring herfra rapporterer antallet og skriver ingenting.'],
+        'demo_seed' => ['label' => 'Last inn eksempeldata', 'description' => 'Legger til en eksempelbok — kontoer, transaksjoner, budsjetter, mål og varsler — funnet på for at du skal se appen med noe i. Det legges til det som allerede er der i stedet for å erstatte det, og ingenting av det er en virkelig persons data.'],
         'db_restore' => ['label' => 'Gjenopprett databasen', 'description' => 'Erstatter den gjeldende databasen med den oppgitte sikkerhetskopien.'],
         'regenerate_recovery_codes' => ['label' => 'Lag nye gjenopprettingskoder', 'description' => 'Lager en brukers 10 engangskoder for gjenoppretting på nytt.'],
         'grant_dev' => ['label' => 'Gi utviklertilgang', 'description' => 'Setter is_developer=true for den oppgitte brukeren.'],

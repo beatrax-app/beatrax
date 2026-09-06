@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Vaciar la caché de vistas', 'description' => 'Vacía la caché de vistas Blade compiladas.'],
         'queue_retry' => ['label' => 'Reintentar los trabajos fallidos', 'description' => 'Reintenta un trabajo fallido por id, o todos los fallidos si pasas `all`.'],
         'rederive_fingerprints' => ['label' => 'Recalcular las huellas', 'description' => 'Vuelve a calcular la huella de cada transacción que sigue por debajo de la versión de normalización actual. Una ejecución desde aquí informa del recuento y no escribe nada.'],
+        'demo_seed' => ['label' => 'Cargar datos de ejemplo', 'description' => 'Añade un libro de ejemplo — cuentas, transacciones, presupuestos, metas y avisos — inventado para ver la aplicación con algo dentro. Se suma a lo que ya hay en lugar de sustituirlo, y nada de ello son datos de una persona real.'],
         'db_restore' => ['label' => 'Restaurar la base de datos', 'description' => 'Sustituye la base de datos actual por el archivo de copia de seguridad indicado.'],
         'regenerate_recovery_codes' => ['label' => 'Regenerar los códigos de recuperación', 'description' => 'Regenera los 10 códigos de recuperación de un solo uso de un usuario.'],
         'grant_dev' => ['label' => 'Conceder acceso de desarrollador', 'description' => 'Pone is_developer=true para el usuario indicado.'],

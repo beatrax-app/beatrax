@@ -65,6 +65,7 @@ return [
         'view_clear' => ['label' => 'Vymazať vyrovnávaciu pamäť pohľadov', 'description' => 'Vyprázdni vyrovnávaciu pamäť skompilovaných pohľadov Blade.'],
         'queue_retry' => ['label' => 'Zopakovať zlyhané úlohy', 'description' => 'Zopakuje jednu zlyhanú úlohu podľa id alebo každú zlyhanú úlohu, keď zadáš `all`.'],
         'rederive_fingerprints' => ['label' => 'Znova odvodiť odtlačky', 'description' => 'Prepočíta odtlačok každej transakcie, ktorá je stále pod aktuálnou verziou normalizácie. Spustenie odtiaľto nahlási počet a nič nezapíše.'],
+        'demo_seed' => ['label' => 'Načítať ukážkové údaje', 'description' => 'Pridá ukážkovú knihu — účty, transakcie, rozpočty, ciele a upozornenia — vymyslenú preto, aby si aplikáciu videl s niečím vnútri. Pridáva sa k tomu, čo tu už je, namiesto toho aby to nahradila, a nič z toho nie sú údaje skutočnej osoby.'],
         'db_restore' => ['label' => 'Obnoviť databázu', 'description' => 'Nahradí aktuálnu databázu zadaným súborom zálohy.'],
         'regenerate_recovery_codes' => ['label' => 'Znova vygenerovať záložné kódy', 'description' => 'Znova vygeneruje 10 jednorazových záložných kódov používateľa.'],
         'grant_dev' => ['label' => 'Udeliť vývojársky prístup', 'description' => 'Nastaví is_developer=true pre zadaného používateľa.'],

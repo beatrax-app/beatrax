@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Nézet-gyorsítótár ürítése', 'description' => 'Kiüríti a lefordított Blade-nézetek gyorsítótárát.'],
         'queue_retry' => ['label' => 'Sikertelen feladatok újrapróbálása', 'description' => 'Újrapróbál egy sikertelen feladatot azonosító alapján, vagy az összeset, ha `all` értéket adsz meg.'],
         'rederive_fingerprints' => ['label' => 'Ujjlenyomatok újraszámítása', 'description' => 'Újraszámítja minden olyan tranzakció ujjlenyomatát, amely még a jelenlegi normalizálási verzió alatt van. Az innen indított futás jelenti a darabszámot, és semmit nem ír ki.'],
+        'demo_seed' => ['label' => 'Mintaadatok betöltése', 'description' => 'Hozzáad egy mintakönyvet — számlák, tranzakciók, keretek, célok és jelzések — kitalálva ahhoz, hogy az alkalmazást tartalommal nézhesd. A meglévőhöz adódik, nem lép a helyére, és semmi sem valódi személy adata.'],
         'db_restore' => ['label' => 'Adatbázis visszaállítása', 'description' => 'Lecseréli a jelenlegi adatbázist a megadott mentésfájlra.'],
         'regenerate_recovery_codes' => ['label' => 'Helyreállítási kódok újragenerálása', 'description' => 'Újragenerálja egy felhasználó 10 egyszer használható helyreállítási kódját.'],
         'grant_dev' => ['label' => 'Fejlesztői hozzáférés megadása', 'description' => 'Az is_developer értékét true-ra állítja a megadott felhasználónál.'],

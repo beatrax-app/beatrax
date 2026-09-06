@@ -40,6 +40,17 @@ return [
         'this_machine' => 'Denne maskine (:zone)',
     ],
 
+    'sample_data' => [
+        'heading' => 'Eksempeldata',
+        'help' => 'Fylder denne konto med et opfundet regnskab — konti, posteringer, budgetter, mål og varsler — så der er noget at se på. Det lægges oveni det, der allerede er, og intet af det er en virkelig persons data.',
+        'warning' => 'Det skriver i dit eget regnskab og når dine parrede enheder. Der er ingen fortryd på denne skærm.',
+        'confirm' => 'Føj det til denne konto',
+        'cancel' => 'Annuller',
+        'load' => 'Indlæs eksempeldata',
+        'working' => 'Bygger eksempelregnskabet. Det tager et øjeblik.',
+        'loaded' => 'Eksempeldata tilføjet (:count).',
+    ],
+
     'country' => [
         'heading' => 'Land',
         'label' => 'Dit land',

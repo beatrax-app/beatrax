@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Golește cache-ul de vizualizări', 'description' => 'Golește cache-ul vizualizărilor Blade compilate.'],
         'queue_retry' => ['label' => 'Reîncearcă sarcinile eșuate', 'description' => 'Reîncearcă o sarcină eșuată după id sau toate sarcinile eșuate dacă dai `all`.'],
         'rederive_fingerprints' => ['label' => 'Recalculează amprentele', 'description' => 'Recalculează amprenta fiecărei tranzacții care este încă sub versiunea curentă de normalizare. Rulată de aici, comanda raportează numărul și nu scrie nimic.'],
+        'demo_seed' => ['label' => 'Încarcă date de exemplu', 'description' => 'Adaugă un registru de exemplu — conturi, tranzacții, bugete, obiective și alerte — inventat ca să vezi aplicația cu ceva în ea. Se adaugă la ce există deja în loc să înlocuiască, și nimic din el nu sunt datele unei persoane reale.'],
         'db_restore' => ['label' => 'Restaurează baza de date', 'description' => 'Înlocuiește baza de date curentă cu fișierul de copie de rezervă dat.'],
         'regenerate_recovery_codes' => ['label' => 'Regenerează codurile de recuperare', 'description' => 'Regenerează cele 10 coduri de recuperare de unică folosință ale unui utilizator.'],
         'grant_dev' => ['label' => 'Acordă acces de dezvoltator', 'description' => 'Setează is_developer=true pentru utilizatorul dat.'],

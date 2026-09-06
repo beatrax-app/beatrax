@@ -10,6 +10,7 @@ use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Shell\Internal\Http\Livewire\AppSidebar;
 use Modules\Shell\Internal\Http\Livewire\Dashboard;
 use Modules\Shell\Internal\Http\Livewire\NetWorthCard;
+use Modules\Shell\Internal\Http\Livewire\SampleDataCard;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 use Modules\Shell\Internal\Http\Livewire\SpendingTrendCard;
 
@@ -30,5 +31,9 @@ final class ShellServiceProvider extends ServiceProvider
         $livewire->component('core.app-sidebar', AppSidebar::class);
         $livewire->component('core.net-worth-card', NetWorthCard::class);
         $livewire->component('core.spending-trend-card', SpendingTrendCard::class);
+
+        // A new component, so it takes the module's own prefix rather than the
+        // `core.` one the five above are pinned to by their snapshots.
+        $livewire->component('shell.sample-data-card', SampleDataCard::class);
     }
 }

@@ -40,6 +40,17 @@ return [
         'this_machine' => 'Toto zariadenie (:zone)',
     ],
 
+    'sample_data' => [
+        'heading' => 'Ukážkové údaje',
+        'help' => 'Naplní tento účet vymyslenou knihou — účty, transakcie, rozpočty, ciele a upozornenia — aby bolo na čo pozerať. Pridáva sa k tomu, čo tu už je, a nič z toho nie sú údaje skutočnej osoby.',
+        'warning' => 'Toto píše do tvojej vlastnej knihy a dostane sa na spárované zariadenia. Z tejto obrazovky sa to nedá vrátiť.',
+        'confirm' => 'Pridať k tomuto účtu',
+        'cancel' => 'Zrušiť',
+        'load' => 'Načítať ukážkové údaje',
+        'working' => 'Zostavuje sa ukážková kniha. Chvíľu to potrvá.',
+        'loaded' => 'Ukážkové údaje pridané (:count).',
+    ],
+
     'country' => [
         'heading' => 'Krajina',
         'label' => 'Tvoja krajina',

@@ -40,6 +40,17 @@ return [
         'this_machine' => 'Ovaj uređaj (:zone)',
     ],
 
+    'sample_data' => [
+        'heading' => 'Probni podaci',
+        'help' => 'Puni ovaj račun izmišljenom knjigom — računi, transakcije, budžeti, ciljevi i upozorenja — da ima šta da se pogleda. Dodaje se onome što već postoji i ništa od toga nisu podaci stvarne osobe.',
+        'warning' => 'Ovo piše u tvoju sopstvenu knjigu i stiže na tvoje uparene uređaje. Sa ovog ekrana nema poništavanja.',
+        'confirm' => 'Dodaj na ovaj račun',
+        'cancel' => 'Otkaži',
+        'load' => 'Učitaj probne podatke',
+        'working' => 'Gradi se probna knjiga. Potrajaće trenutak.',
+        'loaded' => 'Probni podaci dodati (:count).',
+    ],
+
     'country' => [
         'heading' => 'Država',
         'label' => 'Tvoja država',

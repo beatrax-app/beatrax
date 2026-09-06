@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Görünüm önbelleğini temizle', 'description' => 'Derlenmiş Blade görünümlerinin önbelleğini boşaltır.'],
         'queue_retry' => ['label' => 'Başarısız işleri yeniden dene', 'description' => 'Kimliğe göre tek bir başarısız işi ya da `all` verildiğinde başarısız olan tüm işleri yeniden dener.'],
         'rederive_fingerprints' => ['label' => 'Parmak izlerini yeniden türet', 'description' => 'Hâlâ geçerli normalleştirme sürümünün altında olan her işlemin parmak izini yeniden hesaplar. Buradan çalıştırıldığında sayıyı bildirir ve hiçbir şey yazmaz.'],
+        'demo_seed' => ['label' => 'Örnek veri yükle', 'description' => 'Örnek bir defter ekler — hesaplar, işlemler, bütçeler, hedefler ve uyarılar — uygulamayı içinde bir şey varken görebilmen için uydurulmuş. Zaten olanın yerine geçmez, üstüne eklenir ve hiçbiri gerçek bir kişinin verisi değildir.'],
         'db_restore' => ['label' => 'Veritabanını geri yükle', 'description' => 'Geçerli veritabanını verilen yedek dosyasıyla değiştirir.'],
         'regenerate_recovery_codes' => ['label' => 'Kurtarma kodlarını yenile', 'description' => 'Bir kullanıcının tek kullanımlık 10 kurtarma kodunu yeniden üretir.'],
         'grant_dev' => ['label' => 'Geliştirici erişimi ver', 'description' => 'Verilen kullanıcı için is_developer=true yapar.'],

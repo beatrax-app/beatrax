@@ -40,6 +40,17 @@ return [
         'this_machine' => 'Questo dispositivo (:zone)',
     ],
 
+    'sample_data' => [
+        'heading' => 'Dati di esempio',
+        'help' => 'Riempie questo conto con un registro inventato — conti, transazioni, budget, obiettivi e avvisi — così c’è qualcosa da guardare. Si somma a quello che c’è già e nulla appartiene a una persona reale.',
+        'warning' => 'Questo scrive nel tuo registro e raggiunge i tuoi dispositivi accoppiati. Da questa schermata non si annulla.',
+        'confirm' => 'Aggiungilo a questo conto',
+        'cancel' => 'Annulla',
+        'load' => 'Carica dati di esempio',
+        'working' => 'Sto costruendo il registro di esempio. Ci vuole un momento.',
+        'loaded' => 'Dati di esempio aggiunti (:count).',
+    ],
+
     'country' => [
         'heading' => 'Paese',
         'label' => 'Il tuo Paese',

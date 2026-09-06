@@ -68,6 +68,7 @@ return [
         'view_clear' => ['label' => 'Počisti predpomnilnik pogledov', 'description' => 'Izprazni predpomnilnik prevedenih pogledov Blade.'],
         'queue_retry' => ['label' => 'Znova poskusi neuspela opravila', 'description' => 'Znova poskusi eno neuspelo opravilo po id ali vsa neuspela opravila, če navedeš `all`.'],
         'rederive_fingerprints' => ['label' => 'Znova izpelji prstne odtise', 'description' => 'Znova izračuna prstni odtis vsake transakcije, ki je še pod veljavno različico normalizacije. Zagon od tu sporoči število in ničesar ne zapiše.'],
+        'demo_seed' => ['label' => 'Naloži vzorčne podatke', 'description' => 'Doda vzorčno knjigo — račune, transakcije, proračune, cilje in opozorila — izmišljeno zato, da aplikacijo vidiš z nečim v njej. Doda se k temu, kar že je, namesto da bi to zamenjala, in nič od tega niso podatki resnične osebe.'],
         'db_restore' => ['label' => 'Obnovi zbirko podatkov', 'description' => 'Trenutno zbirko podatkov zamenja z navedeno datoteko varnostne kopije.'],
         'regenerate_recovery_codes' => ['label' => 'Znova ustvari kode za obnovitev', 'description' => 'Znova ustvari 10 enkratnih kod za obnovitev za uporabnika.'],
         'grant_dev' => ['label' => 'Dodeli razvijalski dostop', 'description' => 'Za navedenega uporabnika nastavi is_developer=true.'],

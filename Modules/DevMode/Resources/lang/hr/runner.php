@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Očisti predmemoriju predložaka', 'description' => 'Prazni predmemoriju prevedenih Blade predložaka.'],
         'queue_retry' => ['label' => 'Ponovi neuspjele zadatke', 'description' => 'Ponavlja jedan neuspjeli zadatak po id-u ili svaki neuspjeli zadatak ako navedeš `all`.'],
         'rederive_fingerprints' => ['label' => 'Ponovno izvedi otiske', 'description' => 'Ponovno računa otisak svake transakcije koja je još ispod trenutne verzije normalizacije. Pokretanje odavde prijavljuje broj i ništa ne zapisuje.'],
+        'demo_seed' => ['label' => 'Učitaj ogledne podatke', 'description' => 'Dodaje ogledni dnevnik — račune, transakcije, proračune, ciljeve i upozorenja — izmišljen da aplikaciju pogledaš s nečim u njoj. Dodaje se onome što već postoji umjesto da ga zamijeni, i ništa od toga nisu podaci stvarne osobe.'],
         'db_restore' => ['label' => 'Vrati bazu podataka', 'description' => 'Zamjenjuje trenutnu bazu podataka zadanom datotekom sigurnosne kopije.'],
         'regenerate_recovery_codes' => ['label' => 'Izradi nove kodove za oporavak', 'description' => 'Ponovno izrađuje 10 jednokratnih kodova za oporavak jednog korisnika.'],
         'grant_dev' => ['label' => 'Dodijeli razvojni pristup', 'description' => 'Postavlja is_developer=true za zadanog korisnika.'],

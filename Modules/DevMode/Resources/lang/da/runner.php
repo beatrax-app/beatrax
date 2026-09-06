@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Ryd view-cachen', 'description' => 'Tømmer cachen med kompilerede Blade-views.'],
         'queue_retry' => ['label' => 'Prøv mislykkede jobs igen', 'description' => 'Prøver ét mislykket job igen ud fra id, eller alle mislykkede jobs hvis du angiver `all`.'],
         'rederive_fingerprints' => ['label' => 'Genberegn fingeraftryk', 'description' => 'Genberegner fingeraftrykket for hver transaktion, der stadig ligger under den nuværende normaliseringsversion. En kørsel herfra rapporterer antallet og skriver ingenting.'],
+        'demo_seed' => ['label' => 'Indlæs eksempeldata', 'description' => 'Tilføjer et eksempelregnskab — konti, posteringer, budgetter, mål og varsler — opfundet, så du kan se appen med noget i. Det lægges oveni det, der allerede er, i stedet for at erstatte det, og intet af det er en virkelig persons data.'],
         'db_restore' => ['label' => 'Gendan databasen', 'description' => 'Erstatter den nuværende database med den angivne backupfil.'],
         'regenerate_recovery_codes' => ['label' => 'Generér nye gendannelseskoder', 'description' => 'Genererer en brugers 10 gendannelseskoder til engangsbrug på ny.'],
         'grant_dev' => ['label' => 'Giv udvikleradgang', 'description' => 'Sætter is_developer=true for den angivne bruger.'],

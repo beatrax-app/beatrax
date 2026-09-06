@@ -9,15 +9,15 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-it('binds the concrete CommandRegistry returning 9 SAFE specs', function (): void {
+// The list, not a count beside it: the allow-list IS the security surface, and
+// a count that can disagree with it is a second copy of the same fact.
+it('exposes exactly these SAFE commands and no others', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
     $safe = $registry->safe();
-    expect($safe)->toHaveCount(9);
 
-    $names = array_map(static fn (CommandSpec $spec): string => $spec->name, $safe);
-    expect($names)->toEqual([
+    $expected = [
         'db:backup',
         'beatrax:doctor',
         'beatrax:failed-jobs',
@@ -27,27 +27,32 @@ it('binds the concrete CommandRegistry returning 9 SAFE specs', function (): voi
         'view:clear',
         'queue:retry',
         'beatrax:rederive-fingerprints',
-    ]);
+        'demo:seed',
+    ];
+
+    $names = array_map(static fn (CommandSpec $spec): string => $spec->name, $safe);
+    expect($names)->toEqual($expected)->and($safe)->toHaveCount(count($expected));
 
     foreach ($safe as $spec) {
         expect($spec->tier)->toBe(CommandTier::Safe);
     }
 });
 
-it('binds the concrete CommandRegistry returning 4 DESTRUCTIVE specs', function (): void {
+it('exposes exactly these DESTRUCTIVE commands and no others', function (): void {
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
     $destructive = $registry->destructive();
-    expect($destructive)->toHaveCount(4);
 
-    $names = array_map(static fn (CommandSpec $spec): string => $spec->name, $destructive);
-    expect($names)->toEqual([
+    $expected = [
         'db:restore',
         'beatrax:regenerate-recovery-codes',
         'beatrax:grant-dev',
         'beatrax:install',
-    ]);
+    ];
+
+    $names = array_map(static fn (CommandSpec $spec): string => $spec->name, $destructive);
+    expect($names)->toEqual($expected)->and($destructive)->toHaveCount(count($expected));
 
     foreach ($destructive as $spec) {
         expect($spec->tier)->toBe(CommandTier::Destructive);
@@ -92,8 +97,11 @@ it('exposes ArgSpec entries with non-empty name + Laravel-compatible rules array
     /** @var DevCommandRegistry $registry */
     $registry = app(DevCommandRegistry::class);
 
+    // Both tiers, counted from the tiers rather than from a third number that
+    // goes stale the moment either list moves.
     $allSpecs = array_merge($registry->safe(), $registry->destructive());
-    expect($allSpecs)->toHaveCount(13);
+    expect($allSpecs)->toHaveCount(count($registry->safe()) + count($registry->destructive()))
+        ->and($allSpecs)->not->toBeEmpty();
 
     foreach ($allSpecs as $spec) {
         foreach ($spec->argsSchema as $arg) {

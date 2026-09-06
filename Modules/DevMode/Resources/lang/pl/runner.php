@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Wyczyść pamięć podręczną widoków', 'description' => 'Opróżnia pamięć podręczną skompilowanych widoków Blade.'],
         'queue_retry' => ['label' => 'Ponów nieudane zadania', 'description' => 'Ponawia jedno nieudane zadanie po id albo każde nieudane zadanie, gdy podasz `all`.'],
         'rederive_fingerprints' => ['label' => 'Przelicz odciski ponownie', 'description' => 'Przelicza odcisk każdej transakcji, która wciąż jest poniżej bieżącej wersji normalizacji. Uruchomienie stąd raportuje liczbę i niczego nie zapisuje.'],
+        'demo_seed' => ['label' => 'Wczytaj dane przykładowe', 'description' => 'Dodaje przykładową księgę — konta, transakcje, budżety, cele i alerty — wymyśloną po to, żeby zobaczyć aplikację z zawartością. Dokłada się do tego, co już jest, zamiast to zastępować, i nic z tego nie jest danymi prawdziwej osoby.'],
         'db_restore' => ['label' => 'Przywróć bazę danych', 'description' => 'Zastępuje bieżącą bazę danych podanym plikiem kopii zapasowej.'],
         'regenerate_recovery_codes' => ['label' => 'Wygeneruj ponownie kody odzyskiwania', 'description' => 'Generuje od nowa 10 jednorazowych kodów odzyskiwania użytkownika.'],
         'grant_dev' => ['label' => 'Przyznaj dostęp deweloperski', 'description' => 'Ustawia is_developer=true dla podanego użytkownika.'],

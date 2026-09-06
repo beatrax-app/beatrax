@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Tyhjennä näkymävälimuisti', 'description' => 'Tyhjentää käännettyjen Blade-näkymien välimuistin.'],
         'queue_retry' => ['label' => 'Yritä epäonnistuneita töitä uudelleen', 'description' => 'Yrittää yhtä epäonnistunutta työtä uudelleen tunnisteen perusteella tai kaikkia, jos annat `all`.'],
         'rederive_fingerprints' => ['label' => 'Laske sormenjäljet uudelleen', 'description' => 'Laskee uudelleen sormenjäljen jokaiselle tapahtumalle, jonka normalisointiversio on yhä nykyistä pienempi. Täältä ajettuna se ilmoittaa määrän eikä kirjoita mitään.'],
+        'demo_seed' => ['label' => 'Lataa esimerkkidata', 'description' => 'Lisää esimerkkikirjanpidon — tilit, tapahtumat, budjetit, tavoitteet ja ilmoitukset — keksitty siihen, että näet sovelluksen jonkin sisällön kanssa. Se lisätään olemassa olevaan sen sijaan että korvaisi sen, eikä mikään siitä ole oikean ihmisen tietoja.'],
         'db_restore' => ['label' => 'Palauta tietokanta', 'description' => 'Korvaa nykyisen tietokannan annetulla varmuuskopiotiedostolla.'],
         'regenerate_recovery_codes' => ['label' => 'Luo palautuskoodit uudelleen', 'description' => 'Luo käyttäjän 10 kertakäyttöistä palautuskoodia uudelleen.'],
         'grant_dev' => ['label' => 'Myönnä kehittäjäoikeudet', 'description' => 'Asettaa annetulle käyttäjälle is_developer=true.'],
