@@ -252,7 +252,7 @@ it('reads both spellings of a money sum, and asks the currency column be named r
         }
         PHP;
 
-    $sites = moneyAggregateSitesIn('Planted.php', token_get_all($source));
+    $sites = moneyAggregateSitesIn('Planted.php', BackendSourceFiles::tokensOf('Planted.php', $source));
 
     expect(array_column($sites, 'key'))->toBe(
         ['Planted.php::unscoped', 'Planted.php::scoped'],

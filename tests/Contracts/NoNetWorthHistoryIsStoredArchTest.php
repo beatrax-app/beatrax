@@ -234,5 +234,5 @@ it('sees a table, a column and a query that keep a net worth', function (): void
     expect(netWorthQueryNamesAStore('<?php DB::table(\''.$stored.'_points\')->insert($rows);'))->toBeTrue()
         ->and(netWorthQueryNamesAStore('<?php $db->statement(\'INSERT INTO '.$stored.'_points VALUES (1)\');'))->toBeTrue()
         ->and(netWorthQueryNamesAStore('<?php DB::table(\'accounts\')->get();'))->toBeFalse()
-        ->and(netWorthQueryNamesAStore("<?php // nothing stores a ".$stored." series\n"))->toBeFalse();
+        ->and(netWorthQueryNamesAStore('<?php // nothing stores a '.$stored." series\n"))->toBeFalse();
 });

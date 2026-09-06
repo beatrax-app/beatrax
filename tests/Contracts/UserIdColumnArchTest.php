@@ -45,15 +45,10 @@ function userIdExemptTables(): array
         'relay_mailbox' => 'zero-knowledge relay: device_id routing only, never a user',
         'dev_mode_audit' => 'records what this machine did, not what an account did',
 
-        // Import scratch space, truncated per run and never synced. The run
-        // that owns them is identified by the import itself.
-        'migration_staging_accounts' => 'per-run import staging, never synced',
-        'migration_staging_budget_assignments' => 'per-run import staging, never synced',
-        'migration_staging_categories' => 'per-run import staging, never synced',
-        'migration_staging_goals' => 'per-run import staging, never synced',
-        'migration_staging_payees' => 'per-run import staging, never synced',
-        'migration_staging_transactions' => 'per-run import staging, never synced',
-        'migration_staging_unmapped_items' => 'per-run import staging, never synced',
+        // The seven `migration_staging_*` tables were listed here too, excused
+        // as per-run scratch space. Every one of them has carried a nullable
+        // user_id since it was created: `scopeColumns()` in the migration that
+        // creates them adds it. The rule below is the one that said so.
     ];
 }
 

@@ -246,7 +246,7 @@ it('reads a minor-unit figure cut into parts, and leaves a figure that is not mo
         }
         PHP;
 
-    expect(array_column(moneyShareCutsIn('Planted.php', token_get_all($source)), 'expression'))->toBe(
+    expect(array_column(moneyShareCutsIn('Planted.php', BackendSourceFiles::tokensOf('Planted.php', $source)), 'expression'))->toBe(
         ['$totalMinor * $share, $parts'],
         'a minor-unit figure multiplied and truncated is the cut this rule is about; a semantic version minor '
         .'is not money, and a cast with no arithmetic in it divides nothing',

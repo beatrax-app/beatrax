@@ -65,12 +65,30 @@ function numberFormatArity(string $source): array
     while (($at = strpos($source, 'number_format(', $offset)) !== false) {
         $depth = 0;
         $args = 1;
+        $quote = null;
         $i = $at + strlen('number_format(') - 1;
 
         for ($len = strlen($source); $i < $len; $i++) {
             $char = $source[$i];
 
-            if ($char === '(') {
+            // The separators this rule is about ARE a comma and a bracket, so
+            // the arguments naming them hold one. Counted raw, the machine
+            // string `number_format($n, 2, ',', '.')` reads as five arguments
+            // and every three-argument call one edit away from it reads as
+            // four -- which is the arity that gets waved through below.
+            if ($quote !== null) {
+                if ($char === '\\') {
+                    $i++;
+                } elseif ($char === $quote) {
+                    $quote = null;
+                }
+
+                continue;
+            }
+
+            if ($char === "'" || $char === '"') {
+                $quote = $char;
+            } elseif ($char === '(') {
                 $depth++;
             } elseif ($char === ')') {
                 $depth--;
@@ -135,6 +153,13 @@ it('counts the arguments a number_format call was given, and reads no comment as
 
     expect(numberFormatArity('<?php echo number_format(max($a, $b), 2, $sep, $group);'))
         ->toBe([4], 'a comma inside a nested call is not an argument of this one');
+
+    expect(numberFormatArity('<?php echo number_format($total, 2, \',\');'))
+        ->toBe([3], 'a call naming the decimal mark and leaning on the default grouping mark is three arguments, '
+            .'and reading its comma as a separator is what waved it through');
+
+    expect(numberFormatArity('<?php echo number_format($total, 2, ")", "(");'))
+        ->toBe([4], 'a bracket inside a string argument closes no call');
 
     expect(numberFormatArity(withoutComments('<?php // number_format($total) is banned here')))
         ->toBe([], 'a comment naming the banned call is a comment explaining the ban');

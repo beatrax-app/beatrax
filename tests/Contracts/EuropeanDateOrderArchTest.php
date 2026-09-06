@@ -153,7 +153,7 @@ it('reads the short date in every spelling and leaves the short time alone', fun
     expect(europeanDateRawShortDateIn("<?php return \$anchor->getIsoFormats()['L'] ?? 'DD-MM-YYYY';"))->toBeTrue();
 
     expect(europeanDateRawShortDateIn("<?php return \$anchor->getIsoFormats()['LT'] ?? 'HH:mm';"))->toBeFalse();
-    expect(europeanDateRawShortDateIn("<?php return Fmt::shortDate(\$date);"))->toBeFalse();
+    expect(europeanDateRawShortDateIn('<?php return Fmt::shortDate($date);'))->toBeFalse();
 
     expect(europeanDateMonthFirstIn("<?php \$a = \$d->translatedFormat('M j, Y');"))->toBe(['M j, Y']);
     expect(europeanDateMonthFirstIn("<?php \$a = \$d->translatedFormat('j M Y');"))->toBe(

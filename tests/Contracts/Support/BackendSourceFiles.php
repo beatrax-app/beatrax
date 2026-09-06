@@ -103,10 +103,21 @@ final class BackendSourceFiles
      */
     public static function codeTokens(string $path): array
     {
-        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
+        return self::tokensOf($path, (string) file_get_contents($path));
+    }
 
+    /**
+     * The same reading over a source already in hand. A guard's control plants
+     * its own source rather than choosing a file, and one that reaches for
+     * token_get_all to read it is exercising a reader the walk beside it does
+     * not use: no Blade island, and every comment still in the stream.
+     *
+     * @return list<array{0:int,1:string,2:int}|string>
+     */
+    public static function tokensOf(string $path, string $source): array
+    {
         return array_values(array_filter(
-            token_get_all($source),
+            token_get_all(BladePhpSource::forPath($path, $source)),
             static fn (array|string $token): bool => ! is_array($token)
                 || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true),
         ));

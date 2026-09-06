@@ -13,8 +13,8 @@ use Tests\Contracts\Support\BackendSourceFiles;
  *
  * @param  list<string>  $paths
  * @return array{using: int, unresolved: list<string>, hits: list<string>} the
- *                                                                        class-likes reached that use a first-party trait, the first-party traits
- *                                                                        the autoloader could not reach, and every shadowed method found
+ *                                                                         class-likes reached that use a first-party trait, the first-party traits
+ *                                                                         the autoloader could not reach, and every shadowed method found
  */
 function traitShadowScan(array $paths): array
 {

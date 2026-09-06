@@ -103,7 +103,7 @@ it('matches a top-level name the way both packagers do, and no more than that', 
         'A pattern naming a subdirectory would excuse the whole tree above it, which is how storage/app shipped.',
     );
     expect(bundleExcludesEntry(['/nativephp'], 'nativephp'))->toBeTrue(
-        "rsync anchors a leading slash to the transfer root, so the anchored spelling still names the top-level entry.",
+        'rsync anchors a leading slash to the transfer root, so the anchored spelling still names the top-level entry.',
     );
     expect(bundleExcludesEntry(['nativephp'], 'nativephp'))->toBeTrue('The bare spelling names it at any depth.');
     expect(bundleExcludesEntry(['*/tests'], 'tests'))->toBeFalse(

@@ -118,6 +118,6 @@ it('tells a dependency on the extension from a report that names it', function (
     expect(imapExtensionDependenciesIn('<?php if ('.$gate.') { return true; }'))->toBe(["extension_loaded('imap')"])
         ->and(imapExtensionDependenciesIn('<?php $stream = '.$call.';'))->toBe(['imap_open()'])
         ->and(imapExtensionDependenciesIn("<?php \$loaded = in_array('imap', get_loaded_extensions(), true);"))->toBe([])
-        ->and(imapExtensionDependenciesIn("<?php // ".$gate." was removed in 8.4\n"))->toBe([])
+        ->and(imapExtensionDependenciesIn('<?php // '.$gate." was removed in 8.4\n"))->toBe([])
         ->and(imapExtensionDependenciesIn('<?php $this->'.$call.';'))->toBe([]);
 });

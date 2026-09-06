@@ -26,7 +26,7 @@ function userColumnsOnDisk(): array
     // this listing, so an empty or truncated one reports every column placed,
     // every list free of phantoms and no column claimed twice -- three clean
     // answers off a table nobody read.
-    expect($columns)->toContain('id')->toContain('email');
+    expect($columns)->toContain('id')->toContain('username');
 
     expect(count($columns))->toBeGreaterThan(
         10,
@@ -92,7 +92,7 @@ it('keeps every column it does sync off the never-on-the-wire answer', function 
     ));
 
     expect($both)->toBe([], sprintf(
-        "These `users` columns are declared synced and never-on-the-wire at once. The two answers "
+        'These `users` columns are declared synced and never-on-the-wire at once. The two answers '
         ."contradict each other, and which one holds is whichever the sender consults:\n  - %s",
         implode("\n  - ", $both),
     ));

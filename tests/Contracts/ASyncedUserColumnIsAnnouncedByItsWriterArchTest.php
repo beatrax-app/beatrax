@@ -35,6 +35,14 @@ const ANNOUNCED_USER_COLUMN_WRITES = [
     'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: period_start_day',
     'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: recurring_detection_window_months',
     'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: recurring_income_min_amount_minor',
+    // Written a step further out than the six above, which this screen sets on
+    // the model and announces with the changed list beside the save. There is
+    // no `$user->timezone =` at all: the screen hands WriteUserPreference to
+    // InstallTimezone::choose(), which writes the column and announces it, and
+    // what the reader matched is the component property of the same name next
+    // to that save. Announced either way, and pinned so the day a raw
+    // `$user->timezone =` does appear here, somebody signs for it.
+    'Modules/Shell/Internal/Http/Livewire/SettingsPage.php :: timezone',
 ];
 
 /**

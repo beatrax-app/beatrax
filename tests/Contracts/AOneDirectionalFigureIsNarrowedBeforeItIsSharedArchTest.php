@@ -391,7 +391,7 @@ it('reads a share cut from a money figure and a bar the template works out, and 
         }
         PHP;
 
-    expect(array_column(directionalShareSitesIn('Planted.php', token_get_all($source)), 'expression'))->toBe(
+    expect(array_column(directionalShareSitesIn('Planted.php', BackendSourceFiles::tokensOf('Planted.php', $source)), 'expression'))->toBe(
         ['$spentMinor / $totalMinor'],
         'a money figure over something that is not a constant is one figure as a fraction of another; a hundredth is '
         .'a unit conversion, and a divisor that reads as money says nothing about the numerator',

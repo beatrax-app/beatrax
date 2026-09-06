@@ -143,7 +143,7 @@ it('keeps a wrapped link from fragmenting out of its own band, in both touch blo
 
     expect($missing)->toBe(
         [],
-        "A touch block no longer stops .tap-link fragmenting, so a link that wraps is "
+        'A touch block no longer stops .tap-link fragmenting, so a link that wraps is '
         ."placed across the break and answers a finger on neither line:\n  ".implode("\n  ", $missing),
     );
 });

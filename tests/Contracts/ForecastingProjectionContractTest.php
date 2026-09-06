@@ -399,8 +399,7 @@ it('accounts for every fixture in the corpus, and holds each omission to its rea
     $accounted = [...array_keys(fpctFixtures()), ...array_keys(FPCT_FIXTURES_NOT_PROJECTED)];
     sort($accounted);
 
-    expect($accounted)->toBe($onDisk, implode("
-", [
+    expect($accounted)->toBe($onDisk, implode("\n", [
         'The fixtures this file runs, plus the ones it records as skipped, are not the fixtures the corpus',
         'holds. Unaccounted for: '.(implode(', ', array_diff($onDisk, $accounted)) ?: 'none').'.',
         'Named and absent from disk: '.(implode(', ', array_diff($accounted, $onDisk)) ?: 'none').'.',
@@ -425,8 +424,7 @@ it('accounts for every fixture in the corpus, and holds each omission to its rea
         }
     }
 
-    expect($expired)->toBe([], implode("
-", [
+    expect($expired)->toBe([], implode("\n", [
         'These fixtures are skipped for a reason that has stopped reading:',
         ...$expired,
     ]));

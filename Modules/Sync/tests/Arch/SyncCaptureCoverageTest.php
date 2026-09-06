@@ -121,7 +121,7 @@ it('does not capture a table the merge registry cannot merge', function (): void
     $unmergeable = array_values(array_diff(CaptureSites::tables(), $syncable));
 
     expect($unmergeable)->toBe([], sprintf(
-        "These are written to the op log and the merge registry has no rules for them, so the peer "
+        'These are written to the op log and the merge registry has no rules for them, so the peer '
         ."quarantines every op naming one and the edit is lost in silence:\n  - %s",
         implode("\n  - ", $unmergeable),
     ));
@@ -165,7 +165,7 @@ it('keeps every excuse pointing at a real syncable table', function (): void {
     $stale = array_values(array_diff($excused, $syncable));
 
     expect($stale)->toBe([], sprintf(
-        "These are excused from capture and the merge registry no longer has rules for them at all. The "
+        'These are excused from capture and the merge registry no longer has rules for them at all. The '
         ."excuse now covers nothing, and reads as a decision somebody made:\n  - %s",
         implode("\n  - ", $stale),
     ));

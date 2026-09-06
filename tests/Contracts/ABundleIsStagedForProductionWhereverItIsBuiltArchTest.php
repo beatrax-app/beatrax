@@ -231,7 +231,6 @@ it('keeps the override inside the action both workflows name, and proves it by r
 
     expect($script)->toContain('.env.bundled');
 
-
     $directory = sys_get_temp_dir().'/beatrax-shipped-env-'.bin2hex(random_bytes(6));
     mkdir($directory, 0o755, true);
 

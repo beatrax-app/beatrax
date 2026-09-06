@@ -151,7 +151,7 @@ it('keeps the developer rows in the registry for the payload filter to drop', fu
 
 it('reads a destination a template names and resolves nothing for one it does not', function (): void {
     $names = "<a wire:navigate href=\"{{ Destination::Dashboard->route() }}\">Dashboard</a>\n"
-        ."<a wire:navigate href=\"{{ Destination::Transactions->route() }}\">Transactions</a>";
+        .'<a wire:navigate href="{{ Destination::Transactions->route() }}">Transactions</a>';
 
     // Two near misses: a row that names its route directly is invisible to this
     // reader — which is why the rule above bans that shape outright — and a case

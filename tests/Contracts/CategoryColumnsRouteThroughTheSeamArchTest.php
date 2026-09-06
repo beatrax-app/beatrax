@@ -173,8 +173,9 @@ it('keeps no seam exemption for a file that no longer names the parts', function
 // The reader is a token walk over bracket depth, and a walk that stopped
 // answers "no array literal" in the same words a file with none does.
 it('reads the bare elements of an array literal and not the keys of a map', function (): void {
-    $literals = categorySeamArrayLiterals(token_get_all(
-        "<?php\n\$columns = ['name', 'parent_name', 'group_name'];\n\$map = ['name' => \$a, 'parent_name' => \$b];\n"
+    $literals = categorySeamArrayLiterals(BackendSourceFiles::tokensOf(
+        'Planted.php',
+        "<?php\n\$columns = ['name', 'parent_name', 'group_name'];\n\$map = ['name' => \$a, 'parent_name' => \$b];\n",
     ));
 
     expect(array_values($literals))->toBe(

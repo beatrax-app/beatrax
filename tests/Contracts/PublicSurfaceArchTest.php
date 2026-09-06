@@ -134,7 +134,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Core/Public/Services/PassthroughSecretShield.php',
         'Modules/Core/Public/Support/AppChrome.php',
         'Modules/Counterparties/Public/Dto/CounterpartyResolutionDto.php',
-        'Modules/Counterparties/Public/Enums/CounterpartyType.php',
         'Modules/Counterparties/Public/Events/CounterpartyResolved.php',
         'Modules/Counterparties/Public/Queries/ChainSummary.php',
         'Modules/Counterparties/Public/Queries/CounterpartyIndexQuery.php',

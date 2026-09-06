@@ -160,6 +160,69 @@ it('gives every scope a floor its walk cannot quietly fall under', function (str
     'the runtime domain PHP' => [RepoTree::RUNTIME_DOMAIN_PHP, 4000],
 ]);
 
+// The scopes above account for the tree git holds. This one accounts for what
+// sits inside it and git does not: a generated `bootstrap/cache/modules.php`
+// naming every service provider was read as Modules/DevMode citing Shell, an
+// edge nobody wrote, under a root every scope covers and in a file the
+// accounting cannot see -- `unaccounted` is measured over `git ls-files`, so an
+// untracked file inside a covered root is invisible to it.
+it('refuses the code this repository did not write, and refuses nothing it no longer holds', function (): void {
+    expect(RepoTree::NEVER_WALKED)->not->toBeEmpty(
+        'RepoTree refuses nothing at all, so the loop below runs over nothing and this rule passes without '
+        .'holding a single refusal to the tree.'
+    );
+
+    $leaked = [];
+
+    foreach (array_keys(RepoTree::SCOPES) as $scope) {
+        foreach (RepoTree::relativeFiles($scope) as $relative) {
+            foreach (array_keys(RepoTree::NEVER_WALKED) as $fragment) {
+                if (str_contains('/'.$relative, $fragment)) {
+                    $leaked[] = $scope.' reached '.$relative;
+                }
+            }
+        }
+    }
+
+    expect($leaked)->toBe([], implode("\n  ", [
+        'These scopes returned a file under a path RepoTree refuses. Every guard reading that scope then '
+            .'reports on code this repository did not write, and a generated file that names every module '
+            .'reads as every module citing every other:',
+        ...array_slice($leaked, 0, 20),
+    ]));
+
+    $proven = [];
+    $excusesNothing = [];
+
+    foreach (RepoTree::NEVER_WALKED as $fragment => $reason) {
+        expect($reason)->not->toBe('', 'The refusal of '.$fragment.' carries no reason, and a refusal nobody wrote a reason for reads as considered.');
+
+        $directory = RepoTree::root().rtrim($fragment, '/');
+
+        if (! is_dir($directory)) {
+            continue;
+        }
+
+        $proven[] = $fragment;
+
+        if (glob($directory.'/*') === []) {
+            $excusesNothing[] = $fragment.' is refused and holds nothing at all';
+        }
+    }
+
+    expect($excusesNothing)->toBe([], implode("\n  ", [
+        'These refusals have outlived what earned them. A path is refused because walking it reads somebody '
+            .'else\'s files or a generated one, and there are none left to read:',
+        ...$excusesNothing,
+    ]));
+
+    expect($proven)->not->toBe(
+        [],
+        'Not one refused path exists in this checkout, so the rule above proved nothing: it would report the '
+        .'same clean result against a list of paths that were never there.'
+    );
+});
+
 // A guard that cannot go red is a guard that says nothing, and the three
 // verdicts above are read off one list each. These plant the three drifts
 // against the reader rather than against the tree, so a rewrite of the account

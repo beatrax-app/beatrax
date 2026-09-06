@@ -8,7 +8,6 @@ use Tests\Contracts\Support\RepoTree;
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-native-post-form-in-the-mobile-shell
  */
-
 const NATIVE_POST_FORM_SUBMITTER = 'beatraxSubmitPostForm';
 
 const NATIVE_POST_FORM_HELPER = 'resources/js/app.js';

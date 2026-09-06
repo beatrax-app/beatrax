@@ -94,8 +94,13 @@ it('appends a query parameter through route() rather than gluing it on afterward
 });
 
 it('reads both halves of the glue and leaves the parameter passed to route() alone', function (): void {
-    $concatenated = "<?php\n\$url = route('transactions.index').'?tag='.\$tag;\n";
-    $inBlade = "<a href=\"{{ route('transactions.index') }}?tag={{ \$tag }}\">Tagged</a>";
+    // The `?` is spliced in rather than typed. This file sits inside the walk
+    // above, so a control written out whole is a violation planted in the tree
+    // the rule scans, and the rule reports its own evidence.
+    $glue = '?';
+
+    $concatenated = "<?php\n\$url = route('transactions.index').'".$glue."tag='.\$tag;\n";
+    $inBlade = "<a href=\"{{ route('transactions.index') }}".$glue.'tag={{ $tag }}">Tagged</a>';
 
     // The near misses: the shape this rule asks for, and a `?` far enough away
     // that it belongs to something else on the line.
