@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Public\Support\ReconciledRowExemptions;
 use Tests\Contracts\Support\BackendSourceFiles;
+use Tests\Contracts\Support\UnannouncedWrites;
 
 // The lock on a reconciled row was thirteen refusals spread across the tree and
 // no statement anywhere of what was allowed through it. Each writer that skips
@@ -190,6 +191,33 @@ it('grants every exemption against a requirement the lock itself mandates', func
             $requirement.' is not the shape of a requirement identifier, so no page defines it and nothing mandates the exemption it is standing for.',
         )->and($reason)->not->toBe('', $requirement.' has to say what it admits, or the list records that something was allowed and not why.');
     }
+});
+
+// A proof is read by nothing but this file, and it sits in a class under
+// Modules/. Spelt as SQL it is indistinguishable from the statement it stands
+// for, and the capture guards — which ask about the spelling rather than the
+// caller — read it as a write this registry performs. The retyping pass's pin
+// quoted its own statement and did exactly that once the pass moved behind
+// TransactionTypeWriter and the real statement was gone.
+it('keeps a proof from reading as the write it stands for', function (): void {
+    $spelledAsSql = [];
+
+    foreach (ReconciledRowExemptions::proofs() as $file => $pattern) {
+        if (PatternScan::matches(UnannouncedWrites::RAW_STATEMENT, $pattern)) {
+            $spelledAsSql[] = $file.' — '.$pattern;
+        }
+    }
+
+    expect(ReconciledRowExemptions::proofs())->not->toBe([])
+        ->and(PatternScan::matches(UnannouncedWrites::RAW_STATEMENT, '/UPDATE transactions SET type = \\?/'))
+        ->toBeTrue('The reader has to recognise the pin that caused this rule, or an empty result means nothing.')
+        ->and($spelledAsSql)->toBe(
+            [],
+            'A pin proves its writer is still the one the requirement admits, so it names the code — a '
+            .'method call, a constructor argument, a schema builder line. Spelt as a SQL statement it is '
+            ."a write in the tree as far as every guard that reads spellings is concerned.\n  "
+            .implode("\n  ", $spelledAsSql),
+        );
 });
 
 it('keeps every exempt writer standing on the write its pin was granted for', function (): void {
