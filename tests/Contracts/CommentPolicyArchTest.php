@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * @link ../../.docs/conventions/00-index.md
@@ -1157,15 +1158,22 @@ function commentPolicyHeadingSlugs(string $page): array
 // which is the failure a renamed heading causes and nothing else catches.
 it('has every #fragment in a doc link naming a heading that exists (M6)', function (): void {
     $hits = [];
+    $cited = 0;
 
-    foreach (commentPolicyBackendFiles() as $path) {
+    // Every PHP file, and both comment kinds. The walk was the backend files
+    // and T_DOC_COMMENT: thirty citations are written on a `//` line, the whole
+    // of tests/ was outside it, and two guards there cited a heading nobody had
+    // written — which is the failure this rule is named after, sitting in the
+    // half of the tree it could not see.
+    foreach (RepoTree::files(RepoTree::EVERY_PHP_FILE) as $path) {
         foreach (token_get_all((string) file_get_contents($path)) as $token) {
-            if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
+            if (! is_array($token) || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
                 continue;
             }
             $m = PatternScan::all('/@link\s+(\S+\.md#\S+)/', $token[1]);
 
             foreach ($m[1] as $target) {
+                $cited++;
                 [$file, $anchor] = explode('#', $target, 2);
                 $resolved = realpath(dirname($path).'/'.$file);
                 if ($resolved !== false && ! in_array($anchor, commentPolicyHeadingSlugs($resolved), true)) {
@@ -1174,6 +1182,21 @@ it('has every #fragment in a doc link naming a heading that exists (M6)', functi
             }
         }
     }
+
+    // Read before the verdict: 533 citations carry a fragment today, and a walk
+    // that found none reports the same clean answer as a tree whose every link
+    // lands where it says.
+    expect($cited)->toBeGreaterThan(
+        300,
+        'The walk found '.$cited.' doc citations carrying a fragment, which is too few to have read the tree.'
+    );
+
+    // The reader itself, over a heading that exists and one that does not, so
+    // an empty offender list is never a slug reader that answers nothing.
+    $slugs = commentPolicyHeadingSlugs(base_path('.docs/conventions/arch-invariants.md'));
+
+    expect($slugs)->toContain('a-scanner-accounts-for-the-whole-tree')
+        ->and($slugs)->not->toContain('a-heading-this-page-has-never-carried');
 
     foreach (commentPolicyDocsPages() as $path) {
         foreach (commentPolicyDocsLinkTargets($path) as $target) {

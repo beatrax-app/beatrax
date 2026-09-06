@@ -141,6 +141,40 @@ compared with `toBe()` in both directions: a crossing that disappears fails the
 test as loudly as one that appears, so the pin cannot rot into a stale
 allow-list. Pin outcomes, not coverage.
 
+### A scanner accounts for the whole tree
+
+A guard narrower than the claim it makes passes, and it passes because it never
+looked. Three shipped instances wore three different mechanisms: a hand-written
+root list that opened five directories of fourteen, a single-root walk that made
+`app/` structurally invisible while a command raw-deleted from two travelling
+tables inside it, and a whole-file substring exemption that hid seventy-one
+files from the encryption guard — including the file where a plaintext IBAN
+leak lived.
+
+One shape underneath: a scanner's declared scope stopped describing the tree,
+and nothing was watching the difference. `Tests\Contracts\Support\RepoTree` is
+the one place a scope is declared, and each names the roots it `covers`, the
+roots it `declines` with the reason somebody else reads them, and the path
+fragments it `skips`. `AScannerAccountsForTheWholeTreeArchTest` holds every
+declaration to the tree git actually holds: a root holding first-party files of
+that kind and named in neither list fails, a `declines` entry for a root that
+holds nothing of the kind fails as an exemption excusing nothing, and a covered
+root the walk reached no file in fails as a scan that stopped reading.
+
+`NEVER_WALKED` is the other half — code this repository did not write, sitting
+inside it. Vendored trees are the obvious members; the generated ones are the
+quieter half, because the accounting above reads its roots out of `git ls-files`
+and cannot see a file git never held. A generated `bootstrap/cache/modules.php`
+naming every service provider in the application sat under a root every scope
+covers, and the cycle guard read it as one module citing another — an edge
+nobody wrote. Each fragment carries its reason, and the guard puts a path under
+every one of them to `RepoTree::refuses()` rather than asking whether the
+directory happens to hold a file today, which answers about the build machine.
+
+A guard that needs its own root list says so in
+`SCANNERS_NAMING_THEIR_OWN_ROOTS`, with the reason the narrowness is deliberate
+and a `proves` pattern re-checked against the file.
+
 ### A pin states its reason, and the reason is re-checked
 
 A pinned exemption that carries only a path is a claim nobody can audit: the
