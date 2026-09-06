@@ -730,7 +730,7 @@ it('has no banned deferral or provenance tokens in comments (M5)', function (): 
             }
         }
     }
-    expect($hits)->toBe([], "Comments must carry no TODO/ticket/phase provenance. Offenders:\n  ".implode("\n  ", $hits));
+    expect($hits)->toBe([], "A shipped comment carries no TODO/ticket/phase provenance. The suite is deliberately\noutside this half — a comment in a test may name the deferral words it describes,\nand only the identifier ban crosses. Offenders:\n  ".implode("\n  ", $hits));
 });
 
 // A Blade file ends in .php and so was always in scope, but its comments are
