@@ -34,7 +34,7 @@ it('does NOT write a system_alerts row for a single ProcessExited (auto-restart 
 
     /** @var SurfaceWorkerCrashAlert $listener */
     $listener = app(SurfaceWorkerCrashAlert::class);
-    $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+    $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
 
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(0);
 });
@@ -50,7 +50,7 @@ it('writes ONE critical system_alerts row when the worker crash-loops within the
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
     $alerts = SystemAlert::query()->where('kind', 'worker.crashed')->get();
@@ -74,7 +74,7 @@ it('uses the UI-SPEC verbatim body for the worker-crashed alert', function (): v
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
     /** @var SystemAlert $alert */
@@ -96,13 +96,13 @@ it('does NOT insert a duplicate row when an un-acknowledged worker.crashed alert
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
@@ -120,7 +120,7 @@ it('fires the OS notification when the window is UNFOCUSED at crash-loop time', 
     $listener = app(SurfaceWorkerCrashAlert::class);
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
     // The Notification facade has no v2 fake, so a fired notification surfaces
@@ -142,7 +142,7 @@ it('suppresses the OS notification when the window is FOCUSED at crash-loop time
     $listener = app(SurfaceWorkerCrashAlert::class);
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
@@ -166,14 +166,14 @@ it('suppresses the OS notification on a SECOND unfocused crash-loop while the pr
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
     Http::assertSent(fn ($request) => str_ends_with((string) $request->url(), '/notification'));
 
     $sentBefore = count(Http::recorded());
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
     expect(count(Http::recorded()))->toBe($sentBefore);
@@ -194,7 +194,7 @@ it('re-fires the OS notification on a fresh crash-loop after the prior alert is 
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->count())->toBe(1);
 
@@ -207,7 +207,7 @@ it('re-fires the OS notification on a fresh crash-loop after the prior alert is 
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $clock->time->addSeconds(10);
-        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->handle(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
     expect(SystemAlert::query()->where('kind', 'worker.crashed')->whereNull('acknowledged_at')->count())->toBe(1);

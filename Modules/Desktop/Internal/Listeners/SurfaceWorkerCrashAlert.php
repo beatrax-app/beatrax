@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Listeners;
 
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
@@ -24,7 +25,11 @@ use Native\Desktop\Facades\Notification;
 // hit), so only a sustained crash-loop within the rolling window escalates.
 final readonly class SurfaceWorkerCrashAlert
 {
-    public const string WORKER_ALIAS = 'queue-default';
+    // NativePHP names a supervised worker `queue_` + its config key, in
+    // QueueWorker::up(). The alias is the shell's, not ours: it arrives on the
+    // event, and a constant guessing at it cannot be caught by a test that
+    // builds the event out of that same constant.
+    public const string WORKER_ALIAS_PREFIX = 'queue_';
 
     public const string EXIT_LOG_SLOT_PREFIX = 'desktop.shell-state.process-exits.';
 
@@ -47,17 +52,21 @@ final readonly class SurfaceWorkerCrashAlert
         private UrlGenerator $urls,
         private SystemAlertWriter $alerts,
         private ShellState $state,
+        private ConfigRepository $config,
     ) {}
 
     public function handle(ProcessExited $event): void
     {
         $this->recordExit($event);
 
-        if ($event->alias !== self::WORKER_ALIAS) {
+        if (! $this->isSupervisedWorker($event->alias)) {
             return;
         }
 
-        if (! $this->isCrashLoop(self::WORKER_ALIAS)) {
+        // The event's own alias, not a constant beside it: the bucket
+        // `recordExit` just wrote is keyed on what arrived, and reading a
+        // different key is how a threshold comes to be counted against nothing.
+        if (! $this->isCrashLoop($event->alias)) {
             return;
         }
 
@@ -77,6 +86,27 @@ final readonly class SurfaceWorkerCrashAlert
             array_slice($stamps, -self::CRASH_LOOP_THRESHOLD),
             self::CRASH_LOOP_WINDOW_SECONDS,
         );
+    }
+
+    // Every worker the bundle is configured to supervise, under the shell's
+    // spelling. Derived from the config rather than listed, so a worker added
+    // or renamed there is watched without anyone remembering this file.
+    /**
+     * @return list<string>
+     */
+    public function supervisedAliases(): array
+    {
+        $workers = $this->config->get('nativephp.queue_workers');
+
+        return array_map(
+            static fn (int|string $key): string => self::WORKER_ALIAS_PREFIX.$key,
+            array_keys(is_array($workers) ? $workers : []),
+        );
+    }
+
+    public function isSupervisedWorker(string $alias): bool
+    {
+        return in_array($alias, $this->supervisedAliases(), true);
     }
 
     public function isCrashLoop(string $alias): bool
