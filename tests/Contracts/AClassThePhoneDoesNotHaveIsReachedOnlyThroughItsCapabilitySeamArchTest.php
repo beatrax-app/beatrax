@@ -38,6 +38,10 @@ const PHONELESS_CLASS_SEAMS = [
             'reason' => 'the writing seam: the same question asked before the writer that needs the extension is chosen',
             'proves' => '/class_exists\(ZipArchive::class\)/',
         ],
+        'Modules/Mobile/Internal/Boot/ShippedBundleContents.php' => [
+            'reason' => 'reads a built artifact on the machine that built it, and asks the same question first: on a build with no ext-zip it reports that the artifact was never read rather than reporting it clean',
+            'proves' => '/class_exists\(ZipArchive::class\)/',
+        ],
     ],
 ];
 
