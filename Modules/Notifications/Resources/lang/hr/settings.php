@@ -6,6 +6,7 @@ return [
     'what_heading' => 'O čemu me obavijestiti',
     'background_note' => 'Beatrax ih priprema dok je aplikacija otvorena. Zakazano pokretanje u pozadini to ne može — zaključavanje aplikacije čuva jedini ključ — pa se ono što čeka preuzima dok nastavljaš koristiti aplikaciju.',
     'background_note_phone' => 'Beatrax ih priprema dok je aplikacija otvorena. U pozadini to ne može — zaključavanje aplikacije čuva jedini ključ — pa ono što čeka stiže kad sljedeći put otvoriš aplikaciju.',
+    'system_grant_refused' => 'Tvoj uređaj ne dopušta Beatraxu prikazivati obavijesti, pa te ništa od navedenog ne može doseći. Uključi ih za Beatrax u postavkama uređaja.',
 
     'reminders' => [
         'label' => 'Podsjetnici na plaćanja',

@@ -30,6 +30,7 @@ use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
 use Modules\Mobile\Internal\Http\Livewire\ColdStartBiometricSettingsSection;
 use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
+use Modules\Mobile\Internal\Http\Livewire\MobileNotificationPermission;
 use Modules\Mobile\Internal\Http\Livewire\MobilePairingScan;
 use Modules\Mobile\Internal\Http\Livewire\MobileWelcomeScreen;
 use Modules\Mobile\Internal\Http\Livewire\SchemaIncompleteScreen;
@@ -45,8 +46,10 @@ use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
 use Modules\Mobile\Internal\Notifications\NativeNotificationConsent;
+use Modules\Mobile\Internal\Notifications\NativeNotificationGrantState;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
+use Modules\Notifications\Public\Contracts\SystemNotificationGrantState;
 
 final class MobileServiceProvider extends ServiceProvider
 {
@@ -121,6 +124,11 @@ final class MobileServiceProvider extends ServiceProvider
         // USER_SET flag, and the package at importance=NONE.
         if (class_exists('NativePHP\\LocalNotifications\\Facades\\LocalNotifications') && UserDataPathService::isMobileRuntime()) {
             $this->app->singleton(SystemNotificationConsent::class, NativeNotificationConsent::class);
+
+            // The read half. Bound here rather than unconditionally because
+            // the record it reads is written by the device prompt, and a root
+            // that never raises one would report NeverAsked forever.
+            $this->app->singleton(SystemNotificationGrantState::class, NativeNotificationGrantState::class);
         }
 
         // The enclave-gated key vault, presented through the shared contract
@@ -169,6 +177,7 @@ final class MobileServiceProvider extends ServiceProvider
 
         $livewire->component('mobile.import-bootstrap', MobileImportBootstrap::class);
         $livewire->component('mobile.lock-screen', MobileLockScreen::class);
+        $livewire->component('mobile.notification-permission', MobileNotificationPermission::class);
         $livewire->component('mobile.pairing-scan', MobilePairingScan::class);
         $livewire->component('mobile.setup-progress-screen', SetupProgressScreen::class);
         $livewire->component('mobile.sync-complete-screen', SyncCompleteScreen::class);

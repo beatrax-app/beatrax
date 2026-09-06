@@ -6,6 +6,7 @@ return [
     'what_heading' => 'O čem posílat oznámení',
     'background_note' => 'Beatrax je připraví, když je aplikace otevřená. Naplánovaný běh na pozadí to nezvládne — zámek aplikace drží jediný klíč — takže čekající se doplní, jak dál aplikaci používáš.',
     'background_note_phone' => 'Beatrax je připraví, když je aplikace otevřená. Na pozadí to nejde — zámek aplikace drží jediný klíč — takže čekající dorazí, až aplikaci příště otevřeš.',
+    'system_grant_refused' => 'Tvoje zařízení nedovoluje Beatraxu zobrazovat oznámení, takže se k tobě nic z toho níže nedostane. Zapni je pro Beatrax v nastavení zařízení.',
 
     'reminders' => [
         'label' => 'Připomínky plateb',

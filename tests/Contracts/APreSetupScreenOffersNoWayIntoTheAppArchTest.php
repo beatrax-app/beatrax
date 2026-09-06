@@ -178,6 +178,11 @@ function preSetupShellMachinery(): array
         'receipts.receipt-conflict-toast',
         'community.suggest-mapping-modal',
         'dev.command-arg-prompt-modal',
+
+        // Raises the OS notification prompt. A screen reached before there is
+        // an account has nothing to notify anybody about, and spending an
+        // install's one prompt there is spending it on nothing.
+        'mobile.notification-permission',
     ];
 }
 

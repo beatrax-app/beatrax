@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Vad du vill få notiser om',
     'background_note' => 'Beatrax förbereder dem medan appen är öppen. En schemalagd körning i bakgrunden klarar det inte — applåset har den enda nyckeln — så det som väntar hämtas medan du fortsätter använda appen.',
     'background_note_phone' => 'Beatrax förbereder dem medan appen är öppen. I bakgrunden kan den inte — applåset har den enda nyckeln — så det som väntar kommer nästa gång du öppnar appen.',
+    'system_grant_refused' => 'Din enhet låter inte Beatrax visa aviseringar, så inget av det nedan når dig. Slå på dem för Beatrax i enhetens inställningar.',
 
     'reminders' => [
         'label' => 'Betalningspåminnelser',

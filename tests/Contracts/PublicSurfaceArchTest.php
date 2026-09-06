@@ -242,14 +242,12 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Notifications/Public/Actions/UndoDismissNotification.php',
         'Modules/Notifications/Public/Dto/DeliveryDecision.php',
         'Modules/Notifications/Public/Dto/NotificationDto.php',
-        'Modules/Notifications/Public/Dto/NotificationPreferencesDto.php',
         'Modules/Notifications/Public/Enums/NotificationState.php',
         'Modules/Notifications/Public/NotificationCopy.php',
         // The type NotificationsSettingsSection names in its mount(), save()
         // and render() signatures. That component is mounted by alias from
         // Shell's settings page, so the consumer is real and outside this
         // scan — a Blade mount never names the types the component injects.
-        'Modules/Notifications/Public/Services/NotificationPreferenceQuery.php',
         'Modules/Notifications/Public/Services/NotificationQuery.php',
         'Modules/Pots/Public/Dto/PotMovementRow.php',
         'Modules/Pots/Public/Dto/PotRow.php',

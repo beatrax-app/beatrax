@@ -385,6 +385,37 @@ window.beatraxSubmitPostForm = async function (form, submitter) {
     window.location.reload();
 };
 
+// The phone's answer to the notification prompt only ever arrives here. The
+// shell injects it as a `native-event` CustomEvent on the page — there is no
+// PHP-side event to listen for — so this is the only place that can carry it
+// back to the server, and the listener has to be installed before the ask.
+function beatraxNotificationPermission($wire, grantEvent, askOnLoad) {
+    return {
+        init() {
+            this._answer = (event) => {
+                if (event?.detail?.event !== grantEvent) {
+                    return;
+                }
+
+                $wire.recordDeviceAnswer(event.detail?.payload?.granted === true);
+            };
+
+            window.addEventListener('native-event', this._answer);
+
+            // After the listener, never before: the platform answers a repeat
+            // ask from the settled value immediately, so an ask that ran first
+            // could be answered before anything was listening.
+            if (askOnLoad) {
+                $wire.askTheDevice();
+            }
+        },
+
+        destroy() {
+            window.removeEventListener('native-event', this._answer);
+        },
+    };
+}
+
 function beatraxInlineScanner($wire) {
     return {
         live: false,
@@ -827,6 +858,7 @@ document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);
         window.Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
+        window.Alpine.data('beatraxNotificationPermission', beatraxNotificationPermission);
         window.Alpine.data('beatraxDatePicker', datePicker);
         window.Alpine.data('beatraxTimePicker', timePicker);
         window.Alpine.data('tabStrip', tabStrip);

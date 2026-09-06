@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Waarover wil je meldingen',
     'background_note' => 'Beatrax bereidt deze voor terwijl de app open is. Een geplande achtergrondrun kan dat niet — de app-vergrendeling heeft de enige sleutel — dus wat klaarstaat wordt opgepakt terwijl je de app verder gebruikt.',
     'background_note_phone' => 'Beatrax bereidt deze voor terwijl de app open is. Op de achtergrond kan dat niet — de app-vergrendeling heeft de enige sleutel — dus wat klaarstaat komt binnen zodra je de app weer opent.',
+    'system_grant_refused' => 'Je apparaat laat Beatrax geen meldingen tonen, dus niets hieronder bereikt je. Zet ze voor Beatrax aan in de instellingen van je apparaat.',
 
     'reminders' => [
         'label' => 'Betalingsherinneringen',

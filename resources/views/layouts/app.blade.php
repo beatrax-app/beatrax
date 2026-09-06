@@ -198,6 +198,16 @@
                         @livewire('receipts.receipt-conflict-toast')
                         @livewire('community.suggest-mapping-modal')
                         @livewire('email-scan.oauth-client-wizard-modal')
+
+                        {{-- Phone only, and drawing nothing. The operating
+                             system refuses every notification until it has
+                             been asked, and the shipped defaults have two
+                             triggers on, so the ask has to sit on a page
+                             every reader reaches rather than behind the
+                             settings form they may never open. --}}
+                        @if (\Modules\Core\Public\Services\UserDataPathService::isMobileRuntime())
+                            @livewire('mobile.notification-permission')
+                        @endif
                     @endif
                     @yield('content')
                 </main>

@@ -12,8 +12,8 @@ use Modules\Mobile\Internal\Listeners\DispatchMobileNotification;
 // stored and the in-app list showed it while no OS notification was ever posted.
 final class OutcomeRecordingListener extends DispatchMobileNotification
 {
-    public function record(string $id, mixed $result): void
+    public function record(string $id, mixed $result, int $userId): void
     {
-        $this->recordDeliveryOutcome($id, $result);
+        $this->recordDeliveryOutcome($id, $result, $userId);
     }
 }

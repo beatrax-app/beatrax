@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Hva du vil varsles om',
     'background_note' => 'Beatrax forbereder dem mens appen er åpen. En planlagt kjøring i bakgrunnen klarer det ikke — applåsen har den eneste nøkkelen — så det som venter, hentes mens du bruker appen videre.',
     'background_note_phone' => 'Beatrax forbereder dem mens appen er åpen. I bakgrunnen kan den ikke — applåsen har den eneste nøkkelen — så det som venter, kommer neste gang du åpner appen.',
+    'system_grant_refused' => 'Enheten din lar ikke Beatrax vise varsler, så ingenting av det nedenfor når fram til deg. Slå dem på for Beatrax i innstillingene på enheten.',
 
     'reminders' => [
         'label' => 'Betalingspåminnelser',

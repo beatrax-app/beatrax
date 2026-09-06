@@ -6,6 +6,7 @@ return [
     'what_heading' => 'Sobre o que te notificar',
     'background_note' => 'O Beatrax prepara-as enquanto a app está aberta. Uma execução agendada em segundo plano não consegue — o bloqueio da app guarda a única chave — por isso o que estiver pendente é recolhido enquanto continuas a usar a app.',
     'background_note_phone' => 'O Beatrax prepara-as enquanto a app está aberta. Em segundo plano não pode — o bloqueio da app guarda a única chave — por isso o que estiver pendente chega da próxima vez que abrires a app.',
+    'system_grant_refused' => 'O teu dispositivo não deixa o Beatrax mostrar notificações, por isso nada do que está abaixo chega até ti. Ativa-as para o Beatrax nas definições do dispositivo.',
 
     'reminders' => [
         'label' => 'Lembretes de pagamento',
