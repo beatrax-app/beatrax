@@ -98,15 +98,19 @@ final readonly class MobileSyncTriggerService
             return SyncAttemptOutcome::PausedOnCellular;
         }
 
-        // ALWAYS drain the relay, never only as a LAN fallback. A working
-        // LAN leg used to skip this entirely, leaving anything queued in the
-        // mailbox — epoch wraps included — unread for as long as the LAN
-        // stayed reachable.
-        $relayReached = $this->relayLeg($identity, $session);
-
+        // The local leg first, with its own bounded retry: an op log only ever
+        // travels over the LAN, and that leg hands over the epoch keys ahead of
+        // the entries they decrypt. Draining first put a round-trip to a remote
+        // host in front of every tick a peer on this network could have served.
         $lanReached = $lanHost !== null
             && $lanPort !== null
             && $this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session);
+
+        // Then the relay, whether or not the LAN answered: it is a fallback in
+        // ORDER, not in whether it runs. It carries no ops — only epoch wraps —
+        // and skipping it on a working LAN left a wrap from a device that is
+        // not this one's LAN peer unread for as long as the LAN held up.
+        $relayReached = $this->relayLeg($identity, $session);
 
         // This tick holds the app-lock key by construction — the identity
         // above would be null otherwise — so it is the pass that can open a
