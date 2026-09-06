@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'View-Cache leeren', 'description' => 'Leert den Cache der kompilierten Blade-Views.'],
         'queue_retry' => ['label' => 'Fehlgeschlagene Jobs wiederholen', 'description' => 'Wiederholt einen fehlgeschlagenen Job per ID oder jeden fehlgeschlagenen Job, wenn `all` übergeben wird.'],
         'rederive_fingerprints' => ['label' => 'Fingerprints neu berechnen', 'description' => 'Berechnet den Fingerprint jeder Transaktion neu, die noch unter der aktuellen Normalisierungsversion liegt. Ein Lauf von hier meldet die Anzahl und schreibt nichts.'],
+        'demo_seed' => ['label' => 'Beispieldaten laden', 'description' => 'Fügt ein Beispielbuch hinzu — Konten, Buchungen, Budgets, Ziele und Hinweise — erfunden, damit du die Anwendung mit Inhalt ansehen kannst. Es kommt zu dem hinzu, was schon da ist, statt es zu ersetzen, und nichts davon sind Daten einer echten Person.'],
         'db_restore' => ['label' => 'Datenbank wiederherstellen', 'description' => 'Ersetzt die aktuelle Datenbank durch die angegebene Backup-Datei.'],
         'regenerate_recovery_codes' => ['label' => 'Wiederherstellungscodes neu erzeugen', 'description' => 'Erzeugt die 10 einmalig nutzbaren Wiederherstellungscodes eines Benutzers neu.'],
         'grant_dev' => ['label' => 'Entwicklerzugriff gewähren', 'description' => 'Setzt is_developer=true für den angegebenen Benutzer.'],

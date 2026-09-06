@@ -40,6 +40,17 @@ return [
         'this_machine' => 'Cet appareil (:zone)',
     ],
 
+    'sample_data' => [
+        'heading' => 'Données d’exemple',
+        'help' => 'Remplit ce compte avec un livre inventé — comptes, transactions, budgets, objectifs et alertes — pour qu’il y ait quelque chose à regarder. Cela s’ajoute à ce qui est déjà là, et rien n’appartient à une personne réelle.',
+        'warning' => 'Cela écrit dans ton propre livre et atteint tes appareils appairés. Il n’y a pas d’annulation depuis cet écran.',
+        'confirm' => 'L’ajouter à ce compte',
+        'cancel' => 'Annuler',
+        'load' => 'Charger des données d’exemple',
+        'working' => 'Construction du livre d’exemple. Cela prend un instant.',
+        'loaded' => 'Données d’exemple ajoutées (:count).',
+    ],
+
     'country' => [
         'heading' => 'Pays',
         'label' => 'Ton pays',

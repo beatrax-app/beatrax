@@ -214,6 +214,17 @@ final class DevModeServiceProvider extends ServiceProvider
                 argsSchema: [],
                 descriptionKey: 'dev::runner.command.rederive_fingerprints.description',
             ),
+            // Safe, and without the --reset the command also offers: adding is
+            // what somebody looking at an empty install wants, and tearing down
+            // what is already there is a decision the console should not carry
+            // a one-click for. The teardown stays on the command line.
+            new CommandSpec(
+                name: 'demo:seed',
+                labelKey: 'dev::runner.command.demo_seed.label',
+                tier: CommandTier::Safe,
+                argsSchema: [],
+                descriptionKey: 'dev::runner.command.demo_seed.description',
+            ),
         ];
     }
 

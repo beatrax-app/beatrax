@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Vider le cache des vues', 'description' => 'Vide le cache des vues Blade compilées.'],
         'queue_retry' => ['label' => 'Relancer les jobs échoués', 'description' => 'Relance un job échoué par identifiant, ou tous les jobs échoués si tu passes `all`.'],
         'rederive_fingerprints' => ['label' => 'Recalculer les empreintes', 'description' => "Recalcule l'empreinte de chaque transaction encore en dessous de la version de normalisation actuelle. Lancée d'ici, la commande indique le nombre et n'écrit rien."],
+        'demo_seed' => ['label' => 'Charger des données d’exemple', 'description' => 'Ajoute un livre d’exemple — comptes, transactions, budgets, objectifs et alertes — inventé pour regarder l’application avec quelque chose dedans. Il s’ajoute à ce qui est déjà là au lieu de le remplacer, et rien n’appartient à une personne réelle.'],
         'db_restore' => ['label' => 'Restaurer la base', 'description' => 'Remplace la base actuelle par le fichier de sauvegarde indiqué.'],
         'regenerate_recovery_codes' => ['label' => 'Régénérer les codes de secours', 'description' => "Régénère les 10 codes de secours à usage unique d'un utilisateur."],
         'grant_dev' => ['label' => "Accorder l'accès développeur", 'description' => "Passe is_developer à true pour l'utilisateur indiqué."],

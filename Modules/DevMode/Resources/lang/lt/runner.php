@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Išvalyti šablonų podėlį', 'description' => 'Ištuština sukompiliuotų Blade šablonų podėlį.'],
         'queue_retry' => ['label' => 'Pakartoti nepavykusias užduotis', 'description' => 'Pakartoja vieną nepavykusią užduotį pagal id arba visas, jei nurodai `all`.'],
         'rederive_fingerprints' => ['label' => 'Iš naujo išvesti atspaudus', 'description' => 'Perskaičiuoja atspaudą kiekvienai operacijai, kurios normalizavimo versija dar žemesnė už dabartinę. Paleistas iš čia jis praneša skaičių ir nieko neįrašo.'],
+        'demo_seed' => ['label' => 'Įkelti pavyzdinius duomenis', 'description' => 'Prideda pavyzdinę knygą — sąskaitas, operacijas, biudžetus, tikslus ir įspėjimus — sugalvotą tam, kad programą pamatytum su turiniu. Ji pridedama prie to, kas jau yra, o ne pakeičia, ir niekas iš to nėra tikro žmogaus duomenys.'],
         'db_restore' => ['label' => 'Atkurti duomenų bazę', 'description' => 'Pakeičia dabartinę duomenų bazę nurodytu atsarginės kopijos failu.'],
         'regenerate_recovery_codes' => ['label' => 'Sukurti naujus atkūrimo kodus', 'description' => 'Iš naujo sukuria 10 vienkartinių naudotojo atkūrimo kodų.'],
         'grant_dev' => ['label' => 'Suteikti kūrėjo prieigą', 'description' => 'Nurodytam naudotojui nustato is_developer=true.'],

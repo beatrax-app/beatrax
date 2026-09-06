@@ -59,6 +59,7 @@ return [
         'view_clear' => ['label' => 'Töm vycachen', 'description' => 'Tömmer cachen med kompilerade Blade-vyer.'],
         'queue_retry' => ['label' => 'Försök med misslyckade jobb igen', 'description' => 'Försöker med ett misslyckat jobb igen via id, eller med alla misslyckade jobb om du anger `all`.'],
         'rederive_fingerprints' => ['label' => 'Räkna om fingeravtrycken', 'description' => 'Räknar om fingeravtrycket för varje transaktion som fortfarande ligger under den nuvarande normaliseringsversionen. En körning härifrån rapporterar antalet och skriver ingenting.'],
+        'demo_seed' => ['label' => 'Läs in exempeldata', 'description' => 'Lägger till en exempelbok — konton, transaktioner, budgetar, mål och varningar — påhittad för att du ska se appen med något i. Den läggs till det som redan finns i stället för att ersätta det, och inget av det är en verklig persons uppgifter.'],
         'db_restore' => ['label' => 'Återställ databasen', 'description' => 'Ersätter den nuvarande databasen med den angivna säkerhetskopian.'],
         'regenerate_recovery_codes' => ['label' => 'Skapa nya återställningskoder', 'description' => 'Skapar en användares 10 engångskoder för återställning på nytt.'],
         'grant_dev' => ['label' => 'Ge utvecklaråtkomst', 'description' => 'Sätter is_developer=true för den angivna användaren.'],

@@ -40,6 +40,17 @@ return [
         'this_machine' => 'See seade (:zone)',
     ],
 
+    'sample_data' => [
+        'heading' => 'Näidisandmed',
+        'help' => 'Täidab selle konto väljamõeldud raamatuga — kontod, tehingud, eelarved, eesmärgid ja teated — et oleks midagi vaadata. See lisandub olemasolevale ja miski sellest pole tegeliku inimese andmed.',
+        'warning' => 'See kirjutab sinu enda raamatusse ja jõuab seotud seadmetesse. Sellel ekraanil tagasivõtmist pole.',
+        'confirm' => 'Lisa see sellele kontole',
+        'cancel' => 'Loobu',
+        'load' => 'Laadi näidisandmed',
+        'working' => 'Näidisraamatut koostatakse. See võtab hetke.',
+        'loaded' => 'Näidisandmed lisatud (:count).',
+    ],
+
     'country' => [
         'heading' => 'Riik',
         'label' => 'Sinu riik',
