@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Kapat — #:id numaralı sistem uyarısı',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'bütçe uyarılarını',
+        'daily-triggers' => 'günlük hatırlatmaları ve özeti',
+    ],
+
     'messages' => [
         'update_available' => 'Güncelleme mevcut — Beatrax :version hazır. Sonraki açılışta yüklenecek.',
         'update_stale' => ':current sürümünü kullanıyorsun — :latest sürümü 30 gündür mevcut. Şimdi güncelle.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Hesap parolası, uygulama kilidinin kurtarma sargısı yeniden sarılmadan değiştirildi; bu nedenle o parola artık uygulama kilidini açmıyor. PIN hâlâ açıyor. PIN hâlâ biliniyorken hesap parolasını uygulama kilidi ayarlarından yeniden bağlayın; aksi hâlde unutulan bir PIN’in ardında hiçbir şey kalmaz.',
         'reconnect_link' => 'Yeniden bağlan →',
         'pots_category_link_retired' => 'Zarf bütçeleme, kategoriye bağlı kumbaraların yerini aldı. Arşivlenen :count kumbaradan gelen :amount yeniden dağıtılmamış durumda ve dağıtmanızı bekliyor.',
+        'notifications_deferred_pass_failed' => 'Beatrax bu cihazda :pass hesaplayamadı, bu yüzden bazıları eksik olabilir. Uygulamayı her açtığınızda yeniden deniyor.',
     ],
 ];

@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Ignora — avviso di sistema #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'gli avvisi di budget',
+        'daily-triggers' => 'i promemoria giornalieri e il riepilogo',
+    ],
+
     'messages' => [
         'update_available' => 'Aggiornamento disponibile — Beatrax :version è pronto. Verrà installato al prossimo avvio.',
         'update_stale' => 'Stai usando la versione :current — la versione :latest è disponibile da 30 giorni. Aggiorna ora.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'La password dell’account è cambiata senza che il wrap di recupero del blocco app venisse re-wrappato, quindi quella password non apre più il blocco. Il PIN sì. Ricollega la password dell’account dalle impostazioni del blocco finché il PIN è ancora noto, altrimenti un PIN dimenticato non lascia nulla dietro di sé.',
         'reconnect_link' => 'Ricollega →',
         'pots_category_link_retired' => 'Il budget a buste ha sostituito i salvadanai collegati a una categoria. :amount da :count salvadanaio archiviato è di nuovo non assegnato e aspetta che tu lo assegni.|Il budget a buste ha sostituito i salvadanai collegati a una categoria. :amount da :count salvadanai archiviati è di nuovo non assegnato e aspetta che tu lo assegni.',
+        'notifications_deferred_pass_failed' => "Beatrax non è riuscito a calcolare :pass su questo dispositivo, quindi potrebbero mancarne alcuni. Riprova ogni volta che apri l'app.",
     ],
 ];

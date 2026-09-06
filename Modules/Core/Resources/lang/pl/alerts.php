@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Odrzuć — alert systemowy #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'powiadomień budżetowych',
+        'daily-triggers' => 'codziennych przypomnień i podsumowania',
+    ],
+
     'messages' => [
         'update_available' => 'Dostępna aktualizacja — Beatrax :version jest gotowy. Zainstaluje się przy następnym uruchomieniu.',
         'update_stale' => 'Używasz wersji :current — wersja :latest jest dostępna od 30 dni. Zaktualizuj teraz.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Hasło konta zmieniono bez ponownego opakowania odzyskiwania blokady aplikacji, więc to hasło nie otwiera już blokady. PIN nadal ją otwiera. Ponownie powiąż hasło konta w ustawieniach blokady, póki PIN jest jeszcze znany — inaczej za zapomnianym PIN-em nie zostanie nic.',
         'reconnect_link' => 'Połącz ponownie →',
         'pots_category_link_retired' => 'Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanej skarbonki znów jest nieprzydzielona i czeka, aż ją przypiszesz.|Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanych skarbonek znów jest nieprzydzielona i czeka, aż ją przypiszesz.|Budżetowanie kopertowe zastąpiło skarbonki powiązane z kategorią. Kwota :amount z :count zarchiwizowanych skarbonek znów jest nieprzydzielona i czeka, aż ją przypiszesz.',
+        'notifications_deferred_pass_failed' => 'Beatrax nie mógł obliczyć :pass na tym urządzeniu, więc części może brakować. Spróbuje ponownie przy każdym otwarciu aplikacji.',
     ],
 ];

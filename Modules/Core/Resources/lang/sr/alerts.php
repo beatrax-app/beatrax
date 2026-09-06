@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Odbaci — sistemsko upozorenje br. :id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'budžetska upozorenja',
+        'daily-triggers' => 'dnevne podsetnike i pregled',
+    ],
+
     'messages' => [
         'update_available' => 'Dostupno je ažuriranje — Beatrax :version je spreman. Instaliraće se pri sledećem pokretanju.',
         'update_stale' => 'Koristiš verziju :current — verzija :latest je dostupna već 30 dana. Ažuriraj sada.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Lozinka naloga promenjena je bez ponovnog pakovanja omotača za oporavak zaključavanja aplikacije, pa ta lozinka više ne otključava aplikaciju. PIN i dalje otključava. Ponovo povežite lozinku naloga u podešavanjima zaključavanja dok je PIN još poznat — inače zaboravljeni PIN ne ostavlja ništa iza sebe.',
         'reconnect_link' => 'Poveži ponovo →',
         'pots_category_link_retired' => 'Budžetiranje po kovertama zamenilo je kasice povezane sa kategorijom. Iznos :amount iz :count arhivirane kasice ponovo je neraspoređen i čeka da ga rasporediš.|Budžetiranje po kovertama zamenilo je kasice povezane sa kategorijom. Iznos :amount iz :count arhivirane kasice ponovo je neraspoređen i čeka da ga rasporediš.|Budžetiranje po kovertama zamenilo je kasice povezane sa kategorijom. Iznos :amount iz :count arhiviranih kasica ponovo je neraspoređen i čeka da ga rasporediš.',
+        'notifications_deferred_pass_failed' => 'Beatrax nije mogao da izračuna :pass na ovom uređaju, pa neka možda nedostaju. Pokušaće ponovo svaki put kada otvorite aplikaciju.',
     ],
 ];

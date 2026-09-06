@@ -343,6 +343,26 @@ that then reported `processed`. It returns `NotificationWriteResult` —
 codec keeps and for the same reason. `PersistBudgetNudge`'s `catch (Throwable)`
 now means what it says: a genuine failure.
 
+### A pass that never completes
+
+Keeping the mark when a pass throws is what makes the retry safe — the next
+keyed request takes it again. It is also how a pass that can never finish
+retries forever with nobody told: the reader's only evidence is a notification
+that does not arrive, and one that never arrives reads exactly like a quiet
+week.
+
+The failure is caught **per pass**, not around the loop over them. The two have
+nothing to do with each other beyond the request that got round to both, and
+one that could not finish used to take the other down with it.
+
+A pass that throws raises a `warning` system alert, one open row per user and
+pass, so a hundred requests hitting the same failure produce one banner rather
+than a hundred. The run that finally gets through takes it back down itself:
+the fault it reported is not one the reader can act on, and an alert that only
+a human can dismiss teaches them to dismiss without reading. The sentence rides
+on the row as a copy spec, so it reads in whatever language the reader has now
+rather than the one the failing request happened to be in.
+
 ### What the reader is told
 
 `notifications::settings.background_note`, in twenty-six languages, sits under

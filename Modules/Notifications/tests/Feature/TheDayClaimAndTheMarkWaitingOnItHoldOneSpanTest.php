@@ -17,6 +17,7 @@ use Modules\Notifications\Internal\Enums\DeferredNotificationPass;
 use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class, EnablesEncryptionForUser::class);
 
@@ -73,6 +74,7 @@ it('holds a deferred mark for exactly the span a day claim is held for', functio
         $this->app->make(EncryptionMigrationService::class),
         $this->app->make(SensitiveColumnCodec::class),
         SessionFactory::forSession(new Store('one-span-cold', new ArraySessionHandler(120))),
+        $this->app->make(LoggerInterface::class),
     );
 
     expect($passes->deferIfKeyless((int) $user->id, DeferredNotificationPass::BudgetNudges))->toBeTrue();

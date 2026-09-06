@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Ausblenden — Systemmeldung #:id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'die Budget-Hinweise',
+        'daily-triggers' => 'die täglichen Erinnerungen und die Übersicht',
+    ],
+
     'messages' => [
         'update_available' => 'Update verfügbar — Beatrax :version steht bereit. Es wird beim nächsten Start installiert.',
         'update_stale' => 'Du nutzt Version :current — Version :latest ist seit 30 Tagen verfügbar. Aktualisiere jetzt.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'Das Kontopasswort wurde geändert, ohne dass die Wiederherstellungs-Hülle der App-Sperre neu verpackt wurde, sodass dieses Passwort die App-Sperre nicht mehr öffnet. Die PIN tut es weiterhin. Verknüpfen Sie das Kontopasswort in den App-Sperr-Einstellungen erneut, solange die PIN noch bekannt ist — sonst bleibt nach einer vergessenen PIN nichts übrig.',
         'reconnect_link' => 'Erneut verbinden →',
         'pots_category_link_retired' => 'Die Umschlag-Budgetierung hat kategoriegebundene Rücklagen abgelöst. Der Betrag von :amount aus :count archivierter Rücklage ist wieder nicht zugeteilt und wartet darauf, dass Sie ihn zuweisen.|Die Umschlag-Budgetierung hat kategoriegebundene Rücklagen abgelöst. Der Betrag von :amount aus :count archivierten Rücklagen ist wieder nicht zugeteilt und wartet darauf, dass Sie ihn zuweisen.',
+        'notifications_deferred_pass_failed' => 'Beatrax konnte :pass auf diesem Gerät nicht ermitteln, daher fehlen möglicherweise einige. Beim nächsten Öffnen der App wird es erneut versucht.',
     ],
 ];

@@ -20,6 +20,11 @@ return [
         'dismiss_aria' => 'Dispensar — alerta do sistema n.º :id',
     ],
 
+    'deferred_pass' => [
+        'budget-nudges' => 'os alertas de orçamento',
+        'daily-triggers' => 'os lembretes diários e o resumo',
+    ],
+
     'messages' => [
         'update_available' => 'Atualização disponível — o Beatrax :version está pronto. Vai ser instalado no próximo arranque.',
         'update_stale' => 'Estás na versão :current — a versão :latest já está disponível há 30 dias. Atualiza agora.',
@@ -48,5 +53,6 @@ return [
         'auth_lock_recovery_wrap_stale' => 'A palavra-passe da conta foi alterada sem que o invólucro de recuperação do bloqueio da aplicação fosse reempacotado, pelo que essa palavra-passe já não abre o bloqueio. O PIN ainda abre. Volte a associar a palavra-passe da conta nas definições de bloqueio enquanto o PIN ainda for conhecido — caso contrário, um PIN esquecido não deixa nada atrás de si.',
         'reconnect_link' => 'Voltar a ligar →',
         'pots_category_link_retired' => 'O orçamento por envelopes substituiu as reservas ligadas a uma categoria. :amount de :count reserva arquivada volta a estar não alocado e espera que o atribua.|O orçamento por envelopes substituiu as reservas ligadas a uma categoria. :amount de :count reservas arquivadas volta a estar não alocado e espera que o atribua.',
+        'notifications_deferred_pass_failed' => 'O Beatrax não conseguiu calcular :pass neste dispositivo, por isso pode faltar algum. Tenta novamente sempre que abre a aplicação.',
     ],
 ];
