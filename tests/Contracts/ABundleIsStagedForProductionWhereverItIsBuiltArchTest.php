@@ -225,13 +225,13 @@ it('keeps the override inside the action both workflows name, and proves it by r
 
     $script = shippedEnvScript((string) file_get_contents($action));
 
-    expect($script)->toContain('.env.example');
+    expect($script)->toContain('.env.bundled');
 
     $directory = sys_get_temp_dir().'/beatrax-shipped-env-'.bin2hex(random_bytes(6));
     mkdir($directory, 0o755, true);
 
     try {
-        file_put_contents($directory.'/.env.example', implode("\n", [
+        file_put_contents($directory.'/.env.bundled', implode("\n", [
             'APP_NAME=Beatrax',
             'APP_ENV=local',
             'APP_DEBUG=true',
@@ -285,12 +285,12 @@ it('stages a template made only of the keys it replaces', function (): void {
     mkdir($directory, 0o755, true);
 
     try {
-        file_put_contents($directory.'/.env.example', "APP_ENV=local\nAPP_DEBUG=true\n");
+        file_put_contents($directory.'/.env.bundled', "APP_ENV=local\nAPP_DEBUG=true\n");
 
         expect(shippedEnvRun($script, $directory, ''))->toBe(0)
             ->and((string) file_get_contents($directory.'/.env'))->toContain('APP_ENV=production');
     } finally {
-        @unlink($directory.'/.env.example');
+        @unlink($directory.'/.env.bundled');
         @unlink($directory.'/.env');
         @unlink($directory.'/run.sh');
         @rmdir($directory);
@@ -315,7 +315,7 @@ it('refuses an extra line whose value never arrived', function (): void {
         // A template of nothing but the two keys being replaced: grep answers
         // "no lines survived" there, which is not an error and must not read
         // as one, or this case passes on a refusal it did not cause.
-        file_put_contents($directory.'/.env.example', "APP_ENV=local\nAPP_DEBUG=true\n");
+        file_put_contents($directory.'/.env.bundled', "APP_ENV=local\nAPP_DEBUG=true\n");
 
         expect(shippedEnvRun($script, $directory, "AUTO_UPDATE_FEED_URL=\n"))->not->toBe(
             0,
@@ -323,7 +323,7 @@ it('refuses an extra line whose value never arrived', function (): void {
             .'AUTO_UPDATE_FEED_URL= polls the empty string for its signed manifest.',
         );
     } finally {
-        @unlink($directory.'/.env.example');
+        @unlink($directory.'/.env.bundled');
         @unlink($directory.'/.env');
         @unlink($directory.'/run.sh');
         @rmdir($directory);
@@ -346,12 +346,115 @@ it('refuses a template it cannot stage, rather than shipping it', function (): v
     try {
         expect(shippedEnvRun($script, $directory, ''))->not->toBe(
             0,
-            'No .env.example at all is the clearest form of "there is nothing to ship from".',
+            'No .env.bundled at all is the clearest form of "there is nothing to ship from".',
         );
     } finally {
         @unlink($directory.'/.env');
         @rmdir($directory);
     }
+});
+
+// Every Composer root that builds a bundle carries the reviewed template the
+// action stages, and the reviewed template holds every key the development one
+// does. A key added to `.env.example` and not here is a key the bundle ships
+// on the framework's default, silently — which is how the four below shipped.
+const BUNDLED_TEMPLATE_ROOTS = ['.', 'mobile-app'];
+
+// Keys the reviewed template deliberately does not carry, each with why.
+const BUNDLED_TEMPLATE_OMITS = [
+    // Read by nothing: no import.meta.env reference anywhere in the tree, on
+    // either root. Laravel scaffolding, not a value this product ships.
+    'VITE_APP_NAME' => 'nothing reads it — grep import.meta.env across resources/ before restoring it',
+];
+
+/** @return array<string, string> the KEY=value pairs a template declares */
+function bundledTemplateKeys(string $path): array
+{
+    $keys = [];
+
+    foreach (explode("\n", (string) file_get_contents($path)) as $line) {
+        $pair = PatternScan::first('/^([A-Z][A-Z0-9_]*)=(.*)$/', trim($line));
+
+        if ($pair !== []) {
+            $keys[$pair[1]] = $pair[2];
+        }
+    }
+
+    return $keys;
+}
+
+function bundledTemplateRoot(string $root): string
+{
+    $desktop = is_file(base_path('.github/workflows/release.yml')) ? base_path() : base_path('..');
+
+    return $root === '.' ? $desktop : $desktop.'/'.$root;
+}
+
+it('gives every root that builds a bundle a reviewed template of its own', function (): void {
+    $missing = [];
+
+    foreach (BUNDLED_TEMPLATE_ROOTS as $root) {
+        if (! is_file(bundledTemplateRoot($root).'/.env.bundled')) {
+            $missing[] = $root.'/.env.bundled';
+        }
+    }
+
+    expect($missing)->toBe([], implode("\n", [
+        'The staging action stages `.env.bundled` and fails without one, so a root',
+        'that builds a bundle and does not carry one cannot be built at all:',
+        ...$missing,
+    ]));
+});
+
+it('leaves no key in the development template that the bundle would ship on a default', function (): void {
+    $unshipped = [];
+
+    foreach (BUNDLED_TEMPLATE_ROOTS as $root) {
+        $path = bundledTemplateRoot($root);
+        $bundled = bundledTemplateKeys($path.'/.env.bundled');
+        $example = bundledTemplateKeys($path.'/.env.example');
+
+        // Asserted before the diff: two empty reads diff to nothing, and
+        // nothing is the answer a correct pair gives too.
+        expect(count($bundled))->toBeGreaterThan(10)
+            ->and(count($example))->toBeGreaterThan(10);
+
+        foreach (array_keys($example) as $key) {
+            if (! array_key_exists($key, $bundled) && ! array_key_exists($key, BUNDLED_TEMPLATE_OMITS)) {
+                $unshipped[] = $root.': '.$key;
+            }
+        }
+    }
+
+    expect($unshipped)->toBe([], implode("\n", [
+        'These keys are declared for local development and not for the bundle, so a',
+        'shipped install resolves them from the framework default rather than from',
+        'anything this product chose:',
+        ...$unshipped,
+        '',
+        'Add the value the bundle should carry, or pin the key in',
+        'BUNDLED_TEMPLATE_OMITS with why the bundle is right not to carry it.',
+    ]));
+});
+
+it('holds no omission whose reason has stopped being true', function (): void {
+    $stale = [];
+
+    foreach (array_keys(BUNDLED_TEMPLATE_OMITS) as $key) {
+        $carried = array_filter(
+            BUNDLED_TEMPLATE_ROOTS,
+            static fn (string $root): bool => array_key_exists($key, bundledTemplateKeys(bundledTemplateRoot($root).'/.env.example')),
+        );
+
+        if ($carried === []) {
+            $stale[] = $key.' is pinned as deliberately unshipped and no development template declares it any more';
+        }
+    }
+
+    expect($stale)->toBe([], implode("\n", [
+        'An omission pinned for a key nobody declares widens the exemption silently:',
+        ...$stale,
+    ]));
 });
 
 // verify-signature refuses a macOS artefact it cannot name: an unverifiable

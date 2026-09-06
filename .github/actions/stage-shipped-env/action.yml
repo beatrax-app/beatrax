@@ -1,14 +1,21 @@
 # Writes the `.env` a shipped bundle carries, in the one place both
 # workflows read it from.
 #
-# `.env.example` is the local-development template: APP_ENV=local and
-# APP_DEBUG=true, which are correct there and wrong in anything a user
-# installs. DevConsoleBuildGate reads app.env first and answers `local` as a
-# development build before it reaches the per-platform branch, so a bundle
-# staged from the template hands the artisan runner, the query panel and the
-# log tail to the first account — and on a phone the first account is the only
-# account. Laravel also answers an error with the debug page, which prints
-# file paths, the framework version and a full stack trace.
+# The template is `.env.bundled`, not `.env.example`. `.env.example` is the
+# local-development template, and staging from it shipped `LOG_LEVEL=debug`,
+# `LOG_STACK=daily`, `BROADCAST_CONNECTION=log` and an `APP_URL` naming a
+# domain that does not exist into every installer — a personal-finance app
+# writing debug lines to a user's disk, because only two keys were rewritten
+# and every other one came along as it stood.
+#
+# The two that were rewritten are the two that bite hardest, which is why
+# nothing else was noticed: DevConsoleBuildGate reads app.env first and answers
+# `local` as a development build, so a bundle staged from the local template
+# hands the artisan runner, the query panel and the log tail to the first
+# account — and on a phone the first account is the only account. Laravel also
+# answers an error with the debug page, which prints file paths, the framework
+# version and a full stack trace. They are still asserted below, because a
+# template is a file somebody can edit.
 #
 # This existed twice, once per workflow, and drifted: release.yml rewrote both
 # keys at all four of its bundle-staging steps while release-build.yml — the
@@ -22,12 +29,12 @@
 # once, twice or not at all. Laravel reads the last assignment, but a file
 # holding both values is a file the next reader has to reason about.
 name: 'Stage the shipped .env'
-description: 'Writes the .env a shipped bundle carries: the local template with the development environment overridden.'
+description: 'Writes the .env a shipped bundle carries, from that root''s reviewed bundle template.'
 
 inputs:
     working-directory:
         description: >-
-            The composer root whose `.env.example` is staged. The mobile
+            The composer root whose `.env.bundled` is staged. The mobile
             bundle is built from `mobile-app/`, which carries its own.
         required: false
         default: '.'
@@ -50,12 +57,12 @@ runs:
           run: |
               set -euo pipefail
 
-              if [ ! -f .env.example ]; then
-                  echo "::error::stage-shipped-env: no .env.example in $(pwd), so there is no template to ship from."
+              if [ ! -f .env.bundled ]; then
+                  echo "::error::stage-shipped-env: no .env.bundled in $(pwd), so there is no reviewed template to ship from. Every Composer root that builds a bundle carries one."
                   exit 1
               fi
 
-              cp .env.example .env
+              cp .env.bundled .env
               # `|| [ "$?" -eq 1 ]` because grep answers 1 for "nothing
               # survived the filter", which is a template holding only the two
               # keys being replaced -- not an error, but fatal under `set -e`,

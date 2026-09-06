@@ -59,3 +59,19 @@ it('is not satisfied by a longer key that ends in the right name', function (): 
 it('states the value each key has to carry, so a refusal can quote it', function (): void {
     expect(ShippedEnvironment::required())->toBe(['APP_ENV' => 'production', 'APP_DEBUG' => 'false']);
 });
+
+// The level, not the key: an operator may reasonably ship `info`, and may not
+// ship the one that writes a personal ledger's rows to a phone's disk.
+it('refuses the log level a shipped bundle may not carry', function (): void {
+    expect(ShippedEnvironment::wrongIn("APP_ENV=production\nAPP_DEBUG=false\nLOG_LEVEL=debug\n"))
+        ->toBe(['LOG_LEVEL' => 'debug']);
+});
+
+it('accepts a log level that is merely talkative', function (string $level): void {
+    expect(ShippedEnvironment::wrongIn("APP_ENV=production\nAPP_DEBUG=false\nLOG_LEVEL={$level}\n"))
+        ->toBe([]);
+})->with(['info', 'warning', 'error']);
+
+it('states the value each key may not carry, so a refusal can quote it', function (): void {
+    expect(ShippedEnvironment::refused())->toBe(['LOG_LEVEL' => 'debug']);
+});
