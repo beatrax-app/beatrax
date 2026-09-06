@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Config\Repository;
 use Illuminate\Http\Client\Factory as HttpClient;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Mobile\Tests\Support\ConfigFileCode;
 use Psr\Log\NullLogger;
@@ -71,9 +72,11 @@ it('leaves the phone no environment variable that could name a feed', function (
         .'the boundary is one variable in a .env nobody reviews.',
     );
 
+    // The channel is deliberately absent: it is the reader's answer now, on a
+    // screen a store build does not draw, so a literal here would be a second
+    // place to look and one of them would go stale.
     expect(storeBuildMobileUpdateConfig())->toBe([
         'publisher_public_key_hex' => null,
-        'update_channel' => 'stable',
         'manifest_feed_url' => null,
     ]);
 });
@@ -89,6 +92,6 @@ it('composes no manifest URL from the phone configuration, on either channel', f
         platformFamily: 'Darwin',
     );
 
-    expect($fetcher->fetch('stable'))->toBeNull()
-        ->and($fetcher->fetch('preview'))->toBeNull();
+    expect($fetcher->fetch(UpdateChannel::Stable))->toBeNull()
+        ->and($fetcher->fetch(UpdateChannel::Preview))->toBeNull();
 });

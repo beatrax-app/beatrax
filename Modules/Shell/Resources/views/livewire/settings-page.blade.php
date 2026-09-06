@@ -456,6 +456,10 @@
                  updated by its store and has nothing to switch. Both keep their
                  own sentence rather than sharing a vaguer one. --}}
             @livewire('core.update-check-settings-section')
+            {{-- Its own component beside the switch rather than a second state
+                 on it: the switch is whether to ask the feed anything, this is
+                 which feed to ask. Both draw nothing on a store build. --}}
+            @livewire('core.update-channel-settings-section')
         </section>
 
         {{-- The codes are the only way back into a locked-out account, and

@@ -7,8 +7,10 @@ use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
 use Native\Desktop\AutoUpdater;
@@ -42,7 +44,7 @@ function consentGateFetcher(?array $manifest): PublisherManifestFetcher
         /** @param array<string, mixed>|null $manifest */
         public function __construct(private ?array $manifest) {}
 
-        public function fetch(string $channel): ?array
+        public function fetch(UpdateChannel $channel): ?array
         {
             return $this->manifest;
         }
@@ -55,7 +57,8 @@ function consentGateChannel(string $publicKeyHex): ElectronUpdateChannel
         app(DatabaseManager::class),
         new NullLogger,
         new SystemClock,
-        new Repository(['auto_update' => ['publisher_public_key_hex' => $publicKeyHex, 'update_channel' => 'stable']]),
+        new Repository(['auto_update' => ['publisher_public_key_hex' => $publicKeyHex]]),
+        app(UpdateChannelPreference::class),
     );
 }
 

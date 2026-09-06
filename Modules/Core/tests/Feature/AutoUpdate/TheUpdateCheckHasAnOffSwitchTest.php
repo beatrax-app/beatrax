@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Http\Livewire\UpdateCheckSettingsSection;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Psr\Log\NullLogger;
@@ -83,7 +84,7 @@ it('sends no request at all once the check is switched off', function (): void {
     offSwitchUser(false);
     Http::fake();
 
-    expect(offSwitchFetcher()->fetch('stable'))->toBeNull();
+    expect(offSwitchFetcher()->fetch(UpdateChannel::Stable))->toBeNull();
 
     Http::assertNothingSent();
 });
@@ -95,7 +96,7 @@ it('still fetches the signed manifest while the check is on', function (): void 
         OFF_SWITCH_FEED_URL.'/latest.yml.sig' => Http::response(str_repeat('ab', 64), 200),
     ]);
 
-    offSwitchFetcher()->fetch('stable');
+    offSwitchFetcher()->fetch(UpdateChannel::Stable);
 
     Http::assertSent(static fn ($request): bool => $request->url() === OFF_SWITCH_FEED_URL.'/latest.yml');
 });

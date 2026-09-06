@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax pita izvor izdanja postoji li novija potpisana verzija. Ništa se ne preuzima dok sam ne odabereš instalaciju.',
         'check_off' => 'Provjera ažuriranja se ne radi i ništa ne napušta ovaj uređaj. Nove verzije pronalaziš tako da sam otvoriš stranicu izdanja.',
         'open_releases' => 'Otvori stranicu izdanja →',
+        'channel_label' => 'Kanal ažuriranja',
+        'channel_help' => 'Stabilan je zadana postavka i nudi izdanja koja je netko pregledao. Pretpregled nudi kandidate za izdanje čim budu objavljeni.',
+        'channel_stable' => 'Stabilan',
+        'channel_preview' => 'Pretpregled',
+        'channel_preview_note' => 'Pretpregledne verzije testiraju se manje od stabilnih i mogu sadržavati nedovršen rad. Prije bilo kakve instalacije provjeravaju se istim potpisom izdavača.',
     ],
 
     'privacy' => [

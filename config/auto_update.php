@@ -11,9 +11,10 @@ return [
     // code diff, and old bundles verify the old key until they cross over.
     'publisher_public_key_hex' => '5cd2b2a3c5a09b4d3e0c778556dd500717a9b10ce396b0a0267363ea20b1abbf',
 
-    // `stable` resolves `latest*.yml` (written for `v*.*.*` tags),
-    // `preview` resolves `beta*.yml` (for `v*-rc.*`). No in-app switch yet.
-    'update_channel' => env('AUTO_UPDATE_CHANNEL', 'stable'),
+    // The channel is deliberately absent from this file. It used to be
+    // `env('AUTO_UPDATE_CHANNEL')`, which made opting into preview a rebuild —
+    // nobody who installs a bundle can reach its .env. It is now the reader's,
+    // in `users.update_channel`, read through UpdateChannelPreference.
 
     // Unset, the fetch yields null and nothing is surfaced — a build with no
     // feed, not a failure, and not the reader's switch, which narrows a build

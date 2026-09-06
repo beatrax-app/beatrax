@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Dto\UpdateManifestDto;
 use Modules\Core\Public\Enums\UpdateAlertKind;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Psr\Log\LoggerInterface;
 use SodiumException;
 
@@ -28,21 +29,25 @@ final readonly class ElectronUpdateChannel
         private LoggerInterface $logger,
         private Clock $clock,
         private Repository $config,
+        private UpdateChannelPreference $channels,
     ) {}
 
-    public function channel(): string
+    public function channel(): UpdateChannel
     {
-        $value = $this->config->get('auto_update.update_channel', 'stable');
-
-        return is_string($value) ? $value : 'stable';
+        return $this->channels->channel();
     }
 
     // Null on every silent-failure path — offline, unsigned, or already
     // announced — because they are one answer to the caller: nothing to show.
     public function poll(PublisherManifestFetcher $fetcher): ?UpdateManifestDto
     {
-        $manifest = $fetcher->fetch($this->channel());
-        if ($manifest === null || ! $this->isWorthSurfacing($manifest)) {
+        // Read once: the answer is a row, and the fetch, the log line and the
+        // DTO must all name the channel that was asked for even if the reader
+        // changes it mid-poll.
+        $channel = $this->channel();
+
+        $manifest = $fetcher->fetch($channel);
+        if ($manifest === null || ! $this->isWorthSurfacing($manifest, $channel)) {
             return null;
         }
 
@@ -50,7 +55,7 @@ final readonly class ElectronUpdateChannel
             latestVersion: $manifest['latest_version'],
             sha512Hex: $manifest['sha512_hex'],
             publishedAt: $manifest['published_at'],
-            channel: $this->channel(),
+            channel: $channel,
         );
     }
 
@@ -59,11 +64,11 @@ final readonly class ElectronUpdateChannel
     /**
      * @param  FetchedManifest  $manifest
      */
-    private function isWorthSurfacing(array $manifest): bool
+    private function isWorthSurfacing(array $manifest, UpdateChannel $channel): bool
     {
         if (! $this->verifyManifest($manifest['body'], $manifest['signature'])) {
             $this->logger->warning('ElectronUpdateChannel: rejected manifest with invalid Ed25519 signature.', [
-                'channel' => $this->channel(),
+                'channel' => $channel->value,
                 'latest_version' => $manifest['latest_version'],
             ]);
 

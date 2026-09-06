@@ -195,6 +195,11 @@ return [
         'check_on' => 'A Beatrax megkérdezi a kiadási csatornát, létezik-e újabb aláírt verzió. Semmi nem töltődik le, amíg te magad nem választod a telepítést.',
         'check_off' => 'Nem történik frissítéskeresés, és semmi nem hagyja el ezt az eszközt. Az új verziókat úgy találod meg, hogy magad nyitod meg a kiadások oldalát.',
         'open_releases' => 'Kiadások oldalának megnyitása →',
+        'channel_label' => 'Frissítési csatorna',
+        'channel_help' => 'A Stabil az alapértelmezés, és olyan kiadásokat kínál, amelyeket ember nézett át. Az Előzetes a kiadásjelölteket kínálja, amint megjelennek.',
+        'channel_stable' => 'Stabil',
+        'channel_preview' => 'Előzetes',
+        'channel_preview_note' => 'Az előzetes verziókat kevesebbet tesztelik, mint a stabilakat, és befejezetlen munkát is tartalmazhatnak. Telepítés előtt ugyanazzal a kiadói aláírással ellenőrizzük őket.',
     ],
 
     'privacy' => [

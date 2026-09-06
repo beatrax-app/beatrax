@@ -32,6 +32,11 @@ final class MergeRulesRegistry
             // already refuse there, so a phone's answer arriving on a desktop
             // would switch off that desktop's only binary-integrity signal.
             'auto_update_check_enabled',
+            // Beside it for the same reason, one step further: which manifest
+            // set the binary asks for is a property of the binary. A desktop
+            // opted into preview and a phone its store updates are both right,
+            // and neither answer means anything on the other device.
+            'update_channel',
             'auto_import_drop_folder',
             'anomaly_backfilled_at',
             'created_at',

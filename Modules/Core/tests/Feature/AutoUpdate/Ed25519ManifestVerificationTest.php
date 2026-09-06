@@ -5,9 +5,12 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Core\Tests\Support\EuvRecordingLogger;
 use Psr\Log\NullLogger;
 
@@ -18,7 +21,6 @@ function makeChannelWithPublicKeyHex(string $publicKeyHex): ElectronUpdateChanne
     $config = new Repository([
         'auto_update' => [
             'publisher_public_key_hex' => $publicKeyHex,
-            'update_channel' => 'stable',
         ],
     ]);
 
@@ -27,6 +29,7 @@ function makeChannelWithPublicKeyHex(string $publicKeyHex): ElectronUpdateChanne
         new NullLogger,
         new SystemClock,
         $config,
+        app(UpdateChannelPreference::class),
     );
 }
 
@@ -115,11 +118,10 @@ it('poll() returns null and logs at warning level when the fetched manifest sign
     $config = new Repository([
         'auto_update' => [
             'publisher_public_key_hex' => $fixture['public_hex'],
-            'update_channel' => 'stable',
         ],
     ]);
 
-    $channel = new ElectronUpdateChannel($db, $logger, new SystemClock, $config);
+    $channel = new ElectronUpdateChannel($db, $logger, new SystemClock, $config, app(UpdateChannelPreference::class));
 
     $fetcher = new class($manifestBody, $tamperedSig) implements PublisherManifestFetcher
     {
@@ -128,7 +130,7 @@ it('poll() returns null and logs at warning level when the fetched manifest sign
             private readonly string $signature,
         ) {}
 
-        public function fetch(string $channel): ?array
+        public function fetch(UpdateChannel $channel): ?array
         {
             return [
                 'body' => $this->body,
@@ -153,15 +155,14 @@ it('poll() returns null without warning when the fetcher reports no update is av
     $config = new Repository([
         'auto_update' => [
             'publisher_public_key_hex' => $fixture['public_hex'],
-            'update_channel' => 'stable',
         ],
     ]);
 
-    $channel = new ElectronUpdateChannel($db, new NullLogger, new SystemClock, $config);
+    $channel = new ElectronUpdateChannel($db, new NullLogger, new SystemClock, $config, app(UpdateChannelPreference::class));
 
     $fetcher = new class implements PublisherManifestFetcher
     {
-        public function fetch(string $channel): ?array
+        public function fetch(UpdateChannel $channel): ?array
         {
             return null;
         }
@@ -178,14 +179,18 @@ it('poll() returns a populated DTO when the fetched manifest verifies cleanly', 
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    $config = new Repository([
-        'auto_update' => [
-            'publisher_public_key_hex' => $fixture['public_hex'],
-            'update_channel' => 'preview',
-        ],
+    $config = new Repository(['auto_update' => ['publisher_public_key_hex' => $fixture['public_hex']]]);
+
+    // The channel the DTO carries is the reader's stored answer, not a build
+    // constant: the row is what decides which manifest was asked for.
+    User::create([
+        'username' => 'ed25519-preview',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+        'update_channel' => 'preview',
     ]);
 
-    $channel = new ElectronUpdateChannel($db, new NullLogger, new SystemClock, $config);
+    $channel = new ElectronUpdateChannel($db, new NullLogger, new SystemClock, $config, app(UpdateChannelPreference::class));
 
     $fetcher = new class($manifestBody, $signature, $publishedAt) implements PublisherManifestFetcher
     {
@@ -195,7 +200,7 @@ it('poll() returns a populated DTO when the fetched manifest verifies cleanly', 
             private readonly CarbonImmutable $publishedAt,
         ) {}
 
-        public function fetch(string $channel): ?array
+        public function fetch(UpdateChannel $channel): ?array
         {
             return [
                 'body' => $this->body,
@@ -213,7 +218,7 @@ it('poll() returns a populated DTO when the fetched manifest verifies cleanly', 
     expect($dto?->latestVersion)->toBe('0.1.1-rc.1');
     expect($dto?->sha512Hex)->toBe(str_repeat('a', 128));
     expect($dto?->publishedAt->equalTo($publishedAt))->toBeTrue();
-    expect($dto?->channel)->toBe('preview');
+    expect($dto?->channel)->toBe(UpdateChannel::Preview);
 });
 
 // A missing publisher key is a mis-shipped build; a manifest that fails to
@@ -228,7 +233,8 @@ it('refuses to verify, and says why, when no publisher key is configured', funct
         $db,
         $logger,
         new SystemClock,
-        new Repository(['auto_update' => ['publisher_public_key_hex' => $configured, 'update_channel' => 'stable']]),
+        new Repository(['auto_update' => ['publisher_public_key_hex' => $configured]]),
+        app(UpdateChannelPreference::class),
     );
 
     expect($channel->verifyManifest('body', str_repeat('s', 64)))->toBeFalse()
@@ -249,7 +255,8 @@ it('refuses an empty signature without complaining about the configuration', fun
         $db,
         $logger,
         new SystemClock,
-        new Repository(['auto_update' => ['publisher_public_key_hex' => null, 'update_channel' => 'stable']]),
+        new Repository(['auto_update' => ['publisher_public_key_hex' => null]]),
+        app(UpdateChannelPreference::class),
     );
 
     expect($channel->verifyManifest('body', ''))->toBeFalse()

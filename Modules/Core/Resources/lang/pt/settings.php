@@ -195,6 +195,11 @@ return [
         'check_on' => 'O Beatrax pergunta ao canal de lançamentos se existe uma versão assinada mais recente. Nada é transferido até escolheres instalá-la.',
         'check_off' => 'Não é feita qualquer procura de atualizações e nada sai deste dispositivo. As novas versões encontram-se abrindo tu mesmo a página de lançamentos.',
         'open_releases' => 'Abrir a página de lançamentos →',
+        'channel_label' => 'Canal de atualizações',
+        'channel_help' => 'Estável é a predefinição e oferece versões que uma pessoa reviu. Pré-visualização oferece candidatas a versão assim que são publicadas.',
+        'channel_stable' => 'Estável',
+        'channel_preview' => 'Pré-visualização',
+        'channel_preview_note' => 'As versões de pré-visualização são testadas menos do que as estáveis e podem conter trabalho por terminar. São verificadas com a mesma assinatura do editor antes de instalar seja o que for.',
     ],
 
     'privacy' => [

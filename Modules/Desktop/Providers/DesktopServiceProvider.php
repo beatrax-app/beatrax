@@ -28,6 +28,7 @@ use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 use Modules\Desktop\Internal\Http\Middleware\ClaimShellLockDemand;
 use Modules\Desktop\Internal\Http\Middleware\ContinueToStagedFile;
 use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
+use Modules\Desktop\Internal\Listeners\ApplyUpdateChannelChoiceToStartupConfig;
 use Modules\Desktop\Internal\Listeners\ApplyUpdateCheckChoiceToStartupConfig;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DemandLockOnWindowHideOrClose;
@@ -216,6 +217,7 @@ final class DesktopServiceProvider extends ServiceProvider
         // flag for it — gating this would leave the reader's answer unread in
         // the one process whose reply decides whether the feed is polled.
         $events->listen(CommandStarting::class, [ApplyUpdateCheckChoiceToStartupConfig::class, 'handle']);
+        $events->listen(CommandStarting::class, [ApplyUpdateChannelChoiceToStartupConfig::class, 'handle']);
 
         $events->listen(DeviceSyncEnabled::class, [StartSyncListenerOnEnable::class, 'handle']);
         $events->listen(

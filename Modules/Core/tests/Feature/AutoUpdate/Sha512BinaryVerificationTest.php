@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Services\UpdateChannelPreference;
 use Psr\Log\NullLogger;
 
 // verifyBinary is the second layer of the auto-update integrity chain: once the
@@ -19,18 +20,14 @@ function makeChannelForSha512(): ElectronUpdateChannel
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    $config = new Repository([
-        'auto_update' => [
-            'publisher_public_key_hex' => str_repeat('00', 32),
-            'update_channel' => 'stable',
-        ],
-    ]);
+    $config = new Repository(['auto_update' => ['publisher_public_key_hex' => str_repeat('00', 32)]]);
 
     return new ElectronUpdateChannel(
         $db,
         new NullLogger,
         new SystemClock,
         $config,
+        app(UpdateChannelPreference::class),
     );
 }
 
@@ -38,12 +35,7 @@ function makeChannelWithFrozenClock(CarbonImmutable $now): ElectronUpdateChannel
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
-    $config = new Repository([
-        'auto_update' => [
-            'publisher_public_key_hex' => str_repeat('00', 32),
-            'update_channel' => 'stable',
-        ],
-    ]);
+    $config = new Repository(['auto_update' => ['publisher_public_key_hex' => str_repeat('00', 32)]]);
 
     $clock = new class($now) implements Clock
     {
@@ -60,6 +52,7 @@ function makeChannelWithFrozenClock(CarbonImmutable $now): ElectronUpdateChannel
         new NullLogger,
         $clock,
         $config,
+        app(UpdateChannelPreference::class),
     );
 }
 
@@ -125,43 +118,4 @@ it('returns false for isStale when the current version already equals the latest
     $channel = makeChannelWithFrozenClock($now);
 
     expect($channel->isStale('0.1.1', '0.1.1', $publishedAt))->toBeFalse();
-});
-
-it('reports the channel name from the injected config Repository', function (): void {
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $config = new Repository([
-        'auto_update' => [
-            'publisher_public_key_hex' => str_repeat('00', 32),
-            'update_channel' => 'preview',
-        ],
-    ]);
-
-    $channel = new ElectronUpdateChannel(
-        $db,
-        new NullLogger,
-        new SystemClock,
-        $config,
-    );
-
-    expect($channel->channel())->toBe('preview');
-});
-
-it('defaults the channel to "stable" when no update_channel value is configured', function (): void {
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
-    $config = new Repository([
-        'auto_update' => [
-            'publisher_public_key_hex' => str_repeat('00', 32),
-        ],
-    ]);
-
-    $channel = new ElectronUpdateChannel(
-        $db,
-        new NullLogger,
-        new SystemClock,
-        $config,
-    );
-
-    expect($channel->channel())->toBe('stable');
 });

@@ -193,6 +193,11 @@ return [
         'check_on' => 'Beatrax vraagt de releasefeed of er een nieuwere ondertekende versie bestaat. Er wordt niets gedownload totdat je zelf kiest om te installeren.',
         'check_off' => 'Er wordt niet op updates gecontroleerd en er verlaat niets dit apparaat. Nieuwe versies vind je door zelf de releasespagina te openen.',
         'open_releases' => 'Releasespagina openen →',
+        'channel_label' => 'Updatekanaal',
+        'channel_help' => 'Stabiel is de standaard en biedt releases die iemand heeft nagekeken. Preview biedt releasekandidaten zodra ze zijn gepubliceerd.',
+        'channel_stable' => 'Stabiel',
+        'channel_preview' => 'Preview',
+        'channel_preview_note' => 'Previewversies worden minder getest dan stabiele en kunnen onaf werk bevatten. Ze worden voor het installeren tegen dezelfde handtekening van de uitgever gecontroleerd.',
     ],
 
     'privacy' => [

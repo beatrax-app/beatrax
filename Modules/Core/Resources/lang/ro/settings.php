@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax întreabă fluxul de versiuni dacă există o versiune semnată mai nouă. Nu se descarcă nimic până când nu alegi tu să o instalezi.',
         'check_off' => 'Nu se face nicio verificare a actualizărilor și nimic nu părăsește acest dispozitiv. Versiunile noi le găsești deschizând singur pagina de versiuni.',
         'open_releases' => 'Deschide pagina de versiuni →',
+        'channel_label' => 'Canal de actualizare',
+        'channel_help' => 'Stabil este opțiunea implicită și oferă versiuni pe care le-a verificat un om. Previzualizare oferă versiuni candidat imediat ce sunt publicate.',
+        'channel_stable' => 'Stabil',
+        'channel_preview' => 'Previzualizare',
+        'channel_preview_note' => 'Versiunile de previzualizare sunt testate mai puțin decât cele stabile și pot conține lucru neterminat. Înainte să se instaleze ceva, ele sunt verificate cu aceeași semnătură a editorului.',
     ],
 
     'privacy' => [

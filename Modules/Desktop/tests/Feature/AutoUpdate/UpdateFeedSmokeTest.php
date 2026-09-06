@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemClock;
+use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
@@ -76,7 +77,8 @@ function smokeChannel(string $publicKeyHex): ElectronUpdateChannel
         app(DatabaseManager::class),
         new NullLogger,
         new SystemClock,
-        new Repository(['auto_update' => ['publisher_public_key_hex' => $publicKeyHex, 'update_channel' => 'stable']]),
+        new Repository(['auto_update' => ['publisher_public_key_hex' => $publicKeyHex]]),
+        app(UpdateChannelPreference::class),
     );
 }
 

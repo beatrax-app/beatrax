@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 
 /**
@@ -16,6 +17,6 @@ final readonly class UpdateManifestDto
         public string $latestVersion,
         public string $sha512Hex,
         public CarbonImmutable $publishedAt,
-        public string $channel,
+        public UpdateChannel $channel,
     ) {}
 }

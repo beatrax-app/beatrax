@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax asks the release feed whether a newer signed version exists. Nothing is downloaded until you choose to install it.',
         'check_off' => 'No update check is made and nothing leaves this device. New versions are found by opening the releases page yourself.',
         'open_releases' => 'Open releases page →',
+        'channel_label' => 'Update channel',
+        'channel_help' => 'Stable is the default and offers releases a person has reviewed. Preview offers release candidates as soon as they are published.',
+        'channel_stable' => 'Stable',
+        'channel_preview' => 'Preview',
+        'channel_preview_note' => 'Preview builds are tested less than stable ones and can carry unfinished work. They are checked against the same publisher signature before anything installs.',
     ],
 
     'privacy' => [

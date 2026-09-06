@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax pyta kanał wydań, czy istnieje nowsza podpisana wersja. Nic nie jest pobierane, dopóki sam nie wybierzesz instalacji.',
         'check_off' => 'Aktualizacje nie są sprawdzane i nic nie opuszcza tego urządzenia. Nowe wersje znajdziesz, otwierając stronę wydań samodzielnie.',
         'open_releases' => 'Otwórz stronę wydań →',
+        'channel_label' => 'Kanał aktualizacji',
+        'channel_help' => 'Stabilny jest ustawieniem domyślnym i oferuje wydania przejrzane przez człowieka. Podgląd oferuje kandydatów do wydania, gdy tylko zostaną opublikowani.',
+        'channel_stable' => 'Stabilny',
+        'channel_preview' => 'Podgląd',
+        'channel_preview_note' => 'Wersje podglądowe są testowane mniej niż stabilne i mogą zawierać niedokończoną pracę. Przed jakąkolwiek instalacją są sprawdzane tym samym podpisem wydawcy.',
     ],
 
     'privacy' => [

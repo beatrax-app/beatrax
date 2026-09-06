@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax kysyy julkaisusyötteeltä, onko uudempaa allekirjoitettua versiota olemassa. Mitään ei ladata, ennen kuin valitset itse asennuksen.',
         'check_off' => 'Päivityksiä ei tarkisteta eikä mitään lähde tältä laitteelta. Uudet versiot löydät avaamalla julkaisusivun itse.',
         'open_releases' => 'Avaa julkaisusivu →',
+        'channel_label' => 'Päivityskanava',
+        'channel_help' => 'Vakaa on oletus ja tarjoaa julkaisuja, jotka ihminen on käynyt läpi. Esiversio tarjoaa julkaisuehdokkaita heti niiden julkaisemisen jälkeen.',
+        'channel_stable' => 'Vakaa',
+        'channel_preview' => 'Esiversio',
+        'channel_preview_note' => 'Esiversioita testataan vähemmän kuin vakaita, ja ne voivat sisältää keskeneräistä työtä. Ne tarkistetaan samalla julkaisijan allekirjoituksella ennen kuin mitään asennetaan.',
     ],
 
     'privacy' => [

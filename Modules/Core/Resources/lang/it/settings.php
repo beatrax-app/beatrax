@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax chiede al feed delle release se esiste una versione firmata più recente. Non viene scaricato nulla finché non scegli tu di installarla.',
         'check_off' => 'Non viene fatto alcun controllo degli aggiornamenti e nulla lascia questo dispositivo. Le nuove versioni si trovano aprendo tu stesso la pagina delle release.',
         'open_releases' => 'Apri la pagina delle release →',
+        'channel_label' => 'Canale di aggiornamento',
+        'channel_help' => 'Stabile è l\'impostazione predefinita e propone versioni riviste da una persona. Anteprima propone le versioni candidate appena vengono pubblicate.',
+        'channel_stable' => 'Stabile',
+        'channel_preview' => 'Anteprima',
+        'channel_preview_note' => 'Le versioni di anteprima sono testate meno di quelle stabili e possono contenere lavoro incompiuto. Prima di installare qualsiasi cosa vengono verificate con la stessa firma dell\'editore.',
     ],
 
     'privacy' => [

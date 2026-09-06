@@ -139,6 +139,12 @@ return [
                 'vPrefixedTagName' => env('GITHUB_V_PREFIXED_TAG_NAME', true),
                 'private' => env('GITHUB_PRIVATE', false),
                 'autoupdate_token' => env('GITHUB_AUTOUPDATE_TOKEN'), // Read-only token used by the updater for private repos
+                // Narrowed to the reader's chosen channel at `native:config`
+                // time, so electron-updater's own poll and Beatrax's
+                // verification fetch resolve the same manifest set.
+                /**
+                 * @link ../.docs/features/desktop/auto-update.md#the-two-channels
+                 */
                 'channel' => env('GITHUB_CHANNEL', 'latest'),
                 'releaseType' => env('GITHUB_RELEASE_TYPE', 'draft'),
             ],

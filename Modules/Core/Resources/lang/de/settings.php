@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax fragt beim Release-Feed nach, ob eine neuere signierte Version existiert. Heruntergeladen wird nichts, bevor du die Installation selbst wählst.',
         'check_off' => 'Es wird nicht nach Updates gesucht, und nichts verlässt dieses Gerät. Neue Versionen findest du, indem du die Releases-Seite selbst öffnest.',
         'open_releases' => 'Releases-Seite öffnen →',
+        'channel_label' => 'Update-Kanal',
+        'channel_help' => 'Stabil ist die Voreinstellung und bietet Releases, die ein Mensch geprüft hat. Vorschau bietet Release-Kandidaten, sobald sie veröffentlicht sind.',
+        'channel_stable' => 'Stabil',
+        'channel_preview' => 'Vorschau',
+        'channel_preview_note' => 'Vorschau-Builds werden weniger getestet als stabile und können unfertige Arbeit enthalten. Vor der Installation werden sie gegen dieselbe Signatur des Herausgebers geprüft.',
     ],
 
     'privacy' => [

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Contracts;
 
+use Modules\Core\Public\Enums\UpdateChannel;
+
 /**
  * @phpstan-type FetchedManifest array{
  *     body: string,
@@ -15,10 +17,11 @@ namespace Modules\Core\Public\Contracts;
  */
 interface PublisherManifestFetcher
 {
-    // Null when no manifest is available (404, offline, unknown channel) —
-    // the caller treats that identically to a signature-verification failure.
+    // Null when no manifest is available — offline, no feed configured, or a
+    // channel whose manifest this release did not publish. The caller treats
+    // all of them as it treats a signature that does not verify: silence.
     /**
      * @return FetchedManifest|null
      */
-    public function fetch(string $channel): ?array;
+    public function fetch(UpdateChannel $channel): ?array;
 }

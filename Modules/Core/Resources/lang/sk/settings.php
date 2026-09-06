@@ -195,6 +195,11 @@ return [
         'check_on' => 'Beatrax sa zdroja vydaní spýta, či existuje novšia podpísaná verzia. Nič sa nesťahuje, kým inštaláciu sám nezvolíš.',
         'check_off' => 'Žiadna kontrola aktualizácií sa nevykonáva a nič neopúšťa toto zariadenie. Nové verzie nájdeš tak, že si sám otvoríš stránku s vydaniami.',
         'open_releases' => 'Otvoriť stránku s vydaniami →',
+        'channel_label' => 'Kanál aktualizácií',
+        'channel_help' => 'Stabilný je predvolená voľba a ponúka vydania, ktoré niekto prešiel. Náhľad ponúka kandidátov na vydanie hneď po zverejnení.',
+        'channel_stable' => 'Stabilný',
+        'channel_preview' => 'Náhľad',
+        'channel_preview_note' => 'Náhľadové zostavy sa testujú menej než stabilné a môžu obsahovať nedokončenú prácu. Pred akoukoľvek inštaláciou sa overujú rovnakým podpisom vydavateľa.',
     ],
 
     'privacy' => [

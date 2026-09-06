@@ -7,6 +7,7 @@ use Illuminate\Http\Client\Factory as HttpClient;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Internal\Enums\OsFamily;
+use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Psr\Log\NullLogger;
 
@@ -43,7 +44,7 @@ it('parses a manifest and normalises the base64 sha512 to hex', function (): voi
         'https://feed.test/latest.yml.sig' => Http::response(str_repeat('ab', 64), 200),
     ]);
 
-    $result = makeManifestFetcher('https://feed.test')->fetch('stable');
+    $result = makeManifestFetcher('https://feed.test')->fetch(UpdateChannel::Stable);
 
     expect($result)->not->toBeNull()
         ->and($result['latest_version'])->toBe('1.2.3')
@@ -59,7 +60,7 @@ it('reads beta.yml for a non-stable channel', function (): void {
         'https://feed.test/beta.yml.sig' => Http::response(str_repeat('cd', 64), 200),
     ]);
 
-    $result = makeManifestFetcher('https://feed.test')->fetch('preview');
+    $result = makeManifestFetcher('https://feed.test')->fetch(UpdateChannel::Preview);
 
     expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('2.0.0-rc.1');
 });
@@ -74,7 +75,7 @@ it('fetches the macOS manifest (latest-mac.yml) on a Darwin bundle', function ()
         'https://feed.test/latest.yml' => Http::response('version: 9.9.9', 200),
     ]);
 
-    $result = makeManifestFetcher('https://feed.test', 'Darwin')->fetch('stable');
+    $result = makeManifestFetcher('https://feed.test', 'Darwin')->fetch(UpdateChannel::Stable);
 
     expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('3.1.0');
 });
@@ -86,7 +87,7 @@ it('fetches the Linux manifest (latest-linux.yml) on a Linux bundle', function (
         'https://feed.test/latest-linux.yml.sig' => Http::response(str_repeat('ab', 64), 200),
     ]);
 
-    $result = makeManifestFetcher('https://feed.test', 'Linux')->fetch('stable');
+    $result = makeManifestFetcher('https://feed.test', 'Linux')->fetch(UpdateChannel::Stable);
 
     expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('3.2.0');
 });
@@ -98,19 +99,19 @@ it('fetches the macOS preview manifest (beta-mac.yml) on a Darwin bundle', funct
         'https://feed.test/beta-mac.yml.sig' => Http::response(str_repeat('cd', 64), 200),
     ]);
 
-    $result = makeManifestFetcher('https://feed.test', 'Darwin')->fetch('preview');
+    $result = makeManifestFetcher('https://feed.test', 'Darwin')->fetch(UpdateChannel::Preview);
 
     expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('3.3.0-rc.1');
 });
 
 it('returns null when no feed url is configured', function (): void {
-    expect(makeManifestFetcher(null)->fetch('stable'))->toBeNull();
+    expect(makeManifestFetcher(null)->fetch(UpdateChannel::Stable))->toBeNull();
 });
 
 it('returns null on a 404 manifest', function (): void {
     Http::fake(['https://feed.test/*' => Http::response('', 404)]);
 
-    expect(makeManifestFetcher('https://feed.test')->fetch('stable'))->toBeNull();
+    expect(makeManifestFetcher('https://feed.test')->fetch(UpdateChannel::Stable))->toBeNull();
 });
 
 it('returns null when the signature body is not hex', function (): void {
@@ -120,7 +121,7 @@ it('returns null when the signature body is not hex', function (): void {
         'https://feed.test/latest.yml.sig' => Http::response('nothexatall!!', 200),
     ]);
 
-    expect(makeManifestFetcher('https://feed.test')->fetch('stable'))->toBeNull();
+    expect(makeManifestFetcher('https://feed.test')->fetch(UpdateChannel::Stable))->toBeNull();
 });
 
 it('returns null when the decoded sha512 is not 64 bytes', function (): void {
@@ -130,7 +131,7 @@ it('returns null when the decoded sha512 is not 64 bytes', function (): void {
         'https://feed.test/latest.yml.sig' => Http::response(str_repeat('ab', 64), 200),
     ]);
 
-    expect(makeManifestFetcher('https://feed.test')->fetch('stable'))->toBeNull();
+    expect(makeManifestFetcher('https://feed.test')->fetch(UpdateChannel::Stable))->toBeNull();
 });
 
 // PHP_OS_FAMILY also answers BSD, Solaris and Unknown. The old `default => ''`
@@ -146,7 +147,7 @@ it('fetches NOTHING at all on an OS family the app publishes no manifest for, ra
         'https://feed.test/*' => Http::response(manifestYaml('9.9.9', base64_encode($digest)), 200),
     ]);
 
-    expect(makeManifestFetcher('https://feed.test', $family)->fetch('stable'))->toBeNull();
+    expect(makeManifestFetcher('https://feed.test', $family)->fetch(UpdateChannel::Stable))->toBeNull();
 
     Http::assertNothingSent();
 })->with(['BSD', 'Solaris', 'Unknown', 'darwin', 'macOS', '']);
@@ -154,8 +155,8 @@ it('fetches NOTHING at all on an OS family the app publishes no manifest for, ra
 it('gives every OS family it does model its own manifest name, so no family can ever be handed another one', function (): void {
     $names = [];
     foreach (OsFamily::cases() as $family) {
-        foreach (['stable', 'preview'] as $channel) {
-            $names[] = $family->updateManifestSuffix().'|'.$channel;
+        foreach (UpdateChannel::cases() as $channel) {
+            $names[] = $family->updateManifestSuffix().'|'.$channel->value;
         }
     }
 
@@ -165,16 +166,16 @@ it('gives every OS family it does model its own manifest name, so no family can 
 it('names the manifest for every modelled family and channel exactly as the release pipeline publishes it', function (): void {
     $fetcher = new ReflectionMethod(HttpPublisherManifestFetcher::class, 'manifestName');
 
-    $name = static fn (string $family, string $channel): ?string => $fetcher->invoke(
+    $name = static fn (string $family, UpdateChannel $channel): ?string => $fetcher->invoke(
         makeManifestFetcher('https://feed.test', $family),
         $channel,
     );
 
-    expect($name('Windows', 'stable'))->toBe('latest.yml')
-        ->and($name('Darwin', 'stable'))->toBe('latest-mac.yml')
-        ->and($name('Linux', 'stable'))->toBe('latest-linux.yml')
-        ->and($name('Windows', 'preview'))->toBe('beta.yml')
-        ->and($name('Darwin', 'preview'))->toBe('beta-mac.yml')
-        ->and($name('Linux', 'preview'))->toBe('beta-linux.yml')
-        ->and($name('FreeBSD', 'stable'))->toBeNull();
+    expect($name('Windows', UpdateChannel::Stable))->toBe('latest.yml')
+        ->and($name('Darwin', UpdateChannel::Stable))->toBe('latest-mac.yml')
+        ->and($name('Linux', UpdateChannel::Stable))->toBe('latest-linux.yml')
+        ->and($name('Windows', UpdateChannel::Preview))->toBe('beta.yml')
+        ->and($name('Darwin', UpdateChannel::Preview))->toBe('beta-mac.yml')
+        ->and($name('Linux', UpdateChannel::Preview))->toBe('beta-linux.yml')
+        ->and($name('FreeBSD', UpdateChannel::Stable))->toBeNull();
 });
