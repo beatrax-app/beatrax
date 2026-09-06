@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Очікує на підтвердження',
     'safety_number_words' => 'Слова номера безпеки:',
     'paired' => 'Пов’язано',
+    'last_seen' => 'Востаннє бачено :when',
+    'last_seen_never' => 'Ще не під’єднано',
     'remove_aria' => 'Видалити: :name',
     'remove' => 'Видалити',
     'pair_new_device' => 'Пов’язати новий пристрій',

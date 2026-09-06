@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Čaka potrditev',
     'safety_number_words' => 'Besede varnostne številke:',
     'paired' => 'Seznanjeno',
+    'last_seen' => 'Nazadnje videno :when',
+    'last_seen_never' => 'Še ni povezano',
     'remove_aria' => 'Odstrani :name',
     'remove' => 'Odstrani',
     'pair_new_device' => 'Seznani novo napravo',

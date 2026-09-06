@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Ootab kinnitust',
     'safety_number_words' => 'Turvanumbri sõnad:',
     'paired' => 'Seotud',
+    'last_seen' => 'Viimati nähtud :when',
+    'last_seen_never' => 'Pole veel ühendatud',
     'remove_aria' => 'Eemalda :name',
     'remove' => 'Eemalda',
     'pair_new_device' => 'Seo uus seade',

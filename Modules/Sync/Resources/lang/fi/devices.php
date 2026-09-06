@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Odottaa vahvistusta',
     'safety_number_words' => 'Turvanumeron sanat:',
     'paired' => 'Paritettu',
+    'last_seen' => 'Nähty viimeksi :when',
+    'last_seen_never' => 'Ei vielä yhdistetty',
     'remove_aria' => 'Poista :name',
     'remove' => 'Poista',
     'pair_new_device' => 'Parita uusi laite',

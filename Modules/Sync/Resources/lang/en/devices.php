@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Awaiting confirmation',
     'safety_number_words' => 'Safety number words:',
     'paired' => 'Paired',
+    'last_seen' => 'Last seen :when',
+    'last_seen_never' => 'Not connected yet',
     'remove_aria' => 'Remove :name',
     'remove' => 'Remove',
     'pair_new_device' => 'Pair a new device',

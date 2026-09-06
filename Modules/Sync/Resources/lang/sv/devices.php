@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Väntar på bekräftelse',
     'safety_number_words' => 'Ord för säkerhetsnummer:',
     'paired' => 'Parkopplad',
+    'last_seen' => 'Senast sedd :when',
+    'last_seen_never' => 'Inte ansluten än',
     'remove_aria' => 'Ta bort :name',
     'remove' => 'Ta bort',
     'pair_new_device' => 'Parkoppla en ny enhet',

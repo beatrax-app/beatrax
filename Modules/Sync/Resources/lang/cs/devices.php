@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Čeká na potvrzení',
     'safety_number_words' => 'Slova bezpečnostního čísla:',
     'paired' => 'Spárováno',
+    'last_seen' => 'Naposledy viděno :when',
+    'last_seen_never' => 'Zatím nepřipojeno',
     'remove_aria' => 'Odebrat: :name',
     'remove' => 'Odebrat',
     'pair_new_device' => 'Spárovat nové zařízení',

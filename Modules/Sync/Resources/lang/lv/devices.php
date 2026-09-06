@@ -37,6 +37,8 @@ return [
     'awaiting_confirmation' => 'Gaida apstiprinājumu',
     'safety_number_words' => 'Drošības numura vārdi:',
     'paired' => 'Sapārota',
+    'last_seen' => 'Pēdējoredzēts :when',
+    'last_seen_never' => 'Vēl nav savienots',
     'remove_aria' => 'Noņemt: :name',
     'remove' => 'Noņemt',
     'pair_new_device' => 'Sapārot jaunu ierīci',
