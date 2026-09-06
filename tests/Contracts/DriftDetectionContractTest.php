@@ -14,6 +14,31 @@ use Modules\DriftAlerts\Models\DriftAlertTransition;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
+// The corpus holds more fixtures than this file replays. Each name here is one
+// of them, with the guard that does replay it: a fixture covered nowhere is the
+// gap this pin exists to make visible, and the case below fails when a name
+// drifts off the corpus or a new fixture arrives in neither list.
+const DDCT_REPLAYED_ELSEWHERE = [
+    'cadence-restructure' => 'Modules/DriftAlerts/tests/Feature/TheDriftCorpusWasNeverFedToTheEvaluatorTest.php',
+    'exactly-at-threshold' => 'Modules/DriftAlerts/tests/Feature/TheDriftCorpusWasNeverFedToTheEvaluatorTest.php',
+    'mixed-currency-within-series' => 'Modules/DriftAlerts/tests/Feature/TheDriftCorpusWasNeverFedToTheEvaluatorTest.php',
+    'sign-flip-refund' => 'Modules/DriftAlerts/tests/Feature/TheDriftCorpusWasNeverFedToTheEvaluatorTest.php',
+    'sub-five-global-threshold' => 'Modules/DriftAlerts/tests/Feature/TheDriftCorpusWasNeverFedToTheEvaluatorTest.php',
+];
+
+/** @return list<string> every fixture name the corpus directory holds */
+function ddctCorpusNames(): array
+{
+    $names = array_map(
+        static fn (string $path): string => basename($path, '.php'),
+        glob(base_path('Modules/DriftAlerts/tests/fixtures/drift-corpus/*.php')) ?: [],
+    );
+
+    sort($names);
+
+    return array_values($names);
+}
+
 /**
  * @return array<string, array{0: string, 1: int|string}>
  */
@@ -206,7 +231,6 @@ function ddctEvaluateAllOccurrencePairs(DatabaseManager $db, DriftEvaluator $eva
     }
 
     for ($i = 1; $i < $count; $i++) {
-        $cutoff = $allRows[$i];
         $deleted = [];
         for ($j = $i + 1; $j < $count; $j++) {
             $row = $allRows[$j];
@@ -221,12 +245,10 @@ function ddctEvaluateAllOccurrencePairs(DatabaseManager $db, DriftEvaluator $eva
         foreach ($deleted as $row) {
             $db->connection()->table('recurring_series_occurrences')->insert($row);
         }
-
-        unset($cutoff);
     }
 }
 
-it('runs the drift evaluator against every fixture in the 24-scenario corpus and produces the documented alert counts', function (string $fixtureName, int|string $expectedAlertCount): void {
+it('runs the drift evaluator against each pinned corpus scenario and produces the documented alert counts', function (string $fixtureName, int|string $expectedAlertCount): void {
     CarbonImmutable::setTestNow('2026-05-19 12:00:00');
 
     /** @var DatabaseManager $db */
@@ -251,11 +273,14 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
         ->count();
 
     if ($expectedAlertCount === 'multiple') {
-        expect($actualCount)->toBeGreaterThanOrEqual(3);
+        expect($actualCount)->toBeGreaterThanOrEqual(
+            3,
+            $fixtureName.' is a volatile series and has to raise an alert on more than one arrival; it raised '.$actualCount.'.'
+        );
     } elseif ($expectedAlertCount === 'revival') {
         // The fixture's 3× -999 → 3× -1149 is a ~15% drift against the 5% global
         // threshold, so exactly one alert exists to snooze and revive.
-        expect($actualCount)->toBe(1);
+        expect($actualCount)->toBe(1, $fixtureName.' must raise exactly one alert for the snooze-and-revive path to have something to act on.');
 
         /** @var DriftAlert $detected */
         $detected = DriftAlert::query()
@@ -279,23 +304,26 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
         $job->handle($db, $stateMachine, app(Clock::class));
 
         $revived = DriftAlert::query()->findOrFail($detected->id);
-        expect($revived->state)->toBe('open');
-        expect($revived->snoozed_until)->toBeNull();
+        expect($revived->state)->toBe('open', 'A snooze whose date has passed left the alert snoozed, so the reader is never told again.');
+        expect($revived->snoozed_until)->toBeNull('The revived alert still carries the lapsed snooze date, so the next pass re-revives it forever.');
 
         $revivalTransition = DriftAlertTransition::query()
             ->where('drift_alert_id', $detected->id)
             ->where('transition_reason', 'detector_revived_snooze')
             ->first();
-        expect($revivalTransition)->not->toBeNull();
-        expect($revivalTransition?->from_state)->toBe('snoozed');
-        expect($revivalTransition?->to_state)->toBe('open');
-        expect($revivalTransition?->actor)->toBe('detector');
+        expect($revivalTransition)->not->toBeNull('The revival wrote no transition row, so the audit trail says the alert reopened itself.');
+        expect($revivalTransition?->from_state)->toBe('snoozed', 'The revival transition does not record the state it revived from.');
+        expect($revivalTransition?->to_state)->toBe('open', 'The revival transition does not record the state it revived into.');
+        expect($revivalTransition?->actor)->toBe('detector', 'The revival is attributed to somebody other than the detector that performed it.');
 
         CarbonImmutable::setTestNow();
 
         return;
     } else {
-        expect($actualCount)->toBe($expectedAlertCount);
+        expect($actualCount)->toBe(
+            $expectedAlertCount,
+            $fixtureName.' expects '.$expectedAlertCount.' alert(s) and the evaluator raised '.$actualCount.'.'
+        );
     }
 
     if (is_int($expectedAlertCount) && $expectedAlertCount > 0 && isset($fixture['expected']['alerts']) && is_array($fixture['expected']['alerts']) && $fixture['expected']['alerts'] !== []) {
@@ -310,7 +338,9 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
                 ->where('delta_minor', $expectedDelta)
                 ->where('currency', $expectedCurrency)
                 ->exists();
-            expect($hit)->toBeTrue();
+            expect($hit)->toBeTrue(
+                $fixtureName.' expects an alert of '.$expectedDelta.' '.$expectedCurrency.' and no row carries that pair.'
+            );
         }
         if (isset($firstExpected['threshold_percent_used'])) {
             $expectedThreshold = (int) $firstExpected['threshold_percent_used'];
@@ -318,12 +348,70 @@ it('runs the drift evaluator against every fixture in the 24-scenario corpus and
                 ->where('user_id', $user->id)
                 ->where('recurring_series_id', $seriesId)
                 ->first();
-            expect($row?->threshold_percent_used)->toBe($expectedThreshold);
+            expect($row?->threshold_percent_used)->toBe(
+                $expectedThreshold,
+                $fixtureName.' was judged against a different threshold than the one it declares.'
+            );
             if (isset($firstExpected['threshold_source'])) {
-                expect($row?->threshold_source)->toBe((string) $firstExpected['threshold_source']);
+                expect($row?->threshold_source)->toBe(
+                    (string) $firstExpected['threshold_source'],
+                    $fixtureName.' records the threshold as coming from somewhere other than where it declares.'
+                );
             }
         }
     }
 
     CarbonImmutable::setTestNow();
 })->with(ddctFixtureExpectations());
+
+// The dataset above is a hand-maintained list against a directory that grows.
+// Read one way it is fine — every name in it is a file — and the direction that
+// costs something is the other: a fixture added to the corpus and to neither
+// list runs nowhere, and this file's name still promises the corpus.
+it('accounts for every fixture the drift corpus holds', function (): void {
+    $corpus = ddctCorpusNames();
+
+    expect(count($corpus))->toBeGreaterThan(
+        10,
+        'The corpus directory came back all but empty, so the accounting below compares nothing.'
+    );
+
+    $replayedHere = array_keys(ddctFixtureExpectations());
+
+    $unaccounted = array_values(array_diff(
+        $corpus,
+        $replayedHere,
+        array_keys(DDCT_REPLAYED_ELSEWHERE),
+    ));
+
+    $missingFile = array_values(array_diff(
+        [...$replayedHere, ...array_keys(DDCT_REPLAYED_ELSEWHERE)],
+        $corpus,
+    ));
+
+    expect($unaccounted)->toBe([], implode("\n  ", [
+        'These corpus fixtures are replayed by nothing this file knows about:',
+        ...$unaccounted,
+        '',
+        'A fixture nobody feeds to the evaluator is a scenario somebody wrote down and',
+        'no build ever runs. Add it to ddctFixtureExpectations() with the alert count it',
+        'must produce, or name in DDCT_REPLAYED_ELSEWHERE the guard that does replay it.',
+    ]));
+
+    expect($missingFile)->toBe([], implode("\n  ", [
+        'These names are expected here and the corpus no longer holds them:',
+        ...$missingFile,
+        '',
+        'A renamed or deleted fixture leaves a row in the dataset that requires a file',
+        'nothing writes, and the entry reads as coverage of a scenario that is gone.',
+    ]));
+});
+
+it('names a real guard for every fixture it hands off', function (): void {
+    foreach (DDCT_REPLAYED_ELSEWHERE as $fixture => $guard) {
+        expect(is_file(base_path($guard)))->toBeTrue(
+            $fixture.' is handed off to '.$guard.', which is not a file. A hand-off to a guard that does not '.
+            'exist is the same as no coverage, written so that it reads as coverage.'
+        );
+    }
+});

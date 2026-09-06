@@ -74,40 +74,116 @@ function labelInNameControls(string $source): array
     );
 }
 
-it('has every static visible label contained in its accessible name (WCAG 2.5.3)', function (): void {
+/**
+ * @return array{labelled: int, compared: int, offenders: list<string>} controls
+ *                                                                      carrying an accessible name, the statically-decidable pairs among them,
+ *                                                                      and the ones whose two labels disagree
+ */
+function labelInNameVerdict(string $source, string $label): array
+{
+    $labelled = 0;
+    $compared = 0;
     $offenders = [];
 
-    foreach (labelInNameBladeFiles() as $path) {
-        $source = (string) file_get_contents($path);
+    foreach (labelInNameControls($source) as $control) {
+        // WCAG 2.5.3 binds only where an accessible name has been given: a
+        // control with no aria-label already announces its own text.
+        $accessibleName = $control->attribute('aria-label');
 
-        foreach (labelInNameControls($source) as $control) {
-            $accessibleName = $control->attribute('aria-label');
+        if ($accessibleName === null || $control->inner === null) {
+            continue;
+        }
 
-            if ($accessibleName === null || $control->inner === null) {
-                continue;
-            }
+        $labelled++;
 
-            $visible = labelInNameVisibleText($control->inner);
+        $visible = labelInNameVisibleText($control->inner);
 
-            // Only statically-decidable pairs. An interpolated name or label
-            // depends on runtime values this check cannot resolve, and an
-            // element with no visible text has no label to disagree with.
-            if ($visible === '' || str_contains($visible, '{{') || str_contains($accessibleName, '{{')) {
-                continue;
-            }
+        // Only statically-decidable pairs. An interpolated name or label
+        // depends on runtime values this check cannot resolve, and an
+        // element with no visible text has no label to disagree with.
+        if ($visible === '' || str_contains($visible, '{{') || str_contains($accessibleName, '{{')) {
+            continue;
+        }
 
-            // A glyph is an icon, not a label — "×" is not a word a speech
-            // user would say. Only text with a letter or digit in it is a
-            // visible label for the purposes of this rule.
-            if (preg_match('~[\p{L}\p{N}]~u', $visible) !== 1) {
-                continue;
-            }
+        // A glyph is an icon, not a label — "×" is not a word a speech
+        // user would say. Only text with a letter or digit in it is a
+        // visible label for the purposes of this rule.
+        if (preg_match('~[\p{L}\p{N}]~u', $visible) !== 1) {
+            continue;
+        }
 
-            if (! str_contains(mb_strtolower($accessibleName), mb_strtolower($visible))) {
-                $offenders[] = sprintf('%s:%d — shows "%s", announces "%s"', $path, $control->line($source), $visible, $accessibleName);
-            }
+        $compared++;
+
+        if (! str_contains(mb_strtolower($accessibleName), mb_strtolower($visible))) {
+            $offenders[] = sprintf('%s:%d — shows "%s", announces "%s"', $label, $control->line($source), $visible, $accessibleName);
         }
     }
 
+    return ['labelled' => $labelled, 'compared' => $compared, 'offenders' => $offenders];
+}
+
+// Buttons and links, which is what MarkupSource is asked for. A `[role=button]`
+// div, a `<summary>` or an `input[type=submit]` carrying a value is the same
+// defect and is not covered here.
+//
+// The word doing the work is STATIC. Every user-facing string in this tree is
+// translated, so 93 of the 105 aria-labelled controls carry `{{ }}` on one side
+// or the other and are skipped by design: today the rule decides zero pairs and
+// can only fail on a hard-coded English pair somebody adds. The floors below
+// are on what the walk reached rather than on what it decided, because a floor
+// on the decided count would be a floor of zero.
+it('has every button and link\'s static visible label contained in its accessible name (WCAG 2.5.3)', function (): void {
+    $files = labelInNameBladeFiles();
+
+    expect(count($files))->toBeGreaterThan(100, 'the Blade walk read almost nothing — the roots are wrong, not the tree.');
+
+    $offenders = [];
+    $labelled = 0;
+
+    foreach ($files as $path) {
+        $verdict = labelInNameVerdict((string) file_get_contents($path), $path);
+
+        $labelled += $verdict['labelled'];
+        $offenders = [...$offenders, ...$verdict['offenders']];
+    }
+
+    // 105 today. A parser that stopped reading elements, or an attribute reader
+    // that stopped resolving aria-label, empties this while the offender list
+    // below stays every bit as empty as a clean tree's.
+    expect($labelled)->toBeGreaterThan(40, 'almost no control was read as carrying an aria-label at all — the markup reader is broken, not the templates.');
+
     expect($offenders)->toBe([], "Visible label text must be part of the accessible name. Offenders:\n  ".implode("\n  ", $offenders));
+});
+
+it('sees a name that hides its own visible label, and lets the four exempt shapes through', function (): void {
+    $planted = <<<'BLADE'
+        <button aria-label="Dismiss">Close</button>
+        <button aria-label="Save changes">Save</button>
+        <a href="/x" aria-label="Open the {{ $name }} report">Open</a>
+        <button aria-label="Close"><span aria-hidden="true">×</span></button>
+        <button aria-label="Remove"><span aria-hidden="true">Delete</span></button>
+        BLADE;
+
+    $verdict = labelInNameVerdict($planted, 'planted.blade.php');
+
+    expect($verdict['offenders'])->toHaveCount(
+        1,
+        'The reader must flag "shows Close, announces Dismiss" and nothing else: a contained '
+        .'label, an interpolated name, a glyph-only label and a label hidden from the reader '
+        .'are each outside this rule for a reason of their own.',
+    );
+
+    expect(str_contains($verdict['offenders'][0], 'shows "Close", announces "Dismiss"'))->toBeTrue(
+        'The reader flagged something, but not the pair whose two labels actually disagree.',
+    );
+
+    expect($verdict['compared'])->toBe(
+        2,
+        'The reader compared the wrong number of pairs: two of these five are statically decidable.',
+    );
+
+    expect($verdict['labelled'])->toBe(
+        5,
+        'The reader no longer sees every aria-labelled control, which is the count the real walk floors itself on.',
+    );
 });

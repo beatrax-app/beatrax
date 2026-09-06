@@ -65,7 +65,13 @@ function zuluStampsRenderedPastTheSeam(array $paths): array
 
 it('renders a Zulu stamp only through the seam that converts to UTC first', function (): void {
     $files = BackendSourceFiles::all();
-    expect($files)->not->toBeEmpty();
+
+    // Six thousand backend files stand behind the pin below. A run that read a
+    // handful would report the seam alone and look exactly like a clean tree.
+    expect(count($files))->toBeGreaterThan(
+        2_000,
+        'The walk read almost nothing, so the comparison below is about a tree nobody opened.',
+    );
 
     // Shrinks only. Each entry states why it renders the shape itself.
     $pinned = [
@@ -86,7 +92,14 @@ it('renders a Zulu stamp only through the seam that converts to UTC first', func
 it('sees a Zulu stamp rendered without a conversion, and passes the seam', function (): void {
     // Without this the walk above could match nothing at all and the guard
     // would report a clean tree it never read.
-    $planted = tempnam(sys_get_temp_dir(), 'zulu-plant').'.php';
+    //
+    // A scratch directory rather than tempnam(): tempnam CREATES the file it
+    // names, and appending `.php` names a second one, so every run left four
+    // empty seeds behind in the shared temp directory.
+    $scratch = sys_get_temp_dir().'/zulu-seam-'.bin2hex(random_bytes(6));
+    mkdir($scratch, 0o700, true);
+
+    $planted = $scratch.'/PlantedZuluWrites.php';
     file_put_contents($planted, <<<'PHP'
         <?php
         final class PlantedZuluWrites
@@ -98,7 +111,7 @@ it('sees a Zulu stamp rendered without a conversion, and passes the seam', funct
         }
         PHP);
 
-    $labelled = tempnam(sys_get_temp_dir(), 'zulu-gmdate').'.php';
+    $labelled = $scratch.'/PlantedGmdateWrites.php';
     file_put_contents($labelled, <<<'PHP'
         <?php
         final class PlantedGmdateWrites
@@ -110,7 +123,7 @@ it('sees a Zulu stamp rendered without a conversion, and passes the seam', funct
         }
         PHP);
 
-    $clean = tempnam(sys_get_temp_dir(), 'zulu-clean').'.php';
+    $clean = $scratch.'/PlantedCleanWrites.php';
     file_put_contents($clean, <<<'PHP'
         <?php
         final class PlantedCleanWrites
@@ -122,7 +135,7 @@ it('sees a Zulu stamp rendered without a conversion, and passes the seam', funct
         }
         PHP);
 
-    $unrelated = tempnam(sys_get_temp_dir(), 'zulu-other').'.php';
+    $unrelated = $scratch.'/PlantedUnrelatedWrites.php';
     file_put_contents($unrelated, <<<'PHP'
         <?php
         final class PlantedUnrelatedWrites
@@ -137,15 +150,21 @@ it('sees a Zulu stamp rendered without a conversion, and passes the seam', funct
     try {
         $found = zuluStampsRenderedPastTheSeam([$planted, $labelled, $clean, $unrelated]);
     } finally {
-        @unlink($planted);
-        @unlink($labelled);
-        @unlink($clean);
-        @unlink($unrelated);
+        foreach ([$planted, $labelled, $clean, $unrelated] as $path) {
+            unlink($path);
+        }
+
+        rmdir($scratch);
     }
 
     $names = array_map(static fn (string $path): string => basename($path), $found);
+    sort($names);
 
-    expect($names)->toHaveCount(2);
-    expect($names)->toContain(basename($planted));
-    expect($names)->toContain(basename($labelled));
+    $expected = [basename($planted), basename($labelled)];
+    sort($expected);
+
+    expect($names)->toBe($expected, implode("\n  ", [
+        'The reader has to see both a \\Z format written on an unconverted instant and a gmdate() that',
+        'stamps the same label, and see neither the seam call nor an unrelated format.',
+    ]));
 });

@@ -254,8 +254,8 @@ The **file** ceiling is the transport's 20 MB. `MAX_BYTES` refuses the body,
 `upload_max_filesize` in the two shells' `php.ini` patches decides whether the
 request arrives at all. None of them can see the others, so
 `EncodedUploadTransportTest` reads them together and fails on a drift, and
-`TheUploadCeilingIsOneNumberArchTest` holds the client against the iOS patch by
-itself: a client ceiling above the server's admits a pick that allocates ~3.7×
+`TheUploadCeilingIsOneNumberArchTest` holds the client against both shells'
+patches: a client ceiling above the server's admits a pick that allocates ~3.7×
 the file in the content process and takes the WebView down with no crash report
 at all.
 

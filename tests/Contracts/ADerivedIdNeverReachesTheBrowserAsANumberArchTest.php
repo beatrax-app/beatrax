@@ -98,6 +98,23 @@ function bareIdArgumentsIn(string $module): array
     return $offenders;
 }
 
+/**
+ * Adds to, and reads back, how many argument expressions the two readers below
+ * reached, before either decided whether one carries an id. Counted inside them
+ * rather than by a second pass over the same patterns: a denominator that
+ * re-implements the reading says nothing about whether the reading ran.
+ */
+function bareIdCandidatesRead(?int $add = null): int
+{
+    static $total = 0;
+
+    if ($add !== null) {
+        $total += $add;
+    }
+
+    return $total;
+}
+
 // The first way an id reaches a wire attribute: echoed straight into it, and
 // sitting bare between one delimiter and the next.
 /** @return list<string> */
@@ -122,6 +139,8 @@ function bareIdEchoesOn(string $line): array
         $expressions = [...$expressions, ...$inner[1]];
     }
 
+    bareIdCandidatesRead(count($expressions));
+
     return array_values(array_filter($expressions, idBearingExpression(...)));
 }
 
@@ -136,6 +155,8 @@ function bareIdConcatenationsOn(string $line): array
 {
     $found = PatternScan::all('/\(\'\s*\.(.+?)\.\s*\'\)/', $line);
 
+    bareIdCandidatesRead(count($found[1]));
+
     return array_values(array_filter(array_map(trim(...), $found[1]), idBearingExpression(...)));
 }
 
@@ -147,6 +168,9 @@ function bareIdConcatenationsOn(string $line): array
 // mutations among them.
 function idBearingExpression(string $expression): bool
 {
+    // Js::from is the quoting this rule asks for, spelled as a helper rather
+    // than as a pair of quotes: it emits a JSON string literal, so the browser
+    // never sees a number to round.
     if (str_contains($expression, 'Js::from')) {
         return false;
     }
@@ -177,7 +201,39 @@ it('never lets a blade write a derived id as a bare number', function (): void {
         }
     }
 
+    // Twenty-one argument expressions stand in these attributes today. A run
+    // that reached none of them found nothing because it stopped, not because
+    // every id is quoted.
+    expect(bareIdCandidatesRead())->toBeGreaterThan(
+        10,
+        'The walk reached '.bareIdCandidatesRead().' argument expressions, so the two readers stopped matching '
+        .'rather than the tree being clean.',
+    );
+
     expect($offenders)->toBe([], implode("\n  ", ['Ids must cross to the browser as strings:', ...$offenders]));
+});
+
+// The two readers and the id test are the whole of the verdict, so each is
+// driven over the shape it has to catch and the quoting that takes it away.
+it('sees an id passed bare in either shape, and leaves a quoted one alone', function (): void {
+    $echoed = '<button wire:click="approve({{ $link->id }})">yes</button>';
+    $quoted = '<button wire:click="approve(\'{{ $link->id }}\')">yes</button>';
+    $dispatched = '<button x-on:click="$dispatch(\'open\', { id: {{ $row[\'id\'] }} })">open</button>';
+    $cast = '<button wire:click="approve({{ (int) $entry->id }})">yes</button>';
+    $amount = '<button wire:click="approve({{ $row->amount_minor }})">yes</button>';
+    $handedOn = '<x-core::confirm-strip :action="\'reject(\'.$link->id.\')\'" />';
+    $handedOnQuoted = '<x-core::confirm-strip :action="\'reject(\\\'\'.$link->id.\'\\\')\'" />';
+
+    expect(bareIdEchoesOn($echoed))->toBe(['$link->id'], 'An id echoed bare into a wire action went unread.');
+    expect(bareIdEchoesOn($quoted))->toBe([], 'A quoted id is what this rule asks for, and it was reported.');
+    expect(bareIdEchoesOn($dispatched))->toBe(['$row[\'id\']'], 'An id in a $dispatch object literal went unread.');
+    expect(bareIdEchoesOn($cast))->toBe(['(int) $entry->id'], 'A cast is a wrapper, not a different value, and it went unread.');
+    expect(bareIdEchoesOn($amount))->toBe([], 'A value that is not an id was reported as one.');
+
+    expect(bareIdConcatenationsOn($handedOn))->toBe(['$link->id'], 'An id concatenated into an action string went unread.');
+    expect(bareIdConcatenationsOn($handedOnQuoted))->toBe([], 'A quoted concatenation is what this rule asks for, and it was reported.');
+
+    expect(idBearingExpression('Js::from($link->id)'))->toBeFalse('Js::from emits a JSON string, so it is the quoting and not the defect.');
 });
 
 it('reads an id back whichever way the wire delivered it', function (): void {

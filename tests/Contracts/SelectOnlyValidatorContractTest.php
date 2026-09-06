@@ -21,3 +21,19 @@ it('contract — rejects every non-SELECT first-token variant', function (string
     'semicolon-stack' => ['SELECT 1; INSERT INTO t VALUES (1)'],
     'comment-only-prefix' => ['/* SELECT */ INSERT INTO t VALUES (1)'],
 ]);
+
+// The other half of the pin. A validator that rejected everything would satisfy
+// the cases above without the tokenizer working at all, and the panel it guards
+// would answer every query with a refusal nobody could act on.
+it('contract — admits the reads the panel exists for', function (string $sql): void {
+    expect(fn () => (new SelectOnlyValidator)->validate($sql))
+        ->not->toThrow(ValidationException::class);
+})->with([
+    'plain' => ['SELECT 1'],
+    'leading-whitespace' => ["\n  SELECT id FROM transactions LIMIT 1"],
+    'lowercase' => ['select id from transactions'],
+    'block-comment-prefix' => ['/* a note */ SELECT 1'],
+    'WITH-read' => ['WITH x AS (SELECT 1) SELECT * FROM x'],
+    'trailing-semicolon' => ['SELECT 1;'],
+    'semicolon-in-a-literal' => ["SELECT id FROM transactions WHERE counterparty_name = 'a; b'"],
+]);

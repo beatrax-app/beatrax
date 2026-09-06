@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use Modules\Core\Public\Support\BladePhpSource;
 
 /**
@@ -410,7 +411,9 @@ function boundedReadSourceFiles(): array
 
 // Symlinks are skipped because mobile-app/ is a second Composer root whose
 // Modules/ and app/ point back here: resolving them reports every shared file
-// a second time under a second spelling.
+// a second time under a second spelling. Migrations, Seeders and tests are
+// skipped because each writes rows rather than reading them for a screen: a
+// seeder reading its own table whole is the shape those files exist to have.
 /**
  * @return list<string>
  */
@@ -479,7 +482,70 @@ it('sees a chain that reads a growing table whole', function (): void {
     PHP;
 
     expect(boundedReadScan($source))->toHaveCount(1)
-        ->and(boundedReadScan($source)[0]['table'])->toBe('transactions');
+        ->and(boundedReadScan($source)[0]['table'])->toBe('transactions', 'the reader must name the table the chain opened on');
+});
+
+// Every verdict below is read off one walk, and a walk that opened nothing
+// answers "no unbounded read" in the same words a bounded tree does.
+it('walks the tree it is about to read four verdicts off', function (): void {
+    expect(count(boundedReadSourceFiles()))->toBeGreaterThan(
+        2_000,
+        'The walk read almost none of Modules/ and app/, so every verdict in this file is about a tree nobody opened.',
+    );
+
+    expect(array_sum(boundedReadCountsByKey()))->toBeGreaterThan(
+        20,
+        'The scanner found almost no whole-table read on a growing table. There are dozens; a count this '
+        .'low means the token walk stopped rather than that the tree stopped reading.',
+    );
+});
+
+// The Eloquent half of the subject is a hand-written map, and a hand-written map
+// cannot see a model somebody adds tomorrow. Every growing table whose model
+// exists has to be in it, or `Model::query()->get()` on that table is invisible
+// while the table-name half of the same rule reports the raw builder form.
+it('maps every growing table that has a model of its own', function (): void {
+    $models = [];
+
+    foreach (glob(base_path('Modules/*/Models/*.php')) ?: [] as $path) {
+        $name = basename($path, '.php');
+        $models[Str::snake(Str::plural($name))] = $name;
+    }
+
+    expect(count($models))->toBeGreaterThan(
+        20,
+        'Almost no Eloquent model was found, so the comparison below is about a tree nobody read.',
+    );
+
+    $unmapped = [];
+
+    foreach (BOUNDED_READ_GROWING_TABLES as $table) {
+        if (isset($models[$table]) && ! isset(BOUNDED_READ_GROWING_MODELS[$models[$table]])) {
+            $unmapped[] = $models[$table].' => \''.$table.'\'';
+        }
+    }
+
+    sort($unmapped);
+
+    expect($unmapped)->toBe([], implode("\n  ", [
+        'These growing tables have an Eloquent model and no entry in BOUNDED_READ_GROWING_MODELS, so a',
+        'Model::query()->get() on them reads the whole table and this rule cannot see it — while the raw',
+        'builder spelling of the identical read is reported. Add the entry:',
+        ...$unmapped,
+    ]));
+
+    $stale = array_values(array_diff(array_keys(BOUNDED_READ_GROWING_MODELS), array_values($models)));
+
+    expect($stale)->toBe([], implode("\n  ", [
+        'These models are mapped and no longer exist under any module\'s Models/ directory, so the entry',
+        'names a spelling nothing can write. Delete it:',
+        ...$stale,
+    ]));
+
+    expect(array_values(array_diff(BOUNDED_READ_GROWING_MODELS, BOUNDED_READ_GROWING_TABLES)))->toBe([], implode("\n  ", [
+        'These models are mapped to a table the growing list does not name, so the entry widens the',
+        'subject of this rule without saying so.',
+    ]));
 });
 
 it('sees the Eloquent spelling of the same read', function (): void {
@@ -527,7 +593,13 @@ it('admits no unbounded read on a growing table outside the allow-list', functio
         }
     }
 
-    expect($offenders)->toBe([]);
+    expect($offenders)->toBe([], implode("\n  ", [
+        'These read a table that grows with use, whole, on a phone inside a 128 MB ceiling. An exhausted',
+        'heap is E_ERROR: no exception to catch, no log line and no retry. Bound the read — limit(),',
+        'a keyset cursor, chunkById() or lazy() — or, where the read genuinely is bounded by something',
+        'real, add it to BOUNDED_READ_ALLOWED with the count and the reason:',
+        ...$offenders,
+    ]));
 });
 
 it('carries no allow-list entry that has stopped matching', function (): void {
@@ -542,7 +614,12 @@ it('carries no allow-list entry that has stopped matching', function (): void {
         }
     }
 
-    expect($stale)->toBe([]);
+    expect($stale)->toBe([], implode("\n  ", [
+        'An entry admits a fixed number of reads, in both directions: a read added to an allowed file',
+        'pushes the count past its entry, and a read that went away leaves the entry excusing something',
+        'that is not there. Update the count, or delete the entry:',
+        ...$stale,
+    ]));
 });
 
 // The entries that are not bounded by anything are a baseline, not a licence:
@@ -554,7 +631,13 @@ it('does not let the known-unbounded baseline grow', function (): void {
         static fn (array $entry): bool => str_contains($entry['why'], 'KNOWN UNBOUNDED'),
     ));
 
-    expect($known)->toHaveCount(8);
+    expect(count($known))->toBe(
+        8,
+        'The known-unbounded baseline is a ratchet: eight reads on this tree are bounded by nothing but '
+        .'how much history the reader has, each costed in reads-bounded-by-the-user.md. The count may '
+        .'fall — delete a line here when one is fixed. It may not rise: a ninth is a new way for the '
+        ."app to die on a five-year ledger.\n  ".implode("\n  ", $known),
+    );
 });
 
 it('gives every allow-list entry a reason somebody can act on', function (): void {
@@ -566,5 +649,10 @@ it('gives every allow-list entry a reason somebody can act on', function (): voi
         }
     }
 
-    expect($thin)->toBe([]);
+    expect($thin)->toBe([], implode("\n  ", [
+        'An allow-list entry is a claim under review, and a claim nobody can act on is a waiver. Say what',
+        'bounds the read — a predicate, a window, a count somebody can picture — or say KNOWN UNBOUNDED',
+        'and add it to the baseline. Too thin to act on:',
+        ...$thin,
+    ]));
 });

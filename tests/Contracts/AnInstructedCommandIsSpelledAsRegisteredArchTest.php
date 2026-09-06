@@ -10,6 +10,16 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md
  */
 
+// The two files that must write a miscased command name: one asserts the Dev
+// Console refuses one, the other is this rule's own control. Pinned to the
+// TOKEN rather than to the file — the rest of both files is held to the rule
+// like anything else, where a whole-file skip would have let a second miscasing
+// ride in on the first one's exemption.
+const INSTRUCTED_COMMAND_DELIBERATE_MISCASINGS = [
+    'Modules/DevMode/tests/Feature/CommandRegistryTest.php' => ['Beatrax:doctor'],
+    'tests/Contracts/AnInstructedCommandIsSpelledAsRegisteredArchTest.php' => ['Beatrax:doctor', 'DB:Backup'],
+];
+
 /**
  * Every command name the artisan application answers to, exactly as registered.
  *
@@ -59,7 +69,7 @@ function instructedCommandFilesUnder(string $root, array $extensions): array
     $files = [];
     /** @var SplFileInfo $file */
     foreach (new RecursiveIteratorIterator($pruned) as $file) {
-        if (! $file->isFile() || $file->getFilename() === basename(__FILE__)) {
+        if (! $file->isFile()) {
             continue;
         }
         foreach ($extensions as $extension) {
@@ -89,10 +99,10 @@ function instructedCommandSources(): array
         $files = array_merge($files, instructedCommandFilesUnder($langRoot, ['.php']));
     }
 
+    // Every root page. The self-skip that used to stand here compared a .md
+    // name with this file's own .php one and could never match.
     foreach (glob(base_path('*.md')) ?: [] as $page) {
-        if (basename($page) !== basename(__FILE__)) {
-            $files[] = $page;
-        }
+        $files[] = $page;
     }
 
     sort($files);
@@ -170,8 +180,8 @@ it('instructs no artisan command the application does not register', function ()
     $registered = instructedCommandRegisteredNames();
     $sources = instructedCommandSources();
 
-    expect($registered)->not->toBe([]);
-    expect($sources)->not->toBe([]);
+    expect($registered)->not->toBe([], 'The artisan application registered no command at all, so every instruction would read as correct.');
+    expect($sources)->not->toBe([], 'No documentation page or lang file was read, so an empty offender list says nothing.');
 
     $offenders = [];
 
@@ -210,21 +220,22 @@ it('writes a registered command name in the case it is registered under, everywh
         instructedCommandFilesUnder(base_path('tests'), ['.php']),
     );
 
-    expect($files)->not->toBe([]);
-
-    // The one file that must write a miscased name: it asserts the Dev Console
-    // refuses one.
-    $deliberate = base_path('Modules/DevMode/tests/Feature/CommandRegistryTest.php');
+    expect($files)->not->toBe([], 'No file was read at all, so an empty offender list means the walk stopped rather than the tree being clean.');
 
     $offenders = [];
+    $pinned = [];
 
     foreach ($files as $path) {
-        if ($path === $deliberate) {
-            continue;
-        }
         $label = str_replace(base_path().'/', '', $path);
+        $deliberate = INSTRUCTED_COMMAND_DELIBERATE_MISCASINGS[$label] ?? [];
 
         foreach (instructedCommandMiscasings((string) file_get_contents($path), $folded) as [$line, $token, $registered]) {
+            if (in_array($token, $deliberate, true)) {
+                $pinned[$label][$token] = true;
+
+                continue;
+            }
+
             $offenders[] = $label.':'.$line.'  '.$token.' is registered as '.$registered;
         }
     }
@@ -236,6 +247,30 @@ it('writes a registered command name in the case it is registered under, everywh
             'exemption is what let a brand sweep capitalise the command token itself. Offenders:'],
         $offenders,
     )));
+
+    $reached = [];
+
+    foreach ($pinned as $label => $tokens) {
+        foreach (array_keys($tokens) as $token) {
+            $reached[] = $label.' — '.$token;
+        }
+    }
+
+    $granted = [];
+
+    foreach (INSTRUCTED_COMMAND_DELIBERATE_MISCASINGS as $label => $tokens) {
+        foreach ($tokens as $token) {
+            $granted[] = $label.' — '.$token;
+        }
+    }
+
+    sort($reached);
+    sort($granted);
+
+    // A pinned token nothing writes any more excuses nothing, and would sit
+    // here excusing whatever came to be written under that spelling later.
+    expect($reached)->toBe($granted, 'A deliberately miscased token is no longer written where it was pinned: '
+        .implode(', ', array_diff($granted, $reached)).'. Delete the entry, or restore what earned it.');
 });
 
 it('offers no Dev Console command the application does not register', function (): void {
@@ -271,7 +306,8 @@ it('reads an invocation only where one is written, and only for this composer ro
         [1, 'beatrax:doctor'],
         [2, 'db:backup'],
         [3, 'Beatrax:doctor'],
-    ]);
+    ], 'An invocation is read where one is written — prose naming the runner is not one, a placeholder names no command, '
+        .'and past a `cd mobile-app` the instruction is for a different artisan application.');
 });
 
 it('reads a miscasing only where the name is a real command', function (): void {
@@ -287,5 +323,6 @@ it('reads a miscasing only where the name is a real command', function (): void 
     expect(instructedCommandMiscasings($sample, $folded))->toBe([
         [1, 'Beatrax:doctor', 'beatrax:doctor'],
         [4, 'DB:Backup', 'db:backup'],
-    ]);
+    ], 'Only a case-fold hit counts: a token matching no registered name is not a claim about a command at all, '
+        .'and a correctly-cased one is what the rule asks for.');
 });

@@ -45,6 +45,33 @@ function sirWorkflowDirectory(): string
 }
 
 /**
+ * Whether a workflow belongs to the release pipeline. Comments come off first:
+ * ci.yml names native:build in one explaining which PHP the release runs on,
+ * and it signs nothing. Named and taking a source string so the control below
+ * drives the same reader the walk drives.
+ */
+function sirIsPipelineWorkflow(string $source): bool
+{
+    return PatternScan::matches(SIR_PIPELINE_MARKS, PatternScan::replace('/^\s*#.*$/m', '', $source));
+}
+
+/** @return list<string> every workflow file, in either spelling of the extension */
+function sirWorkflowFiles(): array
+{
+    $files = [];
+
+    foreach (['/*.yml', '/*.yaml'] as $pattern) {
+        foreach ((array) glob(sirWorkflowDirectory().$pattern) as $file) {
+            $files[] = (string) $file;
+        }
+    }
+
+    sort($files);
+
+    return $files;
+}
+
+/**
  * Every `secrets.*` and `vars.*` name the release-pipeline workflows read.
  *
  * @return list<string>
@@ -53,12 +80,10 @@ function sirCredentialsThePipelineReads(): array
 {
     $names = [];
 
-    foreach ((array) glob(sirWorkflowDirectory().'/*.yml') as $file) {
-        $source = (string) file_get_contents((string) $file);
+    foreach (sirWorkflowFiles() as $file) {
+        $source = (string) file_get_contents($file);
 
-        // ci.yml names native:build in a comment explaining which PHP the
-        // release runs on, and it signs nothing.
-        if (! PatternScan::matches(SIR_PIPELINE_MARKS, PatternScan::replace('/^\s*#.*$/m', '', $source))) {
+        if (! sirIsPipelineWorkflow($source)) {
             continue;
         }
 
@@ -141,6 +166,14 @@ function sirRecordedCredentials(): array
 }
 
 it('finds a register and a pipeline to compare it against', function (): void {
+    // Fifteen workflows sit under .github/workflows today. A glob that came
+    // back short would report the credentials it never opened as unrecorded,
+    // or — reading none of them — as none at all.
+    expect(count(sirWorkflowFiles()))->toBeGreaterThan(
+        5,
+        'Almost no workflow file was found, so the pipeline half of this comparison is missing.'
+    );
+
     expect(sirDocsDirectory())->not->toBe('', '.docs was not found from either composer root')
         ->and(sirWorkflowDirectory())->not->toBe('', '.github/workflows was not found from either composer root')
         ->and(sirRegisterRows())->not->toBe([], SIR_REGISTER.' has no rows this guard can read.')
@@ -256,4 +289,29 @@ it('is the only page in the tree carrying these dates', function (): void {
         'other page links to it -- a date written twice is a date that will be',
         'renewed in one place.',
     ]));
+});
+
+// The pipeline detector is where the whole comparison gets its subject, and one
+// that matched nothing would report the register as claiming credentials no
+// workflow reads — every row at once, which reads as a broken register rather
+// than as a broken guard.
+it('reads a signing workflow, and not a comment naming one', function (): void {
+    $signs = <<<'YAML'
+        jobs:
+          release:
+            steps:
+              - run: php artisan native:build
+              - uses: softprops/action-gh-release@v2
+        YAML;
+
+    $mentionsOnly = <<<'YAML'
+        jobs:
+          test:
+            # The release runs native:build on this same PHP, so pin it here too.
+            steps:
+              - run: vendor/bin/pest
+        YAML;
+
+    expect(sirIsPipelineWorkflow($signs))->toBeTrue();
+    expect(sirIsPipelineWorkflow($mentionsOnly))->toBeFalse();
 });

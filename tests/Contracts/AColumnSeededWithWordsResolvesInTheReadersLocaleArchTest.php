@@ -169,17 +169,27 @@ function seededWordingResolves(string $key): bool
 
 it('names every seeder that writes display wording into a column a screen reads back', function (): void {
     $files = seededWordingFiles();
-    expect($files)->not->toBe([]);
+
+    // Far under the seeders and data migrations this tree holds. A glob that
+    // answered nothing reports no unaccounted seeder, which is the answer a
+    // fully-registered tree gives too.
+    expect(count($files))->toBeGreaterThan(
+        50,
+        'The glob found '.count($files).' seeders and data migrations, which is too few to have read Modules/ at all.',
+    );
 
     $pattern = "/'(".implode('|', SEEDED_WORDING_KEYS).")'\s*=>\s*'[^']*\p{L}[^']*'/u";
 
     $unaccounted = [];
+    $reached = [];
     foreach ($files as $file) {
         $source = (string) file_get_contents(base_path($file));
         if (PatternScan::all($pattern, $source)[0] === []) {
             continue;
         }
         if (array_key_exists($file, SEEDED_WORDING_SOURCES) || array_key_exists($file, SEEDED_WORDING_PINS)) {
+            $reached[] = $file;
+
             continue;
         }
 
@@ -192,6 +202,19 @@ it('names every seeder that writes display wording into a column a screen reads 
         'SeededDisplayName, then add it to SEEDED_WORDING_SOURCES — or, if the wording is a',
         'proper noun that reads the same in every language, pin it with the reason:',
         '  '.implode("\n  ", $unaccounted),
+    ]));
+
+    // An entry the walk no longer reaches excuses nothing, and it reads as a
+    // resolution somebody put behind a column that has since stopped being
+    // seeded at all. Both registries are held to it.
+    $declared = [...array_keys(SEEDED_WORDING_SOURCES), ...array_keys(SEEDED_WORDING_PINS)];
+    sort($declared);
+    sort($reached);
+
+    expect($reached)->toBe($declared, implode("\n", [
+        'A file registered here no longer seeds display wording under any of these keys, so the entry',
+        'excuses nothing and the next reader will take it for a decision about the tree. Delete it:',
+        '  '.implode("\n  ", array_values(array_diff($declared, $reached))),
     ]));
 });
 
@@ -214,7 +237,7 @@ it('resolves every default category slug in English and Dutch', function (): voi
 
     /** @var list<string> $slugs */
     $slugs = array_values(array_unique(PatternScan::all("/'slug'\s*=>\s*'([a-z0-9\-]+)'/", $source)[1]));
-    expect($slugs)->not->toBe([]);
+    expect($slugs)->not->toBe([], 'The default category seeder declares no slug at all, so this rule resolves nothing.');
 
     $missing = array_values(array_filter(
         $slugs,
@@ -327,7 +350,10 @@ it('resolves every key a lang-backed corpus tree uses, in English and Dutch', fu
         $checked++;
     }
 
-    expect($checked)->toBeGreaterThan(0);
+    expect($checked)->toBeGreaterThan(
+        0,
+        'No tree is classified as resolving through a lang group, so this rule compared nothing.',
+    );
 });
 
 // Prose that stays in the provider's language is only an answer while the
@@ -341,7 +367,7 @@ it('names a shipped locale on every file whose prose stays the provider\'s', fun
         }
 
         $files = glob(base_path('resources/corpus/'.$tree.'/*.yaml')) ?: [];
-        expect($files)->not->toBe([]);
+        expect($files)->not->toBe([], $tree.' declares its prose stays the provider\'s and ships no corpus file to check.');
 
         foreach ($files as $path) {
             /** @var array<array-key, mixed> $parsed */
@@ -377,7 +403,7 @@ it('names a shipped locale on every file whose prose stays the provider\'s', fun
 // on; Dutch because it is the second locale the product ships.
 it('carries English and Dutch wording for every bundled corpus entry', function (): void {
     $corpora = seededWordingCorporaResolving(CORPUS_IN_CORPUS);
-    expect($corpora)->not->toBe([]);
+    expect($corpora)->not->toBe([], 'No corpus tree carries its own wording any more, so this rule reads nothing.');
 
     $entries = 0;
     $gaps = [];
@@ -402,6 +428,9 @@ it('carries English and Dutch wording for every bundled corpus entry', function 
         }
     }
 
-    expect($entries)->toBeGreaterThan(300);
+    expect($entries)->toBeGreaterThan(
+        300,
+        'The walk read '.$entries.' corpus entries, which is too few to be the bundled tax corpus.',
+    );
     expect($gaps)->toBe([], "corpus entries a reader outside the jurisdiction cannot read:\n  ".implode("\n  ", $gaps));
 });

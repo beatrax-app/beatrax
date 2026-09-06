@@ -63,16 +63,29 @@ it('names no first-party symbol a comment claims but no class has', function ():
     $classes = FirstPartySymbols::classes();
     $files = BackendSourceFiles::all();
 
-    expect($classes)->not->toBe([]);
-    expect($files)->not->toBe([]);
+    // Both denominators, read before any verdict: a vocabulary that came back
+    // short answers "not first-party, skip" to every mention, and a walk that
+    // opened nothing reports a clean tree. The floors sit well under the ~2,100
+    // class-declaring files and the ~6,400 backend files on this tree today.
+    expect(count($classes))->toBeGreaterThan(
+        800,
+        'Almost no first-party class was found, so every mention below would be skipped as foreign.'
+    );
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'The backend walk opened almost nothing, so no comment was read at all.'
+    );
 
     $hits = [];
+    $mentions = 0;
 
     foreach ($files as $path) {
         $label = str_replace(base_path().'/', '', $path);
 
         foreach (commentSymbolsLines(BladePhpSource::forPath($path, (string) file_get_contents($path))) as $number => $line) {
             foreach (commentSymbolsMentions($line) as [$class, $member]) {
+                $mentions++;
+
                 if (! isset($classes[$class]) || FirstPartySymbols::hasMember($classes[$class], $member)) {
                     continue;
                 }
@@ -81,6 +94,11 @@ it('names no first-party symbol a comment claims but no class has', function ():
             }
         }
     }
+
+    expect($mentions)->toBeGreaterThan(
+        100,
+        'No comment named a Class::member at all, so the mention reader has stopped matching.'
+    );
 
     expect($hits)->toBe([], "A comment names a method, constant, property or case that its class does not have. A comment pointing at a renamed or deleted member reads exactly like one pointing at a member that ships, and it is read as an instruction: the next person keeps a redundant read because the comment says something else guards it. Only first-party classes are checked; a `PREFIX_*` wildcard and a class name this repo does not define are both skipped. Offenders:\n  ".implode("\n  ", $hits));
 });

@@ -46,30 +46,51 @@ it('gives every page a title of its own, not the bare app name', function (strin
 
 // The shape that broke it: layouts.app yields, so a page that names it in the
 // attribute renders into a slot the layout does not have.
+function pageRouteLayoutAttributeIn(string $source): bool
+{
+    return str_contains($source, "#[Layout('layouts.app')]");
+}
+
 it('never points the Layout attribute at the yield-based app layout', function (): void {
     $offenders = [];
+    $walked = 0;
 
-    /** @var iterable<SplFileInfo> $files */
-    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules')));
-
-    foreach ($files as $file) {
-        if (! $file->isFile() || $file->getExtension() !== 'php') {
+    foreach (['Modules', 'app'] as $root) {
+        if (! is_dir(base_path($root))) {
             continue;
         }
 
-        if (! str_contains($file->getPathname(), '/Http/Livewire/')) {
-            continue;
-        }
+        /** @var iterable<SplFileInfo> $files */
+        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path($root)));
 
-        $source = (string) file_get_contents($file->getPathname());
+        foreach ($files as $file) {
+            if (! $file->isFile() || $file->getExtension() !== 'php') {
+                continue;
+            }
 
-        if (str_contains($source, "#[Layout('layouts.app')]")) {
-            $offenders[] = str_replace(base_path().'/', '', $file->getPathname());
+            if (! str_contains($file->getPathname(), '/Http/Livewire/')) {
+                continue;
+            }
+
+            $walked++;
+
+            if (pageRouteLayoutAttributeIn((string) file_get_contents($file->getPathname()))) {
+                $offenders[] = str_replace(base_path().'/', '', $file->getPathname());
+            }
         }
     }
+
+    expect($walked)->toBeGreaterThan(80, 'The component walk found almost nothing, so a clean answer below is the walk being broken rather than the components being right.');
 
     expect($offenders)->toBe([], sprintf(
         "layouts.app is a @yield layout — extend it at render time instead:\n  - %s",
         implode("\n  - ", $offenders),
     ));
+});
+
+it('reads the attribute that broke it and leaves a component layout alone', function (): void {
+    expect(pageRouteLayoutAttributeIn("#[Layout('layouts.app')]\nfinal class Whatever"))->toBeTrue('The reader stopped seeing the attribute this rule exists to forbid.')
+        // The near miss: a namespaced component layout is a slot-based layout
+        // and is exactly what a page is supposed to name.
+        ->and(pageRouteLayoutAttributeIn("#[Layout('core::layouts.app')]\nfinal class Whatever"))->toBeFalse('A component layout is being reported as the yield-based one.');
 });

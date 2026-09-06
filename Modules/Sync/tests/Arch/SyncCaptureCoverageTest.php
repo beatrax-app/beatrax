@@ -118,7 +118,13 @@ it('does not capture a table the merge registry cannot merge', function (): void
 
     // The reverse gap: ops the peer has no rules for are quarantined on
     // arrival, so capture and merge have to agree in both directions.
-    expect(array_values(array_diff(CaptureSites::tables(), $syncable)))->toBe([]);
+    $unmergeable = array_values(array_diff(CaptureSites::tables(), $syncable));
+
+    expect($unmergeable)->toBe([], sprintf(
+        'These are written to the op log and the merge registry has no rules for them, so the peer '
+        ."quarantines every op naming one and the edit is lost in silence:\n  - %s",
+        implode("\n  - ", $unmergeable),
+    ));
 });
 
 it('never captures a table that is meant to stay on the device', function (): void {
@@ -156,32 +162,71 @@ it('keeps every excuse pointing at a real syncable table', function (): void {
     $syncable = array_keys(app(MergeRulesRegistry::class)->rules());
     $excused = array_merge(snapshotOnlyTables(), deviceLocalTables(), referenceDataTables(), uncapturedBacklog());
 
-    expect(array_values(array_diff($excused, $syncable)))->toBe([]);
+    $stale = array_values(array_diff($excused, $syncable));
+
+    expect($stale)->toBe([], sprintf(
+        'These are excused from capture and the merge registry no longer has rules for them at all. The '
+        ."excuse now covers nothing, and reads as a decision somebody made:\n  - %s",
+        implode("\n  - ", $stale),
+    ));
 });
 
 // The reference-data excuse only holds while nothing writes these at runtime.
 // A user-facing writer would make them per-device data that silently diverges.
+/** @return string the shape of a runtime write to $table, in either quoting a call site can use */
+function referenceDataWritePattern(string $table): string
+{
+    return '/table\\([\'"]'.$table.'[\'"]\\)\\s*->\\s*(insert|update|delete|upsert)/';
+}
+
+// app/ as well as Modules/: a walk over one root made the other structurally
+// invisible once before, and the writer it could not see was a console command
+// deleting from two travelling tables. Those two are what RepoTree calls the
+// runtime domain -- nothing under routes, config or database writes at runtime.
+/** @return list<string> absolute paths that could hold a runtime write */
+function referenceDataRuntimeSources(): array
+{
+    $paths = [];
+
+    foreach (['Modules', 'app'] as $root) {
+        /** @var iterable<SplFileInfo> $files */
+        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path($root)));
+
+        foreach ($files as $file) {
+            $path = $file->getPathname();
+
+            if (! $file->isFile() || $file->getExtension() !== 'php') {
+                continue;
+            }
+
+            // Migrations and seeders are how reference data is meant to arrive.
+            if (preg_match('#/(tests|Database/Migrations|Database/Seeders)/#', $path) === 1) {
+                continue;
+            }
+
+            $paths[] = $path;
+        }
+    }
+
+    return $paths;
+}
+
 it('keeps reference data free of any runtime writer', function (string $table): void {
+    $sources = referenceDataRuntimeSources();
+
+    // Counted first: a walk that reached nothing reports the same empty writer
+    // list a table with no runtime writer reports.
+    expect(count($sources))->toBeGreaterThan(
+        4000,
+        'The walk over Modules and app reached '.count($sources).' files, which is too few to have read the '
+        .'runtime tree. A writer could sit in any of the files it never opened.'
+    );
+
+    $pattern = referenceDataWritePattern($table);
     $writers = [];
 
-    /** @var iterable<SplFileInfo> $files */
-    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules')));
-
-    foreach ($files as $file) {
-        $path = $file->getPathname();
-
-        if (! $file->isFile() || $file->getExtension() !== 'php') {
-            continue;
-        }
-
-        // Migrations and seeders are how reference data is meant to arrive.
-        if (preg_match('#/(tests|Database/Migrations|Database/Seeders)/#', $path) === 1) {
-            continue;
-        }
-
-        $source = (string) file_get_contents($path);
-
-        if (preg_match("/table\('{$table}'\)\s*->\s*(insert|update|delete|upsert)/", $source) === 1) {
+    foreach ($sources as $path) {
+        if (PatternScan::matches($pattern, (string) file_get_contents($path))) {
             $writers[] = str_replace(base_path().'/', '', $path);
         }
     }
@@ -192,3 +237,29 @@ it('keeps reference data free of any runtime writer', function (string $table): 
         implode("\n  - ", $writers),
     ));
 })->with(['categories']);
+
+it('reads a runtime write to reference data in either quoting, and a read as neither', function (): void {
+    $pattern = referenceDataWritePattern('categories');
+
+    $writes = [
+        "\$db->table('categories')->insert(\$rows);",
+        '$db->table("categories")->update($values);',
+        "\$db->table('categories')  ->  delete();",
+        "\$db->table('categories')->upsert(\$rows, ['id']);",
+    ];
+
+    foreach ($writes as $write) {
+        expect(PatternScan::matches($pattern, $write))
+            ->toBeTrue('the guard read past `'.$write.'`, so it would read past the real one');
+    }
+
+    $reads = [
+        "\$db->table('categories')->get();",
+        "\$db->table('category_rules')->insert(\$rows);",
+    ];
+
+    foreach ($reads as $read) {
+        expect(PatternScan::matches($pattern, $read))
+            ->toBeFalse('the guard reported `'.$read.'` as a runtime write, which makes its list unreadable');
+    }
+});

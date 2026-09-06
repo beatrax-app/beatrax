@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * @link ../../.docs/conventions/00-index.md
@@ -588,12 +589,12 @@ function commentPolicyTestFiles(): array
 // Standards names share the LETTERS-DIGITS shape a requirement id has, and a
 // test that proves something about SHA-256 has to be allowed to say so. R-7 is
 // the quantile definition, not a requirement, and API-28 is an Android platform
-// level rather than a row in a spec.
+// level rather than a row in a spec. Every name here is one the walks below
+// actually meet; the case at the end of this file holds the list to that, so a
+// name nothing writes any more cannot sit here reading as considered.
 const COMMENT_POLICY_STANDARDS_NAMES = [
-    'AES-128', 'AES-256', 'BIP-39', 'ISO-8601', 'ISO-4217', 'RFC-822', 'RFC-2822',
-    'SHA-1', 'SHA-256', 'SHA-384', 'SHA-512', 'UTF-8', 'UTF-16', 'UTF-32',
-    'X-25519', 'ED-25519', 'HTTP-2', 'CAMT-053', 'MT-940', 'PBKDF2-1', 'BASE-64',
-    'BCP-47', 'PSR-3', 'PSR-4', 'PSR-12', 'R-7', 'API-28',
+    'AES-256', 'ISO-4217', 'SHA-256', 'SHA-512', 'UTF-8',
+    'BCP-47', 'PSR-3', 'PSR-4', 'R-7', 'API-28',
 ];
 
 // Not a name at all: a regex character class whose middle reads like an
@@ -649,8 +650,22 @@ function commentPolicyTestNames(string $path): array
             continue;
         }
 
-        $literal = $tokens[$i + 2] ?? null;
-        if (($tokens[$i + 1] ?? null) !== '(' || ! is_array($literal) || $literal[0] !== T_CONSTANT_ENCAPSED_STRING) {
+        if (($tokens[$i + 1] ?? null) !== '(') {
+            continue;
+        }
+
+        // Whitespace is skipped, because a long name is written on the line
+        // below the `it(` and reading only the very next token made four of
+        // them invisible -- one of which carried the identifier this bans.
+        $at = $i + 2;
+
+        while (is_array($tokens[$at] ?? null) && in_array($tokens[$at][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+            $at++;
+        }
+
+        $literal = $tokens[$at] ?? null;
+
+        if (! is_array($literal) || $literal[0] !== T_CONSTANT_ENCAPSED_STRING) {
             continue;
         }
 
@@ -681,7 +696,8 @@ it('reads every identifier shape this repository mints and leaves the prose form
     $identifiers = ['D-06', 'T-05-12', 'WR-11', 'GOV-R12', 'F3-R36'];
     $prose = ['N-1', 'R-7', 'SHA-256', 'BCP-47', 'API-28'];
 
-    expect($identifiers)->not->toBe([])->and($prose)->not->toBe([]);
+    expect($identifiers)->not->toBe([], 'The minted-identifier probes were emptied, so this control proves nothing about the pattern.')
+        ->and($prose)->not->toBe([], 'The prose probes were emptied, so nothing here proves the pattern leaves a standards name alone.');
 
     foreach ($identifiers as $identifier) {
         expect(PatternScan::matches(COMMENT_POLICY_IDENTIFIER_TOKENS, $identifier))
@@ -695,8 +711,16 @@ it('reads every identifier shape this repository mints and leaves the prose form
 });
 
 it('has no banned deferral or provenance tokens in comments (M5)', function (): void {
+    $files = commentPolicyIdentifierFiles();
+
+    // The floor sits far under the 6,500 files the identifier ban opens.
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The identifier walk opened almost nothing, so no comment was read at all.'
+    );
+
     $hits = [];
-    foreach (commentPolicyIdentifierFiles() as $path) {
+    foreach ($files as $path) {
         foreach (token_get_all((string) file_get_contents($path)) as $token) {
             if (! is_array($token) || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
                 continue;
@@ -706,16 +730,22 @@ it('has no banned deferral or provenance tokens in comments (M5)', function (): 
             }
         }
     }
-    expect($hits)->toBe([], "Comments must carry no TODO/ticket/phase provenance. Offenders:\n  ".implode("\n  ", $hits));
+    expect($hits)->toBe([], "A shipped comment carries no TODO/ticket/phase provenance. The suite is deliberately\noutside this half — a comment in a test may name the deferral words it describes,\nand only the identifier ban crosses. Offenders:\n  ".implode("\n  ", $hits));
 });
 
 // A Blade file ends in .php and so was always in scope, but its comments are
 // invisible to the tokeniser — which is how 250-odd of them accumulated.
 it('has no banned deferral or provenance tokens in Blade comments (M5)', function (): void {
-    expect(commentPolicyBladeFiles())->not->toBe([]);
+    $files = commentPolicyBladeFiles();
+
+    // The floor sits well under the 279 templates this tree ships.
+    expect(count($files))->toBeGreaterThan(
+        100,
+        'The Blade walk opened almost nothing, so no template comment was read at all.'
+    );
 
     $hits = [];
-    foreach (commentPolicyBladeFiles() as $path) {
+    foreach ($files as $path) {
         foreach (commentPolicyBladeComments($path) as $comment) {
             if (preg_match(COMMENT_POLICY_BANNED_TOKENS, commentPolicyWithoutStandards($comment['text'])) === 1) {
                 $hits[] = $path.':'.$comment['line'];
@@ -730,7 +760,12 @@ it('has no banned deferral or provenance tokens in Blade comments (M5)', functio
 // nothing looked.
 it('has no banned deferral or provenance tokens in JS and CSS comments (M5)', function (): void {
     $files = commentPolicyScriptFiles();
-    expect($files)->not->toBe([]);
+
+    // Twelve scripts and stylesheets are repo-owned today.
+    expect(count($files))->toBeGreaterThan(
+        4,
+        'The script walk opened almost nothing, so no stylesheet or script comment was read at all.'
+    );
 
     $hits = [];
     foreach ($files as $path) {
@@ -747,7 +782,12 @@ it('has no banned deferral or provenance tokens in JS and CSS comments (M5)', fu
 // both explanations were citing requirement rows.
 it('has no banned deferral or provenance tokens in config comments (M5)', function (): void {
     $files = commentPolicyConfigFiles();
-    expect($files)->not->toBe([]);
+
+    // Fifteen workflows plus the root NEON, XML and YAML configs.
+    expect(count($files))->toBeGreaterThan(
+        8,
+        'The config walk opened almost nothing, so no carve-out comment was read at all.'
+    );
 
     $hits = [];
     foreach ($files as $path) {
@@ -840,7 +880,11 @@ it('reads NEON and YAML comments without tripping on quoted hashes or URL fragme
 it('has no requirement identifiers in test names', function (): void {
     $files = commentPolicyTestFiles();
 
-    expect($files)->not->toBe([]);
+    // The floor sits far under the 2,500 test files this suite ships.
+    expect(count($files))->toBeGreaterThan(
+        500,
+        'The test walk opened almost nothing, so no test name was read at all.'
+    );
 
     $hits = [];
     foreach ($files as $path) {
@@ -861,7 +905,10 @@ it('has no requirement identifiers in test names', function (): void {
 it('has no requirement identifiers in test comments', function (): void {
     $files = commentPolicyTestFiles();
 
-    expect($files)->not->toBe([]);
+    expect(count($files))->toBeGreaterThan(
+        500,
+        'The test walk opened almost nothing, so no test comment was read at all.'
+    );
 
     $hits = [];
 
@@ -889,8 +936,15 @@ it('has no requirement identifiers in test comments', function (): void {
 });
 
 it('has no informative /* */ block comments (M3)', function (): void {
+    $files = commentPolicyBackendFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The backend walk opened almost nothing, so no comment was read at all.'
+    );
+
     $hits = [];
-    foreach (commentPolicyBackendFiles() as $path) {
+    foreach ($files as $path) {
         foreach (token_get_all((string) file_get_contents($path)) as $token) {
             if (! is_array($token) || $token[0] !== T_COMMENT) {
                 continue;
@@ -908,8 +962,15 @@ it('has no informative /* */ block comments (M3)', function (): void {
 // resolve silently to a rule it was never written against (ADR-0023).
 
 it('has no // block over 4 lines (M2)', function (): void {
+    $files = commentPolicyBackendFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The backend walk opened almost nothing, so no comment block was measured at all.'
+    );
+
     $hits = [];
-    foreach (commentPolicyBackendFiles() as $path) {
+    foreach ($files as $path) {
         foreach (commentPolicyLineCommentBlocks($path) as $block) {
             $n = count($block);
             if ($n > 4) {
@@ -921,8 +982,15 @@ it('has no // block over 4 lines (M2)', function (): void {
 });
 
 it('has @-tag-only docblocks with no descriptive prose (M4)', function (): void {
+    $files = commentPolicyBackendFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The backend walk opened almost nothing, so no docblock was read at all.'
+    );
+
     $hits = [];
-    foreach (commentPolicyBackendFiles() as $path) {
+    foreach ($files as $path) {
         foreach (token_get_all((string) file_get_contents($path)) as $token) {
             if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
                 continue;
@@ -1001,21 +1069,35 @@ function commentPolicyDocsLinkTargets(string $path): array
 
 it('has every @link .md target resolving to a real .docs file (M6)', function (): void {
     $hits = [];
-    foreach (commentPolicyBackendFiles() as $path) {
+    $cited = 0;
+
+    // The same reach as the fragment rule below, and for the same reason: a
+    // citation is a citation whether it is written in a docblock or on a `//`
+    // line, and whether the file that carries it ships or guards.
+    foreach (RepoTree::files(RepoTree::EVERY_PHP_FILE) as $path) {
         foreach (token_get_all((string) file_get_contents($path)) as $token) {
-            if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
+            if (! is_array($token) || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
                 continue;
             }
             $m = PatternScan::all('/@link\s+(\S+\.md)/', $token[1]);
 
             foreach ($m[1] as $target) {
+                $cited++;
                 $resolved = realpath(dirname($path).'/'.$target);
                 if ($resolved === false || ! is_file($resolved)) {
-                    $hits[] = $path.':'.$token[2].' → '.$target;
+                    $hits[] = str_replace(RepoTree::root().'/', '', $path).':'.$token[2].' → '.$target;
                 }
             }
         }
     }
+
+    // 934 citations today. A walk that found none reports the same clean answer
+    // as a tree whose every citation lands on a page that exists.
+    expect($cited)->toBeGreaterThan(
+        500,
+        'The walk found '.$cited.' doc citations, which is too few to have read the tree.'
+    );
+
     expect($hits)->toBe([], "@link .md targets must exist under .docs. Broken links:\n  ".implode("\n  ", $hits));
 });
 
@@ -1025,7 +1107,12 @@ it('has every @link .md target resolving to a real .docs file (M6)', function ()
 // written reads exactly like one describing shipped code.
 it('has every relative link in a .docs page resolving to a real file (M6)', function (): void {
     $pages = commentPolicyDocsPages();
-    expect($pages)->not->toBe([]);
+
+    // The floor sits well under the 210 pages under .docs today.
+    expect(count($pages))->toBeGreaterThan(
+        50,
+        'The .docs walk opened almost no page, so no link was read at all.'
+    );
 
     $hits = [];
     foreach ($pages as $path) {
@@ -1078,23 +1165,48 @@ function commentPolicyHeadingSlugs(string $page): array
 // which is the failure a renamed heading causes and nothing else catches.
 it('has every #fragment in a doc link naming a heading that exists (M6)', function (): void {
     $hits = [];
+    $cited = 0;
 
-    foreach (commentPolicyBackendFiles() as $path) {
+    // Every PHP file, and both comment kinds. The walk was the backend files
+    // and T_DOC_COMMENT: thirty citations are written on a `//` line, the whole
+    // of tests/ was outside it, and two guards there cited a heading nobody had
+    // written — which is the failure this rule is named after, sitting in the
+    // half of the tree it could not see.
+    foreach (RepoTree::files(RepoTree::EVERY_PHP_FILE) as $path) {
         foreach (token_get_all((string) file_get_contents($path)) as $token) {
-            if (! is_array($token) || $token[0] !== T_DOC_COMMENT) {
+            if (! is_array($token) || ! in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
                 continue;
             }
             $m = PatternScan::all('/@link\s+(\S+\.md#\S+)/', $token[1]);
 
             foreach ($m[1] as $target) {
+                $cited++;
                 [$file, $anchor] = explode('#', $target, 2);
                 $resolved = realpath(dirname($path).'/'.$file);
                 if ($resolved !== false && ! in_array($anchor, commentPolicyHeadingSlugs($resolved), true)) {
-                    $hits[] = str_replace(base_path().'/', '', $path).':'.$token[2].' → '.$target;
+                    $hits[] = str_replace(RepoTree::root().'/', '', $path).':'.$token[2].' → '.$target;
                 }
             }
         }
     }
+
+    // Read before the verdict: 533 citations carry a fragment today, and a walk
+    // that found none reports the same clean answer as a tree whose every link
+    // lands where it says.
+    expect($cited)->toBeGreaterThan(
+        300,
+        'The walk found '.$cited.' doc citations carrying a fragment, which is too few to have read the tree.'
+    );
+
+    // The reader itself, over a heading that exists and one that does not, so
+    // an empty offender list is never a slug reader that answers nothing. The
+    // page is named from the repository root rather than from base_path(): the
+    // second Composer root has no .docs of its own, and a control that cannot
+    // open its subject there would fail on the root rather than on the rule.
+    $slugs = commentPolicyHeadingSlugs(RepoTree::root().'/.docs/conventions/arch-invariants.md');
+
+    expect($slugs)->toContain('a-scanner-accounts-for-the-whole-tree')
+        ->and($slugs)->not->toContain('a-heading-this-page-has-never-carried');
 
     foreach (commentPolicyDocsPages() as $path) {
         foreach (commentPolicyDocsLinkTargets($path) as $target) {
@@ -1116,5 +1228,59 @@ it('has every #fragment in a doc link naming a heading that exists (M6)', functi
         'The file resolves, so the two rules above pass and the reader still',
         'lands nowhere. Rename the fragment to match the heading, or restore',
         'the heading the link was written against.',
+    ]));
+});
+
+/** @return list<string> every file any of this file's bans opens, deduplicated */
+function commentPolicyPinnedNameFiles(): array
+{
+    return array_values(array_unique([
+        ...commentPolicyIdentifierFiles(),
+        ...commentPolicyBladeFiles(),
+        ...commentPolicyScriptFiles(),
+        ...commentPolicyConfigFiles(),
+        ...commentPolicyTestFiles(),
+    ]));
+}
+
+// Both lists blank text out before the ban reads it, which is the widest thing
+// a rule here can do to itself: a name nothing writes any more still hides
+// every future occurrence of it, and the entry reads as a decision somebody
+// weighed. Seventeen of the twenty-seven standards names had gone that way,
+// matching nothing anywhere in the tree, and were deleted with this case.
+it('keeps no blanked name the bans no longer meet', function (): void {
+    $wanted = array_merge(COMMENT_POLICY_STANDARDS_NAMES, COMMENT_POLICY_LITERAL_EXEMPTIONS);
+    $files = commentPolicyPinnedNameFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The union of the bans opened almost nothing, so every pinned name would read as stale.'
+    );
+
+    $missing = array_flip($wanted);
+    $self = realpath(__FILE__);
+
+    foreach ($files as $path) {
+        if ($missing === [] || realpath($path) === $self) {
+            continue;
+        }
+
+        $source = (string) file_get_contents($path);
+
+        foreach (array_keys($missing) as $name) {
+            if (str_contains($source, (string) $name)) {
+                unset($missing[$name]);
+            }
+        }
+    }
+
+    expect(array_map(strval(...), array_keys($missing)))->toBe([], implode("\n  ", [
+        'These names are blanked out of every comment before the ban reads it, and no',
+        'file the ban opens writes them any more:',
+        ...array_map(strval(...), array_keys($missing)),
+        '',
+        'A blanking entry that matches nothing is not harmless. It stays in force for',
+        'whatever is written next, and it reads as an exemption somebody weighed rather',
+        'than one nobody has revisited. Delete it; add it back the day a comment needs it.',
     ]));
 });

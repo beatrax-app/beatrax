@@ -32,6 +32,8 @@ function bladeHrefFiles(): array
             if (! $file->isFile() || ! str_ends_with($path, '.blade.php')) {
                 continue;
             }
+            // Neither is first-party markup: a published vendor view is the
+            // package's to route, and node_modules is not ours at all.
             if (str_contains($path, '/vendor/') || str_contains($path, '/node_modules/')) {
                 continue;
             }
@@ -43,11 +45,17 @@ function bladeHrefFiles(): array
     return $files;
 }
 
-// Paths this application does not own. Horizon mounts its own router, and the
-// three below are framework-served assets rather than screens.
-const BLADE_HREF_FOREIGN_PREFIXES = ['/horizon', '/livewire', '/flux', '/storage'];
+// There is deliberately no foreign-prefix carve-out. The four this carried —
+// /horizon, /livewire, /flux and /storage — were named by no view in the tree,
+// so they excused nothing while standing ready to excuse a future path that
+// merely started the same way. A view that genuinely has to link a
+// framework-served path can be argued for when one exists.
 
-it('points every hand-written href at a path this application serves', function (): void {
+// Only a double-quoted, absolute, hand-written href is read. A single-quoted
+// attribute, a relative path and anything built by route() or an expression are
+// outside what this can resolve, and the description says so rather than
+// claiming the tree.
+it('points every hand-written absolute href at a path this application serves', function (): void {
     /** @var Router $router */
     $router = app(Router::class);
 
@@ -58,8 +66,19 @@ it('points every hand-written href at a path this application serves', function 
 
     $offenders = [];
     $seen = 0;
+    $views = bladeHrefFiles();
 
-    foreach (bladeHrefFiles() as $path) {
+    expect(count($views))->toBeGreaterThan(
+        100,
+        'The walk opened almost no Blade view, so the empty offender list below is a tree nobody read.',
+    );
+
+    expect(count($known))->toBeGreaterThan(
+        20,
+        'The router handed back almost no route, so every href below would resolve to nothing and report as broken.',
+    );
+
+    foreach ($views as $path) {
         $source = (string) file_get_contents($path);
 
         $matches = PatternScan::allWithOffsets('/href="(\/[a-z0-9\/_-]*)"/i', $source);
@@ -69,12 +88,8 @@ it('points every hand-written href at a path this application serves', function 
             $href = $match[0];
             $seen++;
 
-            $foreign = false;
-            foreach (BLADE_HREF_FOREIGN_PREFIXES as $prefix) {
-                $foreign = $foreign || str_starts_with($href, $prefix);
-            }
-
-            if ($foreign || $href === '/' || isset($known[$href])) {
+            // `/` is the root the router always answers and every layout links.
+            if ($href === '/' || isset($known[$href])) {
                 continue;
             }
 
@@ -83,13 +98,18 @@ it('points every hand-written href at a path this application serves', function 
         }
     }
 
+    // Read BEFORE the verdict: a scan that matched nothing reads exactly like a
+    // clean tree. Six absolute hrefs stand on this tree, which is how few a
+    // route()-first codebase leaves — the floor is under them, not near them.
+    expect($seen)->toBeGreaterThan(
+        3,
+        'Almost no absolute href was matched, so the empty offender list below is markup nobody parsed.',
+    );
+
     expect($offenders)->toBe(
         [],
         'These paths are written by hand and resolve to nothing. Use route() so a renamed or deleted '
         ."route breaks the build rather than the page.\n  "
         .implode("\n  ", $offenders),
     );
-
-    // A scan that matches nothing reads exactly like a clean tree.
-    expect($seen)->toBeGreaterThan(3);
 });

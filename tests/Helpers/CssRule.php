@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Helpers;
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Reads the compiled shape of a stylesheet rule for the arch tests that assert
 // on one. Both of them previously took a fixed-length window after the
 // selector, which answers about whatever happens to sit at that offset: too
@@ -18,7 +20,11 @@ final class CssRule
     // assertion matching a declaration that is only quoted in prose.
     private static function withoutComments(string $css): string
     {
-        return (string) preg_replace_callback(
+        // Through PatternScan, which raises rather than answering null: the
+        // cast that used to stand here turned a give-up into an EMPTY
+        // stylesheet, and blockFor() then answered '' for every selector --
+        // two arch tests reporting a clean sheet over a file nobody read.
+        return PatternScan::replaceCallback(
             '~/\*.*?\*/~s',
             static fn (array $match): string => str_repeat(' ', strlen($match[0])),
             $css,

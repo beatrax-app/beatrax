@@ -27,7 +27,7 @@ it('emits a BoundaryRule error on the bad fixture', function (): void {
     $process->run();
 
     $output = $process->getOutput().$process->getErrorOutput();
-    expect($output)->toContain('Cross-module Internal/Models import forbidden');
+    expect($output)->toContain('Cross-module import forbidden');
 });
 
 it('emits zero errors on the good fixture', function (): void {
@@ -50,7 +50,7 @@ it('emits zero errors on the good fixture', function (): void {
     $process->run();
 
     $output = $process->getOutput().$process->getErrorOutput();
-    expect($output)->not->toContain('Cross-module Internal/Models import forbidden');
+    expect($output)->not->toContain('Cross-module import forbidden');
 });
 
 // The third test in this file ran `phpstan analyse Modules` and asserted a zero

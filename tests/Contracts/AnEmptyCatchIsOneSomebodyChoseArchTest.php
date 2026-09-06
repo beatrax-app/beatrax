@@ -216,7 +216,10 @@ it('leaves no catch body empty that is not declared with its reason', function (
     $found = emptyCatchBodiesByFile();
     $declared = catchBodiesLeftEmptyOnPurpose();
 
-    expect($found)->not->toBe([]);
+    expect($found)->not->toBe(
+        [],
+        'The walk found no empty catch body anywhere. Two dozen are declared below, so this read a broken tree rather than a clean one.',
+    );
 
     $offenders = [];
 
@@ -234,7 +237,16 @@ it('leaves no catch body empty that is not declared with its reason', function (
         }
     }
 
-    expect($offenders)->toBe([]);
+    expect($offenders)->toBe([], implode("\n  ", [
+        'A catch body with nothing in it turns a failure into a success nothing can tell apart',
+        'from one. These are either new, or declared at a count the file no longer holds:',
+        ...$offenders,
+        '',
+        'Tolerating the failure is often right, and two dozen entries below say where. It is',
+        'still a decision: add the file to catchBodiesLeftEmptyOnPurpose() with the count and',
+        'the one line saying why nothing is left to do. Where something IS left to do, do it —',
+        'report the exception, or let it out.',
+    ]));
 });
 
 // An entry that outlives the catch it excused is the way a pinned list rots
@@ -250,7 +262,13 @@ it('leaves no declared entry that no longer names an empty catch', function (): 
         }
     }
 
-    expect($stale)->toBe([]);
+    expect($stale)->toBe([], implode("\n  ", [
+        'These entries excuse an empty catch body that is no longer there:',
+        ...$stale,
+        '',
+        'An entry outliving what it excused is how a pinned list rots into a list of names',
+        'nobody checks, so it fails as loudly as a new offender does.',
+    ]));
 });
 
 // The scan above is only worth its result if it still reads what it claims to.
@@ -262,5 +280,52 @@ it('still reads the PHP inside a Blade template', function (): void {
 
     $catches = array_filter($tokens, static fn (array|string $token): bool => is_array($token) && $token[0] === T_CATCH);
 
-    expect($catches)->not->toBe([]);
+    expect($catches)->not->toBe(
+        [],
+        'The one PHP catch inside a Blade template is no longer readable, so BladePhpSource — which every '
+        .'template reaches this walk through — has gone blind to the files that hold the next one.',
+    );
+});
+
+it('reads a catch body whose only content is a comment, and leaves one that acts alone', function (): void {
+    $base = tempnam(sys_get_temp_dir(), 'planted-catch');
+    $planted = $base.'.php';
+
+    file_put_contents($planted, <<<'PHP'
+        <?php
+        function plantedSwallow(): void
+        {
+            try {
+                risky();
+            } catch (RuntimeException|LogicException $e) {
+                // Nothing to do: the sweep re-reads the row under the lock.
+            }
+
+            try {
+                risky();
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+        PHP);
+
+    try {
+        $tokens = BackendSourceFiles::codeTokens($planted);
+        $bodies = [];
+
+        foreach ($tokens as $index => $token) {
+            if (is_array($token) && $token[0] === T_CATCH) {
+                $bodies[] = catchBodyIsEmpty($tokens, $index);
+            }
+        }
+    } finally {
+        @unlink($planted);
+        @unlink($base);
+    }
+
+    expect($bodies)->toBe(
+        [true, false],
+        'A body holding only prose is the empty body it is — that is the spelling all two dozen use — and a '
+        .'body that reports is not one. A union-typed catch must not put the scan on the wrong token either.',
+    );
 });

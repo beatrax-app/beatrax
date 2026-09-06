@@ -14,13 +14,26 @@ use Tests\Contracts\Support\SecretShapedValues;
 // and never on the branch that wrote it. This is the rule that stops the
 // fourth, on the branch that writes it.
 
-/** @return list<string> every distinct directory in this repository that holds tests */
+/**
+ * Every distinct directory in this repository that holds tests. mobile-app/tests
+ * is a symlink onto tests/, so walking it would read every file twice and report
+ * every fixture twice.
+ *
+ * @return list<string>
+ */
 function secretGateTestRoots(): array
 {
     return [base_path('tests'), ...glob(base_path('Modules/*/tests')) ?: []];
 }
 
-/** @return list<string> the roots an allowlisted path could name, minus the ones git does not carry */
+/**
+ * The roots an allowlisted path could name. A path in .gitleaks.toml naming a
+ * root that is not here reads as stale below and fails loudly rather than
+ * quietly — which is the right way round, but it is why a new root has to be
+ * added here in the same commit as the entry that names it.
+ *
+ * @return list<string>
+ */
 function secretGateRepositoryRoots(): array
 {
     return ['app', 'bootstrap', 'config', 'database', 'lang', 'Modules', 'resources', 'routes', 'scripts', 'tests'];
@@ -133,7 +146,12 @@ it('reads the ruleset the gate applies, and every pattern in it reaches PCRE', f
 it('finds each shape the gate matches and leaves the assembled remedy alone', function (array $fragments, ?string $rule): void {
     $found = SecretShapedValues::in('tests/Fixtures/gitleaks/ProbeTest.php', "<?php\n".implode('', $fragments)."\n");
 
-    expect(array_column($found, 'rule'))->toBe($rule === null ? [] : [$rule]);
+    expect(array_column($found, 'rule'))->toBe(
+        $rule === null ? [] : [$rule],
+        $rule === null
+            ? 'This shape is the remedy the failure message prescribes, and the reader reported it as a secret — which would send a contributor round in a circle.'
+            : 'This shape fails `security / gitleaks` on every open pull request in the repository, and the reader did not see it.',
+    );
 })->with([
     'a vendor-prefixed key written out' => [["\$key = '", 'sk', "_live_51H8xQ2Kj3nRtYuIoP0aSdFgHjKlZ';"], 'stripe-access-token'],
     'the same key with its prefix split' => [["\$key = '", 'sk', "_'.'live_'.'51H8xQ2Kj3nRtYuIoP0aSdFgHjKlZ';"], null],

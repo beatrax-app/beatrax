@@ -482,36 +482,74 @@ function eventChannelOrphans(array $from, array $to, string $half): array
     return $orphans;
 }
 
+// Both denominators, read before either verdict. The two scans are compared
+// with each other, so a reader that stopped answers "no orphans" on two empty
+// sets — the one failure a guard must not have. The floors sit well under the
+// 50 dispatched and 81 listened names the channel carries today.
 it('has a listener for every event it dispatches', function (): void {
     $files = eventChannelFiles();
-    expect($files)->not->toBeEmpty();
+
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The channel walk opened almost nothing, so neither half of the channel was read.'
+    );
 
     $constants = eventChannelConstants($files);
+    $dispatched = eventChannelScan($files, $constants, listening: false);
+    $listened = eventChannelScan($files, $constants, listening: true);
 
-    expect(eventChannelOrphans(
-        eventChannelScan($files, $constants, listening: false),
-        eventChannelScan($files, $constants, listening: true),
-        'dispatch',
-    ))->toBe([], "Nothing listens for these, so the dispatch is inert and a test that\n".
-        "asserts it passes anyway. Wire the listener or drop the dispatch — and\n".
-        "if a package outside this repo handles it, pin it in\n".
-        'eventChannelPinnedOneSided() with the reason. Offenders:');
+    expect(count($dispatched))->toBeGreaterThan(
+        20,
+        'The scan found no dispatch at all, so every listener below would read as orphaned and none did.'
+    );
+    expect(count($listened))->toBeGreaterThan(
+        20,
+        'The scan found no listener at all, so every dispatch would read as orphaned and none did.'
+    );
+
+    $orphans = eventChannelOrphans($dispatched, $listened, 'dispatch');
+
+    expect($orphans)->toBe([], implode("\n  ", [
+        'Nothing listens for these, so the dispatch is inert and a test that asserts it',
+        'passes anyway:',
+        ...$orphans,
+        '',
+        'Wire the listener or drop the dispatch — and if a package outside this repo',
+        'handles it, pin it in eventChannelPinnedOneSided() with the reason.',
+    ]));
 });
 
 it('has a dispatcher for every event it listens for', function (): void {
     $files = eventChannelFiles();
-    expect($files)->not->toBeEmpty();
+
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The channel walk opened almost nothing, so neither half of the channel was read.'
+    );
 
     $constants = eventChannelConstants($files);
+    $listened = eventChannelScan($files, $constants, listening: true);
+    $dispatched = eventChannelScan($files, $constants, listening: false);
 
-    expect(eventChannelOrphans(
-        eventChannelScan($files, $constants, listening: true),
-        eventChannelScan($files, $constants, listening: false),
-        'listen',
-    ))->toBe([], "Nothing dispatches these, so the handler can never run and whatever it\n".
-        "was meant to refresh never refreshes. Dispatch the name or drop the\n".
-        "listener — and if something outside this repo raises it, pin it in\n".
-        'eventChannelPinnedOneSided() with the reason. Offenders:');
+    expect(count($listened))->toBeGreaterThan(
+        20,
+        'The scan found no listener at all, so this rule had nothing to hold to a dispatch.'
+    );
+    expect(count($dispatched))->toBeGreaterThan(
+        20,
+        'The scan found no dispatch at all, so every listener would read as orphaned and none did.'
+    );
+
+    $orphans = eventChannelOrphans($listened, $dispatched, 'listen');
+
+    expect($orphans)->toBe([], implode("\n  ", [
+        'Nothing dispatches these, so the handler can never run and whatever it was meant',
+        'to refresh never refreshes:',
+        ...$orphans,
+        '',
+        'Dispatch the name or drop the listener — and if something outside this repo',
+        'raises it, pin it in eventChannelPinnedOneSided() with the reason.',
+    ]));
 });
 
 it('carries no pin for an event that has both halves again', function (): void {
@@ -539,7 +577,8 @@ it('carries no pin for an event that has both halves again', function (): void {
 });
 
 it('sees a dispatch that reaches no listener', function (): void {
-    $planted = tempnam(sys_get_temp_dir(), 'event-channel').'.php';
+    $seed = (string) tempnam(sys_get_temp_dir(), 'event-channel');
+    $planted = $seed.'.php';
     file_put_contents($planted, <<<'PHP'
         <?php
         final class PlantedDispatch
@@ -557,6 +596,7 @@ it('sees a dispatch that reaches no listener', function (): void {
         $found = eventChannelScan([$planted], [], listening: false);
     } finally {
         @unlink($planted);
+        @unlink($seed);
     }
 
     expect(array_keys($found))->toBe(['toast', 'nobody-is-listening-for-this']);
@@ -565,7 +605,8 @@ it('sees a dispatch that reaches no listener', function (): void {
 });
 
 it('sees a listener that no dispatch reaches', function (): void {
-    $planted = tempnam(sys_get_temp_dir(), 'event-channel').'.blade.php';
+    $seed = (string) tempnam(sys_get_temp_dir(), 'event-channel');
+    $planted = $seed.'.blade.php';
     file_put_contents($planted, <<<'BLADE'
         <div
             x-on:keydown.escape.window="close()"
@@ -578,6 +619,7 @@ it('sees a listener that no dispatch reaches', function (): void {
         $found = eventChannelScan([$planted], [], listening: true);
     } finally {
         @unlink($planted);
+        @unlink($seed);
     }
 
     // The key modifier collapses to `keydown`; a colon in the name survives.
@@ -589,7 +631,8 @@ it('sees a listener that no dispatch reaches', function (): void {
 it('reads no event name out of a string, a comment or a regex', function (): void {
     // The false-positive half. A scanner that matched prose would be worse than
     // no scanner: every line below would have to be pinned to keep it green.
-    $planted = tempnam(sys_get_temp_dir(), 'event-channel-prose').'.php';
+    $seed = (string) tempnam(sys_get_temp_dir(), 'event-channel-prose');
+    $planted = $seed.'.php';
     file_put_contents($planted, <<<'PHP'
         <?php
         // The panel used to dispatch('ghost-from-a-comment') before this landed.
@@ -610,13 +653,15 @@ it('reads no event name out of a string, a comment or a regex', function (): voi
         $found = eventChannelScan([$planted], [], listening: false);
     } finally {
         @unlink($planted);
+        @unlink($seed);
     }
 
     expect(array_keys($found))->toBe(['really-dispatched']);
 });
 
 it('reads no listener out of a Blade comment', function (): void {
-    $planted = tempnam(sys_get_temp_dir(), 'event-channel-blade-prose').'.blade.php';
+    $seed = (string) tempnam(sys_get_temp_dir(), 'event-channel-blade-prose');
+    $planted = $seed.'.blade.php';
     file_put_contents($planted, <<<'BLADE'
         {{-- The host used to carry x-on:ghost-from-a-blade-comment.window here. --}}
         <div x-on:really-listened.window="go()"></div>
@@ -626,6 +671,7 @@ it('reads no listener out of a Blade comment', function (): void {
         $found = eventChannelScan([$planted], [], listening: true);
     } finally {
         @unlink($planted);
+        @unlink($seed);
     }
 
     expect(array_keys($found))->toBe(['really-listened']);

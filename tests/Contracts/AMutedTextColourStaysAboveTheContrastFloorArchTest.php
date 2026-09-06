@@ -16,7 +16,11 @@ use Modules\Core\Public\Support\PatternScan;
 // darkening the light value silently moved nine nodes below the floor at night.
 
 /**
- * @return list<array{file: string, classes: string}> every class attribute in every template
+ * Every class attribute in every template a reader is shown. A fixture template
+ * under tests/ is not one: a guard planting a class list to be read back would
+ * otherwise report its own plant as a colour somebody has to fix.
+ *
+ * @return list<array{file: string, classes: string}>
  */
 function templateClassAttributes(): array
 {
@@ -44,14 +48,58 @@ function templateClassAttributes(): array
 }
 
 /**
+ * The floors a single class list falls below, named the way the four rules
+ * below name them, so a control can drive the same reading the walk drives.
+ *
+ * @param  list<string>  $tokens
+ * @return list<string>
+ */
+function mutedTextFaults(array $tokens): array
+{
+    $carries = static fn (string $prefix): bool => array_filter(
+        $tokens,
+        static fn (string $token): bool => str_contains($token, $prefix),
+    ) !== [];
+
+    $faults = [];
+
+    if (in_array('text-slate-400', $tokens, true)) {
+        $faults[] = 'slate-400 on a light surface';
+    }
+
+    if (in_array('bg-slate-100', $tokens, true) && in_array('text-slate-500', $tokens, true)) {
+        $faults[] = 'slate-500 on slate-100';
+    }
+
+    if (in_array('placeholder:text-slate-500', $tokens, true) && ! $carries('dark:placeholder:')) {
+        $faults[] = 'a placeholder with no dark half';
+    }
+
+    if (in_array('text-slate-600', $tokens, true) && ! $carries('dark:text-')) {
+        $faults[] = 'a light-only text colour';
+    }
+
+    return $faults;
+}
+
+/**
  * @param  callable(list<string>): bool  $fails
  * @return list<string>
  */
 function classListsWhere(callable $fails): array
 {
     $offenders = [];
+    $attributes = templateClassAttributes();
 
-    foreach (templateClassAttributes() as $attribute) {
+    // Four thousand class attributes are written across the templates. A walk
+    // that read none of them would report every colour as above the floor, and
+    // all four rules below would agree.
+    expect(count($attributes))->toBeGreaterThan(
+        1000,
+        'Read '.count($attributes).' class attributes, too few for an empty offender list to mean anything.',
+    );
+
+    foreach ($attributes as $attribute) {
         $tokens = PatternScan::split('/\s+/', trim($attribute['classes']));
 
         if ($fails($tokens)) {
@@ -64,7 +112,7 @@ function classListsWhere(callable $fails): array
 
 it('does not write slate-400 on a light surface', function (): void {
     $offenders = classListsWhere(
-        static fn (array $tokens): bool => in_array('text-slate-400', $tokens, true)
+        static fn (array $tokens): bool => in_array('slate-400 on a light surface', mutedTextFaults($tokens), true)
     );
     sort($offenders);
 
@@ -78,8 +126,7 @@ it('does not write slate-400 on a light surface', function (): void {
 
 it('does not paint slate-500 onto a surface it also paints slate-100', function (): void {
     $offenders = classListsWhere(
-        static fn (array $tokens): bool => in_array('bg-slate-100', $tokens, true)
-            && in_array('text-slate-500', $tokens, true)
+        static fn (array $tokens): bool => in_array('slate-500 on slate-100', mutedTextFaults($tokens), true)
     );
     sort($offenders);
 
@@ -96,8 +143,7 @@ it('does not paint slate-500 onto a surface it also paints slate-100', function 
 // against slate-900 it is 3.74:1 and needs the dark half.
 it('gives a placeholder its dark half too', function (): void {
     $offenders = classListsWhere(
-        static fn (array $tokens): bool => in_array('placeholder:text-slate-500', $tokens, true)
-            && ! array_filter($tokens, static fn (string $t): bool => str_contains($t, 'dark:placeholder:'))
+        static fn (array $tokens): bool => in_array('a placeholder with no dark half', mutedTextFaults($tokens), true)
     );
     sort($offenders);
 
@@ -110,8 +156,7 @@ it('gives a placeholder its dark half too', function (): void {
 
 it('gives a light-only text colour its dark half', function (): void {
     $offenders = classListsWhere(
-        static fn (array $tokens): bool => in_array('text-slate-600', $tokens, true)
-            && ! array_filter($tokens, static fn (string $t): bool => str_contains($t, 'dark:text-'))
+        static fn (array $tokens): bool => in_array('a light-only text colour', mutedTextFaults($tokens), true)
     );
     sort($offenders);
 
@@ -120,4 +165,24 @@ it('gives a light-only text colour its dark half', function (): void {
         'slate-600 is 2.66:1 against the dark background, so a class list that names it without '
         ."naming a dark: colour is legible in one theme only:\n  ".implode("\n  ", $offenders)
     );
+});
+
+it('reads each of the four pairings off a class list, and leaves the corrected ones alone', function (): void {
+    expect(mutedTextFaults(['text-slate-400', 'text-sm']))
+        ->toBe(['slate-400 on a light surface'], '2.63:1 on white is the pairing that started this');
+
+    expect(mutedTextFaults(['bg-slate-100', 'text-slate-500']))
+        ->toBe(['slate-500 on slate-100'], 'the element carries both, so the pairing is a property of the class list');
+
+    expect(mutedTextFaults(['placeholder:text-slate-500']))
+        ->toBe(['a placeholder with no dark half'], 'a placeholder has no textContent, which is why the first sweep could not see it');
+
+    expect(mutedTextFaults(['text-slate-600']))
+        ->toBe(['a light-only text colour'], 'slate-600 is 2.66:1 at night, so the dark half is not optional');
+
+    expect(mutedTextFaults(['text-slate-600', 'dark:text-slate-300', 'placeholder:text-slate-500', 'dark:placeholder:text-slate-400']))
+        ->toBe([], 'a colour with its dark half named is legible in both themes, which is what the fix looks like');
+
+    expect(mutedTextFaults(['text-slate-500', 'bg-white']))
+        ->toBe([], 'slate-500 is 4.76:1 on white, and this rule is not about it there');
 });

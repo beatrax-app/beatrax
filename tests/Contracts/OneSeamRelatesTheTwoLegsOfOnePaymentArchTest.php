@@ -21,7 +21,13 @@ function settledLegSeamSources(): array
     $root = settledLegSeamRepoRoot();
 
     $sources = [];
-    foreach (['Modules', 'app', 'database', 'config', 'routes'] as $directory) {
+    // Every root that ships PHP or Blade. "Exactly one place" is a claim about
+    // the application, and the narrower five could not see a view, a bootstrap
+    // file or a release script deriving the rate for itself.
+    foreach (['Modules', 'app', 'database', 'config', 'routes', 'resources', 'bootstrap', 'lang', 'scripts'] as $directory) {
+        if (! is_dir($root.'/'.$directory)) {
+            continue;
+        }
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($root.'/'.$directory, RecursiveDirectoryIterator::SKIP_DOTS),
         );
@@ -41,12 +47,21 @@ function settledLegSeamSources(): array
     return $sources;
 }
 
+const SETTLED_LEG_SEAM = 'Modules/Ledger/Public/ValueObjects/TransactionAmount.php';
+
 it('derives the effective rate between two legs in exactly one place', function (): void {
-    $seam = 'Modules/Ledger/Public/ValueObjects/TransactionAmount.php';
+    $sources = settledLegSeamSources();
+
+    expect(count($sources))->toBeGreaterThan(2000, 'The walk read almost nothing, so a clean answer below is the walk being broken rather than the tree being right.');
+
+    // The exemption is one file, and a pin that excuses nothing reads as
+    // considered: the seam has to still be doing the derivation it is spared for.
+    expect(str_contains($sources[SETTLED_LEG_SEAM] ?? '', 'Rate::between('))
+        ->toBeTrue(SETTLED_LEG_SEAM.' is the one site exempted from this rule and it no longer derives a rate. Move the exemption to wherever the derivation went, or delete it.');
 
     $deriving = [];
-    foreach (settledLegSeamSources() as $path => $source) {
-        if ($path !== $seam && str_contains($source, 'Rate::between(')) {
+    foreach ($sources as $path => $source) {
+        if ($path !== SETTLED_LEG_SEAM && str_contains($source, 'Rate::between(')) {
             $deriving[] = $path;
         }
     }

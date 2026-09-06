@@ -4089,20 +4089,6 @@ td.date,
          * This layer loses to Tailwind's utilities, so a link that states its
          * own display -- inline-flex, block -- still keeps it.
          */
-        /*
-         * An inline link that wraps is two fragments, and the band below gets
-         * a containing block that is only the FIRST of them -- so it is placed
-         * across the break, on neither line, and the link answers a finger
-         * over its real height. Three call sites had already been given
-         * `inline-block` by hand after someone noticed the wrap; a device
-         * sweep found the two that nobody had: the drift lifecycle panel and
-         * the recurring empty state, at 2 lines and 0 of 4 band corners
-         * reachable. An inline-block does not fragment, so the band spans the
-         * whole link whether it wrapped or not.
-         *
-         * This layer loses to Tailwind's utilities, so a link that states its
-         * own display -- inline-flex, block -- still keeps it.
-         */
         .tap-link {
             display: inline-block;
         }

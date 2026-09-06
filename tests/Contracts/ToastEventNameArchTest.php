@@ -94,12 +94,13 @@ function toastSeamMethodsRedeclared(array $paths): array
     $hits = [];
 
     foreach ($paths as $path) {
-        if (str_ends_with($path, 'Concerns/DispatchesToast.php')) {
-            continue;
-        }
-
         $tokens = BackendSourceFiles::codeTokens($path);
-        if (! toastUsesTheTrait($tokens)) {
+
+        // Exempt for declaring the methods, not for its path: the file that
+        // declares the trait names it too, so `toastUsesTheTrait()` is true of
+        // it and its own toast() would read as a shadow of itself. Keyed on the
+        // declaration so moving or renaming the file cannot quietly widen this.
+        if (toastDeclaresTheTrait($tokens) || ! toastUsesTheTrait($tokens)) {
             continue;
         }
 
@@ -135,6 +136,33 @@ function toastUsesTheTrait(array $tokens): bool
     return false;
 }
 
+/**
+ * @param  list<array{0:int,1:string,2:int}|string>  $tokens
+ */
+function toastDeclaresTheTrait(array $tokens): bool
+{
+    foreach ($tokens as $index => $token) {
+        if (! is_array($token) || $token[0] !== T_TRAIT) {
+            continue;
+        }
+
+        // Every trait in the file, not the first one: a file declaring another
+        // trait above this one would otherwise answer for that one and stop.
+        foreach (array_slice($tokens, $index + 1, 4) as $following) {
+            if (! is_array($following) || $following[0] !== T_STRING) {
+                continue;
+            }
+            if ($following[1] === 'DispatchesToast') {
+                return true;
+            }
+
+            break;
+        }
+    }
+
+    return false;
+}
+
 /** @return list<string> backend PHP plus every Blade template */
 function toastScannedFiles(): array
 {
@@ -162,7 +190,11 @@ function toastScannedFiles(): array
 
 it('dispatches every toast under the one name the hosts listen for', function (): void {
     $files = toastScannedFiles();
-    expect($files)->not->toBeEmpty();
+
+    // 6,471 backend files and 279 templates today. Floored well under both: a
+    // walk that lost a root reports the same empty offender list a clean tree
+    // reports, and nothing else here would look wrong.
+    expect(count($files))->toBeGreaterThan(2000, 'the walk read almost nothing — the roots are wrong, not the tree.');
 
     expect(toastDispatchesByAnotherName($files))->toBe(
         [],
@@ -177,7 +209,10 @@ it('binds that exact name in the global toast host', function (): void {
     // the host still listens for the name it enforces.
     $host = (string) file_get_contents(base_path('Modules/Core/Resources/views/components/toast-host.blade.php'));
 
-    expect($host)->toContain('x-on:'.TOAST_EVENT.'.window');
+    expect(str_contains($host, 'x-on:'.TOAST_EVENT.'.window'))->toBeTrue(
+        'The global toast host no longer binds `'.TOAST_EVENT.'` on the window, so every dispatch '
+        .'the rule above enforces reaches nothing and the guard is enforcing a name nobody hears.',
+    );
 });
 
 it('sees a toast dispatched under a near-miss name', function (): void {
@@ -201,13 +236,24 @@ it('sees a toast dispatched under a near-miss name', function (): void {
         @unlink($planted);
     }
 
-    expect($found)->toHaveCount(1);
-    expect($found[0])->toContain("dispatches 'toast.show'");
+    expect($found)->toHaveCount(1, 'The reader must flag `toast.show` and leave `toast` and an unrelated event alone.');
+    expect(str_contains($found[0], "dispatches 'toast.show'"))->toBeTrue('The reader flagged a dispatch, but not the near-miss name.');
 });
 
 it('lets no component shadow the toast seam it uses', function (): void {
     $files = BackendSourceFiles::all();
-    expect($files)->not->toBeEmpty();
+
+    expect(count($files))->toBeGreaterThan(2000, 'the backend walk read almost nothing — the roots are wrong, not the tree.');
+
+    // Thirty production files name the trait today. A tokeniser that stopped
+    // resolving the bare `use DispatchesToast;` empties this while the offender
+    // list below stays every bit as empty as a clean tree's.
+    $using = array_values(array_filter(
+        $files,
+        static fn (string $path): bool => toastUsesTheTrait(BackendSourceFiles::codeTokens($path)),
+    ));
+
+    expect(count($using))->toBeGreaterThan(10, 'almost nothing was read as using DispatchesToast — the token walk is broken, not the components.');
 
     expect(toastSeamMethodsRedeclared($files))->toBe(
         [],
@@ -239,6 +285,29 @@ it('sees a component that shadows the trait method', function (): void {
         @unlink($planted);
     }
 
-    expect($found)->toHaveCount(1);
-    expect($found[0])->toContain('redeclares toast()');
+    expect($found)->toHaveCount(1, 'The reader must flag the redeclared toast() and nothing else in the planted class.');
+    expect(str_contains($found[0], 'redeclares toast()'))->toBeTrue('The reader flagged a method, but not the one shadowing the trait.');
+});
+
+it('exempts the trait for declaring the methods, not for the path it sits at', function (): void {
+    $declaring = tempnam(sys_get_temp_dir(), 'toast-trait').'.php';
+    file_put_contents($declaring, <<<'PHP'
+        <?php
+        trait DispatchesToast
+        {
+            protected function toast(string $message): void {}
+
+            protected function toastWithUndo(string $message, string $undoAction, mixed $undoPayload): void {}
+        }
+        PHP);
+
+    try {
+        $found = toastSeamMethodsRedeclared([$declaring]);
+    } finally {
+        @unlink($declaring);
+    }
+
+    // The file is named nothing like Concerns/DispatchesToast.php: the old
+    // exemption was a path, and a moved trait would have failed against itself.
+    expect($found)->toBe([], 'The declaration of the trait reads as a shadow of itself.');
 });

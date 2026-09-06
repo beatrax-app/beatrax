@@ -37,16 +37,38 @@ it('pins every shared runtime dependency to the same constraint in both Composer
     [$root, $mobile] = composerRootRequires();
 
     $mismatched = [];
+    $shared = 0;
+
     foreach (array_keys($root) as $package) {
+        // A package only one root requires is not a shared line of code, so the
+        // two constraints have nothing to agree about.
         if (! isset($mobile[$package])) {
             continue;
         }
+
+        $shared++;
+
         if ($root[$package] !== $mobile[$package]) {
             $mismatched[$package] = sprintf('root %s vs mobile-app %s', $root[$package], $mobile[$package]);
         }
     }
 
-    expect($mismatched)->toBe([]);
+    // The two roots share 43 requires today. A comparison that found none of
+    // them agrees about nothing and reports a clean pair.
+    expect($shared)->toBeGreaterThan(
+        20,
+        'No package is required by both roots, so this rule compared nothing at all.'
+    );
+
+    expect($mismatched)->toBe([], implode("\n  ", [
+        'These libraries are pinned differently in the two Composer roots:',
+        ...array_map(static fn (string $package): string => $package.': '.$mismatched[$package], array_keys($mismatched)),
+        '',
+        'Modules/ is one tree read from both roots, so a library at two versions is',
+        'code written against one and shipped against the other. brick/money at ^0.14',
+        'here and ^0.11 there fatalled the phone the first time anything converted a',
+        'currency, and CI could not see it: the mobile root runs only the Mobile suite.',
+    ]));
 });
 
 /** @return list<string> the bootstrap file of each Composer root */
@@ -116,6 +138,17 @@ it('configures the same exception handler in both Composer roots', function (): 
 
     $root = composerRootExceptionShape($rootPath);
     $mobile = composerRootExceptionShape($mobilePath);
+
+    // Read before the comparison: two empty shapes are equal, so a block reader
+    // that stopped matching would report the roots in perfect agreement.
+    expect(count($root['methods']))->toBeGreaterThan(
+        1,
+        $rootPath.' registers no $exceptions-> callback the reader could find, so the block reader has stopped matching.'
+    );
+    expect(count($root['types']))->toBeGreaterThan(
+        1,
+        $rootPath.' names no exception type the reader could find, so the block reader has stopped matching.'
+    );
 
     expect($mobile['methods'])->toBe(
         $root['methods'],

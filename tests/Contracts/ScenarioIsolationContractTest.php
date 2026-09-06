@@ -374,7 +374,8 @@ it('isolates cross-user scenario activity from another users row counts', functi
 it('confirms zero forbidden JOIN constructs at the source level (defensive grep complement)', function (): void {
     // The arch invariant scans every module; this narrows the same scan to
     // Forecasting, the module the boundary most directly protects.
-    $forbiddenJoinAndTable = 0;
+    $offenders = [];
+    $scanned = 0;
     $forecastingDir = base_path('Modules/Forecasting');
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($forecastingDir, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -388,15 +389,29 @@ it('confirms zero forbidden JOIN constructs at the source level (defensive grep 
         if (str_contains($path, '/tests/')) {
             continue;
         }
+        $scanned++;
         $contents = (string) file_get_contents($path);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
         if (preg_match("/->(join|leftJoin|rightJoin|crossJoin)\\(\\s*['\"]forecast_scenario_mutations['\"]/", $stripped) === 1) {
             if (preg_match("/['\"](transactions|recurring_series_occurrences|chain_links|card_statements)['\"]/", $stripped) === 1) {
-                $forbiddenJoinAndTable++;
+                $offenders[] = str_replace(base_path().'/', '', $path);
             }
         }
     }
-    expect($forbiddenJoinAndTable)->toBe(0);
+
+    // The walk reads one module, and a walk that opened nothing would report a
+    // clean module as loudly as a correct one does.
+    expect($scanned)->toBeGreaterThan(80, 'The Forecasting walk read almost no PHP, so a clean answer below is the walk being broken rather than the module being right.');
+
+    sort($offenders);
+
+    expect($offenders)->toBe(
+        [],
+        'A Forecasting query joins forecast_scenario_mutations to a substrate table. A scenario is a what-if '
+        .'the reader asked for and nothing else may see it, so the join is where a hypothetical amount leaks '
+        ."into a real balance. Compose the two reads instead of joining them. Offenders:\n  "
+        .implode("\n  ", $offenders),
+    );
 });
 
 it('ensures ScenarioQuery is the only Public-API path to the mutations table', function (): void {

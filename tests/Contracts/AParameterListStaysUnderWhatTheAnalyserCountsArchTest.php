@@ -15,9 +15,20 @@ use Tests\Contracts\Support\SonarSourceFiles;
 // what this guard counts is the whole rule: see the .docs page above.
 const SONAR_PARAMETER_CEILING = 7;
 
+// The analysed roots hold 2,493 files declaring thousands of functions, and the
+// two floors sit far under both: a walk that read nothing inspects nothing and
+// reports the same clean tree a walk that found nothing does.
+const SONAR_PARAMETER_FILE_FLOOR = 1_000;
+
+const SONAR_PARAMETER_FUNCTION_FLOOR = 1_000;
+
 it('leaves no parameter list longer than the analyser counts to', function (): void {
     $files = SonarSourceFiles::all();
-    expect($files)->not->toBe([]);
+
+    expect(count($files))->toBeGreaterThan(
+        SONAR_PARAMETER_FILE_FLOOR,
+        'The walk opened '.count($files).' of the files the hosted analysis reads, so its verdict covers a fraction of them.'
+    );
 
     $offenders = [];
     $inspected = 0;
@@ -81,8 +92,17 @@ it('leaves no parameter list longer than the analyser counts to', function (): v
     // A walk that stops reading inspects nothing and reports a clean tree.
     // These say it ran: the tree declares thousands of functions, and at least
     // one of them sits on the ceiling.
-    expect($inspected)->toBeGreaterThan(1000);
-    expect($largest)->toBeGreaterThanOrEqual(SONAR_PARAMETER_CEILING);
+    expect($inspected)->toBeGreaterThan(
+        SONAR_PARAMETER_FUNCTION_FLOOR,
+        'The tokeniser found '.$inspected.' function declarations in '.count($files)
+        .' files, which is what a reader that stopped recognising a declaration looks like.'
+    );
+
+    expect($largest)->toBeGreaterThanOrEqual(
+        SONAR_PARAMETER_CEILING,
+        'The longest counted parameter list in the whole tree was '.$largest
+        .', so the counter is answering with a number nothing in this repository could produce.'
+    );
 
     expect($offenders)->toBe([], implode("\n", [
         'These take more than '.SONAR_PARAMETER_CEILING.' parameters that the analyser counts:',

@@ -49,8 +49,18 @@ function aisOnlyGuardPhpFiles(string $relativeDir): array
 const AIS_ONLY_FORBIDDEN_PATTERN = '#[\'"]/?payments[\'"]|\bPIS\b|payment[-_]initiation#iu';
 
 it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBanking outside tests/comments', function (): void {
+    $files = aisOnlyGuardPhpFiles('Modules/OpenBanking');
+
+    // Counted first: the pattern checks below prove the needle fires, and a
+    // walk that reached no file reports the same empty offender list a clean
+    // module reports. Only the count separates the two.
+    expect(count($files))->toBeGreaterThan(
+        50,
+        'The walk over Modules/OpenBanking reached '.count($files).' files, which is too few to be the module.'
+    );
+
     $hits = [];
-    foreach (aisOnlyGuardPhpFiles('Modules/OpenBanking') as $path) {
+    foreach ($files as $path) {
         $stripped = aisOnlyGuardStripComments((string) file_get_contents($path));
         if (preg_match(AIS_ONLY_FORBIDDEN_PATTERN, $stripped) === 1) {
             $hits[] = str_replace(base_path().'/', '', $path);
@@ -102,7 +112,17 @@ it('emits only a strict subset of {balances, transactions, accounts} from Enable
                 );
                 $keys = array_keys($scope->toArray());
 
-                expect(array_diff($keys, $allowedKeys))->toBe([]);
+                $extra = array_values(array_diff($keys, $allowedKeys));
+
+                expect($extra)->toBe([], sprintf(
+                    'EnableBankingAccessScope::toArray() emitted %s at balances=%s transactions=%s accounts=%s. '
+                    .'The /auth body is built from this array, so a key beyond {balances, transactions, accounts} '
+                    .'asks the bank for a scope this connector does not have.',
+                    implode(', ', $extra),
+                    var_export($balances, true),
+                    var_export($transactions, true),
+                    var_export($accounts, true),
+                ));
                 expect($keys)->not->toContain('payments');
             }
         }

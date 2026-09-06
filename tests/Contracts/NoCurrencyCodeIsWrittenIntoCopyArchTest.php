@@ -10,15 +10,25 @@ use Modules\Ledger\Public\ValueObjects\Money;
 // account's, were true only for the ledger they were written against — and
 // BaseCurrencyIsTheOnlyEuroArchTest skips lang/ on the grounds that
 // translations are data, so nothing was watching them.
+
 /**
+ * Every locale, not English alone. A code reaches a reader through whichever
+ * file their locale resolves to, and the twenty-five translated copies of a
+ * line are exactly where the English one is least likely to be re-read.
+ *
  * @return list<string>
  */
 function copyCurrencyCodeFiles(): array
 {
-    $files = glob(base_path('Modules/*/Resources/lang/en/*.php')) ?: [];
-    sort($files);
+    $files = array_merge(
+        (array) glob(base_path('Modules/*/Resources/lang/*/*.php')),
+        (array) glob(base_path('lang/*/*.php')),
+    );
 
-    return array_values($files);
+    $paths = array_map(strval(...), $files);
+    sort($paths);
+
+    return array_values($paths);
 }
 
 /**
@@ -40,20 +50,88 @@ function copyCurrencyCodeFlatten(array $strings, string $prefix = ''): array
     return $flat;
 }
 
-it('never writes a currency code into a translated string', function (): void {
-    $codes = array_map(static fn (Currency $case): string => $case->value, Currency::cases());
+/**
+ * Read once and held: both rules below walk the same four thousand files, and
+ * requiring each of them twice is the only reason to do it twice.
+ *
+ * @return array<string, array<string, string>> repo-relative path => key => line
+ */
+function copyCurrencyCodeLines(): array
+{
+    /** @var array<string, array<string, string>>|null $lines */
+    static $lines = null;
 
-    $offenders = [];
+    if ($lines !== null) {
+        return $lines;
+    }
+
+    $lines = [];
+
     foreach (copyCurrencyCodeFiles() as $path) {
         /** @var array<array-key, mixed> $strings */
         $strings = require $path;
 
-        foreach (copyCurrencyCodeFlatten($strings) as $key => $value) {
-            foreach ($codes as $code) {
-                if (preg_match('/\b'.$code.'\b/', $value) === 1) {
-                    $offenders[] = str_replace(base_path().'/', '', $path).' ['.$key.'] '.$value;
-                }
+        $lines[str_replace(base_path().'/', '', $path)] = copyCurrencyCodeFlatten($strings);
+    }
+
+    return $lines;
+}
+
+/**
+ * @param  array<string, string>  $flat
+ * @param  list<string>  $needles
+ * @return list<string> `[key] line` for each line naming one
+ */
+function copyCurrencyOffendersIn(array $flat, array $needles, bool $wholeWord): array
+{
+    $offenders = [];
+
+    foreach ($flat as $key => $value) {
+        foreach ($needles as $needle) {
+            $names = $wholeWord
+                ? preg_match('/\b'.preg_quote($needle, '/').'\b/', $value) === 1
+                : str_contains($value, $needle);
+
+            if ($names) {
+                $offenders[] = '['.$key.'] '.$value;
             }
+        }
+    }
+
+    return $offenders;
+}
+
+/**
+ * Both rules read the same denominators, and both are empty over a walk that
+ * globbed nothing. The floors sit far under today's 4,104 files and 111,890
+ * lines.
+ */
+function copyCurrencyAssertTheWalkRead(): void
+{
+    $lines = copyCurrencyCodeLines();
+    $strings = array_sum(array_map(count(...), $lines));
+
+    expect(count($lines))->toBeGreaterThan(
+        1000,
+        'the walk read '.count($lines).' lang files, which is too few to be twenty-six locales.'
+    );
+
+    expect($strings)->toBeGreaterThan(
+        20000,
+        'the walk flattened '.$strings.' translated lines, which is too few to be this tree.'
+    );
+}
+
+it('never writes a currency code into a translated string', function (): void {
+    copyCurrencyAssertTheWalkRead();
+
+    $codes = array_map(static fn (Currency $case): string => $case->value, Currency::cases());
+    expect($codes)->not->toBeEmpty('Currency declares no case, so this rule looked for nothing.');
+
+    $offenders = [];
+    foreach (copyCurrencyCodeLines() as $path => $flat) {
+        foreach (copyCurrencyOffendersIn($flat, $codes, wholeWord: true) as $offender) {
+            $offenders[] = $path.' '.$offender;
         }
     }
 
@@ -71,19 +149,15 @@ it('never writes a currency code into a translated string', function (): void {
 // drawn in the reader's. Both were true only of the ledger they were written
 // against.
 it('never writes a currency symbol into a translated string', function (): void {
+    copyCurrencyAssertTheWalkRead();
+
     $symbols = array_values(Money::SYMBOLS);
+    expect($symbols)->not->toBeEmpty('Money declares no symbol, so this rule looked for nothing.');
 
     $offenders = [];
-    foreach (copyCurrencyCodeFiles() as $path) {
-        /** @var array<array-key, mixed> $strings */
-        $strings = require $path;
-
-        foreach (copyCurrencyCodeFlatten($strings) as $key => $value) {
-            foreach ($symbols as $symbol) {
-                if (str_contains($value, $symbol)) {
-                    $offenders[] = str_replace(base_path().'/', '', $path).' ['.$key.'] '.$value;
-                }
-            }
+    foreach (copyCurrencyCodeLines() as $path => $flat) {
+        foreach (copyCurrencyOffendersIn($flat, $symbols, wholeWord: false) as $offender) {
+            $offenders[] = $path.' '.$offender;
         }
     }
 
@@ -93,4 +167,29 @@ it('never writes a currency symbol into a translated string', function (): void 
         '',
         'Interpolate the amount, or the symbol, from the currency the caller holds.',
     ]));
+});
+
+// Both rules report on a tree that holds none of what they look for, so the
+// readers are driven against planted lines. The near-misses are the two shapes
+// that legitimately survive: a placeholder the caller fills, and a longer word
+// the code happens to sit inside.
+it('tells a currency written into copy from a placeholder and from a word containing it', function (): void {
+    $flat = [
+        'settled.header' => 'Settled EUR',
+        'amount.label' => 'Amount (:currency)',
+        'europe.note' => 'EUROPE, and neuro too',
+        'below.zero' => 'dips below €0',
+        'plain' => 'dips below zero',
+    ];
+
+    expect(copyCurrencyOffendersIn($flat, ['EUR', 'USD'], wholeWord: true))
+        ->toBe(['[settled.header] Settled EUR'])
+        ->and(copyCurrencyOffendersIn($flat, ['€', '$'], wholeWord: false))
+        ->toBe(['[below.zero] dips below €0'])
+        ->and(copyCurrencyOffendersIn([], ['EUR'], wholeWord: true))->toBe([]);
+});
+
+it('flattens a nested lang array to the keys a caller writes', function (): void {
+    expect(copyCurrencyCodeFlatten(['a' => ['b' => 'one', 'c' => ['d' => 'two']], 'e' => 'three', 'f' => 4]))
+        ->toBe(['a.b' => 'one', 'a.c.d' => 'two', 'e' => 'three']);
 });

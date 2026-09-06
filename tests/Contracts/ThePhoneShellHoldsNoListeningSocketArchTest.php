@@ -60,8 +60,13 @@ function phoneShellRoots(): array
         // desktop's own daemon inside the phone's walk.
         $shared = ['Modules', 'app', 'routes', 'resources', 'public', 'tests'];
 
-        if (! is_dir($path) || is_link($path) || in_array($entry, $shared, true)
-            || in_array($entry, ['vendor', 'node_modules', 'storage', 'build-secrets'], true)) {
+        // Not the phone's own code: two are somebody else's packages, one is
+        // runtime state the build writes, and one holds signing material that
+        // never reaches a device at all. A listener spelling found in any of
+        // them would name a file no branch here wrote.
+        $notOurs = ['vendor', 'node_modules', 'storage', 'build-secrets'];
+
+        if (! is_dir($path) || is_link($path) || in_array($entry, $shared, true) || in_array($entry, $notOurs, true)) {
             continue;
         }
 
@@ -89,6 +94,10 @@ function phoneShellSources(array $roots): array
             if (! $file->isFile() || ! str_ends_with($path, '.php')) {
                 continue;
             }
+
+            // A test names a listener spelling on purpose — that is how the
+            // desktop daemon's own suite is written — and vendor is somebody
+            // else's package rather than phone-side code that ships as ours.
             if (str_contains($path, '/tests/') || str_contains($path, '/vendor/')) {
                 continue;
             }
@@ -190,7 +199,7 @@ it('spawns the long-running daemons only from the shell the phone switches off',
 
 it('keeps the desktop shell out of the roster the phone boots, and out of its dependencies', function (): void {
     $statuses = json_decode((string) file_get_contents(phoneShellManifestPath('modules_statuses.json')), true);
-    expect($statuses)->toBeArray();
+    expect($statuses)->toBeArray('modules_statuses.json did not decode to an array, so every assertion below it is about null.');
 
     /** @var array<string, mixed> $statuses */
     expect(array_key_exists('Desktop', $statuses))->toBeTrue(
@@ -201,7 +210,7 @@ it('keeps the desktop shell out of the roster the phone boots, and out of its de
     );
 
     $manifest = json_decode((string) file_get_contents(phoneShellManifestPath('composer.json')), true);
-    expect($manifest)->toBeArray();
+    expect($manifest)->toBeArray('the phone shell composer.json did not decode to an array, so every assertion below it is about null.');
 
     /** @var array{name?: string, require?: array<string, string>} $manifest */
     expect($manifest['name'] ?? '')->toBe(
@@ -210,8 +219,16 @@ it('keeps the desktop shell out of the roster the phone boots, and out of its de
     );
 
     $require = $manifest['require'] ?? [];
-    expect($require)->toHaveKey('nativephp/mobile')
-        ->and($require)->not->toHaveKey('nativephp/desktop');
+
+    expect(array_key_exists('nativephp/mobile', $require))->toBeTrue(
+        'the phone shell no longer requires nativephp/mobile, so this manifest is not the one that builds the device bundle.',
+    );
+
+    // The two packages conflict, so a desktop requirement here would not merely
+    // ship the daemon's shell to the phone — it would not install at all.
+    expect(array_key_exists('nativephp/desktop', $require))->toBeFalse(
+        'the phone shell requires nativephp/desktop, which is the package that ships the update poller and the daemon shell.',
+    );
 });
 
 it('sees a listener planted in phone-side code', function (): void {
@@ -235,8 +252,13 @@ it('sees a listener planted in phone-side code', function (): void {
         @unlink($planted);
     }
 
-    expect($found)->toBe([
-        str_replace(base_path().'/', '', $planted).' names Amp\Http\Server',
-        str_replace(base_path().'/', '', $planted).' names SocketHttpServer',
-    ]);
+    expect($found)->toBe(
+        [
+            str_replace(base_path().'/', '', $planted).' names Amp\Http\Server',
+            str_replace(base_path().'/', '', $planted).' names SocketHttpServer',
+        ],
+        'The reader must find both spellings in the code and neither of the two in the comment '
+        .'above it — a guard that counted prose would pass on a file that only mentions a listener '
+        .'and fail on a file that only explains one.',
+    );
 });

@@ -16,55 +16,98 @@ use Modules\Core\Public\Support\MarkupSource;
 // must also draw a control a finger can find, or half the readers are stranded
 // mid-setup with no way back at all.
 
-/** @return list<string> blades that hand their previous step to the back gesture */
-function gestureBackedStepBlades(): array
+// Both roots a template can ship from, not just Modules: the wizard lives in a
+// module today, and a layout under resources/views could declare the attribute
+// tomorrow with nothing here reading it.
+/** @return array{blades: list<string>, walked: int} */
+function gestureBackedStepWalk(): array
 {
     $found = [];
+    $walked = 0;
 
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(base_path('Modules'), RecursiveDirectoryIterator::SKIP_DOTS),
-    );
-
-    /** @var SplFileInfo $file */
-    foreach ($iterator as $file) {
-        if (! $file->isFile() || ! str_ends_with($file->getPathname(), '.blade.php')) {
+    foreach ([base_path('Modules'), base_path('resources/views')] as $root) {
+        if (! is_dir($root)) {
             continue;
         }
 
-        if (str_contains((string) file_get_contents($file->getPathname()), 'data-wizard-previous-step')) {
-            $found[] = $file->getPathname();
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+
+        /** @var SplFileInfo $file */
+        foreach ($iterator as $file) {
+            if (! $file->isFile() || ! str_ends_with($file->getPathname(), '.blade.php')) {
+                continue;
+            }
+
+            $walked++;
+
+            if (str_contains((string) file_get_contents($file->getPathname()), 'data-wizard-previous-step')) {
+                $found[] = $file->getPathname();
+            }
         }
     }
 
     sort($found);
 
-    return $found;
+    return ['blades' => $found, 'walked' => $walked];
+}
+
+/** @return list<string> blades that hand their previous step to the back gesture */
+function gestureBackedStepBlades(): array
+{
+    return gestureBackedStepWalk()['blades'];
 }
 
 it('finds the screens that lean on the back gesture', function (): void {
+    $walk = gestureBackedStepWalk();
+
+    // Far under the 279 templates the two roots hold. A walk that opened none
+    // of them reports no gesture-backed screen, which is the answer a tree with
+    // no wizard gives.
+    expect($walk['walked'])->toBeGreaterThan(
+        100,
+        'The walk opened '.$walk['walked'].' templates, which is too few to have read either root.',
+    );
+
     // Vacuously green is the failure mode this whole file exists to prevent:
     // the attribute is what ties the gesture to a screen, and a rename would
     // otherwise leave every assertion below with nothing to check.
-    expect(gestureBackedStepBlades())->not->toBe([]);
+    expect($walk['blades'])->not->toBe(
+        [],
+        'No template hands a previous step to the back gesture, so every case below checks nothing.',
+    );
 });
+
+/**
+ * Why this template's gesture stands alone, or null when a control reaches the
+ * same step. Taking a source string so the case below can drive the reader over
+ * a planted template rather than re-implementing it.
+ */
+function gestureBackedStepWithoutAControl(string $source): ?string
+{
+    // The step the gesture would return to, as the template names it.
+    if (preg_match('/data-wizard-previous-step="\{\{\s*(\$[A-Za-z_][A-Za-z0-9_]*)/', $source, $m) !== 1) {
+        return 'the attribute names no variable';
+    }
+
+    $step = preg_quote($m[1], '/');
+
+    if (preg_match('/wire:click="goToStep\(\'\{\{\s*'.$step.'\s*\}\}\'\)"/', $source) !== 1) {
+        return 'nothing but the gesture reaches '.$m[1];
+    }
+
+    return null;
+}
 
 it('draws a back control that needs no gesture at all', function (): void {
     $missing = [];
 
     foreach (gestureBackedStepBlades() as $path) {
-        $source = (string) file_get_contents($path);
+        $stranded = gestureBackedStepWithoutAControl((string) file_get_contents($path));
 
-        // The step the gesture would return to, as the template names it.
-        if (preg_match('/data-wizard-previous-step="\{\{\s*(\$[A-Za-z_][A-Za-z0-9_]*)/', $source, $m) !== 1) {
-            $missing[] = $path.' (the attribute names no variable)';
-
-            continue;
-        }
-
-        $step = preg_quote($m[1], '/');
-
-        if (preg_match('/wire:click="goToStep\(\'\{\{\s*'.$step.'\s*\}\}\'\)"/', $source) !== 1) {
-            $missing[] = $path.' (nothing but the gesture reaches '.$m[1].')';
+        if ($stranded !== null) {
+            $missing[] = $path.' ('.$stranded.')';
         }
     }
 
@@ -74,6 +117,21 @@ it('draws a back control that needs no gesture at all', function (): void {
         'reader who cannot go back:',
         ...$missing,
     ]));
+});
+
+// The reader is the whole of what the rule above enforces, so it is driven over
+// a template that strands its reader and one that does not.
+it('reports a step reachable only by the gesture, and passes one with a control', function (): void {
+    $stranded = '<div data-wizard-previous-step="{{ $previousStep }}"><p>no way back</p></div>';
+    $unnamed = '<div data-wizard-previous-step="{{ steps()[0] }}"></div>';
+    $reachable = '<div data-wizard-previous-step="{{ $previousStep }}">'
+        .'<button type="button" wire:click="goToStep(\'{{ $previousStep }}\')">Back</button></div>';
+
+    expect(gestureBackedStepWithoutAControl($stranded))->toBe('nothing but the gesture reaches $previousStep');
+    expect(gestureBackedStepWithoutAControl($unnamed))->toBe('the attribute names no variable');
+    expect(gestureBackedStepWithoutAControl($reachable))->toBeNull(
+        'A step whose control names the same variable is not stranded, and reading it as one would make the rule unusable.',
+    );
 });
 
 it('keeps that control on the screen rather than only in the tree', function (): void {

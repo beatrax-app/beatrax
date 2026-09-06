@@ -9,20 +9,37 @@ declare(strict_types=1);
 // row shape squeezed the import preview's buttons until "Confirm" broke.
 // Neither reproduces in English, which is why both survived until a Dutch
 // sweep on a 375px screen.
+// Both roots a template ships from. Modules alone was narrower than the rule
+// reads: a page heading drawn by a layout under resources/views squeezes its
+// action the same way, and nothing here would have opened it.
 /** @return list<string> */
 function headingRowBlades(): array
 {
     $files = [];
-    /** @var Iterator<SplFileInfo> $found */
-    $found = new RegexIterator(
-        new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules'))),
-        '/\.blade\.php$/',
-    );
-    foreach ($found as $file) {
-        $files[] = $file->getPathname();
+
+    foreach ([base_path('Modules'), base_path('resources/views')] as $root) {
+        if (! is_dir($root)) {
+            continue;
+        }
+
+        /** @var Iterator<SplFileInfo> $found */
+        $found = new RegexIterator(
+            new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root)),
+            '/\.blade\.php$/',
+        );
+        foreach ($found as $file) {
+            $files[] = $file->getPathname();
+        }
     }
 
-    expect($files)->not->toBe([]);
+    sort($files);
+
+    // Far under the 279 templates the two roots hold. A walk that opened none
+    // of them reports no squeezed row, which is the answer a clean tree gives.
+    expect(count($files))->toBeGreaterThan(
+        100,
+        'The walk opened '.count($files).' templates, which is too few to have read either root.',
+    );
 
     return $files;
 }
@@ -40,6 +57,7 @@ function headingRowIsSqueezable(string $classes): bool
 
 it('lets a heading row wrap rather than squeeze what is on it', function (): void {
     $offenders = [];
+    $rows = 0;
 
     foreach (headingRowBlades() as $path) {
         $source = (string) file_get_contents($path);
@@ -51,6 +69,7 @@ it('lets a heading row wrap rather than squeeze what is on it', function (): voi
         // that one utility is absent from a string that names the others.
         while (($at = strpos($source, 'items-baseline justify-between', $offset)) !== false) {
             $offset = $at + 1;
+            $rows++;
 
             $open = strrpos(substr($source, 0, $at), '"');
             if ($open === false) {
@@ -73,7 +92,20 @@ it('lets a heading row wrap rather than squeeze what is on it', function (): voi
         }
     }
 
-    expect($offenders)->toBe([]);
+    sort($offenders);
+
+    // The literal is what ties this half to a screen, so a rename would leave
+    // it reading nothing and reporting a clean tree.
+    expect($rows)->toBeGreaterThan(
+        10,
+        'No `items-baseline justify-between` row was read at all, so this half checked nothing.',
+    );
+
+    expect($offenders)->toBe(
+        [],
+        "These rows put a heading and its action on one line that cannot wrap, so whichever of them gives way is\n"
+        ."squeezed rather than wrapped. Add flex-wrap to the row:\n  ".implode("\n  ", $offenders),
+    );
 });
 
 // The guard above reads one literal, and the row that squeezed the forecast
@@ -85,6 +117,7 @@ it('lets a heading row wrap rather than squeeze what is on it', function (): voi
 // `justify-between`, so this half looks for the heading instead.
 it('lets any row carrying a page heading wrap, however it aligns it', function (): void {
     $squeezed = [];
+    $rows = 0;
 
     foreach (headingRowBlades() as $path) {
         $source = (string) file_get_contents($path);
@@ -92,6 +125,7 @@ it('lets any row carrying a page heading wrap, however it aligns it', function (
 
         while (($at = strpos($source, 'justify-between', $offset)) !== false) {
             $offset = $at + 1;
+            $rows++;
 
             $open = strrpos(substr($source, 0, $at), '"');
             $close = strpos($source, '"', $at);
@@ -116,6 +150,13 @@ it('lets any row carrying a page heading wrap, however it aligns it', function (
     }
 
     sort($squeezed);
+
+    // The rows the second half considers before it decides. A reader that found
+    // none of them would report a clean tree it never looked at.
+    expect($rows)->toBeGreaterThan(
+        20,
+        'No `justify-between` row was read at all, so this half checked nothing.',
+    );
 
     expect($squeezed)->toBe(
         [],

@@ -191,9 +191,18 @@ const SUPPLIED_DATE_FIELDS = [
 // date. A Retry-After header is the one thing in this tree it IS the reader of:
 // RFC 9110 allows an HTTP-date there in three legal spellings, and what comes
 // back is a delay rather than a day.
-/** @var array<string, string> */
+//
+// `sites` is re-counted and `proves` re-run against the file, because a pin
+// carrying only a path excuses every later strtotime() written into the same
+// class — and this one sits in a mail client, which is where a supplied date
+// arrives from.
+/** @var array<string, array{reason: string, sites: int, proves: string}> */
 const SUPPLIED_DATE_STRTOTIME_PINS = [
-    'Modules/EmailScan/Internal/Clients/GraphErrorMapper.php' => 'A Retry-After HTTP-date, read as a delay in seconds rather than as a calendar day.',
+    'Modules/EmailScan/Internal/Clients/GraphErrorMapper.php' => [
+        'reason' => 'A Retry-After HTTP-date, read as a delay in seconds rather than as a calendar day.',
+        'sites' => 1,
+        'proves' => '/\$when = \$trimmed === \x27\x27 \? false : strtotime\(\$trimmed\);/',
+    ],
 ];
 
 /** @return list<string> every Blade template in Modules and resources */
@@ -280,6 +289,9 @@ function suppliedDateRespellings(array $paths): array
     $counted = 0;
 
     foreach ($paths as $path) {
+        // The seam itself, which is where the round-trip is spelled once. The
+        // exemption is the whole file because the whole file is the answer to
+        // the rule; anything else naming createFromFormat is a second copy.
         if (str_ends_with($path, 'Public/Support/SafeDate.php')) {
             continue;
         }
@@ -309,8 +321,12 @@ function suppliedDateRespellings(array $paths): array
 }
 
 /**
+ * How many times each file calls strtotime(), rather than merely whether it
+ * does: a pin naming a path alone waves on the second call as readily as the
+ * one that was argued for.
+ *
  * @param  list<string>  $paths
- * @return list<string>
+ * @return array<string, int> relative path => the strtotime() calls it makes
  */
 function suppliedDateStrtotimeCalls(array $paths): array
 {
@@ -320,16 +336,16 @@ function suppliedDateStrtotimeCalls(array $paths): array
         $tokens = BackendSourceFiles::codeTokens($path);
         $relative = str_replace(base_path().'/', '', $path);
 
-        foreach ($tokens as $index => $token) {
+        foreach ($tokens as $token) {
             if (is_array($token) && $token[0] === T_STRING && $token[1] === 'strtotime') {
-                $calls[] = $relative;
+                $calls[$relative] = ($calls[$relative] ?? 0) + 1;
             }
         }
     }
 
-    sort($calls);
+    ksort($calls);
 
-    return array_values(array_unique($calls));
+    return $calls;
 }
 
 it('names the file that refuses every date a reader can type into a picker', function (): void {
@@ -359,8 +375,15 @@ it('names the file that refuses every date a reader can type into a picker', fun
     // Both below what the tree actually holds, so a stripped comment eating the
     // markup, a renamed component or a broken regex fails here rather than
     // reporting a tree with no reader-supplied dates in it.
-    expect(count($blades))->toBeGreaterThan(200);
-    expect($walk['elements'])->toBeGreaterThan(15);
+    expect(count($blades))->toBeGreaterThan(
+        200,
+        'The walk opened '.count($blades).' templates, which is too few to have read Modules/ and resources/ at all.',
+    );
+    expect($walk['elements'])->toBeGreaterThan(
+        15,
+        'The walk found '.$walk['elements'].' date pickers, so the component reader stopped rather than the tree '
+        .'having no reader-supplied dates in it.',
+    );
 
     expect($offenders)->toBe([], implode("\n  ", [
         'A date a reader can put into a picker is a date the client chooses, and',
@@ -383,7 +406,7 @@ it('still holds each pinned field to the refusal that was written for it', funct
     $reproved = 0;
 
     foreach (SUPPLIED_DATE_FIELDS as $field => $pin) {
-        expect($pin['reason'])->not->toBe('');
+        expect($pin['reason'])->not->toBe('', $field.' is pinned with no reason, which is a waiver nobody can audit.');
 
         foreach ($pin['refusals'] as $relative => $patterns) {
             $path = base_path($relative);
@@ -415,12 +438,22 @@ it('still holds each pinned field to the refusal that was written for it', funct
 
     // Counted rather than left implicit: a table whose patterns all vanished
     // would otherwise pass by asserting nothing at all.
-    expect($reproved)->toBeGreaterThan(20);
+    expect($reproved)->toBeGreaterThan(
+        20,
+        'Only '.$reproved.' refusal patterns were re-run, so the table above has emptied out rather than the '
+        .'refusals having moved.',
+    );
 });
 
 it('spells the whole-day round-trip once, in SafeDate, and reads no date with strtotime', function (): void {
     $files = BackendSourceFiles::all();
-    expect($files)->not->toBeEmpty();
+
+    // Far under the thousands the tree holds, so a walk that opened nothing
+    // fails here rather than reporting a tree with no second spelling in it.
+    expect(count($files))->toBeGreaterThan(
+        1000,
+        'The walk opened '.count($files).' backend files, which is too few to have read the tree at all.',
+    );
 
     $walk = suppliedDateRespellings($files);
 
@@ -434,10 +467,14 @@ it('spells the whole-day round-trip once, in SafeDate, and reads no date with st
 
     // createFromFormat is still reached for the shapes an importer names, so a
     // walk that stopped seeing calls entirely is a walk that stopped reading.
-    expect($walk['counted'])->toBeGreaterThan(0);
+    expect($walk['counted'])->toBeGreaterThan(
+        0,
+        'No createFromFormat() call was reached at all, so the token reader stopped rather than the tree having '
+        .'stopped naming a format.',
+    );
 
     $strtotime = suppliedDateStrtotimeCalls($files);
-    $unpinned = array_values(array_diff($strtotime, array_keys(SUPPLIED_DATE_STRTOTIME_PINS)));
+    $unpinned = array_values(array_diff(array_keys($strtotime), array_keys(SUPPLIED_DATE_STRTOTIME_PINS)));
 
     expect($unpinned)->toBe([], implode("\n  ", [
         'strtotime() reads relative English — "yesterday", "last friday", "+1 week"',
@@ -447,8 +484,29 @@ it('spells the whole-day round-trip once, in SafeDate, and reads no date with st
         ...$unpinned,
     ]));
 
-    expect(array_values(array_intersect(array_keys(SUPPLIED_DATE_STRTOTIME_PINS), $strtotime)))
-        ->toBe(array_keys(SUPPLIED_DATE_STRTOTIME_PINS), 'a pinned strtotime() site no longer calls it — delete the entry');
+    // The count, not the path: a second call inside an already-pinned file is
+    // exactly what a per-file waiver would have carried, and this file is a
+    // mail client, which is where a supplied date arrives from.
+    $pinnedSites = array_map(static fn (array $pin): int => $pin['sites'], SUPPLIED_DATE_STRTOTIME_PINS);
+    ksort($pinnedSites);
+
+    expect(array_intersect_key($strtotime, $pinnedSites))->toBe(
+        $pinnedSites,
+        'a pinned strtotime() site calls it a different number of times than the entry claims — delete the entry, '
+        .'or argue for the new call the way the first one was argued for',
+    );
+
+    $stale = [];
+    foreach (SUPPLIED_DATE_STRTOTIME_PINS as $relative => $pin) {
+        if (! is_file(base_path($relative)) || preg_match($pin['proves'], (string) file_get_contents(base_path($relative))) !== 1) {
+            $stale[] = $relative.' is exempt because "'.$pin['reason'].'", and it no longer reads that way';
+        }
+    }
+
+    expect($stale)->toBe([], implode("\n  ", [
+        'A pinned strtotime() no longer reads the way the entry describes it:',
+        ...$stale,
+    ]));
 });
 
 it('reads a supplied day before the op-log applier writes it, on both paths', function (): void {
@@ -515,11 +573,14 @@ it('sees a planted picker and a planted second spelling, and is not fooled by a 
         @unlink($plantedPhp);
     }
 
-    expect(array_keys($walk['bindings']))->toBe(['plantedDate', 'rows.*.when']);
-    expect($walk['elements'])->toBe(2);
+    expect(array_keys($walk['bindings']))->toBe(
+        ['plantedDate', 'rows.*.when'],
+        'The reader either missed a planted picker or read the one named inside a Blade comment as a binding.',
+    );
+    expect($walk['elements'])->toBe(2, 'The element count is the denominator, so it has to count the tags and not the bindings.');
 
-    expect($respellings['counted'])->toBe(2);
-    expect(count($respellings['respellings']))->toBe(1);
+    expect($respellings['counted'])->toBe(2, 'Both createFromFormat() calls have to be reached before either is judged.');
+    expect(count($respellings['respellings']))->toBe(1, 'Only the whole-day round-trip is a second spelling; the timestamp read is not.');
     expect($respellings['respellings'][0])->toContain("createFromFormat('Y-m-d', \$raw)");
 });
 
