@@ -72,6 +72,12 @@ it('builds the store shape in every workflow that builds the sideloadable one', 
         if (substr_count($body, 'mobile:inspect-bundle') < 2) {
             $missing[] = $name.': ships an artifact it never read';
         }
+
+        // And what it REQUESTS is read from the merged manifest, which is the
+        // only place the strip script's work can be confirmed to have held.
+        if (! str_contains($body, 'mobile:check-permissions')) {
+            $missing[] = $name.': never reads the permissions the artifact requests';
+        }
     }
 
     expect($judged)->toBeGreaterThanOrEqual(

@@ -19,6 +19,7 @@ use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\DeviceNameSource;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Mobile\Commands\CheckPermissionsCommand;
 use Modules\Mobile\Commands\InspectBundleCommand;
 use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Commands\PackageAndroidCommand;
@@ -176,7 +177,12 @@ final class MobileServiceProvider extends ServiceProvider
         $livewire->component('mobile.welcome-screen', MobileWelcomeScreen::class);
         $livewire->component('mobile.cold-start-biometric-settings-section', ColdStartBiometricSettingsSection::class);
 
-        $this->commands([MobilePullCommand::class, PackageAndroidCommand::class, InspectBundleCommand::class]);
+        $this->commands([
+            MobilePullCommand::class,
+            PackageAndroidCommand::class,
+            InspectBundleCommand::class,
+            CheckPermissionsCommand::class,
+        ]);
 
         // Where the runtime cannot carry a multipart body, the client sends the
         // file base64-encoded and this puts a real UploadedFile back before
