@@ -33,11 +33,23 @@ final readonly class CreateRowCollision
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function contradicts(string $table, int|string $pk, array $payload): bool
+    public function contradicts(string $table, int|string $pk, array $payload, ?string $seededCreatedAt = null): bool
     {
         $stored = $this->storedRow($table, $pk);
 
-        if ($stored === null || ! $this->differs($table, 'created_at', $payload, $stored)) {
+        if ($stored === null) {
+            return false;
+        }
+
+        // A row whose first half carried no birth time was given one from the
+        // op's HLC. That value is this device's invention, so reading it back
+        // as the peer's claim turns the REST of the same create into a second
+        // row wearing one id.
+        if ($seededCreatedAt !== null && self::asText($stored['created_at'] ?? null) === $seededCreatedAt) {
+            return false;
+        }
+
+        if (! $this->differs($table, 'created_at', $payload, $stored)) {
             return false;
         }
 
