@@ -1676,6 +1676,50 @@ declares mergeable, on every covered table. A writer whose *caller* announces is
 pinned there with the file that proves it, and the pin is compared in both
 directions so it cannot outlive the reason it was granted for.
 
+### A write the column guard cannot read is still a write
+
+Counting writers, then columns, still leaves the *spelling*. All three guards
+above root their scan at a table literal — `table('goals')` — or at a model used
+as a static query root, so two ordinary ways of changing a row are invisible to
+every one of them at once, and a defect written either way reports a clean tree.
+
+The first is a statement that names its table inside a string.
+`Ledger\Public\Services\FieldProvenanceWriter` was the first casualty and is
+already fixed; `Chains\Internal\Resolvers\RetypeByAliasResolver` was the second
+and lasted longer, because a chain-resolution pass is not somewhere anybody
+looks for a ledger write. It retyped a batch of ids with
+`UPDATE transactions SET type = ?` and announced nothing, so the device that ran
+chain resolution netted a pair of transfer legs out of its spending while the
+peer went on counting the same two rows as an expense and an income — for good,
+with nothing quarantined and no error raised. `transactions.type` is a merged
+column, so this was never "unreplicated": it was two devices disagreeing.
+`Ledger\Public\Services\TransactionTypeWriter` now owns the bulk retype, reads
+back the ids the UPDATE actually moved under the same predicate it carries, and
+announces one edit per row after the commit.
+
+The second is an update or a delete called on a row already in hand.
+`$run->update(['status' => …])` names its table nowhere, and
+`Import\Public\Actions\DiscardImport` was written that way: the pairing backfill
+carries every `import_runs` row whatever its status, so a peer held the previewed
+run and went on offering to resume a preview the reader had already thrown away.
+A Set naming a run the peer never received updates nothing, which is the right
+answer for a run still local, so the announcement is unconditional.
+
+The same shape without the defect is `Core\Public\Actions\AcknowledgeSystemAlert`,
+which stamped `acknowledged_at` itself and then asked
+`Core\Public\Services\SystemAlertWriter` to announce what it had already done.
+Nothing was lost, but the write and its op were two statements a refactor could
+separate; `SystemAlertWriter::acknowledgeForUser()` owns both now, and announces
+only when the stamp actually closed the row.
+
+`ASyncedRowIsAnnouncedWhicheverWayItIsWrittenArchTest` is the fourth of the
+family and the one that asks about the spelling. It enumerates writers against
+`MergeRulesRegistry` exactly as its siblings do, and the one raw statement it
+allows to tell no peer — the no-op `UPDATE users SET id = id WHERE 0 = 1` in
+`Auth\Public\Actions\SignupAction`, which is there to take the write lock — is
+pinned with a pattern re-run against the file, so the exemption cannot outlive
+the reason it was granted for.
+
 ### `system_alerts` travels only where it is owned
 
 `system_alerts` captures in part, and the split is the point. Six probe write

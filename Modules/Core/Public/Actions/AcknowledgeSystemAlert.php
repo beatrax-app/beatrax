@@ -46,22 +46,11 @@ final readonly class AcknowledgeSystemAlert
             return $alert;
         }
 
-        // The row's `dedup_key` is released by a trigger on this column rather
-        // than here, because a peer's dismissal arrives as a raw UPDATE from
-        // the applier and reaches no PHP of ours. `refresh()` below reads the
-        // row back after it, so the returned model is not holding a stale key.
-        $this->db->connection()->transaction(static function () use ($alert, $now): void {
-            $alert->update(['acknowledged_at' => $now]);
-        });
-
-        // Only an owned row travels: the writer drops a system-wide one,
-        // because a peer never received that alert and a SET naming a pk it
-        // does not hold is an op it can only quarantine.
-        $this->alerts->captureAcknowledgement(
-            $alertId,
-            $alert->user_id,
-            $now->toDateTimeString(),
-        );
+        // Through the writer, never beside it: the stamp and the op that
+        // carries it are one operation there. `refresh()` reads the row back
+        // afterwards, so the returned model holds neither a stale key — a
+        // trigger releases `dedup_key` off this column — nor a stale stamp.
+        $this->alerts->acknowledgeForUser($alertId, $alert->user_id, $now);
 
         return $alert->refresh();
     }
