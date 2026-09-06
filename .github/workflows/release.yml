@@ -931,6 +931,17 @@ jobs:
                   echo "store bundle signed by the expected release key"
                   echo "AAB_PATH=$aab" >> "$GITHUB_ENV"
 
+            - name: Read the built artifacts for anything they must not carry
+              working-directory: mobile-app
+              run: |
+                  set -euo pipefail
+                  # The artifact, never the exclusion list. gitignore bounds
+                  # what reaches git and a cleanup list is a claim about a
+                  # build; a shipped iPhone build carried the build machine's
+                  # own encrypted sync identities under both.
+                  php artisan mobile:inspect-bundle "$GITHUB_WORKSPACE/$APK_PATH" --no-interaction
+                  php artisan mobile:inspect-bundle "$GITHUB_WORKSPACE/$AAB_PATH" --no-interaction
+
             - name: Upload Android artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:

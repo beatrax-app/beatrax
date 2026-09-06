@@ -66,6 +66,12 @@ it('builds the store shape in every workflow that builds the sideloadable one', 
         if (! str_contains($body, 'AAB is signed by an unexpected key')) {
             $missing[] = $name.': builds the AAB and never proves who signed it';
         }
+
+        // Both shapes are read, not just built: what a bundle carries is a
+        // question about the bundle, and the exclusion list has been wrong.
+        if (substr_count($body, 'mobile:inspect-bundle') < 2) {
+            $missing[] = $name.': ships an artifact it never read';
+        }
     }
 
     expect($judged)->toBeGreaterThanOrEqual(
