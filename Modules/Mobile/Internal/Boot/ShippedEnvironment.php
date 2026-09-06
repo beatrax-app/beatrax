@@ -21,10 +21,19 @@ final class ShippedEnvironment
         'APP_DEBUG' => 'false',
     ];
 
+    // Refused by value rather than pinned to one: an operator may reasonably
+    // ship `info`, and may not ship the level that writes a personal ledger's
+    // rows to a phone's disk. `.env.bundled` carries `warning`; this is what
+    // stops a hand-edited file getting past that.
+    /** @var array<string, string> */
+    private const array REFUSED = [
+        'LOG_LEVEL' => 'debug',
+    ];
+
     // Absence is refused alongside a wrong value, deliberately. Both keys
-    // resolve to their safe default when the file omits them — but the template
-    // ships them set to local and true, so a bundle whose safety rests on a
-    // line nobody wrote is one edit away from resting on nothing.
+    // resolve to their safe default when the file omits them — but the local
+    // template ships them set to local and true, and a bundle whose safety
+    // rests on a line nobody wrote is one edit away from resting on nothing.
     /**
      * @return array<string, string> key => what the file carries, for every key
      *                               a shipped bundle may not carry that value for
@@ -41,6 +50,12 @@ final class ShippedEnvironment
             }
         }
 
+        foreach (self::REFUSED as $key => $refused) {
+            if (self::valueOf($envContents, $key) === $refused) {
+                $wrong[$key] = $refused;
+            }
+        }
+
         return $wrong;
     }
 
@@ -48,6 +63,12 @@ final class ShippedEnvironment
     public static function required(): array
     {
         return self::REQUIRED;
+    }
+
+    /** @return array<string, string> the value each key may not carry */
+    public static function refused(): array
+    {
+        return self::REFUSED;
     }
 
     // The first uncommented assignment, which is the one that reaches config():
