@@ -6945,6 +6945,57 @@ config file rather than an `env()` call, so a cached config still carries it.
 asserts each one carries `APP_ENV` first, so an absent `APP_TIMEZONE` means the
 pin is gone rather than that the file was not read.
 
+## A watchdog that watched a name the shell never sends
+
+The desktop watchdog raises one alert when the supervised queue worker exits
+three times inside five minutes, and stays quiet for a single exit. Forty-one
+cases across five files pinned that behaviour, including one written after an
+earlier defect and named for it. Every one of them passed, and the alert could
+not fire on any machine.
+
+The listener compared the arriving alias against a constant of its own,
+`queue-default`. NativePHP starts a supervised worker as `'queue_'.$key` —
+`QueueWorker::up()` — so the shell sends `queue_default`. One character, and the
+comparison was false on every exit the product will ever see.
+
+What made it survive is that **every case built the event out of the same
+constant it was checking**. `new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS)`
+is true of itself whatever the constant says. The suite was not weak about the
+threshold, the window, the bounded bucket or the raise-once rule — it was
+complete about all four and silent about the one value that comes from outside
+the process. A fixture that supplies the field's value from the code under test
+cannot disagree with it.
+
+The tell was visible in the stored state rather than in the tests. `recordExit`
+runs before the alias check and keys its bucket on `$event->alias`, so a device
+that had been running for a minute held a cache slot under the hash of
+`queue_default` while the code looked one up under the hash of `queue-default`.
+Two spellings of one name, both present, neither noticed — the alias check
+returned early on every exit and no crash storm could ever be counted.
+
+Confirmed on desktop hardware on 2026-09-06, by killing the supervised worker
+and reading the database between kills: three exits recorded, no alert. After
+the fix, the same sequence gives one crash → one stamp and no alert, three
+crashes → one `critical` row carrying the copy key, and a fourth crash → still
+one row.
+
+Two things are worth keeping from the shape:
+
+- **Derive a name the other side owns; do not restate it.** The alias now comes
+  from `nativephp.queue_workers` under the documented prefix, so a worker added
+  to the configuration is watched without anyone editing the listener, and the
+  threshold is read back under the alias that arrived rather than under a
+  constant standing beside it.
+- **One case has to get the value from where the field gets it.**
+  `TheWatchdogWatchedAnAliasTheShellNeverSendsTest` calls the vendor's own
+  `QueueWorker::up()` against a captured double and asserts the listener
+  recognises whatever alias it passes. It fails, with the offending spelling in
+  the message, the moment either side moves.
+
+The same reading applies to any boundary where a literal crosses a process:
+a child-process alias, an event name, a queue name, a header. The suite around
+it can be exhaustive and still be a closed loop.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

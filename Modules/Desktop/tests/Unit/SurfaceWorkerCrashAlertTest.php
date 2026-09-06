@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,6 +28,7 @@ function crashListener(Clock $clock): SurfaceWorkerCrashAlert
         app(UrlGenerator::class),
         app(SystemAlertWriter::class),
         app(ShellState::class),
+        app(ConfigRepository::class),
     );
 }
 
@@ -46,11 +48,11 @@ it('returns false on the first ProcessExited for the worker alias', function ():
 
     $listener = crashListener($clock);
 
-    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
+    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default'))->toBeFalse();
 
-    $listener->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+    $listener->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
 
-    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
+    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default'))->toBeFalse();
 });
 
 it('returns true after threshold ProcessExited events within the rolling window', function (): void {
@@ -69,10 +71,10 @@ it('returns true after threshold ProcessExited events within the rolling window'
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
         $clock->time = $now->addSeconds($i * 10);
-        $listener->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
-    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeTrue();
+    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default'))->toBeTrue();
 });
 
 it('does not flag a crash-loop when exits are spaced beyond the window', function (): void {
@@ -94,10 +96,10 @@ it('does not flag a crash-loop when exits are spaced beyond the window', functio
     $windowSeconds = SurfaceWorkerCrashAlert::CRASH_LOOP_WINDOW_SECONDS;
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD + 2; $i++) {
         $clock->time = $now->addSeconds($i * ($windowSeconds + 10));
-        $listener->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        $listener->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
-    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
+    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default'))->toBeFalse();
 });
 
 it('ignores ProcessExited events for non-worker aliases', function (): void {
@@ -117,7 +119,7 @@ it('ignores ProcessExited events for non-worker aliases', function (): void {
         $listener->recordExit(new ProcessExited(alias: 'something-else', code: 1));
     }
 
-    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeFalse();
+    expect($listener->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default'))->toBeFalse();
 });
 
 it('counts an exit recorded by a listener that has already been thrown away', function (): void {
@@ -130,10 +132,10 @@ it('counts an exit recorded by a listener that has already been thrown away', fu
     };
 
     for ($i = 0; $i < SurfaceWorkerCrashAlert::CRASH_LOOP_THRESHOLD; $i++) {
-        crashListener($clock)->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS, code: 1));
+        crashListener($clock)->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
     }
 
-    expect(crashListener($clock)->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS))->toBeTrue(
+    expect(crashListener($clock)->isCrashLoop(SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default'))->toBeTrue(
         'Three exits, three listeners, one crash-loop. Held on the object the '.
         'count reset with every event and the threshold could not be reached.',
     );
