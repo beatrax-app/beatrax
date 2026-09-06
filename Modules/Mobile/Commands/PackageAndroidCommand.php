@@ -7,6 +7,7 @@ namespace Modules\Mobile\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Mobile\Internal\Boot\AndroidApiLevels;
 use Modules\Mobile\Internal\Boot\AndroidVersionCode;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Boot\PinnedAppId;
@@ -73,6 +74,7 @@ final class PackageAndroidCommand extends Command
     {
         $failure = $this->appIdPinFailure($appId)
             ?? $this->shippedEnvironmentFailure()
+            ?? AndroidApiLevels::unpinned($this->config)
             ?? $this->versionCodeFailure()
             ?? $this->androidProjectFailure();
 
@@ -116,7 +118,8 @@ final class PackageAndroidCommand extends Command
         }
 
         $identityFailure = $this->shippedIdentityFailure($appId)
-            ?? $this->shippedVersionCodeFailure();
+            ?? $this->shippedVersionCodeFailure()
+            ?? $this->shippedApiLevelFailure();
 
         if ($identityFailure !== null) {
             return $this->refuse($identityFailure);
@@ -317,6 +320,25 @@ final class PackageAndroidCommand extends Command
             $actual ?? 'no readable value',
             $expected ?? 'the resolved value',
         );
+    }
+
+    // The store reads the level off the artefact, not off the configuration, so
+    // a substitution that put something else there is a submission against a
+    // level nobody chose -- and the placeholders read back as no value at all.
+    private function shippedApiLevelFailure(): ?string
+    {
+        $gradlePath = $this->laravel->basePath(self::GRADLE);
+
+        if (! $this->files->isFile($gradlePath)) {
+            return "No {$gradlePath}, so the API levels the APK carries cannot be read back.";
+        }
+
+        $disagreement = AndroidApiLevels::shippedDisagreement($this->config, $this->files->get($gradlePath));
+
+        return $disagreement === null
+            ? null
+            : 'The APK just built carries '.$disagreement.'. The pinned levels are what the store is '
+                .'told this app supports, and Gradle is where they had to arrive.';
     }
 
     private function shippedIdentityFailure(string $appId): ?string

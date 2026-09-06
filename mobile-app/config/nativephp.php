@@ -6,9 +6,10 @@ declare(strict_types=1);
  * Mobile-app-specific NativePHP config.
  *
  * Deliberately minimal. `nativephp/mobile` merges its own config shallowly, so
- * every key absent here — runtime mode, the Android SDK/build block, the dev
- * server, hot reload — resolves from the package default, and only the keys
- * that genuinely differ are restated. Everything the desktop root's config
+ * every key absent here — runtime mode, the dev server, hot reload — resolves
+ * from the package default, and only the keys that genuinely differ are
+ * restated. The Android block is the exception and says why in its own
+ * comment. Everything the desktop root's config
  * carries (Electron updater providers, prebuild hooks, queue workers, NSIS
  * installer options) is desktop-only: the mobile shell ships via
  * `nativephp/mobile` (Xcode / Android Studio), not electron-builder.
@@ -189,6 +190,60 @@ return [
      * defense-in-depth for any stale local env values.
      */
     'development_team' => env('IOS_TEAM_ID'),
+
+    /*
+     * The Android SDK levels, and the whole block they sit in.
+     *
+     * The levels are the point. `nativephp/mobile` resolves them as
+     * `env('NATIVEPHP_ANDROID_TARGET_SDK', 36)`, so the API level the APK is
+     * built and submitted against was a package default filtered through a
+     * git-ignored .env — nothing in this product decided it, and nothing failed
+     * when the package moved it. A store refuses a submission below the level
+     * it requires, and a level that changes under you changes runtime behaviour
+     * with it, so these are integer literals with no environment read: the
+     * build reads them here, and `mobile:package-android` reads the generated
+     * Gradle file back against them before it reports success.
+     *
+     * The rest of the block is the package's own defaults, restated because
+     * `mergeConfigFrom()` is a shallow `array_merge` — declaring `android` at
+     * all replaces the package's array wholesale, and the four toolchain paths
+     * below are how a developer machine and a CI runner find the SDK.
+     */
+    'android' => [
+        'gradle_jdk_path' => env('NATIVEPHP_GRADLE_PATH'),
+        'android_sdk_path' => env('NATIVEPHP_ANDROID_SDK_LOCATION'),
+        'emulator_path' => env('ANDROID_EMULATOR'),
+        '7zip-location' => env('NATIVEPHP_7ZIP_LOCATION', 'C:\\Program Files\\7-Zip\\7z.exe'),
+
+        'compile_sdk' => 36,
+        'min_sdk' => 33,
+        'target_sdk' => 36,
+
+        'status_bar_style' => 'auto',
+
+        'theme' => [
+            'color_primary' => '#04ABA6',
+            'color_primary_night' => '#FFFFFF',
+            'color_on_primary' => '#FFFFFF',
+        ],
+
+        'build' => [
+            'minify_enabled' => false,
+            'shrink_resources' => false,
+            'obfuscate' => false,
+
+            'debug_symbols' => 'FULL',
+            'generate_mapping_files' => false,
+            'mapping_file_path' => 'build/outputs/mapping/release/',
+
+            'keep_line_numbers' => false,
+            'keep_source_file' => false,
+            'custom_proguard_rules' => [],
+
+            'parallel_builds' => true,
+            'incremental_builds' => true,
+        ],
+    ],
 
     /*
      * Deliberately NOT trimming `vendor/` here.

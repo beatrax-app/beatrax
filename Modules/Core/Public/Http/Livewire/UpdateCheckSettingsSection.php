@@ -31,10 +31,14 @@ final class UpdateCheckSettingsSection extends Component
     #[Locked]
     public bool $onPhone = false;
 
+    // The same question the listeners ask, and deliberately broader than the
+    // enum: a shell NativePHP names but MobilePlatform does not model is still
+    // a store build, and answering false there hands it the desktop copy, a
+    // live switch, and a link to the page the installers are on.
     public function mount(CurrentUser $currentUser): void
     {
         $this->enabled = $currentUser->user()->auto_update_check_enabled ?? true;
-        $this->onPhone = UserDataPathService::platform() !== null;
+        $this->onPhone = UserDataPathService::isMobileRuntime();
     }
 
     // Both methods are public endpoints whatever the view renders, and the
