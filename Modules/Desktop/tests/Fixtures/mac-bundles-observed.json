@@ -1,0 +1,376 @@
+{
+    "recorded_on": "2026-09-07",
+    "bundles": [
+        {
+            "name": "Amphetamine.app",
+            "from_the_store": true,
+            "app_entitlements": {
+                "com.apple.application-identifier": "U5SR49N3PT.com.if.Amphetamine",
+                "com.apple.developer.team-identifier": "U5SR49N3PT",
+                "com.apple.security.app-sandbox": true,
+                "com.apple.security.device.bluetooth": true,
+                "com.apple.security.device.usb": true,
+                "com.apple.security.files.user-selected.read-write": true,
+                "com.apple.security.network.client": true,
+                "com.apple.security.personal-information.location": true
+            },
+            "children": {
+                "Contents/Library/LoginItems/AmphetamineLoginHelper.app/Contents/MacOS/AmphetamineLoginHelper": {
+                    "entitlements": {
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.files.user-selected.read-write": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                }
+            }
+        },
+        {
+            "name": "Apple Configurator.app",
+            "from_the_store": true,
+            "app_entitlements": {
+                "com.apple.accounts.appleaccount.fullaccess": true,
+                "com.apple.application-identifier": "K36BKF7T3D.com.apple.configurator.ui",
+                "com.apple.authkit.client.internal": true,
+                "com.apple.authkit.client.private": true,
+                "com.apple.developer.icloud-container-identifiers": "",
+                "com.apple.developer.icloud-services": "",
+                "com.apple.developer.ubiquity-container-identifiers": "",
+                "com.apple.developer.ubiquity-kvstore-identifier": "K36BKF7T3D.com.apple.configurator.ui",
+                "com.apple.private.accounts.allaccounts": true,
+                "com.apple.private.applemediaservices": true,
+                "com.apple.private.aps-connection-initiate": true,
+                "com.apple.private.commerce": "",
+                "com.apple.private.security.restricted-application-groups": "",
+                "com.apple.private.security.storage.mobilesync": true,
+                "com.apple.private.tcc.allow-prompting": "",
+                "com.apple.security.app-sandbox": true,
+                "com.apple.security.application-groups": "",
+                "com.apple.security.automation.apple-events": true,
+                "com.apple.security.files.user-selected.read-write": true,
+                "com.apple.security.network.client": true,
+                "com.apple.security.scripting-targets": "",
+                "com.apple.security.temporary-exception.apple-events": "",
+                "com.apple.security.temporary-exception.files.absolute-path.read-only": "",
+                "com.apple.security.temporary-exception.files.absolute-path.read-write": "",
+                "com.apple.security.temporary-exception.files.home-relative-path.read-write": "",
+                "com.apple.security.temporary-exception.mach-lookup.global-name": "",
+                "com.apple.security.temporary-exception.sbpl": "",
+                "com.apple.security.temporary-exception.shared-preference.read-only": "",
+                "keychain-access-groups": ""
+            },
+            "children": {
+                "Contents/Extensions/ConfiguratorIntents.appex/Contents/MacOS/ConfiguratorIntents": {
+                    "entitlements": {
+                        "com.apple.private.tcc.allow-prompting": "",
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.temporary-exception.files.home-relative-path.read-only": "",
+                        "com.apple.security.temporary-exception.mach-lookup.global-name": "",
+                        "com.apple.security.temporary-exception.sbpl": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Frameworks/ConfigurationUtilityKit.framework/Versions/A/XPCServices/com.apple.configurator.xpc.AirTrafficService.xpc/Contents/MacOS/com.apple.configurator.xpc.AirTrafficService": {
+                    "entitlements": {
+                        "com.apple.private.security.restricted-application-groups": "",
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.device.usb": true,
+                        "com.apple.security.network.client": true,
+                        "com.apple.security.temporary-exception.sbpl": "",
+                        "com.apple.security.temporary-exception.shared-preference.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Frameworks/ConfigurationUtilityKit.framework/Versions/A/XPCServices/com.apple.configurator.xpc.DeviceService.xpc/Contents/MacOS/com.apple.configurator.xpc.DeviceService": {
+                    "entitlements": {
+                        "com.apple.PairingManager.Read": true,
+                        "com.apple.PairingManager.RemovePeer": true,
+                        "com.apple.PairingManager.Write": true,
+                        "com.apple.iokit.IOPort.TRM.user-access": true,
+                        "com.apple.iokit.IOPort.user-access": true,
+                        "com.apple.private.DeviceSupportUpdater.requestor": true,
+                        "com.apple.private.security.restricted-application-groups": "",
+                        "com.apple.private.security.storage.mobilesync": true,
+                        "com.apple.private.security.storage.mobilesync.heritable": true,
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.device.usb": true,
+                        "com.apple.security.network.client": true,
+                        "com.apple.security.network.server": true,
+                        "com.apple.security.temporary-exception.apple-events": "",
+                        "com.apple.security.temporary-exception.files.absolute-path.read-only": "",
+                        "com.apple.security.temporary-exception.files.absolute-path.read-write": "",
+                        "com.apple.security.temporary-exception.files.home-relative-path.read-only": "",
+                        "com.apple.security.temporary-exception.files.home-relative-path.read-write": "",
+                        "com.apple.security.temporary-exception.mach-lookup.global-name": "",
+                        "com.apple.security.temporary-exception.sbpl": "",
+                        "com.apple.security.temporary-exception.shared-preference.read-write": "",
+                        "com.apple.sharing.DeviceDiscovery": true,
+                        "com.apple.sharing.Session": true,
+                        "keychain-access-groups": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Frameworks/ConfigurationUtilityKit.framework/Versions/A/XPCServices/com.apple.configurator.xpc.InternetService.xpc/Contents/MacOS/com.apple.configurator.xpc.InternetService": {
+                    "entitlements": {
+                        "com.apple.private.security.restricted-application-groups": "",
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.network.client": true,
+                        "com.apple.security.temporary-exception.files.absolute-path.read-only": "",
+                        "com.apple.security.temporary-exception.files.home-relative-path.read-only": "",
+                        "com.apple.security.temporary-exception.files.home-relative-path.read-write": "",
+                        "com.apple.security.temporary-exception.mach-lookup.global-name": "",
+                        "com.apple.security.temporary-exception.sbpl": "",
+                        "com.apple.security.temporary-exception.shared-preference.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Frameworks/ConfigurationUtilityKit.framework/Versions/A/XPCServices/com.apple.configurator.xpc.MigrationService.xpc/Contents/MacOS/com.apple.configurator.xpc.MigrationService": {
+                    "entitlements": {
+                        "com.apple.private.security.restricted-application-groups": "",
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.temporary-exception.files.home-relative-path.read-write": "",
+                        "com.apple.security.temporary-exception.shared-preference.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Frameworks/ConfigurationUtilityKit.framework/Versions/A/XPCServices/com.apple.configurator.xpc.SmartHubService.xpc/Contents/MacOS/com.apple.configurator.xpc.SmartHubService": {
+                    "entitlements": {
+                        "com.apple.private.security.restricted-application-groups": "",
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.device.usb": true,
+                        "com.apple.security.temporary-exception.shared-preference.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Library/LoginItems/ConfiguratorAutomation.app/Contents/MacOS/ConfiguratorAutomation": {
+                    "entitlements": {
+                        "com.apple.private.security.restricted-application-groups": "",
+                        "com.apple.private.tcc.allow-prompting": "",
+                        "com.apple.private.usernotifications.bundle-identifiers": "",
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.automation.apple-events": true,
+                        "com.apple.security.files.user-selected.read-only": true,
+                        "com.apple.security.scripting-targets": "",
+                        "com.apple.security.temporary-exception.mach-lookup.global-name": "",
+                        "com.apple.security.temporary-exception.sbpl": "",
+                        "com.apple.shortcuts.background-running": true,
+                        "com.apple.siri.VoiceShortcuts.xpc": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/MacOS/cfgutil": {
+                    "entitlements": {
+                        "com.apple.private.security.restricted-application-groups": "",
+                        "com.apple.private.security.storage.mobilesync": true,
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.network.client": true,
+                        "com.apple.security.temporary-exception.files.absolute-path.read-write": "",
+                        "com.apple.security.temporary-exception.mach-lookup.global-name": "",
+                        "com.apple.security.temporary-exception.sbpl": "",
+                        "com.apple.security.temporary-exception.shared-preference.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/MacOS/cfgutilscript": {
+                    "entitlements": [],
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/MacOS/installer": {
+                    "entitlements": {
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.temporary-exception.files.absolute-path.read-write": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                }
+            }
+        },
+        {
+            "name": "DevCleaner.app",
+            "from_the_store": true,
+            "app_entitlements": {
+                "com.apple.application-identifier": "3DS5SGYDG6.com.oneminutegames.XcodeCleaner",
+                "com.apple.developer.team-identifier": "3DS5SGYDG6",
+                "com.apple.security.app-sandbox": true,
+                "com.apple.security.files.bookmarks.app-scope": true,
+                "com.apple.security.files.user-selected.read-write": true,
+                "com.apple.security.network.client": true
+            },
+            "children": []
+        },
+        {
+            "name": "1Password.app",
+            "from_the_store": false,
+            "app_entitlements": {
+                "com.apple.application-identifier": "2BUA8C4S2C.com.1password.1password",
+                "com.apple.developer.associated-domains": "",
+                "com.apple.developer.team-identifier": "2BUA8C4S2C",
+                "com.apple.security.application-groups": "",
+                "com.apple.security.automation.apple-events": true,
+                "com.apple.security.cs.allow-jit": true,
+                "com.apple.security.device.camera": true,
+                "com.apple.security.device.usb": true,
+                "com.apple.security.files.downloads.read-write": true,
+                "com.apple.security.files.user-selected.read-write": true,
+                "com.apple.security.network.client": true,
+                "com.apple.security.scripting-targets": "",
+                "com.apple.security.temporary-exception.apple-events": "",
+                "keychain-access-groups": ""
+            },
+            "children": {
+                "Contents/Frameworks/1Password Helper (GPU).app/Contents/MacOS/1Password Helper (GPU)": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": true
+                },
+                "Contents/Frameworks/1Password Helper (Plugin).app/Contents/MacOS/1Password Helper (Plugin)": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": true
+                },
+                "Contents/Frameworks/1Password Helper (Renderer).app/Contents/MacOS/1Password Helper (Renderer)": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": true
+                },
+                "Contents/Frameworks/1Password Helper.app/Contents/MacOS/1Password Helper": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": true
+                },
+                "Contents/Frameworks/Electron Framework.framework/Versions/A/Helpers/chrome_crashpad_handler": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": false,
+                    "launched": false
+                },
+                "Contents/Frameworks/Squirrel.framework/Versions/A/Resources/ShipIt": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": false,
+                    "launched": false
+                },
+                "Contents/Library/LoginItems/1Password Browser Helper.app/Contents/MacOS/1Password Browser Helper": {
+                    "entitlements": {
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.temporary-exception.files.absolute-path.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Library/LoginItems/1Password Browser Helper.app/Contents/MacOS/1Password-BrowserSupport": {
+                    "entitlements": {
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.temporary-exception.files.absolute-path.read-only": "",
+                        "com.apple.security.temporary-exception.files.home-relative-path.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/Library/LoginItems/1Password Launcher.app/Contents/MacOS/1Password Launcher": {
+                    "entitlements": {
+                        "com.apple.security.app-sandbox": true,
+                        "com.apple.security.application-groups": "",
+                        "com.apple.security.temporary-exception.files.absolute-path.read-only": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/MacOS/1Password-Crash-Handler": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/MacOS/1Password-LastPass-Exporter": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/MacOS/1password-mcp": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/MacOS/op-ssh-sign": {
+                    "entitlements": {
+                        "com.apple.security.cs.allow-jit": true
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/XPCServices/OP Updater Service.xpc/Contents/Helpers/1Password Updater.app/Contents/MacOS/1Password Updater": {
+                    "entitlements": {
+                        "com.apple.security.application-groups": ""
+                    },
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                },
+                "Contents/XPCServices/OP Updater Service.xpc/Contents/MacOS/OP Updater Service": {
+                    "entitlements": [],
+                    "signed": true,
+                    "inMacOsDirectory": true,
+                    "launched": false
+                }
+            }
+        }
+    ]
+}

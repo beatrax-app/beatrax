@@ -301,6 +301,15 @@ An Electron helper under `Contents/Frameworks` is recognised structurally. The
 interpreter is not — a spawned binary and a bundled data file that happens to
 be Mach-O look identical on disk — so the command names it explicitly.
 
+The calibration itself runs in CI, against a recording rather than against
+whatever happens to be installed: `php artisan desktop:record-mac-bundles`
+walks `/Applications`, takes up to three bundles carrying a `_MASReceipt` plus
+one Electron app without one, and writes what it read to
+`Modules/Desktop/tests/Fixtures/mac-bundles-observed.json`. It refuses to write
+a recording with only one side, because a fixture of store apps alone would let
+rules that refuse nothing read as calibrated. Re-run it when Apple changes what
+it accepts, and the diff is the change.
+
 #### What the interpreter actually needs, measured
 
 The runbook used to carry both Developer ID relaxations as the cost of the
