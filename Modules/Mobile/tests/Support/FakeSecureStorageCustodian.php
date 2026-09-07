@@ -13,6 +13,8 @@ class FakeSecureStorageCustodian extends SecureStorageKeyCustodian
 
     public bool $setSucceeds = true;
 
+    public bool $deleteSucceeds = true;
+
     protected function runtimeAvailable(): bool
     {
         return true;
@@ -33,8 +35,14 @@ class FakeSecureStorageCustodian extends SecureStorageKeyCustodian
         return $this->slots[$key] ?? null;
     }
 
-    protected function nativeDelete(string $key): void
+    protected function nativeDelete(string $key): bool
     {
+        if (! $this->deleteSucceeds) {
+            return false;
+        }
+
         unset($this->slots[$key]);
+
+        return true;
     }
 }

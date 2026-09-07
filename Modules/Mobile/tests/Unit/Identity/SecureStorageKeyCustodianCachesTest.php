@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Tests\Support\CountingSecureStorageCustodian;
+use Psr\Log\NullLogger;
 
 function countingCustodianUser(int $id): CurrentUser
 {
@@ -19,7 +20,7 @@ function countingCustodianUser(int $id): CurrentUser
 // round trip through JNI, so a page of ~140 rows took 1.2-3.4s to render.
 
 it('asks the native store once however many values are decrypted', function (): void {
-    $custodian = new CountingSecureStorageCustodian(countingCustodianUser(1));
+    $custodian = new CountingSecureStorageCustodian(countingCustodianUser(1), new NullLogger);
     $handle = $custodian->store(str_repeat("\x2a", 32));
 
     // store() already knows the key, so even the first read is free.
@@ -35,7 +36,7 @@ it('asks the native store once however many values are decrypted', function (): 
 it('goes back to the native store after the key is forgotten', function (): void {
     // Locking calls forget(); a cached key that survived it would survive the
     // lock too, and this instance is a singleton in a persistent runtime.
-    $custodian = new CountingSecureStorageCustodian(countingCustodianUser(1));
+    $custodian = new CountingSecureStorageCustodian(countingCustodianUser(1), new NullLogger);
     $handle = $custodian->store(str_repeat("\x2a", 32));
 
     $custodian->forget($handle);
@@ -44,7 +45,7 @@ it('goes back to the native store after the key is forgotten', function (): void
 });
 
 it('re-reads a slot whose entry could not be decoded rather than caching the failure', function (): void {
-    $custodian = new CountingSecureStorageCustodian(countingCustodianUser(1));
+    $custodian = new CountingSecureStorageCustodian(countingCustodianUser(1), new NullLogger);
     $handle = $custodian->store(str_repeat("\x2a", 32));
     $custodian->forget($handle);
 
