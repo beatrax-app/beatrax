@@ -205,6 +205,11 @@ return [
         // and NativePHP omits it; without this the build aborts in validation.
         'php scripts/nativephp_azure_publisher_name.php',
 
+        // Beside it, because the same signing pass covers both: without
+        // win.signExts electron-builder signs only .exe, and the bundled PHP
+        // runtime is mostly DLLs. Store certification is per file.
+        'php scripts/nativephp_sign_every_pe_in_the_package.php',
+
         // Forces the full-binary update path, which is the one covered by
         // the Ed25519 manifest + SHA-512 check in ElectronUpdateChannel.
         'php scripts/nativephp_inject_macos_update_settings.php',

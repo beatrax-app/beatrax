@@ -292,10 +292,37 @@ non-game desktop app on that path.
 Choosing MSIX instead would import the same read-only-install-directory problem
 as the Mac App Store, plus the loss of self-update, for no gain.
 
+#### Why the per-file signature needed a patch at all
+
+electron-builder decides what to sign in `WinPackager.shouldSignFile`, and with
+`win.signExts` absent the answer for anything that is not an `.exe` is *no*:
+
+```js
+const backwardCompatibility = file.endsWith(".exe");
+const signExts = this.platformSpecificBuildOptions.signExts;
+if (!signExts?.length) {
+    return backwardCompatibility || fallbackValue;   // fallbackValue is false
+}
+```
+
+The bundle carries a whole PHP runtime under `extraResources`. `php.exe` was
+signed; `php8ts.dll`, every bundled extension and every support library beside
+it were not. Nothing said so: Windows checks the signature of what it is asked
+to launch, and both the installer and the shell are signed, so a direct
+download looked correct. Store certification is the first reader that opens
+every file.
+
+`scripts/nativephp_sign_every_pe_in_the_package.php` adds the key as a prebuild
+hook. The workflow step that follows the installer check is the part that
+proves it: it walks `dist/*unpacked*`, runs `Get-AuthenticodeSignature` over
+every `.exe`, `.dll` and `.node`, and fails on any status other than `Valid` —
+and also fails if it walked the tree and found *nothing*, because a check that
+read no files passes identically to a package that is fully signed.
+
 | Work | Size |
 |---|---|
 | A **Company** Partner Center account — an individual account cannot be converted, and financial features require a company. Start first; the verification latency is the long pole | S effort, 1–2 weeks |
-| Confirm **every** PE in the installer is signed, `php.exe` and its DLLs included — the requirement is per-file, and a default electron-builder config misses a bundled interpreter | S/M |
+| ~~Confirm **every** PE in the installer is signed~~ — **done**. `win.signExts` now covers `.exe`, `.dll` and `.node`, and both release workflows walk the unpacked package with `Get-AuthenticodeSignature` and refuse a build carrying an unsigned binary. See below | — |
 | Silent install as a standard user, correct add/remove-programs metadata, clean uninstall — all three are certification tests, not guidance | S/M |
 | A release step that publishes the new versioned URL to Partner Center | M |
 | A privacy policy covering the LAN sync and the financial data, with express consent | M |
