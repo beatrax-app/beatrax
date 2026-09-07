@@ -137,6 +137,35 @@ That leaves the three states that DO defer, which are the three the loader
 already distinguishes: no authenticated user (a console), `Locked`, and
 `Unreadable`.
 
+## A fourth state: signed, and not sealable
+
+The three above are all "the writer could not be built". There is a fourth where
+it can: the identity key-file opens and the **keyring** does not, which is what a
+re-wrap under a new KEK leaves behind if it stops part-way. `OpLogWriter` is
+built, signs happily, and reaches a column the registry calls sensitive with no
+epoch key in reach.
+
+It used to write the plaintext, with a null epoch and no log line — the one
+thing this page's own argument forbids: *a rendered value parked in a pending
+table is the plaintext the seal exists to prevent, one table over*. An
+`op_log_entries` row is that, and then it goes on the wire.
+
+`SensitiveColumnCodec` already refuses the same write at the column, on the same
+question (`GdkKeyringService::hasCurrentEpoch()` — a plain integer readable with
+no key at all, which says the rows are **supposed** to be sealed). The writer now
+asks it too, and defers the coordinate instead:
+
+- Enabled and out of reach → deferred, and logged at warning.
+- Never enabled → the clear value is the right one, and always was. Nothing is
+  supposed to be sealed, so nothing is deferred.
+
+A `create` defers **whole**, never column by column. A create announced without
+some of its columns is a row the peer has to be told about twice, and the second
+telling arrives as a `set` stamped later than the create it belongs to.
+
+`Modules/Sync/tests/Feature/AKeylessWriterNeverPutsASealedColumnOnTheWireTest.php`
+holds both halves, so a refusal cannot quietly become a refusal to write at all.
+
 ## One sink, so a path cannot be forgotten
 
 The eleven handlers on `SyncCaptureListener` each resolved the writer themselves

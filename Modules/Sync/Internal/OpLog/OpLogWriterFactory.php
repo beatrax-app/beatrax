@@ -17,6 +17,7 @@ use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Psr\Log\LoggerInterface;
 
 // OpLogWriter takes four runtime primitives no autowiring can supply — the
 // device id, the user id and the signing pair — and they come from an identity
@@ -107,6 +108,8 @@ final readonly class OpLogWriterFactory
             rules: $this->app->make(MergeRulesRegistry::class),
             keyring: $this->app->make(GdkKeyringService::class),
             session: $this->app->make(SessionFactory::class),
+            deferred: $this->app->make(DeferredOpCaptures::class),
+            log: $this->app->make(LoggerInterface::class),
         );
     }
 }

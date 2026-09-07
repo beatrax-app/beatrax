@@ -16,6 +16,7 @@ use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 final readonly class OpLogWriter implements OpCaptureSink
@@ -43,6 +44,8 @@ final readonly class OpLogWriter implements OpCaptureSink
         private GdkKeyringService $keyring,
         private SessionFactory $session,
         private MergeRulesRegistry $rules,
+        private DeferredOpCaptures $deferred,
+        private LoggerInterface $log,
     ) {
         $this->restoreClockState();
     }
@@ -63,7 +66,15 @@ final readonly class OpLogWriter implements OpCaptureSink
     public function writeSet(string $table, int|string $pk, string $field, mixed $value): void
     {
         $jsonValue = $value !== null ? json_encode($value, JSON_THROW_ON_ERROR) : null;
-        [$jsonValue, $gdkEpochId] = $this->maybeEncrypt($table, $pk, $field, $jsonValue);
+        $sealed = $this->seal($table, $pk, $field, $jsonValue);
+
+        if ($sealed === null) {
+            $this->deferUnsealable($table, $pk, [$field], DeferredOpKind::Set);
+
+            return;
+        }
+
+        [$jsonValue, $gdkEpochId] = $sealed;
         $this->writeEntry($table, $pk, $field, $jsonValue, OpType::Set, $gdkEpochId);
     }
 
@@ -119,11 +130,48 @@ final readonly class OpLogWriter implements OpCaptureSink
      */
     public function writeCreateRow(string $table, int|string $pk, array $fields): void
     {
-        foreach ($this->withRowTimestamps($table, $pk, $fields) as $field => $rawValue) {
+        $fields = $this->withRowTimestamps($table, $pk, $fields);
+        $sealed = [];
+
+        foreach ($fields as $field => $rawValue) {
             $jsonValue = $rawValue !== null ? json_encode($rawValue, JSON_THROW_ON_ERROR) : null;
-            [$jsonValue, $gdkEpochId] = $this->maybeEncrypt($table, $pk, $field, $jsonValue);
+            $result = $this->seal($table, $pk, $field, $jsonValue);
+
+            if ($result === null) {
+                // The whole row, not the one column that could not be sealed: a
+                // create announced without some of its columns is a row the peer
+                // has to be told about twice, and the second telling arrives as
+                // a Set with a later stamp than the create it belongs to.
+                $this->deferUnsealable($table, $pk, array_keys($fields), DeferredOpKind::Create);
+
+                return;
+            }
+
+            $sealed[$field] = $result;
+        }
+
+        foreach ($sealed as $field => [$jsonValue, $gdkEpochId]) {
             $this->writeEntry($table, $pk, $field, $jsonValue, OpType::CreateRow, $gdkEpochId);
         }
+    }
+
+    // The device holds an identity it can open and a keyring it cannot, which
+    // is the state a part-way re-wrap leaves. The coordinate is queued and the
+    // drain announces it once a key is in reach, exactly as it does for a
+    // mutation this device could not sign.
+    /**
+     * @param  list<string>  $fields
+     */
+    private function deferUnsealable(string $table, int|string $pk, array $fields, DeferredOpKind $kind): void
+    {
+        foreach ($fields as $field) {
+            $this->deferred->record($this->userId, $table, $pk, $field, $kind);
+        }
+
+        $this->log->warning('OpLogWriter: deferred a capture rather than putting a sealed column on the wire in the clear.', [
+            'table' => $table,
+            'fields' => $fields,
+        ]);
     }
 
     // Thirteen call sites build a create payload: the backfill reads whole rows,
@@ -142,7 +190,7 @@ final readonly class OpLogWriter implements OpCaptureSink
 
         // Read back rather than stamped with now(), so the peer records when
         // the row was made and not when it travelled. Never blocks the write,
-        // in keeping with maybeEncrypt below.
+        // in keeping with seal() below.
         try {
             $row = (array) $this->db->connection()->table($table)->where('id', $pk)->first();
         } catch (\Throwable) {
@@ -168,21 +216,28 @@ final readonly class OpLogWriter implements OpCaptureSink
     }
 
     // Encrypts $jsonValue under the CURRENT GDK epoch when (table, field) is
-    // on the sensitive allow-list. Falls back to plaintext + null epoch when
-    // GDK encryption is not currently usable for this user — never blocks
-    // the write.
+    // on the sensitive allow-list. Plaintext and a null epoch where nothing is
+    // supposed to be sealed at all.
     /**
-     * @return array{0: ?string, 1: ?int}
+     * @return array{0: ?string, 1: ?int}|null null when the field is one this
+     *                                         user's rows are supposed to have
+     *                                         sealed and no key is in reach
      */
-    private function maybeEncrypt(string $table, int|string $pk, string $field, ?string $jsonValue): array
+    private function seal(string $table, int|string $pk, string $field, ?string $jsonValue): ?array
     {
         if ($jsonValue === null || ! $this->sensitiveFields->isSensitive($table, $field)) {
             return [$jsonValue, null];
         }
 
         $epoch = $this->tryCurrentEpoch();
+
         if ($epoch === null) {
-            return [$jsonValue, null];
+            // Never enabled means nothing is supposed to be sealed, and the
+            // clear value is the right one.
+
+            // Enabled and out of reach is the other thing entirely, and
+            // SensitiveColumnCodec already refuses that write at the column.
+            return $this->keyring->hasCurrentEpoch($this->userId) ? null : [$jsonValue, null];
         }
 
         $rawKey = sodium_hex2bin($epoch->keyHex);
