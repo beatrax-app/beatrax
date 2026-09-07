@@ -269,16 +269,79 @@ Apple and is *not* the blocker. These are:
 
 | Work | Size |
 |---|---|
-| Adopt the `mas` Electron distribution and a second electron-builder target; the signing hook injects `hardenedRuntime: true` unconditionally today | M |
-| New entitlement files: sandbox + `allow-jit` for the app, and exactly `app-sandbox` + `inherit` for the child — Apple aborts a child carrying any other sandbox entitlement | S |
-| Move the interpreter from `Contents/Resources/build/php/` to `Contents/MacOS/`, where nested executables are required to live, and sign it with that pair | M |
+| ~~Adopt the `mas` Electron distribution and a second electron-builder target~~ — **done**. `scripts/nativephp_mac_app_store_lane.php` adds the block beside the Developer ID one, sandboxed and explicitly **not** hardened | — |
+| ~~New entitlement files~~ — **done**. `entitlements.mas.plist` and `entitlements.mas.inherit.plist`, the second exactly two keys long | — |
+| ~~Move the interpreter to `Contents/MacOS/`~~ — **done**. `scripts/nativephp_interpreter_into_macos.php` adds it to the mas lane's `extraFiles` and teaches the shell to prefer it; verified below | — |
 | Relocate the data path into the sandbox container, and move `.env` and `bootstrap/cache` out of the bundle, which is read-only on an installed store build. Existing direct-download ledgers do not follow into a container | L |
-| Rework file intake: a child process inherits only *static* rights, so PowerBox grants from an open panel do not reach the PHP side | M/L |
+| ~~Rework file intake~~ — **there is no open panel to inherit a grant from**; read from the code rather than measured, see below | — |
 | Confirm a loopback listener and mDNS work under the sandbox — measured, not read | M, uncertain |
 | Prove every spawned process is reaped on quit | S/M |
 | Apple Distribution + Mac Installer Distribution identities instead of Developer ID; a `.pkg` rather than a `.dmg`; no notarisation on that lane | S+M |
 | Remove self-update on that channel — required, and Electron disables `autoUpdater` in `mas` builds anyway. Both off switches already exist | S/M |
 | Two-channel release engineering, and review risk on a bundled interpreter with no precedent found either way | M + unknown |
+
+#### File intake needs no PowerBox grant, because it never had one
+
+Scoped as M/L on the reasoning that a child process inherits only static
+rights, so an open panel's grant would not reach PHP. Reading the paths, no
+such grant exists to be inherited:
+
+| direction | how it actually works | under the sandbox |
+|---|---|---|
+| statements, receipts, a backup coming **in** | Livewire `WithFileUploads` — an `<input type="file">` in the WebView. The browser reads the bytes and POSTs them to the loopback server | unaffected; PHP never opens the reader's path |
+| an export or backup going **out** | PHP answers with a `BinaryFileResponse`; the shell's download handler writes it wherever the reader chooses | unaffected; the grant belongs to Electron, which has it |
+| the auto-import **drop folder** | `storagePath('app/inbox-drop/<user>')` — an app-owned directory, not one the reader nominates | works, and moves into the container with the rest of the storage root |
+
+The drop folder is the only one that changes for a reader, and it changes in
+discoverability rather than in function: inside a container it is several levels
+down in `~/Library/Containers`. That is listing copy under `F8-R26`, not a
+capability that dies.
+
+This is read from the code, not measured on a sandboxed build. The distinction
+matters: everything above under "measured" was run.
+
+#### The layout and the runtime, proven together
+
+`scripts/measure_sandboxed_interpreter.php` builds a second bundle in the store
+layout — interpreter at `Contents/MacOS/php`, signed with the two-key inherit
+file, spawned by a parent signed with the full sandbox entitlements — because
+that is the shape the shell actually uses:
+
+| | |
+|---|---|
+| parent home | container |
+| child spawned | ok |
+| child exit | 0 |
+| child home | **same container** |
+| child loopback | bound |
+| child pcre | works |
+| child run directly | **killed at launch, exit 133 (expected)** |
+
+The last row is the one worth reading twice. `com.apple.security.inherit` has
+nothing to inherit from when nobody sandboxed the parent, so that binary is
+SIGTRAP'd every time it is launched from a shell. It is reported here so nobody
+later reads it as the relocation having broken something — the only honest test
+of an inheriting child is a sandboxed parent spawning it.
+
+Reviewed as well as run. Two bundles built in the two layouts and signed the
+same way:
+
+| bundle | `desktop:review-mac-bundle` |
+|---|---|
+| interpreter under `Contents/Resources/build/php/` | refused, and named |
+| interpreter at `Contents/MacOS/php` | nothing refused |
+
+#### What the store lane still needs from Apple, not from this repository
+
+Two artefacts exist only in the Apple Developer portal, and the build fails
+loudly without them rather than producing something unsubmittable:
+
+- a **Mac App Store provisioning profile** (`embedded.provisionprofile`). The
+  patch deliberately does not set `provisioningProfile`: defaulting a path
+  would turn a missing prerequisite into a confusing signing error.
+- a **Mac Installer Distribution** identity, for the `.pkg` the store takes in
+  place of a `.dmg`. `Apple Distribution` is already on this machine; the
+  installer certificate is a separate one.
 
 #### Reading a bundle instead of trusting the config
 
