@@ -17,6 +17,7 @@ on:
       - shared
       - release
       - release-build
+      - release-mac-app-store
       - release-preflight
       - mobile-bifrost-publish
       - scorecard

@@ -20,14 +20,16 @@ declare(strict_types=1);
  *   Distribution is additive (ADR-0032). Both lanes ship, so both configs
  *   have to exist at once.
  *
- * What is deliberately NOT set here:
+ * The identity and the profile are read from the environment, all or nothing:
  *
- *   `provisioningProfile`. A Mac App Store profile is an artefact of the
- *   Apple Developer portal, not of this repository, and electron-builder
- *   fails loudly when a `mas` build has none. That failure is the correct
- *   one: a bundle signed for the store without a profile is not a bundle
- *   anybody can submit, and defaulting a path here would turn a missing
- *   prerequisite into a confusing signing error.
+ *   `NATIVEPHP_MAS_IDENTITY` is the Apple Distribution certificate's common
+ *   name, and `NATIVEPHP_MAS_PROVISIONING_PROFILE` the path to the Mac App
+ *   Store profile. Both are artefacts of the Apple Developer portal rather
+ *   than of this repository. When either is absent NEITHER key is written, so
+ *   electron-builder fails on a mas build with no profile — which is the
+ *   correct failure. A bundle signed for the store without one is not a bundle
+ *   anybody can submit, and half a config would turn a missing prerequisite
+ *   into a confusing signing error instead.
  *
  * The patch is reapplied before every build (it is a `prebuild` hook) and is
  * idempotent: a config that already carries a `mas` block is left untouched.
@@ -59,16 +61,26 @@ if (str_contains($source, 'mas:')) {
     exit(0);
 }
 
-$masBlock = <<<'JS'
+$identity = trim((string) getenv('NATIVEPHP_MAS_IDENTITY'));
+$profile = trim((string) getenv('NATIVEPHP_MAS_PROVISIONING_PROFILE'));
+
+$credentials = '';
+
+if ($identity !== '' && $profile !== '') {
+    $credentials = "\n        identity: ".json_encode($identity, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).','
+        ."\n        provisioningProfile: ".json_encode($profile, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).',';
+}
+
+$masBlock = <<<JS
     // Mac App Store lane — scripts/nativephp_mac_app_store_lane.php.
     // Sandboxed, NOT hardened, and signed against its own entitlements pair:
     // the Developer ID file carries two keys the store refuses.
-    mas: {
+    mas: {{$credentials}
         entitlements: 'build/entitlements.mas.plist',
         entitlementsInherit: 'build/entitlements.mas.inherit.plist',
         hardenedRuntime: false,
         type: 'distribution',
-        artifactName: appName + '-${version}-${arch}-mas.${ext}',
+        artifactName: appName + '-\${version}-\${arch}-mas.\${ext}',
     },
 JS;
 
