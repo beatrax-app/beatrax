@@ -20,7 +20,10 @@ final readonly class SearchIndexRefresher
     /**
      * @link ../../../../.docs/features/sync/an-index-that-missed-a-row-refused-nothing.md
      */
-    private const string STALE = 'SearchIndexRefresher: the search index could not be brought in line with a row the replay applied; the row is stored but will not be found by search until search:reindex runs.';
+    // Public because the rebuild reaches the same failure by another route,
+    // and two spellings of one sentence are two recoveries a reader has to
+    // recognise as the same one.
+    public const string STALE = 'SearchIndexRefresher: the search index could not be brought in line with a row the replay applied; the row is stored but will not be found by search until search:reindex runs.';
 
     public function __construct(
         private ?SearchIndexWriterContract $searchWriter = null,

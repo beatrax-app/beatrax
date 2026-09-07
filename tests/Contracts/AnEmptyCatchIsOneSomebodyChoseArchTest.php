@@ -98,7 +98,7 @@ function catchBodiesLeftEmptyOnPurpose(): array
         ],
         'Modules/Sync/Internal/Merge/OpLogQuarantine.php' => [
             'count' => 1,
-            'why' => 'The quarantine row is the audit of a refusal; replay must continue whether or not that audit lands.',
+            'why' => 'It wraps the error that IS the report of a lost audit row; replay must continue whether or not either lands.',
         ],
         'Modules/Sync/Internal/Merge/OpLogReplayer.php' => [
             'count' => 1,
@@ -108,13 +108,9 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'count' => 1,
             'why' => 'It wraps the warning that IS the report of a stale index; a logger failing on a full disk must not take merge determinism down with it.',
         ],
-        'Modules/Sync/Internal/Merge/SelfReferenceDeferral.php' => [
-            'count' => 1,
-            'why' => 'The self-referential link is optional: the row is applied and usable without it, so a refusal costs the link and never the replay.',
-        ],
         'Modules/Sync/Internal/OpLog/OpLogRebuilder.php' => [
             'count' => 1,
-            'why' => 'One unindexable row must not stop the rest being indexed — a stale index recovers, a half-indexed sweep does not.',
+            'why' => 'It wraps the warning that IS the report of a stale index, on the rebuild route rather than the merge one; a logger failing must not stop the sweep.',
         ],
         'Modules/Sync/Internal/Support/DevicesScreenOpening.php' => [
             'count' => 1,

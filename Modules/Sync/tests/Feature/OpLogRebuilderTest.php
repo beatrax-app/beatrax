@@ -12,6 +12,7 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpLogRebuilder;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -450,4 +451,40 @@ it('deletes and recreates only the rows whose persisted op_type is the create-ro
     $rebuilder->rebuild($userId);
 
     expect($db->connection()->table('categorization_rules')->where('id', $pk)->value('priority'))->toBe(777);
+});
+
+// Recovers on the NEXT rebuild — until then the row is findable under words it
+// no longer holds, or not findable at all, and nothing else would have said
+// which. The swallow stays: one unindexable row must not stop the rest.
+it('says so when a rebuilt row could not be re-indexed', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->db;
+    [$userId, , $txnId] = rebuildSeedBase($db, 'reindex');
+
+    $deviceKeys = ['device-rebuild' => $this->pkHex];
+    $replayer = new OpLogReplayer($db, $deviceKeys);
+
+    $replayer->replay([
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'transactions', $txnId, 'note', json_encode('hello', JSON_THROW_ON_ERROR), OpType::Set, 1000),
+    ], $userId);
+
+    $searchWriter = Mockery::mock(SearchIndexWriterContract::class);
+    $searchWriter->shouldReceive('upsertForTransaction')->andThrow(new RuntimeException('the index would not take it'));
+    $searchWriter->shouldReceive('deleteForTransaction')->andThrow(new RuntimeException('the index would not take it'));
+
+    $log = Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
+    $log->shouldReceive('warning')
+        ->atLeast()->once()
+        ->withArgs(fn (string $message): bool => str_contains($message, 'will not be found by search until search:reindex runs'));
+
+    /** @var SearchIndexWriterContract $searchWriter */
+    /** @var LoggerInterface $log */
+    $rebuilder = new OpLogRebuilder($db, $replayer, new MergeRulesRegistry, ['transactions'], null, $searchWriter, null, $log);
+
+    $rebuilder->rebuild($userId);
+
+    // The rebuild itself still ran to the end, which is the trade the swallow
+    // makes: one unindexable row must not stop the rest being indexed.
+    expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
+        ->toBeGreaterThan(0, 'the log is untouched by a rebuild, so this proves the pass completed');
 });

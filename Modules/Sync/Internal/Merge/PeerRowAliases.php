@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 // Which local row a peer's id means, when two devices minted different ids for
@@ -24,6 +25,7 @@ final readonly class PeerRowAliases
     public function __construct(
         private DatabaseManager $db,
         private CoveredTableOrder $tableOrder,
+        private LoggerInterface $log,
     ) {}
 
     // Called when an insert was refused because the row is already present. If
@@ -106,18 +108,16 @@ final readonly class PeerRowAliases
         return $payload;
     }
 
-    // A schema read, so a table the registry does not cover answers empty
-    // rather than raising into the middle of a replay.
+    // Called through rather than guarded: CoveredTableOrder answers with an
+    // empty list rather than raising, and reports the schema fault itself. A
+    // catch here would be a second one behind a first that already swallows
+    // everything, which is a catch that can never fire.
     /**
      * @return array<string, string>
      */
     private function parentColumns(string $table): array
     {
-        try {
-            return $this->tableOrder->parentColumns($table);
-        } catch (Throwable) {
-            return [];
-        }
+        return $this->tableOrder->parentColumns($table);
     }
 
     // The local row holding the same natural key: every unique index the table
@@ -175,7 +175,15 @@ final readonly class PeerRowAliases
 
         try {
             $rows = $connection->select('SELECT name FROM pragma_index_list(?) WHERE "unique" = 1', [$table]);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // No indexes means no natural key, which means no alias: the peer's
+            // row is inserted beside the local one holding the same key instead
+            // of being recognised as it.
+            $this->log->warning('PeerRowAliases: could not read the unique indexes, so a row already here under another id will not be matched.', [
+                'table' => $table,
+                'exception' => $e::class,
+            ]);
+
             return [];
         }
 

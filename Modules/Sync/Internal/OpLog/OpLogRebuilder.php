@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Exceptions\RebuildInProgressException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\RowHistoryPolicy;
+use Modules\Sync\Internal\Merge\SearchIndexRefresher;
+use Psr\Log\LoggerInterface;
 
 final class OpLogRebuilder
 {
@@ -45,13 +48,14 @@ final class OpLogRebuilder
         ?CoveredTableOrder $tableOrder = null,
         private readonly ?SearchIndexWriterContract $searchWriter = null,
         ?PersistedOpLogEntries $persistedEntries = null,
+        private readonly ?LoggerInterface $log = null,
     ) {
         $this->persistedEntries = $persistedEntries ?? new PersistedOpLogEntries($db);
         // Built here when absent rather than left null. The container leaves
         // this optional parameter unresolved, and the null fallback was plain
         // registry order — which lists import_runs before transactions, so
         // every rebuild deleted a parent its children still referenced.
-        $this->tableOrder = $tableOrder ?? new CoveredTableOrder($this->db, $registry);
+        $this->tableOrder = $tableOrder ?? new CoveredTableOrder($this->db, $registry, $log);
 
         // Derives the covered-table list from the registry so it stays
         // config-driven; caller can override for testing partial subsets.
@@ -136,9 +140,27 @@ final class OpLogRebuilder
             }
 
             $this->searchWriter->deleteForTransaction($transactionId, $userId);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             // One unindexable row must not stop the rest being indexed:
             // a stale index recovers, a half-indexed sweep does not.
+
+            // Recovers on the next rebuild, that is — until then the row is
+            // findable under words it no longer holds, or not findable at all.
+
+            // The same sentence and recovery the merge path reports, and
+            // wrapped for the same reason it is: one failure, one route each.
+            try {
+                $this->log?->warning(SearchIndexRefresher::STALE, [
+                    'table' => 'transactions',
+                    'pk' => (string) $transactionId,
+                    'ftsOperation' => $survives ? 'upsert' : 'delete',
+                    'userId' => $userId,
+                    'recoverWith' => 'search:reindex',
+                    ...SafeExceptionContext::describe($e),
+                ]);
+            } catch (\Throwable) {
+                // A logger failing on a full disk must not take a rebuild down.
+            }
         }
     }
 

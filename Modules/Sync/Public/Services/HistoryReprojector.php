@@ -19,6 +19,7 @@ use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -279,7 +280,11 @@ final readonly class HistoryReprojector
      */
     private function withParentsNamed(array $rows, int $userId): array
     {
-        $order = new CoveredTableOrder($this->db, new MergeRulesRegistry);
+        $order = new CoveredTableOrder(
+            $this->db,
+            new MergeRulesRegistry,
+            $this->container->make(LoggerInterface::class),
+        );
         $seen = [];
 
         foreach ($rows as $row) {

@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Merge;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 // A row that arrives without a birth time is written without one, and nothing
@@ -21,7 +22,10 @@ final class SuppliedCreationTime
     /** @var array<string, bool> */
     private array $hasColumn = [];
 
-    public function __construct(private readonly DatabaseManager $db) {}
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly LoggerInterface $log,
+    ) {}
 
     // The op's own HLC, whose high half is a wall clock in milliseconds: not
     // the birth time the writer knew, but the earliest moment this device can
@@ -89,7 +93,15 @@ final class SuppliedCreationTime
             return $this->hasColumn[$table.'.'.$column] ??= $this->db->connection()
                 ->getSchemaBuilder()
                 ->hasColumn($table, $column);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // False reads as "the column is not there", and the birth time the
+            // op carried is then dropped rather than seeded.
+            $this->log->warning('SuppliedCreationTime: could not read the schema, so a supplied creation time was left off the row.', [
+                'table' => $table,
+                'column' => $column,
+                'exception' => $e::class,
+            ]);
+
             return false;
         }
     }

@@ -151,7 +151,15 @@ final class SplitCreateTail
     {
         try {
             $row = $this->db->connection()->table($table)->where('id', $pk)->first();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // Null reads as "no stored row", so the tail fills nothing and the
+            // columns the second half of the create carried are never written.
+            $this->logger?->warning('SplitCreateTail: could not read the stored row, so the tail of a split create was not filled in.', [
+                'table' => $table,
+                'pk' => (string) $pk,
+                'exception' => $e::class,
+            ]);
+
             return null;
         }
 
@@ -176,7 +184,15 @@ final class SplitCreateTail
             $query = $this->db->connection()->table($table)->where('id', $pk);
 
             return $this->ownership->scopeToUser($query, $table, $userId)->exists();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // False reads as "the row is not here", which is what makes a
+            // create judged incomplete rather than recognised as a second half.
+            $this->logger?->warning('SplitCreateTail: could not tell whether the row is here, so an arriving create was judged without it.', [
+                'table' => $table,
+                'pk' => (string) $pk,
+                'exception' => $e::class,
+            ]);
+
             return false;
         }
     }
