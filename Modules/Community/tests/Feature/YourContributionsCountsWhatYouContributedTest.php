@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\MysteryMerchantsPage;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
-use Native\Desktop\Contracts\Shell as ShellContract;
-use Native\Desktop\Fakes\ShellFake;
+use Modules\Community\Tests\Support\RecordingUrlOpener;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 
 // /community/mystery-merchants heads its four tiles with "Your contributions"
 // and rendered a literal 0 — the value was hard-coded, so it read 0 on a fresh
@@ -24,8 +24,8 @@ beforeEach(function (): void {
     $this->user = makeCommunityTestUser('contributions-user');
     $this->actingAs($this->user);
 
-    $this->shell = new ShellFake;
-    $this->app->instance(ShellContract::class, $this->shell);
+    $this->shell = new RecordingUrlOpener;
+    $this->app->instance(ExternalUrlOpener::class, $this->shell);
 });
 
 it('records the reader\'s own suggestion without joining the shared list', function (): void {

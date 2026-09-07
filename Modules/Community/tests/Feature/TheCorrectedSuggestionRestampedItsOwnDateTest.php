@@ -6,8 +6,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
-use Native\Desktop\Contracts\Shell as ShellContract;
-use Native\Desktop\Fakes\ShellFake;
+use Modules\Community\Tests\Support\RecordingUrlOpener;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 
 // Re-suggesting a name for a pattern is "one contribution corrected, not two
 // made" — but created_at rode in the update half of the write, so the correction
@@ -17,7 +17,7 @@ use Native\Desktop\Fakes\ShellFake;
 beforeEach(function (): void {
     $this->user = makeCommunityTestUser('contribution-date-user');
     $this->actingAs($this->user);
-    $this->app->instance(ShellContract::class, new ShellFake);
+    $this->app->instance(ExternalUrlOpener::class, new RecordingUrlOpener);
 });
 
 afterEach(function (): void {

@@ -6,9 +6,9 @@ namespace Modules\Community\Public\Actions;
 
 use InvalidArgumentException;
 use Modules\Community\Internal\Support\LoggableUrl;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 use Modules\Core\Public\Enums\ExternalUrlRefusal;
 use Modules\Core\Public\Support\ExternalUrl;
-use Native\Desktop\Contracts\Shell;
 use Psr\Log\LoggerInterface;
 
 final readonly class OpenExternalUrlAction
@@ -20,7 +20,7 @@ final readonly class OpenExternalUrlAction
     private const array ALLOWED_HOSTS = ['github.com'];
 
     public function __construct(
-        private Shell $shell,
+        private ExternalUrlOpener $opener,
         private LoggerInterface $logger,
     ) {}
 
@@ -33,7 +33,11 @@ final readonly class OpenExternalUrlAction
         return ExternalUrl::refusalFor($url, self::ALLOWED_HOSTS);
     }
 
-    public function __invoke(string $url): void
+    // Answers whether the URL was taken, because on three of the four runtimes
+    // it may not have been and the caller's next line is what the reader is
+    // told happened. A refused address still throws: that is a caller passing
+    // something this list never allowed, not a platform declining.
+    public function __invoke(string $url): bool
     {
         $refusal = self::refusalFor($url);
 
@@ -46,7 +50,15 @@ final readonly class OpenExternalUrlAction
             );
         }
 
-        $this->shell->openExternal($url);
-        $this->logger->info('OpenExternalUrlAction: launched system browser.', ['url' => LoggableUrl::withoutQuery($url)]);
+        $opened = $this->opener->open($url);
+
+        $this->logger->info(
+            $opened
+                ? 'OpenExternalUrlAction: the platform took the URL.'
+                : 'OpenExternalUrlAction: the platform did not take the URL.',
+            ['url' => LoggableUrl::withoutQuery($url)],
+        );
+
+        return $opened;
     }
 }

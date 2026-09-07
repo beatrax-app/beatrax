@@ -17,6 +17,7 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Auth\Public\Events\AppLockUnlocked;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\HostPipeWatch;
@@ -51,6 +52,7 @@ use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\BoundedNativeApiClient;
 use Modules\Desktop\Internal\Native\DesktopColdStartVault;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
+use Modules\Desktop\Internal\Native\DesktopUrlOpener;
 use Modules\Desktop\Internal\Native\FileOpenHandoff;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
@@ -122,6 +124,12 @@ final class DesktopServiceProvider extends ServiceProvider
         $config = $this->app->make(ConfigRepository::class);
         if ($config->get('nativephp-internal.running') === true) {
             $this->app->singleton(OsThemeSignal::class, OsThemeProbe::class);
+
+            // The one runtime whose shell can open a URL, and the only place
+            // that package is named for it. Outside the bundle the Shell POSTs
+            // to a localhost port nothing is listening on, so this must stay
+            // inside the guard the fallback depends on.
+            $this->app->singleton(ExternalUrlOpener::class, DesktopUrlOpener::class);
 
             // The unlocked data key goes to Electron safeStorage, not a plaintext
             // session copy.

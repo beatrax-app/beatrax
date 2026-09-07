@@ -8,16 +8,16 @@ use Illuminate\Support\Facades\App;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
 use Modules\Community\Public\Events\MysteryMerchantSubmitted;
+use Modules\Community\Tests\Support\RecordingUrlOpener;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 use Modules\Core\Public\Support\Lang;
-use Native\Desktop\Contracts\Shell as ShellContract;
-use Native\Desktop\Fakes\ShellFake;
 
 beforeEach(function (): void {
     $this->user = makeCommunityTestUser('suggest-modal-user');
     $this->actingAs($this->user);
 
-    $this->shell = new ShellFake;
-    $this->app->instance(ShellContract::class, $this->shell);
+    $this->shell = new RecordingUrlOpener;
+    $this->app->instance(ExternalUrlOpener::class, $this->shell);
 });
 
 it('opens with a prefilled pattern, submits, launches the system browser, and dispatches a MysteryMerchantSubmitted event', function (): void {
@@ -36,8 +36,8 @@ it('opens with a prefilled pattern, submits, launches the system browser, and di
         ->assertDispatched('toast')
         ->assertDispatched('modal-close');
 
-    expect($this->shell->openExternalCalls)->not->toBeEmpty();
-    $url = $this->shell->openExternalCalls[0];
+    expect($this->shell->openCalls)->not->toBeEmpty();
+    $url = $this->shell->openCalls[0];
     expect($url)->toStartWith('https://github.com/');
     expect($captured)->toHaveCount(1);
     expect($captured[0]->pattern)->toBe('SHELL*PIETER*');
@@ -50,7 +50,7 @@ it('does not launch the system browser when name is empty (validation error)', f
         ->call('submit')
         ->assertSet('submitError', 'Name is required.');
 
-    expect($this->shell->openExternalCalls)->toBe([]);
+    expect($this->shell->openCalls)->toBe([]);
 });
 
 it('keeps the modal open and renders submitError when the configured Compare base targets a non-allow-listed host', function (): void {
@@ -64,7 +64,7 @@ it('keeps the modal open and renders submitError when the configured Compare bas
         ->call('submit')
         ->assertSet('submitError', Lang::get('community::suggest.errors.browser_refused'));
 
-    expect($this->shell->openExternalCalls)->toBe([]);
+    expect($this->shell->openCalls)->toBe([]);
 });
 
 // The refusal used to be printed verbatim, and it opens with the action's own

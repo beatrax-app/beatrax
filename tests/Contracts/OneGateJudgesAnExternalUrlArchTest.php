@@ -125,15 +125,10 @@ it('leaves no template judging a URL scheme for itself', function (): void {
  * @var array<string, array{rule: string, reason: string, proves: string}>
  */
 const EXTERNAL_URL_PINNED_CALLERS = [
-    'Modules/Community/Public/Actions/OpenExternalUrlAction.php' => [
+    'Modules/Desktop/Internal/Native/DesktopUrlOpener.php' => [
         'rule' => 'openExternal',
-        'reason' => 'the gate itself: it applies the https check and the host allow-list, and the openExternal() below it is the one this rule exists to reserve',
-        'proves' => '/ExternalUrl::/',
-    ],
-    'Modules/Community/Internal/Shell/NoOpShell.php' => [
-        'rule' => 'openExternal',
-        'reason' => 'the shell every platform without one falls back to; its openExternal() opens nothing and only records that it was asked',
-        'proves' => '/class NoOpShell/',
+        'reason' => 'the desktop half of ExternalUrlOpener, and the only place the desktop shell is named for a URL; the gate above it has already judged the address',
+        'proves' => '/implements ExternalUrlOpener/',
     ],
     'Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php' => [
         'rule' => 'windowUrl',

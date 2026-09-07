@@ -104,9 +104,20 @@ final class SuggestMappingModal extends Component
         $url = $urlBuilder->build($dto);
 
         try {
-            $openUrl($url);
+            $opened = $openUrl($url);
         } catch (InvalidArgumentException $e) {
             $logger->warning('SuggestMappingModal: the suggestion URL was refused.', SafeExceptionContext::describe($e));
+            $this->submitError = Lang::get('community::suggest.errors.browser_refused');
+
+            return;
+        }
+
+        // The contribution below is a record of a pull request the reader is
+        // about to open. A platform that did not take the URL means there is no
+        // such request, so counting one would credit them for work the app just
+        // failed to send them to.
+        if (! $opened) {
+            $logger->warning('SuggestMappingModal: the platform did not open the suggestion URL.');
             $this->submitError = Lang::get('community::suggest.errors.browser_refused');
 
             return;

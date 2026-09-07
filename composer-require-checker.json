@@ -36,6 +36,7 @@
         "Native\\Mobile\\Edge\\Element",
         "Native\\Mobile\\Edge\\NativeComponent",
         "Native\\Mobile\\Facades\\Biometrics",
+        "Native\\Mobile\\Facades\\Browser",
         "Native\\Mobile\\Facades\\Device",
         "Native\\Mobile\\Facades\\Network",
         "Native\\Mobile\\Facades\\SecureStorage",
