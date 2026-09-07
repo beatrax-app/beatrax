@@ -49,15 +49,28 @@ final readonly class ShippedBundleContents
             return ['no ext-zip in this PHP build, so the artifact was never read: '.$path];
         }
 
-        $unpacked = $this->unpack($path);
-
-        if ($unpacked === null) {
-            return ['not an archive this can read: '.$path];
-        }
-
         $refusals = [];
 
-        foreach ($this->everyFile($unpacked) as $file) {
+        $unpacked = $this->unpack($path, $refusals);
+
+        if ($unpacked === null) {
+            $refusals[] = 'not an archive this can read: '.$path;
+
+            sort($refusals);
+
+            return $refusals;
+        }
+
+        $files = $this->everyFile($unpacked);
+
+        // The positive control. Every other way out of this method reports what
+        // it read; an empty list has to mean "read it, found none", and without
+        // this it also means "read nothing at all".
+        if ($files === []) {
+            $refusals[] = 'the artifact unpacked to no files, so it was never read: '.$path;
+        }
+
+        foreach ($files as $file) {
             $relative = substr($file->getPathname(), strlen($unpacked) + 1);
             $extension = strtolower($file->getExtension());
 
@@ -155,11 +168,21 @@ final readonly class ShippedBundleContents
     // Nested archives are unpacked too: the PHP application travels inside the
     // artifact as its own zip, so a scan that stopped at the outer entries
     // would read the wrapper and never the tree the wrapper carries.
-    private function unpack(string $path, int $depth = 0): ?string
+    /**
+     * @param  list<string>  $refusals  every step that did not happen, so a tree
+     *                                  this could not read is never read as empty
+     */
+    private function unpack(string $path, array &$refusals, int $depth = 0): ?string
     {
+        if ($depth > 2) {
+            $refusals[] = 'nested deeper than this unpacks, so its contents were not read: '.$path;
+
+            return null;
+        }
+
         $zip = new ZipArchive;
 
-        if ($depth > 2 || $zip->open($path) !== true) {
+        if ($zip->open($path) !== true) {
             return null;
         }
 
@@ -167,20 +190,54 @@ final readonly class ShippedBundleContents
         // leaks every entry's name and size to anyone on the machine — and the
         // entries are exactly what this is looking for.
         $target = UserDataPathService::appPath('tmp-inspect-bundle/'.bin2hex(random_bytes(8)));
-        mkdir($target, 0700, true);
 
-        $zip->extractTo($target);
+        if (! @mkdir($target, 0700, true) && ! is_dir($target)) {
+            $zip->close();
+            $refusals[] = 'nowhere to unpack it, so the artifact was not read: '.$target;
+
+            return null;
+        }
+
+        // An extraction that stopped part-way leaves a directory holding some of
+        // the artifact, and a walk over it reports everything else as absent.
+
+        // Suppressed so the answer comes back as a refusal naming the archive:
+        // unsuppressed, the framework turns the entry-level warning into an
+        // ErrorException, and a tool for saying what it could not read would
+        // die instead of saying it. getStatusString() reads "No error" here.
+        $extracted = @$zip->extractTo($target);
         $zip->close();
+
+        if ($extracted !== true) {
+            $refusals[] = 'the archive would not extract, so what it carries is unknown: '.$path;
+
+            return null;
+        }
 
         foreach ($this->everyFile($target) as $file) {
             if (! in_array(strtolower($file->getExtension()), ['zip', 'aab', 'apk', 'ipa'], true)) {
                 continue;
             }
 
-            $inner = $this->unpack($file->getPathname(), $depth + 1);
+            $inner = $this->unpack($file->getPathname(), $refusals, $depth + 1);
 
-            if ($inner !== null) {
-                rename($inner, $file->getPathname().'.unpacked');
+            if ($inner === null) {
+                $refusals[] = 'a nested archive that would not open, so only its bytes were read: '.$file->getPathname();
+
+                continue;
+            }
+
+            // Moved under the tree the caller walks. Left where it is, the
+            // nested contents are outside every later walk and the wrapper's
+            // own bytes are all that gets read — which is the case this
+            // whole nested pass exists for.
+
+            // Suppressed for the same reason as the extraction above: an
+            // artifact can name an entry after where this has to land, and an
+            // ErrorException out of the collision would end the inspection
+            // rather than record what it did not reach.
+            if (! @rename($inner, $file->getPathname().'.unpacked')) {
+                $refusals[] = 'a nested archive was unpacked out of reach, so it was not read: '.$file->getPathname();
             }
         }
 
