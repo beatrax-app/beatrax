@@ -42,22 +42,32 @@ final readonly class NativeShareSheet
     // quietly nowhere.
     public function file(string $shareTitle, string $shareMessage, string $path): bool
     {
-        if (! function_exists('nativephp_call')) {
-            return false;
-        }
+        $payload = self::payloadFor($shareTitle, $shareMessage, $path);
 
+        return $payload !== null && $this->answerTo($payload);
+    }
+
+    // Null where the payload will not encode, which is the same answer as a
+    // refusal to the caller: nothing was handed anywhere.
+    private static function payloadFor(string $shareTitle, string $shareMessage, string $path): ?string
+    {
         $encoded = json_encode([
             'title' => $shareTitle,
             'message' => $shareMessage,
             'filePath' => $path,
         ]);
 
-        if ($encoded === false) {
+        return $encoded === false ? null : $encoded;
+    }
+
+    private function answerTo(string $payload): bool
+    {
+        if (! function_exists('nativephp_call')) {
             return false;
         }
 
         try {
-            return BridgeAnswer::saysItSucceeded(nativephp_call(self::SHARE_FUNCTION, $encoded));
+            return BridgeAnswer::saysItSucceeded(nativephp_call(self::SHARE_FUNCTION, $payload));
         } catch (Throwable) {
             return false;
         }
