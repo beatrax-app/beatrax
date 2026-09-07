@@ -336,12 +336,43 @@ same way:
 Two artefacts exist only in the Apple Developer portal, and the build fails
 loudly without them rather than producing something unsubmittable:
 
-- a **Mac App Store provisioning profile** (`embedded.provisionprofile`). The
-  patch deliberately does not set `provisioningProfile`: defaulting a path
-  would turn a missing prerequisite into a confusing signing error.
+- a **Mac App Store provisioning profile**, base64-encoded into the
+  `MAS_PROVISIONING_PROFILE_BASE64` repository secret. The workflow decodes it
+  to `build/embedded.provisionprofile` and reads the file back: base64 of an
+  empty secret decodes to an empty file without complaining, and an empty
+  profile fails much later as a signing error nobody can place.
+- an **Apple Distribution** identity, as the `NATIVEPHP_MAS_IDENTITY`
+  repository variable — the certificate's common name, not the whole
+  `find-identity` line. This one is already held.
 - a **Mac Installer Distribution** identity, for the `.pkg` the store takes in
-  place of a `.dmg`. `Apple Distribution` is already on this machine; the
-  installer certificate is a separate one.
+  place of a `.dmg`. That certificate is a separate one and is **not** yet
+  held.
+
+Neither the identity nor the profile is written into the config unless **both**
+are present. Half a config would turn a missing prerequisite into a confusing
+signing error; the whole one missing makes electron-builder say so plainly.
+
+### Running the store lane
+
+`release (Mac App Store)` is **dispatch-only**, and deliberately not part of
+`release.yml`. The store build needs artefacts that live in the Apple Developer
+portal, and a release that fails because one of them has not been created yet is
+a direct-download channel that stops shipping for a listing it does not depend
+on. That is what "distribution is additive" means in practice.
+
+It builds the Developer ID target first — `native:build` is what prepares the
+tree, the interpreter and the CA certificate — then runs electron-builder once
+more against the same prepared tree with `--mac mas`, so the store config block
+is read rather than the whole preparation repeated.
+
+Then it reads what it built with `desktop:review-mac-bundle`, and fails if it
+found no bundle at all: a `find` that matched nothing and a bundle with no
+findings print the same thing.
+
+The store bundle carries **no updater**. Apple forbids an app updating itself
+outside the store, and Electron disables `autoUpdater` in a `mas` build anyway —
+writing `NATIVEPHP_UPDATER_ENABLED=false` into the shipped `.env` means the
+in-app check is off too, rather than only the mechanism.
 
 #### Reading a bundle instead of trusting the config
 
