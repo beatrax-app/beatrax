@@ -7,9 +7,11 @@ use Modules\Core\Public\Support\PatternScan;
 // Workflows that produce an installable bundle. release.yml publishes one;
 // release-build.yml exists so a tag can be built and inspected before anyone
 // commits to publishing it, which only means something if the two stage the
-// same environment.
+// same environment. release-mac-app-store.yml is dispatched rather than
+// tagged, and stages one more thing than the others: the store bundle carries
+// no updater, so its .env says so.
 // Byte-sorted, so the discovered list can be compared without reordering it.
-const BUNDLING_WORKFLOWS = ['release-build.yml', 'release.yml'];
+const BUNDLING_WORKFLOWS = ['release-build.yml', 'release-mac-app-store.yml', 'release.yml'];
 
 // Every other .env staging in CI wants the development values: those jobs run
 // the suite, and APP_ENV=testing is what the suite reads.

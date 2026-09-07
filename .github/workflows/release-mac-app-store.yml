@@ -1,0 +1,140 @@
+# The Mac App Store lane, on demand rather than on a tag.
+#
+# It is deliberately NOT part of release.yml. The store build needs two
+# artefacts that live in the Apple Developer portal — a Mac App Store
+# provisioning profile and an Apple Distribution identity — and a release that
+# fails because one of them has not been created yet is a release blocked by
+# paperwork. Dispatching this separately keeps the direct-download channel
+# shipping while the store lane is being set up, which is what "distribution is
+# additive" means in practice.
+#
+# It still refuses loudly rather than degrading: a mas bundle signed without a
+# profile is not one anybody can submit.
+name: release-mac-app-store
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: 'Version to stamp the bundle with, without the leading v'
+                required: true
+                type: string
+
+permissions:
+    contents: read
+
+jobs:
+    build-mas:
+        name: build (Mac App Store, arm64)
+        runs-on: macos-14
+        timeout-minutes: 30
+        steps:
+            - name: Check out the source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2.37.2
+              with:
+                  php-version: '8.5'
+                  extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Install Composer dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Install npm dependencies
+              run: npm ci --ignore-scripts
+
+            - name: Build Vite assets
+              run: npm run build
+
+            # The store build carries no updater. Apple forbids an app updating
+            # itself outside the store, and Electron disables autoUpdater in a
+            # mas build anyway — writing it into the shipped .env means the
+            # in-app check is off as well, rather than only the mechanism.
+            - name: Stage the shipped .env
+              uses: ./.github/actions/stage-shipped-env
+              with:
+                  extra: |
+                      NATIVEPHP_UPDATER_ENABLED=false
+
+            - name: Write the provisioning profile the store lane signs against
+              env:
+                  MAS_PROVISIONING_PROFILE_BASE64: ${{ secrets.MAS_PROVISIONING_PROFILE_BASE64 }}
+              run: |
+                  set -euo pipefail
+                  if [ -z "${MAS_PROVISIONING_PROFILE_BASE64:-}" ]; then
+                      echo "::error::MAS_PROVISIONING_PROFILE_BASE64 is empty. A mas bundle signed without a Mac App Store provisioning profile is not one anybody can submit; create the profile in the Apple Developer portal first."
+                      exit 1
+                  fi
+                  echo "$MAS_PROVISIONING_PROFILE_BASE64" | base64 --decode > build/embedded.provisionprofile
+                  # Read back rather than trusting the pipe: base64 of an empty
+                  # secret decodes to an empty file without complaining, and an
+                  # empty profile fails much later with a signing error.
+                  if [ ! -s build/embedded.provisionprofile ]; then
+                      echo "::error::The decoded provisioning profile is empty."
+                      exit 1
+                  fi
+
+            - name: Stage the NativePHP electron scaffold
+              run: |
+                  set -euo pipefail
+                  php artisan key:generate --ansi
+                  php artisan native:install --publish --no-interaction --force
+
+            # native:build prepares the tree — the app bundle, the interpreter,
+            # the CA certificate — and produces the Developer ID mac target.
+            # The store target is built from that same prepared tree below,
+            # because electron-builder has no platform argument here that means
+            # "mas" and re-preparing it twice would be the slow way to get one
+            # config block read instead of another.
+            - name: Prepare the bundle and build the Developer ID target
+              env:
+                  NATIVEPHP_APP_VERSION: ${{ inputs.version }}
+                  CSC_LINK: ${{ secrets.CSC_LINK }}
+                  CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+                  NATIVEPHP_MAC_IDENTITY: ${{ vars.NATIVEPHP_MAC_IDENTITY }}
+                  NATIVEPHP_MAS_IDENTITY: ${{ vars.NATIVEPHP_MAS_IDENTITY }}
+                  NATIVEPHP_MAS_PROVISIONING_PROFILE: build/embedded.provisionprofile
+              run: |
+                  set -euo pipefail
+                  for required in CSC_LINK CSC_KEY_PASSWORD NATIVEPHP_MAC_IDENTITY NATIVEPHP_MAS_IDENTITY; do
+                      if [ -z "${!required:-}" ]; then
+                          echo "::error::${required} is empty — refusing to build an unsigned store bundle."
+                          exit 1
+                      fi
+                  done
+                  php artisan native:build mac arm64
+
+            - name: Build the Mac App Store target
+              env:
+                  NATIVEPHP_MAS_IDENTITY: ${{ vars.NATIVEPHP_MAS_IDENTITY }}
+                  NATIVEPHP_MAS_PROVISIONING_PROFILE: build/embedded.provisionprofile
+              run: |
+                  set -euo pipefail
+                  cd nativephp/electron
+                  node ./node_modules/electron-builder/cli.js -p never --mac mas --config electron-builder.mjs --arm64
+
+            # The config is a claim; the bundle is the evidence. This reads the
+            # built .app for what review refuses — an unsandboxed app, a key
+            # the store does not take, an unsigned nested executable, or the
+            # interpreter outside a Contents/MacOS directory.
+            - name: Refuse a bundle App Store review would refuse
+              run: |
+                  set -euo pipefail
+                  APP=$(find nativephp/electron/dist/mas* -maxdepth 1 -name '*.app' -print -quit)
+                  if [ -z "$APP" ]; then
+                      echo "::error::No .app under nativephp/electron/dist/mas* — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  php artisan desktop:review-mac-bundle "$APP"
+
+            - name: Upload the store bundle
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+              with:
+                  name: mac-app-store
+                  path: |
+                      nativephp/electron/dist/mas*/*.pkg
+                      nativephp/electron/dist/*.pkg
+                  if-no-files-found: error
