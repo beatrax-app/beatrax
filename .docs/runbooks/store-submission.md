@@ -310,6 +310,58 @@ a recording with only one side, because a fixture of store apps alone would let
 rules that refuse nothing read as calibrated. Re-run it when Apple changes what
 it accepts, and the diff is the change.
 
+#### What the sandbox actually does to the interpreter, measured
+
+The two unknowns recorded as "answerable only by building a sandboxed bundle
+and measuring one" are answered. `php scripts/measure_sandboxed_interpreter.php`
+copies the bundled interpreter into a minimal `.app`, signs it **ad-hoc** with
+the store lane's sandbox entitlements — no keychain, no Apple identity, so it
+reproduces on any Mac — and runs the same probe twice:
+
+| probe | sandboxed | unsandboxed (control) |
+|---|---|---|
+| pcre jit ini | 1 | 1 |
+| pcre match | works | works |
+| loopback listener | bound | bound |
+| loopback connect | connected | connected |
+| udp socket | ok | ok |
+| mdns group join | ok | ok |
+| mdns send | 12 bytes | 12 bytes |
+| proc_open | ok | ok |
+| home | container | real home |
+| mkdir under home | ok | ok |
+| sqlite write | ok | ok |
+| read /etc/hosts | allowed | allowed |
+| write /tmp | **REFUSED** | allowed |
+
+**Everything LAN sync needs survives.** A loopback listener binds and accepts,
+a multicast group join and send to `224.0.0.251:5353` both succeed, outbound
+TCP reaches the stack, and a child process spawns. So does SQLite, into the
+container.
+
+Two details matter more than they look:
+
+- **The control run is the point.** A failure that reproduces unsandboxed is
+  not a sandbox finding. `bind 5353` fails either way on a machine where
+  another process already holds the mDNS port — reading that as a sandbox
+  restriction is exactly how this measurement would lie.
+- **PCRE's JIT works with no JIT entitlement at all.** The store lane's
+  entitlements grant `com.apple.security.cs.allow-jit`, and this suggests even
+  that is not load-bearing. A sandboxed build is not hardened by default —
+  electron-builder hardens `mas` only when told to — so writable-executable
+  memory is not being restricted in the first place.
+
+The remaining cost is the one the measurement confirms rather than removes:
+`HOME` is redirected to `~/Library/Containers/<bundle-id>/Data`, and the
+sandboxed build cannot read the real home. A direct-download ledger does not
+follow a reader into the store build, and that is a migration story, not a
+runtime problem.
+
+A sandboxed process also needs a bundle identity or the kernel kills it at
+launch — SIGTRAP, exit 133, no output at all. The script refuses an empty
+result table for that reason: a run that produced nothing reads exactly like a
+run that found no problems.
+
 #### What the interpreter actually needs, measured
 
 The runbook used to carry both Developer ID relaxations as the cost of the

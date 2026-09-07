@@ -20,6 +20,8 @@
 /storage/app/mobile
 /storage/app/backups
 /storage/app/sync
+# scripts/measure_sandboxed_interpreter.php builds a signed probe bundle here.
+/storage/app/sandbox-probe
 /storage/app/secrets
 /storage/app/first-launch.app-key-generated
 /storage/framework/cache/*
