@@ -180,6 +180,22 @@ final readonly class ShippedBundleContents
             return null;
         }
 
+        $target = $this->extract($path, $refusals);
+
+        if ($target !== null) {
+            $this->unpackNested($target, $refusals, $depth);
+        }
+
+        return $target;
+    }
+
+    /**
+     * @param  list<string>  $refusals
+     * @return string|null the directory the archive now sits in, or null when
+     *                     its bytes never reached one
+     */
+    private function extract(string $path, array &$refusals): ?string
+    {
         $zip = new ZipArchive;
 
         if ($zip->open($path) !== true) {
@@ -191,11 +207,22 @@ final readonly class ShippedBundleContents
         // entries are exactly what this is looking for.
         $target = UserDataPathService::appPath('tmp-inspect-bundle/'.bin2hex(random_bytes(8)));
 
-        if (! @mkdir($target, 0700, true) && ! is_dir($target)) {
-            $zip->close();
-            $refusals[] = 'nowhere to unpack it, so the artifact was not read: '.$target;
+        $refusal = $this->land($zip, $path, $target);
+        $zip->close();
 
-            return null;
+        if ($refusal !== null) {
+            $refusals[] = $refusal;
+        }
+
+        return $refusal === null ? $target : null;
+    }
+
+    // The two ways the bytes do not reach disk, as the sentence to report or a
+    // null for the one where they did.
+    private function land(ZipArchive $zip, string $path, string $target): ?string
+    {
+        if (! @mkdir($target, 0700, true) && ! is_dir($target)) {
+            return 'nowhere to unpack it, so the artifact was not read: '.$target;
         }
 
         // An extraction that stopped part-way leaves a directory holding some of
@@ -205,15 +232,14 @@ final readonly class ShippedBundleContents
         // unsuppressed, the framework turns the entry-level warning into an
         // ErrorException, and a tool for saying what it could not read would
         // die instead of saying it. getStatusString() reads "No error" here.
-        $extracted = @$zip->extractTo($target);
-        $zip->close();
+        return @$zip->extractTo($target) === true
+            ? null
+            : 'the archive would not extract, so what it carries is unknown: '.$path;
+    }
 
-        if ($extracted !== true) {
-            $refusals[] = 'the archive would not extract, so what it carries is unknown: '.$path;
-
-            return null;
-        }
-
+    /** @param list<string> $refusals */
+    private function unpackNested(string $target, array &$refusals, int $depth): void
+    {
         foreach ($this->everyFile($target) as $file) {
             if (! in_array(strtolower($file->getExtension()), ['zip', 'aab', 'apk', 'ipa'], true)) {
                 continue;
@@ -240,7 +266,5 @@ final readonly class ShippedBundleContents
                 $refusals[] = 'a nested archive was unpacked out of reach, so it was not read: '.$file->getPathname();
             }
         }
-
-        return $target;
     }
 }

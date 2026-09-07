@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\ShippedBundleContents;
 
 // An exclusion list is a claim about a build, and the claim has been wrong: a
@@ -170,4 +172,22 @@ it('refuses when a nested archive cannot be moved into the tree it walks', funct
     ]);
 
     expect(implode("\n", bundleRefusals($path)))->toContain('out of reach');
+});
+
+it('refuses when there is nowhere to unpack the artifact', function (): void {
+    $path = bundleArchive(['assets/app/.env' => "APP_ENV=production\n"]);
+
+    // A file where the unpack directory's parent has to be: mkdir cannot make a
+    // directory under it, and is_dir stays false — the same pair of conditions
+    // a full or read-only disk produces, without depending on either.
+    $parent = UserDataPathService::appPath('tmp-inspect-bundle');
+    (new Filesystem)->deleteDirectory($parent);
+    (new Filesystem)->ensureDirectoryExists(dirname($parent));
+    file_put_contents($parent, 'not a directory');
+
+    try {
+        expect(implode("\n", bundleRefusals($path)))->toContain('nowhere to unpack it');
+    } finally {
+        @unlink($parent);
+    }
 });
