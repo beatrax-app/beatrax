@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\DevMode\Tests\Support\RecordingLogger;
 use Modules\Mobile\Internal\Listeners\DispatchMobileNotification;
 use Modules\Mobile\Tests\Support\ExposedDispatchMobileNotification;
 use Modules\Mobile\Tests\Support\RecordingDispatchMobileNotification;
+use Modules\Mobile\Tests\Support\RecordingMobileLogger;
 use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
@@ -148,7 +148,7 @@ it('never throws when the plugin class is absent — the class_exists guard ever
 // handed over — in exactly the case it exists to report.
 function donMobileOutcomeLog(string $answer): array
 {
-    $log = new RecordingLogger;
+    $log = new RecordingMobileLogger;
     app()->instance(LoggerInterface::class, $log);
 
     /** @var ExposedDispatchMobileNotification $listener */
