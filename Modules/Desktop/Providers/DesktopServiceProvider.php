@@ -21,6 +21,7 @@ use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\HostPipeWatch;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Desktop\Commands\ReviewMacBundleCommand;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
@@ -151,6 +152,11 @@ final class DesktopServiceProvider extends ServiceProvider
         // redirect and would carry the demand past this on the one request the
         // window makes after a close.
         $router->pushMiddlewareToGroup('web', ClaimShellLockDemand::class);
+
+        // Reads a built .app for what App Store review refuses. Registered
+        // here rather than behind a build-only guard because the answer is
+        // about an artifact, and an operator asks it from any checkout.
+        $this->commands([ReviewMacBundleCommand::class]);
 
         // NOT bundle-gated, for the same reason the Login listener below is not:
         // the file-open round-trip has to work in local dev and in tests, and

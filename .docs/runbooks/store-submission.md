@@ -280,6 +280,45 @@ Apple and is *not* the blocker. These are:
 | Remove self-update on that channel — required, and Electron disables `autoUpdater` in `mas` builds anyway. Both off switches already exist | S/M |
 | Two-channel release engineering, and review risk on a bundled interpreter with no precedent found either way | M + unknown |
 
+#### Reading a bundle instead of trusting the config
+
+`php artisan desktop:review-mac-bundle <path-to.app>` opens a built bundle and
+reports every reason App Store review would refuse it: an unsandboxed app, any
+of the four entitlements the store does not take, an unsigned nested
+executable, one living outside a `Contents/MacOS` directory, and a helper that
+combines `inherit` with another sandbox right.
+
+The rules are **calibrated against bundles Apple actually shipped**, which is
+the only way to tell a real rule from a plausible one. Two of them were wrong
+until a real store app said so:
+
+| what the rule said | the bundle that disproved it |
+|---|---|
+| a nested helper must carry exactly `app-sandbox` + `inherit` | Amphetamine's login helper holds `files.user-selected.read-write` beside `app-sandbox`, because a nested `.app` is its own sandboxed program rather than an inheriting child |
+| every executable in a sandboxed app must be sandboxed | Apple Configurator ships an unsandboxed `cfgutilscript` in its own `MacOS` directory; the rule only holds for an executable the app *launches* |
+
+An Electron helper under `Contents/Frameworks` is recognised structurally. The
+interpreter is not — a spawned binary and a bundled data file that happens to
+be Mach-O look identical on disk — so the command names it explicitly.
+
+#### What the interpreter actually needs, measured
+
+The runbook used to carry both Developer ID relaxations as the cost of the
+embedded interpreter. Asking the shipped binary narrows it:
+
+| setting | value | consequence |
+|---|---|---|
+| `opcache.enable_cli` | `0` | PHP's own JIT never runs |
+| `opcache.jit` | `disable` | compiled in by `enable-opcache-jit`, never used |
+| `pcre.jit` | `1` | the one live consumer of writable-executable memory |
+| linkage | static, no shared objects | nothing for library validation to reject |
+
+So the store lane needs `com.apple.security.cs.allow-jit`, which **is**
+permitted for App Store distribution, and neither
+`allow-unsigned-executable-memory` nor `disable-library-validation`. The
+alternative to `allow-jit` is `pcre.jit=0`, which the interpreter accepts —
+that is a performance trade on regex-heavy paths, not a correctness one.
+
 ### The Microsoft Store is much cheaper than it looks
 
 MSIX is *recommended*, not required. An EXE/MSI listing is a first-class product
