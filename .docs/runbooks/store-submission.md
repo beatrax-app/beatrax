@@ -273,12 +273,32 @@ Apple and is *not* the blocker. These are:
 | ~~New entitlement files~~ — **done**. `entitlements.mas.plist` and `entitlements.mas.inherit.plist`, the second exactly two keys long | — |
 | ~~Move the interpreter to `Contents/MacOS/`~~ — **done**. `scripts/nativephp_interpreter_into_macos.php` adds it to the mas lane's `extraFiles` and teaches the shell to prefer it; verified below | — |
 | Relocate the data path into the sandbox container, and move `.env` and `bootstrap/cache` out of the bundle, which is read-only on an installed store build. Existing direct-download ledgers do not follow into a container | L |
-| Rework file intake: a child process inherits only *static* rights, so PowerBox grants from an open panel do not reach the PHP side | M/L |
+| ~~Rework file intake~~ — **there is no open panel to inherit a grant from**; read from the code rather than measured, see below | — |
 | Confirm a loopback listener and mDNS work under the sandbox — measured, not read | M, uncertain |
 | Prove every spawned process is reaped on quit | S/M |
 | Apple Distribution + Mac Installer Distribution identities instead of Developer ID; a `.pkg` rather than a `.dmg`; no notarisation on that lane | S+M |
 | Remove self-update on that channel — required, and Electron disables `autoUpdater` in `mas` builds anyway. Both off switches already exist | S/M |
 | Two-channel release engineering, and review risk on a bundled interpreter with no precedent found either way | M + unknown |
+
+#### File intake needs no PowerBox grant, because it never had one
+
+Scoped as M/L on the reasoning that a child process inherits only static
+rights, so an open panel's grant would not reach PHP. Reading the paths, no
+such grant exists to be inherited:
+
+| direction | how it actually works | under the sandbox |
+|---|---|---|
+| statements, receipts, a backup coming **in** | Livewire `WithFileUploads` — an `<input type="file">` in the WebView. The browser reads the bytes and POSTs them to the loopback server | unaffected; PHP never opens the reader's path |
+| an export or backup going **out** | PHP answers with a `BinaryFileResponse`; the shell's download handler writes it wherever the reader chooses | unaffected; the grant belongs to Electron, which has it |
+| the auto-import **drop folder** | `storagePath('app/inbox-drop/<user>')` — an app-owned directory, not one the reader nominates | works, and moves into the container with the rest of the storage root |
+
+The drop folder is the only one that changes for a reader, and it changes in
+discoverability rather than in function: inside a container it is several levels
+down in `~/Library/Containers`. That is listing copy under `F8-R26`, not a
+capability that dies.
+
+This is read from the code, not measured on a sandboxed build. The distinction
+matters: everything above under "measured" was run.
 
 #### The layout and the runtime, proven together
 
