@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Je encryptiesleutel is opnieuw beveiligd met je nieuwe pincode.',
     'error_forgot_failed' => 'Pincode opnieuw instellen mislukt — de herstelsleutel is niet beschikbaar.',
     'error_enable_first' => 'Schakel eerst de pincodevergrendeling in voordat je biometrie registreert.',
+    'error_vault_kept_key' => 'Ontgrendelen met biometrie staat uit, maar deze computer heeft de opgeslagen sleutel niet verwijderd, dus er staat hier nog een kopie. Start Beatrax opnieuw op en verwijder hem nog een keer.',
     'error_disable_blocked_by_encryption' => 'Je notities en tegenpartijgegevens zijn versleuteld met de sleutel die deze app-vergrendeling bewaart, dus de vergrendeling uitzetten zou ze onleesbaar maken. De vergrendeling blijft aan — wijzig in plaats daarvan je pincode.',
     'error_key_material_lost' => 'Dit apparaat heeft de sleutel die je versleutelde gegevens opent niet meer, dus een nieuwe pincode maakt ze niet weer leesbaar. Zet een versleutelde back-up terug die is gemaakt toen de sleutel nog werkte — koppelen brengt dit apparaat er niet terug, want koppelen heeft juist de app-vergrendeling nodig die die sleutel opent.',
     'error_recovery_wrap_stale' => 'Je accountwachtwoord opent deze app-vergrendeling niet meer — het is gewijzigd nadat de vergrendeling was ingesteld. Je pincode werkt nog, maar er zit niets meer achter als je die vergeet. Koppel je accountwachtwoord nu opnieuw.',

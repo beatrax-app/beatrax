@@ -57,7 +57,9 @@ final readonly class DeleteAccountAction
 
         $successorId = $this->successorAdministratorId($connection, $user);
 
-        $lastAccountOnDevice = $connection->transaction(function () use ($connection, $userId, $successorId): bool {
+        $vaultKeptTheKey = false;
+
+        $lastAccountOnDevice = $connection->transaction(function () use ($connection, $userId, $successorId, &$vaultKeptTheKey): bool {
             if ($successorId !== null) {
                 $connection->table('users')->where('id', $successorId)->update(['is_developer' => true]);
             }
@@ -65,7 +67,7 @@ final readonly class DeleteAccountAction
             // Before the rows: forgetting an enrolment writes the flag back
             // through the lock gateway, which would resurrect a deleted row.
             // Inside the transaction, though the keychain clear cannot be.
-            $this->coldStartVault->forget($userId);
+            $vaultKeptTheKey = ! $this->coldStartVault->forget($userId);
 
             ($this->purgeData)($connection, $userId);
 
@@ -77,6 +79,15 @@ final readonly class DeleteAccountAction
 
             return $connection->table('users')->count() === 0;
         });
+
+        // Past the commit, so it describes a deletion that stands. It does not
+        // roll one back: what the promise turns on is that no peer can put the
+        // account back, and a wrap of a key whose rows are gone cannot.
+        if ($vaultKeptTheKey) {
+            $this->log->warning('DeleteAccountAction: the OS vault kept its wrapped copy of the data key, which now outlives the account it belonged to.', [
+                'user_id' => $userId,
+            ]);
+        }
 
         $this->settleAfterPurge($connection, $userId, $lastAccountOnDevice);
     }

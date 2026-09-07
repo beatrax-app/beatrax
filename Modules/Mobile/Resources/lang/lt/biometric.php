@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Patvirtink PIN kodą, kad įjungtum',
     'current_pin' => 'Dabartinis PIN kodas',
     'enable' => 'Įjungti atrakinimą biometriniais duomenimis',
+    'clear_refused' => 'Biometrinis atrakinimas išjungtas, bet įrenginys nepašalino rakto iš saugyklos. Paleisk telefoną iš naujo ir bandyk dar kartą.',
 
     'errors' => [
         'unavailable' => 'Šiame įrenginyje atrakinimas biometriniais duomenimis negalimas.',

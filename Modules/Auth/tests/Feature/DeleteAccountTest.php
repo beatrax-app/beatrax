@@ -7,10 +7,13 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Modules\Auth\Public\Actions\DeleteAccountAction;
+use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
+use Modules\Auth\Tests\Support\DurableColdStartVault;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Psr\Log\LoggerInterface;
 
 // Not that the users row goes, but that everything it owned goes with it, that
 // a household member's identical-looking data does not, and that nobody is
@@ -599,4 +602,57 @@ it('takes the derived cache of the account with it', function (): void {
     expect($keys)->not->toContain('nav-counts:'.$leaving->id);
     expect($keys)->not->toContain('savings-insights:'.$leaving->id);
     expect($keys)->toContain('nav-counts:'.$staying->id);
+});
+
+// The keychain clear is the one step of the deletion the transaction cannot
+// undo, and it was the one step nothing read the answer of: a refusal left a
+// wrapped data key behind and the deletion reported itself clean.
+it('names the wrapped key the OS would not release, and deletes the account anyway', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $log = Mockery::spy(LoggerInterface::class);
+    $this->app->instance(LoggerInterface::class, $log);
+
+    $vault = new DurableColdStartVault;
+    $vault->refuseForget = true;
+    $this->app->instance(ColdStartVault::class, $vault);
+
+    $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
+    $this->actingAs($owner);
+
+    app(DeleteAccountAction::class)($owner, 'owner-password-12');
+
+    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse('a keychain entry that will not delete must not trap the reader in an account');
+
+    $log->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'outlives the account'))
+        ->once();
+});
+
+// Logged past the commit for the same reason the file purge is: a line naming
+// a key that outlived an account, written for a deletion that then rolled back,
+// describes a state the reader is not in.
+it('says nothing about a surviving key when the deletion did not happen', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $log = Mockery::spy(LoggerInterface::class);
+    $this->app->instance(LoggerInterface::class, $log);
+
+    $vault = new DurableColdStartVault;
+    $vault->refuseForget = true;
+    $this->app->instance(ColdStartVault::class, $vault);
+
+    $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
+    deleteAccountBlockPurge($db, $owner->id);
+    $this->actingAs($owner);
+
+    expect(fn () => app(DeleteAccountAction::class)($owner, 'owner-password-12'))->toThrow(RuntimeException::class);
+
+    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue();
+
+    $log->shouldNotHaveReceived('warning', [Mockery::pattern('/outlives the account/'), Mockery::any()]);
 });

@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Za vklop potrdi svoj PIN',
     'current_pin' => 'Trenutni PIN',
     'enable' => 'Vklopi biometrično odklepanje',
+    'clear_refused' => 'Biometrično odklepanje je izklopljeno, a naprava ključa ni odstranila iz varne shrambe. Znova zaženi telefon in poskusi še enkrat.',
 
     'errors' => [
         'unavailable' => 'Biometrično odklepanje na tej napravi ni na voljo.',

@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Cheia ta de criptare a fost resecurizată cu noul cod PIN.',
     'error_forgot_failed' => 'Resetarea codului PIN a eșuat — cheia de recuperare nu este disponibilă.',
     'error_enable_first' => 'Activează mai întâi blocarea cu cod PIN, apoi înrolează biometria.',
+    'error_vault_kept_key' => 'Deblocarea biometrică este oprită, dar acest calculator nu a șters cheia salvată, așa că o copie este tot aici. Repornește Beatrax și elimin-o din nou.',
     'error_disable_blocked_by_encryption' => 'Notițele tale și datele contrapărților sunt criptate cu cheia pe care o păstrează această blocare a aplicației, așa că dezactivarea ei le-ar lăsa ilizibile. Blocarea rămâne activă — schimbă-ți mai bine PIN-ul.',
     'error_key_material_lost' => 'Acest dispozitiv nu mai păstrează cheia care deschide datele tale criptate, așa că un PIN nou nu le va face din nou lizibile. Restaurează o copie de rezervă criptată făcută cât timp cheia încă funcționa — dispozitivul nu se poate întoarce prin împerechere, fiindcă împerecherea are nevoie tocmai de blocarea aplicației pe care o deschide acea cheie.',
     'error_recovery_wrap_stale' => 'Parola contului nu mai deschide această blocare a aplicației — a fost schimbată după configurarea blocării. Codul PIN încă funcționează, dar în spatele lui nu mai rămâne nimic dacă îl uiți. Reconectează acum parola contului.',

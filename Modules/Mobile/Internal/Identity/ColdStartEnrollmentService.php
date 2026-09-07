@@ -43,10 +43,17 @@ final readonly class ColdStartEnrollmentService
         return $ok;
     }
 
-    public function disable(int $userId): void
+    // The flag comes down either way: the reader asked for this off, and
+    // leaving it on would keep offering an unlock they declined. What the
+    // answer carries is whether the key actually went, so the screen can say
+    // so rather than reporting a removal that did not happen.
+    public function disable(int $userId): bool
     {
-        $this->vault->clear($userId);
+        $cleared = $this->vault->clear($userId);
+
         $this->gateway->markColdStartEnrolled($userId, false);
+
+        return $cleared;
     }
 
     public function isEnrolled(int $userId): bool

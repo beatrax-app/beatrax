@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Confirmă codul PIN pentru a activa',
     'current_pin' => 'Codul PIN actual',
     'enable' => 'Activează deblocarea biometrică',
+    'clear_refused' => 'Deblocarea biometrică este oprită, dar dispozitivul nu a eliminat cheia din stocarea securizată. Repornește telefonul și încearcă din nou.',
 
     'errors' => [
         'unavailable' => 'Deblocarea biometrică nu este disponibilă pe acest dispozitiv.',

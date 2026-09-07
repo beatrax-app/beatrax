@@ -70,6 +70,7 @@ return [
     'change_pin_success' => 'Salausavaimesi on suojattu uudelleen uudella PIN-koodillasi.',
     'error_forgot_failed' => 'PIN-koodin nollaus epäonnistui — palautusavain ei ole käytettävissä.',
     'error_enable_first' => 'Ota PIN-lukko käyttöön ennen biometrisen avauksen käyttöönottoa.',
+    'error_vault_kept_key' => 'Biometrinen avaus on pois päältä, mutta tämä tietokone ei poistanut tallennettua avainta, joten kopio on yhä täällä. Käynnistä Beatrax uudelleen ja poista se uudestaan.',
     'error_disable_blocked_by_encryption' => 'Muistiinpanosi ja vastapuolten tiedot on salattu avaimella, jota tämä sovelluslukitus pitää, joten lukituksen poistaminen jättäisi ne lukukelvottomiksi. Lukitus jää päälle — vaihda mieluummin PIN-koodisi.',
     'error_key_material_lost' => 'Tämä laite ei enää pidä avainta, joka avaa salatut tietosi, joten uusi PIN-koodi ei tee niistä taas luettavia. Palauta salattu varmuuskopio, joka on tehty avaimen vielä toimiessa — laitepari ei tuo tätä laitetta takaisin, koska parin muodostaminen tarvitsee sen sovelluslukon, jonka kyseinen avain avaa.',
     'error_recovery_wrap_stale' => 'Tilin salasana ei enää avaa tätä sovelluslukkoa — se vaihdettiin lukon käyttöönoton jälkeen. PIN-koodisi toimii yhä, mutta sen takana ei ole mitään, jos unohdat sen. Liitä tilin salasana uudelleen nyt.',

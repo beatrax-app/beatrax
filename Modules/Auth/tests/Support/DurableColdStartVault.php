@@ -13,6 +13,10 @@ final class DurableColdStartVault implements ColdStartVault
     /** @var array<int, string> */
     public array $keys = [];
 
+    // Settable because only the platform can produce a refusal, and a removal
+    // that failed silently is what the callers are being tested for.
+    public bool $refuseForget = false;
+
     public function isAvailable(): bool
     {
         return true;
@@ -35,8 +39,14 @@ final class DurableColdStartVault implements ColdStartVault
         return $this->keys[$userId] ?? null;
     }
 
-    public function forget(int $userId): void
+    public function forget(int $userId): bool
     {
+        if ($this->refuseForget) {
+            return false;
+        }
+
         unset($this->keys[$userId]);
+
+        return true;
     }
 }

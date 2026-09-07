@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Sisselülitamiseks kinnita oma PIN-kood',
     'current_pin' => 'Praegune PIN-kood',
     'enable' => 'Lülita biomeetriline avamine sisse',
+    'clear_refused' => 'Biomeetriline avamine on väljas, aga seade ei eemaldanud võtit turvahoidlast. Taaskäivita telefon ja proovi uuesti.',
 
     'errors' => [
         'unavailable' => 'Biomeetriline avamine pole selles seadmes saadaval.',

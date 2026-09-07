@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Confirma tu PIN para activarlo',
     'current_pin' => 'PIN actual',
     'enable' => 'Activar el desbloqueo biométrico',
+    'clear_refused' => 'El desbloqueo biométrico está desactivado, pero el dispositivo no ha eliminado la clave del almacenamiento seguro. Reinicia el teléfono e inténtalo de nuevo.',
 
     'errors' => [
         'unavailable' => 'El desbloqueo biométrico no está disponible en este dispositivo.',

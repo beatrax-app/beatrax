@@ -9,6 +9,7 @@ use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 use Native\Desktop\System;
+use Psr\Log\LoggerInterface;
 
 // A Touch ID prompt only yields a bool, so the data key is wrapped by the shared
 // codec and stored under Electron safeStorage: recovering it needs BOTH this
@@ -22,6 +23,7 @@ final readonly class DesktopColdStartVault implements ColdStartVault
         private BiometricKeyBlobCodec $codec,
         private System $system,
         private OwnerOnlyPath $ownerOnly,
+        private LoggerInterface $log,
     ) {}
 
     public function isAvailable(): bool
@@ -97,13 +99,28 @@ final readonly class DesktopColdStartVault implements ColdStartVault
         return $blob === false ? null : $blob;
     }
 
-    public function forget(int $userId): void
+    // Answered by looking again, not by the unlink having been called: a file
+    // another process holds open does not delete on Windows, and isEnrolled()
+    // reads this same file — so a survivor keeps offering an unlock that now
+    // returns a key nothing opens.
+    public function forget(int $userId): bool
     {
         $path = $this->path($userId);
 
         if (is_file($path)) {
             @unlink($path);
+            clearstatcache(true, $path);
         }
+
+        $gone = ! is_file($path);
+
+        if (! $gone) {
+            $this->log->warning('DesktopColdStartVault: the wrapped data key could not be deleted, so the OS still holds a copy this account asked to be rid of.', [
+                'user_id' => $userId,
+            ]);
+        }
+
+        return $gone;
     }
 
     private function path(int $userId): string
