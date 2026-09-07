@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The child half of the Mac App Store lane, and deliberately two keys long.
+
+    A sandboxed child inherits its parent's rights through com.apple.security.
+    inherit, and Apple aborts a child that carries any OTHER sandbox
+    entitlement beside it — the pair is the whole contract. Every Electron
+    helper and the bundled PHP interpreter are signed with this file.
+
+    com.apple.security.cs.allow-jit is NOT here on purpose. It is a
+    code-signing entitlement rather than a sandbox one, so it may be carried
+    by a child, but the interpreter is measured to need it only for PCRE's
+    JIT; the lane starts without it so that a build which needs it says so out
+    loud rather than being granted it in advance. See the runbook.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.inherit</key>
+    <true/>
+</dict>
+</plist>

@@ -82,12 +82,15 @@ yarn-error.log
 
 # NativePHP build + dist output — `native:build` stages the bundled app
 # and electron-builder writes the packaged installers under base_path('build').
-# Two committed exceptions, both static build inputs rather than artefacts:
+# Four committed exceptions, all static build inputs rather than artefacts:
 # `entitlements.mac.plist` is the macOS Hardened Runtime file electron-builder
-# references at signing time, and `notarize.js` is the afterSign hook staged
-# over NativePHP's published one.
+# references at signing time, the two `.mas.` files are the App Store lane's
+# pair (the store refuses two of the keys the Developer ID file relies on), and
+# `notarize.js` is the afterSign hook staged over NativePHP's published one.
 /build/*
 !/build/entitlements.mac.plist
+!/build/entitlements.mas.plist
+!/build/entitlements.mas.inherit.plist
 !/build/notarize.js
 
 # NativePHP Electron working directory — `native:build` populates this with

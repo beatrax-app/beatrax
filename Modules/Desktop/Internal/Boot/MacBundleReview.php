@@ -73,7 +73,7 @@ final class MacBundleReview
         $refusals = [];
 
         foreach ($children as $path => $child) {
-            $refusals = [...$refusals, ...$this->oneChildsRefusals($path, $child)];
+            $refusals = [...$refusals, ...$this->refusalsForOneChild($path, $child)];
         }
 
         return $refusals;
@@ -83,7 +83,7 @@ final class MacBundleReview
      * @param  array{entitlements: array<string, mixed>, signed: bool, inMacOsDirectory: bool, launched: bool}  $child
      * @return list<string>
      */
-    private function oneChildsRefusals(string $path, array $child): array
+    private function refusalsForOneChild(string $path, array $child): array
     {
         $refusals = [];
 
