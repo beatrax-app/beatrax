@@ -6,6 +6,7 @@ namespace Modules\Desktop\Commands;
 
 use Illuminate\Console\Command;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Boot\MacBundleReader;
 
 // Regenerates the calibration fixture from bundles installed on this machine.
@@ -101,7 +102,7 @@ final class RecordMacBundlesCommand extends Command
 
         /** @var string|null $out */
         $out = $this->option('out');
-        $path = $out ?? base_path(self::DEFAULT_OUT);
+        $path = $out ?? UserDataPathService::projectPath(self::DEFAULT_OUT);
 
         file_put_contents($path, json_encode(
             ['recorded_on' => $clock->now()->toDateString(), 'bundles' => $bundles],

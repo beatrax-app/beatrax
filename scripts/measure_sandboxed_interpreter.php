@@ -95,7 +95,15 @@ file_put_contents($out.'/sandbox.entitlements', <<<'PLIST'
 
 file_put_contents($bundle.'/Contents/Resources/probe.php', beatraxSandboxProbeSource());
 copy($interpreter, $bundle.'/Contents/MacOS/php');
-chmod($bundle.'/Contents/MacOS/php', 0o755);
+
+// Checked, not fired and forgotten: copy() does not carry the execute bit, and
+// a bundle whose executable is not executable fails at launch looking exactly
+// like a sandbox refusal.
+if (! chmod($bundle.'/Contents/MacOS/php', 0o755)) {
+    fwrite(STDERR, "measure_sandboxed_interpreter: could not make the copied interpreter executable.\n");
+
+    exit(1);
+}
 
 // After every file is in place: a signature covers the bundle's contents, and
 // adding one afterwards invalidates it.
