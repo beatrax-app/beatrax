@@ -6,9 +6,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
+use Modules\EmailScan\Internal\OAuth\GoogleTokenRevoker;
 use Modules\EmailScan\Public\Actions\DisconnectInbox;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // A leaked refresh token must not outlive the disconnect, but the provider
@@ -96,4 +98,51 @@ it('adds a PKCE code_challenge to the Gmail authorization URL', function (): voi
     expect($params)->toHaveKey('code_challenge')
         ->and($params['code_challenge_method'] ?? null)->toBe('S256')
         ->and($authorization->pkceVerifier)->not->toBe('');
+});
+
+// Best-effort is a decision about not blocking the disconnect, not about
+// saying nothing: the stored copy goes straight after, so nothing will come
+// back to retry, and the grant stays live at the provider until it expires.
+it('names a refused revocation, which nothing will come back for', function (): void {
+    $log = Mockery::spy(LoggerInterface::class);
+    app()->instance(LoggerInterface::class, $log);
+
+    Http::fake(['https://oauth2.googleapis.com/revoke' => Http::response('nope', 500)]);
+    [$user, $inboxId] = disconnectSetupInbox('gmail-refused@example.com', MailProvider::Gmail->value, 'refresh-refused');
+
+    app(DisconnectInbox::class)($inboxId, $user);
+
+    $log->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'outlives the local disconnect')
+            && $context['status'] === 500)
+        ->once();
+});
+
+// A grant already revoked from the account page, or long expired, answers the
+// same 400 every time. Reported as a refusal it would cry wolf on the ordinary
+// case and bury the one that matters.
+it('reads an already-gone grant as gone rather than as a refusal', function (): void {
+    $log = Mockery::spy(LoggerInterface::class);
+    app()->instance(LoggerInterface::class, $log);
+
+    Http::fake(['https://oauth2.googleapis.com/revoke' => Http::response(['error' => 'invalid_token'], 400)]);
+    [$user, $inboxId] = disconnectSetupInbox('gmail-gone@example.com', MailProvider::Gmail->value, 'refresh-gone');
+
+    app(DisconnectInbox::class)($inboxId, $user);
+
+    expect(app(GoogleTokenRevoker::class)->revoke('refresh-gone'))->toBeTrue();
+
+    $log->shouldNotHaveReceived('warning');
+});
+
+it('says nothing when the provider took the revocation', function (): void {
+    $log = Mockery::spy(LoggerInterface::class);
+    app()->instance(LoggerInterface::class, $log);
+
+    Http::fake(['https://oauth2.googleapis.com/revoke' => Http::response('', 200)]);
+    [$user, $inboxId] = disconnectSetupInbox('gmail-ok@example.com', MailProvider::Gmail->value, 'refresh-ok');
+
+    app(DisconnectInbox::class)($inboxId, $user);
+
+    $log->shouldNotHaveReceived('warning');
 });
