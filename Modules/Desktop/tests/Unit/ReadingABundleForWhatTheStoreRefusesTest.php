@@ -63,13 +63,13 @@ it('judges only the nested executables, never the app binary twice', function ()
 it('finds the interpreter where this product actually puts it', function (): void {
     $inspection = bundleDescribedAs(
         ['/x/Beatrax.app' => ['com.apple.security.app-sandbox' => true]],
-        ['/x/Beatrax.app' => ['Contents/MacOS/Beatrax', ReviewMacBundleCommand::INTERPRETER]],
+        ['/x/Beatrax.app' => ['Contents/MacOS/Beatrax', ReviewMacBundleCommand::INTERPRETERS[0]]],
     );
 
     // Named as launched, the way the command names it: the interpreter is
     // spawned, and a bundled data file that happens to be Mach-O is not, and
     // nothing on disk tells the two apart.
-    $refusals = implode("\n", $inspection->refusals('/x/Beatrax.app', [ReviewMacBundleCommand::INTERPRETER]));
+    $refusals = implode("\n", $inspection->refusals('/x/Beatrax.app', ReviewMacBundleCommand::INTERPRETERS));
 
     expect($refusals)->toContain('outside a Contents/MacOS directory');
     expect($refusals)->toContain('launched by the app and is not sandboxed');

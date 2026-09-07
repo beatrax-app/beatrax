@@ -9,11 +9,18 @@ use Modules\Desktop\Internal\Boot\MacBundleInspection;
 
 final class ReviewMacBundleCommand extends Command
 {
-    // The one executable this product spawns that no bundle structure reveals.
-    // An Electron helper under Frameworks is found by shape; the interpreter
-    // sits in Resources and looks exactly like a bundled data file that
-    // happens to be Mach-O.
-    public const string INTERPRETER = 'Contents/Resources/build/php/php';
+    // The executables this product spawns that no bundle structure reveals. An
+    // Electron helper under Frameworks is found by shape; the interpreter looks
+    // exactly like a bundled data file that happens to be Mach-O.
+
+    // Both places, because the store lane moves it: naming only where it used
+    // to live would stop checking the one file this whole review is about, on
+    // the very build that relocated it.
+    /** @var list<string> */
+    public const array INTERPRETERS = [
+        'Contents/Resources/build/php/php',
+        'Contents/MacOS/php',
+    ];
 
     /** @var string */
     protected $signature = 'desktop:review-mac-bundle {path : the built .app to read}';
@@ -46,7 +53,7 @@ final class ReviewMacBundleCommand extends Command
             return self::FAILURE;
         }
 
-        return $this->report($inspection->refusals($path, [self::INTERPRETER]), $executables, $path);
+        return $this->report($inspection->refusals($path, self::INTERPRETERS), $executables, $path);
     }
 
     /** @param list<string> $refusals */

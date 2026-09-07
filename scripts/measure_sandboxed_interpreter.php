@@ -93,6 +93,19 @@ file_put_contents($out.'/sandbox.entitlements', <<<'PLIST'
     </plist>
     PLIST);
 
+// Exactly two keys: Apple terminates a child that combines inherit with any
+// other sandbox entitlement, so this file is wrong the moment it grows.
+file_put_contents($out.'/inherit.entitlements', <<<'PLIST'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>com.apple.security.app-sandbox</key><true/>
+        <key>com.apple.security.inherit</key><true/>
+    </dict>
+    </plist>
+    PLIST);
+
 file_put_contents($bundle.'/Contents/Resources/probe.php', beatraxSandboxProbeSource());
 copy($interpreter, $bundle.'/Contents/MacOS/php');
 
@@ -120,6 +133,8 @@ $probe = $bundle.'/Contents/Resources/probe.php';
 $sandboxed = beatraxRunProbe($bundle.'/Contents/MacOS/php', $probe);
 $plain = beatraxRunProbe($interpreter, $probe);
 
+$inherited = beatraxMeasureTheSpawnedChild($out, $interpreter);
+
 printf("%-34s %-24s %s\n", 'probe', 'sandboxed', 'unsandboxed (control)');
 printf("%s\n", str_repeat('-', 88));
 
@@ -128,16 +143,121 @@ foreach ($plain as $name => $control) {
     printf("%-34s %-24s %s\n", $name, $under, $control);
 }
 
+printf("\n%s\n", 'The store layout: a sandboxed parent spawning the inherit-signed child');
+printf("%s\n", str_repeat('-', 88));
+
+foreach ($inherited as $name => $answer) {
+    printf("%-34s %s\n", $name, $answer);
+}
+
 // A run that produced nothing is the shape this measurement most needs to
 // refuse: the kernel kills a sandboxed process with no container at launch,
 // and an empty result table would read as "no problems found".
-if ($sandboxed === []) {
-    fwrite(STDERR, "\nThe sandboxed run produced no output at all. It was killed at launch rather than restricted.\n");
+if ($sandboxed === [] || $inherited === []) {
+    fwrite(STDERR, "\nA sandboxed run produced no output at all. It was killed at launch rather than restricted.\n");
 
     exit(1);
 }
 
 exit(0);
+
+/**
+ * The layout the Mac App Store requires and the runtime the product needs, in
+ * one measurement.
+ *
+ * The interpreter moves to Contents/MacOS because Apple refuses a Mach-O
+ * outside one, and it is signed with app-sandbox + inherit because a child of
+ * a sandboxed app may declare nothing else. `inherit` has nothing to inherit
+ * from when nobody sandboxed the parent, so running that binary DIRECTLY is
+ * exit 133 every time — the only honest test is the shape the shell uses.
+ *
+ * @return array<string, string>
+ */
+function beatraxMeasureTheSpawnedChild(string $out, string $interpreter): array
+{
+    $bundle = $out.'/StoreLayout.app';
+
+    if (! is_dir($bundle.'/Contents/Resources') && ! mkdir($bundle.'/Contents/Resources', 0o700, true)) {
+        return [];
+    }
+
+    if (! is_dir($bundle.'/Contents/MacOS') && ! mkdir($bundle.'/Contents/MacOS', 0o700, true)) {
+        return [];
+    }
+
+    file_put_contents($bundle.'/Contents/Info.plist', str_replace(
+        ['sandboxprobe', 'SandboxProbe', '<string>php</string>'],
+        ['storelayout', 'StoreLayout', '<string>shell</string>'],
+        (string) file_get_contents($out.'/SandboxProbe.app/Contents/Info.plist'),
+    ));
+
+    file_put_contents($bundle.'/Contents/Resources/parent.php', beatraxParentSource());
+    file_put_contents($bundle.'/Contents/Resources/child.php', beatraxChildSource());
+
+    foreach (['shell', 'php'] as $name) {
+        copy($interpreter, $bundle.'/Contents/MacOS/'.$name);
+
+        if (! chmod($bundle.'/Contents/MacOS/'.$name, 0o755)) {
+            return [];
+        }
+    }
+
+    // The child first and separately: it carries the two-key inherit file, and
+    // signing the bundle afterwards seals it in place.
+    exec('codesign --force --sign - --entitlements '.escapeshellarg($out.'/inherit.entitlements')
+        .' '.escapeshellarg($bundle.'/Contents/MacOS/php').' 2>&1');
+    exec('codesign --force --sign - --entitlements '.escapeshellarg($out.'/sandbox.entitlements')
+        .' '.escapeshellarg($bundle).' 2>&1');
+
+    $direct = 0;
+    exec(escapeshellarg($bundle.'/Contents/MacOS/php').' -r '.escapeshellarg('echo 1;').' 2>&1', $ignored, $direct);
+
+    $answers = beatraxRunProbe($bundle.'/Contents/MacOS/shell', $bundle.'/Contents/Resources/parent.php');
+
+    // 133 is SIGTRAP, and it is the RIGHT answer: a binary declaring `inherit`
+    // with no sandboxed parent has no container to enter. Reported so nobody
+    // reads it later as the relocation having broken something.
+    $answers['child run directly'] = $direct === 0
+        ? 'ran (expected to be killed)'
+        : 'killed at launch, exit '.$direct.' (expected)';
+
+    return $answers;
+}
+
+function beatraxParentSource(): string
+{
+    return <<<'PARENT'
+        <?php
+        $child = dirname(__DIR__).'/MacOS/php';
+        $p = proc_open([$child, __DIR__.'/child.php'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        $out = trim((string) stream_get_contents($pipes[1]));
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $code = proc_close($p);
+        printf("%-30s %s\n", 'parent home', str_contains((string) getenv('HOME'), 'Containers') ? 'container' : 'real home');
+        printf("%-30s %s\n", 'child spawned', $out === '' ? 'FAILED' : 'ok');
+        printf("%-30s %s\n", 'child exit', (string) $code);
+        foreach (explode('|', $out) as $part) {
+            $bits = explode('=', $part, 2);
+            if (count($bits) === 2) {
+                printf("%-30s %s\n", 'child '.trim($bits[0]), trim($bits[1]));
+            }
+        }
+        PARENT;
+}
+
+function beatraxChildSource(): string
+{
+    return <<<'CHILD'
+        <?php
+        $s = @stream_socket_server('tcp://127.0.0.1:0', $e, $m);
+        $home = (string) getenv('HOME');
+        echo 'home=', str_contains($home, 'Containers') ? 'same container' : 'real home';
+        echo ' | loopback=', $s === false ? 'FAILED' : 'bound';
+        echo ' | pcre=', @preg_match('/^(a+)+b$/', 'aaab') === 1 ? 'works' : 'FAILED';
+        if ($s) { fclose($s); }
+        CHILD;
+}
 
 /** @return array<string, string> */
 function beatraxRunProbe(string $php, string $probe): array
