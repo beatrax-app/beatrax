@@ -5,11 +5,14 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\DevMode\Tests\Support\RecordingLogger;
 use Modules\Mobile\Internal\Listeners\DispatchMobileNotification;
+use Modules\Mobile\Tests\Support\ExposedDispatchMobileNotification;
 use Modules\Mobile\Tests\Support\RecordingDispatchMobileNotification;
 use Modules\Notifications\Public\Enums\NotificationTrigger;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -138,3 +141,46 @@ it('never throws when the plugin class is absent — the class_exists guard ever
 
     $listener->handleNotificationDeliverable(donMobileForecastDeliverable($user->id));
 })->throwsNoExceptions();
+
+// The bridge answers a refusal as {"status":"error",...} on both platforms, and
+// an unregistered function name is answered with one. That is a non-empty
+// string, so the only line saying where a notification went recorded it as
+// handed over — in exactly the case it exists to report.
+function donMobileOutcomeLog(string $answer): array
+{
+    $log = new RecordingLogger;
+    app()->instance(LoggerInterface::class, $log);
+
+    /** @var ExposedDispatchMobileNotification $listener */
+    $listener = app(ExposedDispatchMobileNotification::class);
+    $listener->recordOutcome('don-mobile-outcome', $answer, donMobileUser('don-mobile-'.md5($answer))->id);
+
+    return $log->records;
+}
+
+it('records a bridge refusal as a refusal rather than a hand-off', function (): void {
+    $records = donMobileOutcomeLog(
+        '{"status":"error","code":"UNKNOWN_FUNCTION","message":"Function \'LocalNotification.Show\' not found in bridge registry"}'
+    );
+
+    expect($records)->toHaveCount(1)
+        ->and($records[0]['level'])->toBe('warning')
+        ->and($records[0]['message'])->toContain('refused');
+
+    expect($records[0]['context']['refusal'] ?? '')->toContain('UNKNOWN_FUNCTION');
+});
+
+it('reads the other spelling of a refusal too', function (): void {
+    $records = donMobileOutcomeLog('{"success":false}');
+
+    expect($records)->toHaveCount(1)
+        ->and($records[0]['level'])->toBe('warning');
+});
+
+it('still records a confirmed hand-off as one', function (): void {
+    $records = donMobileOutcomeLog('{"success":true,"id":"don-mobile-outcome"}');
+
+    expect($records)->toHaveCount(1)
+        ->and($records[0]['level'])->toBe('info')
+        ->and($records[0]['message'])->toContain('handed to the native bridge');
+});

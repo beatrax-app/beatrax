@@ -37,9 +37,9 @@ final readonly class NativeShareSheet
     // indistinguishable from a share that happened.
 
     // The payload mirrors Native\Mobile\Share::file() key for key, which is
-    // the coupling this buys: the guard below pins that the facade stays
-    // unused here, so a vendor that renames a key is a test failure and not a
-    // silent no-op.
+    // the coupling this buys, and a guard pins the facade as unused across the
+    // tree so a vendor that renames a key fails a test rather than going
+    // quietly nowhere.
     public function file(string $shareTitle, string $shareMessage, string $path): bool
     {
         if (! function_exists('nativephp_call')) {
@@ -57,34 +57,9 @@ final readonly class NativeShareSheet
         }
 
         try {
-            return self::answersSuccess(nativephp_call(self::SHARE_FUNCTION, $encoded));
+            return BridgeAnswer::saysItSucceeded(nativephp_call(self::SHARE_FUNCTION, $encoded));
         } catch (Throwable) {
             return false;
         }
-    }
-
-    // The shell spells success two ways across the functions it answers —
-    // `{"status":"success"}` from the media picker, `{"success":true}` from
-    // SecureStorage and File — so both are read here rather than guessing
-    // which one a share replies with.
-
-    // Everything else is a failure, including an answer this cannot parse.
-    // The cost of reading a real share as failed is that the reader shares
-    // again; the cost of the reverse is being told the recovery codes for an
-    // account are saved in a file that was never written anywhere reachable.
-    private static function answersSuccess(mixed $answer): bool
-    {
-        if (! is_string($answer) || $answer === '') {
-            return false;
-        }
-
-        $decoded = json_decode($answer, true);
-
-        if (! is_array($decoded)) {
-            return false;
-        }
-
-        return ($decoded['status'] ?? null) === 'success'
-            || ($decoded['success'] ?? null) === true;
     }
 }
