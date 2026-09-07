@@ -280,6 +280,115 @@ Apple and is *not* the blocker. These are:
 | Remove self-update on that channel — required, and Electron disables `autoUpdater` in `mas` builds anyway. Both off switches already exist | S/M |
 | Two-channel release engineering, and review risk on a bundled interpreter with no precedent found either way | M + unknown |
 
+#### Reading a bundle instead of trusting the config
+
+`php artisan desktop:review-mac-bundle <path-to.app>` opens a built bundle and
+reports every reason App Store review would refuse it: an unsandboxed app, any
+of the four entitlements the store does not take, an unsigned nested
+executable, one living outside a `Contents/MacOS` directory, and a helper that
+combines `inherit` with another sandbox right.
+
+The rules are **calibrated against bundles Apple actually shipped**, which is
+the only way to tell a real rule from a plausible one. Two of them were wrong
+until a real store app said so:
+
+| what the rule said | the bundle that disproved it |
+|---|---|
+| a nested helper must carry exactly `app-sandbox` + `inherit` | Amphetamine's login helper holds `files.user-selected.read-write` beside `app-sandbox`, because a nested `.app` is its own sandboxed program rather than an inheriting child |
+| every executable in a sandboxed app must be sandboxed | Apple Configurator ships an unsandboxed `cfgutilscript` in its own `MacOS` directory; the rule only holds for an executable the app *launches* |
+
+An Electron helper under `Contents/Frameworks` is recognised structurally. The
+interpreter is not — a spawned binary and a bundled data file that happens to
+be Mach-O look identical on disk — so the command names it explicitly.
+
+The calibration itself runs in CI, against a recording rather than against
+whatever happens to be installed: `php artisan desktop:record-mac-bundles`
+walks `/Applications`, takes up to three bundles carrying a `_MASReceipt` plus
+one Electron app without one, and writes what it read to
+`Modules/Desktop/tests/Fixtures/mac-bundles-observed.json`. It refuses to write
+a recording with only one side, because a fixture of store apps alone would let
+rules that refuse nothing read as calibrated. Re-run it when Apple changes what
+it accepts, and the diff is the change.
+
+#### What the sandbox actually does to the interpreter, measured
+
+The two unknowns recorded as "answerable only by building a sandboxed bundle
+and measuring one" are answered. `php scripts/measure_sandboxed_interpreter.php`
+copies the bundled interpreter into a minimal `.app`, signs it **ad-hoc** with
+the store lane's sandbox entitlements — no keychain, no Apple identity, so it
+reproduces on any Mac — and runs the same probe twice:
+
+| probe | sandboxed | unsandboxed (control) |
+|---|---|---|
+| pcre jit ini | 1 | 1 |
+| pcre match | works | works |
+| loopback listener | bound | bound |
+| loopback connect | connected | connected |
+| udp socket | ok | ok |
+| mdns group join | ok | ok |
+| mdns send | 12 bytes | 12 bytes |
+| proc_open | ok | ok |
+| home | container | real home |
+| mkdir under home | ok | ok |
+| sqlite write | ok | ok |
+| read /etc/hosts | allowed | allowed |
+| write /tmp | **REFUSED** | allowed |
+
+**Everything LAN sync needs survives.** A loopback listener binds and accepts,
+a multicast group join and send to `224.0.0.251:5353` both succeed, outbound
+TCP reaches the stack, and a child process spawns. So does SQLite, into the
+container.
+
+Two details matter more than they look:
+
+- **The control run is the point.** A failure that reproduces unsandboxed is
+  not a sandbox finding. `bind 5353` fails either way on a machine where
+  another process already holds the mDNS port — reading that as a sandbox
+  restriction is exactly how this measurement would lie.
+- **PCRE's JIT works with no JIT entitlement at all.** The store lane's
+  entitlements grant `com.apple.security.cs.allow-jit`, and this suggests even
+  that is not load-bearing. A sandboxed build is not hardened by default —
+  electron-builder hardens `mas` only when told to — so writable-executable
+  memory is not being restricted in the first place.
+
+The remaining cost is the one the measurement confirms rather than removes:
+`HOME` is redirected to `~/Library/Containers/<bundle-id>/Data`, and the
+sandboxed build cannot read the real home. A direct-download ledger does not
+follow a reader into the store build, and that is a migration story, not a
+runtime problem.
+
+That redirect is also why the data-path work is smaller than it was scoped.
+The shell sets `NATIVEPHP_STORAGE_PATH` to `join(app.getPath('userData'),
+'storage')` and `bootstrapCache` to `join(app.getPath('userData'), 'bootstrap',
+'cache')` — both already outside the read-only bundle, and `userData` derives
+from the Application Support directory the sandbox redirects. **Expected to
+relocate with no code change; measured for the interpreter, not yet for
+Electron.** Measuring it is the first step of the build lane, not an
+assumption to build on.
+
+A sandboxed process also needs a bundle identity or the kernel kills it at
+launch — SIGTRAP, exit 133, no output at all. The script refuses an empty
+result table for that reason: a run that produced nothing reads exactly like a
+run that found no problems.
+
+#### What the interpreter actually needs, measured
+
+The runbook used to carry both Developer ID relaxations as the cost of the
+embedded interpreter. Asking the shipped binary narrows it:
+
+| setting | value | consequence |
+|---|---|---|
+| `opcache.enable_cli` | `0` | PHP's own JIT never runs |
+| `opcache.jit` | `disable` | compiled in by `enable-opcache-jit`, never used |
+| `pcre.jit` | `1` | the one live consumer of writable-executable memory |
+| linkage | static, no shared objects | nothing for library validation to reject |
+
+So the store lane needs `com.apple.security.cs.allow-jit`, which **is**
+permitted for App Store distribution, and neither
+`allow-unsigned-executable-memory` nor `disable-library-validation`. The
+alternative to `allow-jit` is `pcre.jit=0`, which the interpreter accepts —
+that is a performance trade on regex-heavy paths, not a correctness one.
+
 ### The Microsoft Store is much cheaper than it looks
 
 MSIX is *recommended*, not required. An EXE/MSI listing is a first-class product

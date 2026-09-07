@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mac App Store entitlements, for the sandboxed lane only. The Developer ID
+    lane keeps entitlements.mac.plist beside this file; the two are NOT
+    interchangeable, and the reason is the whole shape of F8-R28.
+
+    Two keys in the Developer ID file are refused for App Store distribution:
+    com.apple.security.cs.allow-unsigned-executable-memory and
+    com.apple.security.cs.disable-library-validation. Neither appears here.
+
+    What replaces them, measured against the interpreter this bundle ships
+    (static-php-cli 8.5.6) rather than assumed:
+
+      - opcache.enable_cli is 0 and opcache.jit is "disable", so PHP's own JIT
+        never runs and needs no executable memory.
+      - pcre.jit is 1, and PCRE's JIT is the one live consumer of W+X in the
+        PHP child. com.apple.security.cs.allow-jit covers it and IS permitted
+        for App Store distribution. The alternative is pcre.jit=0, which the
+        interpreter accepts; that trade is recorded in the runbook.
+      - The interpreter is a static build (shared off, static on) and loads no
+        third-party dylib at all, which is what library validation checks.
+
+    The sandbox keys are the app's actual surface and nothing more: a loopback
+    HTTP server and an mDNS responder for LAN sync, and the open/save panels
+    for statement import and export.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>
