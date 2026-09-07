@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\ShippedBundleContents;
 
 // An exclusion list is a claim about a build, and the claim has been wrong: a
@@ -116,4 +118,76 @@ it('passes the command on a clean artifact', function (): void {
     $path = bundleArchive(['assets/app/.env' => "APP_ENV=production\n"]);
 
     $this->artisan('mobile:inspect-bundle', ['path' => $path])->assertExitCode(0);
+});
+
+// Every other way out of refusals() reports what it read. An empty list has to
+// mean "read it, found none" — and each of these used to make it also mean
+// "read nothing at all", which is the answer that ships the artifact.
+it('refuses an archive that unpacked to no files at all', function (): void {
+    $path = sys_get_temp_dir().'/bundle-fixture-'.bin2hex(random_bytes(6)).'.apk';
+
+    // ZipArchive will not write an archive with no entries, so the 22 bytes of
+    // a bare end-of-central-directory record stand in for one.
+    file_put_contents($path, "PK\x05\x06".str_repeat("\0", 18));
+
+    expect(implode("\n", bundleRefusals($path)))->toContain('unpacked to no files');
+});
+
+it('refuses an archive it could not extract, rather than walking what did land', function (): void {
+    $path = sys_get_temp_dir().'/bundle-fixture-'.bin2hex(random_bytes(6)).'.apk';
+
+    // One entry is a file and the next needs that same name to be a directory,
+    // so extraction stops part-way with some of the artifact on disk.
+    $zip = new ZipArchive;
+    $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    $zip->addFromString('x', 'a file');
+    $zip->addFromString('x/y', 'and a directory of the same name');
+    $zip->close();
+
+    expect(implode("\n", bundleRefusals($path)))->toContain('would not extract');
+});
+
+it('refuses a nested archive it could not open, instead of reading its bytes', function (): void {
+    $path = bundleArchive([
+        'classes.dex' => "\0\0binary",
+        'assets/php_app.zip' => 'ANDROID_KEYSTORE_PASSWORD=hunter2',
+    ]);
+
+    // The wrapper reads as text, so the secret inside it is found either way —
+    // what must not happen is the archive being passed over in silence.
+    expect(implode("\n", bundleRefusals($path)))->toContain('would not open');
+});
+
+// An artifact that names an entry after where the nested unpack has to land
+// blocks the move, and the nested tree then sits outside every later walk. The
+// wrapper's own bytes are all that would be read — which is the shape the
+// nested pass exists to prevent, arrived at from the other side.
+it('refuses when a nested archive cannot be moved into the tree it walks', function (): void {
+    $inner = bundleArchive(['app/.env' => "APP_STORE_API_KEY=abc123\n"], 'zip');
+
+    $path = bundleArchive([
+        'classes.dex' => "\0\0binary",
+        'assets/php_app.zip' => (string) file_get_contents($inner),
+        'assets/php_app.zip.unpacked/occupied' => 'this name is taken',
+    ]);
+
+    expect(implode("\n", bundleRefusals($path)))->toContain('out of reach');
+});
+
+it('refuses when there is nowhere to unpack the artifact', function (): void {
+    $path = bundleArchive(['assets/app/.env' => "APP_ENV=production\n"]);
+
+    // A file where the unpack directory's parent has to be: mkdir cannot make a
+    // directory under it, and is_dir stays false — the same pair of conditions
+    // a full or read-only disk produces, without depending on either.
+    $parent = UserDataPathService::appPath('tmp-inspect-bundle');
+    (new Filesystem)->deleteDirectory($parent);
+    (new Filesystem)->ensureDirectoryExists(dirname($parent));
+    file_put_contents($parent, 'not a directory');
+
+    try {
+        expect(implode("\n", bundleRefusals($path)))->toContain('nowhere to unpack it');
+    } finally {
+        @unlink($parent);
+    }
 });
