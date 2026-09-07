@@ -217,6 +217,45 @@ jobs:
                   platform: windows
                   artifact-path: nativephp/electron/dist/*.exe
 
+            # The installer above is one file. Microsoft Store certification is
+            # per file, and a DLL beside a signed executable can be replaced
+            # without the installer's signature saying anything. Reads the
+            # package rather than the config: `win.signExts` is what makes
+            # electron-builder sign more than .exe, and only the artifact says
+            # whether it did.
+            - name: Refuse a package carrying a binary nothing signed
+              shell: pwsh
+              run: |
+                  $ErrorActionPreference = 'Stop'
+                  $roots = Get-ChildItem -Path 'nativephp/electron/dist' -Directory -Filter '*unpacked*'
+                  if ($roots.Count -eq 0) {
+                      Write-Output '::error::No *unpacked* directory under nativephp/electron/dist — nothing was read, so nothing is proven.'
+                      exit 1
+                  }
+                  $checked = 0
+                  $unsigned = @()
+                  foreach ($root in $roots) {
+                      Get-ChildItem -Path $root.FullName -Recurse -File -Include *.exe,*.dll,*.node | ForEach-Object {
+                          $checked++
+                          $status = (Get-AuthenticodeSignature $_.FullName).Status
+                          if ($status -ne 'Valid') {
+                              $unsigned += ('{0} [{1}]' -f $_.FullName, $status)
+                          }
+                      }
+                  }
+                  # A zero here would mean the walk found nothing and passed,
+                  # which reads identically to a package that is fully signed.
+                  if ($checked -eq 0) {
+                      Write-Output '::error::Walked the package and found no PE files at all — the path is wrong, not the package clean.'
+                      exit 1
+                  }
+                  Write-Output "Checked $checked binaries across $($roots.Count) unpacked tree(s)."
+                  if ($unsigned.Count -gt 0) {
+                      foreach ($file in $unsigned) { Write-Output "::error::unsigned: $file" }
+                      Write-Output "::error::$($unsigned.Count) of $checked binaries in the package are not validly signed. A store rejects the package for any one of them."
+                      exit 1
+                  }
+
             - name: Upload Windows artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
