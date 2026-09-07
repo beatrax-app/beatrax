@@ -7,7 +7,6 @@ namespace Modules\Desktop\Internal\Boot;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use SimpleXMLElement;
 use SplFileInfo;
 use Symfony\Component\Process\Process;
 
@@ -15,7 +14,7 @@ use Symfony\Component\Process\Process;
 // the bundle on disk — codesign for the signature and the entitlements, and
 // the file magic for what is an executable at all — so a config that claims
 // one thing and a package that carries another disagree here.
-final class MacBundleReader
+final class MacBundleReader implements ReadsAMacBundle
 {
     private const float TIMEOUT_SECONDS = 30.0;
 
@@ -24,7 +23,7 @@ final class MacBundleReader
     {
         $plist = $this->output(['codesign', '-d', '--entitlements', '-', '--xml', $path]);
 
-        return $plist === null ? [] : $this->parsePlist($plist);
+        return $plist === null ? [] : EntitlementsPlist::parse($plist);
     }
 
     public function isSigned(string $path): bool
@@ -61,6 +60,24 @@ final class MacBundleReader
         return str_contains('/'.$relativePath, '/Contents/MacOS/');
     }
 
+    // A _MASReceipt is the only trustworthy signal a bundle came from the
+    // store: it is written at install by the store, never by the build.
+    /** @return array<string, array{from_the_store: bool, electron: bool}> */
+    public function installedBundles(): array
+    {
+        $installed = glob('/Applications/*.app');
+        $bundles = [];
+
+        foreach ($installed === false ? [] : $installed as $path) {
+            $bundles[$path] = [
+                'from_the_store' => is_dir($path.'/Contents/_MASReceipt'),
+                'electron' => is_dir($path.'/Contents/Frameworks/Electron Framework.framework'),
+            ];
+        }
+
+        return $bundles;
+    }
+
     /** @return list<string> */
     private function everyFileIn(string $root): array
     {
@@ -82,43 +99,6 @@ final class MacBundleReader
         }
 
         return $paths;
-    }
-
-    // A plist rather than a JSON option because codesign has no JSON one, and
-    // an <array> value is flattened to its first child: nothing here reads a
-    // list, and a nested parser would be reach nothing needs.
-    /** @return array<string, mixed> */
-    private function parsePlist(string $xml): array
-    {
-        $document = @simplexml_load_string($xml);
-
-        if (! $document instanceof SimpleXMLElement || ! isset($document->dict)) {
-            return [];
-        }
-
-        $entitlements = [];
-        $key = null;
-
-        foreach ($document->dict->children() as $node) {
-            if ($node->getName() === 'key') {
-                $key = (string) $node;
-
-                continue;
-            }
-
-            if ($key === null) {
-                continue;
-            }
-
-            $entitlements[$key] = match ($node->getName()) {
-                'true' => true,
-                'false' => false,
-                default => (string) $node,
-            };
-            $key = null;
-        }
-
-        return $entitlements;
     }
 
     // Null means the tool refused, which for `codesign --verify` IS the

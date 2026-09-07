@@ -9,7 +9,7 @@ namespace Modules\Desktop\Internal\Boot;
 final readonly class MacBundleInspection
 {
     public function __construct(
-        private MacBundleReader $reader,
+        private ReadsAMacBundle $reader,
         private MacBundleReview $review,
     ) {}
 

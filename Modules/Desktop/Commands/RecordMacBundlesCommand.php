@@ -7,7 +7,7 @@ namespace Modules\Desktop\Commands;
 use Illuminate\Console\Command;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
-use Modules\Desktop\Internal\Boot\MacBundleReader;
+use Modules\Desktop\Internal\Boot\ReadsAMacBundle;
 
 // Regenerates the calibration fixture from bundles installed on this machine.
 // The rules are only as good as the bundles they were checked against, and a
@@ -22,11 +22,11 @@ final class RecordMacBundlesCommand extends Command
 
     private const string DEFAULT_OUT = 'Modules/Desktop/tests/Fixtures/mac-bundles-observed.json';
 
-    public function handle(MacBundleReader $reader, Clock $clock): int
+    public function handle(ReadsAMacBundle $reader, Clock $clock): int
     {
         $bundles = [];
 
-        foreach ($this->candidates() as $path => $fromTheStore) {
+        foreach ($this->candidates($reader) as $path => $fromTheStore) {
             $bundles[] = [
                 'name' => basename($path),
                 'from_the_store' => $fromTheStore,
@@ -38,24 +38,27 @@ final class RecordMacBundlesCommand extends Command
         return $this->write($bundles, $clock);
     }
 
-    // A _MASReceipt is the only trustworthy signal a bundle came from the
-    // store: it is written by the store at install, not by the build.
+    // Three from the store and one Electron app from outside it. More store
+    // bundles widen the evidence; more than one outside adds nothing, because
+    // one already answers whether the rules find anything at all.
+
+    // The outside one has to be Electron: a bundle shaped nothing like this
+    // product could be refused for reasons this product will never meet, and
+    // the negative control would stop meaning anything.
     /** @return array<string, bool> path => came from the store */
-    private function candidates(): array
+    private function candidates(ReadsAMacBundle $reader): array
     {
         $store = [];
         $outside = [];
 
-        $installed = glob('/Applications/*.app');
-
-        foreach ($installed === false ? [] : $installed as $path) {
-            if (is_dir($path.'/Contents/_MASReceipt')) {
+        foreach ($reader->installedBundles() as $path => $what) {
+            if ($what['from_the_store']) {
                 $store[$path] = true;
 
                 continue;
             }
 
-            if (is_dir($path.'/Contents/Frameworks/Electron Framework.framework')) {
+            if ($what['electron']) {
                 $outside[$path] = false;
             }
         }
@@ -64,7 +67,7 @@ final class RecordMacBundlesCommand extends Command
     }
 
     /** @return array<string, array<string, mixed>> */
-    private function childrenOf(MacBundleReader $reader, string $path): array
+    private function childrenOf(ReadsAMacBundle $reader, string $path): array
     {
         $children = [];
         $main = 'Contents/MacOS/'.basename($path, '.app');
