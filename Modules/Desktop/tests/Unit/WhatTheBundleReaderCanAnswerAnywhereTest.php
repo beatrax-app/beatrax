@@ -69,15 +69,16 @@ it('reports a plain file as unsigned', function (): void {
     expect(readerUnderTest()->isSigned(aTreeOf(['a.txt' => 'x']).'/a.txt'))->toBeFalse();
 });
 
-it('answers about installed bundles without assuming any are installed', function (): void {
+it('answers for exactly the bundles that are installed, on a machine with none too', function (): void {
     $bundles = readerUnderTest()->installedBundles();
+    $installed = glob('/Applications/*.app');
 
-    foreach ($bundles as $path => $what) {
-        expect($path)->toStartWith('/Applications/');
-        expect($what)->toHaveKeys(['from_the_store', 'electron']);
+    // True on a Linux runner, where the directory does not exist and the
+    // answer is an empty map rather than a failure.
+    expect(array_keys($bundles))->toBe($installed === false ? [] : $installed);
+
+    foreach ($bundles as $what) {
         expect($what['from_the_store'])->toBeBool();
         expect($what['electron'])->toBeBool();
     }
-
-    expect(array_is_list($bundles))->toBeFalse();
 });
