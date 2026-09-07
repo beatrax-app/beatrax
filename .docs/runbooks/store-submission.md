@@ -271,7 +271,7 @@ Apple and is *not* the blocker. These are:
 |---|---|
 | ~~Adopt the `mas` Electron distribution and a second electron-builder target~~ — **done**. `scripts/nativephp_mac_app_store_lane.php` adds the block beside the Developer ID one, sandboxed and explicitly **not** hardened | — |
 | ~~New entitlement files~~ — **done**. `entitlements.mas.plist` and `entitlements.mas.inherit.plist`, the second exactly two keys long | — |
-| Move the interpreter from `Contents/Resources/build/php/` to `Contents/MacOS/`, where nested executables are required to live, and sign it with that pair | M |
+| ~~Move the interpreter to `Contents/MacOS/`~~ — **done**. `scripts/nativephp_interpreter_into_macos.php` adds it to the mas lane's `extraFiles` and teaches the shell to prefer it; verified below | — |
 | Relocate the data path into the sandbox container, and move `.env` and `bootstrap/cache` out of the bundle, which is read-only on an installed store build. Existing direct-download ledgers do not follow into a container | L |
 | Rework file intake: a child process inherits only *static* rights, so PowerBox grants from an open panel do not reach the PHP side | M/L |
 | Confirm a loopback listener and mDNS work under the sandbox — measured, not read | M, uncertain |
@@ -279,6 +279,37 @@ Apple and is *not* the blocker. These are:
 | Apple Distribution + Mac Installer Distribution identities instead of Developer ID; a `.pkg` rather than a `.dmg`; no notarisation on that lane | S+M |
 | Remove self-update on that channel — required, and Electron disables `autoUpdater` in `mas` builds anyway. Both off switches already exist | S/M |
 | Two-channel release engineering, and review risk on a bundled interpreter with no precedent found either way | M + unknown |
+
+#### The layout and the runtime, proven together
+
+`scripts/measure_sandboxed_interpreter.php` builds a second bundle in the store
+layout — interpreter at `Contents/MacOS/php`, signed with the two-key inherit
+file, spawned by a parent signed with the full sandbox entitlements — because
+that is the shape the shell actually uses:
+
+| | |
+|---|---|
+| parent home | container |
+| child spawned | ok |
+| child exit | 0 |
+| child home | **same container** |
+| child loopback | bound |
+| child pcre | works |
+| child run directly | **killed at launch, exit 133 (expected)** |
+
+The last row is the one worth reading twice. `com.apple.security.inherit` has
+nothing to inherit from when nobody sandboxed the parent, so that binary is
+SIGTRAP'd every time it is launched from a shell. It is reported here so nobody
+later reads it as the relocation having broken something — the only honest test
+of an inheriting child is a sandboxed parent spawning it.
+
+Reviewed as well as run. Two bundles built in the two layouts and signed the
+same way:
+
+| bundle | `desktop:review-mac-bundle` |
+|---|---|
+| interpreter under `Contents/Resources/build/php/` | refused, and named |
+| interpreter at `Contents/MacOS/php` | nothing refused |
 
 #### What the store lane still needs from Apple, not from this repository
 

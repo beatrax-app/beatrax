@@ -215,6 +215,11 @@ return [
         // hardening, signing identity and entitlements.
         'php scripts/nativephp_mac_app_store_lane.php',
 
+        // AFTER it, and the script fails loudly if that order is ever lost:
+        // this one adds the interpreter to the mas block, which the one above
+        // creates.
+        'php scripts/nativephp_interpreter_into_macos.php',
+
         // Forces the full-binary update path, which is the one covered by
         // the Ed25519 manifest + SHA-512 check in ElectronUpdateChannel.
         'php scripts/nativephp_inject_macos_update_settings.php',
