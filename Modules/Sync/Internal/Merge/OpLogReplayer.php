@@ -27,6 +27,7 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Services\PairUnlinker;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * @link ../../../../.docs/features/sync/op-log-merge-rules.md
@@ -107,7 +108,14 @@ final readonly class OpLogReplayer
         // apply half owns the merge strategies; both share one quarantine sink.
         // Row ownership, deferred self-references and the search index are
         // their own collaborators — each a question the merge needs answered.
-        $quarantine = new OpLogQuarantine($db);
+
+        // Resolved once, and never null past this line. Every collaborator
+        // below reports a fault it also has to swallow, and a nullable logger
+        // threaded through eight of them is eight more places the sentence can
+        // go missing — which is the shape they are being fixed for.
+        $log = $this->resolveFromContainer(LoggerInterface::class) ?? new NullLogger;
+
+        $quarantine = new OpLogQuarantine($db, $log);
         $this->projector = new OpLogValueProjector($rules, $sensitiveFields, $columnCodec, $session);
         $this->verifier = new OpLogEntryVerifier(
             $db,
@@ -124,12 +132,12 @@ final readonly class OpLogReplayer
             new PriorAuthorship($db, new DeviceRegistryService($db)),
         );
         $ownership = new RowOwnership($db);
-        $splitTail = new SplitCreateTail($db, $ownership, $this->resolveFromContainer(LoggerInterface::class));
+        $splitTail = new SplitCreateTail($db, $ownership, $log);
         $this->pairCascade = new TransferPairCascade($db, new PairUnlinker($db));
         // Ahead of the applier because the applier needs it, and built for the
         // same reason the ordering below is: the container answers null for a
         // concrete class nobody registered.
-        $this->tableOrder = new CoveredTableOrder($db, $rules);
+        $this->tableOrder = new CoveredTableOrder($db, $rules, $log);
         $this->applier = new OpLogEntryApplier(
             $db,
             $rules,
@@ -137,25 +145,25 @@ final readonly class OpLogReplayer
             $quarantine,
             $ownership,
             new SuppliedDateGate($db),
-            new SelfReferenceDeferral($db, $ownership, $this->resolveFromContainer(LoggerInterface::class)),
+            new SelfReferenceDeferral($db, $ownership, $log),
             $splitTail,
             $this->pairCascade,
-            new PeerRowAliases($db, $this->tableOrder),
+            new PeerRowAliases($db, $this->tableOrder, $log),
             new AlreadyPresentCreate(
-                new PeerRowAliases($db, $this->tableOrder),
-                new CreateRowCollision($db, $sensitiveFields),
+                new PeerRowAliases($db, $this->tableOrder, $log),
+                new CreateRowCollision($db, $sensitiveFields, $log),
                 $quarantine,
                 $splitTail,
-                $this->resolveFromContainer(LoggerInterface::class),
+                $log,
             ),
-            new SuppliedCreationTime($db),
+            new SuppliedCreationTime($db, $log),
             new SplitOverfillGate($db),
             new DependentRowCascade($db, $rules),
-            $this->resolveFromContainer(LoggerInterface::class),
+            $log,
         );
         $this->searchRefresher = new SearchIndexRefresher(
             $searchWriter,
-            $this->resolveFromContainer(LoggerInterface::class),
+            $log,
         );
         $this->remoteClock = new RemoteClockAdvance($db);
         $this->rowHistory = new RowHistoryRehydration(new PersistedOpLogEntries($db), $this->verifier);

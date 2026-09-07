@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 // Whether a create the primary key refused names a DIFFERENT row than the one
@@ -24,6 +25,7 @@ final readonly class CreateRowCollision
     public function __construct(
         private DatabaseManager $db,
         private SensitiveFieldRegistry $sensitive,
+        private LoggerInterface $log,
     ) {}
 
     // A birth time the stored row does not share, AND some other column that
@@ -114,8 +116,10 @@ final readonly class CreateRowCollision
         };
     }
 
-    // A table the schema cannot answer for is not a collision, so a replay
-    // that would otherwise continue is never stopped by this question.
+    // Answered null rather than raised, so a replay that would otherwise
+    // continue is never stopped by this question. Null reads as "not a
+    // collision", though, and the create then lands over whatever is here — so
+    // a read that failed is said out loud rather than taken for an empty table.
     /**
      * @return array<string, mixed>|null
      */
@@ -123,7 +127,12 @@ final readonly class CreateRowCollision
     {
         try {
             $row = $this->db->connection()->table($table)->where('id', $pk)->first();
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            $this->log->warning('CreateRowCollision: could not read the stored row, so an arriving create was not checked against it.', [
+                'table' => $table,
+                'exception' => $e::class,
+            ]);
+
             return null;
         }
 

@@ -194,10 +194,19 @@ final class SelfReferenceDeferral
 
         try {
             $this->ownership->scopeToUser($query, $table, $userId)->update($values);
-        } catch (QueryException) {
+        } catch (QueryException $e) {
             // The link is optional by construction — the row is already
             // applied and usable without it, so a refusal here costs the
             // pairing and never the replay.
+
+            // It does cost the pairing, though, and nothing else will come back
+            // for it: the deferral is resolved once, here.
+            $this->logger?->warning('SelfReferenceDeferral: the deferred link was refused, so this row keeps a null where its pair should be.', [
+                'table' => $table,
+                'pk' => (string) $pk,
+                'columns' => array_keys($values),
+                'exception' => $e::class,
+            ]);
         }
     }
 
