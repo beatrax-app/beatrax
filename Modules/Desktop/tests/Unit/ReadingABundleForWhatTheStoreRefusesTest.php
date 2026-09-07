@@ -121,3 +121,29 @@ it('answers zero for a bundle the store would take', function (): void {
 it('is bound to the real reader outside a test', function (): void {
     expect(app(ReadsAMacBundle::class))->toBeInstanceOf(MacBundleReader::class);
 });
+
+// The success line is the one a green build prints, and it has to say how much
+// was read: "nothing refused" over a bundle nobody walked is the same sentence
+// as "nothing refused" over one that was.
+it('says how many executables it read when it refuses nothing', function (): void {
+    bundleDescribedAs(
+        [base_path() => ['com.apple.security.app-sandbox' => true]],
+        [base_path() => ['Contents/MacOS/'.basename(base_path()), 'Contents/MacOS/helper']],
+    );
+
+    test()->artisan('desktop:review-mac-bundle', ['path' => base_path()])
+        ->expectsOutputToContain('Read 2 executables')
+        ->assertExitCode(0);
+});
+
+it('names every refusal rather than only counting them', function (): void {
+    bundleDescribedAs(
+        [base_path() => []],
+        [base_path() => ['Contents/MacOS/'.basename(base_path())]],
+    );
+
+    test()->artisan('desktop:review-mac-bundle', ['path' => base_path()])
+        ->expectsOutputToContain('not sandboxed')
+        ->expectsOutputToContain('must not be submitted')
+        ->assertExitCode(1);
+});
