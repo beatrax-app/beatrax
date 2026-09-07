@@ -400,7 +400,11 @@ function beatraxNotificationPermission($wire, grantEvent, askOnLoad) {
                 $wire.recordDeviceAnswer(event.detail?.payload?.granted === true);
             };
 
-            window.addEventListener('native-event', this._answer);
+            // On `document`, which is where both shells dispatch it: the
+            // CustomEvent is built without `bubbles`, so it never reaches
+            // `window`. Measured on an iPhone 12 mini — the OS answered, the
+            // shell dispatched, and a window listener saw nothing.
+            document.addEventListener('native-event', this._answer);
 
             // After the listener, never before: the platform answers a repeat
             // ask from the settled value immediately, so an ask that ran first
@@ -411,7 +415,7 @@ function beatraxNotificationPermission($wire, grantEvent, askOnLoad) {
         },
 
         destroy() {
-            window.removeEventListener('native-event', this._answer);
+            document.removeEventListener('native-event', this._answer);
         },
     };
 }
