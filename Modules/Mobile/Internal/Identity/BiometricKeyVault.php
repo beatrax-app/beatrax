@@ -111,13 +111,24 @@ class BiometricKeyVault
 
     // Removes the enrolled entry (on disable, PIN reset re-enroll, or a
     // rekey/revocation - see the design doc lifecycle table).
-    public function clear(int $userId): void
+
+    // Answers whether the entry is gone. A delete that quietly failed leaves a
+    // wrapped data key in the enclave while the app records the reader as
+    // un-enrolled, and one of the callers is account deletion.
+    public function clear(int $userId): bool
     {
         if (! $this->runtimeAvailable()) {
-            return;
+            // Nowhere to hold a key is not a refusal to release one.
+            return true;
         }
 
-        $this->vaultDelete($this->slot($userId));
+        $cleared = $this->vaultDelete($this->slot($userId));
+
+        if (! $cleared) {
+            $this->logDeleteRefusal($this->lastNativeError());
+        }
+
+        return $cleared;
     }
 
     private function slot(int $userId): string
@@ -181,13 +192,13 @@ class BiometricKeyVault
         return is_array($result) ? $result : [];
     }
 
-    protected function vaultDelete(string $key): void
+    protected function vaultDelete(string $key): bool
     {
         if (! class_exists(BiometricVault::class)) {
-            return;
+            return false;
         }
 
-        BiometricVault::delete($key);
+        return BiometricVault::delete($key) === true;
     }
 
     protected function lastNativeError(): ?string
@@ -204,6 +215,16 @@ class BiometricKeyVault
     protected function logRefusal(?string $reason): void
     {
         $this->log->warning('BiometricKeyVault: the enclave refused to store the cold-start key.', [
+            'reason' => $reason ?? 'the native side gave none',
+        ]);
+    }
+
+    // Its own message rather than the one above. A removal that failed is not
+    // a store that failed, and a log line naming the wrong operation sends
+    // whoever reads it to the wrong half of the vault.
+    protected function logDeleteRefusal(?string $reason): void
+    {
+        $this->log->warning('BiometricKeyVault: the enclave refused to remove the cold-start key, so a wrapped data key is still held.', [
             'reason' => $reason ?? 'the native side gave none',
         ]);
     }

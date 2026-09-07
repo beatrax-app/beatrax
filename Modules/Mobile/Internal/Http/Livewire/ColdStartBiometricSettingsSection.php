@@ -73,9 +73,16 @@ final class ColdStartBiometricSettingsSection extends Component
         CurrentUser $currentUser,
         ColdStartEnrollmentService $enrollment,
     ): void {
-        $enrollment->disable($currentUser->id());
+        $cleared = $enrollment->disable($currentUser->id());
+
         $this->enrolled = false;
-        $this->flashMessage = '';
+
+        // Off is off — the toggle honours what was asked. The message is
+        // about the key, which the platform may still be holding, and saying
+        // nothing there is telling the reader it was destroyed.
+        $this->flashMessage = $cleared
+            ? ''
+            : Lang::get('mobile::biometric.clear_refused');
     }
 
     public function render(ViewFactory $views): View

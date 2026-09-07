@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Tavo šifravimo raktas iš naujo apsaugotas nauju PIN kodu.',
     'error_forgot_failed' => 'Nepavyko iš naujo nustatyti PIN kodo — atkūrimo raktas nepasiekiamas.',
     'error_enable_first' => 'Prieš registruodamas biometriją, pirmiausia įjunk PIN kodo užraktą.',
+    'error_vault_kept_key' => 'Biometrinis atrakinimas išjungtas, bet šis kompiuteris neištrynė įrašyto rakto, tad kopija tebėra čia. Paleisk Beatrax iš naujo ir pašalink jį dar kartą.',
     'error_disable_blocked_by_encryption' => 'Tavo užrašai ir kitų šalių duomenys užšifruoti raktu, kurį saugo šis programos užraktas, todėl jį išjungus jie taptų neįskaitomi. Užraktas lieka įjungtas — verčiau pasikeisk PIN kodą.',
     'error_key_material_lost' => 'Šis įrenginys nebesaugo rakto, kuris atrakina tavo užšifruotus duomenis, tad naujas PIN kodas jų vėl įskaitomų nepadarys. Atkurk užšifruotą atsarginę kopiją, sukurtą dar veikiant raktui — susiejimu šis įrenginys atgal nebegrįš, nes susiejimui reikia to programėlės užrakto, kurį atrakina šis raktas.',
     'error_recovery_wrap_stale' => 'Paskyros slaptažodis nebeatrakina šio programėlės užrakto — jis buvo pakeistas jau nustačius užraktą. PIN kodas dar veikia, bet už jo nieko nelieka, jei jį pamirši. Susiek paskyros slaptažodį iš naujo dabar.',

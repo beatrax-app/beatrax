@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Bestätige deine PIN, um es zu aktivieren',
     'current_pin' => 'Aktuelle PIN',
     'enable' => 'Biometrisches Entsperren aktivieren',
+    'clear_refused' => 'Die biometrische Entsperrung ist aus, aber das Gerät hat den Schlüssel nicht aus dem sicheren Speicher entfernt. Starte das Telefon neu und versuche es noch einmal.',
 
     'errors' => [
         'unavailable' => 'Biometrisches Entsperren ist auf diesem Gerät nicht verfügbar.',

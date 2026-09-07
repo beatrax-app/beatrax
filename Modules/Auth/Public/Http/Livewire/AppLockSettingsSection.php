@@ -519,12 +519,20 @@ final class AppLockSettingsSection extends Component
         }
 
         $biometricStore->deleteForUser($user->id);
-        $vault->forget($user->id);
+        $cleared = $vault->forget($user->id);
 
-        $this->biometricEnrolled = false;
+        // Read back rather than assumed: the vault answers isEnrolled() from
+        // its own storage, so a refused removal leaves an enrolment this
+        // screen would otherwise show as gone until the next full render.
+        $this->biometricEnrolled = $vault->isEnrolled($user->id);
         $this->confirmingDeenroll = false;
         $this->deenrollPin = '';
-        $this->flashMessage = '';
+
+        // Saying nothing about a key the OS would not release tells the reader
+        // it was destroyed.
+        $this->flashMessage = $cleared
+            ? ''
+            : Lang::get('auth::app_lock.error_vault_kept_key');
     }
 
     /**

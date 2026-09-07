@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Tvoj ključ za šifrovanje je ponovo obezbeđen novim PIN-om.',
     'error_forgot_failed' => 'Resetovanje PIN-a nije uspelo — ključ za oporavak nije dostupan.',
     'error_enable_first' => 'Pre upisa biometrije uključi zaključavanje PIN-om.',
+    'error_vault_kept_key' => 'Biometrijsko otključavanje je isključeno, ali ovaj računar nije obrisao sačuvani ključ, pa je kopija i dalje ovde. Ponovo pokreni Beatrax i ukloni je opet.',
     'error_disable_blocked_by_encryption' => 'Tvoje beleške i podaci o drugim stranama šifrovani su ključem koji čuva ovo zaključavanje aplikacije, pa bi njegovo isključivanje ostavilo te podatke nečitljivima. Zaključavanje ostaje uključeno — umesto toga promeni PIN.',
     'error_key_material_lost' => 'Ovaj uređaj više ne čuva ključ koji otvara tvoje šifrovane podatke, pa ih nov PIN neće ponovo učiniti čitljivima. Vrati šifrovanu rezervnu kopiju napravljenu dok je ključ još radio — uparivanjem se ovaj uređaj ne može vratiti, jer uparivanje traži upravo ono zaključavanje aplikacije koje taj ključ otvara.',
     'error_recovery_wrap_stale' => 'Lozinka naloga više ne otvara ovo zaključavanje aplikacije — promenjena je nakon što je zaključavanje podešeno. PIN i dalje radi, ali iza njega ne ostaje ništa ako ga zaboraviš. Ponovo poveži lozinku naloga sada.',

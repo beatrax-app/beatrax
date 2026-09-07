@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Ta clé de chiffrement est de nouveau protégée, avec ton nouveau PIN.',
     'error_forgot_failed' => 'Échec de la réinitialisation du PIN — la clé de récupération est indisponible.',
     'error_enable_first' => 'Active d\'abord le verrouillage par PIN avant la biométrie.',
+    'error_vault_kept_key' => "Le déverrouillage biométrique est désactivé, mais cet ordinateur n'a pas supprimé la clé enregistrée : une copie est donc toujours là. Redémarre Beatrax et retire-la de nouveau.",
     'error_disable_blocked_by_encryption' => 'Tes notes et les détails de tes tiers sont chiffrés avec la clé que détient ce verrou d\'application ; le désactiver les rendrait illisibles. Le verrou reste actif — change plutôt ton code PIN.',
     'error_key_material_lost' => "Cet appareil ne détient plus la clé qui ouvre tes données chiffrées, donc un nouveau code PIN ne les rendra pas lisibles. Restaure une sauvegarde chiffrée réalisée pendant que la clé fonctionnait encore — cet appareil ne peut pas revenir par un appairage, car l'appairage a besoin du verrou d'application que cette clé ouvre.",
     'error_recovery_wrap_stale' => 'Ton mot de passe du compte n\'ouvre plus ce verrouillage de l\'app — il a été changé après la mise en place du verrou. Ton PIN fonctionne encore, mais il n\'y a plus rien derrière si tu l\'oublies. Relie ton mot de passe du compte maintenant.',

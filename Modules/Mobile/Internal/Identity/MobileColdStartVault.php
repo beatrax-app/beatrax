@@ -50,9 +50,14 @@ final readonly class MobileColdStartVault implements ColdStartVault
         return $result->isRecovered() ? $result->dataKey : null;
     }
 
-    public function forget(int $userId): void
+    // The flag comes down either way — the reader asked for this off — but the
+    // answer is about the key, which the enclave may still be holding.
+    public function forget(int $userId): bool
     {
-        $this->vault->clear($userId);
+        $cleared = $this->vault->clear($userId);
+
         $this->enrolment->mark($userId, false);
+
+        return $cleared;
     }
 }

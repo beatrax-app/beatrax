@@ -20,6 +20,8 @@ class FakeBiometricKeyVault extends BiometricKeyVault
     /** @var array<string, mixed>|null forces a specific native get() outcome */
     public ?array $forcedGet = null;
 
+    private bool $refuseDelete = false;
+
     public ?string $pollValue = null;
 
     protected function runtimeAvailable(): bool
@@ -58,8 +60,22 @@ class FakeBiometricKeyVault extends BiometricKeyVault
             : ['value' => '', 'missing' => true];
     }
 
-    protected function vaultDelete(string $key): void
+    protected function vaultDelete(string $key): bool
     {
+        if ($this->refuseDelete) {
+            return false;
+        }
+
         unset($this->store[$key]);
+
+        return true;
+    }
+
+    // Stands in for a platform that answers the removal with an error. Only
+    // the native side can produce that, so a test cannot reach it any other
+    // way — and a removal that failed silently is the whole finding.
+    public function refuseDelete(): void
+    {
+        $this->refuseDelete = true;
     }
 }

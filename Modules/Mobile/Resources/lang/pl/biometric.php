@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Potwierdź PIN, aby włączyć',
     'current_pin' => 'Obecny PIN',
     'enable' => 'Włącz odblokowanie biometryczne',
+    'clear_refused' => 'Odblokowanie biometryczne jest wyłączone, ale urządzenie nie usunęło klucza z bezpiecznego magazynu. Uruchom telefon ponownie i spróbuj jeszcze raz.',
 
     'errors' => [
         'unavailable' => 'Odblokowanie biometryczne nie jest dostępne na tym urządzeniu.',

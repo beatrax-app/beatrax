@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Etkinleştirmek için PIN kodunu doğrula',
     'current_pin' => 'Mevcut PIN',
     'enable' => 'Biyometrik kilit açmayı etkinleştir',
+    'clear_refused' => 'Biyometrik kilit açma kapalı, ancak cihaz anahtarı güvenli depolamadan kaldırmadı. Telefonu yeniden başlat ve tekrar dene.',
 
     'errors' => [
         'unavailable' => 'Biyometrik kilit açma bu cihazda kullanılamıyor.',

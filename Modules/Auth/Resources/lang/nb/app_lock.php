@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Krypteringsnøkkelen din er sikret på nytt med den nye PIN-koden din.',
     'error_forgot_failed' => 'Tilbakestilling av PIN-koden mislyktes — gjenopprettingsnøkkelen er ikke tilgjengelig.',
     'error_enable_first' => 'Slå på PIN-låsen før du registrerer biometri.',
+    'error_vault_kept_key' => 'Biometrisk opplåsing er av, men denne datamaskinen slettet ikke den lagrede nøkkelen, så en kopi ligger her fortsatt. Start Beatrax på nytt og fjern den igjen.',
     'error_disable_blocked_by_encryption' => 'Notatene dine og motpartsopplysningene er kryptert med nøkkelen denne app-låsen holder, så å slå av låsen ville gjort dem uleselige. Låsen blir stående på — bytt PIN-kode i stedet.',
     'error_key_material_lost' => 'Denne enheten holder ikke lenger nøkkelen som åpner de krypterte dataene dine, så en ny PIN-kode gjør dem ikke lesbare igjen. Gjenopprett en kryptert sikkerhetskopi som ble laget mens nøkkelen fortsatt virket — denne enheten kan ikke pare seg tilbake, fordi paring krever applåsen den nøkkelen åpner.',
     'error_recovery_wrap_stale' => 'Kontopassordet ditt åpner ikke lenger denne applåsen — det ble endret etter at låsen ble satt opp. PIN-koden din virker fortsatt, men det er ingenting bak den om du glemmer den. Koble til kontopassordet på nytt nå.',

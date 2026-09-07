@@ -29,5 +29,13 @@ interface ColdStartVault
 
     // A passphrase change leaves the stored key undecryptable, so it goes
     // rather than failing an unlock confusingly later.
-    public function forget(int $userId): void;
+
+    // True when no durable wrap of this user's data key is left. False when the
+    // platform refused to release one, which leaves a key the reader asked to
+    // be rid of recoverable by whoever can pass the OS prompt.
+
+    // Implementations MUST answer from what the store holds afterwards rather
+    // than from the call having been made, and MUST NOT report true on a
+    // refusal.
+    public function forget(int $userId): bool;
 }

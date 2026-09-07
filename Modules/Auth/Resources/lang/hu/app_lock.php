@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'A titkosítási kulcsodat az új PIN-kód védi mostantól.',
     'error_forgot_failed' => 'A PIN-kód visszaállítása sikertelen — a helyreállítási kulcs nem érhető el.',
     'error_enable_first' => 'Előbb kapcsold be a PIN-zárat, mielőtt biometriát regisztrálsz.',
+    'error_vault_kept_key' => 'A biometrikus feloldás ki van kapcsolva, de ez a számítógép nem törölte a tárolt kulcsot, így egy másolat még mindig itt van. Indítsd újra a Beatraxot, és távolítsd el újra.',
     'error_disable_blocked_by_encryption' => 'A jegyzeteid és a partnereid adatai azzal a kulccsal vannak titkosítva, amelyet ez az alkalmazászár őriz, így a zár kikapcsolása olvashatatlanná tenné őket. A zár bekapcsolva marad — inkább a PIN-kódodat változtasd meg.',
     'error_key_material_lost' => 'Ez az eszköz már nem őrzi a titkosított adataidat nyitó kulcsot, ezért egy új PIN-kód sem teszi őket újra olvashatóvá. Állíts vissza egy titkosított biztonsági mentést, amely még a kulcs működése idején készült — párosítással ez az eszköz nem tud visszajutni, mert a párosításhoz az az alkalmazászár kell, amelyet ez a kulcs nyit.',
     'error_recovery_wrap_stale' => 'A fiókjelszavad már nem nyitja ezt az alkalmazászárat — a zár beállítása után változott meg. A PIN-kódod még működik, de ha elfelejted, nincs mögötte semmi. Kösd össze újra a fiókjelszavadat.',

@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Bekræft din PIN-kode for at aktivere',
     'current_pin' => 'Nuværende PIN-kode',
     'enable' => 'Aktivér biometrisk oplåsning',
+    'clear_refused' => 'Biometrisk oplåsning er slået fra, men enheden ville ikke fjerne nøglen fra det sikre lager. Genstart telefonen, og prøv igen.',
 
     'errors' => [
         'unavailable' => 'Biometrisk oplåsning er ikke tilgængelig på denne enhed.',

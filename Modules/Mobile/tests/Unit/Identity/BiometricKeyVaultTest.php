@@ -6,11 +6,17 @@ use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
 use Modules\Mobile\Tests\Support\FakeBiometricKeyVault;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 function fakeVault(): FakeBiometricKeyVault
 {
     return new FakeBiometricKeyVault(new BiometricKeyBlobCodec(new AppLockKeyWrap), new NullLogger);
+}
+
+function loggingFakeVault(LoggerInterface $log): FakeBiometricKeyVault
+{
+    return new FakeBiometricKeyVault(new BiometricKeyBlobCodec(new AppLockKeyWrap), $log);
 }
 
 it('round-trips the data key through enroll() then recover()', function (): void {
@@ -155,4 +161,40 @@ it('clears only the slot it was asked for', function (): void {
 
     expect($vault->recover(1)->isRecovered())->toBeTrue()
         ->and($vault->recover(2)->status)->toBe(BiometricRecoverResult::MISSING);
+});
+
+// A delete that quietly failed leaves a wrapped data key in the enclave while
+// the app records the reader as un-enrolled, and one of the callers of this
+// path is account deletion.
+it('answers false and names the refusal when the enclave will not release the key', function (): void {
+    $log = Mockery::mock(LoggerInterface::class);
+    $log->shouldReceive('warning')
+        ->once()
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'refused to remove')
+            && str_contains($message, 'still held'));
+
+    $vault = loggingFakeVault($log);
+    $vault->refuseDelete();
+
+    expect($vault->clear(9))->toBeFalse();
+});
+
+it('answers true when the key is gone', function (): void {
+    $log = Mockery::mock(LoggerInterface::class);
+    $log->shouldNotReceive('warning');
+
+    expect(loggingFakeVault($log)->clear(9))->toBeTrue();
+});
+
+// Naming the store failure for a removal sends whoever reads the log to the
+// wrong half of the vault.
+it('does not report a failed removal as a failed store', function (): void {
+    $log = Mockery::mock(LoggerInterface::class);
+    $log->shouldReceive('warning')
+        ->once()
+        ->withArgs(fn (string $message): bool => ! str_contains($message, 'refused to store'));
+
+    $vault = loggingFakeVault($log);
+    $vault->refuseDelete();
+    $vault->clear(9);
 });

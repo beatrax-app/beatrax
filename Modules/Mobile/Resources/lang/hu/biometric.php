@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Erősítsd meg a PIN-kódot az engedélyezéshez',
     'current_pin' => 'Jelenlegi PIN-kód',
     'enable' => 'Biometrikus feloldás engedélyezése',
+    'clear_refused' => 'A biometrikus feloldás ki van kapcsolva, de az eszköz nem távolította el a kulcsot a biztonságos tárolóból. Indítsd újra a telefont, és próbáld meg újra.',
 
     'errors' => [
         'unavailable' => 'A biometrikus feloldás nem érhető el ezen az eszközön.',

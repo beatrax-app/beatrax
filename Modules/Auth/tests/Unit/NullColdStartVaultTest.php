@@ -31,5 +31,6 @@ it('refuses to enroll and recovers nothing', function (): void {
 it('forgets without complaint, since there is never anything stored', function (): void {
     $vault = new NullColdStartVault;
 
-    expect(fn () => $vault->forget(1))->not->toThrow(Throwable::class);
+    expect(fn () => $vault->forget(1))->not->toThrow(Throwable::class)
+        ->and($vault->forget(1))->toBeTrue('a platform that never held a key is not one refusing to release it');
 });

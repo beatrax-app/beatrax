@@ -70,6 +70,7 @@ return [
     'change_pin_success' => 'Jūsu šifrēšanas atslēga ir no jauna aizsargāta ar jauno PIN kodu.',
     'error_forgot_failed' => 'PIN koda atiestatīšana neizdevās — atkopšanas atslēga nav pieejama.',
     'error_enable_first' => 'Vispirms ieslēdziet PIN koda bloķēšanu un tikai tad reģistrējiet biometriju.',
+    'error_vault_kept_key' => 'Biometriskā atbloķēšana ir izslēgta, bet šis dators neizdzēsa saglabāto atslēgu, tāpēc kopija joprojām ir šeit. Restartē Beatrax un noņem to vēlreiz.',
     'error_disable_blocked_by_encryption' => 'Tavas piezīmes un darījuma partneru dati ir šifrēti ar atslēgu, ko glabā šī lietotnes bloķēšana, tāpēc tās izslēgšana padarītu tos nelasāmus. Bloķēšana paliek ieslēgta — labāk nomaini savu PIN.',
     'error_key_material_lost' => 'Šī ierīce vairs neglabā atslēgu, kas atver tavus šifrētos datus, tāpēc jauns PIN tos atkal lasāmus nepadarīs. Atjauno šifrētu dublējumu, kas izveidots, kamēr atslēga vēl darbojās — ar sapārošanu šī ierīce atpakaļ netiks, jo sapārošanai vajag to pašu lietotnes bloķēšanu, ko šī atslēga atver.',
     'error_recovery_wrap_stale' => 'Tava konta parole vairs neatver šo lietotnes bloķēšanu — tā tika nomainīta pēc bloķēšanas iestatīšanas. PIN kods vēl darbojas, bet aiz tā nekas nepaliek, ja to aizmirsti. Piesaisti konta paroli no jauna tagad.',

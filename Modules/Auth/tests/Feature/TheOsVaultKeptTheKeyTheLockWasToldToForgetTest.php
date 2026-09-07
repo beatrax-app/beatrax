@@ -11,6 +11,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Auth\Tests\Support\DurableColdStartVault;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 
 // enable() already deletes the WebAuthn enrolments, because "a leftover
 // enrollment wraps whatever key the previous provisioning held". The OS vault
@@ -119,4 +120,43 @@ it('drops the OS-vault copy of the data key when the mobile import path enables 
         ->enableAppLock($user->id, '135790', 'vault-account-pass', $session);
 
     expect($vault->keys)->toBe([], 'enable() mints a key the enrolment predating it cannot wrap, whichever caller ran it');
+});
+
+// Removing the enrolment reported the same clean screen whether the key went
+// or not: the toggle flipped off, the message stayed empty, and a wrapped data
+// key the reader had just asked to be rid of was still in the OS vault.
+it('says so when the OS would not release the key it was told to forget', function (): void {
+    $vault = new DurableColdStartVault;
+    $this->app->instance(ColdStartVault::class, $vault);
+
+    $user = vaultKeptUser('vault-deenroll-refused');
+    vaultKeptEnableAndEnroll('135790');
+
+    $vault->refuseForget = true;
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->call('confirmDeenroll')
+        ->set('deenrollPin', '135790')
+        ->call('deenroll')
+        ->assertSet('flashMessage', Lang::get('auth::app_lock.error_vault_kept_key'))
+        ->assertSet('biometricEnrolled', true);
+
+    expect($vault->keys[$user->id] ?? null)->not->toBeNull('the fixture must leave the key behind, or the assertions above prove nothing');
+});
+
+it('clears the screen when the key actually went', function (): void {
+    $vault = new DurableColdStartVault;
+    $this->app->instance(ColdStartVault::class, $vault);
+
+    $user = vaultKeptUser('vault-deenroll-ok');
+    vaultKeptEnableAndEnroll('135790');
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->call('confirmDeenroll')
+        ->set('deenrollPin', '135790')
+        ->call('deenroll')
+        ->assertSet('flashMessage', '')
+        ->assertSet('biometricEnrolled', false);
+
+    expect($vault->keys)->toBe([]);
 });

@@ -11,6 +11,8 @@ use Modules\Desktop\Internal\Native\DesktopColdStartVault;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Native\Desktop\Facades\System as SystemFacade;
 use Native\Desktop\System;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 const COLD_START_USER_ID = 7;
 
@@ -26,8 +28,9 @@ afterEach(function (): void {
 /**
  * @param  bool  $available  Whether Touch ID reports itself usable.
  * @param  bool  $prompted  Whether the user completes the authentication.
+ * @param  LoggerInterface|null  $log  Supplied only where a case reads what was logged.
  */
-function coldStartVault(bool $available = true, bool $prompted = true): DesktopColdStartVault
+function coldStartVault(bool $available = true, bool $prompted = true, ?LoggerInterface $log = null): DesktopColdStartVault
 {
     // NativeBiometricUnlock is final, so the same System mock is both swapped
     // into the facade it reads availability from and passed to the constructor.
@@ -48,6 +51,7 @@ function coldStartVault(bool $available = true, bool $prompted = true): DesktopC
         new BiometricKeyBlobCodec(new AppLockKeyWrap),
         $system,
         new OwnerOnlyPath,
+        $log ?? new NullLogger,
     );
 }
 
@@ -128,6 +132,7 @@ it('refuses to enroll when safeStorage returns nothing', function (?string $refu
         new BiometricKeyBlobCodec(new AppLockKeyWrap),
         $system,
         new OwnerOnlyPath,
+        new NullLogger,
     );
 
     expect($vault->enroll(COLD_START_USER_ID, random_bytes(32)))->toBeFalse()
@@ -174,10 +179,37 @@ it('forgets an enrollment and stays silent when there is nothing to forget', fun
     $vault = coldStartVault();
     $vault->enroll(COLD_START_USER_ID, random_bytes(32));
 
-    $vault->forget(COLD_START_USER_ID);
+    expect($vault->forget(COLD_START_USER_ID))->toBeTrue()
+        ->and($vault->isEnrolled(COLD_START_USER_ID))->toBeFalse()
+        ->and($vault->forget(COLD_START_USER_ID))->toBeTrue('nothing left to delete is not a refusal to delete');
+});
 
-    expect($vault->isEnrolled(COLD_START_USER_ID))->toBeFalse()
-        ->and(fn () => $vault->forget(COLD_START_USER_ID))->not->toThrow(Throwable::class);
+// isEnrolled() reads this same file, so a survivor keeps offering an unlock
+// that now returns a key nothing opens. Reported as success, the settings
+// screen says the key is gone while the OS is still holding it.
+it('answers false and names it when the stored key will not delete', function (): void {
+    $log = Mockery::mock(LoggerInterface::class);
+    $log->shouldReceive('warning')
+        ->once()
+        ->withArgs(fn (string $message): bool => str_contains($message, 'could not be deleted'));
+
+    $vault = coldStartVault(log: $log);
+    $vault->enroll(COLD_START_USER_ID, random_bytes(32));
+
+    // A directory nothing may write is how a file survives its own unlink on
+    // POSIX; on Windows the same survivor comes of another process holding it
+    // open. Either way the class only learns of it by looking again.
+    $directory = dirname(coldStartKeyFile());
+    chmod($directory, 0500);
+
+    try {
+        expect(is_file(coldStartKeyFile()))->toBeTrue('the fixture must leave a file behind, or a false below proves nothing');
+
+        expect($vault->forget(COLD_START_USER_ID))->toBeFalse()
+            ->and($vault->isEnrolled(COLD_START_USER_ID))->toBeTrue('the enrolment is still there, and the screen has to be able to say so');
+    } finally {
+        chmod($directory, 0700);
+    }
 });
 
 // mkdir cannot create the secrets directory when a file already occupies the

@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Confirm your PIN to enable',
     'current_pin' => 'Current PIN',
     'enable' => 'Enable biometric unlock',
+    'clear_refused' => 'Biometric unlock is off, but the device would not remove the key from secure storage. Restart your phone and try again.',
 
     'errors' => [
         'unavailable' => 'Biometric unlock is not available on this device.',

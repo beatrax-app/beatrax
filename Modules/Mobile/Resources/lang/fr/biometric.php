@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Confirme ton PIN pour activer',
     'current_pin' => 'PIN actuel',
     'enable' => 'Activer le déverrouillage biométrique',
+    'clear_refused' => "Le déverrouillage biométrique est désactivé, mais l'appareil n'a pas retiré la clé du stockage sécurisé. Redémarre ton téléphone et réessaie.",
 
     'errors' => [
         'unavailable' => 'Le déverrouillage biométrique n\'est pas disponible sur cet appareil.',

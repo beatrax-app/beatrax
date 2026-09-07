@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Şifreleme anahtarın yeni PIN kodunla yeniden güvenceye alındı.',
     'error_forgot_failed' => 'PIN sıfırlama başarısız — kurtarma anahtarı kullanılamıyor.',
     'error_enable_first' => 'Biyometri kaydetmeden önce PIN kilidini etkinleştir.',
+    'error_vault_kept_key' => 'Biyometrik kilit açma kapalı, ancak bu bilgisayar kayıtlı anahtarı silmedi; yani bir kopyası hâlâ burada. Beatrax\'i yeniden başlat ve onu tekrar kaldır.',
     'error_disable_blocked_by_encryption' => 'Notların ve karşı taraf bilgilerin bu uygulama kilidinin tuttuğu anahtarla şifreli, bu yüzden kilidi kapatmak onları okunamaz hâle getirir. Kilit açık kalıyor — bunun yerine PIN kodunu değiştir.',
     'error_key_material_lost' => 'Bu cihaz artık şifreli verilerini açan anahtarı tutmuyor, bu yüzden yeni bir PIN onları yeniden okunur hâle getirmez. Anahtar hâlâ çalışırken alınmış şifreli bir yedeği geri yükle — bu cihaz eşleşerek geri dönemez, çünkü eşleştirme tam da o anahtarın açtığı uygulama kilidini gerektirir.',
     'error_recovery_wrap_stale' => 'Hesap parolan artık bu uygulama kilidini açmıyor — kilit kurulduktan sonra değiştirildi. PIN kodun hâlâ çalışıyor, ama unutursan arkasında hiçbir şey kalmıyor. Hesap parolanı şimdi yeniden bağla.',

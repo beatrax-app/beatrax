@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Pro zapnutí potvrď svůj PIN',
     'current_pin' => 'Současný PIN',
     'enable' => 'Zapnout biometrické odemknutí',
+    'clear_refused' => 'Biometrické odemykání je vypnuté, ale zařízení nedovolilo klíč z bezpečného úložiště odstranit. Restartuj telefon a zkus to znovu.',
 
     'errors' => [
         'unavailable' => 'Biometrické odemknutí není na tomto zařízení dostupné.',

@@ -69,9 +69,13 @@ function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): Biome
                 : BiometricRecoverResult::recovered($this->recovers);
         }
 
-        public function clear(int $userId): void
+        public bool $refusesClear = false;
+
+        public function clear(int $userId): bool
         {
             $this->clearedFor[] = $userId;
+
+            return ! $this->refusesClear;
         }
     };
 }
@@ -158,8 +162,23 @@ it('clears both the enclave entry and the flag when forgetting', function (): vo
     $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
 
     $vault->enroll((int) $user->id, random_bytes(32));
-    $vault->forget((int) $user->id);
 
-    expect($enclave->clearedFor)->toBe([(int) $user->id])
+    expect($vault->forget((int) $user->id))->toBeTrue()
+        ->and($enclave->clearedFor)->toBe([(int) $user->id])
+        ->and($vault->isEnrolled((int) $user->id))->toBeFalse();
+});
+
+// The flag has to come down either way — the reader asked for this off, and an
+// enrolment left on keeps offering an unlock they declined. What must not be
+// reported is that the enclave gave the key up when it did not.
+it('takes the flag down but reports the enclave keeping the key', function (): void {
+    $user = coldStartVaultUser('cold-start-refused');
+    $enclave = coldStartEnclave();
+    $enclave->refusesClear = true;
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+
+    $vault->enroll((int) $user->id, random_bytes(32));
+
+    expect($vault->forget((int) $user->id))->toBeFalse()
         ->and($vault->isEnrolled((int) $user->id))->toBeFalse();
 });

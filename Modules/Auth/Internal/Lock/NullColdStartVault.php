@@ -30,9 +30,13 @@ final class NullColdStartVault implements ColdStartVault
         return null;
     }
 
-    public function forget(int $userId): void
+    // True rather than false: nothing durable was ever held, so there is
+    // nothing left holding a key. A false here would put a refusal on screen
+    // on every platform that has no vault at all.
+    public function forget(int $userId): bool
     {
         // Disabling cold-start unlock calls this on every platform, so a throw
         // would make "the feature is absent" an error settings must handle.
+        return true;
     }
 }

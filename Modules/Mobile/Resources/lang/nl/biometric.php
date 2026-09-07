@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Bevestig je pincode om in te schakelen',
     'current_pin' => 'Huidige pincode',
     'enable' => 'Biometrisch ontgrendelen inschakelen',
+    'clear_refused' => 'Ontgrendelen met biometrie staat uit, maar het apparaat heeft de sleutel niet uit de beveiligde opslag verwijderd. Start je telefoon opnieuw op en probeer het nog eens.',
 
     'errors' => [
         'unavailable' => 'Biometrisch ontgrendelen is niet beschikbaar op dit apparaat.',
