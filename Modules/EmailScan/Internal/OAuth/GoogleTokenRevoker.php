@@ -30,18 +30,34 @@ final readonly class GoogleTokenRevoker
             return false;
         }
 
+        $response = $this->ask($refreshToken);
+
+        return $response !== null && $this->grantIsGone($response);
+    }
+
+    // Null when the request never completed, which is already logged where it
+    // happened: the caller has one answer to read either way.
+    private function ask(string $refreshToken): ?Response
+    {
         try {
-            $response = $this->http->createPendingRequest()
+            return $this->http->createPendingRequest()
                 ->timeout(self::TIMEOUT_SECONDS)
                 ->asForm()
                 ->post(self::REVOKE_URL, ['token' => $refreshToken]);
         } catch (Throwable $e) {
             $this->logger->warning('GoogleTokenRevoker: revoke request failed.', SafeExceptionContext::describe($e));
 
-            return false;
+            return null;
         }
+    }
 
-        if ($response->successful() || self::grantWasAlreadyGone($response)) {
+    private function grantIsGone(Response $response): bool
+    {
+        // A grant already expired, or revoked from the account page, answers
+        // 400 invalid_token. Nothing outlives the disconnect there, so it is
+        // the outcome that was asked for rather than a refusal to give it.
+        if ($response->successful()
+            || ($response->status() === 400 && $response->json('error') === 'invalid_token')) {
             return true;
         }
 
@@ -54,13 +70,5 @@ final readonly class GoogleTokenRevoker
         ]);
 
         return false;
-    }
-
-    // A grant that is already expired or revoked from the account page comes
-    // back 400 invalid_token. Nothing outlives the disconnect there, so it is
-    // the outcome that was asked for rather than a refusal to give it.
-    private static function grantWasAlreadyGone(Response $response): bool
-    {
-        return $response->status() === 400 && $response->json('error') === 'invalid_token';
     }
 }
