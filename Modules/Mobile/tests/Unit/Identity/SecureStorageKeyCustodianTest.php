@@ -7,6 +7,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Exceptions\SecureStorageException;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Tests\Support\FakeSecureStorageCustodian;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 function secureStorageCurrentUser(int $id): CurrentUser
 {
@@ -22,27 +24,27 @@ function secureStorageCurrentUser(int $id): CurrentUser
 // run against an in-memory subclass; the real Keychain is on-device verification.
 
 it('degrades store() to pass-through when the mobile runtime is unavailable', function (): void {
-    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1));
+    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1), new NullLogger);
     $raw = str_repeat("\x2a", 32);
 
     expect($custodian->store($raw))->toBe($raw);
 });
 
 it('round-trips a key through store()/read() on the fallback path', function (): void {
-    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1));
+    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1), new NullLogger);
     $raw = random_bytes(32);
 
     expect($custodian->read($custodian->store($raw)))->toBe($raw);
 });
 
 it('forget() is a safe no-op off-device', function (): void {
-    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1));
+    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1), new NullLogger);
 
     expect(fn () => $custodian->forget('beatrax.session.data_key.1'))->not->toThrow(Throwable::class);
 });
 
 it('stores the key under a per-user slot and returns the slot name as the handle', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
     $raw = random_bytes(32);
 
     $handle = $custodian->store($raw);
@@ -54,22 +56,22 @@ it('stores the key under a per-user slot and returns the slot name as the handle
 });
 
 it('round-trips the key through the native store on-device', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
     $raw = random_bytes(32);
 
     expect($custodian->read($custodian->store($raw)))->toBe($raw);
 });
 
 it('scopes the slot per user so two users never collide', function (): void {
-    $a = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
-    $b = new FakeSecureStorageCustodian(secureStorageCurrentUser(9));
+    $a = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
+    $b = new FakeSecureStorageCustodian(secureStorageCurrentUser(9), new NullLogger);
 
     expect($a->store(random_bytes(32)))->toBe('beatrax.session.data_key.7')
         ->and($b->store(random_bytes(32)))->toBe('beatrax.session.data_key.9');
 });
 
 it('fails closed by throwing instead of returning the raw key when native set() fails', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
     $custodian->setSucceeds = false;
     $raw = random_bytes(32);
 
@@ -81,21 +83,21 @@ it('fails closed by throwing instead of returning the raw key when native set() 
 });
 
 it('returns null (not the slot name) when the entry is missing/evicted', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
 
     // A slot-shaped handle whose entry was never written / was evicted.
     expect($custodian->read('beatrax.session.data_key.7'))->toBeNull();
 });
 
 it('returns null (not garbage) when the stored value is not valid base64', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
     $custodian->slots['beatrax.session.data_key.7'] = 'not+valid+base64+!!!';
 
     expect($custodian->read('beatrax.session.data_key.7'))->toBeNull();
 });
 
 it('forget() deletes the native slot', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
     $handle = $custodian->store(random_bytes(32));
     expect($custodian->slots)->toHaveKey($handle);
 
@@ -111,14 +113,14 @@ it('forget() deletes the native slot', function (): void {
 // has no third case to make, unlike a Linux desktop with no keyring.
 
 it('reports session custody where the mobile runtime is unavailable', function (): void {
-    $custody = (new SecureStorageKeyCustodian(secureStorageCurrentUser(1)))->custody();
+    $custody = (new SecureStorageKeyCustodian(secureStorageCurrentUser(1), new NullLogger))->custody();
 
     expect($custody)->toBe(KeyCustody::Session)
         ->and($custody->protectsAtRest())->toBeFalse();
 });
 
 it('reports operating-system custody on device', function (): void {
-    $custody = (new FakeSecureStorageCustodian(secureStorageCurrentUser(7)))->custody();
+    $custody = (new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger))->custody();
 
     expect($custody)->toBe(KeyCustody::OperatingSystem)
         ->and($custody->protectsAtRest())->toBeTrue();
@@ -129,7 +131,7 @@ it('reports operating-system custody on device', function (): void {
 // operating-system custody over a session that still held the raw key would be
 // the same false claim in the other direction.
 it('keeps the raw key out of the handle it reports operating-system custody for', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
     $raw = random_bytes(32);
 
     $handle = $custodian->store($raw);
@@ -146,9 +148,61 @@ it('keeps the raw key out of the handle it reports operating-system custody for'
 // sent back to the PIN screen by the upgrade itself; the next lock/unlock moves
 // it into the store.
 it('carries a pre-custody session through unchanged rather than asking for the PIN again', function (): void {
-    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
     $raw = random_bytes(32);
 
     expect($custodian->read($raw))->toBe($raw)
         ->and($custodian->slots)->toBe([]);
+});
+
+// Locking drops the handle unconditionally, so a delete that quietly failed
+// left the unlocked data key in the Keychain with nothing pointing at it and
+// the lock screen saying the app was locked.
+it('makes the key unrecoverable when the store will not delete the slot', function (): void {
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
+    $raw = random_bytes(32);
+    $handle = $custodian->store($raw);
+
+    $custodian->deleteSucceeds = false;
+    $custodian->forget($handle);
+
+    expect($custodian->read($handle))->toBeNull('the next unlock has to take the PIN path, not read a key back')
+        ->and($custodian->slots[$handle])->not->toBe(base64_encode($raw));
+});
+
+it('writes nothing over a slot the store refused because it was already empty', function (): void {
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), new NullLogger);
+
+    $custodian->deleteSucceeds = false;
+    $custodian->forget('beatrax.session.data_key.7');
+
+    expect($custodian->slots)->toBe([]);
+});
+
+// The last resort, where neither call would move the key: nothing is left that
+// can act on it, so the one thing that must happen is that it is said.
+it('says so when the store will neither delete nor overwrite the key', function (): void {
+    $log = Mockery::mock(LoggerInterface::class);
+    $log->shouldReceive('warning')
+        ->once()
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'outlives the lock')
+            && $context['slot'] === 'beatrax.session.data_key.7');
+
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), $log);
+    $handle = $custodian->store(random_bytes(32));
+
+    $custodian->deleteSucceeds = false;
+    $custodian->setSucceeds = false;
+    $custodian->forget($handle);
+});
+
+it('says nothing when the delete worked', function (): void {
+    $log = Mockery::mock(LoggerInterface::class);
+    $log->shouldNotReceive('warning');
+
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7), $log);
+
+    $custodian->forget($custodian->store(random_bytes(32)));
+
+    expect($custodian->slots)->toBe([]);
 });
