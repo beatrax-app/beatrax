@@ -269,8 +269,8 @@ Apple and is *not* the blocker. These are:
 
 | Work | Size |
 |---|---|
-| Adopt the `mas` Electron distribution and a second electron-builder target; the signing hook injects `hardenedRuntime: true` unconditionally today | M |
-| New entitlement files: sandbox + `allow-jit` for the app, and exactly `app-sandbox` + `inherit` for the child — Apple aborts a child carrying any other sandbox entitlement | S |
+| ~~Adopt the `mas` Electron distribution and a second electron-builder target~~ — **done**. `scripts/nativephp_mac_app_store_lane.php` adds the block beside the Developer ID one, sandboxed and explicitly **not** hardened | — |
+| ~~New entitlement files~~ — **done**. `entitlements.mas.plist` and `entitlements.mas.inherit.plist`, the second exactly two keys long | — |
 | Move the interpreter from `Contents/Resources/build/php/` to `Contents/MacOS/`, where nested executables are required to live, and sign it with that pair | M |
 | Relocate the data path into the sandbox container, and move `.env` and `bootstrap/cache` out of the bundle, which is read-only on an installed store build. Existing direct-download ledgers do not follow into a container | L |
 | Rework file intake: a child process inherits only *static* rights, so PowerBox grants from an open panel do not reach the PHP side | M/L |
@@ -279,6 +279,18 @@ Apple and is *not* the blocker. These are:
 | Apple Distribution + Mac Installer Distribution identities instead of Developer ID; a `.pkg` rather than a `.dmg`; no notarisation on that lane | S+M |
 | Remove self-update on that channel — required, and Electron disables `autoUpdater` in `mas` builds anyway. Both off switches already exist | S/M |
 | Two-channel release engineering, and review risk on a bundled interpreter with no precedent found either way | M + unknown |
+
+#### What the store lane still needs from Apple, not from this repository
+
+Two artefacts exist only in the Apple Developer portal, and the build fails
+loudly without them rather than producing something unsubmittable:
+
+- a **Mac App Store provisioning profile** (`embedded.provisionprofile`). The
+  patch deliberately does not set `provisioningProfile`: defaulting a path
+  would turn a missing prerequisite into a confusing signing error.
+- a **Mac Installer Distribution** identity, for the `.pkg` the store takes in
+  place of a `.dmg`. `Apple Distribution` is already on this machine; the
+  installer certificate is a separate one.
 
 #### Reading a bundle instead of trusting the config
 
