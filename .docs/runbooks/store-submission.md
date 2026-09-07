@@ -357,6 +357,15 @@ sandboxed build cannot read the real home. A direct-download ledger does not
 follow a reader into the store build, and that is a migration story, not a
 runtime problem.
 
+That redirect is also why the data-path work is smaller than it was scoped.
+The shell sets `NATIVEPHP_STORAGE_PATH` to `join(app.getPath('userData'),
+'storage')` and `bootstrapCache` to `join(app.getPath('userData'), 'bootstrap',
+'cache')` — both already outside the read-only bundle, and `userData` derives
+from the Application Support directory the sandbox redirects. **Expected to
+relocate with no code change; measured for the interpreter, not yet for
+Electron.** Measuring it is the first step of the build lane, not an
+assumption to build on.
+
 A sandboxed process also needs a bundle identity or the kernel kills it at
 launch — SIGTRAP, exit 133, no output at all. The script refuses an empty
 result table for that reason: a run that produced nothing reads exactly like a
