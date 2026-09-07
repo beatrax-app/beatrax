@@ -7,10 +7,14 @@ namespace Modules\Sync\Internal\Merge;
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
+use Psr\Log\LoggerInterface;
 
 final readonly class OpLogQuarantine
 {
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private LoggerInterface $log,
+    ) {}
 
     // A rejected or fail-closed entry is routed here, never to the
     // authoritative op_log_entries table. The write is best-effort: a
@@ -34,9 +38,24 @@ final readonly class OpLogQuarantine
                 'raw_value' => $entry->value,
                 'created_at' => $now,
             ]);
-        } catch (\Throwable) {
-            // Never propagate a quarantine write failure — replay must
-            // continue regardless of whether the audit row lands.
+        } catch (\Throwable $e) {
+            // Never propagated: replay must continue whether or not the audit
+            // row lands. Never silent either — this row IS the record that the
+            // entry existed, so losing it loses the entry with nothing left
+            // anywhere to say an entry was ever dropped.
+            try {
+                $this->log->error('OpLogQuarantine: the quarantine row could not be written, so this entry was dropped with no record of it.', [
+                    'table' => $entry->table,
+                    'pk' => (string) $entry->pk,
+                    'device_id' => $entry->deviceId,
+                    'reason' => $reason->value,
+                    'exception' => $e::class,
+                ]);
+            } catch (\Throwable) {
+                // The second channel, and a full disk is where it fails too.
+                // Taking replay down here would turn one lost audit row into a
+                // merge that stopped.
+            }
         }
     }
 }

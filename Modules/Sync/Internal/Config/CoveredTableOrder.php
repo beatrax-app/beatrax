@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Config;
 
 use Illuminate\Database\DatabaseManager;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 // Orders the covered tables so parents are written before the rows that
@@ -20,6 +21,7 @@ final readonly class CoveredTableOrder
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
+        private ?LoggerInterface $log = null,
     ) {}
 
     // Parents first. Falls back to plain registry order when the schema
@@ -33,7 +35,14 @@ final readonly class CoveredTableOrder
 
         try {
             $dependencies = $this->dependencies($covered);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Plain registry order, which lists import_runs before transactions
+            // — the ordering this class exists to replace, and the one that made
+            // every rebuild delete a parent its children still referenced.
+            $this->log?->warning('CoveredTableOrder: the schema would not answer, so the tables fall back to plain registry order.', [
+                'exception' => $e::class,
+            ]);
+
             return $covered;
         }
 
@@ -123,9 +132,17 @@ final readonly class CoveredTableOrder
                     $columns[$column] = $target;
                 }
             }
-        } catch (Throwable) {
+        } catch (Throwable $e) {
             // Same posture as insertionOrder(): a schema that cannot be read
             // leaves the caller where it was rather than failing the write.
+
+            // Empty reads as "this table names no parent", so every id in an
+            // arriving payload keeps the value the peer minted for it.
+            $this->log?->warning('CoveredTableOrder: the schema would not answer, so this table is treated as naming no parent.', [
+                'table' => $table,
+                'exception' => $e::class,
+            ]);
+
             return [];
         }
 

@@ -193,7 +193,16 @@ final readonly class OpLogWriter implements OpCaptureSink
         // in keeping with seal() below.
         try {
             $row = (array) $this->db->connection()->table($table)->where('id', $pk)->first();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            // The create then travels with neither timestamp, which is the
+            // state the comment above records: a null created_at reaches the
+            // peer and no retention pass ever sweeps it.
+            $this->log->warning('OpLogWriter: could not read the row back, so this create is announced without its timestamps.', [
+                'table' => $table,
+                'pk' => (string) $pk,
+                'exception' => $e::class,
+            ]);
+
             return $fields;
         }
 
