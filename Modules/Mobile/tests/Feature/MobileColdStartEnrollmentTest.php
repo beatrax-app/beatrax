@@ -50,9 +50,13 @@ function fakeEnclaveVault(): BiometricKeyVault
             return true;
         }
 
-        public function clear(int $userId): void
+        public bool $refusesClear = false;
+
+        public function clear(int $userId): bool
         {
             $this->cleared = true;
+
+            return ! $this->refusesClear;
         }
     };
 }

@@ -8,6 +8,7 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Http\Livewire\ColdStartBiometricSettingsSection;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Psr\Log\LoggerInterface;
@@ -16,12 +17,13 @@ uses(RefreshDatabase::class);
 
 // The enclave is unreachable in the repo toolchain, so it is faked here and only
 // the orchestration and component wiring are exercised.
-function settingsVault(bool $available = true): BiometricKeyVault
+function settingsVault(bool $available = true, bool $clears = true): BiometricKeyVault
 {
-    return new class($available, app(BiometricKeyBlobCodec::class), app(LoggerInterface::class)) extends BiometricKeyVault
+    return new class($available, $clears, app(BiometricKeyBlobCodec::class), app(LoggerInterface::class)) extends BiometricKeyVault
     {
         public function __construct(
             private readonly bool $avail,
+            private readonly bool $clears,
             BiometricKeyBlobCodec $codec,
             LoggerInterface $log,
         ) {
@@ -47,7 +49,10 @@ function settingsVault(bool $available = true): BiometricKeyVault
             return true;
         }
 
-        public function clear(int $userId): void {}
+        public function clear(int $userId): bool
+        {
+            return $this->clears;
+        }
     };
 }
 
@@ -124,5 +129,21 @@ it('disables an active enrollment', function (): void {
     Livewire::test(ColdStartBiometricSettingsSection::class)
         ->assertSet('enrolled', true)
         ->call('disable')
-        ->assertSet('enrolled', false);
+        ->assertSet('enrolled', false)
+        ->assertSet('flashMessage', '');
+});
+
+// Off is off either way — the reader asked for that, and an enrolment left on
+// keeps offering an unlock they declined. Saying nothing about the key the
+// enclave kept is what tells them it was destroyed.
+it('turns the enrollment off and still says the enclave kept the key', function (): void {
+    $user = mobileColdStartSettingsUser('settings-disable-refused');
+    app()->bind(BiometricKeyVault::class, fn () => settingsVault(available: true, clears: false));
+    app(MobileLockGateway::class)->markColdStartEnrolled((int) $user->id, true);
+
+    Livewire::test(ColdStartBiometricSettingsSection::class)
+        ->assertSet('enrolled', true)
+        ->call('disable')
+        ->assertSet('enrolled', false)
+        ->assertSet('flashMessage', Lang::get('mobile::biometric.clear_refused'));
 });
