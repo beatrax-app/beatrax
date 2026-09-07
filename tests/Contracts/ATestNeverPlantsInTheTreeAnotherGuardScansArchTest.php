@@ -69,17 +69,106 @@ function basePathAssignments(string $source): array
     return $assigned;
 }
 
+// Which argument of each call names something this guard cares about. For most
+// of them it is the first, but `copy` and `rename` take a SOURCE first and a
+// destination second: reading argument one there flagged every fixture copied
+// OUT of the tree and saw nothing of a real copy INTO it. `rename` names both
+// because moving a file out of a scanned root races a walk exactly as badly as
+// moving one in.
+/** @return array<string, list<int>> function => the zero-indexed arguments that name a path */
+function plantingArgumentsByFunction(): array
+{
+    return [
+        'file_put_contents' => [0],
+        'mkdir' => [0],
+        'touch' => [0],
+        'symlink' => [1],
+        'link' => [1],
+        'unlink' => [0],
+        'rmdir' => [0],
+        'copy' => [1],
+        'rename' => [0, 1],
+    ];
+}
+
+// Splits a call's argument list at top-level commas, so base_path('a/b') counts
+// as one argument rather than being cut at the quote. Reads from just after the
+// opening parenthesis and stops at the matching close.
+/** @return list<string> */
+function plantingArgumentsAt(string $source, int $openParen): array
+{
+    $depth = 0;
+    $quote = null;
+    $current = '';
+    $arguments = [];
+
+    for ($i = $openParen; $i < strlen($source); $i++) {
+        $char = $source[$i];
+
+        if ($quote !== null) {
+            $current .= $char;
+            if ($char === $quote && $source[$i - 1] !== '\\') {
+                $quote = null;
+            }
+
+            continue;
+        }
+
+        if ($char === "'" || $char === '"') {
+            $quote = $char;
+            $current .= $char;
+
+            continue;
+        }
+
+        if ($char === '(' || $char === '[') {
+            $depth++;
+
+            // The scan starts at the function NAME, so everything up to its
+            // opening parenthesis is the name and not an argument.
+            if ($depth === 1) {
+                $current = '';
+
+                continue;
+            }
+        }
+
+        if ($char === ')' || $char === ']') {
+            $depth--;
+            if ($depth === 0) {
+                $arguments[] = $current;
+
+                return $arguments;
+            }
+        }
+
+        if ($char === ',' && $depth === 1) {
+            $arguments[] = $current;
+            $current = '';
+
+            continue;
+        }
+
+        $current .= $char;
+    }
+
+    return $arguments;
+}
+
 // Removing a file races a scan exactly as badly as adding one, so unlink and
 // rmdir stand here beside the creators. `fopen` deliberately does not: the mode
-// is its second argument and this reads only the first, so every fixture opened
-// for reading would report as a plant. `(?<![>:$\w])` keeps the ban to the
-// global-function form — $disk->copy() and File::copy() are unrelated methods
-// that merely share a name, and the \w half stops `link` matching `symlink`.
+// is its second argument and would report every fixture opened for reading as a
+// plant. `(?<![>:$\w])` keeps the ban to the global-function form — $disk->copy()
+// and File::copy() are unrelated methods that merely share a name, and the \w
+// half stops `link` matching `symlink`.
 /** @return list<string> one line per write, naming the file, its line and the root it plants in */
 function plantsInGuardedRoots(string $label, string $source): array
 {
+    $byFunction = plantingArgumentsByFunction();
+    $names = implode('|', array_keys($byFunction));
+
     $matches = PatternScan::setsWithOffsets(
-        '/(?<![>:$\w])(file_put_contents|mkdir|touch|copy|rename|symlink|link|unlink|rmdir)\s*\(\s*([^,)]+)/',
+        '/(?<![>:$\w])('.$names.')\s*\(/',
         $source,
     );
 
@@ -87,17 +176,21 @@ function plantsInGuardedRoots(string $label, string $source): array
     $offenders = [];
 
     foreach ($matches as $match) {
-        $target = plantTargetOf(trim($match[2][0]), $assigned);
+        $arguments = plantingArgumentsAt($source, (int) $match[0][1]);
 
-        // No tests/ carve-out: a module's own tests/ tree is walked by
-        // pinnedCrossModuleInternalImports, by the helper-name guard and by the
-        // testsuite-collection guard, so a file planted there races them too.
-        if ($target === null || ! in_array(explode('/', $target)[0], guardedSourceRoots(), true)) {
-            continue;
+        foreach ($byFunction[$match[1][0]] as $index) {
+            $target = plantTargetOf(trim($arguments[$index] ?? ''), $assigned);
+
+            // No tests/ carve-out: a module's own tests/ tree is walked by
+            // pinnedCrossModuleInternalImports, by the helper-name guard and by
+            // the testsuite-collection guard, so a file planted there races them.
+            if ($target === null || ! in_array(explode('/', $target)[0], guardedSourceRoots(), true)) {
+                continue;
+            }
+
+            $line = substr_count(substr($source, 0, (int) $match[0][1]), "\n") + 1;
+            $offenders[] = $label.':'.$line.' writes '.$target;
         }
-
-        $line = substr_count(substr($source, 0, (int) $match[0][1]), "\n") + 1;
-        $offenders[] = $label.':'.$line.' writes '.$target;
     }
 
     return $offenders;
@@ -154,27 +247,42 @@ it('goes red on a planted write and stays green on a temp-dir and an unguarded r
     $root = sys_get_temp_dir().'/planting-guard-'.bin2hex(random_bytes(6));
     mkdir($root, 0o777, true);
 
+    $duplicate = 'co'.'py';
+
     $plants = "<?php\n\$probe = base_path('Modules/Core/Internal/ScratchProbe.php');\n".$write."(\$probe, '<?php');\n";
     $deletes = "<?php\n".$remove."(base_path('resources/views/layouts/app.blade.php'));\n";
     $behaves = "<?php\n\$probe = sys_get_temp_dir().'/ScratchProbe.php';\n".$write."(\$probe, '<?php');\n"
         .$make."(base_path('storage/app/scratch'));\n";
 
+    // The two calls whose first argument is a SOURCE. Reading argument one for
+    // them saw the fixture being copied out of the tree and nothing of the one
+    // being copied in, which is the write that actually races a scan.
+    $copiesOut = "<?php\n\$into = sys_get_temp_dir().'/hook.php';\n"
+        .$duplicate."(base_path('scripts/nativephp_stage_build_resources.php'), \$into);\n";
+    $copiesIn = "<?php\n\$from = sys_get_temp_dir().'/hook.php';\n"
+        .$duplicate."(\$from, base_path('scripts/planted_hook.php'));\n";
+
     file_put_contents($root.'/PlantsTest.php', $plants);
     file_put_contents($root.'/DeletesTest.php', $deletes);
     file_put_contents($root.'/BehavesTest.php', $behaves);
+    file_put_contents($root.'/CopiesOutTest.php', $copiesOut);
+    file_put_contents($root.'/CopiesInTest.php', $copiesIn);
 
     try {
         expect(guardedRootPlantings($root)['offenders'])->toBe([
+            'CopiesInTest.php:3 writes scripts/planted_hook.php',
             'DeletesTest.php:2 writes resources/views/layouts/app.blade.php',
             'PlantsTest.php:3 writes Modules/Core/Internal/ScratchProbe.php',
         ], implode("\n  ", [
-            'The scan has to see a creation and a deletion under a guarded root, and see neither the',
-            'temp-dir write nor the one under storage/, which no guard walks.',
+            'The scan has to see a creation, a deletion and a copy INTO a guarded root, and see',
+            'none of: the temp-dir write, the one under storage/ which no guard walks, or the',
+            'fixture copied OUT of the tree, which reads nothing and races nothing.',
         ]));
     } finally {
-        unlink($root.'/PlantsTest.php');
-        unlink($root.'/DeletesTest.php');
-        unlink($root.'/BehavesTest.php');
+        foreach (['PlantsTest', 'DeletesTest', 'BehavesTest', 'CopiesOutTest', 'CopiesInTest'] as $fixture) {
+            unlink($root.'/'.$fixture.'.php');
+        }
+
         rmdir($root);
     }
 });
