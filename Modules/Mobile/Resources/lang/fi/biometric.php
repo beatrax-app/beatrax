@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Vahvista PIN-koodisi, niin toiminto otetaan käyttöön',
     'current_pin' => 'Nykyinen PIN-koodi',
     'enable' => 'Ota biometrinen avaus käyttöön',
+    'clear_refused' => 'Biometrinen avaus on pois päältä, mutta laite ei poistanut avainta suojatusta tallennustilasta. Käynnistä puhelin uudelleen ja yritä uudelleen.',
 
     'errors' => [
         'unavailable' => 'Biometrinen avaus ei ole käytettävissä tällä laitteella.',

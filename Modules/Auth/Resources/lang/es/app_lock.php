@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Tu clave de cifrado se ha vuelto a proteger con tu PIN nuevo.',
     'error_forgot_failed' => 'No se pudo restablecer el PIN — la clave de recuperación no está disponible.',
     'error_enable_first' => 'Activa primero el bloqueo con PIN antes de registrar la biometría.',
+    'error_vault_kept_key' => 'El desbloqueo biométrico está desactivado, pero este ordenador no ha borrado la clave guardada, así que aquí sigue habiendo una copia. Reinicia Beatrax y elimínala de nuevo.',
     'error_disable_blocked_by_encryption' => 'Tus notas y datos de contrapartes están cifrados con la clave que guarda este bloqueo de la app, así que desactivarlo los dejaría ilegibles. El bloqueo se queda activado; cambia tu PIN en su lugar.',
     'error_key_material_lost' => 'Este dispositivo ya no guarda la clave que abre tus datos cifrados, así que un PIN nuevo no volverá a hacerlos legibles. Restaura una copia de seguridad cifrada hecha mientras la clave aún funcionaba: este dispositivo no puede volver emparejándose, porque el emparejamiento necesita el bloqueo de la app que esa clave abre.',
     'error_recovery_wrap_stale' => 'Tu contraseña de la cuenta ya no abre este bloqueo de la app — cambió después de configurar el bloqueo. Tu PIN sigue funcionando, pero no queda nada detrás si lo olvidas. Vuelve a vincular tu contraseña de la cuenta ahora.',

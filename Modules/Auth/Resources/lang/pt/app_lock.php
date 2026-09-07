@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'A tua chave de encriptação foi novamente protegida com o novo PIN.',
     'error_forgot_failed' => 'Não foi possível repor o PIN — a chave de recuperação não está disponível.',
     'error_enable_first' => 'Ativa primeiro o bloqueio por PIN antes de registares a biometria.',
+    'error_vault_kept_key' => 'O desbloqueio biométrico está desligado, mas este computador não apagou a chave guardada, por isso ainda está aqui uma cópia. Reinicia o Beatrax e remove-a de novo.',
     'error_disable_blocked_by_encryption' => 'As tuas notas e os dados das contrapartes estão cifrados com a chave que este bloqueio da aplicação guarda, por isso desligá-lo deixaria tudo ilegível. O bloqueio fica ativo — muda antes o teu PIN.',
     'error_key_material_lost' => 'Este dispositivo já não guarda a chave que abre os teus dados cifrados, por isso um PIN novo não os volta a tornar legíveis. Restaura uma cópia de segurança cifrada feita enquanto a chave ainda funcionava — este dispositivo não consegue emparelhar para voltar atrás, porque o emparelhamento precisa do bloqueio da aplicação que essa chave abre.',
     'error_recovery_wrap_stale' => 'A palavra-passe da conta já não abre este bloqueio da aplicação — foi alterada depois de o bloqueio estar configurado. O teu PIN continua a funcionar, mas não fica nada por trás dele se o esqueceres. Volta a ligar a palavra-passe da conta agora.',

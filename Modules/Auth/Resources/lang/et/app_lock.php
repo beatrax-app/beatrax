@@ -70,6 +70,7 @@ return [
     'change_pin_success' => 'Sinu krüpteerimisvõti on uue PIN-koodiga uuesti kaitstud.',
     'error_forgot_failed' => 'PIN-koodi lähtestamine ebaõnnestus — taastevõti pole saadaval.',
     'error_enable_first' => 'Enne biomeetria registreerimist lülita PIN-lukk sisse.',
+    'error_vault_kept_key' => 'Biomeetriline avamine on väljas, aga see arvuti ei kustutanud salvestatud võtit, nii et koopia on siin ikka alles. Taaskäivita Beatrax ja eemalda see uuesti.',
     'error_disable_blocked_by_encryption' => 'Sinu märkmed ja vastaspoolte andmed on krüpteeritud võtmega, mida see rakenduse lukk hoiab, seega luku väljalülitamine muudaks need loetamatuks. Lukk jääb sisse — muuda selle asemel oma PIN-koodi.',
     'error_key_material_lost' => 'See seade ei hoia enam võtit, mis su krüpteeritud andmed avab, seega uus PIN-kood ei tee neid uuesti loetavaks. Taasta krüpteeritud varukoopia, mis tehti ajal, mil võti veel töötas — sidumine siit tagasi ei too, sest sidumine vajab rakenduse lukku, mille see võti avab.',
     'error_recovery_wrap_stale' => 'Sinu konto parool ei ava enam seda rakenduse lukku — see vahetati pärast luku seadistamist. PIN-kood töötab veel, aga selle taga pole enam midagi, kui selle unustad. Seo konto parool nüüd uuesti.',

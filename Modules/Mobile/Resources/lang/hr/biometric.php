@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Potvrdi PIN da uključiš',
     'current_pin' => 'Trenutačni PIN',
     'enable' => 'Uključi biometrijsko otključavanje',
+    'clear_refused' => 'Biometrijsko otključavanje je isključeno, ali uređaj nije uklonio ključ iz sigurnog spremnika. Ponovno pokreni telefon i pokušaj opet.',
 
     'errors' => [
         'unavailable' => 'Biometrijsko otključavanje nije dostupno na ovom uređaju.',

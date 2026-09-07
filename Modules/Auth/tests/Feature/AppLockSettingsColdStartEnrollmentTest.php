@@ -86,7 +86,7 @@ it('enrolls against the OS instead of dispatching the WebAuthn event', function 
     $this->actingAs(coldStartSettingsUser('cold-enrolls'));
     // setPin() provisions a fresh data key, so it clears the OS entry on its
     // way through; this suite is about the enrolment that follows it.
-    bindColdStartVault(available: true)->shouldReceive('forget');
+    bindColdStartVault(available: true)->shouldReceive('forget')->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('newPin', '123456')
@@ -115,7 +115,7 @@ it('says the app is locked when there is no live key to store', function (): voi
 
 it('reports a device that declines to store the key', function (): void {
     $this->actingAs(coldStartSettingsUser('cold-declines'));
-    bindColdStartVault(available: true, enrolls: false)->shouldReceive('forget');
+    bindColdStartVault(available: true, enrolls: false)->shouldReceive('forget')->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('newPin', '123456')
@@ -188,7 +188,7 @@ it('clears the OS entry when de-enrolling with the correct PIN', function (): vo
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'settings-pass');
 
     $vault = bindColdStartVault(available: true);
-    $vault->shouldReceive('forget')->once()->with($user->id);
+    $vault->shouldReceive('forget')->once()->with($user->id)->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('deenrollPin', '123456')

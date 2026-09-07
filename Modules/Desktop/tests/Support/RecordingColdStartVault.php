@@ -11,6 +11,8 @@ final class RecordingColdStartVault implements ColdStartVault
     /** @var list<int> */
     public array $forgotten = [];
 
+    public bool $refuseForget = false;
+
     public function isAvailable(): bool
     {
         return true;
@@ -31,8 +33,10 @@ final class RecordingColdStartVault implements ColdStartVault
         return null;
     }
 
-    public function forget(int $userId): void
+    public function forget(int $userId): bool
     {
         $this->forgotten[] = $userId;
+
+        return ! $this->refuseForget;
     }
 }

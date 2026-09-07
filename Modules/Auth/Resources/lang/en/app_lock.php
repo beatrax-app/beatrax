@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Your encryption key has been re-secured with your new PIN.',
     'error_forgot_failed' => 'PIN reset failed — the recovery key is unavailable.',
     'error_enable_first' => 'Enable the PIN lock first before enrolling biometrics.',
+    'error_vault_kept_key' => 'Biometric unlock is off, but this computer would not delete the stored key, so a copy is still here. Restart Beatrax and remove it again.',
     'error_disable_blocked_by_encryption' => 'Your notes and counterparty details are encrypted with the key this app lock holds, so turning the lock off would leave them unreadable. The lock stays on — change your PIN instead.',
     'error_key_material_lost' => 'This device no longer holds the key that opens your encrypted data, so a new PIN cannot make it readable again. Restore an encrypted backup made while the key still worked — this device cannot pair its way back, because pairing needs the app lock that key opens.',
     'error_recovery_wrap_stale' => 'Your account password no longer opens this app lock — it was changed after the lock was set up. Your PIN still works, but there is nothing behind it if you forget it. Re-link your account password now.',

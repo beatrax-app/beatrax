@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Apstipriniet PIN kodu, lai ieslēgtu',
     'current_pin' => 'Pašreizējais PIN kods',
     'enable' => 'Ieslēgt biometrisko atbloķēšanu',
+    'clear_refused' => 'Biometriskā atbloķēšana ir izslēgta, bet ierīce neizņēma atslēgu no drošās krātuves. Restartē tālruni un mēģini vēlreiz.',
 
     'errors' => [
         'unavailable' => 'Biometriskā atbloķēšana šajā ierīcē nav pieejama.',

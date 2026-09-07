@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Klucz szyfrowania został ponownie zabezpieczony nowym PIN-em.',
     'error_forgot_failed' => 'Reset PIN-u nie powiódł się — klucz odzyskiwania jest niedostępny.',
     'error_enable_first' => 'Najpierw włącz blokadę PIN, zanim zarejestrujesz biometrię.',
+    'error_vault_kept_key' => 'Odblokowanie biometryczne jest wyłączone, ale ten komputer nie usunął zapisanego klucza, więc kopia nadal tu jest. Uruchom Beatrax ponownie i usuń go jeszcze raz.',
     'error_disable_blocked_by_encryption' => 'Twoje notatki i dane kontrahentów są zaszyfrowane kluczem, który przechowuje ta blokada aplikacji, więc jej wyłączenie uczyniłoby je nieczytelnymi. Blokada zostaje włączona — zamiast tego zmień PIN.',
     'error_key_material_lost' => 'To urządzenie nie przechowuje już klucza otwierającego Twoje zaszyfrowane dane, więc nowy PIN nie sprawi, że staną się znowu czytelne. Przywróć zaszyfrowaną kopię zapasową zrobioną, gdy klucz jeszcze działał — parowanie tego urządzenia z powrotem nie uratuje, bo parowanie wymaga właśnie blokady aplikacji, którą ten klucz otwiera.',
     'error_recovery_wrap_stale' => 'Hasło do konta nie otwiera już tej blokady aplikacji — zostało zmienione po jej skonfigurowaniu. PIN nadal działa, ale jeśli go zapomnisz, nic za nim nie zostanie. Połącz hasło do konta na nowo.',

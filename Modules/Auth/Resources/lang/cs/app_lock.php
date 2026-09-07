@@ -66,6 +66,7 @@ return [
     'change_pin_success' => 'Tvůj šifrovací klíč je znovu zabezpečený novým PINem.',
     'error_forgot_failed' => 'Reset PINu se nezdařil — obnovovací klíč není dostupný.',
     'error_enable_first' => 'Než zaregistruješ biometriku, zapni nejdřív zámek PINem.',
+    'error_vault_kept_key' => 'Biometrické odemykání je vypnuté, ale tento počítač uložený klíč nesmazal, takže je tu jeho kopie pořád. Restartuj Beatrax a odeber ho znovu.',
     'error_disable_blocked_by_encryption' => 'Tvoje poznámky a údaje o protistranách jsou šifrované klíčem, který drží tento zámek aplikace, takže jeho vypnutí by je nechalo nečitelné. Zámek zůstává zapnutý — místo toho si změň PIN.',
     'error_key_material_lost' => 'Toto zařízení už nedrží klíč, který otevírá tvoje šifrovaná data, takže nový PIN je znovu čitelnými neudělá. Obnov šifrovanou zálohu pořízenou v době, kdy klíč ještě fungoval — spárováním se toto zařízení zpátky nedostane, protože párování potřebuje zámek aplikace, který ten klíč otevírá.',
     'error_recovery_wrap_stale' => 'Heslo k účtu už tento zámek aplikace neotevře — bylo změněno až po jeho nastavení. Tvůj PIN stále funguje, ale pokud ho zapomeneš, nezůstane za ním nic. Propoj heslo k účtu znovu.',

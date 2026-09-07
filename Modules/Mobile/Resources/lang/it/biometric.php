@@ -11,6 +11,7 @@ return [
     'confirm_pin_heading' => 'Conferma il PIN per attivare',
     'current_pin' => 'PIN attuale',
     'enable' => 'Attiva lo sblocco biometrico',
+    'clear_refused' => "Lo sblocco biometrico è disattivato, ma il dispositivo non ha rimosso la chiave dall'archivio sicuro. Riavvia il telefono e riprova.",
 
     'errors' => [
         'unavailable' => 'Lo sblocco biometrico non è disponibile su questo dispositivo.',
