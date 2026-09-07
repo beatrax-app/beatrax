@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Exceptions\SecureStorageException;
 use Native\Mobile\Facades\SecureStorage;
+use Psr\Log\LoggerInterface;
 
 /**
  * @see KeyCustodian
@@ -20,6 +21,11 @@ class SecureStorageKeyCustodian implements KeyCustodian
     // appended.
     private const string SLOT_PREFIX = 'beatrax.session.data_key.';
 
+    // Written over a slot the store would not delete. The colon is outside the
+    // base64 alphabet, so readThrough() decodes it to false and answers null —
+    // and on a device it is greppable as what it is.
+    private const string UNREADABLE_MARKER = 'beatrax:key-cleared';
+
     // Slot name => the key last read out of it. SensitiveColumnCodec resolves
     // the KEK once per decrypted VALUE, reaching release() before
     // GdkKeyringService can consult a memo keyed on a fingerprint OF that KEK
@@ -29,6 +35,7 @@ class SecureStorageKeyCustodian implements KeyCustodian
 
     public function __construct(
         private readonly CurrentUser $currentUser,
+        private readonly LoggerInterface $log,
     ) {}
 
     public function store(string $rawKey): string
@@ -95,7 +102,35 @@ class SecureStorageKeyCustodian implements KeyCustodian
             return;
         }
 
-        $this->nativeDelete($handle);
+        if ($this->nativeDelete($handle)) {
+            return;
+        }
+
+        $this->maskSlotThatWouldNotDelete($handle);
+    }
+
+    // A refused delete leaves the raw data key in the Keychain while the lock
+    // screen says the app is locked, and the session has just dropped the only
+    // handle naming it. Nothing would ever come back for it.
+
+    // Overwriting with bytes that will not decode is the second way to make the
+    // key unrecoverable: read() then answers null and the next unlock takes the
+    // PIN path, which is where a custodian that cannot produce a key belongs.
+    private function maskSlotThatWouldNotDelete(string $handle): void
+    {
+        if ($this->nativeGet($handle) === null) {
+            // Refused over an entry that was not there: no key survives it.
+            return;
+        }
+
+        if ($this->nativeSet($handle, self::UNREADABLE_MARKER)
+            && $this->nativeGet($handle) === self::UNREADABLE_MARKER) {
+            return;
+        }
+
+        $this->log->warning('SecureStorageKeyCustodian: the platform store would neither delete nor overwrite the session data key, so the unlocked key outlives the lock.', [
+            'slot' => $handle,
+        ]);
     }
 
     // A store that answers on a phone is a real one: the iOS entry is
@@ -146,12 +181,15 @@ class SecureStorageKeyCustodian implements KeyCustodian
         return is_string($value) ? $value : null;
     }
 
-    protected function nativeDelete(string $key): void
+    // Only a literal true is a success, as with set(): the native side answers
+    // false both for a refusal and for an entry that was not there, and this
+    // seam cannot tell them apart. Overridable in tests.
+    protected function nativeDelete(string $key): bool
     {
         if (! class_exists(SecureStorage::class)) {
-            return;
+            return false;
         }
 
-        SecureStorage::delete($key);
+        return SecureStorage::delete($key) === true;
     }
 }

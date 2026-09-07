@@ -32,8 +32,10 @@ class CountingSecureStorageCustodian extends SecureStorageKeyCustodian
         return $this->slots[$key] ?? null;
     }
 
-    protected function nativeDelete(string $key): void
+    protected function nativeDelete(string $key): bool
     {
         unset($this->slots[$key]);
+
+        return true;
     }
 }
