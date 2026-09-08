@@ -189,4 +189,15 @@ enum Locale: string
     {
         return self::tryFrom($code) instanceof self;
     }
+
+    // A platform spells its language as a BCP-47 tag — "nl-NL", "pt-BR",
+    // "en" — and the registry is keyed by the primary subtag alone. Region is
+    // dropped rather than matched: a Dutch reader in Belgium reads the same
+    // Dutch, and no shipped locale differs by region.
+    public static function fromTag(string $tag): ?string
+    {
+        $primary = mb_strtolower(explode('-', str_replace('_', '-', trim($tag)))[0]);
+
+        return self::isSupported($primary) ? $primary : null;
+    }
 }

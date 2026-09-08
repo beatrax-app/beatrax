@@ -1170,3 +1170,40 @@ with, win the merge, and move the older install's day boundary.
 takes effect without restarting the application. No shipped `.env` template
 pins `APP_TIMEZONE` — a pinned one ships the packager's day to every reader,
 which is what `Europe/Amsterdam` in the desktop template was doing.
+
+## The language an install opens in
+
+The switcher's "System" option is the absence of a stored choice, not a
+locale. `SetLocale` gathers the signals and `LocaleNegotiator::resolve()`
+ranks them, highest first:
+
+1. **The reader's stored choice** (`users.locale`, null for "System").
+2. **A guest's session choice**, for the login and setup surfaces where there
+   is no user row to hold one.
+3. **`Accept-Language`**, reduced to the best supported match.
+4. **The OS language**, through `SystemLanguageSource`.
+5. **English**, which is both the source and the fallback locale.
+
+Tier 4 exists because **neither mobile shell sends `Accept-Language`.**
+Measured on a Galaxy A51 running Dutch: the Android WebView forwards `Cookie`,
+`Accept`, `Upgrade-Insecure-Requests`, `User-Agent` and the `sec-ch-ua` hints
+into PHP and nothing else, so a phone whose owner set it to Dutch rendered
+every screen in English and "System" was a promise the platform never kept.
+`Native\Mobile\Facades\Device::getInfo()` already carries the answer —
+`Locale.getDefault().toLanguageTag()` on Android, `Locale.current` on iOS — so
+`NativeSystemLanguage` reads it there rather than a header. The port is bound
+only on a mobile runtime; everywhere else tier 4 is absent and tier 3 decides,
+exactly as before.
+
+### Why tier 3 must be able to answer "nothing"
+
+`Request::getPreferredLanguage($locales)` does **not** return null when the
+request named no language: given a supported set it returns that set's first
+entry, and the set is DEFAULT-first, so the answer is `en`. Passing that
+straight through would rank a header nobody sent above the device that has an
+answer, and tier 4 would be unreachable code. `SetLocale` therefore reads the
+raw header first and only negotiates when it is non-empty.
+
+The same asymmetry hides it from a naive test: Symfony's `Request::create()`
+defaults `HTTP_ACCEPT_LANGUAGE` to `en-us,en;q=0.5`, so the test client sends a
+header the phone never does. A case for the phone's condition has to strip it.

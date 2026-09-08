@@ -19,16 +19,25 @@ final readonly class LocaleNegotiator
 
     // Resolve the active UI locale in precedence order: an explicit per-user
     // choice wins, then a guest's session choice, then the browser's
-    // Accept-Language preference, and finally English. Each candidate is
-    // filtered through the supported set before it is used.
+    // Accept-Language preference, then the OS language on a shell that sends
+    // no such header, and finally English.
+
+    // The device arm ranks last of the signals because it is the coarsest: a
+    // browser that names a language has been told one, while the OS setting is
+    // only ever an inference about the reader in front of it.
     /**
      * @param  string|null  $userLocale  the authenticated user's stored override, or null for "auto"
      * @param  string|null  $sessionLocale  a guest's session-scoped choice, or null
      * @param  string|null  $browserLocale  the already-negotiated Accept-Language best match, or null
+     * @param  string|null  $deviceLocale  the OS language reduced to a supported code, or null
      */
-    public function resolve(?string $userLocale, ?string $sessionLocale, ?string $browserLocale): string
-    {
-        foreach ([$userLocale, $sessionLocale, $browserLocale] as $candidate) {
+    public function resolve(
+        ?string $userLocale,
+        ?string $sessionLocale,
+        ?string $browserLocale,
+        ?string $deviceLocale = null,
+    ): string {
+        foreach ([$userLocale, $sessionLocale, $browserLocale, $deviceLocale] as $candidate) {
             if ($candidate !== null && Locale::isSupported($candidate)) {
                 return $candidate;
             }
