@@ -45,8 +45,29 @@ final readonly class StagedExportHandover
     public function claim(string $token): ?array
     {
         $claims = $this->claims();
-        $claim = $claims[$token] ?? null;
+        $granted = $this->grantable($claims[$token] ?? null);
 
+        // Spent only where it is granted. Forgetting the token first would let
+        // a request that is refused take the owner's one download with it.
+        if ($granted === null) {
+            return null;
+        }
+
+        unset($claims[$token]);
+        $this->session->put(self::CLAIMS_KEY, $claims);
+
+        return $granted;
+    }
+
+    // Every reason a claim may not be honoured, decided before anything is
+    // spent: whose archive it is — a session outlives the account acting in it,
+    // and this file is a copy of one account's whole database — and whether it
+    // still names a file this application wrote.
+    /**
+     * @return array{path: string, name: string}|null
+     */
+    private function grantable(mixed $claim): ?array
+    {
         if (! is_array($claim)) {
             return null;
         }
@@ -55,23 +76,11 @@ final readonly class StagedExportHandover
         $name = is_string($claim['name'] ?? null) ? $claim['name'] : '';
         $owner = is_int($claim['user'] ?? null) ? $claim['user'] : 0;
 
-        // Whose archive it is, not just which session staged it. A session
-        // outlives the account acting in it, and this file is a copy of one
-        // account's whole database.
-        if ($owner !== $this->currentUser->id()) {
-            return null;
-        }
+        $granted = $owner === $this->currentUser->id()
+            && $name !== ''
+            && self::isStagedArchive($path);
 
-        if (! self::isStagedArchive($path) || $name === '') {
-            return null;
-        }
-
-        // Spent only where it is granted. Forgetting it first would let a
-        // request that is refused take the owner's one download with it.
-        unset($claims[$token]);
-        $this->session->put(self::CLAIMS_KEY, $claims);
-
-        return ['path' => $path, 'name' => $name];
+        return $granted ? ['path' => $path, 'name' => $name] : null;
     }
 
     // A claim names a file this application wrote into its own staging
