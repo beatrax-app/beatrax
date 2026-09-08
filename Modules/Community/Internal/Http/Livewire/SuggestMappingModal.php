@@ -62,6 +62,16 @@ final class SuggestMappingModal extends Component
         $this->dispatch('modal-show', name: 'suggest-mapping');
     }
 
+    // The sentence that stops a submit, or null when both fields are here.
+    private static function missingFieldMessage(string $pattern, string $name): ?string
+    {
+        if ($pattern === '') {
+            return Lang::get('community::suggest.errors.pattern_required');
+        }
+
+        return $name === '' ? Lang::get('community::suggest.errors.name_required') : null;
+    }
+
     public function submit(
         CurrentUser $currentUser,
         UserCountry $countries,
@@ -75,13 +85,10 @@ final class SuggestMappingModal extends Component
 
         $pattern = trim($this->pattern);
         $name = trim($this->name);
-        if ($pattern === '') {
-            $this->submitError = Lang::get('community::suggest.errors.pattern_required');
+        $missing = self::missingFieldMessage($pattern, $name);
 
-            return;
-        }
-        if ($name === '') {
-            $this->submitError = Lang::get('community::suggest.errors.name_required');
+        if ($missing !== null) {
+            $this->submitError = $missing;
 
             return;
         }
@@ -104,9 +111,20 @@ final class SuggestMappingModal extends Component
         $url = $urlBuilder->build($dto);
 
         try {
-            $openUrl($url);
+            $opened = $openUrl($url);
         } catch (InvalidArgumentException $e) {
             $logger->warning('SuggestMappingModal: the suggestion URL was refused.', SafeExceptionContext::describe($e));
+            $this->submitError = Lang::get('community::suggest.errors.browser_refused');
+
+            return;
+        }
+
+        // The contribution below is a record of a pull request the reader is
+        // about to open. A platform that did not take the URL means there is no
+        // such request, so counting one would credit them for work the app just
+        // failed to send them to.
+        if (! $opened) {
+            $logger->warning('SuggestMappingModal: the platform did not open the suggestion URL.');
             $this->submitError = Lang::get('community::suggest.errors.browser_refused');
 
             return;

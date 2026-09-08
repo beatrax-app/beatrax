@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use Livewire\Livewire;
+use Modules\Community\Tests\Support\RecordingUrlOpener;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 use Modules\Core\Public\Http\Livewire\UpdateCheckSettingsSection;
-use Native\Desktop\Contracts\Shell as ShellContract;
-use Native\Desktop\Fakes\ShellFake;
 
 // "Beatrax updates itself automatically once installed" is the desktop's
 // electron-updater chain. All three listeners behind it —
@@ -65,12 +65,12 @@ it('offers no route to the releases page on a phone, where that page is where th
 it('opens nothing when the releases endpoint is called on a phone anyway', function (): void {
     putenv('NATIVEPHP_PLATFORM=ios');
 
-    $shell = new ShellFake;
-    $this->app->instance(ShellContract::class, $shell);
+    $shell = new RecordingUrlOpener;
+    $this->app->instance(ExternalUrlOpener::class, $shell);
 
     Livewire::test(UpdateCheckSettingsSection::class)->call('openReleasesPage');
 
-    expect($shell->openExternalCalls)->toBe([]);
+    expect($shell->openCalls)->toBe([]);
 });
 
 // The section read `MobilePlatform::tryFrom()`, so a shell NativePHP names and
@@ -80,8 +80,8 @@ it('opens nothing when the releases endpoint is called on a phone anyway', funct
 it('treats a shell the enum does not model as the store build it is', function (): void {
     putenv('NATIVEPHP_PLATFORM=ipados');
 
-    $shell = new ShellFake;
-    $this->app->instance(ShellContract::class, $shell);
+    $shell = new RecordingUrlOpener;
+    $this->app->instance(ExternalUrlOpener::class, $shell);
 
     Livewire::test(UpdateCheckSettingsSection::class)
         ->assertSet('onPhone', true)
@@ -93,7 +93,7 @@ it('treats a shell the enum does not model as the store build it is', function (
         ->call('toggle')
         ->assertSet('enabled', true);
 
-    expect($shell->openExternalCalls)->toBe([])
+    expect($shell->openCalls)->toBe([])
         ->and($this->reader->fresh()->auto_update_check_enabled)->not->toBeFalse();
 });
 

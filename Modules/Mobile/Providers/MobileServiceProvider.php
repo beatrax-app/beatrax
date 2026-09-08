@@ -17,6 +17,7 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\DeviceNameSource;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\CheckPermissionsCommand;
@@ -44,6 +45,7 @@ use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 use Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
+use Modules\Mobile\Internal\Native\MobileUrlOpener;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
 use Modules\Mobile\Internal\Notifications\NativeNotificationConsent;
 use Modules\Mobile\Internal\Notifications\NativeNotificationGrantState;
@@ -135,6 +137,14 @@ final class MobileServiceProvider extends ServiceProvider
         // so the lock screen asks one question on every platform.
         if (class_exists('Beatrax\BiometricVault\Facades\BiometricVault') && UserDataPathService::isMobileRuntime()) {
             $this->app->singleton(ColdStartVault::class, MobileColdStartVault::class);
+        }
+
+        // A phone was the one platform that could not open a URL at all: the
+        // seam was typed by the desktop package the mobile Composer root does
+        // not install, so asking for an opener was a fatal rather than a
+        // no-op. Browser.Open answers whether the OS took it.
+        if (class_exists('Native\Mobile\Facades\Browser') && UserDataPathService::isMobileRuntime()) {
+            $this->app->singleton(ExternalUrlOpener::class, MobileUrlOpener::class);
         }
     }
 

@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
+use Modules\Community\Tests\Support\RecordingUrlOpener;
+use Modules\Core\Public\Contracts\ExternalUrlOpener;
 use Modules\Core\Public\Enums\ExternalUrlRefusal;
-use Native\Desktop\Contracts\Shell as ShellContract;
-use Native\Desktop\Fakes\ShellFake;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 
@@ -28,9 +28,9 @@ function makeRecorderLogger(): LoggerInterface
 }
 
 beforeEach(function (): void {
-    $this->shell = new ShellFake;
+    $this->shell = new RecordingUrlOpener;
     $this->logger = makeRecorderLogger();
-    $this->app->instance(ShellContract::class, $this->shell);
+    $this->app->instance(ExternalUrlOpener::class, $this->shell);
     $this->app->instance(LoggerInterface::class, $this->logger);
 });
 
@@ -40,7 +40,7 @@ it('launches the system browser for a valid https://github.com URL', function ()
 
     $action('https://github.com/beatrax-app/beatrax/compare/main...suggest-abc?expand=1&body=foo');
 
-    expect($this->shell->openExternalCalls)->toContain(
+    expect($this->shell->openCalls)->toContain(
         'https://github.com/beatrax-app/beatrax/compare/main...suggest-abc?expand=1&body=foo'
     );
 });
@@ -51,7 +51,7 @@ it('rejects an http:// URL', function (): void {
 
     expect(fn () => $action('http://github.com/beatrax-app/beatrax/compare/main'))
         ->toThrow(InvalidArgumentException::class);
-    expect($this->shell->openExternalCalls)->toBe([]);
+    expect($this->shell->openCalls)->toBe([]);
 });
 
 it('rejects an https URL with a non-allow-listed host', function (): void {
@@ -60,7 +60,7 @@ it('rejects an https URL with a non-allow-listed host', function (): void {
 
     expect(fn () => $action('https://evil.example.com/path'))
         ->toThrow(InvalidArgumentException::class);
-    expect($this->shell->openExternalCalls)->toBe([]);
+    expect($this->shell->openCalls)->toBe([]);
 });
 
 it('rejects a javascript: URL', function (): void {
@@ -69,7 +69,7 @@ it('rejects a javascript: URL', function (): void {
 
     expect(fn () => $action("javascript:alert('XSS')"))
         ->toThrow(InvalidArgumentException::class);
-    expect($this->shell->openExternalCalls)->toBe([]);
+    expect($this->shell->openCalls)->toBe([]);
 });
 
 it('logs the opened page without the query string, which carries the statement description', function (): void {
@@ -93,7 +93,7 @@ it('refuses an allow-listed host reached on a port that is not the web', functio
 
     expect(fn () => $action('https://github.com:4000/beatrax-app/beatrax'))
         ->toThrow(InvalidArgumentException::class);
-    expect($this->shell->openExternalCalls)->toBe([]);
+    expect($this->shell->openCalls)->toBe([]);
 });
 
 it('refuses an authority that reads as the allow-listed host and resolves elsewhere', function (): void {
@@ -102,7 +102,7 @@ it('refuses an authority that reads as the allow-listed host and resolves elsewh
 
     expect(fn () => $action('https://github.com@evil.example.com/beatrax-app'))
         ->toThrow(InvalidArgumentException::class);
-    expect($this->shell->openExternalCalls)->toBe([]);
+    expect($this->shell->openCalls)->toBe([]);
 });
 
 it('names the refusal it made, never one the checks before it ruled out', function (): void {
