@@ -46,6 +46,7 @@
         "Native\\Mobile\\Providers\\ScannerServiceProvider",
         "Native\\Mobile\\Providers\\SecureStorageServiceProvider",
         "Native\\Mobile\\Scanner",
+        "Native\\Mobile\\Testing\\FakeBridge",
         "Native\\Mobile\\Testing\\Native",
         "Native\\Mobile\\UI\\NativeUIServiceProvider",
         "NativePHP\\BackgroundTasks\\BackgroundTasksServiceProvider",
