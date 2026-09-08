@@ -6,6 +6,7 @@ namespace Modules\Core\Providers;
 
 use App\Models\User;
 use App\Support\SampleData\SampleDatasetSeeder;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\MigrationsEnded;
@@ -25,6 +26,7 @@ use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Internal\Encryption\ProductionKdfCost;
 use Modules\Core\Internal\Http\Livewire\HelpDataLocations;
 use Modules\Core\Internal\Http\Livewire\SafeEnumSynth;
+use Modules\Core\Internal\Listeners\ApplyInstallTimezoneOffTheRequestPath;
 use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
 use Modules\Core\Internal\Listeners\ForgetNavCountsOnWrite;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
@@ -145,6 +147,14 @@ final class CoreServiceProvider extends ServiceProvider
         $app = $this->app;
         $dispatcher = $app->make(Dispatcher::class);
         $dispatcher->listen(JobProcessing::class, ClearGuardBetweenJobs::class);
+
+        // The zone a DATETIME column is written in, for the two contexts the
+        // `web` group cannot reach. Without it a scheduled write and a
+        // request-scoped write on ONE install land in two frames, and
+        // created_at is what the merge reads to tell a collision from a replay.
+
+        $dispatcher->listen(CommandStarting::class, ApplyInstallTimezoneOffTheRequestPath::class);
+        $dispatcher->listen(JobProcessing::class, ApplyInstallTimezoneOffTheRequestPath::class);
 
         // Same reasoning one layer down: the sidebar badge invalidation is
         // taken from the statement, because the eight modules that write those
