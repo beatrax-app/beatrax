@@ -178,10 +178,15 @@
             <span class="privacy-pill-dot" aria-hidden="true"></span>
             {{ $privacyLine }}
         </span>
+        {{-- The Livewire hop is the Electron bundle's only, and it is a
+             substitute for the anchor rather than an addition to it: preventing
+             the default everywhere left the link dead on every runtime whose
+             opener cannot open anything, which is a phone and a browser tab.
+             A phone hands target="_blank" to the system browser on its own. --}}
         <a
             class="wiz-help-link tap-link"
             href="{{ $helpUrl }}"
-            wire:click.prevent="openHelp"
+            @if ($shellWouldNavigateAway) wire:click.prevent="openHelp" @endif
             target="_blank"
             rel="noopener noreferrer"
             aria-label="{{ Lang::get('onboarding::wizard.need_help_aria') }}"
