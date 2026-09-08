@@ -92,3 +92,29 @@ it('never shows the reader what the refusing action said', function (): void {
         ->and($dutch)->not->toContain('OpenExternalUrlAction')
         ->and($dutch)->not->toContain('evil.example.com');
 });
+
+// The contribution recorded here stands for a pull request the reader is about
+// to open. A platform that did not take the URL means there is no such request,
+// so counting one would credit them for work the app just failed to send them
+// to — and before the opener answered at all, the phone never even got here.
+it('records no contribution when the platform did not take the URL', function (): void {
+    $refusing = new RecordingUrlOpener(takesTheUrl: false);
+    $this->app->instance(ExternalUrlOpener::class, $refusing);
+
+    $captured = [];
+    /** @var Dispatcher $events */
+    $events = $this->app->make(Dispatcher::class);
+    $events->listen(MysteryMerchantSubmitted::class, static function (MysteryMerchantSubmitted $event) use (&$captured): void {
+        $captured[] = $event;
+    });
+
+    Livewire::test(SuggestMappingModal::class)
+        ->dispatch('suggest-mapping:open', rawDescription: 'SHELL*PIETER*')
+        ->set('name', 'Shell Pieter')
+        ->call('submit')
+        ->assertNotDispatched('modal-close')
+        ->assertSet('submitError', Lang::get('community::suggest.errors.browser_refused'));
+
+    expect($refusing->openCalls)->toHaveCount(1)
+        ->and($captured)->toBe([]);
+});

@@ -62,6 +62,16 @@ final class SuggestMappingModal extends Component
         $this->dispatch('modal-show', name: 'suggest-mapping');
     }
 
+    // The sentence that stops a submit, or null when both fields are here.
+    private static function missingFieldMessage(string $pattern, string $name): ?string
+    {
+        if ($pattern === '') {
+            return Lang::get('community::suggest.errors.pattern_required');
+        }
+
+        return $name === '' ? Lang::get('community::suggest.errors.name_required') : null;
+    }
+
     public function submit(
         CurrentUser $currentUser,
         UserCountry $countries,
@@ -75,13 +85,10 @@ final class SuggestMappingModal extends Component
 
         $pattern = trim($this->pattern);
         $name = trim($this->name);
-        if ($pattern === '') {
-            $this->submitError = Lang::get('community::suggest.errors.pattern_required');
+        $missing = self::missingFieldMessage($pattern, $name);
 
-            return;
-        }
-        if ($name === '') {
-            $this->submitError = Lang::get('community::suggest.errors.name_required');
+        if ($missing !== null) {
+            $this->submitError = $missing;
 
             return;
         }
