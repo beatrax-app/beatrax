@@ -209,9 +209,13 @@ final class SetupWizard extends Component
         return $this->redirect('/');
     }
 
-    // Wired to wire:click.prevent so Electron does not navigate the wizard window
-    // away from /setup-wizard. The URL still clears OpenExternalUrlAction's
-    // https + host allow-list before NativePHP's shell contract sees it.
+    // Reached only from the Electron bundle, where the anchor's own target would
+    // navigate the wizard window away from /setup-wizard. Everywhere else the
+    // anchor is left alone: a phone hands target="_blank" to the system browser
+    // — measured on an iPhone 12 mini, Safari came up and the app suspended.
+
+    // The URL still clears OpenExternalUrlAction's https and host allow-list
+    // before any shell sees it.
     public function openHelp(
         OpenExternalUrlAction $opener,
         ConfigRepository $config,
@@ -236,6 +240,7 @@ final class SetupWizard extends Component
     {
         return $views->make('onboarding::livewire.setup-wizard', [
             'helpUrl' => self::helpUrl($config),
+            'shellWouldNavigateAway' => $config->get('nativephp-internal.running') === true,
         ]);
     }
 
