@@ -13,6 +13,8 @@ use Throwable;
 // everything above it deals in booleans.
 final readonly class NativeShareSheet
 {
+    private const string SHARE_FUNCTION = 'Share.File';
+
     // False on web, CI and desktop: nativephp/mobile installs only into the
     // mobile-app root, so the facade is simply absent from a desktop vendor
     // tree and a caller must be able to ask without triggering an autoload.
@@ -26,21 +28,46 @@ final readonly class NativeShareSheet
     // lets the caller tell the reader their file was not saved.
     public function canShareFiles(): bool
     {
-        return function_exists('nativephp_can') && nativephp_can('Share.File');
+        return function_exists('nativephp_can') && nativephp_can(self::SHARE_FUNCTION);
     }
 
-    // The in-method class_exists() re-check is load-bearing: PHPStan narrowing
-    // is scope-local, so it has to sit in the same method as the Share:: call.
+    // Deliberately not Share::file(): the facade is typed void, so the answer
+    // the shell gives is dropped inside it and a sheet that never opened — a
+    // cancel, a provider that refused, a file it could not read — came back
+    // indistinguishable from a share that happened.
+
+    // The payload mirrors Native\Mobile\Share::file() key for key, which is
+    // the coupling this buys, and a guard pins the facade as unused across the
+    // tree so a vendor that renames a key fails a test rather than going
+    // quietly nowhere.
     public function file(string $shareTitle, string $shareMessage, string $path): bool
     {
-        if (! class_exists(Share::class)) {
+        $payload = self::payloadFor($shareTitle, $shareMessage, $path);
+
+        return $payload !== null && $this->answerTo($payload);
+    }
+
+    // Null where the payload will not encode, which is the same answer as a
+    // refusal to the caller: nothing was handed anywhere.
+    private static function payloadFor(string $shareTitle, string $shareMessage, string $path): ?string
+    {
+        $encoded = json_encode([
+            'title' => $shareTitle,
+            'message' => $shareMessage,
+            'filePath' => $path,
+        ]);
+
+        return $encoded === false ? null : $encoded;
+    }
+
+    private function answerTo(string $payload): bool
+    {
+        if (! function_exists('nativephp_call')) {
             return false;
         }
 
         try {
-            Share::file($shareTitle, $shareMessage, $path);
-
-            return true;
+            return BridgeAnswer::saysItSucceeded(nativephp_call(self::SHARE_FUNCTION, $payload));
         } catch (Throwable) {
             return false;
         }

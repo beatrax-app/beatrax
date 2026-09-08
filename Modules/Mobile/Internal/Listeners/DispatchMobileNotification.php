@@ -6,6 +6,7 @@ namespace Modules\Mobile\Internal\Listeners;
 
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Internal\Native\BridgeAnswer;
 use Modules\Mobile\Internal\Notifications\NotificationGrantRecord;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
@@ -71,6 +72,21 @@ class DispatchMobileNotification
             $this->log->warning('Mobile notification was not delivered: the native bridge returned nothing.', [
                 'notification_id' => $notificationId,
                 'bridge_available' => function_exists('nativephp_call'),
+            ]);
+
+            return;
+        }
+
+        // An answer is not the same as a delivery. The router builds a refusal
+        // as {"status":"error",...} on both platforms — an unregistered
+        // function name answers with one — and that is a non-empty string, so
+        // it reached the hand-off line below as evidence of a delivery.
+        $refusal = BridgeAnswer::refusal($result);
+
+        if ($refusal !== null) {
+            $this->log->warning('Mobile notification was refused by the native bridge.', [
+                'notification_id' => $notificationId,
+                'refusal' => mb_substr($refusal, 0, 200),
             ]);
 
             return;
