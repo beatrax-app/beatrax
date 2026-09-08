@@ -11,6 +11,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Clock\RemoteClockAdvance;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
@@ -164,6 +165,7 @@ final readonly class OpLogReplayer
         $this->searchRefresher = new SearchIndexRefresher(
             $searchWriter,
             $log,
+            $this->resolveFromContainer(SearchIndexRepairContract::class),
         );
         $this->remoteClock = new RemoteClockAdvance($db);
         $this->rowHistory = new RowHistoryRehydration(new PersistedOpLogEntries($db), $this->verifier);

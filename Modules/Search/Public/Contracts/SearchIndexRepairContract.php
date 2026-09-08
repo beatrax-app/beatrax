@@ -20,4 +20,13 @@ interface SearchIndexRepairContract
     // write. Returns how many were rebuilt. The caller MUST hold key material
     // — a keyless run refuses each row again and rebuilds nothing.
     public function repair(int $userId, ?string $keyringFingerprint): int;
+
+    // Records that this row's index doc is owed, so the drain above collects
+    // it. A replay whose index write threw used to end at a log line naming
+    // `search:reindex`, which is a console command — and neither a phone nor a
+    // desktop window has a console to run it in.
+
+    // Idempotent by coordinate: the queue holds one row per transaction, so a
+    // failure reported twice is one debt.
+    public function owe(int $userId, int $transactionId): void;
 }

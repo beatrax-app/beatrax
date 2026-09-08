@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Merge;
 
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Psr\Log\LoggerInterface;
 
@@ -23,11 +24,12 @@ final readonly class SearchIndexRefresher
     // Public because the rebuild reaches the same failure by another route,
     // and two spellings of one sentence are two recoveries a reader has to
     // recognise as the same one.
-    public const string STALE = 'SearchIndexRefresher: the search index could not be brought in line with a row the replay applied; the row is stored but will not be found by search until search:reindex runs.';
+    public const string STALE = 'SearchIndexRefresher: the search index could not be brought in line with a row the replay applied; the row is stored, and its index doc is owed to the repair queue that drains on the next unlocked request.';
 
     public function __construct(
         private ?SearchIndexWriterContract $searchWriter = null,
         private ?LoggerInterface $log = null,
+        private ?SearchIndexRepairContract $repairs = null,
     ) {}
 
     public function refresh(SearchDocumentRows $documents, int $userId): void
@@ -60,13 +62,25 @@ final readonly class SearchIndexRefresher
      */
     private function reportStaleIndex(int $transactionId, string $operation, int $userId, \Throwable $e): void
     {
+        // Recorded before it is reported, because the record is the recovery
+        // and the line is only the account of it. "A stale index recovers on
+        // the next write" holds for a row someone edits again; a row that
+        // arrived by sync may never be written here again at all.
+        try {
+            $this->repairs?->owe($userId, $transactionId);
+        } catch (\Throwable) {
+            // The queue is on the same disk as the index that just failed, so
+            // it can fail for the same reason. The warning below is then the
+            // only account there is, which is the state this replaces.
+        }
+
         try {
             $this->log?->warning(self::STALE, [
                 'table' => 'transactions',
                 'pk' => (string) $transactionId,
                 'ftsOperation' => $operation,
                 'userId' => $userId,
-                'recoverWith' => 'search:reindex',
+                'recoverWith' => $this->repairs === null ? 'search:reindex' : 'the repair queue, drained on the next unlocked request',
                 ...SafeExceptionContext::describe($e),
             ]);
         } catch (\Throwable) {

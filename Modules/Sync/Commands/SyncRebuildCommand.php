@@ -9,6 +9,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Services\OwnerAccount;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -120,6 +121,9 @@ final class SyncRebuildCommand extends Command
             registry: $registry,
             searchWriter: $this->container->bound(SearchIndexWriterContract::class)
                 ? $this->container->make(SearchIndexWriterContract::class)
+                : null,
+            searchRepairs: $this->container->bound(SearchIndexRepairContract::class)
+                ? $this->container->make(SearchIndexRepairContract::class)
                 : null,
         );
     }

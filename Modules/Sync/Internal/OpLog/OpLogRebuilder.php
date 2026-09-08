@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
@@ -49,6 +50,10 @@ final class OpLogRebuilder
         private readonly ?SearchIndexWriterContract $searchWriter = null,
         ?PersistedOpLogEntries $persistedEntries = null,
         private readonly ?LoggerInterface $log = null,
+        // Last, and named at every call site: the positional callers in the
+        // suite pass eight arguments, so a parameter added in the middle
+        // silently becomes someone else's logger.
+        private readonly ?SearchIndexRepairContract $searchRepairs = null,
     ) {
         $this->persistedEntries = $persistedEntries ?? new PersistedOpLogEntries($db);
         // Built here when absent rather than left null. The container leaves
@@ -144,18 +149,27 @@ final class OpLogRebuilder
             // One unindexable row must not stop the rest being indexed:
             // a stale index recovers, a half-indexed sweep does not.
 
-            // Recovers on the next rebuild, that is — until then the row is
-            // findable under words it no longer holds, or not findable at all.
+            // Owed to the same queue the merge path uses, so the recovery is
+            // the drain rather than a rebuild nobody has a reason to run
+            // again. Until it drains the row is findable under words it no
+            // longer holds, or not findable at all.
 
             // The same sentence and recovery the merge path reports, and
             // wrapped for the same reason it is: one failure, one route each.
+            try {
+                $this->searchRepairs?->owe($userId, $transactionId);
+            } catch (\Throwable) {
+                // Same disk as the index that just failed; the warning below
+                // is then the only account, which is the state this replaces.
+            }
+
             try {
                 $this->log?->warning(SearchIndexRefresher::STALE, [
                     'table' => 'transactions',
                     'pk' => (string) $transactionId,
                     'ftsOperation' => $survives ? 'upsert' : 'delete',
                     'userId' => $userId,
-                    'recoverWith' => 'search:reindex',
+                    'recoverWith' => $this->searchRepairs === null ? 'search:reindex' : 'the repair queue, drained on the next unlocked request',
                     ...SafeExceptionContext::describe($e),
                 ]);
             } catch (\Throwable) {
