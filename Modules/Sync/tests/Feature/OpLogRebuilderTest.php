@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -487,4 +488,45 @@ it('says so when a rebuilt row could not be re-indexed', function (): void {
     // makes: one unindexable row must not stop the rest being indexed.
     expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
         ->toBeGreaterThan(0, 'the log is untouched by a rebuild, so this proves the pass completed');
+});
+
+// The rebuild route owes the same queue the merge route does. Before this, its
+// only account was a warning naming `search:reindex` — a console command, and
+// the rebuild is reachable from a device that has no console at all.
+it('owes the index doc of a row the rebuild could not re-index', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->db;
+    [$userId, , $txnId] = rebuildSeedBase($db, 'reindex-owed');
+
+    $deviceKeys = ['device-rebuild' => $this->pkHex];
+    $replayer = new OpLogReplayer($db, $deviceKeys);
+
+    $replayer->replay([
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'transactions', $txnId, 'note', json_encode('hello', JSON_THROW_ON_ERROR), OpType::Set, 1000),
+    ], $userId);
+
+    $searchWriter = Mockery::mock(SearchIndexWriterContract::class);
+    $searchWriter->shouldReceive('upsertForTransaction')->andThrow(new RuntimeException('the index would not take it'));
+    $searchWriter->shouldReceive('deleteForTransaction')->andThrow(new RuntimeException('the index would not take it'));
+
+    /** @var SearchIndexRepairContract $repairs */
+    $repairs = app(SearchIndexRepairContract::class);
+
+    /** @var SearchIndexWriterContract $searchWriter */
+    $rebuilder = new OpLogRebuilder(
+        $db,
+        $replayer,
+        new MergeRulesRegistry,
+        ['transactions'],
+        null,
+        $searchWriter,
+        null,
+        null,
+        $repairs,
+    );
+
+    $rebuilder->rebuild($userId);
+
+    expect($db->connection()->table('search_index_repairs')->where('transaction_id', $txnId)->exists())
+        ->toBeTrue('the rebuild left the row unfindable with nothing owed for it');
 });
