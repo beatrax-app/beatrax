@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\JobProcessing;
 use Modules\Core\Public\Support\HostTimezone;
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 uses(RefreshDatabase::class);
 
@@ -34,7 +34,7 @@ afterEach(function (): void {
 });
 
 it('binds the zone before a console command writes anything', function (): void {
-    event(new CommandStarting('fx:refresh-rates', new ArrayInput([]), new NullOutput));
+    event(new CommandStarting('fx:refresh-rates', new ArrayInput([]), new BufferedOutput));
 
     expect(config('app.timezone'))->toBe('Europe/Amsterdam')
         ->and(date_default_timezone_get())->toBe('Europe/Amsterdam');
@@ -58,7 +58,7 @@ it('binds the zone before a queued job writes anything', function (): void {
 // the packager's zone into a cached config — the pin no shipped bundle
 // carries, arriving by the back door.
 it('leaves the configuration alone for the commands that write it to disk', function (string $command): void {
-    event(new CommandStarting($command, new ArrayInput([]), new NullOutput));
+    event(new CommandStarting($command, new ArrayInput([]), new BufferedOutput));
 
     expect(config('app.timezone'))->toBe('UTC');
 })->with(['config:cache', 'optimize']);
@@ -68,7 +68,7 @@ it('leaves the configuration alone for the commands that write it to disk', func
 it('moves the clock a background writer actually reads', function (): void {
     $utc = now()->format('H');
 
-    event(new CommandStarting('recurring:detect', new ArrayInput([]), new NullOutput));
+    event(new CommandStarting('recurring:detect', new ArrayInput([]), new BufferedOutput));
 
     $resolved = now()->format('H');
 
