@@ -91,6 +91,9 @@ it('reports the stale index at warning, naming the row, the operation and the wa
     $documents->rowWritten('transactions', 7, 3);
     $documents->rowDeleted('transactions', [9]);
 
+    // Built without a repair queue, so `recoverWith` still names the console
+    // command: the sentence describes the queue that drains these, and the
+    // context says what to do where no queue was supplied.
     (new SearchIndexRefresher(ftsRefusingWriter(), $log))->refresh($documents, 3);
 
     /** @var list<array{level: string, message: string, context: array<string, mixed>}> $records */
@@ -98,7 +101,8 @@ it('reports the stale index at warning, naming the row, the operation and the wa
 
     expect($records)->toHaveCount(2)
         ->and($records[0]['level'])->toBe('warning')
-        ->and($records[0]['message'])->toContain('search:reindex')
+        ->and($records[0]['message'])->toContain('owed to the repair queue')
+        ->and($records[0]['context']['recoverWith'])->toBe('search:reindex')
         ->and($records[0]['context']['pk'])->toBe('7')
         ->and($records[0]['context']['ftsOperation'])->toBe('upsert')
         ->and($records[0]['context']['userId'])->toBe(3)

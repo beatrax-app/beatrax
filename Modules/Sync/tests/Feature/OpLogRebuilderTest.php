@@ -475,7 +475,7 @@ it('says so when a rebuilt row could not be re-indexed', function (): void {
     $log = Mockery::mock(LoggerInterface::class)->shouldIgnoreMissing();
     $log->shouldReceive('warning')
         ->atLeast()->once()
-        ->withArgs(fn (string $message): bool => str_contains($message, 'will not be found by search until search:reindex runs'));
+        ->withArgs(fn (string $message): bool => str_contains($message, 'owed to the repair queue'));
 
     /** @var SearchIndexWriterContract $searchWriter */
     /** @var LoggerInterface $log */
