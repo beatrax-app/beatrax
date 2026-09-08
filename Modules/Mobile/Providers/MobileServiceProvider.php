@@ -18,6 +18,7 @@ use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\DeviceNameSource;
 use Modules\Core\Public\Contracts\ExternalUrlOpener;
+use Modules\Core\Public\Contracts\SystemLanguageSource;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\CheckPermissionsCommand;
@@ -47,6 +48,7 @@ use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\MobileUrlOpener;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
+use Modules\Mobile\Internal\Native\NativeSystemLanguage;
 use Modules\Mobile\Internal\Notifications\NativeNotificationConsent;
 use Modules\Mobile\Internal\Notifications\NativeNotificationGrantState;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
@@ -104,12 +106,13 @@ final class MobileServiceProvider extends ServiceProvider
             );
         }
 
-        // Two facts only the device itself knows: its name, and whether the
-        // OS is in dark mode. Both have shell-wide fallbacks that are simply
-        // wrong on a phone — "Linux" as a device name, and a light first
-        // paint on a dark device.
+        // Three facts only the device itself knows: its name, its language,
+        // and whether the OS is in dark mode. Each has a shell-wide fallback
+        // that is simply wrong on a phone — "Linux" as a device name, English
+        // as the language, and a light first paint on a dark device.
         if (class_exists('Native\Mobile\Facades\Device') && UserDataPathService::isMobileRuntime()) {
             $this->app->singleton(DeviceNameSource::class, NativeDeviceName::class);
+            $this->app->singleton(SystemLanguageSource::class, NativeSystemLanguage::class);
         }
 
         // NO OsThemeSignal binding on mobile, deliberately. The bridge is read
