@@ -46,6 +46,7 @@ use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 use Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
+use Modules\Mobile\Internal\Native\AndroidHostTimezone;
 use Modules\Mobile\Internal\Native\MobileUrlOpener;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
 use Modules\Mobile\Internal\Native\NativeSystemLanguage;
@@ -61,6 +62,11 @@ final class MobileServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        // First thing this provider does, because HostTimezone memoizes on its
+        // first call: a detect() that ran before this would answer UTC for the
+        // life of the process, and every day boundary on the phone with it.
+        (new AndroidHostTimezone)->supplyToEnvironment();
+
         // A booting callback, not boot(): iOS reads the background-task
         // manifest in BackgroundTasksServiceProvider::boot(), which runs long
         // before this provider's, and a schedule declared there arrives too
