@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Config\Repository;
-use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Internal\Backup\ArchiveWriterFactory;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\ExportEverythingArchive;
+use Modules\Core\Internal\Backup\StagedExportHandover;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
@@ -105,9 +107,10 @@ function exportEverythingRun(
     return $component->export(
         app(Repository::class),
         $clock,
-        app(ResponseFactory::class),
+        app(UrlGenerator::class),
         $shareSheet,
         exportEverythingArchiveWith($db ?? exportEverythingSnapshotDatabase()),
+        app(StagedExportHandover::class),
     );
 }
 
@@ -135,7 +138,15 @@ it('hands the archive to the share sheet instead of a response nothing receives'
         ->and($sheet->handed[0])->toBe('beatrax-export-2026-09-04-120000.zip');
 });
 
-it('returns a downloadable response where the shell saves what it downloads', function (): void {
+// It used to answer with a BinaryFileResponse, which Livewire delivers by
+// running ob_start(), calling sendContent(), and base64-encoding the buffer —
+// the whole archive in PHP memory at 2.33x its size, then again in the JSON and
+// again as a JS string. An iPhone 12 mini reports memory_limit 128M with a page
+// render already peaking at 99 MB.
+
+// So the file leaves through a plain GET the shell downloads the way it
+// downloads anything, and this asserts the handover rather than the response.
+it('sends the reader to a route that streams it where the shell saves downloads', function (): void {
     $sheet = new ExportEverythingShareSheet(dropsDownloads: false, available: false);
 
     $component = Livewire::test(ExportEverythingDownload::class)
@@ -143,10 +154,27 @@ it('returns a downloadable response where the shell saves what it downloads', fu
         ->set('confirmPassphrase', 'a-good-passphrase')
         ->instance();
 
-    $returned = exportEverythingRun($component, $sheet);
+    exportEverythingRun($component, $sheet);
 
-    expect($returned)->toBeInstanceOf(BinaryFileResponse::class)
-        ->and($sheet->handed)->toBe([]);
+    expect($sheet->handed)->toBe([], 'a shell that saves its own downloads was handed the file anyway');
+
+    // The observable effect is the staged claim: one token, naming an archive
+    // that is on disk, spent by the download it names.
+    /** @var Session $session */
+    $session = app(Session::class);
+    $staged = $session->get('beatrax.staged_exports');
+
+    expect($staged)->toBeArray()->toHaveCount(1);
+
+    $token = (string) array_key_first((array) $staged);
+    /** @var StagedExportHandover $handover */
+    $handover = app(StagedExportHandover::class);
+    $claim = $handover->claim($token);
+
+    expect($claim)->not->toBeNull()
+        ->and($claim['name'])->toBe('beatrax-export-2026-09-04-120000.zip')
+        ->and(is_file($claim['path']))->toBeTrue('the route was handed a path with no archive at it')
+        ->and($handover->claim($token))->toBeNull('the token outlived the one download it names');
 });
 
 it('takes the archive with it when the handover is refused', function (): void {

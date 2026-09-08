@@ -10,8 +10,10 @@ use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Routing\Router;
 use Livewire\Livewire;
 use Modules\Categorization\Models\CategorizationRule;
+use Modules\Core\Internal\Backup\StagedExportHandover;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Ledger\Models\Account;
@@ -97,6 +99,9 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
  */
 const ISOLATION_ROUTE_COVERED = [
     'dashboard',
+    // The one-time token names a claim in the staging session, so the probe is
+    // the partner asking for an archive the owner staged.
+    'core.help.data-locations.export',
     // Reads the acting request's own session timestamp and answers a bare
     // boolean. It is here rather than on the allow list because it is the one
     // route wearing the `auth:web` spelling, and the probe asserts the whole
@@ -428,6 +433,32 @@ it('returns 404 (never 403) when the partner requests the owner transaction deta
 
     expect($response->status())->toBe(404);
     expect($response->status())->not->toBe(403);
+});
+
+// The archive this token names is a copy of the whole database, so a link that
+// worked for anyone but the account that staged it would be the worst one in
+// the app to guess. The claim lives in the staging session, and the path is
+// re-checked against the staging directory at download time.
+it('returns 404 (never 403) when the partner requests an export the owner staged', function (): void {
+    /** @var StagedExportHandover $handover */
+    $handover = $this->app->make(StagedExportHandover::class);
+
+    $staging = UserDataPathService::appPath('tmp-backups');
+    @mkdir($staging, 0700, true);
+    $archive = $staging.DIRECTORY_SEPARATOR.'beatrax-export-xui-'.bin2hex(random_bytes(4)).'.zip';
+    file_put_contents($archive, 'the owner archive');
+
+    $this->actingAs($this->owner);
+    $token = $handover->stage($archive, 'beatrax-export-owner.zip');
+
+    $response = $this->actingAs($this->partner)
+        ->get('/help/data-locations/export/'.$token);
+
+    expect($response->status())->toBe(404);
+    expect($response->status())->not->toBe(403);
+    expect(is_file($archive))->toBeTrue('the partner request deleted the owner archive');
+
+    @unlink($archive);
 });
 
 it('returns 404 (never 403) when the partner requests the owner recurring series', function (): void {

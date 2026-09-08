@@ -3,10 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Config\Repository;
-use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Config;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Internal\Backup\StagedExportHandover;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
@@ -73,21 +76,42 @@ function bkmDownloadArchive(): string
     $component->passphrase = 'a-good-passphrase';
     $component->confirmPassphrase = 'a-good-passphrase';
 
-    $response = $component->download(
+    /** @var StagedExportHandover $handover */
+    $handover = app(StagedExportHandover::class);
+
+    // The claim records whose account staged the archive. The guard reads the
+    // id off the bound model and never queries, so an unsaved user is enough —
+    // and it has to be, because the default connection is pointed at a bare
+    // ledger with no users table by the time this runs.
+    test()->actingAs((new User)->forceFill(['id' => 1]));
+
+    $component->download(
         app(DatabaseManager::class),
         app(Repository::class),
         app(FileEncryptor::class),
         app(Clock::class),
-        app(ResponseFactory::class),
+        app(UrlGenerator::class),
         app(ShareSheetExport::class),
         app(BackupKeyMaterial::class),
         app(OwnerOnlyPath::class),
+        $handover,
     );
 
     expect($component->error)->toBe('');
-    expect($response)->toBeInstanceOf(BinaryFileResponse::class);
 
-    return $response->getFile()->getPathname();
+    // The archive is staged for a plain GET now rather than answered with, so
+    // the path comes from the claim the download names.
+    /** @var Session $session */
+    $session = app(Session::class);
+    $staged = (array) $session->get('beatrax.staged_exports');
+
+    expect($staged)->toHaveCount(1);
+
+    $claim = $handover->claim((string) array_key_first($staged));
+
+    expect($claim)->not->toBeNull();
+
+    return $claim['path'];
 }
 
 it('restores the key that opens the ledger it restored, not just the ciphertext', function (): void {
