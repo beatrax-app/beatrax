@@ -111,7 +111,7 @@ Identical to `EncryptedBackupDownload`, and for the same reasons:
   target, so the path carries eight random hex characters.
 - The plaintext snapshot is unlinked in a `finally`, so it never outlives
   the encryption step even when the encryptor throws.
-- The finished archive is made owner-only before it is returned; a mode
+- The finished archive is made owner-only before it is handed over; a mode
   that cannot be settled is a refusal rather than a download.
 
 ## An artefact directory that is not there
@@ -161,6 +161,48 @@ reported as a damaged database. `Migration`'s `ArchiveReader` seam is the
 general reader, and it stays where it is: it lives behind that module's
 `Internal\` namespace, it is shaped around that module's error vocabulary, and
 40 lines that read a header this module writes is not worth moving it.
+
+## How the archive leaves the process
+
+Not through Livewire. A Livewire component that returns a
+`BinaryFileResponse` does not stream it: `SupportFileDownloads` runs
+`ob_start()`, calls `sendContent()`, and `base64_encode()`s the buffer, so the
+whole file is resident at about 2.33x its own size before it is copied again
+into the JSON payload and again into a JS string.
+
+That is affordable on a desktop and not on a phone. Measured on an iPhone 12
+mini through `/dev/system`: `memory_limit` is **128M**, and a page render
+already peaks at **99 MB**. The remaining headroom caps "export everything" at
+single-digit megabytes — on the device whose owner is least likely to have
+another copy of their data.
+
+So the component stages the finished file and redirects to a plain
+authenticated `GET`, which answers with a streamed
+`BinaryFileResponse->deleteFileAfterSend()`. Nothing but the socket buffer is
+ever resident.
+
+`StagedExportHandover` is the seam. A claim is a 32-hex token naming
+`['path', 'name', 'user']` in the session, and four properties make it safe to
+put in a URL:
+
+- **Owner-scoped.** The claim records the account that staged it, and `claim()`
+  refuses a token whose owner is not the account asking. Session scope alone is
+  not enough on a shared household install.
+- **Containment-checked.** A claim is only honoured when its realpath is inside
+  the staging directory, so a claim cannot name a file this application did not
+  write.
+- **Single-use, but only on success.** The token is unset when the download is
+  granted, never when it is refused — otherwise a partner's probe would burn
+  the owner's one download.
+- **Self-pruning.** Staging drops every `beatrax-*` file in the directory older
+  than an hour before it adds a claim. Not just the `.zip` it hands over: an
+  abandoned `.sqlite.enc` is the same whole database, and a plaintext `.sqlite`
+  snapshot orphaned by a crashed encryption step is worse than either.
+
+The route carries no `where()` constraint on the token segment. The claim
+lookup is the only thing that can say whether a token names anything, and a
+routing constraint would have made the route invisible to `CrossUserIsolationTest`,
+which recognises a parameterised route by requesting it with a `1`.
 
 ## Where it is offered
 

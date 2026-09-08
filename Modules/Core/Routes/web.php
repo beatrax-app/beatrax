@@ -2,12 +2,16 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Modules\Core\Internal\Backup\StagedExportHandover;
 use Modules\Core\Public\Controllers\HealthController;
 use Modules\Core\Public\Services\LocaleNegotiator;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 // Auth-free liveness probe, registered outside the `web` middleware group so
 // the `EnsureDatabaseReady` first-launch gate does not redirect pre-migration
@@ -40,4 +44,28 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     // "Where is my data?" — the user-facing privacy page surfacing on-disk
     // paths via UserDataPathService, and the one-click export beside them.
     Route::view('/help/data-locations', 'core::help.data-locations')->name('core.help.data-locations');
+
+    // The archive leaves through a plain navigation rather than back through
+    // the Livewire response that built it. Livewire captures a download by
+    // buffering it and base64-encoding the buffer, which is 2.33x the file in
+    // PHP memory — and a phone measured 99 MB of a 128 MB limit already spent.
+    Route::get('/help/data-locations/export/{token}', static function (
+        string $token,
+        ResponseFactory $responses,
+        StagedExportHandover $handover,
+    ): BinaryFileResponse {
+        $claim = $handover->claim($token);
+
+        // One download per token, by the account that staged it, naming a file
+        // this application wrote. Anything else is a link already followed, or
+        // one that was never issued here.
+        abort_if($claim === null, SymfonyResponse::HTTP_NOT_FOUND);
+
+        return $responses->download($claim['path'], $claim['name'], ['Content-Type' => 'application/zip'])
+            ->deleteFileAfterSend();
+        // No where() on the segment: the claim lookup is the only thing that
+        // can say whether a token names anything, and a routing constraint
+        // here would make the route invisible to the cross-user guard, which
+        // recognises a parameterised route by requesting it with a "1".
+    })->name('core.help.data-locations.export');
 });

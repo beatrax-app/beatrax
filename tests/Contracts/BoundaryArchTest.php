@@ -2359,6 +2359,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Auth/tests/Feature/AFailingCountrySeedNeverCostsTheRecoveryCodesTest.php -> Modules\\Tax\\Internal\\Http\\Livewire\\TaxPage',
         'Modules/Auth/tests/Feature/AppLockProvisionerGdkRewrapTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
+        'Modules/Auth/tests/Feature/CrossUserIsolationTest.php -> Modules\\Core\\Internal\\Backup\\StagedExportHandover',
         'Modules/Auth/tests/Feature/CrossUserIsolationTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\AliasesSettingsPage',
         'Modules/Auth/tests/Feature/OnlyTheOwnerManagesTheHouseholdTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Auth/tests/Feature/SignupReturnsPersistedDefaultsTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',

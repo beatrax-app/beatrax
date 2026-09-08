@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Config\Repository;
-use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Internal\Backup\StagedExportHandover;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
@@ -90,10 +91,11 @@ function backupDownloadFor(EncryptedBackupDownload $component, ShareSheetExport 
         app(Repository::class),
         backupPassphraseEncryptor(),
         $clock,
-        app(ResponseFactory::class),
+        app(UrlGenerator::class),
         $shareSheet,
         app(BackupKeyMaterial::class),
         app(OwnerOnlyPath::class),
+        app(StagedExportHandover::class),
     );
 }
 

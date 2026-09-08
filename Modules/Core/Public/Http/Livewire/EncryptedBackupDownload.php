@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Http\Livewire;
 
 use Illuminate\Config\Repository;
-use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\BackupPassphrase;
+use Modules\Core\Internal\Backup\StagedExportHandover;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
@@ -22,7 +23,6 @@ use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Mobile\Public\Enums\FileExportOutcome;
 use Modules\Mobile\Public\Services\ShareSheetExport;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 final class EncryptedBackupDownload extends Component
@@ -40,15 +40,16 @@ final class EncryptedBackupDownload extends Component
         Repository $config,
         FileEncryptor $encryptor,
         Clock $clock,
-        ResponseFactory $responses,
+        UrlGenerator $urls,
         ShareSheetExport $shareSheet,
         BackupKeyMaterial $keyMaterial,
         OwnerOnlyPath $ownerOnly,
-    ): ?BinaryFileResponse {
+        StagedExportHandover $handover,
+    ): void {
         $this->notice = '';
         $this->error = $this->downloadValidationError($config);
         if ($this->error !== '') {
-            return null;
+            return;
         }
 
         $stamp = $clock->now()->format('Y-m-d-His');
@@ -96,7 +97,7 @@ final class EncryptedBackupDownload extends Component
                 'message' => SafeExceptionContext::shortName($e),
             ]);
 
-            return null;
+            return;
         } finally {
             // The plaintext snapshot must never outlive the encryption step —
             // unlink runs unconditionally, success or failure.
@@ -108,25 +109,22 @@ final class EncryptedBackupDownload extends Component
         $filename = 'beatrax-backup-'.$stamp.'.sqlite.enc';
 
         // A shell that drops the download hands the file to the OS share sheet
-        // instead; both roads end in one response the caller returns.
+        // instead. Neither road answers with the file: both leave through a
+        // staged GET, because Livewire buffers and base64-encodes a download.
         if ($shareSheet->replacesWebViewDownload()) {
-            $delivered = $this->handToShareSheet($shareSheet, $encPath, $filename);
-        } else {
-            $delivered = $responses->download(
-                $encPath,
-                $filename,
-                ['Content-Type' => 'application/octet-stream'],
-            )->deleteFileAfterSend();
+            $this->handToShareSheet($shareSheet, $encPath, $filename);
+
+            return;
         }
 
-        return $delivered;
+        $this->redirect($urls->route('core.help.data-locations.export', [
+            'token' => $handover->stage($encPath, $filename),
+        ]));
     }
 
-    // Nothing is sent back: the response a shell like this would have received
-    // goes nowhere and deleteFileAfterSend() would then destroy the only copy.
     // A refused handover takes the encrypted file with it, so the container
     // does not silently accumulate whole databases nobody can reach.
-    private function handToShareSheet(ShareSheetExport $shareSheet, string $encPath, string $filename): null
+    private function handToShareSheet(ShareSheetExport $shareSheet, string $encPath, string $filename): void
     {
         // The default sentence is true of a plaintext export, which is what
         // most of them are. This one is passphrase-protected, and the reader
@@ -143,8 +141,6 @@ final class EncryptedBackupDownload extends Component
             @unlink($encPath);
             $this->error = $outcome->message();
         }
-
-        return null;
     }
 
     public function render(ViewFactory $views, Repository $config, ShareSheetExport $shareSheet): View
