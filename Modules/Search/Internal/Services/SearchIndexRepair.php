@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Psr\Log\LoggerInterface;
@@ -20,7 +21,13 @@ final readonly class SearchIndexRepair implements SearchIndexRepairContract
         private SearchIndexRepairQueue $queue,
         private SearchIndexWriterContract $writer,
         private LoggerInterface $log,
+        private Clock $clock,
     ) {}
+
+    public function owe(int $userId, int $transactionId): void
+    {
+        $this->queue->request($userId, $transactionId, $this->clock->now()->toDateTimeString());
+    }
 
     public function hasWork(int $userId, ?string $keyringFingerprint): bool
     {

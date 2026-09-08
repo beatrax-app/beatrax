@@ -105,12 +105,12 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'why' => 'It wraps the warning that IS the report of an announcement no listener heard; the merge is already committed, so a logger failing must not turn stale derived state into a stopped catch-up.',
         ],
         'Modules/Sync/Internal/Merge/SearchIndexRefresher.php' => [
-            'count' => 1,
-            'why' => 'It wraps the warning that IS the report of a stale index; a logger failing on a full disk must not take merge determinism down with it.',
+            'count' => 2,
+            'why' => 'One wraps the warning that IS the report of a stale index; a logger failing on a full disk must not take merge determinism down with it. The other wraps the repair-queue write that is the recovery: the queue is on the same disk as the index that just failed, so it can fail for the same reason, and the warning is then the only account there is — which is the state before it existed.',
         ],
         'Modules/Sync/Internal/OpLog/OpLogRebuilder.php' => [
-            'count' => 1,
-            'why' => 'It wraps the warning that IS the report of a stale index, on the rebuild route rather than the merge one; a logger failing must not stop the sweep.',
+            'count' => 2,
+            'why' => 'The same pair as SearchIndexRefresher, on the rebuild route rather than the merge one: one wraps the warning that IS the report, the other wraps the repair-queue write that is the recovery. Neither may stop the sweep, and one unindexable row must not cost the rest their index.',
         ],
         'Modules/Sync/Internal/Support/DevicesScreenOpening.php' => [
             'count' => 1,

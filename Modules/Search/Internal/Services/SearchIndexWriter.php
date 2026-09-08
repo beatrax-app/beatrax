@@ -48,7 +48,13 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         // Retired, not merely skipped: a repair coordinate whose transaction
         // has since been deleted is spent, and leaving it would keep a drained
         // queue reporting work forever.
+
+        // The doc goes with it. A row that is gone must not stay findable, and
+        // this is the path a failed DELETE takes on its way back through the
+        // queue — retiring alone would leave the words of a deleted
+        // transaction in the index for good.
         if ($tx === null) {
+            $this->deleteForTransaction($transactionId, $actorUserId);
             $this->repairs->retire($actorUserId, $transactionId);
 
             return;
