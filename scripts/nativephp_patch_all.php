@@ -43,6 +43,7 @@ $patches = [
     'nativephp_ios_app_icon',
     'nativephp_extend_bundle_copy_timeout',
     'nativephp_ios_request_body_stream',
+    'nativephp_ios_host_timezone',
     'nativephp_ios_upload_limits',
     'nativephp_ios_download_delegate',
     'nativephp_ios_theme_native_shell',
