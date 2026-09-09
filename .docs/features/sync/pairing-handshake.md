@@ -965,6 +965,123 @@ The daemon's tick blocks its event loop for the duration of a relay round trip, 
 start a second tick while one is running. A slow relay costs the listener one delay rather than
 a growing queue behind it.
 
+## What a run on two real devices measures
+
+The harness above proves the state machine. It cannot prove that two separate SQLite files end
+up holding the same ledger, because it never opens two of them on two machines. This section
+records what one full ceremony measures on hardware, in numbers a later reader can re-derive
+against a build instead of taking on trust.
+
+**The devices.** A NativePHP desktop shell on macOS and an iPhone 12 mini (`iPhone13,1`) on
+iOS 26.5.2 running `com.beatrax.mobile` 1.3.0, build 10300 — both built from `71a8a8d8b`.
+The phone is uninstalled before the build: `native:run ios` installs in place, which keeps the
+previously extracted `app_storage/laravel/` tree, so an update ships the new native half over
+the old PHP. The desktop's ledger is `demo:seed`: 149 transactions for the paired user and 22
+for a second user who must not travel. No relay endpoint is configured, so the frames take the
+LAN road and the desktop's own `/pair/frame` on 51337 answers them.
+
+**The ceremony**, on 2026-09-09.
+Desktop initiator, phone responder, over `beatrax://pair?…&host=…&port=51337`
+read off the desktop screen.
+
+| | UTC that day |
+| --- | --- |
+| `issue()` mints the token, TTL 10 minutes | 22:10:41, expiring 22:20:41 |
+| Phone accepts; `POST /pair/frame` reaches the desktop; state `awaiting_confirm` | 22:13:40 |
+| Desktop confirms; expiry moves to 22:22:52 in the same statement | 22:17:52 |
+| Phone confirms; state `confirmed`, both devices admitted | 22:19:12 |
+| `OpLogBackfiller` walks the covered tables | 22:19:13 – 22:19:26 |
+
+Both screens showed `GENTLE EMPLOY APART JOIN PRIDE DENIAL`, each derived from its own copy of
+the two public keys. Two interruptions landed inside the window and neither cost the ceremony:
+the desktop's app lock fired between the accept and the confirm, and `Continue pairing` resumed
+into step 3 rather than starting over; the phone's confirm tap landed against a locked identity,
+was carried through `/mobile/lock`, and completed on the far side of the PIN.
+
+### The comparison, and what it is scoped to
+
+Row counts are not the measurement — 39 tables once matched on count with a typed column
+missing entirely. Every table present in both databases is compared **column by column**, keyed
+on `id`, under this scope:
+
+- The paired user only: `user_id = 1 OR user_id IS NULL` on both sides, and `user_id` itself is
+  never a compared column.
+- AEAD columns are excluded, because a fresh nonce per seal makes them differ for identical
+  plaintext: `SensitiveFieldRegistry::columns()` minus `blindIndexColumns()` minus
+  `knowinglyPlaintext()`. Blind-index columns stay in — a keyed digest is deterministic.
+- Each table's `deviceLocalColumns()` and `columnsNeverOnTheWire()` are excluded.
+
+| | |
+| --- | --- |
+| op-log records copied | **8,481** |
+| op-log entries byte-identical | **8,481 of 8,481**, on every column but `id` and `recorded_at` |
+| `op_log_quarantine` | **0** on both devices |
+| tables present in both databases | 107 |
+| columns compared | **821** across the 106 of those that carry a key, **332** across the 39 in `MergeRulesRegistry` |
+| registered tables byte-identical | **31 of 39** (26 of them non-empty) |
+| transactions | **149 of 149**, on every one of 28 non-AEAD columns |
+| AEAD proved through the plaintext shadow | **132 of 149** `search_body` rows |
+
+`recorded_at` is the only op-log column that differs, and it is meant to: it stamps arrival on
+the reading device, not authorship.
+
+The blind-index columns are the part of the sealed set that *is* comparable, and they match:
+`transactions.counterparty_normalized` on all 149 rows, `merchants.normalized_name`, and
+`recurring_series.cluster_counterparty_key`. On the phone, `/transactions?q=Vesteda` answers
+with three rows reading `Vesteda · Huur Vesteda`, so the sealed `description` and
+`counterparty_name` did not merely arrive as bytes — they decrypt under the epoch the phone was
+handed.
+
+### The differences that are correct
+
+Eight registered tables differ, and seven of the eight are the design:
+
+| Table | Why it differs |
+| --- | --- |
+| `categories` (29 rows) | Global reference rows each install seeds itself. Ids match; only `created_at`/`updated_at` differ. |
+| `categorization_rules`, `rule_conditions`, `rule_actions` | `OpLogBackfiller::DEVICE_LOCAL_TABLES`. Rules stay on the device that authored them, and the rules screen says so. |
+| `system_alerts` | Only the user-scoped alert travelled; the four with `user_id IS NULL` are about the laptop that noticed them. |
+| `known_senders` | Both installs seed their own global rows, and `demo:seed` rewrites the desktop's. The two user-scoped rows are byte-identical. |
+| `users` | The second demo user is absent on the phone, which is the scope working. |
+
+### The one that is not
+
+`tax_transaction_tags` holds 17 rows on the desktop and **0** on the phone. The table is in
+`MergeRulesRegistry` and is named by `CoveredTableOrder::insertionOrder()` between
+`tax_deduction_categories` (66 entries captured) and `transaction_splits` (60), yet it produced
+**zero** op-log entries on the initiating device, so there was nothing for the phone to apply.
+`op_log_quarantine` is 0 on both sides: nothing anywhere reports the loss.
+
+The plaintext shadow is what makes it visible. `tax_transaction_tags.note` is sealed and cannot
+be diffed, but the search index keeps a readable copy of the tax note, and
+`transaction_search_docs.search_body` differs on exactly 17 of 149 rows — the same 17
+transactions that carry a tax tag. Transaction 6 reads
+`KPN BV | KPN Mobile + Internet | Internet, zakelijk deel` on the desktop and
+`KPN BV | KPN Mobile + Internet |` on the phone.
+
+The capture did not finish cleanly either. `PreSyncHistoryCapture` logged one slice of 310 rows
+with `complete: false`, then `capture failed` with `Illuminate\Database\DeadlockException`
+three seconds later, while the relay endpoint was serving the phone's drains from the same
+SQLite file. `sync_backfill_state` nevertheless carries `completed_at` for that same second, so
+no later slice will re-walk what the failed one skipped. A capture that is recorded as finished
+cannot be retried, which is what turns a transient lock into a permanent hole.
+
+### What this run does not cover
+
+- **One direction.** Everything originated on the desktop and was pulled by the phone during
+  the import. No edit, create or delete originating on the phone was carried back, and `Sync
+  now` was never pressed afterwards.
+- **No relay.** With the endpoint empty, only the LAN road and the desktop's own local relay on
+  51338 were exercised. A genuinely remote hop is untested here.
+- **The camera is not in it.** The QR is the real one on the desktop screen, decoded with Vision
+  from a screenshot and handed to the app's own `CodeScanned` seam. Everything below that seam
+  ran for real; the scanner plugin and its decoder did not run.
+- **One ledger, one size.** 171 transactions and 8,481 ops. The chunked walk took two slices, so
+  the resume path ran, but not against a ledger large enough to need many.
+- **A dev desktop.** `app.debug` is true, so the desktop reads `database/nativephp.sqlite` and
+  the Electron dev storage root, not a packaged bundle's paths.
+- **One peer, once.** No third device, no epoch rotation, no device removal, and no Android.
+
 ## See also
 
 - [Pairing two devices that share no database](cross-device-pairing-confirm.md) — the same
