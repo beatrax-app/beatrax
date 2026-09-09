@@ -1046,11 +1046,18 @@ Eight registered tables differ, and seven of the eight are the design:
 
 ### The one that is not
 
-`tax_transaction_tags` holds 17 rows on the desktop and **0** on the phone. The table is in
-`MergeRulesRegistry` and is named by `CoveredTableOrder::insertionOrder()` between
-`tax_deduction_categories` (66 entries captured) and `transaction_splits` (60), yet it produced
-**zero** op-log entries on the initiating device, so there was nothing for the phone to apply.
+`tax_transaction_tags` holds 17 rows on the desktop and **0** on the phone. It produced **zero**
+op-log entries on the initiating device, so there was nothing for the phone to apply, and
 `op_log_quarantine` is 0 on both sides: nothing anywhere reports the loss.
+
+**Where the table sits is the whole explanation, and this page first got it wrong.** It said the
+table is named between `tax_deduction_categories` and `transaction_splits`. That is the order
+they appear in `MergeRulesRegistry`, which is a registry and not a sequence.
+`CoveredTableOrder::insertionOrder()` topologically sorts by foreign key, and
+`tax_transaction_tags` is a leaf whose parents — `transaction_splits`, then `transactions`, then
+`import_runs` — all settle before it can. Resolved against this run's schema it is index **38 of
+39: last**. Index 37, `anomaly_suppression_rules`, is empty on both devices, so the only visible
+casualty of a walk that stopped short was the table at the very end of it.
 
 The plaintext shadow is what makes it visible. `tax_transaction_tags.note` is sealed and cannot
 be diffed, but the search index keeps a readable copy of the tax note, and
@@ -1059,12 +1066,25 @@ transactions that carry a tax tag. Transaction 6 reads
 `KPN BV | KPN Mobile + Internet | Internet, zakelijk deel` on the desktop and
 `KPN BV | KPN Mobile + Internet |` on the phone.
 
-The capture did not finish cleanly either. `PreSyncHistoryCapture` logged one slice of 310 rows
-with `complete: false`, then `capture failed` with `Illuminate\Database\DeadlockException`
-three seconds later, while the relay endpoint was serving the phone's drains from the same
-SQLite file. `sync_backfill_state` nevertheless carries `completed_at` for that same second, so
-no later slice will re-walk what the failed one skipped. A capture that is recorded as finished
-cannot be retried, which is what turns a transient lock into a permanent hole.
+The capture is why. `PreSyncHistoryCapture` logged one slice of 310 rows with `complete: false`,
+then `capture failed` with `Illuminate\Database\DeadlockException` three seconds later, while the
+relay endpoint was serving the phone's drains from the same SQLite file. `sync_backfill_state`
+nevertheless carries `completed_at` for that same second, so no later slice will re-walk what the
+failed one skipped. A capture recorded as finished cannot be retried, which is what turns a
+transient lock into a permanent hole.
+
+Four things in the run's own database close the argument rather than leaving it plausible.
+`sync_backfill_state` stopped at `cursor_table: anomaly_alerts`, index **36**, with `cursor_pk`
+exactly `max(id)` of that table and `captured: 496` exactly the count of distinct create-op pks
+in the log. The op-log ids form one contiguous range 1–8481 whose table sequence maps one-to-one
+onto insertion-order positions 0 through 36 and ends at `anomaly_alerts` — there is no gap
+anywhere for the missing table to have occupied. And `completed_at` carries the same second as
+the exception.
+
+The rival explanation — that a row written without an unlocked session never reaches the log —
+does not hold here. `tax_transaction_tags` and `transactions` were written one second apart by
+the same keyless `demo:seed` run, and `transactions` carries 5,066 ops: the backfill reads rows
+and does not care how they were written. `deferred_op_captures` holds 0 rows.
 
 ### What this run does not cover
 
