@@ -100,6 +100,20 @@ final class UploadWizard extends Component
         ];
     }
 
+    // Without this the framework names the field from its property, and the
+    // reader of a fully translated screen is told "File is verplicht." The
+    // label the form already renders is the name they saw, in the locale they
+    // are reading.
+    /** @return array<string, string> */
+    public function validationAttributes(): array
+    {
+        return [
+            'file' => Lang::get('import::upload.file_label'),
+            'importType' => Lang::get('import::upload.type_label'),
+            'sourceFormat' => Lang::get('import::upload.format_label'),
+        ];
+    }
+
     // The bare `in:` rule accepts any leaf under any import type; without this
     // the mismatch only surfaces at ParseStage.
     private function importTypeFormatRule(): \Closure
