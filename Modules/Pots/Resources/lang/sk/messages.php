@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Táto obálka už nie je dostupná. Vyber inú.',
         'move_same_pot' => 'Obálka nemôže presunúť peniaze sama do seba. Vyber inú obálku.',
         'move_cross_account' => 'Obálky si vymieňajú peniaze len v rámci jedného účtu a :name je na účte :account.',
+        'move_cross_currency' => 'Obálky si vymieňajú peniaze len v jednej mene a :name je v mene :currency.',
         'pot_missing' => 'Táto obálka už nie je dostupná.',
         'operation_failed' => 'Neprešlo to. Žiadne peniaze sa nepresunuli — skús to znova.',
     ],

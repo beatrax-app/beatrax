@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Ez a persely már nem érhető el. Válassz másikat.',
         'move_same_pot' => 'Persely nem mozgathat pénzt önmagába. Válassz másik perselyt.',
         'move_cross_account' => 'A perselyek csak egy számlán belül cserélnek pénzt, és a(z) :name a(z) :account számlán van.',
+        'move_cross_currency' => 'A perselyek csak egy pénznemen belül cserélnek pénzt, és a(z) :name :currency pénznemben van.',
         'pot_missing' => 'Ez a persely már nem érhető el.',
         'operation_failed' => 'Nem ment át. Nem mozgott pénz — próbáld újra.',
     ],

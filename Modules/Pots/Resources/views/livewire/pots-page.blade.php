@@ -717,9 +717,7 @@
                     if ($p->id === $operationPotId) { $moveSrcPotSheet = $p; break 2; }
                 }
             }
-            $moveDestPotsSheet = $moveSrcPotSheet !== null
-                ? array_filter($potsForMove[$moveSrcPotSheet->accountId] ?? [], static fn($p) => $p->id !== $operationPotId)
-                : [];
+            $moveDestPotsSheet = $moveSrcPotSheet?->moveTargetsAmong($potsForMove[$moveSrcPotSheet->accountId] ?? []) ?? [];
         @endphp
         <form wire:submit="movePot" class="space-y-4">
             <div>
@@ -964,9 +962,7 @@
                         }
                     }
                 }
-                $moveDestPots = $moveSrcPot !== null
-                    ? array_filter($potsForMove[$moveSrcPot->accountId] ?? [], static fn($p) => $p->id !== $operationPotId)
-                    : [];
+                $moveDestPots = $moveSrcPot?->moveTargetsAmong($potsForMove[$moveSrcPot->accountId] ?? []) ?? [];
             @endphp
             <x-core::section-heading :title="Lang::get('pots::messages.move.heading', ['name' => $moveSrcPot?->name ?? Lang::get('pots::messages.pot_fallback')])" />
             <form wire:submit="movePot" class="mt-6 space-y-4">

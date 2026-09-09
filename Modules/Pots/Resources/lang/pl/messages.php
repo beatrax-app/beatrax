@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Ta skarbonka nie jest już dostępna. Wybierz inną.',
         'move_same_pot' => 'Skarbonka nie może przenieść pieniędzy do siebie samej. Wybierz inną skarbonkę.',
         'move_cross_account' => 'Skarbonki wymieniają pieniądze tylko w obrębie jednego konta, a :name jest na koncie :account.',
+        'move_cross_currency' => 'Skarbonki wymieniają pieniądze tylko w jednej walucie, a :name jest w walucie :currency.',
         'pot_missing' => 'Ta skarbonka nie jest już dostępna.',
         'operation_failed' => 'Nie udało się. Nie przeniesiono żadnych pieniędzy — spróbuj ponownie.',
     ],

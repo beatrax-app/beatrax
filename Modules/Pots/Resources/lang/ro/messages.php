@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Această pușculiță nu mai este disponibilă. Alege alta.',
         'move_same_pot' => 'O pușculiță nu poate muta bani către ea însăși. Alege altă pușculiță.',
         'move_cross_account' => 'Pușculițele schimbă bani doar în cadrul aceluiași cont, iar :name este în contul :account.',
+        'move_cross_currency' => 'Pușculițele schimbă bani doar în aceeași monedă, iar :name este în :currency.',
         'pot_missing' => 'Această pușculiță nu mai este disponibilă.',
         'operation_failed' => 'Nu a trecut. Nu s-au mutat bani — încearcă din nou.',
     ],

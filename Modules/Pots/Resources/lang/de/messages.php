@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Diese Rücklage ist nicht mehr verfügbar. Wähle eine andere.',
         'move_same_pot' => 'Eine Rücklage kann kein Geld an sich selbst verschieben. Wähle eine andere Rücklage.',
         'move_cross_account' => 'Rücklagen tauschen Geld nur innerhalb eines Kontos, und :name liegt auf :account.',
+        'move_cross_currency' => 'Rücklagen tauschen Geld nur in einer Währung, und :name lautet auf :currency.',
         'pot_missing' => 'Diese Rücklage ist nicht mehr verfügbar.',
         'operation_failed' => 'Das hat nicht geklappt. Es wurde kein Geld verschoben — versuche es erneut.',
     ],
