@@ -339,7 +339,7 @@ final class ReportBuilder extends Component
         }
 
         $byDate = [];
-        foreach ($timeBucketGenerator->generate($period, $definition->granularity) as $bucket) {
+        foreach ($timeBucketGenerator->generate($period, $definition->granularity ?? ReportGranularity::default()) as $bucket) {
             $byDate[$bucket->start->toDateString()] = $bucket;
             $byDate[$bucket->endExclusive->subDay()->toDateString()] = $bucket;
         }
@@ -368,7 +368,7 @@ final class ReportBuilder extends Component
         $this->periodPreset = $definition->periodPreset;
         $this->customFrom = $definition->customFrom ?? '';
         $this->customTo = $definition->customTo ?? '';
-        $this->granularity = $definition->granularity->value;
+        $this->granularity = ($definition->granularity ?? ReportGranularity::default())->value;
         $this->currencyMode = $definition->currencyMode;
         $this->viz = $definition->viz;
         $this->compare = $definition->compare;
