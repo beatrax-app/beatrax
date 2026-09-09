@@ -105,7 +105,7 @@ final class UploadWizard extends Component
     // label the form already renders is the name they saw, in the locale they
     // are reading.
     /** @return array<string, string> */
-    public function validationAttributes(): array
+    protected function validationAttributes(): array
     {
         return [
             'file' => Lang::get('import::upload.file_label'),
