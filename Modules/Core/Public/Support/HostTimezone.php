@@ -87,10 +87,14 @@ final class HostTimezone
         return is_string($candidate) && trim($candidate) !== '' ? trim($candidate) : null;
     }
 
-    // macOS, Linux and iOS all symlink /etc/localtime into the zoneinfo tree,
-    // and the identifier is the tail of that path after the directory holding
-    // the database — two segments, because "Europe/Amsterdam" is two and
+    // macOS and Linux symlink /etc/localtime into the zoneinfo tree, and the
+    // identifier is the tail of that path after the directory holding the
+    // database — two segments, because "Europe/Amsterdam" is two and
     // "America/Argentina/La_Rioja" is three.
+
+    // Neither mobile platform reaches this. Measured inside the app on iOS
+    // 26.5.2, the sandbox shows no /etc at all, so this and the file below both
+    // answer null and the shell supplies the zone instead.
     private static function fromLink(): ?string
     {
         if (! is_link(self::ZONEINFO_LINK)) {
