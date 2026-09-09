@@ -34,6 +34,7 @@ $patches = [
     'nativephp_android_post_body_at_document_start',
     'nativephp_android_notification_permission_truth',
     'nativephp_android_notification_delivery_is_reported',
+    'nativephp_notification_grant_is_read_back',
     'nativephp_exclude_data_from_backup',
     'nativephp_strip_unused_permissions',
     'nativephp_theme_native_shell',
