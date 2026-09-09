@@ -182,7 +182,7 @@
                     aria-hidden, so the hamburger is a screen reader's only way
                     back out of the drawer.
                 --}}
-                <main class="flex-1 min-w-0 overflow-auto" x-bind:inert="$store.overlay.blocking || null">
+                <main class="safe-below flex-1 min-w-0 overflow-auto" x-bind:inert="$store.overlay.blocking || null">
                     {{-- The application's own machinery, mounted beside every
                          page that is part of the application. A wire:snapshot is
                          a bearer token for the component it names, so mounting

@@ -16,7 +16,7 @@
     See UI-SPEC.md §2–§12 for the full binding visual contract.
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
-<div class="mx-auto max-w-7xl px-1 sm:px-4 py-6" x-data="{ panelOpen: false }">
+<div class="mx-auto max-w-7xl px-4 py-6" x-data="{ panelOpen: false }">
     <header class="mb-6">
         <x-core::page-heading style="color: var(--color-text);">{{ Lang::get('calendar::messages.page.title') }}</x-core::page-heading>
         <p class="mt-1 max-w-prose text-sm" style="color: var(--color-text-muted);">
@@ -189,7 +189,15 @@
             via `display: contents`, which is exactly the construct screen
             readers have historically dropped rows from.
         --}}
-        <div class="cal-grid-frame">
+        {{--
+            -mx-3 below sm: the month grid is seven columns of day cells and
+            wants every pixel, which is why the page used to be px-1 while
+            every other screen is px-4 — and the heading and the prose above
+            went with it, twelve pixels left of every other title in the app.
+            The frame takes the gutter back for itself instead, so the grid
+            keeps the width it had and the page keeps the app's own margin.
+        --}}
+        <div class="cal-grid-frame -mx-3 sm:mx-0">
         <table
             role="grid"
             class="cal-grid"

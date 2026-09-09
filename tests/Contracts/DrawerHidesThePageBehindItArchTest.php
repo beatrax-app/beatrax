@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
+
 // The navigation drawer and the command palette are both role="dialog"
 // aria-modal="true", and nothing made the page behind them unreachable. Read
 // off an iPhone 12 mini from the tree VoiceOver itself uses: with the drawer
@@ -20,14 +22,16 @@ function drawerInertLayout(): string
 }
 
 it('marks the page content inert while the drawer is open', function (): void {
-    $layout = drawerInertLayout();
+    // Parsed rather than matched against the class attribute it happened to
+    // carry: the binding is the subject, and pinning the class list alongside
+    // it made a margin change look like the inert binding had been deleted.
+    $mains = MarkupSource::elements(drawerInertLayout(), 'main');
 
-    $start = strpos($layout, '<main class="flex-1 min-w-0 overflow-auto"');
-    expect($start)->not->toBeFalse('The authenticated layout no longer has that main element.');
+    expect($mains)->not->toBe([], 'The authenticated layout no longer has a main element.');
 
-    // 200 characters is the whole start tag with room to spare; reading the
-    // file would pair this main with a binding on some later element.
-    expect(str_contains(substr($layout, (int) $start, 200), 'x-bind:inert="$store.overlay.blocking'))->toBeTrue(
+    // str_contains, not toContain: a second argument there is a second needle
+    // rather than the message, and the sentence below would be searched for.
+    expect(str_contains($mains[0]->attribute('x-bind:inert') ?? '', '$store.overlay.blocking'))->toBeTrue(
         'The page content is not inerted while an overlay is up, so everything under the scrim stays reachable to '.
         'a screen reader and to the tab order.'
     );
