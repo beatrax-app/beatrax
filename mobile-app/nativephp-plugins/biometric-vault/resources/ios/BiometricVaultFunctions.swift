@@ -115,6 +115,17 @@ enum BiometricVaultFunctions {
         }
     }
 
+    // MARK: - BiometricVault.CancelPrompt
+
+    // iOS presents its prompt inside the synchronous Get and returns only once
+    // the enclave has answered, so there is never one standing when the reader
+    // takes another road. Declared because the PHP facade is one file for both.
+    class CancelPrompt: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            return ["success": true]
+        }
+    }
+
     // MARK: - BiometricVault.Delete
     class Delete: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {

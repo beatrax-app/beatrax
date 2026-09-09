@@ -79,6 +79,7 @@ final class MobileLockScreen extends Component
         UrlGenerator $urls,
         Session $session,
         Clock $clock,
+        BiometricKeyVault $vault,
     ): void {
         if (preg_match('/^\d{6,10}$/', $pin) !== 1) {
             $this->flashMessage = Lang::get('mobile::lock.errors.pin_length');
@@ -105,6 +106,12 @@ final class MobileLockScreen extends Component
 
             return;
         }
+
+        // biometricPrompt() runs from this screen's own x-init, so on Android a
+        // prompt is already standing when the reader reaches for the PIN pad
+        // instead. Redirecting without taking it down leaves it over an app
+        // that is now unlocked.
+        $vault->cancelPrompt();
 
         $this->redirectToIntendedUrl($session, $urls);
     }
