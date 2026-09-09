@@ -38,6 +38,7 @@ final readonly class NativeBuildPatches
         'nativephp_android_upload_limits.php',
         'nativephp_keep_webview_cookies.php',
         'nativephp_android_single_content_type.php',
+        'nativephp_android_post_body_at_document_start.php',
         'nativephp_exclude_data_from_backup.php',
         'nativephp_strip_unused_permissions.php',
         'nativephp_theme_native_shell.php',
