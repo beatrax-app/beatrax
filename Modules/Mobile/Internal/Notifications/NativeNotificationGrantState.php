@@ -16,6 +16,7 @@ final readonly class NativeNotificationGrantState implements SystemNotificationG
     public function __construct(
         private CurrentUser $currentUser,
         private NotificationGrantRecord $record,
+        private PlatformNotificationSwitch $platform,
     ) {}
 
     public function current(): SystemNotificationGrant
@@ -24,6 +25,20 @@ final readonly class NativeNotificationGrantState implements SystemNotificationG
             return SystemNotificationGrant::NotApplicable;
         }
 
-        return $this->record->state($this->currentUser->id());
+        $recorded = $this->record->state($this->currentUser->id());
+
+        // Before the dialog has been answered the platform's "off" and "not
+        // yet asked" are the same reading, so only a settled answer is read
+        // back against the platform. The record stays the history of the
+        // dialog; the platform is the truth about the next notification.
+        if (! in_array($recorded, [SystemNotificationGrant::Granted, SystemNotificationGrant::Refused], true)) {
+            return $recorded;
+        }
+
+        return match ($this->platform->enabled()) {
+            true => SystemNotificationGrant::Granted,
+            false => SystemNotificationGrant::Refused,
+            null => $recorded,
+        };
     }
 }

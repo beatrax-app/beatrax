@@ -41,6 +41,7 @@ final readonly class NativeBuildPatches
         'nativephp_android_post_body_at_document_start.php',
         'nativephp_android_notification_permission_truth.php',
         'nativephp_android_notification_delivery_is_reported.php',
+        'nativephp_notification_grant_is_read_back.php',
         'nativephp_exclude_data_from_backup.php',
         'nativephp_strip_unused_permissions.php',
         'nativephp_theme_native_shell.php',
@@ -68,6 +69,7 @@ final readonly class NativeBuildPatches
     // Connect rejects the upload, one until a reader is asked for their face in
     // a language they do not speak, and the backup one never — it reaches iCloud.
     private const array REQUIRED_SCRIPTS = [
+        'nativephp_notification_grant_is_read_back.php',
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
         'nativephp_ios_app_category.php',

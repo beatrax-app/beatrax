@@ -366,27 +366,47 @@ writes `granted=0`, and the reader is not asked again — one request, unchanged
 across two further page loads. iOS never had this; its `RequestPermission`
 dispatches from the authorisation callback itself.
 
-#### Known gap — a grant the reader later revokes
+#### A grant the reader later revokes
 
-Once a grant is recorded nothing checks it again. Measured on the same device
+Once a grant was recorded nothing checked it again. Measured on the same device
 after revoking notifications in system settings: the system reported
-`granted=false` while the row still read `1`, and the app went on scheduling
-notifications the platform would silently drop.
+`granted=false` while `mobile_notification_grant.granted` still read `1`, and
+the app went on scheduling notifications the platform would silently drop.
 
-It cannot currently find out. The plugin exposes `RequestPermission` and
-nothing that **reads** the current state, and asking again is not a substitute:
-where the permission is genuinely revoked that call raises the dialog, which is
-not something a background reconcile may do.
+The app could not find out. The plugin exposed `RequestPermission` and nothing
+that **reads** the current state, and asking again is not a substitute: where
+the permission is genuinely revoked that call raises the dialog, which is not
+something a background reconcile may do.
 
-Closing it needs a `LocalNotification.CheckPermission` on both platforms.
-Android can answer synchronously — `NotificationManagerCompat.areNotificationsEnabled()`,
-which is the right question because a reader who leaves the permission granted
-and turns the app's notifications off in settings is equally unreachable. iOS
-has no synchronous equivalent: `getNotificationSettings` is completion-based,
-so the iOS half needs either a cached read refreshed on activation or the
-plugin's async-event pattern. Until both exist, an app-side reconcile would
-read a source that answers on one platform and not the other, which is the
-shape this codebase treats as a defect rather than a partial fix.
+`scripts/nativephp_notification_grant_is_read_back.php` adds
+`LocalNotification.CheckPermission` to the plugin — to its `nativephp.json`,
+which is what makes a function reachable at all, and to both platform sources.
+Android answers `NotificationManagerCompat.areNotificationsEnabled()`, which is
+the right question because a reader who leaves the permission granted and turns
+the app's notifications off in settings is equally unreachable. iOS answers
+`authorizationStatus`, counting `provisional` and `ephemeral` as granted
+because both still deliver.
+
+`getNotificationSettings` is completion-based, and the third option — neither a
+cached read nor an async event — is the `DispatchSemaphore` the plugin already
+uses for `GetPending`, `Cancel` and its actions helper. It is safe here for the
+reason it is safe there: a bridge function runs on the PHP worker thread, never
+the main thread, so waiting on it cannot block the queue the completion handler
+arrives on.
+
+`NativeNotificationGrantState` reads the platform through
+`PlatformNotificationSwitch`, and three answers matter rather than two:
+
+- **The record stays the history of the dialog.** Nothing writes the platform's
+  answer back into it. A refusal at the dialog and a grant later withdrawn are
+  different events, and the row is the only place the first one is written down.
+- **Only a settled answer is read back.** Before the dialog has been answered,
+  the platform's "off" and "not yet asked" are the same reading, so `NeverAsked`
+  and `Awaiting` are returned untouched and the platform is not consulted.
+- **`null` is not `false`.** `BridgeNotificationSwitch` asks `nativephp_can()`
+  first, so an install whose shell predates this patch keeps what was recorded.
+  Reading "nobody could answer" as a refusal would tell every such reader their
+  device is dropping notifications it is showing.
 
 ### The mobile root reaches the application by symlink, and one link was missing
 

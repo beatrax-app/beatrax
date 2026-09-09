@@ -50,8 +50,10 @@ use Modules\Mobile\Internal\Native\AndroidHostTimezone;
 use Modules\Mobile\Internal\Native\MobileUrlOpener;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
 use Modules\Mobile\Internal\Native\NativeSystemLanguage;
+use Modules\Mobile\Internal\Notifications\BridgeNotificationSwitch;
 use Modules\Mobile\Internal\Notifications\NativeNotificationConsent;
 use Modules\Mobile\Internal\Notifications\NativeNotificationGrantState;
+use Modules\Mobile\Internal\Notifications\PlatformNotificationSwitch;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
 use Modules\Notifications\Public\Contracts\SystemNotificationConsent;
 use Modules\Notifications\Public\Contracts\SystemNotificationGrantState;
@@ -139,6 +141,7 @@ final class MobileServiceProvider extends ServiceProvider
             // The read half. Bound here rather than unconditionally because
             // the record it reads is written by the device prompt, and a root
             // that never raises one would report NeverAsked forever.
+            $this->app->singleton(PlatformNotificationSwitch::class, BridgeNotificationSwitch::class);
             $this->app->singleton(SystemNotificationGrantState::class, NativeNotificationGrantState::class);
         }
 
