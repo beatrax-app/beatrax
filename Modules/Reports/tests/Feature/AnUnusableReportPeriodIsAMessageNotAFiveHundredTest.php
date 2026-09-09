@@ -138,6 +138,9 @@ it('keeps the dashboard up when a pinned report carries an unusable range', func
         ->assertSee('From a peer on another build');
 });
 
+// Granularity is the one field that does not fall back: the others are coerced
+// so an unreadable row cannot take the page down with it, while a grouping is
+// the shape of the numbers rather than a label on them.
 it('falls back to the vocabulary this build knows rather than refusing the whole row', function (): void {
     $definition = ReportDefinitionFactory::fromStored('{"metric":"whatever","dimension":"planet","periodPreset":"custom","granularity":"daily","currencyMode":"bitcoin","viz":"sankey","customFrom":"2026-02-30","accounts":["7","nope",-3]}');
 
@@ -145,7 +148,7 @@ it('falls back to the vocabulary this build knows rather than refusing the whole
         ->and($definition->dimension)->toBe('category')
         ->and($definition->currencyMode)->toBe('base')
         ->and($definition->viz)->toBe('table')
-        ->and($definition->granularity->value)->toBe('monthly')
+        ->and($definition->granularity)->toBeNull()
         ->and($definition->customFrom)->toBeNull()
         ->and($definition->accounts)->toBe([7]);
 });

@@ -50,6 +50,15 @@ final class ReportVocabulary
         return ReportGranularity::tryFrom((string) $value) ?? ReportGranularity::default();
     }
 
+    // The stored column is a different boundary from the rails above. A word
+    // from the address bar becomes the default because the alternative is a
+    // 500; a word found in the database was written by a peer on a newer build,
+    // and answering for it here is deciding what that peer meant.
+    public static function storedGranularity(?string $value): ?ReportGranularity
+    {
+        return ReportGranularity::tryFrom((string) $value);
+    }
+
     // Livewire rehydrates an array-bound #[Url] property from the client
     // payload with whatever it holds — strings, nulls, nested arrays, a keyed
     // map — so an int-typed filter over it is a TypeError waiting for a crafted

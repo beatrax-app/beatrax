@@ -28,7 +28,7 @@ final class ReportDefinition extends Data
         public readonly string $metric,
         public readonly string $dimension,
         public readonly string $periodPreset,
-        public readonly ReportGranularity $granularity,
+        public readonly ?ReportGranularity $granularity,
         public readonly string $currencyMode,
         public readonly string $viz,
         public readonly ?string $customFrom = null,

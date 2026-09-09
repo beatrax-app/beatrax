@@ -17,6 +17,7 @@ use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ComparisonJoin;
 use Modules\Reports\Internal\Enums\ReportDimension;
+use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
 
 final readonly class ReportAggregator
@@ -192,7 +193,7 @@ final readonly class ReportAggregator
             'category' => $this->categorySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
             ReportDimension::Counterparty->value => $this->counterpartySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
             ReportDimension::Account->value => $this->accountSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
-            ReportDimension::TimeBucket->value => $this->timeBucketSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $definition->granularity, $filters),
+            ReportDimension::TimeBucket->value => $this->timeBucketSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $definition->granularity ?? ReportGranularity::default(), $filters),
             default => throw new InvalidArgumentException("Unknown report dimension: {$definition->dimension}"),
         };
     }
@@ -208,7 +209,7 @@ final readonly class ReportAggregator
 
     private function buildNetWorthResult(User $user, Period $period, ReportDefinition $definition): ReportResultDto
     {
-        $points = $this->netWorthSeriesQuery->forUser($user, $period, $definition->granularity, $this->filtersFor($user, $definition));
+        $points = $this->netWorthSeriesQuery->forUser($user, $period, $definition->granularity ?? ReportGranularity::default(), $this->filtersFor($user, $definition));
         $rows = self::pointsToRows($points);
 
         $totalMinor = 0;
