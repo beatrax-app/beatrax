@@ -26,9 +26,23 @@ final class MobileLockScreen extends Component
 {
     use HoldsFlashMessage;
 
+    // `native:` is the coordinator's prefix, not ours, and the only one the
+    // Android side can produce; the names after it are the plugin manifest's.
+    /**
+     * @link ../../../../../.docs/design/cold-start-biometric-unlock.md
+     */
+    private const string EVENT_RECOVERED = 'native:BiometricVault.Recovered';
+
+    private const string EVENT_FAILED = 'native:BiometricVault.Failed';
+
     public bool $biometricAvailable = false;
 
     public string $biometricLabel = 'Use Face ID';
+
+    // The forgotten-code explanation is three sentences on a screen whose only
+    // job is six digits, so it waits behind a mark until the reader has got
+    // the PIN wrong at least once.
+    public bool $forgottenPinHelpDue = false;
 
     public function mount(
         CurrentUser $currentUser,
@@ -52,6 +66,8 @@ final class MobileLockScreen extends Component
         $this->biometricAvailable = ($gateway->hasArmedBiometricCredential($user->id) && $bridge->isAvailable())
             || $coldStartReady;
 
+        $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
+
         // Why pairing sent them here. Without it the redirect landed on a PIN
         // pad that explained nothing, which is the dead end it exists to fix.
         $flashed = $session->get(MobilePairingScan::LOCKED_IDENTITY_FLASH);
@@ -70,6 +86,7 @@ final class MobileLockScreen extends Component
         UrlGenerator $urls,
         Session $session,
         Clock $clock,
+        BiometricKeyVault $vault,
     ): void {
         if (preg_match('/^\d{6,10}$/', $pin) !== 1) {
             $this->flashMessage = Lang::get('mobile::lock.errors.pin_length');
@@ -81,6 +98,8 @@ final class MobileLockScreen extends Component
         $dataKey = $gateway->verifyPin($user->id, $pin, $session);
 
         if ($dataKey === null) {
+            $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
+
             $lockedUntil = $gateway->pinLockedUntil($user->id);
             if ($lockedUntil !== null) {
                 $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
@@ -96,6 +115,12 @@ final class MobileLockScreen extends Component
 
             return;
         }
+
+        // biometricPrompt() runs from this screen's own x-init, so on Android a
+        // prompt is already standing when the reader reaches for the PIN pad
+        // instead. Redirecting without taking it down leaves it over an app
+        // that is now unlocked.
+        $vault->cancelPrompt();
 
         $this->redirectToIntendedUrl($session, $urls);
     }
@@ -147,7 +172,7 @@ final class MobileLockScreen extends Component
 
     // Android async completion: the native prompt has already authenticated
     // and stashed the decrypted blob in a transient native slot.
-    #[On('cold-start-recovered')]
+    #[On(self::EVENT_RECOVERED)]
     public function onColdStartRecovered(
         BiometricKeyVault $vault,
         MobileLockGateway $gateway,
@@ -171,7 +196,7 @@ final class MobileLockScreen extends Component
     /**
      * @link ../../../../../.docs/design/cold-start-biometric-unlock.md
      */
-    #[On('cold-start-failed')]
+    #[On(self::EVENT_FAILED)]
     public function onColdStartFailed(): void
     {
         // Registered so the native prompt's failure lands somewhere, and

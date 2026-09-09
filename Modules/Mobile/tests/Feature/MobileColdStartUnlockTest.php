@@ -155,12 +155,12 @@ it('does NOT admit when the PIN floor is overdue, even if the vault would recove
 // Android finishes the recovery asynchronously: the key arrives on a
 // BiometricVault.Recovered event rather than from the prompt call's return.
 
-it('async recovered admits + redirects via the cold-start-recovered event', function (): void {
+it('async recovered admits + redirects via the BiometricVault.Recovered event', function (): void {
     lockedColdStartUser('cs-async-ok');
     $key = str_repeat('k', 32);
     bindVaultRecover(BiometricRecoverResult::recovered($key));
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-recovered')->assertRedirect(route('dashboard'));
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertRedirect(route('dashboard'));
 
     expect(released())->toBe($key);
 });
@@ -169,7 +169,7 @@ it('async recovered is REFUSED when not enrolled (stale-blob guard on the async 
     lockedColdStartUser('cs-async-not-enrolled', enrolled: false);
     bindVaultRecover(BiometricRecoverResult::recovered(str_repeat('k', 32)));
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-recovered')->assertNoRedirect();
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertNoRedirect();
 
     expect(released())->toBeNull();
 });
@@ -178,7 +178,7 @@ it('async recovered is REFUSED when the PIN floor is overdue', function (): void
     lockedColdStartUser('cs-async-floor', floorDaysAgo: 20);
     bindVaultRecover(BiometricRecoverResult::recovered(str_repeat('k', 32)));
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-recovered')->assertNoRedirect();
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertNoRedirect();
 
     expect(released())->toBeNull();
 });
@@ -186,7 +186,84 @@ it('async recovered is REFUSED when the PIN floor is overdue', function (): void
 it('onColdStartFailed is a no-op — never admits, never redirects', function (): void {
     lockedColdStartUser('cs-async-failed');
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-failed')->assertNoRedirect();
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Failed')->assertNoRedirect();
 
     expect(released())->toBeNull();
+});
+
+// The screen fires the prompt from its own x-init, and the PIN pad stays live
+// underneath it, so both roads are open at once and only one of them is taken.
+// On Android the prompt is a window rather than part of the page: it survived
+// the unlock and stood over an app that was already open.
+function bindVaultCountingCancels(): object
+{
+    $tally = new class
+    {
+        public int $cancels = 0;
+    };
+
+    app()->bind(BiometricKeyVault::class, fn ($app) => new class($app->make(BiometricKeyBlobCodec::class), $app->make(LoggerInterface::class), $tally) extends BiometricKeyVault
+    {
+        public function __construct(
+            BiometricKeyBlobCodec $codec,
+            LoggerInterface $log,
+            private readonly object $tally,
+        ) {
+            parent::__construct($codec, $log);
+        }
+
+        public function cancelPrompt(): void
+        {
+            $this->tally->cancels++;
+        }
+
+        protected function runtimeAvailable(): bool
+        {
+            return true;
+        }
+
+        protected function vaultCapability(): array
+        {
+            return ['available' => true, 'reason' => 'available'];
+        }
+    });
+
+    return $tally;
+}
+
+it('takes the standing prompt down when the PIN is what opened the lock', function (): void {
+    lockedColdStartUser('pin-beats-prompt');
+    $tally = bindVaultCountingCancels();
+
+    Livewire::test(MobileLockScreen::class)
+        ->call('submit', '123456')
+        ->assertRedirect(route('dashboard'));
+
+    expect($tally->cancels)->toBe(1);
+});
+
+// A wrong PIN is not an answer to the prompt. Taking it down here would retire
+// the road the reader is most likely to take next, on the screen where they
+// have just demonstrated they do not remember the other one.
+it('leaves the prompt standing when the PIN was wrong', function (): void {
+    lockedColdStartUser('wrong-pin-keeps-prompt');
+    $tally = bindVaultCountingCancels();
+
+    Livewire::test(MobileLockScreen::class)
+        ->call('submit', '999999')
+        ->assertNoRedirect();
+
+    expect($tally->cancels)->toBe(0);
+});
+
+// A PIN that never reaches the gateway must not reach the prompt either.
+it('leaves the prompt standing when the PIN was the wrong length', function (): void {
+    lockedColdStartUser('short-pin-keeps-prompt');
+    $tally = bindVaultCountingCancels();
+
+    Livewire::test(MobileLockScreen::class)
+        ->call('submit', '12')
+        ->assertNoRedirect();
+
+    expect($tally->cancels)->toBe(0);
 });

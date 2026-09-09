@@ -7074,13 +7074,23 @@ Three readings generalise:
   `deviceOwnerAuthentication` admits a passcode that `.biometryCurrentSet` then
   refuses. A probe that is more permissive than the store is a promise the
   enclave breaks later, which is the same failure in a new place.
-- **A skeleton that refuses is part of the capability.** Android's `Set()`
-  answers `async_required` and writes nothing, so a ready sensor is still a no.
-  `Set()` and `IsAvailable()` read one `setIsAsyncOnly()` and
-  `TheProbeMustNotOfferWhatTheWriterRefusesTest` asserts the pair in the Kotlin
-  source, with a positive control that fails the day `Set()` stops refusing —
-  so the guard is deleted by the change that makes it untrue, not left behind
-  to pass vacuously.
+- **A skeleton that refuses is part of the capability.** While Android's `Set()`
+  answered `async_required` and wrote nothing, a ready sensor was still a no.
+  `Set()` and `IsAvailable()` read one `setIsAsyncOnly()`, and
+  `TheProbeMustNotOfferWhatTheWriterRefusesTest` asserted the pair in the Kotlin
+  source with a positive control that fails the day `Set()` stops refusing. That
+  day came: the control fired, `setIsAsyncOnly()` is gone, and the guard now
+  reads the same rule inverted — the probe must not report a refusal the writer
+  does not make. A guard written to be deleted by the change that makes it
+  untrue is one that survives the change as something still worth asserting.
+- **A listener and a dispatcher can each be right and never meet.**
+  `MobileLockScreen` listened for `cold-start-recovered`; the Android side can
+  only ever raise `native:` + a name, because `NativeActionCoordinator.dispatch()`
+  hardcodes `window.Livewire.dispatch("native:" + event, payload)`. Both halves
+  passed their own tests for months, and the join could not fail while nothing
+  raised the event at all. A channel with a listener and no dispatcher is
+  untested by construction, so the name has to be asserted against the code that
+  raises it — not restated in a second place.
 
 `AVaultFakePinsTheCapabilityItPretendsToHaveTest` moved with the seam. It used
 to require every vault fake overriding `runtimeAvailable()` to pin

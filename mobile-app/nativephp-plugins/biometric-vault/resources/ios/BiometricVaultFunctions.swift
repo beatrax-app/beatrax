@@ -102,6 +102,30 @@ enum BiometricVaultFunctions {
         }
     }
 
+    // MARK: - BiometricVault.PollRecovered
+
+    // iOS recovers synchronously: Get releases the bytes inline once the
+    // enclave accepts Face ID, so nothing is ever stashed for a later poll.
+    // Declared all the same, because the PHP facade is one file for both
+    // platforms and an undeclared function answers "function not found" —
+    // which reads as a bridge fault rather than as the empty slot it is.
+    class PollRecovered: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            return ["value": ""]
+        }
+    }
+
+    // MARK: - BiometricVault.CancelPrompt
+
+    // iOS presents its prompt inside the synchronous Get and returns only once
+    // the enclave has answered, so there is never one standing when the reader
+    // takes another road. Declared because the PHP facade is one file for both.
+    class CancelPrompt: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            return ["success": true]
+        }
+    }
+
     // MARK: - BiometricVault.Delete
     class Delete: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {

@@ -30,7 +30,9 @@ it('reads what the device said about itself', function (string $reply, bool $ava
 })->with([
     'an iPhone with Face ID enrolled' => ['{"available":true,"reason":"available"}', true, 'available'],
     'a Samsung with no finger enrolled' => ['{"available":false,"reason":"none_enrolled"}', false, 'none_enrolled'],
-    'Android, where Set is still a skeleton' => ['{"available":true,"reason":"async_unimplemented"}', true, 'async_unimplemented'],
+    // A word this build has never heard of: the reader of the log is a person,
+    // and a peer plugin on a newer build must reach them saying what it said.
+    'a reason a later build invented' => ['{"available":true,"reason":"enclave_busy"}', true, 'enclave_busy'],
     // Not "available": a missing key is not a yes, and a bridge that answered
     // an object with nothing in it has told us nothing about the enclave.
     'an object with neither key in it' => ['{}', false, 'unreadable'],

@@ -1,138 +1,222 @@
 package com.beatrax.biometricvault
 
 import android.content.Context
-import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
+import android.os.Handler
+import android.os.Looper
 import android.util.Base64
 import android.util.Log
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.nativephp.mobile.bridge.BridgeError
 import com.nativephp.mobile.bridge.BridgeFunction
+import com.nativephp.mobile.utils.NativeActionCoordinator
+import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.OAEPParameterSpec
+import javax.crypto.spec.PSource
+import javax.crypto.spec.SecretKeySpec
 
 /**
- * BiometricVault — SPIKE (Tier A proof, Android).
+ * BiometricVault — the Android half of cold-start biometric unlock.
  *
- * KEY FINDING (the reason cold-start biometric unlock is its own phase):
- * Android cannot mirror the iOS synchronous keychain. A Keystore key created
- * with `setUserAuthenticationRequired(true)` gates EVERY Cipher operation
- * (both encrypt and decrypt) behind a `BiometricPrompt.authenticate(CryptoObject)`
- * call, which is asynchronous and must run on a FragmentActivity's UI thread.
- * A synchronous bridge `Get()` therefore cannot return the plaintext inline —
- * the recover path MUST be event-based:
+ * WHY A KEY PAIR AND NOT AES. A Keystore secret key created with
+ * `setUserAuthenticationRequired(true)` gates EVERY Cipher operation behind a
+ * BiometricPrompt, encryption included. Enrolment cannot pay that: the PHP
+ * caller re-verifies the PIN to obtain the live data key, calls Set, and then
+ * `sodium_memzero`s the key on the very next line -- an asynchronous Set would
+ * have to hold that plaintext across a UI round trip. Only the PRIVATE half of
+ * an asymmetric Keystore key requires user authentication; the public half does
+ * not. So Set stays synchronous and returns a real answer, and Get is the one
+ * that prompts. The enclave binding is unchanged: the bytes are released only
+ * for a live BIOMETRIC_STRONG authentication.
  *
- *     PHP: BiometricVault::recover(key)  ->  native dispatches BiometricPrompt
- *     native: on success  ->  emit "BiometricVault.Recovered" { key, value }
- *             on cancel/fail -> emit "BiometricVault.Failed" { key, reason }
+ * The value is enveloped rather than encrypted with RSA directly, so nothing
+ * here has an opinion about how long the stored blob is.
  *
- * The Keystore CONFIG below (the security-critical part) is complete and
- * correct; the BiometricPrompt wiring is a structured skeleton that needs an
- * Activity handle + the NativePHP event-emit API and on-device iteration — the
- * work S2 must budget for. `setInvalidatedByBiometricEnrollment(true)` is the
- * anti-coercion property (a newly enrolled fingerprint invalidates the key),
- * matching iOS's `.biometryCurrentSet`.
+ * `setInvalidatedByBiometricEnrollment(true)` is the anti-coercion property,
+ * matching iOS's `.biometryCurrentSet`: enrolling a new fingerprint destroys
+ * the key. Get answers that case as `missing` and clears the entry, because an
+ * undecryptable blob is not an authentication that failed -- it is nothing left
+ * to authenticate against, and the reader has to enrol again.
  *
- * Store shape: `set()` encrypts under the biometric-bound key (itself an async
- * prompt at enroll time — acceptable, the user is present) and persists
- * base64(iv):base64(ciphertext) in plain SharedPreferences; the security is in
- * the Keystore key, not the prefs.
+ * RECOVERY COMPLETES BY SIGNAL (E5-R10). Get returns `async`; the prompt
+ * callback stashes the decrypted blob in a transient in-process slot and raises
+ * `BiometricVault.Recovered`. The blob never travels in the event payload --
+ * PHP fetches it over the bridge with PollRecovered, which consumes the slot on
+ * read. A slot that survived its read, or a backgrounding, could be replayed by
+ * a later dispatch and admit a session with no live biometric behind it.
  */
 object BiometricVaultFunctions {
 
-    private const val KEY_ALIAS = "beatrax.biometric.vault.kek"
+    private const val KEY_ALIAS = "beatrax.biometric.vault.wrap.v2"
+
+    // Aliases no build can read any more, deleted rather than migrated. The
+    // first is the spike's symmetric key, which Set never once wrote under. The
+    // second authorised SHA-256 alone, which the OAEP note below is about.
+    private val RETIRED_ALIASES = listOf(
+        "beatrax.biometric.vault.kek",
+        "beatrax.biometric.vault.wrap",
+    )
+
     private const val PREFS_NAME = "beatrax_biometric_vault"
-    private const val TRANSFORM = "AES/GCM/NoPadding"
+    private const val WRAP_TRANSFORM = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
+    private const val CONTENT_TRANSFORM = "AES/GCM/NoPadding"
     private const val GCM_TAG_BITS = 128
 
-    // --- Keystore key (security-critical; complete) --------------------------
+    private const val EVENT_RECOVERED = "BiometricVault.Recovered"
+    private const val EVENT_FAILED = "BiometricVault.Failed"
 
-    private fun getOrCreateKey(): SecretKey {
-        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (ks.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
+    // Consumed by PollRecovered and dropped when the app leaves the foreground.
+    @Volatile
+    private var recovered: String? = null
 
-        val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-        val builder = KeyGenParameterSpec.Builder(
-            KEY_ALIAS,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        )
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(256)
-            // Every use requires a fresh biometric.
-            .setUserAuthenticationRequired(true)
-            // A newly enrolled fingerprint/face invalidates this key.
-            .setInvalidatedByBiometricEnrollment(true)
+    @Volatile
+    private var watchingLifecycle = false
 
-        // Per-use STRONG-biometric gating. setUserAuthenticationParameters +
-        // AUTH_BIOMETRIC_STRONG are API 30+ (Android R); on API 28/29 (the
-        // manifest floor) fall back to the pre-30 "-1 = require auth for every
-        // use" validity duration. Without this gate the key can't be created on
-        // 28/29 (NoSuchMethodError).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            builder.setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
-        } else {
-            @Suppress("DEPRECATION")
-            builder.setUserAuthenticationValidityDurationSeconds(-1)
+    // The prompt outlives the screen that asked for it. It is dispatched from
+    // the lock screen's own mount, so a reader who types the PIN instead leaves
+    // it standing over an app that is already unlocked.
+    @Volatile
+    private var active: BiometricPrompt? = null
+
+    // cancelAuthentication() answers through the main executor, and prompt()
+    // already runs there, so the cancelled prompt's error arrives AFTER the
+    // replacement has been mounted. Without a ticket to compare, that late
+    // callback clears the live prompt's handle and nothing can take it down.
+    @Volatile
+    private var ticket = 0
+
+    // --- Keystore key (security-critical) ------------------------------------
+
+    private fun keyStore(): KeyStore =
+        KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+    private fun getOrCreateKeyPair(): java.security.KeyStore.PrivateKeyEntry {
+        val ks = keyStore()
+
+        for (alias in RETIRED_ALIASES) {
+            if (ks.containsAlias(alias)) ks.deleteEntry(alias)
         }
 
-        gen.init(builder.build())
-        return gen.generateKey()
+        (ks.getEntry(KEY_ALIAS, null) as? KeyStore.PrivateKeyEntry)?.let { return it }
+
+        val gen = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore")
+        gen.initialize(
+            KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA1)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
+                .setKeySize(2048)
+                // Only the private half is gated by this; encryption is not.
+                .setUserAuthenticationRequired(true)
+                .setInvalidatedByBiometricEnrollment(true)
+                .setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
+                .build()
+        )
+        gen.generateKeyPair()
+
+        return keyStore().getEntry(KEY_ALIAS, null) as KeyStore.PrivateKeyEntry
     }
 
     fun deleteKey() {
-        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        if (ks.containsAlias(KEY_ALIAS)) ks.deleteEntry(KEY_ALIAS)
+        val ks = keyStore()
+        for (alias in RETIRED_ALIASES + KEY_ALIAS) {
+            if (ks.containsAlias(alias)) ks.deleteEntry(alias)
+        }
     }
 
     // --- Bridge functions ----------------------------------------------------
 
     /**
-     * Set: encrypt+persist. NOTE: because the key requires auth, initialising
-     * the encrypt Cipher also triggers a BiometricPrompt — so on-device this
-     * too routes through promptAndRun() (async). Modeled here as the crypto
-     * skeleton; the prompt wiring is shared with Get.
+     * Set: synchronous. The public half of the Keystore pair needs no
+     * authentication, so enrolment answers for itself rather than through an
+     * event the caller has already zeroed its key to wait for.
      */
     class Set(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
             val key = parameters["key"] as? String
                 ?: throw BridgeError.InvalidParameters("key is required")
             val value = parameters["value"] as? String
+
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
             if (value == null) {
-                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(key).apply()
+                prefs.edit().remove(key).apply()
                 return mapOf("success" to true)
             }
-            // On-device: dispatch BiometricPrompt(CryptoObject(encryptCipher)),
-            // then in the callback do cipher.doFinal(value) and persist. Emit
-            // an event with the outcome. See promptAndRun() below.
-            if (setIsAsyncOnly()) {
-                Log.w("BiometricVault.Set", "Async BiometricPrompt required on Android — see class docblock.")
-                return mapOf("success" to false, "async_required" to true)
-            }
 
-            return mapOf("success" to false)
+            return try {
+                prefs.edit().putString(key, seal(value)).apply()
+                mapOf("success" to true)
+            } catch (e: Exception) {
+                Log.e("BiometricVault.Set", "could not seal the entry: ${e.message}", e)
+                mapOf("success" to false)
+            }
         }
     }
 
     /**
-     * Get: MUST be async on Android. Returns a marker telling PHP to expect the
-     * "BiometricVault.Recovered" / "BiometricVault.Failed" event instead of an
-     * inline value.
+     * Get: asynchronous, and the only call that prompts. Answers `async` so the
+     * caller stops waiting for a value, then raises Recovered or Failed.
      */
-    class Get(private val context: Context) : BridgeFunction {
+    class Get(private val activity: FragmentActivity) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-            parameters["key"] as? String
+            val key = parameters["key"] as? String
                 ?: throw BridgeError.InvalidParameters("key is required")
-            // On-device: build decrypt Cipher from the stored IV, dispatch
-            // BiometricPrompt(CryptoObject(decryptCipher)); on success emit
-            // "BiometricVault.Recovered" { key, value }, else "…Failed".
-            return mapOf("async" to true, "event" to "BiometricVault.Recovered")
+            val reason = parameters["reason"] as? String ?: "Unlock Beatrax"
+
+            val stored = activity
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(key, null)
+                ?: return mapOf("missing" to true)
+
+            val cipher = try {
+                unwrapCipher()
+            } catch (e: KeyPermanentlyInvalidatedException) {
+                // The enrolled set changed, which is exactly what the key was
+                // built to notice. Nothing can read this blob again.
+                Log.w("BiometricVault.Get", "the enrolled biometric changed; the entry cannot be read again")
+                forget(activity, key)
+                return mapOf("missing" to true)
+            } catch (e: Exception) {
+                Log.e("BiometricVault.Get", "could not prepare the unwrap: ${e.message}", e)
+                return mapOf("failed" to true)
+            }
+
+            Handler(Looper.getMainLooper()).post {
+                prompt(activity, cipher, reason, stored, key)
+            }
+
+            return mapOf("async" to true)
+        }
+    }
+
+    /**
+     * PollRecovered: hands over the blob the prompt released, once. Consume on
+     * read is half the contract; the other half is the lifecycle observer that
+     * drops the slot when the app stops.
+     */
+    class PollRecovered(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val value = recovered
+            recovered = null
+
+            return mapOf("value" to (value ?: ""))
         }
     }
 
@@ -149,29 +233,18 @@ object BiometricVaultFunctions {
      * AUTH_BIOMETRIC_STRONG, so anything this call would admit that the key
      * would not is a promise the enclave then breaks. A device credential is
      * not a biometric and deliberately does not count.
-     *
-     * "Right now" also covers this plugin: while Set() answers `async_required`
-     * the vault cannot hold a key on any Android build, however ready the
-     * sensor is, and this call says `async_unimplemented` rather than yes.
      */
     class IsAvailable(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
             val status = BiometricManager.from(context)
                 .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
 
-            val sensorReady = status == BiometricManager.BIOMETRIC_SUCCESS
-
-            // The reason travels with the answer: "no" has six causes here and
-            // only one of them is worth telling a reader about. A ready sensor
-            // is still a no while Set() cannot write — the sensor was the only
-            // thing being asked, and every Android phone got an Enroll button.
-            val reason = when {
-                sensorReady && setIsAsyncOnly() -> "async_unimplemented"
-                sensorReady -> "available"
-                status == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> "none_enrolled"
-                status == BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> "no_hardware"
-                status == BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> "hardware_unavailable"
-                status == BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> "security_update_required"
+            val reason = when (status) {
+                BiometricManager.BIOMETRIC_SUCCESS -> "available"
+                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> "none_enrolled"
+                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> "no_hardware"
+                BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> "hardware_unavailable"
+                BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> "security_update_required"
                 else -> "unsupported"
             }
 
@@ -185,11 +258,17 @@ object BiometricVaultFunctions {
     }
 
     /**
-     * Whether Set() still has to refuse. Read by Set, which returns the refusal,
-     * and by IsAvailable, which must not offer what Set will refuse — one fact
-     * with two readers rather than two places to remember when the wiring lands.
+     * CancelPrompt: for the race the lock screen really runs. Its mount fires
+     * the prompt, and the PIN pad underneath stays live the whole time, so the
+     * two paths finish in either order and only one of them is the reader's.
      */
-    private fun setIsAsyncOnly(): Boolean = true
+    class CancelPrompt(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            Handler(Looper.getMainLooper()).post { dismiss() }
+
+            return mapOf("success" to true)
+        }
+    }
 
     class Delete(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
@@ -200,47 +279,186 @@ object BiometricVaultFunctions {
         }
     }
 
-    // --- Async BiometricPrompt skeleton (needs Activity + event API) ---------
+    // --- The prompt ----------------------------------------------------------
 
-    /**
-     * The shared prompt runner S2 must complete. `activity` is the current
-     * FragmentActivity (NativePHP exposes the host activity); `onResult` fires
-     * the NativePHP event. Left as a documented skeleton because it needs a
-     * live Activity + the plugin event-emit API this spike cannot compile.
-     */
-    private fun promptAndRun(
+    private fun prompt(
         activity: FragmentActivity,
         cipher: Cipher,
         reason: String,
-        onSuccess: (Cipher) -> Unit,
-        onFailure: (String) -> Unit,
+        stored: String,
+        key: String,
     ) {
-        val executor = androidx.core.content.ContextCompat.getMainExecutor(activity)
-        val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+        watchLifecycle(activity)
+        dismiss()
+
+        val mine = ++ticket
+
+        val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                result.cryptoObject?.cipher?.let(onSuccess) ?: onFailure("no_cipher")
+                if (mine != ticket) return
+
+                val unwrap = result.cryptoObject?.cipher
+                if (unwrap == null) {
+                    // The prompt authenticated something other than the Cipher
+                    // it was handed, so nothing here is enclave-released.
+                    fail(activity, "no_cipher")
+                    return
+                }
+
+                active = null
+
+                try {
+                    recovered = open(stored, unwrap)
+                    NativeActionCoordinator.dispatchEvent(activity, EVENT_RECOVERED, "{}")
+                } catch (e: KeyPermanentlyInvalidatedException) {
+                    forget(activity, key)
+                    fail(activity, "invalidated")
+                } catch (e: Exception) {
+                    Log.e("BiometricVault", "the entry did not open after a successful prompt: ${e.message}", e)
+                    fail(activity, "unreadable")
+                }
             }
-            override fun onAuthenticationError(code: Int, msg: CharSequence) = onFailure("error:$code")
-            override fun onAuthenticationFailed() = onFailure("failed")
-        })
+
+            // Not a refusal: the sensor read a finger it did not recognise and
+            // the prompt is still up. Answering here would retire a ceremony
+            // the reader is still in.
+            override fun onAuthenticationFailed() {
+                Log.d("BiometricVault", "a presented biometric was not recognised; the prompt is still up")
+            }
+
+            override fun onAuthenticationError(code: Int, msg: CharSequence) {
+                if (mine != ticket) return
+
+                fail(activity, if (code == BiometricPrompt.ERROR_USER_CANCELED ||
+                    code == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                    code == BiometricPrompt.ERROR_CANCELED
+                ) "canceled" else "error:$code")
+            }
+        }
+
         val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Unlock Beatrax")
             .setSubtitle(reason)
+            // BIOMETRIC_STRONG alone admits no device credential, so the prompt
+            // must carry its own way out.
             .setNegativeButtonText("Use PIN")
-            .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .build()
-        prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
+
+        try {
+            // Assigned before authenticate(), never after: a synchronous failure
+            // inside it would otherwise have its cleanup overwritten by a handle
+            // to a prompt that never mounted.
+            val prompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
+            active = prompt
+            prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
+        } catch (e: Exception) {
+            Log.e("BiometricVault", "the prompt did not mount: ${e.message}", e)
+            fail(activity, "unreadable")
+        }
     }
 
-    @Suppress("unused")
-    private fun encryptCipher(): Cipher =
-        Cipher.getInstance(TRANSFORM).apply { init(Cipher.ENCRYPT_MODE, getOrCreateKey()) }
+    private fun fail(activity: FragmentActivity, reason: String) {
+        recovered = null
+        active = null
+        Log.d("BiometricVault", "recovery did not complete: $reason")
+        NativeActionCoordinator.dispatchEvent(activity, EVENT_FAILED, """{"reason":"$reason"}""")
+    }
 
-    @Suppress("unused")
-    private fun decryptCipher(iv: ByteArray): Cipher =
-        Cipher.getInstance(TRANSFORM).apply { init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_BITS, iv)) }
+    // Takes the prompt down without an answer. The callback still fires with
+    // ERROR_CANCELED, which raises Failed — a signal the lock screen is
+    // deliberately deaf to, because a cancelled ceremony earns no state.
+    private fun dismiss() {
+        // The slot is dropped here rather than in the callback, because the
+        // ticket now silences a superseded one: a ceremony the reader answered
+        // another way must not leave a released blob behind for the next
+        // dispatch to claim.
+        ticket++
+        recovered = null
+        active?.cancelAuthentication()
+        active = null
+    }
 
-    @Suppress("unused")
-    private fun encode(iv: ByteArray, ct: ByteArray): String =
-        Base64.encodeToString(iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(ct, Base64.NO_WRAP)
+    private fun forget(activity: Context, key: String) {
+        activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(key).apply()
+        deleteKey()
+    }
+
+    // A blob that outlived the foreground is one a later dispatch could claim
+    // without a prompt behind it.
+    private fun watchLifecycle(activity: FragmentActivity) {
+        if (watchingLifecycle) return
+        watchingLifecycle = true
+
+        activity.lifecycle.addObserver(LifecycleEventObserver { _: LifecycleOwner, event: Lifecycle.Event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                recovered = null
+            }
+        })
+    }
+
+    // --- Envelope ------------------------------------------------------------
+
+    // A content key per write, wrapped by the enclave-bound public half. The
+    // prompt authorises the unwrap of that content key and nothing larger,
+    // which is what keeps the stored value's length out of this file.
+    private fun seal(value: String): String {
+        val content: SecretKey = KeyGenerator.getInstance("AES")
+            .apply { init(256) }
+            .generateKey()
+
+        val body = Cipher.getInstance(CONTENT_TRANSFORM).apply {
+            init(Cipher.ENCRYPT_MODE, content)
+        }
+
+        val ciphertext = body.doFinal(value.toByteArray(Charsets.UTF_8))
+
+        val wrapped = Cipher.getInstance(WRAP_TRANSFORM).apply {
+            init(Cipher.ENCRYPT_MODE, getOrCreateKeyPair().certificate.publicKey, oaepSpec())
+        }.doFinal(content.encoded)
+
+        return listOf(wrapped, body.iv, ciphertext).joinToString(":") {
+            Base64.encodeToString(it, Base64.NO_WRAP)
+        }
+    }
+
+    private fun open(stored: String, unwrap: Cipher): String {
+        val parts = stored.split(":")
+        require(parts.size == 3) { "the stored entry is not an envelope" }
+
+        val content = SecretKeySpec(
+            unwrap.doFinal(Base64.decode(parts[0], Base64.NO_WRAP)),
+            "AES"
+        )
+
+        val plaintext = Cipher.getInstance(CONTENT_TRANSFORM).apply {
+            init(
+                Cipher.DECRYPT_MODE,
+                content,
+                GCMParameterSpec(GCM_TAG_BITS, Base64.decode(parts[1], Base64.NO_WRAP))
+            )
+        }.doFinal(Base64.decode(parts[2], Base64.NO_WRAP))
+
+        return String(plaintext, Charsets.UTF_8)
+    }
+
+    private fun unwrapCipher(): Cipher =
+        Cipher.getInstance(WRAP_TRANSFORM).apply {
+            init(Cipher.DECRYPT_MODE, getOrCreateKeyPair().privateKey, oaepSpec())
+        }
+
+    // Nothing about OAEP is left to a default here, and the reason is a failure
+    // that survives a correct prompt. `OAEPWithSHA-256AndMGF1Padding` names the
+    // message digest only; the JCA default for the MGF1 digest is SHA-1, and
+    // Keymaster checks that second digest against the key's authorised set. A
+    // public-key encrypt can run outside the TEE and succeeds either way, so the
+    // mismatch appears only on the private-key `doFinal` — reported as the
+    // generic KM_ERROR_UNKNOWN_ERROR (-1000), after the fingerprint was accepted
+    // and with nothing in the message about digests. Read off a Galaxy A51.
+    private fun oaepSpec(): OAEPParameterSpec = OAEPParameterSpec(
+        "SHA-256",
+        "MGF1",
+        MGF1ParameterSpec.SHA1,
+        PSource.PSpecified.DEFAULT,
+    )
 }

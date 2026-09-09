@@ -8,10 +8,10 @@ use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Dto\ReportDefinition;
 
-// A stored definition is a synced LWW column, so the row a peer on a different
-// build wrote is a realistic source of a word this one does not know. Every
-// field is coerced the way the URL rail's are; nothing throws, because one
-// unreadable row used to 500 /reports and, if pinned, the dashboard with it.
+// A stored definition is a synced LWW column, so a peer on a different build is
+// a realistic source of a word this one does not know. Nothing throws: one
+// unreadable row used to 500 /reports, and the dashboard with it. Granularity is
+// the one field dropped rather than coerced, as customFrom already is below.
 final class ReportDefinitionFactory
 {
     public static function fromStored(mixed $raw): ReportDefinition
@@ -22,7 +22,7 @@ final class ReportDefinitionFactory
             metric: ReportVocabulary::metric(self::string($decoded, 'metric')),
             dimension: ReportVocabulary::dimension(self::string($decoded, 'dimension')),
             periodPreset: ReportVocabulary::periodPreset(self::string($decoded, 'periodPreset')),
-            granularity: ReportVocabulary::granularity(self::string($decoded, 'granularity')),
+            granularity: ReportVocabulary::storedGranularity(self::string($decoded, 'granularity')),
             currencyMode: ReportVocabulary::currencyMode(self::string($decoded, 'currencyMode')),
             viz: ReportVocabulary::viz(self::string($decoded, 'viz')),
             // Dropped rather than replayed when it is not a date: the builder

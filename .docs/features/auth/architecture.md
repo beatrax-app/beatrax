@@ -544,13 +544,27 @@ and it would still leave any cookie already issued working.
 The `/lock` route offers exactly three things to do — PIN pad, biometric
 prompt, sign out — and nothing else. Sign out is reachable through two
 controls with the same POST target: the plain one, and the forgotten-code
-signpost (`lock_screen.forgot_pin`) whose copy states that tapping it
-signs you out, that the account password signs you back in, and that no
-data is lost. The reset itself stays in Settings behind a password
+signpost (`lock_screen.forgot_pin`), whose label states that tapping it
+signs you out. What that sign-out is worth — that the account password
+signs you back in and costs nothing, unless a recovery-code reset or the
+account owner set that password, after which it opens nothing — is
+`auth::help.forgot_pin`, behind an `x-core::help-tip` beside the label.
+It used to be printed inline at full size: three lines of prose over a
+pad whose only job is six digits.
+
+**The mark is the one in the product that is not always drawn.** It
+appears once `MobileLockGateway::forgottenPinHelpDue()` reads at least
+one failure off `user_app_lock_configs.failed_attempts` — the meter
+`PinVerificationService` already keeps for the backoff, so no second
+counter exists and a reload or a relaunch comes back with the mark still
+there. Before the first wrong PIN the reader is entering a code, not
+asking about one. The reset itself stays in Settings behind a password
 login — putting it on the lock screen would reduce the app-lock's value
 to the account password's for anyone holding a locked device, and the
 lock exists precisely because it is a separate gate. The mobile screen
-carries the same pair. PIN digits are never rendered in an
+carries the same pair, the same mark and the same copy
+(`mobile::lock.forgot_pin` and `mobile::help.forgot_pin`, held equal to
+the Auth pair by a test). PIN digits are never rendered in an
 `<input>`; the DOM only shows bullet glyphs, so no autocomplete,
 clipboard, or OS password-manager capture can occur. The digits
 accumulate client-side in transient Alpine state rather than a public

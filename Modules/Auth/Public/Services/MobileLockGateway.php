@@ -100,6 +100,20 @@ final readonly class MobileLockGateway
         return $this->verifier->lockedUntil($userId);
     }
 
+    // One wrong PIN is the moment the reader has a question about the PIN
+    // rather than an answer, and it is the whole of what the forgotten-code
+    // explanation waits for. Read off the meter the pad already keeps, so a
+    // reload or a re-lock cannot hand back a screen that has forgotten.
+    public const int FORGOTTEN_PIN_HELP_AFTER_FAILURES = 1;
+
+    public function forgottenPinHelpDue(int $userId): bool
+    {
+        $remaining = $this->remainingPinAttempts($userId);
+
+        return $remaining !== null
+            && $remaining <= PinVerificationService::HARD_CAP - self::FORGOTTEN_PIN_HELP_AFTER_FAILURES;
+    }
+
     // Here, mirroring LockScreen::remainingAttempts(), so no second module
     // needs its own raw read of user_app_lock_configs.
     public function remainingPinAttempts(int $userId): ?int
