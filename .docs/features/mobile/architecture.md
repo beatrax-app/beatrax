@@ -433,6 +433,51 @@ the reader saw on screen.
 
 Verified on hardware after a clean install: **"Bestand is verplicht."**
 
+### A notification that said it arrived
+
+`NotificationManager.notify()` does not throw when an app may not post. It
+returns quietly, so the caller cannot tell a delivery from a discard — and the
+plugin's `Show` logged "Notification shown successfully" and answered
+`success: true` either way.
+
+Measured on a Galaxy A51 (2026-09-09), POST_NOTIFICATIONS denied and the
+channel at importance NONE. A manual cash-book entry raised its notification;
+the bridge answered success; `DispatchMobileNotification::recordDeliveryOutcome`
+read that as a delivery and recorded one; the shade held nothing. Granting the
+permission and repeating the same entry put **"Kasboek bijgewerkt / 1 boeking
+handmatig toegevoegd"** on screen, which is how the two halves were measured
+against each other rather than assumed.
+
+The application cannot make this call itself. The plugin exposes a way to
+request the permission and no way to read it, so the only code that knows
+whether the next notification will be seen is the code posting it.
+`scripts/nativephp_android_notification_delivery_is_reported.php` guards `Show`
+with `areNotificationsEnabled()` — the right question, because a reader who
+grants the permission and then turns the app's notifications off in settings is
+equally unreachable, and only one of those is a permission — and refuses
+through `BridgeError.ExecutionFailed`, which is the shape the application
+already reads as a refusal and records no delivery for.
+
+`Schedule` is deliberately **not** guarded. It hands the platform a
+notification for a later time, and a permission the reader has not granted yet
+is one they may grant before it fires; refusing to schedule would throw away a
+notification that would have been allowed.
+
+The patch targets the plugin's own `resources/android`, not the generated
+project: `app/src/nativephp/` is regenerated from those resources on every
+build, and an edit there is discarded — measured, by making exactly that
+mistake first and watching the device answer
+`❌ Function 'LocalNotification.CheckPermission' not found` after a clean build.
+
+Verified on hardware after an in-place update, with the account preserved:
+
+```text
+denied   W LocalNotification: Notification not delivered: this app may not post notifications
+         local.WARNING: Mobile notification was refused by the native bridge.
+granted  D LocalNotification: Notification shown successfully
+         NotificationRecord(pkg=com.beatrax.mobile … importance=3)
+```
+
 ### The runtime is persistent, and request headers leak between requests
 
 The embedded PHP process serves many requests. Its superglobals are not fully
