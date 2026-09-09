@@ -39,6 +39,11 @@ final class MobileLockScreen extends Component
 
     public string $biometricLabel = 'Use Face ID';
 
+    // The forgotten-code explanation is three sentences on a screen whose only
+    // job is six digits, so it waits behind a mark until the reader has got
+    // the PIN wrong at least once.
+    public bool $forgottenPinHelpDue = false;
+
     public function mount(
         CurrentUser $currentUser,
         MobileLockGateway $gateway,
@@ -60,6 +65,8 @@ final class MobileLockScreen extends Component
 
         $this->biometricAvailable = ($gateway->hasArmedBiometricCredential($user->id) && $bridge->isAvailable())
             || $coldStartReady;
+
+        $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
 
         // Why pairing sent them here. Without it the redirect landed on a PIN
         // pad that explained nothing, which is the dead end it exists to fix.
@@ -90,6 +97,8 @@ final class MobileLockScreen extends Component
         $dataKey = $gateway->verifyPin($user->id, $pin, $session);
 
         if ($dataKey === null) {
+            $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
+
             $lockedUntil = $gateway->pinLockedUntil($user->id);
             if ($lockedUntil !== null) {
                 $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));

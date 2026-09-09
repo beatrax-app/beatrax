@@ -10,7 +10,7 @@ return [
     // i18n-review: bg · forgot_pin — the sentence says "Излез" and the button says
     // "Изход". Same root, and twenty other locales pair an imperative with a noun
     // label the same way, but a native should confirm the pairing reads.
-    'forgot_pin' => 'Забрави ли ПИН кода? Излез — ако паролата за профила ти още отваря това заключване, можеш да влезеш отново, да зададеш нов ПИН код и да не загубиш нищо. Парола, нулирана с код за възстановяване или зададена ти от собственика на профила, вече не го отваря.',
+    'forgot_pin' => 'Забрави ли ПИН кода? Излез',
 
     'digits_entered' => ':count въведена цифра|:count въведени цифри',
     'pad_label' => 'Клавиатура за ПИН',

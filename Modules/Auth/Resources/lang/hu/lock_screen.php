@@ -7,11 +7,7 @@ return [
     'native_unlock_failed' => 'A feloldás nem sikerült. Add meg inkább a PIN-kódot.',
     'page_title' => 'Feloldás · Beatrax',
     'sign_out' => 'Kijelentkezés',
-    // i18n-review: hu · forgot_pin — "Nem vész el adat" matches the same clause in
-    // app_lock forgot_modal_body, so it is at least consistent; standing alone
-    // without "soha" it is terse, and a native may want "Semmilyen adat nem vész
-    // el" instead.
-    'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki — ha a fiókjelszavad még nyitja ezt a zárat, újra bejelentkezhetsz, beállíthatsz egy új PIN-kódot, és semmi nem vész el. Az a jelszó, amelyet helyreállítási kóddal állítottál vissza, vagy amelyet a fiók tulajdonosa állított be neked, már nem nyitja.',
+    'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki',
 
     'digits_entered' => ':count számjegy beírva|:count számjegy beírva',
     'pad_label' => 'PIN-billentyűzet',
