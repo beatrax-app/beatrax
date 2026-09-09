@@ -140,24 +140,65 @@ class BiometricKeyVault
     // Native seam (overridable in tests; facade confined here)
     // -------------------------------------------------------------------------
 
-    // Android's half is a skeleton by design: a Keystore key with
-    // setUserAuthenticationRequired(true) gates every Cipher call behind an
-    // async BiometricPrompt, so Set answers `async_required` and writes nothing.
-    // Offering enrolment there said the device declined to store the key.
+    // Asks the device rather than reading which operating system is running.
+    // PHP_OS_FAMILY answered the same on a phone with a fingerprint enrolled
+    // and on one with none, so the reader was offered an enrolment the enclave
+    // then refused, and the only account of it was the word "false".
     /**
      * @link ../../../../mobile-app/nativephp-plugins/biometric-vault/resources/android/BiometricVaultFunctions.kt
      */
     protected function platformCanStore(): bool
     {
-        return $this->platformFamily() !== 'Linux';
+        $capability = $this->vaultCapability();
+
+        if (($capability['available'] ?? null) === true) {
+            return true;
+        }
+
+        $this->logUnavailable($capability['reason'] ?? 'unreadable');
+
+        return false;
     }
 
-    // Android reports Linux here and iOS reports Darwin, which is the same
-    // distinction NativeDeviceName leans on. A native probe would say no more
-    // until the prompt wiring lands and this becomes a real capability call.
-    protected function platformFamily(): string
+    /**
+     * @return array{available?: bool, reason?: string}
+     */
+    protected function vaultCapability(): array
     {
-        return PHP_OS_FAMILY;
+        $answer = $this->capabilityAnswer();
+
+        if (! is_array($answer)) {
+            return [];
+        }
+
+        $reason = $answer['reason'] ?? null;
+
+        return [
+            'available' => ($answer['available'] ?? null) === true,
+            'reason' => is_string($reason) && $reason !== '' ? $reason : 'unreadable',
+        ];
+    }
+
+    // The bridge call itself, kept apart from the reading of its answer: the
+    // repo root does not autoload the plugin, so every case below this line was
+    // reachable only from the mobile-app root and went untested in both.
+    protected function capabilityAnswer(): mixed
+    {
+        if (! class_exists(BiometricVault::class)) {
+            return null;
+        }
+
+        return BiometricVault::capability();
+    }
+
+    // Debug rather than warning: on a phone with no biometric enrolled this is
+    // the ordinary state of the world, not a fault, and the screen already
+    // shows the reader a PIN pad instead of an affordance that cannot work.
+    protected function logUnavailable(string $reason): void
+    {
+        $this->log->debug('BiometricKeyVault: this device cannot gate an entry behind a biometric.', [
+            'reason' => $reason,
+        ]);
     }
 
     protected function runtimeAvailable(): bool

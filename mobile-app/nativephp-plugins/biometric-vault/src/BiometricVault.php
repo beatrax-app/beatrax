@@ -59,6 +59,24 @@ class BiometricVault
         return compact('value', 'authenticated', 'async', 'canceled', 'failed', 'missing');
     }
 
+    // What the device can do RIGHT NOW, not which operating system it runs: a
+    // phone with no biometric enrolled cannot hold this key, and answering from
+    // PHP_OS_FAMILY offered the reader an enrolment that then failed. The reason
+    // travels with the answer because "no" has six causes and one to act on.
+    /**
+     * @return array{available: bool, reason: string}
+     */
+    public function capability(): array
+    {
+        $answer = $this->call('BiometricVault.IsAvailable', []);
+        $reason = $answer['reason'] ?? null;
+
+        return [
+            'available' => ($answer['available'] ?? null) === true,
+            'reason' => is_string($reason) && $reason !== '' ? $reason : 'unreadable',
+        ];
+    }
+
     public function delete(string $key): bool
     {
         return $this->callSuccess('BiometricVault.Delete', ['key' => $key]);

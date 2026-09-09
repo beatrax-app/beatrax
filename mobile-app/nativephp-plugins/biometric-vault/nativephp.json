@@ -14,6 +14,13 @@
             "description": "Read a value, releasing it ONLY after a fresh biometric authentication"
         },
         {
+            "name": "BiometricVault.IsAvailable",
+            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.IsAvailable",
+            "android_params": ["context"],
+            "ios": "BiometricVaultFunctions.IsAvailable",
+            "description": "Whether this device can gate an entry behind a biometric right now"
+        },
+        {
             "name": "BiometricVault.Delete",
             "android": "com.beatrax.biometricvault.BiometricVaultFunctions.Delete",
             "ios": "BiometricVaultFunctions.Delete",

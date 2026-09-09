@@ -44,13 +44,15 @@ function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): Biome
             return true;
         }
 
-        // The enclave path is iOS, which reports Darwin. Without pinning it the
-        // fake inherits the HOST's PHP_OS_FAMILY, so platformCanStore() answers
-        // false on a Linux runner and every availability assertion here passes
-        // on a Mac and fails in CI.
-        protected function platformFamily(): string
+        // Without pinning it, this half of isAvailable() falls to the real
+        // bridge, which no repo toolchain can reach, so every availability
+        // assertion here would fail for the absence of a phone.
+        /**
+         * @return array{available?: bool, reason?: string}
+         */
+        protected function vaultCapability(): array
         {
-            return 'Darwin';
+            return ['available' => true, 'reason' => 'available'];
         }
 
         public function enroll(int $userId, string $dataKey): bool

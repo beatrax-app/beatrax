@@ -7045,6 +7045,51 @@ The convention page is [A sentence is one line](a-sentence-is-one-line.md), and
 still carries a fragment key — plus a control asserting at least one language
 puts words *after* the command, since otherwise the placeholder bought nothing.
 
+## A capability answered from the operating system's name
+
+`BiometricKeyVault::platformCanStore()` was `PHP_OS_FAMILY !== 'Linux'`. Its own
+comment admitted what that was: *"A native probe would say no more until the
+prompt wiring lands and this becomes a real capability call."* It never did.
+
+The answer is the same on every iPhone, including one with Face ID switched off
+for this app, and on every Android build, including one with no finger enrolled.
+Settings offered "Use Face ID — Enroll this device", the enrolment failed, and
+the screen said *"Your device declined to store the key."* The device had
+declined nothing; it had never been asked. The only account of the refusal on an
+iPhone 12 mini was `Keychain save failed (-25293)`, read by patching a file onto
+the phone.
+
+Three readings generalise:
+
+- **A question about a capability has to reach the thing that has it.** The
+  operating system name is a fact about the binary, not about the enclave, the
+  sensor, or what the reader enrolled. `BiometricManager.canAuthenticate` and
+  `LAContext.canEvaluatePolicy` are the two calls that know, and the reason
+  they hand back — `none_enrolled` against `no_hardware` against
+  `hardware_unavailable` — is the difference between something the reader can
+  fix and something nobody can.
+- **A probe must ask for the authentication the write is stored under.**
+  Android's weaker authenticators admit a device credential that an
+  `AUTH_BIOMETRIC_STRONG` Keystore key then refuses; iOS's
+  `deviceOwnerAuthentication` admits a passcode that `.biometryCurrentSet` then
+  refuses. A probe that is more permissive than the store is a promise the
+  enclave breaks later, which is the same failure in a new place.
+- **A skeleton that refuses is part of the capability.** Android's `Set()`
+  answers `async_required` and writes nothing, so a ready sensor is still a no.
+  `Set()` and `IsAvailable()` read one `setIsAsyncOnly()` and
+  `TheProbeMustNotOfferWhatTheWriterRefusesTest` asserts the pair in the Kotlin
+  source, with a positive control that fails the day `Set()` stops refusing —
+  so the guard is deleted by the change that makes it untrue, not left behind
+  to pass vacuously.
+
+`AVaultFakePinsTheCapabilityItPretendsToHaveTest` moved with the seam. It used
+to require every vault fake overriding `runtimeAvailable()` to pin
+`platformFamily()` too, because the unpinned half read the host's operating
+system and sixteen tests passed on a Mac and failed on CI's Linux runner. The
+unpinned half now reaches for a bridge no toolchain has, which fails everywhere
+instead — no less unrelated to what the test is about — so the guard names the
+new seam.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

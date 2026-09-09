@@ -85,12 +85,15 @@ function refusingKeyVault(?string $nativeError, bool $stored, array &$logged): B
             return true;
         }
 
-        // The enclave path is iOS, which reports Darwin. Unpinned, the fake inherits
-        // the HOST's PHP_OS_FAMILY, so platformCanStore() answers false on a Linux
-        // runner and every availability assertion passes on a Mac and fails in CI.
-        protected function platformFamily(): string
+        // Unpinned, this half of isAvailable() falls to the real bridge, which
+        // no repo toolchain can reach, so every enrolment here would be refused
+        // for the absence of a phone rather than for the reason under test.
+        /**
+         * @return array{available?: bool, reason?: string}
+         */
+        protected function vaultCapability(): array
         {
-            return 'Darwin';
+            return ['available' => true, 'reason' => 'available'];
         }
 
         protected function vaultSet(string $key, string $value): bool
