@@ -3600,11 +3600,18 @@ td.date,
  * scrim transparent on the older of the two shipped engines.
  *
  * The top layer is a paint decision and not an inheritance one: the panel still
- * inherits from the element it is written inside, which for three of the five
- * tips is the block that lays out a page heading. Balanced lines and automatic
- * hyphens are a decision about a two-word title, so both are put back to their
- * initial values here rather than reaching three sentences of prose in 26
- * languages.
+ * inherits from the element it is written inside, which for three of the six
+ * tips is the block that lays out a page heading and for the other three is a
+ * 12px uppercase label. It therefore states its whole type, and not the two
+ * properties that were noticed first: every panel in the product shipped
+ * wearing the treatment of the words that opened it. /budgets and the dashboard
+ * card put three sentences of prose in UPPERCASE at 0.3px of letter-spacing,
+ * because `uppercase tracking-wide` on a column label is inherited like any
+ * other declaration; /chains, /reconcile and /recurring/review drew theirs at
+ * font-weight 600 and -0.7px, which is a 28px heading's tracking applied to
+ * 13px of body copy. Anything a label can set and a paragraph can inherit is
+ * restated below rather than left to whatever the next call site is written
+ * inside.
  */
 .help-tip-panel {
     display: none;
@@ -3616,9 +3623,19 @@ td.date,
     background: var(--color-surface-raised);
     box-shadow: var(--shadow-md);
     color: var(--color-text);
+    font-family: var(--font-sans);
     font-size: var(--text-sm);
+    font-style: normal;
+    font-variant-numeric: normal;
+    font-weight: 400;
+    letter-spacing: normal;
     line-height: 1.55;
+    text-align: start;
+    text-indent: 0;
+    text-transform: none;
     text-wrap: wrap;
+    white-space: normal;
+    word-spacing: normal;
     hyphens: manual;
 }
 
