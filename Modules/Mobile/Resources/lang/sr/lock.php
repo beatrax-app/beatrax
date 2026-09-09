@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Previše pokušaja — probaj ponovo za :secondss.',
         'incorrect_pin_remaining' => 'Neispravan PIN. Preostaje :count pokušaj.|Neispravan PIN. Preostaju :count pokušaja.|Neispravan PIN. Preostaje :count pokušaja.',
         'incorrect_pin' => 'Neispravan PIN.',
+
+        'pin_changed' => 'PIN ovog uređaja je promenjen tokom otključavanja. Unesi trenutni PIN.',
     ],
 ];

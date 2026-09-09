@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'PIN errato. Resta :count tentativo.|PIN errato. Restano :count tentativi.',
     'error_incorrect' => 'PIN errato.',
+
+    'error_pin_changed' => 'Il PIN di questo dispositivo è cambiato durante lo sblocco. Inserisci il PIN attuale.',
 ];

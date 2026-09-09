@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Demasiadas tentativas — tenta novamente dentro de :secondss.',
         'incorrect_pin_remaining' => 'PIN incorreto. Resta :count tentativa.|PIN incorreto. Restam :count tentativas.',
         'incorrect_pin' => 'PIN incorreto.',
+
+        'pin_changed' => 'O PIN deste dispositivo foi alterado durante o desbloqueio. Introduz o PIN atual.',
     ],
 ];

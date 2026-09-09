@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Nesprávny PIN. Zostáva :count pokus.|Nesprávny PIN. Zostávajú :count pokusy.|Nesprávny PIN. Zostáva :count pokusov.',
     'error_incorrect' => 'Nesprávny PIN.',
+
+    'error_pin_changed' => 'PIN tohto zariadenia bol zmenený počas odomykania. Zadaj aktuálny PIN.',
 ];

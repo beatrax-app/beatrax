@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'För många försök — försök igen om :secondss.',
         'incorrect_pin_remaining' => 'Fel PIN-kod. :count försök återstår.|Fel PIN-kod. :count försök återstår.',
         'incorrect_pin' => 'Fel PIN-kod.',
+
+        'pin_changed' => 'PIN-koden för den här enheten ändrades under upplåsningen. Ange den aktuella PIN-koden.',
     ],
 ];

@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'For mange forsøg — prøv igen om :secondss.',
         'incorrect_pin_remaining' => 'Forkert PIN-kode. :count forsøg tilbage.|Forkert PIN-kode. :count forsøg tilbage.',
         'incorrect_pin' => 'Forkert PIN-kode.',
+
+        'pin_changed' => 'PIN-koden til denne enhed blev ændret under oplåsningen. Indtast den aktuelle PIN-kode.',
     ],
 ];

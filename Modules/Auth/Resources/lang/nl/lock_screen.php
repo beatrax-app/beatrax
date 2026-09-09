@@ -20,4 +20,6 @@ return [
     'error_backoff' => 'Te veel pogingen — probeer het over :wait opnieuw.',
     'error_incorrect_remaining' => 'Onjuiste pincode. Nog :count poging over.|Onjuiste pincode. Nog :count pogingen over.',
     'error_incorrect' => 'Onjuiste pincode.',
+
+    'error_pin_changed' => 'De pincode voor dit apparaat is gewijzigd tijdens het ontgrendelen. Voer de huidige pincode in.',
 ];

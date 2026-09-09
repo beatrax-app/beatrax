@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Neispravan PIN. Preostaje :count pokušaj.|Neispravan PIN. Preostaju :count pokušaja.|Neispravan PIN. Preostaje :count pokušaja.',
     'error_incorrect' => 'Neispravan PIN.',
+
+    'error_pin_changed' => 'PIN ovog uređaja je promenjen tokom otključavanja. Unesi trenutni PIN.',
 ];

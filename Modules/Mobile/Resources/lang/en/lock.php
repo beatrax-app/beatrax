@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Too many attempts — try again in :secondss.',
         'incorrect_pin_remaining' => 'Incorrect PIN. :count attempt remaining.|Incorrect PIN. :count attempts remaining.',
         'incorrect_pin' => 'Incorrect PIN.',
+
+        'pin_changed' => 'The PIN for this device was changed while you were unlocking. Enter the current PIN.',
     ],
 ];

@@ -33,7 +33,7 @@ final readonly class ColdStartEnroller
         // The empty box is refused here rather than at the hasher, which raises
         // on one instead of answering. It earns the same refusal a wrong PIN
         // does, so the two share the answer as well as the reason.
-        $dataKey = $pin === '' ? null : $this->verifier->verify($userId, $pin, $session);
+        $dataKey = $pin === '' ? null : $this->verifier->verify($userId, $pin, $session)->dataKey;
 
         if ($dataKey === null) {
             return ColdStartEnrolmentResult::PinRejected;

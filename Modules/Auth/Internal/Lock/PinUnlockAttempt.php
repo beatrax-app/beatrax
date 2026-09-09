@@ -13,6 +13,7 @@ final class PinUnlockAttempt
     private function __construct(
         public readonly ?string $dataKey,
         public readonly ?string $corruptionDetail,
+        public readonly bool $pinChangedMidAttempt = false,
     ) {}
 
     public static function unlocked(string $dataKey): self
@@ -28,5 +29,14 @@ final class PinUnlockAttempt
     public static function wrongPin(): self
     {
         return new self(null, null);
+    }
+
+    // Reached only under the write lock, and the one answer that is not a
+    // judgement: the row this attempt described is gone, so nothing was
+    // recorded. A caller that reads it as a refusal names a remaining count
+    // the reader can watch stand still.
+    public static function outracedByAPinChange(): self
+    {
+        return new self(null, null, true);
     }
 }

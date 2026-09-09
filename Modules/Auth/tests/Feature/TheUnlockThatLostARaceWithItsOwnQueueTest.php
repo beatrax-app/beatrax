@@ -128,7 +128,7 @@ it('unlocks even when another process commits between its read and its write', f
 
         $rivalCommitted = unlockRaceRivalCommitsOnceOnTheReadUnderLock();
 
-        $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session);
+        $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session)->dataKey;
 
         expect($rivalCommitted())->toBeTrue()
             ->and($dataKey)->toBeString()
@@ -166,7 +166,7 @@ it('raises one lockout alert for one wrong PIN, not one per retry', function ():
 
         $rivalCommitted = unlockRaceRivalCommitsOnceOnTheReadUnderLock();
 
-        expect(app(PinVerificationService::class)->verify($user->id, '999999', $session))->toBeNull()
+        expect(app(PinVerificationService::class)->verify($user->id, '999999', $session)->dataKey)->toBeNull()
             ->and($rivalCommitted())->toBeTrue();
 
         expect(SystemAlert::query()->where('user_id', $user->id)->count())->toBe(1);
@@ -201,7 +201,7 @@ it('pays for one derivation even where the write is refused and retried', functi
         $rivalCommitted = unlockRaceRivalCommitsOnceOnTheReadUnderLock();
         $cost->derivations = 0;
 
-        $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session);
+        $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session)->dataKey;
 
         expect($rivalCommitted())->toBeTrue()
             ->and($dataKey)->toBeString()

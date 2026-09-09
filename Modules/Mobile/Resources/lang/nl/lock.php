@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Te veel pogingen — probeer het over :secondss opnieuw.',
         'incorrect_pin_remaining' => 'Onjuiste pincode. Nog :count poging over.|Onjuiste pincode. Nog :count pogingen over.',
         'incorrect_pin' => 'Onjuiste pincode.',
+
+        'pin_changed' => 'De pincode voor dit apparaat is gewijzigd tijdens het ontgrendelen. Voer de huidige pincode in.',
     ],
 ];

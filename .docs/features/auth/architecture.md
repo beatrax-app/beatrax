@@ -517,6 +517,16 @@ describes material this row no longer holds — so the attempt records
 again. Losing a race with a re-wrap is not something to walk them towards a
 sign-out for.
 
+That is why `verify()` answers with the `PinUnlockAttempt` itself rather
+than the data key alone. A key and a null carry two states, and there are
+three: unlocked, refused, and an attempt that was never this one's to
+judge. Both lock screens read the third off `pinChangedMidAttempt` and say
+so; handed a bare null they said the one thing that was certainly untrue —
+"incorrect PIN", beside a remaining count the reader could watch stand
+still, because nothing had been counted. `MobileLockGateway` carries the
+same three states across the module boundary as `PinUnlockOutcome`, since
+`PinUnlockAttempt` is `Internal` and the phone's screen is not.
+
 ### Biometric enrollment + assertion (`WebAuthnBiometricService`)
 
 Uses `web-auth/webauthn-lib` directly (not a Laravel passkey wrapper).
@@ -622,10 +632,16 @@ attribute or in a Livewire update response — the full PIN crosses the
 wire exactly once, as a `submit()` method argument, forwarded straight to
 `PinVerificationService`.
 
-An active backoff window is checked *before* the PIN itself, so even a
-correct PIN submitted during the window must not be reported as
-"incorrect" — the copy distinguishes "too many attempts, try again in Ns"
-from "incorrect PIN, N attempts remaining". The biometric prompt is
+Three refusals reach the reader, and `LockScreen::refusalMessage()` is the
+one place they are told apart. An active backoff window is checked *before*
+the PIN itself, so even a correct PIN submitted during the window must not
+be reported as "incorrect": that one reads "too many attempts, try again in
+Ns". An unlock a PIN change outran reads `lock_screen.error_pin_changed` —
+the PIN for this device changed mid-unlock, enter the current one. Only the
+third, a PIN this row genuinely refuses, spent an attempt, so it is the
+only one that may say "incorrect PIN, N attempts remaining". The count is
+read from `failed_attempts`, which the other two did not move, so naming it
+on either of them contradicts itself on screen. The biometric prompt is
 dispatched only on an explicit button tap, never on render, so the
 browser's native biometric UI never auto-fires.
 
@@ -812,9 +828,15 @@ biometric-enrollment-check collaborators without duplicating that logic
 into a second module-owned copy — a crypto-logic drift risk — and without
 reaching into `Modules\Auth\Internal\*` directly. Every method here is a
 thin pass-through to an existing Internal collaborator; the `AppLockKeyService`
-key-release path itself stays untouched by this gateway. Two behaviours
+key-release path itself stays untouched by this gateway. Four behaviours
 are gateway-specific rather than pure delegation:
 
+- `unlockWithPin()` translates `PinUnlockAttempt` into the Public
+  `PinUnlockOutcome`, because the value object the verifier answers with is
+  `Internal` and the phone's screen has to tell all three states apart.
+  `verifyPin()` is the same call projected back down to the key alone, kept
+  for the cold-start enrolment that needs the live key rather than the
+  outcome.
 - `unlockWithRecoveredKey()` stamps `last_activity_at` alongside admitting
   the recovered key, because a genuine cold start (app killed/rebooted)
   almost always exceeds the idle window — without that stamp the very

@@ -2497,6 +2497,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/AFirstSyncMustNotReportAHistoryItIsMissingTest.php -> Modules\\Sync\\Internal\\Transport\\PeerCatchUpExchanger',
         'Modules/Mobile/tests/Feature/AFirstSyncMustNotReportAHistoryItIsMissingTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Mobile/tests/Feature/AHeldEntryIsRetiredOnThePhoneTooTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
+        'Modules/Mobile/tests/Feature/APinChangedMidUnlockIsNotAWrongPinOnThePhoneTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Mobile/tests/Feature/AResumedTrustGateStillNamesBothDevicesTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/AStoreBuildCarriesNoFeedItCouldInstallFromTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
         'Modules/Mobile/tests/Feature/AnAddressIsOfferedOnlyWhenNothingAnsweredTest.php -> Modules\\Sync\\Internal\\Pairing\\WordCodeEncoder',
