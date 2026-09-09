@@ -93,7 +93,7 @@ function refusedBiometricBindVault(BiometricRecoverResult $result): void
             return $this->dictated;
         }
 
-        public function completePendingRecover(): BiometricRecoverResult
+        public function completePendingRecover(int $userId): BiometricRecoverResult
         {
             return $this->dictated;
         }

@@ -15,6 +15,7 @@ use Livewire\Facades\GenerateSignedUploadUrlFacade;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Events\AppLockLocked;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\DeviceNameSource;
 use Modules\Core\Public\Contracts\ExternalUrlOpener;
@@ -46,6 +47,7 @@ use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 use Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
+use Modules\Mobile\Internal\Identity\StandTheBiometricCeremonyDownOnLock;
 use Modules\Mobile\Internal\Native\AndroidHostTimezone;
 use Modules\Mobile\Internal\Native\MobileUrlOpener;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
@@ -165,6 +167,11 @@ final class MobileServiceProvider extends ServiceProvider
         // Cold-start biometric: invalidate the enclave blob if the app-lock
         // data key ever rotates (oldKek !== newKek).
         $events->listen(AppLockPassphraseChanged::class, [ClearColdStartVaultOnKeyRotation::class, 'handle']);
+
+        // And drop whatever the enclave already released, which the session has
+        // no handle on and no lifecycle edge reaches while the app is locking in
+        // the foreground.
+        $events->listen(AppLockLocked::class, [StandTheBiometricCeremonyDownOnLock::class, 'handle']);
 
         // Re-apply the generated-project patches on every mobile build, not
         // only on composer install: the build tooling regenerates the Android

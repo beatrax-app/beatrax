@@ -8,6 +8,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Events\AppLockLocked;
 use Modules\Auth\Public\Events\AppLockUnlocked;
 
 final readonly class LockStateManager
@@ -57,6 +58,11 @@ final readonly class LockStateManager
         // The pending record belongs to the unlock just undone; carrying it
         // past a lock credits the next session with presence nobody proved.
         $session->forget(self::SESSION_UNLOCK_ACTIVITY_PENDING);
+
+        // Announced from the funnel, like the unlock: what the session drops
+        // here is not everything a platform is holding, and the one place that
+        // knows every road to a lock is this method.
+        $this->events()?->dispatch(new AppLockLocked($session));
     }
 
     // Releases a lock flag no PIN or biometric could ever clear, through the

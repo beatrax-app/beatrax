@@ -180,13 +180,18 @@ final class MobileLockScreen extends Component
         Session $session,
         UrlGenerator $urls,
     ): void {
+        // Drained first and judged after. The enclave released the blob before
+        // this method ran, so returning on a refused gate without consuming the
+        // slot parks a live data key in the device's memory with nothing left
+        // that has to happen for a later dispatch to claim it.
+        $result = $vault->completePendingRecover($currentUser->id());
+
         // The same boundary gates as the synchronous path: a stale enrollment
         // or overdue PIN floor must not admit, prompt or no prompt.
         if (! $gateway->isColdStartEnrolled($currentUser->id()) || $gateway->pinFloorDue($currentUser->id())) {
             return;
         }
 
-        $result = $vault->completePendingRecover();
         if ($result->isRecovered() && $result->dataKey !== null) {
             $gateway->unlockWithRecoveredKey($currentUser->id(), $result->dataKey, $session);
             $this->redirectToIntendedUrl($session, $urls);

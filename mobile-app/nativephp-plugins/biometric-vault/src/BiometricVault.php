@@ -86,17 +86,22 @@ class BiometricVault
     // a transient slot that survives the read, or one that outlives a
     // backgrounding, can be replayed by a later spoofed dispatch and admit a
     // session with no fresh biometric behind it. Android only; iOS never calls.
-    public function pollRecovered(): ?string
+
+    // The key names the slot the caller expects the blob to have come from.
+    // The wrap secret rides inside the blob, so any well-formed blob unwraps to
+    // some valid data key: without the slot name on the return trip, one
+    // account's session could be handed the key belonging to another's.
+    public function pollRecovered(string $key): ?string
     {
-        $value = $this->call('BiometricVault.PollRecovered', [])['value'] ?? null;
+        $value = $this->call('BiometricVault.PollRecovered', ['key' => $key])['value'] ?? null;
 
         return is_string($value) && $value !== '' ? $value : null;
     }
 
-    // The lock screen fires the prompt from its own mount and leaves the PIN pad
-    // live underneath, so the two paths finish in either order. Android's prompt
-    // is a window that outlives the screen; iOS answers inside Get and has
-    // nothing standing, which is why this is a no-op there rather than absent.
+    // Stand down: take the prompt off the screen and drop any blob one already
+    // released. The lock screen fires the prompt from its own mount and leaves
+    // the PIN pad live underneath, so the two paths finish in either order; a
+    // re-lock is the other caller, and no lifecycle edge fires for that one.
     public function cancelPrompt(): bool
     {
         return $this->callSuccess('BiometricVault.CancelPrompt', []);
