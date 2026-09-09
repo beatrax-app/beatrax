@@ -305,6 +305,14 @@ platform biometrics. Both gate access to a per-session **data key** that
 downstream encryption features (base-currency FX, at-rest field encryption)
 read through `AppLockKeyService::release()`/`withhold()`.
 
+`AppLockPinShape` sits in `Auth\Public\Contracts` because the keypads that have
+to accept every PIN it admits are views in two modules — the desktop pad, its
+partial, and Mobile's own copy — and each reads the ceiling from the constant
+rather than typing one. A pad capped under the rule is a permanent lockout
+reached through supported UI: the settings screen takes a PIN the unlock screen
+then cannot be made to spell. `APinPadNeverStatesALengthTheRuleOwnsArchTest`
+holds every template on that path to it.
+
 Both the PIN verifier (`PinHasher`) and the wrap key (`AppLockKdf`) derive at
 the one work factor the whole application shares, injected as
 `Modules\Core\Public\Contracts\KdfCost` — 256 MiB and three passes in a shipped

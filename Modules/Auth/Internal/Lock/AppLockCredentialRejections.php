@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Lock;
 
 use Illuminate\Contracts\Hashing\Hasher;
+use Modules\Auth\Public\Contracts\AppLockPinShape;
 use Modules\Core\Public\Support\Lang;
 
 // One owner for what the app-lock screen says back to a reader: the same three
