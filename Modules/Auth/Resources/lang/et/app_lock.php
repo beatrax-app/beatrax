@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Sellel Beatraxi versioonil pole kohta, kuhu avamisvõti salvestada, seega biomeetrilist avamist ei pakuta. Piirang ei ole sinu seade.',
     'error_enroll_unprotected' => 'Biomeetriline avamine vajab operatsioonisüsteemi võtmehoidlat ja sellel paigaldusel seda pole. Registreerimine jätaks avamisvõtme sinu andmete kõrvale loetavaks, seega seda siin ei pakuta.',
-    'error_enroll_locked' => 'Ava rakendus enne registreerimist.',
     'error_enroll_failed' => 'Seade keeldus võtit salvestamast. Biomeetriline avamine pole saadaval.',
     'heading' => 'Rakenduse lukk',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'See Beatraxi versioon ei saa biomeetrilist avamist pakkuda. Siin avab ainult sinu PIN-kood.',
 
     'deenroll_modal_heading' => 'Eemalda biomeetriline avamine — kinnita PIN-koodiga',
+    'enroll_modal_heading' => 'Lülita biomeetriline avamine sisse — kinnita PIN-koodiga',
     'current_pin_label' => 'Praegune PIN-kood',
     'remove_biometric' => 'Eemalda biomeetria',
     'keep_biometric' => 'Jäta biomeetria alles',

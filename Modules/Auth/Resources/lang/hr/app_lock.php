@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Ova verzija Beatraxa nema gdje pohraniti ključ za otključavanje, pa se biometrijsko otključavanje ne nudi. Ograničenje nije tvoj uređaj.',
     'error_enroll_unprotected' => 'Biometrijsko otključavanje treba spremište ključeva operacijskog sustava, a ova instalacija ga nema. Upis bi ostavio ključ za otključavanje čitljiv uz tvoje podatke, pa se ovdje ne nudi.',
-    'error_enroll_locked' => 'Otključaj aplikaciju prije upisa.',
     'error_enroll_failed' => 'Tvoj uređaj je odbio pohraniti ključ. Biometrijsko otključavanje nije dostupno.',
     'heading' => 'Zaključavanje aplikacije',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'Ova verzija Beatraxa ne može ponuditi biometrijsko otključavanje. Tvoj PIN je ovdje jedino otključavanje.',
 
     'deenroll_modal_heading' => 'Ukloni biometrijsko otključavanje — potvrdi PIN-om',
+    'enroll_modal_heading' => 'Uključi biometrijsko otključavanje — potvrdi PIN-om',
     'current_pin_label' => 'Trenutačni PIN',
     'remove_biometric' => 'Ukloni biometriju',
     'keep_biometric' => 'Zadrži biometriju',

@@ -9,7 +9,7 @@ use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 final readonly class ClearColdStartVaultOnKeyRotation
 {
     public function __construct(
-        private ColdStartEnrollmentService $enrollment,
+        private MobileColdStartVault $vault,
     ) {}
 
     public function handle(AppLockPassphraseChanged $event): void
@@ -22,8 +22,8 @@ final readonly class ClearColdStartVaultOnKeyRotation
 
         // The data key actually rotated: the enclave blob wraps the OLD key and
         // is now useless. Clear it so the user re-enrolls under the new key.
-        if ($this->enrollment->isEnrolled($event->userId)) {
-            $this->enrollment->disable($event->userId);
+        if ($this->vault->isEnrolled($event->userId)) {
+            $this->vault->forget($event->userId);
         }
     }
 }

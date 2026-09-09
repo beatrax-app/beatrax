@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Esta versão do Beatrax não tem onde guardar uma chave de desbloqueio, por isso o desbloqueio biométrico não é oferecido. A limitação não é o teu dispositivo.',
     'error_enroll_unprotected' => 'O desbloqueio biométrico precisa de um arquivo de chaves do sistema operativo, e esta instalação não tem nenhum. Registá-lo deixaria a chave de desbloqueio legível ao lado dos teus dados, por isso não é oferecido aqui.',
-    'error_enroll_locked' => 'Desbloqueia a aplicação antes de fazeres o registo.',
     'error_enroll_failed' => 'O teu dispositivo recusou guardar a chave. O desbloqueio biométrico não está disponível.',
     'heading' => 'Bloqueio da aplicação',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'Esta versão do Beatrax não consegue oferecer desbloqueio biométrico. Aqui o teu PIN é o único desbloqueio.',
 
     'deenroll_modal_heading' => 'Remover o desbloqueio biométrico — confirma com o PIN',
+    'enroll_modal_heading' => 'Ativar o desbloqueio biométrico — confirma com o PIN',
     'current_pin_label' => 'PIN atual',
     'remove_biometric' => 'Remover biometria',
     'keep_biometric' => 'Manter biometria',

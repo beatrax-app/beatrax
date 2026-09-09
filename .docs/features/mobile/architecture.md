@@ -1013,11 +1013,19 @@ so the call resolves to nothing on both platforms and `completePendingRecover()`
 can only ever report MISSING. It lands with the Android `BiometricPrompt`
 wiring, which is the only thing that would ever fill the slot it reads.
 
-Enrollment is PIN-rooted:
-`ColdStartEnrollmentService::enroll()` re-verifies the PIN to obtain the
-live data key, wraps it into the enclave via the vault, and records the
-enrollment flag — every failure path (vault unavailable, wrong PIN,
-native store failure) leaves nothing enrolled. `ClearColdStartVaultOnKeyRotation`
+Enrollment is PIN-rooted, and there is one way in on every platform:
+`Modules\Auth\Internal\Lock\ColdStartEnroller::enrol()` re-verifies the PIN to
+obtain the live data key, wraps it into the enclave through `ColdStartVault`,
+zeroes the released key, and records the enrollment flag — every failure path
+(vault unavailable, empty or wrong PIN, native store failure) leaves nothing
+enrolled. It is the only caller of `ColdStartVault::enroll()` outside the vault
+implementations themselves, which is what
+`tests/Contracts/ANativeEnrolmentTakesAFreshPinArchTest.php` holds in place: the
+key it stores comes out of the PIN, never out of the session, so no arrangement
+of callers arms the vault without one. Its two callers are the app-lock settings
+section, whose Enroll button opens a PIN confirmation before it reaches the
+vault, and the lock screen, which re-arms a vault holding nothing using the PIN
+it has just verified. `ClearColdStartVaultOnKeyRotation`
 listens for `AppLockPassphraseChanged` and clears the enclave entry only
 when the underlying data key actually rotated (`oldKek !== newKek`) — a
 plain PIN change keeps the same data key and is a no-op, since a GDK
