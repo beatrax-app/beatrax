@@ -14,9 +14,17 @@
             "description": "Read a value, releasing it ONLY after a fresh biometric authentication"
         },
         {
+            "name": "BiometricVault.PollRecovered",
+            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.PollRecovered",
+            "ios": "BiometricVaultFunctions.PollRecovered",
+            "description": "Hand over the blob the biometric prompt released, once; the slot is consumed on read"
+        },
+        {
             "name": "BiometricVault.IsAvailable",
             "android": "com.beatrax.biometricvault.BiometricVaultFunctions.IsAvailable",
-            "android_params": ["context"],
+            "android_params": [
+                "context"
+            ],
             "ios": "BiometricVaultFunctions.IsAvailable",
             "description": "Whether this device can gate an entry behind a biometric right now"
         },

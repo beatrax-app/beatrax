@@ -988,11 +988,12 @@ weaker authenticators would admit is one an `AUTH_BIOMETRIC_STRONG` Keystore key
 then refuses, and a passcode `deviceOwnerAuthentication` would admit is one
 `.biometryCurrentSet` then refuses.
 
-The Android probe also answers for this plugin and not only for the phone. While
-`Set()` returns `async_required` nothing can be written on any Android build,
-however ready the sensor is, so `IsAvailable` answers `async_unimplemented`
-there. Both read one `setIsAsyncOnly()`, so a build that wires the prompt cannot
-flip the writer and leave the probe refusing, or the reverse.
+The Android probe answered for this plugin as well as for the phone for as long
+as `Set()` returned `async_required` and wrote nothing: a ready sensor was still
+a no, reported as `async_unimplemented`. The `BiometricPrompt` wiring has landed
+and `Set()` writes, so that reason is retired and the probe answers from the
+sensor alone. The pairing rule is unchanged and now runs the other way up — the
+probe must not report a refusal `Set()` does not make.
 
 **`pollRecovered()` depends on a native contract, not just a PHP one.** It
 reads and consumes the transient blob the Android `BiometricPrompt` callback

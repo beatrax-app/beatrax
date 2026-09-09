@@ -28,7 +28,7 @@ it('does not offer the vault when the device says it cannot hold the key', funct
 
     expect($vault->isAvailable())->toBeFalse();
 })->with([
-    'Android, where Set() is still an async skeleton' => ['async_unimplemented'],
+    'a sensor the OS says needs a security update first' => ['security_update_required'],
     'a phone with no finger or face enrolled' => ['none_enrolled'],
     'a phone with no biometric sensor' => ['no_hardware'],
     'a sensor the OS has locked out after too many attempts' => ['hardware_unavailable'],
@@ -39,7 +39,7 @@ it('still offers the vault where the device says it can hold the key', function 
 });
 
 it('refuses an enrolment rather than letting it fail at the bridge', function (): void {
-    $vault = new PlatformStubVault(['available' => false, 'reason' => 'async_unimplemented']);
+    $vault = new PlatformStubVault(['available' => false, 'reason' => 'none_enrolled']);
 
     expect($vault->enroll(1, 'a-data-key'))->toBeFalse();
 });
