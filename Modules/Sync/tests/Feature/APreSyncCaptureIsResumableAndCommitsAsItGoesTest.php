@@ -51,6 +51,24 @@ function resumableBindWriter(int $userId): void
 {
     $keypair = sodium_crypto_sign_keypair();
 
+    // Registered, because coverage counts only the authors a peer can verify:
+    // an unregistered writer leaves everything it wrote uncovered, which is a
+    // state no real device is ever in.
+    app(DatabaseManager::class)->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => 'resumable-device',
+        'name' => 'Resumable fixture',
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($keypair)),
+        'x25519_public_key_hex' => str_repeat('00', 32),
+        'safety_number_words' => '',
+        'is_self' => 1,
+        'paired_at' => '2026-08-28T00:00:00+00:00',
+        'confirmed_at' => '2026-08-28T00:00:00+00:00',
+        'last_seen_at' => null,
+        'created_at' => '2026-08-28T00:00:00+00:00',
+        'updated_at' => '2026-08-28T00:00:00+00:00',
+    ]);
+
     app()->instance(OpLogWriter::class, app(OpLogWriter::class, [
         'deviceId' => 'resumable-device',
         'userId' => $userId,
