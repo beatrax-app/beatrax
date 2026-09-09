@@ -333,6 +333,61 @@ Verified on hardware against a clean install: the load-time commit on
 `/imports/new` is captured 21 ms before dispatch, answers without a 404, and
 the page is stable. See [ARCH-R26](https://github.com/beatrax-app/spec).
 
+### The answer to the notification dialog, and the half of it still missing
+
+`LocalNotification.RequestPermission` raises the Android 13 POST_NOTIFICATIONS
+dialog and documents its result as arriving through
+`onRequestPermissionsResult`. The generated `MainActivity` implements that
+callback, posts `NativePHPLifecycle.Events.ON_PERMISSION_RESULT` — for which
+the shell's own log reads `No listeners for event: onPermissionResult` — and
+then switches on request codes `1001` and `1002`. The plugin's code is
+`10_001`. Nothing dispatched
+`NativePHP\LocalNotifications\Events\PermissionGranted`, so the answer was
+dropped.
+
+Measured on a Galaxy A51 (2026-09-09): the prompt was accepted, the system
+recorded `POST_NOTIFICATIONS: granted=true`, and `mobile_notification_grant`
+still read `granted` NULL.
+
+A **grant** recovered by accident. `RequestPermission` short-circuits when the
+permission is already held and dispatches the event from that branch, and
+`shouldAsk()` deliberately re-asks while the answer is outstanding, so the next
+page load settled it. A **refusal** had no such branch: it was never recorded,
+the row stayed NULL, and the reader was asked on every page load until Android
+stopped showing the dialog at all — at which point nothing was asked, nothing
+was recorded, and the settings screen could not say "you refused this" because
+no one had ever written it down. The recovery existed only on the path that did
+not need it.
+
+`scripts/nativephp_android_notification_permission_truth.php` dispatches the
+plugin's own event from the activity's callback, keyed on the plugin's own
+constant. Verified on hardware against a clean install: refusing the dialog now
+writes `granted=0`, and the reader is not asked again — one request, unchanged
+across two further page loads. iOS never had this; its `RequestPermission`
+dispatches from the authorisation callback itself.
+
+#### Known gap — a grant the reader later revokes
+
+Once a grant is recorded nothing checks it again. Measured on the same device
+after revoking notifications in system settings: the system reported
+`granted=false` while the row still read `1`, and the app went on scheduling
+notifications the platform would silently drop.
+
+It cannot currently find out. The plugin exposes `RequestPermission` and
+nothing that **reads** the current state, and asking again is not a substitute:
+where the permission is genuinely revoked that call raises the dialog, which is
+not something a background reconcile may do.
+
+Closing it needs a `LocalNotification.CheckPermission` on both platforms.
+Android can answer synchronously — `NotificationManagerCompat.areNotificationsEnabled()`,
+which is the right question because a reader who leaves the permission granted
+and turns the app's notifications off in settings is equally unreachable. iOS
+has no synchronous equivalent: `getNotificationSettings` is completion-based,
+so the iOS half needs either a cached read refreshed on activation or the
+plugin's async-event pattern. Until both exist, an app-side reconcile would
+read a source that answers on one platform and not the other, which is the
+shape this codebase treats as a defect rather than a partial fix.
+
 ### The runtime is persistent, and request headers leak between requests
 
 The embedded PHP process serves many requests. Its superglobals are not fully

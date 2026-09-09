@@ -32,6 +32,7 @@ $patches = [
     'nativephp_keep_webview_cookies',
     'nativephp_android_single_content_type',
     'nativephp_android_post_body_at_document_start',
+    'nativephp_android_notification_permission_truth',
     'nativephp_exclude_data_from_backup',
     'nativephp_strip_unused_permissions',
     'nativephp_theme_native_shell',
