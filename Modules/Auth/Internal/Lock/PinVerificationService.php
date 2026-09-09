@@ -158,17 +158,18 @@ final class PinVerificationService
             ->lockForUpdate()
             ->first();
 
-        if ($row === null || $this->inBackoffWindow($row)) {
-            return null;
-        }
-
         // A PIN change that committed while the derivation ran leaves this
         // attempt describing material the row no longer holds, so neither
         // outcome is its to record and the counter is left alone.
-        if (! self::sameWrapMaterial($read, $row)) {
+        if ($row === null || $this->inBackoffWindow($row) || ! self::sameWrapMaterial($read, $row)) {
             return null;
         }
 
+        return $this->record($userId, $session, $row, $attempt);
+    }
+
+    private function record(int $userId, Session $session, \stdClass $row, PinUnlockAttempt $attempt): ?string
+    {
         if ($attempt->dataKey !== null) {
             $this->markUnlocked($userId, $session, $attempt->dataKey);
 
