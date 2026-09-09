@@ -6,13 +6,23 @@ namespace Modules\Mobile\Tests\Support;
 
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
+// Answers for the native capability probe. The vault used to decide this from
+// PHP_OS_FAMILY, so a stub only had to name an operating system; it now asks
+// the device, and a stub has to say what the device said back.
 final class PlatformStubVault extends BiometricKeyVault
 {
-    public function __construct(private readonly string $family, private readonly bool $runtime = true)
-    {
-        parent::__construct(app(BiometricKeyBlobCodec::class), new NullLogger);
+    /**
+     * @param  array{available?: bool, reason?: string}  $capability
+     */
+    public function __construct(
+        private readonly array $capability,
+        private readonly bool $runtime = true,
+        ?LoggerInterface $log = null,
+    ) {
+        parent::__construct(app(BiometricKeyBlobCodec::class), $log ?? new NullLogger);
     }
 
     protected function runtimeAvailable(): bool
@@ -20,8 +30,11 @@ final class PlatformStubVault extends BiometricKeyVault
         return $this->runtime;
     }
 
-    protected function platformFamily(): string
+    /**
+     * @return array{available?: bool, reason?: string}
+     */
+    protected function vaultCapability(): array
     {
-        return $this->family;
+        return $this->capability;
     }
 }

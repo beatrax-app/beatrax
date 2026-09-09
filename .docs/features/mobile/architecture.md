@@ -973,6 +973,27 @@ nothing is enrolled, `failed` means something is enrolled and authentication
 did not succeed. Collapsing the two would let a failed unlock read as a device
 that never enrolled.
 
+**`capability()` asks the device, and `PHP_OS_FAMILY` is not the device.** The
+application answered "can this hold a key?" from the operating system name for
+as long as the vault existed, so an iPhone with Face ID switched off for the app
+and a Samsung with no finger enrolled both read as able, were offered enrolment
+in settings, and got back the words "Your device declined to store the key."
+`BiometricVault.IsAvailable` asks the platform instead — Android's
+`BiometricManager.canAuthenticate(BIOMETRIC_STRONG)`, iOS's
+`LAContext.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics)` — and
+the reason travels back with the answer, because "no" has six causes and only
+one of them is the reader's to act on. Both probes deliberately ask for the
+authentication the stored item is written under: a device credential Android's
+weaker authenticators would admit is one an `AUTH_BIOMETRIC_STRONG` Keystore key
+then refuses, and a passcode `deviceOwnerAuthentication` would admit is one
+`.biometryCurrentSet` then refuses.
+
+The Android probe also answers for this plugin and not only for the phone. While
+`Set()` returns `async_required` nothing can be written on any Android build,
+however ready the sensor is, so `IsAvailable` answers `async_unimplemented`
+there. Both read one `setIsAsyncOnly()`, so a build that wires the prompt cannot
+flip the writer and leave the probe refusing, or the reverse.
+
 **`pollRecovered()` depends on a native contract, not just a PHP one.** It
 reads and consumes the transient blob the Android `BiometricPrompt` callback
 stashed after a successful decrypt, and answers null when nothing is pending.
@@ -984,6 +1005,12 @@ be replayed by a later spoofed `cold-start-recovered` dispatch and admit a
 session with no fresh biometric behind it. The PHP-side gates
 (`isColdStartEnrolled` plus the PIN floor) defend in depth, but enclave
 freshness rests entirely on consume-on-read.
+
+None of that is built yet, and the gap is wider than a missing implementation:
+`BiometricVault.PollRecovered` is not in the plugin's `nativephp.json` at all,
+so the call resolves to nothing on both platforms and `completePendingRecover()`
+can only ever report MISSING. It lands with the Android `BiometricPrompt`
+wiring, which is the only thing that would ever fill the slot it reads.
 
 Enrollment is PIN-rooted:
 `ColdStartEnrollmentService::enroll()` re-verifies the PIN to obtain the

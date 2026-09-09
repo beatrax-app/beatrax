@@ -6,6 +6,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
+import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import com.nativephp.mobile.bridge.BridgeError
@@ -110,8 +111,12 @@ object BiometricVaultFunctions {
             // On-device: dispatch BiometricPrompt(CryptoObject(encryptCipher)),
             // then in the callback do cipher.doFinal(value) and persist. Emit
             // an event with the outcome. See promptAndRun() below.
-            Log.w("BiometricVault.Set", "Async BiometricPrompt required on Android — see class docblock.")
-            return mapOf("success" to false, "async_required" to true)
+            if (setIsAsyncOnly()) {
+                Log.w("BiometricVault.Set", "Async BiometricPrompt required on Android — see class docblock.")
+                return mapOf("success" to false, "async_required" to true)
+            }
+
+            return mapOf("success" to false)
         }
     }
 
@@ -130,6 +135,61 @@ object BiometricVaultFunctions {
             return mapOf("async" to true, "event" to "BiometricVault.Recovered")
         }
     }
+
+    /**
+     * Whether this device can gate an entry behind a biometric RIGHT NOW.
+     *
+     * The application used to answer this from PHP_OS_FAMILY, which says only
+     * which operating system is running. A phone with no fingerprint enrolled,
+     * or one whose sensor the OS has locked out, answered the same as one that
+     * can — so the reader was offered biometric unlock and the enrolment then
+     * failed with nothing to read but the word "false".
+     *
+     * BIOMETRIC_STRONG and nothing weaker: the Keystore key is created with
+     * AUTH_BIOMETRIC_STRONG, so anything this call would admit that the key
+     * would not is a promise the enclave then breaks. A device credential is
+     * not a biometric and deliberately does not count.
+     *
+     * "Right now" also covers this plugin: while Set() answers `async_required`
+     * the vault cannot hold a key on any Android build, however ready the
+     * sensor is, and this call says `async_unimplemented` rather than yes.
+     */
+    class IsAvailable(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val status = BiometricManager.from(context)
+                .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+
+            val sensorReady = status == BiometricManager.BIOMETRIC_SUCCESS
+
+            // The reason travels with the answer: "no" has six causes here and
+            // only one of them is worth telling a reader about. A ready sensor
+            // is still a no while Set() cannot write — the sensor was the only
+            // thing being asked, and every Android phone got an Enroll button.
+            val reason = when {
+                sensorReady && setIsAsyncOnly() -> "async_unimplemented"
+                sensorReady -> "available"
+                status == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> "none_enrolled"
+                status == BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> "no_hardware"
+                status == BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> "hardware_unavailable"
+                status == BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> "security_update_required"
+                else -> "unsupported"
+            }
+
+            Log.d("BiometricVault.IsAvailable", "canAuthenticate(STRONG)=$status ($reason)")
+
+            return mapOf(
+                "available" to (reason == "available"),
+                "reason" to reason,
+            )
+        }
+    }
+
+    /**
+     * Whether Set() still has to refuse. Read by Set, which returns the refusal,
+     * and by IsAvailable, which must not offer what Set will refuse — one fact
+     * with two readers rather than two places to remember when the wiring lands.
+     */
+    private fun setIsAsyncOnly(): Boolean = true
 
     class Delete(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
