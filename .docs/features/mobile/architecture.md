@@ -388,6 +388,51 @@ plugin's async-event pattern. Until both exist, an app-side reconcile would
 read a source that answers on one platform and not the other, which is the
 shape this codebase treats as a defect rather than a partial fix.
 
+### The mobile root reaches the application by symlink, and one link was missing
+
+`mobile-app/` is a second Composer root. It does not copy the application — it
+links to it: `app`, `Modules`, `public`, `resources`, `routes` and `tests` are
+all `120000` entries pointing at `../`. The bundle is built from that root and
+ships what it finds there, so a directory the root cannot see was never a
+candidate for the build.
+
+`lang` was not among the six.
+
+Measured on a Galaxy A51 set to Dutch: every screen rendered in Dutch and the
+validation error under the import file picker read **"The file field is
+required."** On the device, `./app_storage/laravel/lang/` did not exist at all,
+while `./app_storage/laravel/Modules/Import/Resources/lang/` did — because
+`Modules` is linked and `lang` was not.
+
+It read as English rather than as a missing translation key because Laravel
+ships its own `en` files inside the framework package
+(`vendor/laravel/framework/src/Illuminate/Translation/lang/en`), which always
+resolve. Only the published locales were absent, and only on the phone. A
+fully translated app showed one English line per form, which is small enough
+to look like a stray untranslated string rather than the whole framework
+message catalogue being gone.
+
+Every framework-generated message was affected on mobile, in all 26 locales:
+validation errors, `auth`, `passwords` and `pagination`.
+
+The fix is the seventh symlink. `TheFrameworksOwnMessagesAreTranslatedOnDeviceTest`
+guards the set rather than the instance — it asserts the mobile root reaches
+every directory the bundle is built from, and that `validation.required`
+resolves to something other than the English fallback in every published
+locale. Run from the desktop root it passes either way; run from the mobile
+root, which is what the mobile CI job does, it fails without the link.
+
+With the catalogue present the same screen answered **"File is verplicht."** —
+the sentence translated and the field in it not. The framework names a field
+from its property when nothing tells it otherwise, and the standard translation
+set carries no `file` attribute because `file` is a rule name rather than a
+field name. `UploadWizard::validationAttributes()` now names the three fields by
+the labels the form already renders, which are translated in every locale
+already, so the fix carries no new translation debt and cannot drift from what
+the reader saw on screen.
+
+Verified on hardware after a clean install: **"Bestand is verplicht."**
+
 ### The runtime is persistent, and request headers leak between requests
 
 The embedded PHP process serves many requests. Its superglobals are not fully
