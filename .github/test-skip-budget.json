@@ -199,6 +199,15 @@
             "runs_in": "mobile-app quality",
             "why": "Beatrax\\BiometricVault\\BiometricVault is the first-party beatrax/mobile-biometric-vault plugin, a path package required only by the mobile-app root — not nativephp/mobile-biometrics, which is a different plugin this entry used to name. One of the two markers sits on a four-row dataset, which is why two markers report five skips."
         },
+        "Modules/Mobile/tests/Unit/Identity/TheSignalAndroidRaisesIsTheOnePhpListensForTest.php": {
+            "markers": 1,
+            "skipped": {
+                "quality shard": 1,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "The positive control for the `native:` prefix reads NativeActionCoordinator.kt, which ships inside nativephp/mobile and is installed only in the mobile-app root. The two name-agreement rules in the same file read tracked sources and run everywhere."
+        },
         "Modules/Mobile/tests/Unit/Identity/WhatTheDeviceSaidAboutItsOwnBiometricTest.php": {
             "markers": 2,
             "skipped": {

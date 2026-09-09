@@ -88,9 +88,15 @@ plugin):
   enclave itself refuses to release the bytes without a fresh Face ID/Touch ID,
   and `.biometryCurrentSet` auto-invalidates the item if the enrolled set
   changes.
-- **Android:** generate a Keystore key with
+- **Android:** generate a Keystore **key pair** with
   `setUserAuthenticationRequired(true)` + `setInvalidatedByBiometricEnrollment(true)`, and unwrap through a `BiometricPrompt` `CryptoObject`. The Keystore
-  refuses the `Cipher` without a fresh biometric.
+  refuses the private-key `Cipher` without a fresh biometric. A *secret* key
+  would gate encryption too, and enrolment cannot pay that: the caller
+  re-verifies the PIN for the live data key and `sodium_memzero`s it on the
+  statement after the store, so a `Set()` that answered by event would be
+  waiting on a key that no longer exists. Only the private half of an
+  asymmetric key requires authentication, so `Set()` is synchronous and `Get()`
+  is the one that prompts.
 
 This needs a native shim — a Swift function, a Kotlin function and a PHP
 facade — or an `accessControl: biometric` option upstream in
@@ -208,8 +214,7 @@ on-device UAT):
 - `BiometricVault.IsAvailable` — the capability probe, one bridge function per
   platform behind `BiometricKeyVault::platformCanStore()`. It answers what the
   device can do right now and why, not which operating system it is running:
-  `available`, `none_enrolled`, `no_hardware`, `hardware_unavailable`,
-  `async_unimplemented` (Android, while `Set()` is still a skeleton), plus
+  `available`, `none_enrolled`, `no_hardware`, `hardware_unavailable`, plus
   `security_update_required` on Android / `no_passcode` on iOS, and
   `unreadable` when the bridge answered nothing. The refusal is written to the
   log at debug; a phone with nothing enrolled is a state of the world, not a
@@ -218,18 +223,33 @@ on-device UAT):
 
 ## What is not built yet
 
-1. **Android async recover** — the `BiometricVault.Recovered` event handler in
-   `MobileLockScreen` (the vault returns `pendingAsync` on Android), and the
-   Kotlin `BiometricPrompt` wiring behind it. Two things wait on this: `Set()`
-   answers `async_required` and writes nothing, which is why `IsAvailable`
-   answers `async_unimplemented` on every Android build; and
-   `BiometricVault.PollRecovered`, which the PHP facade calls but
-   `nativephp.json` never declared, so it answers "function not found" on both
-   platforms and `completePendingRecover()` can only ever report MISSING.
-2. **On-device verification** — the Tier A round-trip on a physical device,
-   proving the enclave gates the read; the plugin is registered by path repo +
-   `native:plugin:register`. Enrolment on an iPhone 12 mini returns
-   `Keychain save failed (-25293)`, which is `errSecNotAvailable`.
+1. **On-device verification, iOS** — the Tier A round-trip on an iPhone; the
+   plugin is registered by path repo + `native:plugin:register`. Enrolment on an
+   iPhone 12 mini returns `Keychain save failed (-25293)`, which is
+   `errSecNotAvailable`.
+
+   **Android is verified** (Galaxy A51, Android 13, 2026-09-09): enrolment
+   writes, a fingerprint releases the blob, and the app unlocks. The log carries
+   the whole chain, and the replay case is what makes the rest of it mean
+   something — the same `PollRecovered` call that unlocks on a full slot does
+   nothing on a consumed one:
+
+   | | native dispatch | `PollRecovered` | outcome |
+   |---|---|---|---|
+   | after a real fingerprint | `BiometricVault.Recovered` | yes | unlocked |
+   | signal replayed from JS, no prompt | none | yes | stayed locked |
+
+   The event payload is `{}` — the blob travels over the PHP bridge, never in
+   the event.
+
+Android async recover was item 1 of this list and is now in the tree: the Kotlin
+`BiometricPrompt` wiring, `BiometricVault.PollRecovered` declared in
+`nativephp.json` and consuming its slot on read, and `MobileLockScreen`
+listening on `native:BiometricVault.Recovered`. That prefix is the correction
+the wiring exposed — `NativeActionCoordinator.dispatch()` calls
+`window.Livewire.dispatch("native:" + event, payload)`, so the bare
+`cold-start-recovered` the handler used to listen for was a channel the device
+could not raise, and nothing could notice while nothing raised anything.
 
 Items 3 and 4 of this list — the enrollment toggle with the PIN floor, and the
 `clear()` lifecycle hooks — were written after it and are in the tree:

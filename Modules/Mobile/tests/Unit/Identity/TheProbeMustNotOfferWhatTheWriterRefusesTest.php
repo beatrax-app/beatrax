@@ -3,14 +3,15 @@
 declare(strict_types=1);
 
 // Two facts about the same platform, held in two classes in one file. Set()
-// knows it cannot write on Android until the BiometricPrompt wiring lands;
-// IsAvailable() is asked whether the vault can hold a key. Answering the
-// second from the sensor alone is what put an "Enroll this device" button on
-// every Android build for a vault that refuses every write.
+// writes, and IsAvailable() is asked whether the vault can hold a key; the two
+// must not disagree in either direction. While Set() refused every write, an
+// "Enroll this device" button appeared on every Android build, because the
+// probe was answering from the sensor alone. The BiometricPrompt wiring has
+// landed, so the refusal it reported is now the lie: `async_unimplemented` is
+// no answer any build can honestly give, and setIsAsyncOnly() is gone.
 //
 // The Kotlin and the Swift are compiled by a toolchain no PHP run has, so this
-// reads the sources. The pair is what is checked, not either half: when the
-// prompt wiring lands, setIsAsyncOnly() goes and this test goes with it.
+// reads the sources. The pair is what is checked, not either half.
 
 /**
  * Both Composer roots run this directory and only one of them is mobile-app.
@@ -27,27 +28,35 @@ function biometricVaultPluginSource(string $relative): string
     return (string) file_get_contents((string) $path);
 }
 
-it('does not let the Android probe answer yes while Set still refuses', function (): void {
+it('does not let the Android probe report a refusal Set no longer makes', function (): void {
     $kotlin = biometricVaultPluginSource('android/BiometricVaultFunctions.kt');
 
-    // A positive control: if Set no longer refuses, the rest of this is about
-    // a state the file is not in and the assertions below would pass vacuously.
-    expect(str_contains($kotlin, '"async_required" to true'))->toBeTrue(
-        'Set() no longer refuses on Android, so delete setIsAsyncOnly() and this test with it.'
+    // A positive control the other way up: while Set answered `async_required`
+    // the assertions below described a state the file was not in. If that
+    // refusal ever returns, the probe has to learn to report it again.
+    expect(str_contains($kotlin, '"async_required" to true'))->toBeFalse(
+        'Set() refuses on Android again, so IsAvailable() has to say so rather than offering the vault.'
     );
 
-    expect(str_contains($kotlin, 'sensorReady && setIsAsyncOnly() -> "async_unimplemented"'))->toBeTrue(
-        'IsAvailable() offers a vault Set() will refuse: it reads the sensor and not setIsAsyncOnly().'
+    expect(str_contains($kotlin, 'async_unimplemented'))->toBeFalse(
+        'The probe still answers async_unimplemented, which no build can now be in.'
+    );
+
+    expect(str_contains($kotlin, 'setIsAsyncOnly'))->toBeFalse(
+        'setIsAsyncOnly() outlived the refusal it stood for.'
     );
 });
 
-// Read off the Samsung: the refusal has to be one fact, not two copies. Set()
-// and IsAvailable() both call it, so a build that wires the prompt cannot flip
-// one and leave the other offering or refusing on its own.
-it('has both Android callers read the same refusal', function (): void {
+// Set() has to stay synchronous, and this is the reason in one line: the PHP
+// caller zeroes the data key on the statement after the one that stores it, so
+// a Set that answered by event would be waiting on a key that no longer exists.
+it('keeps the Android write synchronous', function (): void {
     $kotlin = biometricVaultPluginSource('android/BiometricVaultFunctions.kt');
 
-    expect(substr_count($kotlin, 'setIsAsyncOnly()'))->toBe(3, 'Set, IsAvailable, and the declaration.');
+    $set = substr($kotlin, strpos($kotlin, 'class Set('), 900);
+
+    expect($set)->toContain('"success" to true')
+        ->and($set)->not->toContain('BiometricPrompt(');
 });
 
 // iOS is the other half of the same pair and reaches the opposite conclusion:

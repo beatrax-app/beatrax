@@ -83,9 +83,11 @@ function eventChannelPinnedOneSided(): array
 
         // Android's BiometricPrompt answers asynchronously: the native callback
         // raises these back into Livewire once it has stashed or failed to
-        // stash the decrypted blob, so the dispatcher is the native side.
-        'cold-start-recovered' => 'listen',
-        'cold-start-failed' => 'listen',
+        // stash the decrypted blob, so the dispatcher is the native side. The
+        // `native:` prefix is the coordinator's, not ours — it is the only
+        // shape window.Livewire.dispatch() is ever called with from Kotlin.
+        'native:BiometricVault.Recovered' => 'listen',
+        'native:BiometricVault.Failed' => 'listen',
     ];
 }
 

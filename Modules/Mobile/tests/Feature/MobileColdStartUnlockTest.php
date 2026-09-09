@@ -155,12 +155,12 @@ it('does NOT admit when the PIN floor is overdue, even if the vault would recove
 // Android finishes the recovery asynchronously: the key arrives on a
 // BiometricVault.Recovered event rather than from the prompt call's return.
 
-it('async recovered admits + redirects via the cold-start-recovered event', function (): void {
+it('async recovered admits + redirects via the BiometricVault.Recovered event', function (): void {
     lockedColdStartUser('cs-async-ok');
     $key = str_repeat('k', 32);
     bindVaultRecover(BiometricRecoverResult::recovered($key));
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-recovered')->assertRedirect(route('dashboard'));
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertRedirect(route('dashboard'));
 
     expect(released())->toBe($key);
 });
@@ -169,7 +169,7 @@ it('async recovered is REFUSED when not enrolled (stale-blob guard on the async 
     lockedColdStartUser('cs-async-not-enrolled', enrolled: false);
     bindVaultRecover(BiometricRecoverResult::recovered(str_repeat('k', 32)));
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-recovered')->assertNoRedirect();
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertNoRedirect();
 
     expect(released())->toBeNull();
 });
@@ -178,7 +178,7 @@ it('async recovered is REFUSED when the PIN floor is overdue', function (): void
     lockedColdStartUser('cs-async-floor', floorDaysAgo: 20);
     bindVaultRecover(BiometricRecoverResult::recovered(str_repeat('k', 32)));
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-recovered')->assertNoRedirect();
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertNoRedirect();
 
     expect(released())->toBeNull();
 });
@@ -186,7 +186,7 @@ it('async recovered is REFUSED when the PIN floor is overdue', function (): void
 it('onColdStartFailed is a no-op — never admits, never redirects', function (): void {
     lockedColdStartUser('cs-async-failed');
 
-    Livewire::test(MobileLockScreen::class)->dispatch('cold-start-failed')->assertNoRedirect();
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Failed')->assertNoRedirect();
 
     expect(released())->toBeNull();
 });

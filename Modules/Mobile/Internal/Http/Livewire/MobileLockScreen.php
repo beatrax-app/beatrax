@@ -26,6 +26,15 @@ final class MobileLockScreen extends Component
 {
     use HoldsFlashMessage;
 
+    // `native:` is the coordinator's prefix, not ours, and the only one the
+    // Android side can produce; the names after it are the plugin manifest's.
+    /**
+     * @link ../../../../../.docs/design/cold-start-biometric-unlock.md
+     */
+    private const string EVENT_RECOVERED = 'native:BiometricVault.Recovered';
+
+    private const string EVENT_FAILED = 'native:BiometricVault.Failed';
+
     public bool $biometricAvailable = false;
 
     public string $biometricLabel = 'Use Face ID';
@@ -147,7 +156,7 @@ final class MobileLockScreen extends Component
 
     // Android async completion: the native prompt has already authenticated
     // and stashed the decrypted blob in a transient native slot.
-    #[On('cold-start-recovered')]
+    #[On(self::EVENT_RECOVERED)]
     public function onColdStartRecovered(
         BiometricKeyVault $vault,
         MobileLockGateway $gateway,
@@ -171,7 +180,7 @@ final class MobileLockScreen extends Component
     /**
      * @link ../../../../../.docs/design/cold-start-biometric-unlock.md
      */
-    #[On('cold-start-failed')]
+    #[On(self::EVENT_FAILED)]
     public function onColdStartFailed(): void
     {
         // Registered so the native prompt's failure lands somewhere, and
