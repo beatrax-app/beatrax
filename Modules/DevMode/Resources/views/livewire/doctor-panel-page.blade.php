@@ -46,9 +46,17 @@
     @if ($probeRows === [])
         <div class="card p-6 text-center" data-testid="doctor-empty-state">
             <p class="text-sm text-[var(--color-text-muted)]">
-                {{ Lang::get('dev::doctor.empty_prefix') }}
-                <span class="font-semibold">{{ Lang::get('dev::doctor.empty_rerun') }}</span>
-                {{ Lang::get('dev::doctor.empty_suffix') }} <code class="font-mono">{{ $commandName }}</code>.
+                {{-- One sentence, one key: the command was appended after a
+                     translated fragment, which fixes English word order into
+                     every locale. Dutch read "om aan te roepen beatrax:doctor",
+                     and Estonian, Finnish and Latvian each named the command
+                     twice. The button's own label is passed in, so the word
+                     this sentence tells the reader to press cannot drift from
+                     the one on the button. --}}
+                {!! Lang::get('dev::doctor.empty_html', [
+                    'action' => '<span class="font-semibold">'.e(Lang::get('dev::doctor.rerun')).'</span>',
+                    'command' => '<code class="font-mono">'.e($commandName).'</code>',
+                ]) !!}
             </p>
         </div>
     @else
