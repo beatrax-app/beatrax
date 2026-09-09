@@ -356,6 +356,47 @@ every input before any write (mirroring the project's other settings
 sections' defense-in-depth discipline) even though the query layer
 re-validates as well.
 
+## Delivery, confirmed on hardware
+
+A local notification is one of the few things the suite cannot prove: the shipped
+path ends in `NotificationManager.notify()`, which does **not** throw when the app
+may not post — it returns quietly, so a device with the permission denied records
+a delivery for a notification that reached nobody. The plugin now refuses through
+`BridgeError.ExecutionFailed` when `areNotificationsEnabled()` is false, and the
+run below is what says the delivering half works.
+
+**Galaxy A51 (SM-A515F, Android 13), 2026-09-09.** Trigger: a manual cash-book
+entry at `/cash` — `PersistCoalescedImport` raises
+`NotificationTrigger::ManualEntryRecorded` synchronously, and every other trigger
+is scheduled, which this phone almost entirely does not run. The whole request
+cost 502 ms, so delivery is synchronous with the submit.
+
+The grant is real rather than declared:
+
+```text
+android.permission.POST_NOTIFICATIONS: granted=true, flags=[ USER_SET|… ]
+```
+
+The record the OS holds:
+
+```text
+NotificationRecord(0x00082731: pkg=com.beatrax.mobile user=UserHandle{0}
+  id=1805921718 tag=null importance=3 key=0|com.beatrax.mobile|1805921718|null|10428
+  Notification(channel=nativephp_default …))
+  android.title = Cash book updated
+  android.text  = 1 entry added by hand.
+```
+
+Three sources agree on one event, which is what makes it falsifiable rather than
+a claim: logcat's `LocalNotification: Showing notification: id=4bb47414…`, the
+`notifications` row whose id is that same `4bb47414…` with
+`trigger_type=manual_entry_recorded`, and the `transactions` row for the entry,
+all stamped `2026-09-09 23:29:31`.
+
+**What this run does not say.** Only the on-demand trigger was exercised. The
+scheduled triggers are not covered by it, and on a phone they are the ones that
+mostly do not fire at all.
+
 ## Related
 
 - [Copy that follows the reader](reader-language-copy.md) — the copy
