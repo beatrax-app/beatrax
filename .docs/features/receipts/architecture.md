@@ -134,8 +134,13 @@ What the module explicitly does NOT do:
 - **Internal/Jobs/ProcessFetchedInboxMessagesJob** — the per-user
   consumer of `inbox_messages` rows still `fetched`.
 - **Internal/Jobs/ScanInboxDropFolderJob** — the per-user scan of
-  `storage/app/inbox-drop/{userId}/`, dispatched by
-  `Internal/Console/ScanInboxDropFolderCommand`.
+  `UserDataPathService::appPath('inbox-drop/{userId}')`, dispatched by
+  `Internal/Console/ScanInboxDropFolderCommand`. It asked the container
+  (`$app->storagePath('app/inbox-drop/…')`) until 2026-09-09: the same
+  directory on a checkout, on the desktop and on Android, and a different
+  one on iOS, where the shell announces a storage root that is not the
+  durable store. `UserDataLocations` answers `appPath()` for this folder,
+  so the deletion procedure and the export were walking the other tree.
 - **Internal/Console/ScanInboxDropFolderCommand** — `receipts:scan-drop-folder`,
   the only dispatcher of that job. It reads the per-user
   `auto_import_drop_folder` opt-in itself, so a tick costs nothing for a

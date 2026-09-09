@@ -66,11 +66,15 @@ What `tests/Contracts/` holds for `Core`, and what it does not:
 
 - `noStoragePathHardCodedOutsideUserDataPathService` — only
   `UserDataPathService` may call `base_path()` /
-  `database_path()` / `storage_path()`, and only it may spell a
-  storage literal (`database.sqlite`, `storage/app/`) out. It
-  reads `Modules`, `app` and `config`, skipping tests and
+  `database_path()` / `storage_path()`, ask the container the same
+  question (`$app->storagePath()` and its other spellings), or
+  spell a storage literal (`database.sqlite`, `storage/app/`) out.
+  It reads `Modules`, `app` and `config`, skipping tests and
   migrations; Blade files are exempt from the literal half,
-  because a `<code>` tag legitimately shows a reader a path.
+  because a `<code>` tag legitimately shows a reader a path. The
+  companion case feeds the container pattern every spelling that
+  reaches the `Application` and one method merely named like it,
+  so the rule cannot silently stop reading half of them.
 - `noSecretsInLivewireSnapshot` — backed by `SecretsColumnRegistry`.
   Adding a new secret column without registering it leaves the
   invariant blind.
@@ -170,10 +174,11 @@ and the assertion — see
   `base_path()` in production code, and the only file allowed to
   spell a storage path out.** The arch invariant
   `noStoragePathHardCodedOutsideUserDataPathService` blocks every
-  other call site and every other `database.sqlite` / `storage/app/`
-  literal, so a packaged build (where `NATIVEPHP_STORAGE_PATH`
-  redirects the storage root) cannot land a stray path that escapes
-  the redirect.
+  other call site — the helper spelling and the container's alike —
+  and every other `database.sqlite` / `storage/app/` literal, so a
+  build whose shell redirects the storage root (`NATIVEPHP_STORAGE_PATH`
+  on the desktop, `LARAVEL_STORAGE_PATH` on both phones) cannot land a
+  stray path that escapes the redirect.
   (`Modules/Core/tests/Feature/UserDataPathResolutionTest.php`)
 - **`EnsureAppKey::run()` runs `key:generate --force` exactly once per
   install.** The sentinel file at

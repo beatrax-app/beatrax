@@ -318,18 +318,24 @@ seeds is one the peer's own row can no longer land beside. See
   `storage_path()`, `base_path()` outside this class is forbidden by
   the arch invariant
   `noStoragePathHardCodedOutsideUserDataPathService`, which sweeps
-  `Modules`, `app` and `config` for the hard-coded storage literals
-  `database.sqlite` and `storage/app/` in the same pass — so no other
-  file can reach a path either through a helper or by writing one out.
+  `Modules`, `app` and `config` for the container spellings of the same
+  question (`$app->storagePath()` and the rest) and for the hard-coded
+  storage literals `database.sqlite` and `storage/app/` in the same pass
+  — so no other file can reach a path through a helper, through the
+  container, or by writing one out.
   The `NATIVEPHP_STORAGE_PATH` env var redirects the storage root for
   the packaged build. `getenv()` is used (not Laravel's `env()` helper)
   because it is unconditional at every boot stage, which is what makes
   the static accessors safe to call from `config/*.php` files evaluated
   before the container exists.
   - **Mobile runtime detection**: NativePHP mobile does NOT set
-    `NATIVEPHP_STORAGE_PATH` — it retargets `base_path()` itself into
-    the app-sandbox container, so every accessor already resolves
-    inside the sandbox with no dedicated mobile branch. The private
+    `NATIVEPHP_STORAGE_PATH` — it retargets `base_path()` into the
+    app-sandbox container and announces the storage root separately,
+    as `LARAVEL_STORAGE_PATH`, which `storageRoot()` reads from
+    `$_SERVER` / `$_ENV` / `getenv()` after the desktop's name. On
+    iOS the two are different trees, so `base_path()` alone does not
+    place the storage root and reading only the desktop's name put
+    `laravel.log` in the bundle an update deletes. The private
     `platformSignal()` (`NATIVEPHP_PLATFORM` via `$_SERVER`, `$_ENV`,
     `getenv()`) is the primary on-device signal — the public
     `platform()` narrows it to a `MobilePlatform` case for callers that

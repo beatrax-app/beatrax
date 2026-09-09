@@ -182,6 +182,10 @@ final class SystemSnapshotPage extends Component
             'storage' => UserDataPathService::storageBase(),
             'config' => UserDataPathService::projectPath('config'),
             'cache' => UserDataPathService::frameworkPath('cache'),
+            // The one path a reader most often needs and could not see: on a
+            // phone the log file is not under any of the rows above, and the
+            // page named a storage root the framework did not write to.
+            'logs' => UserDataPathService::logsDirectory(),
             'database' => UserDataPathService::databaseFile(),
         ];
     }

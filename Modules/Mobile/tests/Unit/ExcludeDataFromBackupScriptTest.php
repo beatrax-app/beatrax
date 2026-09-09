@@ -200,6 +200,87 @@ it('flags the tree the path service writes to, not a tree beside it', function (
     }
 });
 
+// The five paths the case above enumerates were the durable ones, and the set
+// was written by hand. The log file was not in it, and the log file was the one
+// path outside every excluded tree: reading only the desktop shell's name for
+// the storage root put laravel.log under Documents/app, which prepareDurableStore()
+// does not cover and getAppSupportDir() never creates. Measured on an iPhone 12
+// mini: 250 lines there across five launches, at LOG_LEVEL=debug.
+it('covers the disposable tree as well, once the storage root the shell announced is read', function (): void {
+    [$root, $app] = excludeBackupScaffold();
+
+    excludeBackupRun($root);
+
+    $swift = (string) file_get_contents($app);
+
+    $documents = '/private/var/mobile/Containers/Data/Application/BEATRAX/Documents';
+    $support = '/private/var/mobile/Containers/Data/Application/BEATRAX/Library/Application Support';
+
+    $originalBase = $this->app->basePath();
+    $originalStorage = getenv('NATIVEPHP_STORAGE_PATH');
+
+    putenv('NATIVEPHP_STORAGE_PATH');
+    putenv('NATIVEPHP_PLATFORM=ios');
+    $_SERVER['LARAVEL_STORAGE_PATH'] = $support.'/storage';
+
+    try {
+        $this->app->setBasePath($documents.'/app');
+
+        // Application Support counts as excluded only because the patch flags
+        // every directory getAppSupportDir creates, and setupEnvironment()
+        // creates storage/logs through it. Assert that before relying on it.
+        expect($swift)->toContain('backup-exclusion: application support');
+
+        ['directories' => $excluded] = excludeBackupTree($swift, $documents);
+        $excluded[] = $support;
+
+        $written = [
+            'log file' => UserDataPathService::logsFile(),
+            'compiled views' => UserDataPathService::frameworkPath('views'),
+            'sessions' => UserDataPathService::frameworkPath('sessions'),
+            'database' => UserDataPathService::databaseFile(),
+            'secrets' => UserDataPathService::secretsPath(),
+        ];
+
+        $unflagged = [];
+
+        foreach ($written as $what => $path) {
+            $covered = array_filter(
+                $excluded,
+                static fn (string $directory): bool => $path === $directory
+                    || str_starts_with($path, $directory.'/'),
+            );
+
+            if ($covered === []) {
+                $unflagged[] = $what.' at '.$path;
+            }
+        }
+
+        expect($unflagged)->toBe([], 'outside every excluded directory: '.implode(', ', $unflagged));
+
+        // The control, so the assertion above is not passing on a coincidence:
+        // with the announcement unread the log file lands in the bundle, which
+        // is covered by nothing here. This is the state that shipped.
+        unset($_SERVER['LARAVEL_STORAGE_PATH']);
+
+        $bundleLog = UserDataPathService::logsFile();
+
+        expect($bundleLog)->toStartWith($documents.'/app/storage')
+            ->and(array_filter(
+                $excluded,
+                static fn (string $directory): bool => str_starts_with($bundleLog, $directory.'/'),
+            ))->toBe([], 'the bundle log path was inside an excluded tree, so the case above proves nothing');
+    } finally {
+        unset($_SERVER['LARAVEL_STORAGE_PATH']);
+        $this->app->setBasePath($originalBase);
+        putenv('NATIVEPHP_PLATFORM');
+
+        if (is_string($originalStorage) && $originalStorage !== '') {
+            putenv('NATIVEPHP_STORAGE_PATH='.$originalStorage);
+        }
+    }
+});
+
 it('reaches every file the walk can find, and re-asserts on the way to the background', function (): void {
     // The handset carried eight files in this tree: the ledger, its -wal and
     // -shm, two relay secrets, relay.json, the GDK keyring and the sync

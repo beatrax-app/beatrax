@@ -86,7 +86,9 @@ Practical recipes for exercising the `Desktop` module in isolation.
 - The repo-wide `noStoragePathHardCodedOutsideUserDataPathService`
   invariant covers the `FirstLaunchBootstrap` path: it must call the
   path service, never `database_path()` / `storage_path()` /
-  `base_path()` directly.
+  `base_path()` directly, and never `$app->databasePath()` either —
+  `$this->paths->databasePath()` and `$app->databasePath()` read
+  almost identically and answer different directories on a phone.
 
 ## How to run the suite for just this module
 

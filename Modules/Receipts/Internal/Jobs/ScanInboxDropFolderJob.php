@@ -6,7 +6,6 @@ namespace Modules\Receipts\Internal\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Filesystem\Filesystem;
@@ -16,6 +15,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\BoundedRead;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -60,7 +60,6 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
 
     public function handle(
         Filesystem $files,
-        Application $app,
         Clock $clock,
         RecordReceipt $recordReceipt,
         MboxIterator $mboxIterator,
@@ -74,7 +73,11 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
             return;
         }
 
-        $baseDir = $app->storagePath('app/inbox-drop/'.$this->userId);
+        // appPath(), not the framework's storagePath(): on iOS the two name
+        // different trees, and UserDataLocations answers appPath() for the
+        // deletion procedure and the export. A drop folder read from the
+        // other one is a folder neither of them can reach.
+        $baseDir = UserDataPathService::appPath('inbox-drop/'.$this->userId);
         if (! $files->isDirectory($baseDir)) {
             return;
         }

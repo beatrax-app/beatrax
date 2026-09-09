@@ -211,7 +211,9 @@ Modules/Receipts/
   adopts or opens the hourly `inbox-handoff` `ImportRun`, and returns
   the run id so a walk shares one. `ProcessFetchedInboxMessagesJob`
   and `ScanInboxDropFolderJob` are its two callers; the second used
-  to discard the outcome and import nothing.
+  to discard the outcome and import nothing, and later resolved its
+  base directory through the container rather than the path service —
+  two different trees on iOS.
 - `Internal/Listeners/HandleFileOpenedFromOs::handle($event)`
   — filters by `.eml` / `.mbox` extension; persists path into
   `Desktop::PendingFileIntent`.

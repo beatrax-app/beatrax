@@ -1658,7 +1658,15 @@ environment signals against `UserDataPathService`'s resolved paths (to
 confirm the encrypted SQLite file lands inside the app sandbox); the
 second proves the amphp/Revolt event loop can be driven to completion for
 a single bounded dial-out burst from within the mobile runtime, without
-attempting the real Noise handshake. Both are registered only from the
+attempting the real Noise handshake.
+
+The first one now carries a verdict row rather than only a dump. It printed
+the framework's storage root beside the path service's from the day it was
+written, and the two differing on iOS is the defect that shipped anyway — a
+reader scanning a table of six paths has no reason to compare two of them
+by eye. It is also the one file the
+`noStoragePathHardCodedOutsideUserDataPathService` allow-list excuses for
+asking the container directly, because asking is what it exists to do. Both are registered only from the
 mobile-app root's own bootstrap, never the shared `MobileServiceProvider`.
 
 ## Native chrome over the web body
@@ -1826,6 +1834,34 @@ the layout from `Modules/Core/Public/Support/PersistedStore`, and
 `UserDataPathService` resolves — database, keyring, sync identity, secrets,
 backups — falls inside a directory the patched shell excludes. Six of its ten
 cases fail against the old script.
+
+### One path the enumeration did not name
+
+That set was written by hand, and `logsFile()` was not in it. It was also the
+one path that fell outside every excluded tree. `storageRoot()` read only the
+desktop shell's name for the storage root, so on iOS it answered
+`base_path()/storage` — `Documents/app/storage/logs/laravel.log`, which
+`prepareDurableStore()` does not cover, `getAppSupportDir()` never creates, and
+`AppUpdateManager` deletes whole on every version change. Measured on an iPhone
+12 mini: 250 lines there across five launches, at `LOG_LEVEL=debug`, while the
+directory the app's own `booted()` hook creates through `storage_path()` held
+none of them.
+
+The fix is `storageRoot()` reading `LARAVEL_STORAGE_PATH` — the name both
+mobile shells announce, and the one Laravel's own `storagePath()` reads. The
+reach, per platform, is then:
+
+| | announced storage root | how it is excluded |
+| --- | --- | --- |
+| Android | `<files>/persisted_data/storage` | `allowBackup="false"` plus the two rule files, covering the whole internal data directory |
+| iOS | `<container>/Library/Application Support/storage` | the `getAppSupportDir()` patch, which flags every directory `setupEnvironment()` creates — `storage`, `storage/logs`, `storage/framework/{views,cache,sessions}` |
+
+`Documents/app` — the bundle — is covered by neither, and after this nothing
+the app writes resolves there. The test case now names the log file, the
+compiled views and the session directory alongside the durable five, and
+carries a control that resolves the log path with the announcement unread: it
+lands in the bundle, outside every excluded tree, which is the state that
+shipped.
 
 The two platform halves are guarded separately, and each patch within the iOS
 half has its own sentinel. They were not at first: the Android marker
