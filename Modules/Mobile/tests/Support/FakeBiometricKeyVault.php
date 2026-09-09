@@ -29,12 +29,18 @@ class FakeBiometricKeyVault extends BiometricKeyVault
         return $this->available;
     }
 
-    // The enclave path is iOS, which reports Darwin. Unpinned, the fake inherits
-    // the HOST's PHP_OS_FAMILY, so platformCanStore() answers false on a Linux
-    // runner and every availability assertion passes on a Mac and fails in CI.
-    protected function platformFamily(): string
+    // Unpinned, this half of isAvailable() falls to the real bridge, which no
+    // repo toolchain can reach, so every availability assertion would fail for
+    // the absence of a phone rather than for anything the test is about.
+    /** @var array{available?: bool, reason?: string} */
+    public array $capability = ['available' => true, 'reason' => 'available'];
+
+    /**
+     * @return array{available?: bool, reason?: string}
+     */
+    protected function vaultCapability(): array
     {
-        return 'Darwin';
+        return $this->capability;
     }
 
     protected function pollRecovered(): ?string

@@ -67,6 +67,41 @@ enum BiometricVaultFunctions {
         }
     }
 
+    // MARK: - BiometricVault.IsAvailable
+    //
+    // Whether this device can gate an entry behind a biometric RIGHT NOW.
+    //
+    // The application used to answer this from PHP_OS_FAMILY, which says only
+    // which operating system is running. An iPhone with Face ID switched off
+    // for this app, or with no face enrolled, answered the same as one that
+    // can — so the reader was offered biometric unlock and the enrolment then
+    // failed with nothing to read but the word "false".
+    //
+    // deviceOwnerAuthenticationWithBiometrics and not the passcode-inclusive
+    // policy: the keychain item is written with .biometryCurrentSet, so a
+    // passcode this call would admit is one the enclave then refuses.
+    class IsAvailable: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            let context = LAContext()
+            var error: NSError?
+            let available = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+
+            // The reason travels with the answer. LAError's cases are the same
+            // five distinctions Android draws, under different names.
+            let reason: String
+            switch LAError.Code(rawValue: error?.code ?? 0) {
+            case _ where available: reason = "available"
+            case .biometryNotEnrolled: reason = "none_enrolled"
+            case .biometryNotAvailable: reason = "no_hardware"
+            case .biometryLockout: reason = "hardware_unavailable"
+            case .passcodeNotSet: reason = "no_passcode"
+            default: reason = "unsupported"
+            }
+
+            return ["available": available, "reason": reason]
+        }
+    }
+
     // MARK: - BiometricVault.Delete
     class Delete: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {

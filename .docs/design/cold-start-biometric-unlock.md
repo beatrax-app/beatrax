@@ -205,20 +205,37 @@ on-device UAT):
   straight through; else `vault->recover()` → `admitDataKey()` → redirect;
   missing/canceled/unavailable fall through to the PIN pad. Async (Android)
   handled by the event, see below.
+- `BiometricVault.IsAvailable` — the capability probe, one bridge function per
+  platform behind `BiometricKeyVault::platformCanStore()`. It answers what the
+  device can do right now and why, not which operating system it is running:
+  `available`, `none_enrolled`, `no_hardware`, `hardware_unavailable`,
+  `async_unimplemented` (Android, while `Set()` is still a skeleton), plus
+  `security_update_required` on Android / `no_passcode` on iOS, and
+  `unreadable` when the bridge answered nothing. The refusal is written to the
+  log at debug; a phone with nothing enrolled is a state of the world, not a
+  fault, and the reader is shown the PIN pad rather than an affordance that
+  cannot work.
 
 ## What is not built yet
 
 1. **Android async recover** — the `BiometricVault.Recovered` event handler in
    `MobileLockScreen` (the vault returns `pendingAsync` on Android), and the
-   Kotlin `BiometricPrompt` wiring behind it.
+   Kotlin `BiometricPrompt` wiring behind it. Two things wait on this: `Set()`
+   answers `async_required` and writes nothing, which is why `IsAvailable`
+   answers `async_unimplemented` on every Android build; and
+   `BiometricVault.PollRecovered`, which the PHP facade calls but
+   `nativephp.json` never declared, so it answers "function not found" on both
+   platforms and `completePendingRecover()` can only ever report MISSING.
 2. **On-device verification** — the Tier A round-trip on a physical device,
    proving the enclave gates the read; the plugin is registered by path repo +
-   `native:plugin:register`.
-3. **Enrollment UX + PIN floor** — a settings toggle that calls
-   `BiometricKeyVault::enroll($userId, $dataKey)` while unlocked after a fresh PIN entry;
-   the "PIN mandatory after biometry change / every N days" cadence.
-4. **Lifecycle hooks** — `clear()` on disable, on PIN reset re-enroll, and on
-   rekey/revocation (invalidate-and-re-enroll).
+   `native:plugin:register`. Enrolment on an iPhone 12 mini returns
+   `Keychain save failed (-25293)`, which is `errSecNotAvailable`.
+
+Items 3 and 4 of this list — the enrollment toggle with the PIN floor, and the
+`clear()` lifecycle hooks — were written after it and are in the tree:
+`ColdStartBiometricSettingsSection`, `MobileLockGateway::pinFloorDue()` with a
+14-day floor, and `ColdStartEnrollmentService::disable()`. The list said
+otherwise for long enough to be worth this paragraph.
 
 ## Decisions (owner, locked)
 

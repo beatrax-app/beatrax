@@ -197,7 +197,16 @@
                 "mobile-app quality": 0
             },
             "runs_in": "mobile-app quality",
-            "why": "BiometricVault comes from nativephp/mobile-biometrics, a paid plugin resolved only from the mobile-app root. One of the two markers sits on a four-row dataset, which is why two markers report five skips."
+            "why": "Beatrax\\BiometricVault\\BiometricVault is the first-party beatrax/mobile-biometric-vault plugin, a path package required only by the mobile-app root — not nativephp/mobile-biometrics, which is a different plugin this entry used to name. One of the two markers sits on a four-row dataset, which is why two markers report five skips."
+        },
+        "Modules/Mobile/tests/Unit/Identity/WhatTheDeviceSaidAboutItsOwnBiometricTest.php": {
+            "markers": 2,
+            "skipped": {
+                "quality shard": 9,
+                "mobile-app quality": 0
+            },
+            "runs_in": "mobile-app quality",
+            "why": "Beatrax\\BiometricVault\\BiometricVault is the first-party beatrax/mobile-biometric-vault plugin, a path package required only by the mobile-app root. One of the two markers sits on an eight-row dataset, which is why two markers report nine skips."
         },
         "Modules/Mobile/tests/Unit/NoInboundDeepLinkSchemeTest.php": {
             "markers": 1,
