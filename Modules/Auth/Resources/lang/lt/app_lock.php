@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Ši Beatrax versija neturi kur išsaugoti atrakinimo rakto, todėl biometrinis atrakinimas nesiūlomas. Riboja ne tavo įrenginys.',
     'error_enroll_unprotected' => 'Biometriniam atrakinimui reikia operacinės sistemos raktų saugyklos, o šis įdiegimas jos neturi. Registracija paliktų atrakinimo raktą įskaitomą šalia tavo duomenų, todėl čia ji nesiūloma.',
-    'error_enroll_locked' => 'Prieš registruodamas atrakink programėlę.',
     'error_enroll_failed' => 'Tavo įrenginys atsisakė išsaugoti raktą. Biometrinis atrakinimas negalimas.',
     'heading' => 'Programėlės užraktas',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'Ši Beatrax versija negali pasiūlyti biometrinio atrakinimo. Čia atrakinti galima tik tavo PIN kodu.',
 
     'deenroll_modal_heading' => 'Pašalinti biometrinį atrakinimą — patvirtink PIN kodu',
+    'enroll_modal_heading' => 'Įjungti biometrinį atrakinimą — patvirtink PIN kodu',
     'current_pin_label' => 'Dabartinis PIN kodas',
     'remove_biometric' => 'Pašalinti biometriją',
     'keep_biometric' => 'Palikti biometriją',

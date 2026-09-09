@@ -15,6 +15,7 @@ use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\AppLockPinShape;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
+use Modules\Auth\Internal\Lock\ColdStartEnroller;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\Contracts\ColdStartVault;
@@ -79,6 +80,7 @@ final class LockScreen extends Component
         DatabaseManager $db,
         Clock $clock,
         ColdStartVault $vault,
+        ColdStartEnroller $enroller,
         MobileLockGateway $gateway,
     ): void {
         if (! AppLockPinShape::isWellFormed($pin)) {
@@ -111,11 +113,12 @@ final class LockScreen extends Component
             return;
         }
 
-        // The only moment the raw data key is in hand. The flag is written
-        // alongside so the enrolment dies with the account row rather than
-        // surviving as a file that outlives the user it was for.
-        if ($vault->isAvailable() && ! $vault->isEnrolled($user->id) && $vault->enroll($user->id, $dataKey)) {
-            $gateway->markColdStartEnrolled($user->id, true);
+        // Re-armed through the same enroller the settings screen uses, rather
+        // than storing the key in hand: one funnel owns arming the vault, and
+        // it is the one that spends a PIN to do it. The PIN just verified is
+        // the one it spends.
+        if ($vault->isAvailable() && ! $vault->isEnrolled($user->id)) {
+            $enroller->enrol($user->id, $pin, $session);
         }
 
         $this->redirect($this->intendedUrl($session, $urls), navigate: false);

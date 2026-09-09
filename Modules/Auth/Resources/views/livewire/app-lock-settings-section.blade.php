@@ -10,7 +10,9 @@
       - Enable flow collects the account password: the recovery wrap needs it.
       - Disable and change-PIN use Flux modals for PIN-confirmation.
       - Idle timeout persists instantly without a modal.
-      - Biometric row is a slot placeholder only; enrollment is wired elsewhere.
+      - Enrolling an OS-vault biometric confirms with the PIN, exactly as
+        removing one does: the entry it writes is a durable way back to the
+        data key that biometrics alone can open.
 
     Copywriting contract (UI-SPEC Copywriting section):
       - Section heading: "App lock"
@@ -21,6 +23,7 @@
         this setting does not govern. The window is interpolated from
         IdleTimeoutOptions::BACKGROUND_GRACE_SECONDS, never typed into the line.
       - Biometric empty-state: "This version of Beatrax cannot offer biometric unlock. Your PIN is the only unlock here."
+      - Enroll modal heading: "Turn on biometric unlock — confirm with PIN"
       - Disable modal CTA: "Disable lock" / "Keep app lock"
       - Change PIN modal CTA: "Change PIN" / "Keep PIN"
 --}}
@@ -262,6 +265,44 @@
                 </p>
             @endif
         </div>
+
+        {{-- Enroll confirmation modal. The OS-vault arm only: the browser arm
+             is a WebAuthn round trip whose own ceremony is the proof, and
+             startEnroll dispatches it without opening this. --}}
+        @if ($confirmingEnroll)
+            <flux:modal wire:model="confirmingEnroll" class="md:max-w-sm">
+                <div class="space-y-4 p-6">
+                    <x-core::section-heading :title="Lang::get('auth::app_lock.enroll_modal_heading')" :level="3" />
+                    <x-core::form-field
+                        :label="Lang::get('auth::app_lock.current_pin_label')"
+                        name="enrollPin"
+                        field-id="enroll-pin-input"
+                        type="password"
+                        size="base"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        wire:model="enrollPin"
+                        placeholder="········"
+                    />
+                    <div class="flex gap-3">
+                        <x-core::neutral-button
+                            block="flex"
+                            class="min-h-[44px]"
+                            wire:click="enrollWithPin"
+                        >
+                            {{ Lang::get('auth::app_lock.enroll') }}
+                        </x-core::neutral-button>
+                        <x-core::secondary-button
+                            block="flex"
+                            class="min-h-[44px]"
+                            wire:click="$set('confirmingEnroll', false)"
+                        >
+                            {{ Lang::get('auth::app_lock.cancel') }}
+                        </x-core::secondary-button>
+                    </div>
+                </div>
+            </flux:modal>
+        @endif
 
         {{-- De-enroll confirmation modal --}}
         @if ($confirmingDeenroll)

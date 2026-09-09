@@ -20,11 +20,12 @@ use Modules\Auth\Internal\Lock\AppLockDisableResult;
 use Modules\Auth\Internal\Lock\AppLockKeyState;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
+use Modules\Auth\Internal\Lock\ColdStartEnroller;
+use Modules\Auth\Internal\Lock\ColdStartEnrolmentResult;
 use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Contracts\ColdStartVault;
-use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
@@ -55,6 +56,10 @@ final class AppLockSettingsSection extends Component
     public bool $biometricCapable = false;
 
     public string $biometricLabel = 'biometric unlock';
+
+    public bool $confirmingEnroll = false;
+
+    public string $enrollPin = '';
 
     public bool $confirmingDeenroll = false;
 
@@ -405,10 +410,7 @@ final class AppLockSettingsSection extends Component
     // by POSTing an attestation to /lock/biometric/enroll, then dispatching
     // 'biometric-enrolled' back here.
     public function startEnroll(
-        CurrentUser $currentUser,
         ColdStartVault $vault,
-        AppLockKeyService $keyService,
-        Session $session,
         ConfigRepository $config,
         SecretShield $shield,
     ): void {
@@ -418,11 +420,14 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        // An OS-owned biometric is enrolled directly: WebAuthn is a browser
-        // API, and navigator.credentials.create() resolves to nothing behind
-        // the desktop shell, which read as a dead button.
+        // An OS-owned biometric asks for the PIN first and skips the browser
+        // entirely: WebAuthn is a browser API, and navigator.credentials
+        // .create() resolves to nothing behind the desktop shell, which read
+        // as a dead button.
         if ($vault->isAvailable()) {
-            $this->enrollNatively($currentUser, $vault, $keyService, $session);
+            $this->confirmingEnroll = true;
+            $this->enrollPin = '';
+            $this->flashMessage = '';
 
             return;
         }
@@ -456,29 +461,41 @@ final class AppLockSettingsSection extends Component
         };
     }
 
-    // Stores the live data key under the OS gate, so it only works unlocked --
-    // which is the only state this settings screen is reachable in.
-    private function enrollNatively(
+    // The OS entry is a durable way back to the data key that biometrics alone
+    // can open, so arming one costs what removing one costs. The enroller
+    // derives the key from this PIN rather than taking the session's, which is
+    // what makes the box in front of the reader a gate and not a formality.
+    public function enrollWithPin(
         CurrentUser $currentUser,
-        ColdStartVault $vault,
-        AppLockKeyService $keyService,
+        ColdStartEnroller $enroller,
+        AppLockCredentialRejections $rejections,
         Session $session,
     ): void {
-        $dataKey = $keyService->release($session);
+        $rejection = $rejections->pinRequired($this->enrollPin);
 
-        if ($dataKey === null) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_locked');
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
 
-        if (! $vault->enroll($currentUser->user()->id, $dataKey)) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_failed');
+        $pin = $this->enrollPin;
+        $this->enrollPin = '';
+
+        $result = $enroller->enrol($currentUser->user()->id, $pin, $session);
+
+        // The panel stays open on a refusal for the same reason the disable
+        // one does: another PIN is an answer the reader can still give.
+        if ($result !== ColdStartEnrolmentResult::Enrolled) {
+            $this->flashMessage = $result === ColdStartEnrolmentResult::PinRejected
+                ? Lang::get('auth::app_lock.error_pin_incorrect')
+                : Lang::get('auth::app_lock.error_enroll_failed');
 
             return;
         }
 
         $this->biometricEnrolled = true;
+        $this->confirmingEnroll = false;
         $this->flashMessage = '';
     }
 

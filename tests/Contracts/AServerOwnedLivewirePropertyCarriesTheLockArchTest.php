@@ -112,7 +112,6 @@ function serverOwnedPropertyExemptions(): array
         // A capability, peer or wizard flag whose real gate is downstream: the
         // forged value reaches a check that throws, refuses or is idempotent.
         'Modules\\EmailScan\\Public\\Http\\Livewire\\OAuthClientWizardModal::$provider' => 'the wizard writes the reader\'s own OAuth secret and the provider is re-derived from the enum',
-        'Modules\\Mobile\\Internal\\Http\\Livewire\\ColdStartBiometricSettingsSection::$available' => 'the key vault itself refuses on hardware without one; this flag only picks the message',
         'Modules\\Mobile\\Internal\\Http\\Livewire\\SyncScreen::$hasPeers' => 'forging it starts a sync that finds no peer',
         'Modules\\OpenBanking\\Internal\\Http\\Livewire\\OpenBankingWizardModal::$publicKeyPem' => 'read only for emptiness; the key itself is re-read from storage',
         'Modules\\Sync\\Public\\Http\\Livewire\\DevicesAndSyncSettingsSection::$appLockConfigured' => 'enableSync() reaches a real re-check that throws when the lock is not configured',

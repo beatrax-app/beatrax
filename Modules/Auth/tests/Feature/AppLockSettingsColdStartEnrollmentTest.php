@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Contracts\Session\Session;
 use Livewire\Livewire;
 use Mockery\MockInterface;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 
@@ -26,14 +28,22 @@ function coldStartSettingsUser(string $username): User
 
 /**
  * @param  bool  $available  Whether the OS gate reports itself usable.
- * @param  bool  $enrolls  Whether the OS accepts the key when handed it.
+ * @param  bool|null  $enrolls  Whether the OS accepts the key when handed it, or null to
+ *                              refuse the call outright — which is what "no PIN reached the
+ *                              vault" has to be asserted as, since a vault that was never
+ *                              asked and one that answered false read the same on screen.
  */
-function bindColdStartVault(bool $available, bool $enrolls = true, bool $isEnrolled = false): MockInterface
+function bindColdStartVault(bool $available, ?bool $enrolls = true, bool $isEnrolled = false): MockInterface
 {
     $vault = Mockery::mock(ColdStartVault::class);
     $vault->shouldReceive('isAvailable')->andReturn($available);
     $vault->shouldReceive('isEnrolled')->andReturn($isEnrolled);
-    $vault->shouldReceive('enroll')->andReturn($enrolls);
+
+    if ($enrolls === null) {
+        $vault->shouldReceive('enroll')->never();
+    } else {
+        $vault->shouldReceive('enroll')->andReturn($enrolls);
+    }
 
     app()->instance(ColdStartVault::class, $vault);
 
@@ -82,7 +92,7 @@ it('does not offer it when no cold-start gate exists', function (): void {
         ->assertSet('biometricEnrolled', false);
 });
 
-it('enrolls against the OS instead of dispatching the WebAuthn event', function (): void {
+it('asks for the PIN instead of dispatching the WebAuthn event, and enrols once it has one', function (): void {
     $this->actingAs(coldStartSettingsUser('cold-enrolls'));
     // setPin() provisions a fresh data key, so it clears the OS entry on its
     // way through; this suite is about the enrolment that follows it.
@@ -95,22 +105,69 @@ it('enrolls against the OS instead of dispatching the WebAuthn event', function 
         ->call('setPin')
         ->call('startEnroll')
         ->assertNotDispatched('beatrax:webauthn-create')
+        ->assertSet('confirmingEnroll', true)
+        ->assertSet('biometricEnrolled', false)
+        ->set('enrollPin', '123456')
+        ->call('enrollWithPin')
         ->assertSet('biometricEnrolled', true)
+        ->assertSet('confirmingEnroll', false)
         ->assertSet('flashMessage', '');
 });
 
-// The key is only in the session while unlocked, and a user staring at a dead
-// button cannot tell "locked" from "your device said no".
-it('says the app is locked when there is no live key to store', function (): void {
-    $user = coldStartSettingsUser('cold-locked');
+// The whole point of the gate: the button alone must not reach the vault. A
+// vault that was never asked is the only assertion that separates this from a
+// vault that was asked and said no.
+it('does not reach the vault at all until a PIN is typed', function (): void {
+    $this->actingAs(coldStartSettingsUser('cold-no-pin'));
+    bindColdStartVault(available: true, enrolls: null)->shouldReceive('forget')->andReturnTrue();
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->set('newPin', '123456')
+        ->set('confirmPin', '123456')
+        ->set('accountPassword', 'settings-pass')
+        ->call('setPin')
+        ->call('startEnroll')
+        ->call('enrollWithPin')
+        ->assertSet('biometricEnrolled', false)
+        ->assertSee('Enter your PIN.');
+});
+
+it('does not reach the vault on a wrong PIN', function (): void {
+    $this->actingAs(coldStartSettingsUser('cold-wrong-enroll-pin'));
+    bindColdStartVault(available: true, enrolls: null)->shouldReceive('forget')->andReturnTrue();
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->set('newPin', '123456')
+        ->set('confirmPin', '123456')
+        ->set('accountPassword', 'settings-pass')
+        ->call('setPin')
+        ->call('startEnroll')
+        ->set('enrollPin', '000000')
+        ->call('enrollWithPin')
+        ->assertSet('biometricEnrolled', false)
+        ->assertSet('confirmingEnroll', true)
+        ->assertSee('Incorrect PIN.');
+});
+
+// The key the vault is handed comes out of the PIN, not out of the session, so
+// a session holding no key is not the obstacle it used to be -- and no session
+// that happens to hold one is a way past the PIN either.
+it('arms the vault from the PIN even when the session is holding no key', function (): void {
+    $user = coldStartSettingsUser('cold-withheld');
     $this->actingAs($user);
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'settings-pass');
     bindColdStartVault(available: true);
 
+    /** @var Session $session */
+    $session = app(Session::class);
+    app(AppLockKeyService::class)->withhold($session);
+
     Livewire::test(AppLockSettingsSection::class)
         ->call('startEnroll')
-        ->assertSet('biometricEnrolled', false)
-        ->assertSee('Unlock the app before enrolling.');
+        ->set('enrollPin', '123456')
+        ->call('enrollWithPin')
+        ->assertSet('biometricEnrolled', true)
+        ->assertSet('flashMessage', '');
 });
 
 it('reports a device that declines to store the key', function (): void {
@@ -123,6 +180,8 @@ it('reports a device that declines to store the key', function (): void {
         ->set('accountPassword', 'settings-pass')
         ->call('setPin')
         ->call('startEnroll')
+        ->set('enrollPin', '123456')
+        ->call('enrollWithPin')
         ->assertSet('biometricEnrolled', false)
         ->assertSee('Your device declined to store the key.');
 });

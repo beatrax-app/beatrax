@@ -44,6 +44,8 @@ function vaultKeptEnableAndEnroll(string $pin): void
         ->call('setPin')
         ->assertSet('lockEnabled', true)
         ->call('startEnroll')
+        ->set('enrollPin', $pin)
+        ->call('enrollWithPin')
         ->assertSet('biometricEnrolled', true);
 }
 

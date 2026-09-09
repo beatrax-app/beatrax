@@ -143,7 +143,7 @@ no new crypto, only a new storage location + access-control policy.
 
 | Event | Suggested behavior |
 |---|---|
-| **Enroll** (create the gated entry) | Opt-in, from the mobile lock/settings screen, only while unlocked (DK in hand). Require a fresh PIN entry immediately before enrollment (proves knowledge, sets the PIN floor). Write the `BWS \|\| bioWrappedKey` blob to the gated entry. |
+| **Enroll** (create the gated entry) | Opt-in, from the app-lock section of the settings screen. A fresh PIN entry is required, and it is that PIN which produces the DK being wrapped — nothing enrols from a key the session already holds. Write the `BWS \|\| bioWrappedKey` blob to the gated entry. |
 | **PIN change** | The DK does not change on PIN change (only its PIN wrap does), so the biometric blob stays valid — **no rewrap needed**. (Confirm against `AppLockProvisioner` rewrap semantics before relying on this.) |
 | **OS biometry change** (new finger/face enrolled) | Tier A: `.biometryCurrentSet` / `setInvalidatedByBiometricEnrollment(true)` **auto-invalidates** the entry. Detect the resulting read failure → fall back to PIN → re-enroll. This is the key anti-coercion property; do not use `.biometryAny`. |
 | **Disable biometric unlock** | Delete the gated entry (`SecureStorage::delete`). |
@@ -207,6 +207,21 @@ on-device UAT):
   and a console or job caller threw rather than clearing.
 - `Modules/Auth/Public/Services/AppLockKeyService::admitDataKey()` — the
   authorized admit point; provenance (a real enclave recover) is the trust gate.
+- `Modules/Auth/Internal/Lock/ColdStartEnroller` — the one way an entry is ever
+  created, on every platform. It takes a PIN, verifies it to obtain the DK,
+  wraps that DK into `ColdStartVault`, zeroes the released copy, and marks the
+  enrolment flag the lock screens read. An empty or wrong PIN, an unavailable
+  vault or a refused write all leave nothing enrolled and the flag down.
+  Its two callers are the Enroll button on `AppLockSettingsSection`, which opens
+  a PIN confirmation exactly as de-enrolling does, and `LockScreen::submit()`,
+  which re-arms a vault holding nothing using the PIN it has just verified.
+  There were two enrolment controls before there was one: the PIN-gated one was
+  mounted by no screen, and the one the phone actually rendered armed the vault
+  from the session's own key and asked for nothing at all.
+  `tests/Contracts/ANativeEnrolmentTakesAFreshPinArchTest.php` derives both
+  halves rather than pinning them — that `ColdStartVault::enroll()` is reached
+  from exactly one place outside the vault implementations, and that the place
+  spends a PIN on the very key it stores.
 - `MobileLockScreen::biometricPrompt()` — cold-start path: on a held key →
   straight through; else `vault->recover()` → `admitDataKey()` → redirect;
   missing/canceled/unavailable fall through to the PIN pad. Async (Android)
@@ -251,11 +266,12 @@ the wiring exposed — `NativeActionCoordinator.dispatch()` calls
 `cold-start-recovered` the handler used to listen for was a channel the device
 could not raise, and nothing could notice while nothing raised anything.
 
-Items 3 and 4 of this list — the enrollment toggle with the PIN floor, and the
-`clear()` lifecycle hooks — were written after it and are in the tree:
-`ColdStartBiometricSettingsSection`, `MobileLockGateway::pinFloorDue()` with a
-14-day floor, and `ColdStartEnrollmentService::disable()`. The list said
-otherwise for long enough to be worth this paragraph.
+Items 3 and 4 of this list — the enrollment control with the PIN floor, and the
+`clear()` lifecycle hooks — were written after it and are in the tree: the
+biometric row on `AppLockSettingsSection` behind `ColdStartEnroller`,
+`MobileLockGateway::pinFloorDue()` with a 14-day floor, and
+`ColdStartVault::forget()`. The list said otherwise for long enough to be worth
+this paragraph.
 
 ## Decisions (owner, locked)
 

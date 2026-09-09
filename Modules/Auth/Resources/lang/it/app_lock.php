@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Questa versione di Beatrax non ha dove conservare una chiave di sblocco, quindi lo sblocco biometrico non viene offerto. Il limite non è il tuo dispositivo.',
     'error_enroll_unprotected' => 'Lo sblocco biometrico richiede un archivio chiavi del sistema operativo, e questa installazione non ne ha uno. La registrazione lascerebbe la chiave di sblocco leggibile accanto ai tuoi dati, quindi qui non viene offerta.',
-    'error_enroll_locked' => "Sblocca l'app prima di registrare il dispositivo.",
     'error_enroll_failed' => 'Il tuo dispositivo ha rifiutato di salvare la chiave. Lo sblocco biometrico non è disponibile.',
     'heading' => 'Blocco app',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'Questa versione di Beatrax non può offrire lo sblocco biometrico. Qui il tuo PIN è l\'unico sblocco.',
 
     'deenroll_modal_heading' => 'Rimuovi lo sblocco biometrico — conferma con il PIN',
+    'enroll_modal_heading' => 'Attiva lo sblocco biometrico — conferma con il PIN',
     'current_pin_label' => 'PIN attuale',
     'remove_biometric' => 'Rimuovi la biometria',
     'keep_biometric' => 'Mantieni la biometria',
