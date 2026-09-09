@@ -37,6 +37,11 @@ final class LockScreen extends Component
     // credential behind $biometricAvailable it can unlock on its own.
     public bool $nativeUnlockAvailable = false;
 
+    // The forgotten-code explanation is three sentences on a screen whose only
+    // job is six digits, so it waits behind a mark until the reader has got
+    // the PIN wrong at least once.
+    public bool $forgottenPinHelpDue = false;
+
     public function mount(
         CurrentUser $currentUser,
         BiometricDeviceStore $biometricStore,
@@ -61,6 +66,8 @@ final class LockScreen extends Component
         $this->nativeUnlockAvailable = $vault->isAvailable()
             && $vault->isEnrolled($user->id)
             && $gateway->isColdStartEnrolled($user->id);
+
+        $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
     }
 
     public function submit(
@@ -84,6 +91,8 @@ final class LockScreen extends Component
         $dataKey = $verifier->verify($user->id, $pin, $session);
 
         if ($dataKey === null) {
+            $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
+
             // verify() returns null before checking the PIN during a backoff
             // window, so a correct PIN lands here too and must be told apart.
             $lockedUntil = $verifier->lockedUntil($user->id);
