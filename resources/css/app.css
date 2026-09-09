@@ -3831,6 +3831,15 @@ td.date,
         padding-right: var(--safe-right);
     }
 
+    /* .safe-below — the bottom seam on its own, for the one place .safe-screen
+     * may not go. layouts.app's <main> sits under a .top-bar that reserves
+     * var(--safe-top) already, and under nothing at all at the other end: both
+     * phone shells paint the page edge to edge, so the last row of a screen
+     * scrolled as far as it goes ended behind the navigation bar. */
+    .safe-below {
+        padding-bottom: var(--safe-bottom);
+    }
+
     /* The padding above only holds the heading clear of the status bar at
      * rest. Under viewport-fit=cover the bars are painted OVER the page, so a
      * screen taller than the viewport scrolls its own <h1> up under the clock

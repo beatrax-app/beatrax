@@ -6,6 +6,7 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Routing\Router;
 use Illuminate\View\Factory as ViewFactory;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
@@ -428,6 +429,58 @@ function safeAreaSignedOutSweep(): array
 
     return ['checked' => $checked, 'offenders' => $offenders];
 }
+
+// The other end of the same document, and the one the four-edge rule above
+// says .safe-screen may not cover. .top-bar reserves var(--safe-top) and
+// stands in the flow, so the top of a signed-in screen is held clear; nothing
+// held the bottom, and both phone shells paint the page edge to edge.
+//
+// Measured on a Galaxy A51 with the page scrolled as far as it goes: 9px of
+// the budget row's move button behind the navigation bar, with no scroll left
+// to rescue it. On the iPhone the same seam is 34px of home-indicator.
+it('reserves the bottom seam on the surface a signed-in reader reaches', function (): void {
+    $reader = User::query()->create([
+        'username' => 'safe-area-below',
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+
+    $html = (string) $this->actingAs($reader)->get('/settings')->getContent();
+
+    // str_contains, not toContain: a second argument to toContain is a second
+    // needle, not the message, so the explanation below would be searched for
+    // in the page.
+    expect(str_contains($html, 'safe-below'))->toBeTrue(implode("\n", [
+        'The signed-in document reserves nothing at its bottom edge.',
+        '',
+        "layouts.app's <main> is the only element between the page and the",
+        'navigation bar, and the phone shells paint the page under it. A screen',
+        'cannot reserve this for itself: Livewire re-renders the component and',
+        'never the layout, and a page that happens to end in whitespace today is',
+        'not a guarantee about the one that ends in a button tomorrow.',
+    ]));
+});
+
+// .safe-screen pads four edges and would reserve the status bar twice here,
+// which is why the bottom gets a class of its own rather than the shared one.
+it('gives the bottom seam its own class rather than the four-edge one', function (): void {
+    $layout = (string) file_get_contents(base_path('resources/views/layouts/app.blade.php'));
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    $mains = MarkupSource::elements($layout, 'main');
+
+    expect($mains)->not->toBe([], 'layouts.app has no <main> element to read');
+
+    $classes = $mains[0]->attribute('class') ?? '';
+
+    expect($classes)->toContain('safe-below')
+        ->and($classes)->not->toContain('safe-screen');
+
+    expect($css)->toContain('.safe-below {')
+        ->and(PatternScan::matches('/\.safe-below\s*\{\s*padding-bottom:\s*var\(--safe-bottom\);\s*\}/', $css))
+        ->toBeTrue('.safe-below has to read the seam variable, not a fixed height');
+});
 
 it('reserves the seam on every full-screen surface a signed-out reader reaches', function (): void {
     // Twice, because a fresh install and a populated one expose different
