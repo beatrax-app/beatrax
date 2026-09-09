@@ -93,6 +93,8 @@ pass for a clean one.
 
 - [Copy that carries a count](counted-nouns-in-copy.md) — how a number and a
   noun are written together across 26 locales
+- [A sentence is one line](a-sentence-is-one-line.md) — why a prefix key plus a
+  value plus a suffix key writes English word order into every locale
 - [Translations awaiting a native reader](translations-awaiting-a-native-reader.md)
   — the `i18n-review:` marker, and the standing work-list of strings carrying it
 - [Copy that follows the reader](../features/notifications/reader-language-copy.md)
