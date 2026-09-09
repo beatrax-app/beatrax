@@ -190,3 +190,80 @@ it('onColdStartFailed is a no-op — never admits, never redirects', function ()
 
     expect(released())->toBeNull();
 });
+
+// The screen fires the prompt from its own x-init, and the PIN pad stays live
+// underneath it, so both roads are open at once and only one of them is taken.
+// On Android the prompt is a window rather than part of the page: it survived
+// the unlock and stood over an app that was already open.
+function bindVaultCountingCancels(): object
+{
+    $tally = new class
+    {
+        public int $cancels = 0;
+    };
+
+    app()->bind(BiometricKeyVault::class, fn ($app) => new class($app->make(BiometricKeyBlobCodec::class), $app->make(LoggerInterface::class), $tally) extends BiometricKeyVault
+    {
+        public function __construct(
+            BiometricKeyBlobCodec $codec,
+            LoggerInterface $log,
+            private readonly object $tally,
+        ) {
+            parent::__construct($codec, $log);
+        }
+
+        public function cancelPrompt(): void
+        {
+            $this->tally->cancels++;
+        }
+
+        protected function runtimeAvailable(): bool
+        {
+            return true;
+        }
+
+        protected function vaultCapability(): array
+        {
+            return ['available' => true, 'reason' => 'available'];
+        }
+    });
+
+    return $tally;
+}
+
+it('takes the standing prompt down when the PIN is what opened the lock', function (): void {
+    lockedColdStartUser('pin-beats-prompt');
+    $tally = bindVaultCountingCancels();
+
+    Livewire::test(MobileLockScreen::class)
+        ->call('submit', '123456')
+        ->assertRedirect(route('dashboard'));
+
+    expect($tally->cancels)->toBe(1);
+});
+
+// A wrong PIN is not an answer to the prompt. Taking it down here would retire
+// the road the reader is most likely to take next, on the screen where they
+// have just demonstrated they do not remember the other one.
+it('leaves the prompt standing when the PIN was wrong', function (): void {
+    lockedColdStartUser('wrong-pin-keeps-prompt');
+    $tally = bindVaultCountingCancels();
+
+    Livewire::test(MobileLockScreen::class)
+        ->call('submit', '999999')
+        ->assertNoRedirect();
+
+    expect($tally->cancels)->toBe(0);
+});
+
+// A PIN that never reaches the gateway must not reach the prompt either.
+it('leaves the prompt standing when the PIN was the wrong length', function (): void {
+    lockedColdStartUser('short-pin-keeps-prompt');
+    $tally = bindVaultCountingCancels();
+
+    Livewire::test(MobileLockScreen::class)
+        ->call('submit', '12')
+        ->assertNoRedirect();
+
+    expect($tally->cancels)->toBe(0);
+});

@@ -20,6 +20,12 @@
             "description": "Hand over the blob the biometric prompt released, once; the slot is consumed on read"
         },
         {
+            "name": "BiometricVault.CancelPrompt",
+            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.CancelPrompt",
+            "ios": "BiometricVaultFunctions.CancelPrompt",
+            "description": "Take down a biometric prompt the reader answered another way"
+        },
+        {
             "name": "BiometricVault.IsAvailable",
             "android": "com.beatrax.biometricvault.BiometricVaultFunctions.IsAvailable",
             "android_params": [

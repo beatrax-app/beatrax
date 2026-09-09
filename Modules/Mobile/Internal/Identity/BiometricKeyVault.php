@@ -155,7 +155,12 @@ class BiometricKeyVault
             return true;
         }
 
-        $this->logUnavailable($capability['reason'] ?? 'unreadable');
+        // Debug rather than warning: on a phone with no biometric enrolled this
+        // is the ordinary state of the world, not a fault, and the screen shows
+        // a PIN pad instead of an affordance that cannot work.
+        $this->log->debug('BiometricKeyVault: this device cannot gate an entry behind a biometric.', [
+            'reason' => $capability['reason'] ?? 'unreadable',
+        ]);
 
         return false;
     }
@@ -189,16 +194,6 @@ class BiometricKeyVault
         }
 
         return BiometricVault::capability();
-    }
-
-    // Debug rather than warning: on a phone with no biometric enrolled this is
-    // the ordinary state of the world, not a fault, and the screen already
-    // shows the reader a PIN pad instead of an affordance that cannot work.
-    protected function logUnavailable(string $reason): void
-    {
-        $this->log->debug('BiometricKeyVault: this device cannot gate an entry behind a biometric.', [
-            'reason' => $reason,
-        ]);
     }
 
     protected function runtimeAvailable(): bool
@@ -268,6 +263,23 @@ class BiometricKeyVault
         $this->log->warning('BiometricKeyVault: the enclave refused to remove the cold-start key, so a wrapped data key is still held.', [
             'reason' => $reason ?? 'the native side gave none',
         ]);
+    }
+
+    // Takes down a prompt the reader answered another way. Never conditional on
+    // isAvailable(): the prompt on screen was dispatched by a build that thought
+    // the vault was available, and a capability that changed since must not be
+    // what leaves it standing.
+    public function cancelPrompt(): void
+    {
+        // class_exists again, and not only through runtimeAvailable(): the
+        // analyser cannot follow the guard through a method call, and the repo
+        // root does not autoload the plugin, so a static call it cannot rule
+        // out is an error rather than a warning.
+        if (! $this->runtimeAvailable() || ! class_exists(BiometricVault::class)) {
+            return;
+        }
+
+        BiometricVault::cancelPrompt();
     }
 
     // Reads the base64 blob the async (Android) BiometricPrompt callback
