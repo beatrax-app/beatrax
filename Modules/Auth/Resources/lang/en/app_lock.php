@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'This version of Beatrax has nowhere to store an unlock key, so biometric unlock is not offered. Your device is not the limitation.',
     'error_enroll_unprotected' => 'Biometric unlock needs an operating-system key store, and this installation has none. Enrolling would leave the unlock key readable beside your data, so it is not offered here.',
-    'error_enroll_locked' => 'Unlock the app before enrolling.',
     'error_enroll_failed' => 'Your device declined to store the key. Biometric unlock is unavailable.',
     'heading' => 'App lock',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'This version of Beatrax cannot offer biometric unlock. Your PIN is the only unlock here.',
 
     'deenroll_modal_heading' => 'Remove biometric unlock — confirm with PIN',
+    'enroll_modal_heading' => 'Turn on biometric unlock — confirm with PIN',
     'current_pin_label' => 'Current PIN',
     'remove_biometric' => 'Remove biometric',
     'keep_biometric' => 'Keep biometric',

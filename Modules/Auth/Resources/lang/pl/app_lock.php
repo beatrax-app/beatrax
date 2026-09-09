@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Ta wersja Beatraxa nie ma gdzie przechowywać klucza odblokowującego, więc odblokowanie biometryczne nie jest oferowane. Ograniczeniem nie jest Twoje urządzenie.',
     'error_enroll_unprotected' => 'Odblokowanie biometryczne wymaga magazynu kluczy systemu operacyjnego, a ta instalacja go nie ma. Rejestracja pozostawiłaby klucz odblokowujący czytelny obok Twoich danych, więc nie jest tu oferowana.',
-    'error_enroll_locked' => 'Odblokuj aplikację przed rejestracją.',
     'error_enroll_failed' => 'Urządzenie odmówiło zapisania klucza. Odblokowanie biometryczne jest niedostępne.',
     'heading' => 'Blokada aplikacji',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'Ta wersja Beatraxa nie może zaoferować odblokowania biometrycznego. Tutaj jedynym odblokowaniem jest Twój PIN.',
 
     'deenroll_modal_heading' => 'Usuń odblokowanie biometryczne — potwierdź PIN-em',
+    'enroll_modal_heading' => 'Włącz odblokowanie biometryczne — potwierdź PIN-em',
     'current_pin_label' => 'Obecny PIN',
     'remove_biometric' => 'Usuń biometrię',
     'keep_biometric' => 'Zachowaj biometrię',

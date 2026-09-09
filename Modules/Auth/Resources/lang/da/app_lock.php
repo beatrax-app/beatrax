@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Denne version af Beatrax har ingen steder at gemme en oplåsningsnøgle, så biometrisk oplåsning tilbydes ikke. Det er ikke din enhed, der er begrænsningen.',
     'error_enroll_unprotected' => 'Biometrisk oplåsning kræver et nøglelager i operativsystemet, og denne installation har ingen. Tilmelding ville efterlade oplåsningsnøglen læsbar ved siden af dine data, så det tilbydes ikke her.',
-    'error_enroll_locked' => 'Lås appen op, før du registrerer enheden.',
     'error_enroll_failed' => 'Din enhed afviste at gemme nøglen. Biometrisk oplåsning er ikke tilgængelig.',
     'heading' => 'Applås',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'Denne version af Beatrax kan ikke tilbyde biometrisk oplåsning. Din PIN-kode er den eneste oplåsning her.',
 
     'deenroll_modal_heading' => 'Fjern biometrisk oplåsning — bekræft med PIN-kode',
+    'enroll_modal_heading' => 'Slå biometrisk oplåsning til — bekræft med PIN-kode',
     'current_pin_label' => 'Nuværende PIN-kode',
     'remove_biometric' => 'Fjern biometri',
     'keep_biometric' => 'Behold biometri',

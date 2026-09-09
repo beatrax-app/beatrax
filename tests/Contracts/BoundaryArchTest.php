@@ -2521,7 +2521,6 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/MobileBiometricUnlockTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Mobile/tests/Feature/MobileBiometricUnlockTest.php -> Modules\\Auth\\Internal\\Lock\\BiometricDeviceStore',
         'Modules/Mobile/tests/Feature/MobileColdStartEnrollmentTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
-        'Modules/Mobile/tests/Feature/MobileColdStartSettingsTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Mobile/tests/Feature/MobileColdStartUnlockTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Mobile/tests/Feature/MobileColdStartVaultTest.php -> Modules\\Auth\\Internal\\Lock\\AppLockProvisioner',
         'Modules/Mobile/tests/Feature/MobileEncryptedCopyTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',

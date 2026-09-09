@@ -14,7 +14,7 @@ use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
-use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
+use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
@@ -72,62 +72,6 @@ function enrollmentUser(string $username): User
         'default_currency_view' => 'eur_only',
     ]);
 }
-
-it('enrolls with the correct PIN: wraps the live key and sets the flag', function (): void {
-    $user = enrollmentUser('enroll-ok');
-    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
-
-    $vault = fakeEnclaveVault();
-    $service = new ColdStartEnrollmentService($vault, app(MobileLockGateway::class));
-
-    $ok = $service->enroll((int) $user->id, '123456', app(Session::class));
-
-    expect($ok)->toBeTrue()
-        ->and($vault->enrolled)->toBeTrue()
-        ->and($service->isEnrolled((int) $user->id))->toBeTrue();
-});
-
-it('does not enroll on a wrong PIN — nothing is stored, flag stays false', function (): void {
-    $user = enrollmentUser('enroll-wrong-pin');
-    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
-
-    $vault = fakeEnclaveVault();
-    $service = new ColdStartEnrollmentService($vault, app(MobileLockGateway::class));
-
-    $ok = $service->enroll((int) $user->id, '000000', app(Session::class));
-
-    expect($ok)->toBeFalse()
-        ->and($vault->enrolled)->toBeFalse()
-        ->and($service->isEnrolled((int) $user->id))->toBeFalse();
-});
-
-it('does not enroll when the enclave vault is unavailable', function (): void {
-    $user = enrollmentUser('enroll-unavailable');
-    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
-
-    // The real vault reports runtimeAvailable() false in the repo toolchain.
-    $vault = app(BiometricKeyVault::class);
-    $service = new ColdStartEnrollmentService($vault, app(MobileLockGateway::class));
-
-    expect($service->enroll((int) $user->id, '123456', app(Session::class)))->toBeFalse()
-        ->and($service->isEnrolled((int) $user->id))->toBeFalse();
-});
-
-it('disable clears the enclave and resets the flag', function (): void {
-    $user = enrollmentUser('enroll-disable');
-    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
-
-    $vault = fakeEnclaveVault();
-    $service = new ColdStartEnrollmentService($vault, app(MobileLockGateway::class));
-
-    $service->enroll((int) $user->id, '123456', app(Session::class));
-    expect($service->isEnrolled((int) $user->id))->toBeTrue();
-
-    $service->disable((int) $user->id);
-
-    expect($vault->cleared)->toBeTrue()
-        ->and($service->isEnrolled((int) $user->id))->toBeFalse();
-});
 
 it('pinFloorDue is true when the user has never completed a PIN unlock', function (): void {
     $user = enrollmentUser('floor-fresh');
@@ -188,7 +132,7 @@ it('clears the cold-start enrollment when the app-lock data key actually rotates
 
     $vault = fakeEnclaveVault();
     app()->instance(BiometricKeyVault::class, $vault);
-    app()->forgetInstance(ColdStartEnrollmentService::class);
+    app()->forgetInstance(MobileColdStartVault::class);
 
     // Different old and new KEKs, so the data key genuinely rotated.
     event(new AppLockPassphraseChanged((int) $user->id, str_repeat('a', 32), str_repeat('b', 32)));
@@ -204,7 +148,7 @@ it('leaves the enrollment intact on a normal PIN change (data key unchanged)', f
 
     $vault = fakeEnclaveVault();
     app()->instance(BiometricKeyVault::class, $vault);
-    app()->forgetInstance(ColdStartEnrollmentService::class);
+    app()->forgetInstance(MobileColdStartVault::class);
 
     // The same KEK on both sides: a PIN change that left the data key alone.
     event(new AppLockPassphraseChanged((int) $user->id, str_repeat('a', 32), str_repeat('a', 32)));
@@ -234,17 +178,4 @@ it('disabling the app lock resets the cold-start flag', function (): void {
     app(AppLockProvisioner::class)->disable((int) $user->id, '123456');
 
     expect(app(MobileLockGateway::class)->isColdStartEnrolled((int) $user->id))->toBeFalse();
-});
-
-it('a wrong-PIN enroll consumes a PIN attempt (shares the lock-screen backoff)', function (): void {
-    $user = enrollmentUser('enroll-consumes-attempt');
-    app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
-
-    $before = app(MobileLockGateway::class)->remainingPinAttempts((int) $user->id);
-
-    $service = new ColdStartEnrollmentService(fakeEnclaveVault(), app(MobileLockGateway::class));
-    $service->enroll((int) $user->id, '000000', app(Session::class));
-
-    $after = app(MobileLockGateway::class)->remainingPinAttempts((int) $user->id);
-    expect($after)->toBeLessThan($before);
 });

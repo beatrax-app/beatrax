@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'error_enroll_unsupported' => 'Tato verze Beatraxu nemá kam uložit odemykací klíč, takže se biometrické odemykání nenabízí. Omezením není tvoje zařízení.',
     'error_enroll_unprotected' => 'Biometrické odemykání potřebuje úložiště klíčů operačního systému a tato instalace žádné nemá. Registrace by nechala odemykací klíč čitelný vedle tvých dat, takže se tu nenabízí.',
-    'error_enroll_locked' => 'Před registrací odemkni aplikaci.',
     'error_enroll_failed' => 'Zařízení odmítlo uložit klíč. Biometrické odemykání není dostupné.',
     'heading' => 'Zámek aplikace',
 
@@ -32,6 +31,7 @@ return [
     'biometric_unavailable' => 'Tato verze Beatraxu neumí biometrické odemykání. Jediné odemknutí je tu tvůj PIN.',
 
     'deenroll_modal_heading' => 'Odebrat biometrické odemykání — potvrď PINem',
+    'enroll_modal_heading' => 'Zapnout biometrické odemykání — potvrď PINem',
     'current_pin_label' => 'Současný PIN',
     'remove_biometric' => 'Odebrat biometriku',
     'keep_biometric' => 'Ponechat biometriku',

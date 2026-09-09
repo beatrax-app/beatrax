@@ -29,7 +29,6 @@ use Modules\Mobile\Internal\Boot\IosSigningPreflight;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
-use Modules\Mobile\Internal\Http\Livewire\ColdStartBiometricSettingsSection;
 use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
 use Modules\Mobile\Internal\Http\Livewire\MobileLockScreen;
 use Modules\Mobile\Internal\Http\Livewire\MobileNotificationPermission;
@@ -206,7 +205,6 @@ final class MobileServiceProvider extends ServiceProvider
         $livewire->component('mobile.sync-screen', SyncScreen::class);
         $livewire->component('mobile.schema-incomplete-screen', SchemaIncompleteScreen::class);
         $livewire->component('mobile.welcome-screen', MobileWelcomeScreen::class);
-        $livewire->component('mobile.cold-start-biometric-settings-section', ColdStartBiometricSettingsSection::class);
 
         $this->commands([
             MobilePullCommand::class,
