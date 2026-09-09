@@ -106,6 +106,40 @@ function aHelpMarkIsWrittenIn(MarkupElement $element): bool
     return MarkupSource::elements((string) $element->inner, 'x-core::help-tip') !== [];
 }
 
+// A control cannot contain the mark that explains it. A help-tip inside a
+// <button> is one interactive element nested in another: no browser resolves
+// it and both controls break. Those labels carry the mark immediately after
+// the control instead, and this reads the gap to make sure "immediately" is
+// true rather than assumed.
+function aHelpMarkFollows(string $source, MarkupElement $element, string $key): bool
+{
+    $after = substr($source, $element->offset + strlen($element->startTag) + strlen((string) $element->inner));
+
+    foreach (MarkupSource::elements($after, 'x-core::help-tip') as $mark) {
+        $label = PatternScan::first('~Lang::get\\(\'([^\']+)\'~', $mark->attribute(':label') ?? '');
+
+        if ($label === [] || $label[1] !== $key) {
+            continue;
+        }
+
+        return nothingAReaderReadsLiesBetween(substr($after, 0, $mark->offset));
+    }
+
+    return false;
+}
+
+// Closing tags, a Blade condition and a non-breaking space are what separate a
+// label from the mark beside it. Prose is not, and a mark a paragraph later is
+// not beside anything.
+function nothingAReaderReadsLiesBetween(string $between): bool
+{
+    $text = MarkupSource::text($between);
+    $text = str_replace(['&nbsp;', "\u{00a0}"], '', $text);
+    $text = PatternScan::replace('~@\\w+\\s*(\\([^()]*\\))?~', '', $text);
+
+    return trim($text) === '';
+}
+
 it('never draws a label bare on one screen while another screen explains it', function (): void {
     $sources = [];
 
@@ -119,7 +153,12 @@ it('never draws a label bare on one screen while another screen explains it', fu
 
     $keys = labelsAHelpPanelExplains($sources);
 
-    expect(count($keys))->toBeGreaterThan(2, 'Read '.count($keys).' labels carrying a help panel; the tree has five and a reader of none proves nothing.');
+    // The floor is the count itself, not a token above zero. This guard only
+    // asks whether a label is bare on screens OTHER than the one explaining
+    // it, so deleting the last panel for a key takes every bare drawing of it
+    // out of scope and the guard reports clean. Adding a panel raises this
+    // number; removing one has to be the deliberate act of lowering it.
+    expect(count($keys))->toBeGreaterThanOrEqual(7, 'Read '.count($keys).' labels carrying a help panel, fewer than the tree had when this floor was set. A deleted panel silences every bare drawing of its label.');
 
     $bare = [];
     $drawn = 0;
@@ -129,7 +168,7 @@ it('never draws a label bare on one screen while another screen explains it', fu
             foreach (elementsDrawingTheLabel($source, $key) as $element) {
                 $drawn++;
 
-                if (aHelpMarkIsWrittenIn($element)) {
+                if (aHelpMarkIsWrittenIn($element) || aHelpMarkFollows($source, $element, $key)) {
                     continue;
                 }
 
@@ -169,7 +208,7 @@ it('reads a mark inside the label\'s own element, and not one in the element bes
 
     expect($verdict($explained))->toBe([['div', true]], 'a mark glued to the label is the shape every call site uses')
         ->and($verdict($throughASlot))->toBe([['x-core::page-heading', true]], 'the tip slot of a page heading carries the mark for the heading beside it')
-        ->and($verdict($beside))->toBe([['p', false]], 'a mark in the element next door explains nothing and reads as bare')
+        ->and($verdict($beside))->toBe([['p', false]], 'the mark next door is not written IN the label, which is what this reader answers; whether it is still beside it is aHelpMarkFollows()\'s question')
         ->and($verdict($bare))->toBe([['p', false]], 'the whole defect: the label with nothing beside it');
 
     expect(labelsAHelpPanelExplains(['a.blade.php' => $explained]))->toBe([$key => 'a.blade.php'], 'the panel names the key it explains through its own :label argument');
@@ -178,6 +217,40 @@ it('reads a mark inside the label\'s own element, and not one in the element bes
 // The attribute a pattern would have had to find. `:label` is not an HTML
 // attribute name, its value carries quotes and parentheses of its own, and at
 // four of the six call sites the tag it sits in spans five lines.
+// The shape the lock screen is forced into. Its label lives inside a <button>,
+// and a help-tip written in there would be one interactive element nested in
+// another -- so the mark goes immediately after the control, and "immediately"
+// is the whole of what makes it reachable.
+it('accepts a mark beside a control that cannot contain it, and only while nothing readable intervenes', function (): void {
+    $key = 'auth::lock_screen.forgot_pin';
+    $mark = '<x-core::help-tip topic="forgot-pin" :label="Lang::get(\''.$key.'\')" :body="$body" />';
+    $label = '{{ Lang::get(\''.$key.'\') }}';
+    $button = '<form><button type="submit">'.$label.'</button></form>';
+
+    $gated = $button.'@if ($due)&nbsp;'.$mark.'@endif';
+    $glued = $button.$mark;
+    $afterProse = $button.'<p>Something else entirely a reader stops to read.</p>'.$mark;
+    $otherKey = $button.'&nbsp;<x-core::help-tip topic="t" :label="Lang::get(\'auth::lock_screen.sign_out\')" :body="$body" />';
+    $none = $button;
+
+    $reachable = static function (string $source) use ($key): bool {
+        $drawing = elementsDrawingTheLabel($source, $key);
+
+        expect($drawing)->toHaveCount(1, 'the reader should find the one control drawing the label');
+
+        return aHelpMarkFollows($source, $drawing[0], $key);
+    };
+
+    expect($reachable($gated))->toBeTrue('a closing tag, a Blade condition and a non-breaking space are not things a reader reads')
+        ->and($reachable($glued))->toBeTrue('the mark straight after the control is the same shape without the gate')
+        ->and($reachable($afterProse))->toBeFalse('a mark on the far side of a sentence is not beside the label')
+        ->and($reachable($otherKey))->toBeFalse('a mark explaining a different label explains nothing about this one')
+        ->and($reachable($none))->toBeFalse('the defect itself: a control naming a thing with no way to read the answer');
+
+    expect(aHelpMarkIsWrittenIn(elementsDrawingTheLabel($gated, $key)[0]))
+        ->toBeFalse('and none of this is reachable through containment, which is why the second reader exists');
+});
+
 it('reads the key off the panel and not off the label it is written beside', function (): void {
     $wrapped = <<<'BLADE'
         <x-core::th align="left">{{ Lang::get('budgets::messages.table.if_overspent') }}&nbsp;<x-core::help-tip
