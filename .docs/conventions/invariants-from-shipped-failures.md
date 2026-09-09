@@ -6997,6 +6997,34 @@ The same reading applies to any boundary where a literal crosses a process:
 a child-process alias, an event name, a queue name, a header. The suite around
 it can be exhaustive and still be a closed loop.
 
+## A sentence assembled from three keys and a value
+
+The doctor panel's empty state was `empty_prefix`, a bolded `empty_rerun`,
+`empty_suffix`, and the command name appended last. Twenty-six locales, and the
+only order any of them could be rendered in was the one the Blade file wrote.
+
+Dutch read *"om aan te roepen `beatrax:doctor`"* — the verb stranded before its
+object, which is not a sentence in Dutch. Estonian, Finnish and Latvian each
+named the command twice, once as a pronoun inside the suffix (`see`, `sen`,
+`to`) and once as the appended value. The remaining twenty-two were correct by
+coincidence: their grammar happens to put the object last.
+
+Two readings generalise:
+
+- **A concatenation is a grammar.** Splitting a sentence across keys does not
+  give a translator freedom; it takes it away, because the one thing they cannot
+  translate is the join. One key with placeholders is the only shape where the
+  value can move.
+- **A duplicated fragment is a drift.** `empty_rerun` held the same word as
+  `rerun` — the button's own label — in all twenty-six files, so the sentence
+  naming the button and the button were two strings that could disagree. The
+  call site now passes the button's key into the sentence.
+
+The convention page is [A sentence is one line](a-sentence-is-one-line.md), and
+`ASentenceIsNotAssembledFromTranslatedFragmentsArchTest` fails on a locale that
+still carries a fragment key — plus a control asserting at least one language
+puts words *after* the command, since otherwise the placeholder bought nothing.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
