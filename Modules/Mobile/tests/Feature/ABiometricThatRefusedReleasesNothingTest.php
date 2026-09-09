@@ -174,7 +174,7 @@ it('releases no key on the event the asynchronous leg finishes on either', funct
         refusedBiometricBindVault($result);
 
         Livewire::test(MobileLockScreen::class)
-            ->dispatch('cold-start-recovered')
+            ->dispatch('native:BiometricVault.Recovered')
             ->assertNoRedirect();
 
         expect(refusedBiometricReleasedKey())->toBeNull("the {$factory} outcome must leave the app locked on the asynchronous leg");
