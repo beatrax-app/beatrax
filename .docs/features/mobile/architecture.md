@@ -275,6 +275,64 @@ Both halves are inert off that shell: the shim checks `location.protocol` and
 does nothing on http/https, and the middleware acts only on its own marker
 field, which an ordinary request never carries.
 
+### A POST body is captured in the page, and the capture is armed first
+
+A `WebResourceRequest` carries a method, a URL and headers, and no body —
+Android has never exposed one. The shell recovers it from the page instead:
+`WebViewManager`'s injected script wraps `window.fetch` and
+`XMLHttpRequest.prototype.send`, hands each body to `AndroidPOST.logPostData`
+against a generated id, and sets that id on the request as
+`X-NativePHP-Req-Id`. `shouldInterceptRequest` trades the header back for the
+bytes through `PHPBridge.consumePostData` and passes them to
+`native_persistent_dispatch`, which is the only way `php://input` is ever
+non-empty on this platform.
+
+That wrapper used to be installed from `onPageFinished` — the window `load`
+event — which is after anything the page issues while it is still loading.
+Measured on a Galaxy A51 (Android 13, WebView 151) with a document-start
+recorder, on `/imports/new`:
+
+```text
++443ms  DOMContentLoaded
++659ms  window.load
++679ms  fetch-called  POST /livewire-<hash>/update  shimInstalled=false
++688ms  shim-assigned-fetch
+```
+
+Nine milliseconds. A Livewire component that commits from Alpine's `init()`
+posts inside that window, so `consumePostData` had nothing to return and the
+request was dispatched with an empty body. `HandleRequests::handleUpdate` found
+no `components` in it and called `abort(404)`; Livewire's client read the 404
+as a failed commit and reloaded the page; the reload mounted the component and
+posted again. A ~1.8 s cycle that never converged, 856 navigations deep when it
+was found.
+
+Only a commit issued during load loses this race, which is why every ordinary
+click worked and this presented as one broken screen rather than a platform
+defect. Nothing in the loop was visible in `laravel.log`, and the 404 was
+indistinguishable from a genuinely empty POST.
+
+`scripts/nativephp_android_post_body_at_document_start.php` arms the same
+capture through `WebViewCompat.addDocumentStartJavaScript`, which runs before
+the first script on the page on every navigation, and keeps the page-finish
+injection as the fallback for WebViews without `DOCUMENT_START_SCRIPT`. Both
+install one constant, so the fallback — the copy nobody exercises — cannot
+drift from the armed one. A body that still cannot be recovered is now logged
+rather than dispatched silently as empty.
+
+Two consequences worth knowing:
+
+- The re-injection guard used to `return` out of the whole injected script.
+  Once the capture is armed that return would fire on every page, taking the
+  CSRF scrape and its `MutationObserver` with it, so the guard moved into the
+  capture and the scrape now always runs.
+- The capture must not touch `document.body`; at document start there is none.
+  That is the line between what was moved and what stayed behind.
+
+Verified on hardware against a clean install: the load-time commit on
+`/imports/new` is captured 21 ms before dispatch, answers without a 404, and
+the page is stable. See [ARCH-R26](https://github.com/beatrax-app/spec).
+
 ### The runtime is persistent, and request headers leak between requests
 
 The embedded PHP process serves many requests. Its superglobals are not fully
