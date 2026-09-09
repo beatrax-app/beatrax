@@ -15,6 +15,8 @@ use Throwable;
 // hours out from the desktop it synced with until somebody went looking.
 final readonly class HostTimezoneProbe implements Probe
 {
+    private const string FLOOR = 'floor';
+
     public function __construct(
         private Repository $config,
         private InstallTimezone $timezone,
@@ -28,8 +30,7 @@ final readonly class HostTimezoneProbe implements Probe
     public function run(): ProbeResult
     {
         try {
-            $pinned = $this->config->get('app.timezone_pinned');
-            $chosen = $this->timezone->chosen();
+            $source = $this->source();
             $zone = $this->timezone->zone();
         } catch (Throwable $e) {
             return new ProbeResult(ProbeSeverity::Critical->value,
@@ -38,27 +39,41 @@ final readonly class HostTimezoneProbe implements Probe
             );
         }
 
-        // A pin or a stored choice answers before the machine is ever asked, so
-        // a silent floor underneath one of them costs nothing.
+        if ($source === self::FLOOR) {
+            return new ProbeResult(ProbeSeverity::Warning->value,
+                'The machine could not be asked which zone it is in, so days are being read in UTC. '
+                .'Set APP_TIMEZONE, or choose a zone in settings, before trusting a stored date.',
+                ['zone' => $zone, 'source' => self::FLOOR],
+            );
+        }
+
+        return new ProbeResult(ProbeSeverity::Ok->value,
+            self::sentence($source, $zone), ['zone' => $zone, 'source' => $source]);
+    }
+
+    // A pin or a stored choice answers before the machine is ever asked, so a
+    // silent floor underneath one of them costs nothing and is not reported.
+    private function source(): string
+    {
+        $pinned = $this->config->get('app.timezone_pinned');
+
         if (is_string($pinned) && $pinned !== '') {
-            return new ProbeResult(ProbeSeverity::Ok->value,
-                sprintf('Pinned by the environment to %s.', $zone), ['zone' => $zone, 'source' => 'environment']);
+            return 'environment';
         }
 
-        if ($chosen !== null) {
-            return new ProbeResult(ProbeSeverity::Ok->value,
-                sprintf('Chosen on this installation: %s.', $zone), ['zone' => $zone, 'source' => 'stored']);
+        if ($this->timezone->chosen() !== null) {
+            return 'stored';
         }
 
-        if (HostTimezone::hostAnswered()) {
-            return new ProbeResult(ProbeSeverity::Ok->value,
-                sprintf('Read from the machine: %s.', $zone), ['zone' => $zone, 'source' => 'machine']);
-        }
+        return HostTimezone::hostAnswered() ? 'machine' : self::FLOOR;
+    }
 
-        return new ProbeResult(ProbeSeverity::Warning->value,
-            'The machine could not be asked which zone it is in, so days are being read in UTC. '
-            .'Set APP_TIMEZONE, or choose a zone in settings, before trusting a stored date.',
-            ['zone' => $zone, 'source' => 'floor'],
-        );
+    private static function sentence(string $source, string $zone): string
+    {
+        return match ($source) {
+            'environment' => sprintf('Pinned by the environment to %s.', $zone),
+            'stored' => sprintf('Chosen on this installation: %s.', $zone),
+            default => sprintf('Read from the machine: %s.', $zone),
+        };
     }
 }
