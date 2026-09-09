@@ -215,11 +215,15 @@ module-boundary contract. Selected examples:
   `CommunityServiceProvider`, which names the FQCN only to ask whether the
   desktop binding exists before installing that fallback.
 - **`noStoragePathHardCodedOutsideUserDataPathService`** — `base_path()`,
-  `storage_path()` and `database_path()`, and the hard-coded
-  `database.sqlite` / `storage/app/` literals, are all forbidden under
-  `Modules/`, `app/` and `config/` outside `UserDataPathService` — the helpers
-  everywhere, the literals everywhere but a Blade view, which may legitimately
-  print a path to the reader. That single reader is what makes the per-OS
+  `storage_path()` and `database_path()`, the container spellings of the same
+  question (`$app->storagePath()`, `$this->laravel->databasePath()`, `App::`
+  and the rest), and the hard-coded `database.sqlite` / `storage/app/`
+  literals, are all forbidden under `Modules/`, `app/` and `config/` outside
+  `UserDataPathService` — the helpers everywhere, the literals everywhere but
+  a Blade view, which may legitimately print a path to the reader. The
+  container half was added after two classes reached the framework's storage
+  root through `$app->storagePath()`, which on iOS is not the tree the
+  deletion procedure and the export walk. That single reader is what makes the per-OS
   user-data-directory paths
   (see [ADR 0006](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0006-nativephp-desktop-shell.md)) work.
 - **`paymentTypeHinterContract`** — every `*Hinter` class under

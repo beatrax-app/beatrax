@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 
@@ -12,9 +13,7 @@ use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 // are covered by the exception's own factory test instead.
 
 beforeEach(function (): void {
-    /** @var Application $app */
-    $app = $this->app;
-    $this->dir = $app->storagePath('app/inbox/8888/file-drop/2026/06');
+    $this->dir = UserDataPathService::appPath('inbox/8888/file-drop/2026/06');
     $files = new Filesystem;
     if ($files->isDirectory($this->dir)) {
         // Restore writability so the tree can be torn down.
@@ -38,7 +37,7 @@ function fileDropStore(): FileDropEmlBlobStore
     /** @var Filesystem $files */
     $files = $app->make(Filesystem::class);
 
-    return new FileDropEmlBlobStore($files, $app);
+    return new FileDropEmlBlobStore($files);
 }
 
 it('raises couldNotOpenTempFile when the target directory is read-only', function (): void {

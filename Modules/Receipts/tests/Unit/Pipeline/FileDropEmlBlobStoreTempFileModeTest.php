@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 
 // The .tmp file has to be born at 0600 rather than chmod'd afterwards: between
@@ -11,9 +12,7 @@ use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 // umask, and a cohabiting OS user can win that race with a cat.
 
 beforeEach(function (): void {
-    /** @var Application $app */
-    $app = $this->app;
-    $this->baseDir = $app->storagePath('app/inbox/9999/file-drop/2026/05');
+    $this->baseDir = UserDataPathService::appPath('inbox/9999/file-drop/2026/05');
     $this->cleanup = function (): void {
         if (is_dir($this->baseDir)) {
             foreach (glob($this->baseDir.'/*') ?: [] as $p) {
@@ -33,7 +32,7 @@ it('writes the final .eml file with mode 0600 after put()', function (): void {
     $app = $this->app;
     /** @var Filesystem $files */
     $files = $app->make(Filesystem::class);
-    $store = new FileDropEmlBlobStore($files, $app);
+    $store = new FileDropEmlBlobStore($files);
 
     $path = $this->baseDir.'/abc123.eml';
     $store->put($path, "From: test@example.com\r\nSubject: hi\r\n\r\nbody");
@@ -52,7 +51,7 @@ it('restores the prior umask after a successful put()', function (): void {
     $app = $this->app;
     /** @var Filesystem $files */
     $files = $app->make(Filesystem::class);
-    $store = new FileDropEmlBlobStore($files, $app);
+    $store = new FileDropEmlBlobStore($files);
 
     $priorUmask = umask();
     try {

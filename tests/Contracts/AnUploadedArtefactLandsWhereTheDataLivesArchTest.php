@@ -10,9 +10,13 @@ use Tests\Contracts\Support\RepoTree;
 // framework's default root for 'local' is storage_path('app/private').
 //
 // The desktop shell remaps storage_path() to the writable data directory, so
-// there the default is already right. Mobile does not remap it, and on a phone
-// storage_path() names the unpacked bundle -- the half an app update replaces.
-// The durable half is persisted_data/, which is what the path service answers.
+// there the default is already right. Both mobile shells remap it too, under
+// their own name -- LARAVEL_STORAGE_PATH -- but not to the same tree: Android
+// points it at persisted_data/storage, iOS at Application Support/storage,
+// which is NOT where base_path()'s sibling store is. So on an iPhone the
+// framework's default root and the durable half are two different directories,
+// and the durable half is persisted_data/, which is what the path service
+// answers.
 
 /** Whether the file resolves a filesystem disk by name, in either spelling. */
 function uploadedArtefactNamesADisk(string $source): bool

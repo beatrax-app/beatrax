@@ -24,6 +24,10 @@ const BOUNDARY_ALLOW_LIST_PINS = [
             'reason' => 'the one home for a filesystem path, so a NativePHP build can retarget the storage root in a single place; it is the sole sanctioned caller of base_path()',
             'proves' => '/(?<![>:])\b(database_path|storage_path|base_path)\s*\(/',
         ],
+        'Modules/Mobile/Internal/Spike/SpikeStoragePathCommand.php' => [
+            'reason' => 'the on-device topology dump, whose whole job is to print the framework\'s answer BESIDE the path service\'s so a reader can see whether the shell\'s announcement was read; asking the container is the measurement, not a shortcut past it',
+            'proves' => '/getLaravel\(\)->storagePath\s*\(/',
+        ],
     ],
     'noHorizonImportsInShippedBuildCode' => [
         'app/Providers/HorizonServiceProvider.php' => [
@@ -1036,6 +1040,15 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
 
     $bannedHelpers = '/(?<![>:])\b(database_path|storage_path|base_path)\s*\(/';
     $bannedLiterals = "/['\"](database\\.sqlite|storage\\/app\\/)/";
+    // The same question asked of the container instead of the helper. The
+    // pattern above cannot see it twice over: the method is camelCase, and the
+    // lookbehind drops anything after `->`. Two production classes went through
+    // that hole and resolved the reader's dropped receipts and file-drop mail
+    // somewhere UserDataLocations — the deletion procedure and the export —
+    // does not look, because on iOS the shell announces a storage root that is
+    // not the durable store.
+    $bannedContainerPaths = '/(?:\$app|\$this->app|\$this->laravel|getLaravel\(\)|app\(\)|App::)\s*(?:->|::)?\s*'
+        .'(?:storagePath|databasePath)\s*\(/';
 
     $hits = [];
     $scanned = 0;
@@ -1066,6 +1079,7 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
             $contents = (string) file_get_contents($path);
             $stripped = preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $contents) ?? $contents;
             if (preg_match($bannedHelpers, $stripped) === 1
+                || preg_match($bannedContainerPaths, $stripped) === 1
                 || (! $isBlade && preg_match($bannedLiterals, $stripped) === 1)) {
                 $hits[] = $relative;
             }
@@ -1080,6 +1094,38 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
     expect($hits)->toBe(
         [],
         "Raw path helpers / storage literals are forbidden outside UserDataPathService. Offenders:\n  ".implode("\n  ", $hits),
+    );
+});
+
+// A rule that reads only one spelling is a rule with a hole, and this one had
+// it for as long as the helper spelling was the only one written down. The
+// controls below are the two directions: every way to reach the Application is
+// caught, and a method merely NAMED like one is not.
+it('reads the container spelling of a path helper in every form, and leaves the path service alone', function (): void {
+    $pattern = '/(?:\$app|\$this->app|\$this->laravel|getLaravel\(\)|app\(\)|App::)\s*(?:->|::)?\s*'
+        .'(?:storagePath|databasePath)\s*\(/';
+
+    $caught = [
+        '<?php $app->storagePath("app/inbox");',
+        '<?php $this->app->storagePath("app/inbox");',
+        '<?php $this->laravel->databasePath();',
+        '<?php $this->getLaravel()->storagePath();',
+        '<?php app()->storagePath();',
+        '<?php App::storagePath();',
+    ];
+
+    foreach ($caught as $source) {
+        expect(PatternScan::matches($pattern, $source))->toBeTrue(
+            'the container was asked where storage is, in a spelling the rule cannot see: '.$source,
+        );
+    }
+
+    expect(PatternScan::matches($pattern, '<?php $this->paths->storagePath();'))->toBeFalse(
+        'the path service\'s own instance accessor IS the sanctioned answer and must not be forbidden',
+    );
+
+    expect(PatternScan::matches($pattern, '<?php $report->storagePathLabel();'))->toBeFalse(
+        'a method whose name merely starts with one of these resolves nothing',
     );
 });
 

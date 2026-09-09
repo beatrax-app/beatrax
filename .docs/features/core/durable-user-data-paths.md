@@ -39,13 +39,29 @@ owns may ever resolve here. `modulesPath()`, `migrationsPath()`,
 `publicPath()` and `projectPath()` are the deliberately project-rooted
 accessors.
 
-**`storageRoot()`** is the `storage/` tree, honouring `NATIVEPHP_STORAGE_PATH`
-when the packaged desktop build sets it. It deliberately does **not** branch
-for mobile. `storage/framework` and `storage/logs` are disposable caches, and
-relocating them into the persisted store would carry stale compiled views
-across an update that was supposed to clear them. A test pins this
-non-branching, so a future "consistency" fix that adds the branch fails
-loudly rather than quietly.
+**`storageRoot()`** is the `storage/` tree, honouring whichever name the
+running shell announces it under: `NATIVEPHP_STORAGE_PATH` from the packaged
+desktop build, `LARAVEL_STORAGE_PATH` from both mobile shells. It still does
+**not** branch on `NATIVEPHP_PLATFORM`, and a test pins that; what it reads is
+an announcement, in the same shape the desktop's has always been read.
+
+Reading only the desktop's name is what shipped. On iOS that put
+`laravel.log` in `Documents/app/storage/logs` — the bundle
+`AppUpdateManager.removeItem(atPath: appPath)` deletes whole on every version
+change, and the one data tree on the device that nothing excludes from iCloud
+— while the app's own `booted()` hook created `storage_path('logs')` beside it
+and wrote nothing there. Measured on an iPhone 12 mini, iOS 26.5.2: 250 lines
+across five launches in the first, none in the second.
+
+The reason recorded for not reading it was that relocating
+`storage/framework` into the persisted store would carry stale compiled views
+across an update meant to clear them. Both halves of that turned out not to
+hold. Android's shell already points `VIEW_COMPILED_PATH` and `CACHE_PATH`
+inside `persisted_data/storage/framework`, and `mobile-app/bootstrap/app.php`'s
+`booted()` hook already re-points `view.compiled` at `storage_path()` on both
+platforms — so compiled views were never in the bundle to begin with. And a
+compiled view is expired against its source's mtime, which an update rewrites,
+so a surviving one is recompiled on first render rather than served.
 
 **`appRoot()`** is `storage/app` — the durable half. Keyring, sync identity,
 secrets, backups. This one **does** branch for mobile, onto the sibling
@@ -110,38 +126,73 @@ wiped-and-reshipped bundle.
 - **Database under the bundle** — the shipped development `database.sqlite`
   becomes the user's database. A data leak, and the onboarding gate never
   fires because the database is not empty.
-- **`storage/framework` under the persisted store** — compiled views and
-  cached config outlive the update that replaced the code they were
-  compiled from.
+- **The log file under the bundle** — `Documents/app` is deleted whole on
+  every iOS version change, so the log of the update you are diagnosing is
+  the first thing the update destroys. It is also the only data tree on the
+  device outside the two the shell flags, so it was the only one iCloud
+  copied. Reading the shell's announcement is what moves it.
 - **A raw `base_path()` / `storage_path()` / `database_path()` call
   anywhere else, or a storage path written out by hand** — the arch
   invariant `noStoragePathHardCodedOutsideUserDataPathService` fails. It
-  bans the three helpers and the literals `database.sqlite` and
-  `storage/app/` alike, across `Modules`, `app` and `config`. This class
-  is the allow-list, and it has exactly one entry.
+  bans the three helpers, the container spellings of the same question
+  (`$app->storagePath()`, `$this->laravel->databasePath()`, `App::` and the
+  rest), and the literals `database.sqlite` and `storage/app/`, across
+  `Modules`, `app` and `config`.
+- **The same question asked of the container** — the rule read only the
+  helper spelling for as long as it existed, and its pattern excluded
+  anything after `->` outright. Two classes went through that hole:
+  `ScanInboxDropFolderJob` and `FileDropEmlBlobStore` resolved the reader's
+  dropped receipts and file-drop mail through `$app->storagePath('app/…')`.
+  On a checkout, on the desktop and on Android that is the same directory
+  `appPath()` answers, which is why it read as a spelling difference. On iOS
+  it is not, and `UserDataLocations` — the one inventory behind the "where is
+  my data" page, the deletion procedure and the export — answers `appPath()`.
+  A delete would have walked an empty tree and reported success.
 
 `getenv()` is used throughout rather than Laravel's `env()` helper because it
 is unconditional at every boot stage. That is what makes these static
 accessors safe to call from `config/*.php` files, which are evaluated before
 the container exists.
 
-## Why one variable is read from three sources and the other from one
+## Three storage-root names, and which sources each is read from
 
 `NATIVEPHP_PLATFORM` is read from `$_SERVER`, `$_ENV` and `getenv()`;
-`NATIVEPHP_STORAGE_PATH` is read with a bare `getenv()` at three call sites.
-The asymmetry looks like drift and is not — the two variables reach PHP by
-different routes, and each is read the way its own route delivers it.
+`NATIVEPHP_STORAGE_PATH` is read with a bare `getenv()`; `LARAVEL_STORAGE_PATH`
+is read from all three. The asymmetry is not drift — each variable reaches PHP
+by its own route, and is read the way that route delivers it.
 
 **`NATIVEPHP_STORAGE_PATH` is set by the desktop shell only.** The Electron
 plugin puts it in the object it hands to the spawned PHP process
 (`resources/electron/electron-plugin/src/server/php.ts`), so it arrives as a
 genuine process environment variable and `getenv()` is the primitive that
-reads it. No mobile shell sets it at all: it appears nowhere in
-`nativephp/mobile` — not in the iOS `setenv()` block, not in the Swift host,
-not in Android's `LaravelEnvironment.kt`, and not in any `$_SERVER` injection.
-So on a phone there is no server-const spelling for a bare `getenv()` to miss,
-and its absence is precisely the signal that hands the decision to
-`isMobileRuntime()`.
+reads it. No mobile shell sets it at all, and its absence is what hands the
+`appRoot()` decision to `isMobileRuntime()`.
+
+**`LARAVEL_STORAGE_PATH` is the mobile shells' name for the same thing**, and
+it is the name Laravel's own `Application::storagePath()` reads — from `$_ENV`
+first, then `$_SERVER`, never `getenv()`. iOS sets it with `setenv()` in both
+`NativePHPApp.swift:setupEnvironment()` and `PersistentPHPRuntime.boot()`;
+Android sets it through `LaravelEnvironment.kt`'s `setEnvironmentVariables`
+batch, alongside `VIEW_COMPILED_PATH` and `CACHE_PATH`. It is read from all
+three sources for the same reason `platformSignal()` is: Android hands its
+environment to PHP as server consts, so a bare `getenv()` is blind on that
+half of the phones while looking perfectly correct on the other.
+
+The two mobile shells do **not** announce the same tree relative to
+`base_path()`, which is why `storageRoot()` and `appRoot()` stay separate
+accessors rather than one deriving from the other:
+
+| | `base_path()` | announced storage root | durable store |
+| --- | --- | --- | --- |
+| Android | `<files>/laravel` | `<files>/persisted_data/storage` | `<files>/persisted_data` |
+| iOS | `<container>/Documents/app` | `<container>/Library/Application Support/storage` | `<container>/Documents/persisted_data` |
+
+On Android the announcement and the store are the same tree; on iOS they are
+two, and both are excluded from backup by
+`scripts/nativephp_exclude_data_from_backup.php` — the announcement through
+the `getAppSupportDir()` patch, the store through `prepareDurableStore()`.
+`Documents/app` is flagged by neither, which is the whole reason the log file
+had to leave it.
 
 **`NATIVEPHP_PLATFORM` does have a `$_SERVER`-only route.** Each embedded
 webview gets its own PHP context, and those slots pass request state by
@@ -156,11 +207,16 @@ Resolved roots, measured rather than reasoned about:
 | --- | --- | --- | --- |
 | host / test | `<base>/storage` | `<base>/storage/app` | `<base>/database/…` |
 | desktop | `$NATIVEPHP_STORAGE_PATH` | `…/app` | `…/database/…` |
-| iOS | `<base>/storage` | `…/persisted_data/storage/app` | `…/persisted_data/database/…` |
+| Android | `$LARAVEL_STORAGE_PATH` (= `…/persisted_data/storage`) | `…/persisted_data/storage/app` | `…/persisted_data/database/…` |
+| iOS | `$LARAVEL_STORAGE_PATH` (= `…/Library/Application Support/storage`) | `…/persisted_data/storage/app` | `…/persisted_data/database/…` |
 
 The desktop row is the live packaged behaviour; the iOS row is confirmed
 against a real device, where `persisted_data/storage/app/sync/identity/*.enc`
-and the database both sit in the persisted store. On desktop the app's own
+and the database both sit in the persisted store, and where the announced
+storage root was read off the running app: `Library/Application
+Support/storage` carried `framework/views`, `framework/cache/data` and
+`framework/native_routes.json` while `Documents/persisted_data` carried the
+database. The `storageRoot()` column is what the two disagreed about. On desktop the app's own
 default connection is not this file's `databaseFile()` at all — the vendored
 desktop service provider rewrites `database.default` to its own `nativephp`
 connection, which in debug builds is `database/nativephp.sqlite` inside the
