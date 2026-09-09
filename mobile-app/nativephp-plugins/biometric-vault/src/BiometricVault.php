@@ -93,6 +93,15 @@ class BiometricVault
         return is_string($value) && $value !== '' ? $value : null;
     }
 
+    // The lock screen fires the prompt from its own mount and leaves the PIN pad
+    // live underneath, so the two paths finish in either order. Android's prompt
+    // is a window that outlives the screen; iOS answers inside Get and has
+    // nothing standing, which is why this is a no-op there rather than absent.
+    public function cancelPrompt(): bool
+    {
+        return $this->callSuccess('BiometricVault.CancelPrompt', []);
+    }
+
     // The reason the last bridge call refused, or null when it did not. The
     // native side answers a refusal with {status: error, message}; every caller
     // here reduces that to false or [], so without this the only account of a

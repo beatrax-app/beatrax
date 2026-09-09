@@ -86,6 +86,19 @@ object BiometricVaultFunctions {
     @Volatile
     private var watchingLifecycle = false
 
+    // The prompt outlives the screen that asked for it. It is dispatched from
+    // the lock screen's own mount, so a reader who types the PIN instead leaves
+    // it standing over an app that is already unlocked.
+    @Volatile
+    private var active: BiometricPrompt? = null
+
+    // cancelAuthentication() answers through the main executor, and prompt()
+    // already runs there, so the cancelled prompt's error arrives AFTER the
+    // replacement has been mounted. Without a ticket to compare, that late
+    // callback clears the live prompt's handle and nothing can take it down.
+    @Volatile
+    private var ticket = 0
+
     // --- Keystore key (security-critical) ------------------------------------
 
     private fun keyStore(): KeyStore =
@@ -244,6 +257,19 @@ object BiometricVaultFunctions {
         }
     }
 
+    /**
+     * CancelPrompt: for the race the lock screen really runs. Its mount fires
+     * the prompt, and the PIN pad underneath stays live the whole time, so the
+     * two paths finish in either order and only one of them is the reader's.
+     */
+    class CancelPrompt(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            Handler(Looper.getMainLooper()).post { dismiss() }
+
+            return mapOf("success" to true)
+        }
+    }
+
     class Delete(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
             val key = parameters["key"] as? String
@@ -263,9 +289,14 @@ object BiometricVaultFunctions {
         key: String,
     ) {
         watchLifecycle(activity)
+        dismiss()
+
+        val mine = ++ticket
 
         val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                if (mine != ticket) return
+
                 val unwrap = result.cryptoObject?.cipher
                 if (unwrap == null) {
                     // The prompt authenticated something other than the Cipher
@@ -273,6 +304,8 @@ object BiometricVaultFunctions {
                     fail(activity, "no_cipher")
                     return
                 }
+
+                active = null
 
                 try {
                     recovered = open(stored, unwrap)
@@ -294,6 +327,8 @@ object BiometricVaultFunctions {
             }
 
             override fun onAuthenticationError(code: Int, msg: CharSequence) {
+                if (mine != ticket) return
+
                 fail(activity, if (code == BiometricPrompt.ERROR_USER_CANCELED ||
                     code == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
                     code == BiometricPrompt.ERROR_CANCELED
@@ -311,8 +346,12 @@ object BiometricVaultFunctions {
             .build()
 
         try {
-            BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
-                .authenticate(info, BiometricPrompt.CryptoObject(cipher))
+            // Assigned before authenticate(), never after: a synchronous failure
+            // inside it would otherwise have its cleanup overwritten by a handle
+            // to a prompt that never mounted.
+            val prompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
+            active = prompt
+            prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
         } catch (e: Exception) {
             Log.e("BiometricVault", "the prompt did not mount: ${e.message}", e)
             fail(activity, "unreadable")
@@ -321,8 +360,23 @@ object BiometricVaultFunctions {
 
     private fun fail(activity: FragmentActivity, reason: String) {
         recovered = null
+        active = null
         Log.d("BiometricVault", "recovery did not complete: $reason")
         NativeActionCoordinator.dispatchEvent(activity, EVENT_FAILED, """{"reason":"$reason"}""")
+    }
+
+    // Takes the prompt down without an answer. The callback still fires with
+    // ERROR_CANCELED, which raises Failed — a signal the lock screen is
+    // deliberately deaf to, because a cancelled ceremony earns no state.
+    private fun dismiss() {
+        // The slot is dropped here rather than in the callback, because the
+        // ticket now silences a superseded one: a ceremony the reader answered
+        // another way must not leave a released blob behind for the next
+        // dispatch to claim.
+        ticket++
+        recovered = null
+        active?.cancelAuthentication()
+        active = null
     }
 
     private fun forget(activity: Context, key: String) {
