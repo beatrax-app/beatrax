@@ -31,16 +31,24 @@ final class UserDataPathService
         return self::projectRoot().DIRECTORY_SEPARATOR.'.env';
     }
 
-    // One source, unlike platformSignal() below, because the two variables
-    // arrive by different routes: the desktop shell passes this one in the
-    // spawned process environment, and no mobile shell sets it at all — so
-    // there is no server-const injection for a bare getenv() to miss here.
+    // Each shell announces the root under its own name; reading only the
+    // desktop's put laravel.log in the bundle an iOS update deletes. Three
+    // sources for the mobile name because Android hands its environment to
+    // PHP as server consts, which a bare getenv() cannot see.
     private static function storageRoot(): string
     {
-        $native = getenv('NATIVEPHP_STORAGE_PATH');
+        $desktop = getenv('NATIVEPHP_STORAGE_PATH');
 
-        return is_string($native) && $native !== ''
-            ? rtrim($native, '/\\')
+        if (is_string($desktop) && $desktop !== '') {
+            return rtrim($desktop, '/\\');
+        }
+
+        $mobile = $_SERVER['LARAVEL_STORAGE_PATH']
+            ?? $_ENV['LARAVEL_STORAGE_PATH']
+            ?? getenv('LARAVEL_STORAGE_PATH');
+
+        return is_string($mobile) && $mobile !== ''
+            ? rtrim($mobile, '/\\')
             : self::projectRoot().DIRECTORY_SEPARATOR.'storage';
     }
 

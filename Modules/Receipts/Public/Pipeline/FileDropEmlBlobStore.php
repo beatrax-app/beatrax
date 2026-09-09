@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\Receipts\Public\Pipeline;
 
 use DateTimeImmutable;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SecretFileMode;
 use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 use RuntimeException;
@@ -23,7 +23,6 @@ final readonly class FileDropEmlBlobStore
 
     public function __construct(
         private Filesystem $files,
-        private Application $app,
     ) {}
 
     public function pathFor(
@@ -38,8 +37,11 @@ final readonly class FileDropEmlBlobStore
             );
         }
 
-        return $this->app->storagePath(sprintf(
-            'app/inbox/%d/file-drop/%04d/%02d/%s.eml',
+        // appPath(), not the framework's storagePath(): on iOS the two name
+        // different trees, and UserDataLocations answers appPath() when the
+        // reader asks where their mail is, deletes it, or exports it.
+        return UserDataPathService::appPath(sprintf(
+            'inbox/%d/file-drop/%04d/%02d/%s.eml',
             $userId,
             (int) $internalDate->format('Y'),
             (int) $internalDate->format('m'),
