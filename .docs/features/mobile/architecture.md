@@ -478,6 +478,59 @@ granted  D LocalNotification: Notification shown successfully
          NotificationRecord(pkg=com.beatrax.mobile … importance=3)
 ```
 
+### The zone an iPhone could not read
+
+`HostTimezone::detect()` asks four sources in order: an environment variable the
+shell may fill, `/etc/localtime`, `/etc/timezone`, and the Windows registry. Its
+own comment said "macOS, Linux and iOS all symlink /etc/localtime into the
+zoneinfo tree". Measured **inside the app** on an iPhone (iOS 26.5.2), by
+instrumenting `probe()` and reading the result back out of the container:
+
+```text
+shell_env                                false
+link_exists                              false   <- /etc/localtime is not visible
+is_link                                  false
+file_exists_etc_timezone                 false
+TZ                                       false
+date_default                             UTC
+IntlTimeZone::createDefault()->getID()   CET
+```
+
+The sandbox shows the app no `/etc` at all, so every source fails and the floor
+answers UTC. With the pin removed to reproduce the release condition, the app's
+log wrote **06:47 while the wall clock said 08:48** — two hours out, in the
+frame every DATETIME column is stored in
+([G7-R16](https://github.com/beatrax-app/spec)).
+
+Development builds hide it exactly as they did on Android: both `.env` files pin
+`APP_TIMEZONE`, so tier one wins and `detect()` never runs. `.env.bundled`
+deliberately omits it, which makes UTC the answer on every shipped iOS build.
+
+ICU knows the offset and is not enough on its own. It answers `CET`, which
+`DateTimeZone::listIdentifiers()` does not contain, so `HostTimezone::isZone()`
+rejects it and the floor answers anyway. `TimeZone.current.identifier` answers
+`Europe/Amsterdam` — a real identifier, carrying the region rather than a bare
+offset, which is the distinction that matters once two devices sync and
+`created_at` is what tells a primary-key collision from a replay.
+
+#### Two runtimes boot PHP, and each carries its own environment
+
+Supplying the variable beside `PHPRC` in `NativePHPApp.preparePhpEnvironment()`
+fixed the request path and left the background scheduler in UTC. Measured on the
+device, the same line was written twice, twelve seconds and two hours apart:
+
+```text
+[2026-09-09 08:55:46] local.DEBUG: BackgroundTasks: found 19 schedule event(s)
+[2026-09-09 06:55:58] local.DEBUG: BackgroundTasks: found 19 schedule event(s)
+```
+
+`PersistentPHPRuntime` sets its own `setenv` block — `LARAVEL_STORAGE_PATH`,
+`DB_DATABASE`, `NATIVEPHP_PLATFORM` and the rest — and never saw the first one.
+The patch supplies both, and a case pins that it supplies both.
+
+Verified on hardware, clean install with the pin removed: **all fifty log lines
+in the local hour, none in UTC**, against a wall clock of 09:00 CEST.
+
 ### The runtime is persistent, and request headers leak between requests
 
 The embedded PHP process serves many requests. Its superglobals are not fully
