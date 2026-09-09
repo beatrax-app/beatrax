@@ -184,6 +184,16 @@ and the assertion — see
   two wraps, and turning it back on re-offers native unlock rather than
   finding a stale enrolment in the way.
   (`tests/Feature/TheOsVaultKeptTheKeyTheLockWasToldToForgetTest.php`)
+- **A correct PIN is stretched once, and the PIN hash only names a failure.**
+  `AppLockKeyWrap::unwrap()` authenticates the PIN by itself, so the unlock
+  tries it first and reads `pin_hash` only where that failed — which is what
+  keeps a wrong PIN out of the critical corrupted-key alert and a corrupt
+  wrap out of the failure counter. The derivation runs before the write
+  transaction opens, so a write another process refuses is retried on a
+  re-read rather than on a second stretch, and a PIN change that committed
+  underneath the derivation makes the attempt record nothing at all.
+  (`tests/Feature/AnUnlockDerivesOnceAndStillNamesTheFailureTest.php`,
+  `tests/Feature/TheUnlockThatLostARaceWithItsOwnQueueTest.php`)
 - **Cross-user reads / writes return 404, not 403.** A logged-in user
   probing any URL keyed by another user's id receives 404; the existence
   of partner accounts is never revealed.

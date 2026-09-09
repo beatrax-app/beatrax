@@ -450,23 +450,72 @@ the next `release()` call in *that* session returns null.
 
 ### PIN verification + backoff (`PinVerificationService`)
 
-Wraps the compare-and-unwrap in a `lockForUpdate()` + `transaction()` pair
-(mirroring `RecoveryCodeAuthenticator`) so concurrent PIN attempts can't
-race the failure counter. On a wrong PIN, `failed_attempts` increments;
-crossing a threshold sets an escalating `locked_until` backoff window
-(30s, 60s, then 300s and beyond) that short-circuits further attempts
-without even hashing; reaching the hard cap signs the session out
-entirely and emits a `SystemAlert`. `AppLockProvisioner::
-primeSessionAfterLogin()` clears `failed_attempts` and `locked_until`
-whenever it runs — the lock screen's own copy sends a reader who has
-forgotten the PIN to sign back in with the account password, so arriving
-there IS that credential being proved. Without it the meter stayed at the
-cap that signed them out, and the next mistyped digit signed them out
-again over a screen reading "0 attempts remaining". A corrupted wrap blob is treated as a
-non-counting failure (also alerted) rather than a crash. A successful PIN
-unlock re-arms every one of the user's biometric credentials (see below)
-and refreshes the "must re-enter PIN periodically" clock the mobile
-cold-start biometric path reads.
+On a wrong PIN, `failed_attempts` increments; crossing a threshold sets an
+escalating `locked_until` backoff window (30s, 60s, then 300s and beyond)
+that short-circuits further attempts without deriving anything at all;
+reaching the hard cap signs the session out entirely and emits a
+`SystemAlert`. `AppLockProvisioner::primeSessionAfterLogin()` clears
+`failed_attempts` and `locked_until` whenever it runs — the lock screen's
+own copy sends a reader who has forgotten the PIN to sign back in with the
+account password, so arriving there IS that credential being proved.
+Without it the meter stayed at the cap that signed them out, and the next
+mistyped digit signed them out again over a screen reading "0 attempts
+remaining". A successful PIN unlock re-arms every one of the user's
+biometric credentials (see below) and refreshes the "must re-enter PIN
+periodically" clock the mobile cold-start biometric path reads.
+
+#### The unwrap is the authenticator; the hash only names the failure
+
+`AppLockKeyWrap::unwrap()` is authenticated encryption, so a PIN that does
+not derive the wrap key cannot get a data key out of the blob. That makes
+the stored `pin_hash` redundant as a gate, and leaves it one job the unwrap
+cannot do on its own: telling a wrong PIN apart from a correct PIN over a
+wrap the row can no longer open. So the unlock tries the unwrap first and
+consults the hash only where that failed.
+
+| Unwrap | `pin_hash` verified | Outcome |
+| --- | --- | --- |
+| opens | never | unlocked; `failed_attempts` and `locked_until` cleared |
+| fails | fails | wrong PIN: the counter increments and the backoff ladder advances |
+| fails | passes | corrupted key wrap: a critical `SystemAlert`, and the counter is left alone |
+
+A correct PIN therefore costs **one** Argon2id derivation where it used to
+cost two, and a wrong one costs two where it used to cost one. That raises
+an online guesser's price per attempt rather than lowering it, and leaves
+an offline attacker's price per guess exactly where it was: both stored
+artefacts are derived at the same cost, and an attacker with the file
+already picks whichever of them they prefer. `PinUnlockAttempt` is the
+answer the three rows above are carried in.
+
+Unusable material is not a crash on the way to that table. A `kdf_salt`
+that is absent, not a string, or not `SODIUM_CRYPTO_PWHASH_SALTBYTES` long
+is refused before libsodium sees it, and reaches the same corrupted-key
+alert as a missing `pin_wrapped_key`.
+
+#### The derivation runs outside the write transaction
+
+Argon2id at the shipped cost is seconds of pure CPU on a phone, and the
+desktop runs four processes against one SQLite file, so none of it is spent
+holding write intent:
+
+1. Read the row. A live `locked_until` returns here, which is what keeps a
+   locked-out attempt the cheapest request this path serves rather than
+   the most expensive.
+2. Derive, unwrap, and — only where that failed — verify the hash. No
+   database work at all.
+3. Open the transaction: re-read the row under `lockForUpdate()`, re-check
+   the backoff, then `markUnlocked()` or `handleFailure()`. The counter is
+   still read and written inside one transaction, so concurrent attempts
+   cannot race it, and a write another process's commit refuses is retried
+   without paying the derivation a second time.
+
+The locked re-read is also where a PIN change that committed underneath
+the derivation is caught. Where `kdf_salt`, `pin_wrapped_key` or `pin_hash`
+differ from the row the derivation ran against, the answer in hand
+describes material this row no longer holds — so the attempt records
+**nothing**: no unlock, and no increment either. The reader types the PIN
+again. Losing a race with a re-wrap is not something to walk them towards a
+sign-out for.
 
 ### Biometric enrollment + assertion (`WebAuthnBiometricService`)
 

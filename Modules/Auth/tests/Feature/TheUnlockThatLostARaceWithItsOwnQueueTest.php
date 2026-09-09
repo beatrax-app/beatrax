@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Event;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinVerificationService;
+use Modules\Auth\Tests\Support\CountingKdfCost;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 
@@ -75,7 +76,11 @@ function unlockRaceCleanup(string $file, string $previousDefault): void
 // transaction. It writes a column the unlock does not read and a value the row
 // does not already hold — an update to the value already there leaves the WAL
 // alone and races nothing.
-function unlockRaceRivalCommitsOnceOnItsRead(): Closure
+//
+// The transaction level is what picks that read out. The unlock takes an
+// earlier one outside the transaction, to derive against, and a commit landing
+// there collides with nothing: there is no open write for it to refuse.
+function unlockRaceRivalCommitsOnceOnTheReadUnderLock(): Closure
 {
     $committed = false;
 
@@ -84,6 +89,9 @@ function unlockRaceRivalCommitsOnceOnItsRead(): Closure
             return;
         }
         if (! str_contains($event->sql, 'user_app_lock_configs') || ! str_starts_with(strtolower($event->sql), 'select')) {
+            return;
+        }
+        if (DB::connection('unlock_race')->transactionLevel() === 0) {
             return;
         }
 
@@ -118,7 +126,7 @@ it('unlocks even when another process commits between its read and its write', f
         $session = app(Session::class);
         app(LockStateManager::class)->lock($session);
 
-        $rivalCommitted = unlockRaceRivalCommitsOnceOnItsRead();
+        $rivalCommitted = unlockRaceRivalCommitsOnceOnTheReadUnderLock();
 
         $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session);
 
@@ -156,12 +164,51 @@ it('raises one lockout alert for one wrong PIN, not one per retry', function ():
         $session = app(Session::class);
         app(LockStateManager::class)->lock($session);
 
-        $rivalCommitted = unlockRaceRivalCommitsOnceOnItsRead();
+        $rivalCommitted = unlockRaceRivalCommitsOnceOnTheReadUnderLock();
 
         expect(app(PinVerificationService::class)->verify($user->id, '999999', $session))->toBeNull()
             ->and($rivalCommitted())->toBeTrue();
 
         expect(SystemAlert::query()->where('user_id', $user->id)->count())->toBe(1);
+    } finally {
+        unlockRaceCleanup($file, $previousDefault);
+    }
+});
+
+// The refused write is retried, and the retry re-reads the row. What it must
+// not do is stretch the PIN again: at the shipped cost that is seconds of
+// Argon2id per attempt, paid while the reader waits at the lock screen.
+it('pays for one derivation even where the write is refused and retried', function (): void {
+    $previousDefault = (string) config('database.default');
+    $file = unlockRaceDatabase();
+
+    try {
+        $cost = CountingKdfCost::install();
+
+        $user = User::query()->create([
+            'username' => 'race-derivations',
+            'password' => 'whatever-password',
+            'period_start_day' => 1,
+        ]);
+        $this->actingAs($user);
+
+        app(AppLockProvisioner::class)->enable($user->id, '123456', 'whatever-password');
+
+        /** @var Session $session */
+        $session = app(Session::class);
+        app(LockStateManager::class)->lock($session);
+
+        $rivalCommitted = unlockRaceRivalCommitsOnceOnTheReadUnderLock();
+        $cost->derivations = 0;
+
+        $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session);
+
+        expect($rivalCommitted())->toBeTrue()
+            ->and($dataKey)->toBeString()
+            ->and($cost->derivations)->toBe(
+                1,
+                'The wrap key is derived before the transaction opens, so a refused write costs a re-read and not a second stretch.',
+            );
     } finally {
         unlockRaceCleanup($file, $previousDefault);
     }

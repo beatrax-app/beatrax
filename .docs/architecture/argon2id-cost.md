@@ -22,10 +22,19 @@ It returns libsodium's `MODERATE` pair:
 | `memlimit` | `268435456` — 256 MiB (`SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE`) |
 | algorithm | `SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13` |
 
-That is roughly half a second per derivation on a developer laptop. It is
-memory-hard on purpose: a six-digit PIN has about twenty bits of entropy, so
-the only thing standing between a stolen `user_app_lock_configs` row and the
-data key is how expensive each guess is.
+That is roughly half a second per derivation on a developer laptop, and around
+two seconds on a mid-range Android phone. It is memory-hard on purpose: a
+six-digit PIN has about twenty bits of entropy, so the only thing standing
+between a stolen `user_app_lock_configs` row and the data key is how expensive
+each guess is.
+
+A PIN unlock spends exactly one of them. `AppLockKeyWrap::unwrap()`
+authenticates the PIN on its own, so `PinHasher` is consulted only where the
+unwrap failed — to say whether the blob is corrupt or the PIN wrong — which
+puts the second derivation on the attempt that fails rather than the one that
+succeeds. Both artefacts go on being written at this one cost, because an
+attacker holding the file attacks whichever of them is cheaper:
+[`Auth` — architecture](../features/auth/architecture.md#the-unwrap-is-the-authenticator-the-hash-only-names-the-failure).
 
 `BackupEncryptor::encryptWithKey()` is the deliberate exception and does **not**
 take this cost. Its secret is already 256 uniformly random bits, so stretching
