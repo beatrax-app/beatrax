@@ -26,6 +26,8 @@ final class HostTimezone
 
     private static ?string $detected = null;
 
+    private static ?bool $answered = null;
+
     // Memoized for the life of the process. Two of the four probes touch the
     // filesystem and one spawns a subprocess, and the answer cannot change
     // under a running application without it being restarted anyway.
@@ -34,12 +36,25 @@ final class HostTimezone
         return self::$detected ??= self::probe();
     }
 
+    // Whether the machine answered at all, or the floor was taken. The two are
+    // indistinguishable in the return value — a host genuinely on UTC and a
+    // host that could not be asked both read "UTC" — and on Android nothing
+    // could be asked at all for as long as nobody looked.
+    public static function hostAnswered(): bool
+    {
+        self::detect();
+
+        return self::$answered === true;
+    }
+
     // Test seam, and the only writer of the memo. A value that is not a zone
-    // identifier is refused rather than remembered, so a shell handing over
-    // nonsense falls back rather than poisoning every later call.
-    public static function fake(?string $zone): void
+    // identifier is refused rather than remembered. `$answered` is separate
+    // because 'UTC' from a host and 'UTC' from the floor are the same string,
+    // and only a caller knows which it stands in for.
+    public static function fake(?string $zone, bool $answered = true): void
     {
         self::$detected = $zone !== null && self::isZone($zone) ? $zone : null;
+        self::$answered = self::$detected === null ? null : $answered;
     }
 
     public static function isZone(string $candidate): bool
@@ -51,9 +66,13 @@ final class HostTimezone
     {
         foreach ([self::fromShell(), self::fromLink(), self::fromFile(), self::fromWindows()] as $candidate) {
             if ($candidate !== null && self::isZone($candidate)) {
+                self::$answered = true;
+
                 return $candidate;
             }
         }
+
+        self::$answered = false;
 
         return 'UTC';
     }
