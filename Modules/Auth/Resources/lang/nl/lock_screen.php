@@ -7,7 +7,7 @@ return [
     'native_unlock_failed' => 'Ontgrendelen mislukt. Voer je pincode in.',
     'page_title' => 'Ontgrendelen · Beatrax',
     'sign_out' => 'Afmelden',
-    'forgot_pin' => 'Pincode vergeten? Meld je af — als je accountwachtwoord deze vergrendeling nog opent, log je weer in, stel je een nieuwe pincode in en verlies je niets. Een wachtwoord dat met een herstelcode is gereset of dat de accounteigenaar voor je heeft ingesteld, opent de vergrendeling niet meer.',
+    'forgot_pin' => 'Pincode vergeten? Meld je af',
 
     'digits_entered' => ':count cijfer ingevoerd|:count cijfers ingevoerd',
     'pad_label' => 'Pincode-toetsenblok',

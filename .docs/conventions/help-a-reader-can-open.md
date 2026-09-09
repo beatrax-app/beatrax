@@ -131,6 +131,31 @@ a reader would want, the right answer is no tip rather than a padded one.
   lede and `/chains` with a subtitle; the tip answers what those two sentences
   assume the reader already knows, and does not repeat them.
 
+## A mark that waits for the question
+
+Every mark above is always drawn. The lock screen's is not, and it is the one
+exception the rule allows: it appears only once the reader has got the PIN
+wrong at least once.
+
+The tip there explains what the forgotten-code sign-out is worth — that the
+account password signs you back in and costs nothing, unless a recovery-code
+reset or the account owner set that password. That was printed inline at full
+size, three lines of prose under a pad whose only job is six digits, and it is
+the one screen in the product with no room to spare. Before the first wrong
+PIN the reader is entering a code, not asking about one.
+
+**The condition is a count something else already keeps.** `MobileLockGateway::
+forgottenPinHelpDue()` reads `user_app_lock_configs.failed_attempts`, the meter
+`PinVerificationService` maintains for the backoff, so the mark survives a
+reload and a relaunch — a screen that had forgotten what the reader just did
+would be worse than one that never offered. A second counter kept by the
+component would have been exactly that.
+
+This is a timing rule, not a licence to hide help behind a state. It applies
+where the question has a moment: something the reader does makes it occur to
+them. On a screen where the reader could be puzzled at any point — every other
+site here — the mark is drawn from the start.
+
 ## The measured numbers
 
 - **`min(24rem, calc(100vw - 2rem))`.** 24rem is 384px, which is wider than an
@@ -148,6 +173,10 @@ a reader would want, the right answer is no tip rather than a padded one.
   fixed all three, which is why the offset is written in the label's own units.
   Every one of them now reads 0.00 or 0.01, the mark stays 18×18 and its halo
   44×44, and an engine with no `cap` unit keeps `middle` at 2.7px.
+- **262.4px of 327.** The lock screen's label and mark share one line at 375px
+  in all twenty-six locales; Hungarian is the widest and leaves 64px spare. The
+  mark's centre measures 0.00px off the cap-height centre of the label beside
+  it, which is what the shared `text-sm` block on the pair buys.
 - **14.56px of circle.** A mark laid out as a flex item has no basis to hold it
   open: on the Latvian recurring title at 375px the heading took the width it
   needed and left the circle an oval. In its label's inline flow it cannot be

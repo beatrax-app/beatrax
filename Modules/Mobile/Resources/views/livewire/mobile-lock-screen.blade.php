@@ -198,21 +198,30 @@
              names itself, because on a phone there is no second window and no
              console — this screen is the whole of the escape route. Neutral,
              not rose: it is the way back in, not the exit. Grouped with the
-             plain sign-out so three lines of copy cost one gap on a screen
-             the keypad has already nearly filled. --}}
+             plain sign-out so both cost one gap on a screen the keypad has
+             already nearly filled.
+
+             The phone is where the three printed lines cost most — the pad is
+             already the whole viewport — so what the sign-out is worth moves
+             behind the mark, and the mark waits for the first wrong PIN.
+             The block carries the type for the label and the mark both, and
+             the space between them is non-breaking. --}}
         <div class="space-y-1">
-            <form method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
-                @csrf
-                <button
-                    type="submit"
-                    class="w-full text-center text-sm text-slate-600 dark:text-slate-400
-                           hover:text-slate-900 dark:hover:text-slate-100
-                           focus:outline-none focus-visible:underline
-                           py-2"
-                >
-                    {{ Lang::get('mobile::lock.forgot_pin') }}
-                </button>
-            </form>
+            <div class="text-center text-sm text-slate-600 dark:text-slate-400">
+                <form class="inline" method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="py-2
+                               hover:text-slate-900 dark:hover:text-slate-100
+                               focus:outline-none focus-visible:underline"
+                    >{{ Lang::get('mobile::lock.forgot_pin') }}</button>
+                </form>@if ($forgottenPinHelpDue)&nbsp;<x-core::help-tip
+                    topic="lock-forgot-pin"
+                    :label="Lang::get('mobile::lock.forgot_pin')"
+                    :body="Lang::get('mobile::help.forgot_pin')"
+                />@endif
+            </div>
 
             <form method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
                 @csrf

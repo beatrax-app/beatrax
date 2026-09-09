@@ -81,21 +81,36 @@
              before it is tapped: password login primes the session from the
              recovery wrap, and Settings → "Forgot your PIN?" re-wraps under a
              new PIN. Neutral, not rose — it is the way back in, not the exit.
-             Grouped with the plain sign-out so three lines of copy cost one
-             gap on a screen the keypad has already nearly filled. --}}
+             Grouped with the plain sign-out so both cost one gap on a screen
+             the keypad has already nearly filled.
+
+             What that sign-out is worth — that the account password opens this
+             lock again unless a recovery code or the account owner set it — is
+             the two sentences that used to be printed here at full size, three
+             lines of prose over a pad whose only job is six digits. They are
+             behind the mark now, and the mark waits for the first wrong PIN:
+             until then the reader is entering a code, not asking about one.
+
+             The block carries the type for the label and the mark both, which
+             is what puts the mark on the label's cap height rather than the
+             body text's, and the space between them is non-breaking so a label
+             with no room left takes its last word down with the mark. --}}
         <div class="space-y-1">
-            <form method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
-                @csrf
-                <button
-                    type="submit"
-                    class="w-full text-center text-sm text-slate-600 dark:text-slate-400
-                           hover:text-slate-900 dark:hover:text-slate-100
-                           focus:outline-none focus-visible:underline
-                           py-2"
-                >
-                    {{ Lang::get('auth::lock_screen.forgot_pin') }}
-                </button>
-            </form>
+            <div class="text-center text-sm text-slate-600 dark:text-slate-400">
+                <form class="inline" method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="py-2
+                               hover:text-slate-900 dark:hover:text-slate-100
+                               focus:outline-none focus-visible:underline"
+                    >{{ Lang::get('auth::lock_screen.forgot_pin') }}</button>
+                </form>@if ($forgottenPinHelpDue)&nbsp;<x-core::help-tip
+                    topic="lock-forgot-pin"
+                    :label="Lang::get('auth::lock_screen.forgot_pin')"
+                    :body="Lang::get('auth::help.forgot_pin')"
+                />@endif
+            </div>
 
             <form method="POST" action="{{ route('logout') }}" data-beatrax-post x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
                 @csrf

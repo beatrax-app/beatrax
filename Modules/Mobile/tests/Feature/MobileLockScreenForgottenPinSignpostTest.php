@@ -69,10 +69,21 @@ it('offers the forgotten-code way back in as a control that signs out', function
 });
 
 it('says on the lock screen itself that the way back in signs you out', function (): void {
-    $copy = Lang::get('mobile::lock.forgot_pin');
+    $label = Lang::get('mobile::lock.forgot_pin');
 
-    expect($copy)->toContain(Lang::get('mobile::lock.sign_out'))
-        ->and($copy)->toContain('account password');
+    expect($label)->toContain(Lang::get('mobile::lock.sign_out'))
+        ->and(Lang::get('mobile::help.forgot_pin'))->toContain('account password');
+});
+
+// The phone is where three printed lines cost most — the pad is already the
+// whole viewport — so the label keeps only what has to be read before the
+// control is tapped, and the rest opens from a mark beside it.
+it('keeps the explanation off the label and behind the mark', function (): void {
+    $label = Lang::get('mobile::lock.forgot_pin');
+
+    expect(mb_strlen($label))->toBeLessThan(60, 'The forgotten-code control is a label again only while it reads as one.')
+        ->and($label)->not->toContain('recovery code')
+        ->and($label)->not->toContain('account password');
 });
 
 // The phone says the same thing the desktop lock screen says, and it was wrong
@@ -80,12 +91,32 @@ it('says on the lock screen itself that the way back in signs you out', function
 // account password opens nothing, so "No data is lost" sent the reader at the
 // one door that cannot open. The two lines are kept in step here.
 it('names the resets that leave nothing behind the PIN, in step with the desktop lock screen', function (): void {
-    $copy = Lang::get('mobile::lock.forgot_pin');
+    $copy = Lang::get('mobile::help.forgot_pin');
 
-    expect($copy)->toBe(Lang::get('auth::lock_screen.forgot_pin'))
+    expect(Lang::get('mobile::lock.forgot_pin'))->toBe(Lang::get('auth::lock_screen.forgot_pin'))
+        ->and($copy)->toBe(Lang::get('auth::help.forgot_pin'))
         ->and($copy)->toContain('recovery code')
         ->and($copy)->toContain('account owner')
         ->and($copy)->not->toContain('No data is lost');
+});
+
+// The count is the pad's own failure meter rather than anything this screen
+// keeps, so a phone that was killed and relaunched — which Android does to a
+// backgrounded app routinely — comes back with the mark still there.
+it('offers the explanation only once the reader has actually got the PIN wrong', function (): void {
+    lockedOutPhoneUser('forgot-phone-progressive');
+
+    $before = Livewire::test(MobileLockScreen::class);
+
+    expect($before->html())->not->toContain('help-tip')
+        ->and($before->html())->not->toContain(Lang::get('mobile::help.forgot_pin'));
+
+    $before->call('submit', '999999');
+
+    $after = Livewire::test(MobileLockScreen::class);
+
+    expect($after->html())->toContain('help-tip')
+        ->and($after->html())->toContain(Lang::get('mobile::help.forgot_pin'));
 });
 
 it('routes the forgotten-code control through the POST sign-out, never a bare link', function (): void {

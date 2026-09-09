@@ -62,8 +62,11 @@ All three are grammatical. The question is idiom, not correctness.
 | `fi` | `Tietoja ei häviä.` | `Tietoja ei katoa.` or the positive `Tiedot säilyvät.` |
 | `hu` | `Nem vész el adat.` | `Semmilyen adat nem vész el.` — the current form matches `app_lock.forgot_modal_body`, which writes it with `soha`; standing alone it is terse |
 
-Both `lock_screen.php` and `lock.php` carry the same sentence in each locale, so
-each row is two files.
+The clause moved when the forgotten-code explanation went behind a help mark:
+it now lives in `Modules/Auth/Resources/lang/<locale>/help.php` and
+`Modules/Mobile/Resources/lang/<locale>/help.php`, under `forgot_pin`, and the
+markers moved with it. Both modules carry the same sentence in each locale, so
+each row is still two files.
 
 ### The palette's "see all" row
 
