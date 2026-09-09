@@ -7090,6 +7090,45 @@ unpinned half now reaches for a bridge no toolchain has, which fails everywhere
 instead — no less unrelated to what the test is about — so the guard names the
 new seam.
 
+## A label explained on one screen and bare on the next
+
+`tests/Contracts/ALabelExplainedOnOneScreenIsNotBareOnTheNextArchTest.php`
+
+`x-core::help-tip` opens its panel from beside the label it explains, so which
+readers can reach the answer is decided entirely by where that label is drawn.
+Nothing tied the two together: the panel was written on the screen its author
+had open, and the same words on every other screen stayed bare.
+
+*Ready to assign* shipped explained on `/budgets` and bare on the dashboard's
+budgets glance card — the same three words, on the first screen a reader opens.
+The copy was already in all 26 locales, the page returned 200, and the whole
+help feature read as missing to anyone who did not happen to be on one of the
+four screens that carried a mark.
+
+The guard reads the `:label` key out of every panel and then looks for that key
+in every Blade view a reader is shown, so a second call site is found the moment
+it exists rather than when somebody notices.
+
+## A popover in the top layer that still inherits from the label
+
+`tests/Contracts/AHelpPanelWearsItsOwnTypeAndNotTheLabelsArchTest.php`
+
+The top layer decides where a `[popover]` **paints**, not what it inherits. The
+panel is still a `<div>` written inside the label that opens it, and a label is
+the most heavily typed line on a screen.
+
+All six help panels shipped wearing that type. `/budgets` and the dashboard card
+sit inside `text-xs font-medium uppercase tracking-wide`, so three sentences of
+prose were drawn in CAPITALS at 0.3px of tracking; `/chains`, `/reconcile` and
+`/recurring/review` sit inside a 28px heading block and drew theirs at
+`font-weight: 600` and `-0.7px`. Two properties had already been noticed and put
+back — `text-wrap` and `hyphens` — which is what makes this a shape rather than
+an oversight: the inheritance was known about and answered one property at a
+time, with nothing asking what else came through.
+
+Nothing could fail. The panel opened, the copy was right, and the guards that
+existed measured its width, its alignment and its 44px reach.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

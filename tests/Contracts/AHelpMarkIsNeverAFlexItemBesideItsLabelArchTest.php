@@ -131,7 +131,7 @@ it('never writes a help mark as a flex item beside the label it explains', funct
         }
     }
 
-    // Four templates draw five marks today. A walk that found none of them
+    // Five templates draw six marks today. A walk that found none of them
     // would report every mark as correctly placed.
     expect($marks)->toBeGreaterThan(2, 'Read '.$marks.' help marks across '.count($blades).' templates, too few to have proved anything.');
 

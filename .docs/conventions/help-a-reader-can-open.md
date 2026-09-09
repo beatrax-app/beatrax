@@ -37,6 +37,22 @@ uses. Drawn rather than typed for the reason
 records: `ⓘ` and `ℹ` are exactly the ambiguous kind, and WebKit paints a colour
 picture where Chromium paints line art.
 
+**The panel states its whole type, because it is written inside a label.** The
+top layer decides where a popover *paints* and nothing about what it inherits,
+and the element a mark sits beside is the most heavily typed line on any screen.
+All six panels shipped wearing the label's treatment: `/budgets` and the
+dashboard card sit inside `text-xs font-medium uppercase tracking-wide`, so
+three sentences of prose were drawn in CAPITALS at 0.3px of tracking, and the
+three page headings gave theirs `font-weight: 600` at `-0.7px` — a 28px display
+face's negative tracking applied to 13px of body copy. Two properties had
+already been noticed and put back, `text-wrap` and `hyphens`, which is what made
+it a shape rather than an oversight: the inheritance was known about and
+answered one property at a time.
+`tests/Contracts/AHelpPanelWearsItsOwnTypeAndNotTheLabelsArchTest.php` holds the
+restated set, and re-reads the Tailwind type utilities written above every mark
+in the tree against it — so a mark placed inside `italic` or `text-right`
+tomorrow fails until the panel puts that property back too.
+
 **Anchor positioning is deliberately absent.** Without it the UA centres a
 popover, which is what a 375px screen wants anyway, and the anchor properties
 would be stripped from the compiled stylesheet by the same Lightning CSS pass
@@ -119,6 +135,27 @@ The `.docs` page is not the copy. Those pages are written for whoever maintains
 the code — they say which listener was added and what broke without it. The help
 answers what the feature is for and how to use it, and where a page has nothing
 a reader would want, the right answer is no tip rather than a padded one.
+
+## Where the same tip has to go again
+
+**A label that carries a panel on one screen carries it on every screen that
+draws that label.** The panel is opened from beside the words it explains, so
+who can reach it is decided by where those words appear — and a label appears on
+more screens than the one whose author wrote the panel.
+
+*Ready to assign* shipped explained on `/budgets` and bare on the dashboard's
+budgets card, which is the same three words on the screen every reader opens
+first. The answer existed, it was already translated into all 26 locales, and
+the screen most people read never offered it. That is what the report *"we added
+information icons — I don't see them anymore"* was describing: not a mark that
+had been removed, a reader who met the label somewhere it had never been.
+
+`tests/Contracts/ALabelExplainedOnOneScreenIsNotBareOnTheNextArchTest.php` reads
+the `:label` key out of every panel in the tree and then looks for that key
+everywhere else a Blade view draws it. A second call site either carries the
+mark inside the label's own element, or it is naming a different thing and says
+so with a different string. There is no third answer, and no allow-list —
+adding one would be pinning the exact shape the guard exists to find.
 
 ## Where a tip does not go
 

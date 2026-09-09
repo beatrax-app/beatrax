@@ -42,7 +42,14 @@
                  nl 385, de 387, el 392. It wraps to its own line instead. --}}
             <div class="mt-4 flex flex-wrap items-center gap-3">
                 <div>
-                    <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.ready.label') }}</p>
+                    {{-- The label is a <div> because the tip's panel is one: a
+                         <div popover> inside a <p> closes the paragraph in the
+                         parser, and the figure below would land outside it. --}}
+                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.ready.label') }}&nbsp;<x-core::help-tip
+                        topic="budgets-glance-ready"
+                        :label="Lang::get('budgets::messages.ready.label')"
+                        :body="Lang::get('budgets::help.ready_to_assign')"
+                    /></div>
                     <p
                         class="mt-1 text-3xl font-semibold {{ $toBudgetMinor === null ? 'text-slate-600 dark:text-slate-400' : $figureColour }}"
                         style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;"
