@@ -764,6 +764,26 @@ a user exists and `/signup` and `/welcome` stop answering once one does —
 sweeping either state alone leaves half of them unvisited. `/mobile/welcome`
 answers under the phone shell only and is out of this root's reach.
 
+The ninth arm is the other end of the same document. Every arm above reasons
+about the top: `.top-bar` is sticky and stands in the flow, so a screen under
+it needs no top reserve, and `.safe-screen` is kept off `<main>` for exactly
+that reason. Nothing was said about the bottom, and nothing reserved it —
+`layouts.app`'s `<main>` is the only element between the page and the
+navigation bar, and both phone shells paint the page under it.
+
+Measured on a Galaxy A51 with `/budgets` scrolled as far as it goes: 9px of the
+budget row's move button behind the navigation bar, with no scroll left to
+rescue it. Everything else that sat under the bar at scroll 0 could be scrolled
+clear; that button could not, because it was already at the end.
+
+`.safe-below` is `padding-bottom: var(--safe-bottom)` and nothing else, worn by
+`<main>`. It is a second class rather than `.safe-screen` because the four-edge
+one would reserve the status bar twice, which is the seventh arm's defect
+arriving by a different door. The arm asks the rendered signed-in document for
+the class, and asks `app.css` that the class reads the seam variable rather
+than a number: 48px is this phone's navigation bar, 34px is the iPhone's home
+indicator, and 0 is every desktop.
+
 One caveat about this page itself: Tailwind v4 scans the project root, `.docs/`
 included, so a utility name written in a sentence here is a real candidate for
 the bundle. `px-[…left]` in an earlier draft of this section shipped as
