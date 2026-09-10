@@ -19,6 +19,8 @@ final class SweepUntaggableTaxTagsCommand extends Command
 {
     use CoercesScalars;
 
+    private const int BATCH = 500;
+
     protected $signature = 'tax:sweep-untaggable
         {--user= : Restrict the sweep to one account; defaults to every account}
         {--apply : Remove the tags. Without it the command only reports them.}';
@@ -71,14 +73,14 @@ final class SweepUntaggableTaxTagsCommand extends Command
     {
         $user = $this->option('user');
 
+        // Walked in batches: the offender list is short by the time this is
+        // run, but the table it is found in is as long as the reader's history.
         $rows = $this->db->connection()
             ->table('tax_transaction_tags as tag')
             ->join('transactions as t', 't.id', '=', 'tag.transaction_id')
             ->when(is_string($user) && $user !== '', static fn (Builder $q): Builder => $q->where('tag.user_id', (int) $user))
-            ->orderBy('tag.user_id')
-            ->orderBy('tag.transaction_id')
-            ->orderBy('tag.id')
-            ->get(['tag.user_id', 'tag.transaction_id', 'tag.transaction_split_id', 't.type', 't.payment_type', 't.settled_amount_minor']);
+            ->select(['tag.id as tag_id', 'tag.user_id', 'tag.transaction_id', 'tag.transaction_split_id', 't.type', 't.payment_type', 't.settled_amount_minor'])
+            ->lazyById(self::BATCH, 'tag.id', 'tag_id');
 
         $untaggable = [];
         foreach ($rows as $row) {
