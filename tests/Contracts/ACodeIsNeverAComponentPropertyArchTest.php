@@ -27,23 +27,6 @@ use Modules\Core\Public\Support\PatternScan;
 
 const CODE_PROPERTY_BLADE_FLOOR = 250;
 
-// Recorded rather than exempted, and it can only shrink. MobileImportBootstrap
-// binds the code the reader is CHOOSING on a device that has no lock yet, with
-// live per-field validation keyed on these very names, and it is the first-run
-// screen of a phone -- so converting it is a change to a flow that has to be
-// re-verified on hardware, not a refactor. It zeroes both the moment submit()
-// consumes them. Nothing may be added to this list.
-/**
- * @return list<string>
- */
-function codePropertyRecordedSites(): array
-{
-    return [
-        'Modules/Mobile/Resources/views/livewire/mobile-import-bootstrap.blade.php:pin',
-        'Modules/Mobile/Resources/views/livewire/mobile-import-bootstrap.blade.php:confirmPin',
-    ];
-}
-
 /** @return list<string> */
 function codePropertyBlades(): array
 {
@@ -146,11 +129,9 @@ it('binds no code to a component property, because the snapshot is the browser\'
         $bound = array_merge($bound, codePropertyBindingsIn($relative, (string) file_get_contents($path)));
     }
 
-    $unrecorded = array_values(array_diff($bound, codePropertyRecordedSites()));
-
-    expect($unrecorded)->toBe([], implode("\n", [
+    expect($bound)->toBe([], implode("\n", [
         'These put a code in the wire snapshot:',
-        ...$unrecorded,
+        ...$bound,
         '',
         'A wire:model target is a component property, and a public property is',
         'serialised into the page on every render and every round trip. The code',
@@ -159,11 +140,6 @@ it('binds no code to a component property, because the snapshot is the browser\'
         'screen does: keep the digits in the panel\'s own Alpine scope and send',
         'them once, as a method argument.',
     ]));
-
-    // The list can only shrink. A site that was converted and left here reads
-    // as a violation somebody decided to keep.
-    expect(array_values(array_intersect(codePropertyRecordedSites(), $bound)))
-        ->toBe(codePropertyRecordedSites(), 'A recorded site no template still binds has been fixed; delete its line.');
 });
 
 it('reads a bound code, and passes the shapes that only look like one', function (): void {

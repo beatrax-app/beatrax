@@ -43,9 +43,7 @@ it('leaves the iOS download to the WebView on the import wizard too', function (
             ->set('username', 'phone-owner-ios')
             ->set('password', 'a-genuinely-long-password')
             ->set('passwordConfirmation', 'a-genuinely-long-password')
-            ->set('pin', '426900')
-            ->set('confirmPin', '426900')
-            ->call('submit')
+            ->call('submit', '426900', '426900')
             ->assertSet('step', 'recovery_codes')
             ->html();
     } finally {
@@ -71,9 +69,7 @@ it('still asks the endpoint on a shell that drops WebView downloads', function (
             ->set('username', 'phone-owner-android')
             ->set('password', 'a-genuinely-long-password')
             ->set('passwordConfirmation', 'a-genuinely-long-password')
-            ->set('pin', '426900')
-            ->set('confirmPin', '426900')
-            ->call('submit')
+            ->call('submit', '426900', '426900')
             ->assertSet('step', 'recovery_codes')
             ->html();
     } finally {
@@ -101,9 +97,7 @@ it('still asks the endpoint on a shell that drops downloads and cannot share eit
             ->set('username', 'phone-owner-android-no-share')
             ->set('password', 'a-genuinely-long-password')
             ->set('passwordConfirmation', 'a-genuinely-long-password')
-            ->set('pin', '426900')
-            ->set('confirmPin', '426900')
-            ->call('submit')
+            ->call('submit', '426900', '426900')
             ->assertSet('step', 'recovery_codes')
             ->html();
     } finally {

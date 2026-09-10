@@ -18,6 +18,8 @@ final class LivewireRoundTrip
 {
     /**
      * @param  array<string, string>  $updates  public properties to set before the call
+     * @param  list<mixed>  $params  arguments the method takes rather than holds:
+     *                               a value the component must not keep, like a code
      */
     public static function call(
         TestCase $test,
@@ -25,9 +27,10 @@ final class LivewireRoundTrip
         string $component,
         string $method,
         array $updates = [],
+        array $params = [],
     ): string {
         $response = self::post($test, self::snapshotFor($pageHtml, $component), $updates, [
-            ['path' => '', 'method' => $method, 'params' => []],
+            ['path' => '', 'method' => $method, 'params' => $params],
         ])->assertOk();
 
         $html = $response->json('components.0.effects.html');

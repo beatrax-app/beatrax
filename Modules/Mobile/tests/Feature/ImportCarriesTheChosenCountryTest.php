@@ -17,10 +17,8 @@ function importWithCountry(string $country): User
         ->set('username', 'phone-owner')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
         ->set('country', $country)
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'recovery_codes');
 
     return User::query()->firstOrFail();
