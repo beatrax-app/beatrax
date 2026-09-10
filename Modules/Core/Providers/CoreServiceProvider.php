@@ -16,6 +16,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
+use Modules\Core\Internal\Build\BuiltFrontEnd;
 use Modules\Core\Internal\Console\BackupDatabaseCommand;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\FailedJobsCommand;
@@ -29,6 +30,7 @@ use Modules\Core\Internal\Http\Livewire\SafeEnumSynth;
 use Modules\Core\Internal\Listeners\ApplyInstallTimezoneOffTheRequestPath;
 use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
 use Modules\Core\Internal\Listeners\ForgetNavCountsOnWrite;
+use Modules\Core\Internal\Listeners\RefuseToShipAStaleFrontEnd;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Internal\Support\MigrationWindow;
@@ -108,6 +110,14 @@ final class CoreServiceProvider extends ServiceProvider
         // freshness probe all inject this service to resolve the backups dir.
         $this->app->singleton(UserDataPathService::class);
 
+        // Built beside public/ rather than beside base_path(): the tree that
+        // directory resolves into is the tree its contents were compiled from,
+        // and from the mobile Composer root the two are not the same place.
+        $this->app->singleton(
+            BuiltFrontEnd::class,
+            fn (): BuiltFrontEnd => BuiltFrontEnd::beside($this->app->publicPath()),
+        );
+
         // The 'local' disk is where an uploaded statement is copied, and its
         // framework default root is storage_path('app/private'). Desktop
         // remaps storage_path to the writable data directory; mobile does not,
@@ -154,6 +164,11 @@ final class CoreServiceProvider extends ServiceProvider
         // created_at is what the merge reads to tell a collision from a replay.
 
         $dispatcher->listen(CommandStarting::class, ApplyInstallTimezoneOffTheRequestPath::class);
+
+        // A build that stops beats one that ships the wrong thing: public/build
+        // is bundled as found, so a checkout whose front end predates its
+        // sources reaches a device with the older script and the older sheet.
+        $dispatcher->listen(CommandStarting::class, RefuseToShipAStaleFrontEnd::class);
         $dispatcher->listen(JobProcessing::class, ApplyInstallTimezoneOffTheRequestPath::class);
 
         // Same reasoning one layer down: the sidebar badge invalidation is

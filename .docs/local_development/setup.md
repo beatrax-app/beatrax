@@ -137,6 +137,43 @@ Build before installing on hardware, and note that a worktree given its own
 script no longer carries the Alpine registrations `resources/js` declares, which
 is the shape that reached a phone silently.
 
+Since nothing on the way to a device rebuilds it, the four commands that put
+`public/build` in front of one refuse to start over a stale copy:
+`native:build`, `native:package`, `native:run` and `mobile:package-android`, in
+either Composer root. The refusal names the newest source, the newest built
+file, both timestamps and the fix:
+
+```text
+   Modules\Core\Internal\Build\StaleFrontEndException
+
+  The front end under public/build is older than the sources it is compiled from, so
+  native:run would ship a script and a stylesheet that predate this checkout.
+
+    newest source      resources/js/app.js                          2026-09-10 13:31
+    newest built file  public/build/manifest.json                   2026-09-10 13:23
+  …
+  Run `npm run build`, then native:run again.
+```
+
+What counts as a source is Vite's own entries, `vite.config.js`,
+`package.json`, `package-lock.json`, and the Blade the Tailwind pass compiles
+the stylesheet from — `resources/views` and every `Modules/*/Resources/views`.
+So editing a template is enough to require a rebuild, which is correct: a
+utility class first written into a view is not in the built sheet until the
+next build.
+
+`npm run dev` does not write `public/build`; it writes `public/hot` and serves
+from the Vite dev server. A shell build after a session of `npm run dev` is
+therefore refused until `npm run build` has run once, which takes about twenty
+seconds.
+
+The refusal cannot live in a build hook. `native:run` runs none,
+`nativephp/mobile` has no hook array, and the desktop's prebuild runner prints
+`Command failed` for a hook that exits non-zero and then packages anyway — so a
+`npm run build` added there would report a failed Vite run and ship the older
+bundle regardless. It listens for `CommandStarting` instead, registered by
+`CoreServiceProvider`, which both roots load.
+
 ## Run the test suite
 
 ```sh
