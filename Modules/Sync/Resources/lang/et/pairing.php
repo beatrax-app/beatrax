@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Sinu seadme identiteet on lukus. Ava rakendus ja proovi uuesti.',
     'identity_absent' => 'Sünkroonimine pole selles seadmes veel seadistatud, seega pole tal identiteeti, mida siduda. Luba esmalt sünkroonimine.',
+    'cannot_be_answered' => 'Siin näidatud koodile ei saaks keegi vastata: see seade pole võrgu kaudu kättesaadav ja releed pole seadistatud. Näita teise seadme koodi ja sisesta see siia.',
     'invalid_code' => 'See kood on vigane või aegunud. Palu teisel seadmel uus luua.',
     'already_under_way' => 'See seade on koodi juba vastu võtnud ja ootab teise seadme kinnitust. Kui seda ei tule, palu uus kood ja kasuta seda.',
     'vouched_but_refused' => 'Teisel seadmel on see kood alles, aga see seade ei saanud seda vastu võtta. Palu sellelt uus kood ja kasuta seda.',

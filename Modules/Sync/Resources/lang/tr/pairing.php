@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Cihaz kimliğin kilitli. Uygulamanın kilidini açıp yeniden dene.',
     'identity_absent' => 'Bu cihazda senkronizasyon henüz kurulmadı, bu yüzden eşleştirilecek bir kimliği yok. Önce senkronizasyonu etkinleştir.',
+    'cannot_be_answered' => 'Burada gösterilen bir kod yanıtlanamaz: bu cihaza ağ üzerinden ulaşılamıyor ve bir relay ayarlanmamış. Diğer cihazın kodunu göster ve buraya gir.',
     'invalid_code' => 'Bu kod geçersiz veya süresi dolmuş. Diğer cihazdan yeni bir kod oluşturmasını iste.',
     'already_under_way' => 'Bu cihaz o kodu zaten kabul etti ve diğer cihazın onayını bekliyor. Onay gelmezse yeni bir kod iste ve onu kullan.',
     'vouched_but_refused' => 'Diğer cihaz o kodu hâlâ tutuyor, ancak bu cihaz onu kabul edemedi. Ondan yeni bir kod iste ve onu kullan.',

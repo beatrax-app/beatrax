@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Az eszközazonosságod zárolva van. Oldd fel az alkalmazást, és próbáld újra.',
     'identity_absent' => 'A szinkronizálás még nincs beállítva ezen az eszközön, így nincs identitása a párosításhoz. Előbb kapcsold be a szinkronizálást.',
+    'cannot_be_answered' => 'Az itt megjelenített kódra senki sem tudna válaszolni: ez az eszköz nem érhető el a hálózaton, és nincs beállítva relé. Mutasd meg a másik eszköz kódját, és azt add meg itt.',
     'invalid_code' => 'Ez a kód érvénytelen vagy lejárt. Kérj újat a másik eszköztől.',
     'already_under_way' => 'Ez az eszköz már elfogadta a kódot, és a másik eszköz megerősítésére vár. Ha nem érkezik meg, kérj új kódot, és azt használd.',
     'vouched_but_refused' => 'A másik eszköznél még megvan ez a kód, de ez az eszköz nem tudta elfogadni. Kérj tőle új kódot, és azt használd.',

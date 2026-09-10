@@ -226,6 +226,17 @@ mints no word code on a mobile runtime, and the step renders `scan_on_other` in 
 `enter_on_other`. A computer has no camera, so the working route to a desktop is the other
 direction — show the desktop's code and read it here.
 
+A QR needing no lookup is still not enough on its own. The scan has to be answered, and
+`POST /pair/frame` reaches only a device that listens — which a phone does not. Where no relay
+is configured either, `showMyCode()` refuses through `PairingAnswerability` before a token is
+minted, rather than drawing a code and a countdown nothing can end (**E2-R23**). The refusal
+names the direction that works: read the other device's code here.
+
+That failure was quiet before, and quiet in a way that looked like progress. The safety number
+derives from the two public identities alone, so the scanning phone reached "Confirm — they
+match" while the phone that showed the code sat on step 2 of 3 with its token still `pending`,
+its relay mailbox empty, and nothing listening on 51337.
+
 ## The safety number
 
 `SafetyNumberDeriver::derive()` takes the two raw 32-byte Ed25519 public keys, **sorts them

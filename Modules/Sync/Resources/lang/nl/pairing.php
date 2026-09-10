@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'De identiteit van je apparaat is vergrendeld. Ontgrendel de app en probeer het opnieuw.',
     'identity_absent' => 'Synchronisatie is op dit apparaat nog niet ingesteld, dus het heeft geen identiteit om te koppelen. Schakel eerst synchronisatie in.',
+    'cannot_be_answered' => 'Een code die hier wordt getoond kan niet worden beantwoord: dit apparaat is niet bereikbaar via het netwerk en er is geen relay ingesteld. Toon de code van het andere apparaat en voer die hier in.',
     'invalid_code' => 'Deze code is ongeldig of verlopen. Vraag het andere apparaat om een nieuwe te genereren.',
     'already_under_way' => 'Dit apparaat heeft die code al aangenomen en wacht tot het andere apparaat bevestigt. Gebeurt dat niet, vraag dan een nieuwe code en gebruik die.',
     'vouched_but_refused' => 'Het andere apparaat heeft die code nog, maar dit apparaat kon hem niet aannemen. Vraag daar een nieuwe code en gebruik die.',

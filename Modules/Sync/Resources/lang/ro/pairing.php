@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Identitatea dispozitivului tău este blocată. Deblochează aplicația și încearcă din nou.',
     'identity_absent' => 'Sincronizarea nu este încă configurată pe acest dispozitiv, așa că nu are o identitate de împerecheat. Activează mai întâi sincronizarea.',
+    'cannot_be_answered' => 'Un cod afișat aici nu ar putea primi răspuns: acest dispozitiv nu poate fi contactat în rețea și nu este configurat niciun releu. Afișează codul celuilalt dispozitiv și introdu-l aici.',
     'invalid_code' => 'Acest cod este invalid sau a expirat. Cere celuilalt dispozitiv să genereze unul nou.',
     'already_under_way' => 'Acest dispozitiv a acceptat deja codul și așteaptă confirmarea celuilalt dispozitiv. Dacă nu vine, cere un cod nou și folosește-l pe acela.',
     'vouched_but_refused' => 'Celălalt dispozitiv are încă acel cod, dar acesta nu l-a putut accepta. Cere-i un cod nou și folosește-l pe acela.',

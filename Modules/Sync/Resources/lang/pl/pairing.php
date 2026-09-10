@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Tożsamość Twojego urządzenia jest zablokowana. Odblokuj aplikację i spróbuj ponownie.',
     'identity_absent' => 'Synchronizacja nie jest jeszcze skonfigurowana na tym urządzeniu, więc nie ma ono tożsamości do sparowania. Najpierw włącz synchronizację.',
+    'cannot_be_answered' => 'Na kod pokazany tutaj nikt nie mógłby odpowiedzieć: to urządzenie jest nieosiągalne w sieci i nie skonfigurowano przekaźnika. Pokaż kod drugiego urządzenia i wpisz go tutaj.',
     'invalid_code' => 'Ten kod jest nieprawidłowy albo wygasł. Poproś o wygenerowanie nowego na drugim urządzeniu.',
     'already_under_way' => 'To urządzenie już przyjęło ten kod i czeka na potwierdzenie z drugiego urządzenia. Jeśli nie nadejdzie, poproś o nowy kod i użyj go.',
     'vouched_but_refused' => 'Drugie urządzenie nadal ma ten kod, ale to urządzenie nie mogło go przyjąć. Poproś o nowy kod i użyj go.',

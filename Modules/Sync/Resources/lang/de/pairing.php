@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Die Identität deines Geräts ist gesperrt. Entsperre die App und versuche es erneut.',
     'identity_absent' => 'Die Synchronisierung ist auf diesem Gerät noch nicht eingerichtet, also hat es keine Identität zum Koppeln. Aktiviere zuerst die Synchronisierung.',
+    'cannot_be_answered' => 'Ein hier gezeigter Code könnte nicht beantwortet werden: dieses Gerät ist über das Netzwerk nicht erreichbar, und es ist kein Relay eingerichtet. Zeige stattdessen den Code des anderen Geräts an und gib ihn hier ein.',
     'invalid_code' => 'Dieser Code ist ungültig oder abgelaufen. Lass das andere Gerät einen neuen erzeugen.',
     'already_under_way' => 'Dieses Gerät hat den Code bereits übernommen und wartet auf die Bestätigung des anderen Geräts. Bleibt sie aus, lass einen neuen Code erzeugen und verwende den.',
     'vouched_but_refused' => 'Das andere Gerät hat den Code noch, aber dieses Gerät konnte ihn nicht übernehmen. Lass dort einen neuen Code erzeugen und verwende den.',

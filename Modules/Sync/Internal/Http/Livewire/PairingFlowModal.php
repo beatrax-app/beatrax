@@ -21,6 +21,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsPairingTokenRow;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
+use Modules\Sync\Internal\Pairing\PairingAnswerability;
 use Modules\Sync\Internal\Pairing\PairingFrameCourier;
 use Modules\Sync\Internal\Pairing\PairingLanAdvertisement;
 use Modules\Sync\Internal\Pairing\PairingPeerErrands;
@@ -227,12 +228,21 @@ final class PairingFlowModal extends Component
         DeviceRegistryService $registry,
         PairingRefusalCopy $refusalCopy,
         PairingLanAdvertisement $lanAdvertisement,
+        PairingAnswerability $answerability,
     ): void {
         $userId = $currentUser->user()->id;
 
         [$identityState, $identity] = $identityLoader->loadWithState($userId, $session);
         if ($identity === null) {
             $this->flashMessage = $refusalCopy->identityUnavailable($identityState);
+
+            return;
+        }
+
+        // Asked before a token is minted, so a ceremony that cannot finish is
+        // never started and no row is left to expire.
+        if (! $answerability->canBeAnswered()) {
+            $this->flashMessage = Lang::get('sync::pairing.cannot_be_answered');
 
             return;
         }
@@ -608,8 +618,9 @@ final class PairingFlowModal extends Component
         DeviceRegistryService $registry,
         PairingRefusalCopy $refusalCopy,
         PairingLanAdvertisement $lanAdvertisement,
+        PairingAnswerability $answerability,
     ): void {
-        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session, $relayConfig, $registry, $refusalCopy, $lanAdvertisement);
+        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session, $relayConfig, $registry, $refusalCopy, $lanAdvertisement, $answerability);
     }
 
     // Cancels an IN-FLIGHT pairing: expires the still-live token and resets

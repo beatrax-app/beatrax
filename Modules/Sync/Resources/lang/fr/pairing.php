@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'L\'identité de ton appareil est verrouillée. Déverrouille l\'app et réessaie.',
     'identity_absent' => 'La synchronisation n\'est pas encore configurée sur cet appareil, il n\'a donc aucune identité à appairer. Active d\'abord la synchronisation.',
+    'cannot_be_answered' => 'Un code affiché ici ne pourrait pas recevoir de réponse : cet appareil n\'est pas joignable sur le réseau et aucun relais n\'est configuré. Affiche le code de l\'autre appareil et saisis-le ici.',
     'invalid_code' => 'Ce code est invalide ou a expiré. Demande à l\'autre appareil d\'en générer un nouveau.',
     'already_under_way' => 'Cet appareil a déjà accepté ce code et attend la confirmation de l\'autre appareil. Si elle ne vient pas, demande un nouveau code et utilise celui-là.',
     'vouched_but_refused' => 'L\'autre appareil a toujours ce code, mais cet appareil n\'a pas pu l\'accepter. Demande-lui un nouveau code et utilise celui-là.',
