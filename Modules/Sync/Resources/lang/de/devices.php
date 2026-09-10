@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Neue Identität für dieses Gerät anlegen',
 
     'encrypted_at_rest' => 'Daten im Ruhezustand verschlüsselt',
-    'encrypted_at_rest_scope' => 'Notizen, Buchungstexte und die Namen und IBANs deiner Zahlungsempfänger sind im Buchungsbestand mit der Passphrase deiner App-Sperre verschlüsselt. Beträge, Daten sowie dein eigener Kontoname und deine eigene IBAN sind es nicht. Der Suchindex behält eine eigene lesbare Kopie davon, wen du bezahlst, deiner Buchungstexte und deiner Steuernotizen, und einige Händlernamen stehen im Klartext an anderer Stelle in der Datenbankdatei.',
+    'encrypted_at_rest_scope' => 'Notizen, Buchungstexte und die Namen und IBANs deiner Zahlungsempfänger sind im Buchungsbestand mit der Passphrase deiner App-Sperre verschlüsselt. Beträge, Daten sowie dein eigener Kontoname und deine eigene IBAN sind es nicht. Der Suchindex behält eine eigene lesbare Kopie davon, wen du bezahlst, deiner Buchungstexte, der Notizen, die du zu einer Buchung schreibst, der Notizen, die du zu einer Kategorie einer Aufteilung schreibst, und deiner Steuernotizen, und einige Händlernamen stehen im Klartext an anderer Stelle in der Datenbankdatei.',
     'on' => 'An',
     'securing' => 'Deine Daten werden geschützt…',
     'do_not_close' => 'Schließe dieses Fenster nicht.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Wenn du die Passphrase deiner App-Sperre verlierst und kein Backup und kein anderes vertrauenswürdiges Gerät hast, lassen sich deine Daten nicht wiederherstellen.',
     'recover_help' => 'Um den Zugriff wiederzuerlangen, koppele dieses Gerät von einem anderen vertrauenswürdigen Gerät neu oder nutze dein eigenes verschlüsseltes Backup.',
     'amounts_plaintext' => 'Beträge werden im Ruhezustand nicht verschlüsselt — Salden und Summen bleiben lesbar, damit deine Monatssummen weiter korrekt zusammenzählen.',
-    'search_plaintext' => 'Der Suchindex behält eine Klartextkopie von Händler- und Beschreibungstext, damit die Volltextsuche weiter funktioniert.',
+    'search_plaintext' => 'Der Suchindex behält eine Klartextkopie von Händler-, Beschreibungs- und Notiztext, damit die Volltextsuche weiter funktioniert.',
     'keep_unencrypted' => 'Daten unverschlüsselt lassen',
     'encryption_enabled' => 'Verschlüsselung aktiviert',
     'encryption_enabled_scope' => 'Notizen, Buchungstexte und deine Zahlungsempfänger sind jetzt mit der Passphrase deiner App-Sperre verschlüsselt. Beträge, Daten und der Suchindex bleiben lesbar.',

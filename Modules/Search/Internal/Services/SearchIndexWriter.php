@@ -74,7 +74,7 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         // are the sole reason this class needs a session at all.
         $newBody = $this->bodyFor(
             $connection,
-            ['counterparty_name' => $tx->counterparty_name, 'description' => $tx->description],
+            ['counterparty_name' => $tx->counterparty_name, 'description' => $tx->description, 'note' => $tx->note],
             $transactionId,
             $userId,
             ($this->session)(),
@@ -95,7 +95,7 @@ final class SearchIndexWriter implements SearchIndexWriterContract
     // built from what a keyless drain got back overwrites the words with
     // nothing and answers "no such transaction" over a ledger that has them.
     /**
-     * @param  array{counterparty_name: mixed, description: mixed}  $stored
+     * @param  array{counterparty_name: mixed, description: mixed, note: mixed}  $stored
      */
     private function bodyFor(
         ConnectionInterface $connection,
@@ -104,12 +104,27 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         int $userId,
         Session $session,
     ): ?string {
-        $counterparty = $this->source->read('transactions', 'counterparty_name', $stored['counterparty_name'], $userId, $session);
-        $description = $this->source->read('transactions', 'description', $stored['description'], $userId, $session);
+        $fields = [
+            $this->source->read('transactions', 'counterparty_name', $stored['counterparty_name'], $userId, $session),
+            $this->source->read('transactions', 'description', $stored['description'], $userId, $session),
+            $this->source->read('transactions', 'note', $stored['note'], $userId, $session),
+            $this->taxNote($connection, $transactionId, $userId, $session),
+            ...$this->legNotes($connection, $transactionId, $userId, $session),
+        ];
 
-        // The whole-transaction tag, named rather than left to scan order: a
-        // split leg's tag matches the same transaction_id and carries no note,
-        // so which row `first()` returned decided whether the note was indexed.
+        if (in_array(null, $fields, true)) {
+            return null;
+        }
+
+        /** @var list<string> $fields */
+        return SearchDocumentBody::join(...$fields);
+    }
+
+    // The whole-transaction tag, named rather than left to scan order: a split
+    // leg's tag matches the same transaction_id and carries no note, so which
+    // row `first()` returned decided whether the note was indexed.
+    private function taxNote(ConnectionInterface $connection, int $transactionId, int $userId, Session $session): ?string
+    {
         $tag = $connection
             ->table(SearchedColumns::TAX_TAGS)
             ->select(SearchedColumns::of(SearchedColumns::TAX_TAGS))
@@ -118,13 +133,31 @@ final class SearchIndexWriter implements SearchIndexWriterContract
             ->whereNull('transaction_split_id')
             ->first();
 
-        $note = $this->source->read('tax_transaction_tags', 'note', $tag->note ?? null, $userId, $session);
+        return $this->source->read(SearchedColumns::TAX_TAGS, 'note', $tag->note ?? null, $userId, $session);
+    }
 
-        if ($counterparty === null || $description === null || $note === null) {
-            return null;
+    // One field per leg rather than one joined string, so a needle can never
+    // span two legs — the same reason the fields above are separated at all.
+    /**
+     * @return list<string|null>
+     */
+    private function legNotes(ConnectionInterface $connection, int $transactionId, int $userId, Session $session): array
+    {
+        $legs = SplitLegNotes::ordered(
+            $connection
+                ->table(SearchedColumns::SPLITS)
+                ->select(SearchedColumns::of(SearchedColumns::SPLITS))
+                ->where('transaction_id', $transactionId)
+                ->where('user_id', $userId),
+        )->get();
+
+        $notes = [];
+
+        foreach ($legs as $leg) {
+            $notes[] = $this->source->read(SearchedColumns::SPLITS, 'note', $leg->note ?? null, $userId, $session);
         }
 
-        return SearchDocumentBody::join($counterparty, $description, $note);
+        return $notes;
     }
 
     // Leaves the stored doc exactly as it was — a stale body still finds the

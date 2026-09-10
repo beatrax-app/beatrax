@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Nieuwe identiteit voor dit apparaat starten',
 
     'encrypted_at_rest' => 'Gegevens versleuteld opgeslagen',
-    'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn in het grootboek versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet. De zoekindex bewaart een eigen leesbare kopie van wie je betaalt, van je omschrijvingen van transacties en van je belastingnotities, en sommige namen van winkeliers staan leesbaar elders in het databasebestand.',
+    'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn in het grootboek versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet. De zoekindex bewaart een eigen leesbare kopie van wie je betaalt, van je omschrijvingen van transacties, van de notities die je bij een transactie schrijft, van de notities die je bij een categorie in een splitsing schrijft en van je belastingnotities, en sommige namen van winkeliers staan leesbaar elders in het databasebestand.',
     'on' => 'Aan',
     'securing' => 'Je gegevens worden beveiligd…',
     'do_not_close' => 'Sluit dit venster niet.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Als je je app-vergrendelingswachtwoord verliest en geen back-up of ander vertrouwd apparaat hebt, kunnen je gegevens niet worden hersteld.',
     'recover_help' => 'Om weer toegang te krijgen, koppel je dit apparaat opnieuw vanaf een ander vertrouwd apparaat, of gebruik je je eigen versleutelde back-up.',
     'amounts_plaintext' => 'Bedragen worden niet versleuteld opgeslagen — saldi en totalen blijven leesbaar zodat je maandtotalen correct blijven optellen.',
-    'search_plaintext' => 'De zoekindex bewaart een leesbare kopie van winkelier- en omschrijvingstekst zodat zoeken op volledige tekst blijft werken.',
+    'search_plaintext' => 'De zoekindex bewaart een leesbare kopie van winkelier-, omschrijvings- en notitietekst zodat zoeken op volledige tekst blijft werken.',
     'keep_unencrypted' => 'Gegevens onversleuteld houden',
     'encryption_enabled' => 'Versleuteling ingeschakeld',
     'encryption_enabled_scope' => 'Notities, omschrijvingen en wie je betaalt zijn nu versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en de zoekindex blijven leesbaar.',

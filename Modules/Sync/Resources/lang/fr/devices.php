@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Créer une nouvelle identité pour cet appareil',
 
     'encrypted_at_rest' => 'Données chiffrées au repos',
-    'encrypted_at_rest_scope' => 'Tes notes, les libellés de transaction et les noms et IBAN de tes bénéficiaires sont chiffrés dans le registre avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et le nom et l\'IBAN de ton propre compte ne le sont pas. L\'index de recherche conserve sa propre copie lisible de qui tu paies, de tes libellés de transaction et de tes notes fiscales, et certains noms de commerçants restent en clair ailleurs dans le fichier de base de données.',
+    'encrypted_at_rest_scope' => 'Tes notes, les libellés de transaction et les noms et IBAN de tes bénéficiaires sont chiffrés dans le registre avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et le nom et l\'IBAN de ton propre compte ne le sont pas. L\'index de recherche conserve sa propre copie lisible de qui tu paies, de tes libellés de transaction, des notes que tu écris sur une transaction, des notes que tu écris sur une catégorie d\'une ventilation et de tes notes fiscales, et certains noms de commerçants restent en clair ailleurs dans le fichier de base de données.',
     'on' => 'Activé',
     'securing' => 'Sécurisation de tes données…',
     'do_not_close' => 'Ne ferme pas cette fenêtre.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Si tu perds ta phrase secrète de verrouillage et que tu n\'as ni sauvegarde ni autre appareil de confiance, tes données seront irrécupérables.',
     'recover_help' => 'Pour retrouver l\'accès, réappaire cet appareil depuis un autre appareil de confiance, ou utilise ta sauvegarde chiffrée indépendante.',
     'amounts_plaintext' => 'Les montants ne sont pas chiffrés au repos — les soldes et les totaux restent lisibles pour que tes totaux mensuels continuent de tomber juste.',
-    'search_plaintext' => 'L\'index de recherche conserve une copie en clair du nom du commerçant et de la description pour que la recherche en texte intégral continue de fonctionner.',
+    'search_plaintext' => 'L\'index de recherche conserve une copie en clair du nom du commerçant, de la description et des notes pour que la recherche en texte intégral continue de fonctionner.',
     'keep_unencrypted' => 'Garder les données non chiffrées',
     'encryption_enabled' => 'Chiffrement activé',
     'encryption_enabled_scope' => 'Tes notes, tes libellés et tes bénéficiaires sont désormais chiffrés avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et l\'index de recherche restent lisibles.',

@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Crea una nuova identità per questo dispositivo',
 
     'encrypted_at_rest' => 'Dati crittografati a riposo',
-    'encrypted_at_rest_scope' => 'Le note, le descrizioni delle transazioni e i nomi e gli IBAN di chi paghi sono cifrati nel registro con la passphrase del blocco app. Gli importi, le date e il nome e l\'IBAN del tuo conto no. L\'indice di ricerca conserva una propria copia leggibile di chi paghi, delle descrizioni delle tue transazioni e delle tue note fiscali, e alcuni nomi di esercenti restano in chiaro altrove nel file di database.',
+    'encrypted_at_rest_scope' => 'Le note, le descrizioni delle transazioni e i nomi e gli IBAN di chi paghi sono cifrati nel registro con la passphrase del blocco app. Gli importi, le date e il nome e l\'IBAN del tuo conto no. L\'indice di ricerca conserva una propria copia leggibile di chi paghi, delle descrizioni delle tue transazioni, delle note che scrivi su una transazione, delle note che scrivi su una categoria di una suddivisione e delle tue note fiscali, e alcuni nomi di esercenti restano in chiaro altrove nel file di database.',
     'on' => 'Attivo',
     'securing' => 'Protezione dei tuoi dati…',
     'do_not_close' => 'Non chiudere questa finestra.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => "Se perdi la passphrase di blocco dell'app e non hai un backup né un altro dispositivo attendibile, i tuoi dati non potranno essere recuperati.",
     'recover_help' => "Per riottenere l'accesso, riabbina questo dispositivo da un altro dispositivo attendibile oppure usa il tuo backup crittografato indipendente.",
     'amounts_plaintext' => 'Gli importi non sono crittografati a riposo — saldi e totali restano leggibili così i tuoi totali mensili continuano a tornare.',
-    'search_plaintext' => "L'indice di ricerca conserva una copia in chiaro del testo di esercente e descrizione così la ricerca full-text continua a funzionare.",
+    'search_plaintext' => "L'indice di ricerca conserva una copia in chiaro del testo di esercente, descrizione e note così la ricerca full-text continua a funzionare.",
     'keep_unencrypted' => 'Mantieni i dati non crittografati',
     'encryption_enabled' => 'Crittografia attivata',
     'encryption_enabled_scope' => 'Le note, le descrizioni e chi paghi ora sono cifrati con la passphrase del blocco app. Gli importi, le date e l\'indice di ricerca restano leggibili.',

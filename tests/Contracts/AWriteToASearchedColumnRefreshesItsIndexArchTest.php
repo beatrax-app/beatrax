@@ -16,9 +16,9 @@ use Modules\Search\Public\Support\SearchedColumns;
 
 // The subject is every call that seals a column of one of those tables:
 // SensitiveColumnCodec is the mandatory door into an at-rest-encrypted column,
-// so a writer cannot reach counterparty_name, description or the tax note
-// without passing through here — not even one that names its column through an
-// enum rather than a literal.
+// so a writer cannot reach a counterparty name, a description, a tax note or
+// either of the reader's own notes without passing through here — not even one
+// that names its column through an enum rather than a literal.
 const SEARCHED_SEAL_METHODS = ['encryptAttrs', 'encryptValue'];
 
 // Keyed by path, carrying WHY the write leaves the index describing the row
@@ -26,9 +26,8 @@ const SEARCHED_SEAL_METHODS = ['encryptAttrs', 'encryptValue'];
 // and fails, so the list cannot rot into a blanket exemption.
 const SEARCHED_SEAL_ALLOWED = [
     'Modules/Ledger/Public/Actions/RecordTransactions.php' => 'Inserts rather than updates, and dispatches TransactionImported after the chunk commits; Search listens for it through IndexTransactionOnImport.',
-    'Modules/Ledger/Public/Actions/SetTransactionNote.php' => 'Seals transactions.note, which the body is not composed from — the note the index carries is the whole-transaction tax tag.',
     'Modules/Sync/Public/Casts/EncryptedJsonCast.php' => 'Seals transactions.raw_payload, the source row as the adapter read it, which no search reads.',
-    'Modules/Sync/Internal/Merge/OpLogValueProjector.php' => 'Projects a peer op onto whichever column it names; OpLogReplayer refreshes every touched document through SearchIndexRefresher once the replay commits.',
+    'Modules/Sync/Internal/Merge/OpLogValueProjector.php' => 'Projects a peer op onto whichever column it names; OpLogReplayer refreshes every touched document through SearchIndexRefresher once the replay commits, which reaches a column of this table only while SearchDocumentRows names the table it lives on.',
     'Modules/Core/Internal/Encryption/PlaintextResidueSweep.php' => 'Re-seals a value already stored, so the plaintext the body holds is the same before and after and the document still describes the row.',
 ];
 
