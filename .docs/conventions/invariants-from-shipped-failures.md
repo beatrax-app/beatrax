@@ -7264,6 +7264,55 @@ The rule reads registrations out of the built script rather than out of
 provider a template names and nobody ever registered fails the same check,
 because a fresh build cannot contain that either.
 
+## A built front end older than the sources it was compiled from
+
+`Modules/Core/Internal/Listeners/RefuseToShipAStaleFrontEnd.php`
+
+`public/build` is what ships, and nothing between a checkout and a device
+rebuilds it. `native:run` runs no Vite step, the desktop's prebuild hooks run
+none either, and `nativephp/mobile` has no hook array at all — so both shells
+bundle the directory exactly as they find it on disk. Only CI builds first.
+
+That is invisible from the server side. The manifest resolves, `@vite([...])`
+emits URLs that answer 200, and every view renders. The script is simply older
+than the tree it was built from: a component nobody has registered there yet, a
+utility class nobody has compiled there yet. One phone build loaded a script
+compiled four days before the Alpine provider it was missing, and a stylesheet
+compiled six days before the `.safe-below` class six screens read for their
+inset.
+
+A prebuild hook cannot carry the refusal. `HasPreAndPostProcessing::runProcess()`
+prints `Command failed` for a hook that exits non-zero and then packages anyway,
+so a `npm run build` added there would re-create this exact shape the first time
+Vite failed — a build that reports the failure and ships the older bundle. The
+guard listens for `CommandStarting` instead, which fires ahead of every hook and
+in both Composer roots, because `CoreServiceProvider` is registered in both.
+
+It refuses `native:build`, `native:package`, `native:run` and
+`mobile:package-android`. The last is named beside the others rather than
+covered by `native:package`, which it reaches through `$this->call()` —
+`CommandStarting` never fires for a nested call. `native:publish` needs no entry:
+it delegates through `Artisan::call('native:build')`, which does raise the event.
+
+What counts as a source is Vite's three entries, the two files that decide what
+it makes of them, and the Blade the Tailwind pass compiles the stylesheet from —
+`resources/views` and every `Modules/*/Resources/views`. `resources/corpus` is
+declined: no entry imports it and no template renders it, so a change there
+cannot reach the bundle.
+
+The tree is resolved from `public/`, never from `base_path()`. The mobile root
+reaches this one by symlink, so asking there for `vite.config.js` finds nothing
+while the bundle it builds is compiled from the sources here.
+
+There is deliberately no CI half. `public/build` is gitignored and no workflow
+caches it, so every job that needs it runs `npm run build` after the checkout —
+an artefact newer than every source is all a comparison in CI could ever
+observe. The two content guards beside this one are the same shape and are
+already there: `AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest` and
+`SafeAreaReadsTheSeamArchTest` read the built files and answer for a local tree.
+What the suite pins here is the guard itself —
+`Modules/Core/tests/Unit/ABuildRefusesAFrontEndOlderThanItsSourcesTest.php`.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
