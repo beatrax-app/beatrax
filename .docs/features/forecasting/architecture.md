@@ -63,9 +63,15 @@ What the module explicitly does NOT do:
     `CreateScenario` + `AddScenarioMutation` pair in a DB
     transaction. The scenario's NAME is translated; its IDENTITY is
     the mutation kind plus the series it targets, which is what
-    `ScenarioSeriesResolver::existingScenarioIdForTemplate()` looks a
+    `ScenarioSeriesResolver::existingTemplateScenario()` looks a
     second click up by — three separate actions used to key that on
-    the English name they built.
+    the English name they built. The figure is **not** part of that
+    identity, so a second price typed against the same series
+    re-prices the what-if the reader already has through
+    `EditScenarioMutation` rather than being taken for a repeat
+    click: the name carries no figure and is unique per reader, so a
+    second scenario could not have been named anyway, and the reprice
+    was returning the first scenario's amount in silence.
   - `SetAccountForecastBuffer::__invoke($accountId, $bufferMinor,
     $user)` — the per-account buffer the shortfall detector
     compares against.

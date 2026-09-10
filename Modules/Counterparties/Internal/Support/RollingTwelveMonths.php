@@ -43,6 +43,15 @@ final readonly class RollingTwelveMonths
         return self::start($now)->toDateString();
     }
 
+    // The window's other edge, which it did not have. Every consumer filtered
+    // from startDate() with nothing above it, so a booked future-dated direct
+    // debit landed in the total and the average while months() had no bar to
+    // draw it on — the ledger holds such rows on purpose.
+    public static function endDate(CarbonImmutable $now): string
+    {
+        return $now->endOfMonth()->toDateString();
+    }
+
     // subMonths() off a day the target month does not have rolls FORWARD into
     // the month after it, and a later startOfMonth() cannot undo that: on 31
     // January the twelve buckets ended on a February that had not happened.

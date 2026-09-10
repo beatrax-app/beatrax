@@ -273,7 +273,13 @@ All of them take their window from
 ending with the one in progress. The totals used to take a rolling
 year while the bars took calendar months, so spend inside the headline
 figure, and inside the average it is divided by, had no bar to appear
-in — on the 1st of a month, a whole month of it. Rows are read via the raw query builder rather than
+in — on the 1st of a month, a whole month of it. The class answers
+**both** edges, `startDate()` and `endDate()`, for the same reason: it
+once answered only the lower one, and the ledger deliberately holds
+rows whose `posted_at` is still ahead
+(`Ledger\Public\Services\BookedFutureRowQuery`), so a booked future
+direct debit was counted in
+the total and the average with no bar to draw it on. Rows are read via the raw query builder rather than
 Eloquent, so the explicit `where('user_id', ...)` filter is the
 load-bearing scope (`BelongsToUser` only fires under HTTP-bound
 Eloquent surfaces). `CounterpartyIndexRow` carries no `iban` field at
