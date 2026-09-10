@@ -117,10 +117,16 @@ What the module explicitly does NOT do:
   the synthetic own-IBAN to an Account, adopt or open the hourly
   inbox-handoff `ImportRun`, and write through
   `ReceiptSourceAdapter` → `Import::NormalizeStage` →
-  `Ledger::RecordsTransactions`. Both the inbox job and the
-  drop-folder scan reach it here; the scan used to discard the
-  outcome instead, which moved the file to `processed/` and left
-  the ledger empty.
+  `Categorization::AppliesAutoCategory` →
+  `Counterparties::ResolvesCounterparties` →
+  `Ledger::RecordsTransactions`. The two stages between the
+  normaliser and the recorder are the ones a wizard upload gets from
+  `ImportPipeline`: without them the same message arrived
+  uncategorised and with no counterparty row when the inbox fetched
+  it, and categorised with one when the reader uploaded it. Both the
+  inbox job and the drop-folder scan reach it here; the scan used to
+  discard the outcome instead, which moved the file to `processed/`
+  and left the ledger empty.
 - **Internal/Matchers/** — `PaypalReceiptMatcher`,
   `IcsReceiptMatcher`, `GooglePlayReceiptMatcher`. Each
   parses its sender's HTML / text body, extracts the per-line

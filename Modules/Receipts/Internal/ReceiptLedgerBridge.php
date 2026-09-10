@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Receipts\Internal;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\IdReadBack;
+use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
@@ -30,6 +32,8 @@ final readonly class ReceiptLedgerBridge
     public function __construct(
         private ReceiptSourceAdapter $receiptAdapter,
         private NormalizeStage $normalize,
+        private AppliesAutoCategory $autoCategory,
+        private ResolvesCounterparties $resolveCounterparty,
         private RecordsTransactions $recorder,
         private Clock $clock,
         private DatabaseManager $db,
@@ -52,6 +56,14 @@ final readonly class ReceiptLedgerBridge
         $importRunId ??= $this->resolveHandoffRun($user);
         $source = $this->receiptAdapter->toSourceDto($parsed, sourceRowIndex: 0);
         $canonical = $this->normalize->run($source, $account->id, $user, importRunId: $importRunId, sourceFormat: $sourceFormat->value);
+
+        // The stages a receipt uploaded through the wizard pays for. Reaching
+        // the recorder straight off the normaliser gave the same message two
+        // outcomes: the reader's rules and their merchant list saw a receipt
+        // they had uploaded and never one their inbox had fetched.
+        $canonical = $this->autoCategory->apply($canonical, $user)->canonical;
+        $canonical = $this->resolveCounterparty->run($canonical, $user);
+
         ($this->recorder)([$canonical], $user);
 
         return $importRunId;
