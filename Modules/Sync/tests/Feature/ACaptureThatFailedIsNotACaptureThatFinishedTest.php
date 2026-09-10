@@ -319,3 +319,54 @@ it('stops working a walk nothing can advance, without ever calling it finished',
         ->and(captureGapState($user->id)->completed_at)->toBeNull()
         ->and((int) captureGapState($user->id)->failed_slices)->toBe(BackfillProgress::MAX_FAILED_SLICES);
 });
+
+// The bound the stall exists to be is a bound on the request tail, and the
+// request tail was the thing clearing it: DeliversOwedEpochs opens a capture on
+// every tick it is allowed, and opening a walk reset the count that had stopped
+// it. Eight fruitless slices apart, that made the ceiling a ceiling nothing
+// ever reached.
+
+function captureGapStall(int $userId): void
+{
+    /** @var PreSyncHistoryCapture $capture */
+    $capture = app(PreSyncHistoryCapture::class);
+    $capture->capture($userId);
+
+    for ($slice = 0; $slice < BackfillProgress::MAX_FAILED_SLICES; $slice++) {
+        $capture->resume($userId);
+    }
+}
+
+it('leaves a stalled walk stalled however often the request tail comes back', function (): void {
+    $user = captureGapUser();
+    captureGapUnreadableCounterparty($user->id);
+    captureGapBindWriter($user->id);
+
+    captureGapStall((int) $user->id);
+
+    /** @var PreSyncHistoryCapture $capture */
+    $capture = app(PreSyncHistoryCapture::class);
+
+    for ($tick = 0; $tick < 5; $tick++) {
+        $capture->owe((int) $user->id);
+    }
+
+    expect(app(BackfillProgress::class)->isOpen((int) $user->id))->toBeFalse()
+        ->and((int) captureGapState((int) $user->id)->failed_slices)->toBe(BackfillProgress::MAX_FAILED_SLICES)
+        ->and(captureGapState((int) $user->id)->completed_at)->toBeNull();
+});
+
+it('works the walk again when the reader asks for one', function (): void {
+    $user = captureGapUser();
+    captureGapUnreadableCounterparty($user->id);
+    captureGapBindWriter($user->id);
+
+    captureGapStall((int) $user->id);
+
+    app(PreSyncHistoryCapture::class)->capture((int) $user->id);
+
+    // One slice of the reopened walk runs inside capture(), and it is fruitless
+    // for the same reason as the eight before it -- so the count stands at one,
+    // not at nothing. What matters is that it is no longer at the ceiling.
+    expect((int) captureGapState((int) $user->id)->failed_slices)->toBeLessThan(BackfillProgress::MAX_FAILED_SLICES);
+});

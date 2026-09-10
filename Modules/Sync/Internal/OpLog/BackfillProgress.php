@@ -27,12 +27,13 @@ final readonly class BackfillProgress
         private Clock $clock,
     ) {}
 
-    // Starts a walk, or reopens one a completed or stalled run had closed: rows
-    // may have appeared since, and row-wise idempotence makes a repeat cheap. A
-    // walk still in flight keeps its cursor rather than restarting at the top.
+    // Reopens a completed walk, because rows may have appeared since. A walk
+    // nobody has finished keeps what it has -- its cursor, and the fruitless
+    // slices that stalled it. Reading isOpen() here instead made the stall
+    // self-clearing, since the request tail reopens on every tick it is allowed.
     public function open(int $userId): void
     {
-        if ($this->isOpen($userId)) {
+        if ($this->isUnfinished($userId)) {
             return;
         }
 
@@ -50,6 +51,28 @@ final readonly class BackfillProgress
                 'updated_at' => $now,
             ],
         );
+    }
+
+    // Open or stalled: two states of one walk nobody has finished, and neither
+    // wants its cursor or its stall count replaced under it.
+    private function isUnfinished(int $userId): bool
+    {
+        return $this->db->connection()->table('sync_backfill_state')
+            ->where('user_id', $userId)
+            ->whereNull('completed_at')
+            ->exists();
+    }
+
+    // The reader asked for this walk, so the stall goes with the asking. The
+    // count infers a permanent condition from repetition alone, and pairing a
+    // device that carries the epoch the walk could not read is exactly the new
+    // information repetition cannot hold.
+    public function clearStall(int $userId): void
+    {
+        $this->db->connection()->table('sync_backfill_state')
+            ->where('user_id', $userId)
+            ->whereNull('completed_at')
+            ->update(['failed_slices' => 0, 'updated_at' => Instant::zulu($this->clock->now())]);
     }
 
     // The one read the resume driver makes on every request it is allowed to
