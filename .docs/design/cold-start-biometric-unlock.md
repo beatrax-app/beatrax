@@ -336,7 +336,14 @@ on-device UAT):
   through to the PIN pad; `missing` takes the enrolment flag down, takes the
   trigger off the screen and prints `mobile::lock.errors.biometric_reset`.
   Async (Android) handled by the event, see below.
-- `LockScreen::nativeUnlock()` — the same distinction over the shared
+- `LockScreen::nativeUnlock()` — reads the enrolment flag before it prompts, for
+  the reason `MobileLockScreen::biometricPrompt()` re-checks its own gates: a
+  Livewire method is callable whatever `mount()` rendered, and the desktop vault
+  keys its file on the user id alone, so an entry left by an earlier holder of
+  that id opens to a key this account has never held. `mount()` had read the flag
+  since `OrphanedColdStartEnrolmentTest` was written; the action had not, so the
+  control was off the screen and the unlock behind it was not.
+  Past that gate it draws the same distinction over the shared
   `ColdStartVault`, which flattens every refusal to a null. It is recovered by
   asking `isEnrolled()` again: implementations drop an entry they could not
   read *before* answering (`DesktopColdStartVault` deletes the file,
