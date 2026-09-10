@@ -37,6 +37,7 @@ return [
     'done' => 'Gotovo',
 
     'identity_locked' => 'Identitet tvog uređaja je zaključan. Otključaj aplikaciju i pokušaj ponovno.',
+    'identity_absent' => 'Sinkronizacija još nije postavljena na ovom uređaju, pa nema identitet za uparivanje. Prvo uključi sinkronizaciju.',
     'invalid_code' => 'Ovaj kod nije valjan ili je istekao. Zatraži da drugi uređaj generira novi.',
     'already_under_way' => 'Ovaj uređaj je taj kod već prihvatio i čeka potvrdu s drugog uređaja. Ako ne stigne, zatraži novi kod i upotrijebi njega.',
     'vouched_but_refused' => 'Drugi uređaj još ima taj kod, ali ga ovaj uređaj nije mogao prihvatiti. Zatraži od njega novi kod i upotrijebi njega.',

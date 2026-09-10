@@ -230,9 +230,9 @@ final class PairingFlowModal extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        $identity = $identityLoader->load($userId, $session);
+        [$identityState, $identity] = $identityLoader->loadWithState($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = $refusalCopy->identityUnavailable($userId, $session);
+            $this->flashMessage = $refusalCopy->identityUnavailable($identityState);
 
             return;
         }
@@ -318,9 +318,9 @@ final class PairingFlowModal extends Component
     ): void {
         $userId = $currentUser->user()->id;
 
-        $identity = $identityLoader->load($userId, $session);
+        [$identityState, $identity] = $identityLoader->loadWithState($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = $refusalCopy->identityUnavailable($userId, $session);
+            $this->flashMessage = $refusalCopy->identityUnavailable($identityState);
 
             return;
         }
@@ -501,9 +501,9 @@ final class PairingFlowModal extends Component
 
         // Binds the confirming side to THIS device's real identity — the
         // service derives the side from this device id, never from client state.
-        $identity = $identityLoader->load($userId, $session);
+        [$identityState, $identity] = $identityLoader->loadWithState($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = $refusalCopy->identityUnavailable($userId, $session);
+            $this->flashMessage = $refusalCopy->identityUnavailable($identityState);
 
             return;
         }
