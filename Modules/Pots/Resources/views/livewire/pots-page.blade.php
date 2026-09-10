@@ -81,7 +81,23 @@
     {{-- Page header --}}
     <header class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <x-core::page-heading>{{ Lang::get('pots::messages.heading') }}</x-core::page-heading>
+            {{-- The three figures under each account are drawn once per
+                 currency, so the panel that reads them belongs up here where
+                 its id is unique. --}}
+            <x-core::page-heading>
+                {{ Lang::get('pots::messages.heading') }}
+                <x-slot:tip>
+                    <x-core::help-tip
+                        topic="pots"
+                        :label="Lang::get('pots::messages.heading')"
+                        :body="Lang::get('pots::help.pots', [
+                            'real' => rtrim(Lang::get('pots::messages.recon.real_balance'), ': '),
+                            'allocated' => rtrim(Lang::get('pots::messages.recon.allocated'), ': '),
+                            'unallocated' => rtrim(Lang::get('pots::messages.recon.unallocated'), ': '),
+                        ])"
+                    />
+                </x-slot:tip>
+            </x-core::page-heading>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('pots::messages.subtitle') }}</p>
         </div>
         @if (count($accounts) > 0)

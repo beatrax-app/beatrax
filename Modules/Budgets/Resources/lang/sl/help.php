@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Kaj se zgodi s kuverto, ki je porabila več, kot je v njej, ko se obdobje izteče. Pri „:reduce“ se primanjkljaj odšteje že od tega, kar boš imel naslednje obdobje za razporediti, sama kuverta pa se spet začne pri nič. Pri „:carry“ primanjkljaj ostane tam, kjer je nastal: ta kuverta se odpre pod ničlo in jo je treba dopolniti, preden spet kaj plača, preostanek načrta pa se ne premakne.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Kaj lahko ta kuverta še plača: „:assigned“ za to obdobje, plus „:carried“, plus ali minus „:moved“, minus „:spent“ — štirje stolpci na levi. To ni stanje na računu: z istega računa črpa več kuvert, ta številka pa govori samo o tej eni. Pod ničlo je kuverta že porabila več, kot je v njej, konec obdobja pa odloči, kaj se zgodi s tem primanjkljajem.',
 ];

@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Što se događa s omotnicom koja je potrošila više nego što u njoj ima, kad razdoblje završi. Uz „:reduce” manjak se odbija odmah od onoga što ćeš iduće razdoblje imati za rasporediti, a sama omotnica opet kreće od nule. Uz „:carry” manjak ostaje ondje gdje je nastao: ta omotnica otvara se ispod nule i mora se dopuniti prije nego što išta plati, a ostatak plana se ne miče.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Što ova omotnica još može platiti: „:assigned” za ovo razdoblje, plus „:carried”, plus ili minus „:moved”, minus „:spent” — četiri stupca lijevo. To nije stanje na računu: više omotnica crpi s istog računa, a ovaj iznos govori samo o ovoj. Ispod nule omotnica je već potrošila više nego što u njoj ima, a kraj razdoblja odlučuje što će biti s tim manjkom.',
 ];

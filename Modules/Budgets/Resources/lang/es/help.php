@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Lo que le ocurre a un sobre que ha gastado más de lo que contiene, una vez termina el periodo. Con “:reduce”, el descubierto se descuenta de lo primero que tendrás para repartir el periodo siguiente y el sobre vuelve a empezar en cero. Con “:carry”, el descubierto se queda donde se produjo: ese sobre abre por debajo de cero y hay que rellenarlo antes de que vuelva a pagar nada, y el resto del plan no se toca.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Lo que este sobre todavía puede pagar: “:assigned” de este periodo, más “:carried”, más o menos “:moved”, menos “:spent” — las cuatro columnas de la izquierda. No es un saldo bancario: varios sobres tiran de la misma cuenta, y esta cifra solo habla de este. Por debajo de cero el sobre ya ha gastado más de lo que contiene, y el final del periodo decide qué pasa con ese descubierto.',
 ];

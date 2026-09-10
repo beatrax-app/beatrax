@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Kas notiek ar aploksni, kas iztērējusi vairāk, nekā tajā ir, kad periods beidzas. Ar „:reduce“ iztrūkums vispirms tiek atskaitīts no tā, kas tev būs sadalāms nākamajā periodā, un pati aploksne sāk no nulles. Ar „:carry“ iztrūkums paliek tur, kur radās: šī aploksne atveras zem nulles un ir jāpapildina, pirms tā par kaut ko maksā, bet pārējais plāns netiek aiztikts.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Ko šī aploksne vēl var samaksāt: „:assigned“ par šo periodu, plus „:carried“, plus vai mīnus „:moved“, mīnus „:spent“ — četras kolonnas pa kreisi. Tas nav konta atlikums: no viena konta smeļas vairākas aploksnes, un šis skaitlis runā tikai par šo vienu. Zem nulles aploksne jau ir iztērējusi vairāk, nekā tajā ir, un perioda beigas izšķir, kas notiks ar šo iztrūkumu.',
 ];

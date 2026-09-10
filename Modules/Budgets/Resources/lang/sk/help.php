@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Čo sa stane s obálkou, ktorá minula viac, než v nej je, len čo sa obdobie skončí. Pri „:reduce“ sa schodok odpočíta hneď z toho, čo budeš mať nasledujúce obdobie na rozdelenie, a samotná obálka začína znova na nule. Pri „:carry“ zostane schodok tam, kde vznikol: obálka sa otvorí pod nulou a treba ju najprv doplniť, než z nej pôjde čokoľvek zaplatiť, a so zvyškom plánu sa nič nedeje.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Čo táto obálka ešte môže zaplatiť: „:assigned“ za toto obdobie, plus „:carried“, plus alebo mínus „:moved“, mínus „:spent“ — štyri stĺpce vľavo. Nie je to zostatok na účte: z jedného účtu čerpá viac obálok a toto číslo hovorí len za túto jednu. Pod nulou obálka minula viac, než v nej je, a koniec obdobia rozhodne, čo sa s tým schodkom stane.',
 ];
