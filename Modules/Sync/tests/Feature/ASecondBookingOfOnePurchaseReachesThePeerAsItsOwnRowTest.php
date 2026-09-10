@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -89,9 +90,9 @@ function secondBookingRow(int $userId, int $accountId, int $runId, int $ordinal)
         'source_format' => 'asn-csv',
         'source_row_index' => $ordinal,
         'occurrence_ordinal' => $ordinal,
-        'fingerprint' => $composer->composeTuple(
+        'fingerprint' => $composer->composeTuple(new FingerprintTuple(
             $userId, $accountId, '2026-02-03', '2026-02-03 00:00:00', -350, 'EUR', 'koffiehuis', $ordinal,
-        ),
+        )),
         'fingerprint_version' => FingerprintComposer::NORMALIZATION_VERSION,
         'status' => 'cleared',
         'created_at' => '2026-02-03 10:00:00',

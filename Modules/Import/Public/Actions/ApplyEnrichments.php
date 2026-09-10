@@ -15,6 +15,7 @@ use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
@@ -262,7 +263,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             $rederived['normalization_version'] = $this->fingerprints->version();
         }
 
-        $rederived['fingerprint'] = $this->fingerprints->composeTuple(
+        $rederived['fingerprint'] = $this->fingerprints->composeTuple(new FingerprintTuple(
             $user->id,
             self::toInt($row->account_id),
             CarbonImmutable::parse(self::toString($row->posted_at))->toDateString(),
@@ -271,7 +272,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             $amount->currency ?? self::toString($row->currency),
             $normalized,
             self::toInt($row->occurrence_ordinal),
-        );
+        ));
         $rederived['fingerprint_version'] = $this->fingerprints->version();
 
         return $rederived;

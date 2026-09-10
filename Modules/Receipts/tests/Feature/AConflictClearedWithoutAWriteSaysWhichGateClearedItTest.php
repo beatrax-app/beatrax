@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
@@ -81,7 +82,7 @@ beforeEach(function (): void {
         'source_format' => 'paypal-csv',
         'import_run_id' => $run->id,
         'source_row_index' => 1,
-        'fingerprint' => $fingerprints->composeTuple(
+        'fingerprint' => $fingerprints->composeTuple(new FingerprintTuple(
             $this->fixtureUser->id,
             $this->fixtureAccount->id,
             '2026-04-01',
@@ -90,7 +91,7 @@ beforeEach(function (): void {
             'EUR',
             $normalized,
             0,
-        ),
+        )),
         'fingerprint_version' => $fingerprints->version(),
     ]);
 

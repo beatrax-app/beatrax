@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Normalizer;
 
 final class FingerprintComposer
@@ -15,40 +16,23 @@ final class FingerprintComposer
 
     public function compose(CanonicalTransaction $tx): string
     {
-        return $this->composeTuple(
-            $tx->userId ?? 0,
-            $tx->accountId,
-            $tx->postedAt->toDateString(),
-            $tx->bookedAt->toDateTimeString(),
-            $tx->amountMinor,
-            $tx->currency,
-            $tx->counterpartyNormalized,
-            $tx->occurrenceOrdinal,
-        );
+        return $this->composeTuple(FingerprintTuple::of($tx));
     }
 
     // The same tuple over values read straight from a row, for the sweeps that
     // rewrite counterparty_normalized and must rewrite the fingerprint with it
     // rather than rebuild a whole canonical DTO to reach eight of its fields.
-    public function composeTuple(
-        int $userId,
-        int $accountId,
-        string $postedAtDate,
-        string $bookedAtDateTime,
-        int $amountMinor,
-        string $currency,
-        string $counterpartyNormalized,
-        int $occurrenceOrdinal,
-    ): string {
+    public function composeTuple(FingerprintTuple $tuple): string
+    {
         return hash('sha256', self::occurrenceGroupOf(
-            $userId,
-            $accountId,
-            $postedAtDate,
-            $bookedAtDateTime,
-            $amountMinor,
-            $currency,
-            $counterpartyNormalized,
-        ).'|'.$occurrenceOrdinal);
+            $tuple->userId,
+            $tuple->accountId,
+            $tuple->postedAtDate,
+            $tuple->bookedAtDateTime,
+            $tuple->amountMinor,
+            $tuple->currency,
+            $tuple->counterpartyNormalized,
+        ).'|'.$tuple->occurrenceOrdinal);
     }
 
     // Everything the tuple holds except which occurrence it is: what two rows
