@@ -212,9 +212,16 @@ on-device UAT):
   wraps that DK into `ColdStartVault`, zeroes the released copy, and marks the
   enrolment flag the lock screens read. An empty or wrong PIN, an unavailable
   vault or a refused write all leave nothing enrolled and the flag down.
-  Its two callers are the Enroll button on `AppLockSettingsSection`, which opens
-  a PIN confirmation exactly as de-enrolling does, and `LockScreen::submit()`,
-  which re-arms a vault holding nothing using the PIN it has just verified.
+  It has exactly one caller: the Enroll button on `AppLockSettingsSection`,
+  which opens a PIN confirmation exactly as de-enrolling does. Enrolment is
+  opt-in, and this is the only place the reader can opt in.
+  `LockScreen::submit()` used to re-arm an empty vault with the PIN it had just
+  verified, which was convenient and was not the ask: a correct PIN is proof of
+  identity, not a request to enrol a fingerprint, and a reader who turned the
+  lock off and on again found biometric unlock back on without choosing it.
+  Turning the app lock off still forgets the entry — that is the security
+  property, and it is unchanged — so what a disable/enable cycle now costs is
+  one visit to the settings control.
   There were two enrolment controls before there was one: the PIN-gated one was
   mounted by no screen, and the one the phone actually rendered armed the vault
   from the session's own key and asked for nothing at all.

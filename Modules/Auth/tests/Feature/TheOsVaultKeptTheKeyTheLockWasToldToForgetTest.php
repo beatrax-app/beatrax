@@ -35,6 +35,15 @@ function vaultKeptUser(string $username): User
     return $user;
 }
 
+function vaultKeptEnroll(string $pin): void
+{
+    Livewire::test(AppLockSettingsSection::class)
+        ->call('startEnroll')
+        ->set('enrollPin', $pin)
+        ->call('enrollWithPin')
+        ->assertSet('biometricEnrolled', true);
+}
+
 function vaultKeptEnableAndEnroll(string $pin): void
 {
     Livewire::test(AppLockSettingsSection::class)
@@ -42,11 +51,9 @@ function vaultKeptEnableAndEnroll(string $pin): void
         ->set('confirmPin', $pin)
         ->set('accountPassword', 'vault-account-pass')
         ->call('setPin')
-        ->assertSet('lockEnabled', true)
-        ->call('startEnroll')
-        ->set('enrollPin', $pin)
-        ->call('enrollWithPin')
-        ->assertSet('biometricEnrolled', true);
+        ->assertSet('lockEnabled', true);
+
+    vaultKeptEnroll($pin);
 }
 
 it('drops the OS-vault copy of the data key when the lock is turned off', function (): void {
@@ -67,7 +74,7 @@ it('drops the OS-vault copy of the data key when the lock is turned off', functi
     expect($vault->keys)->toBe([], 'disable() clears every durable wrap of the data key, and the OS vault holds one');
 });
 
-it('offers the native unlock again after the lock is turned off and back on', function (): void {
+it('leaves the native unlock off after the lock is turned off and back on, until it is asked for again', function (): void {
     $vault = new DurableColdStartVault;
     $this->app->instance(ColdStartVault::class, $vault);
 
@@ -95,10 +102,21 @@ it('offers the native unlock again after the lock is turned off and back on', fu
 
     Livewire::test(LockScreen::class)->call('submit', '246802');
 
-    // Read before anything else touches the vault: the unlock is the moment the
-    // lock screen re-enrols, and it only does so when nothing is enrolled.
+    // The unlock arms nothing. Enrolling is a thing the reader asks for on the
+    // settings screen, and turning the lock off and on again is not that ask.
     expect($vault->keys[$user->id] ?? null)
-        ->not->toBe($firstKey, 'the re-enrolled blob must wrap the key the new PIN provisioned, not the one it replaced');
+        ->toBeNull('a correct PIN is proof of identity, not a request to enrol a fingerprint')
+        ->and($firstKey)->toBeString('the case is only worth anything if something was enrolled to begin with');
+
+    Livewire::test(LockScreen::class)->assertSet('nativeUnlockAvailable', false);
+
+    // And the ask still works: the same settings control arms it again, with
+    // the key the new PIN provisioned rather than the one it replaced.
+    vaultKeptEnroll('246802');
+
+    expect($vault->keys[$user->id] ?? null)
+        ->toBeString('the settings control is the way back')
+        ->not->toBe($firstKey, 'the new blob must wrap the key the new PIN provisioned');
 
     Livewire::test(LockScreen::class)->assertSet('nativeUnlockAvailable', true);
 });
