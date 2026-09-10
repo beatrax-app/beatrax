@@ -199,9 +199,10 @@ it('parses the six empirical summary amounts column-by-column from the four-toke
 
     expect($metadata)->toBeInstanceOf(StatementSummaryData::class);
     /** @var StatementSummaryData $metadata */
-    // Balances are signed negative because a debit is owed to ICS. The
-    // numbers come off page 1's four-column header, which reads
-    // `€ 606,96 Af  € 606,96 Bij  € 1.416,50 Af  € 1.416,50 Af`.
+    // Both balances are signed negative because both are marked `Af`, which is
+    // owed to ICS. The numbers come off page 1's four-column header, which
+    // reads `€ 606,96 Af  € 606,96 Bij  € 1.416,50 Af  € 1.416,50 Af` — every
+    // column of it in the direction the fixed per-column sign assumed.
     expect($metadata->openingBalanceMinor)->toBe(-60696);
     expect($metadata->closingBalanceMinor)->toBe(-141650);
 
