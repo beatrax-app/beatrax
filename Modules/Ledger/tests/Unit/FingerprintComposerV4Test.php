@@ -16,9 +16,9 @@ it('produces a stable 64-hex SHA-256 for identical inputs', function (): void {
     expect($a)->toBe($b);
 })->group('phase-2');
 
-it('exposes NORMALIZATION_VERSION as 3', function (): void {
-    expect((new FingerprintComposer)->version())->toBe(3);
-    expect(FingerprintComposer::NORMALIZATION_VERSION)->toBe(3);
+it('exposes NORMALIZATION_VERSION as 4', function (): void {
+    expect((new FingerprintComposer)->version())->toBe(4);
+    expect(FingerprintComposer::NORMALIZATION_VERSION)->toBe(4);
 })->group('phase-2');
 
 it('produces an identical hash when only sourceRef differs', function (): void {
@@ -41,7 +41,7 @@ it('produces a different hash when bookedAt differs by one second', function ():
     expect($a)->not->toBe($b);
 })->group('phase-2');
 
-it('is sensitive to every other v3 tuple field', function (string $field, mixed $alternate): void {
+it('is sensitive to every other v4 tuple field', function (string $field, mixed $alternate): void {
     $composer = new FingerprintComposer;
 
     $base = $composer->compose($this->canonical());
@@ -55,9 +55,13 @@ it('is sensitive to every other v3 tuple field', function (string $field, mixed 
     'amountMinor' => ['amountMinor', -200],
     'currency' => ['currency', 'USD'],
     'counterpartyNormalized' => ['counterpartyNormalized', 'different-merchant'],
+    // The one a bank cannot vary. Two identical bookings on one statement agree
+    // in every field above, so without this the second hashes to the first and
+    // insertOrIgnore drops a purchase the reader made.
+    'occurrenceOrdinal' => ['occurrenceOrdinal', 1],
 ])->group('phase-2');
 
-it('treats a null userId as zero in the v3 tuple', function (): void {
+it('treats a null userId as zero in the v4 tuple', function (): void {
     $composer = new FingerprintComposer;
 
     $withNull = $composer->compose($this->canonical(['userId' => null]));

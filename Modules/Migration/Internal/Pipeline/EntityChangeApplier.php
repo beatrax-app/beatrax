@@ -195,6 +195,7 @@ final readonly class EntityChangeApplier
             importRunId: self::toInt($row->import_run_id),
             sourceRowIndex: self::toInt($row->source_row_index),
             sourceRef: $row->source_ref !== null ? self::toString($row->source_ref) : null,
+            occurrenceOrdinal: self::toInt($row->occurrence_ordinal),
         );
 
         $fingerprint = $this->fingerprints->compose($canonical);

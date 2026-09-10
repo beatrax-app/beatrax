@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Services\FingerprintComposer;
 
 beforeEach(function (): void {
     /** @var DatabaseManager $db */
@@ -48,25 +49,25 @@ it('reports a dry-run preview without writing when --dry-run is set', function (
         ->count();
     expect($remainingV2)->toBe(2);
 
-    $v3Count = $this->db->connection()
+    $currentCount = $this->db->connection()
         ->table('transactions')
-        ->where('normalization_version', 3)
+        ->where('normalization_version', FingerprintComposer::NORMALIZATION_VERSION)
         ->count();
-    expect($v3Count)->toBe(0);
+    expect($currentCount)->toBe(0);
 })->group('phase-2');
 
-it('rewrites v2 rows to v3 in a single transaction when no collisions exist', function (): void {
+it('rewrites rows below the current version in a single transaction when no collisions exist', function (): void {
     $this->seedTwoNonCollidingV2Rows();
 
     $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
-        ->expectsOutputToContain('Re-derived 2 rows to v3')
+        ->expectsOutputToContain('Re-derived 2 rows to v'.FingerprintComposer::NORMALIZATION_VERSION)
         ->assertSuccessful();
 
-    $v3Count = $this->db->connection()
+    $currentCount = $this->db->connection()
         ->table('transactions')
-        ->where('normalization_version', 3)
+        ->where('normalization_version', FingerprintComposer::NORMALIZATION_VERSION)
         ->count();
-    expect($v3Count)->toBe(2);
+    expect($currentCount)->toBe(2);
 
     $v2Count = $this->db->connection()
         ->table('transactions')
@@ -81,11 +82,11 @@ it('rewrites v2 rows to v3 in a single transaction when no collisions exist', fu
     expect($rows[0]->fingerprint)->not->toBe($rows[1]->fingerprint);
 })->group('phase-2');
 
-it('aborts with a clear error when a v3 tuple collision exists in v2 data', function (): void {
+it('aborts with a clear error when the current tuple would collide on older data', function (): void {
     $this->seedCollidingV2Rows();
 
     $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
-        ->expectsOutputToContain('Fingerprint v3 migration ABORTED')
+        ->expectsOutputToContain('Fingerprint v'.FingerprintComposer::NORMALIZATION_VERSION.' migration ABORTED')
         ->expectsOutputToContain('1 collision(s) detected')
         ->assertFailed();
 
@@ -95,25 +96,25 @@ it('aborts with a clear error when a v3 tuple collision exists in v2 data', func
         ->count();
     expect($v2Count)->toBe(2);
 
-    $v3Count = $this->db->connection()
+    $currentCount = $this->db->connection()
         ->table('transactions')
-        ->where('normalization_version', 3)
+        ->where('normalization_version', FingerprintComposer::NORMALIZATION_VERSION)
         ->count();
-    expect($v3Count)->toBe(0);
+    expect($currentCount)->toBe(0);
 })->group('phase-2');
 
-it('skips rows already on v3 (idempotent re-run)', function (): void {
-    $this->seedOneV3Row();
+it('skips rows already on the current version (idempotent re-run)', function (): void {
+    $this->seedOneCurrentVersionRow();
 
     $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
         ->expectsOutputToContain('0 rows would be re-derived')
         ->assertSuccessful();
 
-    $v3Count = $this->db->connection()
+    $currentCount = $this->db->connection()
         ->table('transactions')
-        ->where('normalization_version', 3)
+        ->where('normalization_version', FingerprintComposer::NORMALIZATION_VERSION)
         ->count();
-    expect($v3Count)->toBe(1);
+    expect($currentCount)->toBe(1);
 })->group('phase-2');
 
 it('falls back to dry-run output when neither --confirm nor --dry-run is supplied', function (): void {
@@ -123,14 +124,14 @@ it('falls back to dry-run output when neither --confirm nor --dry-run is supplie
         ->expectsOutputToContain('Dry-run OK. 2 rows would be re-derived')
         ->assertSuccessful();
 
-    $v3Count = $this->db->connection()
+    $currentCount = $this->db->connection()
         ->table('transactions')
-        ->where('normalization_version', 3)
+        ->where('normalization_version', FingerprintComposer::NORMALIZATION_VERSION)
         ->count();
-    expect($v3Count)->toBe(0);
+    expect($currentCount)->toBe(0);
 })->group('phase-2');
 
-it('re-derives v3 fingerprints over a realistic-scale row set without collisions', function (): void {
+it('re-derives fingerprints over a realistic-scale row set without collisions', function (): void {
     // 229 rows: the size of the three-month ASN CAMT fixture corpus, so this
     // runs at the scale a real re-derive would.
     for ($i = 0; $i < 229; $i++) {
@@ -149,14 +150,14 @@ it('re-derives v3 fingerprints over a realistic-scale row set without collisions
     }
 
     $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
-        ->expectsOutputToContain('Re-derived 229 rows to v3')
+        ->expectsOutputToContain('Re-derived 229 rows to v'.FingerprintComposer::NORMALIZATION_VERSION)
         ->assertSuccessful();
 
-    $v3Count = $this->db->connection()
+    $currentCount = $this->db->connection()
         ->table('transactions')
-        ->where('normalization_version', 3)
+        ->where('normalization_version', FingerprintComposer::NORMALIZATION_VERSION)
         ->count();
-    expect($v3Count)->toBe(229);
+    expect($currentCount)->toBe(229);
 
     $distinctFingerprints = $this->db->connection()
         ->table('transactions')

@@ -98,7 +98,7 @@ composer test
 ## Common debugging recipes
 
 - **A re-imported row producing a duplicate transaction** —
-  the v3 fingerprint inputs differ between the two imports.
+  the v4 fingerprint inputs differ between the two imports.
   Compare `transactions.fingerprint` for both rows; the
   most common cause is a parser normalising counterparty
   differently across two adapter versions.
@@ -152,7 +152,7 @@ and the assertion — see
   the pair at two.
 - **`RecordsStatementSummary` is the SOLE sanctioned writer for
   `statement_summaries`.**
-- **`RecordTransactions::__invoke` is idempotent on the v3
+- **`RecordTransactions::__invoke` is idempotent on the v4
   fingerprint.** INSERT ON CONFLICT(fingerprint) DO UPDATE
   (append to `enriched_from`); re-importing the same row never
   produces a duplicate transaction.
@@ -160,10 +160,13 @@ and the assertion — see
   `source_ref` value observed for a fingerprint appends a new
   entry; no entry is ever removed. The historical chain of
   observations survives.
-- **The v3 fingerprint includes `account_id`.** v2 omitted it
-  (a documented bug where cross-account same-amount rows
-  collided); v3 includes it and the
-  `rederive_fingerprints_to_v3` migration re-derived every row.
+- **The v4 fingerprint names every column that identifies a row.**
+  v2 omitted `account_id` (a documented bug where cross-account
+  same-amount rows collided) and v3 omitted `occurrence_ordinal`
+  (two identical purchases on one statement, where the second was
+  dropped). Each addition shipped with its own re-derive
+  migration — `rederive_fingerprints_to_v3`, then
+  `rederive_fingerprints_to_v4`.
 - **Every `transactions.type` value is a documented enum.**
   Paired BEFORE INSERT / BEFORE UPDATE triggers reject any
   value outside the allow-list. The trigger pair was
@@ -204,7 +207,7 @@ and the assertion — see
   its presence would.
 - **The fingerprint rederive command is idempotent.** Running
   `beatrax:rederive-fingerprints` twice produces no change
-  on the second run (the v3 algorithm is deterministic).
+  on the second run (the v4 algorithm is deterministic).
 
 ## Edge cases
 
@@ -280,9 +283,9 @@ and the assertion — see
   manual override.
 - `accounts.forecast_buffer_minor` — Forecasting-supplied
   buffer.
-- The v3 fingerprint algorithm is fixed in code; bumping
-  to v4 requires a re-derive migration following the
-  `2026_05_13_010001` pattern.
+- The v4 fingerprint algorithm is fixed in code; bumping
+  to v5 requires a re-derive migration following the
+  `2026_05_13_010001` / `2026_09_10_000011` pattern.
 - The `transactions.type` allow-list lives in the
   trigger pair; extending it requires a migration that
   drops + recreates the triggers.

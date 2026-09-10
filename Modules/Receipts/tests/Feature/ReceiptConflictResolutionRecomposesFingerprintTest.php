@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
@@ -28,7 +29,7 @@ beforeEach(function (): void {
     $this->bookedAt = '2026-04-01 12:00:00';
 
     $this->composeFor = function (int $amountMinor, string $currency, ?string $counterpartyName): string {
-        return $this->fingerprints->composeTuple(
+        return $this->fingerprints->composeTuple(new FingerprintTuple(
             $this->fixtureUser->id,
             $this->fixtureAccount->id,
             $this->postedAt,
@@ -36,7 +37,8 @@ beforeEach(function (): void {
             $amountMinor,
             $currency,
             $this->counterpartyKey->forName($counterpartyName, $this->fixtureUser->id),
-        );
+            0,
+        ));
     };
 
     $this->seedConflict = function (string $field, mixed $stored, mixed $incoming) {

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
@@ -28,7 +29,7 @@ beforeEach(function (): void {
 
     $this->normalized = $this->counterpartyKey->forName('Stored Merchant', $this->fixtureUser->id);
 
-    $this->composeFor = fn (int $amountMinor): string => $this->fingerprints->composeTuple(
+    $this->composeFor = fn (int $amountMinor): string => $this->fingerprints->composeTuple(new FingerprintTuple(
         $this->fixtureUser->id,
         $this->fixtureAccount->id,
         '2026-04-01',
@@ -36,7 +37,8 @@ beforeEach(function (): void {
         $amountMinor,
         'EUR',
         $this->normalized,
-    );
+        0,
+    ));
 
     $this->seedTransaction = function (int $amountMinor): Transaction {
         static $idx = 0;

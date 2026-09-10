@@ -51,7 +51,7 @@ Practical recipes for exercising the `Import` module in isolation.
 - **What they test:** the full pipeline against a realistic
   multi-source month (ASN CAMT + PayPal CSV + ICS PDF imported
   in succession); the chain dispatcher firing exactly once
-  per import; the cross-source dedup via the v3 fingerprint.
+  per import; the cross-source dedup via the v4 fingerprint.
 
 ## Contract / arch invariants
 
@@ -111,8 +111,9 @@ composer test
 ## Common debugging recipes
 
 - **A row that should have dedupped imports as a duplicate** —
-  the v3 fingerprint inputs include normalised counterparty,
-  posted-at, settled-at, amount minor, account id, source format.
+  the v4 fingerprint inputs are user id, account id, posted-at,
+  booked-at, amount minor, currency, normalised counterparty and
+  occurrence ordinal.
   A change in any input produces a different fingerprint; the
   most common cause is a parser update normalising the
   counterparty differently across two runs. Compare the two
@@ -174,7 +175,7 @@ and the assertion — see
   new for the resolver to chase.
 - **`RunImport` and `ConfirmImport` are idempotent on re-runs
   by fingerprint.** The pipeline's `FingerprintStage` produces
-  a v3 fingerprint that the persistence layer keys on; a re-
+  a v4 fingerprint that the persistence layer keys on; a re-
   imported file produces zero new rows and an
   `ImportConfirmResult` reporting 0 inserted. A re-upload whose
   SHA256 already belongs to a confirmed run short-circuits
@@ -245,7 +246,7 @@ and the assertion — see
   the count that did arrive, and still offers to confirm those.
   See `tests/fixtures/asn-partial-failure.csv`.
 - **Two imports racing on the same file** — both produce the
-  same v3 fingerprints; the persistence layer's dedup keeps
+  same v4 fingerprints; the persistence layer's dedup keeps
   exactly one row per fingerprint.
 - **A merchant alias whose pattern conflicts with an existing
   alias** — `CreateMerchantAlias` raises a friendly validation

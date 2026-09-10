@@ -1180,7 +1180,7 @@ The shape is a `WHERE` on a column a reviewer can find in a `CREATE INDEX` line,
 sitting in a position no lookup can seek on. `transactions.counterparty_normalized`
 appears exactly once in the schema: seventh, in the fingerprint composite
 `(user_id, account_id, posted_at, booked_at, amount_minor, currency,
-counterparty_normalized)`. A read filtering on `user_id` and
+counterparty_normalized, occurrence_ordinal)`. A read filtering on `user_id` and
 `counterparty_normalized` and nothing between them cannot use it, so SQLite scans
 the user's whole `transactions` partition and sorts what survives.
 

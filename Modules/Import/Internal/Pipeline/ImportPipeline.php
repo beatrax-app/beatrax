@@ -44,6 +44,8 @@ use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\Services\OccurrenceOrdinals;
 use Modules\Ledger\Public\Support\LedgerDay;
 use Modules\Receipts\Public\Support\ReceiptCaptureLog;
 use Modules\Sync\Public\Exceptions\BlindIndexKeyUnavailableException;
@@ -67,6 +69,7 @@ final readonly class ImportPipeline
         private SourceAdapterRegistry $adapters,
         private RecordsStatementSummary $statementSummaries,
         private MerchantNameResolver $merchantNameResolver,
+        private FingerprintComposer $fingerprints,
         private LoggerInterface $logger,
         private Application $app,
     ) {}
@@ -84,7 +87,7 @@ final readonly class ImportPipeline
         // a dependency of this singleton, so state held on it would outlive the
         // run and, on the phone's single-process runtime, the request too.
         $captures = new ReceiptCaptureLog;
-        $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId);
+        $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId, new OccurrenceOrdinals($this->fingerprints));
 
         $built = $this->buildPreviewRows(
             $this->parse->run($localPath, $sourceFormat, $accounts, $user, $captures),
@@ -106,7 +109,7 @@ final readonly class ImportPipeline
      */
     public function previewFromGenerator(Generator $sourceRows, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, PreviewWriter $writer): PreviewHead
     {
-        $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId);
+        $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId, new OccurrenceOrdinals($this->fingerprints));
 
         return $this->buildPreviewRows($sourceRows, $run, $writer)['head'];
     }
@@ -235,7 +238,12 @@ final readonly class ImportPipeline
 
             // Before the fingerprint stage, so counterparty_id rides the
             // canonical row into RecordTransactions.
-            return $this->resolveCounterparty->run($normalized, $user);
+            $normalized = $this->resolveCounterparty->run($normalized, $user);
+
+            // Also before it, and for the harder reason: the ordinal is the
+            // last member of the dedup tuple, so a row without one asks the
+            // fingerprint stage about a different row than the one it is.
+            return $run->ordinals->stamp($normalized);
         } catch (BlindIndexKeyUnavailableException|SensitiveColumnKeyUnavailableException $e) {
             // Both messages name a class and the user's own id. Correct for a
             // log, wrong for a preview row, and it would repeat once per row of

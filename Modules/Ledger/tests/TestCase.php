@@ -11,6 +11,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Services\FingerprintComposer;
 use Tests\TestCase as RootTestCase;
 
 abstract class TestCase extends RootTestCase
@@ -47,6 +48,7 @@ abstract class TestCase extends RootTestCase
             'sourceRowIndex' => 0,
             'sourceRef' => 'ASN-REF-001',
             'rawPayload' => null,
+            'occurrenceOrdinal' => 0,
         ];
 
         $merged = array_merge($defaults, $overrides);
@@ -73,6 +75,7 @@ abstract class TestCase extends RootTestCase
             sourceRowIndex: $merged['sourceRowIndex'],
             sourceRef: $merged['sourceRef'],
             rawPayload: $merged['rawPayload'],
+            occurrenceOrdinal: $merged['occurrenceOrdinal'],
         );
     }
 
@@ -223,12 +226,14 @@ abstract class TestCase extends RootTestCase
         ]);
     }
 
-    protected function seedOneV3Row(): void
+    // Read off the composer rather than written down, so a tuple change bumps
+    // this row with it instead of turning "already current" into "one behind".
+    protected function seedOneCurrentVersionRow(): void
     {
         $this->seedV2Row([
-            'normalization_version' => 3,
-            'fingerprint_version' => 3,
-            'source_ref' => 'EREF-V3',
+            'normalization_version' => FingerprintComposer::NORMALIZATION_VERSION,
+            'fingerprint_version' => FingerprintComposer::NORMALIZATION_VERSION,
+            'source_ref' => 'EREF-CURRENT',
         ]);
     }
 }

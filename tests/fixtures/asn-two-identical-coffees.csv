@@ -1,0 +1,3 @@
+Datum,Je rekening,Van / naar,Naam,Adres,Postcode,Woonplaats,Valuta saldo,Saldo voor boeking,Valuta,Bedrag bij / af,Verwerkingsdatum,Valutadatum,Code,Type,Volgnummer,Betalingskenmerk,Omschrijving,Afschriftnummer,Categorie
+03-02-2026,NL57ASNB0123456789,NL68BANK0000000009,Koffiehuis,,,,EUR,2000.00,EUR,-3.50,03-02-2026,03-02-2026,9714,BEA,900001,,'Koffie',4,'Eten'
+03-02-2026,NL57ASNB0123456789,NL68BANK0000000009,Koffiehuis,,,,EUR,1996.50,EUR,-3.50,03-02-2026,03-02-2026,9714,BEA,900002,,'Koffie',4,'Eten'

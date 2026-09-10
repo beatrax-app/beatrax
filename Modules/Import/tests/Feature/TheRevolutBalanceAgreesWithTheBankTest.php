@@ -7,6 +7,7 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
@@ -86,7 +87,7 @@ it('keys every row on the native amount, so a re-import still dedups', function 
 
     $composer = app(FingerprintComposer::class);
     foreach (Transaction::query()->get() as $row) {
-        expect($row->fingerprint)->toBe($composer->composeTuple(
+        expect($row->fingerprint)->toBe($composer->composeTuple(new FingerprintTuple(
             $this->user->id,
             $this->account->id,
             $row->posted_at->toDateString(),
@@ -94,7 +95,8 @@ it('keys every row on the native amount, so a re-import still dedups', function 
             (int) $row->amount_minor,
             (string) $row->currency,
             (string) $row->counterparty_normalized,
-        ));
+            (int) $row->occurrence_ordinal,
+        )));
     }
 
     $again = $this->importer->runAndConfirm(REVOLUT_FEE_EXPORT, 'revolut-csv', $this->user, 'second-pass.csv');

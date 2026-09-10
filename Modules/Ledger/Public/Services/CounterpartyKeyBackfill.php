@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\RowChunk;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use stdClass;
@@ -101,7 +102,7 @@ final readonly class CounterpartyKeyBackfill
 
         return [
             'counterparty_normalized' => $derived,
-            'fingerprint' => $this->fingerprints->composeTuple(
+            'fingerprint' => $this->fingerprints->composeTuple(new FingerprintTuple(
                 $userId,
                 self::toInt($row->account_id ?? null),
                 CarbonImmutable::parse(self::toString($row->posted_at ?? null))->toDateString(),
@@ -109,7 +110,8 @@ final readonly class CounterpartyKeyBackfill
                 self::toInt($row->amount_minor ?? null),
                 self::toString($row->currency ?? null),
                 $derived,
-            ),
+                self::toInt($row->occurrence_ordinal ?? null),
+            )),
         ];
     }
 

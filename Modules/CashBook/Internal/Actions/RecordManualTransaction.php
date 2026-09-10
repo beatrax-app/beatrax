@@ -29,13 +29,6 @@ final readonly class RecordManualTransaction
 {
     private const int MAX_ATTEMPTS = 5;
 
-    // The last second of the entered day the retry offset can start from, so
-    // an entry added just before midnight cannot be nudged into the next day.
-    private const int LATEST_BOOKED_SECOND = CarbonImmutable::SECONDS_PER_MINUTE
-        * CarbonImmutable::MINUTES_PER_HOUR
-        * CarbonImmutable::HOURS_PER_DAY
-        - self::MAX_ATTEMPTS;
-
     public function __construct(
         private DatabaseManager $db,
         private RecordsTransactions $record,
@@ -84,7 +77,8 @@ final readonly class RecordManualTransaction
 
         $counterpartyNormalized = $this->counterpartyKey->forName($counterpartyName, $user->id);
 
-        $bookedAt = $this->nextFreeBookedAt($user, $accountId, $date, $signed, $currency, $counterpartyNormalized);
+        $bookedAt = $this->enteredAt($date);
+        $ordinal = $this->nextFreeOrdinal($user, $accountId, $date, $bookedAt, $signed, $currency, $counterpartyNormalized);
         $counterpartyId = null;
 
         for ($attempt = 0; $attempt < self::MAX_ATTEMPTS; $attempt++) {
@@ -93,7 +87,7 @@ final readonly class RecordManualTransaction
                 accountId: $accountId,
                 type: $type,
                 postedAt: $date,
-                bookedAt: $bookedAt->addSeconds($attempt),
+                bookedAt: $bookedAt,
                 valueDate: $date,
                 amountMinor: $signed,
                 currency: $currency,
@@ -113,10 +107,11 @@ final readonly class RecordManualTransaction
                 autoCategoryProvenance: null,
                 paymentType: PaymentType::Cash,
                 counterpartyId: $counterpartyId,
+                occurrenceOrdinal: $ordinal + $attempt,
             );
 
             // Resolved once, on the first attempt: the retries differ only in
-            // the second they book at, and the stage's upsert is a write.
+            // which occurrence they claim, and the stage's upsert is a write.
             if ($attempt === 0) {
                 $canonical = $this->resolveCounterparty->run($canonical, $user);
                 $counterpartyId = $canonical->counterpartyId;
@@ -130,42 +125,40 @@ final readonly class RecordManualTransaction
         return false;
     }
 
-    // The time of day is the clock's, and is the only column two otherwise
-    // identical entries can differ in: a blind five-second walk from now gave
-    // up on the sixth coffee, so this starts past the last second this exact
-    // entry already occupies. The day is the reader's, for the tax year.
-    private function nextFreeBookedAt(
+    // The day is the reader's, for the tax year; the time of day is the second
+    // they typed it. Both are facts, and the second is the only one of them two
+    // devices holding the same entry disagree about — so it is what keeps a
+    // coffee typed on the phone from merging into one typed on the desktop.
+    private function enteredAt(CarbonImmutable $date): CarbonImmutable
+    {
+        return $date->startOfDay()->addSeconds($this->clock->now()->secondsSinceMidnight());
+    }
+
+    // Read off the ledger rather than counted within a file, because a typed
+    // entry has no file: the reader saying "coffee" twice is two facts, and
+    // nothing but this ledger records that they already said it once.
+    /**
+     * @link ../../../../.docs/architecture/ingestion-pipeline.md#the-occurrence-ordinal
+     */
+    private function nextFreeOrdinal(
         User $user,
         int $accountId,
         CarbonImmutable $date,
+        CarbonImmutable $bookedAt,
         int $signedMinor,
         string $currency,
         string $counterpartyNormalized,
-    ): CarbonImmutable {
-        $startOfDay = $date->startOfDay();
-        $earliest = $startOfDay->addSeconds(
-            min($this->clock->now()->secondsSinceMidnight(), self::LATEST_BOOKED_SECOND),
-        );
-
-        $latest = $this->db->connection()->table('transactions')
+    ): int {
+        $highest = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
             ->where('posted_at', $date->toDateString())
+            ->where('booked_at', $bookedAt->toDateTimeString())
             ->where('amount_minor', $signedMinor)
             ->where('currency', $currency)
             ->where('counterparty_normalized', $counterpartyNormalized)
-            ->where('booked_at', '>=', $earliest->toDateTimeString())
-            ->max('booked_at');
+            ->max('occurrence_ordinal');
 
-        if (! is_string($latest)) {
-            return $earliest;
-        }
-
-        $next = CarbonImmutable::parse($latest)->addSecond();
-        $lastOfDay = $startOfDay->addSeconds(self::LATEST_BOOKED_SECOND);
-
-        // An entry added just before midnight must not be nudged into the next
-        // day, which is a different tax year on the last day of December.
-        return $next->gt($lastOfDay) ? $lastOfDay : $next;
+        return is_numeric($highest) ? (int) $highest + 1 : 0;
     }
 }

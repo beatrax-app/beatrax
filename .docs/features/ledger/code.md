@@ -70,7 +70,7 @@ Modules/Ledger/
   - `RecordsTransactions::__invoke(iterable<CanonicalTransaction>
     $canonical, User $user, bool $captureForSync = true):
     RecordResult` — single sanctioned writer for
-    `transactions`. Takes a batch, not a row. Idempotent on v3
+    `transactions`. Takes a batch, not a row. Idempotent on v4
     fingerprint via INSERT ON CONFLICT.
   - `UpdatesTransactionCategory::__invoke(int $transactionId,
     ?int $categoryId, User $user): int` — single sanctioned
@@ -100,8 +100,10 @@ Modules/Ledger/
 - **Exceptions/MoneyColumnMissingException** — thrown by
   `Money` reads when a column is absent.
 - **Services/**
-  - `FingerprintComposer::compose(...)` — deterministic v3
+  - `FingerprintComposer::compose(...)` — deterministic v4
     fingerprint compose; takes the canonical inputs.
+  - `OccurrenceOrdinals::stamp(...)` — which occurrence of an
+    otherwise identical row this is, counted within one file.
   - `PeriodQuery::current($user) / previous($user)` — period
     resolver. Transient binding (depends on `CurrentUser`).
   - `ThisPeriodAtAGlanceQuery::for($user): DashboardSummary` —
@@ -193,6 +195,10 @@ Migrations, the load-bearing ones summarised by purpose:
   `2026_05_27_000002_backfill_starting_balance_from_statement_summaries.php`
   — the per-account starting-balance addition, added then
   backfilled from the statement summaries already on hand.
+- `2026_09_10_000010_count_the_purchases_a_statement_books_twice.php`
+  and `2026_09_10_000011_rederive_fingerprints_to_v4.php` — the
+  `occurrence_ordinal` column, the widened unique index, and the
+  v3 → v4 re-derive that follows them.
 
 ## Provider wiring
 
