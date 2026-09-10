@@ -12,6 +12,7 @@ use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Reports\Internal\Aggregation\Dto\OtherMovementTotals;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use Modules\Reports\Internal\Enums\ReportCurrencyMode;
@@ -28,7 +29,7 @@ final readonly class CurrencyModeApplier
      * @param  string  $metric  'spend' | 'income' | 'net'
      * @param  callable(string $currency): ?list<ReportResultRow>  $queryForCurrency  Re-runs the caller's chosen dimension query, scoped to one settled_currency at a time. Null means the report cannot be answered in that currency at all — an amount bound the reader typed in their own currency that no rate reaches this one — which is an exclusion to disclose, never rows to drop quietly.
      * @param  SpendQueryFilters  $filters  the same accounts/categories/counterparties filters the dimension query itself applies, threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows
-     * @param  array<string, int>  $otherTotalsByCurrency  fees and adjustments per settled currency; carried through the same currency decision the rows get so the figure beside the total is denominated the same way
+     * @param  OtherMovementTotals  $otherMovements  fees and adjustments per settled currency, plus the currencies whose bucket the reader's bound cannot be restated in; carried through the same currency decision the rows get so the figure beside the total is denominated the same way
      */
     public function apply(
         User $user,
@@ -37,13 +38,13 @@ final readonly class CurrencyModeApplier
         string $currencyMode,
         callable $queryForCurrency,
         SpendQueryFilters $filters = new SpendQueryFilters,
-        array $otherTotalsByCurrency = [],
+        OtherMovementTotals $otherMovements = new OtherMovementTotals,
     ): ReportResultDto {
         $currencies = $this->discoverCurrencies($user, $period, $metric, $filters->accountIds, $filters->categoryIds, $filters->counterpartyIds);
 
         return match ($currencyMode) {
-            ReportCurrencyMode::Base->value => $this->applyBase($user, $currencies, $queryForCurrency, $otherTotalsByCurrency),
-            ReportCurrencyMode::Original->value => $this->applyOriginal($user, $currencies, $queryForCurrency, $otherTotalsByCurrency),
+            ReportCurrencyMode::Base->value => $this->applyBase($user, $currencies, $queryForCurrency, $otherMovements),
+            ReportCurrencyMode::Original->value => $this->applyOriginal($user, $currencies, $queryForCurrency, $otherMovements),
             default => throw new InvalidArgumentException("Unknown currency mode: {$currencyMode}"),
         };
     }
@@ -105,9 +106,8 @@ final readonly class CurrencyModeApplier
     /**
      * @param  list<string>  $currencies
      * @param  callable(string $currency): ?list<ReportResultRow>  $queryForCurrency
-     * @param  array<string, int>  $otherTotalsByCurrency
      */
-    private function applyBase(User $user, array $currencies, callable $queryForCurrency, array $otherTotalsByCurrency = []): ReportResultDto
+    private function applyBase(User $user, array $currencies, callable $queryForCurrency, OtherMovementTotals $otherMovements): ReportResultDto
     {
         $baseCurrency = $this->baseCurrency->forUser($user);
 
@@ -115,7 +115,7 @@ final readonly class CurrencyModeApplier
         // a dimension query returns is denominated in the one currency it was
         // asked for, so converting per row read the whole rate table once per
         // row for a rate that could not have changed between them.
-        $rates = $this->fx->ratesTo([...$currencies, ...array_keys($otherTotalsByCurrency)], $baseCurrency);
+        $rates = $this->fx->ratesTo([...$currencies, ...array_keys($otherMovements->byCurrency)], $baseCurrency);
 
         /** @var array<string, array{key: int|string|null, label: string, amount: int}> $merged */
         $merged = [];
@@ -123,7 +123,7 @@ final readonly class CurrencyModeApplier
         // A set, not a tally: the row loop counted per row and the fee loop per
         // currency, so 12 unconvertible USD rows plus USD fees reported 13.
         /** @var array<string, true> $excludedCurrencies */
-        $excludedCurrencies = [];
+        $excludedCurrencies = self::excludedSet($otherMovements);
 
         foreach ($currencies as $currency) {
             $rows = $queryForCurrency($currency);
@@ -172,7 +172,7 @@ final readonly class CurrencyModeApplier
         // only fees produces no rows, so it never reaches the list above. The
         // banner reads ":count not converted", so flagging without counting
         // renders a literal zero beside the warning.
-        $fees = $this->fx->withRates($otherTotalsByCurrency, $baseCurrency, $rates);
+        $fees = $this->fx->withRates($otherMovements->byCurrency, $baseCurrency, $rates);
         foreach ($fees->unconverted as $code) {
             $excludedCurrencies[$code] = true;
         }
@@ -212,15 +212,14 @@ final readonly class CurrencyModeApplier
     /**
      * @param  list<string>  $currencies
      * @param  callable(string $currency): ?list<ReportResultRow>  $queryForCurrency
-     * @param  array<string, int>  $otherTotalsByCurrency
      */
-    private function applyOriginal(User $user, array $currencies, callable $queryForCurrency, array $otherTotalsByCurrency = []): ReportResultDto
+    private function applyOriginal(User $user, array $currencies, callable $queryForCurrency, OtherMovementTotals $otherMovements): ReportResultDto
     {
         $resultRows = [];
         /** @var array<string, int> $totalsByCurrency */
         $totalsByCurrency = [];
         /** @var array<string, true> $excludedCurrencies */
-        $excludedCurrencies = [];
+        $excludedCurrencies = self::excludedSet($otherMovements);
 
         foreach ($currencies as $currency) {
             $rows = $queryForCurrency($currency);
@@ -250,7 +249,7 @@ final readonly class CurrencyModeApplier
             // here, so a fee bucket outside it has no other line to appear on
             // and used to vanish -- a total that omits money reading as all of
             // it, which is the one thing this disclosure exists to prevent.
-            otherMovementsByCurrency: array_filter($otherTotalsByCurrency, static fn (int $minor): bool => $minor !== 0),
+            otherMovementsByCurrency: array_filter($otherMovements->byCurrency, static fn (int $minor): bool => $minor !== 0),
         );
     }
 
@@ -287,6 +286,22 @@ final readonly class CurrencyModeApplier
         }
 
         return $headline;
+    }
+
+    // A currency carrying only fees never reaches discoverCurrencies(), so
+    // nothing else in this class would ever have named it. Seeded before the
+    // row loop rather than merged after it, so both modes disclose it.
+    /**
+     * @return array<string, true>
+     */
+    private static function excludedSet(OtherMovementTotals $otherMovements): array
+    {
+        $set = [];
+        foreach ($otherMovements->excludedCurrencies as $code) {
+            $set[$code] = true;
+        }
+
+        return $set;
     }
 
     /**

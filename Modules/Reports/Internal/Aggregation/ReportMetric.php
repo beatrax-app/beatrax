@@ -79,18 +79,22 @@ enum ReportMetric: string
         return in_array(TransactionType::Refund->value, $this->disclosedTypes(), true);
     }
 
-    // Connection::raw() needs a literal-string, so the caller's column
-    // prefix is matched against a fixed set rather than interpolated.
+    // Connection::raw() needs a literal-string, so the caller's amount
+    // source is matched against a fixed set rather than interpolated.
     /**
      * @return literal-string
      */
-    public function sumExpr(string $prefix = ''): string
+    public function sumExpr(string $source = ''): string
     {
-        $column = match ($prefix) {
+        $column = match ($source) {
             '' => 'settled_amount_minor',
             't.' => 't.settled_amount_minor',
             'ts.' => 'ts.settled_amount_minor',
-            default => throw new InvalidArgumentException("Unknown column prefix: {$prefix}"),
+            // Under a category filter a split parent is attributed by its legs,
+            // so what one transaction contributes is whichever of the two the
+            // split-aware join left standing.
+            CategoryAttribution::LEG_OR_PARENT => CategoryAttribution::LEG_OR_PARENT_MINOR,
+            default => throw new InvalidArgumentException("Unknown amount source: {$source}"),
         };
 
         return match ($this) {

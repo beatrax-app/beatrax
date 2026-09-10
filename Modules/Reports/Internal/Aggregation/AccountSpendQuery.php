@@ -44,7 +44,7 @@ final readonly class AccountSpendQuery
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->tap(fn (QueryBuilder $q): QueryBuilder => $this->filterApplier->apply($q, $filters))
             ->groupBy('account_id')
-            ->selectRaw('account_id, '.$reportMetric->sumExpr().' AS amount_minor')
+            ->selectRaw('account_id, '.$this->filterApplier->amountExpr($reportMetric, $filters).' AS amount_minor')
             ->get();
 
         /** @var array<int, int> $map */

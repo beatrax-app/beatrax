@@ -73,7 +73,7 @@ against can never drift apart in the gap between the two. The seasonal
 year survives only as a fallback for a suggestion snapshot that predates
 the `taxYear` key.
 
-## Reconciled rows are removed before the count is reported
+## The offer, the write and the toast are three counts of one set
 
 Reconciliation freezes a transaction, and tax classification is precisely
 what a reconcile is meant to freeze. Every write path in the trait —
@@ -81,14 +81,27 @@ what a reconcile is meant to freeze. Every write path in the trait —
 checks `TransactionStatusQuery::isReconciled()` first and warns without
 writing.
 
-`applyBatchTag()` cannot check one row at a time, so it calls
-`reconciledIdsAmong()` once for the whole candidate list and removes
-those ids before tagging anything. The count reported in the success
-toast is taken *after* that filter, so "Tagged 3 more transactions" means
-three rows were actually written. When the filter empties the list
-entirely, the trait raises `tax::messages.batch_none_reconciled` rather
-than claiming it tagged zero transactions — "nothing happened" and
-"nothing needed to happen" read identically otherwise.
+`applyBatchTag()` cannot check one row at a time, so the candidate query
+behind the banner carries the refusals instead: `untaggedForCounterparty()`
+is the single predicate the count offered and the ids written both come
+from. It has to refuse everything `TagTransaction::execute()` refuses, and
+for a while it only refused the reconciled half. `TaxableMovement::narrow()`
+is the other half — the same rule `canCarryATag()` states about one row,
+asked of rows, with its type list derived by putting every
+`TransactionType` case through `canCarryATag()` so the two spellings
+cannot drift. Without it a Bol.com year of four untagged rows — two
+expenses, a `refund` and an expense the detector marked
+`payment_type = refund` — offered "3 more", wrote one, and said it had
+tagged three; `/tax` gained €30.00 against the €65.00 the banner implied.
+
+The number in the toast is then the number of writes that took, not the
+size of the list: `TagTransaction::execute()` answers whether a tag stands
+on the row afterwards, and `applyBatchTag()` counts the trues. A candidate
+can still go out of reach between the offer and the click, and that is the
+one thing the two counts can legitimately disagree about. When nothing was
+written the trait raises `tax::messages.batch_none_reconciled` rather than
+claiming it tagged zero transactions — "nothing happened" and "nothing
+needed to happen" read identically otherwise.
 
 ## Dismissal is for the life of the page
 

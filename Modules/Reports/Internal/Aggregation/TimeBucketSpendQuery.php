@@ -38,7 +38,7 @@ final readonly class TimeBucketSpendQuery
         $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
         $reportMetric = ReportMetric::fromMetric($metric);
         $counted = $reportMetric->predicate();
-        $amountExpr = $reportMetric->sumExpr();
+        $amountExpr = $this->filterApplier->amountExpr($reportMetric, $filters);
 
         $result = [];
         foreach ($buckets as $bucket) {

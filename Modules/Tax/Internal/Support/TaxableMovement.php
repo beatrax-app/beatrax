@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Support;
 
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Enums\TransactionType;
 
@@ -26,6 +27,32 @@ final class TaxableMovement
         }
 
         return ! self::isReturn($type, $paymentType);
+    }
+
+    // The same question asked of rows instead of one row, so a candidate the
+    // write refuses is never counted, offered, or reported as tagged: the
+    // banner offered three siblings, wrote one, and said it had written three.
+    public static function narrow(QueryBuilder $query, string $prefix = ''): QueryBuilder
+    {
+        return $query
+            ->whereIn($prefix.'type', self::taggableTypes())
+            ->where(static function (QueryBuilder $marks) use ($prefix): void {
+                $marks->whereNull($prefix.'payment_type')
+                    ->orWhere($prefix.'payment_type', '!=', PaymentType::Refund->value);
+            });
+    }
+
+    // Derived by asking canCarryATag() about every case rather than listed, so
+    // a type that changes its answer changes both spellings of the rule at once.
+    /**
+     * @return list<string>
+     */
+    private static function taggableTypes(): array
+    {
+        return array_values(array_filter(
+            array_map(static fn (TransactionType $type): string => $type->value, TransactionType::cases()),
+            static fn (string $type): bool => self::canCarryATag($type, null),
+        ));
     }
 
     // The same two marks the rollups read a return by: the payment-type

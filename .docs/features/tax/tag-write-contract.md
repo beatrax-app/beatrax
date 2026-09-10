@@ -83,13 +83,22 @@ A return is recognised by the same two marks the rollups read it by —
 `type` for a row a reader labelled by hand — because
 [`transactions.type` is never `refund` on imported data](../ledger/architecture.md#moneyflow--the-one-definition-of-spend-income-and-net).
 
-The refusal is silent, in the same shape and for the same reason as the
-reconciled-row refusal above it: the rule engine, a batch tag, the demo
+The refusal throws nothing, in the same shape and for the same reason as
+the reconciled-row refusal above it: the rule engine, a batch tag, the demo
 seeder and a receipt conflict resolution all reach this action without a
-screen in front of them, and none of them can render an error. The badge on
-an ineligible row therefore still offers "Tag" and the tag does not take —
-a control that does nothing, which is worth fixing separately and is not
-worth a wrong tax total in the meantime.
+screen in front of them, and none of them can render an error. It is not
+invisible, though — `execute()` answers `false`, so a caller reporting what
+it did can count writes rather than attempts, which is what the batch
+banner's toast does. The badge on an ineligible row still offers "Tag" and
+the tag does not take — a control that does nothing, which is worth fixing
+separately and is not worth a wrong tax total in the meantime.
+
+A query that offers rows to this action asks the same question of them
+before it counts: `TaxableMovement::narrow()` is the table-side spelling of
+`canCarryATag()`, with its type list derived by putting every
+`TransactionType` case through `canCarryATag()` rather than listed again.
+`TaxTagQuery::untaggedIdsForCounterparty()` is its one caller today — see
+[the batch-tag suggestion](batch-tag-suggestion.md).
 
 ## Sweeping the rows tagged before the rule existed
 
