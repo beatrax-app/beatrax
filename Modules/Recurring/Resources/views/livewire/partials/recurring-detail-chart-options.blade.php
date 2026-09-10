@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage')
 {{--
     Recurring series detail chart options partial.
 
@@ -53,9 +54,17 @@
         );
         chart.render();
     "
+    x-on:{{ RecurringSeriesDetailPage::UPDATED_EVENT }}.window="
+        if (! window.ApexCharts || ! chart) { return; }
+        chart.updateOptions(window.beatraxApplyChartTheme(JSON.parse($el.dataset.options)), true, false);
+    "
     data-options="{{ $recurringDetailOptionsJson }}"
 >
-    <div id="{{ $chartElementId }}"></div>
+    {{-- wire:ignore, and it is not decoration: Livewire's morph wiped the
+         rendered SVG out of this node. "View all points" emptied the chart and
+         nothing drew it again — the wrapper survives the morph, so x-init does
+         not re-run, and only a page load brought the series back. --}}
+    <div wire:ignore id="{{ $chartElementId }}"></div>
     <noscript>
         <p class="text-xs text-slate-500 dark:text-slate-400">
             {{ Lang::get('recurring::detail.chart_requires_js') }}

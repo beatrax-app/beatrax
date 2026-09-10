@@ -7313,6 +7313,74 @@ already there: `AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest` and
 What the suite pins here is the guard itself —
 `Modules/Core/tests/Unit/ABuildRefusesAFrontEndOlderThanItsSourcesTest.php`.
 
+## A node a script draws into that the morph is allowed to empty
+
+`tests/Contracts/AnElementAScriptDrawsIntoSurvivesTheMorphArchTest.php`
+
+Livewire's morph finishes `patchChildren` by removing every live child the
+incoming HTML has no counterpart for. An SVG that ApexCharts drew into an empty
+`<div>` never has one — the server renders the div empty, because drawing into
+it is the browser's job — so any re-render of the component deletes the chart.
+`wire:ignore` is the only escape: it is what sets `__livewire_ignore`, which the
+`updating` hook reads to skip the node whole.
+
+`x-init` does not rescue it. The Alpine wrapper around the target is morphed in
+place rather than replaced, so it is never initialised a second time and the
+mounted ApexCharts instance goes on holding a node whose contents have been
+removed. The page returns 200, nothing is logged, and the reader is left the
+bordered empty box the target's own classes draw.
+
+Two forecasting partials already carried `wire:ignore`, each with the measured
+failure written above it, and four more render targets did not. On the recurring
+series detail page "View all points" emptied the chart permanently — the
+component raised no event at all, so nothing redrew it, and pressing the toggle
+again just re-rendered the same blank frame. In the report builder the three viz
+partials self-heal only on `report-updated`, which `ReportBuilder::updated()`
+raises for property changes; `openSaveForm`, `cancelSaveForm`, `save`,
+`clearFlash` and `export` re-render without it, so pressing Save blanked the
+chart until the reader touched a control or reloaded. ApexCharts sharpens that:
+`update()` short-circuits when the new options are byte-identical to the last
+ones, so a control change that leaves the options unchanged wipes the SVG in the
+morph and then skips the redraw it would have been saved by.
+
+The pinned-reports row is the same shape and was safe only by accident — the
+component has no action and no `#[On]`, and the morph skips nested component
+roots, so nothing re-renders it. The first listener added there would have
+blanked every pinned chart at once.
+
+The rule reads the element a script *constructs a renderer onto*, taken from the
+first argument of a `new`. An id an expression merely reads a value out of —
+`getElementById('ob-public-key').value` behind a copy button — is not a drawing,
+and freezing that field would be a defect of its own.
+
+## A provider registered from an event that has already fired
+
+`tests/Contracts/AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest.php`
+
+`alpine:init` is dispatched exactly once, by `Alpine.start()`. `wire:navigate`
+re-executes a page's body scripts on arrival and never restarts Alpine, so a
+template that registers its provider from an `alpine:init` listener registers it
+on a full page load and never on a navigated one. The once-guard these blocks
+carry — `window.__devLogTailerRegistered` and its kind — makes the miss
+permanent for the life of the document: the second visit sees the flag set and
+skips the block that would have registered.
+
+The dev log tailer was written that way. `x-data="logTailer({…})"` then binds an
+empty scope, which is the failure the rule beside this one is named for: one
+expression error, a 200, and polling, pause, filter, copy and the truncate
+handler all simply absent. Nothing in the tree links `/dev/logs` with
+`wire:navigate` today — the dev shell nav and the app sidebar use a plain
+`href`, and the palette assigns `window.location.href` — so it was one attribute
+away from live.
+
+The rule beside this one accepts a registration written in the template's own
+`<script>` and asks only whether the name is there. This half asks when. It is
+measured by position: a registration written before the script first mentions
+`alpine:init` is one the eager path reaches, which is the shape
+`resources/js/app.js` uses — register off `window.Alpine` if it is already
+there, and keep the listener as the fallback for the page that loads before
+Alpine exists.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
@@ -251,6 +252,30 @@ it('expands the chart point set when the view-all toggle is flipped', function (
     $component->call('toggleAllPoints');
     expect($component->get('showAllPoints'))->toBeFalse();
 })->group('view-all-toggle-expands-points');
+
+it('keeps the drawn chart out of the morph and hands it the points the toggle asked for', function (): void {
+    $seeded = rsdSeedSeriesWithOccurrences($this->db, $this->user, $this->account, $this->run, 30);
+
+    $page = RenderedMarkup::of((string) $this->actingAs($this->user)
+        ->get(route('recurring.series.show', ['seriesId' => $seeded['series']->id]))
+        ->getContent());
+
+    // The morph removes every live child the server's HTML has no counterpart
+    // for, and the SVG drawn in here never has one. Pressing the toggle emptied
+    // the frame and only a page load brought it back.
+    expect($page->firstOrFail('#series-chart-'.$seeded['series']->id)->attribute('wire:ignore'))
+        ->not->toBeNull('the chart target is morphed, so the first re-render of this page erases the series');
+
+    // Ignored means the wrapper's refreshed data-options is all that changes,
+    // and something has to tell the mounted instance to read it.
+    expect($page->firstOrFail('[data-options]')->attribute('x-on:'.RecurringSeriesDetailPage::UPDATED_EVENT.'.window'))
+        ->not->toBeNull('nothing on the chart listens for the redraw, so it would keep drawing the points it mounted with');
+
+    Livewire::actingAs($this->user)
+        ->test(RecurringSeriesDetailPage::class, ['seriesId' => $seeded['series']->id])
+        ->call('toggleAllPoints')
+        ->assertDispatched(RecurringSeriesDetailPage::UPDATED_EVENT);
+});
 
 it('links every occurrence row to its underlying transaction (occurrences-table-links-to-transaction)', function (): void {
     $seeded = rsdSeedSeriesWithOccurrences($this->db, $this->user, $this->account, $this->run, 3);

@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Actions\SaveReport;
 use Modules\Reports\Internal\Dto\ReportDefinition;
@@ -356,4 +357,22 @@ it('mounts every chart through the shared beatraxApplyChartTheme Alpine hook', f
     Livewire::test(ReportBuilder::class)
         ->set('viz', $viz)
         ->assertSeeHtml('window.beatraxApplyChartTheme');
+})->with(['bar', 'line', 'donut']);
+
+it('keeps the drawn chart out of the morph, whichever viz is mounted', function (string $viz): void {
+    $user = rbUser();
+    test()->actingAs($user);
+    $db = app(DatabaseManager::class);
+    $account = rbAccount($user);
+    rbTransaction($db, $user, $account, ['settled_amount_minor' => -5_000]);
+
+    $chart = RenderedMarkup::of(Livewire::test(ReportBuilder::class)->set('viz', $viz)->html())
+        ->firstOrFail('[data-testid="report-chart"]');
+
+    // openSaveForm, cancelSaveForm, save, clearFlash and export all re-render
+    // without raising report-updated, and the morph removes a drawn SVG the
+    // server's HTML has no counterpart for. Pressing Save emptied the frame.
+    expect($chart->attribute('wire:ignore'))->not->toBeNull(
+        'the '.$viz.' chart target is morphed, so any action that raises no report-updated blanks it',
+    );
 })->with(['bar', 'line', 'donut']);

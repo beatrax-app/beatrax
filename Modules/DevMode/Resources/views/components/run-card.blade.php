@@ -39,7 +39,11 @@
         default => ucfirst($status),
     };
 @endphp
+{{-- wire:key, because these cards are a filtered list: without one the morph
+     matches them by position, so setFilter/rerun/spawn can lay another run's
+     card over this one and hand the live <pre> a different run's id. --}}
 <article
+    wire:key="run-card-{{ $runId }}"
     class="card p-3 space-y-2"
     data-run-id="{{ $runId }}"
     data-run-tier="{{ $tier->value }}"
@@ -101,16 +105,26 @@
     @if ($excerpt !== null && $excerpt !== '')
         <pre class="overflow-auto rounded bg-slate-950 px-3 py-2 text-[11px] font-mono text-slate-200 max-h-44">{{ $excerpt }}</pre>
     @elseif ($status === 'running')
+        {{-- close() on all three endings, not just on `done`. A stream that ends
+             without one — a spawn crash, a PHP timeout, a restarted server —
+             leaves EventSource reconnecting for the life of the document, and a
+             few of those exhaust what one origin is allowed to hold open. --}}
         <pre
             class="overflow-auto rounded bg-slate-950 px-3 py-2 text-[11px] font-mono text-slate-200 max-h-44"
             x-data='{
                 lines: "",
+                stream: null,
                 init() {
-                    const es = new EventSource("/dev/artisan/stream/" + this.$el.dataset.runId);
-                    es.addEventListener("message", (ev) => {
+                    this.stream = new EventSource("/dev/artisan/stream/" + this.$el.dataset.runId);
+                    this.stream.addEventListener("message", (ev) => {
                         try { const d = JSON.parse(ev.data); this.lines += (d.line || ""); } catch (e) { this.lines += ev.data; }
                     });
-                    es.addEventListener("done", () => es.close());
+                    this.stream.addEventListener("done", () => this.close());
+                    this.stream.onerror = () => this.close();
+                },
+                destroy() { this.close(); },
+                close() {
+                    if (this.stream) { this.stream.close(); this.stream = null; }
                 }
             }'
             data-run-id="{{ $runId }}"

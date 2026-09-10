@@ -111,7 +111,12 @@
     "
     data-options="{{ $optionsJson }}"
 >
+    {{-- wire:ignore, and it is not decoration: Livewire's morph wiped the
+         rendered SVG out of this node, leaving a bordered empty box. Only a
+         control-rail change raises report-updated, so pressing Save left the
+         reader an empty frame until they touched a control or reloaded. --}}
     <div
+        wire:ignore
         id="{{ $chartElementId }}"
         data-testid="report-chart"
         data-chart-variant="bar"
