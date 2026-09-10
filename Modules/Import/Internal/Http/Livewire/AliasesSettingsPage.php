@@ -24,9 +24,11 @@ use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Internal\Exceptions\AliasFileRejectedException;
+use Modules\Import\Internal\Exceptions\MerchantAliasPatternTooShortException;
 use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
+use Modules\Import\Internal\Services\MerchantAliasPattern;
 use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
@@ -178,7 +180,7 @@ final class AliasesSettingsPage extends Component
         // "too short to test" and could still save, so the one pattern nobody
         // has ever seen the effect of was the only one that could be saved
         // blind.
-        if (mb_strlen($value) < AliasMatchPreviewQuery::MIN_PATTERN_LENGTH) {
+        if (MerchantAliasPattern::isBelowFloor($value)) {
             $this->flashMessage = Lang::get('import::aliases.errors.too_short');
 
             return;
@@ -327,6 +329,10 @@ final class AliasesSettingsPage extends Component
 
         try {
             ($merge)($currentUser->user(), $uniqueIds, $friendly, $generalized);
+        } catch (MerchantAliasPatternTooShortException) {
+            $this->flashMessage = Lang::get('import::aliases.errors.too_short');
+
+            return;
         } catch (NotFoundHttpException) {
             $this->showMergeModal = false;
             $this->selectedIds = [];
@@ -400,8 +406,10 @@ final class AliasesSettingsPage extends Component
 
         try {
             $entries = $importer->parse($contents);
-        } catch (AliasFileRejectedException $rejected) {
-            $this->importError = $rejected->sentence();
+        } catch (AliasFileRejectedException|MerchantAliasPatternTooShortException $rejected) {
+            $this->importError = $rejected instanceof AliasFileRejectedException
+                ? $rejected->sentence()
+                : Lang::get('import::aliases.errors.too_short');
 
             return;
         }

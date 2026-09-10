@@ -41,7 +41,7 @@ const ALIAS_YAML_NO_ENTRIES = "aliases:\n  - pattern: X\n";
 
 const ALIAS_YAML_ENTRY_NOT_A_MAPPING = "entries:\n  - just-a-string\n  - just-another\n";
 
-const ALIAS_YAML_ENTRY_MISSING_FIELDS = "entries:\n  - pattern: X\n    name: X\n  - pattern: Y\n";
+const ALIAS_YAML_ENTRY_MISSING_FIELDS = "entries:\n  - pattern: ABC\n    name: ABC\n  - pattern: XYZ\n";
 
 it('says a file is not YAML in the language the reader is reading', function (): void {
     $dutch = aliasImportErrorIn($this->user, 'nl', ALIAS_YAML_NOT_YAML);
