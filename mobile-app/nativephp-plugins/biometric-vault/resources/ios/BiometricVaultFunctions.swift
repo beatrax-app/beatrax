@@ -109,6 +109,10 @@ enum BiometricVaultFunctions {
     // Declared all the same, because the PHP facade is one file for both
     // platforms and an undeclared function answers "function not found" —
     // which reads as a bridge fault rather than as the empty slot it is.
+    //
+    // The `key` the caller sends names the slot it expects the blob to have
+    // come out of. There is no slot here to match it against, and an empty
+    // value is the honest answer to every key.
     class PollRecovered: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {
             return ["value": ""]
@@ -119,10 +123,15 @@ enum BiometricVaultFunctions {
 
     // iOS presents its prompt inside the synchronous Get and returns only once
     // the enclave has answered, so there is never one standing when the reader
-    // takes another road. Declared because the PHP facade is one file for both.
+    // takes another road, and no blob is ever stashed for one to leave behind.
+    // Declared because the PHP facade is one file for both.
+    //
+    // `standing` is what keeps the bare `success: true` from claiming a prompt
+    // was taken down. Android answers it from what was actually up; here it is
+    // false by construction, and a reader of either answer learns the truth.
     class CancelPrompt: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {
-            return ["success": true]
+            return ["success": true, "standing": false]
         }
     }
 

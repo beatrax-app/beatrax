@@ -107,7 +107,7 @@ it('completePendingRecover round-trips a stashed blob to RECOVERED', function ()
     // biometric blob, produced by the same codec the vault uses.
     $vault->pollValue = base64_encode((new BiometricKeyBlobCodec(new AppLockKeyWrap))->wrap($dataKey));
 
-    $result = $vault->completePendingRecover();
+    $result = $vault->completePendingRecover(7);
 
     expect($result->isRecovered())->toBeTrue()
         ->and($result->dataKey)->toBe($dataKey);
@@ -117,14 +117,26 @@ it('completePendingRecover returns MISSING when nothing is stashed', function ()
     $vault = fakeVault();
     $vault->pollValue = null;
 
-    expect($vault->completePendingRecover()->status)->toBe(BiometricRecoverResult::MISSING);
+    expect($vault->completePendingRecover(7)->status)->toBe(BiometricRecoverResult::MISSING);
 });
 
 it('completePendingRecover returns MISSING on a corrupt stashed blob (fails closed)', function (): void {
     $vault = fakeVault();
     $vault->pollValue = 'not+valid+base64+!!!';
 
-    expect($vault->completePendingRecover()->status)->toBe(BiometricRecoverResult::MISSING);
+    expect($vault->completePendingRecover(7)->status)->toBe(BiometricRecoverResult::MISSING);
+});
+
+// The wrap secret lives inside the blob, so an unwrap that succeeds proves only
+// that the blob was well formed -- never whose it is. The slot name is the only
+// thing that carries that, and it has to make the return trip too.
+it('names the slot the polling user owns', function (): void {
+    $vault = fakeVault();
+    $vault->pollValue = base64_encode((new BiometricKeyBlobCodec(new AppLockKeyWrap))->wrap(random_bytes(32)));
+
+    $vault->completePendingRecover(7);
+
+    expect($vault->polledKey)->toBe('beatrax.coldstart.datakey.7');
 });
 
 it('completePendingRecover returns UNAVAILABLE off-device', function (): void {
@@ -132,7 +144,7 @@ it('completePendingRecover returns UNAVAILABLE off-device', function (): void {
     $vault->available = false;
     $vault->pollValue = base64_encode((new BiometricKeyBlobCodec(new AppLockKeyWrap))->wrap(random_bytes(32)));
 
-    expect($vault->completePendingRecover()->status)->toBe(BiometricRecoverResult::UNAVAILABLE);
+    expect($vault->completePendingRecover(7)->status)->toBe(BiometricRecoverResult::UNAVAILABLE);
 });
 
 // The slot name carries the OWNING user id, which the caller names. Read from

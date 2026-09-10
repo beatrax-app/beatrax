@@ -68,7 +68,7 @@ function bindVaultRecover(BiometricRecoverResult $result): void
             return $this->result;
         }
 
-        public function completePendingRecover(): BiometricRecoverResult
+        public function completePendingRecover(int $userId): BiometricRecoverResult
         {
             return $this->result;
         }
@@ -181,6 +181,58 @@ it('async recovered is REFUSED when the PIN floor is overdue', function (): void
     Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertNoRedirect();
 
     expect(released())->toBeNull();
+});
+
+// A refused gate is not a reason to leave the released blob where it is. The
+// enclave let it go before this screen ran, and the poll is its only consumer,
+// so the poll comes first and the refusal decides what to do with the answer.
+function bindVaultCountingPolls(BiometricRecoverResult $result): object
+{
+    $tally = new class
+    {
+        public int $polls = 0;
+    };
+
+    app()->bind(BiometricKeyVault::class, fn ($app): BiometricKeyVault => new class($app->make(BiometricKeyBlobCodec::class), $app->make(LoggerInterface::class), $result, $tally) extends BiometricKeyVault
+    {
+        public function __construct(
+            BiometricKeyBlobCodec $codec,
+            LoggerInterface $log,
+            private readonly BiometricRecoverResult $result,
+            private readonly object $tally,
+        ) {
+            parent::__construct($codec, $log);
+        }
+
+        public function completePendingRecover(int $userId): BiometricRecoverResult
+        {
+            $this->tally->polls++;
+
+            return $this->result;
+        }
+    });
+
+    return $tally;
+}
+
+it('drains the native slot even though the stale-blob guard refuses', function (): void {
+    lockedColdStartUser('cs-async-drain-not-enrolled', enrolled: false);
+    $tally = bindVaultCountingPolls(BiometricRecoverResult::recovered(str_repeat('k', 32)));
+
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertNoRedirect();
+
+    expect($tally->polls)->toBe(1)
+        ->and(released())->toBeNull();
+});
+
+it('drains the native slot even though the PIN floor refuses', function (): void {
+    lockedColdStartUser('cs-async-drain-floor', floorDaysAgo: 20);
+    $tally = bindVaultCountingPolls(BiometricRecoverResult::recovered(str_repeat('k', 32)));
+
+    Livewire::test(MobileLockScreen::class)->dispatch('native:BiometricVault.Recovered')->assertNoRedirect();
+
+    expect($tally->polls)->toBe(1)
+        ->and(released())->toBeNull();
 });
 
 it('onColdStartFailed is a no-op — never admits, never redirects', function (): void {

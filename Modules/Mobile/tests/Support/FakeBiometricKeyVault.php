@@ -43,8 +43,13 @@ class FakeBiometricKeyVault extends BiometricKeyVault
         return $this->capability;
     }
 
-    protected function pollRecovered(): ?string
+    /** The slot the last poll named, so a test can read what the vault asked for. */
+    public ?string $polledKey = null;
+
+    protected function pollRecovered(string $key): ?string
     {
+        $this->polledKey = $key;
+
         return $this->pollValue;
     }
 

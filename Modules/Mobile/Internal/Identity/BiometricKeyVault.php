@@ -82,13 +82,18 @@ class BiometricKeyVault
     // BiometricPrompt has already authenticated and stashed the
     // decrypted blob in a transient native slot (no key over the JS
     // bridge). iOS never uses this. Returns MISSING when nothing pending.
-    public function completePendingRecover(): BiometricRecoverResult
+
+    // The user id names the slot on the way back as well as on the way out.
+    // The wrap secret lives inside the blob, so recoveredFrom() cannot fail
+    // closed on a foreign one: it would unwrap to a perfectly valid data key
+    // belonging to somebody else, and the caller admits it under its own id.
+    public function completePendingRecover(int $userId): BiometricRecoverResult
     {
         if (! $this->runtimeAvailable()) {
             return BiometricRecoverResult::unavailable();
         }
 
-        return $this->recoveredFrom($this->pollRecovered());
+        return $this->recoveredFrom($this->pollRecovered($this->slot($userId)));
     }
 
     // Turns a stored wrapped blob into a result. Both recovery paths decoded
@@ -265,10 +270,15 @@ class BiometricKeyVault
         ]);
     }
 
-    // Takes down a prompt the reader answered another way. Never conditional on
-    // isAvailable(): the prompt on screen was dispatched by a build that thought
-    // the vault was available, and a capability that changed since must not be
-    // what leaves it standing.
+    // Stands the ceremony down: the prompt the reader answered another way, and
+    // the blob a prompt already released and nobody claimed.
+
+    // Never conditional on isAvailable(): the prompt on screen was dispatched by
+    // a build that thought the vault was available, and a capability that
+    // changed since must not be what leaves it standing.
+    /**
+     * @link ../../../../.docs/design/cold-start-biometric-unlock.md#the-transient-slot-and-what-bounds-it
+     */
     public function cancelPrompt(): void
     {
         // class_exists again, and not only through runtimeAvailable(): the
@@ -285,13 +295,16 @@ class BiometricKeyVault
     // Reads the base64 blob the async (Android) BiometricPrompt callback
     // stashed in the transient native slot, or null when nothing is
     // pending. No biometric prompt happens here - it already ran.
-    protected function pollRecovered(): ?string
+
+    // The native side releases the blob only when the slot it was stashed
+    // under is the one named here, and drops it either way.
+    protected function pollRecovered(string $key): ?string
     {
         if (! class_exists(BiometricVault::class)) {
             return null;
         }
 
-        $value = BiometricVault::pollRecovered();
+        $value = BiometricVault::pollRecovered($key);
 
         return is_string($value) && $value !== '' ? $value : null;
     }

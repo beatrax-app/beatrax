@@ -17,13 +17,13 @@
             "name": "BiometricVault.PollRecovered",
             "android": "com.beatrax.biometricvault.BiometricVaultFunctions.PollRecovered",
             "ios": "BiometricVaultFunctions.PollRecovered",
-            "description": "Hand over the blob the biometric prompt released, once; the slot is consumed on read"
+            "description": "Hand over the blob the biometric prompt released, once, and only to the slot key it was released from"
         },
         {
             "name": "BiometricVault.CancelPrompt",
             "android": "com.beatrax.biometricvault.BiometricVaultFunctions.CancelPrompt",
             "ios": "BiometricVaultFunctions.CancelPrompt",
-            "description": "Take down a biometric prompt the reader answered another way"
+            "description": "Stand down: take down a standing prompt and drop any blob one already released"
         },
         {
             "name": "BiometricVault.IsAvailable",
@@ -42,7 +42,7 @@
         }
     ],
     "android": {
-        "min_version": 28,
+        "min_version": 30,
         "permissions": [
             "android.permission.USE_BIOMETRIC"
         ],

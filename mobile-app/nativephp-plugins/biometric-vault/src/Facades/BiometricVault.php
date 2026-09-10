@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static array get(string $key, string $reason = 'Unlock Beatrax')
  * @method static array capability()
  * @method static bool delete(string $key)
- * @method static ?string pollRecovered()
+ * @method static ?string pollRecovered(string $key)
  * @method static bool cancelPrompt()
  *
  * @see \Beatrax\BiometricVault\BiometricVault
