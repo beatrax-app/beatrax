@@ -129,7 +129,7 @@ final readonly class SearchQuery
         $sliced = $rows->take($limit)->values();
 
         $highlights = [];
-        if (strlen($textQuery) >= SearchDocumentBody::TRIGRAM_WIDTH && $candidates !== null) {
+        if (mb_strlen($textQuery) >= SearchDocumentBody::TRIGRAM_WIDTH && $candidates !== null) {
             $highlights = $this->ftsResolver->loadHighlights($user, $textQuery, self::toIntList($sliced->pluck('id')->all()));
         }
 
