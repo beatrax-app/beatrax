@@ -7,7 +7,6 @@ namespace Modules\Ledger\Public\Services;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
-use InvalidArgumentException;
 use Modules\Chains\Public\Dto\CardStatementForecastTile;
 use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
@@ -24,7 +23,6 @@ use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\TopCategories;
 use Modules\Ledger\Public\Enums\MoneyFlow;
-use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
@@ -34,8 +32,8 @@ final readonly class ThisPeriodAtAGlanceQuery
     use CoercesScalars;
 
     // The head of the three conditional sums below. They differ only in which
-    // types they count and which sign they count them with.
-    private const string SUM_OVER_TYPES_PREFIX = 'COALESCE(SUM(CASE WHEN type IN (';
+    // rows they count and which sign they count them with.
+    private const string SUM_HEAD = 'COALESCE(SUM(CASE WHEN ';
 
     // 86400 = 24h: where a scan is scheduled, an inbox untouched longer than
     // that shows an amber dot. Inboxes past TILE_LINE_LIMIT collapse into a
@@ -133,11 +131,12 @@ final readonly class ThisPeriodAtAGlanceQuery
     public function incomeForPeriod(User $user, Period $period, ?string $currency = null): int
     {
         $currency ??= $this->baseCurrency->code();
+        [$incomeWhen, $incomeBindings] = MoneyFlow::Income->predicate();
 
         $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('type', TransactionType::Income->value)
+            ->whereRaw($incomeWhen, $incomeBindings)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->groupBy('settled_currency')
@@ -161,10 +160,12 @@ final readonly class ThisPeriodAtAGlanceQuery
      */
     public function incomeForSpanByCurrencyPerDay(User $user, Period $span): array
     {
+        [$incomeWhen, $incomeBindings] = MoneyFlow::Income->predicate();
+
         $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('type', TransactionType::Income->value)
+            ->whereRaw($incomeWhen, $incomeBindings)
             ->where('posted_at', '>=', $span->start->toDateString())
             ->where('posted_at', '<', $span->endExclusive->toDateString())
             ->groupBy('posted_at', 'settled_currency')
@@ -186,13 +187,13 @@ final readonly class ThisPeriodAtAGlanceQuery
      */
     private function bucketsByCurrency(User $user, Period $period): array
     {
-        $inflowTypes = MoneyFlow::Income->types();
-        $outflowTypes = MoneyFlow::Spend->types();
-        $netTypes = MoneyFlow::Net->types();
+        [$inflowWhen, $inflowBindings] = MoneyFlow::Income->predicate();
+        [$outflowWhen, $outflowBindings] = MoneyFlow::Spend->predicate();
+        [$netWhen, $netBindings] = MoneyFlow::Net->predicate();
 
-        $inflowSum = self::SUM_OVER_TYPES_PREFIX.self::binds($inflowTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
-        $outflowSum = self::SUM_OVER_TYPES_PREFIX.self::binds($outflowTypes).') THEN -settled_amount_minor ELSE 0 END), 0)';
-        $netSum = self::SUM_OVER_TYPES_PREFIX.self::binds($netTypes).') THEN settled_amount_minor ELSE 0 END), 0)';
+        $inflowSum = self::SUM_HEAD.$inflowWhen.' THEN settled_amount_minor ELSE 0 END), 0)';
+        $outflowSum = self::SUM_HEAD.$outflowWhen.' THEN -settled_amount_minor ELSE 0 END), 0)';
+        $netSum = self::SUM_HEAD.$netWhen.' THEN settled_amount_minor ELSE 0 END), 0)';
 
         $rows = $this->db->connection()
             ->table('transactions')
@@ -202,11 +203,11 @@ final readonly class ThisPeriodAtAGlanceQuery
             ->groupBy('settled_currency')
             ->havingRaw(
                 '('.$inflowSum.' <> 0) OR ('.$outflowSum.' <> 0)',
-                [...$inflowTypes, ...$outflowTypes],
+                [...$inflowBindings, ...$outflowBindings],
             )
             ->selectRaw(
                 'settled_currency, '.$inflowSum.' AS inflow_minor, '.$outflowSum.' AS outflow_minor, '.$netSum.' AS net_minor',
-                [...$inflowTypes, ...$outflowTypes, ...$netTypes],
+                [...$inflowBindings, ...$outflowBindings, ...$netBindings],
             )
             ->orderBy('settled_currency')
             ->get();
@@ -215,30 +216,6 @@ final readonly class ThisPeriodAtAGlanceQuery
         $all = $rows->all();
 
         return $all;
-    }
-
-    /**
-     * @param  list<string>  $types
-     */
-    // havingRaw()/selectRaw() need a literal-string, so the placeholder run is
-    // matched against a fixed set rather than built with implode(). The counts
-    // are bounded by TransactionType's cases; anything else is a caller bug.
-    /**
-     * @param  list<string>  $types
-     * @return literal-string
-     */
-    private static function binds(array $types): string
-    {
-        return match (count($types)) {
-            1 => '?',
-            2 => '?, ?',
-            3 => '?, ?, ?',
-            4 => '?, ?, ?, ?',
-            5 => '?, ?, ?, ?, ?',
-            6 => '?, ?, ?, ?, ?, ?',
-            7 => '?, ?, ?, ?, ?, ?, ?',
-            default => throw new InvalidArgumentException('Unsupported bind count: '.count($types)),
-        };
     }
 
     /**

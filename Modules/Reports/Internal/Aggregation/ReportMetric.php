@@ -43,6 +43,17 @@ enum ReportMetric: string
         return $this->flow()->types();
     }
 
+    // Which rows the metric counts, delegated for the same reason types() is:
+    // the dashboard rollups read the same rule, and a second copy of it here is
+    // how the two came to disagree about a refund.
+    /**
+     * @return array{literal-string, list<string>}
+     */
+    public function predicate(string $prefix = ''): array
+    {
+        return $this->flow()->predicate($prefix);
+    }
+
     private function flow(): MoneyFlow
     {
         return match ($this) {

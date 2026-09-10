@@ -41,7 +41,7 @@ final readonly class CategorySpendQuery
     ): array {
         $connection = $this->db->connection();
         $reportMetric = ReportMetric::fromMetric($metric);
-        $types = $reportMetric->types();
+        $counted = $reportMetric->predicate('t.');
         /** @var array<int, int> $map */
         $map = [];
 
@@ -55,7 +55,7 @@ final readonly class CategorySpendQuery
             ->whereRaw('(NOT EXISTS (SELECT 1 FROM transaction_splits AS ts WHERE ts.transaction_id = t.id) OR COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor)')
             ->where('t.user_id', $user->id)
             ->where('t.settled_currency', $currency)
-            ->whereIn('t.type', $types)
+            ->whereRaw(...$counted)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
             ->when($filters->accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $filters->accountIds))
@@ -80,7 +80,7 @@ final readonly class CategorySpendQuery
             ->join('transactions as t', 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $user->id)
             ->where('ts.settled_currency', $currency)
-            ->whereIn('t.type', $types)
+            ->whereRaw(...$counted)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
             // Legs count only when they sum to the parent; a broken split falls

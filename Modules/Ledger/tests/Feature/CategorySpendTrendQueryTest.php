@@ -15,7 +15,7 @@ function trendCategory(DatabaseManager $db, int $userId, string $name): int
     ]);
 }
 
-function trendTx(DatabaseManager $db, int $userId, int $categoryId, int $minor, string $postedAt): void
+function trendTx(DatabaseManager $db, int $userId, int $categoryId, int $minor, string $postedAt, string $paymentType = 'unknown'): void
 {
     static $i = 0;
     $i++;
@@ -35,7 +35,7 @@ function trendTx(DatabaseManager $db, int $userId, int $categoryId, int $minor, 
         'booked_at' => $postedAt.' 00:00:00', 'value_date' => $postedAt,
         'amount_minor' => $minor, 'currency' => 'EUR', 'settled_amount_minor' => $minor, 'settled_currency' => 'EUR',
         'counterparty_normalized' => 'trend', 'counterparty_name' => 'TREND', 'normalization_version' => 1,
-        'type' => 'expense', 'source_format' => 'asn-csv', 'source_row_index' => $i,
+        'type' => 'expense', 'payment_type' => $paymentType, 'source_format' => 'asn-csv', 'source_row_index' => $i,
         'fingerprint_version' => 3, 'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
     ]);
 }
@@ -156,9 +156,10 @@ it('still compares against a previous period the reader genuinely spent nothing 
 
     $groceries = trendCategory($this->db, $this->user->id, 'Groceries');
     // A charge and its refund inside the previous period: rows the ledger
-    // demonstrably holds, netting to nothing spent.
+    // demonstrably holds, netting to nothing spent. The credit says it is a
+    // return — a credit that does not is money in, not spend given back.
     trendTx($this->db, $this->user->id, $groceries, -12000, $previous->start->addDays(1)->toDateString());
-    trendTx($this->db, $this->user->id, $groceries, 12000, $previous->start->addDays(4)->toDateString());
+    trendTx($this->db, $this->user->id, $groceries, 12000, $previous->start->addDays(4)->toDateString(), 'refund');
     trendTx($this->db, $this->user->id, $groceries, -25000, $current->start->addDays(3)->toDateString());
 
     $trend = app(CategorySpendTrendQuery::class)->forUser($this->user);

@@ -97,6 +97,18 @@ enum TransactionType: string
         ));
     }
 
+    // Every type that crossed between the reader and somebody else, whichever
+    // way. Its directed sibling answers a different question and neither can
+    // be built from the other, so both are derived from the cases.
+    /** @return list<string> */
+    public static function externalMovementValues(): array
+    {
+        return array_values(array_map(
+            static fn (self $type): string => $type->value,
+            array_filter(self::cases(), static fn (self $type): bool => $type->isExternalMovement()),
+        ));
+    }
+
     /** @return list<string> */
     public static function transferValues(): array
     {
