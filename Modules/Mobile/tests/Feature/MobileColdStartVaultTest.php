@@ -16,10 +16,12 @@ uses(RefreshDatabase::class);
 
 /**
  * @param  ?string  $recovers  The key the enclave yields, or null to refuse.
+ * @param  ?BiometricRecoverResult  $refusal  Which refusal it answers with, where
+ *                                            the case is about telling them apart.
  */
-function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): BiometricKeyVault
+function coldStartEnclave(bool $enrolls = true, ?string $recovers = null, ?BiometricRecoverResult $refusal = null): BiometricKeyVault
 {
-    return new class(app(BiometricKeyBlobCodec::class), app(LoggerInterface::class), $enrolls, $recovers) extends BiometricKeyVault
+    return new class(app(BiometricKeyBlobCodec::class), app(LoggerInterface::class), $enrolls, $recovers, $refusal) extends BiometricKeyVault
     {
         /** @var list<int> */
         public array $clearedFor = [];
@@ -35,6 +37,7 @@ function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): Biome
             LoggerInterface $log,
             private readonly bool $enrolls,
             private readonly ?string $recovers,
+            private readonly ?BiometricRecoverResult $refusal,
         ) {
             parent::__construct($codec, $log);
         }
@@ -66,9 +69,11 @@ function coldStartEnclave(bool $enrolls = true, ?string $recovers = null): Biome
         {
             $this->recoveredFor[] = $userId;
 
-            return $this->recovers === null
-                ? BiometricRecoverResult::canceled()
-                : BiometricRecoverResult::recovered($this->recovers);
+            if ($this->recovers !== null) {
+                return BiometricRecoverResult::recovered($this->recovers);
+            }
+
+            return $this->refusal ?? BiometricRecoverResult::canceled();
         }
 
         public bool $refusesClear = false;
@@ -184,3 +189,37 @@ it('takes the flag down but reports the enclave keeping the key', function (): v
     expect($vault->forget((int) $user->id))->toBeFalse()
         ->and($vault->isEnrolled((int) $user->id))->toBeFalse();
 });
+
+// The one refusal that is durable: MISSING means the enclave holds nothing here
+// it can read, and an entry a new fingerprint invalidated answers exactly like
+// one that was never stored. The flag is this platform's only record of the
+// entry, so a flag left standing is a control the screen goes on offering.
+
+it('records the enrolment as gone when the enclave has nothing left to read', function (): void {
+    $user = coldStartVaultUser('cold-start-missing');
+    $enclave = coldStartEnclave(refusal: BiometricRecoverResult::missing());
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+
+    $vault->enroll((int) $user->id, random_bytes(32));
+
+    expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBeNull()
+        ->and($vault->isEnrolled((int) $user->id))->toBeFalse();
+});
+
+// A refusal that is not about the entry leaves it exactly where it was, or a
+// changed mind and a wrong finger each cost a working enrolment.
+it('keeps the enrolment through a refusal that is not about the entry', function (BiometricRecoverResult $refusal): void {
+    $user = coldStartVaultUser('cold-start-keeps-'.$refusal->status);
+    $enclave = coldStartEnclave(refusal: $refusal);
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+
+    $vault->enroll((int) $user->id, random_bytes(32));
+
+    expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBeNull()
+        ->and($vault->isEnrolled((int) $user->id))->toBeTrue();
+})->with([
+    'the reader dismissed the sheet' => [fn (): BiometricRecoverResult => BiometricRecoverResult::canceled()],
+    'the authentication did not succeed' => [fn (): BiometricRecoverResult => BiometricRecoverResult::failed()],
+    'the prompt is still running' => [fn (): BiometricRecoverResult => BiometricRecoverResult::pendingAsync()],
+    'there is no runtime to ask' => [fn (): BiometricRecoverResult => BiometricRecoverResult::unavailable()],
+]);

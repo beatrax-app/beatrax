@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Розблокувати Beatrax',
     'native_unlock_failed' => 'Не вдалося розблокувати. Введи PIN.',
+    'native_unlock_reset' => 'Біометричне розблокування було скинуто. Введи PIN, а потім знову ввімкни його в розділі Блокування застосунку.',
     'page_title' => 'Розблокування · Beatrax',
     'sign_out' => 'Вийти',
     'forgot_pin' => 'Не пам’ятаєш PIN? Вийди',

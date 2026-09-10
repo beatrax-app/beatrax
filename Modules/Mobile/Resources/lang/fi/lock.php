@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Väärä PIN-koodi.',
 
         'pin_changed' => 'Tämän laitteen PIN-koodi vaihdettiin avaamisen aikana. Anna nykyinen PIN-koodi.',
+
+        'biometric_reset' => 'Biometrinen avaus nollattiin. Anna PIN-koodi ja ota se sitten uudelleen käyttöön kohdassa Sovelluslukko.',
     ],
 ];

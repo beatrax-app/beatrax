@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Beatrax ontgrendelen',
     'native_unlock_failed' => 'Ontgrendelen mislukt. Voer je pincode in.',
+    'native_unlock_reset' => 'Biometrisch ontgrendelen is vervallen. Voer je pincode in en schakel het daarna weer in bij App-vergrendeling.',
     'page_title' => 'Ontgrendelen · Beatrax',
     'sign_out' => 'Afmelden',
     'forgot_pin' => 'Pincode vergeten? Meld je af',

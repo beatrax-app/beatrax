@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Deblochează Beatrax',
     'native_unlock_failed' => 'Nu s-a putut debloca. Introdu codul PIN în schimb.',
+    'native_unlock_reset' => 'Deblocarea biometrică a fost resetată. Introdu codul PIN, apoi activeaz-o din nou în Blocarea aplicației.',
     'page_title' => 'Deblocare · Beatrax',
     'sign_out' => 'Deconectare',
     'forgot_pin' => 'Ți-ai uitat codul PIN? Deconectează-te',

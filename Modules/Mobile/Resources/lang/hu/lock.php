@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Hibás PIN-kód.',
 
         'pin_changed' => 'Ennek az eszköznek a PIN-kódja megváltozott a feloldás közben. Add meg az aktuális PIN-kódot.',
+
+        'biometric_reset' => 'A biometrikus feloldás visszaállt. Add meg a PIN-kódot, majd kapcsold be újra az Alkalmazászár alatt.',
     ],
 ];

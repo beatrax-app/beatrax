@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Déverrouiller Beatrax',
     'native_unlock_failed' => 'Déverrouillage impossible. Saisis plutôt ton PIN.',
+    'native_unlock_reset' => 'Le déverrouillage biométrique a été réinitialisé. Saisis ton PIN, puis réactive-le dans Verrouillage de l\'app.',
     'page_title' => 'Déverrouiller · Beatrax',
     'sign_out' => 'Se déconnecter',
     'forgot_pin' => 'PIN oublié ? Déconnecte-toi',

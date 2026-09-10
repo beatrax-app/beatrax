@@ -47,6 +47,14 @@ final readonly class MobileColdStartVault implements ColdStartVault
     {
         $result = $this->vault->recover($userId, $reason);
 
+        // MISSING is the enclave saying it holds nothing here it can read, and
+        // a key invalidated by a new fingerprint reads the same as one that was
+        // never stored. The flag is this platform's whole record of the entry,
+        // so it comes down with it rather than outliving it.
+        if ($result->status === BiometricRecoverResult::MISSING) {
+            $this->enrolment->mark($userId, false);
+        }
+
         return $result->isRecovered() ? $result->dataKey : null;
     }
 

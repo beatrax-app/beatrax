@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Avaa Beatrax',
     'native_unlock_failed' => 'Avaaminen ei onnistunut. Anna PIN-koodi.',
+    'native_unlock_reset' => 'Biometrinen avaus nollattiin. Anna PIN-koodi ja ota se sitten uudelleen käyttöön kohdassa Sovelluslukko.',
     'page_title' => 'Avaa lukitus · Beatrax',
     'sign_out' => 'Kirjaudu ulos',
     'forgot_pin' => 'Unohditko PIN-koodin? Kirjaudu ulos',

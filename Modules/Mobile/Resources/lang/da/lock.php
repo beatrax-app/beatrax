@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Forkert PIN-kode.',
 
         'pin_changed' => 'PIN-koden til denne enhed blev ændret under oplåsningen. Indtast den aktuelle PIN-kode.',
+
+        'biometric_reset' => 'Biometrisk oplåsning blev nulstillet. Indtast din PIN-kode, og slå den til igen under Applås.',
     ],
 ];

@@ -26,5 +26,7 @@ return [
         'incorrect_pin' => 'Nepareizs PIN kods.',
 
         'pin_changed' => 'Šīs ierīces PIN kods tika mainīts atbloķēšanas laikā. Ievadiet pašreizējo PIN kodu.',
+
+        'biometric_reset' => 'Biometriskā atbloķēšana tika atiestatīta. Ievadiet PIN kodu un pēc tam ieslēdziet to atkal sadaļā Lietotnes bloķēšana.',
     ],
 ];

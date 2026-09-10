@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Ava Beatrax',
     'native_unlock_failed' => 'Avamine ebaõnnestus. Sisesta selle asemel PIN-kood.',
+    'native_unlock_reset' => 'Biomeetriline avamine lähtestati. Sisesta PIN-kood ja lülita see siis jaotises Rakenduse lukk uuesti sisse.',
     'page_title' => 'Ava · Beatrax',
     'sign_out' => 'Logi välja',
     'forgot_pin' => 'Unustasid PIN-koodi? Logi välja',

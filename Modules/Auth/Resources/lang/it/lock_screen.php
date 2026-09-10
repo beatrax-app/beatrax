@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Sblocca Beatrax',
     'native_unlock_failed' => 'Sblocco non riuscito. Inserisci invece il tuo PIN.',
+    'native_unlock_reset' => 'Lo sblocco biometrico è stato reimpostato. Inserisci il PIN, poi riattivalo in Blocco app.',
     'page_title' => 'Sblocca · Beatrax',
     'sign_out' => 'Esci',
     'forgot_pin' => 'Hai dimenticato il PIN? Esci',

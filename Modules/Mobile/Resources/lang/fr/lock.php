@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'PIN incorrect.',
 
         'pin_changed' => 'Le PIN de cet appareil a été modifié pendant le déverrouillage. Saisis le PIN actuel.',
+
+        'biometric_reset' => 'Le déverrouillage biométrique a été réinitialisé. Saisis ton PIN, puis réactive-le dans Verrouillage de l\'app.',
     ],
 ];

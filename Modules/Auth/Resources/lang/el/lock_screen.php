@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Ξεκλείδωμα του Beatrax',
     'native_unlock_failed' => 'Δεν ήταν δυνατό το ξεκλείδωμα. Εισαγάγε το PIN σου.',
+    'native_unlock_reset' => 'Το βιομετρικό ξεκλείδωμα μηδενίστηκε. Εισαγάγε το PIN σου και μετά ενεργοποίησέ το ξανά στο Κλείδωμα εφαρμογής.',
     'page_title' => 'Ξεκλείδωμα · Beatrax',
     'sign_out' => 'Αποσύνδεση',
     'forgot_pin' => 'Ξέχασες το PIN σου; Αποσυνδέσου',

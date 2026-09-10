@@ -145,7 +145,7 @@ no new crypto, only a new storage location + access-control policy.
 |---|---|
 | **Enroll** (create the gated entry) | Opt-in, from the app-lock section of the settings screen. A fresh PIN entry is required, and it is that PIN which produces the DK being wrapped — nothing enrols from a key the session already holds. Write the `BWS \|\| bioWrappedKey` blob to the gated entry. |
 | **PIN change** | The DK does not change on PIN change (only its PIN wrap does), so the biometric blob stays valid — **no rewrap needed**. (Confirm against `AppLockProvisioner` rewrap semantics before relying on this.) |
-| **OS biometry change** (new finger/face enrolled) | Tier A: `.biometryCurrentSet` / `setInvalidatedByBiometricEnrollment(true)` **auto-invalidates** the entry. Detect the resulting read failure → fall back to PIN → re-enroll. This is the key anti-coercion property; do not use `.biometryAny`. |
+| **OS biometry change** (new finger/face enrolled) | Tier A: `.biometryCurrentSet` / `setInvalidatedByBiometricEnrollment(true)` **auto-invalidates** the entry. The invalidated read answers `missing` — the same answer as an entry that was never stored — and that answer is authoritative: the enrolment flag comes down, the trigger comes off the screen and the reader is told (§5). Re-enrolling then costs a PIN like any other enrolment. This is the key anti-coercion property; do not use `.biometryAny`. |
 | **Disable biometric unlock** | Delete the gated entry (`SecureStorage::delete`). |
 | **Per-device rekey / epoch change** | A rekey changes the DK → the stored `bioWrappedKey` no longer unwraps to a usable key. Options: (a) rewrap eagerly on rekey while unlocked; (b) invalidate the entry on rekey and force one PIN unlock + re-enroll. Recommend (b) for simplicity and to keep rekey atomic — it degrades to "one PIN unlock after a rekey," which is rare. |
 | **Remote device revocation** | The revoked device can no longer decrypt future epochs regardless; ensure the local gated entry is also deleted on a revocation signal so a recovered device can't cold-start into stale data. |
@@ -164,17 +164,41 @@ differ in what happens *around* biometric failure.
   `MobileLockScreen` behavior exactly; lowest surprise.
 - **Option 2 — Explicit re-enroll prompt on invalidation.** Distinguish "user
   cancelled" (silent) from "entry invalidated by biometry change / rekey"
-  (show a one-line banner: "Biometric unlock was reset — unlock with your PIN
-  to re-enable"). More transparent about *why* Face ID stopped working;
-  slightly more code + copy.
+  (show a one line: "Biometric unlock was reset. Enter your PIN, then turn it
+  back on under App lock."). More transparent about *why* Face ID stopped
+  working; slightly more code + copy. The line names the settings section
+  rather than promising a re-enrolment, because enrolment is opt-in and
+  nothing arms the vault without a PIN typed for that purpose.
 - **Option 3 — Biometric-first, PIN-on-tap.** Hide the PIN pad behind a
   "Use PIN instead" affordance and lead with biometric. Cleaner steady-state
   UI, but hides the always-available fallback — worse for the cold-start /
   lockout cases this feature is *about*. Not recommended for a finance app.
 
-Recommendation: **Option 1** for the mechanism, plus the **Option 2** banner
-*only* for the invalidation case (so a reset biometric isn't silently
-mysterious). Skip Option 3.
+**Built: Option 1** for the mechanism, plus the **Option 2** line *only* for
+the invalidation case. Option 3 is skipped.
+
+A silent fallback for *every* refusal was the shipped behaviour, and it turned
+the invalidation case into a control that could not work and did not say so:
+tapping it ran `BiometricVault.Get`, which answered `missing` inline without
+raising a prompt, and nothing on the screen moved. The reader could tap it for
+ever. So `missing` — and only `missing` — is now read as the entry being gone.
+
+**When the screen learns it, and why it is not asked at mount.** Only the read
+knows, and on both platforms the read is the thing the authentication gates:
+the enclave will not release the entry without a live biometric, and the
+desktop blob carries its own wrapping secret, so opening it to see whether it
+opens *is* recovering the data key. A mount-time probe would therefore either
+raise a prompt nobody asked for or leave the key in the memory of a locked
+screen. Neither is worth one saved tap.
+
+The mobile screen does not need one: biometric-primary means the prompt is
+auto-invoked from the view's `x-init`, so the enclave is asked as the screen
+renders, and the invalidated case is the one that answers *inline* — no sheet,
+nothing for the reader to dismiss. The control leaves in the same round trip
+that would have raised the prompt, and it costs the unlock path nothing,
+because it is the call the screen already makes. The desktop lock screen has no
+auto-invoke (its prompt is a deliberate tap), so there the reader taps once,
+is told, and the control is gone from that response onwards.
 
 ---
 
@@ -307,9 +331,22 @@ on-device UAT):
   from exactly one place outside the vault implementations, and that the place
   spends a PIN on the very key it stores.
 - `MobileLockScreen::biometricPrompt()` — cold-start path: on a held key →
-  straight through; else `vault->recover()` → `admitDataKey()` → redirect;
-  missing/canceled/unavailable fall through to the PIN pad. Async (Android)
-  handled by the event, see below.
+  straight through; else `vault->recover()` → `admitDataKey()` → redirect.
+  Canceled, failed, pendingAsync and unavailable change nothing and fall
+  through to the PIN pad; `missing` takes the enrolment flag down, takes the
+  trigger off the screen and prints `mobile::lock.errors.biometric_reset`.
+  Async (Android) handled by the event, see below.
+- `LockScreen::nativeUnlock()` — the same distinction over the shared
+  `ColdStartVault`, which flattens every refusal to a null. It is recovered by
+  asking `isEnrolled()` again: implementations drop an entry they could not
+  read *before* answering (`DesktopColdStartVault` deletes the file,
+  `MobileColdStartVault` marks the flag), so a vault that still reports itself
+  enrolled was refused a prompt and one that no longer does had its entry
+  destroyed under it. The first keeps `native_unlock_failed` and the control;
+  the second prints `native_unlock_reset`, takes the control off the screen and
+  records the flag as false. Nothing re-arms on its own afterwards: enrolment is
+  opt-in, so the flag coming down is what lets the settings control offer it
+  again, and the copy sends the reader there.
 - `MobileLockScreen::onColdStartRecovered()` — the Android leg. It drains the
   native slot with `completePendingRecover($userId)` *before* re-checking the
   enrolment flag and the PIN floor, so a refusal leaves nothing behind.

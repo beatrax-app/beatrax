@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Odemknout Beatrax',
     'native_unlock_failed' => 'Nepodařilo se odemknout. Zadej místo toho PIN.',
+    'native_unlock_reset' => 'Biometrické odemykání bylo resetováno. Zadej PIN a pak ho znovu zapni v sekci Zámek aplikace.',
     'page_title' => 'Odemknutí · Beatrax',
     'sign_out' => 'Odhlásit se',
     'forgot_pin' => 'Nepamatuješ si PIN? Odhlas se',

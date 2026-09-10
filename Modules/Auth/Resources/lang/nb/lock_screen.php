@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Lås opp Beatrax',
     'native_unlock_failed' => 'Kunne ikke låse opp. Tast inn PIN-koden din i stedet.',
+    'native_unlock_reset' => 'Biometrisk opplåsing ble tilbakestilt. Tast inn PIN-koden din, og slå den på igjen under Applås.',
     'page_title' => 'Lås opp · Beatrax',
     'sign_out' => 'Logg ut',
     'forgot_pin' => 'Har du glemt PIN-koden? Logg ut',

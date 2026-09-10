@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Cod PIN incorect.',
 
         'pin_changed' => 'Codul PIN al acestui dispozitiv a fost schimbat în timpul deblocării. Introdu codul PIN actual.',
+
+        'biometric_reset' => 'Deblocarea biometrică a fost resetată. Introdu codul PIN, apoi activeaz-o din nou în Blocarea aplicației.',
     ],
 ];
