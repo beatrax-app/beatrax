@@ -149,7 +149,7 @@ it('applies a day that arrives carrying the midnight its own writer emits', func
     (new OpLogReplayer($db, $this->deviceKeys))->replay([$entry], (int) $this->user->id);
 
     expect($db->connection()->table('goals')->where('id', $this->goal)->value('target_date'))
-        ->not->toBe('2027-06-01', 'the peer\'s day must have been applied')
+        ->toBe('2027-06-15', 'the peer\'s day must have been applied, and as a day')
         ->and(impDateReason($db, 'goals'))->toBeNull();
 });
 
