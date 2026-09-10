@@ -37,6 +37,10 @@ final readonly class TagTransaction
         private ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
+    // Answers whether a tag stands on the row once the call returns, so a
+    // caller counting what it wrote reports what it wrote: the batch banner
+    // printed the size of the list it was handed and called that the number
+    // tagged, over rows the two refusals below had written nothing for.
     /**
      * @param  string  $provenanceSource  `field_provenance` source stamped onto
      *                                    `tax_tag`: `'manual'`, or `'rule'` from the
@@ -50,7 +54,7 @@ final readonly class TagTransaction
         ?int $taxYearOverride,
         ?int $transactionSplitId = null,
         string $provenanceSource = 'manual',
-    ): void {
+    ): bool {
         $txRow = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
@@ -65,14 +69,14 @@ final readonly class TagTransaction
         // rule engine, a batch tag and a replay all reach this action, and the
         // year figure takes abs() of whatever it finds.
         if (! TaxableMovement::canCarryATag($txRow->type ?? null, $txRow->payment_type ?? null)) {
-            return;
+            return false;
         }
 
         // The rule engine, a bulk tag and a replay all reach this action
         // without passing the page's own lock, and a tag is exactly the
         // classification a reconcile froze.
         if (TransactionStatusQuery::locksEdits($txRow->status)) {
-            return;
+            return false;
         }
 
         // Leg-ownership guard: a forged transactionSplitId could otherwise
@@ -131,6 +135,8 @@ final readonly class TagTransaction
             : self::createdColumns($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $note, $taxYearOverride));
 
         $this->searchIndex?->upsertForTransaction($transactionId, $userId);
+
+        return true;
     }
 
     // True when the row was already there, which is what decides whether the

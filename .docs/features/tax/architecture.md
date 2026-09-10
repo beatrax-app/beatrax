@@ -382,8 +382,11 @@ onto the suggestion at `saveTaxCategory()` time, *before*
 `closePicker()` wipes the live picker state.
 [The batch-tag suggestion](batch-tag-suggestion.md) sets out that
 ordering requirement, the `array_key_exists()`-not-`??` rule the
-snapshot depends on, the trigger-row year keying, and the
-reconciled-candidate filter behind the "tagged N more" count.
+snapshot depends on, the trigger-row year keying, and why the candidate
+filter behind the "tagged N more" count has to refuse every row the write
+refuses — a reconcile and, since `TaxableMovement::narrow()`, a refund or
+a transfer as well. The toast counts what `TagTransaction::execute()`
+answered, not the size of the list it was handed.
 
 **Pitfall guard.** `taxTagStateFor()` issues exactly one query via
 `TaxTagQuery::forTransactionIds()` for the whole batch, never one per
