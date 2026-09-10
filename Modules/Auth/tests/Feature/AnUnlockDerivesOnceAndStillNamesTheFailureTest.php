@@ -64,7 +64,7 @@ it('unlocks a correct PIN over a hash that could never verify, and derives the w
     // Only the unlock is measured: enabling the lock derives three times.
     $counter->derivations = 0;
 
-    $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session);
+    $dataKey = app(PinVerificationService::class)->verify($user->id, '123456', $session)->dataKey;
 
     expect($dataKey)->toBeString('The unwrap authenticates the PIN, so the hash beside it is not consulted.')
         ->and(app(LockStateManager::class)->isLocked($session))->toBeFalse()
@@ -88,7 +88,7 @@ it('counts a wrong PIN over a corrupt blob as a wrong PIN and raises no corrupti
     /** @var Session $session */
     $session = app(Session::class);
 
-    expect(app(PinVerificationService::class)->verify($user->id, '000000', $session))->toBeNull();
+    expect(app(PinVerificationService::class)->verify($user->id, '000000', $session)->dataKey)->toBeNull();
 
     expect(SystemAlert::query()->where('user_id', $user->id)->where('kind', 'auth.lock.corrupted_key')->count())
         ->toBe(0, 'A wrong PIN must never be reported to the reader as a corrupted key.');
@@ -108,7 +108,7 @@ it('still reaches the critical alert for a correct PIN over a corrupt blob, and 
     /** @var Session $session */
     $session = app(Session::class);
 
-    expect(app(PinVerificationService::class)->verify($user->id, '123456', $session))->toBeNull();
+    expect(app(PinVerificationService::class)->verify($user->id, '123456', $session)->dataKey)->toBeNull();
 
     $alert = SystemAlert::query()
         ->where('user_id', $user->id)
@@ -136,10 +136,10 @@ it('alerts rather than crashing when the stored salt is a length libsodium refus
     /** @var Session $session */
     $session = app(Session::class);
 
-    expect(app(PinVerificationService::class)->verify($user->id, '123456', $session))->toBeNull()
+    expect(app(PinVerificationService::class)->verify($user->id, '123456', $session)->dataKey)->toBeNull()
         ->and(SystemAlert::query()->where('user_id', $user->id)->where('kind', 'auth.lock.corrupted_key')->count())->toBe(1);
 
-    expect(app(PinVerificationService::class)->verify($user->id, '000000', $session))->toBeNull()
+    expect(app(PinVerificationService::class)->verify($user->id, '000000', $session)->dataKey)->toBeNull()
         ->and((int) unlockCostRow($user)->failed_attempts)->toBe(1, 'A wrong PIN over an unusable salt is still a wrong PIN.');
 });
 
@@ -174,7 +174,8 @@ it('records nothing when a PIN change commits between the read it derived agains
     $result = app(PinVerificationService::class)->verify($user->id, '123456', $session);
 
     expect($rewrapped)->toBeTrue()
-        ->and($result)->toBeNull('The key it unwrapped is not the one this row wraps any more.')
+        ->and($result->dataKey)->toBeNull('The key it unwrapped is not the one this row wraps any more.')
+        ->and($result->pinChangedMidAttempt)->toBeTrue('A screen handed a bare null tells the reader the PIN was wrong.')
         ->and(app(LockStateManager::class)->isLocked($session))->toBeTrue();
 
     expect((int) unlockCostRow($user)->failed_attempts)->toBe(

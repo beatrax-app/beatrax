@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Priveľa pokusov — skús to znova o :secondss.',
         'incorrect_pin_remaining' => 'Nesprávny PIN. Zostáva :count pokus.|Nesprávny PIN. Zostávajú :count pokusy.|Nesprávny PIN. Zostáva :count pokusov.',
         'incorrect_pin' => 'Nesprávny PIN.',
+
+        'pin_changed' => 'PIN tohto zariadenia bol zmenený počas odomykania. Zadaj aktuálny PIN.',
     ],
 ];

@@ -66,7 +66,10 @@ final class PinVerificationService
     /** @var list<array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>}> */
     private array $pendingAlerts = [];
 
-    public function verify(int $userId, string $pin, Session $session): ?string
+    // The attempt itself, not the key alone. A caller that reads only the key
+    // cannot tell a refusal from an attempt nothing recorded, and reports the
+    // one thing that is certainly untrue: an incorrect PIN.
+    public function verify(int $userId, string $pin, Session $session): PinUnlockAttempt
     {
         $read = $this->configRow($userId);
 
@@ -74,7 +77,7 @@ final class PinVerificationService
         // what makes a locked-out attempt cheap rather than the most expensive
         // request the app serves.
         if ($read === null || $this->inBackoffWindow($read)) {
-            return null;
+            return PinUnlockAttempt::wrongPin();
         }
 
         // Derived before the transaction opens. This is seconds of Argon2id on
@@ -82,9 +85,9 @@ final class PinVerificationService
         // process on the file -- and a contended retry would pay it twice.
         $attempt = $this->attemptUnlock($pin, $read);
 
-        /** @var string|null $result */
+        /** @var PinUnlockAttempt $result */
         $result = $this->db->connection()->transaction(
-            function () use ($userId, $session, $read, $attempt): ?string {
+            function () use ($userId, $session, $read, $attempt): PinUnlockAttempt {
                 // Cleared per attempt, not per call: a rolled-back attempt's
                 // alerts describe a lockout that was undone with it.
                 $this->pendingAlerts = [];
@@ -150,7 +153,7 @@ final class PinVerificationService
             : null;
     }
 
-    private function settle(int $userId, Session $session, \stdClass $read, PinUnlockAttempt $attempt): ?string
+    private function settle(int $userId, Session $session, \stdClass $read, PinUnlockAttempt $attempt): PinUnlockAttempt
     {
         $row = $this->db->connection()
             ->table('user_app_lock_configs')
@@ -158,33 +161,38 @@ final class PinVerificationService
             ->lockForUpdate()
             ->first();
 
-        // A PIN change that committed while the derivation ran leaves this
-        // attempt describing material the row no longer holds, so neither
-        // outcome is its to record and the counter is left alone.
-        if ($row === null || $this->inBackoffWindow($row) || ! self::sameWrapMaterial($read, $row)) {
-            return null;
+        if ($row === null || $this->inBackoffWindow($row)) {
+            return PinUnlockAttempt::wrongPin();
         }
 
-        return $this->record($userId, $session, $row, $attempt);
+        // A PIN change that committed while the derivation ran leaves this
+        // attempt describing material the row no longer holds, so neither
+        // outcome is its to record and the counter is left alone. Its own
+        // answer, or the screen names a remaining count that never moved.
+        if (! self::sameWrapMaterial($read, $row)) {
+            return PinUnlockAttempt::outracedByAPinChange();
+        }
+
+        $this->record($userId, $session, $row, $attempt);
+
+        return $attempt;
     }
 
-    private function record(int $userId, Session $session, \stdClass $row, PinUnlockAttempt $attempt): ?string
+    private function record(int $userId, Session $session, \stdClass $row, PinUnlockAttempt $attempt): void
     {
         if ($attempt->dataKey !== null) {
             $this->markUnlocked($userId, $session, $attempt->dataKey);
 
-            return $attempt->dataKey;
+            return;
         }
 
         if ($attempt->corruptionDetail !== null) {
             $this->emitAlert($userId, 'auth.lock.corrupted_key', 'critical', CopyLine::of(self::CORRUPTED_KEY_LINE), ['detail' => $attempt->corruptionDetail]);
 
-            return null;
+            return;
         }
 
         $this->handleFailure($userId, $this->currentFailedAttempts($row));
-
-        return null;
     }
 
     private static function sameWrapMaterial(\stdClass $read, \stdClass $locked): bool

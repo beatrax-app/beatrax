@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Liikaa yrityksiä — yritä uudelleen :secondss kuluttua.',
         'incorrect_pin_remaining' => 'Väärä PIN-koodi. :count yritys jäljellä.|Väärä PIN-koodi. :count yritystä jäljellä.',
         'incorrect_pin' => 'Väärä PIN-koodi.',
+
+        'pin_changed' => 'Tämän laitteen PIN-koodi vaihdettiin avaamisen aikana. Anna nykyinen PIN-koodi.',
     ],
 ];

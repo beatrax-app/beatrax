@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Falsche PIN. Noch :count Versuch übrig.|Falsche PIN. Noch :count Versuche übrig.',
     'error_incorrect' => 'Falsche PIN.',
+
+    'error_pin_changed' => 'Die PIN für dieses Gerät wurde beim Entsperren geändert. Gib die aktuelle PIN ein.',
 ];

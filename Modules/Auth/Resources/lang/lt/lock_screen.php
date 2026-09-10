@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Neteisingas PIN kodas. Liko :count bandymas.|Neteisingas PIN kodas. Liko :count bandymai.|Neteisingas PIN kodas. Liko :count bandymų.',
     'error_incorrect' => 'Neteisingas PIN kodas.',
+
+    'error_pin_changed' => 'Šio įrenginio PIN kodas buvo pakeistas atrakinant. Įvesk dabartinį PIN kodą.',
 ];

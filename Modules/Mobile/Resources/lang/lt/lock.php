@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Per daug bandymų — pakartok po :secondss.',
         'incorrect_pin_remaining' => 'Neteisingas PIN kodas. Liko :count bandymas.|Neteisingas PIN kodas. Liko :count bandymai.|Neteisingas PIN kodas. Liko :count bandymų.',
         'incorrect_pin' => 'Neteisingas PIN kodas.',
+
+        'pin_changed' => 'Šio įrenginio PIN kodas buvo pakeistas atrakinant. Įvesk dabartinį PIN kodą.',
     ],
 ];

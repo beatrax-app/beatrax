@@ -42,7 +42,7 @@ it('correct PIN returns the unwrapped data key and resets failed_attempts', func
     $lockState->lock($session);
     expect($lockState->isLocked($session))->toBeTrue();
 
-    $dataKey = $service->verify($user->id, '123456', $session);
+    $dataKey = $service->verify($user->id, '123456', $session)->dataKey;
 
     expect($dataKey)->toBeString()
         ->and(strlen($dataKey))->toBe(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
@@ -77,7 +77,7 @@ it('wrong PIN increments failed_attempts in user_app_lock_configs', function ():
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    $result = $service->verify($user->id, '000000', $session);
+    $result = $service->verify($user->id, '000000', $session)->dataKey;
     expect($result)->toBeNull();
 
     $row = DB::connection()->table('user_app_lock_configs')
@@ -128,7 +128,7 @@ it('reaching the backoff threshold sets locked_until and blocks further attempts
     expect((int) $row->failed_attempts)->toBe(5);
     expect($row->locked_until)->not->toBeNull('locked_until should be set after BACKOFF_THRESHOLD failures');
 
-    $result = $service->verify($user->id, '123456', $session);
+    $result = $service->verify($user->id, '123456', $session)->dataKey;
     expect($result)->toBeNull('Correct PIN should still return null while locked_until is in the future');
 });
 
@@ -163,7 +163,7 @@ it('successful PIN unlock re-arms disarmed biometric credentials', function (): 
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    $dataKey = $service->verify($user->id, '123456', $session);
+    $dataKey = $service->verify($user->id, '123456', $session)->dataKey;
     expect($dataKey)->toBeString();
 
     $rearmed = $store->findByCredentialId($user->id, base64_encode('rearm-cred'));
@@ -198,7 +198,7 @@ it('reaching the failure cap signs the session out', function (): void {
         ->where('user_id', $user->id)
         ->update(['failed_attempts' => 9]); // one below HARD_CAP=10
 
-    $result = $service->verify($user->id, '000000', $session);
+    $result = $service->verify($user->id, '000000', $session)->dataKey;
     expect($result)->toBeNull();
 
     $alert = SystemAlert::query()

@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Çok fazla deneme — :secondssn sonra yeniden dene.',
         'incorrect_pin_remaining' => 'PIN hatalı. :count deneme hakkın kaldı.',
         'incorrect_pin' => 'PIN hatalı.',
+
+        'pin_changed' => 'Bu cihazın PIN kodu kilit açılırken değiştirildi. Güncel PIN kodunu gir.',
     ],
 ];

@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Liiga palju katseid — proovi uuesti :secondss pärast.',
         'incorrect_pin_remaining' => 'Vale PIN-kood. Jäänud on :count katse.|Vale PIN-kood. Jäänud on :count katset.',
         'incorrect_pin' => 'Vale PIN-kood.',
+
+        'pin_changed' => 'Selle seadme PIN-koodi muudeti avamise ajal. Sisesta praegune PIN-kood.',
     ],
 ];

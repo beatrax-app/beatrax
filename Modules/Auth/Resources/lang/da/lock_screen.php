@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Forkert PIN-kode. :count forsøg tilbage.|Forkert PIN-kode. :count forsøg tilbage.',
     'error_incorrect' => 'Forkert PIN-kode.',
+
+    'error_pin_changed' => 'PIN-koden til denne enhed blev ændret under oplåsningen. Indtast den aktuelle PIN-kode.',
 ];

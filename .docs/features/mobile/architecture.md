@@ -907,8 +907,15 @@ renders, reading the same bindings the server validates.
 
 `MobileLockScreen` is structurally identical to the Auth module's
 `LockScreen`, reached via the narrow `MobileLockGateway` Public seam
-(this module never imports `Modules\Auth\Internal\*` directly). The only
-behavioral difference is the biometric trigger: instead of the browser
+(this module never imports `Modules\Auth\Internal\*` directly). That is
+what `MobileLockGateway::unlockWithPin()` and its `PinUnlockOutcome` exist
+for: the screen needs the three states an unlock can end in, and the value
+object the verifier answers with is `Internal`. `verifyPin()` still hands
+back the key alone, for the cold-start enrolment that wraps the live key
+into the enclave — a screen reading only that cannot tell a refused PIN
+from one a PIN change outran, and reported both as "incorrect PIN" beside a
+count that never moved. The only behavioral difference is the biometric
+trigger: instead of the browser
 WebAuthn round-trip, `biometricPrompt()` calls `BiometricUnlockBridge::
 prompt()` (native, bool-only) directly. A `true` result is only ever used
 to read through the existing `AppLockKeyService::release()` gate:

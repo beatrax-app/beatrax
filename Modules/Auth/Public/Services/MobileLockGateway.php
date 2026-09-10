@@ -12,6 +12,7 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Auth\Public\Enums\PinUnlockOutcome;
 use Modules\Core\Public\Contracts\Clock;
 
 final readonly class MobileLockGateway
@@ -90,9 +91,23 @@ final readonly class MobileLockGateway
             ->contains(fn (object $cred): bool => $this->biometricStore->isArmed($cred));
     }
 
+    // The key itself, for the cold-start enrolment that wraps the live one
+    // into the enclave. A screen wants unlockWithPin(): the key alone cannot
+    // tell a refusal from an attempt nothing recorded.
     public function verifyPin(int $userId, string $pin, Session $session): ?string
     {
-        return $this->verifier->verify($userId, $pin, $session);
+        return $this->verifier->verify($userId, $pin, $session)->dataKey;
+    }
+
+    public function unlockWithPin(int $userId, string $pin, Session $session): PinUnlockOutcome
+    {
+        $attempt = $this->verifier->verify($userId, $pin, $session);
+
+        return match (true) {
+            $attempt->dataKey !== null => PinUnlockOutcome::Unlocked,
+            $attempt->pinChangedMidAttempt => PinUnlockOutcome::OutracedByAPinChange,
+            default => PinUnlockOutcome::Refused,
+        };
     }
 
     public function pinLockedUntil(int $userId): ?CarbonImmutable

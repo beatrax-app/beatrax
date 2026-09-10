@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'For mange forsøk — prøv igjen om :secondss.',
         'incorrect_pin_remaining' => 'Feil PIN-kode. :count forsøk igjen.|Feil PIN-kode. :count forsøk igjen.',
         'incorrect_pin' => 'Feil PIN-kode.',
+
+        'pin_changed' => 'PIN-koden for denne enheten ble endret under opplåsingen. Tast inn den gjeldende PIN-koden.',
     ],
 ];

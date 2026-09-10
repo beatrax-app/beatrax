@@ -84,7 +84,7 @@ it('announces the unlock a lock-screen PIN performs', function (): void {
     $heard = unlockEventCounter();
     app(AppLockKeyService::class)->withhold($session);
 
-    expect(app(PinVerificationService::class)->verify((int) $user->id, '123456', $session))->not->toBeNull();
+    expect(app(PinVerificationService::class)->verify((int) $user->id, '123456', $session)->dataKey)->not->toBeNull();
     expect($heard())->toBe(1);
 });
 

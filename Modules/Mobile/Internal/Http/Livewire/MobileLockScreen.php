@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Auth\Public\Enums\PinUnlockOutcome;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
@@ -95,23 +96,12 @@ final class MobileLockScreen extends Component
         }
 
         $user = $currentUser->user();
-        $dataKey = $gateway->verifyPin($user->id, $pin, $session);
+        $outcome = $gateway->unlockWithPin($user->id, $pin, $session);
 
-        if ($dataKey === null) {
+        if ($outcome !== PinUnlockOutcome::Unlocked) {
             $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
 
-            $lockedUntil = $gateway->pinLockedUntil($user->id);
-            if ($lockedUntil !== null) {
-                $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
-                $this->flashMessage = Lang::get('mobile::lock.errors.too_many_attempts', ['seconds' => $seconds]);
-
-                return;
-            }
-
-            $remaining = $gateway->remainingPinAttempts($user->id);
-            $this->flashMessage = $remaining !== null
-                ? Lang::choice('mobile::lock.errors.incorrect_pin_remaining', $remaining)
-                : Lang::get('mobile::lock.errors.incorrect_pin');
+            $this->flashMessage = $this->refusalMessage($user->id, $outcome, $gateway, $clock);
 
             return;
         }
@@ -123,6 +113,28 @@ final class MobileLockScreen extends Component
         $vault->cancelPrompt();
 
         $this->redirectToIntendedUrl($session, $urls);
+    }
+
+    // Mirrors LockScreen::refusalMessage(): only a refusal spent an attempt,
+    // so only a refusal may name a remaining count.
+    private function refusalMessage(int $userId, PinUnlockOutcome $outcome, MobileLockGateway $gateway, Clock $clock): string
+    {
+        if ($outcome === PinUnlockOutcome::OutracedByAPinChange) {
+            return Lang::get('mobile::lock.errors.pin_changed');
+        }
+
+        $lockedUntil = $gateway->pinLockedUntil($userId);
+        if ($lockedUntil !== null) {
+            $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
+
+            return Lang::get('mobile::lock.errors.too_many_attempts', ['seconds' => $seconds]);
+        }
+
+        $remaining = $gateway->remainingPinAttempts($userId);
+
+        return $remaining !== null
+            ? Lang::choice('mobile::lock.errors.incorrect_pin_remaining', $remaining)
+            : Lang::get('mobile::lock.errors.incorrect_pin');
     }
 
     // Auto-invoked from the view's x-init at mount, and again on an explicit

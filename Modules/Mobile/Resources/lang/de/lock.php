@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Zu viele Versuche — versuche es in :secondss erneut.',
         'incorrect_pin_remaining' => 'Falsche PIN. Noch :count Versuch übrig.|Falsche PIN. Noch :count Versuche übrig.',
         'incorrect_pin' => 'Falsche PIN.',
+
+        'pin_changed' => 'Die PIN für dieses Gerät wurde beim Entsperren geändert. Gib die aktuelle PIN ein.',
     ],
 ];

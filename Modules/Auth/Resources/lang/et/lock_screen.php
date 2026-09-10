@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Vale PIN-kood. Jäänud on :count katse.|Vale PIN-kood. Jäänud on :count katset.',
     'error_incorrect' => 'Vale PIN-kood.',
+
+    'error_pin_changed' => 'Selle seadme PIN-koodi muudeti avamise ajal. Sisesta praegune PIN-kood.',
 ];

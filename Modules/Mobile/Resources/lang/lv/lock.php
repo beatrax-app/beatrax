@@ -24,5 +24,7 @@ return [
         'too_many_attempts' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :secondss.',
         'incorrect_pin_remaining' => 'Nepareizs PIN kods. Atlikuši :count mēģinājumu.|Nepareizs PIN kods. Atlicis :count mēģinājums.|Nepareizs PIN kods. Atlikuši :count mēģinājumi.',
         'incorrect_pin' => 'Nepareizs PIN kods.',
+
+        'pin_changed' => 'Šīs ierīces PIN kods tika mainīts atbloķēšanas laikā. Ievadiet pašreizējo PIN kodu.',
     ],
 ];

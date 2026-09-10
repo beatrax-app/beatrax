@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Λανθασμένο PIN. Απομένει :count προσπάθεια.|Λανθασμένο PIN. Απομένουν :count προσπάθειες.',
     'error_incorrect' => 'Λανθασμένο PIN.',
+
+    'error_pin_changed' => 'Το PIN αυτής της συσκευής άλλαξε κατά το ξεκλείδωμα. Εισαγάγε το τρέχον PIN.',
 ];

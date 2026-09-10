@@ -26,4 +26,6 @@ return [
 
     'error_incorrect_remaining' => 'Nepareizs PIN kods. Atlikuši :count mēģinājumu.|Nepareizs PIN kods. Atlicis :count mēģinājums.|Nepareizs PIN kods. Atlikuši :count mēģinājumi.',
     'error_incorrect' => 'Nepareizs PIN kods.',
+
+    'error_pin_changed' => 'Šīs ierīces PIN kods tika mainīts atbloķēšanas laikā. Ievadiet pašreizējo PIN kodu.',
 ];
