@@ -185,7 +185,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             ->table('transaction_splits')
             ->where('transaction_id', $transactionId)
             ->where('user_id', $user->id)
-            ->get(['id', 'category_id', 'settled_amount_minor', 'note', 'sort_order'])
+            ->get(['id', 'category_id', 'settled_amount_minor', 'settled_currency', 'note', 'sort_order'])
             ->keyBy(static fn (object $row): int => self::toInt($row->id));
 
         /** @var list<int> $existingIds */
@@ -200,7 +200,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
 
             if ($legId !== null && in_array($legId, $existingIds, true)) {
                 $incomingIds[] = $legId;
-                $event = $this->updateLeg($user, $transactionId, $legId, $leg, $index, $existingRows->get($legId));
+                $event = $this->updateLeg($user, $transactionId, $legId, $leg, $index, $currency, $existingRows->get($legId));
                 if ($event !== null) {
                     $events[] = $event;
                 }
@@ -217,12 +217,17 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
     /**
      * @param  array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}  $leg
      */
-    private function updateLeg(User $user, int $transactionId, int $legId, array $leg, int $index, ?stdClass $old): ?TransactionSplitMutated
+    private function updateLeg(User $user, int $transactionId, int $legId, array $leg, int $index, string $currency, ?stdClass $old): ?TransactionSplitMutated
     {
         $normalizedNote = self::normalizeNote($leg['note']);
+        // The parent's currency, on every write and not only the first. A leg
+        // took it at insert and never again, so a parent that changed currency
+        // left its legs priced in the old one -- and re-balancing the split was
+        // the one action that looked like it would correct them.
         $fields = [
             'category_id' => $leg['category_id'],
             'settled_amount_minor' => $leg['settled_amount_minor'],
+            'settled_currency' => $currency,
             'note' => $normalizedNote,
             'sort_order' => $index,
         ];
@@ -243,6 +248,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
         $oldFields = $old !== null ? [
             'category_id' => $old->category_id ?? null,
             'settled_amount_minor' => $old->settled_amount_minor ?? null,
+            'settled_currency' => $old->settled_currency ?? null,
             'note' => $this->decryptNote($old->note ?? null, $user->id),
             'sort_order' => $old->sort_order ?? null,
         ] : [];
