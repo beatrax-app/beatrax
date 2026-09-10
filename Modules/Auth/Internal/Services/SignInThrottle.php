@@ -13,16 +13,11 @@ use Modules\Core\Public\Enums\Duration;
 // a limit written into one of them is a limit the other walks around.
 final readonly class SignInThrottle
 {
-    // The same five a minute the recovery gate takes, because they are the two
-    // guest credentials that reach the same account and a household that has
-    // learned one number should not have to learn a second.
-    public const int MAX_ATTEMPTS = 5;
-
     public function __construct(private RateLimiter $limiter) {}
 
     public function isExhausted(string $usernameInput): bool
     {
-        return $this->limiter->tooManyAttempts($this->key($usernameInput), self::MAX_ATTEMPTS);
+        return $this->limiter->tooManyAttempts($this->key($usernameInput), GuestAttemptCap::PER_MINUTE);
     }
 
     public function recordAttempt(string $usernameInput): void

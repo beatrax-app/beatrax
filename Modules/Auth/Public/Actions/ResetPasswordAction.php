@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
+use Modules\Auth\Internal\Services\GuestAttemptCap;
 use Modules\Auth\Internal\Services\SessionRevoker;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Auth\Public\Support\Username;
@@ -20,11 +21,6 @@ use Modules\Core\Public\Support\Lang;
 // so the reset flow ends with the user signing in fresh on /login.
 final readonly class ResetPasswordAction
 {
-    // This route is a guest route, and one attempt costs ten bcrypt-12 hashes
-    // plus an unbounded write into the household's alert banner. The hash
-    // count is the enumeration defence and stays; this bounds what it costs.
-    private const int MAX_ATTEMPTS = 5;
-
     private static function decaySeconds(): int
     {
         return Duration::Minute->seconds();
@@ -51,7 +47,10 @@ final readonly class ResetPasswordAction
         // exactly like a known one and the limiter answers nothing about which.
         $throttleKey = 'auth.reset-password:'.Username::normalize($usernameInput);
 
-        if ($this->limiter->tooManyAttempts($throttleKey, self::MAX_ATTEMPTS)) {
+        // One attempt here costs ten bcrypt-12 hashes plus a write into the
+        // household's alert banner. The hash count is the enumeration defence
+        // and stays; the cap bounds how often it can be spent.
+        if ($this->limiter->tooManyAttempts($throttleKey, GuestAttemptCap::PER_MINUTE)) {
             throw ValidationException::withMessages([
                 'code' => Lang::get('auth::reset_password.error_throttled', [
                     'wait' => $this->limiter->availableIn($throttleKey).'s',

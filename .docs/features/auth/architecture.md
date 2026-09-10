@@ -215,8 +215,11 @@ deployment makes the hash cost the whole defence — but a widened install is a
 supported shape and `deploy/server` documents a Docker deployment reachable off
 the machine, so on that shape the gate was reachable and unmetered.
 
-`Auth\Internal\Services\SignInThrottle` is the meter, at the same five a
-minute `ResetPasswordAction` takes and keyed the same way: on the username as
+`Auth\Internal\Services\SignInThrottle` is the meter. The number is
+`GuestAttemptCap::PER_MINUTE`, which the recovery gate reads too: the two
+credentials reach the same account from the same screenless place, so they are
+one rule with one declaration rather than two that drift. It is keyed the same
+way as recovery: on the username as
 typed and normalised, so an unknown one is metered exactly like a known one and
 the counter answers nothing the constant failure message and the equalised hash
 refuse to answer in words. A successful sign-in clears it, so it is a ceiling on

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Cache\RateLimiter;
-use Modules\Auth\Internal\Services\SignInThrottle;
+use Modules\Auth\Internal\Services\GuestAttemptCap;
 use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Exceptions\SignInThrottled;
@@ -39,7 +39,7 @@ function meteredLogin(): LoginAction
 
 function spendTheMeter(string $username): void
 {
-    foreach (range(1, SignInThrottle::MAX_ATTEMPTS) as $ignored) {
+    foreach (range(1, GuestAttemptCap::PER_MINUTE) as $ignored) {
         meteredLogin()($username, 'not-the-password', false);
     }
 }
@@ -59,7 +59,7 @@ it('refuses the attempt after the meter is spent, rather than checking again', f
 it('lets every attempt up to the cap through', function (): void {
     meteredOwner();
 
-    foreach (range(1, SignInThrottle::MAX_ATTEMPTS) as $ignored) {
+    foreach (range(1, GuestAttemptCap::PER_MINUTE) as $ignored) {
         expect(meteredLogin()(METERED_ACCOUNT, 'not-the-password', false))->toBeFalse();
     }
 });
@@ -87,7 +87,7 @@ it('counts two spellings of one username against one meter', function (): void {
 it('releases the whole meter on a sign-in that succeeds', function (): void {
     meteredOwner();
 
-    foreach (range(1, SignInThrottle::MAX_ATTEMPTS - 1) as $ignored) {
+    foreach (range(1, GuestAttemptCap::PER_MINUTE - 1) as $ignored) {
         meteredLogin()(METERED_ACCOUNT, 'not-the-password', false);
     }
 
@@ -97,7 +97,7 @@ it('releases the whole meter on a sign-in that succeeds', function (): void {
     // Read before the success, or a meter that never counted at all would
     // report the same zero afterwards and this would assert nothing.
     expect($limiter->attempts('auth.sign-in:'.METERED_ACCOUNT))
-        ->toBe(SignInThrottle::MAX_ATTEMPTS - 1);
+        ->toBe(GuestAttemptCap::PER_MINUTE - 1);
 
     expect(meteredLogin()(METERED_ACCOUNT, METERED_PASSWORD, false))->toBeTrue();
 
