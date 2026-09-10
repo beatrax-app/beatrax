@@ -177,13 +177,27 @@ final readonly class OpLogEntryVerifier
         // column gate: a SET/CREATE naming a field that is not a real column of
         // its table quarantines here instead of failing at the DB write. The
         // DeleteTombstone sentinel never names a column, so it is exempt.
-        return $this->hasRegisteredColumn($entry) ? null : QuarantineReason::UnknownColumn;
+        if (! $this->hasRegisteredColumn($entry)) {
+            return QuarantineReason::UnknownColumn;
+        }
+
+        // RegisteredColumns answers off the live schema, so a device-local
+        // column is a real one and clears the gate above. Refused here because
+        // the capture filter that keeps these off the wire is the SENDER's
+        // promise, and it is only as old as the oldest build in the household.
+        return $this->namesADeviceLocalColumn($entry) ? QuarantineReason::DeviceLocalColumn : null;
     }
 
     private function hasRegisteredColumn(OpLogEntry $entry): bool
     {
         return $entry->opType === OpType::DeleteTombstone
             || $this->columns->isRegistered($entry->table, $entry->field);
+    }
+
+    private function namesADeviceLocalColumn(OpLogEntry $entry): bool
+    {
+        return $entry->opType !== OpType::DeleteTombstone
+            && in_array($entry->field, $this->rules->deviceLocalColumns($entry->table), true);
     }
 
     // Whether a device id belongs to a deterministically re-derived system op
