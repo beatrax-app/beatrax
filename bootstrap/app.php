@@ -11,6 +11,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Auth\Internal\Http\Middleware\ForgetsSpentRecoveryCodes;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
+use Modules\Core\Internal\Http\Middleware\NativeBridgeIsShellOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetInstallTimezone;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
@@ -47,6 +48,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: [
             AppChromeResolver::SCHEME_COOKIE,
         ]);
+        // Behind LoopbackOnly, which is enough for a loopback install and is
+        // exactly what a widened one gives up. The package registers the
+        // bridge on every deployment and its own guard returns early wherever
+        // the shell is not running, so outside the shell nothing refuses it.
+        $middleware->prepend(NativeBridgeIsShellOnly::class);
         $middleware->prepend(LoopbackOnly::class);
         // The other half of the loopback boundary: LoopbackOnly gates the
         // interface, this gates the Host — the half DNS rebinding defeats.

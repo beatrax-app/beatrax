@@ -8,6 +8,7 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
 use Modules\Desktop\Internal\Native\ShellHandoff;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Native\Desktop\Events\App\OpenFile;
+use Tests\Helpers\ShellBridge;
 
 // The second instance of the same defect. HandleNativeOpenFile reaches session
 // state two hops down -- through FileOpenIntake, FileOpenedFromOs and the
@@ -54,7 +55,7 @@ it('carries a double-clicked export into the session the window reads', function
     $session->save();
     $windowSessionId = $session->getId();
 
-    $this->post('_native/api/events', [
+    $this->withHeaders(ShellBridge::arm())->post('_native/api/events', [
         'event' => OpenFile::class,
         'payload' => [$this->export],
     ])->assertOk();
@@ -82,7 +83,7 @@ it('waits for a reader rather than staging into a session nobody is signed into'
     $session->save();
     $windowSessionId = $session->getId();
 
-    $this->post('_native/api/events', [
+    $this->withHeaders(ShellBridge::arm())->post('_native/api/events', [
         'event' => OpenFile::class,
         'payload' => [$this->export],
     ])->assertOk();
@@ -102,7 +103,7 @@ it('refuses a document type the intake does not route', function (): void {
 
     $this->actingAs($this->user);
 
-    $this->post('_native/api/events', [
+    $this->withHeaders(ShellBridge::arm())->post('_native/api/events', [
         'event' => OpenFile::class,
         'payload' => [$rejected],
     ])->assertOk();
