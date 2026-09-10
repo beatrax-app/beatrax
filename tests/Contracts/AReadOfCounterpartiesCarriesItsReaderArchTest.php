@@ -2,9 +2,15 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
+
 /**
  * @link ../../.docs/features/counterparties/architecture.md
  */
+
+// A template is walked through BladePhpSource, because `.blade.php` ends in
+// `.php` and token_get_all reads a Blade island as one lump of inline HTML: a
+// guard built without it lists the file and reports it clean.
 
 // counterparties holds names the reader authored, and transactions.counterparty_id
 // carries no foreign key on purpose — a delete leaves the id dangling rather than
@@ -136,7 +142,10 @@ it('names the reader on every runtime read of a counterparty', function (): void
             continue;
         }
 
-        foreach (counterpartyReadsWithoutAReader((string) file_get_contents(base_path($relative))) as $line) {
+        $path = base_path($relative);
+        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
+
+        foreach (counterpartyReadsWithoutAReader($source) as $line) {
             $unscoped[] = $relative.':'.$line;
         }
     }
