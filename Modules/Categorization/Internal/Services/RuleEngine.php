@@ -105,8 +105,16 @@ final readonly class RuleEngine
         };
     }
 
-    private static function matchAmount(ConditionOperator $op, int $target, int $value, ?int $value2): bool
+    // A bound that is not a number is a half-filled rule, not a bound of zero.
+    // Coercing it made `> ''` an amount-above-nothing condition that fired on
+    // every income row the reader owns; the text and date branches have always
+    // refused theirs, which is the rule this one was missing.
+    private static function matchAmount(ConditionOperator $op, int $target, ?int $value, ?int $value2): bool
     {
+        if ($value === null) {
+            return false;
+        }
+
         return match ($op) {
             ConditionOperator::GreaterThan => $target > $value,
             ConditionOperator::LessThan => $target < $value,
@@ -161,8 +169,8 @@ final readonly class RuleEngine
         return $target->greaterThanOrEqualTo($lo) && $target->lessThanOrEqualTo($hi);
     }
 
-    private static function toIntValue(string $value): int
+    private static function toIntValue(string $value): ?int
     {
-        return is_numeric($value) ? (int) $value : 0;
+        return is_numeric($value) ? (int) $value : null;
     }
 }
