@@ -25,8 +25,6 @@ final class ExternalUrl
     // web. The desktop shell serves the application to itself over loopback and
     // the sync listener answers to a `.local` name, so a URL naming one of these
     // aims the reader's click back at their own install.
-    private const array LOCAL_SUFFIXES = ['.localhost', '.local', '.internal', '.home.arpa'];
-
     /**
      * @param  list<string>|null  $allowedHosts  lower-case hosts, or null where the caller has no finite list
      */
@@ -81,20 +79,13 @@ final class ExternalUrl
         return is_array($parts) && (isset($parts['user']) || isset($parts['pass']));
     }
 
+    // PublicHost answers whether the host is outside this machine and this
+    // network. The extra clause is this caller's alone: an address literal
+    // names a machine rather than a service, so it is never a merchant's
+    // contact page even where it routes. A bank's SCA host may be one.
     private static function isPublicHost(string $host): bool
     {
-        // A name with no dot in it is a LAN name, and an address literal names a
-        // machine rather than a service. Neither can be a merchant's contact
-        // page, and both can be the reader's own device.
-        $local = $host === 'localhost'
-            || ! str_contains($host, '.')
-            || filter_var($host, FILTER_VALIDATE_IP) !== false;
-
-        foreach (self::LOCAL_SUFFIXES as $suffix) {
-            $local = $local || str_ends_with($host, $suffix);
-        }
-
-        return ! $local;
+        return filter_var($host, FILTER_VALIDATE_IP) === false && PublicHost::names($host);
     }
 
     private static function servesOnTheHttpsPort(string $url): bool
