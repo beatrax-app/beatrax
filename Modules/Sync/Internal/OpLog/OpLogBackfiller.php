@@ -8,13 +8,19 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 // Writes the rows that already existed when sync was switched on into the op
 // log as CREATE_ROW ops. Capture is event-driven, so a device that was used
 // before pairing had an empty log and handed its first peer nothing — the
 // phone sat on "0 of 0 records" while the desktop held years of data.
+/**
+ * @link ../../../../.docs/features/sync/pre-sync-history-capture.md#a-failed-slice-leaves-the-walk-owed
+ */
 final readonly class OpLogBackfiller
 {
     // Rows per SELECT. The log is written entry-by-entry regardless; this
@@ -43,12 +49,19 @@ final readonly class OpLogBackfiller
         'rule_actions' => ['rule_id', 'categorization_rules'],
     ];
 
+    // The walk shares its SQLite file with the relay answering a peer's drains,
+    // and a chunk refused for a lock is a wait rather than a verdict. Laravel
+    // re-runs the closure only for a concurrency error; anything else still
+    // leaves the table on the first throw.
+    private const int LOCK_ATTEMPTS = 3;
+
     public function __construct(
         private DatabaseManager $db,
         private CoveredTableOrder $order,
         private MergeRulesRegistry $rules,
         private BackfillProgress $progress,
         private StoredRowPlaintext $plaintext,
+        private LoggerInterface $log,
     ) {}
 
     // Returns the number of rows captured. Idempotent row-wise: a row already
@@ -80,23 +93,139 @@ final readonly class OpLogBackfiller
             // every table after it starts at its own beginning.
             $resumePk = $index === $resumeIndex && $resumeFrom !== null ? $resumeFrom['pk'] : null;
 
-            $captured += $table === self::SELF_SCOPED_TABLE
-                ? $this->captureUserSettings($connection, $userId, $writer)
-                : $this->captureTable($connection, $table, $userId, $writer, $budget, $resumePk);
+            $captured += $this->captureOneTable($connection, $table, $userId, $writer, $budget, $resumePk);
 
             if ($budget !== null && $budget->isSpent()) {
                 return $captured;
             }
         }
 
-        // Only a walk that reached the end of the order is finished. Closing on
-        // a spent budget would retire a capture with rows still owed, which is
-        // the "0 of 0 records" this class exists to prevent.
+        // Only a walk that reached the end of the order is finished, and only
+        // if it left nothing behind. Closing on a spent budget would retire a
+        // capture with rows still owed, which is the "0 of 0 records" this
+        // class exists to prevent.
         if ($budget !== null) {
-            $this->progress->close($userId);
+            $this->settle($userId, $order);
         }
 
         return $captured;
+    }
+
+    // A table that will not walk costs its own rows and never the ones after
+    // it. Ending the order on the first throw is what lost every table past
+    // the one a lock landed on, while the state row read complete.
+    /**
+     * @throws Throwable from the one-shot path, which has no cursor, no audit
+     *                   and no driver to record a gap with.
+     */
+    private function captureOneTable(
+        Connection $connection,
+        string $table,
+        int $userId,
+        OpLogWriter $writer,
+        ?BackfillBudget $budget,
+        ?string $resumePk,
+    ): int {
+        try {
+            return $table === self::SELF_SCOPED_TABLE
+                ? $this->captureUserSettings($connection, $userId, $writer)
+                : $this->captureTable($connection, $table, $userId, $writer, $budget, $resumePk);
+        } catch (Throwable $e) {
+            if ($budget === null) {
+                throw $e;
+            }
+
+            $this->log->error('OpLogBackfiller: a covered table would not walk; the rest of the order still does.', [
+                'user_id' => $userId,
+                'table' => $table,
+                ...SafeExceptionContext::describe($e),
+            ]);
+
+            return 0;
+        }
+    }
+
+    // Counts both sides of every covered table and says so either way. A table
+    // that produced no entries reads exactly like a table with nothing to
+    // produce until somebody counts the rows too, which is how seventeen tax
+    // tags left one device, reached no peer, and were reported by nothing.
+    /**
+     * @param  list<string>  $order
+     */
+    private function settle(int $userId, array $order): void
+    {
+        $audited = $this->auditableTables($order);
+        $shortfall = $this->shortfall($userId, $audited);
+
+        if ($shortfall === []) {
+            $this->progress->close($userId);
+
+            $this->log->info('OpLogBackfiller: every covered table is in the log.', [
+                'user_id' => $userId,
+                'tables' => count($audited),
+                'uncovered' => 0,
+            ]);
+
+            return;
+        }
+
+        // Owed, not finished, and back to the top: the missed table may sit
+        // anywhere in the order, and row-wise idempotence makes re-reaching it
+        // two indexed reads per row already captured.
+        $this->progress->recordFailure($userId);
+        $this->progress->rewind($userId);
+
+        $this->log->error('OpLogBackfiller: the walk ended with rows no peer will ever be told about.', [
+            'user_id' => $userId,
+            'tables' => count($audited),
+            'uncovered' => $shortfall,
+        ]);
+    }
+
+    // Which covered tables hold rows this device has not put in the log, and
+    // by how many. Coverage counts only authors a peer can still verify, the
+    // same test the walk itself skips a row on.
+    /**
+     * @param  list<string>  $tables
+     * @return array<string, array{rows: int, captured: int}>
+     */
+    private function shortfall(int $userId, array $tables): array
+    {
+        $connection = $this->db->connection();
+        $shortfall = [];
+
+        $schema = $connection->getSchemaBuilder();
+
+        foreach ($tables as $table) {
+            if (! $schema->hasTable($table)) {
+                continue;
+            }
+
+            $rows = $this->scopedQuery($connection, $table, $userId, ['id'])->count();
+            $captured = $this->ownCreates($connection, $table, $userId)->distinct()->count('pk');
+
+            if ($captured < $rows) {
+                $shortfall[$table] = ['rows' => $rows, 'captured' => $captured];
+            }
+        }
+
+        return $shortfall;
+    }
+
+    // Everything the audit can meaningfully count. The device-local tables are
+    // never on the wire at all, and the reader's own row travels as Sets
+    // against a row the peer already has rather than as a create.
+    /**
+     * @param  list<string>  $order
+     * @return list<string>
+     */
+    private function auditableTables(array $order): array
+    {
+        return array_values(array_filter(
+            $order,
+            static fn (string $table): bool => $table !== self::SELF_SCOPED_TABLE
+                && ! in_array($table, self::DEVICE_LOCAL_TABLES, true),
+        ));
     }
 
     // Where in the current order the stored cursor sits. A table the order no
@@ -161,6 +290,27 @@ final readonly class OpLogBackfiller
         return $captured;
     }
 
+    // The creates this device authored, and no one else's. A peer holds only
+    // the devices it paired with itself, so an op signed by a former peer is
+    // coverage here and unverifiable there — which left a replaced phone
+    // missing every row its predecessor wrote.
+    /**
+     * @return Builder
+     */
+    private function ownCreates(Connection $connection, string $table, int $userId)
+    {
+        return $connection->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->where('op_type', OpType::CreateRow->value)
+            ->whereIn('device_id', static function (Builder $query) use ($userId): void {
+                $query->select('device_id')
+                    ->from('device_registry')
+                    ->where('user_id', $userId)
+                    ->where('is_self', 1);
+            });
+    }
+
     // Which of THIS chunk's rows already carry a create op a peer could
     // actually verify, as a lookup keyed by pk. Asked per chunk rather than
     // per table so neither the result set nor the IN list grows with the size
@@ -183,21 +333,8 @@ final readonly class OpLogBackfiller
             return [];
         }
 
-        $found = $connection->table('op_log_entries')
-            ->where('user_id', $userId)
-            ->where('table_name', $table)
-            ->where('op_type', OpType::CreateRow->value)
+        $found = $this->ownCreates($connection, $table, $userId)
             ->whereIn('pk', $pks)
-            // This device's own creates, and no one else's. A peer holds
-            // only the devices it paired with itself, so an op signed by a
-            // former peer is coverage here and unverifiable there — which
-            // left a replaced phone missing every row its predecessor wrote.
-            ->whereIn('device_id', static function (Builder $query) use ($userId): void {
-                $query->select('device_id')
-                    ->from('device_registry')
-                    ->where('user_id', $userId)
-                    ->where('is_self', 1);
-            })
             ->distinct()
             ->pluck('pk');
 
@@ -267,9 +404,16 @@ final readonly class OpLogBackfiller
 
         $query->orderBy($table.'.id')
             ->chunk(self::CHUNK, function ($rows) use ($connection, $table, $userId, $writer, $budget, &$captured): bool {
-                $captured += $connection->transaction(
-                    fn (): int => $this->captureChunk($connection, $table, $userId, $writer, $budget, $rows),
+                $written = $connection->transaction(
+                    fn (): int => $this->captureChunk($connection, $table, $userId, $writer, $budget !== null, $rows),
+                    self::LOCK_ATTEMPTS,
                 );
+
+                $captured += $written;
+
+                // Spent outside the transaction, because a chunk the engine
+                // made us re-run wrote its rows once and must be charged once.
+                $budget?->spend($written);
 
                 return $budget === null || ! $budget->isSpent();
             });
@@ -287,7 +431,7 @@ final readonly class OpLogBackfiller
         string $table,
         int $userId,
         OpLogWriter $writer,
-        ?BackfillBudget $budget,
+        bool $resumable,
         $rows,
     ): int {
         $already = $this->alreadyCaptured($connection, $table, $userId, $rows);
@@ -315,11 +459,10 @@ final readonly class OpLogBackfiller
             $captured++;
         }
 
-        if ($budget !== null && $lastPk !== null) {
-            // Spent on rows WRITTEN, not rows walked: skipping a row a previous
-            // slice already captured costs two indexed reads and no signature,
-            // and the budget's deadline is what bounds that half.
-            $budget->spend($captured);
+        // Spent on rows WRITTEN, not rows walked: skipping a row a previous
+        // slice already captured costs two indexed reads and no signature, and
+        // the budget's deadline is what bounds that half.
+        if ($resumable && $lastPk !== null) {
             $this->progress->advance($userId, $table, $lastPk, $captured);
         }
 

@@ -16,14 +16,20 @@ use Modules\Core\Public\Support\Instant;
  */
 final readonly class BackfillProgress
 {
+    // Past this many consecutive fruitless slices the walk stalls: still owed,
+    // never finished, and no longer retried on every request tail. Only a user
+    // action reopens it, because a condition this many slices apart cannot be
+    // the transient lock the first retry is for.
+    public const int MAX_FAILED_SLICES = 8;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
     ) {}
 
-    // Starts a walk, or reopens one a completed run had closed: rows may have
-    // appeared since, and row-wise idempotence makes a repeat cheap. A walk
-    // still in flight keeps its cursor rather than restarting at the top.
+    // Starts a walk, or reopens one a completed or stalled run had closed: rows
+    // may have appeared since, and row-wise idempotence makes a repeat cheap. A
+    // walk still in flight keeps its cursor rather than restarting at the top.
     public function open(int $userId): void
     {
         if ($this->isOpen($userId)) {
@@ -38,6 +44,7 @@ final readonly class BackfillProgress
                 'cursor_table' => null,
                 'cursor_pk' => null,
                 'captured' => 0,
+                'failed_slices' => 0,
                 'started_at' => $now,
                 'completed_at' => null,
                 'updated_at' => $now,
@@ -52,6 +59,18 @@ final readonly class BackfillProgress
         return $this->db->connection()->table('sync_backfill_state')
             ->where('user_id', $userId)
             ->whereNull('completed_at')
+            ->where('failed_slices', '<', self::MAX_FAILED_SLICES)
+            ->exists();
+    }
+
+    // Finished, as against merely not being worked on: a walk that stalled is
+    // neither. The two used to be one answer, and a stalled walk reported
+    // itself as a capture that had covered everything.
+    public function isComplete(int $userId): bool
+    {
+        return $this->db->connection()->table('sync_backfill_state')
+            ->where('user_id', $userId)
+            ->whereNotNull('completed_at')
             ->exists();
     }
 
@@ -74,11 +93,44 @@ final readonly class BackfillProgress
 
     public function advance(int $userId, string $table, int|string $pk, int $captured): void
     {
+        $moved = [
+            'cursor_table' => $table,
+            'cursor_pk' => (string) $pk,
+            'updated_at' => Instant::zulu($this->clock->now()),
+        ];
+
+        // A chunk that wrote nothing is not progress. Clearing the count on it
+        // would let a table no keyring can read be retried until the install
+        // is deleted, which is the condition the count exists to end.
+        if ($captured > 0) {
+            $moved['failed_slices'] = 0;
+        }
+
         $this->db->connection()->table('sync_backfill_state')
             ->where('user_id', $userId)
-            ->increment('captured', $captured, [
-                'cursor_table' => $table,
-                'cursor_pk' => (string) $pk,
+            ->increment('captured', $captured, $moved);
+    }
+
+    // A slice that could not finish leaves the walk OWED. Stamping completed_at
+    // here is what turned a three-second lock into a permanent hole: no later
+    // slice re-walks a capture the state row says has already ended.
+    public function recordFailure(int $userId): void
+    {
+        $this->db->connection()->table('sync_backfill_state')
+            ->where('user_id', $userId)
+            ->increment('failed_slices', 1, ['updated_at' => Instant::zulu($this->clock->now())]);
+    }
+
+    // Sends the next slice back to the top of the order. The cursor is an
+    // optimisation over row-wise idempotence, so dropping it costs two indexed
+    // reads per already-captured row and buys back every table the walk skipped.
+    public function rewind(int $userId): void
+    {
+        $this->db->connection()->table('sync_backfill_state')
+            ->where('user_id', $userId)
+            ->update([
+                'cursor_table' => null,
+                'cursor_pk' => null,
                 'updated_at' => Instant::zulu($this->clock->now()),
             ]);
     }

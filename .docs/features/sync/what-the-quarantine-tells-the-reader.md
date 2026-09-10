@@ -185,6 +185,20 @@ The count it totals is the largest report per author, never the sum across
 peers. Two peers holding the same author's work back are two accounts of one
 gap.
 
+## An empty quarantine is not an answer either
+
+Everything on this page is about an operation that **arrived** and was refused. A quantity that
+never became an operation is outside it entirely, and reads as health: on a pairing that copied
+8,481 records with `op_log_quarantine` at 0 on both devices, seventeen `tax_transaction_tags`
+rows had produced no op-log entries at all on the sending device. Nothing was refused because
+nothing was offered.
+
+So the reading "quarantine is 0, therefore the sync lost nothing" is wrong in the one direction
+that matters, and no amount of work on this table fixes it. The counterpart guard is on the
+sending side: the pre-sync walk counts rows against captured creates for every covered table
+before it is allowed to record itself as finished, and says what it covered even when it covered
+everything. See [Silence is not a report](pre-sync-history-capture.md#silence-is-not-a-report).
+
 ## Related
 
 - [Sync architecture](architecture.md) — the merge layer that produces these refusals

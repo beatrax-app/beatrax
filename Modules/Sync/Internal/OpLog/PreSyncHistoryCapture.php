@@ -95,17 +95,17 @@ final readonly class PreSyncHistoryCapture
                 $this->log->info('PreSyncHistoryCapture: captured pre-sync rows.', [
                     'user_id' => $userId,
                     'rows' => $captured,
-                    'complete' => ! $this->progress->isOpen($userId),
+                    'complete' => $this->progress->isComplete($userId),
                 ]);
             }
 
             return $captured;
         } catch (Throwable $e) {
-            // Retired rather than left owed. A row this device cannot read is a
-            // permanent verdict, and a driver that runs on every request would
-            // otherwise reach the same failing chunk every few seconds forever.
-            // Both callers of capture() are user actions that happen again.
-            $this->progress->close($userId);
+            // Owed, not finished. Stamping completed_at here made a lock lasting
+            // three seconds a hole lasting forever: no later slice re-walks a
+            // capture the state row says has ended, and every table the walk had
+            // not reached yet was never captured at all.
+            $this->progress->recordFailure($userId);
 
             $this->log->error('PreSyncHistoryCapture: capture failed.', [
                 'user_id' => $userId,
