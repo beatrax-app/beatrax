@@ -27,6 +27,7 @@ trait HandlesTaxTagging
 {
     use DispatchesToast;
 
+    #[Locked]
     public ?int $taxPickerTxId = null;
 
     public string $pickerNote = '';
@@ -46,6 +47,7 @@ trait HandlesTaxTagging
     /**
      * @var array{counterpartyId: int, counterpartyName: string, untaggedCount: int, taxYear?: int, categoryId?: int|null, note?: string|null}|null
      */
+    #[Locked]
     public ?array $batchSuggestion = null;
 
     public bool $batchSuggestionDismissed = false;
