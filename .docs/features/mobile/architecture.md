@@ -137,6 +137,22 @@ from the script:
   reader on `system` resolves their theme. So the shell overrides nothing while
   they follow the phone, and the flag is what tells it.
 
+- **`nativephp_theme_native_shell.php` also closes the shell's inspector.**
+  `WebView.setWebContentsDebuggingEnabled(true)` is the last statement of the
+  vendor's `configureWebViewSettings()`, unconditional, and it is process-wide:
+  it is not read off `android:debuggable` and it does not follow the build
+  variant. A shipped release answered `chrome://inspect` — live DOM and JS heap
+  of the ledger, and script execution in the app's own origin — to anyone with
+  adb on a borrowed phone. The patch reads
+  `applicationInfo.flags and FLAG_DEBUGGABLE`, so a `native:run` build still
+  inspects and a release build does not.
+
+  It goes out in the same write as the background paint, off the same anchor,
+  because the anchor **is** the line it rewrites. Split into a second script,
+  whichever ran later would report the anchor missing and skip in silence — the
+  patch order in `nativephp_patch_all.php` would be the only thing holding it
+  together, and nothing would fail if it changed.
+
 **When each patch is present, and when it is not.** Worth stating plainly,
 because the failure is silent — an unpatched shell builds, installs and runs,
 and only the patched behaviour is missing:
