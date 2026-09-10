@@ -127,6 +127,16 @@ For a production-shaped build (faster page loads, no source maps):
 npm run build
 ```
 
+`public/build` is what ships. Neither `native:run` nor the desktop prebuild hooks
+run Vite, so a desktop or phone build bundles that directory as it finds it on
+disk — a JavaScript or stylesheet change made since the last build reaches
+neither device, while every view still renders and the manifest still resolves.
+Build before installing on hardware, and note that a worktree given its own
+`public/build` by a copy carries whatever the checkout it was copied from had.
+`AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest` fails when the built
+script no longer carries the Alpine registrations `resources/js` declares, which
+is the shape that reached a phone silently.
+
 ## Run the test suite
 
 ```sh
