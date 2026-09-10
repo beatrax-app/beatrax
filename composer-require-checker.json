@@ -85,6 +85,7 @@
         "Tests\\Helpers\\LiveSqliteConnection",
         "Tests\\Helpers\\LivewireRoundTrip",
         "Tests\\Helpers\\RealSqliteFixture",
+        "Tests\\Helpers\\ShellBridge",
         "Tests\\Helpers\\UploadIsolation",
         "Tests\\TestCase",
         "uses",
