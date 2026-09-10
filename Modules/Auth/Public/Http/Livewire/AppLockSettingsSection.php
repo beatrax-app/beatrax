@@ -229,8 +229,13 @@ final class AppLockSettingsSection extends Component
         $this->accountPassword = '';
 
         // A browser event, not a PHP one: sibling sections refresh their
-        // lock-gated UI live without a cross-module dependency.
-        $this->dispatch(AppLockEvents::CONFIGURED);
+        // lock-gated UI live without a cross-module dependency. It carries the
+        // window because this screen never re-renders the layout that emits it,
+        // and lock.js has nothing to arm the veil and the idle watch with.
+        $this->dispatch(
+            AppLockEvents::CONFIGURED,
+            ms: $this->idleTimeoutMinutes * Duration::Minute->milliseconds(),
+        );
 
         // Every other write on this screen confirms itself; this one blanked
         // its three inputs and said nothing, which reads as "it did not take".

@@ -139,6 +139,9 @@ document.addEventListener('alpine:init', () => {
         /** The BroadcastChannel instance (null when API unavailable). */
         _channel: null,
 
+        /** True once the lock machinery is armed, so a second arming is a no-op. */
+        _armed: false,
+
         // -----------------------------------------------------------------------
         // Veil helpers
         // -----------------------------------------------------------------------
@@ -458,15 +461,46 @@ document.addEventListener('alpine:init', () => {
                 };
             }
 
+            this._armBiometricListeners();
+
             // Veil and grace are lock machinery, not standalone privacy
             // features: _startGrace() ends in _serverLock(), and a veil whose
             // grace window has elapsed is only ever lifted by a successful
             // unlock. Arming either for a user with no lock strands them
             // behind a PIN pad that no PIN opens — the same invariant the
             // idle tracker already honours below.
+            // Enabling the lock does not reload the page, and the layout
+            // emits beatraxIdleMs only when the lock was already on at
+            // render. Without this the veil, the grace marker and the idle
+            // watch stayed unarmed until the reader happened to reload.
+            document.addEventListener('app-lock-configured', (event) => {
+                const ms = event.detail && event.detail.ms;
+                if (typeof ms !== 'number' || ms <= 0 || this._armed) {
+                    return;
+                }
+
+                window.beatraxIdleMs = ms;
+                this._armLockMachinery();
+            });
+
             if (!_lockEnabled()) {
                 return;
             }
+
+            this._armLockMachinery();
+        },
+
+        // The half that only means anything once a lock exists. Reachable
+        // twice -- from init() on a page that already had one, and from the
+        // event above when the reader has just set one -- so it refuses a
+        // second arming rather than doubling every listener.
+        _armLockMachinery() {
+            if (this._armed) {
+                return;
+            }
+
+            this._armed = true;
+
 
             // Navigating away hides this document too, and the hide is
             // indistinguishable from backgrounding by the time
@@ -580,6 +614,13 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
+        },
+
+        // Registered before the lock-enabled guard below: these two are the
+        // way IN, not lock machinery. The guard exists so a user with no
+        // lock is not stranded behind a veil, and the lock screen -- whose
+        // layout never emits beatraxIdleMs -- is exactly where they matter.
+        _armBiometricListeners() {
             // ---------------------------------------------------------------
             // WebAuthn unlock — beatrax:webauthn-get
             //
