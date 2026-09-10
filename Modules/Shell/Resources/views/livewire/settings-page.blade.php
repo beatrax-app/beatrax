@@ -266,7 +266,17 @@
         </section>
 
         <section class="space-y-2">
-            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.period.heading') }}</h2>
+            {{-- The mark sits outside the h2 and on a block that carries the
+                 type for both, the way x-core::page-heading does it: an h2 may
+                 not contain the panel's div, and a button inside a heading is
+                 read out as part of it. --}}
+            <div class="heading-with-tip {{ $cardHead }}">
+                <h2 class="inline">{{ Lang::get('core::settings.period.heading') }}</h2>&nbsp;<x-core::help-tip
+                    topic="settings-period"
+                    :label="Lang::get('core::settings.period.heading')"
+                    :body="Lang::get('core::help.period', ['label' => Lang::get('core::settings.period.label')])"
+                />
+            </div>
             <x-core::form-field
                 name="periodStartDay"
                 type="number"

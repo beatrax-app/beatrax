@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Hvad der sker med en kuvert, der har brugt mere, end den indeholder, når perioden slutter. Vælger du ”:reduce”, trækkes underskuddet først fra det, du har at fordele i næste periode, og kuverten selv starter forfra på nul. Vælger du ”:carry”, bliver underskuddet stående, hvor det opstod: kuverten åbner under nul og skal fyldes op igen, før den betaler for noget, og resten af planen rører sig ikke.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Hvad denne kuvert stadig kan betale for: ”:assigned” i denne periode, plus ”:carried”, plus eller minus ”:moved”, minus ”:spent” — de fire kolonner til venstre. Det er ikke en kontosaldo: flere kuverter trækker på den samme konto, og dette tal gælder kun denne ene. Under nul har kuverten allerede brugt mere, end den indeholder, og periodens slutning afgør, hvad der sker med underskuddet.',
 ];

@@ -127,7 +127,19 @@
                     <x-core::th align="right">{{ Lang::get('budgets::messages.table.carried_in') }}</x-core::th>
                     <x-core::th align="right">{{ Lang::get('budgets::messages.table.moved') }}</x-core::th>
                     <x-core::th align="right">{{ Lang::get('budgets::messages.table.spent') }}</x-core::th>
-                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.available') }}</x-core::th>
+                    {{-- The row prints every term of its own availability, and
+                         the reader still has to be told which way they combine
+                         and that the result is not a bank balance. --}}
+                    <x-core::th align="right">{{ Lang::get('budgets::messages.table.available') }}&nbsp;<x-core::help-tip
+                        topic="budgets-available"
+                        :label="Lang::get('budgets::messages.table.available')"
+                        :body="Lang::get('budgets::help.available', [
+                            'assigned' => Lang::get('budgets::messages.table.assigned'),
+                            'carried' => Lang::get('budgets::messages.table.carried_in'),
+                            'moved' => Lang::get('budgets::messages.table.moved'),
+                            'spent' => Lang::get('budgets::messages.table.spent'),
+                        ])"
+                    /></x-core::th>
                     {{-- The tip sits on the header rather than on each row's
                          select: one panel per page, and the id it needs is
                          unique only up here. The space before the mark is

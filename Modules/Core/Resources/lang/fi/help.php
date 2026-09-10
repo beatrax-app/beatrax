@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Poista jokainen näistä, niin jälkiä ei jää:',
     'delete_journal_note' => 'Tietokannan vieressä on kaksi lokitiedostoa, :wal ja :shm. Tuoreimmat muutoksesi ovat niissä, kunnes ne kirjataan tietokantaan, joten poista kaikki kolme yhdessä.',
     'no_telemetry' => 'Telemetriaa, josta kieltäytyä, ei ole, eikä etätiliä, joka pitäisi sulkea.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Se ajanjakso, jolta budjettisi, koontinäyttösi ja jokainen ”tämä jakso” -luku mitataan. ”:label” ratkaisee, mistä se alkaa — aseta se palkkapäivää seuraavaan päivään, niin jakso pitää sisällään juuri sen rahan, joka sen kattamiseksi maksettiin. Päivän siirtäminen järjestää uudelleen jokaisen jo jakamasi kuorisumman, ja kun kaksi vanhaa jaksoa taittuu yhdeksi uudeksi, niiden summat lasketaan yhteen; päivän siirtäminen takaisin ei erottele niitä uudelleen.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Kaikki mistä Beatrax tietää sinun omistavan, miinus kaikki mitä olet velkaa: jokaisen tuomasi tai yhdistämäsi tilin saldo, jossa kortti- ja lainasaldot lasketaan miinukseksi. Se ei ole täydellisempi kuin se, minkä olet antanut — tili, jota Beatrax ei ole koskaan nähnyt, ei ole tässä luvussa. Toisen valuutan saldot muunnetaan luvun alla näkyvällä kurssilla, ja se mitä ei pystytty hinnoittelemaan nimetään siinä sen sijaan että se jäisi hiljaa pois.',
 ];

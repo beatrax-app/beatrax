@@ -117,6 +117,10 @@
                     @endforeach
                 </div>
 
+                {{-- The chip and its mark share one inline block so the mark
+                     takes the chip's type rather than the row's; beside the
+                     button it would be a flex item, which resolves neither. --}}
+                <div class="text-sm">
                 {{-- aria-pressed, not role="switch": a switch is the track-and-thumb
                      picture x-core::switch draws, and this is a chip in a row of
                      chips. "Switch, on" announced a control that is not here. --}}
@@ -135,8 +139,13 @@
                     ])
                 >
                     <span>{{ Lang::get('forecasting::forecast.view_by_funder') }}</span>
-                </button>
+                </button>&nbsp;<x-core::help-tip
+                    topic="forecast-view-by-funder"
+                    :label="Lang::get('forecasting::forecast.view_by_funder')"
+                    :body="Lang::get('forecasting::help.view_by_funder')"
+                />
                 <span id="view-by-funder-hint" class="sr-only">{{ Lang::get('forecasting::forecast.view_by_funder_hint') }}</span>
+                </div>
             </div>
 
             {{-- Scenario picker — baseline radio + one per saved scenario + "+ New scenario" chip. --}}

@@ -14,7 +14,14 @@
             <dt class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.transparency.bank_label') }}</dt>
             <dd class="text-right text-sm text-slate-900 dark:text-slate-100">{{ $bankDisplayName }}</dd>
 
-            <dt class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.transparency.consent_status_label') }}</dt>
+            <dt class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.transparency.consent_status_label') }}&nbsp;<x-core::help-tip
+                topic="open-banking-consent"
+                :label="Lang::get('openbanking::messages.transparency.consent_status_label')"
+                :body="Lang::get('openbanking::help.consent_status', [
+                    'expiring' => Lang::get('openbanking::messages.transparency.pill_expiring'),
+                    'reconnect' => Lang::get('openbanking::messages.consent_banner.reconnect'),
+                ])"
+            /></dt>
             <dd class="text-right">
                 @if ($consentStatus === ConsentStatus::Revoked->value)
                     <x-core::status-pill tone="danger" data-testid="ob-consent-pill">{{ Lang::get('openbanking::messages.transparency.pill_revoked') }}</x-core::status-pill>

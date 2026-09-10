@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Um jede Spur zu entfernen, lösche jedes davon:',
     'delete_journal_note' => 'Neben der Datenbank liegen zwei Journaldateien, :wal und :shm. Deine jüngsten Änderungen stecken darin, bis sie in die Datenbank übernommen werden — lösche also alle drei zusammen.',
     'no_telemetry' => 'Es gibt keine Telemetrie, die du abschalten müsstest, und kein externes Konto, das du kündigen müsstest.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Der Zeitraum, über den deine Budgets, dein Dashboard und jede „diese Periode“-Zahl gemessen werden. „:label“ legt fest, wo er beginnt — stell ihn auf den Tag nach deinem Zahltag, und eine Periode enthält genau das Geld, das sie decken sollte. Diesen Tag zu verschieben ordnet jeden bereits zugewiesenen Umschlagbetrag neu ein, und wo zwei alte Perioden auf eine neue fallen, werden ihre Beträge addiert; den Tag zurückzustellen teilt sie nicht wieder auf.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Alles, wovon Beatrax weiß, dass du es hast, minus alles, was du schuldest: der Saldo jedes Kontos, das du importiert oder verbunden hast, wobei Karten- und Kreditsalden gegengerechnet werden. Vollständiger als das, was du eingegeben hast, ist es nicht — ein Konto, das Beatrax nie gesehen hat, steckt nicht in dieser Zahl. Salden in anderer Währung werden zu dem Kurs umgerechnet, der unter der Zahl steht, und was sich nicht bewerten ließ, wird dort benannt statt stillschweigend weggelassen.',
 ];

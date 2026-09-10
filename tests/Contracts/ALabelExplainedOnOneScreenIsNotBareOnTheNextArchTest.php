@@ -158,7 +158,7 @@ it('never draws a label bare on one screen while another screen explains it', fu
     // it, so deleting the last panel for a key takes every bare drawing of it
     // out of scope and the guard reports clean. Adding a panel raises this
     // number; removing one has to be the deliberate act of lowering it.
-    expect(count($keys))->toBeGreaterThanOrEqual(7, 'Read '.count($keys).' labels carrying a help panel, fewer than the tree had when this floor was set. A deleted panel silences every bare drawing of its label.');
+    expect(count($keys))->toBeGreaterThanOrEqual(18, 'Read '.count($keys).' labels carrying a help panel, fewer than the tree had when this floor was set. A deleted panel silences every bare drawing of its label.');
 
     $bare = [];
     $drawn = 0;

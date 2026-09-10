@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Hiçbir iz kalmaması için bunların her birini sil:',
     'delete_journal_note' => 'Veritabanının yanında iki günlük dosyası durur: :wal ve :shm. En son değişikliklerin, veritabanına işlenene kadar bunların içinde yaşar; o yüzden üçünü birlikte sil.',
     'no_telemetry' => 'Devre dışı bırakılacak bir telemetri ve kapatılacak uzak bir hesap yok.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Bütçelerinin, panonun ve “bu dönem” diyen her rakamın ölçüldüğü zaman aralığı. “:label”, bu aralığın nerede başladığına karar verir — maaş gününün ertesine ayarla, dönem tam olarak onu karşılamak için ödenen parayı tutsun. O günü kaydırmak, zarflara daha önce dağıttığın her tutarı yeniden yerleştirir; iki eski dönem tek bir yeni döneme katlandığında tutarları toplanır ve günü geri almak onları bir daha ayırmaz.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Beatrax’ın sende olduğunu bildiği her şey, eksi borçlu olduğun her şey: içe aktardığın ya da bağladığın her hesabın bakiyesi; kart ve kredi bakiyeleri aleyhine sayılır. Ona verdiğinden daha eksiksiz olamaz — Beatrax’ın hiç görmediği bir hesap bu rakamın içinde değildir. Başka para birimindeki bakiyeler rakamın altında gösterilen kurla çevrilir ve fiyatlandırılamayanlar sessizce dışarıda bırakılmak yerine orada adıyla anılır.',
 ];

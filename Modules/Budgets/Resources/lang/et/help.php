@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Mis juhtub ümbrikuga, mis on kulutanud rohkem, kui tal on, kui periood lõpeb. Valikuga „:reduce“ arvatakse puudujääk esimesena maha sellest, mida sul on järgmisel perioodil jaotada, ja ümbrik ise alustab uuesti nullist. Valikuga „:carry“ jääb puudujääk sinna, kus see tekkis: see ümbrik avaneb miinuses ja tuleb enne mis tahes maksmist uuesti täita, ülejäänud plaan aga ei liigu.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Mida see ümbrik veel maksta suudab: „:assigned“ selle perioodi eest, pluss „:carried“, pluss või miinus „:moved“, miinus „:spent“ — neli veergu vasakul. See ei ole kontojääk: samast kontost ammutab mitu ümbrikku ja see arv räägib ainult sellest ühest. Alla nulli on ümbrik juba kulutanud rohkem, kui tal on, ja perioodi lõpp otsustab, mis selle puudujäägiga juhtub.',
 ];

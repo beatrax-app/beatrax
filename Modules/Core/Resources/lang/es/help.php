@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Para no dejar rastro, elimina cada una de estas cosas:',
     'delete_journal_note' => 'Junto a la base de datos hay dos archivos de diario, :wal y :shm. Tus cambios más recientes viven ahí hasta que se integran en la base de datos, así que borra los tres juntos.',
     'no_telemetry' => 'No hay telemetría que desactivar ni cuenta remota que cerrar.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'El tramo de tiempo sobre el que se miden tus presupuestos, tu panel y cualquier cifra de “este periodo”. “:label” decide dónde empieza — ponlo el día después de cobrar y un periodo contiene el dinero que se pagó para cubrirlo. Mover ese día vuelve a archivar cada importe de sobre que ya has asignado, y donde dos periodos antiguos caen sobre uno nuevo sus importes se suman; devolver el día no vuelve a separarlos.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Todo lo que Beatrax sabe que tienes, menos todo lo que debes: el saldo de cada cuenta que has importado o conectado, con los saldos de tarjeta y préstamo contando en contra. No es más completo que lo que le has dado — una cuenta que Beatrax nunca ha visto no está en esta cifra. Los saldos en otra moneda se convierten al tipo que aparece bajo la cifra, y lo que no ha podido valorar se nombra ahí en vez de quedar fuera en silencio.',
 ];

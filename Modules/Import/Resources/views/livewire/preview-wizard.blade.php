@@ -322,7 +322,19 @@
                         <x-core::th align="left">{{ Lang::get('import::preview.col_funding_source') }}</x-core::th>
                         <x-core::th align="left">{{ Lang::get('import::preview.col_counterparty') }}</x-core::th>
                         <x-core::th align="right">{{ Lang::get('import::preview.col_amount') }}</x-core::th>
-                        <x-core::th align="left">{{ Lang::get('import::preview.col_status') }}</x-core::th>
+                        {{-- The three badges under this header say what they
+                             are only through a title attribute, which is inert
+                             on both shipped phones. --}}
+                        <x-core::th align="left">{{ Lang::get('import::preview.col_status') }}&nbsp;<x-core::help-tip
+                            topic="import-preview-status"
+                            :label="Lang::get('import::preview.col_status')"
+                            :body="Lang::get('import::help.preview_status', [
+                                'new' => Lang::get('import::preview.status.new'),
+                                'duplicate' => Lang::get('import::preview.status.duplicate'),
+                                'enriched' => Lang::get('import::preview.status.enriched'),
+                                'confirm' => Lang::get('import::preview.confirm'),
+                            ])"
+                        /></x-core::th>
                     </x-slot:head>
 
                     @foreach ($preview->rows as $row)

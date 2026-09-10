@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Dönem bittiğinde, içinde olandan fazlasını harcamış bir zarfa ne olacağı. “:reduce” seçersen açık, gelecek dönem dağıtacağın tutardan ilk sırada düşülür ve zarfın kendisi yeniden sıfırdan başlar. “:carry” seçersen açık, oluştuğu yerde kalır: o zarf sıfırın altında açılır ve bir şey ödeyebilmek için önce doldurulması gerekir, planın geri kalanı ise yerinden oynamaz.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Bu zarfın hâlâ ödeyebileceği tutar: bu dönemin “:assigned” tutarı, artı “:carried”, artı ya da eksi “:moved”, eksi “:spent” — soldaki dört sütun. Bu bir banka bakiyesi değildir: aynı hesaptan birden çok zarf beslenir ve buradaki rakam yalnızca bu zarf için geçerlidir. Sıfırın altı, zarfın içinde olandan fazlasını harcadığı anlamına gelir; bu açığa ne olacağına dönemin sonu karar verir.',
 ];

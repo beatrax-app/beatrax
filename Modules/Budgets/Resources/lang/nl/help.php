@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Wat er met een envelop gebeurt die meer heeft uitgegeven dan erin zit, zodra de periode voorbij is. Kies je ‘:reduce’, dan gaat het tekort er meteen af van wat je volgende periode te verdelen hebt, en begint de envelop zelf weer op nul. Kies je ‘:carry’, dan blijft het tekort staan waar het is ontstaan: die envelop begint onder nul en moet eerst worden aangevuld voordat er weer iets uit betaald wordt, en de rest van het plan blijft ongemoeid.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Wat deze envelop nog kan betalen: ‘:assigned’ voor deze periode, plus ‘:carried’, plus of min ‘:moved’, min ‘:spent’ — de vier kolommen links hiervan. Het is geen banksaldo: meerdere enveloppen putten uit dezelfde rekening, en dit getal spreekt alleen voor deze ene. Onder nul heeft de envelop al meer uitgegeven dan erin zit, en het einde van de periode bepaalt wat er met dat tekort gebeurt.',
 ];
