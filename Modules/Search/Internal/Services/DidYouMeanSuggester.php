@@ -11,9 +11,9 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-// Suggests one "did you mean" word (levenshtein <= 2, no spellfix1 in
-// this SQLite build) for a zero-result query >= 4 chars, built from a
-// decrypt-then-tally corpus over a bounded most-recent window.
+// Suggests one "did you mean" word (edit distance <= 2, no spellfix1 in
+// this SQLite build) for a zero-result query >= 4 characters, built from
+// a decrypt-then-tally corpus over a bounded most-recent window.
 final readonly class DidYouMeanSuggester
 {
     // Bounds the number of raw rows decrypted to build the corpus so a
@@ -48,7 +48,7 @@ final readonly class DidYouMeanSuggester
     private function targetWord(string $query): ?string
     {
         $query = trim($query);
-        if (strlen($query) < 4) {
+        if (mb_strlen($query) < 4) {
             return null;
         }
 
@@ -57,7 +57,7 @@ final readonly class DidYouMeanSuggester
             static fn (string $w): bool => $w !== '',
         ));
 
-        return $words === [] ? null : strtolower($words[count($words) - 1]);
+        return $words === [] ? null : mb_strtolower($words[count($words) - 1]);
     }
 
     // Decrypt-then-tally corpus over a bounded most-recent window: a
@@ -118,18 +118,18 @@ final readonly class DidYouMeanSuggester
         if ($decrypted === '') {
             return [];
         }
-        $tokens = preg_split('/\s+/', strtolower($decrypted));
+        $tokens = preg_split('/\s+/', mb_strtolower($decrypted));
         if ($tokens === false) {
             return [];
         }
 
         return array_values(array_filter(
             array_map('trim', $tokens),
-            static fn (string $w): bool => strlen($w) >= SearchDocumentBody::TRIGRAM_WIDTH,
+            static fn (string $w): bool => mb_strlen($w) >= SearchDocumentBody::TRIGRAM_WIDTH,
         ));
     }
 
-    // Nearest corpus word within levenshtein 2, ties broken by higher
+    // Nearest corpus word within edit distance 2, ties broken by higher
     // frequency; the target word itself is never its own suggestion.
     /**
      * @param  array<array-key, int>  $corpusWords
@@ -146,7 +146,7 @@ final readonly class DidYouMeanSuggester
                 continue;
             }
 
-            $dist = levenshtein($targetWord, $word);
+            $dist = self::editDistance($targetWord, $word);
             if ($dist < $bestDist || ($dist === $bestDist && $freq > $bestFreq)) {
                 $bestDist = $dist;
                 $bestFreq = $freq;
@@ -155,5 +155,42 @@ final readonly class DidYouMeanSuggester
         }
 
         return $bestDist <= 2 ? $bestWord : null;
+    }
+
+    // levenshtein() counts bytes, so an accented character costs two edits
+    // and the threshold above tightens the more accents a language has:
+    // "eleve" sat four from its two-accent spelling, not two, and was never
+    // offered. Single-byte pairs still take the C implementation.
+    private static function editDistance(string $a, string $b): int
+    {
+        if (strlen($a) === mb_strlen($a) && strlen($b) === mb_strlen($b)) {
+            return levenshtein($a, $b);
+        }
+
+        return self::codePointDistance(mb_str_split($a), mb_str_split($b));
+    }
+
+    /**
+     * @param  list<string>  $a
+     * @param  list<string>  $b
+     */
+    private static function codePointDistance(array $a, array $b): int
+    {
+        $width = count($b);
+        $previous = range(0, $width);
+
+        foreach ($a as $i => $aChar) {
+            $current = [$i + 1];
+            foreach ($b as $j => $bChar) {
+                $current[] = min(
+                    $previous[$j + 1] + 1,
+                    $current[$j] + 1,
+                    $previous[$j] + ($aChar === $bChar ? 0 : 1),
+                );
+            }
+            $previous = $current;
+        }
+
+        return $previous[$width];
     }
 }
