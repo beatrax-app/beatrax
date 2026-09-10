@@ -236,7 +236,17 @@ user's explicit Show-IBAN click before echoing it.
 12-month total, per-month average, and 12-bar sparkline via SQL
 `GROUP BY`/`SUM` so per-render cost stays bounded regardless of import
 history depth. All three — and the profile's own total and category
-breakdown — take their window from
+breakdown — count only the types that crossed between the reader and
+somebody else (`TransactionType::externalMovementValues()`). The alias
+bridge retypes a settlement to the reader's own card as a transfer and
+leaves `counterparty_id` pointing at the issuer that resolved before it,
+so filtering on the id alone added the EUR 225.00 the reader moved onto
+their own card to what they had "spent with" the issuer — on top of every
+charge that settlement pays off. The transaction count beside the figure
+deliberately still counts every row: it answers when the reader last had
+anything to do with this counterparty, which a settlement is.
+
+All of them take their window from
 `Internal\Support\RollingTwelveMonths`: twelve whole calendar months
 ending with the one in progress. The totals used to take a rolling
 year while the bars took calendar months, so spend inside the headline

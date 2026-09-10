@@ -17,6 +17,7 @@ use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\Support\CategoryPathName;
@@ -58,6 +59,7 @@ final readonly class CounterpartyProfileQuery
         $buckets = $connection->table('transactions')
             ->where('user_id', $user->id)
             ->where('counterparty_id', $cpId)
+            ->whereIn('type', TransactionType::externalMovementValues())
             ->where('posted_at', '>=', $cutoffDate)
             ->groupBy('settled_currency')
             ->selectRaw('settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total')
@@ -266,6 +268,7 @@ final readonly class CounterpartyProfileQuery
         $rows = CategoryPathName::joinParent($joined, self::toInt($cp->user_id), 'c', 'cp')
             ->where('t.user_id', $cp->user_id)
             ->where('t.counterparty_id', $cp->id)
+            ->whereIn('t.type', TransactionType::externalMovementValues())
             ->where('t.posted_at', '>=', $cutoffDate)
             ->select(['t.category_id as category_id', 't.settled_currency as settled_currency', ...CategoryPathName::columns('c', 'cp')])
             ->selectRaw('COALESCE(SUM(t.settled_amount_minor), 0) as total_minor')
@@ -412,6 +415,7 @@ final readonly class CounterpartyProfileQuery
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $cp->user_id)
             ->where('counterparty_id', $cp->id)
+            ->whereIn('type', TransactionType::externalMovementValues())
             ->selectRaw("CAST(strftime('%Y', posted_at) AS INTEGER) as year, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total_minor")
             ->groupBy('year', 'settled_currency')
             ->get();

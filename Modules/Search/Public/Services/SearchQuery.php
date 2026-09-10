@@ -12,6 +12,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AmountDirection;
+use Modules\Ledger\Public\Enums\MoneyFlow;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
@@ -406,11 +407,18 @@ final readonly class SearchQuery
      */
     private function totals(Builder $query, string $base): array
     {
+        // By flow, not by the amount's sign: a fee and a transfer out are both
+        // negative and only one of them is money leaving the reader, and both
+        // legs of one internal move used to land here, one on each side.
+        [$outWhen, $outBindings] = MoneyFlow::Spend->predicate('transactions.');
+        [$inWhen, $inBindings] = MoneyFlow::Income->predicate('transactions.');
+
         $summary = (clone $query)->selectRaw(
             'COUNT(*) as total_count,
              settled_currency as bucket_currency,
-             SUM(CASE WHEN settled_amount_minor < 0 THEN settled_amount_minor ELSE 0 END) as total_out,
-             SUM(CASE WHEN settled_amount_minor > 0 THEN settled_amount_minor ELSE 0 END) as total_in',
+             SUM(CASE WHEN '.$outWhen.' THEN settled_amount_minor ELSE 0 END) as total_out,
+             SUM(CASE WHEN '.$inWhen.' THEN settled_amount_minor ELSE 0 END) as total_in',
+            [...$outBindings, ...$inBindings],
         )->groupBy('settled_currency')->get();
 
         $count = 0;

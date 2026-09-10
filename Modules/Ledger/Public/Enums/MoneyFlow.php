@@ -74,6 +74,7 @@ enum MoneyFlow: string
         return match ($prefix) {
             '' => ['type', "COALESCE(payment_type, '')", 'settled_amount_minor'],
             't.' => ['t.type', "COALESCE(t.payment_type, '')", 't.settled_amount_minor'],
+            'transactions.' => ['transactions.type', "COALESCE(transactions.payment_type, '')", 'transactions.settled_amount_minor'],
             default => throw new InvalidArgumentException("Unknown column prefix: {$prefix}"),
         };
     }
