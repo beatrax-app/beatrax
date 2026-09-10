@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Search\Public\Support\SearchedColumns;
 use Modules\Sync\Internal\Merge\SearchDocumentRows;
 
 uses(RefreshDatabase::class);
@@ -22,16 +23,32 @@ function tablesTheSearchWriterComposesFrom(): array
 
     expect($source)->toBeString();
 
+    // Both spellings, because a table named by a SearchedColumns constant is
+    // still a table this writer composes from: reading only the literal made
+    // this guard agree the tax note was covered on the very commit that moved
+    // it behind the constant.
     // Written as one statement so the answer is read where it is produced: a
     // give-up leaves $matches empty, which would name no tables and let the
     // case below agree that every table it reads is covered.
-    if (preg_match_all("/->table\('([a-z_]+)'\)/", (string) $source, $matches) === false) {
+    if (preg_match_all("/->table\(\s*(?:'([a-z_]+)'|SearchedColumns::([A-Z_]+))\s*\)/", (string) $source, $matches, PREG_SET_ORDER) === false) {
         throw new RuntimeException('the writer could not be scanned: '.preg_last_error_msg());
     }
 
+    $named = [];
+
+    foreach ($matches as $match) {
+        // A constant that names no table would silently drop one, so it is
+        // resolved rather than trusted to look like a table name.
+        $named[] = ($match[1] ?? '') !== ''
+            ? $match[1]
+            : (string) constant(SearchedColumns::class.'::'.$match[2]);
+    }
+
+    expect($named)->not->toBeEmpty('the writer named no table at all, which is what a scanner that stopped reading looks like');
+
     // The destination is not a source: the writer reads it only to compare the
     // body it is about to store against the one already there.
-    $tables = array_diff(array_unique($matches[1]), ['transaction_search_docs']);
+    $tables = array_diff(array_unique($named), ['transaction_search_docs']);
 
     sort($tables);
 

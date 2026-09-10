@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Search\Public\Support\SearchedColumns;
 use Psr\Log\LoggerInterface;
 
 // Synchronous writer keeping transaction_search_docs and the FTS5
@@ -41,7 +42,7 @@ final class SearchIndexWriter implements SearchIndexWriterContract
 
         $tx = $connection
             ->table('transactions')
-            ->select(['id', 'user_id', 'counterparty_name', 'description'])
+            ->select(['id', 'user_id', ...SearchedColumns::of(SearchedColumns::TRANSACTIONS)])
             ->where('id', $transactionId)
             ->first();
 
@@ -110,8 +111,8 @@ final class SearchIndexWriter implements SearchIndexWriterContract
         // split leg's tag matches the same transaction_id and carries no note,
         // so which row `first()` returned decided whether the note was indexed.
         $tag = $connection
-            ->table('tax_transaction_tags')
-            ->select(['note'])
+            ->table(SearchedColumns::TAX_TAGS)
+            ->select(SearchedColumns::of(SearchedColumns::TAX_TAGS))
             ->where('transaction_id', $transactionId)
             ->where('user_id', $userId)
             ->whereNull('transaction_split_id')

@@ -119,8 +119,14 @@ final class Mt940Lexer
     /**
      * @return Generator<int, array{0: string, 1: string}>
      */
-    private function processLine(string $line, ?string &$currentTag, string &$buffer): Generator
+    private function processLine(string $rawLine, ?string &$currentTag, string &$buffer): Generator
     {
+        // Every other reader of a text file converts it: the CSV adapters hand
+        // League a charset filter, and the mail and PDF readers decode per
+        // part. MT940 is read as bytes, so a bank still emitting latin-1 wrote
+        // an invalid sequence into a name, a description and a raw_payload.
+        $line = mb_scrub($rawLine, 'UTF-8');
+
         if ($line === '-') {
             if ($currentTag !== null) {
                 yield [$currentTag, rtrim($buffer, "\r\n")];
