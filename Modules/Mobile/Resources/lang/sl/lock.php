@@ -24,5 +24,7 @@ return [
         // a native eye.
         'incorrect_pin_remaining' => 'Napačen PIN. Preostal je še :count poskus.|Napačen PIN. Preostala sta še :count poskusa.|Napačen PIN. Preostali so še :count poskusi.|Napačen PIN. Preostalo je še :count poskusov.',
         'incorrect_pin' => 'Napačen PIN.',
+
+        'pin_changed' => 'PIN te naprave je bil spremenjen med odklepanjem. Vnesi trenutni PIN.',
     ],
 ];

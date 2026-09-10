@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Zbyt wiele prób — spróbuj ponownie za :secondss.',
         'incorrect_pin_remaining' => 'Nieprawidłowy PIN. Pozostała :count próba.|Nieprawidłowy PIN. Pozostały :count próby.|Nieprawidłowy PIN. Pozostało :count prób.',
         'incorrect_pin' => 'Nieprawidłowy PIN.',
+
+        'pin_changed' => 'PIN tego urządzenia został zmieniony podczas odblokowywania. Wpisz aktualny PIN.',
     ],
 ];

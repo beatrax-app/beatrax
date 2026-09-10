@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Incorrect PIN. :count attempt remaining.|Incorrect PIN. :count attempts remaining.',
     'error_incorrect' => 'Incorrect PIN.',
+
+    'error_pin_changed' => 'The PIN for this device was changed while you were unlocking. Enter the current PIN.',
 ];

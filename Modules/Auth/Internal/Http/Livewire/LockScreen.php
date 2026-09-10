@@ -15,6 +15,7 @@ use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\ColdStartEnroller;
+use Modules\Auth\Internal\Lock\PinUnlockAttempt;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\Contracts\AppLockPinShape;
@@ -90,25 +91,13 @@ final class LockScreen extends Component
         }
 
         $user = $currentUser->user();
-        $dataKey = $verifier->verify($user->id, $pin, $session);
+        $attempt = $verifier->verify($user->id, $pin, $session);
+        $dataKey = $attempt->dataKey;
 
         if ($dataKey === null) {
             $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
 
-            // verify() returns null before checking the PIN during a backoff
-            // window, so a correct PIN lands here too and must be told apart.
-            $lockedUntil = $verifier->lockedUntil($user->id);
-            if ($lockedUntil !== null) {
-                $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
-                $this->flashMessage = Lang::get('auth::lock_screen.error_backoff', ['wait' => $seconds.'s']);
-
-                return;
-            }
-
-            $remaining = $this->remainingAttempts($user->id, $db);
-            $this->flashMessage = $remaining !== null
-                ? Lang::choice('auth::lock_screen.error_incorrect_remaining', $remaining)
-                : Lang::get('auth::lock_screen.error_incorrect');
+            $this->flashMessage = $this->refusalMessage($user->id, $attempt, $verifier, $db, $clock);
 
             return;
         }
@@ -122,6 +111,31 @@ final class LockScreen extends Component
         }
 
         $this->redirect($this->intendedUrl($session, $urls), navigate: false);
+    }
+
+    // Three ways not to be let in, and the reader is owed the difference.
+    // Only the last of them spent an attempt, so it is the only one that may
+    // name a remaining count.
+    private function refusalMessage(int $userId, PinUnlockAttempt $attempt, PinVerificationService $verifier, DatabaseManager $db, Clock $clock): string
+    {
+        if ($attempt->pinChangedMidAttempt) {
+            return Lang::get('auth::lock_screen.error_pin_changed');
+        }
+
+        // verify() answers before checking the PIN during a backoff window, so
+        // a correct PIN lands here too and must be told apart.
+        $lockedUntil = $verifier->lockedUntil($userId);
+        if ($lockedUntil !== null) {
+            $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
+
+            return Lang::get('auth::lock_screen.error_backoff', ['wait' => $seconds.'s']);
+        }
+
+        $remaining = $this->remainingAttempts($userId, $db);
+
+        return $remaining !== null
+            ? Lang::choice('auth::lock_screen.error_incorrect_remaining', $remaining)
+            : Lang::get('auth::lock_screen.error_incorrect');
     }
 
     // The vault returns the key only on a successful prompt, so a null here

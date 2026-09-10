@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Trop de tentatives — réessaie dans :secondss.',
         'incorrect_pin_remaining' => 'PIN incorrect. :count tentative restante.|PIN incorrect. :count tentatives restantes.',
         'incorrect_pin' => 'PIN incorrect.',
+
+        'pin_changed' => 'Le PIN de cet appareil a été modifié pendant le déverrouillage. Saisis le PIN actuel.',
     ],
 ];

@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Πάρα πολλές προσπάθειες — δοκίμασε ξανά σε :seconds δευτ.',
         'incorrect_pin_remaining' => 'Λάθος PIN. Απομένει :count προσπάθεια.|Λάθος PIN. Απομένουν :count προσπάθειες.',
         'incorrect_pin' => 'Λάθος PIN.',
+
+        'pin_changed' => 'Το PIN αυτής της συσκευής άλλαξε κατά το ξεκλείδωμα. Εισαγάγε το τρέχον PIN.',
     ],
 ];

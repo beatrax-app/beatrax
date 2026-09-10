@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Väärä PIN-koodi. :count yritys jäljellä.|Väärä PIN-koodi. :count yritystä jäljellä.',
     'error_incorrect' => 'Väärä PIN-koodi.',
+
+    'error_pin_changed' => 'Tämän laitteen PIN-koodi vaihdettiin avaamisen aikana. Anna nykyinen PIN-koodi.',
 ];

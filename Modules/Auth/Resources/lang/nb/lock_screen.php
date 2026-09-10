@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Feil PIN-kode. :count forsøk igjen.|Feil PIN-kode. :count forsøk igjen.',
     'error_incorrect' => 'Feil PIN-kode.',
+
+    'error_pin_changed' => 'PIN-koden for denne enheten ble endret under opplåsingen. Tast inn den gjeldende PIN-koden.',
 ];

@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Hatalı PIN. :count deneme hakkın kaldı.',
     'error_incorrect' => 'Hatalı PIN.',
+
+    'error_pin_changed' => 'Bu cihazın PIN kodu kilit açılırken değiştirildi. Güncel PIN kodunu gir.',
 ];

@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Nieprawidłowy PIN. Pozostała :count próba.|Nieprawidłowy PIN. Pozostały :count próby.|Nieprawidłowy PIN. Pozostało :count prób.',
     'error_incorrect' => 'Nieprawidłowy PIN.',
+
+    'error_pin_changed' => 'PIN tego urządzenia został zmieniony podczas odblokowywania. Wpisz aktualny PIN.',
 ];

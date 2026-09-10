@@ -40,7 +40,7 @@ it('verify returns null and alerts when the PIN wrap material is missing', funct
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    $result = $service->verify($user->id, '123456', $session);
+    $result = $service->verify($user->id, '123456', $session)->dataKey;
 
     expect($result)->toBeNull();
 
@@ -75,7 +75,7 @@ it('verify returns null and alerts when the wrapped key blob is corrupt', functi
     /** @var Session $session */
     $session = $this->app->make(Session::class);
 
-    $result = $service->verify($user->id, '123456', $session);
+    $result = $service->verify($user->id, '123456', $session)->dataKey;
 
     expect($result)->toBeNull();
 

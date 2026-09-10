@@ -20,5 +20,7 @@ return [
         'too_many_attempts' => 'Prea multe încercări — încearcă din nou peste :secondss.',
         'incorrect_pin_remaining' => 'Cod PIN incorect. Ți-a mai rămas :count încercare.|Cod PIN incorect. Ți-au mai rămas :count încercări.|Cod PIN incorect. Ți-au mai rămas :count de încercări.',
         'incorrect_pin' => 'Cod PIN incorect.',
+
+        'pin_changed' => 'Codul PIN al acestui dispozitiv a fost schimbat în timpul deblocării. Introdu codul PIN actual.',
     ],
 ];

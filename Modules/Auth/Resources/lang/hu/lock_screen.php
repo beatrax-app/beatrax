@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'Hibás PIN-kód. Még :count próbálkozásod maradt.|Hibás PIN-kód. Még :count próbálkozásod maradt.',
     'error_incorrect' => 'Hibás PIN-kód.',
+
+    'error_pin_changed' => 'Ennek az eszköznek a PIN-kódja megváltozott a feloldás közben. Add meg az aktuális PIN-kódot.',
 ];

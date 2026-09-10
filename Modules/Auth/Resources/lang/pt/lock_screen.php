@@ -22,4 +22,6 @@ return [
 
     'error_incorrect_remaining' => 'PIN incorreto. Resta :count tentativa.|PIN incorreto. Restam :count tentativas.',
     'error_incorrect' => 'PIN incorreto.',
+
+    'error_pin_changed' => 'O PIN deste dispositivo foi alterado durante o desbloqueio. Introduz o PIN atual.',
 ];
