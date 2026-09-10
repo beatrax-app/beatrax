@@ -190,16 +190,19 @@ creates one synthetic `import_runs` row per `(user, sourceProduct)` (mirrors
 `CashBook`'s manual-entry synthetic-fixture precedent).
 
 None of the three source formats carry a transaction time-of-day, so
-`postedAt`/`valueDate` are always midnight. Since `FingerprintComposer`'s
-dedup tuple relies on `bookedAt`'s second-resolution to disambiguate two
-otherwise-identical same-day rows, feeding it the same midnight value for
-every row would collapse two genuinely distinct transactions into one.
-`SameFingerprintOrdinals` hands each staged row its position among the rows
-that would otherwise fingerprint identically — same account, date, payee,
-amount and currency — and `PromoteStagingToDomain` seeds `bookedAt` with that
-number of seconds past midnight. `postedAt`/`valueDate` stay the exact
-user-facing date; only the internal, never-displayed `bookedAt` carries the
-synthetic offset.
+`postedAt`, `valueDate` and `bookedAt` are all the same midnight. Two
+otherwise-identical same-day rows are told apart by `occurrence_ordinal`, the
+eighth member of `FingerprintComposer`'s tuple: `SameFingerprintOrdinals`
+hands each staged row its position among the rows that would otherwise
+fingerprint identically — same account, date, payee, amount and currency —
+and `PromoteStagingToDomain` writes that number into the ordinal column.
+
+That number used to be added to `bookedAt` as seconds past midnight, back when
+the ordinal had nowhere else to live. It wrapped at a day's worth of one kind,
+and every row it touched carried a time of day its export never stated.
+`2026_09_10_000012_take_the_ordinal_back_out_of_the_clock` puts it back where
+it belongs on rows promoted before the column existed; the offset is
+recoverable exactly, being the distance from `booked_at` to midnight.
 
 ## A row re-exported under a new identity
 

@@ -12,7 +12,6 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\IdReadBack;
@@ -679,18 +678,17 @@ final class PromoteStagingToDomain
 
         $postedAt = CarbonImmutable::parse(self::toString($row->posted_at));
 
-        // Every postedAt is midnight (no source carries a time-of-day); the
-        // offset keeps two same-day rows off one fingerprint. It counts within
-        // the fingerprint's own tuple, never the staging row's database id: that
-        // id is minted per run, so a re-export arrived as a second copy.
-        $bookedAt = $postedAt->addSeconds($sameFingerprintOrdinal % Duration::Day->seconds());
+        // No source carries a time of day, so booked_at is the posting date.
+        // Two same-day rows are told apart by the ordinal's own column, not by
+        // a second of clock time invented to hold it: that offset wrapped at a
+        // day's worth of one kind, and stated a time no export ever gave.
 
         return new CanonicalTransaction(
             userId: $user->id,
             accountId: $accountId,
             type: $type,
             postedAt: $postedAt,
-            bookedAt: $bookedAt,
+            bookedAt: $postedAt,
             valueDate: $postedAt,
             amountMinor: $amountMinor,
             currency: self::toString($row->currency),
@@ -706,6 +704,7 @@ final class PromoteStagingToDomain
             importRunId: $this->migrationImportRunId($user, $sourceProduct),
             sourceRowIndex: 0,
             sourceRef: 'migration:'.$sourceProduct.':'.self::toString($row->source_external_id),
+            occurrenceOrdinal: $sameFingerprintOrdinal,
         );
     }
 
