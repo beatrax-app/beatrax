@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Search\Internal\Services\SearchDocumentBody;
 use Modules\Search\Internal\Services\SearchSourceText;
+use Modules\Search\Public\Support\SearchedColumns;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -71,7 +72,7 @@ final class ReindexSearchCommand extends Command
         $indexed = 0;
         $connection
             ->table('transactions')
-            ->select(['id', 'user_id', 'counterparty_name', 'description'])
+            ->select(['id', 'user_id', ...SearchedColumns::of(SearchedColumns::TRANSACTIONS)])
             ->whereIn('user_id', $rebuildable)
             ->orderBy('id')
             ->chunk(self::CHUNK_SIZE, function (Collection $rows) use ($connection, $session, $bar, &$indexed): void {
@@ -169,8 +170,8 @@ final class ReindexSearchCommand extends Command
         // a rebuild then dropped the note the incremental writer had indexed
         // and the row stopped being findable by the words on it.
         $notesByTxId = [];
-        $tags = $connection->table('tax_transaction_tags')
-            ->select(['transaction_id', 'note'])
+        $tags = $connection->table(SearchedColumns::TAX_TAGS)
+            ->select(['transaction_id', ...SearchedColumns::of(SearchedColumns::TAX_TAGS)])
             ->whereIn('transaction_id', $ids)
             ->whereNull('transaction_split_id')
             ->get();

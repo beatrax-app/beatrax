@@ -148,7 +148,7 @@ What the module explicitly does NOT do:
   caller, running synchronously so a transaction is searchable the
   instant the import commits (no queue dependency). It is not the only
   one. **Every write that changes indexed text has to reindex**, and
-  nine classes across five modules do:
+  twelve classes across seven modules do:
 
   | Caller | Module | When |
   |---|---|---|
@@ -156,6 +156,9 @@ What the module explicitly does NOT do:
   | `TagTransaction` / `UntagTransaction` | Tax | a tax note is written or cleared |
   | `DeleteTransaction` | Ledger | a transaction is permanently deleted |
   | `StripAsnDescriptionDelimiters` | Ledger | the delimiter sweep rewrites a description |
+  | `ApplyEnrichments` | Import | a receipt's name or description wins a conflict at import |
+  | `ApplyReceiptConflictResolution` | Receipts | the reader answers a held conflict with the receipt's value |
+  | `EntityChangeApplier` | Migration | a re-run migration restates a description |
   | `CashBookPage` | CashBook | a manual entry is deleted |
   | `SearchIndexRefresher` | Sync | a merged op changed a transaction |
   | `OpLogRebuilder` | Sync | history is replayed from the op log |
@@ -165,6 +168,26 @@ What the module explicitly does NOT do:
   but a search that no longer finds the row will say so. The list is
   held to the code by `Modules/Search/tests/Unit/TheDocNamesEveryWriterCallerTest.php`,
   which fails when a new caller is not named here.
+
+## The columns the body is composed from, and the guard over them
+
+`Modules/Search/Public/Support/SearchedColumns` names them once —
+`transactions.counterparty_name`, `transactions.description`,
+`tax_transaction_tags.note` — and `SearchIndexWriter`, `ReindexSearchCommand`
+and every writer that has to ask "did I touch one?" read the set from there
+rather than restating it.
+
+The doc table above only names the classes that already call the writer; it
+cannot see one that writes an indexed column and calls nothing, which is how
+three of them shipped. `tests/Contracts/AWriteToASearchedColumnRefreshesItsIndexArchTest.php`
+closes that direction. Its subject is every call to
+`SensitiveColumnCodec::encryptAttrs()` / `::encryptValue()` naming one of those
+tables, because sealing is the mandatory door into an at-rest-encrypted column:
+a writer cannot reach one of the three without passing through it, not even a
+writer that names its column through an enum rather than a literal. A seal site
+whose table argument the scanner cannot read is reported rather than assumed
+innocent. Each site either reaches `SearchIndexWriterContract` or is pinned with
+the reason its write leaves the document still describing the row.
 
   **"The tax note" means the whole-transaction tag, and both writers
   now say so.** `tax_transaction_tags` also holds one row per tagged
