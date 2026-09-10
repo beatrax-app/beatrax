@@ -37,6 +37,7 @@ return [
     'done' => 'Atlikta',
 
     'identity_locked' => 'Tavo įrenginio tapatybė užrakinta. Atrakink programėlę ir bandyk dar kartą.',
+    'identity_absent' => 'Sinchronizavimas šiame įrenginyje dar nenustatytas, todėl jis neturi tapatybės, kurią būtų galima susieti. Pirmiausia įjunk sinchronizavimą.',
     'invalid_code' => 'Šis kodas neteisingas arba nebegalioja. Paprašyk kitame įrenginyje sugeneruoti naują.',
     'already_under_way' => 'Šis įrenginys tą kodą jau priėmė ir laukia, kol patvirtins kitas įrenginys. Jei taip neatsitiks, paprašyk naujo kodo ir naudok jį.',
     'vouched_but_refused' => 'Kitas įrenginys tą kodą vis dar turi, bet šis įrenginys negalėjo jo priimti. Paprašyk jo naujo kodo ir naudok jį.',

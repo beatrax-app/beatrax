@@ -37,6 +37,7 @@ return [
     'done' => 'Concluído',
 
     'identity_locked' => 'A identidade do teu dispositivo está bloqueada. Desbloqueia a app e tenta de novo.',
+    'identity_absent' => 'A sincronização ainda não está configurada neste dispositivo, por isso não tem identidade para emparelhar. Ativa primeiro a sincronização.',
     'invalid_code' => 'Este código é inválido ou expirou. Pede ao outro dispositivo que gere um novo.',
     'already_under_way' => 'Este dispositivo já aceitou esse código e está à espera da confirmação do outro. Se não chegar, pede um código novo e usa esse.',
     'vouched_but_refused' => 'O outro dispositivo ainda tem esse código, mas este não o conseguiu aceitar. Pede-lhe um código novo e usa esse.',
