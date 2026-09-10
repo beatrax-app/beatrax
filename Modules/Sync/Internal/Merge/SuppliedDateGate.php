@@ -37,6 +37,19 @@ final class SuppliedDateGate
         return SafeDate::dayIgnoringTimeOrNull($value) === null;
     }
 
+    // The day an accepted value writes as. refuses() lets the long shape
+    // through on purpose, and writing it back verbatim put a midnight in a DATE
+    // column: '2026-09-16 00:00:00' is not <= '2026-09-16' in SQLite, so the
+    // row fell out of every window the short ones stayed in.
+    public function normalise(string $table, string $field, mixed $value): mixed
+    {
+        if (! is_string($value) || ! in_array($field, $this->dateColumnsFor($table), true)) {
+            return $value;
+        }
+
+        return SafeDate::dayIgnoringTimeOrNull($value)?->toDateString() ?? $value;
+    }
+
     /**
      * @return list<string>
      */
