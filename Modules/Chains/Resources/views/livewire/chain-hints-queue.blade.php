@@ -18,7 +18,16 @@
 <div class="mx-auto max-w-5xl px-4 py-6">
     <header class="mb-8">
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-            <x-core::page-heading>{{ Lang::get('chains::hints.heading') }}</x-core::page-heading>
+            <x-core::page-heading>
+                {{ Lang::get('chains::hints.heading') }}
+                <x-slot:tip>
+                    <x-core::help-tip
+                        topic="chains-hints"
+                        :label="Lang::get('chains::hints.heading')"
+                        :body="Lang::get('chains::help.hints')"
+                    />
+                </x-slot:tip>
+            </x-core::page-heading>
             <a
                 href="{{ route('chains.review') }}"
                 class="tap-link text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"

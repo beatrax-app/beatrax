@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Ha minden nyomot el akarsz tüntetni, töröld mindegyiket:',
     'delete_journal_note' => 'Az adatbázis mellett két naplófájl található, a :wal és a :shm. A legfrissebb módosításaid ezekben vannak, amíg be nem kerülnek az adatbázisba, ezért mind a hármat együtt töröld.',
     'no_telemetry' => 'Nincs telemetria, amiről le kellene mondanod, és nincs távoli fiók, amit be kellene zárnod.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Az az időszakasz, amelyre a költségvetéseid, az áttekintőd és minden „ebben az időszakban” szereplő szám vonatkozik. A „:label” dönti el, hol kezdődik — állítsd a fizetésed utáni napra, és az időszak azt a pénzt tartalmazza, amit a fedezetére kaptál. Ennek a napnak az elmozdítása újrarendezi minden borítékba már kiosztott összegedet, és ahol két régi időszak egy újba hajlik, az összegeik összeadódnak; a napot visszaállítva nem válnak szét újra.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Minden, amiről a Beatrax tudja, hogy a tiéd, mínusz minden, amivel tartozol: minden importált vagy összekapcsolt számla egyenlege, ahol a kártya- és hitelegyenlegek ellened számítanak. Nem teljesebb annál, amit megadtál neki — egy számla, amit a Beatrax sosem látott, nincs benne ebben a számban. A más pénznemben álló egyenlegek a szám alatt látható árfolyamon számítódnak át, és amit nem tudott beárazni, ott néven van nevezve ahelyett, hogy csendben kimaradna.',
 ];

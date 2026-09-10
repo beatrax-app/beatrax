@@ -70,7 +70,14 @@
                  and the last digit sat under "Breakdown". --}}
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div class="min-w-0">
-                    <p class="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('core::net_worth.heading') }}</p>
+                    {{-- A div, not a p: the tip's panel is a div, and a
+                         <div popover> inside a <p> closes the paragraph in the
+                         parser, which would put the figure below outside it. --}}
+                    <div class="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{{ Lang::get('core::net_worth.heading') }}&nbsp;<x-core::help-tip
+                        topic="net-worth"
+                        :label="Lang::get('core::net_worth.heading')"
+                        :body="Lang::get('core::help.net_worth')"
+                    /></div>
 
                     {{-- Total figure with FX disclosure affordance --}}
                     <p class="mt-1 text-3xl font-semibold {{ $amountClass($netWorth->totalMinor) }}" style="font-variant-numeric: tabular-nums;">

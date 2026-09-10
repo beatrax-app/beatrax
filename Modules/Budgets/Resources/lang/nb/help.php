@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Hva som skjer med en konvolutt som har brukt mer enn den inneholder, når perioden er over. Velger du ”:reduce”, trekkes underskuddet først fra det du har å fordele neste periode, og konvolutten selv starter på null igjen. Velger du ”:carry”, blir underskuddet stående der det oppsto: konvolutten åpner under null og må fylles opp igjen før den betaler for noe, og resten av planen røres ikke.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Hva denne konvolutten fortsatt kan betale for: ”:assigned” i denne perioden, pluss ”:carried”, pluss eller minus ”:moved”, minus ”:spent” — de fire kolonnene til venstre. Det er ikke en kontosaldo: flere konvolutter henter fra samme konto, og dette tallet gjelder bare denne ene. Under null har konvolutten allerede brukt mer enn den inneholder, og slutten av perioden avgjør hva som skjer med underskuddet.',
 ];

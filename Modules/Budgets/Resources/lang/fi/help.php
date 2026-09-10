@@ -8,4 +8,7 @@ return [
 
     /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
     'if_overspent' => 'Mitä tapahtuu kuorelle, joka on kuluttanut enemmän kuin siinä on, kun jakso päättyy. Valinnalla ”:reduce” vajaus vähennetään ensimmäisenä siitä, mitä sinulla on jaettavana seuraavalla jaksolla, ja kuori itse alkaa taas nollasta. Valinnalla ”:carry” vajaus jää sinne missä se syntyi: kuori avautuu miinuksella ja se on täytettävä uudelleen ennen kuin se maksaa mitään, eikä muu suunnitelma liiku.',
+
+    /** @link ../../../../../.docs/features/budgets/architecture.md#the-genesis-to-target-fold-carryoverquery */
+    'available' => 'Mitä tämä kuori voi vielä maksaa: ”:assigned” tällä jaksolla, plus ”:carried”, plus tai miinus ”:moved”, miinus ”:spent” — neljä vasemmalla olevaa saraketta. Tämä ei ole tilin saldo: useampi kuori ottaa samalta tililtä, ja tämä luku puhuu vain tästä yhdestä. Nollan alapuolella kuori on jo kuluttanut enemmän kuin siinä on, ja jakson loppu ratkaisee, mitä vajaukselle tapahtuu.',
 ];

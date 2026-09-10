@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Kad nebeliktų jokio pėdsako, ištrink kiekvieną iš šių:',
     'delete_journal_note' => 'Šalia duomenų bazės yra du žurnalo failai, :wal ir :shm. Naujausi tavo pakeitimai lieka juose, kol nesuliejami į duomenų bazę, tad ištrink visus tris kartu.',
     'no_telemetry' => 'Nėra jokios telemetrijos, kurios reikėtų atsisakyti, ir jokios nuotolinės paskyros, kurią reikėtų uždaryti.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Laiko atkarpa, per kurią matuojami tavo biudžetai, skydelis ir kiekvienas „šio laikotarpio“ skaičius. „:label“ nusprendžia, kur ji prasideda — nustatyk kitą dieną po atlyginimo, ir laikotarpyje bus tie pinigai, kurie jam padengti ir buvo išmokėti. Perkėlus tą dieną, iš naujo sudėliojama kiekviena jau paskirstyta vokų suma, o ten, kur du seni laikotarpiai suvirsta į vieną naują, jų sumos sudedamos; grąžinus dieną atgal, jos nebeišsiskiria.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Viskas, apie ką Beatrax žino, kad tai tavo, minus viskas, ką esi skolingas: kiekvienos importuotos ar prijungtos sąskaitos likutis, o kortelių ir paskolų likučiai skaičiuojami tavo nenaudai. Išsamesnis, nei tai, ką jai davei, jis nebūna — sąskaita, kurios Beatrax niekada nematė, į šį skaičių nepatenka. Kitos valiutos likučiai perskaičiuojami pagal po skaičiumi rodomą kursą, o tai, ko nepavyko įkainoti, ten ir įvardijama, o ne tyliai praleidžiama.',
 ];

@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Ca să nu rămână nicio urmă, șterge fiecare dintre acestea:',
     'delete_journal_note' => 'Lângă baza de date stau două fișiere de jurnal, :wal și :shm. Cele mai recente modificări ale tale sunt acolo până sunt integrate în baza de date, așa că șterge-le pe toate trei împreună.',
     'no_telemetry' => 'Nu există nicio telemetrie de dezactivat și niciun cont la distanță de închis.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Intervalul de timp pe care se măsoară bugetele tale, panoul tău și orice cifră pentru „această perioadă”. „:label” hotărăște unde începe — pune-l în ziua de după salariu și perioada va cuprinde banii plătiți ca să o acopere. Mutarea acelei zile reașază fiecare sumă din plicuri pe care ai alocat-o deja, iar acolo unde două perioade vechi se strâng într-una nouă sumele lor se adună; mutarea zilei înapoi nu le mai desparte.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Tot ce știe Beatrax că ai, minus tot ce datorezi: soldul fiecărui cont pe care l-ai importat sau conectat, soldurile de card și de credit fiind socotite împotriva ta. Nu este mai complet decât ce i-ai dat — un cont pe care Beatrax nu l-a văzut niciodată nu se află în această cifră. Soldurile în altă monedă sunt convertite la cursul arătat sub cifră, iar cele pe care nu le-a putut evalua sunt numite acolo, nu lăsate deoparte în tăcere.',
 ];

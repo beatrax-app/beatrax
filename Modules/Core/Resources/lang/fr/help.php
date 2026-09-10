@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Pour ne laisser aucune trace, supprime chacun de ces éléments :',
     'delete_journal_note' => 'La base de données est accompagnée de deux fichiers de journal, :wal et :shm. Tes modifications les plus récentes y vivent tant qu\'elles ne sont pas intégrées à la base, alors supprime les trois ensemble.',
     'no_telemetry' => 'Il n\'y a aucune télémétrie à désactiver et aucun compte distant à fermer.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'La tranche de temps sur laquelle vos budgets, votre tableau de bord et tout chiffre « cette période » sont mesurés. « :label » décide de son début — réglez-le au lendemain de votre paie et une période contient l’argent versé pour la couvrir. Déplacer ce jour reclasse chaque montant d’enveloppe déjà affecté, et là où deux anciennes périodes se replient sur une seule nouvelle, leurs montants sont additionnés ; remettre le jour en arrière ne les sépare pas de nouveau.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Tout ce que Beatrax sait que vous possédez, moins tout ce que vous devez : le solde de chaque compte importé ou connecté, les soldes de carte et de prêt étant comptés en négatif. Ce chiffre n’est jamais plus complet que ce que vous lui avez donné — un compte que Beatrax n’a jamais vu n’y figure pas. Les soldes dans une autre devise sont convertis au taux indiqué sous le chiffre, et ceux qu’il n’a pas pu convertir y sont nommés plutôt que discrètement omis.',
 ];

@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Radera var och en av de här för att ta bort alla spår:',
     'delete_journal_note' => 'Bredvid databasen ligger två journalfiler, :wal och :shm. Dina senaste ändringar finns i dem tills de skrivs in i databasen, så radera alla tre tillsammans.',
     'no_telemetry' => 'Det finns ingen telemetri att välja bort och inget fjärrkonto att avsluta.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Den tidsrymd dina budgetar, din översikt och varje siffra för ”den här perioden” mäts över. ”:label” avgör var den börjar — sätt den till dagen efter lön, så innehåller en period de pengar som betalades ut för att täcka den. Att flytta den dagen omplacerar varje kuvertbelopp du redan har fördelat, och där två gamla perioder faller ihop till en ny läggs deras belopp samman; att flytta tillbaka dagen delar inte upp dem igen.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Allt Beatrax vet att du har, minus allt du är skyldig: saldot på varje konto du har importerat eller kopplat, där kort- och lånesaldon räknas emot dig. Det är aldrig mer fullständigt än det du har matat in — ett konto Beatrax aldrig har sett finns inte i den här siffran. Saldon i en annan valuta räknas om till kursen som visas under siffran, och det som inte gick att prissätta namnges där i stället för att tyst falla bort.',
 ];

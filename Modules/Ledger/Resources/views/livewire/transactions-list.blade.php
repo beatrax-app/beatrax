@@ -321,7 +321,18 @@
                     <x-core::th align="left">{{ Lang::get('ledger::list.table.counterparty') }}</x-core::th>
                     <x-core::th align="left">{{ Lang::get('ledger::list.table.category') }}</x-core::th>
                     <x-core::th align="left">{{ Lang::get('ledger::list.table.tax') }}</x-core::th>
-                    <x-core::th align="left">{{ Lang::get('ledger::list.table.status') }}</x-core::th>
+                    {{-- The pill under this header is a control on every row,
+                         so the panel that says what tapping it does goes on the
+                         header, where its id is unique. --}}
+                    <x-core::th align="left">{{ Lang::get('ledger::list.table.status') }}&nbsp;<x-core::help-tip
+                        topic="ledger-status"
+                        :label="Lang::get('ledger::list.table.status')"
+                        :body="Lang::get('ledger::help.status', [
+                            'uncleared' => Lang::get('ledger::common.status.uncleared'),
+                            'cleared' => Lang::get('ledger::common.status.cleared'),
+                            'reconciled' => Lang::get('ledger::common.status.reconciled'),
+                        ])"
+                    /></x-core::th>
                     <x-core::th align="right">{{ Lang::get('ledger::list.table.amount') }}</x-core::th>
                 </x-slot:head>
 

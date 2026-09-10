@@ -149,7 +149,17 @@
 
             <div class="tax-totals-strip mb-6">
                 <div class="flex flex-col">
-                    <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.total_deductions') }}</span>
+                    {{-- A div, not a span: the tip's panel is a div. The figure
+                         reads like a net position and is not one, which is the
+                         misreading the panel exists to stop. --}}
+                    <div style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.total_deductions') }}&nbsp;<x-core::help-tip
+                        topic="tax-total-deductions"
+                        :label="Lang::get('tax::page.total_deductions')"
+                        :body="Lang::get('tax::help.total_deductions', [
+                            'income' => Lang::get('tax::page.income'),
+                            'yearcol' => Lang::get('tax::page.col_year'),
+                        ])"
+                    /></div>
                     <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text);">
                         {{ Money::ofMinor($data->deductionsTotalMinor, $data->currency)->format() }}
                     </span>

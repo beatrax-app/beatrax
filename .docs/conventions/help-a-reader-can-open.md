@@ -40,7 +40,7 @@ picture where Chromium paints line art.
 **The panel states its whole type, because it is written inside a label.** The
 top layer decides where a popover *paints* and nothing about what it inherits,
 and the element a mark sits beside is the most heavily typed line on any screen.
-All six panels shipped wearing the label's treatment: `/budgets` and the
+Every panel then in the tree shipped wearing the label's treatment: `/budgets` and the
 dashboard card sit inside `text-xs font-medium uppercase tracking-wide`, so
 three sentences of prose were drawn in CAPITALS at 0.3px of tracking, and the
 three page headings gave theirs `font-weight: 600` at `-0.7px` — a 28px display
@@ -157,6 +157,52 @@ mark inside the label's own element, or it is naming a different thing and says
 so with a different string. There is no third answer, and no allow-list —
 adding one would be pinning the exact shape the guard exists to find.
 
+## Where the marks are
+
+Eighteen labels carry a panel. The floor in
+`tests/Contracts/ALabelExplainedOnOneScreenIsNotBareOnTheNextArchTest.php` is
+that number, so deleting one is a deliberate act of lowering it rather than a
+silent shrink.
+
+| Label | Screen | What the panel answers |
+|---|---|---|
+| `budgets::messages.ready.label` | `/budgets`, dashboard card | the arithmetic of the envelope plan |
+| `budgets::messages.table.available` | `/budgets` | which four columns combine into it, and that it is not a bank balance |
+| `budgets::messages.table.if_overspent` | `/budgets` | where a shortfall lands at period end |
+| `pots::messages.heading` | `/pots` | real, allocated and unallocated, and that the bank balance never moves |
+| `ledger::list.table.status` | `/transactions` | what tapping the pill does, and which state cannot be tapped |
+| `ledger::reconcile.heading` | `/reconcile` | the cleared balance, the difference, and what completing locks |
+| `chains::index.heading` | `/chains` | what a chain is and how one comes to exist |
+| `chains::hints.heading` | `/chains/hints` | what half a link is and whether dismissing costs anything |
+| `recurring::review.title` | `/recurring/review` | how a series is detected and how far back it reads |
+| `calendar::messages.toolbar.col_balance` | `/calendar` | which of the two checkbox columns builds the figure |
+| `tax::page.total_deductions` | `/tax` | that income is counted apart, and which date decides the year |
+| `import::preview.col_status` | `/imports/{id}/preview` | what confirming does with new, duplicate and enriched rows |
+| `openbanking::messages.transparency.consent_status_label` | `/settings/open-banking` | that a bank consent expires on a schedule the bank sets |
+| `core::settings.period.heading` | `/settings` | what a period is, and that moving its start day sums what it folds |
+| `core::net_worth.heading` | dashboard | what it adds, what it subtracts, and what it cannot see |
+| `forecasting::forecast.view_by_funder` | `/forecast` | which account a projected payment is charged against |
+| `auth::lock_screen.forgot_pin`, `mobile::lock.forgot_pin` | both lock screens | what the forgotten-code sign-out is worth |
+
+## The three shapes a mark takes
+
+Two of them are pinned in both help guards, because a component decides the
+mark's type rather than the call site:
+
+- **`x-core::th`** — a column header. The right host for anything drawn once per
+  row, which is most badges and every status pill.
+- **The `tip` slot of `x-core::page-heading`** — a routed page's `<h1>`.
+
+The third is written by hand where neither fits, and it is the same shape
+`page-heading` renders: a block that carries the type, the label inline inside
+it, and the mark glued on after. `/settings` uses it for a `<h2>`, and
+`/forecast` uses it for a chip whose row is a flex container.
+
+**A `<p>` cannot host one.** The panel is a `<div>`, and a `<div popover>`
+inside a `<p>` closes the paragraph in the parser — everything after it lands
+outside. The dashboard's budgets card, the net-worth card and the tax totals
+strip each draw their label in a `<div>` for that reason and say so.
+
 ## Where a tip does not go
 
 - **On a control that is not on the screen.** The overspend tip is on the
@@ -167,6 +213,17 @@ adding one would be pinning the exact shape the guard exists to find.
 - **On anything the screen already says.** `/reconcile` opens with a sentence of
   lede and `/chains` with a subtitle; the tip answers what those two sentences
   assume the reader already knows, and does not repeat them.
+- **On a label the phone restack draws again per row.** `/rules` prints
+  `col_priority` and `col_hits` in a `<th>` and *again* inside each row's `<td>`
+  under `md:hidden`, because the restack drops `<thead>` below 768px. A panel on
+  either key has to be reachable from both drawings, and the second is per row —
+  so the column header cannot carry one until the phone label stops repeating
+  the key. The same shape blocks the pots reconciliation line, which is drawn
+  once per account and per currency; its panel went to the page heading instead.
+- **Where the reader already has the answer one tap away.** `/forecast`'s
+  buffer chip opens an editor whose own help line defines a buffer; the import
+  wizard's format select is explained by the notice under it. A second copy of
+  a sentence the next tap produces is wallpaper.
 
 ## A mark that waits for the question
 
