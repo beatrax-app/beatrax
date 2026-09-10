@@ -24,9 +24,17 @@ It returns libsodium's `MODERATE` pair:
 
 That is roughly half a second per derivation on a developer laptop, and around
 two seconds on a mid-range Android phone. It is memory-hard on purpose: a
-six-digit PIN has about twenty bits of entropy, so the only thing standing
-between a stolen `user_app_lock_configs` row and the data key is how expensive
-each guess is.
+six-digit PIN has about twenty bits of entropy, so what stands between a stolen
+`user_app_lock_configs` row and the data key it wraps is how expensive each
+guess is.
+
+That bounds the wrapped path and only the wrapped path. Whoever holds that row
+holds the file it lives in, and on a shape where `KeyCustodian` is not rebound
+onto an OS key store — self-hosted in a browser, and CI — the same file carries
+an unwrapped copy of the data key in `sessions`, sealed under `APP_KEY` rather
+than under the PIN. Guessing is the cheapest way in only where the desktop or
+mobile custodian took that copy out:
+[the app-lock data key's lifetime](../features/auth/app-lock-data-key-lifetime.md).
 
 A PIN unlock spends exactly one of them. `AppLockKeyWrap::unwrap()`
 authenticates the PIN on its own, so `PinHasher` is consulted only where the

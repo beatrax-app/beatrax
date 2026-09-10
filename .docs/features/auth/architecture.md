@@ -411,14 +411,25 @@ The first consumer is Sync's `HoldPairingCeremonyOpenOnUnlock`, which revives a
 pairing ceremony whose TTL lapsed while the app sat locked.
 
 The data key lives in the Laravel session payload for as long as the
-session stays unlocked, which the session driver serialises at rest (file
-driver: `storage/framework/sessions/*`, owner-only permissions). This is
-an accepted risk for a local-only, single-machine deployment: the session
-store and the SQLite database share the same disk and OS user, so an
-attacker who can read session files can already read the DB. `lock()`
-removes the key from the session immediately; the only deliberate
-persistent copies are the wrapped blobs in `user_app_lock_configs` /
-`user_biometric_credentials`.
+session stays unlocked, and the driver serialises it at rest. The driver
+is `database`, not `file` — `config/session.php` — so that payload is a
+row in the `sessions` table of the same SQLite file as the ledger,
+encrypted under `APP_KEY`, for a lifetime of thirty days with
+`expire_on_close` false.
+
+The risk was accepted on the reasoning that the session store and the
+database share a disk and an OS user, so anyone who can read one can read
+the other. That is true and it is not the whole comparison: reading the
+database yields the sealed columns, and reading the session yields the
+key that opens them. On any shape where `KeyCustodian` is not rebound
+onto an OS key store — self-hosted in a browser, and CI — at-rest
+encryption is worth what `APP_KEY` is worth, and `APP_KEY` sits in a
+plaintext `.env` beside both.
+
+`lock()` removes the key from the session immediately, so the window is
+an unlocked session rather than the install's whole life. The only
+deliberate *wrapped* copies remain the blobs in `user_app_lock_configs` /
+`user_biometric_credentials`, and those are the ones a PIN opens.
 
 `KeyCustodian` (`Public/Contracts/KeyCustodian.php`) abstracts what the
 "handle" actually is: on the default (web) custodian the handle IS the raw

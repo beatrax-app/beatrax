@@ -9,9 +9,27 @@ The app lock is not only a screen gate. The PIN and the account password each wr
 - The per-device biometric wraps and the cold-start enclave blob, which wrap the same key
   again.
 
-Only two copies of the data key are durable, and both live in one row of
+Two copies of the data key are durable **by design**, and both live in one row of
 `user_app_lock_configs`: `pin_wrapped_key` and `password_wrapped_key`, under a shared
-`kdf_salt`. Nothing else on the machine can produce it.
+`kdf_salt`. Neither opens without a credential the reader supplies.
+
+A third copy is durable wherever `KeyCustodian` is not rebound. The desktop and
+mobile providers rebind it onto the OS key store, each gated on its own bundle
+runtime; every other shape — self-hosted in a browser, and CI — keeps
+`NullKeyCustodian`, whose `store()` returns the raw key and whose `custody()`
+says `KeyCustody::Session` precisely so this is inspectable. The session driver
+is `database`, its lifetime is thirty days and `expire_on_close` is false, so
+that copy sits in the `sessions` table of the same SQLite file as the ledger,
+encrypted under `APP_KEY` alone — and `APP_KEY` is read from a plaintext `.env`
+that no `OwnerOnlyPath` call covers.
+
+What that means for a self-hosted install: the app lock defends the running
+application, not the file. Anyone holding a copy of the data directory *and*
+the `.env` — a stolen disk, an unencrypted host backup, a data directory synced
+to cloud storage, a second OS user who can read the file — reads the key out of
+`sessions.payload` without the PIN, and without paying the Argon2id cost the
+wrapped copies charge. The two wrapped copies above are what a PIN opens; this
+one needs no PIN at all.
 
 So the invariant is short, and it is a data-safety one:
 
