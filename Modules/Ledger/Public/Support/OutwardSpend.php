@@ -63,6 +63,24 @@ final readonly class OutwardSpend
         return self::share($partMinor, $this->totalMinor);
     }
 
+    public function percentOf(int $partMinor): int
+    {
+        return self::percent($partMinor, $this->totalMinor);
+    }
+
+    // Cut from the two integers, never from their quotient. The nearest double
+    // to 29/50 is 0.57999999999999996, and times a hundred it lands below 58,
+    // so the floor below took a whole point off -- at 29, 57 and 58 percent
+    // exactly, and nowhere else in the hundred.
+    public static function percent(int $partMinor, int $wholeMinor): int
+    {
+        if ($partMinor <= 0 || $wholeMinor <= 0) {
+            return 0;
+        }
+
+        return intdiv(min($partMinor, $wholeMinor) * 100, $wholeMinor);
+    }
+
     // Both ends are tested. A whole that is nought or negative has no parts to
     // be a fraction of, and a part running the other way is not a fraction of
     // this whole either -- it is what the whole was narrowed down from.

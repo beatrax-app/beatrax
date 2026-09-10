@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Goals\Public\Dto;
 
 use Modules\Goals\Public\Enums\GoalStatus;
+use Modules\Ledger\Public\Support\OutwardSpend;
 use Spatie\LaravelData\Data;
 
 final class GoalProgressRow extends Data
@@ -44,7 +45,7 @@ final class GoalProgressRow extends Data
             return 0;
         }
 
-        return (int) floor(max(0.0, min(1.0, $this->fractionComplete)) * 100);
+        return OutwardSpend::percent($this->contributedMinor, $this->targetMinor);
     }
 
     public function remainingMinor(): int
