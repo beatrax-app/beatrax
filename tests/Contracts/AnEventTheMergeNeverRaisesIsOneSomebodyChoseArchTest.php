@@ -146,6 +146,10 @@ function eventsTheMergeRaises(): array
  * @var array<string, array{why: string, reason: string, proves?: array{0: string, 1: string}}>
  */
 const AN_EVENT_THE_MERGE_NEVER_RAISES = [
+    'Modules\Auth\Public\Events\AppLockLocked' => [
+        'why' => 'local',
+        'reason' => 'the reader locked THIS device; no row can arrive that locked it',
+    ],
     'Modules\Auth\Public\Events\AppLockPassphraseChanged' => [
         'why' => 'local',
         'reason' => 'the passphrase is a device-local column; a peer keeps its own and re-wraps nothing of ours',

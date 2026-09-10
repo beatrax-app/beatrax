@@ -18,6 +18,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.nativephp.mobile.bridge.BridgeError
 import com.nativephp.mobile.bridge.BridgeFunction
 import com.nativephp.mobile.utils.NativeActionCoordinator
+import java.lang.ref.WeakReference
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.spec.MGF1ParameterSpec
@@ -52,23 +53,34 @@ import javax.crypto.spec.SecretKeySpec
  * undecryptable blob is not an authentication that failed -- it is nothing left
  * to authenticate against, and the reader has to enrol again.
  *
+ * ONE KEY PAIR PER SLOT. A single shared alias made every reader's enrolment
+ * one another's: forgetting one reader's entry deleted the pair the others'
+ * entries were sealed under, and their next Get minted a replacement mid-read,
+ * prompted against it and failed forever on a blob nothing could open. The
+ * alias is derived from the slot name, deleted with the slot, and is also the
+ * envelope's associated data -- so a blob moved between slots, or restored
+ * after a rekey retired the pair, fails on the tag instead of opening.
+ *
  * RECOVERY COMPLETES BY SIGNAL (E5-R10). Get returns `async`; the prompt
  * callback stashes the decrypted blob in a transient in-process slot and raises
  * `BiometricVault.Recovered`. The blob never travels in the event payload --
- * PHP fetches it over the bridge with PollRecovered, which consumes the slot on
- * read. A slot that survived its read, or a backgrounding, could be replayed by
- * a later dispatch and admit a session with no live biometric behind it.
+ * PHP fetches it over the bridge with PollRecovered, which names the slot it
+ * expects and consumes it on read. The slot also carries a deadline, because a
+ * blob nobody claims must not wait for a lifecycle edge that an overlay, a
+ * split-screen focus loss or picture-in-picture never delivers.
  */
 object BiometricVaultFunctions {
 
-    private const val KEY_ALIAS = "beatrax.biometric.vault.wrap.v2"
+    private const val ALIAS_PREFIX = "beatrax.biometric.vault.wrap.v3."
 
     // Aliases no build can read any more, deleted rather than migrated. The
-    // first is the spike's symmetric key, which Set never once wrote under. The
-    // second authorised SHA-256 alone, which the OAEP note below is about.
+    // first is the spike's symmetric key, which Set never once wrote under; the
+    // second authorised SHA-256 alone, which the OAEP note below is about; the
+    // third is the one pair every reader on the device shared.
     private val RETIRED_ALIASES = listOf(
         "beatrax.biometric.vault.kek",
         "beatrax.biometric.vault.wrap",
+        "beatrax.biometric.vault.wrap.v2",
     )
 
     private const val PREFS_NAME = "beatrax_biometric_vault"
@@ -79,12 +91,32 @@ object BiometricVaultFunctions {
     private const val EVENT_RECOVERED = "BiometricVault.Recovered"
     private const val EVENT_FAILED = "BiometricVault.Failed"
 
-    // Consumed by PollRecovered and dropped when the app leaves the foreground.
-    @Volatile
-    private var recovered: String? = null
+    // How long a released blob may wait to be claimed. The event crosses the
+    // WebView and returns as a Livewire update against a page that is already
+    // rendered, which is well inside this; past it, nobody is coming.
+    private const val SLOT_TTL_MS = 8_000L
+
+    private val main = Handler(Looper.getMainLooper())
+
+    // The blob the prompt released, and the slot it came out of. The wrap
+    // secret lives inside the blob, so any well-formed blob unwraps to some
+    // valid data key and only the slot name says whose.
+    private class Released(val key: String, val blob: String, val ticket: Int)
 
     @Volatile
-    private var watchingLifecycle = false
+    private var released: Released? = null
+
+    private var expiry: Runnable? = null
+
+    // Keyed on the owner and not on a flag. This is an `object`, the observer
+    // binds to one activity's registry, and the process outlives its activity:
+    // a flag left a DESTROYED registry watching and refused to attach the live
+    // activity's, which made ON_STOP a no-op for the rest of the process.
+    @Volatile
+    private var watched: WeakReference<LifecycleOwner>? = null
+
+    @Volatile
+    private var retiredSwept = false
 
     // The prompt outlives the screen that asked for it. It is dispatched from
     // the lock screen's own mount, so a reader who types the PIN instead leaves
@@ -104,19 +136,36 @@ object BiometricVaultFunctions {
     private fun keyStore(): KeyStore =
         KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
-    private fun getOrCreateKeyPair(): java.security.KeyStore.PrivateKeyEntry {
-        val ks = keyStore()
+    private fun aliasFor(key: String): String = ALIAS_PREFIX + key
+
+    // The envelope is bound to the alias entitled to open it, which names both
+    // the format generation and the slot. There is no data-key epoch this side
+    // can compute; the rollback an epoch would have caught is caught instead by
+    // the pair being deleted with the entry it sealed.
+    private fun aad(key: String): ByteArray = aliasFor(key).toByteArray(Charsets.UTF_8)
+
+    // Once per process, and never as a cost of unlocking. These aliases are
+    // gone after the first pass, so the read that proves it is a Keystore call
+    // per attempt for nothing.
+    private fun sweepRetired(ks: KeyStore) {
+        if (retiredSwept) return
+        retiredSwept = true
 
         for (alias in RETIRED_ALIASES) {
             if (ks.containsAlias(alias)) ks.deleteEntry(alias)
         }
+    }
 
-        (ks.getEntry(KEY_ALIAS, null) as? KeyStore.PrivateKeyEntry)?.let { return it }
+    private fun getOrCreateKeyPair(alias: String): KeyStore.PrivateKeyEntry {
+        val ks = keyStore()
+        sweepRetired(ks)
+
+        (ks.getEntry(alias, null) as? KeyStore.PrivateKeyEntry)?.let { return it }
 
         val gen = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore")
         gen.initialize(
             KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
+                alias,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
             )
                 .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA1)
@@ -130,13 +179,61 @@ object BiometricVaultFunctions {
         )
         gen.generateKeyPair()
 
-        return keyStore().getEntry(KEY_ALIAS, null) as KeyStore.PrivateKeyEntry
+        return keyStore().getEntry(alias, null) as KeyStore.PrivateKeyEntry
     }
 
-    fun deleteKey() {
+    private fun deleteAlias(alias: String) {
         val ks = keyStore()
-        for (alias in RETIRED_ALIASES + KEY_ALIAS) {
-            if (ks.containsAlias(alias)) ks.deleteEntry(alias)
+        if (ks.containsAlias(alias)) ks.deleteEntry(alias)
+    }
+
+    // --- The transient slot --------------------------------------------------
+
+    private fun stash(key: String, blob: String, ceremony: Int) {
+        synchronized(this) {
+            released = Released(key, blob, ceremony)
+            cancelExpiry()
+
+            val deadline = Runnable { expire(ceremony) }
+            expiry = deadline
+            main.postDelayed(deadline, SLOT_TTL_MS)
+        }
+    }
+
+    // An exact slot match or nothing. A poll naming another slot is a session
+    // asking for a key that is not its own, and the answer to that is that
+    // nobody gets it -- the wrap secret rides inside the blob, so the slot name
+    // is the only thing that says whose key this is.
+    private fun claim(key: String): String? = synchronized(this) {
+        val held = released ?: return@synchronized null
+        drop()
+
+        if (held.key != key) {
+            Log.w("BiometricVault", "a poll named a slot the released blob does not belong to; the blob was discarded")
+            return@synchronized null
+        }
+
+        held.blob
+    }
+
+    private fun drop() {
+        synchronized(this) {
+            released = null
+            cancelExpiry()
+        }
+    }
+
+    private fun cancelExpiry() {
+        expiry?.let { main.removeCallbacks(it) }
+        expiry = null
+    }
+
+    private fun expire(ceremony: Int) {
+        synchronized(this) {
+            if (released?.ticket != ceremony) return@synchronized
+
+            Log.d("BiometricVault", "a released blob went unclaimed within its deadline and was dropped")
+            drop()
         }
     }
 
@@ -153,15 +250,14 @@ object BiometricVaultFunctions {
                 ?: throw BridgeError.InvalidParameters("key is required")
             val value = parameters["value"] as? String
 
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-            if (value == null) {
-                prefs.edit().remove(key).apply()
-                return mapOf("success" to true)
-            }
-
             return try {
-                prefs.edit().putString(key, seal(value)).apply()
+                if (value == null) {
+                    forget(context, key)
+                } else {
+                    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit().putString(key, seal(value, key)).apply()
+                }
+
                 mapOf("success" to true)
             } catch (e: Exception) {
                 Log.e("BiometricVault.Set", "could not seal the entry: ${e.message}", e)
@@ -185,38 +281,55 @@ object BiometricVaultFunctions {
                 .getString(key, null)
                 ?: return mapOf("missing" to true)
 
+            val enrolled = try {
+                val ks = keyStore()
+                sweepRetired(ks)
+                ks.containsAlias(aliasFor(key))
+            } catch (e: Exception) {
+                Log.e("BiometricVault.Get", "the keystore would not answer: ${e.message}", e)
+                return mapOf("failed" to true)
+            }
+
+            // Nothing left to authenticate against. Reading is not the place to
+            // mint a key pair: the one it would make cannot open this blob, so
+            // the prompt it then raises can only ever be answered for nothing.
+            if (!enrolled) {
+                Log.w("BiometricVault.Get", "the entry has no key pair left; it cannot be read again")
+                forgetQuietly(activity, key)
+                return mapOf("missing" to true)
+            }
+
             val cipher = try {
-                unwrapCipher()
+                unwrapCipher(aliasFor(key))
             } catch (e: KeyPermanentlyInvalidatedException) {
                 // The enrolled set changed, which is exactly what the key was
                 // built to notice. Nothing can read this blob again.
                 Log.w("BiometricVault.Get", "the enrolled biometric changed; the entry cannot be read again")
-                forget(activity, key)
+                forgetQuietly(activity, key)
                 return mapOf("missing" to true)
             } catch (e: Exception) {
                 Log.e("BiometricVault.Get", "could not prepare the unwrap: ${e.message}", e)
                 return mapOf("failed" to true)
             }
 
-            Handler(Looper.getMainLooper()).post {
-                prompt(activity, cipher, reason, stored, key)
-            }
+            main.post { prompt(activity, cipher, reason, stored, key) }
 
             return mapOf("async" to true)
         }
     }
 
     /**
-     * PollRecovered: hands over the blob the prompt released, once. Consume on
-     * read is half the contract; the other half is the lifecycle observer that
-     * drops the slot when the app stops.
+     * PollRecovered: hands over the blob the prompt released, once, and only to
+     * the slot it was released from. Consume on read is one part of the
+     * contract; the deadline the stash carries and the lifecycle observer are
+     * the other two.
      */
-    class PollRecovered(private val activity: FragmentActivity) : BridgeFunction {
+    class PollRecovered(@Suppress("UNUSED_PARAMETER") activity: FragmentActivity) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-            val value = recovered
-            recovered = null
+            val key = parameters["key"] as? String
+                ?: throw BridgeError.InvalidParameters("key is required")
 
-            return mapOf("value" to (value ?: ""))
+            return mapOf("value" to (claim(key) ?: ""))
         }
     }
 
@@ -258,15 +371,23 @@ object BiometricVaultFunctions {
     }
 
     /**
-     * CancelPrompt: for the race the lock screen really runs. Its mount fires
-     * the prompt, and the PIN pad underneath stays live the whole time, so the
-     * two paths finish in either order and only one of them is the reader's.
+     * CancelPrompt: stand down. It takes the prompt off the screen and drops
+     * any blob a prompt already released, which is the pair of things that must
+     * not survive the reader answering another way — or the app re-locking
+     * while it is still in the foreground, where no lifecycle edge fires at all.
+     *
+     * The registration template hands every bridge function the activity;
+     * standing down needs nothing from it, and holding it would keep a
+     * destroyed activity alive in this process-wide object.
      */
-    class CancelPrompt(private val activity: FragmentActivity) : BridgeFunction {
+    class CancelPrompt(@Suppress("UNUSED_PARAMETER") activity: FragmentActivity) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-            Handler(Looper.getMainLooper()).post { dismiss() }
+            // Read here rather than inside the posted dismissal, so the caller
+            // is told what was standing at the moment it asked.
+            val standing = active != null
+            main.post { dismiss() }
 
-            return mapOf("success" to true)
+            return mapOf("success" to true, "standing" to standing)
         }
     }
 
@@ -274,8 +395,14 @@ object BiometricVaultFunctions {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
             val key = parameters["key"] as? String
                 ?: throw BridgeError.InvalidParameters("key is required")
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(key).apply()
-            return mapOf("success" to true)
+
+            return try {
+                forget(context, key)
+                mapOf("success" to true)
+            } catch (e: Exception) {
+                Log.e("BiometricVault.Delete", "the entry's key pair would not delete: ${e.message}", e)
+                mapOf("success" to false)
+            }
         }
     }
 
@@ -308,10 +435,10 @@ object BiometricVaultFunctions {
                 active = null
 
                 try {
-                    recovered = open(stored, unwrap)
+                    stash(key, open(stored, unwrap, key), mine)
                     NativeActionCoordinator.dispatchEvent(activity, EVENT_RECOVERED, "{}")
                 } catch (e: KeyPermanentlyInvalidatedException) {
-                    forget(activity, key)
+                    forgetQuietly(activity, key)
                     fail(activity, "invalidated")
                 } catch (e: Exception) {
                     Log.e("BiometricVault", "the entry did not open after a successful prompt: ${e.message}", e)
@@ -359,7 +486,7 @@ object BiometricVaultFunctions {
     }
 
     private fun fail(activity: FragmentActivity, reason: String) {
-        recovered = null
+        drop()
         active = null
         Log.d("BiometricVault", "recovery did not complete: $reason")
         NativeActionCoordinator.dispatchEvent(activity, EVENT_FAILED, """{"reason":"$reason"}""")
@@ -374,25 +501,40 @@ object BiometricVaultFunctions {
         // another way must not leave a released blob behind for the next
         // dispatch to claim.
         ticket++
-        recovered = null
+        drop()
         active?.cancelAuthentication()
         active = null
     }
 
-    private fun forget(activity: Context, key: String) {
-        activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(key).apply()
-        deleteKey()
+    private fun forget(context: Context, key: String) {
+        // The pair first: if it will not delete, the entry it seals stays put
+        // and the caller is told the key is still held, rather than being left
+        // with a gated pair nothing points at.
+        deleteAlias(aliasFor(key))
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(key).apply()
+    }
+
+    // For the read paths, where the removal is housekeeping behind an answer
+    // that is already decided and throwing would rewrite it as a bridge fault.
+    private fun forgetQuietly(context: Context, key: String) {
+        try {
+            forget(context, key)
+        } catch (e: Exception) {
+            Log.e("BiometricVault", "the unreadable entry would not delete: ${e.message}", e)
+        }
     }
 
     // A blob that outlived the foreground is one a later dispatch could claim
-    // without a prompt behind it.
+    // without a prompt behind it. A backstop and not the guarantee: an overlay,
+    // a split-screen focus loss and picture-in-picture all pause without
+    // stopping, so the deadline the stash carries is what bounds every case.
     private fun watchLifecycle(activity: FragmentActivity) {
-        if (watchingLifecycle) return
-        watchingLifecycle = true
+        if (watched?.get() === activity) return
+        watched = WeakReference(activity)
 
         activity.lifecycle.addObserver(LifecycleEventObserver { _: LifecycleOwner, event: Lifecycle.Event ->
             if (event == Lifecycle.Event.ON_STOP) {
-                recovered = null
+                drop()
             }
         })
     }
@@ -402,19 +544,20 @@ object BiometricVaultFunctions {
     // A content key per write, wrapped by the enclave-bound public half. The
     // prompt authorises the unwrap of that content key and nothing larger,
     // which is what keeps the stored value's length out of this file.
-    private fun seal(value: String): String {
+    private fun seal(value: String, key: String): String {
         val content: SecretKey = KeyGenerator.getInstance("AES")
             .apply { init(256) }
             .generateKey()
 
         val body = Cipher.getInstance(CONTENT_TRANSFORM).apply {
             init(Cipher.ENCRYPT_MODE, content)
+            updateAAD(aad(key))
         }
 
         val ciphertext = body.doFinal(value.toByteArray(Charsets.UTF_8))
 
         val wrapped = Cipher.getInstance(WRAP_TRANSFORM).apply {
-            init(Cipher.ENCRYPT_MODE, getOrCreateKeyPair().certificate.publicKey, oaepSpec())
+            init(Cipher.ENCRYPT_MODE, getOrCreateKeyPair(aliasFor(key)).certificate.publicKey, oaepSpec())
         }.doFinal(content.encoded)
 
         return listOf(wrapped, body.iv, ciphertext).joinToString(":") {
@@ -422,7 +565,7 @@ object BiometricVaultFunctions {
         }
     }
 
-    private fun open(stored: String, unwrap: Cipher): String {
+    private fun open(stored: String, unwrap: Cipher, key: String): String {
         val parts = stored.split(":")
         require(parts.size == 3) { "the stored entry is not an envelope" }
 
@@ -437,15 +580,23 @@ object BiometricVaultFunctions {
                 content,
                 GCMParameterSpec(GCM_TAG_BITS, Base64.decode(parts[1], Base64.NO_WRAP))
             )
+            updateAAD(aad(key))
         }.doFinal(Base64.decode(parts[2], Base64.NO_WRAP))
 
         return String(plaintext, Charsets.UTF_8)
     }
 
-    private fun unwrapCipher(): Cipher =
-        Cipher.getInstance(WRAP_TRANSFORM).apply {
-            init(Cipher.DECRYPT_MODE, getOrCreateKeyPair().privateKey, oaepSpec())
+    // Strictly the pair that is already there. Get checks for it first and
+    // answers `missing` when it is gone, so a read never mints the key that
+    // would have made the prompt unanswerable.
+    private fun unwrapCipher(alias: String): Cipher {
+        val entry = keyStore().getEntry(alias, null) as? KeyStore.PrivateKeyEntry
+            ?: throw IllegalStateException("no key pair is enrolled under $alias")
+
+        return Cipher.getInstance(WRAP_TRANSFORM).apply {
+            init(Cipher.DECRYPT_MODE, entry.privateKey, oaepSpec())
         }
+    }
 
     // Nothing about OAEP is left to a default here, and the reason is a failure
     // that survives a correct prompt. `OAEPWithSHA-256AndMGF1Padding` names the

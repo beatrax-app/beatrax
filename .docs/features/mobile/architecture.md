@@ -934,12 +934,18 @@ to read through the existing `AppLockKeyService::release()` gate:
   the enclave entry for a live biometric. On Android, recovery is
   asynchronous — the native prompt authenticates and stashes the
   decrypted blob in a transient native slot, then emits a bare
-  `cold-start-recovered` signal (no key over the JS bridge);
+  `native:BiometricVault.Recovered` signal (no key over the JS bridge);
   `onColdStartRecovered()` collects it PHP-side via
-  `completePendingRecover()`.
+  `completePendingRecover($userId)`, and does so before re-checking the
+  gates rather than after, so a refusal leaves no blob resident.
 
 A false/aborted biometric never reaches `AppLockKeyService::release()` in
-either path — the PIN pad is always the fallback of last resort.
+either path — the PIN pad is always the fallback of last resort. Every
+road to a lock announces `AppLockLocked`, and on mobile
+`StandTheBiometricCeremonyDownOnLock` answers it by taking any standing
+prompt down and dropping whatever the enclave already released — an idle
+re-lock happens with the app in the foreground, where the native
+lifecycle edge never fires.
 
 `BiometricKeyVault` stores a biometric-wrapped copy of the data key in an
 enclave-gated entry (iOS `SecAccessControl(.biometryCurrentSet)`, Android
@@ -1002,23 +1008,27 @@ and `Set()` writes, so that reason is retired and the probe answers from the
 sensor alone. The pairing rule is unchanged and now runs the other way up — the
 probe must not report a refusal `Set()` does not make.
 
-**`pollRecovered()` depends on a native contract, not just a PHP one.** It
+**`pollRecovered($key)` depends on a native contract, not just a PHP one.** It
 reads and consumes the transient blob the Android `BiometricPrompt` callback
 stashed after a successful decrypt, and answers null when nothing is pending.
 No biometric prompt happens there — the key never crosses the JS bridge in the
-prompt result, so PHP collects it after the fact. The native `PollRecovered`
-must therefore be single-shot, deleting the transient slot on read, *and* must
-clear it when the app backgrounds or re-locks. Without both, a stashed blob can
-be replayed by a later spoofed `cold-start-recovered` dispatch and admit a
-session with no fresh biometric behind it. The PHP-side gates
-(`isColdStartEnrolled` plus the PIN floor) defend in depth, but enclave
-freshness rests entirely on consume-on-read.
+prompt result, so PHP collects it after the fact. Consume-on-read is one of
+five bounds on that slot, and none of them holds the line alone; the set, and
+why each is there, is in
+[cold-start-biometric-unlock.md](../../design/cold-start-biometric-unlock.md#the-transient-slot-and-what-bounds-it).
 
-None of that is built yet, and the gap is wider than a missing implementation:
-`BiometricVault.PollRecovered` is not in the plugin's `nativephp.json` at all,
-so the call resolves to nothing on both platforms and `completePendingRecover()`
-can only ever report MISSING. It lands with the Android `BiometricPrompt`
-wiring, which is the only thing that would ever fill the slot it reads.
+The `$key` is the entry name the caller expects the blob to have come out of,
+and it is what makes the return trip an identified one. The wrap secret lives
+inside the blob, so any well-formed blob unwraps to a valid data key and
+`recoveredFrom()` cannot fail closed on a foreign one — without the name, one
+reader's session could be handed another reader's key and go on to write rows
+encrypted under it. `BiometricKeyVault::slot()` puts the user id in the name on
+the way out; `completePendingRecover(int $userId)` supplies the same name back.
+
+The PHP-side gates (`isColdStartEnrolled` plus the PIN floor) defend in depth,
+and `onColdStartRecovered()` runs the poll *before* them: the enclave released
+the blob before the method was called, so a gate that returns without consuming
+parks a live data key that a later dispatch of the same event can claim.
 
 Enrollment is PIN-rooted, and there is one way in on every platform:
 `Modules\Auth\Internal\Lock\ColdStartEnroller::enrol()` re-verifies the PIN to

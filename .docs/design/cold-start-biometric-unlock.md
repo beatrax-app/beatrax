@@ -178,6 +178,83 @@ mysterious). Skip Option 3.
 
 ---
 
+## The transient slot and what bounds it
+
+Android's `Get` cannot answer inline, so the prompt callback decrypts the blob,
+parks it in a process-global slot inside `BiometricVaultFunctions`, and raises
+`BiometricVault.Recovered`. Between those two moments a live wrap of the data
+key sits in the app's memory with nothing holding it. Four things take it out
+again, and none of them is sufficient alone:
+
+| Bound | What it covers |
+|---|---|
+| Consume on read | `PollRecovered` empties the slot on the read that claims it, and drops it on a read that does not. |
+| Slot-name match | The blob is stashed with the entry name it came out of, and released only to a poll naming that same name. |
+| Deadline | `Handler.postDelayed` drops an unclaimed blob a few seconds after the dispatch; cancelled the moment it is claimed. |
+| Stand-down | `CancelPrompt` takes the prompt down *and* drops the slot, on a PIN unlock and on every app lock. |
+| `ON_STOP` | A backstop for a real backgrounding, no longer the guarantee. |
+
+**Why the slot name has to make the return trip.** The wrap secret lives inside
+the blob (`BiometricKeyBlobCodec`), so any well-formed blob unwraps to some
+valid data key — `recoveredFrom()` cannot fail closed on one belonging to
+somebody else. `BiometricKeyVault::slot()` puts the owning user id in the entry
+name on the way out; `completePendingRecover(int $userId)` supplies the same
+name on the way back, and a mismatch releases nothing. Household trust makes
+the confidentiality half tolerable; the integrity half is not, because the
+receiving session would go on to write rows encrypted under a key that is not
+its own.
+
+**Why the poll comes before the gates.** `onColdStartRecovered()` drains the
+slot first and judges afterwards. The enclave released the blob before the
+method ran, so a gate that returns without consuming leaves a live data key
+resident with nothing left that has to happen — a later dispatch of the same
+event claims it, and the PIN unlock that stamped `last_pin_unlock_at` in the
+meantime has opened the very gate that refused it.
+
+**Why `ON_STOP` is not enough.** A translucent activity, split-screen focus
+loss and picture-in-picture all deliver `ON_PAUSE` and no `ON_STOP`, and an
+idle re-lock happens with the app still in the foreground, where no lifecycle
+edge fires at all. `ON_PAUSE` is deliberately *not* an edge here: on the OEMs
+where the biometric sheet is its own activity it would drop the blob the prompt
+just released. The deadline is what bounds every case instead.
+
+**Why the observer is keyed on the activity.** `BiometricVaultFunctions` is a
+Kotlin `object` and the process outlives its activity. A boolean latch left the
+observer attached to a DESTROYED `LifecycleRegistry` and refused to attach the
+live activity's, so `ON_STOP` became a no-op for the rest of the process; the
+guard compares the `LifecycleOwner` instead, through a weak reference so the
+dead activity is not held.
+
+## One Keystore pair per slot
+
+The Android entry is an envelope: a per-write AES-GCM content key, wrapped by
+the public half of a Keystore RSA pair whose private half is the part
+`setUserAuthenticationRequired(true)` gates. That pair is **per slot**
+(`beatrax.biometric.vault.wrap.v3.` + the entry name), for two reasons:
+
+- One shared alias made every reader's enrolment one another's. `forget()`
+  deleted the single alias wholesale, so one reader's biometry change orphaned
+  the others' entries — and their next `Get` did not answer `missing`, because
+  the entry row was still there: the read path minted a replacement pair,
+  prompted against it, and failed on a blob nothing could open, forever.
+- The read path no longer mints. `Get` answers `missing` when the alias is
+  absent and drops the entry with it, because a blob whose pair is gone is not
+  an authentication that failed — it is nothing left to authenticate against.
+
+`Delete` removes the pair as well as the row, and the pair goes first: a
+deletion that cannot remove it leaves the entry in place and reports the key as
+still held, rather than stranding a gated pair nothing points at.
+
+**The envelope's associated data is the alias.** `updateAAD` on both `seal` and
+`open` binds the ciphertext to the alias entitled to open it, which names the
+format generation and the slot. There is no data-key epoch the Kotlin side can
+compute for itself — the app's epoch counter is the sync keyring's, not the
+app-lock data key's, and at cold start the app is locked. The rollback an epoch
+would have caught is caught by the pair being deleted with the entry it sealed:
+a blob captured before a rekey has no private key left to unwrap its content
+key. The stored string's layout is unchanged; entries written by an earlier
+build read as `missing` and are re-enrolled from a PIN unlock.
+
 ## Threat-model delta (summary)
 
 | Property | Today (PIN root) | After cold-start unlock (Tier A) |
@@ -233,6 +310,14 @@ on-device UAT):
   straight through; else `vault->recover()` → `admitDataKey()` → redirect;
   missing/canceled/unavailable fall through to the PIN pad. Async (Android)
   handled by the event, see below.
+- `MobileLockScreen::onColdStartRecovered()` — the Android leg. It drains the
+  native slot with `completePendingRecover($userId)` *before* re-checking the
+  enrolment flag and the PIN floor, so a refusal leaves nothing behind.
+- `Modules/Mobile/Internal/Identity/StandTheBiometricCeremonyDownOnLock` —
+  listens for `AppLockLocked`, which `LockStateManager::lock()` announces from
+  the funnel every road to a lock passes through, and calls
+  `BiometricKeyVault::cancelPrompt()`. The session drops its own handle on the
+  data key there; nothing else dropped what the enclave had already released.
 - `BiometricVault.IsAvailable` — the capability probe, one bridge function per
   platform behind `BiometricKeyVault::platformCanStore()`. It answers what the
   device can do right now and why, not which operating system it is running:
@@ -250,7 +335,11 @@ on-device UAT):
    iPhone 12 mini returns `Keychain save failed (-25293)`, which is
    `errSecNotAvailable`.
 
-   **Android is verified** (Galaxy A51, Android 13, 2026-09-09): enrolment
+   **Android was verified** (Galaxy A51, Android 13, 2026-09-09) on the build
+   that preceded the per-slot Keystore pair, the envelope's associated data and
+   the slot's deadline. Those three change what the enclave half does, so the
+   round-trip below is the shape to re-run rather than a result that still
+   stands. What it showed then: enrolment
    writes, a fingerprint releases the blob, and the app unlocks. The log carries
    the whole chain, and the replay case is what makes the rest of it mean
    something — the same `PollRecovered` call that unlocks on a full slot does
