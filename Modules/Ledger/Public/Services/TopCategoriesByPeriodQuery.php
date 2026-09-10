@@ -48,6 +48,7 @@ final readonly class TopCategoriesByPeriodQuery
                 name: $this->ancestry->fullPath($categoryId, $categoriesById),
                 spend: Money::ofMinor($spendMinor, $displayCurrency),
                 percentageOfTotal: $spend->shareOf($spendMinor),
+                wholeMinor: $spend->totalMinor,
             );
         }
 
