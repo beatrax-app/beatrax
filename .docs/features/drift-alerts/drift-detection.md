@@ -108,7 +108,7 @@ calendar accuracy.
 
 `latestPerYear` is the series' current cadence. `priorPerYear` is read off the
 gap *before* the prior occurrence — `DriftEvaluator::priorOccurrencesPerYear()`
-divides 365 by that gap in days and snaps the result onto the nearest rate by
+measures that gap in days and snaps it onto the period of the nearest rate by
 ratio, falling back to the current cadence when there is no third occurrence to
 measure against. Nearest by ratio and not by difference: 4/yr and 1/yr are 3
 apart while 52/yr and 12/yr are 40, so a linear nearest-match would pull every
@@ -129,6 +129,25 @@ tint read the same figure, so the two surfaces cannot disagree about one alert.
 step 3 above. A series with no discernible interval has no meaningful
 yearly impact, and a zero is a value callers can short-circuit on rather
 than a number the module made up.
+
+### A skipped period is not a restructure
+
+The two rates differ *exactly* on a restructure only while the gap the prior
+rate is read off is whole. One missed occurrence doubles that gap: a monthly
+series that skipped March posts 59 days apart, a better ratio fit for a
+quarter (91.25 days) than for a month (30.42), so the prior amount was
+annualised at 4/yr against a latest at 12/yr and one EUR 2.00 rise was
+reported as EUR 104.00 a year. A weekly series that skipped two weeks was read
+as monthly and understated by the mirror of it.
+
+The candidates the gap is matched against are therefore the four cadence
+periods **plus the series' own period taken twice and three times** — up to
+`Recurring\Public\Support\MissedOccurrences::MAX_PER_WINDOW` skipped
+occurrences, the same bound `CadenceInferrer` drops a too-long interval from
+its median at. Only the series' own cadence gets the multi-period readings, and
+a single period wins every tie, so a restructure still reads as one: under a
+weekly series a 30-day gap is one monthly period, not three weekly ones, and
+under a yearly series a 31-day gap is still monthly.
 
 ## Writing the alert
 
