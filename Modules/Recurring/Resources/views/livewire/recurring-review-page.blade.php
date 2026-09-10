@@ -68,7 +68,7 @@
 
     @if (count($selectedIds) > 0)
         <section
-            class="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
+            class="safe-lift fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
             aria-label="{{ Lang::get('recurring::review.bulk.aria') }}"
         >
             <span class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('recurring::review.bulk.selected', ['count' => count($selectedIds)]) }}</span>

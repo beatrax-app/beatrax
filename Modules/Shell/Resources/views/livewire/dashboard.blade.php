@@ -385,7 +385,7 @@
         <div
             aria-atomic="true"
             aria-live="polite"
-            class="fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
+            class="safe-lift fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
             <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
@@ -421,7 +421,7 @@
         <div
             aria-atomic="true"
             aria-live="polite"
-            class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
+            class="safe-lift fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.failed_chain.title') }}</p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">

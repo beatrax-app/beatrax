@@ -38,7 +38,7 @@
         },
     }"
     x-on:toast.window="push($event.detail)"
-    class="pointer-events-none fixed bottom-4 right-4 z-[10000] flex w-[min(380px,calc(100vw-2rem))] flex-col-reverse gap-2"
+    class="safe-lift pointer-events-none fixed bottom-4 right-4 z-[10000] flex w-[min(380px,calc(100vw-2rem))] flex-col-reverse gap-2"
     role="status"
     aria-live="polite"
     data-testid="toast-host"

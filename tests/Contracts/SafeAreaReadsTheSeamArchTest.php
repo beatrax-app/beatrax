@@ -6,6 +6,7 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Routing\Router;
 use Illuminate\View\Factory as ViewFactory;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\MarkupElement;
 use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
@@ -23,10 +24,15 @@ function safeAreaTemplates(): Finder
 
 // Blade comments are prose about the seam, not a use of it. Reading them as
 // markup fails the build on a template that documents the anti-pattern, which
-// is the opposite of what every arm here is for.
+// is the opposite of what every arm here is for. Their line breaks stay, so an
+// offender's line number still points at the line the file really has.
 function safeAreaMarkup(string $contents): string
 {
-    return PatternScan::replace('/\{\{--.*?--\}\}/s', '', $contents);
+    return PatternScan::replaceCallback(
+        '/\{\{--.*?--\}\}/s',
+        static fn (array $comment): string => str_repeat("\n", substr_count((string) $comment[0], "\n")),
+        $contents,
+    );
 }
 
 /**
@@ -518,5 +524,268 @@ it('reserves the seam on every full-screen surface a signed-out reader reaches',
         '',
         'Only what this Composer root can route is swept. /mobile/welcome answers',
         'under the phone shell alone and is checked by eye there.',
+    ]));
+});
+
+/**
+ * Every lone class selector app.css declares by reading the seam, mapped to
+ * the declarations that read it. Only a lone class, for the same reason
+ * safeAreaClassEdges() gives: in `.a .b` neither half is a class a template
+ * can wear to get the padding.
+ *
+ * @return array<string, string>
+ */
+function safeAreaSeamClassBodies(): array
+{
+    $css = PatternScan::replace(
+        '#/\*.*?\*/#s',
+        '',
+        (string) file_get_contents(base_path('resources/css/app.css')),
+    );
+
+    $bodies = [];
+
+    foreach (PatternScan::sets('/([^{}]+)\{([^{}]*)\}/s', $css) as [, $selector, $body]) {
+        $name = PatternScan::first('/^\s*\.([A-Za-z0-9_-]+)\s*$/', $selector);
+
+        if ($name === [] || ! str_contains($body, 'var(--safe-')) {
+            continue;
+        }
+
+        $bodies[$name[1]] = ($bodies[$name[1]] ?? '').$body;
+    }
+
+    return $bodies;
+}
+
+/**
+ * @return list<string>
+ */
+function safeAreaBottomSeamClasses(): array
+{
+    return array_keys(array_filter(
+        safeAreaSeamClassBodies(),
+        static fn (string $body): bool => str_contains($body, 'var(--safe-bottom)'),
+    ));
+}
+
+// The same question asked of the stylesheet that actually ships. It is
+// minified and its selectors are merged, so the answer is read off whichever
+// selector list the minifier settled on rather than off one written rule.
+/**
+ * @return array<string, bool>
+ */
+function safeAreaShippedClassSeams(): array
+{
+    $built = glob(base_path('public/build/assets/app-*.css')) ?: [];
+
+    expect($built)->not->toBe([], 'No compiled stylesheet under public/build/assets. Run `npm run build`: the phone bundler zips that directory as it finds it, so an unbuilt tree cannot answer this and must not be skipped.');
+
+    $seams = [];
+
+    foreach ($built as $file) {
+        $rules = PatternScan::sets('/([^{}]+)\{([^{}]*)\}/s', (string) file_get_contents($file));
+
+        foreach ($rules as [, $selector, $body]) {
+            $reads = str_contains($body, 'var(--safe-');
+
+            foreach (PatternScan::all('/\.(-?[A-Za-z_][A-Za-z0-9_-]*)/', $selector)[1] as $name) {
+                $seams[$name] = ($seams[$name] ?? false) || $reads;
+            }
+        }
+    }
+
+    return $seams;
+}
+
+/**
+ * @param  list<string>  $classes
+ */
+function safeAreaAnchorsToTheBottom(array $classes): bool
+{
+    foreach ($classes as $class) {
+        if (PatternScan::matches('#^(?:[a-z0-9-]+:)*-?bottom-(?!auto$)[a-z0-9./\[\]%-]+$#', $class)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Credited on the element or anywhere inside it: a bar that must keep painting
+// to the screen edge reserves the seam on the row within it, and that is the
+// correct arrangement rather than a way around this rule.
+/**
+ * @param  list<string>  $seam
+ */
+function safeAreaBottomSeamIsReserved(MarkupElement $element, array $seam): bool
+{
+    $reach = implode(' ', $element->classes()).' '.($element->inner ?? '');
+
+    foreach ($seam as $name) {
+        if (PatternScan::matches('/(?:^|[\s"\'])'.preg_quote($name, '/').'(?:$|[\s"\'])/', $reach)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Which spacing utilities would beat a seam class that sets this property.
+// Tailwind emits every one of them into @layer utilities and the seam classes
+// live in @layer components, so the utility wins outright however specific the
+// class is and whatever order the two are written in.
+/**
+ * @return list<string>
+ */
+function safeAreaUtilitiesOverriding(string $body): array
+{
+    $shorthands = [
+        'padding-bottom' => ['pb', 'py', 'p'],
+        'margin-bottom' => ['mb', 'my', 'm'],
+    ];
+
+    $prefixes = [];
+
+    foreach ($shorthands as $property => $tokens) {
+        if (str_contains($body, $property.':')) {
+            $prefixes = [...$prefixes, ...$tokens];
+        }
+    }
+
+    return array_values(array_unique($prefixes));
+}
+
+// The seam is COMPILED from resources/css/app.css and SHIPPED from
+// public/build. The phone bundler zips that directory as it finds it and
+// rebuilds nothing, so a stylesheet older than the layout it dresses travels
+// to the device intact: the class is in the markup, the rule is in the source,
+// every test over the source passes, and the element pads by zero.
+//
+// Measured on a Galaxy A51 from an APK built the same hour: the bundle carried
+// a stylesheet compiled six days earlier, with no `.safe-below` rule anywhere
+// in it, while `<main>` wore the class. Five of nineteen routes ended with
+// their last row behind the navigation bar, the worst of them a destructive
+// restore button 23px under it.
+it('ships every seam class it compiles', function (): void {
+    $compiled = safeAreaSeamClassBodies();
+    $shipped = safeAreaShippedClassSeams();
+
+    expect(count($compiled))->toBeGreaterThan(3, 'app.css yielded almost no class that reads the seam, so a clean answer below is this reader being broken rather than the bundle being right.');
+
+    expect(count($shipped))->toBeGreaterThan(500, 'Almost no selector was read out of the shipped stylesheet, so every class below would report clean whatever the bundle holds.');
+
+    $missing = array_values(array_filter(
+        array_keys($compiled),
+        static fn (string $name): bool => ($shipped[$name] ?? false) === false,
+    ));
+
+    expect($missing)->toBe([], implode("\n", [
+        'app.css defines these against the seam and public/build does not ship them:',
+        ...$missing,
+        '',
+        'Run `npm run build`. public/build is gitignored and nothing rebuilds it on',
+        'the way into a phone bundle, so a stale one ships whatever it was compiled',
+        'from — and a class with no rule behind it is a padding of zero, on the',
+        'device only, with the markup and the source both looking correct.',
+    ]));
+});
+
+// A `bottom-4` measures its gap from the screen edge, and both phone shells
+// paint that edge under the navigation bar, so the gap the design asked for is
+// spent on the bar and the overlay's own controls stand behind it. Worse than
+// the scrolled-to-the-end case <main> answers: nothing in a fixed box scrolls,
+// so there is no position from which the reader can reach the control.
+it('measures an overlay pinned to the bottom edge from the seam', function (): void {
+    $seam = safeAreaBottomSeamClasses();
+    $offenders = [];
+    $read = 0;
+    $anchored = 0;
+
+    foreach (safeAreaTemplates() as $file) {
+        $read++;
+        $source = safeAreaMarkup((string) $file->getContents());
+
+        foreach (MarkupSource::tags($source) as $element) {
+            $classes = $element->classes();
+
+            if (! in_array('fixed', $classes, true) || ! safeAreaAnchorsToTheBottom($classes)) {
+                continue;
+            }
+
+            $anchored++;
+
+            if (! safeAreaBottomSeamIsReserved($element, $seam)) {
+                $offenders[] = $file->getRelativePathname().':'.$element->line($source);
+            }
+        }
+    }
+
+    expect($read)->toBeGreaterThan(150, 'The template walk read almost nothing, so a clean answer below is the walk being broken rather than the templates being right.');
+
+    expect($anchored)->toBeGreaterThan(3, 'Almost no bottom-anchored overlay was recognised, so this rule judged next to nothing.');
+
+    expect(count($seam))->toBeGreaterThan(1, 'app.css yielded almost no class that reads the bottom seam, so every overlay below is judged against an empty vocabulary.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These elements are pinned to the bottom of the viewport and reserve nothing:',
+        ...$offenders,
+        '',
+        'Wear .safe-lift, which moves the origin the gap is counted from and leaves',
+        'the gap itself alone. A bar that must keep painting to the screen edge puts',
+        'it on the row inside instead, so the surface still reaches the edge and only',
+        'its content clears the bar.',
+    ]));
+});
+
+// The seam classes live in @layer components and every Tailwind spacing
+// utility lives in @layer utilities, which wins outright — however specific
+// the class is, and whichever is written first. A `py-4` beside .safe-below
+// leaves the element with the design's 16px and nothing reports it: the class
+// is in the attribute, the rule is in the bundle, and the computed padding is
+// the utility's.
+it('lets no utility take back the seam a class reserves', function (): void {
+    $bodies = safeAreaSeamClassBodies();
+    $offenders = [];
+    $read = 0;
+    $wearers = 0;
+
+    foreach (safeAreaTemplates() as $file) {
+        $read++;
+        $attributes = PatternScan::all('/class="([^"]*)"/', safeAreaMarkup((string) $file->getContents()));
+
+        foreach ($attributes[1] as $attribute) {
+            $classes = PatternScan::split('/\s+/', trim($attribute));
+
+            foreach (array_intersect($classes, array_keys($bodies)) as $worn) {
+                $wearers++;
+
+                $beaten = array_values(array_filter(
+                    safeAreaUtilitiesOverriding($bodies[$worn]),
+                    static fn (string $prefix): bool => array_filter(
+                        $classes,
+                        static fn (string $class): bool => PatternScan::matches('#^'.$prefix.'-[a-z0-9./\[\]%-]+$#', $class),
+                    ) !== [],
+                ));
+
+                if ($beaten !== []) {
+                    $offenders[] = $file->getRelativePathname().': .'.$worn.' beside '.implode('-*, ', $beaten).'-*';
+                }
+            }
+        }
+    }
+
+    expect($read)->toBeGreaterThan(150, 'The template walk read almost nothing, so a clean answer below is the walk being broken rather than the templates being right.');
+
+    expect($wearers)->toBeGreaterThan(3, 'Almost no element wearing a seam class was found, so this rule judged next to nothing.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These elements carry a seam class and a utility that overwrites it:',
+        ...$offenders,
+        '',
+        'Cascade layers, not specificity: @layer utilities beats @layer components',
+        'whatever the selectors say, so the seam class is inert here and the element',
+        'keeps the number the utility spells. Move the reserve onto an element the',
+        'utility does not dress, or take the utility off.',
     ]));
 });

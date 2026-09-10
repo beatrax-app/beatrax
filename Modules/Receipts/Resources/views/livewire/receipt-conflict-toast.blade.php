@@ -21,7 +21,7 @@
         <div
             role="alert"
             aria-live="assertive"
-            class="fixed bottom-md right-md z-50 max-w-sm rounded-lg border border-slate-200 bg-white shadow-lg p-md dark:bg-slate-950 dark:border-slate-700"
+            class="safe-lift fixed bottom-md right-md z-50 max-w-sm rounded-lg border border-slate-200 bg-white shadow-lg p-md dark:bg-slate-950 dark:border-slate-700"
         >
             <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {{ Lang::get('receipts::messages.conflict.title') }}

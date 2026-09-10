@@ -784,6 +784,55 @@ the class, and asks `app.css` that the class reads the seam variable rather
 than a number: 48px is this phone's navigation bar, 34px is the iPhone's home
 indicator, and 0 is every desktop.
 
+The tenth arm is the one the ninth could not see. A seam class is *compiled*
+from `resources/css/app.css` and *shipped* from `public/build`, and those are
+two different artefacts: the directory is gitignored, the phone bundler zips it
+as it finds it, and nothing on that path rebuilds it. So a stylesheet older
+than the layout it dresses travels to the device intact, and every check over
+the source passes while the device pads by zero.
+
+That is what shipped. An Android bundle carried a stylesheet compiled six days
+before `.safe-below` existed, while `<main>` in the same bundle wore the class:
+no `.safe-below` rule anywhere in the sheet, so the class resolved to nothing
+and `<main>` computed to `padding-bottom: 0`. Swept on a Galaxy A51, five of
+nineteen routes ended with their last row behind the navigation bar — the worst
+of them the destructive "Restore (overwrites current data)" button, 23px under
+it, on the screen where that button is the most dangerous one there is.
+
+The arm derives its subjects from the stylesheet rather than pinning them: every
+lone class selector `app.css` declares by reading `var(--safe-*)` must be a class
+the built stylesheet also names in a rule that reads it. It floors both sides —
+the number of seam classes derived, and the number of selectors read out of the
+bundle — so a reader that stops reading fails rather than reporting clean.
+
+The eleventh arm covers an element pinned to the bottom of the *viewport*
+rather than standing in the flow. `bottom-4` counts its gap from the screen
+edge, both phone shells paint that edge under the navigation bar, and so the
+gap the design asked for is spent on the bar while the overlay's own controls
+stand behind it. It is worse than the case `<main>` answers: nothing in a fixed
+box scrolls, so there is no position the reader can reach the control from.
+Six elements carried the shape — the receipt-conflict toast and the global
+toast host, both of which offer a choice; the two dashboard alert toasts; the
+recurring bulk-action pill; and the migration preview's footer, whose confirm
+button sat 32px under the bar.
+
+`.safe-lift` is `margin-bottom: var(--safe-bottom)` and nothing else. A margin
+rather than padding because padding grows a fixed box downwards and leaves its
+bottom edge where it was; a bottom margin moves the origin instead, so each
+site keeps whatever gap it was drawn with and only the edge it counts from
+changes. A bar that must keep painting to the screen edge — the migration
+footer is the only one — puts the lift on the row inside it, which the arm
+credits: it reads the element's own classes and its inner markup both.
+
+The twelfth arm is why the first attempt at that footer was inert. The seam
+classes live in `@layer components` and every Tailwind spacing utility lives in
+`@layer utilities`, which wins outright — however specific the selector is, and
+whichever is written first. `.safe-below` beside the footer's `py-4` computed to
+the design's 16px, with the class in the attribute and the rule in the bundle
+and nothing to look at that was wrong. The arm derives which utility prefixes
+would beat each seam class from the properties that class actually sets, and
+fails any element carrying both.
+
 One caveat about this page itself: Tailwind v4 scans the project root, `.docs/`
 included, so a utility name written in a sentence here is a real candidate for
 the bundle. `px-[…left]` in an earlier draft of this section shipped as
@@ -1510,6 +1559,20 @@ The compiled sheet is read as-is, so the build must be current: a utility added
 to a template since the last `npm run build` has not been generated yet and
 reads here as though it matched nothing. The failure message says so, because
 that is where somebody meets it.
+
+That is not only a false positive waiting to happen — it is the true positive
+that matters most, because `public/build` is what a phone bundle ships. Neither
+shell rebuilds it: both zip the directory as they find it, and only CI runs
+`npm run build` first. A stale one therefore travels to a device whole, and this
+rule is the only thing that reads it.
+
+The walk covers `resources/views` beside `Modules`, and did not always. It began
+as a module-tree scan, which left the four page layouts out of it — and
+`<main class="safe-below">` is written in one of them. A bundle went to a phone
+carrying a stylesheet from before that class existed: `<main>` computed to
+`padding-bottom: 0`, five routes ended with their last row behind the navigation
+bar, and this rule reported the two module classes the same bundle was also
+missing while saying nothing about the one that broke the screens.
 
 ## A validation rule declared but never run
 
