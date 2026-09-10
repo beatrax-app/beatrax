@@ -97,6 +97,12 @@ final class WebAuthnBiometricController
                 ['enrolled' => false, 'error' => 'Session not unlocked.'],
                 Response::HTTP_FORBIDDEN,
             ),
+            // Named apart from the other refusals because it is the only one
+            // the reader can answer: type the code again and come back.
+            BiometricEnrolmentOutcome::PinNotProved => new JsonResponse(
+                ['enrolled' => false, 'error' => 'pin_not_proved'],
+                Response::HTTP_FORBIDDEN,
+            ),
             BiometricEnrolmentOutcome::Failed => new JsonResponse(
                 ['enrolled' => false, 'error' => 'Enrollment failed.'],
                 Response::HTTP_UNPROCESSABLE_ENTITY,

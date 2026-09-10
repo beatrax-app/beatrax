@@ -326,6 +326,25 @@ on-device UAT):
   It has exactly one caller: the Enroll button on `AppLockSettingsSection`,
   which opens a PIN confirmation exactly as de-enrolling does. Enrolment is
   opt-in, and this is the only place the reader can opt in.
+- `Modules/Auth/Internal/Lock/BrowserEnrolmentAuthoriser` — the same bargain on
+  the road with no OS vault, where the durable wrap is the WebAuthn credential
+  row rather than an enclave entry. It opens the same data key to the same
+  biometric and outlives the session just as plainly, and it used to cost an
+  unlocked session, which is the only state the settings screen is ever reached
+  in — so it cost nothing. Now the Enroll button opens the same PIN
+  confirmation on both roads.
+  The two differ in one way, because the ceremony does: WebAuthn leaves for the
+  browser and comes back a round trip later, so the PIN cannot produce the very
+  key being wrapped. It produces a `FreshPinProof` instead — single-use,
+  deadlined at two minutes, bound to the account that typed it, drained on the
+  read that judges it — and `EnrolBiometricCredential` spends that before it
+  reads a key or writes a byte. The key itself is never carried across the gap;
+  it is read from the custodian at the moment it is wrapped, so no second
+  durable copy exists meanwhile.
+  `tests/Contracts/ANativeEnrolmentTakesAFreshPinArchTest.php` covers both
+  wraps, and holds them to rules that differ for that reason — the proof half is
+  checked at file scope, which is weaker than the `enroll()` half and is said so
+  in the guard.
   `LockScreen::submit()` used to re-arm an empty vault with the PIN it had just
   verified, which was convenient and was not the ask: a correct PIN is proof of
   identity, not a request to enrol a fingerprint, and a reader who turned the

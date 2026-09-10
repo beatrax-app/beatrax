@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'This version of Beatrax has nowhere to store an unlock key, so biometric unlock is not offered. Your device is not the limitation.',
     'error_enroll_unprotected' => 'Biometric unlock needs an operating-system key store, and this installation has none. Enrolling would leave the unlock key readable beside your data, so it is not offered here.',
     'error_enroll_failed' => 'Your device declined to store the key. Biometric unlock is unavailable.',
+    'error_enroll_pin_expired' => 'The PIN confirmation ran out before your device finished. Enter your PIN and try again.',
     'heading' => 'App lock',
 
     'toggle_label' => 'Lock app with PIN',

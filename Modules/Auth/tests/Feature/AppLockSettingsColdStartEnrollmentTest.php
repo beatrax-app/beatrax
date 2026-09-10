@@ -224,8 +224,14 @@ it('still asks the browser when there is no shell and no OS gate', function (): 
     // it is only offered where the bound shield really protects those bytes.
     bindColdStartProtectingShield();
 
+    // The PIN comes first on this road too: the ceremony travels to the browser
+    // and back, so what leaves with it is a proof the PIN was just typed.
     Livewire::test(AppLockSettingsSection::class)
         ->call('startEnroll')
+        ->assertNotDispatched('beatrax:webauthn-create')
+        ->assertSet('confirmingEnroll', true)
+        ->set('enrollPin', '123456')
+        ->call('enrollWithPin')
         ->assertDispatched('beatrax:webauthn-create');
 });
 

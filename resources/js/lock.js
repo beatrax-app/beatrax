@@ -712,11 +712,16 @@ document.addEventListener('alpine:init', () => {
                         body: JSON.stringify(attestation),
                     });
 
-                    if (enrollRes.ok) {
-                        const result = await enrollRes.json();
-                        if (result.enrolled && window.Livewire) {
-                            window.Livewire.dispatch('biometric-enrolled');
-                        }
+                    // Read whatever came back, ok or not: a refusal answers 403
+                    // with the reason in the body, and reading only ok
+                    // responses is what made every refusal here silent.
+                    const result = await enrollRes.json().catch(() => ({}));
+
+                    if (window.Livewire) {
+                        window.Livewire.dispatch(
+                            result.enrolled ? 'biometric-enrolled' : 'biometric-enrol-failed',
+                            result.enrolled ? {} : { reason: result.error || '' },
+                        );
                     }
                 } catch (e) {
                     // Enrollment cancelled or failed — no-op.

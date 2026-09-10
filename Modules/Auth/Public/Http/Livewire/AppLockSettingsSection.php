@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Http\Livewire;
 
-use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -20,15 +19,13 @@ use Modules\Auth\Internal\Lock\AppLockDisableResult;
 use Modules\Auth\Internal\Lock\AppLockKeyState;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\ColdStartEnroller;
-use Modules\Auth\Internal\Lock\ColdStartEnrolmentResult;
 use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Contracts\ColdStartVault;
+use Modules\Auth\Public\Http\Livewire\Concerns\ManagesBiometricEnrolment;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -39,6 +36,7 @@ final class AppLockSettingsSection extends Component
 {
     use DispatchesToast;
     use HoldsFlashMessage;
+    use ManagesBiometricEnrolment;
 
     // No #[Validate] on the PIN and password boxes below. The attribute only
     // runs where an action calls validate(), none of these do, and a rule that
@@ -404,152 +402,6 @@ final class AppLockSettingsSection extends Component
         // Nothing else marks this one: the lock was already on and stays on, so
         // without a word the screen looks identical to a reset that failed.
         $this->toast(Lang::get('core::settings.saved'));
-    }
-
-    // Half of a browser round trip: lock.js answers 'beatrax:webauthn-create'
-    // by POSTing an attestation to /lock/biometric/enroll, then dispatching
-    // 'biometric-enrolled' back here.
-    public function startEnroll(
-        ColdStartVault $vault,
-        ConfigRepository $config,
-        SecretShield $shield,
-    ): void {
-        if (! $this->lockEnabled) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_enable_first');
-
-            return;
-        }
-
-        // An OS-owned biometric asks for the PIN first and skips the browser
-        // entirely: WebAuthn is a browser API, and navigator.credentials
-        // .create() resolves to nothing behind the desktop shell, which read
-        // as a dead button.
-        if ($vault->isAvailable()) {
-            $this->confirmingEnroll = true;
-            $this->enrollPin = '';
-            $this->flashMessage = '';
-
-            return;
-        }
-
-        $refusal = $this->browserEnrolmentRefusal($config, $shield);
-
-        if ($refusal !== null) {
-            $this->flashMessage = $refusal;
-
-            return;
-        }
-
-        $this->dispatch('beatrax:webauthn-create');
-    }
-
-    // Reached only once the OS vault above turned out to be unavailable: both
-    // answers here are about the browser road specifically, and a device with
-    // its own vault never travels it.
-    private function browserEnrolmentRefusal(ConfigRepository $config, SecretShield $shield): ?string
-    {
-        return match (true) {
-            // Same dead-button case as an unavailable vault, with nothing left
-            // to fall back on: say so rather than dispatching into nothing.
-            $config->get('nativephp-internal.running') === true => Lang::get('auth::app_lock.error_enroll_unsupported'),
-            // The browser path persists the unwrapping key beside the key it
-            // unwraps, in the same file as the ledger. Only a shield that really
-            // makes those bytes unreadable earns that; a self-hosted web install
-            // binds the pass-through, and the enrolment routes refuse there too.
-            ! $shield->protectsAtRest() => Lang::get('auth::app_lock.error_enroll_unprotected'),
-            default => null,
-        };
-    }
-
-    // The OS entry is a durable way back to the data key that biometrics alone
-    // can open, so arming one costs what removing one costs. The enroller
-    // derives the key from this PIN rather than taking the session's, which is
-    // what makes the box in front of the reader a gate and not a formality.
-    public function enrollWithPin(
-        CurrentUser $currentUser,
-        ColdStartEnroller $enroller,
-        AppLockCredentialRejections $rejections,
-        Session $session,
-    ): void {
-        $rejection = $rejections->pinRequired($this->enrollPin);
-
-        if ($rejection !== null) {
-            $this->flashMessage = $rejection;
-
-            return;
-        }
-
-        $pin = $this->enrollPin;
-        $this->enrollPin = '';
-
-        $result = $enroller->enrol($currentUser->user()->id, $pin, $session);
-
-        // The panel stays open on a refusal for the same reason the disable
-        // one does: another PIN is an answer the reader can still give.
-        if ($result !== ColdStartEnrolmentResult::Enrolled) {
-            $this->flashMessage = $result === ColdStartEnrolmentResult::PinRejected
-                ? Lang::get('auth::app_lock.error_pin_incorrect')
-                : Lang::get('auth::app_lock.error_enroll_failed');
-
-            return;
-        }
-
-        $this->biometricEnrolled = true;
-        $this->confirmingEnroll = false;
-        $this->flashMessage = '';
-    }
-
-    #[On('biometric-enrolled')]
-    public function onBiometricEnrolled(): void
-    {
-        $this->biometricEnrolled = true;
-        $this->flashMessage = '';
-    }
-
-    public function confirmDeenroll(): void
-    {
-        $this->confirmingDeenroll = true;
-        $this->deenrollPin = '';
-    }
-
-    public function deenroll(
-        CurrentUser $currentUser,
-        BiometricDeviceStore $biometricStore,
-        AppLockProvisioner $provisioner,
-        ColdStartVault $vault,
-        AppLockCredentialRejections $rejections,
-    ): void {
-        $rejection = $rejections->pinRequired($this->deenrollPin);
-
-        if ($rejection !== null) {
-            $this->flashMessage = $rejection;
-
-            return;
-        }
-
-        $user = $currentUser->user();
-
-        if (! $provisioner->verifyPin($user->id, $this->deenrollPin)) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
-
-            return;
-        }
-
-        $biometricStore->deleteForUser($user->id);
-        $cleared = $vault->forget($user->id);
-
-        // Read back rather than assumed: the vault answers isEnrolled() from
-        // its own storage, so a refused removal leaves an enrolment this
-        // screen would otherwise show as gone until the next full render.
-        $this->biometricEnrolled = $vault->isEnrolled($user->id);
-        $this->confirmingDeenroll = false;
-        $this->deenrollPin = '';
-
-        // Saying nothing about a key the OS would not release tells the reader
-        // it was destroyed.
-        $this->flashMessage = $cleared
-            ? ''
-            : Lang::get('auth::app_lock.error_vault_kept_key');
     }
 
     /**

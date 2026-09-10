@@ -117,10 +117,32 @@ it('the settings section still starts a browser enrolment where a real shield is
     bindNoBiometricVault();
     bindProtectingShield();
 
+    // The browser road asks for the PIN first now, exactly as the OS one does,
+    // and the ceremony leaves only once that PIN has been spent.
     Livewire::test(AppLockSettingsSection::class)
         ->call('startEnroll')
+        ->assertNotDispatched('beatrax:webauthn-create')
+        ->assertSet('confirmingEnroll', true)
+        ->assertSet('flashMessage', '')
+        ->set('enrollPin', '123456')
+        ->call('enrollWithPin')
         ->assertDispatched('beatrax:webauthn-create')
         ->assertSet('flashMessage', '');
+});
+
+it('does not start the browser ceremony on a wrong PIN', function (): void {
+    $user = shieldedEnrolmentUser('enrol-shield-section-wrong');
+    $this->actingAs($user);
+    app(AppLockProvisioner::class)->enable($user->id, '123456', 'shielded-pass');
+    bindNoBiometricVault();
+    bindProtectingShield();
+
+    Livewire::test(AppLockSettingsSection::class)
+        ->call('startEnroll')
+        ->set('enrollPin', '999999')
+        ->call('enrollWithPin')
+        ->assertNotDispatched('beatrax:webauthn-create')
+        ->assertSet('confirmingEnroll', true);
 });
 
 it('carries the refusal in every locale', function (): void {

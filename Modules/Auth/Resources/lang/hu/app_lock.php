@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'A Beatrax e verziójának nincs hová eltárolnia a feloldókulcsot, ezért a biometrikus feloldás nem érhető el. Nem az eszközöd a korlát.',
     'error_enroll_unprotected' => 'A biometrikus feloldáshoz az operációs rendszer kulcstárolója kell, ennek a telepítésnek pedig nincs ilyen. A regisztráció olvashatóan hagyná a feloldókulcsot az adataid mellett, ezért itt nem érhető el.',
     'error_enroll_failed' => 'Az eszközöd elutasította a kulcs tárolását. A biometrikus feloldás nem érhető el.',
+    'error_enroll_pin_expired' => 'A PIN-kódos megerősítés lejárt, mielőtt az eszköz végzett volna. Add meg a PIN-kódodat, és próbáld újra.',
     'heading' => 'Alkalmazászár',
 
     'toggle_label' => 'Alkalmazás zárolása PIN-kóddal',

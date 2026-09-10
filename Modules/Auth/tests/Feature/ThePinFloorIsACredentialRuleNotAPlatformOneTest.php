@@ -18,7 +18,7 @@ use Modules\Core\Models\User;
 // boundaries and the desktop at neither, on no stated reason -- the floor is a
 // property of the credential, and Touch ID is the same bargain as Face ID.
 
-function pinFloorUser(int $daysSincePin): User
+function coldStartPinAgeUser(int $daysSincePin): User
 {
     $user = User::query()->create([
         'username' => 'pin-floor-'.bin2hex(random_bytes(4)),
@@ -41,7 +41,7 @@ function pinFloorUser(int $daysSincePin): User
     return $user;
 }
 
-function pinFloorVault(string $dataKey): ColdStartVault
+function coldStartPinAgeVault(string $dataKey): ColdStartVault
 {
     $vault = new class($dataKey) implements ColdStartVault
     {
@@ -83,22 +83,22 @@ function pinFloorVault(string $dataKey): ColdStartVault
 }
 
 it('offers the native unlock inside the floor', function (): void {
-    pinFloorUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS - 1);
-    pinFloorVault(random_bytes(32));
+    coldStartPinAgeUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS - 1);
+    coldStartPinAgeVault(random_bytes(32));
 
     Livewire::test(LockScreen::class)->assertSet('nativeUnlockAvailable', true);
 });
 
 it('stops offering the native unlock once the floor is due', function (): void {
-    pinFloorUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS);
-    pinFloorVault(random_bytes(32));
+    coldStartPinAgeUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS);
+    coldStartPinAgeVault(random_bytes(32));
 
     Livewire::test(LockScreen::class)->assertSet('nativeUnlockAvailable', false);
 });
 
 it('admits no key past the floor, whatever the render offered', function (): void {
-    pinFloorUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS);
-    $vault = pinFloorVault(random_bytes(32));
+    coldStartPinAgeUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS);
+    $vault = coldStartPinAgeVault(random_bytes(32));
 
     Livewire::test(LockScreen::class)
         ->call('nativeUnlock')
@@ -113,8 +113,8 @@ it('admits no key past the floor, whatever the render offered', function (): voi
 // device, which is every install that predates the column.
 
 it('treats an account that never unlocked with a PIN as overdue', function (): void {
-    $user = pinFloorUser(daysSincePin: 0);
-    pinFloorVault(random_bytes(32));
+    $user = coldStartPinAgeUser(daysSincePin: 0);
+    coldStartPinAgeVault(random_bytes(32));
 
     DB::connection()->table('user_app_lock_configs')
         ->where('user_id', $user->id)
@@ -124,8 +124,8 @@ it('treats an account that never unlocked with a PIN as overdue', function (): v
 });
 
 it('leaves the enrolment standing, because a floor is not a lost entry', function (): void {
-    $user = pinFloorUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS);
-    pinFloorVault(random_bytes(32));
+    $user = coldStartPinAgeUser(daysSincePin: MobileLockGateway::PIN_FLOOR_DAYS);
+    coldStartPinAgeVault(random_bytes(32));
 
     Livewire::test(LockScreen::class)->call('nativeUnlock');
 
