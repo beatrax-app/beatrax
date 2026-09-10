@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Identiteta tvoje naprave je zaklenjena. Odkleni aplikacijo in poskusi znova.',
     'identity_absent' => 'Sinhronizacija na tej napravi še ni nastavljena, zato nima identitete za seznanjanje. Najprej vklopi sinhronizacijo.',
+    'cannot_be_answered' => 'Na kodo, prikazano tukaj, nihče ne bi mogel odgovoriti: ta naprava ni dosegljiva prek omrežja in relej ni nastavljen. Pokaži kodo druge naprave in jo vnesi sem.',
     'invalid_code' => 'Ta koda ni veljavna ali je potekla. Na drugi napravi ustvari novo.',
     'already_under_way' => 'Ta naprava je kodo že sprejela in čaka na potrditev druge naprave. Če ne pride, na njej ustvari novo kodo in uporabi tisto.',
     'vouched_but_refused' => 'Druga naprava kodo še ima, a je ta naprava ni mogla sprejeti. Na njej ustvari novo kodo in uporabi tisto.',

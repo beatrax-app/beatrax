@@ -9,6 +9,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Pairing\PairingAnswerability;
+use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 
 uses(RefreshDatabase::class);
 
@@ -34,6 +36,17 @@ function phoneCodeShowMyCode(User $user): string
     /** @var Session $session */
     $session = app(Session::class);
     app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, $session);
+
+    // A phone draws a code at all only where the scan can be answered,
+    // which is a relay. Stated here rather than read off whatever relay the
+    // machine running the suite happens to have configured for itself.
+    app()->instance(PairingAnswerability::class, new class(app(RelayConfig::class)) extends PairingAnswerability
+    {
+        public function canBeAnswered(): bool
+        {
+            return true;
+        }
+    });
 
     return Livewire::test(PairingFlowModal::class)->call('showMyCode')->html();
 }

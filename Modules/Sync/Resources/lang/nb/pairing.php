@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Enhetsidentiteten din er låst. Lås opp appen og prøv igjen.',
     'identity_absent' => 'Synkronisering er ikke satt opp på denne enheten ennå, så den har ingen identitet å pare. Aktiver synkronisering først.',
+    'cannot_be_answered' => 'En kode som vises her, kan ikke besvares: denne enheten er ikke tilgjengelig over nettverket, og det er ikke satt opp noe relay. Vis den andre enhetens kode og skriv den inn her i stedet.',
     'invalid_code' => 'Koden er ugyldig eller har utløpt. Be den andre enheten om å generere en ny.',
     'already_under_way' => 'Denne enheten har allerede tatt imot koden og venter på at den andre enheten bekrefter. Skjer det ikke, be om en ny kode og bruk den.',
     'vouched_but_refused' => 'Den andre enheten har fortsatt koden, men denne enheten klarte ikke å ta den imot. Be om en ny kode, og bruk den.',

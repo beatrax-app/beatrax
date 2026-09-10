@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',
     'identity_absent' => 'Sync is not set up on this device yet, so it has no identity to pair with. Turn on sync first.',
+    'cannot_be_answered' => 'A code shown here could not be answered: this device cannot be reached over the network, and no relay is set up. Show the other device\'s code and enter that here instead.',
     'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
     'already_under_way' => 'This device has already taken that code up, and is waiting for the other device to confirm. If it never does, ask for a fresh code and use that.',
     'vouched_but_refused' => 'The other device still holds that code, but this device could not take it up. Ask it for a fresh code and use that.',
