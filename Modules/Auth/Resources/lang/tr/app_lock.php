@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'Beatrax\'ın bu sürümünde kilit açma anahtarını saklayacak bir yer yok, bu yüzden biyometrik kilit açma sunulmuyor. Sınırlama cihazın değil.',
     'error_enroll_unprotected' => 'Biyometrik kilit açma, işletim sisteminin anahtar deposuna ihtiyaç duyar ve bu kurulumda böyle bir depo yok. Kaydolmak, kilit açma anahtarını verilerinin yanında okunabilir bırakırdı; bu yüzden burada sunulmuyor.',
     'error_enroll_failed' => 'Cihazın anahtarı saklamayı reddetti. Biyometrik kilit açma kullanılamıyor.',
+    'error_enroll_pin_expired' => 'PIN onayı, cihazınız tamamlamadan önce sona erdi. PIN’inizi girin ve tekrar deneyin.',
     'heading' => 'Uygulama kilidi',
 
     'toggle_label' => 'Uygulamayı PIN ile kilitle',

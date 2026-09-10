@@ -20,6 +20,22 @@ use Tests\Contracts\Support\SonarSourceFiles;
 // that produces the key, and zero the key afterwards. A second control cannot
 // grow back without failing the count, and a first one cannot lose its PIN
 // without failing the shape.
+//
+// There are TWO durable wraps, and for a while this guard watched one. The
+// WebAuthn credential row is `secret || wrapped_key` and opens the same data
+// key to the same biometric, outliving the session exactly as the vault entry
+// does -- and it is reached through completeEnrollment(), which spells nothing
+// this file was reading. So it is a second subject here.
+//
+// The two subjects are held to different rules, and the difference is real
+// rather than a concession. A vault entry is written in the request that takes
+// the PIN, so the PIN can be required to produce the very key being stored. A
+// WebAuthn ceremony leaves for the browser and comes back, so what survives the
+// gap is a proof of the PIN -- single-use, deadlined, bound to the account --
+// and the key is read at the moment it is wrapped. The proof is checked at FILE
+// scope rather than in the calling function, because it is consumed on the way
+// into the action and spent in the method that writes; that is weaker than the
+// enroll() rule and is written down here rather than left to be discovered.
 
 const NATIVE_ENROLMENT_FILE_FLOOR = 1_000;
 
@@ -27,6 +43,12 @@ const NATIVE_ENROLMENT_IMPLEMENTATION_FLOOR = 3;
 
 /** The contract whose implementations are allowed to reach the platform directly. */
 const NATIVE_ENROLMENT_VAULT_CONTRACT = 'ColdStartVault';
+
+/** The other durable wrap: the WebAuthn credential row, written by this call. */
+const NATIVE_ENROLMENT_BROWSER_VERB = 'completeenrollment';
+
+/** What spending a fresh PIN leaves behind for a ceremony that has to travel. */
+const NATIVE_ENROLMENT_PROOF = 'FreshPinProof';
 
 function nativeEnrolmentIsVaultImplementation(string $source): bool
 {
@@ -221,6 +243,47 @@ function nativeEnrolmentFaultsIn(string $path, string $source): array
     return $faults;
 }
 
+/**
+ * Every `->completeEnrollment(` call in a file, as line numbers.
+ *
+ * @param  list<array{0:int|null,1:string,2:int}>  $tokens
+ * @return list<int>
+ */
+function nativeEnrolmentBrowserCalls(array $tokens): array
+{
+    $lines = [];
+
+    foreach ($tokens as $index => $token) {
+        if ($token[0] !== T_OBJECT_OPERATOR && $token[0] !== T_NULLSAFE_OBJECT_OPERATOR) {
+            continue;
+        }
+
+        $name = $tokens[$index + 1] ?? null;
+        $paren = $tokens[$index + 2] ?? null;
+
+        if ($name === null || $name[0] !== T_STRING || strtolower($name[1]) !== NATIVE_ENROLMENT_BROWSER_VERB) {
+            continue;
+        }
+        if ($paren === null || $paren[0] !== null || $paren[1] !== '(') {
+            continue;
+        }
+
+        $lines[] = $token[2];
+    }
+
+    return $lines;
+}
+
+/**
+ * Whether a file spends a fresh-PIN proof: it must name the proof and consume
+ * one. Minting is not spending -- the screen that takes the PIN mints, and a
+ * file that only minted would be arming itself.
+ */
+function nativeEnrolmentSpendsAProof(string $source): bool
+{
+    return str_contains($source, NATIVE_ENROLMENT_PROOF) && preg_match('/->consume\(/', $source) === 1;
+}
+
 it('arms the OS vault from exactly one place, and that place spends a PIN to do it', function (): void {
     $files = SonarSourceFiles::all();
 
@@ -370,4 +433,115 @@ it('reads a caller that arms the vault with no PIN, and passes one that spends a
     expect(nativeEnrolmentIsVaultImplementation('<?php final class V { public function f(ColdStartVault $v) {} }'))->toBeFalse(
         'naming the contract in a signature is using it, not being it',
     );
+});
+
+it('writes the other durable wrap from exactly one place, and that place spends a proof of a fresh PIN', function (): void {
+    $files = SonarSourceFiles::all();
+
+    expect(count($files))->toBeGreaterThan(
+        NATIVE_ENROLMENT_FILE_FLOOR,
+        'The walk opened '.count($files).' production files, which is what a reader that stopped reading looks like.',
+    );
+
+    $callers = [];
+    $unproven = [];
+
+    foreach ($files as $path) {
+        $source = (string) file_get_contents($path);
+
+        if (! str_contains($source, '->completeEnrollment(')) {
+            continue;
+        }
+
+        $relative = str_replace(base_path().'/', '', $path);
+        $callers[] = $relative;
+
+        if (nativeEnrolmentSpendsAProof($source)) {
+            continue;
+        }
+
+        foreach (nativeEnrolmentBrowserCalls(SonarSourceFiles::tokens($source)) as $line) {
+            $unproven[] = $relative.':'.$line;
+        }
+    }
+
+    expect($unproven)->toBe([], implode("\n", [
+        'These write a WebAuthn wrap of the data key without a fresh PIN behind them:',
+        ...$unproven,
+        '',
+        'The row it writes is `secret || wrapped_key` in the ledger\'s own file, and',
+        'a biometric alone opens it afterwards for as long as it exists. An',
+        'unlocked session is what it used to cost, and the session cannot be the',
+        'proof that the enrolment was asked for, because the entry outlives it.',
+        'Consume a FreshPinProof before the ceremony is allowed to complete.',
+    ]));
+
+    expect($callers)->toHaveCount(1, implode("\n", [
+        'The WebAuthn wrap is written from '.count($callers).' places:',
+        ...$callers,
+        '',
+        'One is enough, and one is what the proof can be reasoned about across.',
+        'Route a new caller through the existing action rather than reaching the',
+        'ceremony a second time.',
+    ]));
+});
+
+it('reads a browser enrolment that spends no proof, and passes one that does', function (): void {
+    $ungated = <<<'PHP'
+        <?php
+        final class Enrol
+        {
+            public function __invoke(array $response, Session $session): Outcome
+            {
+                $dataKey = $this->lockState->heldKey($session);
+
+                $this->service->completeEnrollment($this->userId, $response, $dataKey, $session);
+
+                return Outcome::Enrolled;
+            }
+        }
+        PHP;
+
+    expect(nativeEnrolmentSpendsAProof($ungated))->toBeFalse(
+        'an unlocked session is not a proof that the enrolment was asked for',
+    );
+    expect(nativeEnrolmentBrowserCalls(SonarSourceFiles::tokens($ungated)))->toBe([8]);
+
+    $minted = <<<'PHP'
+        <?php
+        final class Screen
+        {
+            public function __construct(private FreshPinProof $proof) {}
+
+            public function enrolWithPin(string $pin): void
+            {
+                $this->proof->mint($this->session, $this->userId);
+            }
+        }
+        PHP;
+
+    expect(nativeEnrolmentSpendsAProof($minted))->toBeFalse(
+        'the screen that takes the PIN mints the proof; a file that only mints is arming itself',
+    );
+
+    $proven = <<<'PHP'
+        <?php
+        final class Enrol
+        {
+            public function __construct(private FreshPinProof $pinProof) {}
+
+            public function __invoke(array $response, Session $session): Outcome
+            {
+                if (! $this->pinProof->consume($session, $this->userId)) {
+                    return Outcome::PinNotProved;
+                }
+
+                $this->service->completeEnrollment($this->userId, $response, $session);
+
+                return Outcome::Enrolled;
+            }
+        }
+        PHP;
+
+    expect(nativeEnrolmentSpendsAProof($proven))->toBeTrue();
 });

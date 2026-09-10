@@ -99,16 +99,13 @@ it('asks for the PIN instead of dispatching the WebAuthn event, and enrols once 
     bindColdStartVault(available: true)->shouldReceive('forget')->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->call('startEnroll')
         ->assertNotDispatched('beatrax:webauthn-create')
         ->assertSet('confirmingEnroll', true)
         ->assertSet('biometricEnrolled', false)
-        ->set('enrollPin', '123456')
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', '123456')
         ->assertSet('biometricEnrolled', true)
         ->assertSet('confirmingEnroll', false)
         ->assertSet('flashMessage', '');
@@ -122,12 +119,10 @@ it('does not reach the vault at all until a PIN is typed', function (): void {
     bindColdStartVault(available: true, enrolls: null)->shouldReceive('forget')->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->call('startEnroll')
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', '')
         ->assertSet('biometricEnrolled', false)
         ->assertSee('Enter your PIN.');
 });
@@ -137,13 +132,10 @@ it('does not reach the vault on a wrong PIN', function (): void {
     bindColdStartVault(available: true, enrolls: null)->shouldReceive('forget')->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->call('startEnroll')
-        ->set('enrollPin', '000000')
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', '000000')
         ->assertSet('biometricEnrolled', false)
         ->assertSet('confirmingEnroll', true)
         ->assertSee('Incorrect PIN.');
@@ -164,8 +156,7 @@ it('arms the vault from the PIN even when the session is holding no key', functi
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('startEnroll')
-        ->set('enrollPin', '123456')
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', '123456')
         ->assertSet('biometricEnrolled', true)
         ->assertSet('flashMessage', '');
 });
@@ -175,13 +166,10 @@ it('reports a device that declines to store the key', function (): void {
     bindColdStartVault(available: true, enrolls: false)->shouldReceive('forget')->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->call('startEnroll')
-        ->set('enrollPin', '123456')
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', '123456')
         ->assertSet('biometricEnrolled', false)
         ->assertSee('Your device declined to store the key.');
 });
@@ -224,8 +212,13 @@ it('still asks the browser when there is no shell and no OS gate', function (): 
     // it is only offered where the bound shield really protects those bytes.
     bindColdStartProtectingShield();
 
+    // The PIN comes first on this road too: the ceremony travels to the browser
+    // and back, so what leaves with it is a proof the PIN was just typed.
     Livewire::test(AppLockSettingsSection::class)
         ->call('startEnroll')
+        ->assertNotDispatched('beatrax:webauthn-create')
+        ->assertSet('confirmingEnroll', true)
+        ->call('enrollWithPin', '123456')
         ->assertDispatched('beatrax:webauthn-create');
 });
 
@@ -250,8 +243,7 @@ it('clears the OS entry when de-enrolling with the correct PIN', function (): vo
     $vault->shouldReceive('forget')->once()->with($user->id)->andReturnTrue();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('deenrollPin', '123456')
-        ->call('deenroll')
+        ->call('deenroll', '123456')
         ->assertSet('biometricEnrolled', false)
         ->assertSet('confirmingDeenroll', false);
 });
@@ -265,7 +257,6 @@ it('leaves the OS entry alone when the de-enroll PIN is wrong', function (): voi
     $vault->shouldNotReceive('forget');
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('deenrollPin', '000000')
-        ->call('deenroll')
+        ->call('deenroll', '000000')
         ->assertSet('biometricEnrolled', true);
 });

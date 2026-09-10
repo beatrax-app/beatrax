@@ -35,10 +35,8 @@ it('user with no lock can enable it by setting a valid PIN with matching confirm
     expect($provisioner->isEnabled($user->id))->toBeFalse();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->assertHasNoErrors()
         // The sibling app-lock-gated sections refresh on this.
         ->assertDispatched('app-lock-configured');
@@ -52,10 +50,8 @@ it('confirms that the PIN was set', function (): void {
     $this->actingAs(appLockSettingsUser('confirm-set-user'));
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->assertDispatched('toast');
 });
 
@@ -70,10 +66,8 @@ it('confirms that a forgotten PIN was reset', function (): void {
     $provisioner->enable($user->id, '123456', 'settings-pass');
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '654321')
-        ->set('confirmPin', '654321')
         ->set('accountPassword', 'settings-pass')
-        ->call('resetForgottenPin')
+        ->call('resetForgottenPin', '654321', '654321')
         ->assertSet('flashMessage', '')
         ->assertDispatched('toast');
 });
@@ -86,10 +80,8 @@ it('rejects a PIN shorter than 6 digits with the correct error copy', function (
     $provisioner = $this->app->make(AppLockProvisioner::class);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123')
-        ->set('confirmPin', '123')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123', '123')
         ->assertSee('PIN must be at least 6 digits.');
 
     expect($provisioner->isEnabled($user->id))->toBeFalse();
@@ -103,10 +95,8 @@ it('rejects mismatched PIN confirmation with the correct error copy', function (
     $provisioner = $this->app->make(AppLockProvisioner::class);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '654321')
         ->set('accountPassword', 'settings-pass')
-        ->call('setPin')
+        ->call('setPin', '123456', '654321')
         ->assertSee("PINs don't match. Try again.");
 
     expect($provisioner->isEnabled($user->id))->toBeFalse();
@@ -155,16 +145,14 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact',
     expect($before)->not->toBeNull();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('deenrollPin', '000000')
-        ->call('deenroll')
+        ->call('deenroll', '000000')
         ->assertSee('Incorrect PIN.');
 
     expect($db->connection()->table('user_biometric_credentials')->where('user_id', $user->id)->count())->toBe(1);
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('deenrollPin', '432100')
-        ->call('deenroll')
+        ->call('deenroll', '432100')
         ->assertSet('biometricEnrolled', false);
 
     expect($db->connection()->table('user_biometric_credentials')->where('user_id', $user->id)->count())->toBe(0);
@@ -195,15 +183,13 @@ it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled
     // The wrong PIN must be numeric: a non-numeric one fails the #[Validate]
     // regex, leaves the property at '', and passes by coincidence.
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '000000')
-        ->call('disable')
+        ->call('disable', '000000')
         ->assertSee('Incorrect PIN.');
 
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '432100')
-        ->call('disable')
+        ->call('disable', '432100')
         ->assertHasNoErrors();
 
     expect($provisioner->isEnabled($user->id))->toBeFalse();

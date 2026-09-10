@@ -85,9 +85,7 @@ it('shows the codes in the chosen language on the round-trip that reveals them',
         'username' => 'wessel',
         'password' => 'opensesame-long-enough',
         'passwordConfirmation' => 'opensesame-long-enough',
-        'pin' => '123456',
-        'confirmPin' => '123456',
-    ]);
+    ], ['123456', '123456']);
 
     expect($rendered)
         ->toContain((include base_path('Modules/Mobile/Resources/lang/nl/import.php'))['recovery_heading'])

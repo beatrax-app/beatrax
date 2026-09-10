@@ -1,11 +1,21 @@
-# Cold-start biometric unlock (mobile)
+# Cold-start biometric unlock
 
 **Status:** the app-side path exists; the native enclave binding and its
 on-device verification do not — see "What exists in code" and "What is not
 built yet" below. Extends the LOCK-04 model.
 
 **Decided (owner):** biometric is allowed to be a **full cryptographic root**
-on mobile (see Decision 1).
+(see Decision 1).
+
+**Both shells, one bargain.** The problem was posed on mobile and the enclave
+half is still written from the phone's side, because that is where the two
+plugin tiers and the transient slot live. What the page decides is not the
+phone's, though: `ColdStartVault` is Auth's contract, the desktop implements it
+over Touch ID and safeStorage, and `LockScreen::nativeUnlock()` is the desktop
+leg of the same unlock. The title said "(mobile)" for long enough that the PIN
+floor was built on one screen and not the other — the floor is a property of
+what the credential is worth, and a fingerprint on a laptop buys exactly what a
+face on a phone buys.
 
 ---
 
@@ -316,6 +326,25 @@ on-device UAT):
   It has exactly one caller: the Enroll button on `AppLockSettingsSection`,
   which opens a PIN confirmation exactly as de-enrolling does. Enrolment is
   opt-in, and this is the only place the reader can opt in.
+- `Modules/Auth/Internal/Lock/BrowserEnrolmentAuthoriser` — the same bargain on
+  the road with no OS vault, where the durable wrap is the WebAuthn credential
+  row rather than an enclave entry. It opens the same data key to the same
+  biometric and outlives the session just as plainly, and it used to cost an
+  unlocked session, which is the only state the settings screen is ever reached
+  in — so it cost nothing. Now the Enroll button opens the same PIN
+  confirmation on both roads.
+  The two differ in one way, because the ceremony does: WebAuthn leaves for the
+  browser and comes back a round trip later, so the PIN cannot produce the very
+  key being wrapped. It produces a `FreshPinProof` instead — single-use,
+  deadlined at two minutes, bound to the account that typed it, drained on the
+  read that judges it — and `EnrolBiometricCredential` spends that before it
+  reads a key or writes a byte. The key itself is never carried across the gap;
+  it is read from the custodian at the moment it is wrapped, so no second
+  durable copy exists meanwhile.
+  `tests/Contracts/ANativeEnrolmentTakesAFreshPinArchTest.php` covers both
+  wraps, and holds them to rules that differ for that reason — the proof half is
+  checked at file scope, which is weaker than the `enroll()` half and is said so
+  in the guard.
   `LockScreen::submit()` used to re-arm an empty vault with the PIN it had just
   verified, which was convenient and was not the ask: a correct PIN is proof of
   identity, not a request to enrol a fingerprint, and a reader who turned the
@@ -336,7 +365,8 @@ on-device UAT):
   through to the PIN pad; `missing` takes the enrolment flag down, takes the
   trigger off the screen and prints `mobile::lock.errors.biometric_reset`.
   Async (Android) handled by the event, see below.
-- `LockScreen::nativeUnlock()` — reads the enrolment flag before it prompts, for
+- `LockScreen::nativeUnlock()` — reads the enrolment flag and the PIN floor
+  before it prompts, at both boundaries the mobile screen uses, for
   the reason `MobileLockScreen::biometricPrompt()` re-checks its own gates: a
   Livewire method is callable whatever `mount()` rendered, and the desktop vault
   keys its file on the user id alone, so an entry left by an earlier holder of

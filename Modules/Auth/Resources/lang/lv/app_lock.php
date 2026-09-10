@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'Šai Beatrax versijai nav kur glabāt atbloķēšanas atslēgu, tāpēc biometriskā atbloķēšana netiek piedāvāta. Ierobežojums nav jūsu ierīce.',
     'error_enroll_unprotected' => 'Biometriskajai atbloķēšanai nepieciešama operētājsistēmas atslēgu glabātuve, un šai instalācijai tādas nav. Reģistrēšana atstātu atbloķēšanas atslēgu lasāmu blakus taviem datiem, tāpēc tā šeit netiek piedāvāta.',
     'error_enroll_failed' => 'Ierīce atteicās saglabāt atslēgu. Biometriskā atbloķēšana nav pieejama.',
+    'error_enroll_pin_expired' => 'PIN koda apstiprinājums beidzās, pirms ierīce paguva pabeigt. Ievadiet PIN kodu un mēģiniet vēlreiz.',
     'heading' => 'Lietotnes bloķēšana',
 
     'toggle_label' => 'Bloķēt lietotni ar PIN kodu',

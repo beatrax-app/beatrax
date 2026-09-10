@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'Ta različica Beatraxa nima kam shraniti odklepnega ključa, zato biometrično odklepanje ni na voljo. Omejitev ni tvoja naprava.',
     'error_enroll_unprotected' => 'Biometrično odklepanje potrebuje shrambo ključev operacijskega sistema, ta namestitev pa je nima. Vpis bi pustil odklepni ključ berljiv ob tvojih podatkih, zato tu ni na voljo.',
     'error_enroll_failed' => 'Tvoja naprava je zavrnila shranjevanje ključa. Biometrično odklepanje ni na voljo.',
+    'error_enroll_pin_expired' => 'Potrditev s PIN-om je potekla, preden je naprava končala. Vnesite PIN in poskusite znova.',
     'heading' => 'Zaklepanje aplikacije',
 
     'toggle_label' => 'Zakleni aplikacijo s PIN-om',

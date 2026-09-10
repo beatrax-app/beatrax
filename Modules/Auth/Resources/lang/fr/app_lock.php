@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'Cette version de Beatrax n\'a nulle part où ranger une clé de déverrouillage, le déverrouillage biométrique n\'est donc pas proposé. La limite n\'est pas ton appareil.',
     'error_enroll_unprotected' => 'Le déverrouillage biométrique a besoin d\'un magasin de clés du système d\'exploitation, et cette installation n\'en a pas. L\'enrôlement laisserait la clé de déverrouillage lisible à côté de tes données, il n\'est donc pas proposé ici.',
     'error_enroll_failed' => 'Ton appareil a refusé de stocker la clé. Le déverrouillage biométrique est indisponible.',
+    'error_enroll_pin_expired' => 'La confirmation par PIN a expiré avant que votre appareil ait terminé. Saisissez votre PIN et réessayez.',
     'heading' => 'Verrouillage de l\'app',
 
     'toggle_label' => 'Verrouiller l\'app avec un PIN',

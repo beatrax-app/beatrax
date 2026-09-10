@@ -33,10 +33,8 @@ function appLockLifetimeUser(string $username): User
 function appLockLifetimeSetPin(string $pin): void
 {
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', $pin)
-        ->set('confirmPin', $pin)
         ->set('accountPassword', 'lifetime-pass')
-        ->call('setPin');
+        ->call('setPin', $pin, $pin);
 }
 
 // Encryption is switched on the way DevicesAndSyncSettingsSection switches it
@@ -105,8 +103,7 @@ it('keeps an encrypted value readable across a disable and a re-enable of the ap
     expect(appLockLifetimeReadableName((int) $user->id, (int) $counterparty->id))->toBe(APP_LOCK_LIFETIME_NAME);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '123456')
-        ->call('disable');
+        ->call('disable', '123456');
 
     appLockLifetimeSetPin('654321');
 
@@ -121,8 +118,7 @@ it('refuses the disable and says why, leaving the lock on', function (): void {
     appLockLifetimeEncryptedCounterparty($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '123456')
-        ->call('disable')
+        ->call('disable', '123456')
         ->assertSet('lockEnabled', true)
         ->assertSet('confirmingDisable', false)
         ->assertSee('turning the lock off would leave them unreadable');
@@ -179,10 +175,8 @@ it('names an already-stranded install rather than minting a second key over it',
     expect($provisioner->keyState((int) $user->id))->toBe(AppLockKeyState::Stranded);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '654321')
-        ->set('confirmPin', '654321')
         ->set('accountPassword', 'lifetime-pass')
-        ->call('setPin')
+        ->call('setPin', '654321', '654321')
         ->assertSet('lockEnabled', false)
         ->assertSee('no longer holds the key that opens your encrypted data');
 

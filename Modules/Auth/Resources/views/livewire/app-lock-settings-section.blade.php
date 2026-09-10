@@ -54,7 +54,18 @@
         <div class="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
             <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.setup_heading') }}</h3>
 
-            <div class="space-y-3">
+            <div
+                class="space-y-3"
+                x-data="{
+                newPin: '', confirmPin: '',
+                submit() {
+                    const v = { newPin: this.newPin, confirmPin: this.confirmPin };
+                    this.newPin = '';
+                    this.confirmPin = '';
+                    $wire.setPin(v.newPin, v.confirmPin);
+                },
+            }"
+            >
                 <x-core::form-field
                     :label="Lang::get('auth::app_lock.new_pin_label')"
                     name="newPin"
@@ -62,8 +73,8 @@
                     type="password"
                     size="base"
                     inputmode="numeric"
-                    autocomplete="new-password"
-                    wire:model="newPin"
+                    autocomplete="off"
+                    x-model="newPin"
                     placeholder="········"
                 />
 
@@ -74,8 +85,8 @@
                     type="password"
                     size="base"
                     inputmode="numeric"
-                    autocomplete="new-password"
-                    wire:model="confirmPin"
+                    autocomplete="off"
+                    x-model="confirmPin"
                     placeholder="········"
                 />
 
@@ -101,7 +112,7 @@
                 <x-core::neutral-button
                     block="full"
                     class="min-h-[44px]"
-                    wire:click="setPin"
+                    x-on:click="submit()"
                 >
                     {{ Lang::get('auth::app_lock.set_pin') }}
                 </x-core::neutral-button>
@@ -170,7 +181,17 @@
              rebuilding the recovery wrap costs. --}}
         @if ($confirmingRelink)
             <flux:modal wire:model="confirmingRelink" class="md:max-w-sm">
-                <div class="space-y-4 p-6">
+                <div
+                    class="space-y-4 p-6"
+                    x-data="{
+                        currentPin: '',
+                        submit() {
+                            const v = { currentPin: this.currentPin };
+                            this.currentPin = '';
+                            $wire.relinkRecovery(v.currentPin);
+                        },
+                    }"
+                >
                     <x-core::section-heading :title="Lang::get('auth::app_lock.relink_modal_heading')" :level="3" />
                     <x-core::form-field
                         :label="Lang::get('auth::app_lock.current_pin_label')"
@@ -180,7 +201,7 @@
                         size="base"
                         inputmode="numeric"
                         autocomplete="off"
-                        wire:model="currentPin"
+                        x-model="currentPin"
                         placeholder="········"
                     />
                     <x-core::form-field
@@ -197,7 +218,7 @@
                         <x-core::neutral-button
                             block="flex"
                             class="min-h-[44px]"
-                            wire:click="relinkRecovery"
+                            x-on:click="submit()"
                         >
                             {{ Lang::get('auth::app_lock.relink_recovery') }}
                         </x-core::neutral-button>
@@ -271,7 +292,17 @@
              startEnroll dispatches it without opening this. --}}
         @if ($confirmingEnroll)
             <flux:modal wire:model="confirmingEnroll" class="md:max-w-sm">
-                <div class="space-y-4 p-6">
+                <div
+                    class="space-y-4 p-6"
+                    x-data="{
+                        pin: '',
+                        submit() {
+                            const v = { pin: this.pin };
+                            this.pin = '';
+                            $wire.enrollWithPin(v.pin);
+                        },
+                    }"
+                >
                     <x-core::section-heading :title="Lang::get('auth::app_lock.enroll_modal_heading')" :level="3" />
                     <x-core::form-field
                         :label="Lang::get('auth::app_lock.current_pin_label')"
@@ -281,14 +312,14 @@
                         size="base"
                         inputmode="numeric"
                         autocomplete="off"
-                        wire:model="enrollPin"
+                        x-model="pin"
                         placeholder="········"
                     />
                     <div class="flex gap-3">
                         <x-core::neutral-button
                             block="flex"
                             class="min-h-[44px]"
-                            wire:click="enrollWithPin"
+                            x-on:click="submit()"
                         >
                             {{ Lang::get('auth::app_lock.enroll') }}
                         </x-core::neutral-button>
@@ -307,7 +338,17 @@
         {{-- De-enroll confirmation modal --}}
         @if ($confirmingDeenroll)
             <flux:modal wire:model="confirmingDeenroll" class="md:max-w-sm">
-                <div class="space-y-4 p-6">
+                <div
+                    class="space-y-4 p-6"
+                    x-data="{
+                        pin: '',
+                        submit() {
+                            const v = { pin: this.pin };
+                            this.pin = '';
+                            $wire.deenroll(v.pin);
+                        },
+                    }"
+                >
                     <x-core::section-heading :title="Lang::get('auth::app_lock.deenroll_modal_heading')" :level="3" />
                     <x-core::form-field
                         :label="Lang::get('auth::app_lock.current_pin_label')"
@@ -317,13 +358,13 @@
                         size="base"
                         inputmode="numeric"
                         autocomplete="off"
-                        wire:model="deenrollPin"
+                        x-model="pin"
                         placeholder="········"
                     />
                     <div class="flex gap-3">
                         <button
                             type="button"
-                            wire:click="deenroll"
+                            x-on:click="submit()"
                             class="flex-1 min-h-[44px] rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white
                                    hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
                         >
@@ -372,7 +413,17 @@
     {{-- ===== 3e: Disable lock modal (PIN confirmation) ===== --}}
     @if ($confirmingDisable)
         <flux:modal wire:model="confirmingDisable" class="md:max-w-sm">
-            <div class="space-y-4 p-6">
+            <div
+                class="space-y-4 p-6"
+                x-data="{
+                    currentPin: '',
+                    submit() {
+                        const v = { currentPin: this.currentPin };
+                        this.currentPin = '';
+                        $wire.disable(v.currentPin);
+                    },
+                }"
+            >
                 <x-core::section-heading :title="Lang::get('auth::app_lock.disable_modal_heading')" :level="3" />
                 <x-core::form-field
                     :label="Lang::get('auth::app_lock.current_pin_label')"
@@ -382,14 +433,14 @@
                     size="base"
                     inputmode="numeric"
                     autocomplete="off"
-                    wire:model="currentPin"
+                    x-model="currentPin"
                     placeholder="········"
                 />
                 <div class="flex gap-3">
                     <x-core::neutral-button
                         block="flex"
                         class="min-h-[44px]"
-                        wire:click="disable"
+                        x-on:click="submit()"
                     >
                         {{ Lang::get('auth::app_lock.disable_lock') }}
                     </x-core::neutral-button>
@@ -408,7 +459,18 @@
     {{-- ===== 3e': Forgot PIN recovery modal ===== --}}
     @if ($confirmingForgotPin)
         <flux:modal wire:model="confirmingForgotPin" class="md:max-w-sm">
-            <div class="space-y-4 p-6">
+            <div
+                class="space-y-4 p-6"
+                x-data="{
+                    newPin: '', confirmPin: '',
+                    submit() {
+                        const v = { newPin: this.newPin, confirmPin: this.confirmPin };
+                        this.newPin = '';
+                        this.confirmPin = '';
+                        $wire.resetForgottenPin(v.newPin, v.confirmPin);
+                    },
+                }"
+            >
                 <x-core::section-heading :title="Lang::get('auth::app_lock.forgot_modal_heading')" :level="3" />
                 <p class="text-xs text-slate-500 dark:text-slate-400">
                     {{ Lang::get('auth::app_lock.forgot_modal_body') }}
@@ -431,8 +493,8 @@
                         type="password"
                         size="base"
                         inputmode="numeric"
-                        autocomplete="new-password"
-                        wire:model="newPin"
+                        autocomplete="off"
+                        x-model="newPin"
                         placeholder="········"
                     />
                     <x-core::form-field
@@ -442,8 +504,8 @@
                         type="password"
                         size="base"
                         inputmode="numeric"
-                        autocomplete="new-password"
-                        wire:model="confirmPin"
+                        autocomplete="off"
+                        x-model="confirmPin"
                         placeholder="········"
                     />
                 </div>
@@ -451,7 +513,7 @@
                     <x-core::neutral-button
                         block="flex"
                         class="min-h-[44px]"
-                        wire:click="resetForgottenPin"
+                        x-on:click="submit()"
                     >
                         {{ Lang::get('auth::app_lock.reset_pin') }}
                     </x-core::neutral-button>
@@ -470,7 +532,19 @@
     {{-- ===== 3e: Change PIN modal (PIN confirmation) ===== --}}
     @if ($confirmingChangePin)
         <flux:modal wire:model="confirmingChangePin" class="md:max-w-sm">
-            <div class="space-y-4 p-6">
+            <div
+                class="space-y-4 p-6"
+                x-data="{
+                    currentPin: '', newPin: '', confirmPin: '',
+                    submit() {
+                        const v = { currentPin: this.currentPin, newPin: this.newPin, confirmPin: this.confirmPin };
+                        this.currentPin = '';
+                        this.newPin = '';
+                        this.confirmPin = '';
+                        $wire.changePin(v.currentPin, v.newPin, v.confirmPin);
+                    },
+                }"
+            >
                 <x-core::section-heading :title="Lang::get('auth::app_lock.change_modal_heading')" :level="3" />
                 <div class="space-y-3">
                     <x-core::form-field
@@ -481,7 +555,7 @@
                         size="base"
                         inputmode="numeric"
                         autocomplete="off"
-                        wire:model="currentPin"
+                        x-model="currentPin"
                         placeholder="········"
                     />
                     <x-core::form-field
@@ -491,8 +565,8 @@
                         type="password"
                         size="base"
                         inputmode="numeric"
-                        autocomplete="new-password"
-                        wire:model="newPin"
+                        autocomplete="off"
+                        x-model="newPin"
                         placeholder="········"
                     />
                     <x-core::form-field
@@ -502,8 +576,8 @@
                         type="password"
                         size="base"
                         inputmode="numeric"
-                        autocomplete="new-password"
-                        wire:model="confirmPin"
+                        autocomplete="off"
+                        x-model="confirmPin"
                         placeholder="········"
                     />
                 </div>
@@ -511,7 +585,7 @@
                     <x-core::neutral-button
                         block="flex"
                         class="min-h-[44px]"
-                        wire:click="changePin"
+                        x-on:click="submit()"
                     >
                         {{ Lang::get('auth::app_lock.change_pin') }}
                     </x-core::neutral-button>

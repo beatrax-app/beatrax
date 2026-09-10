@@ -99,9 +99,7 @@ it('settings Forgot PIN flow resets the PIN via the account password', function 
         ->call('confirmForgotPin')
         ->assertSet('confirmingForgotPin', true)
         ->set('accountPassword', 'wrong-password')
-        ->set('newPin', '567890')
-        ->set('confirmPin', '567890')
-        ->call('resetForgottenPin')
+        ->call('resetForgottenPin', '567890', '567890')
         ->assertSee('Incorrect account password.');
 
     expect($provisioner->verifyPin($user->id, '123456'))->toBeTrue();
@@ -109,9 +107,7 @@ it('settings Forgot PIN flow resets the PIN via the account password', function 
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmForgotPin')
         ->set('accountPassword', 'forgot-ui-pass')
-        ->set('newPin', '567890')
-        ->set('confirmPin', '567890')
-        ->call('resetForgottenPin')
+        ->call('resetForgottenPin', '567890', '567890')
         ->assertSet('confirmingForgotPin', false)
         ->assertSet('accountPassword', '')
         ->assertSet('newPin', '');

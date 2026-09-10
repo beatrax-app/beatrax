@@ -63,10 +63,12 @@ final class LockScreen extends Component
 
         // The flag as well as the vault: the desktop vault keys its file on
         // the user id alone, so after a database reset it offered the next
-        // account to take that id an enrolment it never made.
+        // account to take that id an enrolment it never made. And the floor,
+        // which is a property of the credential and not of the platform.
         $this->nativeUnlockAvailable = $vault->isAvailable()
             && $vault->isEnrolled($user->id)
-            && $gateway->isColdStartEnrolled($user->id);
+            && $gateway->isColdStartEnrolled($user->id)
+            && ! $gateway->pinFloorDue($user->id);
 
         $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
     }
@@ -142,7 +144,7 @@ final class LockScreen extends Component
         // whatever the render offered, and the desktop vault keys its entry on
         // the user id alone — so an entry an earlier holder of this id left
         // behind opens to a key this account has never held.
-        if (! $gateway->isColdStartEnrolled($user->id)) {
+        if (! $gateway->isColdStartEnrolled($user->id) || $gateway->pinFloorDue($user->id)) {
             $this->nativeUnlockAvailable = false;
 
             return;

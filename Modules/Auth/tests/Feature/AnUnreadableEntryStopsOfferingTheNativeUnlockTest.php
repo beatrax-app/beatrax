@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
@@ -30,6 +32,13 @@ function unreadableEntryUser(string $username): User
 
     app(AppLockProvisioner::class)->enable((int) $user->id, '123456', 'account-password');
     app(MobileLockGateway::class)->markColdStartEnrolled((int) $user->id, true);
+
+    // A real enrolment spends a PIN on the key it stores, and that verification
+    // is a PIN unlock -- so the floor is never due on a vault just armed. These
+    // fixtures reach the flag directly, so they stamp what the enroller would.
+    DB::connection()->table('user_app_lock_configs')
+        ->where('user_id', $user->id)
+        ->update(['last_pin_unlock_at' => CarbonImmutable::now()->toDateTimeString()]);
 
     test()->session([LockStateManager::SESSION_KEY => true]);
 

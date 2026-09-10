@@ -37,9 +37,7 @@ it('provisions a local user + app-lock + sync identity (no epoch) and advances t
         ->set('username', 'phone-owner')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'recovery_codes')
         ->assertSet('flashMessage', '')
         ->assertDispatched(MobileImportBootstrap::STEP_CHANGED_EVENT);
@@ -78,9 +76,7 @@ it('leaves the recovery-codes step by a plain link into mobile.pair?mode=import'
         ->set('username', 'phone-owner-continue')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'recovery_codes')
         ->html();
 
@@ -100,9 +96,7 @@ it('never shows the recovery codes a second time when the pairing ceremony is ca
         ->set('username', 'phone-owner-cancels')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'recovery_codes')
         ->html();
 
@@ -196,9 +190,7 @@ it('rejects mismatched passwords and a too-short PIN without provisioning anythi
         ->set('username', 'phone-owner-bad')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'does-not-match')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'collect_pin')
         ->assertHasErrors(['passwordConfirmation' => 'Passwords do not match.']);
 
@@ -208,9 +200,7 @@ it('rejects mismatched passwords and a too-short PIN without provisioning anythi
         ->set('username', 'phone-owner-bad-pin')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '12')
-        ->set('confirmPin', '12')
-        ->call('submit')
+        ->call('submit', '12', '12')
         ->assertSet('step', 'collect_pin')
         ->assertHasErrors(['pin' => 'PIN must be at least 6 digits.']);
 
@@ -226,7 +216,7 @@ it('reports every broken rule on the field it belongs to, not one message for th
     $this->withoutMiddleware(EnsureDatabaseReady::class);
 
     Livewire::test(MobileImportBootstrap::class)
-        ->call('submit')
+        ->call('submit', '', '')
         ->assertSet('step', 'collect_pin')
         ->assertSet('flashMessage', '')
         ->assertHasErrors([
@@ -245,9 +235,7 @@ it('reports a two-digit PIN under the PIN box while the password rule stays unde
         ->set('username', 'phone-owner-shortvals')
         ->set('password', 'short')
         ->set('passwordConfirmation', 'short')
-        ->set('pin', '12')
-        ->set('confirmPin', '12')
-        ->call('submit')
+        ->call('submit', '12', '12')
         ->assertHasErrors(['password', 'pin'])
         ->assertHasNoErrors(['username', 'passwordConfirmation', 'confirmPin'])
         ->html();
@@ -270,9 +258,7 @@ it('leaves every box as the reader typed it after a rejected submit', function (
         ->set('username', 'phone-owner-keeps-typing')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '12')
-        ->set('confirmPin', '12')
-        ->call('submit')
+        ->call('submit', '12', '12')
         ->assertHasErrors(['pin'])
         ->assertSet('password', 'a-genuinely-long-password')
         ->assertSet('passwordConfirmation', 'a-genuinely-long-password')
@@ -302,9 +288,7 @@ it('keeps the button that ends each step clear of the system navigation bar', fu
         ->set('username', 'phone-owner-insets')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'recovery_codes')
         ->html();
 
@@ -321,9 +305,7 @@ it('places a username SignupAction refuses under the username box rather than on
         ->set('username', 'not a valid username')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'collect_pin')
         ->assertSet('flashMessage', '')
         ->assertHasErrors(['username']);
@@ -348,9 +330,7 @@ it('drops the way back once the device holds an identity', function (): void {
         ->set('username', 'phone-owner')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '426900')
-        ->set('confirmPin', '426900')
-        ->call('submit')
+        ->call('submit', '426900', '426900')
         ->assertSet('step', 'recovery_codes')
         ->html();
 
@@ -406,9 +386,7 @@ it('says nothing when a rejected submit leaves the reader on the step they were 
         ->set('username', 'phone-owner')
         ->set('password', 'short')
         ->set('passwordConfirmation', 'short')
-        ->set('pin', '12')
-        ->set('confirmPin', '12')
-        ->call('submit')
+        ->call('submit', '12', '12')
         ->assertSet('step', 'collect_pin')
         ->assertNotDispatched(MobileImportBootstrap::STEP_CHANGED_EVENT);
 });
@@ -424,9 +402,7 @@ it('refuses an eleven-digit PIN on the form instead of committing the account an
         ->set('username', 'phone-owner-long-pin')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '12345678901')
-        ->set('confirmPin', '12345678901')
-        ->call('submit')
+        ->call('submit', '12345678901', '12345678901')
         ->assertSet('step', 'collect_pin')
         ->assertHasErrors(['pin' => 'PIN must be 6 to 10 digits — numbers only.']);
 
@@ -441,9 +417,7 @@ it('refuses a PIN the numeric keypad could never type back', function (): void {
         ->set('username', 'phone-owner-letters')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '4269ab')
-        ->set('confirmPin', '4269ab')
-        ->call('submit')
+        ->call('submit', '4269ab', '4269ab')
         ->assertSet('step', 'collect_pin')
         ->assertHasErrors(['pin' => 'PIN must be 6 to 10 digits — numbers only.']);
 

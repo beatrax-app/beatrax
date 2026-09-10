@@ -5,14 +5,18 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
+use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
+use Tests\Helpers\LivewireRoundTrip;
 
 uses(RefreshDatabase::class);
 
-// The five setup boxes are wire-bound, so what the reader types reaches the
-// server as component state and would ride the serialized snapshot back out on
-// every later render. Consuming them is what ends that: past submit the real
+// Three of the five setup boxes are wire-bound, so what the reader types reaches
+// the server as component state and would ride the serialized snapshot back out
+// on every later render. Consuming them is what ends that: past submit the real
 // values live in the session and nothing addressed to the browser carries them.
+// The two code boxes are not among them and never were -- see the last case.
 
 // Distinctive on purpose: a needle that matches by accident proves nothing when
 // it is absent. Assembled from words rather than spelled as one high-entropy
@@ -44,25 +48,23 @@ it('empties the credential boxes the moment provisioning consumes them, so no la
     $component = Livewire::test(MobileImportBootstrap::class)
         ->set('username', 'phone-owner-credentials')
         ->set('password', setupCredentialsPassphrase())
-        ->set('passwordConfirmation', setupCredentialsPassphrase())
-        ->set('pin', SETUP_CREDENTIALS_PIN)
-        ->set('confirmPin', SETUP_CREDENTIALS_PIN);
+        ->set('passwordConfirmation', setupCredentialsPassphrase());
 
-    // Asserted before the submit as the denominator: the needles below are only
-    // evidence of a credential dropped if they were genuinely on the wire while
-    // the reader was still typing them.
+    // Asserted before the submit as the denominator: the passphrase below is
+    // only evidence of a credential dropped if it was genuinely on the wire
+    // while the reader was still typing it. The code has no such denominator
+    // here -- it never reaches a property, so it is never on the wire at all.
     expect(setupCredentialsWireTraffic($component))
         ->toContain(setupCredentialsPassphrase())
-        ->toContain(SETUP_CREDENTIALS_PIN);
+        ->not->toContain(SETUP_CREDENTIALS_PIN);
 
-    $component->call('submit')->assertSet('step', 'recovery_codes');
+    $component->call('submit', SETUP_CREDENTIALS_PIN, SETUP_CREDENTIALS_PIN)
+        ->assertSet('step', 'recovery_codes');
 
     expect(User::query()->count())->toBe(1, 'the ceremony must have run, or nothing consumed the credentials');
 
     expect($component->get('password'))->toBe('')
-        ->and($component->get('passwordConfirmation'))->toBe('')
-        ->and($component->get('pin'))->toBe('')
-        ->and($component->get('confirmPin'))->toBe('');
+        ->and($component->get('passwordConfirmation'))->toBe('');
 
     expect(setupCredentialsWireTraffic($component))
         ->not->toContain(setupCredentialsPassphrase())
@@ -98,4 +100,52 @@ it('keeps the retry window credentials in the session and off every surface addr
     expect(setupCredentialsWireTraffic($component))
         ->not->toContain(setupCredentialsPassphrase())
         ->not->toContain(SETUP_CREDENTIALS_PIN);
+});
+
+// The branch the two above never walk. reportBrokenFieldRules() returns above
+// every line that empties a box, so on a rejected submit the snapshot is
+// rendered with whatever the properties still hold -- and a mistyped confirm
+// box on a five-field phone form is the everyday case, not the exotic one.
+it('keeps the code off the wire on a rejected submit, which is the render that carries the most', function (): void {
+    $component = Livewire::test(MobileImportBootstrap::class)
+        ->set('username', 'phone-owner-rejected')
+        ->set('password', setupCredentialsPassphrase())
+        ->set('passwordConfirmation', setupCredentialsPassphrase())
+        ->call('submit', SETUP_CREDENTIALS_PIN, '000000');
+
+    $component->assertHasErrors('confirmPin')
+        ->assertSet('step', 'collect_pin');
+
+    expect(User::query()->count())->toBe(0, 'a rejected submit must not have created the account');
+
+    // The positive control for this render: the passphrase IS here, on the
+    // argument the allow-list makes for a password and not for a code. Without
+    // it, an absent code proves only that the needle was unfindable.
+    expect(setupCredentialsWireTraffic($component))
+        ->toContain(setupCredentialsPassphrase())
+        ->not->toContain(SETUP_CREDENTIALS_PIN);
+});
+
+// Livewire::test() builds the same call payload but never leaves PHP. This is
+// the round trip the WebView actually makes: the page's own snapshot posted to
+// the update endpoint with the code as a call parameter, and the JSON that
+// comes back read for the digits. It is the surface the defect lived on.
+it('sends the code to the update endpoint as a parameter, and reads back a body without it', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $page = (string) $this->get(route('mobile.import'))->assertOk()->getContent();
+
+    expect($page)->not->toContain(SETUP_CREDENTIALS_PIN, 'the first render cannot carry a code nobody has typed');
+
+    $rendered = LivewireRoundTrip::call($this, $page, 'mobile.import-bootstrap', 'submit', [
+        'username' => 'phone-owner-round-trip',
+        'password' => setupCredentialsPassphrase(),
+        'passwordConfirmation' => setupCredentialsPassphrase(),
+    ], [SETUP_CREDENTIALS_PIN, SETUP_CREDENTIALS_PIN]);
+
+    // The call did what it was asked, or an absent code proves only that the
+    // request was refused before it reached anything.
+    expect(User::query()->count())->toBe(1, 'the endpoint has to have run the ceremony');
+    expect($rendered)->toContain((string) Lang::get('mobile::import.recovery_heading'));
+    expect($rendered)->not->toContain(SETUP_CREDENTIALS_PIN);
 });

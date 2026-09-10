@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Http\Livewire;
 
-use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -20,15 +19,13 @@ use Modules\Auth\Internal\Lock\AppLockDisableResult;
 use Modules\Auth\Internal\Lock\AppLockKeyState;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\ColdStartEnroller;
-use Modules\Auth\Internal\Lock\ColdStartEnrolmentResult;
 use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Contracts\ColdStartVault;
+use Modules\Auth\Public\Http\Livewire\Concerns\ManagesBiometricEnrolment;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
@@ -39,10 +36,16 @@ final class AppLockSettingsSection extends Component
 {
     use DispatchesToast;
     use HoldsFlashMessage;
+    use ManagesBiometricEnrolment;
 
-    // No #[Validate] on the PIN and password boxes below. The attribute only
-    // runs where an action calls validate(), none of these do, and a rule that
-    // never runs reads as a gate that is there. AppLockPinShape is the rule.
+    // The code boxes on this screen hold no property. Digits accumulate in the
+    // panel's own Alpine scope and cross once, as a method argument, the way
+    // the lock screen's pad has always sent them -- so no snapshot carries a
+    // code and no re-render puts one back on the wire.
+
+    // No #[Validate] on the password box below. The attribute only runs where
+    // an action calls validate(), none of these do, and a rule that never runs
+    // reads as a gate that is there. AppLockPinShape is the rule.
 
     // Locked: setPin() refuses to run on an enabled lock because enable()
     // re-provisions rather than re-wraps. Read off the wire, that refusal was
@@ -59,22 +62,12 @@ final class AppLockSettingsSection extends Component
 
     public bool $confirmingEnroll = false;
 
-    public string $enrollPin = '';
-
     public bool $confirmingDeenroll = false;
-
-    public string $deenrollPin = '';
 
     // Exempt from the PIN confirmation every other mutation here requires:
     // narrowing the auto-lock window touches no key material. The rule is in
     // rules() because an attribute argument cannot read the options list.
     public int $idleTimeoutMinutes = IdleTimeoutOptions::DEFAULT_MINUTES;
-
-    public string $newPin = '';
-
-    public string $confirmPin = '';
-
-    public string $currentPin = '';
 
     public string $accountPassword = '';
 
@@ -164,17 +157,16 @@ final class AppLockSettingsSection extends Component
     public function confirmRelinkRecovery(): void
     {
         $this->confirmingRelink = true;
-        $this->currentPin = '';
         $this->accountPassword = '';
     }
 
     // Takes both credentials at once because that is what the repair costs: the
     // PIN produces the data key, the account password becomes its new wrap.
-    public function relinkRecovery(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
+    public function relinkRecovery(string $currentPin, CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
     {
         $user = $currentUser->user();
 
-        $rejection = $rejections->pinRequired($this->currentPin)
+        $rejection = $rejections->pinRequired($currentPin)
             ?? $rejections->accountPassword($this->accountPassword, $user->password);
 
         if ($rejection !== null) {
@@ -183,10 +175,9 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        $relinked = $provisioner->relinkRecoveryWrap($user->id, $this->currentPin, $this->accountPassword);
+        $relinked = $provisioner->relinkRecoveryWrap($user->id, $currentPin, $this->accountPassword);
 
         $this->accountPassword = '';
-        $this->currentPin = '';
 
         if (! $relinked) {
             $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
@@ -201,7 +192,7 @@ final class AppLockSettingsSection extends Component
         $this->toast(Lang::get('auth::app_lock.relink_recovery_success'));
     }
 
-    public function setPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections, Session $session): void
+    public function setPin(string $newPin, string $confirmPin, CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections, Session $session): void
     {
         // enable() re-provisions the whole lock, so re-running it on an enabled
         // lock would rotate what a PIN change only re-wraps. Go via changePin().
@@ -214,7 +205,7 @@ final class AppLockSettingsSection extends Component
         // The key-state read sits between the two, ahead of the password checks
         // because no answer to them changes it, and a form that asks first
         // reads as though it could.
-        $rejection = $rejections->newPin($this->newPin, $this->confirmPin);
+        $rejection = $rejections->newPin($newPin, $confirmPin);
 
         if ($rejection === null && $provisioner->keyState($user->id) === AppLockKeyState::Stranded) {
             $rejection = Lang::get('auth::app_lock.error_key_material_lost');
@@ -230,13 +221,11 @@ final class AppLockSettingsSection extends Component
 
         // The session is passed so enable() stores the data key straight away:
         // the user just authenticated, so leave them unlocked, not key-less.
-        $provisioner->enable($user->id, $this->newPin, $this->accountPassword, $session);
+        $provisioner->enable($user->id, $newPin, $this->accountPassword, $session);
 
         $this->lockEnabled = true;
         $this->flashMessage = '';
 
-        $this->newPin = '';
-        $this->confirmPin = '';
         $this->accountPassword = '';
 
         // A browser event, not a PHP one: sibling sections refresh their
@@ -276,12 +265,11 @@ final class AppLockSettingsSection extends Component
     public function confirmDisable(): void
     {
         $this->confirmingDisable = true;
-        $this->currentPin = '';
     }
 
-    public function disable(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
+    public function disable(string $currentPin, CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
     {
-        $rejection = $rejections->pinRequired($this->currentPin);
+        $rejection = $rejections->pinRequired($currentPin);
 
         if ($rejection !== null) {
             $this->flashMessage = $rejection;
@@ -290,7 +278,7 @@ final class AppLockSettingsSection extends Component
         }
 
         $user = $currentUser->user();
-        $result = $provisioner->disable($user->id, $this->currentPin);
+        $result = $provisioner->disable($user->id, $currentPin);
 
         if ($result === AppLockDisableResult::PinIncorrect) {
             $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
@@ -302,7 +290,6 @@ final class AppLockSettingsSection extends Component
         // answer, so leaving it open invites the user to keep trying.
         if ($result === AppLockDisableResult::EncryptedDataDependsOnIt) {
             $this->confirmingDisable = false;
-            $this->currentPin = '';
             $this->flashMessage = Lang::get('auth::app_lock.error_disable_blocked_by_encryption');
 
             return;
@@ -311,29 +298,28 @@ final class AppLockSettingsSection extends Component
         $this->lockEnabled = false;
         $this->biometricEnrolled = false;
         $this->confirmingDisable = false;
-        $this->currentPin = '';
         $this->flashMessage = '';
     }
 
     public function confirmChangePin(): void
     {
         $this->confirmingChangePin = true;
-        $this->currentPin = '';
-        $this->newPin = '';
-        $this->confirmPin = '';
         $this->changePinSuccessMessage = '';
     }
 
     // The keyring re-wrap is not done here: AppLockProvisioner::changePin()
     // dispatches AppLockPassphraseChanged and that does the work.
     public function changePin(
+        string $currentPin,
+        string $newPin,
+        string $confirmPin,
         CurrentUser $currentUser,
         AppLockProvisioner $provisioner,
         EncryptionMigrationService $migrationService,
         AppLockCredentialRejections $rejections,
     ): void {
-        $rejection = $rejections->newPin($this->newPin, $this->confirmPin)
-            ?? $rejections->pinRequired($this->currentPin);
+        $rejection = $rejections->newPin($newPin, $confirmPin)
+            ?? $rejections->pinRequired($currentPin);
 
         if ($rejection !== null) {
             $this->flashMessage = $rejection;
@@ -342,7 +328,7 @@ final class AppLockSettingsSection extends Component
         }
 
         $user = $currentUser->user();
-        $result = $provisioner->changePin($user->id, $this->currentPin, $this->newPin);
+        $result = $provisioner->changePin($user->id, $currentPin, $newPin);
 
         if ($result === false) {
             $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
@@ -351,9 +337,6 @@ final class AppLockSettingsSection extends Component
         }
 
         $this->confirmingChangePin = false;
-        $this->currentPin = '';
-        $this->newPin = '';
-        $this->confirmPin = '';
         $this->flashMessage = '';
 
         $this->changePinSuccessMessage = $migrationService->isEnabled($user->id)
@@ -365,17 +348,15 @@ final class AppLockSettingsSection extends Component
     {
         $this->confirmingForgotPin = true;
         $this->accountPassword = '';
-        $this->newPin = '';
-        $this->confirmPin = '';
     }
 
     // Reachable via: sign out from the lock screen -> password login
     // (which primes the session) -> Settings -> "Forgot PIN?".
-    public function resetForgottenPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
+    public function resetForgottenPin(string $newPin, string $confirmPin, CurrentUser $currentUser, AppLockProvisioner $provisioner, AppLockCredentialRejections $rejections): void
     {
         $user = $currentUser->user();
 
-        $rejection = $rejections->newPin($this->newPin, $this->confirmPin)
+        $rejection = $rejections->newPin($newPin, $confirmPin)
             ?? $rejections->accountPassword($this->accountPassword, $user->password);
 
         if ($rejection !== null) {
@@ -384,11 +365,9 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        $result = $provisioner->rewrapForNewPin($user->id, $this->accountPassword, $this->newPin);
+        $result = $provisioner->rewrapForNewPin($user->id, $this->accountPassword, $newPin);
 
         $this->accountPassword = '';
-        $this->newPin = '';
-        $this->confirmPin = '';
 
         if ($result === false) {
             // The recovery wrap is missing or corrupted — recovery impossible
@@ -404,152 +383,6 @@ final class AppLockSettingsSection extends Component
         // Nothing else marks this one: the lock was already on and stays on, so
         // without a word the screen looks identical to a reset that failed.
         $this->toast(Lang::get('core::settings.saved'));
-    }
-
-    // Half of a browser round trip: lock.js answers 'beatrax:webauthn-create'
-    // by POSTing an attestation to /lock/biometric/enroll, then dispatching
-    // 'biometric-enrolled' back here.
-    public function startEnroll(
-        ColdStartVault $vault,
-        ConfigRepository $config,
-        SecretShield $shield,
-    ): void {
-        if (! $this->lockEnabled) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_enable_first');
-
-            return;
-        }
-
-        // An OS-owned biometric asks for the PIN first and skips the browser
-        // entirely: WebAuthn is a browser API, and navigator.credentials
-        // .create() resolves to nothing behind the desktop shell, which read
-        // as a dead button.
-        if ($vault->isAvailable()) {
-            $this->confirmingEnroll = true;
-            $this->enrollPin = '';
-            $this->flashMessage = '';
-
-            return;
-        }
-
-        $refusal = $this->browserEnrolmentRefusal($config, $shield);
-
-        if ($refusal !== null) {
-            $this->flashMessage = $refusal;
-
-            return;
-        }
-
-        $this->dispatch('beatrax:webauthn-create');
-    }
-
-    // Reached only once the OS vault above turned out to be unavailable: both
-    // answers here are about the browser road specifically, and a device with
-    // its own vault never travels it.
-    private function browserEnrolmentRefusal(ConfigRepository $config, SecretShield $shield): ?string
-    {
-        return match (true) {
-            // Same dead-button case as an unavailable vault, with nothing left
-            // to fall back on: say so rather than dispatching into nothing.
-            $config->get('nativephp-internal.running') === true => Lang::get('auth::app_lock.error_enroll_unsupported'),
-            // The browser path persists the unwrapping key beside the key it
-            // unwraps, in the same file as the ledger. Only a shield that really
-            // makes those bytes unreadable earns that; a self-hosted web install
-            // binds the pass-through, and the enrolment routes refuse there too.
-            ! $shield->protectsAtRest() => Lang::get('auth::app_lock.error_enroll_unprotected'),
-            default => null,
-        };
-    }
-
-    // The OS entry is a durable way back to the data key that biometrics alone
-    // can open, so arming one costs what removing one costs. The enroller
-    // derives the key from this PIN rather than taking the session's, which is
-    // what makes the box in front of the reader a gate and not a formality.
-    public function enrollWithPin(
-        CurrentUser $currentUser,
-        ColdStartEnroller $enroller,
-        AppLockCredentialRejections $rejections,
-        Session $session,
-    ): void {
-        $rejection = $rejections->pinRequired($this->enrollPin);
-
-        if ($rejection !== null) {
-            $this->flashMessage = $rejection;
-
-            return;
-        }
-
-        $pin = $this->enrollPin;
-        $this->enrollPin = '';
-
-        $result = $enroller->enrol($currentUser->user()->id, $pin, $session);
-
-        // The panel stays open on a refusal for the same reason the disable
-        // one does: another PIN is an answer the reader can still give.
-        if ($result !== ColdStartEnrolmentResult::Enrolled) {
-            $this->flashMessage = $result === ColdStartEnrolmentResult::PinRejected
-                ? Lang::get('auth::app_lock.error_pin_incorrect')
-                : Lang::get('auth::app_lock.error_enroll_failed');
-
-            return;
-        }
-
-        $this->biometricEnrolled = true;
-        $this->confirmingEnroll = false;
-        $this->flashMessage = '';
-    }
-
-    #[On('biometric-enrolled')]
-    public function onBiometricEnrolled(): void
-    {
-        $this->biometricEnrolled = true;
-        $this->flashMessage = '';
-    }
-
-    public function confirmDeenroll(): void
-    {
-        $this->confirmingDeenroll = true;
-        $this->deenrollPin = '';
-    }
-
-    public function deenroll(
-        CurrentUser $currentUser,
-        BiometricDeviceStore $biometricStore,
-        AppLockProvisioner $provisioner,
-        ColdStartVault $vault,
-        AppLockCredentialRejections $rejections,
-    ): void {
-        $rejection = $rejections->pinRequired($this->deenrollPin);
-
-        if ($rejection !== null) {
-            $this->flashMessage = $rejection;
-
-            return;
-        }
-
-        $user = $currentUser->user();
-
-        if (! $provisioner->verifyPin($user->id, $this->deenrollPin)) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
-
-            return;
-        }
-
-        $biometricStore->deleteForUser($user->id);
-        $cleared = $vault->forget($user->id);
-
-        // Read back rather than assumed: the vault answers isEnrolled() from
-        // its own storage, so a refused removal leaves an enrolment this
-        // screen would otherwise show as gone until the next full render.
-        $this->biometricEnrolled = $vault->isEnrolled($user->id);
-        $this->confirmingDeenroll = false;
-        $this->deenrollPin = '';
-
-        // Saying nothing about a key the OS would not release tells the reader
-        // it was destroyed.
-        $this->flashMessage = $cleared
-            ? ''
-            : Lang::get('auth::app_lock.error_vault_kept_key');
     }
 
     /**

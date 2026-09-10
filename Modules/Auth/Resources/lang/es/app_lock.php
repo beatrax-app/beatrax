@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'Esta versión de Beatrax no tiene dónde guardar una clave de desbloqueo, así que no ofrece desbloqueo biométrico. La limitación no es tu dispositivo.',
     'error_enroll_unprotected' => 'El desbloqueo biométrico necesita un almacén de claves del sistema operativo, y esta instalación no tiene ninguno. Registrarlo dejaría la clave de desbloqueo legible junto a tus datos, así que no se ofrece aquí.',
     'error_enroll_failed' => 'Tu dispositivo rechazó guardar la clave. El desbloqueo biométrico no está disponible.',
+    'error_enroll_pin_expired' => 'La confirmación con el PIN caducó antes de que tu dispositivo terminara. Introduce tu PIN e inténtalo de nuevo.',
     'heading' => 'Bloqueo de la app',
 
     'toggle_label' => 'Bloquear la app con PIN',

@@ -68,10 +68,8 @@ it('AppLockSettingsSection setPin stores the data key in the session after enabl
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '987654')
-        ->set('confirmPin', '987654')
         ->set('accountPassword', 'livewire-pass')
-        ->call('setPin')
+        ->call('setPin', '987654', '987654')
         ->assertHasNoErrors();
 
     /** @var AppLockProvisioner $provisioner */

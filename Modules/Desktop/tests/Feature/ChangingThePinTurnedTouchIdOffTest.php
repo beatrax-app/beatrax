@@ -39,10 +39,7 @@ it('keeps the Touch ID enrolment when a PIN change re-wraps the same data key', 
     app()->instance(ColdStartVault::class, $vault);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '123456')
-        ->set('newPin', '654321')
-        ->set('confirmPin', '654321')
-        ->call('changePin')
+        ->call('changePin', '123456', '654321', '654321')
         ->assertSet('flashMessage', '');
 
     expect($vault->forgotten)->toBe([], 'a PIN change rotates nothing, so the enclave blob still unwraps the correct key');
