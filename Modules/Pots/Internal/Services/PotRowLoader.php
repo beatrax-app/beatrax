@@ -41,13 +41,19 @@ final readonly class PotRowLoader
         private Clock $clock,
     ) {}
 
+    // Bounded to the pot's own denomination: `pots.currency` is frozen at
+    // creation and `accounts.default_currency` is not, so one account holds
+    // pots in two and a movement need not carry the one its pot does. Summed
+    // across them the total is not an amount, and the card prints it as one.
     public function balanceForPot(int $potId, User $user): int
     {
         return (int) $this->db->connection()
             ->table('pot_movements')
-            ->where('user_id', $user->id)
-            ->where('pot_id', $potId)
-            ->sum('amount_minor');
+            ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
+            ->where('pot_movements.user_id', $user->id)
+            ->where('pot_movements.pot_id', $potId)
+            ->whereColumn('pot_movements.currency', 'pots.currency')
+            ->sum('pot_movements.amount_minor');
     }
 
     /**

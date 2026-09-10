@@ -45,6 +45,15 @@ final class ReceiptBodyText
         return implode('|', $marks);
     }
 
+    // A marked figure, as both unlabelled anchors search for it. The lookbehind
+    // is the whole of it: a mark run together with what precedes it is part of
+    // a word, not a denomination. "Referentienummer: ABCEUR123456" was read as
+    // EUR 123.456,00, and a transaction id ending USD00001 as USD 1.00.
+    public static function markedAmount(): string
+    {
+        return '(?<![0-9A-Za-z])('.self::currencyMarkers().')\s*([0-9][0-9.,]*)';
+    }
+
     // What currencyMarkers() captured, back as an ISO code. A figure the
     // message marked with nothing keeps the denomination the format itself
     // settles in, which is the only currency left to name it with.

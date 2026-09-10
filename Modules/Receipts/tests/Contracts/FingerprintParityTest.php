@@ -8,7 +8,6 @@ use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Enums\SourceFormat;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
@@ -80,7 +79,7 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         $accountId = $seeded['paypalAccount']->id;
         $accounts = new FixedPaypalAccountResolver($accountId);
 
-        $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class), new ReceiptBodyText);
+        $matcher = new PaypalReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
         $rawEml = (string) file_get_contents($emlPath);
         $matchOutcome = $matcher->match($rawEml);
         expect($matchOutcome->kind)->toBe(MatchOutcomeKind::Parsed);

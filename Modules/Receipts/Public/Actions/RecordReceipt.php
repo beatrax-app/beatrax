@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\Core\Public\Support\Instant;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Dto\CapturedReceipt;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
@@ -35,6 +36,7 @@ final readonly class RecordReceipt
         private FileDropEmlBlobStore $blobStore,
         private DatabaseManager $db,
         private Clock $clock,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     // $captures is how a caller learns WHAT was filed rather than only how the
@@ -108,7 +110,7 @@ final readonly class RecordReceipt
             emlPath: $blobPath,
         );
 
-        $outcome = $this->matchers->dispatch($input, $emlBytes);
+        $outcome = $this->matchers->dispatch($input, $emlBytes, $this->baseCurrency->forUser($user));
 
         $captures?->record(new CapturedReceipt(
             senderEmail: $senderEmail,

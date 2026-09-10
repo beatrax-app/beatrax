@@ -13,6 +13,7 @@ use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Internal\Exceptions\AccountCannotHoldPotsException;
+use Modules\Pots\Internal\Exceptions\CrossCurrencyTransferException;
 use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Enums\PotMovementKind;
 use Modules\Pots\Public\Enums\PotStatus;
@@ -317,6 +318,7 @@ final readonly class PotWriter
      * @throws SelfTransferException source and target are the same pot
      * @throws TargetPotNotFoundException the target pot is not found or not owned
      * @throws CrossAccountTransferException the two pots sit on different accounts
+     * @throws CrossCurrencyTransferException the two pots hold different currencies
      * @throws InsufficientUnallocatedException amount exceeds source pot balance
      */
     public function transfer(
@@ -352,6 +354,14 @@ final readonly class PotWriter
 
         if ($fromPot->account_id !== $toPot->account_id) {
             throw new CrossAccountTransferException('Transfer is only supported between pots on the same account.');
+        }
+
+        // Not covered by the account rule above: the account's denomination is
+        // mutable and the pot's is frozen, so one account holds both. Both legs
+        // were written in the SOURCE pot's currency, and the target's balance
+        // added yen to euro under the euro sign.
+        if ($toPot->currency !== $currency) {
+            throw new CrossCurrencyTransferException('Transfer is only supported between pots holding the same currency.');
         }
 
         /** @var list<EntityMutated> $events */

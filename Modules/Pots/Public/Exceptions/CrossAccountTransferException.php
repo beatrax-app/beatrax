@@ -6,7 +6,8 @@ namespace Modules\Pots\Public\Exceptions;
 
 use InvalidArgumentException;
 
-// Every cross-currency move is one of these, and the reader was told to check
-// fields that were all correct. Typed so the page can name the account the
-// target sits in, which is the fact that explains the refusal.
+// Typed so the page can name the account the target sits in, which is the fact
+// that explains the refusal — the reader was told to check fields that were all
+// correct. Two pots on ONE account can still hold two currencies, which is
+// CrossCurrencyTransferException's to refuse, not this one's.
 final class CrossAccountTransferException extends InvalidArgumentException {}

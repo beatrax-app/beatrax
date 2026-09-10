@@ -17,12 +17,12 @@ final readonly class MatcherRegistry
     /** @param list<SenderMatcher> $matchers Sorted by priority() DESC. */
     public function __construct(private array $matchers) {}
 
-    public function dispatch(MatcherInputDto $input, string $emlRaw): MatchOutcomeDto
+    public function dispatch(MatcherInputDto $input, string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto
     {
         $inboxMsg = $input->toInboxMessageDto();
         foreach ($this->matchers as $matcher) {
             if ($matcher->canHandle($inboxMsg)) {
-                return $matcher->match($emlRaw)->fromMatcher($matcher->key());
+                return $matcher->match($emlRaw, $ownerCurrency)->fromMatcher($matcher->key());
             }
         }
 

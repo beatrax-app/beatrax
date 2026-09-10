@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Modules\Ledger\Public\Enums\Currency;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\Matchers\GooglePlayReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
@@ -32,7 +31,7 @@ function currencyEml(string $sender, string $body): string
 }
 
 it('settles a PayPal receipt converted into yen at the yen it names', function (): void {
-    $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class), new ReceiptBodyText);
+    $matcher = new PaypalReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 
     $outcome = $matcher->match(currencyEml('service@paypal.com', implode("\n", [
         'Merchant: Nintendo',
@@ -47,7 +46,7 @@ it('settles a PayPal receipt converted into yen at the yen it names', function (
 });
 
 it('reads a PayPal figure marked with a glyph in that glyph\'s money, not the reader\'s base', function (): void {
-    $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class), new ReceiptBodyText);
+    $matcher = new PaypalReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 
     $outcome = $matcher->match(currencyEml('service@paypal.com', implode("\n", [
         'Aan: Nintendo',

@@ -16,6 +16,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Internal\Dto\StandingAmountRefusal;
 use Modules\Pots\Internal\Enums\PotLinkType;
 use Modules\Pots\Internal\Exceptions\AccountCannotHoldPotsException;
+use Modules\Pots\Internal\Exceptions\CrossCurrencyTransferException;
 use Modules\Pots\Public\Dto\PotRow;
 use Modules\Pots\Public\Exceptions\CrossAccountTransferException;
 use Modules\Pots\Public\Exceptions\GoalAlreadyLinkedException;
@@ -443,23 +444,18 @@ final class PotsPage extends Component
                 $memo,
             );
         } catch (InsufficientUnallocatedException) {
-            $potName = Lang::get('pots::messages.pot_fallback');
-            $balance = 0;
-            $currency = $baseCurrency->code();
-            if ($sourcePot !== null) {
-                $potName = $sourcePot->name;
-                $balance = $sourcePot->balanceMinor;
-                $currency = $sourcePot->currency;
-            }
-            $this->errorAmountLimitMinor = max(0, $balance);
+            // The pot's own denomination, never the install's: the figure this
+            // sentence quotes is the pot's balance, and naming it in another
+            // money is the defect this refusal exists to report.
+            $currency = $sourcePot->currency ?? $baseCurrency->code();
+            $this->errorAmountLimitMinor = max(0, $sourcePot->balanceMinor ?? 0);
             $this->errorAmountLimitCurrency = $currency;
-            $availableFormatted = Money::ofMinor(
-                $this->errorAmountLimitMinor,
-                $currency
-            )->format();
             $this->errorAmount = Lang::get(
                 'pots::messages.errors.amount_exceeds_pot_balance',
-                ['name' => $potName, 'amount' => $availableFormatted],
+                [
+                    'name' => $sourcePot->name ?? Lang::get('pots::messages.pot_fallback'),
+                    'amount' => Money::ofMinor($this->errorAmountLimitMinor, $currency)->format(),
+                ],
             );
             $refused = true;
         } catch (InvalidPotAmountException) {
@@ -475,6 +471,14 @@ final class PotsPage extends Component
                 ? Lang::get('pots::messages.errors.move_cross_account', [
                     'name' => $targetPot->name,
                     'account' => $targetPot->accountName,
+                ])
+                : Lang::get('pots::messages.errors.operation_failed');
+            $refused = true;
+        } catch (CrossCurrencyTransferException) {
+            $this->errorTarget = $targetPot instanceof PotRow
+                ? Lang::get('pots::messages.errors.move_cross_currency', [
+                    'name' => $targetPot->name,
+                    'currency' => $targetPot->currency,
                 ])
                 : Lang::get('pots::messages.errors.operation_failed');
             $refused = true;

@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'O kumbara artık kullanılamıyor. Başka birini seç.',
         'move_same_pot' => 'Bir kumbara kendine para taşıyamaz. Başka bir kumbara seç.',
         'move_cross_account' => 'Kumbaralar yalnızca aynı hesap içinde para alışverişi yapar; :name ise :account hesabında.',
+        'move_cross_currency' => 'Kumbaralar yalnızca aynı para biriminde para alışverişi yapar; :name ise :currency cinsinden.',
         'pot_missing' => 'O kumbara artık kullanılamıyor.',
         'operation_failed' => 'İşlem geçmedi. Hiç para taşınmadı — yeniden dene.',
     ],

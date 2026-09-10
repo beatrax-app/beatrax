@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Ta kasica više nije dostupna. Izaberi drugu.',
         'move_same_pot' => 'Kasica ne može premestiti novac sama sebi. Izaberi drugu kasicu.',
         'move_cross_account' => 'Kasice razmenjuju novac samo unutar jednog računa, a :name je na računu :account.',
+        'move_cross_currency' => 'Kasice razmenjuju novac samo u jednoj valuti, a :name je u valuti :currency.',
         'pot_missing' => 'Ta kasica više nije dostupna.',
         'operation_failed' => 'Nije prošlo. Novac nije premešten — pokušaj ponovo.',
     ],

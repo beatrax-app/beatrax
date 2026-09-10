@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Den pulje er ikke længere tilgængelig. Vælg en anden.',
         'move_same_pot' => 'En pulje kan ikke flytte penge til sig selv. Vælg en anden pulje.',
         'move_cross_account' => 'Puljer bytter kun penge inden for én konto, og :name ligger på :account.',
+        'move_cross_currency' => 'Puljer bytter kun penge i én valuta, og :name er i :currency.',
         'pot_missing' => 'Den pulje er ikke længere tilgængelig.',
         'operation_failed' => 'Det gik ikke igennem. Der blev ikke flyttet penge — prøv igen.',
     ],
