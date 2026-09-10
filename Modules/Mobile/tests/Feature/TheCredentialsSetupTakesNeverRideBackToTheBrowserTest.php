@@ -5,7 +5,10 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
+use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
+use Tests\Helpers\LivewireRoundTrip;
 
 uses(RefreshDatabase::class);
 
@@ -121,4 +124,28 @@ it('keeps the code off the wire on a rejected submit, which is the render that c
     expect(setupCredentialsWireTraffic($component))
         ->toContain(setupCredentialsPassphrase())
         ->not->toContain(SETUP_CREDENTIALS_PIN);
+});
+
+// Livewire::test() builds the same call payload but never leaves PHP. This is
+// the round trip the WebView actually makes: the page's own snapshot posted to
+// the update endpoint with the code as a call parameter, and the JSON that
+// comes back read for the digits. It is the surface the defect lived on.
+it('sends the code to the update endpoint as a parameter, and reads back a body without it', function (): void {
+    $this->withoutMiddleware(EnsureDatabaseReady::class);
+
+    $page = (string) $this->get(route('mobile.import'))->assertOk()->getContent();
+
+    expect($page)->not->toContain(SETUP_CREDENTIALS_PIN, 'the first render cannot carry a code nobody has typed');
+
+    $rendered = LivewireRoundTrip::call($this, $page, 'mobile.import-bootstrap', 'submit', [
+        'username' => 'phone-owner-round-trip',
+        'password' => setupCredentialsPassphrase(),
+        'passwordConfirmation' => setupCredentialsPassphrase(),
+    ], [SETUP_CREDENTIALS_PIN, SETUP_CREDENTIALS_PIN]);
+
+    // The call did what it was asked, or an absent code proves only that the
+    // request was refused before it reached anything.
+    expect(User::query()->count())->toBe(1, 'the endpoint has to have run the ceremony');
+    expect($rendered)->toContain((string) Lang::get('mobile::import.recovery_heading'));
+    expect($rendered)->not->toContain(SETUP_CREDENTIALS_PIN);
 });
