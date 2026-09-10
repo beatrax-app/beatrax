@@ -219,6 +219,7 @@ final readonly class TaxTagQuery
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
+            ->where('user_id', $userId)
             ->first(['display_name', 'metadata']);
 
         // Decrypt first, then translate: the seam reads the plaintext name,
