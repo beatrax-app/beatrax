@@ -254,6 +254,24 @@ whose table argument the scanner cannot read is reported rather than assumed
 innocent. Each site either reaches `SearchIndexWriterContract` or is pinned with
 the reason its write leaves the document still describing the row.
 
+## A document that outlives its transaction
+
+The body is a plaintext shadow, so a document left behind by a deleted row is a
+deleted purchase's merchant name still readable on disk — and still answering a
+`MATCH`. A database cascade deleted transactions without telling the writer
+until it was removed tree-wide, and removing the cause left the residue: one
+real install carried 102 such documents, and a search for one of their
+merchants returned 13 rows that do not exist.
+
+`search:reindex` would clear them — it drops a user's documents before rebuilding
+them — and cannot here, because it skips a user whose columns a console run
+holds no key for, which on an encrypted desktop is every user. So a forward
+migration removes them instead, through `SearchIndexWriterContract` rather than
+a `DELETE`: `transaction_search_fts` is external-content, so deleting the row
+alone leaves the terms behind, which is the whole of what is being removed.
+
+`beatrax:doctor` reports the count, so an install that grows one says so.
+
 ## A column this process cannot read
 
 The index body is a plaintext shadow of five sealed columns —
