@@ -186,8 +186,9 @@ Modules/DevMode/
   developer. That gate is `Modules\Core\Public\Services` — `Shell`
   and `Desktop` ask it too, and neither may depend on this module.
 - `Internal/Http/Middleware/HorizonFrameAncestors::handle($req, $next)`
-  — appends the `frame-ancestors` CSP directive so the iframe
-  renders.
+  — declares `frame-ancestors 'self'` and no other directive. Core's
+  `NoStoreFinancialData` runs outside it and merges that one over the
+  app-wide policy.
 - `Internal/Http/Livewire/` — the twelve console pages enumerated
   in the directory tree.
 - `Internal/Listeners/LogQueueLifecycle::processed($event) /

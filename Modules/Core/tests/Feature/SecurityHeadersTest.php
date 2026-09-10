@@ -58,10 +58,11 @@ it('keeps the no-store cache posture the headers were added alongside', function
     expect($response->headers->get('Cache-Control'))->toContain('no-store');
 });
 
-it('does not fight a response that sets its own frame policy', function (): void {
+it('takes a route s frame policy without taking the rest of its policy from it', function (): void {
     // The Dev Console embeds Horizon and allows it with
     // `frame-ancestors 'self'`. Browsers disagree on whether CSP or
-    // X-Frame-Options wins when both are present, so ours stands down.
+    // X-Frame-Options wins when both are present, so X-Frame-Options stands
+    // down — which is safe only while the policy still carries a frame rule.
     $middleware = new NoStoreFinancialData(app(Vite::class), app());
 
     $response = $middleware->handle(
@@ -74,8 +75,12 @@ it('does not fight a response that sets its own frame policy', function (): void
         },
     );
 
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
     expect($response->headers->has('X-Frame-Options'))->toBeFalse()
-        ->and($response->headers->get('Content-Security-Policy'))->toBe("frame-ancestors 'self'")
+        ->and($csp)->toContain("frame-ancestors 'self'")
+        ->and($csp)->toContain("script-src 'self' 'nonce-")
+        ->and($csp)->toContain("object-src 'none'")
         // The rest still apply — only the conflicting one is withdrawn.
         ->and($response->headers->get('X-Content-Type-Options'))->toBe('nosniff');
 });

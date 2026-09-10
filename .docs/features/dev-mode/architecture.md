@@ -216,9 +216,12 @@ layout to render the ⌘K palette and the sidebar nav-list:
   the update endpoint runs outside the route stack: without it a
   snapshot minted while the flag was on kept driving the SQL panel,
   the runner and the queue inspector after it came off.
-- **Internal/Http/Middleware/HorizonFrameAncestors** — the
-  `frame-ancestors` header on the Horizon iframe page so the
-  embed renders without the CSP rejecting it.
+- **Internal/Http/Middleware/HorizonFrameAncestors** — writes
+  `Content-Security-Policy: frame-ancestors 'self'` on the Horizon
+  iframe page, and nothing else. It runs inside Core's
+  `NoStoreFinancialData`, which merges that one directive over the
+  app-wide policy: a route that wrote more here would lose the extra
+  rather than displace the nine directives it did not write.
 - **Internal/Http/Livewire/** — twelve Livewire pages
   (DevOverviewPage, ArtisanRunnerPage, AuditLogPage,
   LogTailerPage, QueueInspectorPage, HorizonFramePage,
@@ -392,8 +395,9 @@ The Horizon iframe flow (dev_mode + Horizon installed only):
 ```
 /dev/horizon
   → HorizonFramePage Livewire SFC
-       → renders <iframe src="/horizon"> with frame-ancestors header
-            (applied by HorizonFrameAncestors middleware)
+       → renders <iframe src="/horizon">
+  → HorizonFrameAncestors declares frame-ancestors 'self'
+       → NoStoreFinancialData merges it over the app-wide policy
 ```
 
 ## Livewire page notes

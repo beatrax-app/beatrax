@@ -238,6 +238,13 @@ and the assertion — see
 - **Every authenticated response carries `Cache-Control: no-store`.**
   `NoStoreFinancialData` is pushed onto the `auth` middleware group
   so the browser never caches a transaction list.
+- **A route middleware may narrow `frame-ancestors` and nothing else.**
+  The base Content-Security-Policy is what an inner layer extends: its
+  declaration is merged one directive at a time and every directive
+  outside `OVERRIDABLE_DIRECTIVES` is dropped, so a route cannot hand
+  itself `script-src *` and cannot lose the nine directives it never
+  wrote
+  (`Modules/Core/tests/Feature/ARouteMayNarrowOneDirectiveNotReplaceThePolicyTest.php`).
 - **`ElectronUpdateChannel` verifies every manifest before raising any
   `system_alerts` row.** Ed25519 signature verification against the
   publisher public key is the gate; a manifest failing verification

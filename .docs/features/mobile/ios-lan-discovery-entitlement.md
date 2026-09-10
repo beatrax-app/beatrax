@@ -124,7 +124,10 @@ road. The address is unicast, which `NSLocalNetworkUsageDescription` already
 covers — an IP rather than the SRV record's `.local` name, because resolving a
 `.local` name is itself multicast and would need the entitlement all over
 again. Trust is unchanged: an address decides which machine is asked, never
-which one is trusted, and the safety number remains the only gate.
+which one is trusted, and the safety number remains the only gate. It is
+bounded, though — a scanned `host=` is held to the same on-this-network rule an
+mDNS address satisfies by construction, so the machine it names cannot be one
+off the LAN ([the rule](../sync/lan-discovery-trust-model.md#an-address-that-came-from-a-scan-answers-the-same-question)).
 
 It is the typed-code arm, which depends on finding the peer, that had nothing
 to find. A QR carries the initiator's address; a code a reader types carries a

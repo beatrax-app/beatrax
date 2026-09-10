@@ -222,9 +222,13 @@ and the assertion — see
   `Laravel\Horizon\HorizonServiceProvider` exists.** A production
   `--no-dev` build silently skips the route; the dev-shell sidebar
   reads `Router::has('dev.horizon')` to gate the nav item.
-- **The Horizon iframe carries a `frame-ancestors` CSP header.**
-  `HorizonFrameAncestors` middleware applies it; without the header
-  the embed is rejected by the browser CSP.
+- **`/dev/horizon` carries `frame-ancestors 'self'` AND every other
+  directive of the app-wide policy.** `HorizonFrameAncestors` declares
+  only the frame rule and Core's `NoStoreFinancialData` merges it over
+  the base; a route middleware cannot replace the policy, because that
+  left this route with a frame rule, no `script-src`, no `object-src`
+  and no `X-Frame-Options` either
+  (`Modules/DevMode/tests/Feature/AHorizonRouteKeepsEveryDirectiveItDidNotWriteTest.php`).
 - **The Horizon import is allowed only in
   `app/Providers/HorizonServiceProvider.php`.** The repo-wide
   `noHorizonImportsInShippedBuildCode` invariant blocks any

@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Transport\Relay;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\RelayConfigWriteException;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
+use Modules\Sync\Internal\Support\LanOnlyHost;
 use Throwable;
 
 final class RelayConfig
@@ -90,36 +91,12 @@ final class RelayConfig
     }
 
     // The one question all three endpoint checks were each answering for
-    // themselves: is this host reachable only from this network? `localhost`,
-    // loopback, and private IPv4 count; link-local and other reserved ranges do
-    // not. A domain name never does — DNS resolves to wherever, not ours to trust.
+    // themselves. `localhost` is admitted HERE and refused for a scanned peer:
+    // the relay may be hosted on this machine, and a peer that is this machine
+    // is not a peer.
     private function isLanHost(string $host): bool
     {
-        if ($host === 'localhost') {
-            return true;
-        }
-
-        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
-            return false;
-        }
-
-        // Loopback (127/8) is the intended same-machine relay; everything else
-        // must be an RFC 1918 PRIVATE address. Link-local (169.254 — APIPA and
-        // the 169.254.169.254 metadata endpoint) and other reserved ranges are
-        // refused, so a scanned QR cannot drive a plaintext POST at one of them.
-        return str_starts_with($host, '127.') || $this->isPrivateIpv4($host);
-    }
-
-    // NO_PRIV_RANGE fails only for the private ranges, so a failure here is
-    // precisely the RFC 1918 LAN case (reserved/link-local addresses pass it
-    // and are therefore rejected).
-    private function isPrivateIpv4(string $host): bool
-    {
-        return filter_var(
-            $host,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE,
-        ) === false;
+        return LanOnlyHost::admitsOrIsThisMachine($host);
     }
 
     // Whether an endpoint is one the transport would actually use. Callers

@@ -18,6 +18,12 @@ final readonly class NoStoreFinancialData
     // recomputed from the shipped file so a package bump can never strand it.
     private const string NATIVE_BRIDGE_JS = 'vendor/nativephp/desktop/resources/electron/electron-plugin/src/preload/livewire-dispatcher.js';
 
+    // The one directive a route may set for itself: whether this page is meant
+    // to be framed is a question only the route knows. Every other directive is
+    // an app-wide property no single route is in a position to relax.
+    /** @var list<string> */
+    private const array OVERRIDABLE_DIRECTIVES = ['frame-ancestors'];
+
     // The app renders text it did not write — counterparty names, payment
     // references, receipt bodies from bank exports and mailboxes — so these
     // are what stands between a missed escape and a working attack.
@@ -66,15 +72,12 @@ final readonly class NoStoreFinancialData
             }
         }
 
-        $policy = $this->contentSecurityPolicy();
-        if ($policy !== null && ! $response->headers->has('Content-Security-Policy')) {
-            $response->headers->set('Content-Security-Policy', $policy);
-        }
+        $this->writeContentSecurityPolicy($response);
 
-        // The Dev Console embeds Horizon in a frame and allows it with
-        // `frame-ancestors 'self'`. Browsers disagree on whether CSP or
-        // X-Frame-Options wins when both are present, so the safe reading is
-        // to let the more specific header stand alone and drop ours.
+        // Browsers disagree on whether a CSP frame-ancestors or X-Frame-Options
+        // wins when both are present, and the merge above guarantees a policy
+        // that carries frame-ancestors, so the more expressive header is left
+        // to stand alone.
         if ($response->headers->has('Content-Security-Policy')) {
             $response->headers->remove('X-Frame-Options');
         }
@@ -82,13 +85,73 @@ final readonly class NoStoreFinancialData
         return $response;
     }
 
-    // Null while the Vite dev server is hot: HMR needs the dev origin and inline
+    // The base is what a route EXTENDS. Every route middleware runs inside this
+    // one, so deferring to a policy already on the response handed one route the
+    // whole header: /dev/horizon shipped a frame rule and none of the other nine
+    // directives, and no X-Frame-Options either, because a CSP was present.
+    private function writeContentSecurityPolicy(Response $response): void
+    {
+        $directives = array_merge($this->baseDirectives(), $this->declaredOverrides($response));
+
+        if ($directives === []) {
+            $response->headers->remove('Content-Security-Policy');
+
+            return;
+        }
+
+        $policy = [];
+
+        foreach ($directives as $name => $value) {
+            $policy[] = $name.' '.$value;
+        }
+
+        $response->headers->set('Content-Security-Policy', implode('; ', $policy));
+    }
+
+    // What an inner layer asked for, narrowed to OVERRIDABLE_DIRECTIVES. Merging
+    // whatever it wrote would re-open the hole from the other side: a route could
+    // then hand itself `script-src *`. Anything else is dropped, so the base
+    // value stands rather than a spelling this parser did not follow.
+    /**
+     * @return array<string, string>
+     */
+    private function declaredOverrides(Response $response): array
+    {
+        $declared = $response->headers->get('Content-Security-Policy');
+
+        if ($declared === null) {
+            return [];
+        }
+
+        $overrides = [];
+
+        foreach (explode(';', $declared) as $directive) {
+            $directive = trim($directive);
+            $nameLength = strcspn($directive, " \t");
+            $name = strtolower(substr($directive, 0, $nameLength));
+            $value = trim(substr($directive, $nameLength));
+
+            // An empty source list is a parse error the browser answers by
+            // ignoring the directive, which for frame-ancestors means framed by
+            // anyone. The base value is the safe reading of "said nothing".
+            if ($value !== '' && in_array($name, self::OVERRIDABLE_DIRECTIVES, true)) {
+                $overrides[$name] = $value;
+            }
+        }
+
+        return $overrides;
+    }
+
+    // Empty while the Vite dev server is hot: HMR needs the dev origin and inline
     // eval a strict policy forbids, and the dev server is not a shipped surface.
     // Every built bundle gets the nonce policy instead.
-    private function contentSecurityPolicy(): ?string
+    /**
+     * @return array<string, string>
+     */
+    private function baseDirectives(): array
     {
         if ($this->vite->isRunningHot()) {
-            return null;
+            return [];
         }
 
         // 'unsafe-eval' is unavoidable: Livewire bundles Alpine, which compiles
@@ -97,24 +160,24 @@ final readonly class NoStoreFinancialData
         // 'unsafe-inline' is deliberately absent (a nonce disables it anyway).
         $nonce = $this->vite->cspNonce();
 
-        $scriptSrc = "script-src 'self' 'nonce-{$nonce}' 'unsafe-eval'";
+        $scriptSrc = "'self' 'nonce-{$nonce}' 'unsafe-eval'";
         $bridgeHash = $this->nativeBridgeScriptHash();
         if ($bridgeHash !== null) {
             $scriptSrc .= " '{$bridgeHash}'";
         }
 
-        return implode('; ', [
-            "default-src 'self'",
-            $scriptSrc,
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data:",
-            "font-src 'self' data:",
-            "connect-src 'self'",
-            "object-src 'none'",
-            "base-uri 'self'",
-            "form-action 'self'",
-            "frame-ancestors 'none'",
-        ]);
+        return [
+            'default-src' => "'self'",
+            'script-src' => $scriptSrc,
+            'style-src' => "'self' 'unsafe-inline'",
+            'img-src' => "'self' data:",
+            'font-src' => "'self' data:",
+            'connect-src' => "'self'",
+            'object-src' => "'none'",
+            'base-uri' => "'self'",
+            'form-action' => "'self'",
+            'frame-ancestors' => "'none'",
+        ];
     }
 
     // The bridge's inline text is `\n{file}\n` — the module wrapper strips its
