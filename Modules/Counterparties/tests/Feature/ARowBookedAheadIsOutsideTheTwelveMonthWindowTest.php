@@ -38,7 +38,7 @@ function aheadLedger(User $user, array $rows): int
         'name' => 'Ahead ASN',
         'slug' => 'ahead-asn-'.$user->id,
         'kind' => 'bank',
-        'iban' => 'NL00AHD'.str_pad((string) $user->id, 8, '0', STR_PAD_LEFT),
+        'iban' => 'NL00ASNB'.str_pad((string) $user->id, 8, '0', STR_PAD_LEFT),
         'default_currency' => 'EUR',
         'created_at' => '2020-01-01 00:00:00',
         'updated_at' => '2020-01-01 00:00:00',
