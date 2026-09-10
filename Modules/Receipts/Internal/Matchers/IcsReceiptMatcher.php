@@ -193,7 +193,7 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
             $chainHints[] = new FundedByCardPayload(cardLast4: $cardLast4);
             // The offset capture around the anchor snips the
             // audit-evidence excerpt without a second regex pass.
-            $chainEvidence = trim(substr($body, max(0, $cardMatches[0][1] - 5), strlen($cardMatches[0][0]) + 10));
+            $chainEvidence = trim(mb_strcut($body, max(0, $cardMatches[0][1] - 5), strlen($cardMatches[0][0]) + 10));
         }
 
         $rawPayload = [
@@ -201,7 +201,7 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
             'card_last4' => $cardLast4,
             'subject' => $parsed->headers['subject'] ?? '',
             'sender' => $parsed->headers['from'] ?? '',
-            'body_excerpt' => substr($body, 0, 200),
+            'body_excerpt' => mb_strcut($body, 0, 200),
         ];
         if ($chainEvidence !== null) {
             $rawPayload['chain_hint_evidence'] = $chainEvidence;

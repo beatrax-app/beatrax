@@ -32,7 +32,7 @@ final class RenderedMarkup
         try {
             $document = HTMLDocument::createFromString($html, LIBXML_NOERROR);
         } catch (Throwable $failure) {
-            throw new MarkupParseFailedException($failure->getMessage(), substr($html, 0, 60));
+            throw new MarkupParseFailedException($failure->getMessage(), mb_strcut($html, 0, 60));
         }
 
         self::assertRead($document, $html);
@@ -66,7 +66,7 @@ final class RenderedMarkup
         $element = $this->first($selector);
 
         if ($element === null) {
-            throw new MarkupParseFailedException('no element matched `'.$selector.'`', substr($this->html(), 0, 60));
+            throw new MarkupParseFailedException('no element matched `'.$selector.'`', mb_strcut($this->html(), 0, 60));
         }
 
         return $element;
@@ -122,7 +122,7 @@ final class RenderedMarkup
         }
 
         if ($document->documentElement === null) {
-            throw new MarkupParseFailedException('a document with no root element', substr($html, 0, 60));
+            throw new MarkupParseFailedException('a document with no root element', mb_strcut($html, 0, 60));
         }
     }
 }

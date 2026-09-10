@@ -425,7 +425,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                substr($reason, 0, 500),
+                mb_strcut($reason, 0, 500),
             );
         } catch (Throwable $stateWriteFailure) {
             // An invalid transition here is fine, but a real write failure
