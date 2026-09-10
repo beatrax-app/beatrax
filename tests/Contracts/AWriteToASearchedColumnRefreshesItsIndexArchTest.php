@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Search\Public\Support\SearchedColumns;
 
 /**
@@ -176,7 +177,7 @@ function searchedSealSitesByFile(): array
     foreach (searchedSealSourceFiles() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
 
-        foreach (searchedSealScan((string) file_get_contents($path)) as $hit) {
+        foreach (searchedSealScan(BladePhpSource::forPath($path, (string) file_get_contents($path))) as $hit) {
             $sites[$relative][] = $hit['line'];
         }
     }
