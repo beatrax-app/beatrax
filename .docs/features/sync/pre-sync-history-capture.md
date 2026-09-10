@@ -45,9 +45,10 @@ fast — thousands of individual per-entry commits turn a second of work into mi
 SQLite — but the unit is a chunk, not the whole ledger.
 
 `sync_backfill_state` holds one row per user: how far the walk got (`cursor_table`,
-`cursor_pk`), how much it has captured, and whether it has finished (`completed_at`). The
-cursor advance is written **inside the same transaction** as the entries that chunk produced,
-so the two can never name different amounts of captured history.
+`cursor_pk`), how much it has captured, how many consecutive slices captured nothing
+(`failed_slices`), and whether it has finished (`completed_at`). The cursor advance is written
+**inside the same transaction** as the entries that chunk produced, so the two can never name
+different amounts of captured history.
 
 `BackfillBudget` bounds one slice by two numbers, because they answer different questions:
 
@@ -94,22 +95,68 @@ been enabled.
 At one slice every two seconds, a four-thousand-row ledger finishes inside a few minutes of
 ordinary use, in the background, with each slice durable the moment it commits.
 
-## A failed slice is retired, not retried forever
+## A failed slice leaves the walk owed
 
-If a slice throws — the real case is `UnreadableColumnException`, a sensitive column no epoch in
-this keyring opens — the capture is **closed** and logged at error level rather than left owed.
-A driver that runs on every request would otherwise reach the same failing chunk every couple of
-seconds for as long as the install exists, and the condition it is failing on is permanent.
+A slice that throws used to be **closed** — `completed_at` stamped, the walk retired — on the
+reasoning that the real failure is `UnreadableColumnException`, a permanent verdict a driver
+running on every request would otherwise re-reach every couple of seconds forever.
 
-Nothing is lost by that: the chunks committed before the failure stay committed, and both
-callers of `capture()` are user actions — enabling sync, completing a pairing — that reopen the
-walk when they happen again, resuming from the cursor rather than from the top.
+Measured on two paired devices, that reasoning cost a table. The walk ran for thirteen seconds
+while the relay served the joining phone's drains out of the same SQLite file, took a
+`DeadlockException`, and the catch stamped `completed_at` for that same second. The state row
+named `anomaly_alerts` — position 36 of the 39-table insertion order — and the two tables after
+it were never walked. `anomaly_suppression_rules` was empty. `tax_transaction_tags` held
+seventeen rows, produced **zero** op-log entries, and reached no peer. Quarantine was 0 on both
+devices, because nothing was ever refused: nothing was ever offered.
 
-A **locked app is not that case**, and the two are deliberately told apart. With the app-lock
-engaged there is no signing key, so no `OpLogWriter` can be built at all — that is a reason to
-come back, not a verdict on any row. The slice returns having done nothing and leaves the walk
-owed, and the first request after an unlock picks it up. Retiring on it would mean locking the
-screen mid-capture abandoned the capture until the next pairing.
+Three things were wrong with one failure ending a walk, and each is now separate:
+
+- **A failure is not a completion.** The catch records a *failed slice* rather than a finish.
+  `completed_at` is written in exactly one place — a walk that reached the end of the order with
+  nothing left behind. A capture the state row calls finished cannot be retried, which is what
+  turns a three-second lock into a permanent hole.
+- **A table that will not walk costs its own rows, not the ones after it.** The per-table catch
+  in `backfill()` reports the table and carries on down the order, so a leaf like
+  `tax_transaction_tags` — which a topological order puts *last*, because its parents settle
+  last — no longer depends on every table above it being readable.
+- **A chunk refused for a lock is a wait, not a verdict.** The chunk transaction is opened with
+  `LOCK_ATTEMPTS` attempts, so Laravel re-runs it for a concurrency error and only a concurrency
+  error. The budget is spent outside that transaction: a chunk the engine made us re-run wrote
+  its rows once and is charged once.
+
+A walk still cannot be worked forever. `sync_backfill_state.failed_slices` counts consecutive
+slices that captured nothing; past `BackfillProgress::MAX_FAILED_SLICES` the walk **stalls** —
+still owed, never finished, no longer picked up by the request tail. A slice that captures rows
+clears the count; a slice that captures none does not, because a table no keyring can read would
+otherwise be retried until the install is deleted. Stalled is not complete, and both callers of
+`capture()` are user actions that reopen it.
+
+A **locked app is not any of those cases**. With the app-lock engaged there is no signing key, so
+no `OpLogWriter` can be built at all — a reason to come back, not a verdict on any row, and not a
+failed slice either. The slice returns having done nothing and the first request after an unlock
+picks it up.
+
+## Silence is not a report
+
+A table that produced no entries reads exactly like a table with nothing to produce. That is the
+whole of why seventeen rows left one device, reached no peer, and were noticed by nobody: every
+surface that could have spoken was counting something that matched. Row counts matched. The op
+log was byte-identical across 8,481 records. Quarantine was 0. The loss was visible only through
+`transaction_search_docs.search_body`, a plaintext shadow that happens to hold the tax note.
+
+So the walk counts both sides before it is allowed to finish. `shortfall()` asks, for every
+covered table that is neither device-local nor the reader's own row, how many rows this user has
+and how many of them carry a `CREATE_ROW` op **this device authored** — the same test the walk
+skips a row on, so the audit can never call a row covered that the walk would still re-capture.
+
+- Nothing short: the walk closes, and logs `every covered table is in the log` with the number of
+  tables audited and `uncovered: 0`. That line is the positive control. A clean pass that logs
+  nothing is indistinguishable from a pass that never ran, which is the reading this defect
+  survived on.
+- Anything short: the walk does **not** close. The tables and their two counts are logged at
+  error level, a failed slice is recorded, and the cursor is rewound to the top of the order —
+  the missed table can sit anywhere in it, and a cursor pointing past it would never reach it
+  again. Row-wise idempotence makes the re-walk two indexed reads per row already captured.
 
 ## Rows the walk does not take
 
