@@ -258,7 +258,12 @@ site is precisely the harm the contact fields exist to avoid.
 not a bare substring one: `compileToken()` quotes the needle and fences it with
 a `(?<![\p{L}\p{N}])` / `(?![\p{L}\p{N}])` lookaround on each edge whose own
 character is alphanumeric, so `OBI` no longer matches inside `mobiel` while
-`AMAZON.` still matches `AMAZON.NL`. A `regex:` pattern strips the prefix,
+`AMAZON.` still matches `AMAZON.NL`. That reading — punctuation is its own
+boundary — holds only while some edge is still asserted, so a needle with
+punctuation at **both** edges takes the lookaround on both instead of neither:
+`-a-` clears `MerchantAliasPattern`'s three-character floor and otherwise
+matched inside `super-a-market`. All 9,168 bundled literal patterns open on an
+alphanumeric character, so the shape is reachable only from a typed alias. A `regex:` pattern strips the prefix,
 wraps the remaining PCRE body in `#...#i`, and tests it against the whole
 haystack. A malformed regex never throws — `@preg_match` failure is logged once
 at `warning` and treated as a non-match, so one bad corpus row can never abort

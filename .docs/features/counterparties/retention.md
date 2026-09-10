@@ -71,12 +71,45 @@ one replica is a delete of what another replica is still using.
 
 ## What still deletes a counterparty
 
-Nothing on this device. `Categorization`'s
-`DeactivateRulesOnReferentDelete` keeps its `EntityMutated` arm because
-a peer running an older build still prunes, and that delete arrives as
-an op-log row which fires no Eloquent model event. A rule whose action
-names the arriving id is switched off; see
+One thing, and it is a decision the reader makes by hand: merging two
+merchant aliases. The alias's friendly name is what the resolver slugs a
+counterparty from, so renaming it leaves the names that used to own a row
+owning none, and the next import mints a second row beside the history.
+`Counterparties\Internal\Actions\MergeCounterparties` folds them instead
+— it repoints the absorbed row's transactions onto the survivor, renames
+the survivor to the merged name so the next import lands on it, and then
+removes the row the reader merged away. Nothing on a timer still prunes,
+and nothing deletes a transaction.
+
+`Categorization`'s `DeactivateRulesOnReferentDelete` keeps its
+`EntityMutated` arm for the same delete, and for a peer running an older
+build that still prunes: both arrive as an op-log row which fires no
+Eloquent model event. A rule whose action names the arriving id is
+switched off rather than repointed — a rule is an instruction, not
+history, and a merge is not evidence the reader meant it to follow the
+survivor; see
 [categorization architecture](../categorization/architecture.md#app-level-referential-integrity).
+
+### What travels with a merge, and what does not
+
+`counterparty_id` lives in three tables plus one scratch one, and none of
+them is reached by a cascade — `transactions.counterparty_id` carries no
+foreign key at all, deliberately, so history is never cascaded away.
+
+| Column | Travels | Why |
+|---|---|---|
+| `transactions.counterparty_id` | yes | the history itself; one `Set` op per row, or the move never reaches the paired device |
+| `anomaly_suppression_rules.counterparty_id` | yes | the foreign key is `nullOnDelete`, and a null there matches *every* merchant, so leaving it would widen one merchant's mute over the whole ledger |
+| `migration_source_map.beatrax_id` (rows whose `beatrax_entity_type` is `counterparty`) | yes | `SourceMapWriter` reads an existing mapping back rather than resolving again, so a stale row hands a removed id to the next re-import |
+| `rule_actions.payload.counterparty_id` | no | the delete announcement already reaches `DeactivateRulesOnReferentDelete`, which switches the rule off |
+| `migration_staging_payees.resolved_counterparty_id` | no | per-run scratch, not synced, and rewritten from the freshly resolved id by the next promotion |
+
+`transactions.counterparty_name` is **not** rewritten: it is what the bank
+called the row, not what the app calls the counterparty. That is what lets
+a reader see which lines moved after a merge, and it is why the fold owes
+the search index nothing — `transaction_search_docs.search_body` is
+composed from `counterparty_name` and `description`, and the fold changes
+neither.
 
 ## Related
 

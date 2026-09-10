@@ -2265,6 +2265,13 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // PreMigrationSnapshot, so no table literal reaches this scan. The five
         // projection tables were already written that way; op_log_entries now is too.
         'Modules/Core/Public/Services/EncryptionMigrationService.php sync_encryption_state 4',
+        // Merging two merchant aliases merges the counterparties they named,
+        // and a counterparty id lives in three tables. Ledger's per-row seam
+        // refuses a reconciled row, which here would strand it on a row this
+        // fold removes. See .docs/features/counterparties/retention.md.
+        'Modules/Counterparties/Internal/Actions/MergeCounterparties.php anomaly_suppression_rules 1',
+        'Modules/Counterparties/Internal/Actions/MergeCounterparties.php migration_source_map 1',
+        'Modules/Counterparties/Internal/Actions/MergeCounterparties.php transactions 1',
         'Modules/DevMode/Internal/Queue/QueueActions.php jobs 2',
         'Modules/Import/Public/Actions/ApplyEnrichments.php pending_enrichment_conflicts 1',
         'Modules/Import/Public/Actions/ApplyEnrichments.php transactions 1',

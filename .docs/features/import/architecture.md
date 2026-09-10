@@ -555,6 +555,21 @@ friendly_name)` into the survivor's `merged_from` JSON provenance column,
 and deletes the absorbed rows — both writes inside one transaction so a
 failure mid-way leaves the table untouched.
 
+The friendly name is what `CounterpartyResolver` slugs a counterparty
+from where the file names no counterparty of its own, so rewriting it
+here used to leave the reader's history straddling two rows: the names
+that owned the old counterparties stopped owning one, and the next
+import minted a second for the merged name. The same transaction
+therefore calls `Counterparties`' `MergesCounterparties::fold()` with
+the pre-merge friendly names, which repoints the absorbed
+counterparties' transactions onto the survivor, renames the survivor to
+the merged name so the next import resolves straight to it, and removes
+the rows it emptied — see
+[counterparty retention](../counterparties/retention.md#what-still-deletes-a-counterparty)
+for what travels with a merge and what does not. Its op-log entries come
+back on the returned DTO and join this action's own, dispatched together
+once the transaction commits.
+
 `CreateMerchantAlias` is the sole permissible write path from the UI /
 Livewire / queue worker into `merchant_aliases`: `updateOrCreate` keyed
 on `(user_id, pattern)` means calling it twice for the same user + raw

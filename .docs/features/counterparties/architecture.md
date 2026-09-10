@@ -37,7 +37,9 @@ What the module explicitly does NOT do:
   nothing scheduled writes to `transactions` (see
   [retention](retention.md)). The `transactions.counterparty_id` FK is
   from the user side only, so even a delete arriving from a peer takes
-  no ledger row with it.
+  no ledger row with it. The one row that does leave is one the reader
+  merged away by hand, and its transactions move onto the survivor
+  first.
 - It never resolves itself. The 7-step precedence chain depends on
   contracts owned by other modules — `ResolvesKnownCounterpartyIban`
   from `Import`, `MerchantNameResolver` from `Import`. The resolver is
@@ -103,6 +105,11 @@ must carry its own explicit filter regardless of the trait.
     — the single entry point cross-module consumers
     (`Import`, `Ledger`, `Chains`, `Recurring`, `Categorization`)
     inject when they need to know a row's counterparty.
+  - `MergesCounterparties::fold($user, $formerNames, $survivingName)` —
+    what `Import`'s `MergeMerchantAliases` calls inside its own
+    transaction when the reader merges two aliases. It returns a
+    `CounterpartyMergeDto` carrying the op-log entries for the caller to
+    dispatch after that transaction commits.
 - **Pipeline/**
   - `ResolvesCounterparties::run($tx, $user)` — the pipeline-stage
     contract `ImportPipeline` consumes. Bound to
@@ -114,6 +121,8 @@ must carry its own explicit filter regardless of the trait.
   - `CounterpartyResolutionDto` — `(counterpartyId, slug, type)`
     returned by the resolver. `counterpartyId = null` when
     `type='self_account'`.
+  - `CounterpartyMergeDto` — `(survivingId, absorbed, movedTransactions,
+    events)` returned by the fold.
 - **Support/**
   - `CounterpartyDefaultName::resolve($storedName, $metadata)` — the one
     read seam that turns a name the app supplied into the reader's own
@@ -130,6 +139,12 @@ must carry its own explicit filter regardless of the trait.
 
 `Internal/` houses the implementation:
 
+- **Internal/Actions/MergeCounterparties** — the fold behind
+  `MergesCounterparties`. It is the only thing in the app that removes a
+  `counterparties` row, and the only writer here that reaches a table
+  this module does not own; both are pinned, and
+  [retention](retention.md#what-still-deletes-a-counterparty) is where
+  the table-by-table decision is written down.
 - **Internal/Actions/LabelCounterparty** — the write seam behind every
   triage decision: accept, hand-label, ignore. It re-derives the slug
   from the new display name, announces the write with `EntityMutated`
@@ -352,7 +367,9 @@ somebody has decided how.
 ## Retention
 
 Nothing prunes `counterparties`, and nothing on a timer writes to
-`transactions`. A row the resolver creates stays. Each device holds a
+`transactions`. A row the resolver creates stays until the reader merges
+the merchant alias that named it into another, which folds its
+transactions onto the survivor before the emptied row goes. Each device holds a
 partial replica, so "no transaction points at this row" and "the
 transactions that point at it have not arrived yet" are the same
 observation — [retention](retention.md) carries the paired Mac and

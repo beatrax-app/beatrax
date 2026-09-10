@@ -8,12 +8,14 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Compilers\BladeCompiler;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Counterparties\Internal\Actions\MergeCounterparties;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Internal\Pipeline\ResolveCounterpartyStage;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
+use Modules\Counterparties\Public\Contracts\MergesCounterparties;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 
 final class CounterpartiesServiceProvider extends ServiceProvider
@@ -24,6 +26,7 @@ final class CounterpartiesServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CounterpartyResolver::class, CounterpartyResolverService::class);
         $this->app->singleton(ResolvesCounterparties::class, ResolveCounterpartyStage::class);
+        $this->app->bind(MergesCounterparties::class, MergeCounterparties::class);
     }
 
     public function boot(BladeCompiler $blade, LivewireManager $livewire): void
