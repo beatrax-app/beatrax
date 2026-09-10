@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Se potti ei ole enää käytettävissä. Valitse toinen.',
         'move_same_pot' => 'Potti ei voi siirtää rahaa itseensä. Valitse toinen potti.',
         'move_cross_account' => 'Potit vaihtavat rahaa vain saman tilin sisällä, ja :name on tilillä :account.',
+        'move_cross_currency' => 'Potit vaihtavat rahaa vain samassa valuutassa, ja :name on valuutassa :currency.',
         'pot_missing' => 'Se potti ei ole enää käytettävissä.',
         'operation_failed' => 'Tämä ei mennyt läpi. Rahaa ei siirretty — yritä uudelleen.',
     ],

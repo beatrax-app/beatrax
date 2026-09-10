@@ -6,6 +6,7 @@ namespace Modules\Forecasting\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -76,9 +77,18 @@ final readonly class BalanceAnchorResolver
     // through to the reader's own figure.
     private function fromCardStatements(int $accountId, User $user, string $defaultCurrency): ?BalanceAnchorDto
     {
+        $currency = $defaultCurrency !== '' ? $defaultCurrency : Currency::Eur->value;
+
+        // The newest statement printed in the currency this anchor runs in,
+        // never simply the newest: added to a charge sum filtered to the
+        // account's currency, USD 500.00 opened the projection as EUR 500.00.
+        // A row predating the column carries the account's own.
         $row = $this->db->connection()->table('card_statements')
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
+            ->where(static function (Builder $sameMoney) use ($currency): void {
+                $sameMoney->whereNull('currency')->orWhere('currency', $currency);
+            })
             ->orderByDesc('period_end')
             ->orderByDesc('id')
             ->first();
@@ -96,8 +106,6 @@ final readonly class BalanceAnchorResolver
         $closedOn = $rawPeriodEnd !== ''
             ? CarbonImmutable::parse($rawPeriodEnd)
             : $this->clock->now();
-
-        $currency = $defaultCurrency !== '' ? $defaultCurrency : Currency::Eur->value;
 
         return new BalanceAnchorDto(
             accountId: $accountId,

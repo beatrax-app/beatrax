@@ -193,14 +193,19 @@ final readonly class PotBalanceQuery
         return $result;
     }
 
+    // In the pot's own denomination, the same bound balanceForPot() applies:
+    // the caller converts this figure as if it were the pot's currency, so a
+    // movement carrying another one would be re-priced at a rate it never had.
     public function netMovementForPotSince(int $potId, string $since, User $user): int
     {
         return (int) $this->db->connection()
             ->table('pot_movements')
-            ->where('user_id', $user->id)
-            ->where('pot_id', $potId)
-            ->where('created_at', '>=', $since)
-            ->sum('amount_minor');
+            ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
+            ->where('pot_movements.user_id', $user->id)
+            ->where('pot_movements.pot_id', $potId)
+            ->whereColumn('pot_movements.currency', 'pots.currency')
+            ->where('pot_movements.created_at', '>=', $since)
+            ->sum('pot_movements.amount_minor');
     }
 
     public function linkedPotIdForGoal(int $goalId, User $user): ?int

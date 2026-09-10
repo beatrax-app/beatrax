@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'That pot is no longer available. Pick another one.',
         'move_same_pot' => 'A pot cannot move money to itself. Pick a different pot.',
         'move_cross_account' => 'Pots only exchange money inside one account, and :name is in :account.',
+        'move_cross_currency' => 'Pots only exchange money in one currency, and :name is held in :currency.',
         'pot_missing' => 'That pot is no longer available.',
         'operation_failed' => 'That did not go through. No money was moved — try again.',
     ],

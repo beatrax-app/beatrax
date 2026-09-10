@@ -1,6 +1,6 @@
 # Why a pot operation can be refused, and how the refusals differ
 
-`PotWriter::transfer()` distinguishes six ways a move can be turned down, each
+`PotWriter::transfer()` distinguishes seven ways a move can be turned down, each
 with its own exception type. `PotsPage::movePot()` used to catch three of them
 and let the rest fall into `catch (\InvalidArgumentException)` — and because
 `PotNotFoundException` extends `InvalidArgumentException`, four unrelated
@@ -15,9 +15,8 @@ things were wrong with that sentence, and both are the same defect twice:
 - **It named a cause that had been ruled out.** Moving between pots on two
   accounts, and picking one pot as both source and target, are ordinary things
   a person does. Nothing is malformed — the operation is simply not supported —
-  so re-checking correct fields could never clear it. Because "different
-  accounts" is also *every* cross-currency case, a reader holding a yen pot and
-  a euro pot was given no hint that currency was involved at all.
+  so re-checking correct fields could never clear it. A reader holding a yen pot
+  and a euro pot was given no hint that currency was involved at all.
 - **It described the wrong operation.** "That pot could not be saved" is the
   create/edit form's wording. `fundPot()`, `withdrawPot()` and `movePot()`
   reused it, so a reader who was *moving money* was told a pot had failed to
@@ -33,7 +32,19 @@ things were wrong with that sentence, and both are the same defect twice:
 | Source and target are one pot | `SelfTransferException` | `errors.move_same_pot` | under the **Move to** select |
 | Target pot gone | `TargetPotNotFoundException` | `errors.move_target_missing` | under the **Move to** select |
 | The two pots sit on different accounts | `CrossAccountTransferException` | `errors.move_cross_account`, naming the target's account | under the **Move to** select |
+| The two pots hold different currencies | `CrossCurrencyTransferException` | `errors.move_cross_currency`, naming the target's currency | under the **Move to** select |
 | Amount exceeds the source pot | `InsufficientUnallocatedException` | `errors.amount_exceeds_pot_balance`, naming the pot and the figure | under the amount box |
+
+"Different accounts" is not the same question as "different currencies", and
+reading it as though it were is what left the second one unguarded.
+`pots.currency` is frozen when the pot is made and `accounts.default_currency`
+is not, so one account genuinely holds pots in two denominations — the case
+[`PotsInACurrencyTheAccountNoLongerUsesTest`](../../../Modules/Pots/tests/Feature/PotsInACurrencyTheAccountNoLongerUsesTest.php)
+already covers. `transfer()` stamped the **source** pot's currency on both legs,
+so ¥50,000 moved into a euro pot arrived as 50,000 euro cents and the card read
+EUR 500.00 the reader never had. The picker no longer offers a target in another
+currency (`PotRow::moveTargetsAmong()`, which both the sheet and the desktop
+modal draw from), and the writer refuses one that reaches it anyway.
 
 `TargetPotNotFoundException` narrows `PotNotFoundException` and is caught first —
 the subclass would otherwise be swallowed by its parent's arm and print the

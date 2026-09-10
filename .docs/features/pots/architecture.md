@@ -50,9 +50,10 @@ column update:
   balance the same way.
 - **transfer** — an atomic pair of movements (a `transfer_out` on the source
   pot, a `transfer_in` on the target), both pots required active, owned by
-  the user, and sharing the same `account_id` — transfers are intra-account
-  only. The source balance check runs inside the same transaction as both
-  inserts.
+  the user, sharing the same `account_id` — transfers are intra-account
+  only — and sharing the same `currency`, which the account rule does not
+  imply ([move refusals](move-refusals.md)). The source balance check runs
+  inside the same transaction as both inserts.
 - **archive** — releases any remaining balance back to unallocated via one
   final `withdraw` movement (memo: "Released on archive"), then flips
   `status` to `archived`, both in the same transaction. An archived pot
@@ -147,7 +148,8 @@ matching `GoalWriter`'s convention.
 - **Exceptions** — `PotNotFoundException` (and its narrower
   `TargetPotNotFoundException`), `InvalidPotAmountException`,
   `InsufficientUnallocatedException`, `SelfTransferException`,
-  `CrossAccountTransferException`, `GoalAlreadyLinkedException`,
+  `CrossAccountTransferException`, `CrossCurrencyTransferException`,
+  `GoalAlreadyLinkedException`,
   `PotAlreadyLinkedException`, `PotLinkedToCategoryException`,
   `AccountCannotHoldPotsException`.
 

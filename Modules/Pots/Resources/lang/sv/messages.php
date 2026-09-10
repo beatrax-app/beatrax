@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Den sparpotten är inte längre tillgänglig. Välj en annan.',
         'move_same_pot' => 'En sparpott kan inte flytta pengar till sig själv. Välj en annan sparpott.',
         'move_cross_account' => 'Sparpotter byter bara pengar inom ett och samma konto, och :name ligger på :account.',
+        'move_cross_currency' => 'Sparpotter byter bara pengar i en och samma valuta, och :name är i :currency.',
         'pot_missing' => 'Den sparpotten är inte längre tillgänglig.',
         'operation_failed' => 'Det gick inte igenom. Inga pengar flyttades — försök igen.',
     ],

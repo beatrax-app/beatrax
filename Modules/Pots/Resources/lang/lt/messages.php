@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Ši taupyklė nebepasiekiama. Pasirink kitą.',
         'move_same_pot' => 'Taupyklė negali perkelti pinigų pati sau. Pasirink kitą taupyklę.',
         'move_cross_account' => 'Taupyklės keičiasi pinigais tik vienoje sąskaitoje, o :name yra sąskaitoje :account.',
+        'move_cross_currency' => 'Taupyklės keičiasi pinigais tik viena valiuta, o :name yra :currency valiuta.',
         'pot_missing' => 'Ši taupyklė nebepasiekiama.',
         'operation_failed' => 'Nepavyko. Pinigai nebuvo perkelti — bandyk dar kartą.',
     ],

@@ -350,3 +350,39 @@ it('opens a card on the baseline the wizard asked the reader to confirm', functi
     expect($anchor->openingBalanceMinor)->toBe(-70400)
         ->and($anchor->source)->toBe('sum_of_transactions');
 });
+
+// `card_statements` carries the currency its figures were printed in, and the
+// anchor added that integer to a transaction sum filtered to the ACCOUNT's
+// currency. A dollar statement on a euro card opened the whole projection on
+// USD 500.00 read as EUR 500.00.
+it('opens on the newest statement printed in the account\'s own currency', function (): void {
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-15 09:00:00'));
+
+    $accountId = barInsertAccount($this->db, $this->user->id, AccountKind::IcsCard->value);
+    $userId = $this->user->id;
+
+    $statement = static fn (string $periodEnd, int $openBalanceMinor, string $currency): array => [
+        'user_id' => $userId,
+        'account_id' => $accountId,
+        'import_run_id' => null,
+        'period_start' => '2026-04-01 00:00:00',
+        'period_end' => $periodEnd,
+        'total_amount_minor' => -$openBalanceMinor,
+        'open_balance_minor' => $openBalanceMinor,
+        'currency' => $currency,
+        'state' => 'open',
+        'created_at' => '2026-05-01 00:00:00',
+        'updated_at' => '2026-05-01 00:00:00',
+    ];
+
+    $this->db->connection()->table('card_statements')->insert($statement('2026-04-30 00:00:00', 20000, Currency::Eur->value));
+    $this->db->connection()->table('card_statements')->insert($statement('2026-05-31 00:00:00', 50000, Currency::Usd->value));
+
+    barInsertTransaction($this->db, $this->user->id, $accountId, -7000, '2026-06-04');
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->currency)->toBe(Currency::Eur->value)
+        ->and($anchor->openingBalanceMinor)->toBe(-27000)
+        ->and($anchor->source)->toBe('ics_card_statement');
+});

@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Cette cagnotte n\'est plus disponible. Choisis-en une autre.',
         'move_same_pot' => 'Une cagnotte ne peut pas se déplacer de l\'argent à elle-même. Choisis une autre cagnotte.',
         'move_cross_account' => 'Les cagnottes n\'échangent de l\'argent qu\'au sein d\'un même compte, et :name est dans :account.',
+        'move_cross_currency' => 'Les cagnottes n\'échangent de l\'argent que dans une même devise, et :name est en :currency.',
         'pot_missing' => 'Cette cagnotte n\'est plus disponible.',
         'operation_failed' => 'Cela n\'a pas abouti. Aucun argent n\'a été déplacé — réessaie.',
     ],

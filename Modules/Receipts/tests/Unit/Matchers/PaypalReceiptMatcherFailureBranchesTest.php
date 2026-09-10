@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\ReceiptBodyText;
 use Modules\Receipts\Public\Enums\MatchOutcomeKind;
@@ -10,7 +9,7 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function paypalFailMatcher(): PaypalReceiptMatcher
 {
-    return new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class), new ReceiptBodyText);
+    return new PaypalReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 }
 
 function paypalPlainEml(string $body): string

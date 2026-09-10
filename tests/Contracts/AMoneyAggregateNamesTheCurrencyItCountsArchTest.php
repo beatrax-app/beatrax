@@ -22,14 +22,6 @@ const MONEY_AGGREGATE_PINS = [
         'reason' => 'SUM(id) over row ids, which is a checksum and not money at all',
         'proves' => '/SUM\(id\)/',
     ],
-    'Modules/Pots/Internal/Services/PotRowLoader.php::balanceForPot' => [
-        'reason' => 'one pot, and pots.currency is frozen at creation, so the movements it sums are all in that one currency',
-        'proves' => "/where\('pot_id', \\\$potId\)/",
-    ],
-    'Modules/Pots/Public/Services/PotBalanceQuery.php::netMovementForPotSince' => [
-        'reason' => 'one pot, for the same reason',
-        'proves' => "/where\('pot_id', \\\$potId\)/",
-    ],
     'Modules/Reports/Internal/Aggregation/ReportMetric.php::sumExpr' => [
         'reason' => 'a SQL fragment with no query of its own; CurrencyModeApplier re-runs the dimension query one settled_currency at a time and every caller takes the fragment from there',
         'proves' => '/@return literal-string/',

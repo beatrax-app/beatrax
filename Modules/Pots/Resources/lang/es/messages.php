@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Esa hucha ya no está disponible. Elige otra.',
         'move_same_pot' => 'Una hucha no puede moverse dinero a sí misma. Elige otra hucha.',
         'move_cross_account' => 'Las huchas solo intercambian dinero dentro de una misma cuenta, y :name está en :account.',
+        'move_cross_currency' => 'Las huchas solo intercambian dinero en una misma moneda, y :name está en :currency.',
         'pot_missing' => 'Esa hucha ya no está disponible.',
         'operation_failed' => 'No se ha completado. No se ha movido dinero: inténtalo de nuevo.',
     ],

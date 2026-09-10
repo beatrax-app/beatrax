@@ -71,7 +71,7 @@ it('stamps the key even on an outcome the matcher declined to parse', function (
             return true;
         }
 
-        public function match(string $emlRaw): MatchOutcomeDto
+        public function match(string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto
         {
             return MatchOutcomeDto::skipped('declined');
         }

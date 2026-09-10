@@ -28,6 +28,7 @@ use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
+use Modules\Ledger\Public\Support\StatementDenomination;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 /**
@@ -348,8 +349,11 @@ final class ReconcilePage extends Component
         // being built, so a file the reader discarded still has one. This
         // screen is where they agree the account really holds this much, and
         // Complete locks the rows against it.
-        $row = $connection->table('statement_summaries')
-            ->join('import_runs', 'import_runs.id', '=', 'statement_summaries.import_run_id')
+        $row = StatementDenomination::boundToTheAccount(
+            $connection->table('statement_summaries')
+                ->join('import_runs', 'import_runs.id', '=', 'statement_summaries.import_run_id'),
+            'closing_balance_currency',
+        )
             ->where('import_runs.status', ImportRunStatus::Confirmed->value)
             ->where('statement_summaries.user_id', $userId)
             ->where('statement_summaries.account_id', $this->accountId)
@@ -383,8 +387,10 @@ final class ReconcilePage extends Component
         // exists from the moment a file is PREVIEWED, and CardStatementUpserter
         // promotes every ICS summary it finds. Left joined because
         // import_run_id is nullOnDelete, and such a row IS in the ledger.
-        $row = $connection->table('card_statements')
-            ->leftJoin('import_runs', 'import_runs.id', '=', 'card_statements.import_run_id')
+        $row = StatementDenomination::cardStatementBoundToItsAccount(
+            $connection->table('card_statements')
+                ->leftJoin('import_runs', 'import_runs.id', '=', 'card_statements.import_run_id'),
+        )
             ->where('card_statements.user_id', $userId)
             ->where('card_statements.account_id', $this->accountId)
             ->whereNotNull('card_statements.total_amount_minor')
@@ -410,10 +416,10 @@ final class ReconcilePage extends Component
         }
     }
 
-    // A printed statement is denominated in one currency, the account's own,
-    // so that is the line a multi-currency account is reconciled against —
-    // never the reader's base currency, which the figure was labelled with
-    // while being read off a different account's ledger.
+    // A printed statement is denominated in one currency, and the two prefills
+    // above are narrowed to the statements printed in the account's own, so
+    // this label is the figure's and not a second guess at it — never the
+    // reader's base currency, which it was labelled with before.
     private function statementCurrency(ConnectionInterface $connection, int $userId, BaseCurrency $baseCurrency): string
     {
         $currency = $this->accountId === null

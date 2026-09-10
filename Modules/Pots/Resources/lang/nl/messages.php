@@ -131,6 +131,7 @@ return [
         'move_target_missing' => 'Dat potje is niet meer beschikbaar. Kies een ander.',
         'move_same_pot' => 'Een potje kan geen geld naar zichzelf verplaatsen. Kies een ander potje.',
         'move_cross_account' => 'Potjes wisselen alleen geld uit binnen één rekening, en :name staat op :account.',
+        'move_cross_currency' => 'Potjes wisselen alleen geld uit in één valuta, en :name staat in :currency.',
         'pot_missing' => 'Dat potje is niet meer beschikbaar.',
         'operation_failed' => 'Dit is niet doorgegaan. Er is geen geld verplaatst — probeer het opnieuw.',
     ],

@@ -144,6 +144,35 @@ replaying an op-log entry minted before the repair writes that entry's payload
 back through the query builder, so the long shape can still arrive from a device
 that has been offline.
 
+## A statement is only this account's balance in this account's currency
+
+`statement_summaries` records `opening_balance_currency` and
+`closing_balance_currency` beside the two figures, because a statement is
+printed in one currency and the account it is matched to is denominated in
+another column entirely (`accounts.default_currency`). The match itself is made
+on the IBAN, and an IBAN can carry more than one line.
+
+All three readers of those figures took the account's denomination and never
+the statement's, so a statement printed in dollars
+
+- anchored a euro account at its own integer, through
+  `BackfillStartingBalanceFromStatementSummaries`, and every balance, net-worth
+  point, forecast anchor and reconcile difference downstream inherited it;
+- was offered in the import wizard as that account's starting balance, through
+  `StatementSummaryStartingBalanceDetector`;
+- prefilled the reconcile box, through `ReconcilePage`, under the euro sign.
+
+`Modules\Ledger\Public\Support\StatementDenomination` is the one predicate all
+three now narrow with: the row is used only where its own currency column is the
+account's, or is null — rows written before the column existed carry null and
+were the account's own. `card_statements` keeps one `currency` for the whole
+statement and the reconcile prefill asks the same question of it.
+
+`AFigureIsReadWithTheCurrencyColumnBesideItArchTest` derives the
+`<prefix>_minor` / `<prefix>_currency` pairs from the migrations rather than
+listing them, so a table that grows one later is covered without the guard being
+edited.
+
 ## The advice must not name a route that does not exist
 
 The panel showed one sentence for every non-zero difference: toggle cleared rows

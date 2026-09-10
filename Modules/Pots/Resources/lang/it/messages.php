@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Quel salvadanaio non è più disponibile. Scegline un altro.',
         'move_same_pot' => 'Un salvadanaio non può spostare denaro su se stesso. Scegli un altro salvadanaio.',
         'move_cross_account' => 'I salvadanai si scambiano denaro solo all\'interno di uno stesso conto, e :name è in :account.',
+        'move_cross_currency' => 'I salvadanai si scambiano denaro solo nella stessa valuta, e :name è in :currency.',
         'pot_missing' => 'Quel salvadanaio non è più disponibile.',
         'operation_failed' => 'Non è andata a buon fine. Nessun denaro è stato spostato: riprova.',
     ],

@@ -136,6 +136,7 @@ return [
         'move_target_missing' => 'Šī krājkase vairs nav pieejama. Izvēlieties citu.',
         'move_same_pot' => 'Krājkase nevar pārvietot naudu pati sev. Izvēlieties citu krājkasi.',
         'move_cross_account' => 'Krājkases apmainās ar naudu tikai viena konta ietvaros, un :name ir kontā :account.',
+        'move_cross_currency' => 'Krājkases apmainās ar naudu tikai vienā valūtā, un :name ir :currency valūtā.',
         'pot_missing' => 'Šī krājkase vairs nav pieejama.',
         'operation_failed' => 'Neizdevās. Nauda netika pārvietota — mēģiniet vēlreiz.',
     ],

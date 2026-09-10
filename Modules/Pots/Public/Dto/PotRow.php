@@ -45,6 +45,23 @@ final class PotRow extends Data
         return null;
     }
 
+    // Where this pot's money may go: another pot on the same account holding the
+    // same currency. Both the sheet and the desktop modal draw the list, and
+    // filtering it in each blade is how one of them came to offer a target the
+    // writer refuses.
+    /**
+     * @param  list<self>  $onTheSameAccount
+     * @return list<self>
+     */
+    public function moveTargetsAmong(array $onTheSameAccount): array
+    {
+        return array_values(array_filter(
+            $onTheSameAccount,
+            fn (self $candidate): bool => $candidate->id !== $this->id
+                && $candidate->currency === $this->currency,
+        ));
+    }
+
     public function categorySpentIsPartial(): bool
     {
         return $this->categorySpentUnconverted !== [];

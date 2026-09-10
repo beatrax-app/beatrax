@@ -45,7 +45,7 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
     // a yen line read as a hundredth of itself.
     private static function amountRegex(): string
     {
-        return '/('.ReceiptBodyText::currencyMarkers().')\s*([0-9][0-9.,]*)/i';
+        return '/'.ReceiptBodyText::markedAmount().'/i';
     }
 
     public function key(): string
@@ -74,7 +74,7 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
         return in_array($domain, self::ICS_DOMAINS, true);
     }
 
-    public function match(string $emlRaw): MatchOutcomeDto
+    public function match(string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto
     {
         $parsed = $this->reader->read($emlRaw);
         $body = $this->resolveBody($parsed);

@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Ta hranilnik ni več na voljo. Izberi drugega.',
         'move_same_pot' => 'Hranilnik ne more prenesti denarja vase. Izberi drug hranilnik.',
         'move_cross_account' => 'Hranilniki si izmenjujejo denar samo znotraj enega računa, :name pa je na računu :account.',
+        'move_cross_currency' => 'Hranilniki si izmenjujejo denar samo v eni valuti, :name pa je v valuti :currency.',
         'pot_missing' => 'Ta hranilnik ni več na voljo.',
         'operation_failed' => 'Ni šlo skozi. Noben denar ni bil prenesen — poskusi znova.',
     ],

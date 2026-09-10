@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Essa reserva já não está disponível. Escolhe outra.',
         'move_same_pot' => 'Uma reserva não pode mover dinheiro para si própria. Escolhe outra reserva.',
         'move_cross_account' => 'As reservas só trocam dinheiro dentro da mesma conta, e :name está em :account.',
+        'move_cross_currency' => 'As reservas só trocam dinheiro na mesma moeda, e :name está em :currency.',
         'pot_missing' => 'Essa reserva já não está disponível.',
         'operation_failed' => 'Não foi concluído. Não se moveu dinheiro — tenta novamente.',
     ],

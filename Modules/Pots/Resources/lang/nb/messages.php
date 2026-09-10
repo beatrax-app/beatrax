@@ -132,6 +132,7 @@ return [
         'move_target_missing' => 'Den sparepotten er ikke lenger tilgjengelig. Velg en annen.',
         'move_same_pot' => 'En sparepott kan ikke flytte penger til seg selv. Velg en annen sparepott.',
         'move_cross_account' => 'Sparepotter bytter bare penger innenfor én konto, og :name ligger på :account.',
+        'move_cross_currency' => 'Sparepotter bytter bare penger i én valuta, og :name er i :currency.',
         'pot_missing' => 'Den sparepotten er ikke lenger tilgjengelig.',
         'operation_failed' => 'Det gikk ikke igjennom. Ingen penger ble flyttet — prøv igjen.',
     ],

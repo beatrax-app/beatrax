@@ -8,7 +8,6 @@ use Modules\Core\Public\Support\SafeDate;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use Modules\Ingestion\Public\Enums\SyntheticIban;
 use Modules\Ledger\Public\Enums\Currency;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
@@ -35,7 +34,6 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
 
     public function __construct(
         private EmlMimeReader $reader,
-        private BaseCurrency $baseCurrency,
         private ReceiptBodyText $text,
     ) {}
 
@@ -44,7 +42,7 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
     // a '¥' figure was read at no currency the message had named.
     private static function markedAmountRegex(): string
     {
-        return '/('.ReceiptBodyText::currencyMarkers().')\s*([0-9.,]+)/i';
+        return '/'.ReceiptBodyText::markedAmount().'/i';
     }
 
     private static function labelledAmountRegex(): string
@@ -85,7 +83,7 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
         return $domain === self::PAYPAL_DOMAIN;
     }
 
-    public function match(string $emlRaw): MatchOutcomeDto
+    public function match(string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto
     {
         $parsed = $this->reader->read($emlRaw);
         $body = $parsed->textBody ?? $parsed->htmlBody;
@@ -98,12 +96,12 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
             return MatchOutcomeDto::skipped('paypal-login-notification');
         }
 
-        return $this->parseReceipt($parsed, $body, $subject);
+        return $this->parseReceipt($parsed, $body, $subject, $ownerCurrency ?? Currency::Eur->value);
     }
 
-    private function parseReceipt(ParsedMimeMessage $parsed, string $body, string $subject): MatchOutcomeDto
+    private function parseReceipt(ParsedMimeMessage $parsed, string $body, string $subject, string $ownerCurrency): MatchOutcomeDto
     {
-        $charge = $this->extractCharge($body);
+        $charge = $this->extractCharge($body, $ownerCurrency);
         $merchant = $this->resolveMerchant($body);
         if ($charge === null || $merchant === null) {
             return MatchOutcomeDto::unmatched();
@@ -148,12 +146,12 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
     /**
      * @return array{string, int, string, int, string}|null
      */
-    private function extractCharge(string $body): ?array
+    private function extractCharge(string $body, string $ownerCurrency): ?array
     {
         if (preg_match(self::TRANSACTION_ID_REGEX, $body, $txMatches) !== 1) {
             return null;
         }
-        $amountPair = $this->extractNativeAmount($body);
+        $amountPair = $this->extractNativeAmount($body, $ownerCurrency);
         if ($amountPair === null) {
             return null;
         }
@@ -176,14 +174,14 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
     /**
      * @return array{int, string}|null
      */
-    private function extractNativeAmount(string $body): ?array
+    private function extractNativeAmount(string $body, string $ownerCurrency): ?array
     {
         // USD is checked first when both `$ X USD` and `EUR Y` appear
         // (foreign-currency receipt shape: native USD, settled EUR) —
         // its anchor is more specific than the bare marked-amount anchor.
         return $this->nativeFromUsd($body)
             ?? $this->nativeFromMarked($body)
-            ?? $this->nativeFromLabelled($body);
+            ?? $this->nativeFromLabelled($body, $ownerCurrency);
     }
 
     /**
@@ -213,18 +211,18 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
         return $minor === null ? null : [-$minor, $currency];
     }
 
-    // The reader's base is the last resort, for a figure the message put no
-    // mark of any kind against: a PayPal total with no code and no glyph is
-    // denominated by nothing the mail says.
+    // The owner's reporting currency is the last resort, for a figure the
+    // message put no mark of any kind against: a PayPal total with no code and
+    // no glyph is denominated by nothing the mail says.
     /**
      * @return array{int, string}|null
      */
-    private function nativeFromLabelled(string $body): ?array
+    private function nativeFromLabelled(string $body, string $ownerCurrency): ?array
     {
         if (preg_match(self::labelledAmountRegex(), $body, $m) !== 1) {
             return null;
         }
-        $currency = $this->text->currencyMarked($m[1], $this->baseCurrency->code());
+        $currency = $this->text->currencyMarked($m[1], $ownerCurrency);
         $minor = $this->text->amountMinor($m[2], $currency);
 
         return $minor === null ? null : [-$minor, $currency];
