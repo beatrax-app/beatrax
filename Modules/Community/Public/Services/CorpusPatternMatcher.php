@@ -74,8 +74,17 @@ final class CorpusPatternMatcher
         // Each edge is asserted only where the needle's OWN edge is alphanumeric.
         // A pattern ending in punctuation carries its own boundary — asserting
         // past it made `AMAZON.` stop matching `AMAZON.NL`.
-        $before = self::isWordEdge(mb_substr($needle, 0, 1)) ? '(?<![\p{L}\p{N}])' : '';
-        $after = self::isWordEdge(mb_substr($needle, -1)) ? '(?![\p{L}\p{N}])' : '';
+        $opensOnAWord = self::isWordEdge(mb_substr($needle, 0, 1));
+        $closesOnAWord = self::isWordEdge(mb_substr($needle, -1));
+
+        // That reading holds only while some edge is still asserted. Punctuation
+        // at both ends asserts neither, so `-a-` clears the pattern floor on
+        // three characters and then matches inside `super-a-market`: a needle
+        // with no word edge to anchor on takes the assertion at both.
+        $unanchored = ! $opensOnAWord && ! $closesOnAWord;
+
+        $before = $opensOnAWord || $unanchored ? '(?<![\p{L}\p{N}])' : '';
+        $after = $closesOnAWord || $unanchored ? '(?![\p{L}\p{N}])' : '';
 
         return '#'.$before.preg_quote($needle, '#').$after.'#iu';
     }

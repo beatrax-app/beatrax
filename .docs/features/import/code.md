@@ -154,7 +154,9 @@ Modules/Import/
     parsed Play receipt resolves against. Both hold their sentinel
     as a constant reading `Ingestion`'s `SyntheticIban` enum.
   - `CreateMerchantAlias::__invoke($pattern, $friendlyName, $user)`,
-    `MergeMerchantAliases::__invoke($sourceId, $targetId, $user)`.
+    `MergeMerchantAliases::__invoke($user, $aliasIds, $friendlyName,
+    $generalizedPattern)`, which also folds the counterparties those
+    aliases named through `MergesCounterparties`.
   - `AccountDenomination::forStatement(?$statementCurrency)` is the one
     place an account's denomination is decided: the file's own currency,
     and the reader's reporting currency only when the file names none —

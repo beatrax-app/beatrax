@@ -1550,7 +1550,11 @@ devices editing different fields of the same row both keep their change.
 
 `migration_import_baseline` and `migration_source_map` are rewritten wholesale
 by a migration run and never edited by hand; a partial replay of one would
-describe a state neither device was ever in.
+describe a state neither device was ever in. The one exception announces
+itself: `MergeCounterparties` repoints the `migration_source_map` rows naming
+an absorbed counterparty and dispatches a `Set` for each, because
+`SourceMapWriter` reads an existing mapping back rather than resolving again
+and would otherwise hand a removed id to the next re-import.
 
 ### Ten more tables brought under merge rules
 

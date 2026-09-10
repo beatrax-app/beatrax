@@ -140,7 +140,9 @@ having answered the country question at all.
 `CorpusPatternMatcher::containsToken()`: a bare `mb_stripos` found the
 corpus token `OBI` inside "m*obi*el" and turned a phone bill into a DIY
 chain. The boundary is asserted only where the needle's own edge is
-alphanumeric, so `AMAZON.` still matches `AMAZON.NL`.
+alphanumeric, so `AMAZON.` still matches `AMAZON.NL` — except on a needle
+punctuated at both edges, which would otherwise assert nothing at all and
+match inside a longer run.
 
 **The alias tiers read one memoised list per reader.** Both of them share
 it, loaded and sorted once instead of two reads and a sort per

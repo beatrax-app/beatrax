@@ -10,6 +10,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\DateFactory;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Counterparties\Public\Contracts\MergesCounterparties;
+use Modules\Counterparties\Public\Dto\CounterpartyMergeDto;
 use Modules\Import\Internal\Services\MerchantAliasPattern;
 use Modules\Import\Models\MerchantAlias;
 use Modules\Import\Public\Services\MerchantNameResolver;
@@ -24,6 +26,7 @@ final readonly class MergeMerchantAliases
         private DateFactory $dates,
         private Dispatcher $events,
         private MerchantNameResolver $resolver,
+        private MergesCounterparties $counterparties,
     ) {}
 
     /**
@@ -73,6 +76,12 @@ final readonly class MergeMerchantAliases
             $absorbedIds = $this->deleteAbsorbed($user, $absorbed);
 
             $captured = $this->captureFor($user, $survivingId, $friendlyName, $generalizedPattern, $mergedFrom, $absorbedIds);
+
+            // The alias is the value the counterparty slug is derived from, so
+            // a merge that rewrote only this table left the next import to slug
+            // the merged name afresh and mint a second row beside the history.
+            $fold = $this->foldCounterparties($user, $absorbed, $survivingRow, $friendlyName);
+            $captured = [...$captured, ...$fold->events];
 
             return $this->reloadSurviving($user, $survivingId);
         });
@@ -133,6 +142,35 @@ final readonly class MergeMerchantAliases
         }
 
         return $events;
+    }
+
+    // Inside the transaction, and its ops go into the same batch: a rollback
+    // that left the counterparty fold announced would have the paired device
+    // repoint a history this device never moved.
+    /**
+     * @param  Collection<int, stdClass>  $absorbed
+     */
+    private function foldCounterparties(User $user, Collection $absorbed, stdClass $survivingRow, string $friendlyName): CounterpartyMergeDto
+    {
+        return $this->counterparties->fold($user, self::formerNames($absorbed, $survivingRow), $friendlyName);
+    }
+
+    // The surviving row first, so a merge onto a name no counterparty holds
+    // yet folds into the row the reader was already looking at rather than
+    // into whichever of the absorbed ones sorted first.
+    /**
+     * @param  Collection<int, stdClass>  $absorbed
+     * @return list<string>
+     */
+    private static function formerNames(Collection $absorbed, stdClass $survivingRow): array
+    {
+        $names = [self::rowString($survivingRow, 'friendly_name')];
+
+        foreach ($absorbed as $row) {
+            $names[] = self::rowString($row, 'friendly_name');
+        }
+
+        return $names;
     }
 
     /**

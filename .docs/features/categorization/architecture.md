@@ -321,10 +321,12 @@ and touches only `categorization_rules.active`; a global (unowned,
 defensive no-op, since neither module exposes a delete path for a
 global row today.
 
-**The model event alone is not enough for counterparties.** Nothing on
-this device deletes a `counterparties` row — retention there is
-indefinite ([counterparty retention](../counterparties/retention.md)) —
-and the deletes that can still reach the table go nowhere near a model:
+**The model event alone is not enough for counterparties.** One thing on
+this device deletes a `counterparties` row — merging two merchant aliases
+folds the counterparties they named into one
+([counterparty retention](../counterparties/retention.md)) — and neither
+that delete nor the ones that reach the table from elsewhere goes
+anywhere near a model:
 the sweep that used to prune them deleted through the query builder,
 and a peer whose build still prunes reaches this device as an op-log row
 `OpLogEntryApplier` writes the same way. A query-builder delete fires no
