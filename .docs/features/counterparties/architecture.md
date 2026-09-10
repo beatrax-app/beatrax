@@ -40,6 +40,13 @@ What the module explicitly does NOT do:
   no ledger row with it. The one row that does leave is one the reader
   merged away by hand, and its transactions move onto the survivor
   first.
+- Its rows are read by id and by reader, never by id alone. Because the
+  ledger side carries no foreign key, a deleted counterparty leaves its id
+  behind in `transactions.counterparty_id` for a later row to take — so an
+  id arriving at a read is not evidence of who owns the row it names.
+  `tests/Contracts/AReadOfCounterpartiesCarriesItsReaderArchTest.php` holds
+  every runtime read to naming a `user_id`, with migrations the one exception
+  because they run before any reader exists.
 - It never resolves itself. The 7-step precedence chain depends on
   contracts owned by other modules — `ResolvesKnownCounterpartyIban`
   from `Import`, `MerchantNameResolver` from `Import`. The resolver is
