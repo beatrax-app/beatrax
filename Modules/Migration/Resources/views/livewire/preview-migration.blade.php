@@ -102,7 +102,7 @@
 
     {{-- Footer action row — pinned bottom, 1px top border, 24px top padding. --}}
     <footer class="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white px-6 py-4 dark:bg-slate-950 dark:border-slate-700">
-        <div class="mx-auto max-w-5xl space-y-2">
+        <div class="safe-lift mx-auto max-w-5xl space-y-2">
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('migration::preview.footer_note') }}</p>
             <div class="flex items-center justify-between gap-3">
                 <x-core::secondary-button
