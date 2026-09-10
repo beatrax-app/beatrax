@@ -473,3 +473,61 @@ it('skips a booked row whose money will not parse and keeps the rest', function 
     'non-numeric amount' => [['transaction_amount' => ['amount' => 'not-a-number', 'currency' => 'EUR']]],
     'more precision than the currency allows' => [['transaction_amount' => ['amount' => '10.00123', 'currency' => 'EUR']]],
 ]);
+
+// The direction carries the sign, and an absent credit_debit_indicator reaches
+// the adapter as ''. That is not DBIT, so a payment the reader made landed in
+// the ledger as money arriving. The adapter already refuses a row whose amount
+// or currency it cannot read; a row that never said which way it went is one.
+it('refuses a booked row that did not state its direction rather than reading it as money in', function (): void {
+    $transactions = [
+        'transactions' => [[
+            'entry_reference' => 'REF-NO-DIRECTION',
+            'transaction_id' => 'TXN-NO-DIRECTION',
+            'status' => 'BOOK',
+            'booking_date' => '2026-03-10',
+            'value_date' => '2026-03-10',
+            'transaction_amount' => ['amount' => '40.00', 'currency' => 'EUR'],
+            'creditor' => ['name' => 'Test Merchant'],
+            'creditor_account' => ['iban' => 'NL00TEST0000000001'],
+            'debtor' => null,
+            'debtor_account' => null,
+            'remittance_information' => ['test'],
+            'bank_transaction_code' => null,
+        ]],
+        'continuation_key' => null,
+    ];
+    $client = ebFixtureHttpClient($transactions, $this->accountDetailsResponse);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    expect(iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials())))->toBe([]);
+});
+
+// The positive control: the same row, stated, still arrives -- otherwise a
+// guard that refused every row would read exactly the same way.
+it('still takes the row once the direction is stated', function (): void {
+    $transactions = [
+        'transactions' => [[
+            'entry_reference' => 'REF-WITH-DIRECTION',
+            'transaction_id' => 'TXN-WITH-DIRECTION',
+            'status' => 'BOOK',
+            'booking_date' => '2026-03-10',
+            'value_date' => '2026-03-10',
+            'transaction_amount' => ['amount' => '40.00', 'currency' => 'EUR'],
+            'credit_debit_indicator' => 'DBIT',
+            'creditor' => ['name' => 'Test Merchant'],
+            'creditor_account' => ['iban' => 'NL00TEST0000000001'],
+            'debtor' => null,
+            'debtor_account' => null,
+            'remittance_information' => ['test'],
+            'bank_transaction_code' => null,
+        ]],
+        'continuation_key' => null,
+    ];
+    $client = ebFixtureHttpClient($transactions, $this->accountDetailsResponse);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    $rows = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->amountMinor)->toBe(-4000);
+});
