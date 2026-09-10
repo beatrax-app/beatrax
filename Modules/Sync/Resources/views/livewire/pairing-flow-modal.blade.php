@@ -118,15 +118,33 @@
                 <p
                     class="mt-3 text-center text-xs text-amber-700 dark:text-amber-400"
                     x-data="{
+                        total: {{ $expiresInSeconds }},
+                        startedAt: Date.now(),
                         remaining: {{ $expiresInSeconds }},
                         interval: null,
+                        check: null,
                         get label() {
                             const m = Math.floor(this.remaining / 60);
                             const s = String(this.remaining % 60).padStart(2, '0');
                             return m + ':' + s;
                         },
                     }"
-                    x-init="interval = setInterval(() => remaining > 0 ? remaining-- : (clearInterval(interval), $wire.onCodeExpired()), 1000)"
+                    {{-- What is left comes from the clock, never from a tally of
+                         ticks. A background window is clamped to one tick a
+                         minute, which both over-reported the time left and never
+                         reached the branch that retires the code. --}}
+                    x-init="
+                        check = () => {
+                            remaining = Math.max(0, total - Math.round((Date.now() - startedAt) / 1000));
+                            if (remaining === 0) {
+                                clearInterval(interval);
+                                $wire.onCodeExpired();
+                            }
+                        };
+                        check();
+                        interval = setInterval(check, 1000);
+                    "
+                    x-on:visibilitychange.document="check()"
                 >
                     {{ Lang::get('sync::pairing.expires_in') }} <span x-text="label">{{ floor($expiresInSeconds / 60) }}:{{ str_pad((string) ($expiresInSeconds % 60), 2, '0', STR_PAD_LEFT) }}</span>
                 </p>
