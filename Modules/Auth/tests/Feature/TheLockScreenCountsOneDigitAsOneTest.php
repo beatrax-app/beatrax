@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
+use Modules\Auth\Public\Contracts\AppLockPinShape;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 
@@ -29,7 +30,9 @@ it('announces one digit in the singular and two in the plural', function (): voi
 it('offers an announcement for every dot the pad can fill', function (): void {
     Livewire\Livewire::test(LockScreen::class)
         ->assertSee('0 digits entered', escape: false)
-        ->assertSee('10 digits entered', escape: false);
+        ->assertSee(Lang::choice('auth::lock_screen.digits_entered', AppLockPinShape::MAXIMUM_LENGTH, [
+            'count' => AppLockPinShape::MAXIMUM_LENGTH,
+        ]), escape: false);
 });
 
 // The count belongs inside the string, not glued onto it in the browser: a

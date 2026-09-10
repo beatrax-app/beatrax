@@ -275,14 +275,18 @@ rule reading lang files could see it because no lang file held a counted line.
 Three answers, in order of preference.
 
 **The count is bounded.** Render every announcement server-side and index it.
-The lock screen's PIN pad holds at most ten digits, so it renders eleven lines
-through `Lang::choice()` and Alpine picks one:
+The lock screen's PIN pad holds at most `AppLockPinShape::MAXIMUM_LENGTH`
+digits, so it renders one line per length through `Lang::choice()` and Alpine
+picks one. The bound is read from the constant rather than typed, because the
+pad that caps what a reader may enter and the rule that says what a PIN is have
+to be the same number:
 
 ```blade
+@use('Modules\Auth\Public\Contracts\AppLockPinShape')
 @php
     $digitAnnouncements = array_map(
         static fn (int $count): string => Lang::choice('mobile::lock.digits_entered', $count, ['count' => $count]),
-        range(0, 10),
+        range(0, AppLockPinShape::MAXIMUM_LENGTH),
     );
 @endphp
 <div x-bind:aria-label="@js($digitAnnouncements)[pin.length]">

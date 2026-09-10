@@ -1,3 +1,4 @@
+@use('Modules\Auth\Public\Contracts\AppLockPinShape')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     PIN pad partial — calm-slate token classes, accessible targets.
@@ -17,9 +18,9 @@
       - aria-label="Backspace" on the backspace button.
       - aria-label="OK — confirm PIN" on the submit button.
       - dot display wrapped in aria-live="polite" region announcing "{N} digits entered".
-        The eleven possible announcements are chosen server-side, because a
-        locale with more than two plural forms cannot be served by a suffix
-        glued onto a number in the browser.
+        The announcements — one per length AppLockPinShape admits — are chosen
+        server-side, because a locale with more than two plural forms cannot be
+        served by a suffix glued onto a number in the browser.
       - backoff label in aria-live="assertive" slot.
 
     Sizing contract (UI-SPEC):
@@ -31,7 +32,7 @@
 @php
     $digitAnnouncements = array_map(
         static fn (int $count): string => Lang::choice('auth::lock_screen.digits_entered', $count, ['count' => $count]),
-        range(0, 10),
+        range(0, AppLockPinShape::MAXIMUM_LENGTH),
     );
 @endphp
 {{-- Dot display — aria-live so screen readers announce digit count changes --}}
@@ -41,7 +42,7 @@
     aria-live="polite"
     x-bind:aria-label="@js($digitAnnouncements)[pin.length]"
 >
-    <template x-for="i in 10" :key="i">
+    <template x-for="i in {{ AppLockPinShape::MAXIMUM_LENGTH }}" :key="i">
         <span
             class="h-3 w-3 rounded-full transition-colors duration-150 motion-reduce:transition-none"
             x-bind:class="i <= pin.length

@@ -1,3 +1,4 @@
+@use('Modules\Auth\Public\Contracts\AppLockPinShape')
 @use('Modules\Core\Public\Support\Lang')
 <div
     class="safe-screen beatrax-shell min-h-screen flex items-center justify-center
@@ -12,7 +13,7 @@
     x-data="{
         pin: '',
         press(d) {
-            if (this.pin.length < 10) {
+            if (this.pin.length < {{ AppLockPinShape::MAXIMUM_LENGTH }}) {
                 this.pin += d;
             }
         },
