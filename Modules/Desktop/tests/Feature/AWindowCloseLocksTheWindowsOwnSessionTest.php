@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Native\Desktop\Events\Windows\WindowClosed;
+use Tests\Helpers\ShellBridge;
 
 // The sibling suites drive the listener directly and so cannot see the question
 // this one asks: the shell does not call the listener, it posts an event to a
@@ -52,7 +53,7 @@ function windowCloseLockUser(bool $lockEnabled): User
 
 function windowClosed(): void
 {
-    test()->post('_native/api/events', [
+    test()->withHeaders(ShellBridge::arm())->post('_native/api/events', [
         'event' => WindowClosed::class,
         'payload' => ['main'],
     ])->assertOk();

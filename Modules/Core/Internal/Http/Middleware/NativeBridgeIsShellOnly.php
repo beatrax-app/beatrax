@@ -15,21 +15,24 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // outside the shell the bridge is not merely unguarded, it is guarded by
 // something that has already decided to let everyone past.
 /**
- * @link ../../../../../../.docs/features/desktop/architecture.md
+ * @link ../../../../../.docs/features/desktop/architecture.md
  */
 final readonly class NativeBridgeIsShellOnly
 {
     private const string BRIDGE_PREFIX = '_native/';
 
+    private const string SECRET_HEADER = 'X-NativePHP-Secret';
+
+    private const string SECRET_COOKIE = '_php_native';
+
     public function __construct(private Repository $config) {}
 
-    // Answers 404 rather than 403: outside the shell the bridge is not a door
-    // this deployment refuses to open, it is one it does not have.
+    // Answers 404 rather than 403: a caller that cannot show the shell's secret
+    // is not being refused a door this deployment has, it is being told there
+    // is none -- the same answer every other unowned surface here gives.
     public function handle(Request $request, Closure $next): Response
     {
-        $isBridge = str_starts_with(ltrim($request->path(), '/'), self::BRIDGE_PREFIX);
-
-        if ($isBridge && $this->config->get('nativephp-internal.running') !== true) {
+        if ($this->namesTheBridge($request) && ! $this->carriesTheShellSecret($request)) {
             throw new NotFoundHttpException;
         }
 
@@ -37,5 +40,29 @@ final readonly class NativeBridgeIsShellOnly
         $response = $next($request);
 
         return $response;
+    }
+
+    private function namesTheBridge(Request $request): bool
+    {
+        return str_starts_with(ltrim($request->path(), '/'), self::BRIDGE_PREFIX);
+    }
+
+    // Asked without reference to `running`: a deployment that is not a bundle
+    // has no secret at all, so nothing can be presented and the prefix closes
+    // on its own. Electron injects the header on every request it originates,
+    // which is what the shell has and a browser on the same port does not.
+    private function carriesTheShellSecret(Request $request): bool
+    {
+        $secret = $this->config->get('nativephp-internal.secret');
+
+        if (! is_string($secret) || $secret === '') {
+            return false;
+        }
+
+        $header = $request->header(self::SECRET_HEADER);
+        $cookie = $request->cookie(self::SECRET_COOKIE);
+
+        return (is_string($header) && hash_equals($secret, $header))
+            || (is_string($cookie) && hash_equals($secret, $cookie));
     }
 }
