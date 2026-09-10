@@ -33,9 +33,9 @@ holds the payment-type hinters, not the readers.
 
 Each adapter yields a sequence of `SourceRow` value objects — the
 unnormalised, parser-specific shape of one input line. Adapters know about
-their format's quirks (PayPal's UTF-8 BOM, ICS's Windows-1252 encoding, a
-positional CSV's fixed column order). They know nothing about the canonical
-schema.
+their format's quirks (PayPal's UTF-8 BOM, a positional CSV's fixed column
+order, an MT940 line a bank wrote in latin-1). They know nothing about the
+canonical schema.
 
 Every CSV dialect is now a preset whose format id already names it —
 `ing-nl-csv` is the ING dialect, `asn-csv` the ASN one — so no import needs a
