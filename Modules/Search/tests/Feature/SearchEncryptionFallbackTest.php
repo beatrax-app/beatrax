@@ -120,16 +120,16 @@ it('a short (<3-char) query fallback returns hits for a genuinely encrypted user
     $query = app(SearchQuery::class);
 
     // Two characters is below the FTS5 trigram floor, so only likeFallbackIds
-    // runs. The lowercase input also pins the decrypt-then-substring match as
-    // case-insensitive, the way the SQL LIKE it replaced was.
+    // runs. It matches the plaintext body the index is built from, so this
+    // row is reachable without a column of `transactions` being decrypted.
     $page = $query->search($user, 'zx', SearchFilters::empty());
 
     expect(collect($page->rows)->pluck('id'))->toContain($txId);
 })->group('SearchEncryptionFallback');
 
 it('the short-query fallback candidate scan is bounded, not an unbounded full-history decrypt (Task 1)', function (): void {
-    // Matching by decrypting means the scan has to stop somewhere, and this
-    // constant is what a naive full-history decrypt would have to remove.
+    // A two-letter needle matches a large share of a long history, so the
+    // ids handed to the outer search still have to stop somewhere.
     $reflection = new ReflectionClass(FtsCandidateResolver::class);
     $constant = $reflection->getConstant('LIKE_FALLBACK_CANDIDATE_CAP');
 

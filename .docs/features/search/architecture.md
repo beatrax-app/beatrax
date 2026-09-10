@@ -202,9 +202,11 @@ What the module explicitly does NOT do:
   bodies are byte-identical across a `search:reindex`.
 + `SearchQuery::search(...)` — parses typed tokens via `QueryParser`,
   resolves a candidate rowid set (FTS5 `MATCH` when the text query is
-  ≥3 characters; a bounded decrypt-then-substring scan otherwise, since
-  FTS5's trigram tokenizer needs a 3-character minimum and a
-  ciphertext column can no longer be matched in SQL), applies the
+  ≥3 characters; a bounded `LIKE` over that same indexed body
+  otherwise, since FTS5's trigram tokenizer needs a 3-character
+  minimum — both arms therefore search one corpus, and a needle does
+  not change what it is matched against at the third character),
+  applies the
   existing filter dimensions with per-dimension ownership validation,
   and returns a cursor-paginated `SearchResultPage` with
   `highlight()`/`snippet()` HTML built from sentinel markers
@@ -387,7 +389,7 @@ User types a query
             resolved display name AND the stored name)
   → SearchQuery::resolveCandidateIds
        → textQuery >= 3 chars → FTS5 MATCH (escaped, ANDed per word)
-       → textQuery <  3 chars → bounded decrypt-then-substring scan
+       → textQuery <  3 chars → bounded LIKE on transaction_search_docs.search_body
   → buildBaseQuery + applyFilters (ownership-validated per dimension)
   → cursor pagination (posted_at, id) DESC
   → loadHighlights (FTS highlight()/snippet(), sentinel-marked)
