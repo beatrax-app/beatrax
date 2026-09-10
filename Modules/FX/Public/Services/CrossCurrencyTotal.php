@@ -170,6 +170,15 @@ final readonly class CrossCurrencyTotal
         return self::spreadRemainder($shares, $weightsMinor, $wholeMinor - $sumOfShares);
     }
 
+    // A percentage of one amount, which a float multiplier cannot hold: the
+    // nearest double to 1.15 is a shade under it, so 115% of EUR 12.90 rounded
+    // to EUR 14.83 where the figure is EUR 14.835. Whole percents only —
+    // anything finer is a rate, and RateTable converts at those.
+    public static function percentOf(int $wholeMinor, int $percent): int
+    {
+        return self::proRataShare($wholeMinor, $percent, 100);
+    }
+
     // Rounded half away from zero, on magnitudes: the quotient is negative
     // when an odd number of the three is, and mixed-sign parts do reach here.
     private static function proRataShare(int $wholeMinor, int $weightMinor, int $weightTotal): int

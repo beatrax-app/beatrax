@@ -49,13 +49,17 @@ final readonly class SetAccountOpeningBalance
             throw new NotFoundHttpException('Account not found.');
         }
 
-        if ($openingBalanceMinor !== null) {
-            $this->validateOpeningBalance($accountId, $user, $openingBalanceMinor, $openingBalanceAsOfDate, $allowDivergence);
-        }
+        // The day the check found, never the string it arrived as. The two
+        // differ by whatever whitespace rode along, and date(' 2026-04-17') is
+        // NULL in SQLite -- which takes the starting-balance predicate with it
+        // and empties the balance line the reader is looking at.
+        $asOf = $openingBalanceMinor === null
+            ? null
+            : $this->validateOpeningBalance($accountId, $user, $openingBalanceMinor, $openingBalanceAsOfDate, $allowDivergence);
 
         $this->accounts->write($user->id, $accountId, [
             'opening_balance_minor' => $openingBalanceMinor,
-            'opening_balance_as_of_date' => $openingBalanceMinor === null ? null : $openingBalanceAsOfDate,
+            'opening_balance_as_of_date' => $asOf?->toDateString(),
         ]);
 
         foreach (ForecastHorizon::days() as $horizon) {
@@ -73,7 +77,7 @@ final readonly class SetAccountOpeningBalance
         int $openingBalanceMinor,
         ?string $openingBalanceAsOfDate,
         bool $allowDivergence,
-    ): void {
+    ): CarbonImmutable {
         if ($openingBalanceAsOfDate === null || trim($openingBalanceAsOfDate) === '') {
             throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_required'));
         }
@@ -86,25 +90,23 @@ final readonly class SetAccountOpeningBalance
             throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_future'));
         }
 
-        if ($allowDivergence) {
-            return;
-        }
-
         // No figure to compare against means no divergence to warn about. The
         // sum that used to stand in for one was not this account's position.
-        $sum = $this->positionOn($accountId, $user, $asOf);
-        if ($sum === null) {
-            return;
+        $sum = $allowDivergence ? null : $this->positionOn($accountId, $user, $asOf);
+
+        if ($sum !== null) {
+            $diff = $openingBalanceMinor - $sum;
+
+            if (abs($diff) > self::DIVERGENCE_WARNING_THRESHOLD_MINOR) {
+                throw new OpeningBalanceDivergenceWarning(
+                    diffMinor: $diff,
+                    sumOfTransactionsMinor: $sum,
+                    userValueMinor: $openingBalanceMinor,
+                );
+            }
         }
 
-        $diff = $openingBalanceMinor - $sum;
-        if (abs($diff) > self::DIVERGENCE_WARNING_THRESHOLD_MINOR) {
-            throw new OpeningBalanceDivergenceWarning(
-                diffMinor: $diff,
-                sumOfTransactionsMinor: $sum,
-                userValueMinor: $openingBalanceMinor,
-            );
-        }
+        return $asOf;
     }
 
     // Derived WITHOUT the override being validated, so the check cannot agree

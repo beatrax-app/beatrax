@@ -21,6 +21,12 @@ The column used to take whatever the form sent, and every reader of it — the
 projection, the card, the sort order — then worked from a date the goal's owner
 never chose.
 
+What the writer keeps is the day the check *found*, not the string that reached
+it. `SafeDate::dayOrNull()` trims before it reads, so the two differ by whatever
+whitespace rode along; the column's cast trims that away again, but the sync
+payload beside it did not, and a peer received a padded day that its own DATE
+column then held. A padded day sorts outside every window it belongs in.
+
 ## A real date the goal starts after
 
 `GoalTargetDateBeforeStartException`, which narrows the first.

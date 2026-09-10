@@ -51,8 +51,8 @@ it('writes a band for a duplicate-only alert off the charge it carries', functio
         ->first();
 
     expect($rule)->not->toBeNull()
-        ->and((int) $rule->amount_band_low_minor)->toBe((int) round(1.15 * -4999))
-        ->and((int) $rule->amount_band_high_minor)->toBe((int) round(0.85 * -4999))
+        ->and((int) $rule->amount_band_low_minor)->toBe(-5749)
+        ->and((int) $rule->amount_band_high_minor)->toBe(-4249)
         ->and($rule->currency)->toBe('EUR')
         ->and((int) $rule->source_anomaly_alert_id)->toBe((int) $alert->id);
 });
@@ -83,8 +83,8 @@ it('still resolves the band from the transaction when the alert carries no amoun
         ->first();
 
     expect($rule)->not->toBeNull()
-        ->and((int) $rule->amount_band_low_minor)->toBe((int) round(1.15 * -4999))
-        ->and((int) $rule->amount_band_high_minor)->toBe((int) round(0.85 * -4999))
+        ->and((int) $rule->amount_band_low_minor)->toBe(-5749)
+        ->and((int) $rule->amount_band_high_minor)->toBe(-4249)
         ->and($rule->currency)->toBe('EUR');
 });
 

@@ -17,6 +17,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
@@ -27,9 +28,9 @@ final readonly class ScenarioApplier
 {
     // The add_recurring form has no variance-tolerance field, so its band is a
     // fixed ±5% rather than a series-derived width.
-    private const float ADD_RECURRING_ENVELOPE_LOW_MULTIPLIER = 0.95;
+    private const int ADD_RECURRING_ENVELOPE_LOW_PERCENT = 95;
 
-    private const float ADD_RECURRING_ENVELOPE_HIGH_MULTIPLIER = 1.05;
+    private const int ADD_RECURRING_ENVELOPE_HIGH_PERCENT = 105;
 
     public function __construct(
         private ScenarioQuery $scenarioQuery,
@@ -234,8 +235,8 @@ final readonly class ScenarioApplier
         $magnitude = abs($payload->amountMinor);
         $sign = $payload->direction === Direction::Income->value ? 1 : -1;
         $point = $sign * $magnitude;
-        $lowMag = (int) round($magnitude * self::ADD_RECURRING_ENVELOPE_LOW_MULTIPLIER);
-        $highMag = (int) round($magnitude * self::ADD_RECURRING_ENVELOPE_HIGH_MULTIPLIER);
+        $lowMag = CrossCurrencyTotal::percentOf($magnitude, self::ADD_RECURRING_ENVELOPE_LOW_PERCENT);
+        $highMag = CrossCurrencyTotal::percentOf($magnitude, self::ADD_RECURRING_ENVELOPE_HIGH_PERCENT);
         [$lowMinor, $highMinor] = $sign < 0 ? [-$highMag, -$lowMag] : [$lowMag, $highMag];
 
         foreach ($this->walk->datesInHorizon($start, $cadence, $asOf, $horizonEnd) as $date) {

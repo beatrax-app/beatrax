@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Models\Account;
@@ -31,7 +32,7 @@ final class DemoTransactionsSeeder
 
     // A plausible rate, not a real provider's: the point is that the
     // currency-mode toggle has non-trivial data to convert.
-    private const EUR_PER_USD = '0.92000000';
+    private const int EUR_PER_USD_PERCENT = 92;
 
     private CarbonImmutable $windowEnd;
 
@@ -418,7 +419,7 @@ final class DemoTransactionsSeeder
                 continue;
             }
             $amountUsd = $usdAmounts[$i] ?? -499;
-            $settledEur = (int) round($amountUsd * (float) self::EUR_PER_USD);
+            $settledEur = CrossCurrencyTotal::percentOf($amountUsd, self::EUR_PER_USD_PERCENT);
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => $amountUsd,

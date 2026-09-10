@@ -199,15 +199,21 @@ final readonly class GoalWriter
     // owner never chose.
     private static function assertRealDate(string $targetDate, string $startDate): string
     {
-        if (SafeDate::dayOrNull($targetDate) === null) {
+        // The day the check found, not the string it arrived as: the column
+        // takes it through a cast that trims, and the sync payload beside it
+        // does not, so a peer received a day its own DATE column then held
+        // padded -- and a padded day sorts outside every window it belongs in.
+        $day = SafeDate::dayOrNull($targetDate)?->toDateString();
+
+        if ($day === null) {
             throw new InvalidGoalTargetDateException('Target date is not a calendar date.');
         }
 
-        if ($targetDate < $startDate) {
+        if ($day < $startDate) {
             throw new GoalTargetDateBeforeStartException('Target date is before the goal starts.');
         }
 
-        return $targetDate;
+        return $day;
     }
 
     public function parseAmount(string $value, ?string $currencyCode = null): ?int

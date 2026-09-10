@@ -18,10 +18,6 @@ const MONEY_ALLOCATOR = 'Modules/FX/Public/Services/CrossCurrencyTotal.php';
 // Each entry is one that does not cut a whole into parts, and says what it does
 // instead; `proves` re-checks that against the code.
 const MONEY_SHARE_PINS = [
-    'Modules/Anomaly/Internal/Support/SuppressionRuleKeyResolver.php' => [
-        'reason' => 'an amount BAND a later charge is matched against, and the key it becomes is never printed or summed as money',
-        'proves' => '/BAND_LOW_MULTIPLIER/',
-    ],
     'Modules/Chains/Internal/Resolvers/PaypalFundingResolver.php' => [
         'reason' => 'a matching tolerance around a settlement, used to decide whether two rows are the same payment',
         'proves' => '/AMOUNT_BAND_PERCENT/',
@@ -33,10 +29,6 @@ const MONEY_SHARE_PINS = [
     'Modules/Counterparties/Resources/views/livewire/profile-tabs/bank.blade.php' => [
         'reason' => 'a bar width rather than a slice: the numerator is one row magnitude and the denominator the largest magnitude on the panel, and the integer it rounds to never leaves the width it draws',
         'proves' => '/width: \{\{ \$pct \}\}%/',
-    ],
-    'Modules/Forecasting/Internal/Pipeline/CadenceJitter.php' => [
-        'reason' => 'the seven-day smear of one uncertain occurrence, which is a probability weight over days and is documented as summing to slightly under the point estimate on purpose',
-        'proves' => '/projection-math\.md/',
     ],
     'Modules/Recurring/Internal/Detectors/DetectedSeries.php' => [
         'reason' => 'a cadence rewritten as its monthly equivalent, which is a rate and not a slice: nothing else has to add back up to the yearly figure',
@@ -50,26 +42,53 @@ const MONEY_SHARE_PINS = [
 
 /**
  * Every place a minor-unit figure is multiplied or divided and then truncated
- * to an integer, as path => the expression text.
+ * to an integer, as path => the expression text, beside how many truncating
+ * expressions of any kind the walk read to find them.
  *
  * A bare `$minor` is not one of these: the identifier has to READ as money
  * (`$latestAmountMinor`, `settled_amount_minor`, `pointMinor`), or a semantic
  * version's minor component counts as a share of a card charge.
  *
- * @return list<array{path: string, line: int, expression: string}>
+ * @return array{cuts: list<array{path: string, line: int, expression: string}>, read: int}
  */
 function moneyShareCuts(): array
 {
     $cuts = [];
+    $read = 0;
 
     foreach (BackendSourceFiles::all() as $path) {
+        $tokens = BackendSourceFiles::codeTokens($path);
+        $read += moneyShareTruncationsIn($tokens);
         $cuts = array_merge($cuts, moneyShareCutsIn(
             str_replace(base_path().'/', '', $path),
-            BackendSourceFiles::codeTokens($path),
+            $tokens,
         ));
     }
 
-    return $cuts;
+    return ['cuts' => $cuts, 'read' => $read];
+}
+
+// Every truncation the walk saw, money or not. The offender list is floored on
+// this rather than on its own length: a tree that grows more correct shrinks
+// the second, so a floor there falls to a fix and reads as a walk that stopped.
+/**
+ * @param  list<array{0:int,1:string,2:int}|string>  $tokens
+ */
+function moneyShareTruncationsIn(array $tokens): int
+{
+    $read = 0;
+
+    foreach ($tokens as $token) {
+        if (! is_array($token)) {
+            continue;
+        }
+
+        if ($token[0] === T_INT_CAST || ($token[0] === T_STRING && $token[1] === 'intdiv')) {
+            $read++;
+        }
+    }
+
+    return $read;
 }
 
 /**
@@ -178,15 +197,15 @@ function moneyShareCastOperand(array $texts, int $index): string
 }
 
 it('cuts a money share in the one place that hands the remainder back', function (): void {
-    $cuts = moneyShareCuts();
+    $walk = moneyShareCuts();
 
     // A walk that reads nothing finds no arithmetic and reports a clean tree.
-    expect(count($cuts))->toBeGreaterThan(10, 'Read '.count($cuts).' truncating money expressions, too few for an empty offender list to mean anything.');
+    expect($walk['read'])->toBeGreaterThan(300, 'Read '.$walk['read'].' truncating expressions, too few for an empty offender list to mean anything.');
 
     $offenders = [];
     $pinned = [];
 
-    foreach ($cuts as $cut) {
+    foreach ($walk['cuts'] as $cut) {
         if ($cut['path'] === MONEY_ALLOCATOR) {
             continue;
         }

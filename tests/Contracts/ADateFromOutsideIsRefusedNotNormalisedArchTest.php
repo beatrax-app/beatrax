@@ -168,11 +168,12 @@ const SUPPLIED_DATE_FIELDS = [
         ],
     ],
     'targetDate' => [
-        'reason' => 'The goal target date, which is where this repo first wrote the rule down; the writer now asks SafeDate for it rather than spelling it a second time.',
+        'reason' => 'The goal target date, which is where this repo first wrote the rule down; the writer now asks SafeDate for it rather than spelling it a second time, and keeps the day it answers rather than the string that arrived.',
         'sites' => 3,
         'refusals' => [
             'Modules/Goals/Public/Services/GoalWriter.php' => [
-                '/if \(SafeDate::dayOrNull\(\$targetDate\) === null\) \{/',
+                '/\$day = SafeDate::dayOrNull\(\$targetDate\)\?->toDateString\(\);/',
+                '/if \(\$day === null\) \{/',
                 '/throw new InvalidGoalTargetDateException/',
             ],
         ],

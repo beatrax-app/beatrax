@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 
 /**
  * @link ../../../../.docs/features/forecasting/projection-math.md#cadence-jitter
@@ -25,13 +26,7 @@ final readonly class CadenceJitter
         CarbonImmutable $windowEnd,
         int $jitterDays = self::WINDOW_DAYS,
     ): array {
-        $window = $jitterDays * 2 + 1;
-
-        // The weight is the fraction of the original contribution
-        // attributed to each replica day; integer rounding of the weight
-        // is accepted up to ±2 minor units per replica (locked by
-        // CadenceJitterTest).
-        $weight = 100 / $window;
+        $equalDays = array_fill(0, max($jitterDays * 2 + 1, 0), 1);
 
         $jittered = [];
         foreach ($contributions as $c) {
@@ -41,20 +36,57 @@ final readonly class CadenceJitter
                 continue;
             }
 
-            for ($offset = -$jitterDays; $offset <= $jitterDays; $offset++) {
-                $jittered[] = new ForecastContribution(
-                    date: self::clampToWindow($c->date->addDays($offset), $windowStart, $windowEnd),
-                    pointMinor: (int) round($c->pointMinor * $weight / 100),
-                    lowMinor: (int) round($c->lowMinor * $weight / 100),
-                    highMinor: (int) round($c->highMinor * $weight / 100),
-                    currency: $c->currency,
-                    seriesId: $c->seriesId,
-                    accountId: $c->accountId,
-                );
+            foreach (self::replicasOf($c, $equalDays, $jitterDays, $windowStart, $windowEnd) as $replica) {
+                $jittered[] = $replica;
             }
         }
 
         return $jittered;
+    }
+
+    // A replica is a share of one occurrence, so the shares have to add back up
+    // to it: rounding each seventh on its own turned EUR 10.00 into EUR 10.03
+    // and made a single cent disappear altogether.
+    /**
+     * @param  list<int>  $equalDays
+     * @return list<ForecastContribution>
+     */
+    private static function replicasOf(
+        ForecastContribution $c,
+        array $equalDays,
+        int $jitterDays,
+        CarbonImmutable $windowStart,
+        CarbonImmutable $windowEnd,
+    ): array {
+        $point = self::shares($c->pointMinor, $equalDays);
+        $low = self::shares($c->lowMinor, $equalDays);
+        $high = self::shares($c->highMinor, $equalDays);
+
+        $replicas = [];
+        foreach ($point as $index => $pointMinor) {
+            $replicas[] = new ForecastContribution(
+                date: self::clampToWindow($c->date->addDays($index - $jitterDays), $windowStart, $windowEnd),
+                pointMinor: $pointMinor,
+                lowMinor: $low[$index] ?? 0,
+                highMinor: $high[$index] ?? 0,
+                currency: $c->currency,
+                seriesId: $c->seriesId,
+                accountId: $c->accountId,
+            );
+        }
+
+        return $replicas;
+    }
+
+    /**
+     * @param  list<int>  $equalDays
+     * @return list<int>
+     */
+    private static function shares(int $wholeMinor, array $equalDays): array
+    {
+        $shares = CrossCurrencyTotal::apportion($wholeMinor, $equalDays);
+
+        return $shares === null ? array_fill(0, count($equalDays), 0) : array_values($shares);
     }
 
     // The fold walks [windowStart, windowEnd] and never reads a bucket outside

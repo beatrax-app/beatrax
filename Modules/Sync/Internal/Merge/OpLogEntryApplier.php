@@ -395,6 +395,8 @@ final readonly class OpLogEntryApplier
                     return null;
                 }
 
+                $resolved = $this->suppliedDates->normalise($table, $field, $resolved);
+
                 $payload[$field] = $this->projector->reencryptForProjection($table, $field, $resolved, $userId);
             } catch (\Throwable) {
                 $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
@@ -480,6 +482,8 @@ final readonly class OpLogEntryApplier
 
                 return;
             }
+
+            $columnValue = $this->suppliedDates->normalise($table, $field, $columnValue);
 
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
 
