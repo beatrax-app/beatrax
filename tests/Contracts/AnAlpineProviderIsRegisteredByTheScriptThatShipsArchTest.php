@@ -17,6 +17,7 @@ use Tests\Contracts\Support\RepoTree;
 // could not be caught.
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-alpine-provider-missing-from-the-script-that-ships
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-provider-registered-from-an-event-that-has-already-fired
  */
 
 /**
@@ -104,6 +105,63 @@ function alpineRegistersInScript(string $name, string $script): bool
 }
 
 /**
+ * Whether $script hands its providers to Alpine only from an `alpine:init`
+ * listener. That event is dispatched once, by `Alpine.start()`. `wire:navigate`
+ * re-executes a page's body scripts on arrival and never restarts Alpine, so a
+ * listener added then is waiting for something that has already happened —
+ * every registration behind it is simply never made, and the once-guard these
+ * blocks carry means there is no second attempt.
+ *
+ * Measured by position rather than by scope: a registration written before the
+ * listener is one the eager path reaches, which is the shape
+ * `resources/js/app.js` uses and the shape this asks for.
+ */
+function alpineRegistersOnlyOnInit(string $script): bool
+{
+    $listener = strpos($script, 'alpine:init');
+
+    if ($listener === false) {
+        return false;
+    }
+
+    $registrations = PatternScan::allWithOffsets(ALPINE_REGISTRATION_PATTERN, $script)[0];
+
+    foreach ($registrations as $registration) {
+        if ($registration[1] < $listener) {
+            return false;
+        }
+    }
+
+    return $registrations !== [];
+}
+
+/**
+ * @return list<array{template: string, name: string, script: string}> every provider a template registers in a <script> of its own
+ */
+function alpineProvidersRegisteredByTemplates(): array
+{
+    $registered = [];
+
+    foreach (RepoTree::files(RepoTree::EVERY_BLADE_VIEW) as $path) {
+        $source = (string) file_get_contents($path);
+
+        foreach (MarkupSource::elements($source, 'script') as $script) {
+            $body = $script->innerOrFail();
+
+            foreach (PatternScan::all(ALPINE_REGISTRATION_PATTERN, $body)[1] as $name) {
+                $registered[] = [
+                    'template' => str_replace(RepoTree::root().'/', '', $path),
+                    'name' => $name,
+                    'script' => $body,
+                ];
+            }
+        }
+    }
+
+    return $registered;
+}
+
+/**
  * The built entry scripts, which is what a browser downloads. Read as they are
  * rather than rebuilt: a registration added to resources/js since the last
  * `npm run build` is exactly the state this rule exists to name.
@@ -177,6 +235,55 @@ it('has every registration in the front-end sources present in the script that s
         "public/build, which is the file a browser and both device shells load. Neither `native:run` nor\n".
         "the desktop prebuild hooks run Vite, so whatever is on disk is what ships. Run `npm run build`.\n  ".implode("\n  ", $missing),
     );
+});
+
+// The rule above accepts a registration in the template's own <script>, and it
+// asks only whether the name is there. This is the other half of that
+// acceptance: WHEN the script hands it over. A provider registered from an
+// event that has already fired is as absent as one nobody wrote.
+it('has every provider a template registers of its own reachable without a second alpine:init', function (): void {
+    $registered = alpineProvidersRegisteredByTemplates();
+
+    expect($registered)->not->toBe(
+        [],
+        'No template registers an Alpine provider in a <script> of its own, so the rule above accepts a path '
+        .'nothing takes and this one holds nothing to the clock. Either the reader stopped, or the acceptance '
+        .'in the message above excuses a shape the tree no longer has.'
+    );
+
+    $late = [];
+
+    foreach ($registered as $site) {
+        if (alpineRegistersOnlyOnInit($site['script'])) {
+            $late[] = $site['template'].' → '.$site['name'].'()';
+        }
+    }
+
+    sort($late);
+
+    expect($late)->toBe(
+        [],
+        "These are registered from an `alpine:init` listener and nowhere else. Alpine dispatches that event\n".
+        "once, from Alpine.start(); wire:navigate re-runs a page's body scripts on arrival and never restarts\n".
+        "Alpine, so the first reader to reach the page through a navigate link registers a listener for\n".
+        "something that has already happened. The x-data then binds an empty scope — one expression error, a\n".
+        "200, and every method absent. Register eagerly off `window.Alpine` and keep the listener as the\n".
+        "fallback for the page that loads before Alpine exists, the way resources/js/app.js does.\n  ".implode("\n  ", $late),
+    );
+});
+
+it('reads a registration made too late to happen, and leaves an eager one alone', function (): void {
+    expect(alpineRegistersOnlyOnInit("document.addEventListener('alpine:init', () => { Alpine.data('x', () => ({})); });"))
+        ->toBeTrue('the listener is the only path, so nothing registers on a wire:navigate arrival');
+
+    expect(alpineRegistersOnlyOnInit("const r = (a) => a.data('x', f); if (window.Alpine) { r(window.Alpine); } else { document.addEventListener('alpine:init', () => r(window.Alpine), { once: true }); }"))
+        ->toBeFalse('the eager branch registers before the listener is ever mentioned');
+
+    expect(alpineRegistersOnlyOnInit("Alpine.data('x', () => ({}));"))
+        ->toBeFalse('a registration at the top level of the script waits for nothing');
+
+    expect(alpineRegistersOnlyOnInit("document.addEventListener('alpine:init', () => window.beatraxBoot());"))
+        ->toBeFalse('a listener that registers no provider is not this rule\'s business');
 });
 
 it('reads the shapes an x-data uses to name a provider, and leaves a literal alone', function (): void {

@@ -23,6 +23,12 @@ final class RecurringSeriesDetailPage extends Component
 {
     use DispatchesToast;
 
+    // The morph leaves the chart's Alpine wrapper in place, so x-init never
+    // runs twice and the mounted ApexCharts instance goes on drawing the points
+    // it was built with. This is what tells it to read the refreshed
+    // data-options; the blade binds its window listener to the same constant.
+    public const string UPDATED_EVENT = 'recurring-series-updated';
+
     // Locked because it arrives as a route segment, which puts it outside
     // TamperedUrlParameterContractTest's reach: that test drives #[Url]
     // properties only. Unlocked, editVarianceTolerance() wrote series 9
@@ -44,8 +50,12 @@ final class RecurringSeriesDetailPage extends Component
     public function toggleAllPoints(): void
     {
         $this->showAllPoints = ! $this->showAllPoints;
+        $this->dispatch(self::UPDATED_EVENT);
     }
 
+    // Announced from here too, though tolerance is not plotted: every action on
+    // this component re-renders the partial, and an event raised per re-render
+    // rather than per property is the one an action added later inherits.
     public function editVarianceTolerance(
         int $newTolerancePercent,
         CurrentUser $currentUser,
@@ -53,6 +63,7 @@ final class RecurringSeriesDetailPage extends Component
     ): void {
         ($action)($this->seriesId, $currentUser->user(), $newTolerancePercent);
         $this->toast(Lang::get('recurring::detail.tolerance_toast', ['percent' => $newTolerancePercent]));
+        $this->dispatch(self::UPDATED_EVENT);
     }
 
     public function render(
