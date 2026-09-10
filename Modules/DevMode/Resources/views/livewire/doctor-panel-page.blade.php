@@ -9,38 +9,47 @@
                 {{ Lang::get('dev::doctor.subtitle') }}
             </p>
         </div>
-        <x-core::neutral-button
-            class="disabled:cursor-not-allowed disabled:opacity-50"
-            data-testid="doctor-rerun-button"
-            x-data="{ running: false }"
-            x-on:click="
-                running = true;
-                fetch('/dev/artisan/spawn', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
-                    },
-                    body: JSON.stringify({ command: '{{ $commandName }}', args: {} })
-                }).then(r => r.json()).then(d => {
-                    if (d.run_id) {
-                        const es = new EventSource('/dev/artisan/stream/' + d.run_id);
-                        es.addEventListener('done', () => { es.close(); window.location.reload(); });
-                        es.onerror = () => { es.close(); window.location.reload(); };
-                    } else {
-                        running = false;
-                        if (d.message) {
-                            window.dispatchEvent(new CustomEvent('toast', { detail: { message: d.message } }));
+        @if ($canSpawn)
+            <x-core::neutral-button
+                class="disabled:cursor-not-allowed disabled:opacity-50"
+                data-testid="doctor-rerun-button"
+                x-data="{ running: false }"
+                x-on:click="
+                    running = true;
+                    fetch('/dev/artisan/spawn', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ command: '{{ $commandName }}', args: {} })
+                    }).then(r => r.json()).then(d => {
+                        if (d.run_id) {
+                            const es = new EventSource('/dev/artisan/stream/' + d.run_id);
+                            es.addEventListener('done', () => { es.close(); window.location.reload(); });
+                            es.onerror = () => { es.close(); window.location.reload(); };
+                        } else {
+                            running = false;
+                            if (d.message) {
+                                window.dispatchEvent(new CustomEvent('toast', { detail: { message: d.message } }));
+                            }
                         }
-                    }
-                }).catch(() => { running = false; });
-            "
-            x-bind:disabled="running"
-        >
-            <span x-show="!running">{{ Lang::get('dev::doctor.rerun') }}</span>
-            <span x-show="running" x-cloak>{{ Lang::get('dev::doctor.running') }}</span>
-        </x-core::neutral-button>
+                    }).catch(() => { running = false; });
+                "
+                x-bind:disabled="running"
+            >
+                <span x-show="!running">{{ Lang::get('dev::doctor.rerun') }}</span>
+                <span x-show="running" x-cloak>{{ Lang::get('dev::doctor.running') }}</span>
+            </x-core::neutral-button>
+        @else
+            {{-- A runtime with no interpreter to spawn answers every press
+                 with 501, so the control is not drawn at all; the reason it
+                 would have given is the reason shown here instead. --}}
+            <p class="max-w-sm text-sm text-[var(--color-text-muted)]" data-testid="doctor-spawning-unavailable">
+                {{ Lang::get('dev::runner.spawning_unavailable') }}
+            </p>
+        @endif
     </header>
 
     @if ($probeRows === [])
@@ -53,10 +62,14 @@
                      twice. The button's own label is passed in, so the word
                      this sentence tells the reader to press cannot drift from
                      the one on the button. --}}
-                {!! Lang::get('dev::doctor.empty_html', [
-                    'action' => '<span class="font-semibold">'.e(Lang::get('dev::doctor.rerun')).'</span>',
-                    'command' => '<code class="font-mono">'.e($commandName).'</code>',
-                ]) !!}
+                @if ($canSpawn)
+                    {!! Lang::get('dev::doctor.empty_html', [
+                        'action' => '<span class="font-semibold">'.e(Lang::get('dev::doctor.rerun')).'</span>',
+                        'command' => '<code class="font-mono">'.e($commandName).'</code>',
+                    ]) !!}
+                @else
+                    {{ Lang::get('dev::runner.spawning_unavailable') }}
+                @endif
             </p>
         </div>
     @else

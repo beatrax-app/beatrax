@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
+use Modules\DevMode\Internal\Process\CommandSpawner;
 
 #[Layout('dev::layouts.dev-shell')]
 final class DoctorPanelPage extends Component
@@ -27,6 +28,7 @@ final class DoctorPanelPage extends Component
         DatabaseManager $db,
         ProbeOutputParser $parser,
         CurrentUser $user,
+        CommandSpawner $spawner,
     ): View {
         // Scoped to the caller like every other dev_mode_audit read: the probe
         // output carries the filesystem paths of whoever ran it.
@@ -45,7 +47,13 @@ final class DoctorPanelPage extends Component
             ? ['probeRows' => [], 'rawStdout' => null, 'finishedAt' => null, 'exitCode' => null]
             : $this->snapshotFromRow($latest, $parser);
 
-        return $views->make('dev::livewire.doctor-panel-page', [...$snapshot, 'commandName' => self::COMMAND]);
+        return $views->make('dev::livewire.doctor-panel-page', [
+            ...$snapshot,
+            'commandName' => self::COMMAND,
+            // Asked before the button is drawn: on a runtime that cannot spawn,
+            // every press answers 501 and the panel stays empty forever.
+            'canSpawn' => $spawner->canSpawn(),
+        ]);
     }
 
     /**
