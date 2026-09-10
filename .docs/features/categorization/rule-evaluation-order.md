@@ -83,9 +83,14 @@ so `%` and `_` in a merchant name are literal characters rather than
 wildcards.
 
 **Amount** compares `settled_amount_minor` as an integer with `>`, `<`,
-`equals` or `between`. A non-numeric stored value coerces to `0` rather
-than throwing. `between` normalises its bounds with `min`/`max`, so a
-rule authored with the bounds reversed still behaves as the user meant.
+`equals` or `between`. A stored bound that is not a number disables the
+condition rather than throwing — and rather than comparing against `0`,
+which is what it used to do: `> ''` then read as "above nothing" and fired
+on every income row the reader owned. That was the one branch not keeping
+the promise this page makes twice elsewhere, that a half-filled or corrupt
+rule cannot become a match-everything rule. `between` needs both ends for
+the same reason, and normalises them with `min`/`max`, so a rule authored
+with the bounds reversed still behaves as the user meant.
 
 The bound is stored as bare minor units with no currency of its own, and
 the rule form writes it at the reader's reporting currency scale. So the
