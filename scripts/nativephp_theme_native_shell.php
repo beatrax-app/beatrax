@@ -5,8 +5,9 @@ declare(strict_types=1);
 require_once __DIR__.'/nativephp_scaffold_root.php';
 
 /*
- * Paints the two surfaces CSS can never reach: the WebView's own canvas and
- * the Activity window behind it.
+ * Patches the generated Android shell's WebViewManager and its themes: the two
+ * surfaces CSS can never reach — the WebView's own canvas and the Activity
+ * window behind it — and the one setting that must not survive a release build.
  *
  * A WebView's default background is opaque white, and it shows that white for
  * the whole navigation — from the moment the old document is torn down until
@@ -31,6 +32,17 @@ $nightColors = $root.'/res/values-night/colors.xml';
 // surfaces and the first painted frame are the same colour.
 const SHELL_DARK = '#FF020617';
 const SHELL_LIGHT = '#FFFFFFFF';
+
+// setWebContentsDebuggingEnabled is process-wide and independent of
+// android:debuggable, so the shipped build answered chrome://inspect: live DOM
+// and JS heap of the ledger, and script execution in the app's own origin.
+// Read off the flag the platform sets, so a `native:run` build still inspects.
+const INSPECTION_GATE = <<<'KOTLIN'
+        WebView.setWebContentsDebuggingEnabled(
+            (context.applicationInfo.flags and
+                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        )
+KOTLIN;
 
 function patchWebViewBackground(string $file): void
 {
@@ -77,8 +89,13 @@ function patchWebViewBackground(string $file): void
 
 KOTLIN;
 
-    file_put_contents($file, str_replace($anchor, $patch.$anchor, $source));
-    echo "nativephp_theme_native_shell: WebView background painted.\n";
+    // Both replacements go out in ONE write, off ONE anchor, because the anchor
+    // IS the line the second one rewrites. Split across two scripts, whichever
+    // ran second would report the anchor missing and skip in silence.
+    $patched = str_replace($anchor, $patch.$anchor, $source);
+
+    file_put_contents($file, str_replace($anchor, INSPECTION_GATE, $patched));
+    echo "nativephp_theme_native_shell: WebView background painted, inspection gated.\n";
 }
 
 function patchThemeBackground(string $file, string $colorName): void
