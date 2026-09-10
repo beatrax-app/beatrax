@@ -52,7 +52,32 @@ before attempting any write:
 
 Only the exact string `manual` blocks. A field stamped `rule` is
 overwritten freely — that is what lets an edited rule correct its own
-earlier output. An unstamped field is overwritten freely too.
+earlier output. An unstamped field is overwritten freely too, with one
+exception the map cannot express on its own.
+
+### Absence of a stamp is not permission
+
+The map the re-apply reads is `protectedFieldsFor()`, not
+`provenanceFor()`. The two differ in one place: a row carrying a
+`category_id` that neither `field_provenance` nor
+`auto_category_provenance` claims is read as `category_id: manual`.
+
+Every automatic assignment records which rule or memory produced it
+(`auto_category_provenance`), and a rule that later rewrites one stamps
+the map above. Neither present leaves the reader as the only one who
+could have put the category there — and two writers of a category the
+reader chose stamp nothing at all. `CashBook`'s `RecordManualTransaction`
+writes the category picked in the cash-entry form, and `Migration`'s
+`PromoteStagingToDomain` writes the categorisation the reader brought
+from whichever app they came from. Both stored an unstamped
+`category_id`, and the first press of *Re-apply rules* replaced it. The
+column was also added to a table that already had rows, with no backfill
+behind it, so every category set by hand before then read as unstamped
+too.
+
+`provenanceFor()` stays the stored map, because `stamp()` compares before
+and after with it and announces the result: a synthesised key there would
+put a value on the wire that no row holds.
 
 `PROVENANCE_KEY` exists because the action type and the provenance key
 are not the same vocabulary: the action types are `category`,
