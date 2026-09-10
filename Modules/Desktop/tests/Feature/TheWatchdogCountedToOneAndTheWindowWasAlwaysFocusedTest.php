@@ -18,6 +18,7 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Native\Desktop\Events\App\ApplicationBooted;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
+use Tests\Helpers\ShellBridge;
 
 // The sibling suites resolve a listener once and call it repeatedly, which is
 // the one thing the shell never does. Each _native/api/events POST is its own
@@ -59,7 +60,7 @@ function watchdogListensAsTheBundleDoes(): void
 
 function theWorkerExited(): void
 {
-    test()->post('_native/api/events', [
+    test()->withHeaders(ShellBridge::arm())->post('_native/api/events', [
         'event' => ProcessExited::class,
         'payload' => [SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', 1],
     ])->assertOk();
@@ -144,7 +145,7 @@ it('lets a notification through to the OS after the request that recorded the bl
     Http::fake();
     $user = watchdogUser('watchdog-blurred');
 
-    $this->post('_native/api/events', ['event' => WindowBlurred::class, 'payload' => ['main']])->assertOk();
+    $this->withHeaders(ShellBridge::arm())->post('_native/api/events', ['event' => WindowBlurred::class, 'payload' => ['main']])->assertOk();
     aFreshShellRequest();
 
     app(DispatchOsNotification::class)->handleNotificationDeliverable(aDeliverableFor($user->id));
@@ -171,7 +172,7 @@ it('starts a launch from the default, so a shell killed while blurred does not t
     Http::fake();
     $user = watchdogUser('watchdog-relaunched');
 
-    $this->post('_native/api/events', ['event' => WindowBlurred::class, 'payload' => ['main']])->assertOk();
+    $this->withHeaders(ShellBridge::arm())->post('_native/api/events', ['event' => WindowBlurred::class, 'payload' => ['main']])->assertOk();
     aFreshShellRequest();
 
     // Raised rather than posted: the vendor controller behind the booted route
