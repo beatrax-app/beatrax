@@ -63,11 +63,6 @@ final readonly class OutwardSpend
         return self::share($partMinor, $this->totalMinor);
     }
 
-    public function percentOf(int $partMinor): int
-    {
-        return self::percent($partMinor, $this->totalMinor);
-    }
-
     // Cut from the two integers, never from their quotient. The nearest double
     // to 29/50 is 0.57999999999999996, and times a hundred it lands below 58,
     // so the floor below took a whole point off -- at 29, 57 and 58 percent
