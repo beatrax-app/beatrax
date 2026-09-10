@@ -59,6 +59,18 @@ different money:
   typed in their own currency, and each was compared straight against
   `settled_amount_minor` of every row. A bound written as EUR 50.00
   (`5000`) fires on a JPY 5,001 charge worth about EUR 31.
+- **A product constant met by a reader-scoped figure.** The same defect
+  with nobody to have typed it: `SavingsInsightsQuery`'s review floor was
+  the integer `500` compared against a monthly cost already converted into
+  the reader's *reporting* currency. Both sides were in one money, so the
+  comparison was well formed — and still wrong, because the floor meant
+  EUR 5.00 to one reader and about EUR 3.00 to a reader reporting in yen.
+  A yen is roughly 0.6 of a eurocent, so the error here is a factor of
+  about 1.7, not of 100 — and rescaling the constant by
+  `CurrencyScale::minorUnitsPerMajor()` would have read it as five major
+  units, JPY 5, roughly two orders of magnitude *further* from the
+  intended floor than the bug. Scale is what a figure is rendered and
+  parsed at; a threshold is an amount, and an amount converts.
 - **An ordering key.** `ORDER BY ABS(monthly_equivalent_minor)` put JPY
   10,000 a month (`10000`, about EUR 63) above EUR 99 a month (`9900`) on
   a list headed "biggest first".

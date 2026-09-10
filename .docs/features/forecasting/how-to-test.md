@@ -140,9 +140,16 @@ and the assertion — see
   wraps a `CreateScenario` + `AddScenarioMutation` pair in a DB
   transaction; a half-applied launchpad scenario can never land.
 - **A second click returns the first scenario, in any language.**
-  The lookup is `existingScenarioIdForTemplate()` — mutation kind plus
+  The lookup is `existingTemplateScenario()` — mutation kind plus
   target series — never the translated name, which the reader may also
   have renamed.
+- **A second PRICE re-prices that scenario rather than returning it.**
+  The figure is not part of the lookup key and the name never carried
+  it, so a reprice used to hand back the first scenario's amount in
+  silence. `CreateScenarioFromTemplate` now edits the existing
+  `change_series_amount` mutation through `EditScenarioMutation`; a
+  cancellation, which names no figure, still writes nothing on the
+  second click.
 - **Scenario names are unique per user.** UNIQUE
   `(user_id, name)`; the rename action has a deterministic conflict
   surface.

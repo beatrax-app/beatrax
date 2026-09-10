@@ -19,6 +19,7 @@ use Modules\DriftAlerts\Internal\Dto\InsightFacts;
 use Modules\DriftAlerts\Internal\Enums\SavingsInsightKind;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -28,7 +29,13 @@ use Modules\Sync\Public\Events\EntityMutated;
 
 final readonly class SavingsInsightsQuery
 {
-    private const int REVIEW_FLOOR = 500;
+    // An amount of money, not a count of minor units. 500 is EUR 5.00 and also
+    // JPY 500, which is about EUR 3.00, so a yen reader was offered the prompt
+    // on a subscription a euro reader beside them, on the same real figure, was
+    // not. The floor is written here and converted into whatever they report in.
+    private const int REVIEW_FLOOR_MINOR = 500;
+
+    private const string REVIEW_FLOOR_CURRENCY = Currency::Eur->value;
 
     private const int CACHE_TTL = 600;
 
@@ -99,6 +106,8 @@ final readonly class SavingsInsightsQuery
             $approved,
         ), $baseCurrency);
 
+        $reviewFloorMinor = $this->reviewFloorIn($baseCurrency);
+
         $insights = [];
         foreach ($approved as $series) {
             if ($series->direction !== Direction::Expense->value) {
@@ -130,6 +139,7 @@ final readonly class SavingsInsightsQuery
                 ),
                 $resource,
                 isset($openAlerts[$series->seriesId]),
+                $reviewFloorMinor,
             );
 
             if ($facts !== null && ! isset($dismissed[$facts->kind->keyFor($facts->seriesId)])) {
@@ -138,6 +148,22 @@ final readonly class SavingsInsightsQuery
         }
 
         return $this->costliestFirst($insights, $baseCurrency, $rates);
+    }
+
+    // A pair the rate table cannot reach keeps the figure as written, which is
+    // what every reader got before the floor was money at all.
+    private function reviewFloorIn(string $baseCurrency): int
+    {
+        if ($baseCurrency === self::REVIEW_FLOOR_CURRENCY) {
+            return self::REVIEW_FLOOR_MINOR;
+        }
+
+        $floor = Money::tryOfMinor(self::REVIEW_FLOOR_MINOR, self::REVIEW_FLOOR_CURRENCY);
+        $converted = $floor === null
+            ? null
+            : $this->fx->convert($floor, $baseCurrency, $this->fx->ratesTo([self::REVIEW_FLOOR_CURRENCY], $baseCurrency));
+
+        return $converted?->toMinor() ?? self::REVIEW_FLOOR_MINOR;
     }
 
     // Null for a currency the rate table cannot reach, which withholds the
@@ -238,19 +264,20 @@ final readonly class SavingsInsightsQuery
         return 'savings-insights:facts:'.$user->id;
     }
 
+    // The floor arrives already in the reader's reporting currency, and the
+    // series is converted into that currency before the comparison rather than
+    // refused for not already being denominated in it.
     private function pick(
         InsightCandidate $candidate,
         SupportResource $resource,
         bool $hasOpenAlert,
+        int $reviewFloorMinor,
     ): ?InsightFacts {
-        // The review floor is a threshold in the reader's reporting currency,
-        // so the series is converted into it before the comparison rather than
-        // refused for not already being denominated in it.
         $kind = match (true) {
             $resource->cheaperUrl !== null => SavingsInsightKind::Cheaper,
             $hasOpenAlert && $resource->cancelUrl !== null => SavingsInsightKind::Cancel,
             $candidate->monthlyInBaseMinor !== null
-                && $candidate->monthlyInBaseMinor >= self::REVIEW_FLOOR
+                && $candidate->monthlyInBaseMinor >= $reviewFloorMinor
                 && $resource->cancelUrl !== null => SavingsInsightKind::Review,
             default => null,
         };

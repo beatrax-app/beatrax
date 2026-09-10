@@ -21,6 +21,7 @@ use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringOccurrenceQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
+use Modules\Recurring\Public\Support\MissedOccurrences;
 use Modules\Sync\Public\Events\EntityMutated;
 
 /**
@@ -132,13 +133,13 @@ final readonly class DriftEvaluator
             return $fallback;
         }
 
-        return self::snapToCadenceRate(self::DAYS_PER_YEAR / $gapDays) ?? $fallback;
+        return self::snapToCadenceRate($gapDays, $fallback) ?? $fallback;
     }
 
     // Nearest by ratio, not by difference: 4/yr and 1/yr are 3 apart while
     // 52/yr and 12/yr are 40, so a linear nearest-match would pull every long
     // gap onto the yearly band.
-    private static function snapToCadenceRate(float $perYear): ?int
+    private static function snapToCadenceRate(float $gapDays, int $fallback): ?int
     {
         $best = null;
         $bestDistance = null;
@@ -147,14 +148,34 @@ final readonly class DriftEvaluator
             if ($rate === 0) {
                 continue;
             }
-            $distance = abs(log($perYear / $rate));
+            $distance = self::ratioDistance($gapDays, self::DAYS_PER_YEAR / $rate);
             if ($bestDistance === null || $distance < $bestDistance) {
                 $bestDistance = $distance;
                 $best = $rate;
             }
         }
 
+        // A gap with occurrences missing from it is a run of the same period,
+        // not a longer one: a skipped month made 59 days read as quarterly and
+        // annualised the rise at a third of its rate. Only the series' own
+        // cadence is read that way, and a single period wins every tie.
+        if ($fallback > 0 && $bestDistance !== null) {
+            $period = self::DAYS_PER_YEAR / $fallback;
+            for ($missed = 1; $missed <= MissedOccurrences::MAX_PER_WINDOW; $missed++) {
+                $distance = self::ratioDistance($gapDays, $period * ($missed + 1));
+                if ($distance < $bestDistance) {
+                    $bestDistance = $distance;
+                    $best = $fallback;
+                }
+            }
+        }
+
         return $best;
+    }
+
+    private static function ratioDistance(float $gapDays, float $periodDays): float
+    {
+        return abs(log($gapDays / $periodDays));
     }
 
     private function openAlert(int $seriesId, User $user, RecurringSeriesDto $series, DriftMetrics $drift): void

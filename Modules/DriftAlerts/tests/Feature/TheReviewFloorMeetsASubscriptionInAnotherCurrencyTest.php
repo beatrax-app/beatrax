@@ -11,6 +11,10 @@ use Modules\Ledger\Public\Enums\Currency;
 // The review floor is a figure in the reader's reporting currency, and the arm
 // that applies it refused every series not already denominated in that
 // currency. Pick pounds over a euro ledger and "Ways to save" quietly emptied.
+//
+// The floor itself is EUR 5.00 converted, not the integer 500 read as pounds,
+// so at 0.80 it is GBP 4.00 here. The figure that used to sit just under it —
+// EUR 6.00, GBP 4.80 — sits just over it, and this file says so.
 
 function rfChain(DatabaseManager $db, int $userId, string $merchant, int $monthlyMinor, string $currency): int
 {
@@ -94,8 +98,22 @@ it('offers the review prompt for a euro subscription a pound reader is looking a
 });
 
 it('still withholds it below the floor once converted', function (): void {
-    // EUR 6.00 a month is GBP 4.80, under the GBP 5.00 floor.
-    rfChain($this->db, $this->user->id, 'KPN', 600, Currency::Eur->value);
+    // EUR 4.00 a month is GBP 3.20, under the GBP 4.00 the EUR 5.00 floor is.
+    rfChain($this->db, $this->user->id, 'KPN', 400, Currency::Eur->value);
 
     expect(app(SavingsInsightsQuery::class)->forUser($this->user))->toBe([]);
+});
+
+// The floor is the same money for every reader, so it converts with them: read
+// as the bare integer 500 it would be GBP 5.00 here and this series would be
+// withheld, which is the pound reader being told something the euro reader is
+// not about one real amount.
+it('offers it just above the converted floor, which is not GBP 5.00', function (): void {
+    $seriesId = rfChain($this->db, $this->user->id, 'KPN', 600, Currency::Eur->value);
+
+    $insights = app(SavingsInsightsQuery::class)->forUser($this->user);
+
+    expect($insights)->toHaveCount(1)
+        ->and($insights[0]->type)->toBe('review')
+        ->and($insights[0]->key)->toBe('review:'.$seriesId);
 });

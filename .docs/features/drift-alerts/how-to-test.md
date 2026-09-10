@@ -172,6 +172,14 @@ and the assertion — see
 - **A cadence restructure is annualised per side.** Monthly EUR 10
   becoming yearly EUR 100 is a EUR 20/yr saving, not EUR 90/yr extra.
   (`tests/fixtures/drift-corpus/cadence-restructure.php`)
+- **A skipped period is not a restructure.** The prior rate is read
+  off one gap, and one missed occurrence doubles it: a monthly plan
+  that skipped March fitted a quarter better than a month and priced
+  a EUR 2.00 rise at EUR 104.00 a year. The gap is matched against the
+  series' own period taken twice and three times as well, so a run of
+  the same cadence stays that cadence and a real restructure still
+  reads as one.
+  (`tests/Unit/AMissedMonthIsNotACadenceChangeTest.php`)
 - **An already-actioned alert no-ops rather than raising.** A second
   tab acknowledging a dismissed row, or re-snoozing a lapsed snooze to
   a new date, leaves the row consistent instead of returning a 500.

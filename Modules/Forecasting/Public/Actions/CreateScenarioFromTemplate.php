@@ -10,6 +10,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Enums\ScenarioTemplate;
 use Modules\Forecasting\Internal\Support\ScenarioSeriesResolver;
+use Modules\Forecasting\Models\ForecastScenarioMutation;
+use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -22,6 +24,7 @@ final readonly class CreateScenarioFromTemplate
         private DatabaseManager $db,
         private CreateScenario $createScenario,
         private AddScenarioMutation $addMutation,
+        private EditScenarioMutation $editMutation,
         private ScenarioSeriesResolver $seriesResolver,
     ) {}
 
@@ -36,9 +39,13 @@ final readonly class CreateScenarioFromTemplate
         // Asked before the insert, not only after it fails: the reader who
         // clicks the launchpad twice gets the scenario they already made,
         // and a name that is theirs to rename never breaks that.
-        $existing = $this->seriesResolver->existingScenarioIdForTemplate($user, $template, $recurringSeriesId);
+        $existing = $this->seriesResolver->existingTemplateScenario($user, $template, $recurringSeriesId);
         if ($existing !== null) {
-            return $existing;
+            if ($newAmountMinor !== null) {
+                $this->reprice($existing['mutationId'], $user, $template, $recurringSeriesId, $newAmountMinor);
+            }
+
+            return $existing['scenarioId'];
         }
 
         $scenarioName = Lang::get($template->nameKey(), [
@@ -63,6 +70,37 @@ final readonly class CreateScenarioFromTemplate
             }
             throw $e;
         }
+    }
+
+    // A second price typed against the same series is a re-price of the what-if
+    // the reader already has, not a repeat click. One scenario per (template,
+    // series) is what the name can hold — it carries no figure and is UNIQUE
+    // per reader — so the figure moves rather than a second scenario appearing.
+    private function reprice(
+        int $mutationId,
+        User $user,
+        ScenarioTemplate $template,
+        int $recurringSeriesId,
+        int $newAmountMinor,
+    ): void {
+        $payload = $template->payloadFor($recurringSeriesId, $newAmountMinor);
+        $mutation = ForecastScenarioMutation::query()
+            ->where('id', $mutationId)
+            ->where('user_id', $user->id)
+            ->first();
+        $stored = $mutation?->payload;
+
+        // A template that names no figure has nothing to re-price, and the
+        // figure already stored is the one being asked for. Both are the
+        // repeat click the lookup above exists for, and neither may write.
+        if (! $payload instanceof ChangeSeriesAmountPayload || ! $stored instanceof ChangeSeriesAmountPayload) {
+            return;
+        }
+        if ($stored->newAmountMinor === $payload->newAmountMinor) {
+            return;
+        }
+
+        ($this->editMutation)($mutationId, $user, $payload);
     }
 
     // The drift page holds an alert id, not a series id, and may not name this

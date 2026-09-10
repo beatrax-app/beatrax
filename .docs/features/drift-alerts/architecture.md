@@ -191,7 +191,12 @@ support-resource link, chosen by priority — (1) `cheaper`: the corpus has
 a cheaper-plan/student/retention page; (2) `cancel`: the price has
 drifted up (an open drift alert exists) and the corpus has a
 cancellation page; (3) `review`: an ongoing charge at or above the EUR
-review floor with a cancellation page. One suggestion per subscription,
+review floor with a cancellation page — EUR 5.00, converted into
+whatever the reader reports in rather than read as 500 minor units of
+it, because 500 yen is about EUR 3.00 and the yen reader was being
+offered a prompt the euro reader beside them, on the same real amount,
+was not. A pair the rate table cannot reach keeps the figure as
+written. One suggestion per subscription,
 dismissible via a stable persisted key, ranked by monthly cost — purely
 informational, Beatrax surfaces the official link and never acts on the
 user's behalf. `forUser()` is cached per user so the dashboard card

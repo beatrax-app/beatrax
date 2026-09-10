@@ -20,12 +20,15 @@ final readonly class ScenarioSeriesResolver
     public function __construct(private DatabaseManager $db) {}
 
     // What a launchpad's second click looks the scenario back up by. The name
-    // cannot serve: it is translated, so a Dutch reader's row is invisible to a
-    // lookup spelling the English one. The mutation the template wrote is the
-    // same row on every device in every language.
-    public function existingScenarioIdForTemplate(User $user, ScenarioTemplate $template, int $seriesId): ?int
+    // cannot serve: it is translated, and it never held the figure either, so
+    // the mutation the template wrote answers both — the same row on every
+    // device in every language, and the one the typed price lives on.
+    /**
+     * @return array{scenarioId: int, mutationId: int}|null
+     */
+    public function existingTemplateScenario(User $user, ScenarioTemplate $template, int $seriesId): ?array
     {
-        $value = $this->db->connection()->table('forecast_scenarios')
+        $row = $this->db->connection()->table('forecast_scenarios')
             ->join(
                 'forecast_scenario_mutations',
                 'forecast_scenario_mutations.forecast_scenario_id',
@@ -36,9 +39,20 @@ final readonly class ScenarioSeriesResolver
             ->where('forecast_scenario_mutations.kind', $template->mutationKind()->value)
             ->where('forecast_scenario_mutations.target_series_id', $seriesId)
             ->orderBy('forecast_scenarios.id')
-            ->value('forecast_scenarios.id');
+            ->first([
+                'forecast_scenarios.id as scenario_id',
+                'forecast_scenario_mutations.id as mutation_id',
+            ]);
 
-        return is_numeric($value) ? (int) $value : null;
+        if ($row === null) {
+            return null;
+        }
+
+        /** @var stdClass $row */
+        $scenarioId = is_numeric($row->scenario_id ?? null) ? (int) $row->scenario_id : 0;
+        $mutationId = is_numeric($row->mutation_id ?? null) ? (int) $row->mutation_id : 0;
+
+        return $scenarioId === 0 ? null : ['scenarioId' => $scenarioId, 'mutationId' => $mutationId];
     }
 
     public function existingScenarioIdByName(User $user, string $name): ?int

@@ -177,6 +177,11 @@ a second, refined median and counted. If more than two missed periods
 fall inside any window of six consecutive intervals, the cluster is
 declared `irregular` outright — too unstable to be a commitment.
 
+Both numbers live in `Recurring\Public\Support\MissedOccurrences`, not in
+the inferrer: drift detection reads the same bound off a single interval to
+tell a skipped month from a restructured plan, and two homes for one rule is
+how the two surfaces came to disagree about a 59-day gap.
+
 The subtle part is which median decides the cadence. There are two, and
 they are used for different things:
 

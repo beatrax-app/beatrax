@@ -53,10 +53,11 @@ final readonly class CounterpartyIndexQuery
         // a rolling year, the total held days the sparkline had no bar for.
         $now = $this->clock->now();
         $cutoffDate = RollingTwelveMonths::startDate($now);
+        $endDate = RollingTwelveMonths::endDate($now);
 
-        $buckets = $this->bucketsByCounterparty($user, $cutoffDate);
+        $buckets = $this->bucketsByCounterparty($user, $cutoffDate, $endDate);
         $recentRows = $this->recentRowByCounterparty($user);
-        $monthlyBuckets = $this->monthlyBucketsByCounterparty($user, $cutoffDate);
+        $monthlyBuckets = $this->monthlyBucketsByCounterparty($user, $cutoffDate, $endDate);
         $sparklineMonths = RollingTwelveMonths::months($now);
 
         // One rate lookup per currency for the whole page, not one per
@@ -206,14 +207,14 @@ final readonly class CounterpartyIndexQuery
     /**
      * @return array<int, array{minor: array<string, int>, count: int}>
      */
-    private function bucketsByCounterparty(User $user, string $cutoffDate): array
+    private function bucketsByCounterparty(User $user, string $cutoffDate, string $endDate): array
     {
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereNotNull('counterparty_id')
             ->whereIn('type', TransactionType::externalMovementValues())
-            ->where('posted_at', '>=', $cutoffDate)
+            ->whereBetween('posted_at', [$cutoffDate, $endDate])
             ->groupBy('counterparty_id', 'settled_currency')
             ->selectRaw('counterparty_id, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total, COUNT(*) as cnt')
             ->get();
@@ -269,14 +270,14 @@ final readonly class CounterpartyIndexQuery
     /**
      * @return array<int, array<string, array<string, int>>>
      */
-    private function monthlyBucketsByCounterparty(User $user, string $cutoffDate): array
+    private function monthlyBucketsByCounterparty(User $user, string $cutoffDate, string $endDate): array
     {
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereNotNull('counterparty_id')
             ->whereIn('type', TransactionType::externalMovementValues())
-            ->where('posted_at', '>=', $cutoffDate)
+            ->whereBetween('posted_at', [$cutoffDate, $endDate])
             ->groupBy('counterparty_id', 'ym', 'settled_currency')
             ->selectRaw("counterparty_id, strftime('%Y-%m', posted_at) as ym, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total")
             ->get();

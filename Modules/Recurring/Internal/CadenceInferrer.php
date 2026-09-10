@@ -7,6 +7,7 @@ namespace Modules\Recurring\Internal;
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\WeekStart;
 use Modules\Recurring\Public\Enums\SeriesCadence;
+use Modules\Recurring\Public\Support\MissedOccurrences;
 
 /**
  * @link ../../../.docs/features/recurring/series-detection.md#missed-periods-and-why-the-cadence-snaps-on-the-unfiltered-median
@@ -26,12 +27,6 @@ final class CadenceInferrer
     private const int YEARLY_MIN = 350;
 
     private const int YEARLY_MAX = 380;
-
-    private const float MISSED_INTERVAL_MULTIPLIER = 1.8;
-
-    private const int MAX_MISSED_PER_WINDOW = 2;
-
-    private const int MISSED_WINDOW_SIZE = 6;
 
     private const float CONFIDENCE_LOW_STDDEV_THRESHOLD = 5.0;
 
@@ -62,7 +57,7 @@ final class CadenceInferrer
         $filtered = [];
         $missedCount = 0;
         $missedFlags = [];
-        $missedThreshold = $provisionalMedian * self::MISSED_INTERVAL_MULTIPLIER;
+        $missedThreshold = $provisionalMedian * MissedOccurrences::INTERVAL_MULTIPLIER;
         foreach ($intervals as $interval) {
             if ($provisionalMedian > 0.0 && $interval > $missedThreshold) {
                 $missedCount++;
@@ -174,8 +169,8 @@ final class CadenceInferrer
      */
     private static function exceedsMissedWindowCap(array $missedFlags): bool
     {
-        $window = self::MISSED_WINDOW_SIZE;
-        $cap = self::MAX_MISSED_PER_WINDOW;
+        $window = MissedOccurrences::WINDOW_SIZE;
+        $cap = MissedOccurrences::MAX_PER_WINDOW;
         $count = count($missedFlags);
         if ($count < $window) {
             return false;
