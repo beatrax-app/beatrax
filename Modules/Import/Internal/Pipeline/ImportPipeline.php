@@ -89,7 +89,7 @@ final readonly class ImportPipeline
         $captures = new ReceiptCaptureLog;
         $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId, new OccurrenceOrdinals($this->fingerprints));
 
-        $built = $this->buildPreviewRows(
+        $head = $this->buildPreviewRows(
             $this->parse->run($localPath, $sourceFormat, $accounts, $user, $captures),
             $run,
             $writer,
@@ -97,9 +97,9 @@ final readonly class ImportPipeline
             $captures,
         );
 
-        $this->persistStatementMetadata($sourceFormat, $importRunId, $built['lastResolvedAccountId'], $user);
+        $this->persistStatementMetadata($sourceFormat, $importRunId, $accounts, $user);
 
-        return $built['head'];
+        return $head;
     }
 
     /**
@@ -111,19 +111,17 @@ final readonly class ImportPipeline
     {
         $run = new PreviewRun($sourceFormat, $accounts, $user, $importRunId, new OccurrenceOrdinals($this->fingerprints));
 
-        return $this->buildPreviewRows($sourceRows, $run, $writer)['head'];
+        return $this->buildPreviewRows($sourceRows, $run, $writer);
     }
 
     /**
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
-     * @return array{head: PreviewHead, lastResolvedAccountId: ?int}
      */
-    private function buildPreviewRows(iterable $sourceRows, PreviewRun $run, PreviewWriter $writer, ?string $localPath = null, ?ReceiptCaptureLog $captures = null): array
+    private function buildPreviewRows(iterable $sourceRows, PreviewRun $run, PreviewWriter $writer, ?string $localPath = null, ?ReceiptCaptureLog $captures = null): PreviewHead
     {
         /** @var array<string, UnknownIban> $unknownIbans */
         $unknownIbans = [];
         $rowsWritten = 0;
-        $lastResolvedAccountId = null;
         $fileFailureReason = null;
         $fileFailureDetail = null;
         $fileFailureRowIndex = null;
@@ -145,7 +143,6 @@ final readonly class ImportPipeline
 
                 /** @var KnownAccount $resolution */
                 $accountId = $resolution->accountId;
-                $lastResolvedAccountId = $accountId;
 
                 $enriched = $this->enrichRow($source, $accountId, $run);
                 if ($enriched instanceof PreviewRowDto) {
@@ -210,17 +207,14 @@ final readonly class ImportPipeline
             $writer->addRow(self::unreadableRow($unreadableMessage, ImportFailureReason::MessageUnreadable));
         }
 
-        return [
-            'head' => $writer->finish(
-                array_values($unknownIbans),
-                $fileFailureReason,
-                $fileFailureDetail,
-                $fileFailureRowIndex,
-                $captures?->kept() ?? [],
-                $captures?->total() ?? 0,
-            ),
-            'lastResolvedAccountId' => $lastResolvedAccountId,
-        ];
+        return $writer->finish(
+            array_values($unknownIbans),
+            $fileFailureReason,
+            $fileFailureDetail,
+            $fileFailureRowIndex,
+            $captures?->kept() ?? [],
+            $captures?->total() ?? 0,
+        );
     }
 
     // Every stage a row has to survive to become a transaction. One that fails
@@ -385,12 +379,8 @@ final readonly class ImportPipeline
     /**
      * @link ../../../../.docs/architecture/ingestion-pipeline.md#statement-metadata-side-channel
      */
-    private function persistStatementMetadata(string $sourceFormat, int $importRunId, ?int $accountId, User $user): void
+    private function persistStatementMetadata(string $sourceFormat, int $importRunId, AccountResolver $accounts, User $user): void
     {
-        if ($accountId === null) {
-            return;
-        }
-
         if (! in_array($sourceFormat, $this->adapters->supportedFormats(), strict: true)) {
             return;
         }
@@ -400,9 +390,18 @@ final readonly class ImportPipeline
             return;
         }
 
+        // The summary describes ONE statement and names the account it belongs
+        // to, and a multi-statement CAMT file walks on past it into a second
+        // account's rows. Stamped with whichever account resolved last, the
+        // first statement's opening balance anchored the last one's account.
+        $resolution = $accounts->resolve($metadata->ibanOwner);
+        if (! $resolution instanceof KnownAccount) {
+            return;
+        }
+
         ($this->statementSummaries)(
             $user,
-            $metadata->withImportRunId($importRunId)->withAccountId($accountId),
+            $metadata->withImportRunId($importRunId)->withAccountId($resolution->accountId),
         );
     }
 

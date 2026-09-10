@@ -270,8 +270,12 @@ publishes the **first**, with `extras.multiStatement: true` beside it and
 disagree: CAMT silently kept the *last* statement, so a reader importing
 a multi-statement export lost the earlier ones from
 `statement_summaries` with nothing recording that they had been in the
-file. The later statements' entries still yield rows either way. Unlike
-MT940 there is no paged-statement case to separate out here: CAMT.053
+file. The later statements' entries still yield rows either way, under
+their own `ownIban` — which is why the pipeline files the one summary
+against the account the summary's own `ibanOwner` resolves to, and never
+against the last account a row resolved to. See
+[the statement metadata side-channel](../../architecture/ingestion-pipeline.md#statement-metadata-side-channel).
+Unlike MT940 there is no paged-statement case to separate out here: CAMT.053
 pages across *messages* (`<Pgntn>` in the group header), so a second
 `<Stmt>` inside one message — with its own `<Id>` and its own
 `OPBD`/`CLBD` balances — is a second statement, never page two of the
@@ -400,12 +404,17 @@ after the earliest charge it billed and no statement could settle. See
 another](../../conventions/invariants-from-shipped-failures.md#a-period-derived-from-one-column-and-tested-on-another).
 `openingBalanceDate` / `closingBalanceDate` follow the same two days.
 
-Statement-metadata sign convention: opening/closing/period-charges
-display as positive amounts with an `Af` direction marker meaning "owed
-to ICS"; they are persisted signed-negative so ledger semantics line up
-with the rest of the project (debits negative, credits positive).
-Period-received credits stay positive; credit-limit and minimum-due are
-informational and stay positive.
+Statement-metadata sign convention: every figure in the four-column
+summary block displays as a positive amount with a direction marker
+beside it — `Af` meaning "owed to ICS", `Bij` meaning credit — and the
+marker decides the sign, exactly as it does on the transaction rows.
+`Af` persists negative and `Bij` positive, so ledger semantics line up
+with the rest of the project (debits negative, credits positive) and
+the four columns still balance: closing = opening + received + charges.
+Credit-limit and minimum-due carry no marker; they are informational and
+stay positive. Signing them by column instead — which is right for the
+one shipped statement and nothing else — is
+[the failure that page records](ics-pdf-text-extraction.md#statement-summary-and-signs).
 
 `IcsPdfAdapter::statementMetadata()` is assembled in the parse
 generator's terminator step — callers must exhaust the `parse()`
