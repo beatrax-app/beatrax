@@ -99,6 +99,20 @@ it('has each platform adapter answering the custody question itself', function (
     );
 })->with([DesktopKeyCustodian::class, SecureStorageKeyCustodian::class, NullKeyCustodian::class]);
 
+// The pass-through is what local dev, CI and the self-hosted web app resolve,
+// and the sentence it says about itself is the only thing that tells a reader
+// their key is following the session. A pass-through claiming OS custody would
+// pass every test above: it is bound where it should be, it declares custody()
+// itself, and the enum arm it named would be the one that protects at rest.
+it('has the pass-through custodian naming session custody', function (): void {
+    expect(app(NullKeyCustodian::class)->custody())->toBe(
+        KeyCustody::Session,
+        'NullKeyCustodian no longer reports session custody. It is what every shape without a bundle '
+        .'resolves, and its store() hands back the raw key, so the shape that resolves it would now be '
+        .'told the data key it writes to the sessions table is protected at rest.'
+    );
+});
+
 it('treats only operating-system custody as protection at rest', function (): void {
     $cases = KeyCustody::cases();
 
