@@ -29,6 +29,12 @@ enum QuarantineReason: string
 
     case ForgedSignature = 'forged_signature';
 
+    // A field its own table never puts on the wire -- `users.password` and the
+    // rest of the device-local set. The capture filter keeps them off the wire,
+    // but that is the SENDER's promise: a peer on an older build whose list was
+    // shorter still emits them, so the receiver refuses them too.
+    case DeviceLocalColumn = 'device_local_column';
+
     case StrategyError = 'strategy_error';
 
     case IncompleteCreateRow = 'incomplete_create_row';

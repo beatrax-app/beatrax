@@ -23,9 +23,10 @@ enum QuarantineOutcome: string
     // the copy has to offer that reading before it offers the other one.
     case UntrustedAuthor = 'untrusted_author';
 
-    // The two that should not happen between a household's own devices: a
-    // signature that did not verify against the key of the device claiming to
-    // have written it, and an entry naming a different account.
+    // What cannot happen between a household's own devices: a signature that
+    // did not verify against the key of the device claiming to have written it,
+    // an entry naming a different account, and a field its own table is never
+    // supposed to put on the wire.
     case NotVerified = 'not_verified';
 
     // The change was admissible and the write still could not be made, so the
@@ -63,7 +64,11 @@ enum QuarantineOutcome: string
         return match ($this) {
             self::TooNew => [QuarantineReason::UnknownTable, QuarantineReason::UnknownColumn],
             self::UntrustedAuthor => [QuarantineReason::MissingDeviceKey, QuarantineReason::UnconfirmedDevice],
-            self::NotVerified => [QuarantineReason::ForgedSignature, QuarantineReason::CrossUser],
+            self::NotVerified => [
+                QuarantineReason::ForgedSignature,
+                QuarantineReason::CrossUser,
+                QuarantineReason::DeviceLocalColumn,
+            ],
             self::Diverged => [
                 QuarantineReason::IncompleteCreateRow,
                 QuarantineReason::DeleteBlockedByReference,
