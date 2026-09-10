@@ -646,6 +646,16 @@ folded from their content gives them one row — losing money instead of
 duplicating it. `pot_movements`, `goals` and `saved_reports` are minted for that
 reason.
 
+`transactions` takes the first answer, and a transaction is an event too, so the
+same trap reaches it through the index rather than through an id. Two identical
+purchases on one statement agree in every column a bank fills — it states a day
+and no time — so the natural key had to gain
+[an occurrence ordinal](../../architecture/ingestion-pipeline.md#the-occurrence-ordinal)
+before it could tell them apart. Because the ordinal is counted within the file
+and not against the ledger, two devices importing one statement derive the same
+ordinals, and `PeerRowAliases` matches each arriving create onto the local row
+that is the same booking rather than folding both onto the first.
+
 `ACoveredTableTellsTwoDevicesRowsApartTest` enforces this: a covered table with
 an autoincrement, no other unique index and no id scheme fails it. Two groups
 are named there rather than quietly passing — the three rule tables, which never

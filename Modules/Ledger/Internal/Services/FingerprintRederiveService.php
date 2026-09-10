@@ -61,6 +61,7 @@ final readonly class FingerprintRederiveService
                 'import_run_id',
                 'source_row_index',
                 'source_ref',
+                'occurrence_ordinal',
             ])
             ->where('normalization_version', '<', $targetVersion)
             ->orderBy('id');
@@ -155,6 +156,7 @@ final readonly class FingerprintRederiveService
             importRunId: self::toInt($row->import_run_id),
             sourceRowIndex: self::toInt($row->source_row_index),
             sourceRef: self::toStringOrNull($row->source_ref),
+            occurrenceOrdinal: self::toInt($row->occurrence_ordinal),
         );
     }
 

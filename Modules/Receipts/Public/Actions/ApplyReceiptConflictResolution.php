@@ -15,6 +15,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
@@ -51,6 +52,7 @@ final readonly class ApplyReceiptConflictResolution
         'settled_currency',
         'fx_rate_used',
         'counterparty_normalized',
+        'occurrence_ordinal',
     ];
 
     public function __construct(
@@ -290,7 +292,7 @@ final readonly class ApplyReceiptConflictResolution
             $rederived['normalization_version'] = $this->fingerprints->version();
         }
 
-        $rederived['fingerprint'] = $this->fingerprints->composeTuple(
+        $rederived['fingerprint'] = $this->fingerprints->composeTuple(new FingerprintTuple(
             $user->id,
             self::toInt($txRow->account_id),
             CarbonImmutable::parse(self::toString($txRow->posted_at))->toDateString(),
@@ -298,7 +300,8 @@ final readonly class ApplyReceiptConflictResolution
             $amount->amountMinor ?? self::toInt($txRow->amount_minor),
             $amount->currency ?? self::toString($txRow->currency),
             $normalized,
-        );
+            self::toInt($txRow->occurrence_ordinal),
+        ));
         $rederived['fingerprint_version'] = $this->fingerprints->version();
 
         return $rederived;

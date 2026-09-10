@@ -15,6 +15,7 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\TransactionStatusWriter;
@@ -156,7 +157,7 @@ it('recomposes the fingerprint when prefer_receipt rewrites the amount the tuple
     $fresh = Transaction::query()->findOrFail($tx->id);
 
     expect($fresh->amount_minor)->toBe(-2750)
-        ->and($fresh->fingerprint)->toBe($this->composer->composeTuple(
+        ->and($fresh->fingerprint)->toBe($this->composer->composeTuple(new FingerprintTuple(
             $this->fixtureUser->id,
             $this->account->id,
             '2026-03-10',
@@ -164,7 +165,8 @@ it('recomposes the fingerprint when prefer_receipt rewrites the amount the tuple
             -2750,
             'EUR',
             $stored->counterpartyNormalized,
-        ));
+            0,
+        )));
 });
 
 // The receipt sibling of this write already refuses a reconciled row and this

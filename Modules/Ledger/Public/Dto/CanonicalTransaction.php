@@ -43,73 +43,27 @@ final class CanonicalTransaction extends Data
         public readonly ?PaymentType $paymentType = null,
         public readonly ?int $counterpartyId = null,
         public readonly ?string $note = null,
+        public readonly int $occurrenceOrdinal = 0,
     ) {}
+
+    // clone-with rather than a rebuild: every wither restated all 26 fields, so
+    // adding one meant editing six near-identical blocks and any of them could
+    // quietly drop a field -- withPaymentType() had already lost `note`. The
+    // properties are readonly, which only this scope may reassign while cloning.
 
     // ClassifyTransactionType flips the NormalizeStage-derived default
     // (expense/income) to the transfer/refund/fee variants the
     // pair-detection listener requires.
     public function withType(string $type): self
     {
-        return new self(
-            userId: $this->userId,
-            accountId: $this->accountId,
-            type: $type,
-            postedAt: $this->postedAt,
-            bookedAt: $this->bookedAt,
-            valueDate: $this->valueDate,
-            amountMinor: $this->amountMinor,
-            currency: $this->currency,
-            settledAmountMinor: $this->settledAmountMinor,
-            settledCurrency: $this->settledCurrency,
-            counterpartyName: $this->counterpartyName,
-            counterpartyIban: $this->counterpartyIban,
-            counterpartyNormalized: $this->counterpartyNormalized,
-            normalizationVersion: $this->normalizationVersion,
-            description: $this->description,
-            categoryId: $this->categoryId,
-            sourceFormat: $this->sourceFormat,
-            importRunId: $this->importRunId,
-            sourceRowIndex: $this->sourceRowIndex,
-            sourceRef: $this->sourceRef,
-            rawPayload: $this->rawPayload,
-            autoCategoryProvenance: $this->autoCategoryProvenance,
-            paymentType: $this->paymentType,
-            counterpartyId: $this->counterpartyId,
-            note: $this->note,
-        );
+        return clone ($this, ['type' => $type]);
     }
 
     // ApplyAutoCategoryStage stamps the chosen rule/memory category
     // before fingerprinting + persistence; null explicitly clears it.
     public function withCategoryId(?int $categoryId): self
     {
-        return new self(
-            userId: $this->userId,
-            accountId: $this->accountId,
-            type: $this->type,
-            postedAt: $this->postedAt,
-            bookedAt: $this->bookedAt,
-            valueDate: $this->valueDate,
-            amountMinor: $this->amountMinor,
-            currency: $this->currency,
-            settledAmountMinor: $this->settledAmountMinor,
-            settledCurrency: $this->settledCurrency,
-            counterpartyName: $this->counterpartyName,
-            counterpartyIban: $this->counterpartyIban,
-            counterpartyNormalized: $this->counterpartyNormalized,
-            normalizationVersion: $this->normalizationVersion,
-            description: $this->description,
-            categoryId: $categoryId,
-            sourceFormat: $this->sourceFormat,
-            importRunId: $this->importRunId,
-            sourceRowIndex: $this->sourceRowIndex,
-            sourceRef: $this->sourceRef,
-            rawPayload: $this->rawPayload,
-            autoCategoryProvenance: $this->autoCategoryProvenance,
-            paymentType: $this->paymentType,
-            counterpartyId: $this->counterpartyId,
-            note: $this->note,
-        );
+        return clone ($this, ['categoryId' => $categoryId]);
     }
 
     // ApplyAutoCategoryStage builds this alongside categoryId so
@@ -119,65 +73,14 @@ final class CanonicalTransaction extends Data
      */
     public function withAutoCategoryProvenance(?array $provenance): self
     {
-        return new self(
-            userId: $this->userId,
-            accountId: $this->accountId,
-            type: $this->type,
-            postedAt: $this->postedAt,
-            bookedAt: $this->bookedAt,
-            valueDate: $this->valueDate,
-            amountMinor: $this->amountMinor,
-            currency: $this->currency,
-            settledAmountMinor: $this->settledAmountMinor,
-            settledCurrency: $this->settledCurrency,
-            counterpartyName: $this->counterpartyName,
-            counterpartyIban: $this->counterpartyIban,
-            counterpartyNormalized: $this->counterpartyNormalized,
-            normalizationVersion: $this->normalizationVersion,
-            description: $this->description,
-            categoryId: $this->categoryId,
-            sourceFormat: $this->sourceFormat,
-            importRunId: $this->importRunId,
-            sourceRowIndex: $this->sourceRowIndex,
-            sourceRef: $this->sourceRef,
-            rawPayload: $this->rawPayload,
-            autoCategoryProvenance: $provenance,
-            paymentType: $this->paymentType,
-            counterpartyId: $this->counterpartyId,
-            note: $this->note,
-        );
+        return clone ($this, ['autoCategoryProvenance' => $provenance]);
     }
 
     // PaymentTypeClassifierStage stamps the resolved chip after the
     // per-source hinters and the description-keyword fallback have run.
     public function withPaymentType(PaymentType $paymentType): self
     {
-        return new self(
-            userId: $this->userId,
-            accountId: $this->accountId,
-            type: $this->type,
-            postedAt: $this->postedAt,
-            bookedAt: $this->bookedAt,
-            valueDate: $this->valueDate,
-            amountMinor: $this->amountMinor,
-            currency: $this->currency,
-            settledAmountMinor: $this->settledAmountMinor,
-            settledCurrency: $this->settledCurrency,
-            counterpartyName: $this->counterpartyName,
-            counterpartyIban: $this->counterpartyIban,
-            counterpartyNormalized: $this->counterpartyNormalized,
-            normalizationVersion: $this->normalizationVersion,
-            description: $this->description,
-            categoryId: $this->categoryId,
-            sourceFormat: $this->sourceFormat,
-            importRunId: $this->importRunId,
-            sourceRowIndex: $this->sourceRowIndex,
-            sourceRef: $this->sourceRef,
-            rawPayload: $this->rawPayload,
-            autoCategoryProvenance: $this->autoCategoryProvenance,
-            paymentType: $paymentType,
-            counterpartyId: $this->counterpartyId,
-        );
+        return clone ($this, ['paymentType' => $paymentType]);
     }
 
     // ResolveCounterpartyStage stamps the FK onto the upserted
@@ -185,38 +88,20 @@ final class CanonicalTransaction extends Data
     // branch short-circuits without writing a counterparty row).
     public function withCounterpartyId(?int $counterpartyId): self
     {
-        return new self(
-            userId: $this->userId,
-            accountId: $this->accountId,
-            type: $this->type,
-            postedAt: $this->postedAt,
-            bookedAt: $this->bookedAt,
-            valueDate: $this->valueDate,
-            amountMinor: $this->amountMinor,
-            currency: $this->currency,
-            settledAmountMinor: $this->settledAmountMinor,
-            settledCurrency: $this->settledCurrency,
-            counterpartyName: $this->counterpartyName,
-            counterpartyIban: $this->counterpartyIban,
-            counterpartyNormalized: $this->counterpartyNormalized,
-            normalizationVersion: $this->normalizationVersion,
-            description: $this->description,
-            categoryId: $this->categoryId,
-            sourceFormat: $this->sourceFormat,
-            importRunId: $this->importRunId,
-            sourceRowIndex: $this->sourceRowIndex,
-            sourceRef: $this->sourceRef,
-            rawPayload: $this->rawPayload,
-            autoCategoryProvenance: $this->autoCategoryProvenance,
-            paymentType: $this->paymentType,
-            counterpartyId: $counterpartyId,
-            note: $this->note,
-        );
+        return clone ($this, ['counterpartyId' => $counterpartyId]);
     }
 
     // RuleApplier::applyAtImport() folds a firing rule's note action
     // before persistence — the sole import-time writer of this field.
     public function withNote(?string $note): self
+    {
+        return clone ($this, ['note' => $note]);
+    }
+
+    // OccurrenceOrdinals stamps this before the fingerprint stage reads the
+    // row, and it is the last field the tuple takes: two rows a statement
+    // books identically differ here and nowhere else.
+    public function withOccurrenceOrdinal(int $occurrenceOrdinal): self
     {
         return new self(
             userId: $this->userId,
@@ -243,7 +128,8 @@ final class CanonicalTransaction extends Data
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
-            note: $note,
+            note: $this->note,
+            occurrenceOrdinal: $occurrenceOrdinal,
         );
     }
 
@@ -294,6 +180,7 @@ final class CanonicalTransaction extends Data
             'import_run_id' => $this->importRunId,
             'source_row_index' => $this->sourceRowIndex,
             'source_ref' => $this->sourceRef,
+            'occurrence_ordinal' => $this->occurrenceOrdinal,
             'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload, JSON_THROW_ON_ERROR),
             'payment_type' => ($this->paymentType ?? PaymentType::Unknown)->value,
             'status' => $this->sourceFormat === SyntheticSourceFormat::Manual->value
