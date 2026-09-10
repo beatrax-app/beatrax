@@ -9,16 +9,13 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Services\EncryptionMigrationService;
-use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\TransactionCursor;
-use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 // The candidate half of a search: narrow the ledger to the rows a text
-// query reaches, via FTS5 MATCH or — for queries too short for FTS5 —
-// the decrypt-then-substring LIKE fallback, plus the highlight/snippet
-// load that reuses the same MATCH expression.
+// query reaches, via FTS5 MATCH or — for queries too short for FTS5 — a
+// LIKE over that same indexed body, plus the highlight/snippet load that
+// reuses the same MATCH expression.
 final readonly class FtsCandidateResolver
 {
     use CoercesScalars;
@@ -29,16 +26,13 @@ final readonly class FtsCandidateResolver
     // Rentevergoeding into "Rente…". 64 is FTS5's own ceiling.
     private const int SNIPPET_TRIGRAMS = 64;
 
-    // Bounds the candidate window the <3-char LIKE fallback decrypts,
-    // most-recent-first, so a short query never decrypts an entire
-    // multi-year history on every keystroke.
+    // Bounds the ids a <3-char query hands the outer search, newest first:
+    // a two-letter needle matches a large share of a long history, and the
+    // reader is paging the newest of those, not all of them.
     public const int LIKE_FALLBACK_CANDIDATE_CAP = 500;
 
     public function __construct(
         private DatabaseManager $db,
-        private SensitiveColumnCodec $codec,
-        private SessionFactory $session,
-        private EncryptionMigrationService $encryptionService,
     ) {}
 
     // Null for the empty-text (filters-only) branch signals "apply no
@@ -135,9 +129,10 @@ final readonly class FtsCandidateResolver
         return $result;
     }
 
-    // Fallback for queries too short for FTS5. Narrows the candidate set
-    // in SQL on cheap plaintext dimensions only, then decrypts +
-    // substring-matches in PHP (a no-op pass-through when disabled).
+    // Fallback for queries too short for FTS5: a trigram index holds no token
+    // this short, so the needle runs as a LIKE over the same plaintext body
+    // the index is built from -- the corpus both the >=3-char arm and the
+    // short WORDS of a longer query are already matched against.
     /**
      * @param  Closure(Builder): void  $applyFilters
      * @return list<int>
@@ -146,59 +141,25 @@ final readonly class FtsCandidateResolver
     {
         $query = $this->db->connection()
             ->table('transactions')
-            ->where('transactions.user_id', $user->id);
+            ->join(
+                'transaction_search_docs',
+                'transaction_search_docs.transaction_id',
+                '=',
+                'transactions.id',
+            )
+            ->where('transactions.user_id', $user->id)
+            ->where('transaction_search_docs.user_id', $user->id);
 
         $applyFilters($query);
+        LikeNeedle::contains($query, 'transaction_search_docs.search_body', $textQuery);
         TransactionCursor::orderNewestFirst($query);
 
-        /** @var iterable<stdClass> $candidates */
-        $candidates = $query
-            ->limit(self::LIKE_FALLBACK_CANDIDATE_CAP)
-            ->get(['transactions.id', 'transactions.counterparty_name', 'transactions.description']);
-
-        $needle = mb_strtolower($textQuery);
-        $userId = $user->id;
-        $encryptionEnabled = $this->encryptionService->isEnabled($userId);
-
         $matched = [];
-        foreach ($candidates as $row) {
-            $haystack = $this->decryptedRowHaystack($row, $userId, $encryptionEnabled);
-            if ($haystack !== null && str_contains($haystack, $needle)) {
-                $matched[] = self::toInt($row->id);
-            }
+        foreach ($query->limit(self::LIKE_FALLBACK_CANDIDATE_CAP)->get(['transactions.id']) as $row) {
+            $matched[] = self::toInt($row->id);
         }
 
         return $matched;
-    }
-
-    // Lowercased "name\0description" for one candidate row, or null when
-    // encryption is on and either field is still ciphertext (rekey/epoch
-    // gap, or a locked app-lock) — the NUL join can never be spanned by
-    // a user needle, so a hit lies wholly within one field.
-    private function decryptedRowHaystack(stdClass $row, int $userId, bool $encryptionEnabled): ?string
-    {
-        $nameResult = $this->decryptField('transactions', 'counterparty_name', $row->counterparty_name ?? null, $userId);
-        $descriptionResult = $this->decryptField('transactions', 'description', $row->description ?? null, $userId);
-
-        if ($encryptionEnabled && (! $nameResult['decrypted'] || ! $descriptionResult['decrypted'])) {
-            return null;
-        }
-
-        return mb_strtolower($nameResult['value'])."\x00".mb_strtolower($descriptionResult['value']);
-    }
-
-    // Empty non-null stored values short-circuit to a decrypted pass so
-    // callers never feed a blank blob to the codec.
-    /**
-     * @return array{value: string, decrypted: bool}
-     */
-    private function decryptField(string $table, string $column, mixed $stored, int $userId): array
-    {
-        if (! is_string($stored) || $stored === '') {
-            return ['value' => '', 'decrypted' => true];
-        }
-
-        return $this->codec->decryptValue($table, $column, $stored, $userId, ($this->session)());
     }
 
     /**
