@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Ustvari novo identiteto za to napravo',
 
     'encrypted_at_rest' => 'Podatki šifrirani v mirovanju',
-    'encrypted_at_rest_scope' => 'Zapiski, opisi transakcij ter imena in IBAN tistih, ki jim plačuješ, so v knjigi šifrirani z geslom za zaklep aplikacije. Zneski, datumi ter ime in IBAN tvojega računa niso. Iskalni indeks hrani svojo berljivo kopijo tega, komu plačuješ, opisov tvojih transakcij in tvojih davčnih zapiskov, nekatera imena trgovcev pa ostajajo berljiva drugje v datoteki baze podatkov.',
+    'encrypted_at_rest_scope' => 'Zapiski, opisi transakcij ter imena in IBAN tistih, ki jim plačuješ, so v knjigi šifrirani z geslom za zaklep aplikacije. Zneski, datumi ter ime in IBAN tvojega računa niso. Iskalni indeks hrani svojo berljivo kopijo tega, komu plačuješ, opisov tvojih transakcij, zapiskov, ki jih pišeš k transakciji, zapiskov, ki jih pišeš h kategoriji v razdelitvi, in tvojih davčnih zapiskov, nekatera imena trgovcev pa ostajajo berljiva drugje v datoteki baze podatkov.',
     'on' => 'Vklopljeno',
     'securing' => 'Zavarovanje tvojih podatkov…',
     'do_not_close' => 'Ne zapiraj tega okna.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Če izgubiš geslo za zaklepanje aplikacije in nimaš varnostne kopije ali druge zaupanja vredne naprave, tvojih podatkov ni mogoče obnoviti.',
     'recover_help' => 'Za obnovitev dostopa to napravo znova seznani z druge zaupanja vredne naprave ali uporabi svojo ločeno šifrirano varnostno kopijo.',
     'amounts_plaintext' => 'Zneski v mirovanju niso šifrirani — stanja in seštevki ostanejo berljivi, da se tvoji mesečni seštevki še naprej pravilno izidejo.',
-    'search_plaintext' => 'Iskalni indeks hrani nešifrirano kopijo imena trgovca in opisa, da iskanje po celotnem besedilu še naprej deluje.',
+    'search_plaintext' => 'Iskalni indeks hrani nešifrirano kopijo imena trgovca, opisa in zapiskov, da iskanje po celotnem besedilu še naprej deluje.',
     'keep_unencrypted' => 'Obdrži podatke nešifrirane',
     'encryption_enabled' => 'Šifriranje je vklopljeno',
     'encryption_enabled_scope' => 'Zapiski, opisi in to, komu plačuješ, so zdaj šifrirani z geslom za zaklep aplikacije. Zneski, datumi in iskalni indeks ostanejo berljivi.',

@@ -9,6 +9,11 @@ use Modules\Search\Internal\Services\SearchDocumentBody;
 
 return new class extends ModuleMigration
 {
+    // The width the damage had: three empty fields. The body has since grown
+    // the reader's own transaction and leg notes, so composing one here would
+    // look for a shape nothing on disk was ever written in.
+    private const string EMPTIED_BODY = SearchDocumentBody::FIELD_SEPARATOR.SearchDocumentBody::FIELD_SEPARATOR;
+
     public function up(): void
     {
         if (! $this->schema()->hasTable('search_index_repairs')) {
@@ -49,7 +54,7 @@ return new class extends ModuleMigration
 
         $rows = $connection->table('transaction_search_docs as d')
             ->join('transactions as t', 't.id', '=', 'd.transaction_id')
-            ->where('d.search_body', SearchDocumentBody::join('', '', ''))
+            ->where('d.search_body', self::EMPTIED_BODY)
             ->where(static function (QueryBuilder $q): void {
                 $q->whereRaw("coalesce(t.description, '') <> ''")
                     ->orWhereRaw("coalesce(t.counterparty_name, '') <> ''")

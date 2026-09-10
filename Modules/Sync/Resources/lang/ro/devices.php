@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Creează o identitate nouă pentru acest dispozitiv',
 
     'encrypted_at_rest' => 'Date criptate în repaus',
-    'encrypted_at_rest_scope' => 'Notele, descrierile tranzacțiilor și numele și IBAN-urile celor cărora le plătești sunt criptate în registru cu parola de blocare a aplicației. Sumele, datele și numele și IBAN-ul propriului tău cont nu sunt. Indexul de căutare păstrează propria copie lizibilă a celor cărora le plătești, a descrierilor tranzacțiilor tale și a notelor tale fiscale, iar unele nume de comercianți rămân în text clar în alte locuri din fișierul bazei de date.',
+    'encrypted_at_rest_scope' => 'Notele, descrierile tranzacțiilor și numele și IBAN-urile celor cărora le plătești sunt criptate în registru cu parola de blocare a aplicației. Sumele, datele și numele și IBAN-ul propriului tău cont nu sunt. Indexul de căutare păstrează propria copie lizibilă a celor cărora le plătești, a descrierilor tranzacțiilor tale, a notelor pe care le scrii pe o tranzacție, a notelor pe care le scrii pe o categorie dintr-o împărțire și a notelor tale fiscale, iar unele nume de comercianți rămân în text clar în alte locuri din fișierul bazei de date.',
     'on' => 'Activat',
     'securing' => 'Se securizează datele tale…',
     'do_not_close' => 'Nu închide această fereastră.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Dacă pierzi fraza de acces a blocării aplicației și nu ai nicio copie de rezervă sau alt dispozitiv de încredere, datele tale nu pot fi recuperate.',
     'recover_help' => 'Pentru a recăpăta accesul, împerechează din nou acest dispozitiv de pe alt dispozitiv de încredere sau folosește propria copie de rezervă criptată.',
     'amounts_plaintext' => 'Sumele nu sunt criptate în repaus — soldurile și totalurile rămân lizibile, astfel încât totalurile tale lunare să se adune în continuare corect.',
-    'search_plaintext' => 'Indexul de căutare păstrează o copie în text simplu a textului comerciantului și al descrierii, ca să funcționeze în continuare căutarea în tot textul.',
+    'search_plaintext' => 'Indexul de căutare păstrează o copie în text simplu a textului comerciantului, al descrierii și al notelor, ca să funcționeze în continuare căutarea în tot textul.',
     'keep_unencrypted' => 'Păstrează datele necriptate',
     'encryption_enabled' => 'Criptare activată',
     'encryption_enabled_scope' => 'Notele, descrierile și cei cărora le plătești sunt acum criptate cu parola de blocare a aplicației. Sumele, datele și indexul de căutare rămân lizibile.',

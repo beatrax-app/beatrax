@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Izveidot šai ierīcei jaunu identitāti',
 
     'encrypted_at_rest' => 'Dati šifrēti glabāšanā',
-    'encrypted_at_rest_scope' => 'Piezīmes, darījumu apraksti un maksājumu saņēmēju vārdi un IBAN ir šifrēti virsgrāmatā ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un tava paša konta nosaukums un IBAN nav šifrēti. Meklēšanas indekss glabā savu lasāmu kopiju no tā, kam tu maksā, no taviem darījumu aprakstiem un no tavām nodokļu piezīmēm, un daži tirgotāju nosaukumi ir lasāmi citviet datubāzes failā.',
+    'encrypted_at_rest_scope' => 'Piezīmes, darījumu apraksti un maksājumu saņēmēju vārdi un IBAN ir šifrēti virsgrāmatā ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un tava paša konta nosaukums un IBAN nav šifrēti. Meklēšanas indekss glabā savu lasāmu kopiju no tā, kam tu maksā, no taviem darījumu aprakstiem, no piezīmēm, ko raksti darījumam, no piezīmēm, ko raksti sadalījuma kategorijai, un no tavām nodokļu piezīmēm, un daži tirgotāju nosaukumi ir lasāmi citviet datubāzes failā.',
     'on' => 'Ieslēgts',
     'securing' => 'Aizsargā jūsu datus…',
     'do_not_close' => 'Neaizveriet šo logu.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Ja pazaudējat lietotnes bloķēšanas paroles frāzi un jums nav ne dublējuma, ne citas uzticamas ierīces, datus atgūt nebūs iespējams.',
     'recover_help' => 'Lai atgūtu piekļuvi, sapārojiet šo ierīci no citas uzticamas ierīces vai izmantojiet atsevišķu šifrētu dublējumu.',
     'amounts_plaintext' => 'Summas glabāšanā netiek šifrētas — atlikumi un kopsummas paliek nolasāmi, lai mēneša kopsummas joprojām saskaitītos pareizi.',
-    'search_plaintext' => 'Meklēšanas indekss glabā tirgotāju un aprakstu tekstu atklātā veidā, lai pilnteksta meklēšana turpinātu darboties.',
+    'search_plaintext' => 'Meklēšanas indekss glabā tirgotāju, aprakstu un piezīmju tekstu atklātā veidā, lai pilnteksta meklēšana turpinātu darboties.',
     'keep_unencrypted' => 'Atstāt datus nešifrētus',
     'encryption_enabled' => 'Šifrēšana ieslēgta',
     'encryption_enabled_scope' => 'Piezīmes, apraksti un tas, kam tu maksā, tagad ir šifrēti ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un meklēšanas indekss paliek lasāmi.',

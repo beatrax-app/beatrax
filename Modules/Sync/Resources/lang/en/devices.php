@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Start a new identity for this device',
 
     'encrypted_at_rest' => 'Data encrypted at rest',
-    'encrypted_at_rest_scope' => 'Notes, transaction descriptions and the names and IBANs of who you pay are encrypted in the ledger with your app-lock passphrase. Amounts, dates and your own account name and IBAN are not. The search index keeps its own readable copy of who you pay, your transaction descriptions and your tax notes, and some merchant names still appear in plain text elsewhere in the database file.',
+    'encrypted_at_rest_scope' => 'Notes, transaction descriptions and the names and IBANs of who you pay are encrypted in the ledger with your app-lock passphrase. Amounts, dates and your own account name and IBAN are not. The search index keeps its own readable copy of who you pay, your transaction descriptions, the notes you write on a transaction, the notes you write on a split category and your tax notes, and some merchant names still appear in plain text elsewhere in the database file.',
     'on' => 'On',
     'securing' => 'Securing your data…',
     'do_not_close' => 'Do not close this window.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'If you lose your app-lock passphrase and have no backup or other trusted device, your data cannot be recovered.',
     'recover_help' => 'To recover access, re-pair this device from another trusted device, or use your independent encrypted backup.',
     'amounts_plaintext' => 'Amounts are not encrypted at rest — balances and totals stay readable so your monthly totals keep adding up correctly.',
-    'search_plaintext' => 'The search index keeps a plaintext copy of merchant and description text so full-text search keeps working.',
+    'search_plaintext' => 'The search index keeps a plaintext copy of merchant, description and note text so full-text search keeps working.',
     'keep_unencrypted' => 'Keep data unencrypted',
     'encryption_enabled' => 'Encryption enabled',
     'encryption_enabled_scope' => 'Notes, descriptions and who you pay are now encrypted with your app-lock passphrase. Amounts, dates and the search index stay readable.',
