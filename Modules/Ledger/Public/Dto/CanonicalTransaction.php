@@ -294,7 +294,7 @@ final class CanonicalTransaction extends Data
             'import_run_id' => $this->importRunId,
             'source_row_index' => $this->sourceRowIndex,
             'source_ref' => $this->sourceRef,
-            'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload),
+            'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload, JSON_THROW_ON_ERROR),
             'payment_type' => ($this->paymentType ?? PaymentType::Unknown)->value,
             'status' => $this->sourceFormat === SyntheticSourceFormat::Manual->value
                 ? ClearedStatus::Uncleared->value

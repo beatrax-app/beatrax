@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\DateFactory;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Import\Internal\Services\MerchantAliasPattern;
 use Modules\Import\Models\MerchantAlias;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Sync\Public\Events\EntityMutated;
@@ -39,6 +40,11 @@ final readonly class MergeMerchantAliases
                 'MergeMerchantAliases requires at least two alias ids.',
             );
         }
+
+        // The merge modal pre-fills the longest common prefix of the selected
+        // patterns, which for two unrelated aliases is a character or two, and
+        // the surviving row is what every later import matches on.
+        $generalizedPattern = MerchantAliasPattern::orRefuse($generalizedPattern);
 
         $expectedCount = count(array_unique($aliasIds));
 

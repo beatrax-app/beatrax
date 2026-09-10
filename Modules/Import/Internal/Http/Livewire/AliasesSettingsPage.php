@@ -24,9 +24,11 @@ use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Internal\Exceptions\AliasFileRejectedException;
+use Modules\Import\Internal\Exceptions\MerchantAliasPatternTooShortException;
 use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
+use Modules\Import\Internal\Services\MerchantAliasPattern;
 use Modules\Import\Public\Actions\MergeMerchantAliases;
 use Modules\Import\Public\Services\AliasMatchPreviewQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
@@ -178,7 +180,7 @@ final class AliasesSettingsPage extends Component
         // "too short to test" and could still save, so the one pattern nobody
         // has ever seen the effect of was the only one that could be saved
         // blind.
-        if (mb_strlen($value) < AliasMatchPreviewQuery::MIN_PATTERN_LENGTH) {
+        if (MerchantAliasPattern::isBelowFloor($value)) {
             $this->flashMessage = Lang::get('import::aliases.errors.too_short');
 
             return;
@@ -323,23 +325,7 @@ final class AliasesSettingsPage extends Component
             return;
         }
 
-        $uniqueIds = array_values(array_unique(array_map('intval', $this->selectedIds)));
-
-        try {
-            ($merge)($currentUser->user(), $uniqueIds, $friendly, $generalized);
-        } catch (NotFoundHttpException) {
-            $this->showMergeModal = false;
-            $this->selectedIds = [];
-            $this->flashMessage = Lang::get('import::aliases.errors.merge_not_found');
-
-            return;
-        } catch (Throwable $e) {
-            $logger->error('AliasesSettingsPage: bulk-merge failed.', SafeExceptionContext::describe($e));
-            $this->showMergeModal = false;
-            $this->flashMessage = Lang::get('import::aliases.errors.merge_failed', [
-                'class' => SafeExceptionContext::shortName($e),
-            ]);
-
+        if (! $this->merged($merge, $currentUser, $logger, $friendly, $generalized)) {
             return;
         }
 
@@ -348,6 +334,40 @@ final class AliasesSettingsPage extends Component
         $this->mergeFriendlyName = '';
         $this->mergeGeneralizedPattern = '';
         $this->flashMessage = Lang::get('import::aliases.flash.merged');
+    }
+
+    // A bool rather than a message, because each refusal leaves the screen
+    // somewhere different: too short keeps the modal and the selection so the
+    // reader can lengthen it, a row that has gone clears both, and an unknown
+    // failure closes the modal and keeps the selection.
+    private function merged(
+        MergeMerchantAliases $merge,
+        CurrentUser $currentUser,
+        LoggerInterface $logger,
+        string $friendly,
+        string $generalized,
+    ): bool {
+        $uniqueIds = array_values(array_unique(array_map('intval', $this->selectedIds)));
+
+        try {
+            ($merge)($currentUser->user(), $uniqueIds, $friendly, $generalized);
+
+            return true;
+        } catch (MerchantAliasPatternTooShortException) {
+            $this->flashMessage = Lang::get('import::aliases.errors.too_short');
+        } catch (NotFoundHttpException) {
+            $this->showMergeModal = false;
+            $this->selectedIds = [];
+            $this->flashMessage = Lang::get('import::aliases.errors.merge_not_found');
+        } catch (Throwable $e) {
+            $logger->error('AliasesSettingsPage: bulk-merge failed.', SafeExceptionContext::describe($e));
+            $this->showMergeModal = false;
+            $this->flashMessage = Lang::get('import::aliases.errors.merge_failed', [
+                'class' => SafeExceptionContext::shortName($e),
+            ]);
+        }
+
+        return false;
     }
 
     public function exportYaml(
@@ -400,8 +420,10 @@ final class AliasesSettingsPage extends Component
 
         try {
             $entries = $importer->parse($contents);
-        } catch (AliasFileRejectedException $rejected) {
-            $this->importError = $rejected->sentence();
+        } catch (AliasFileRejectedException|MerchantAliasPatternTooShortException $rejected) {
+            $this->importError = $rejected instanceof AliasFileRejectedException
+                ? $rejected->sentence()
+                : Lang::get('import::aliases.errors.too_short');
 
             return;
         }

@@ -92,7 +92,7 @@ final class RuleApplier
         }
 
         $user = $this->resolveUser($userId);
-        $provenance = $this->provenance->provenanceFor($userId, $transactionId);
+        $provenance = $this->provenance->protectedFieldsFor($userId, $transactionId);
 
         $changed = [];
         // Written once at the end, not per action: the stamp announces the

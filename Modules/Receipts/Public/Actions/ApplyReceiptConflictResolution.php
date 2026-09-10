@@ -20,6 +20,8 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Search\Public\Support\SearchedColumns;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -61,6 +63,7 @@ final readonly class ApplyReceiptConflictResolution
         private Dispatcher $events,
         private LoggerInterface $logger,
         private WriteUserPreference $preferences,
+        private SearchIndexWriterContract $searchIndex,
     ) {}
 
     // One conflict per call, because the toast names one conflict and quotes
@@ -227,6 +230,13 @@ final readonly class ApplyReceiptConflictResolution
             ]);
 
             return [];
+        }
+
+        // Same transaction as the UPDATE, so a rollback takes the document with
+        // it. The reader consented to the receipt's name; without this the only
+        // place still holding the one they declined is the index they search.
+        if (SearchedColumns::touchedBy(SearchedColumns::TRANSACTIONS, [$field->value])) {
+            $this->searchIndex->upsertForTransaction($transactionId, $user->id);
         }
 
         // Plaintext, and the recomposed tuple with it: OpLogWriter seals a

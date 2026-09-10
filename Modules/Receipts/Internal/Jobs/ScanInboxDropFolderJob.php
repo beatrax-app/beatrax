@@ -31,8 +31,8 @@ use Throwable;
 
 // Per-user 5-minute scanner for storage/app/inbox-drop/{userId}/.
 // Top-level .eml/.mbox files run through RecordReceipt and then
-// ReceiptLedgerBridge, exactly as the wizard upload path does, before
-// moving atomically to a processed/ or failed/ subtree keyed by year-month.
+// ReceiptLedgerBridge, which applies the pipeline stages a wizard upload
+// pays for, before moving atomically to processed/ or failed/.
 final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable;

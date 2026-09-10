@@ -11,6 +11,7 @@ use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Enums\AliasFileRejection;
 use Modules\Import\Internal\Exceptions\AliasFileRejectedException;
+use Modules\Import\Internal\Exceptions\MerchantAliasPatternTooShortException;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
 use Modules\Sync\Public\Events\EntityMutated;
@@ -34,6 +35,7 @@ final readonly class AliasYamlImporter
      * @return list<CorpusEntryDto>
      *
      * @throws AliasFileRejectedException when the file is not an alias list this build can read
+     * @throws MerchantAliasPatternTooShortException when an entry's pattern cannot make a safe needle
      */
     public function parse(string $yamlContent): array
     {
@@ -84,7 +86,10 @@ final readonly class AliasYamlImporter
 
         return new CorpusEntryDto(
             pattern: $pattern,
-            generalizedPattern: $this->generalizer->generalize($pattern),
+            // A pattern too short to generalise safely is too short to write:
+            // the generalizer falls back to the description, and a description
+            // under the floor leaves the file with nowhere left to go.
+            generalizedPattern: MerchantAliasPattern::orRefuse($this->generalizer->generalize($pattern)),
             name: $name,
             category: self::stringField($raw, 'category'),
             region: self::stringField($raw, 'region'),

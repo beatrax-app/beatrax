@@ -21,6 +21,8 @@ use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Events\ReceiptConflictDetected;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Search\Public\Support\SearchedColumns;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -59,6 +61,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         private SessionFactory $session,
         private FingerprintComposer $fingerprints,
         private CounterpartyKey $counterpartyKey,
+        private SearchIndexWriterContract $searchIndex,
     ) {}
 
     public function __invoke(array $enrichments, User $user): int
@@ -190,6 +193,14 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
                 'enriched_from' => json_encode($provenance, JSON_THROW_ON_ERROR),
                 'updated_at' => $this->clock->now()->toDateTimeString(),
             ]);
+
+        // Inside the same transaction as the UPDATE, so a rollback takes the
+        // document with it. Without this the receipt renamed the row and the
+        // index went on answering to the bank's narrative, so the reader could
+        // not find by the merchant name the enrichment had just given them.
+        if (SearchedColumns::touchedBy(SearchedColumns::TRANSACTIONS, array_keys($plainUpdates))) {
+            $this->searchIndex->upsertForTransaction($enrichment->existingTransactionId, $user->id);
+        }
     }
 
     // Null where the resolution touches neither leg's amount nor its currency,

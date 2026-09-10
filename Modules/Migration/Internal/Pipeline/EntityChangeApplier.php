@@ -18,6 +18,8 @@ use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 use Modules\Migration\Internal\Enums\MigrationEntityType;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Search\Public\Support\SearchedColumns;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -34,6 +36,7 @@ final readonly class EntityChangeApplier
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
         private TransactionStatusQuery $statusQuery,
+        private SearchIndexWriterContract $searchIndex,
     ) {}
 
     /**
@@ -70,6 +73,8 @@ final readonly class EntityChangeApplier
                 ->where('id', $beatraxId)
                 ->where('user_id', $user->id)
                 ->update($storedFields);
+
+            $this->reindexIfSearched($table, $beatraxId, $user, array_keys($fields));
         }
 
         $this->sourceMapWriter->record(
@@ -81,6 +86,19 @@ final readonly class EntityChangeApplier
         );
 
         return true;
+    }
+
+    // A restated description is words the reader searches by, and the index is
+    // derived rather than read live: without this the migration rewrote the
+    // row and the search went on answering to the description it replaced.
+    /**
+     * @param  list<string>  $written
+     */
+    private function reindexIfSearched(string $table, int $beatraxId, User $user, array $written): void
+    {
+        if (SearchedColumns::touchedBy($table, $written)) {
+            $this->searchIndex->upsertForTransaction($beatraxId, $user->id);
+        }
     }
 
     // Re-running a migration restates what the source says; a row the reader

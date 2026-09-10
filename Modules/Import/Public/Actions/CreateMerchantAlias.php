@@ -6,9 +6,8 @@ namespace Modules\Import\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
-use Modules\Import\Internal\Exceptions\MerchantAliasPatternTooShortException;
+use Modules\Import\Internal\Services\MerchantAliasPattern;
 use Modules\Import\Models\MerchantAlias;
-use Modules\Import\Public\Services\AliasMatchPreviewQuery;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
 use Modules\Sync\Public\Events\EntityMutated;
@@ -27,14 +26,9 @@ final readonly class CreateMerchantAlias
         ?string $generalizedPattern,
         string $friendlyName,
     ): MerchantAlias {
-        $resolvedGeneralized = trim($generalizedPattern ?? $this->generalizer->generalize($pattern));
-
-        // The floor belongs here, not on the screen that happens to be open:
-        // the generalizer produces sub-floor values on its own ("AH 1234" is
-        // "ah"), and the popover never had a minimum at all.
-        if (mb_strlen($resolvedGeneralized) < AliasMatchPreviewQuery::MIN_PATTERN_LENGTH) {
-            throw new MerchantAliasPatternTooShortException(AliasMatchPreviewQuery::MIN_PATTERN_LENGTH);
-        }
+        $resolvedGeneralized = MerchantAliasPattern::orRefuse(
+            $generalizedPattern ?? $this->generalizer->generalize($pattern),
+        );
 
         $alias = MerchantAlias::query()->updateOrCreate(
             [

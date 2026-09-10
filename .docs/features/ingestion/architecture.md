@@ -310,6 +310,21 @@ with a user-readable message so the upload wizard surfaces a fast error
 instead of a hung worker on a pathological input (e.g. a crafted file
 whose every byte is a newline, or one absurdly long line).
 
+It is also the point where an MT940 file becomes text. Every other reader of
+a text file converts what it reads: the CSV adapters attach League's
+`CharsetConverter` from the preset's declared encoding, the mail reader
+decodes each MIME part at the charset that part names, and the PDF readers
+ask poppler for UTF-8. MT940 is read as bytes, and `Mt940HeaderProfile`'s
+`SOURCE_ENCODING` was never applied to anything. A bank still exporting
+latin-1 therefore put an invalid sequence straight into `counterparty_name`,
+`description` and `raw_payload` — where `json_encode()` returned `false`, a
+JSON column stored `0`, and the source row of that transaction was gone with
+nothing said. Each line is scrubbed to valid UTF-8 as it is read, after the
+byte caps above and before anything is matched on it, which is the same
+substitution the CSV path already gets. `CanonicalTransaction::toAttributes()`
+encodes `raw_payload` under `JSON_THROW_ON_ERROR` as its backstop, the way
+the `auto_category_provenance` column beside it always did.
+
 `Mt940Tag61Parser`'s status code maps to amount sign: `C`/`RD` →
 positive, `D`/`RC` → negative. The magnitude itself goes through
 `BankAmountParser::parseMt940Minor()`, which absorbs the four shapes

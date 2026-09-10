@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use JsonException;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Psr\Log\LoggerInterface;
+use stdClass;
 
 final readonly class FieldProvenanceWriter
 {
@@ -86,6 +87,47 @@ final readonly class FieldProvenanceWriter
             mutationType: 'edit',
             dirtyFields: ['field_provenance' => $merged],
         ));
+    }
+
+    // The stored map plus the one thing its absence cannot be read as. This
+    // column arrived on a table that already had rows and nothing backfilled
+    // it, and two writers of a category the reader chose — the cash book's own
+    // form and the migration importer — have never stamped one.
+    /**
+     * @link ../../../../.docs/features/categorization/field-provenance.md#absence-of-a-stamp-is-not-permission
+     *
+     * @return array<string, string>
+     */
+    public function protectedFieldsFor(int $userId, int $transactionId): array
+    {
+        $row = $this->db->connection()
+            ->table('transactions')
+            ->where('id', $transactionId)
+            ->where('user_id', $userId)
+            ->first(['field_provenance', 'category_id', 'auto_category_provenance']);
+
+        $stamped = $row->field_provenance ?? null;
+        $raw = is_string($stamped) ? $stamped : '';
+        $stored = $raw === '' ? [] : $this->decodeProvenance($raw, $transactionId);
+
+        return isset($stored['category_id']) || ! self::carriesAnUnclaimedCategory($row)
+            ? $stored
+            : $stored + ['category_id' => 'manual'];
+    }
+
+    // A category on the row that no automatic writer claims: every automatic
+    // assignment records which rule or memory made it, and a rule that later
+    // rewrites one stamps the map above. Neither present leaves the reader as
+    // the only one who could have put it there.
+    private static function carriesAnUnclaimedCategory(?stdClass $row): bool
+    {
+        if ($row === null || ($row->category_id ?? null) === null) {
+            return false;
+        }
+
+        $provenance = $row->auto_category_provenance ?? null;
+
+        return $provenance === null || (is_string($provenance) && trim($provenance) === '');
     }
 
     // Returns [] for a never-stamped row, a foreign/missing transaction
