@@ -858,107 +858,134 @@ document.addEventListener('step-changed', () => {
     arm();
 })();
 
-document.addEventListener('alpine:init', () => {
-    if (window.Alpine) {
-        window.Alpine.data('palette', palette);
-        window.Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
-        window.Alpine.data('beatraxNotificationPermission', beatraxNotificationPermission);
-        window.Alpine.data('beatraxDatePicker', datePicker);
-        window.Alpine.data('beatraxTimePicker', timePicker);
-        window.Alpine.data('tabStrip', tabStrip);
-        window.Alpine.data('emojiActionHold', emojiActionHold);
-        window.Alpine.data('passwordStrength', passwordStrength);
-        window.Alpine.data('copyToClipboard', copyToClipboard);
+/**
+ * Everything a template is allowed to name: the factories an `x-data`
+ * resolves through, the two translation magics, and the shared stores.
+ *
+ * Alpine arrives as an argument rather than being read off `window` here,
+ * so where it comes from is decided once, below, instead of once per line.
+ */
+function beatraxRegisterAlpine(Alpine) {
+    Alpine.data('palette', palette);
+    Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
+    Alpine.data('beatraxNotificationPermission', beatraxNotificationPermission);
+    Alpine.data('beatraxDatePicker', datePicker);
+    Alpine.data('beatraxTimePicker', timePicker);
+    Alpine.data('tabStrip', tabStrip);
+    Alpine.data('emojiActionHold', emojiActionHold);
+    Alpine.data('passwordStrength', passwordStrength);
+    Alpine.data('copyToClipboard', copyToClipboard);
 
-        // A count that only exists in the browser still owes the reader their
-        // language's plural arm, and a line whose value arrives client-side
-        // still owes them their own word order. Both read a whole translated
-        // line and fill it; neither concatenates a fragment onto a value.
-        window.Alpine.magic('plural', () => (arms, key, number, replace) => choosePlural(arms, key, number, replace));
-        window.Alpine.magic('line', () => (line, replace) => fillLine(line, replace));
+    // A count that only exists in the browser still owes the reader their
+    // language's plural arm, and a line whose value arrives client-side
+    // still owes them their own word order. Both read a whole translated
+    // line and fill it; neither concatenates a fragment onto a value.
+    Alpine.magic('plural', () => (arms, key, number, replace) => choosePlural(arms, key, number, replace));
+    Alpine.magic('line', () => (line, replace) => fillLine(line, replace));
 
-        // Mobile navigation drawer state
-        // Which overlays are covering the page, by name. The layout marks
-        // <main> inert while any of them is up: aria-modal is a promise to a
-        // screen reader that everything behind is unreachable, and nothing was
-        // keeping it. Read from the real iOS tree with the drawer open, the
-        // dashboard behind the scrim was still being announced.
-        //
-        // Names rather than a counter, so a double open() cannot leave the app
-        // inert forever.
-        window.Alpine.store('overlay', {
-            names: [],
-            add(name) { if (!this.names.includes(name)) { this.names.push(name); } },
-            remove(name) { this.names = this.names.filter((n) => n !== name); },
-            has(name) { return this.names.includes(name); },
-            get blocking() { return this.names.length > 0; },
-        });
+    // Mobile navigation drawer state
+    // Which overlays are covering the page, by name. The layout marks
+    // <main> inert while any of them is up: aria-modal is a promise to a
+    // screen reader that everything behind is unreachable, and nothing was
+    // keeping it. Read from the real iOS tree with the drawer open, the
+    // dashboard behind the scrim was still being announced.
+    //
+    // Names rather than a counter, so a double open() cannot leave the app
+    // inert forever.
+    Alpine.store('overlay', {
+        names: [],
+        add(name) { if (!this.names.includes(name)) { this.names.push(name); } },
+        remove(name) { this.names = this.names.filter((n) => n !== name); },
+        has(name) { return this.names.includes(name); },
+        get blocking() { return this.names.length > 0; },
+    });
 
-        // `isDrawer` tracks the same 1024px breakpoint the stylesheet uses to
-        // turn this panel from a drawer into the static desktop sidebar. The
-        // dialog semantics have to follow it: aria-modal on a permanently
-        // visible nav tells a screen reader the rest of the page is inert.
-        // The soft keyboard offsets the VISUAL viewport and leaves the layout
-        // viewport where it was. `interactive-widget=resizes-content` is meant
-        // to prevent that and is inert in the Android WebView (151.x), so the
-        // sticky top bar and the status-bar scrim sit above the visible area
-        // and the page draws its own content through the status bar. Measured
-        // on a Galaxy S24 Ultra: offsetTop 303 with innerHeight unchanged.
-        //
-        // The class gates the transform so nothing carries one at rest: a
-        // transform on .top-bar makes it the containing block for any fixed
-        // descendant, which is a change worth not making 100% of the time.
-        const viewport = window.visualViewport;
+    // `isDrawer` tracks the same 1024px breakpoint the stylesheet uses to
+    // turn this panel from a drawer into the static desktop sidebar. The
+    // dialog semantics have to follow it: aria-modal on a permanently
+    // visible nav tells a screen reader the rest of the page is inert.
+    // The soft keyboard offsets the VISUAL viewport and leaves the layout
+    // viewport where it was. `interactive-widget=resizes-content` is meant
+    // to prevent that and is inert in the Android WebView (151.x), so the
+    // sticky top bar and the status-bar scrim sit above the visible area
+    // and the page draws its own content through the status bar. Measured
+    // on a Galaxy S24 Ultra: offsetTop 303 with innerHeight unchanged.
+    //
+    // The class gates the transform so nothing carries one at rest: a
+    // transform on .top-bar makes it the containing block for any fixed
+    // descendant, which is a change worth not making 100% of the time.
+    const viewport = window.visualViewport;
 
-        if (viewport) {
-            const syncKeyboardOffset = () => {
-                // Floor, not round: a fractional offsetTop rounded up puts the
-                // chrome that fraction too LOW and leaves a device-pixel row of
-                // the page showing above it. Measured at 302.93, that row was
-                // the budget card's border beside the clock. Floor covers.
-                const offset = Math.floor(viewport.offsetTop);
-                document.documentElement.style.setProperty('--vv-offset-top', offset + 'px');
-                document.documentElement.classList.toggle('kb-offset', offset > 0);
-            };
+    if (viewport) {
+        const syncKeyboardOffset = () => {
+            // Floor, not round: a fractional offsetTop rounded up puts the
+            // chrome that fraction too LOW and leaves a device-pixel row of
+            // the page showing above it. Measured at 302.93, that row was
+            // the budget card's border beside the clock. Floor covers.
+            const offset = Math.floor(viewport.offsetTop);
+            document.documentElement.style.setProperty('--vv-offset-top', offset + 'px');
+            document.documentElement.classList.toggle('kb-offset', offset > 0);
+        };
 
-            viewport.addEventListener('resize', syncKeyboardOffset);
-            viewport.addEventListener('scroll', syncKeyboardOffset);
-            syncKeyboardOffset();
-        }
-
-        const drawerBreakpoint = window.matchMedia('(max-width: 1023.98px)');
-
-        window.Alpine.store('mobileNav', {
-            drawerOpen: false,
-            isDrawer: drawerBreakpoint.matches,
-            open() { this.drawerOpen = true; window.Alpine.store('overlay').add('drawer'); },
-            close() { this.drawerOpen = false; window.Alpine.store('overlay').remove('drawer'); },
-            toggle() { this.drawerOpen ? this.close() : this.open(); },
-        });
-
-        drawerBreakpoint.addEventListener('change', (event) => {
-            window.Alpine.store('mobileNav').isDrawer = event.matches;
-        });
-
-        // Alpine stores survive a wire:navigate page swap, so a drawer opened
-        // to tap a nav link would still be open on the page it navigated to,
-        // covering it. Close on arrival — the destination is what the user
-        // asked for, not the menu they used to get there.
-        document.addEventListener('livewire:navigated', () => {
-            window.Alpine.store('mobileNav').close();
-        });
-
-        // Platform detection for ⌘K vs Ctrl+K labels.
-        // Uses the modern userAgentData API first (Chromium 90+), falls back
-        // to the legacy navigator.platform string for Safari + Firefox.
-        window.Alpine.store('platform', {
-            isMac: Boolean(
-                (typeof navigator !== 'undefined') && (
-                    (navigator.userAgentData?.platform === 'macOS')
-                    || (navigator.platform || '').startsWith('Mac')
-                )
-            ),
-        });
+        viewport.addEventListener('resize', syncKeyboardOffset);
+        viewport.addEventListener('scroll', syncKeyboardOffset);
+        syncKeyboardOffset();
     }
-});
+
+    const drawerBreakpoint = window.matchMedia('(max-width: 1023.98px)');
+
+    Alpine.store('mobileNav', {
+        drawerOpen: false,
+        isDrawer: drawerBreakpoint.matches,
+        open() { this.drawerOpen = true; Alpine.store('overlay').add('drawer'); },
+        close() { this.drawerOpen = false; Alpine.store('overlay').remove('drawer'); },
+        toggle() { this.drawerOpen ? this.close() : this.open(); },
+    });
+
+    drawerBreakpoint.addEventListener('change', (event) => {
+        Alpine.store('mobileNav').isDrawer = event.matches;
+    });
+
+    // Alpine stores survive a wire:navigate page swap, so a drawer opened
+    // to tap a nav link would still be open on the page it navigated to,
+    // covering it. Close on arrival — the destination is what the user
+    // asked for, not the menu they used to get there.
+    document.addEventListener('livewire:navigated', () => {
+        Alpine.store('mobileNav').close();
+    });
+
+    // Platform detection for ⌘K vs Ctrl+K labels.
+    // Uses the modern userAgentData API first (Chromium 90+), falls back
+    // to the legacy navigator.platform string for Safari + Firefox.
+    Alpine.store('platform', {
+        isMac: Boolean(
+            (typeof navigator !== 'undefined') && (
+                (navigator.userAgentData?.platform === 'macOS')
+                || (navigator.platform || '').startsWith('Mac')
+            )
+        ),
+    });
+}
+
+/**
+ * Register without waiting for `alpine:init`.
+ *
+ * `livewire.js` is a classic script at the end of <body>: it creates Alpine
+ * and publishes it on `window` while the document is still being parsed,
+ * then starts it on DOMContentLoaded. This module is deferred, so it runs
+ * between those two and Alpine is already there — registering now puts every
+ * provider in place before the event is dispatched at all, and a page whose
+ * scripts run in some other order stops being a question with an answer this
+ * file depends on.
+ *
+ * The listener is the other state, not a second attempt: Alpine not yet
+ * created. There is no third. `window.Alpine` still missing when the event
+ * fires is a bundle with no Alpine in it, and that throws where somebody can
+ * read it instead of dropping nine registrations in silence.
+ */
+if (window.Alpine) {
+    beatraxRegisterAlpine(window.Alpine);
+} else {
+    document.addEventListener('alpine:init', () => beatraxRegisterAlpine(window.Alpine), { once: true });
+}
 

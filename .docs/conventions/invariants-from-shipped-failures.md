@@ -7139,6 +7139,37 @@ time, with nothing asking what else came through.
 Nothing could fail. The panel opened, the copy was right, and the guards that
 existed measured its width, its alignment and its 44px reach.
 
+## An Alpine provider missing from the script that ships
+
+`tests/Contracts/AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest.php`
+
+`x-data="thing($wire)"` resolves `thing` through `Alpine.data('thing', …)`. Where
+nothing registered that name Alpine binds the element anyway: one expression
+error reaches the console, the scope object comes back with no keys, and every
+method the component was written around is absent. The element is in the DOM,
+the route answers 200, and the suite is green.
+
+The phone's notification bridge shipped that way. `beatraxNotificationPermission`
+was written into `resources/js/app.js` and was not in
+`public/build/assets/app-*.js`, which is the file a device downloads — the built
+script predated the registration by four days. The bridge is the only code that
+raises the operating system's notification dialog and the only listener for the
+answer the shell injects into the page, so on that build neither could happen.
+It is mounted in the application layout, so all 22 routes that draw the app
+shell threw an uncaught `ReferenceError` on load; the one signed-in screen that
+draws no shell, the recovery-code hand-over, was the only page that did not.
+
+Nothing rebuilds the script on the way to a device. `native:run` runs no Vite
+step and the desktop prebuild hooks do not run one either, so both shells bundle
+`public/build` exactly as they find it on disk; only CI builds it first. A stale
+bundle is invisible from the server side — the manifest resolves, every view
+renders, and the script is simply older than the tree it was built from.
+
+The rule reads registrations out of the built script rather than out of
+`resources/js`, which is what makes it answer the question a device asks. A
+provider a template names and nobody ever registered fails the same check,
+because a fresh build cannot contain that either.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
