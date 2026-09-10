@@ -80,8 +80,8 @@ it('prints one date for the entry on both screens', function (): void {
     expect(substr((string) $row->booked_at, 0, 10))->toBe(substr((string) $row->posted_at, 0, 10));
 });
 
-// The bookedAt offset that breaks a same-second fingerprint collision has to
-// keep working off the entered day rather than the wall clock.
+// What separates two identical entries is the occurrence ordinal, not the day:
+// both stay on the day the reader named, and neither is nudged off it.
 it('still records two identical back-dated entries without dropping one', function (): void {
     recordBackDatedCashEntry($this->user);
     recordBackDatedCashEntry($this->user);
@@ -97,10 +97,10 @@ it('still records two identical back-dated entries without dropping one', functi
     }
 });
 
-// The retry offset walks booked_at forward a second at a time. Started from
-// the wall clock's own time of day, an entry added at 23:59:59 on New Year's
-// Eve walked into the next day — and, on that date, the next tax year.
-it('keeps the last-second entry on the day it names, retries and all', function (): void {
+// The entry is booked at the second the reader typed it, on the day they named.
+// A repeat of it used to walk that second forward, and an entry added at
+// 23:59:59 on New Year's Eve walked into the next day — and the next tax year.
+it('keeps the last-second entry on the day it names, repeats and all', function (): void {
     $clock = Mockery::mock(Clock::class);
     $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 3, 4, 23, 59, 59));
     $this->app->instance(Clock::class, $clock);

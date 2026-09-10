@@ -1116,17 +1116,20 @@ why the ordinal has to sit inside the UNIQUE index and not only inside the
 hash, is in
 [the occurrence ordinal](../../architecture/ingestion-pipeline.md#the-occurrence-ordinal).
 
-A hand-typed cash entry has no file to count within, and the second the
-reader typed it is still what separates two of them: a cash entry is stamped
-with the clock's second on the day the reader named, so six €2.50 coffees typed
-in a row are six writes of one tuple. `CashBook`'s `RecordManualTransaction`
-therefore asks the ledger which second this exact entry last occupied — same
-user, account, posted day, amount, currency and counterparty — and books at the
-one after it, clamped inside the day so an entry added before midnight is never
-nudged into the next tax year. The action returns whether a row was written so
-the page can say so rather than toast "Cash entry added." over nothing. Two
-identical coffees on one day are two facts, and a dedup rule that cannot tell
-them apart is answering a question about imports with an answer about typing.
+A hand-typed cash entry has no file to count within, so `CashBook`'s
+`RecordManualTransaction` asks the ledger for one past the highest ordinal
+this exact entry already occupies — same user, account, posted day, booked
+second, amount, currency and counterparty. Its `booked_at` is simply the
+second the reader typed it on the day they named: real information, and the
+only column two devices holding the same hand-typed entry disagree about, so
+it is what keeps a coffee typed on the phone from merging into one typed on
+the desktop. It used to *walk* that second forward past each collision,
+clamped inside the day so an entry added before midnight was never nudged
+into the next tax year; the ordinal retires the walk and the clamp with it.
+The action still returns whether a row was written, so the page can say so
+rather than toast "Cash entry added." over nothing. Two identical coffees on
+one day are two facts, and a dedup rule that cannot tell them apart is
+answering a question about imports with an answer about typing.
 
 `NORMALIZATION_VERSION` is bumped whenever the tuple shape or
 `normalize()`'s output changes; a stored row with a lower version

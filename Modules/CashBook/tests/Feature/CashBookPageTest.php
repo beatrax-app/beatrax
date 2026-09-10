@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Dto\RecordResult;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -318,49 +319,45 @@ it('prints a cash entry under the sign of the currency it was recorded in', func
         ->assertSee(Money::ofMinor(-1250, 'USD')->format());
 });
 
-// The action gives up after five collisions on the fingerprint's booked_at
-// second, and the page toasted "Cash entry added." either way — six identical
-// coffees on one day produced twelve of that sentence and six rows. The last
-// five seconds of a day are the only place the walk can still run out.
+// A ledger that writes nothing: the action exhausts its attempts and answers
+// false. The reader-facing half is what these two pin — the page toasted "Cash
+// entry added." over a write that never happened, and six identical coffees on
+// one day produced twelve of that sentence and six rows.
+function cashBookPageRecorderThatWritesNothing(): RecordsTransactions
+{
+    return new class implements RecordsTransactions
+    {
+        public function __invoke(iterable $canonical, User $user, bool $captureForSync = true): RecordResult
+        {
+            return new RecordResult(inserted: 0, duplicates: iterator_count($canonical));
+        }
+    };
+}
+
 it('says an entry was not recorded rather than toasting one that was not', function (): void {
-    CarbonImmutable::setTestNow('2026-06-05 23:59:59');
+    $this->app->instance(RecordsTransactions::class, cashBookPageRecorderThatWritesNothing());
 
-    $component = Livewire::actingAs($this->user)->test(CashBookPage::class);
-
-    for ($i = 0; $i < 5; $i++) {
-        $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('date', '2026-06-05')
-            ->call('add')
-            ->assertSet('error', '')
-            ->assertDispatched('toast', message: 'Cash entry added.');
-    }
-
-    $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('date', '2026-06-05')
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('date', '2026-06-05')
         ->call('add')
         ->assertSet('error', 'That entry was not recorded. Try adding it again.')
         ->assertNotDispatched('toast');
 
     expect(DB::table('transactions')->where('user_id', $this->user->id)->where('source_format', 'manual')->count())
-        ->toBe(5);
-
-    CarbonImmutable::setTestNow(null);
+        ->toBe(0);
 });
 
 // The form clears itself on a successful add, so a reader told the entry was
 // not recorded on a cleared form has to reconstruct what they typed.
 it('keeps what the reader typed when the entry was not recorded', function (): void {
-    CarbonImmutable::setTestNow('2026-06-05 23:59:59');
+    $this->app->instance(RecordsTransactions::class, cashBookPageRecorderThatWritesNothing());
 
-    $component = Livewire::actingAs($this->user)->test(CashBookPage::class);
-
-    for ($i = 0; $i < 5; $i++) {
-        $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('date', '2026-06-05')->call('add');
-    }
-
-    $component->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('description', 'coffee')->set('date', '2026-06-05')
+    Livewire::actingAs($this->user)
+        ->test(CashBookPage::class)
+        ->set('amount', '2,50')->set('counterparty', 'Kiosk')->set('description', 'coffee')->set('date', '2026-06-05')
         ->call('add')
         ->assertSet('amount', '2,50')
         ->assertSet('counterparty', 'Kiosk')
         ->assertSet('description', 'coffee');
-
-    CarbonImmutable::setTestNow(null);
 });

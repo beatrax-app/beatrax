@@ -523,6 +523,14 @@ It is not a mergeable field either. The ordinal is identity, fixed when the row
 is born, and belongs beside `fingerprint` and `amount_minor` — columns that
 travel whole inside a create and are never the subject of a `Set`.
 
+A hand-typed cash entry has no file to count within, so
+`CashBook`'s `RecordManualTransaction` asks the ledger instead: one past the
+highest ordinal already stored for that exact tuple. The reader saying "coffee"
+twice is two facts, and nothing but the ledger records that they already said it
+once. Its `booked_at` stays the second the entry was typed — real information,
+unlike a bank's midnight — and it is also what keeps a coffee typed on the phone
+from merging into one typed on the desktop.
+
 ## Per-row error handling
 
 Per-row exceptions inside the try-catch around stages 4-8 produce
