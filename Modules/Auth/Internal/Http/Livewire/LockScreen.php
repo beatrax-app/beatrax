@@ -137,6 +137,17 @@ final class LockScreen extends Component
         UrlGenerator $urls,
     ): void {
         $user = $currentUser->user();
+
+        // Read here and not only at mount(): a Livewire method is callable
+        // whatever the render offered, and the desktop vault keys its entry on
+        // the user id alone — so an entry an earlier holder of this id left
+        // behind opens to a key this account has never held.
+        if (! $gateway->isColdStartEnrolled($user->id)) {
+            $this->nativeUnlockAvailable = false;
+
+            return;
+        }
+
         $dataKey = $vault->recover($user->id, Lang::get('auth::lock_screen.native_unlock_reason'));
 
         if ($dataKey === null) {
