@@ -7,10 +7,10 @@ namespace Modules\Migration\Internal\Pipeline;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
 
-// No budget export carries a time of day, so a promoted row's booked_at is its
-// posting date plus an offset, and that offset keeps two same-day rows off one
-// fingerprint. Counted over the tuple the fingerprint is built from, and never
-// from the staging row's database id: that id is minted per run.
+// No budget export carries a time of day, so two same-day rows are kept off one
+// fingerprint by their ordinal rather than by a clock. Counted over the tuple
+// the fingerprint is built from, and never from the staging row's database id:
+// that id is minted per run.
 /**
  * @link ../../../../.docs/features/migration/architecture.md#a-row-re-exported-under-a-new-identity
  */

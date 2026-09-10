@@ -11,11 +11,10 @@ use Modules\Migration\Tests\Support\MigrationFixturePaths;
 
 uses(RefreshDatabase::class);
 
-// No budget export carries a time of day, so promotion bolts a deterministic
-// per-row offset onto booked_at to keep two same-day rows off one fingerprint.
-// That offset is a sort key and nothing else: the day it lands on has to stay
-// the day the file said, or a screen that draws booked_at names a date the
-// reader's own export never contained.
+// No budget export carries a time of day, so a promoted booked_at is the
+// posting date and nothing else. Two same-day rows are kept off one
+// fingerprint by the ordinal's own column; booked_at used to carry that as a
+// seconds offset, and a screen drawing it named a time no export contained.
 
 beforeEach(function (): void {
     $this->sourceDayUser = User::create([
@@ -108,7 +107,7 @@ it('posts every promoted row on the exact day its export stated', function (): v
 // fingerprint does not read. Every other fixture leaves the offset at zero, so
 // running this against one of those asserts that nothing spilled out of a day
 // nothing was ever moved within.
-it('keeps the ordering offset inside the day it orders', function (): void {
+it('states no time of day its source did not, and still separates two same-day rows', function (): void {
     /** @var DatabaseManager $db */
     $db = $this->sourceDayDb;
 
@@ -116,44 +115,38 @@ it('keeps the ordering offset inside the day it orders', function (): void {
 
     $promoted = $db->connection()->table('transactions')
         ->where('user_id', $this->sourceDayUser->id)
-        ->get(['source_ref', 'posted_at', 'booked_at']);
+        ->get(['source_ref', 'posted_at', 'booked_at', 'occurrence_ordinal']);
 
     expect($promoted->count())->toBeGreaterThan(0);
 
-    $spilled = [];
-    $offsetRows = 0;
-
+    $invented = [];
     foreach ($promoted as $row) {
         $bookedAt = (string) $row->booked_at;
         $postedAt = (string) $row->posted_at;
 
-        if (substr($bookedAt, 0, 10) !== $postedAt) {
-            $spilled[] = (string) $row->source_ref.': booked_at '.$bookedAt.', posted_at '.$postedAt;
-        }
         if ($bookedAt !== $postedAt.' 00:00:00') {
-            $offsetRows++;
+            $invented[] = (string) $row->source_ref.': booked_at '.$bookedAt.', posted_at '.$postedAt;
         }
     }
 
-    // The offset has to be there, or this is asserting that nothing spilled out
-    // of a day nothing was ever moved within.
-    expect($offsetRows)->toBeGreaterThan(0);
+    expect($invented)->toBe(
+        [],
+        'A promoted booked_at is the posting date at midnight. Anything else is a time of day the '
+        ."reader's own export never carried, drawn on the detail screen as though it had:\n  "
+        .implode("\n  ", $invented),
+    );
 
-    // And it has to have done its job: both trips survive as two rows. An
-    // offset that separates nothing would let the second collapse onto the
-    // first as a duplicate fingerprint and be dropped.
-    expect($db->connection()->table('transactions')
+    // And the separation still has to work: both trips survive as two rows,
+    // told apart by the ordinal rather than by the clock.
+    $twins = $db->connection()->table('transactions')
         ->where('user_id', $this->sourceDayUser->id)
         ->whereDate('posted_at', '2026-01-15')
         ->where('amount_minor', -4500)
-        ->count())->toBe(2);
+        ->get(['occurrence_ordinal']);
 
-    expect($spilled)->toBe(
-        [],
-        'The sub-day offset exists to separate two same-day rows, so it must stay inside that day. '
-        .'A booked_at on another day is drawn on the detail screen as a second, real date the '
-        ."export never carried:\n  ".implode("\n  ", $spilled),
-    );
+    expect($twins)->toHaveCount(2);
+    expect($twins->pluck('occurrence_ordinal')->map(fn (mixed $v): int => (int) $v)->unique())
+        ->toHaveCount(2);
 });
 
 it('draws no second date on a migrated row, because there is not one', function (): void {

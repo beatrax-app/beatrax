@@ -232,11 +232,16 @@ it('MigrationConfirm: two genuinely distinct same-day same-amount same-account t
 
     expect($employerTransactions)->toHaveCount(2);
 
+    // What separates them is the ordinal, not a second of clock time. Both
+    // keep the only booked_at their export stated.
+    $ordinals = $employerTransactions->pluck('occurrence_ordinal')->map(fn (mixed $v): int => (int) $v)->unique();
+    expect($ordinals)->toHaveCount(2);
+
     $bookedAts = $employerTransactions->pluck('booked_at')->map(fn (mixed $v): string => (string) $v)->unique();
-    expect($bookedAts)->toHaveCount(2);
+    expect($bookedAts)->toHaveCount(1);
 
     // The fingerprint-miss "extra" surfacing must not have fired either: the
-    // bookedAt fix gives both rows distinct fingerprints.
+    // ordinal gives both rows distinct fingerprints.
     $collisionItems = $this->db->connection()->table('migration_staging_unmapped_items')
         ->where('migration_run_id', $run->id)
         ->where('item_type', 'extra')
