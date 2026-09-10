@@ -14,7 +14,6 @@ use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\ColdStartEnroller;
 use Modules\Auth\Internal\Lock\PinUnlockAttempt;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
@@ -80,8 +79,6 @@ final class LockScreen extends Component
         Session $session,
         DatabaseManager $db,
         Clock $clock,
-        ColdStartVault $vault,
-        ColdStartEnroller $enroller,
         MobileLockGateway $gateway,
     ): void {
         if (! AppLockPinShape::isWellFormed($pin)) {
@@ -100,14 +97,6 @@ final class LockScreen extends Component
             $this->flashMessage = $this->refusalMessage($user->id, $attempt, $verifier, $db, $clock);
 
             return;
-        }
-
-        // Re-armed through the same enroller the settings screen uses, rather
-        // than storing the key in hand: one funnel owns arming the vault, and
-        // it is the one that spends a PIN to do it. The PIN just verified is
-        // the one it spends.
-        if ($vault->isAvailable() && ! $vault->isEnrolled($user->id)) {
-            $enroller->enrol($user->id, $pin, $session);
         }
 
         $this->redirect($this->intendedUrl($session, $urls), navigate: false);
