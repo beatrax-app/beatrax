@@ -1852,6 +1852,18 @@ from a hardcoded list, so a newly shared directory is picked up
 automatically, and it hard-fails if any symlink survives the copy — a
 non-self-contained tree can never reach Bifrost.
 
+It hard-fails on one more thing before it copies anything: a `public/build/`
+older than the sources it is compiled from. Nothing in the build container
+rebuilds the front end, so whatever is on disk when the script runs is what a
+phone loads, and the script asks about `mobile-app/public` — the symlink it is
+about to dereference — so the answer is about the tree that actually ships. The
+comparison is the one `RefuseToShipAStaleFrontEnd` refuses `native:run` on,
+reached through `scripts/refuse_a_stale_front_end.php` rather than through
+artisan: the publishing job installs no Composer dependencies, so there is no
+application to boot, and a second comparison written in shell would be a second
+answer free to drift from the one a device is refused on. It exits 5 when the
+bundle is stale and 6 when there is no PHP to ask with.
+
 The materialized tree is published to a dedicated, fully-generated build
 repo that Bifrost is pointed at (at its root — no experimental monorepo /
 subfolder support required). That repo is derived output with a single

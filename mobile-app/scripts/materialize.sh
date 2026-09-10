@@ -41,6 +41,37 @@ fi
 
 echo "materialize: ${SRC} -> ${OUT}"
 
+# --- Guard: the front end must not predate the sources it is compiled from. --
+# public/ is copied verbatim below and nothing in the Bifrost container rebuilds
+# it, so a stale public/build/ here is a stale bundle on a phone — a component
+# nobody registered yet, a utility class nobody compiled yet, and a manifest
+# that resolves anyway. Asked of ${SRC}/public, which is the symlink rsync is
+# about to dereference, so the answer is about the tree that actually ships.
+#
+# A plain script rather than an artisan command: the publishing job installs no
+# Composer dependencies, so there is no application here to boot. It is the same
+# comparison the CommandStarting listener refuses native:run on, reached without
+# an autoloader, so there is only ever one definition of "newer than".
+if ! command -v php >/dev/null 2>&1; then
+    echo "::error:: php is needed to check public/build against its sources, and is not on PATH" >&2
+    exit 6
+fi
+#
+# 0 is current and 1 is stale; anything else is the check failing to run, which
+# is a third answer and not the second one. Collapsing them would report a
+# checker that cannot parse itself as a stale bundle, and send whoever read it
+# to run a build that was never the problem.
+front_end_check=0
+php "${REPO_ROOT}/scripts/refuse_a_stale_front_end.php" "${SRC}/public" "materialize.sh" || front_end_check=$?
+if [[ ${front_end_check} -eq 1 ]]; then
+    echo "::error:: public/build predates the sources it is compiled from — run 'npm run build'" >&2
+    exit 5
+fi
+if [[ ${front_end_check} -ne 0 ]]; then
+    echo "::error:: the public/build check exited ${front_end_check} without answering; nothing was verified" >&2
+    exit 7
+fi
+
 # --- Copy, dereferencing every symlink into real content. --------------------
 # --copy-links (-L) turns each symlink into the file/dir tree it points at, so
 # the parent-pointing links become real content local to the output tree.

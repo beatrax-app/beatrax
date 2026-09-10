@@ -17,10 +17,13 @@ final readonly class StaleFrontEnd
 
     public function sentence(string $command): string
     {
-        $source = self::stamped($this->source, $this->sourceModified);
-        $built = $this->built === null || $this->builtModified === null
-            ? self::NO_BUILD_AT_ALL
-            : self::stamped($this->built, $this->builtModified);
+        $builtPath = $this->built ?? self::NO_BUILD_AT_ALL;
+        $column = max(strlen($this->source), strlen($builtPath)) + 2;
+
+        $source = self::stamped($this->source, $this->sourceModified, $column);
+        $built = $this->builtModified === null
+            ? $builtPath
+            : self::stamped($builtPath, $this->builtModified, $column);
 
         return sprintf(
             "The front end under public/build is older than the sources it is compiled from, so\n"
@@ -39,8 +42,8 @@ final readonly class StaleFrontEnd
         );
     }
 
-    private static function stamped(string $path, int $modified): string
+    private static function stamped(string $path, int $modified, int $column): string
     {
-        return str_pad($path, 44).' '.date('Y-m-d H:i', $modified);
+        return str_pad($path, $column).date('Y-m-d H:i', $modified);
     }
 }
