@@ -123,7 +123,16 @@
                         <div class="mb-1 grid grid-cols-3 gap-1 text-xs font-semibold" style="color: var(--color-text-faint);">
                             <span class="col-span-1">{{ Lang::get('calendar::messages.toolbar.col_account') }}</span>
                             <span class="text-center">{{ Lang::get('calendar::messages.toolbar.col_entries') }}</span>
-                            <span class="text-center">{{ Lang::get('calendar::messages.toolbar.col_balance') }}</span>
+                            {{-- A div, not a span: the tip's panel is a div, and
+                                 the two columns are the one pair on this screen
+                                 whose difference is invisible from the words. --}}
+                            <div class="text-center">{{ Lang::get('calendar::messages.toolbar.col_balance') }}&nbsp;<x-core::help-tip
+                                topic="calendar-balance-column"
+                                :label="Lang::get('calendar::messages.toolbar.col_balance')"
+                                :body="Lang::get('calendar::help.balance_column', [
+                                    'entries' => Lang::get('calendar::messages.toolbar.col_entries'),
+                                ])"
+                            /></div>
                         </div>
                         @foreach ($accountRoster as $acct)
                             <div class="grid grid-cols-3 gap-1 items-center py-1">
