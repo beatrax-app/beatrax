@@ -61,7 +61,7 @@ beforeEach(function (): void {
             return $msg->senderEmail === 'notifications@netflix.com';
         }
 
-        public function match(string $emlRaw): MatchOutcomeDto
+        public function match(string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto
         {
             throw new RuntimeException('This message could not be read.');
         }
