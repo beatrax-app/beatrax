@@ -35,14 +35,11 @@ final class FortifyServiceProvider extends ServiceProvider
             $username = $request->input('username');
             $password = $request->input('password');
 
-            if (! is_string($username) || ! is_string($password)) {
-                return null;
-            }
-
             // Fortify has no channel for a wait, so a spent meter answers here
-            // exactly as a wrong password does. The reader who is told nothing
-            // useful is the one who bypassed the Livewire form.
-            if ($throttle->isExhausted($username)) {
+            // exactly as a wrong password does -- the same null a malformed
+            // payload gets. The reader told nothing useful is the one who
+            // bypassed the Livewire form.
+            if (! is_string($username) || ! is_string($password) || $throttle->isExhausted($username)) {
                 return null;
             }
 
