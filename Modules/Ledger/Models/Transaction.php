@@ -43,6 +43,7 @@ use Modules\Sync\Public\Casts\EncryptedJsonCast;
  * @property int $import_run_id
  * @property int $source_row_index
  * @property string|null $source_ref
+ * @property int $occurrence_ordinal
  * @property array<int|string, mixed>|null $raw_payload
  * @property ArrayObject<int, array<string, mixed>>|null $enriched_from
  * @property int|null $pair_transaction_id
@@ -72,7 +73,7 @@ final class Transaction extends Model
         'settled_amount_minor', 'settled_currency', 'fx_rate_used',
         'counterparty_name', 'counterparty_iban', 'counterparty_normalized', 'normalization_version',
         'description', 'category_id', 'counterparty_id', 'auto_category_provenance',
-        'source_format', 'import_run_id', 'source_row_index', 'source_ref',
+        'source_format', 'import_run_id', 'source_row_index', 'source_ref', 'occurrence_ordinal',
         'raw_payload',
         'enriched_from',
         'pair_transaction_id',
@@ -93,6 +94,7 @@ final class Transaction extends Model
             'normalization_version' => 'integer',
             'fingerprint_version' => 'integer',
             'source_row_index' => 'integer',
+            'occurrence_ordinal' => 'integer',
             // SQLite hands this back as a float, and brick/math 0.18 converts a
             // float argument to int — 0.92917629 silently becomes 0, collapsing
             // every rate recomputed from it to zero.

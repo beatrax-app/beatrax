@@ -36,6 +36,7 @@ beforeEach(function (): void {
             $amountMinor,
             $currency,
             $this->counterpartyKey->forName($counterpartyName, $this->fixtureUser->id),
+            0,
         );
     };
 

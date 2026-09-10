@@ -48,6 +48,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         'settled_currency',
         'fx_rate_used',
         'counterparty_normalized',
+        'occurrence_ordinal',
         'status',
     ];
 
@@ -269,6 +270,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             $amount->amountMinor ?? self::toInt($row->amount_minor),
             $amount->currency ?? self::toString($row->currency),
             $normalized,
+            self::toInt($row->occurrence_ordinal),
         );
         $rederived['fingerprint_version'] = $this->fingerprints->version();
 

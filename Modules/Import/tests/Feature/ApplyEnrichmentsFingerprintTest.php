@@ -164,6 +164,7 @@ it('recomposes the fingerprint when prefer_receipt rewrites the amount the tuple
             -2750,
             'EUR',
             $stored->counterpartyNormalized,
+            0,
         ));
 });
 

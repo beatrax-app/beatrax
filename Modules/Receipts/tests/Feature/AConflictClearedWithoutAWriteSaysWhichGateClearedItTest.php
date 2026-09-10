@@ -89,6 +89,7 @@ beforeEach(function (): void {
             -3199,
             'EUR',
             $normalized,
+            0,
         ),
         'fingerprint_version' => $fingerprints->version(),
     ]);

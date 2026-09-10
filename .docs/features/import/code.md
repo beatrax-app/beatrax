@@ -231,7 +231,7 @@ Modules/Import/
   $user, $sourceFormat)` — runs every tagged `PaymentTypeHinter`
   in order; first hit wins.
 - `Internal/Pipeline/Stages/FingerprintStage::classify($tx, $user)`
-  — computes the v3 fingerprint used for dedup and answers with
+  — computes the v4 fingerprint used for dedup and answers with
   the row's disposition (new / duplicate / enriched).
 - `Internal/Parsers/*` — per-source `PaymentTypeHinter`
   implementations **only**. The readers themselves are

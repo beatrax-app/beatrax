@@ -11,7 +11,7 @@ final class FingerprintComposer
 {
     // Bump whenever the tuple shape or normalize()'s output changes;
     // re-derive existing rows via beatrax:rederive-fingerprints.
-    public const int NORMALIZATION_VERSION = 3;
+    public const int NORMALIZATION_VERSION = 4;
 
     public function compose(CanonicalTransaction $tx): string
     {
@@ -23,12 +23,13 @@ final class FingerprintComposer
             $tx->amountMinor,
             $tx->currency,
             $tx->counterpartyNormalized,
+            $tx->occurrenceOrdinal,
         );
     }
 
     // The same tuple over values read straight from a row, for the sweeps that
     // rewrite counterparty_normalized and must rewrite the fingerprint with it
-    // rather than rebuild a whole canonical DTO to reach seven of its fields.
+    // rather than rebuild a whole canonical DTO to reach eight of its fields.
     public function composeTuple(
         int $userId,
         int $accountId,
@@ -37,16 +38,34 @@ final class FingerprintComposer
         int $amountMinor,
         string $currency,
         string $counterpartyNormalized,
+        int $occurrenceOrdinal,
     ): string {
-        return hash('sha256', implode('|', [
-            (string) $userId,
-            (string) $accountId,
+        return hash('sha256', self::occurrenceGroupOf(
+            $userId,
+            $accountId,
             $postedAtDate,
             $bookedAtDateTime,
-            (string) $amountMinor,
+            $amountMinor,
             $currency,
             $counterpartyNormalized,
-        ]));
+        ).'|'.$occurrenceOrdinal);
+    }
+
+    // Everything the tuple holds except which occurrence it is: what two rows
+    // of one statement share when the bank states no time of day for either.
+    // OccurrenceOrdinals counts within this, so the ordinal and the tuple it
+    // completes are derived from one list of columns.
+    public function occurrenceGroup(CanonicalTransaction $tx): string
+    {
+        return self::occurrenceGroupOf(
+            $tx->userId ?? 0,
+            $tx->accountId,
+            $tx->postedAt->toDateString(),
+            $tx->bookedAt->toDateTimeString(),
+            $tx->amountMinor,
+            $tx->currency,
+            $tx->counterpartyNormalized,
+        );
     }
 
     public function normalize(string $rawName): string
@@ -62,6 +81,26 @@ final class FingerprintComposer
     public function version(): int
     {
         return self::NORMALIZATION_VERSION;
+    }
+
+    private static function occurrenceGroupOf(
+        int $userId,
+        int $accountId,
+        string $postedAtDate,
+        string $bookedAtDateTime,
+        int $amountMinor,
+        string $currency,
+        string $counterpartyNormalized,
+    ): string {
+        return implode('|', [
+            (string) $userId,
+            (string) $accountId,
+            $postedAtDate,
+            $bookedAtDateTime,
+            (string) $amountMinor,
+            $currency,
+            $counterpartyNormalized,
+        ]);
     }
 
     // Decomposes to NFD and removes every \p{Mn} codepoint, avoiding the

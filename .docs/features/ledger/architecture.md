@@ -63,7 +63,7 @@ What the module explicitly does NOT do:
   - `RecordsTransactions::__invoke(iterable<CanonicalTransaction>
     $canonical, User $user, bool $captureForSync = true):
     RecordResult` — the single sanctioned writer for
-    `transactions`. Idempotent on the v3 fingerprint. It takes a
+    `transactions`. Idempotent on the v4 fingerprint. It takes a
     BATCH, not one row: the argument is deliberately `iterable`
     so a lazy generator is never forced into memory, and the
     implementation buffers it into chunks committed one
@@ -101,7 +101,7 @@ What the module explicitly does NOT do:
     money column is missing from a query result, instead of a
     silent zero.
 - **Services/**
-  - `FingerprintComposer::compose(...)` — v3 fingerprint
+  - `FingerprintComposer::compose(...)` — v4 fingerprint
     deterministic compose. Singleton.
   - `PeriodQuery::current($user)` / `previous($user)` — the
     `users.period_start_day`-aware period resolver. Transient
@@ -132,7 +132,7 @@ What the module explicitly does NOT do:
 `Internal/` houses the implementation:
 
 - **Internal/Services/FingerprintRederiveService** — re-derives
-  every fingerprint to the v3 algorithm.
+  every fingerprint to the v4 algorithm.
 - **Internal/Console/RederiveFingerprintsCommand** —
   `beatrax:rederive-fingerprints` artisan command.
 - **Internal/Http/Livewire/TransactionsList** — the
@@ -143,7 +143,7 @@ What the module explicitly does NOT do:
 ## Key services + events
 
 - `RecordTransactions::__invoke($canonical, $user,
-  $captureForSync)` — INSERT ON CONFLICT on the v3 fingerprint,
+  $captureForSync)` — INSERT ON CONFLICT on the v4 fingerprint,
   per row, inside a transaction per chunk. Returns a
   `RecordResult` carrying two counts, `inserted` and
   `duplicates`; the enriched count the confirm screen renders
@@ -155,11 +155,12 @@ What the module explicitly does NOT do:
 - `UpdateTransactionCategory::__invoke($txId, $catId, $user)` —
   scoped by `(id, user_id)`; returns affected count. Categorization's
   `AssignCategory` delegates here.
-- `FingerprintComposer::compose(...)` — deterministic inputs
-  (`normalized_counterparty`, `posted_at`, `settled_at`,
-  `amount_minor`, `account_id`, `source_format`). v3 includes
-  every input; v2 dropped `account_id` and was re-derived via
-  migration.
+- `FingerprintComposer::compose(...)` — deterministic inputs, in
+  order: `user_id`, `account_id`, `posted_at`, `booked_at`,
+  `amount_minor`, `currency`, `counterparty_normalized`,
+  `occurrence_ordinal`. Each version added one and was re-derived
+  by its own migration: v3 dropped `source_ref` and added
+  `booked_at`, v4 added `occurrence_ordinal`.
 - `PeriodQuery` — resolves the user's current and previous
   period given `users.period_start_day`. Transient binding to
   pick up the live `CurrentUser` per request.
@@ -1073,16 +1074,17 @@ PHP, owns the merge. Every write and read is scoped by
 `(id, user_id)`; a foreign or missing transaction id is a silent no-op
 (0 rows affected) or empty-array read, never a leak.
 
-## `FingerprintComposer` — the v3 dedup algorithm
+## `FingerprintComposer` — the v4 dedup algorithm
 
 `Public/Services/FingerprintComposer` produces the canonical sha256
 fingerprint of a `CanonicalTransaction` — the second-layer idempotency
 guard behind the composite UNIQUE index on
 `transactions(user_id, account_id, posted_at, booked_at, amount_minor,
-currency, counterparty_normalized)`. The tuple is prefixed with
-`user_id` so the same row imported under two different users hashes to
-two different fingerprints — without that prefix the UNIQUE index
-would reject the second user's row as a "duplicate" of the first.
+currency, counterparty_normalized, occurrence_ordinal)`. The tuple is
+prefixed with `user_id` so the same row imported under two different
+users hashes to two different fingerprints — without that prefix the
+UNIQUE index would reject the second user's row as a "duplicate" of the
+first.
 
 `normalize()` collapses a raw counterparty name into the stable string
 used inside the fingerprint tuple: lowercased, NFD-stripped of
@@ -1094,29 +1096,37 @@ digest. `compose()` treats the result as an opaque tuple member either way,
 which is why a fingerprint re-derived from the stored column stays stable: a
 hash of a hash is still deterministic, and needs no key.
 
-`composeTuple()` takes the same seven values read straight from a row, for
+`composeTuple()` takes the same eight values read straight from a row, for
 the enable-time sweep that rewrites `counterparty_normalized` and must
-rewrite `fingerprint` in the same statement.
-`booked_at` carries second-resolution so two same-day same-merchant
-same-amount entries posted seconds apart never collide. `source_ref`
-is intentionally absent from the tuple: the same real-world transaction
-surfaces in CSV and CAMT.053 exports with different reference values,
-and the fingerprint must equate those.
+rewrite `fingerprint` in the same statement. `occurrenceGroup()` hashes
+nothing and returns the first seven joined: what two rows of one statement
+share, and so what the ordinal counts within.
+`source_ref` is intentionally absent from the tuple: the same real-world
+transaction surfaces in CSV and CAMT.053 exports with different reference
+values, and the fingerprint must equate those.
 
-Second-resolution is enough for an import, whose rows carry their own
-times, and it is the *only* thing separating two hand-entered ones: a cash
-entry is stamped with the clock's second on the day the reader named, so six
-€2.50 coffees typed in a row are six writes of one tuple. `CashBook`'s
-`RecordManualTransaction` therefore asks the ledger which second this exact
-entry last occupied — same user, account, posted day, amount, currency and
-counterparty — and books at the one after it, clamped inside the day so an
-entry added before midnight is never nudged into the next tax year. It used
-to walk five seconds forward from *now* and give up, silently, on the sixth
-identical entry; the walk now starts past the collision instead of into it,
-and the action returns whether a row was written so the page can say so
-rather than toast "Cash entry added." over nothing. Two identical coffees on
-one day are two facts, and a dedup rule that cannot tell them apart is
-answering a question about imports with an answer about typing.
+`booked_at` carries second-resolution, but a bank does not: every CSV and
+MT940 adapter books at `posted_at->startOfDay()`. Two identical purchases on
+one statement therefore agree in all seven of the columns above, and the
+second was dropped by `insertOrIgnore` as a duplicate of the first.
+`occurrence_ordinal` is what tells them apart — 0 for the first booking of a
+shape, 1 for the second — counted within the file rather than against the
+ledger, so a re-import still dedupes to nothing. The full reasoning, including
+why the ordinal has to sit inside the UNIQUE index and not only inside the
+hash, is in
+[the occurrence ordinal](../../architecture/ingestion-pipeline.md#the-occurrence-ordinal).
+
+A hand-typed cash entry has no file to count within, and the second the
+reader typed it is still what separates two of them: a cash entry is stamped
+with the clock's second on the day the reader named, so six €2.50 coffees typed
+in a row are six writes of one tuple. `CashBook`'s `RecordManualTransaction`
+therefore asks the ledger which second this exact entry last occupied — same
+user, account, posted day, amount, currency and counterparty — and books at the
+one after it, clamped inside the day so an entry added before midnight is never
+nudged into the next tax year. The action returns whether a row was written so
+the page can say so rather than toast "Cash entry added." over nothing. Two
+identical coffees on one day are two facts, and a dedup rule that cannot tell
+them apart is answering a question about imports with an answer about typing.
 
 `NORMALIZATION_VERSION` is bumped whenever the tuple shape or
 `normalize()`'s output changes; a stored row with a lower version

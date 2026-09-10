@@ -109,6 +109,7 @@ final readonly class CounterpartyKeyBackfill
                 self::toInt($row->amount_minor ?? null),
                 self::toString($row->currency ?? null),
                 $derived,
+                self::toInt($row->occurrence_ordinal ?? null),
             ),
         ];
     }

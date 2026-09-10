@@ -43,6 +43,7 @@ final class CanonicalTransaction extends Data
         public readonly ?PaymentType $paymentType = null,
         public readonly ?int $counterpartyId = null,
         public readonly ?string $note = null,
+        public readonly int $occurrenceOrdinal = 0,
     ) {}
 
     // ClassifyTransactionType flips the NormalizeStage-derived default
@@ -76,6 +77,7 @@ final class CanonicalTransaction extends Data
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
             note: $this->note,
+            occurrenceOrdinal: $this->occurrenceOrdinal,
         );
     }
 
@@ -109,6 +111,7 @@ final class CanonicalTransaction extends Data
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
             note: $this->note,
+            occurrenceOrdinal: $this->occurrenceOrdinal,
         );
     }
 
@@ -145,6 +148,7 @@ final class CanonicalTransaction extends Data
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
             note: $this->note,
+            occurrenceOrdinal: $this->occurrenceOrdinal,
         );
     }
 
@@ -177,6 +181,8 @@ final class CanonicalTransaction extends Data
             autoCategoryProvenance: $this->autoCategoryProvenance,
             paymentType: $paymentType,
             counterpartyId: $this->counterpartyId,
+            note: $this->note,
+            occurrenceOrdinal: $this->occurrenceOrdinal,
         );
     }
 
@@ -211,6 +217,7 @@ final class CanonicalTransaction extends Data
             paymentType: $this->paymentType,
             counterpartyId: $counterpartyId,
             note: $this->note,
+            occurrenceOrdinal: $this->occurrenceOrdinal,
         );
     }
 
@@ -244,6 +251,42 @@ final class CanonicalTransaction extends Data
             paymentType: $this->paymentType,
             counterpartyId: $this->counterpartyId,
             note: $note,
+            occurrenceOrdinal: $this->occurrenceOrdinal,
+        );
+    }
+
+    // OccurrenceOrdinals stamps this before the fingerprint stage reads the
+    // row, and it is the last field the tuple takes: two rows a statement
+    // books identically differ here and nowhere else.
+    public function withOccurrenceOrdinal(int $occurrenceOrdinal): self
+    {
+        return new self(
+            userId: $this->userId,
+            accountId: $this->accountId,
+            type: $this->type,
+            postedAt: $this->postedAt,
+            bookedAt: $this->bookedAt,
+            valueDate: $this->valueDate,
+            amountMinor: $this->amountMinor,
+            currency: $this->currency,
+            settledAmountMinor: $this->settledAmountMinor,
+            settledCurrency: $this->settledCurrency,
+            counterpartyName: $this->counterpartyName,
+            counterpartyIban: $this->counterpartyIban,
+            counterpartyNormalized: $this->counterpartyNormalized,
+            normalizationVersion: $this->normalizationVersion,
+            description: $this->description,
+            categoryId: $this->categoryId,
+            sourceFormat: $this->sourceFormat,
+            importRunId: $this->importRunId,
+            sourceRowIndex: $this->sourceRowIndex,
+            sourceRef: $this->sourceRef,
+            rawPayload: $this->rawPayload,
+            autoCategoryProvenance: $this->autoCategoryProvenance,
+            paymentType: $this->paymentType,
+            counterpartyId: $this->counterpartyId,
+            note: $this->note,
+            occurrenceOrdinal: $occurrenceOrdinal,
         );
     }
 
@@ -294,6 +337,7 @@ final class CanonicalTransaction extends Data
             'import_run_id' => $this->importRunId,
             'source_row_index' => $this->sourceRowIndex,
             'source_ref' => $this->sourceRef,
+            'occurrence_ordinal' => $this->occurrenceOrdinal,
             'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload, JSON_THROW_ON_ERROR),
             'payment_type' => ($this->paymentType ?? PaymentType::Unknown)->value,
             'status' => $this->sourceFormat === SyntheticSourceFormat::Manual->value

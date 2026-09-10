@@ -213,15 +213,25 @@ walks the seven-step precedence chain and upserts the matching
 fingerprint boundary specifically so the resolved `counterparty_id`
 rides along into the persisted transaction.
 
+### 7a. Occurrence ordinal (`OccurrenceOrdinals`)
+
+The last thing stamped onto a `CanonicalTransaction` before the fingerprint
+stage reads it, and the reason it exists is
+[The occurrence ordinal](#the-occurrence-ordinal) below. `PreviewRun` carries
+one `Ledger\Public\Services\OccurrenceOrdinals` per run — never one on the
+pipeline, which is a singleton, so a counter held there would number the next
+file's rows from where this one stopped.
+
 ### 8. Fingerprint (`FingerprintStage`)
 
-The post-commit boundary. The stage computes the v3 fingerprint over
+The post-commit boundary. The stage computes the v4 fingerprint over
 (`user_id`, `account_id`, `posted_at` as a date, `booked_at` as a datetime,
-`amount_minor`, `currency`, `counterparty_normalized`) — the tuple
-`FingerprintComposer::composeTuple()` hashes, in that order. `description` is
-**not** among them, which is why `EnrichmentConflictField::Description` is the
-one conflict field answering false to `isFingerprintInput()`: enriching it
-needs no fingerprint recompose, while the other three do.
+`amount_minor`, `currency`, `counterparty_normalized`, `occurrence_ordinal`) —
+the tuple `FingerprintComposer::composeTuple()` hashes, in that order.
+`description` is **not** among them, which is why
+`EnrichmentConflictField::Description` is the one conflict field answering false
+to `isFingerprintInput()`: enriching it needs no fingerprint recompose, while
+the other three do.
 The stage then classifies the canonical transaction against the existing
 `transactions` table:
 
@@ -459,6 +469,60 @@ source plus same transaction never duplicates. The fingerprint stage
 plus the `enriched_from` append-only column is how the constraint is
 mechanised.
 
+## The occurrence ordinal
+
+A bank states a day, not a time: every CSV and MT940 adapter books at
+`posted_at->startOfDay()`, and CAMT.053 books at the booking date's midnight.
+So a statement that records the same purchase twice — two €3.50 coffees at the
+same shop on one day — hands the pipeline two rows agreeing in **every** column
+the seven-column v3 tuple read. `RecordTransactions` writes through
+`insertOrIgnore` against that tuple's UNIQUE index, so the second row was
+dropped in silence: the preview promised two transactions, the ledger kept one,
+and every balance under it was short by a purchase the reader had made.
+
+`transactions.occurrence_ordinal` is the eighth member of the tuple. It counts
+which occurrence of an otherwise identical row this one is, **within the file it
+arrived in**: the first coffee is 0, the second is 1.
+
+Three properties make it work, and each of them is a constraint on where the
+number may come from.
+
+- **It is a function of the file, never of the ledger.** `OccurrenceOrdinals`
+  counts over the rows of one preview run, in the order the file lists them.
+  Read instead off what is already stored, a re-import of the same statement
+  would number the pair 2 and 3, hash to two fingerprints nothing matches, and
+  write the reader's coffees a second time. Counting within the file is what
+  keeps a genuine re-import a no-op, and what makes a partial overlap land
+  exactly the rows it adds: a later file holding both coffees against a ledger
+  holding one classifies ordinal 0 as DUPLICATE and ordinal 1 as NEW.
+- **Two devices compute the same number.** Nothing about the ordinal depends on
+  when a row was inserted, on an autoincrement, or on what a device already
+  holds — only on the bytes of the statement and their order. A phone and a
+  desktop importing one statement therefore derive identical ordinals, identical
+  fingerprints, and rows that recognise each other on arrival rather than
+  landing twice.
+- **It sits inside the UNIQUE index, not only inside the hash.** The composite
+  `transactions_fingerprint_uq` names it last. That index is a *natural key* on
+  the wire: `Sync\Internal\Merge\PeerRowAliases` reads the table's unique
+  indexes off the live schema to decide which local row a peer's id means. An
+  index blind to the ordinal answers "the first booking" for both arriving
+  creates, so the peer's id for the second names the wrong purchase and every
+  later op edits it. `ASecondBookingOfOnePurchaseReachesThePeerAsItsOwnRowTest`
+  pins both halves — a device that imported neither statement keeps two rows,
+  and a device that imported the same statement itself matches each arriving
+  create onto the row that is the same booking.
+
+The column carries a database default of `0` and therefore stays **out** of
+`_create_required` (see
+[merge-registry authoring](../features/sync/merge-registry-authoring.md#the-rule-for-_create_required)).
+That default is also the version-skew answer: a create from a peer still on the
+previous build names no ordinal, inserts as 0, and collides with the local
+single occurrence exactly as it should.
+
+It is not a mergeable field either. The ordinal is identity, fixed when the row
+is born, and belongs beside `fingerprint` and `amount_minor` — columns that
+travel whole inside a create and are never the subject of a `Set`.
+
 ## Per-row error handling
 
 Per-row exceptions inside the try-catch around stages 4-8 produce
@@ -528,6 +592,8 @@ with no opening/closing balance.
   `FingerprintStage`).
 - `Modules/Import/Public/Pipeline/NormalizeStage.php` — the only
   public-contract stage.
+- `Modules/Ledger/Public/Services/OccurrenceOrdinals.php` — the per-file
+  counter behind [the occurrence ordinal](#the-occurrence-ordinal).
 - `Modules/Categorization/Internal/Pipeline/ApplyAutoCategoryStage.php`
   — auto-category implementation.
 - `Modules/Counterparties/Internal/Resolver/CounterpartyResolverService.php`

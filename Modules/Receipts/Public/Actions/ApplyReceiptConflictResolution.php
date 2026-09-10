@@ -51,6 +51,7 @@ final readonly class ApplyReceiptConflictResolution
         'settled_currency',
         'fx_rate_used',
         'counterparty_normalized',
+        'occurrence_ordinal',
     ];
 
     public function __construct(
@@ -298,6 +299,7 @@ final readonly class ApplyReceiptConflictResolution
             $amount->amountMinor ?? self::toInt($txRow->amount_minor),
             $amount->currency ?? self::toString($txRow->currency),
             $normalized,
+            self::toInt($txRow->occurrence_ordinal),
         );
         $rederived['fingerprint_version'] = $this->fingerprints->version();
 

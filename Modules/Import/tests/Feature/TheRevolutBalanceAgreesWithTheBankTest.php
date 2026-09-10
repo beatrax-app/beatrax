@@ -94,6 +94,7 @@ it('keys every row on the native amount, so a re-import still dedups', function 
             (int) $row->amount_minor,
             (string) $row->currency,
             (string) $row->counterparty_normalized,
+            (int) $row->occurrence_ordinal,
         ));
     }
 

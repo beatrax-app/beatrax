@@ -219,7 +219,7 @@ verbatim under `rawPayload['sepa']` for downstream chain resolution.
 Booking-date normalisation: when `<BookgDt>` carries a date-only
 element, `bookedAt` is zeroed to `00:00:00` to match the CSV adapter's
 `startOfDay()` semantics, so a CSV row and a CAMT entry for the same
-logical transaction produce identical `FingerprintComposer` v3 hashes;
+logical transaction produce identical `FingerprintComposer` v4 hashes;
 an `<Ntry>` with neither `<BookgDt>` nor `<ValDt>` is rejected as a
 parse error rather than falling back to the wall clock. Security: before
 any `Reader` construction, `libxml_set_external_entity_loader()` is

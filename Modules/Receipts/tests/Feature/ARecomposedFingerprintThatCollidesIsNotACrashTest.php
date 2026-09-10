@@ -36,6 +36,7 @@ beforeEach(function (): void {
         $amountMinor,
         'EUR',
         $this->normalized,
+        0,
     );
 
     $this->seedTransaction = function (int $amountMinor): Transaction {
