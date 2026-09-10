@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
+use Modules\Auth\Public\Contracts\AppLockPinShape;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;

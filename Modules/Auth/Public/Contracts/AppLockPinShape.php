@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Modules\Auth\Internal\Lock;
+namespace Modules\Auth\Public\Contracts;
 
 // What a PIN is, in one place. The unlock screen is a numeric keypad with no
 // letter key, so anything this does not admit is a PIN the reader could never
-// type back — a permanent lockout reached through supported UI. Both the
-// settings-screen gate and the provisioner's own floor read the rule from here.
+// type back — a permanent lockout reached through supported UI. Public because
+// the pad that has to accept every PIN this admits is a screen in Mobile.
 final class AppLockPinShape
 {
     public const int MINIMUM_LENGTH = 6;

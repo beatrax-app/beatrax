@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\LockScreen;
-use Modules\Auth\Internal\Lock\AppLockPinShape;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Public\Contracts\AppLockPinShape;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\Lang;
@@ -61,6 +61,19 @@ it('names the bounds from the constants rather than from the sentence', function
     expect($rendered)
         ->toContain((string) AppLockPinShape::MINIMUM_LENGTH)
         ->toContain((string) AppLockPinShape::MAXIMUM_LENGTH);
+});
+
+// The pad had its own copy of the ceiling, so a PIN the settings screen took
+// was one the keypad could never be made to spell back — the lockout the rule
+// exists to prevent, reached through supported UI.
+it('caps the keypad at the length the rule admits, in the markup it renders', function (): void {
+    pinRuleReader();
+
+    $markup = Livewire::test(LockScreen::class)->html();
+
+    expect($markup)
+        ->toContain('this.pin.length < '.AppLockPinShape::MAXIMUM_LENGTH)
+        ->toContain('x-for="i in '.AppLockPinShape::MAXIMUM_LENGTH.'"');
 });
 
 it('leaves the bounds out of the copy in every locale it ships', function (): void {
