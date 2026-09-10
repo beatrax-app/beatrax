@@ -31,13 +31,14 @@ final readonly class SpendByCategoryQuery
     {
         $connection = $this->db->connection();
         $map = [];
+        [$spendWhen, $spendBindings] = MoneyFlow::Spend->predicate('t.');
 
         // Unsplit + broken-split parents (see the linked architecture
         // page for the three-case predicate this correlated subquery covers).
         $unsplitQuery = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
-            ->whereIn('t.type', MoneyFlow::Spend->types())
+            ->whereRaw($spendWhen, $spendBindings)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString());
 
@@ -60,7 +61,7 @@ final readonly class SpendByCategoryQuery
         $legs = $connection->table('transaction_splits as ts')
             ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
-            ->whereIn('t.type', MoneyFlow::Spend->types())
+            ->whereRaw($spendWhen, $spendBindings)
             ->where('t.posted_at', '>=', $period->start->toDateString())
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
             // Only attribute legs when the split is internally
@@ -88,11 +89,12 @@ final readonly class SpendByCategoryQuery
     {
         $connection = $this->db->connection();
         $byDay = [];
+        [$spendWhen, $spendBindings] = MoneyFlow::Spend->predicate('t.');
 
         $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
-            ->whereIn('t.type', MoneyFlow::Spend->types())
+            ->whereRaw($spendWhen, $spendBindings)
             ->where('t.posted_at', '>=', $span->start->toDateString())
             ->where('t.posted_at', '<', $span->endExclusive->toDateString())
             ->whereNotNull('t.category_id')
@@ -108,7 +110,7 @@ final readonly class SpendByCategoryQuery
         $legs = $connection->table('transaction_splits as ts')
             ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
-            ->whereIn('t.type', MoneyFlow::Spend->types())
+            ->whereRaw($spendWhen, $spendBindings)
             ->where('t.posted_at', '>=', $span->start->toDateString())
             ->where('t.posted_at', '<', $span->endExclusive->toDateString())
             ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')

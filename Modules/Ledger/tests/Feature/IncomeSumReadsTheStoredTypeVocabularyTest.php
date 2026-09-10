@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
@@ -56,7 +57,9 @@ it('sums a row stored under the type the owning enum names', function (): void {
 });
 
 // Every other case shares the column, so a spelling that drifted onto one of
-// them would silently widen the sum instead of emptying it.
+// them would silently widen the sum instead of emptying it. Each row carries
+// the sign its own label implies: the rollup reads the sign, so a `fee` handed
+// a credit is a row nobody can have meant rather than a case under test.
 it('sums none of the other cases the same column accepts', function (): void {
     $offset = 0;
     foreach (TransactionType::cases() as $type) {
@@ -65,10 +68,12 @@ it('sums none of the other cases the same column accepts', function (): void {
         }
 
         $offset++;
+        $magnitude = 1000 * $offset;
+        $minor = $type->direction() === Direction::Income ? $magnitude : -$magnitude;
         $this->makeTransaction($this->fixtureUser, $this->asnAccount, $this->run, [
             'type' => $type->value,
-            'amount_minor' => 1000 * $offset,
-            'settled_amount_minor' => 1000 * $offset,
+            'amount_minor' => $minor,
+            'settled_amount_minor' => $minor,
             'posted_at' => '2026-05-0'.$offset,
             'booked_at' => '2026-05-0'.$offset.' 12:00:00',
             'counterparty_name' => 'Vocabulary '.$type->value,
