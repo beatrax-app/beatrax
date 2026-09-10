@@ -16,6 +16,7 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Support\TaggedRowScope;
+use Modules\Tax\Internal\Support\TaxableMovement;
 use Modules\Tax\Internal\Support\TaxCorpusWording;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
@@ -255,12 +256,12 @@ final readonly class TaxTagQuery
     }
 
     // One predicate behind the banner's offer and the banner's write, so the
-    // two cannot say different numbers. A reconcile freezes exactly the
-    // classification a tag is, so a row it covers is neither counted nor
-    // tagged — counting them offered seven and wrote three.
+    // two cannot say different numbers. Both reasons the write refuses a row
+    // are asked here: a reconcile freezes exactly the classification a tag is,
+    // and a refund or a transfer can carry no tag at all.
     private function untaggedForCounterparty(int $userId, int $counterpartyId, int $taxYear): QueryBuilder
     {
-        return $this->db->connection()
+        $candidates = $this->db->connection()
             ->table(TaggedRowScope::TRANSACTIONS)
             ->leftJoin(TaggedRowScope::TAGS, static function (JoinClause $join) use ($userId): void {
                 $join->on('tag.transaction_id', '=', 't.id')
@@ -274,6 +275,8 @@ final readonly class TaxTagQuery
                 TaggedRowScope::TRANSACTION_YEAR.' = ?',
                 [$taxYear],
             );
+
+        return TaxableMovement::narrow($candidates, 't.');
     }
 
     // What the badge on a transaction row prints: the corpus's short label in

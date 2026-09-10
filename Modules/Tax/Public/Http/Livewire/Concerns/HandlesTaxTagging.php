@@ -269,15 +269,7 @@ trait HandlesTaxTagging
             : $livePickerNote;
 
         try {
-            foreach ($ids as $txId) {
-                $tag->execute(
-                    $user->id,
-                    $txId,
-                    is_int($categoryId) ? $categoryId : null,
-                    is_string($note) ? $note : null,
-                    null,
-                );
-            }
+            $written = self::writeEachTag($tag, $user->id, $ids, is_int($categoryId) ? $categoryId : null, is_string($note) ? $note : null);
         } catch (NotFoundHttpException|\InvalidArgumentException) {
             $this->dismissBatch();
             $this->toast(Lang::get('tax::messages.errors.tag_refused'));
@@ -285,16 +277,34 @@ trait HandlesTaxTagging
             return;
         }
 
-        $count = count($ids);
         $this->batchSuggestion = null;
         $this->batchSuggestionDismissed = true;
 
         // Nothing written is still an answer: every candidate went out of reach
         // between the offer and the click, and a banner that closed in silence
         // reads as a tag that happened.
-        $this->toast($count === 0
+        $this->toast($written === 0
             ? Lang::get('tax::messages.batch_none_reconciled')
-            : Lang::choice('tax::messages.batch_tagged', $count));
+            : Lang::choice('tax::messages.batch_tagged', $written));
+    }
+
+    // How many tags the write actually left standing, which is what the toast
+    // reports: counting the candidate list instead said "3 transactions tagged"
+    // over a refund and a transfer the action had written nothing for.
+    /**
+     * @param  list<int>  $ids
+     */
+    private static function writeEachTag(TagTransaction $tag, int $userId, array $ids, ?int $categoryId, ?string $note): int
+    {
+        $written = 0;
+
+        foreach ($ids as $txId) {
+            if ($tag->execute($userId, $txId, $categoryId, $note, null)) {
+                $written++;
+            }
+        }
+
+        return $written;
     }
 
     /**
