@@ -512,13 +512,17 @@ That matters for the sign symmetry of an expense band: an expense and
 an income of equal magnitude round outward by the same amount rather
 than one of them rounding toward zero.
 
-Rounding error is bounded and accepted rather than corrected. The
-jitter's seven replicas do not necessarily re-sum to the original
-amount (-1000 becomes -1001 across the window). No compensating
-adjustment is applied; a single minor unit spread across a seven-day
-window is below the resolution of anything the user reads off a chart,
-and a correction pass would introduce an ordering dependency between
-replicas that a reader would have to keep in their head.
+Where a whole is cut into parts, the rounding error is corrected rather
+than accepted. The jitter's seven replicas are cut by
+`CrossCurrencyTotal::apportion()` and re-sum to the original amount
+exactly — see [Cadence jitter](#cadence-jitter) above, where -1000 becomes
+`-142, -143, -143, -143, -143, -143, -143`. The largest-remainder pass
+hands the remainder back to the same set the rounding took it from, so
+no ordering dependency is left for a reader to hold in their head.
+
+The three floats above are a different matter: each is collapsed with
+`(int) round(...)` and nothing re-sums them, because none of them is a
+share of a whole. That error stays bounded and accepted.
 
 ## Related pages
 
