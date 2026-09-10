@@ -5144,6 +5144,7 @@ each compared the Dutch reading to the same key resolved under `en`.
 `tests/Contracts/TheFourAmountColumnsMoveAsASetArchTest.php`
 `tests/Contracts/AMoneyAggregateNamesTheCurrencyItCountsArchTest.php`
 `tests/Contracts/AMoneyShareIsCutByTheAllocatorArchTest.php`
+`tests/Contracts/AnInexactMultiplierNeverScalesAMoneyFigureArchTest.php`
 
 Four failures in three modules turned out to be one shape: money mutated,
 aggregated or divided without going through the seam that already existed for
@@ -5200,14 +5201,44 @@ parts, `apportion()` splits a whole the record already carries, and both spread
 what the rounding lost back over the same set, largest magnitude first with ties
 broken by position.
 
+`CadenceJitter` was the same cut wearing a different word. A percentile-tier
+occurrence is replicated across seven days and each replica rounded its own
+seventh, so the replicas did not add back up to the charge: EUR 10.00 reached
+the projection as EUR 10.03, JPY 50,000 as JPY 50,001, and a single minor unit
+rounded to nought on all seven days and left the balance line altogether. It
+had an exemption from the allocator rule, granted on the reason that the smear
+"is documented as summing to slightly under the point estimate on purpose" —
+the page said *over*, and called it the rounding error rather than a purpose,
+and the exemption's pattern only checked that the file still linked to the
+page. Read against the corpus, the projection charged the account three minor
+units per uncertain occurrence, compounding with the horizon: +3 at thirty
+days, +6 at sixty, +9 at ninety.
+
+**A percentage of an amount is a whole percent, not a float.** A decimal
+written in source is stored as the nearest double, and 1.15 is a shade under
+1.15. `SuppressionRuleKeyResolver` multiplied the charge by it to get the upper
+edge of the band "this is expected" mutes, so 115% of EUR 12.90 — EUR 14.835 —
+came out EUR 14.83, and `AnomalyEvaluator` matches a later charge against that
+edge exactly. A charge of EUR 14.84 fell outside the mute the reader had asked
+for, and the alert they dismissed came back. It is wrong 51,289 times below EUR
+20,000. Whether a multiplier lands on the right side of its own rounding is a
+property of the number rather than of the code: 0.85, 0.95, 1.05 and 0.92 are
+each exact over every amount this app can hold, and nobody had checked which
+was which. `CrossCurrencyTotal::percentOf()` takes a whole percent and answers
+in integers; anything finer is a rate, and `RateTable` converts at those.
+
 Nothing caught any of them because each is arithmetic that succeeds. The
 guards therefore read the tree rather than the behaviour: no array literal
 outside the seam may name two or more of the four amount columns; every `SUM`
-must sit in a function that names a currency column; and integer-truncating
-arithmetic on a minor-unit figure belongs to the allocator. Each carries an
-explicit exemption list where every entry states why that site answers for one
-currency, or is not a share — and a pattern re-checked against the code, so an
-exemption that stops being true fails rather than waving the site on.
+must sit in a function that names a currency column; integer-truncating
+arithmetic on a minor-unit figure belongs to the allocator; and no decimal
+literal, float constant or float cast may scale a money figure that is then
+truncated back to an integer. Each carries an explicit exemption list where
+every entry states why that site answers for one currency, or is not a share —
+and a pattern re-checked against the code, so an exemption that stops being
+true fails rather than waving the site on. The jitter's entry is why the
+patterns have to test the *reason* and not merely the file: one that only
+asked whether a link was still there outlived the claim it was standing on.
 
 ## A window recomputed instead of derived
 
