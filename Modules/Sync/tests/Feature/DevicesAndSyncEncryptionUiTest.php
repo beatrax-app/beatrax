@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Search\Public\Support\SearchedColumns;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
@@ -143,7 +144,7 @@ it('the enable-encryption confirm step discloses amounts + search-index plaintex
         ->set('encryptionOn', false)
         ->call('showEnableEncryptionModal')
         ->assertSee('Amounts are not encrypted at rest')
-        ->assertSee('The search index keeps a plaintext copy of merchant and description text')
+        ->assertSee('The search index keeps a plaintext copy of merchant, description and note text')
         ->assertSee('your data cannot be recovered')
         ->assertDontSee('remote wipe')
         ->assertDontSee("the other device's data is deleted")
@@ -277,9 +278,10 @@ function deviceRegistryRow(int $userId, string $deviceId, string $name, bool $is
 // transaction_search_docs.search_body, so the field list below is derived from
 // that file rather than restated here: a column added to search_body with no
 // matching disclosure fails this test instead of shipping as a quiet
-// under-disclosure. Both spellings are read, because the writer routed its
-// decrypts through a collaborator and a pattern that knew only the old one
-// would have reported no columns at all rather than a missing disclosure.
+// under-disclosure. Every spelling of the table is read — the literal and the
+// SearchedColumns constant — because the writer routed its decrypts through a
+// collaborator once already, and a pattern that knew only the old one would
+// have reported no columns at all rather than a missing disclosure.
 it('the encryption-on status row names the search index and every column SearchIndexWriter leaves in the clear', function (): void {
     $writerPath = dirname(__DIR__, 3).'/Search/Internal/Services/SearchIndexWriter.php';
     expect(is_file($writerPath))->toBeTrue();
@@ -287,11 +289,20 @@ it('the encryption-on status row names the search index and every column SearchI
     $source = file_get_contents($writerPath);
     expect($source)->toBeString();
 
-    $matches = PatternScan::sets("/(?:decryptValue|->read)\('([a-z_]+)', '([a-z_]+)'/", is_string($source) ? $source : '');
+    $matches = PatternScan::sets(
+        "/(?:decryptValue|->read)\(\s*(?:'([a-z_]+)'|SearchedColumns::([A-Z_]+)), '([a-z_]+)'/",
+        is_string($source) ? $source : '',
+    );
 
     $indexedInTheClear = [];
     foreach ($matches as $match) {
-        $indexedInTheClear[] = $match[1].'.'.$match[2];
+        // A constant that names no table would drop a column out of the list
+        // silently, so it is resolved rather than trusted to look like one.
+        $table = ($match[1] ?? '') !== ''
+            ? $match[1]
+            : (string) constant(SearchedColumns::class.'::'.$match[2]);
+
+        $indexedInTheClear[] = $table.'.'.$match[3];
     }
     $indexedInTheClear = array_values(array_unique($indexedInTheClear));
     sort($indexedInTheClear);
@@ -306,8 +317,10 @@ it('the encryption-on status row names the search index and every column SearchI
     // expectation; a softened sentence breaks the second.
     $disclosures = [
         'tax_transaction_tags.note' => 'tax notes',
+        'transaction_splits.note' => 'the notes you write on a split category',
         'transactions.counterparty_name' => 'who you pay',
         'transactions.description' => 'transaction descriptions',
+        'transactions.note' => 'the notes you write on a transaction',
     ];
 
     expect($indexedInTheClear)->toBe(array_keys($disclosures));

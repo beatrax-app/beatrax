@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Vytvořit pro toto zařízení novou identitu',
 
     'encrypted_at_rest' => 'Data šifrovaná v úložišti',
-    'encrypted_at_rest_scope' => 'Poznámky, popisy transakcí a jména a IBAN příjemců jsou v účetní knize šifrovány přístupovou frází zámku aplikace. Částky, data a název a IBAN tvého vlastního účtu nikoli. Index vyhledávání si drží vlastní čitelnou kopii toho, komu platíš, popisů tvých transakcí a tvých daňových poznámek, a některá jména obchodníků zůstávají čitelná jinde v souboru databáze.',
+    'encrypted_at_rest_scope' => 'Poznámky, popisy transakcí a jména a IBAN příjemců jsou v účetní knize šifrovány přístupovou frází zámku aplikace. Částky, data a název a IBAN tvého vlastního účtu nikoli. Index vyhledávání si drží vlastní čitelnou kopii toho, komu platíš, popisů tvých transakcí, poznámek, které píšeš k transakci, poznámek, které píšeš ke kategorii v rozděleném záznamu, a tvých daňových poznámek, a některá jména obchodníků zůstávají čitelná jinde v souboru databáze.',
     'on' => 'Zapnuto',
     'securing' => 'Zabezpečují se tvá data…',
     'do_not_close' => 'Nezavírej toto okno.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Pokud ztratíš heslo zámku aplikace a nemáš zálohu ani jiné důvěryhodné zařízení, data se obnovit nedají.',
     'recover_help' => 'Přístup obnovíš tak, že toto zařízení znovu spáruješ z jiného důvěryhodného zařízení, nebo použiješ svou vlastní šifrovanou zálohu.',
     'amounts_plaintext' => 'Částky se v úložišti nešifrují — zůstatky a součty zůstávají čitelné, aby ti měsíční součty dál správně vycházely.',
-    'search_plaintext' => 'Index vyhledávání si drží nešifrovanou kopii názvů obchodníků a popisů, aby fulltextové vyhledávání dál fungovalo.',
+    'search_plaintext' => 'Index vyhledávání si drží nešifrovanou kopii názvů obchodníků, popisů a poznámek, aby fulltextové vyhledávání dál fungovalo.',
     'keep_unencrypted' => 'Nechat data nešifrovaná',
     'encryption_enabled' => 'Šifrování zapnuto',
     'encryption_enabled_scope' => 'Poznámky, popisy a to, komu platíš, jsou teď šifrované přístupovou frází zámku aplikace. Částky, data a index vyhledávání zůstávají čitelné.',

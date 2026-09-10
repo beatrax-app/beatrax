@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Loo sellele seadmele uus identiteet',
 
     'encrypted_at_rest' => 'Andmed on kettal krüpteeritud',
-    'encrypted_at_rest_scope' => 'Märkmed, tehingute kirjeldused ning saajate nimed ja IBAN-id on pearaamatus krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ning sinu enda konto nimi ja IBAN ei ole. Otsinguindeks hoiab omaenda loetavat koopiat sellest, kellele sa maksad, sinu tehingute kirjeldustest ja sinu maksumärkmetest, ning mõned kaupmeeste nimed on loetavad andmebaasifaili teistes kohtades.',
+    'encrypted_at_rest_scope' => 'Märkmed, tehingute kirjeldused ning saajate nimed ja IBAN-id on pearaamatus krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ning sinu enda konto nimi ja IBAN ei ole. Otsinguindeks hoiab omaenda loetavat koopiat sellest, kellele sa maksad, sinu tehingute kirjeldustest, märkmetest, mille kirjutad tehingule, märkmetest, mille kirjutad jaotuse kategooriale, ja sinu maksumärkmetest, ning mõned kaupmeeste nimed on loetavad andmebaasifaili teistes kohtades.',
     'on' => 'Sees',
     'securing' => 'Kaitsen sinu andmeid…',
     'do_not_close' => 'Ära sulge seda akent.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Kui kaotad rakenduse luku paroolifraasi ning sul pole varukoopiat ega muud usaldusväärset seadet, ei ole sinu andmeid võimalik taastada.',
     'recover_help' => 'Ligipääsu taastamiseks seo see seade mõne teise usaldusväärse seadmega uuesti või kasuta oma eraldi krüpteeritud varukoopiat.',
     'amounts_plaintext' => 'Summasid kettal ei krüpteerita — jäägid ja kogusummad jäävad loetavaks, et sinu kuusummad ikka õigesti kokku liituksid.',
-    'search_plaintext' => 'Otsinguindeks hoiab kaupmeeste ja kirjelduste teksti avatud kujul, et täistekstiotsing töötaks edasi.',
+    'search_plaintext' => 'Otsinguindeks hoiab kaupmeeste, kirjelduste ja märkmete teksti avatud kujul, et täistekstiotsing töötaks edasi.',
     'keep_unencrypted' => 'Jäta andmed krüpteerimata',
     'encryption_enabled' => 'Krüpteerimine on lubatud',
     'encryption_enabled_scope' => 'Märkmed, kirjeldused ja see, kellele sa maksad, on nüüd krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ja otsinguindeks jäävad loetavaks.',

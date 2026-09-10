@@ -352,12 +352,13 @@ one query, on the device with the smallest ceiling of any that runs this.
 ## The tables a search document is built from
 
 `SearchIndexWriter::upsertForTransaction()` composes one row of
-`transaction_search_docs` from **two** tables, not one:
+`transaction_search_docs` from **three** tables, not one:
 
 | table | what it contributes |
 |---|---|
-| `transactions` | `counterparty_name`, `description` |
-| `tax_transaction_tags` | `note` |
+| `transactions` | `counterparty_name`, `description`, `note` |
+| `transaction_splits` | `note`, one field per leg |
+| `tax_transaction_tags` | `note`, the whole-transaction tag only |
 
 A replay that marked only `transactions` rows dirty therefore left the index
 stale whenever a tag arrived on its own. Measured across two paired devices:
@@ -374,10 +375,12 @@ it belongs to, and two rules that are easy to get backwards:
 - **A child row's delete rebuilds, it does not tombstone.** Deleting the
   transaction takes its document with it. Deleting a tag leaves the
   transaction behind, so its document is rebuilt without the note. Treating
-  the two the same way drops a live transaction out of search entirely.
+  the two the same way drops a live transaction out of search entirely. A
+  removed split leg is the same shape as a removed tag: the transaction is
+  still there and its document loses that leg's note.
 
 `ASearchDocumentIsRebuiltForEveryTableItReadsTest` derives the expected source
-list from what `SearchIndexWriter` actually queries, so a third source table
+list from what `SearchIndexWriter` actually queries, so a fourth source table
 breaks the test rather than going silently unindexed.
 
 ## What an arriving row announces

@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Start en ny identitet for denne enheten',
 
     'encrypted_at_rest' => 'Data kryptert i hvile',
-    'encrypted_at_rest_scope' => 'Notater, transaksjonsbeskrivelser og navn og IBAN til dem du betaler, er kryptert i regnskapet med applåspassordet ditt. Beløp, datoer og ditt eget kontonavn og IBAN er ikke det. Søkeindeksen beholder sin egen lesbare kopi av hvem du betaler, transaksjonsbeskrivelsene dine og skattenotatene dine, og enkelte butikknavn står i klartekst andre steder i databasefilen.',
+    'encrypted_at_rest_scope' => 'Notater, transaksjonsbeskrivelser og navn og IBAN til dem du betaler, er kryptert i regnskapet med applåspassordet ditt. Beløp, datoer og ditt eget kontonavn og IBAN er ikke det. Søkeindeksen beholder sin egen lesbare kopi av hvem du betaler, transaksjonsbeskrivelsene dine, notatene du skriver på en transaksjon, notatene du skriver på en kategori i en fordeling og skattenotatene dine, og enkelte butikknavn står i klartekst andre steder i databasefilen.',
     'on' => 'På',
     'securing' => 'Sikrer dataene dine…',
     'do_not_close' => 'Ikke lukk dette vinduet.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Hvis du mister passordfrasen for applåsen og verken har en sikkerhetskopi eller en annen betrodd enhet, kan ikke dataene dine gjenopprettes.',
     'recover_help' => 'For å få tilgang igjen kan du pare denne enheten på nytt fra en annen betrodd enhet, eller bruke den uavhengige krypterte sikkerhetskopien din.',
     'amounts_plaintext' => 'Beløp krypteres ikke i hvile — saldoer og totaler forblir lesbare slik at månedstotalene dine fortsatt stemmer.',
-    'search_plaintext' => 'Søkeindeksen beholder en kopi i klartekst av forhandler- og beskrivelsestekst slik at fritekstsøk fortsatt fungerer.',
+    'search_plaintext' => 'Søkeindeksen beholder en kopi i klartekst av forhandler-, beskrivelses- og notattekst slik at fritekstsøk fortsatt fungerer.',
     'keep_unencrypted' => 'Behold data ukryptert',
     'encryption_enabled' => 'Kryptering aktivert',
     'encryption_enabled_scope' => 'Notater, beskrivelser og hvem du betaler, er nå kryptert med applåspassordet ditt. Beløp, datoer og søkeindeksen forblir lesbare.',

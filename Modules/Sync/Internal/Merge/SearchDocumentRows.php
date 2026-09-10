@@ -21,6 +21,7 @@ final class SearchDocumentRows
     // ASearchDocumentIsRebuiltForEveryTableItReadsTest.
     private const array TRANSACTION_KEY = [
         'transactions' => 'id',
+        'transaction_splits' => 'transaction_id',
         'tax_transaction_tags' => 'transaction_id',
     ];
 

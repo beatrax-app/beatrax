@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Bu cihaz için yeni bir kimlik oluştur',
 
     'encrypted_at_rest' => 'Veriler durağan halde şifreli',
-    'encrypted_at_rest_scope' => 'Notlar, işlem açıklamaları ve ödeme yaptığın kişilerin adları ile IBAN\'ları defterde uygulama kilidi parolanla şifrelenir. Tutarlar, tarihler ve kendi hesabının adı ile IBAN\'ı şifrelenmez. Arama dizini kime ödeme yaptığının, işlem açıklamalarının ve vergi notlarının kendi okunabilir kopyasını saklar ve bazı satıcı adları veritabanı dosyasının başka yerlerinde açık metin olarak bulunur.',
+    'encrypted_at_rest_scope' => 'Notlar, işlem açıklamaları ve ödeme yaptığın kişilerin adları ile IBAN\'ları defterde uygulama kilidi parolanla şifrelenir. Tutarlar, tarihler ve kendi hesabının adı ile IBAN\'ı şifrelenmez. Arama dizini kime ödeme yaptığının, işlem açıklamalarının, bir işleme yazdığın notların, bir bölüştürme kategorisine yazdığın notların ve vergi notlarının kendi okunabilir kopyasını saklar ve bazı satıcı adları veritabanı dosyasının başka yerlerinde açık metin olarak bulunur.',
     'on' => 'Açık',
     'securing' => 'Verilerin güvenceye alınıyor…',
     'do_not_close' => 'Bu pencereyi kapatma.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Uygulama kilidi parolanı kaybedersen ve yedeğin ya da güvendiğin başka bir cihazın yoksa verilerin kurtarılamaz.',
     'recover_help' => 'Erişimi geri kazanmak için bu cihazı güvendiğin başka bir cihazdan yeniden eşleştir veya bağımsız şifreli yedeğini kullan.',
     'amounts_plaintext' => 'Tutarlar durağan halde şifrelenmez — aylık toplamların doğru çıkmaya devam etsin diye bakiyeler ve toplamlar okunabilir kalır.',
-    'search_plaintext' => 'Tam metin araması çalışmaya devam etsin diye arama dizini, işyeri ve açıklama metninin düz bir kopyasını saklar.',
+    'search_plaintext' => 'Tam metin araması çalışmaya devam etsin diye arama dizini, işyeri, açıklama ve not metninin düz bir kopyasını saklar.',
     'keep_unencrypted' => 'Verileri şifresiz bırak',
     'encryption_enabled' => 'Şifreleme etkinleştirildi',
     'encryption_enabled_scope' => 'Notlar, açıklamalar ve kime ödeme yaptığın artık uygulama kilidi parolanla şifreleniyor. Tutarlar, tarihler ve arama dizini okunabilir kalır.',

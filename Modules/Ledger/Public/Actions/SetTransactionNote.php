@@ -11,6 +11,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // mode='set': trimmed $text replaces the note outright, blank input
@@ -23,6 +24,7 @@ final readonly class SetTransactionNote implements SetsTransactionNote
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
+        private SearchIndexWriterContract $searchIndex,
     ) {}
 
     public function __invoke(int $transactionId, ?string $text, string $mode, User $user): int
@@ -57,14 +59,25 @@ final readonly class SetTransactionNote implements SetsTransactionNote
             return 0;
         }
 
-        return Transaction::query()
-            ->where('id', $transactionId)
-            ->where('user_id', $user->id)
-            ->update([
-                'note' => is_string($target)
-                    ? $this->codec->encryptValue('transactions', 'note', $target, $user->id, ($this->session)())
-                    : $target,
-            ]);
+        // The note is indexed, and nothing in SQLite maintains that index. One
+        // transaction over both, so a failed upsert takes the write with it
+        // rather than leaving the row findable by words it no longer carries.
+        return $this->db->connection()->transaction(function () use ($transactionId, $target, $user): int {
+            $affected = Transaction::query()
+                ->where('id', $transactionId)
+                ->where('user_id', $user->id)
+                ->update([
+                    'note' => is_string($target)
+                        ? $this->codec->encryptValue('transactions', 'note', $target, $user->id, ($this->session)())
+                        : $target,
+                ]);
+
+            if ($affected > 0) {
+                $this->searchIndex->upsertForTransaction($transactionId, $user->id);
+            }
+
+            return $affected;
+        });
     }
 
     private static function appended(?string $currentNote, string $trimmed): ?string

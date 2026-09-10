@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Napravi novi identitet za ovaj uređaj',
 
     'encrypted_at_rest' => 'Podaci šifrovani u mirovanju',
-    'encrypted_at_rest_scope' => 'Beleške, opisi transakcija i imena i IBAN onih kojima plaćaš šifruju se u knjizi lozinkom za zaključavanje aplikacije. Iznosi, datumi i naziv i IBAN tvog sopstvenog računa nisu šifrovani. Indeks pretrage čuva sopstvenu čitljivu kopiju toga kome plaćaš, opisa tvojih transakcija i tvojih poreskih beleški, a neka imena trgovaca stoje u čitljivom obliku na drugim mestima u datoteci baze podataka.',
+    'encrypted_at_rest_scope' => 'Beleške, opisi transakcija i imena i IBAN onih kojima plaćaš šifruju se u knjizi lozinkom za zaključavanje aplikacije. Iznosi, datumi i naziv i IBAN tvog sopstvenog računa nisu šifrovani. Indeks pretrage čuva sopstvenu čitljivu kopiju toga kome plaćaš, opisa tvojih transakcija, beleški koje pišeš uz transakciju, beleški koje pišeš uz kategoriju u podeli i tvojih poreskih beleški, a neka imena trgovaca stoje u čitljivom obliku na drugim mestima u datoteci baze podataka.',
     'on' => 'Uključeno',
     'securing' => 'Obezbeđivanje tvojih podataka…',
     'do_not_close' => 'Ne zatvaraj ovaj prozor.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Ako izgubiš lozinku za zaključavanje aplikacije, a nemaš rezervnu kopiju ni drugi pouzdan uređaj, tvoje podatke nije moguće vratiti.',
     'recover_help' => 'Da vratiš pristup, ponovo upari ovaj uređaj sa drugog pouzdanog uređaja ili iskoristi svoju zasebnu šifrovanu rezervnu kopiju.',
     'amounts_plaintext' => 'Iznosi nisu šifrovani u mirovanju — stanja i zbirovi ostaju čitljivi da bi se tvoji mesečni zbirovi i dalje ispravno računali.',
-    'search_plaintext' => 'Indeks pretrage čuva nešifrovanu kopiju naziva trgovca i opisa da bi pretraga celog teksta i dalje radila.',
+    'search_plaintext' => 'Indeks pretrage čuva nešifrovanu kopiju naziva trgovca, opisa i beleški da bi pretraga celog teksta i dalje radila.',
     'keep_unencrypted' => 'Zadrži podatke nešifrovane',
     'encryption_enabled' => 'Šifrovanje je uključeno',
     'encryption_enabled_scope' => 'Beleške, opisi i to kome plaćaš sada su šifrovani lozinkom za zaključavanje aplikacije. Iznosi, datumi i indeks pretrage ostaju čitljivi.',

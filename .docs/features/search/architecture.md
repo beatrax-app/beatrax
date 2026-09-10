@@ -1,15 +1,17 @@
 # `Search` — architecture
 
 The `Search` module gives the app full-text search over every retained
-transaction: an FTS5 trigram index over counterparty name, description
-and tax note, kept in lockstep with every write, powering both the
-`/transactions` search-and-filter surface and the ⌘K command-palette
-server endpoint.
+transaction: an FTS5 trigram index over counterparty name, description,
+the reader's own transaction and split-leg notes and the tax note, kept
+in lockstep with every write, powering both the `/transactions`
+search-and-filter surface and the ⌘K command-palette server endpoint.
 
 ## What this module is for
 
 Years of transaction history are only useful if a merchant name or
-note can be found instantly. This module owns the denormalized search
+note can be found instantly. The words most worth finding are the ones
+the reader wrote themselves, and those were the last to be indexed.
+This module owns the denormalized search
 document, the synchronous index writer, the typed-token query parser,
 and the read path that composes FTS5 `MATCH`/`highlight()`/`snippet()`
 with the existing filter dimensions (date, account, category,
@@ -132,12 +134,12 @@ What the module explicitly does NOT do:
 ## Key services + events
 
 + `SearchIndexWriter::upsertForTransaction($id, $actorUserId)` — reads
-  `counterparty_name`/`description` (decrypting via
+  `counterparty_name`/`description`/`note` (decrypting via
   `Sync::SensitiveColumnCodec` when encryption is enabled — the FTS
   body must always be plaintext, never ciphertext, per the [disclosed
   plaintext-shadow design](../sync/sensitive-columns-at-rest.md#what-this-does-not-fix))
-  plus the WHOLE-TRANSACTION tax note, concatenates them
-  separated by `chr(12)` (a form-feed — not trigram-indexable, so it
+  plus the WHOLE-TRANSACTION tax note and one field per split leg's
+  note, concatenates them separated by `chr(12)` (a form-feed — not trigram-indexable, so it
   can never produce a false cross-field match), and upserts both
   `transaction_search_docs` and the FTS5 virtual table inside one DB
   transaction. `deleteForTransaction` mirrors this on permanent
@@ -148,13 +150,15 @@ What the module explicitly does NOT do:
   caller, running synchronously so a transaction is searchable the
   instant the import commits (no queue dependency). It is not the only
   one. **Every write that changes indexed text has to reindex**, and
-  twelve classes across seven modules do:
+  fourteen classes across eight modules do:
 
   | Caller | Module | When |
   |---|---|---|
   | `IndexTransactionOnImport` | Search | a row lands from an import |
   | `TagTransaction` / `UntagTransaction` | Tax | a tax note is written or cleared |
   | `DeleteTransaction` | Ledger | a transaction is permanently deleted |
+  | `SetTransactionNote` | Ledger | the reader writes or clears a transaction note |
+  | `SaveTransactionSplit` | Ledger | legs are saved or unsplit, carrying leg notes |
   | `StripAsnDescriptionDelimiters` | Ledger | the delimiter sweep rewrites a description |
   | `ApplyEnrichments` | Import | a receipt's name or description wins a conflict at import |
   | `ApplyReceiptConflictResolution` | Receipts | the reader answers a held conflict with the receipt's value |
@@ -182,6 +186,20 @@ What the module explicitly does NOT do:
   lets the partial `tax_tags_whole_tx_unique` index answer.
   `ALegTagMustNotEraseTheTransactionsOwnTaxNoteTest` pins both writers
   in both tag-write orders.
+
+  **A leg's own note is a field of its own, and the legs are ordered.**
+  A transaction can carry any number of legs, so the body's field count
+  is the row's rather than the schema's: each leg contributes one field,
+  in `sort_order` then `id` order, appended after the tax note. One
+  joined string would let a needle span two legs, which is the same
+  thing the form-feed exists to prevent between the other fields.
+  `sort_order` is reassigned on every save and does not identify a leg
+  on its own, so the id breaks its ties — and both writers apply that
+  ordering through `SplitLegNotes::ordered()`, because a rebuild that
+  chose its own order would rewrite every split transaction's document
+  for no reason and leave the FTS `'delete'` of the old body matching
+  nothing. `ANoteTheReaderWroteIsFoundByItsOwnWordsTest` asserts the two
+  bodies are byte-identical across a `search:reindex`.
 + `SearchQuery::search(...)` — parses typed tokens via `QueryParser`,
   resolves a candidate rowid set (FTS5 `MATCH` when the text query is
   ≥3 characters; a bounded decrypt-then-substring scan otherwise, since
@@ -204,7 +222,10 @@ What the module explicitly does NOT do:
   back exactly as they were. There is no `'delete-all'`.
   A single row whose column the codec **blanks** — ciphertext under an
   epoch this device lacks, on a user whose current epoch does open —
-  is left out rather than indexed as an empty body. Exits non-zero with
+  is left out rather than indexed as an empty body; a leg note is judged
+  by the same rule as the columns beside it, so one unreadable leg
+  refuses the whole document rather than indexing a body missing a
+  field. Exits non-zero with
   a warning when the indexed count doesn't match the transaction count,
   so neither a partial run nor a skipped row is silently treated as
   complete.
@@ -213,9 +234,13 @@ What the module explicitly does NOT do:
 
 `Modules/Search/Public/Support/SearchedColumns` names them once —
 `transactions.counterparty_name`, `transactions.description`,
-`tax_transaction_tags.note` — and `SearchIndexWriter`, `ReindexSearchCommand`
-and every writer that has to ask "did I touch one?" read the set from there
-rather than restating it.
+`transactions.note`, `transaction_splits.note` and `tax_transaction_tags.note`
+— and `SearchIndexWriter`, `ReindexSearchCommand` and every writer that has to
+ask "did I touch one?" read the set from there rather than restating it.
+`transaction_splits` is a source table like the other two, so
+`Sync::SearchDocumentRows` tracks index freshness for it as well: without that,
+a leg note edited on one device syncs while the receiving device's document
+still answers for the words the leg used to carry.
 
 The doc table above only names the classes that already call the writer; it
 cannot see one that writes an indexed column and calls nothing, which is how
@@ -223,7 +248,7 @@ three of them shipped. `tests/Contracts/AWriteToASearchedColumnRefreshesItsIndex
 closes that direction. Its subject is every call to
 `SensitiveColumnCodec::encryptAttrs()` / `::encryptValue()` naming one of those
 tables, because sealing is the mandatory door into an at-rest-encrypted column:
-a writer cannot reach one of the three without passing through it, not even a
+a writer cannot reach one of the five without passing through it, not even a
 writer that names its column through an enum rather than a literal. A seal site
 whose table argument the scanner cannot read is reported rather than assumed
 innocent. Each site either reaches `SearchIndexWriterContract` or is pinned with
@@ -231,10 +256,35 @@ the reason its write leaves the document still describing the row.
 
 ## A column this process cannot read
 
-The index body is a plaintext shadow of three sealed columns —
-`transactions.counterparty_name`, `transactions.description` and the
+The index body is a plaintext shadow of five sealed columns —
+`transactions.counterparty_name`, `transactions.description`,
+`transactions.note`, every `transaction_splits.note` on the row and the
 whole-transaction `tax_transaction_tags.note`. It is the only searchable copy
 of them, which is why the shadow is disclosed rather than hidden.
+
+The last three of those are free text the reader wrote, which makes them the
+most sensitive thing in the shadow and worth stating plainly: **a transaction
+note and a split-leg note are stored a second time, in the clear, in
+`transaction_search_docs.search_body`**, on the same disk and inside the same
+backup as the sealed original. AEAD over a column FTS5 has to tokenize matches
+nothing, so the choice is a searchable note or a private one; the product
+decision is that a note nobody can find is not worth writing, and the copy is
+disclosed rather than hidden. `SensitiveFieldRegistry::knowinglyPlaintext()`
+carries the same statement where an at-rest audit will read it. Nothing else
+widens: `transactions.raw_payload`, the mailbox columns and the counterparty
+identity columns are not composed into the body and this change did not put
+them there.
+
+Widening the composition does not widen what is already on disk. Every note
+written before it is in the ledger and in no body, and nothing rebuilds one on
+its own: no later write touches the row, a sync does not, and `search:reindex`
+cannot on an encrypted desktop, where a console run holds no app-lock key.
+`2026_09_10_000001_index_the_notes_written_before_the_index_read_them` walks the
+transactions that carry a note — their own or a leg's — through
+`SearchIndexWriterContract`, so there is one composer of the body rather than a
+second one written in SQL. It is also what makes a keyless run of that migration
+safe: handed a note it cannot open, the writer leaves the stored body alone and
+queues the coordinate, and the next unlocked request finishes it.
 
 `SensitiveColumnCodec::decryptValue()` never throws. Handed ciphertext it holds
 no epoch for, it returns the empty string with `decrypted: false`. That is the
@@ -299,8 +349,9 @@ Import::RecordTransactions inserts a transactions row
   → dispatch TransactionImported (same DB transaction)
   → Search::IndexTransactionOnImport::handle
        → SearchIndexWriter::upsertForTransaction
-            → decrypt counterparty_name / description (if encrypted)
+            → decrypt counterparty_name / description / note (if encrypted)
             → build search_body = counterparty + FF + description + FF + note
+                 + FF + tax note + FF + one field per split leg's note
             → upsert transaction_search_docs
             → FTS 'delete' old posting (if a doc row already existed)
             → FTS insert new posting
@@ -342,3 +393,6 @@ understood.
 + [Sensitive columns at rest](../sync/sensitive-columns-at-rest.md) —
   what the index writer and `search:reindex` have to decrypt, and what
   it means when a value comes back blank.
++ [The op-log merge rules](../sync/op-log-merge-rules.md#the-tables-a-search-document-is-built-from)
+  — the three source tables a replay has to mark dirty for a receiving
+  device's index to stay in step with the rows it just merged.

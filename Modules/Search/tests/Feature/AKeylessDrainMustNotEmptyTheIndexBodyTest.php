@@ -14,7 +14,7 @@ use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 
 uses(RefreshDatabase::class);
 
-// The body is the ONLY searchable copy of three sealed columns. A peer's
+// The body is the ONLY searchable copy of five sealed columns. A peer's
 // catch-up is replayed inside `sync:serve`, which holds no app-lock key, and
 // the codec hands an unreadable column back as the empty string rather than
 // throwing — so the merge-path writer rebuilt 99 of 148 bodies out of nothing
@@ -146,8 +146,10 @@ it('writes no document at all rather than an empty one, and rebuilds it on the n
 
     expect($db->connection()->table('transaction_search_docs')->where('transaction_id', $txId)->count())
         ->toBe(0)
+        // Asked without naming a field count: a split transaction contributes
+        // one field per leg, so "empty" is any body that is separators alone.
         ->and($db->connection()->table('transaction_search_docs')
-            ->where('search_body', SearchDocumentBody::join('', '', ''))->count())
+            ->whereRaw('replace(search_body, ?, ?) = ?', [SearchDocumentBody::FIELD_SEPARATOR, '', ''])->count())
         ->toBe(0)
         ->and($db->connection()->table('search_index_repairs')->where('user_id', $userId)->count())
         ->toBe(1);

@@ -1347,12 +1347,18 @@ blob, plus de-enrolment of anything unclassifiable.
 
 #### What this does not fix
 
-- **The full-text search index still holds the merchant name in the clear.**
-  `transaction_search_docs.search_body` is `transactions.counterparty_name` +
-  `transactions.description` + `tax_transaction_tags.note` — three AEAD-sealed columns, decrypted
-  at write time so FTS5 can tokenise them, one row per transaction in the same file. The note is
-  the *tax* note specifically; `transactions.note` and `transaction_splits.note` are sealed and
-  never enter the index.
+- **The full-text search index still holds the merchant name in the clear, and now the
+  reader's own notes with it.** `transaction_search_docs.search_body` is
+  `transactions.counterparty_name` + `transactions.description` + `transactions.note` +
+  `tax_transaction_tags.note` + one field per `transaction_splits.note` on the row — five
+  AEAD-sealed columns, decrypted
+  at write time so FTS5 can tokenise them, one row per transaction in the same file. The last
+  three are free text the reader wrote, which makes them the most identifying thing in the
+  shadow: a note says in the reader's own words what a merchant name only implies. They were
+  held back from the index for exactly that reason, and the trade was reconsidered the other
+  way — a note nobody can find is not worth writing, so the copy is disclosed rather than
+  withheld. Nothing else moved: `transactions.raw_payload`, the mailbox columns and the
+  counterparty identity columns are not composed into the body.
   `SELECT search_body FROM transaction_search_docs` recovers exactly what the blind index was
   meant to hide. [ADR-0018](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0018-amounts-plaintext-at-rest.md) records that shadow as knowingly accepted and
   names an encrypted-search design as the revisit; until that exists, this change removes one

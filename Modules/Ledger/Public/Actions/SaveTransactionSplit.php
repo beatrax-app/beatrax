@@ -22,6 +22,7 @@ use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
@@ -44,6 +45,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
         private SessionFactory $session,
         private FieldProvenanceWriter $provenance,
         private DependentRowCascade $cascade,
+        private SearchIndexWriterContract $searchIndex,
     ) {}
 
     /**
@@ -69,6 +71,11 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             $this->assertLegsSumToParent($legs, $currency, self::toInt($freshParent->settled_amount_minor));
 
             $dispatchAfterCommit = $this->applyLegDiff($user, $transactionId, $legs, $currency);
+
+            // A leg note is indexed text and nothing in SQLite maintains the
+            // index, so the document is rebuilt from the legs this save left
+            // behind — inside the same transaction that wrote them.
+            $this->searchIndex->upsertForTransaction($transactionId, $user->id);
         });
 
         // Dispatch after the transaction commits — never from inside
@@ -410,6 +417,10 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             // one the reader picked, and 'manual' is the only value that stops
             // RuleApplier::applyAtReapply() taking that choice back.
             $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'manual']);
+
+            // Every leg went, and with them their notes. A document still
+            // carrying those words answers for text the ledger no longer holds.
+            $this->searchIndex->upsertForTransaction($transactionId, $user->id);
         });
 
         foreach ($dependents as $dependent) {

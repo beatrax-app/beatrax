@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Utwórz nową tożsamość tego urządzenia',
 
     'encrypted_at_rest' => 'Dane szyfrowane w spoczynku',
-    'encrypted_at_rest_scope' => 'Notatki, opisy transakcji oraz nazwy i numery IBAN odbiorców są szyfrowane w księdze hasłem blokady aplikacji. Kwoty, daty oraz nazwa i IBAN Twojego własnego konta nie są. Indeks wyszukiwania przechowuje własną czytelną kopię tego, komu płacisz, opisów Twoich transakcji i Twoich notatek podatkowych, a niektóre nazwy sprzedawców występują jawnie w innych miejscach pliku bazy danych.',
+    'encrypted_at_rest_scope' => 'Notatki, opisy transakcji oraz nazwy i numery IBAN odbiorców są szyfrowane w księdze hasłem blokady aplikacji. Kwoty, daty oraz nazwa i IBAN Twojego własnego konta nie są. Indeks wyszukiwania przechowuje własną czytelną kopię tego, komu płacisz, opisów Twoich transakcji, notatek, które piszesz przy transakcji, notatek, które piszesz przy kategorii w podziale, i Twoich notatek podatkowych, a niektóre nazwy sprzedawców występują jawnie w innych miejscach pliku bazy danych.',
     'on' => 'Wł.',
     'securing' => 'Zabezpieczanie Twoich danych…',
     'do_not_close' => 'Nie zamykaj tego okna.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Jeśli zgubisz hasło blokady aplikacji i nie masz kopii zapasowej ani innego zaufanego urządzenia, danych nie da się odzyskać.',
     'recover_help' => 'Aby odzyskać dostęp, sparuj to urządzenie ponownie z innego zaufanego urządzenia albo użyj własnej, niezależnej zaszyfrowanej kopii zapasowej.',
     'amounts_plaintext' => 'Kwoty nie są szyfrowane w spoczynku — salda i sumy pozostają czytelne, dzięki czemu miesięczne podsumowania nadal się zgadzają.',
-    'search_plaintext' => 'Indeks wyszukiwania przechowuje jawną kopię nazw sprzedawców i opisów, aby wyszukiwanie pełnotekstowe działało dalej.',
+    'search_plaintext' => 'Indeks wyszukiwania przechowuje jawną kopię nazw sprzedawców, opisów i notatek, aby wyszukiwanie pełnotekstowe działało dalej.',
     'keep_unencrypted' => 'Zostaw dane niezaszyfrowane',
     'encryption_enabled' => 'Szyfrowanie włączone',
     'encryption_enabled_scope' => 'Notatki, opisy i to, komu płacisz, są teraz szyfrowane hasłem blokady aplikacji. Kwoty, daty i indeks wyszukiwania pozostają czytelne.',

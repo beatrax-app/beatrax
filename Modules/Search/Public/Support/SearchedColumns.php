@@ -15,11 +15,14 @@ final class SearchedColumns
 {
     public const string TRANSACTIONS = 'transactions';
 
+    public const string SPLITS = 'transaction_splits';
+
     public const string TAX_TAGS = 'tax_transaction_tags';
 
     /** @var array<string, list<string>> */
     private const array BY_TABLE = [
-        self::TRANSACTIONS => ['counterparty_name', 'description'],
+        self::TRANSACTIONS => ['counterparty_name', 'description', 'note'],
+        self::SPLITS => ['note'],
         self::TAX_TAGS => ['note'],
     ];
 

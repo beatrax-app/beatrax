@@ -16,7 +16,7 @@ return [
     'identity_unreadable_replace' => 'Starta en ny identitet för den här enheten',
 
     'encrypted_at_rest' => 'Data krypterade i vila',
-    'encrypted_at_rest_scope' => 'Anteckningar, transaktionsbeskrivningar och namn och IBAN för dem du betalar krypteras i bokföringen med din applåslösenfras. Belopp, datum och ditt eget kontonamn och IBAN gör det inte. Sökindexet behåller en egen läsbar kopia av vem du betalar, dina transaktionsbeskrivningar och dina skatteanteckningar, och vissa handlarnamn står i klartext på andra ställen i databasfilen.',
+    'encrypted_at_rest_scope' => 'Anteckningar, transaktionsbeskrivningar och namn och IBAN för dem du betalar krypteras i bokföringen med din applåslösenfras. Belopp, datum och ditt eget kontonamn och IBAN gör det inte. Sökindexet behåller en egen läsbar kopia av vem du betalar, dina transaktionsbeskrivningar, anteckningarna du skriver på en transaktion, anteckningarna du skriver på en kategori i en uppdelning och dina skatteanteckningar, och vissa handlarnamn står i klartext på andra ställen i databasfilen.',
     'on' => 'På',
     'securing' => 'Skyddar dina data…',
     'do_not_close' => 'Stäng inte det här fönstret.',
@@ -62,7 +62,7 @@ return [
     'no_recovery_warning' => 'Om du tappar bort lösenfrasen för ditt applås och saknar säkerhetskopia och andra betrodda enheter går dina data inte att återställa.',
     'recover_help' => 'För att få tillbaka åtkomsten kan du parkoppla den här enheten på nytt från en annan betrodd enhet, eller använda din fristående krypterade säkerhetskopia.',
     'amounts_plaintext' => 'Belopp krypteras inte i vila — saldon och summor förblir läsbara så att dina månadssummor fortsätter att stämma.',
-    'search_plaintext' => 'Sökindexet behåller en kopia i klartext av handlar- och beskrivningstext så att fritextsökning fortsätter att fungera.',
+    'search_plaintext' => 'Sökindexet behåller en kopia i klartext av handlar-, beskrivnings- och anteckningstext så att fritextsökning fortsätter att fungera.',
     'keep_unencrypted' => 'Behåll data okrypterade',
     'encryption_enabled' => 'Kryptering aktiverad',
     'encryption_enabled_scope' => 'Anteckningar, beskrivningar och vem du betalar är nu krypterade med din applåslösenfras. Belopp, datum och sökindexet förblir läsbara.',

@@ -83,7 +83,7 @@ final class SensitiveFieldRegistry
             'file_imports.sender_email' => self::unreachableFromTheQueue('The From address of the receipt mail. No unique, no index, no predicate — the row is found by provider_message_id.'),
             'file_imports.source_filename' => self::unreachableFromTheQueue('The name of the file the receipt came from. The drop-folder arm stores what the user called it, verbatim — the same string the log layer redacts, because a statement is named by the bank for the account it covers. Never selected, never matched: the row is found by provider_message_id.'),
             'discovered_senders.sender_name' => self::unreachableFromTheQueue('The display name beside the unsealable sender_email above, ordered by neither and predicated on by neither.'),
-            'transaction_search_docs.search_body' => 'The full-text shadow: it holds decrypted counterparty names, descriptions and tax notes, because FTS over ciphertext matches nothing. Disclosed in the UI rather than sealed.',
+            'transaction_search_docs.search_body' => 'The full-text shadow: it holds decrypted counterparty names, descriptions, tax notes and the reader\'s own notes on a transaction and on each of its split legs, because FTS over ciphertext matches nothing. The three note columns are free text the reader wrote, which makes this the most identifying entry on the list; a note nobody can find is not worth writing, so the copy is disclosed in the UI rather than sealed.',
         ];
     }
 

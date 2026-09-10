@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Search\Internal\Services\SearchDocumentBody;
 use Modules\Search\Internal\Services\SearchSourceText;
+use Modules\Search\Internal\Services\SplitLegNotes;
 use Modules\Search\Public\Support\SearchedColumns;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -140,7 +141,8 @@ final class ReindexSearchCommand extends Command
     {
         $this->error(sprintf(
             'FTS reindex skipped user %s: encryption at rest is enabled and this process holds no app-lock key, so '.
-            'counterparty_name/description would be indexed as ciphertext. Their index rows were left untouched. '.
+            'the counterparty name, the description and every note on the row would be indexed as ciphertext. '.
+            'Their index rows were left untouched. '.
             'A console run never holds that key — rebuild those users from the unlocked app.',
             implode(', ', $blocked),
         ));
@@ -164,22 +166,8 @@ final class ReindexSearchCommand extends Command
     private function indexChunk(ConnectionInterface $connection, Collection $rows, Session $session): int
     {
         $ids = $rows->pluck('id')->all();
-
-        // The WHOLE-transaction tag only. A split leg carries a tag of its own
-        // whose note is always null, and an unfiltered read looped it in last:
-        // a rebuild then dropped the note the incremental writer had indexed
-        // and the row stopped being findable by the words on it.
-        $notesByTxId = [];
-        $tags = $connection->table(SearchedColumns::TAX_TAGS)
-            ->select(['transaction_id', ...SearchedColumns::of(SearchedColumns::TAX_TAGS)])
-            ->whereIn('transaction_id', $ids)
-            ->whereNull('transaction_split_id')
-            ->get();
-        foreach ($tags as $tag) {
-            if (is_numeric($tag->transaction_id)) {
-                $notesByTxId[(int) $tag->transaction_id] = $tag->note;
-            }
-        }
+        $taxNotes = $this->taxNotesByTransaction($connection, $ids);
+        $legNotes = $this->legNotesByTransaction($connection, $ids);
 
         $docs = [];
         foreach ($rows as $row) {
@@ -187,22 +175,31 @@ final class ReindexSearchCommand extends Command
             $userId = is_numeric($row->user_id) ? (int) $row->user_id : 0;
 
             // Decrypted before the body is built, so FTS5 tokenizes plaintext
-            // — identical treatment to SearchIndexWriter's single-row path.
-            $counterparty = $this->source->read('transactions', 'counterparty_name', $row->counterparty_name, $userId, $session);
-            $description = $this->source->read('transactions', 'description', $row->description, $userId, $session);
-            $note = $this->source->read('tax_transaction_tags', 'note', $notesByTxId[$txId] ?? null, $userId, $session);
+            // — identical treatment to SearchIndexWriter's single-row path,
+            // field for field and leg for leg.
+            $fields = [
+                $this->source->read('transactions', 'counterparty_name', $row->counterparty_name, $userId, $session),
+                $this->source->read('transactions', 'description', $row->description, $userId, $session),
+                $this->source->read('transactions', 'note', $row->note, $userId, $session),
+                $this->source->read('tax_transaction_tags', 'note', $taxNotes[$txId] ?? null, $userId, $session),
+            ];
+
+            foreach ($legNotes[$txId] ?? [] as $legNote) {
+                $fields[] = $this->source->read('transaction_splits', 'note', $legNote, $userId, $session);
+            }
 
             // Indexing a blank body would claim success over a row that can no
             // longer be found at all. Left out instead, so the count comes up
             // short and reportOutcome() says the rebuild is incomplete.
-            if ($counterparty === null || $description === null || $note === null) {
+            if (in_array(null, $fields, true)) {
                 continue;
             }
 
+            /** @var list<string> $fields */
             $docs[] = [
                 'transaction_id' => $txId,
                 'user_id' => $userId,
-                'search_body' => SearchDocumentBody::join($counterparty, $description, $note),
+                'search_body' => SearchDocumentBody::join(...$fields),
             ];
         }
 
@@ -211,6 +208,59 @@ final class ReindexSearchCommand extends Command
         }
 
         return count($docs);
+    }
+
+    // The WHOLE-transaction tag only. A split leg carries a tag of its own
+    // whose note is always null, and an unfiltered read looped it in last: a
+    // rebuild then dropped the note the incremental writer had indexed and the
+    // row stopped being findable by the words on it.
+    /**
+     * @param  array<mixed>  $transactionIds
+     * @return array<int, mixed>
+     */
+    private function taxNotesByTransaction(ConnectionInterface $connection, array $transactionIds): array
+    {
+        $notes = [];
+
+        $tags = $connection->table(SearchedColumns::TAX_TAGS)
+            ->select(['transaction_id', ...SearchedColumns::of(SearchedColumns::TAX_TAGS)])
+            ->whereIn('transaction_id', $transactionIds)
+            ->whereNull('transaction_split_id')
+            ->get();
+
+        foreach ($tags as $tag) {
+            if (is_numeric($tag->transaction_id)) {
+                $notes[(int) $tag->transaction_id] = $tag->note;
+            }
+        }
+
+        return $notes;
+    }
+
+    // Ordered through the same collaborator the single-row writer reads them
+    // by, because the body is the leg notes in that order and a rebuild that
+    // chose its own would rewrite every split transaction's document.
+    /**
+     * @param  array<mixed>  $transactionIds
+     * @return array<int, list<mixed>>
+     */
+    private function legNotesByTransaction(ConnectionInterface $connection, array $transactionIds): array
+    {
+        $notes = [];
+
+        $legs = SplitLegNotes::ordered(
+            $connection->table(SearchedColumns::SPLITS)
+                ->select(['transaction_id', ...SearchedColumns::of(SearchedColumns::SPLITS)])
+                ->whereIn('transaction_id', $transactionIds),
+        )->get();
+
+        foreach ($legs as $leg) {
+            if (is_numeric($leg->transaction_id)) {
+                $notes[(int) $leg->transaction_id][] = $leg->note;
+            }
+        }
+
+        return $notes;
     }
 
     // Fail loudly on a partial run — a mismatched count means the index

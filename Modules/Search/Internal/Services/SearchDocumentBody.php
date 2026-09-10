@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
-// One row of transaction_search_docs: counterparty, description and tax note
-// joined by a byte no transaction text carries, so FTS5 cannot match across
-// two fields as one phrase. Writer, reindexer and reader must agree on it, and
-// the reader must replace it — the raw byte drew a tofu box on the phone.
+// One row of transaction_search_docs: counterparty, description, the reader's
+// own notes and the tax note, joined by a byte no transaction text carries so
+// FTS5 cannot match across two fields as one phrase. Writer, reindexer and
+// reader must agree on it; the reader must replace it, or it draws a tofu box.
 final class SearchDocumentBody
 {
     // The index tokenizer is trigram, so an FTS5 token is a three-character
@@ -19,13 +19,17 @@ final class SearchDocumentBody
 
     public const string DISPLAY_SEPARATOR = ' · ';
 
-    public static function join(string $counterparty, string $description, string $note): string
+    // Variadic because a split transaction contributes one field per leg, so
+    // the field count is the row's, not the schema's. Every caller passes the
+    // same fields in the same order: a body composed two ways is one a rebuild
+    // silently rewrites.
+    public static function join(string ...$fields): string
     {
-        return $counterparty.self::FIELD_SEPARATOR.$description.self::FIELD_SEPARATOR.$note;
+        return implode(self::FIELD_SEPARATOR, $fields);
     }
 
-    // A row usually carries no tax note, so its body ends on a join with
-    // nothing after it, and a row with no description has two in a row.
+    // A row usually carries neither note, so its body ends on joins with
+    // nothing after them, and a row with no description has two in a row.
     // Neither separates anything the reader can see.
     public static function toDisplay(string $snippetBody): string
     {
