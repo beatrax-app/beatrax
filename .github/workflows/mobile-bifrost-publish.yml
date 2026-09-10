@@ -65,9 +65,22 @@ jobs:
             - name: Check out the monorepo
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+            # materialize.sh refuses a public/build/ older than the sources it is
+            # compiled from, and it asks in PHP so that the comparison has one
+            # definition rather than a second one written in shell. This job
+            # installs no Composer dependencies, so the check runs as a plain
+            # script — but it still runs on the version this project is written
+            # in, rather than whatever the runner image happens to carry.
+            - name: Set up PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2.37.2
+              with:
+                  php-version: '8.5'
+                  coverage: none
+
             # Public assets are served on-device, so the materialized tree must
-            # carry a built public/build/. Drop this step only if Bifrost's
-            # container builds the frontend itself.
+            # carry a built public/build/, and the step above refuses the tree if
+            # this one has not run. Drop neither unless Bifrost's container
+            # builds the frontend itself.
             - name: Set up Node
               uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
               with:

@@ -167,6 +167,13 @@ from the Vite dev server. A shell build after a session of `npm run dev` is
 therefore refused until `npm run build` has run once, which takes about twenty
 seconds.
 
+`mobile-app/scripts/materialize.sh` refuses the same thing before it copies
+anything, exiting 5 on a stale bundle and 6 when there is no PHP to ask with. It
+is the one shipping path that is not an artisan command, and it asks through
+`scripts/refuse_a_stale_front_end.php` — the same comparison, reached without an
+autoloader, because the job that publishes to Bifrost installs no Composer
+dependencies.
+
 The refusal cannot live in a build hook. `native:run` runs none,
 `nativephp/mobile` has no hook array, and the desktop's prebuild runner prints
 `Command failed` for a hook that exits non-zero and then packages anyway — so a

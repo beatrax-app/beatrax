@@ -50,6 +50,22 @@ function buildSeamRemove(string $directory): void
     @rmdir($directory);
 }
 
+// The one root both Composer roots agree on: from mobile-app/ every path below
+// is reached by symlink, and base_path() there names a tree that has no
+// .github/ and no scripts/ of its own.
+function buildSeamStandaloneCommand(string $root): string
+{
+    return escapeshellarg(PHP_BINARY)
+        .' '.escapeshellarg(buildSeamRepoRoot().'/scripts/refuse_a_stale_front_end.php')
+        .' '.escapeshellarg($root.'/public')
+        .' materialize.sh 2>&1';
+}
+
+function buildSeamRepoRoot(): string
+{
+    return dirname((string) realpath(base_path('Modules')));
+}
+
 function buildSeamRefusal(string $root, string $command): ?string
 {
     $listener = new RefuseToShipAStaleFrontEnd(BuiltFrontEnd::beside($root.'/public'));
@@ -155,4 +171,59 @@ it('has the refusal registered on the event both Composer roots raise', function
     $listeners = app(Dispatcher::class)->getRawListeners();
 
     expect($listeners[CommandStarting::class] ?? [])->toContain(RefuseToShipAStaleFrontEnd::class);
+});
+
+it('refuses a stale tree from a shell that has no autoloader', function (): void {
+    $root = buildSeamTree(['resources/js/app.js' => 1_700_000_500], 1_700_000_060);
+
+    exec(buildSeamStandaloneCommand($root), $output, $status);
+
+    expect($status)->toBe(1)
+        ->and(implode("\n", $output))->toContain('materialize.sh would ship', 'Run `npm run build`');
+
+    buildSeamRemove($root);
+});
+
+it('passes a fresh tree from that same shell', function (): void {
+    $root = buildSeamTree(['resources/js/app.js' => 1_700_000_000], 1_700_000_060);
+
+    exec(buildSeamStandaloneCommand($root), $output, $status);
+
+    expect($status)->toBe(0)
+        ->and(implode("\n", $output))->toContain('newer than every source');
+
+    buildSeamRemove($root);
+});
+
+it('has materialize.sh ask that reader before it copies anything', function (): void {
+    $script = (string) file_get_contents(buildSeamRepoRoot().'/mobile-app/scripts/materialize.sh');
+
+    $asks = strpos($script, 'scripts/refuse_a_stale_front_end.php');
+    $copies = strpos($script, 'rsync -a --copy-links');
+
+    expect($asks)->not->toBeFalse('materialize.sh no longer asks whether public/build is current.')
+        ->and($copies)->not->toBeFalse('The copy this rule orders against was renamed, so the order below proves nothing.')
+        ->and($asks)->toBeLessThan($copies);
+});
+
+it('sets up a pinned PHP in every workflow that runs materialize.sh', function (): void {
+    $missing = [];
+    $read = 0;
+
+    foreach ((array) glob(buildSeamRepoRoot().'/.github/workflows/*.yml') as $path) {
+        $body = (string) file_get_contents((string) $path);
+
+        if (! str_contains($body, 'materialize.sh')) {
+            continue;
+        }
+
+        $read++;
+
+        if (! str_contains($body, 'shivammathur/setup-php@')) {
+            $missing[] = basename((string) $path);
+        }
+    }
+
+    expect($read)->toBeGreaterThan(0, 'No workflow runs materialize.sh, so this rule read nothing at all.');
+    expect($missing)->toBe([], 'These run materialize.sh, whose front-end check is written in this project\'s PHP, on whatever the runner image happens to carry: '.implode(', ', $missing));
 });

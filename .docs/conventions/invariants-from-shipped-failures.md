@@ -7294,6 +7294,14 @@ covered by `native:package`, which it reaches through `$this->call()` —
 `CommandStarting` never fires for a nested call. `native:publish` needs no entry:
 it delegates through `Artisan::call('native:build')`, which does raise the event.
 
+`mobile-app/scripts/materialize.sh` is the fifth shipping path and the only one
+that is not an artisan command: it rsyncs `public/` into the Bifrost build repo,
+in a job that installs no Composer dependencies, so it can neither boot the
+application nor autoload it. It asks the same question through
+`scripts/refuse_a_stale_front_end.php`, which requires the two classes by hand.
+Writing a `find -newer` beside it would have been a second answer to one
+question, free to drift from the one a device is refused on.
+
 What counts as a source is Vite's three entries, the two files that decide what
 it makes of them, and the Blade the Tailwind pass compiles the stylesheet from —
 `resources/views` and every `Modules/*/Resources/views`. `resources/corpus` is
