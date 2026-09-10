@@ -15,6 +15,10 @@ final class RelayConfig
 
     private const string DRAIN_TOKENS_FILE = 'sync-relay-drain-tokens.json';
 
+    // Prefixes the scoped keys so a bare device id left by an older build is
+    // still distinguishable from one, which is what the migration above reads.
+    private const string DRAIN_TOKEN_KEY_VERSION = 'r1:';
+
     // The two files the per-device scheme replaced: an install-scoped drain
     // secret every local user of this install shared, and a relay-wide token
     // the pairing QR handed to every peer that ever paired. Both are retired
@@ -252,8 +256,8 @@ final class RelayConfig
         return is_array($data) ? $data : null;
     }
 
-    // The drain credential for ONE device id on this install, minted on first
-    // use and never transmitted. Keyed on the device id because device ids are
+    // The drain credential for ONE device id AT ONE RELAY, minted on first use
+    // and never transmitted anywhere else. Per device id because device ids are
     // per-user: one secret for the whole install bound the relay to whichever
     // local user drained first and answered 401 to the second one forever.
     /**
@@ -263,15 +267,41 @@ final class RelayConfig
     public function deviceDrainToken(string $deviceId): string
     {
         $tokens = $this->readDrainTokens();
+        $key = $this->drainTokenKey($deviceId);
 
-        if (isset($tokens[$deviceId])) {
-            return $tokens[$deviceId];
+        if (isset($tokens[$key])) {
+            return $tokens[$key];
         }
 
-        $tokens[$deviceId] = RelayDrainToken::mint($deviceId);
+        // A file written before tokens were scoped holds the bare device id,
+        // and the relay this install is pointed at has already recorded that
+        // token as the one it will accept. Carried forward under the current
+        // endpoint rather than replaced, which that store would refuse.
+        $legacy = $tokens[$deviceId] ?? null;
+        unset($tokens[$deviceId]);
+
+        $tokens[$key] = is_string($legacy) && $legacy !== ''
+            ? $legacy
+            : RelayDrainToken::mint($deviceId);
+
         $this->writeDrainTokens($tokens);
 
-        return $tokens[$deviceId];
+        return $tokens[$key];
+    }
+
+    // One token per relay, not one per device. RelayDrainRegistry is
+    // trust-on-first-use, so the first token a relay sees for an id is the one
+    // it accepts from then on -- and presenting that same token to a second
+    // relay hands the second one a credential it can spend at the first.
+    private function drainTokenKey(string $deviceId): string
+    {
+        // Hashed rather than concatenated: the endpoint is a URL and a device
+        // id may carry ':', so a plain join has two ways to spell one key. The
+        // trailing slash is trimmed for the same reason.
+        return self::DRAIN_TOKEN_KEY_VERSION.hash(
+            'sha256',
+            rtrim($this->endpointUrl() ?? '', '/')."\0".$deviceId,
+        );
     }
 
     /**

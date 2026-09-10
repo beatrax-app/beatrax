@@ -65,7 +65,7 @@ so it cannot become the exhaustion vector it exists to prevent.
 
 Retrieval is what needs gating, and it is gated per device rather than per
 relay or per install. The credential is a drain token minted for **one device
-id**, persisted at `secretsPath()/sync-relay-drain-tokens.json` with the same
+id at one relay**, persisted at `secretsPath()/sync-relay-drain-tokens.json` with the same
 `mkdir 0700 → write → chmod 0600` discipline as every other secret in the
 module, and presented as an ordinary `Authorization: Bearer` header.
 
@@ -127,6 +127,34 @@ an attacker who knows a victim's device id and registers it **before** the
 victim ever drains wins the slot. What is gone is the escalation — that the
 attacker did not need to mint anything, because a working token had already
 been handed to them.
+
+### One token per relay, not one per device
+
+A device id is not the whole key. The token file is keyed on
+`sha256(endpoint \0 device_id)`, so the credential a device presents is the one
+it minted **for that relay** and for no other.
+
+The reason is the registry above: it is trust-on-first-use, so the first token a
+relay sees for an id is the one it will accept from then on. A single token per
+device meant the same bearer went to every relay the device was ever pointed at
+— and `PairingPeerLink::configureRelayFromQr()` lets a scanned code set the
+endpoint on a device that has none. A relay learned that way would have been
+handed a credential it could spend at the household's own relay, against the
+mailbox where GDK epoch wraps sit.
+
+Scoped, the same scan gets a freshly minted token that names the same device and
+is worth nothing anywhere else. Pointing the device back at its own relay
+returns the token that relay already recorded, so its own mailbox keeps
+answering. The endpoint's trailing slash is trimmed before hashing, because two
+spellings of one URL would otherwise mint two tokens and the relay would refuse
+the second.
+
+An install that has already drained holds an entry under the bare device id.
+That entry is carried forward under the *current* endpoint on the next read and
+the bare key is removed — the relay this install is pointed at has already
+recorded that token, and minting a second one there would `401` the owner out of
+its own mailbox. Removing the bare key is what stops a later endpoint from
+inheriting it.
 
 ### Two local users, two tokens
 
