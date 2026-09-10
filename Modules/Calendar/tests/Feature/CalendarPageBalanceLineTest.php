@@ -181,13 +181,17 @@ it('does not render balance data from another user\'s accounts', function (): vo
     $other = cpblUser('cpbl-other');
 
     $otherAccount = cpblAccount($db, $other->id, 'Other Account');
-    cpblForecastRun($db, $other->id, $otherAccount, '2026-06-20', 999999);
+    cpblForecastRun($db, $other->id, $otherAccount, '2026-06-20', 777700);
 
+    // The group mark is what makes this needle the reader's number and not a
+    // digit run. A bare 7777 also matches wire:key="lw-1777700123-0", which
+    // Livewire mints per render, so the assertion passed on most seeds and
+    // failed on the ones that happened to contain it.
     Livewire::actingAs($owner)
         ->test(CalendarPage::class, [
             'month' => 6,
             'year' => 2026,
             'balanceAccountIds' => [$otherAccount],  // foreign account id
         ])
-        ->assertDontSee('9999');
+        ->assertDontSee('7,777');
 });
