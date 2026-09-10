@@ -37,6 +37,7 @@ return [
     'done' => 'Gatavs',
 
     'identity_locked' => 'Ierīces identitāte ir bloķēta. Atbloķējiet lietotni un mēģiniet vēlreiz.',
+    'identity_absent' => 'Sinhronizācija šajā ierīcē vēl nav iestatīta, tāpēc tai nav identitātes, ko sapārot. Vispirms ieslēdziet sinhronizāciju.',
     'invalid_code' => 'Šis kods nav derīgs vai tam ir beidzies termiņš. Palūdziet otrai ierīcei izveidot jaunu.',
     'already_under_way' => 'Šī ierīce šo kodu jau ir pieņēmusi un gaida otras ierīces apstiprinājumu. Ja tas nepienāk, palūdziet jaunu kodu un izmantojiet to.',
     'vouched_but_refused' => 'Otrai ierīcei šis kods joprojām ir, bet šī ierīce to nevarēja pieņemt. Palūdziet tai jaunu kodu un izmantojiet to.',

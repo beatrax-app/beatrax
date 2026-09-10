@@ -37,6 +37,7 @@ return [
     'done' => 'Hotovo',
 
     'identity_locked' => 'Identita tvého zařízení je zamčená. Odemkni aplikaci a zkus to znovu.',
+    'identity_absent' => 'Synchronizace na tomto zařízení ještě není nastavená, takže nemá identitu ke spárování. Nejdřív zapni synchronizaci.',
     'invalid_code' => 'Tento kód je neplatný nebo vypršel. Nech si na druhém zařízení vygenerovat nový.',
     'already_under_way' => 'Toto zařízení už kód přijalo a čeká na potvrzení z druhého zařízení. Pokud nepřijde, nech si vygenerovat nový kód a použij ten.',
     'vouched_but_refused' => 'Druhé zařízení kód stále má, ale toto zařízení ho nedokázalo přijmout. Nech si na něm vygenerovat nový kód a použij ten.',

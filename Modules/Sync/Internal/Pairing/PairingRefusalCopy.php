@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-use Illuminate\Contracts\Session\Session;
+use LogicException;
 use Modules\Core\Public\Support\Lang;
-use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Enums\PairingAcceptRefusal;
@@ -31,18 +30,29 @@ final readonly class PairingRefusalCopy
     // banned container call.
     private const string IDENTITY_LOCKED_MESSAGE = 'sync::pairing.identity_locked';
 
+    // A device that never minted an identity has no lock to open, so the
+    // locked line sends the reader looking for a PIN pad this app will not
+    // show them. What is missing is sync itself.
+    private const string IDENTITY_ABSENT_MESSAGE = 'sync::pairing.identity_absent';
+
     public function __construct(
-        private DeviceIdentityLoader $identityLoader,
         private PeerDiscovery $discovery,
     ) {}
 
-    // Asked only once a load() already came back empty, so the extra read is
-    // paid on the refusal path alone.
-    public function identityUnavailable(int $userId, Session $session): string
+    // Handed the state the caller's own read produced, so the file is unsealed
+    // once and the answer cannot drift between two reads. Usable never reaches
+    // here: one read yields the identity and the state together, so an
+    // identity of null is exactly the three endings below.
+    public function identityUnavailable(DeviceIdentityState $state): string
     {
-        return $this->identityLoader->state($userId, $session) === DeviceIdentityState::Unreadable
-            ? Lang::get(self::IDENTITY_UNREADABLE_MESSAGE)
-            : Lang::get(self::IDENTITY_LOCKED_MESSAGE);
+        return Lang::get(match ($state) {
+            DeviceIdentityState::Unreadable => self::IDENTITY_UNREADABLE_MESSAGE,
+            DeviceIdentityState::Absent => self::IDENTITY_ABSENT_MESSAGE,
+            DeviceIdentityState::Locked => self::IDENTITY_LOCKED_MESSAGE,
+            DeviceIdentityState::Usable => throw new LogicException(
+                'identityUnavailable() was asked to name a refusal for a usable identity.',
+            ),
+        });
     }
 
     // The one line saying a code is unknown or expired, and the two endings

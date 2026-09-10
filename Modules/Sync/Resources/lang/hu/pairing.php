@@ -37,6 +37,7 @@ return [
     'done' => 'Kész',
 
     'identity_locked' => 'Az eszközazonosságod zárolva van. Oldd fel az alkalmazást, és próbáld újra.',
+    'identity_absent' => 'A szinkronizálás még nincs beállítva ezen az eszközön, így nincs identitása a párosításhoz. Előbb kapcsold be a szinkronizálást.',
     'invalid_code' => 'Ez a kód érvénytelen vagy lejárt. Kérj újat a másik eszköztől.',
     'already_under_way' => 'Ez az eszköz már elfogadta a kódot, és a másik eszköz megerősítésére vár. Ha nem érkezik meg, kérj új kódot, és azt használd.',
     'vouched_but_refused' => 'A másik eszköznél még megvan ez a kód, de ez az eszköz nem tudta elfogadni. Kérj tőle új kódot, és azt használd.',
