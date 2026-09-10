@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Actions\SaveReport;
 use Modules\Reports\Internal\Actions\TogglePin;
@@ -265,6 +266,29 @@ it('tells ApexCharts not to truncate the axis ticks it draws', function (): void
 
     expect($html)->toContain('trim: false')
         ->toContain('hideOverlappingLabels: true');
+});
+
+// This component has no action and no #[On] today, so nothing re-renders it and
+// the morph never reaches these cards. That is a fact about its method list,
+// not a property of the shape: the first listener added here would blank every
+// pinned chart, with nothing on the page to draw them again.
+it('keeps every pinned chart out of the morph before anything re-renders the row', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+
+    $saved = app(SaveReport::class)->save($user, prrDefinition(), 'Pinned Report');
+    app(TogglePin::class)->toggle($user, $saved->id);
+
+    $charts = RenderedMarkup::of(Livewire::test(PinnedReportsRow::class)->html())
+        ->all('[data-testid="pinned-report-chart"]');
+
+    expect($charts)->not->toBe([], 'no pinned chart was rendered, so the verdict below is about markup nobody read');
+
+    foreach ($charts as $chart) {
+        expect($chart->attribute('wire:ignore'))->not->toBeNull(
+            'the mini card is a render target the morph is allowed to empty',
+        );
+    }
 });
 
 function prrCategoryDefinition(string $viz): ReportDefinition
