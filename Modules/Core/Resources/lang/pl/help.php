@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Aby nie został żaden ślad, usuń każdą z tych rzeczy:',
     'delete_journal_note' => 'Obok bazy danych leżą dwa pliki dziennika, :wal i :shm. Twoje najnowsze zmiany są w nich, dopóki nie zostaną zapisane do bazy, więc usuń wszystkie trzy razem.',
     'no_telemetry' => 'Nie ma żadnej telemetrii, z której trzeba by rezygnować, ani zdalnego konta do zamknięcia.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Odcinek czasu, na którym mierzone są twoje budżety, twój pulpit i każda liczba „w tym okresie”. „:label” rozstrzyga, gdzie się zaczyna — ustaw go na dzień po wypłacie, a okres obejmie pieniądze wypłacone na jego pokrycie. Przesunięcie tego dnia przekłada na nowo każdą kwotę już rozdzieloną do kopert, a tam, gdzie dwa stare okresy składają się na jeden nowy, ich kwoty są sumowane; cofnięcie dnia już ich nie rozdziela.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Wszystko, o czym Beatrax wie, że masz, minus wszystko, co jesteś winien: saldo każdego konta, które zaimportowałeś lub podłączyłeś, przy czym salda kart i pożyczek liczą się na twoją niekorzyść. Nie jest pełniejsze niż to, co mu dałeś — konto, którego Beatrax nigdy nie widział, w tej liczbie nie występuje. Salda w innej walucie przeliczane są po kursie pokazanym pod liczbą, a to, czego nie dało się wycenić, jest tam nazwane, zamiast po cichu wypaść.',
 ];

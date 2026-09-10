@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Da ne ostane nijedan trag, obriši svaku od ovih stavki:',
     'delete_journal_note' => 'Uz bazu podataka stoje dve datoteke dnevnika, :wal i :shm. Tvoje najnovije izmene žive u njima dok se ne upišu u bazu, zato obriši sve tri zajedno.',
     'no_telemetry' => 'Nema telemetrije od koje bi se odjavio ni udaljenog naloga koji bi zatvorio.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Vremenski odsek preko kojeg se mere tvoji budžeti, tvoja kontrolna tabla i svaki iznos za „ovaj period”. „:label” određuje gde počinje — postavi ga na dan posle plate i period će držati novac koji je za njega isplaćen. Pomeranje tog dana preslaže svaki iznos u kovertama koji si već rasporedio, a gde se dva stara perioda sklope u jedan novi njihovi se iznosi sabiraju; vraćanje dana nazad ih više ne razdvaja.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Sve za šta Beatrax zna da imaš, minus sve što duguješ: stanje svakog računa koji si uvezao ili povezao, pri čemu se stanja kartica i kredita broje na tvoju štetu. Potpunije od onoga što si mu dao nije — račun koji Beatrax nikad nije video nije u ovom iznosu. Stanja u drugoj valuti preračunavaju se po kursu prikazanom ispod iznosa, a ono što nije uspeo da proceni imenovano je tamo umesto da tiho ispadne.',
 ];

@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Slett hver av disse for å fjerne alle spor:',
     'delete_journal_note' => 'Databasen har to journalfiler ved siden av seg, :wal og :shm. De nyeste endringene dine ligger i dem til de skrives inn i databasen, så slett alle tre samtidig.',
     'no_telemetry' => 'Det finnes ingen telemetri å reservere seg mot og ingen fjernkonto å avslutte.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Tidsrommet budsjettene dine, oversikten din og alle tall for ”denne perioden” måles over. ”:label” avgjør hvor det begynner — sett den til dagen etter lønn, så inneholder en periode pengene som ble utbetalt for å dekke den. Å flytte den dagen omplasserer hvert konvoluttbeløp du allerede har fordelt, og der to gamle perioder faller sammen til én ny legges beløpene deres sammen; å flytte dagen tilbake deler dem ikke opp igjen.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Alt Beatrax vet at du har, minus alt du skylder: saldoen på hver konto du har importert eller koblet til, der kort- og lånesaldoer teller mot deg. Det er aldri mer fullstendig enn det du har gitt den — en konto Beatrax aldri har sett, er ikke med i dette tallet. Saldoer i en annen valuta regnes om til kursen som vises under tallet, og det som ikke lot seg prise, navngis der i stedet for å falle stille bort.',
 ];

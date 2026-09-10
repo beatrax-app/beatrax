@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Da za tabo ne ostane sledi, izbriši vse našteto:',
     'delete_journal_note' => 'Ob zbirki podatkov ležita dve dnevniški datoteki, :wal in :shm. Tvoje najnovejše spremembe so v njiju, dokler se ne zapišejo v zbirko, zato izbriši vse tri skupaj.',
     'no_telemetry' => 'Ni telemetrije, ki bi jo zavrnil, in ne oddaljenega računa, ki bi ga zaprl.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Časovni odsek, čez katerega se merijo tvoji proračuni, tvoja nadzorna plošča in vsaka številka za „to obdobje“. „:label“ odloči, kje se začne — nastavi ga na dan po plači in obdobje bo držalo denar, ki je bil zanj izplačan. Premik tega dne prerazporedi vsak kuvertni znesek, ki si ga že razporedil, in kjer se dve stari obdobji zložita v eno novo, se njuna zneska seštejeta; premik dneva nazaj ju več ne razdeli.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Vse, za kar Beatrax ve, da imaš, minus vse, kar dolguješ: stanje vsakega računa, ki si ga uvozil ali povezal, pri čemer se stanja kartic in posojil štejejo v tvojo škodo. Popolnejše od tega, kar si mu dal, ni — račun, ki ga Beatrax ni nikoli videl, v tej številki ni. Stanja v drugi valuti se preračunajo po tečaju, prikazanem pod številko, tisto, česar ni znal ovrednotiti, pa je tam poimenovano, namesto da bi tiho izpadlo.',
 ];

@@ -56,4 +56,10 @@ return [
     'delete_list_intro' => 'Lai nepaliktu nekādu pēdu, izdzēsiet katru no šiem:',
     'delete_journal_note' => 'Blakus datubāzei atrodas divi žurnāla faili, :wal un :shm. Jaunākās izmaiņas glabājas tajos, līdz tās tiek ierakstītas datubāzē, tāpēc izdzēsiet visus trīs kopā.',
     'no_telemetry' => 'Nav telemetrijas, no kuras atteikties, un nav attālināta konta, ko slēgt.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Laika posms, pār kuru tiek mērīti tavi budžeti, tava pārskata lapa un ikviens „šī perioda“ skaitlis. „:label“ izšķir, kur tas sākas — iestati to nākamajā dienā pēc algas, un periods saturēs tieši to naudu, kas tā segšanai izmaksāta. Šīs dienas pārbīde pārkārto katru aplokšņu summu, ko jau esi sadalījis, un tur, kur divi vecie periodi saplūst vienā jaunā, to summas tiek saskaitītas; dienas atgriešana tās vairs nesadala.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Viss, par ko Beatrax zina, ka tas ir tavs, mīnus viss, ko esi parādā: katra importēta vai pievienota konta atlikums, turklāt karšu un aizdevumu atlikumi tiek skaitīti pret tevi. Pilnīgāks par to, ko esi tai devis, tas nav — konts, ko Beatrax nekad nav redzējusi, šajā skaitlī nav. Citas valūtas atlikumi tiek pārrēķināti pēc zem skaitļa rādītā kursa, un tas, ko neizdevās novērtēt, tur ir nosaukts, nevis klusi izlaists.',
 ];

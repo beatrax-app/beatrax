@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'Ak chceš odstrániť každú stopu, zmaž všetko z tohto:',
     'delete_journal_note' => 'Vedľa databázy ležia dva žurnálové súbory, :wal a :shm. Tvoje najnovšie zmeny sú v nich, kým sa nezapíšu do databázy, tak zmaž všetky tri naraz.',
     'no_telemetry' => 'Nie je tu žiadna telemetria, z ktorej by sa dalo odhlásiť, ani vzdialený účet, ktorý by bolo treba zrušiť.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Úsek času, cez ktorý sa merajú tvoje rozpočty, tvoj prehľad a každé číslo pre „toto obdobie“. „:label“ určuje, kde sa začína — nastav ho na deň po výplate a obdobie bude držať peniaze, ktoré ho mali pokryť. Posunutie toho dňa preradí každú sumu, ktorú už máš rozdelenú do obálok, a kde sa dve staré obdobia zložia na jedno nové, ich sumy sa spočítajú; posunutie dňa späť ich už nerozdelí.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Všetko, o čom Beatrax vie, že to máš, mínus všetko, čo dlžíš: zostatok každého účtu, ktorý si naimportoval alebo pripojil, pričom zostatky kariet a pôžičiek sa počítajú proti tebe. Úplnejšie než to, čo si mu dal, to nie je — účet, ktorý Beatrax nikdy nevidel, v tomto čísle nie je. Zostatky v inej mene sa prepočítajú kurzom uvedeným pod číslom a to, čo sa oceniť nedalo, je tam pomenované, namiesto toho aby potichu vypadlo.',
 ];

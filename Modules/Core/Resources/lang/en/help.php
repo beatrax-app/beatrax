@@ -52,4 +52,10 @@ return [
     'delete_list_intro' => 'To remove every trace, delete each of these:',
     'delete_journal_note' => 'The database keeps two journal files beside it, :wal and :shm. Your most recent changes live in those until they are folded into the database, so delete all three together.',
     'no_telemetry' => "There's no telemetry to opt out of and no remote account to close.",
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'The stretch of time your budgets, your dashboard and every “this period” figure are measured over. “:label” decides where it begins — set it to the day after you are paid and a period holds the money that was paid to cover it. Moving that day re-files every envelope amount you have already assigned, and where two old periods fold onto one new one their amounts are added together; moving the day back does not split them apart again.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Everything Beatrax knows you have, minus everything you owe: the balance of every account you have imported or connected, with card and loan balances counted against you. It is only as complete as what you have given it — an account Beatrax has never seen is not in this figure. Balances held in another currency are converted at the rate shown under the figure, and any it could not price is named there rather than quietly left out.',
 ];

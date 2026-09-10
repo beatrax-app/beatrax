@@ -55,4 +55,10 @@ return [
     'delete_list_intro' => 'Iga jälje kaotamiseks kustuta kõik need:',
     'delete_journal_note' => 'Andmebaasi kõrval on kaks žurnaalifaili, :wal ja :shm. Sinu kõige värskemad muudatused on neis seni, kuni need andmebaasi kantakse, seega kustuta kõik kolm koos.',
     'no_telemetry' => 'Telemeetriat, millest loobuda, ei ole, ega ka kaugkontot, mida sulgeda.',
+
+    /** @link ../../../../../.docs/features/budgets/moving-the-budget-month.md#the-mapping-keep-the-distance-from-the-month-the-reader-is-in */
+    'period' => 'Ajavahemik, mille kohta mõõdetakse su eelarveid, töölauda ja iga „selle perioodi“ arvu. „:label“ otsustab, kust see algab — pane see palgapäevale järgnevaks päevaks ja periood hoiab raha, mis selle katteks maksti. Selle päeva nihutamine paigutab ümber iga ümbrikusumma, mille oled juba jaotanud, ja kus kaks vana perioodi voltuvad ühte uude, liidetakse nende summad kokku; päeva tagasi nihutamine neid uuesti lahku ei võta.',
+
+    /** @link ../../../../../.docs/features/position/architecture.md#composition-never-a-raw-select */
+    'net_worth' => 'Kõik, mille kohta Beatrax teab, et see on sinu oma, miinus kõik, mida sa võlgned: iga sinu imporditud või ühendatud konto jääk, kusjuures kaardi- ja laenujäägid loetakse sinu kahjuks. Täielikum kui see, mille oled talle andnud, see ei ole — konto, mida Beatrax pole kunagi näinud, ei ole selles arvus. Teise valuuta jäägid arvestatakse ümber arvu all näidatud kursiga ja see, mida hinnata ei õnnestunud, nimetatakse seal, mitte ei jäeta vaikselt välja.',
 ];
