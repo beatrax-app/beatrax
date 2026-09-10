@@ -43,7 +43,7 @@ final class PaletteSearchEndpoint extends Component
     ): void {
         $this->query = $q;
 
-        if (strlen($q) < self::MIN_QUERY_LENGTH) {
+        if (mb_strlen($q) < self::MIN_QUERY_LENGTH) {
             $this->resetResults();
 
             return;
