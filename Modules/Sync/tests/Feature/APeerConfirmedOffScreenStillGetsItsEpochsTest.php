@@ -12,6 +12,8 @@ use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Http\Middleware\DeliversOwedEpochs;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\OpLog\BackfillProgress;
+use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Modules\Sync\Internal\Pairing\PairedDeviceAdmitter;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -143,6 +145,14 @@ it('opens the pre-sync capture the same skipped tail owed', function (): void {
 
     app(DeliversOwedEpochs::class)->terminate(Request::create('/'), new Response);
 
+    // Both halves, because the tail owes the walk and the driver works it. The
+    // first is what this tail is for; asserting only the second would pass on a
+    // tail that opened nothing, so long as something else had.
+    expect(app(BackfillProgress::class)->isOpen($userId))
+        ->toBeTrue('the skipped tail owed a capture and did not open one');
+
+    app(PreSyncHistoryCapture::class)->resume($userId);
+
     expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
         ->toBeGreaterThan(0, 'the peer was handed a key with no history behind it');
 });
@@ -184,6 +194,11 @@ it('captures the history even when a peer cannot be sealed to', function (): voi
     ]);
 
     app(DeliversOwedEpochs::class)->terminate(Request::create('/'), new Response);
+
+    expect(app(BackfillProgress::class)->isOpen($userId))
+        ->toBeTrue('a peer that can never be sealed to held the walk closed');
+
+    app(PreSyncHistoryCapture::class)->resume($userId);
 
     expect($db->connection()->table('op_log_entries')->where('user_id', $userId)->count())
         ->toBeGreaterThan(0, 'an unsealable peer blocked this device capturing its own history');

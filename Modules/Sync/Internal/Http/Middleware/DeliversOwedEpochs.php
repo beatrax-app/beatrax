@@ -65,7 +65,7 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
         // of one skipped tail. A peer whose key material can never be sealed
         // would otherwise hold this device's own history hostage for good, and
         // opening the capture is all ResumesPreSyncCapture has to finish.
-        $this->container->make(PreSyncHistoryCapture::class)->capture($userId);
+        $this->container->make(PreSyncHistoryCapture::class)->owe($userId);
     }
 
     // The peers owed, or none. One covered lookup on a table holding a handful

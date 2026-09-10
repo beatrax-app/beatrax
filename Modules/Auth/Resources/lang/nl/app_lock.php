@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'Deze versie van Beatrax kan nergens een ontgrendelsleutel opslaan, dus biometrisch ontgrendelen wordt niet aangeboden. Je apparaat is niet de beperking.',
     'error_enroll_unprotected' => 'Biometrisch ontgrendelen heeft een sleutelopslag van het besturingssysteem nodig, en deze installatie heeft die niet. Registreren zou de ontgrendelsleutel leesbaar naast je gegevens laten staan, dus dat wordt hier niet aangeboden.',
     'error_enroll_failed' => 'Je apparaat wilde de sleutel niet opslaan. Biometrisch ontgrendelen is niet beschikbaar.',
+    'error_enroll_pin_expired' => 'De bevestiging met je pincode is verlopen voordat je apparaat klaar was. Voer je pincode in en probeer het opnieuw.',
     'heading' => 'App-vergrendeling',
 
     'toggle_label' => 'App vergrendelen met pincode',

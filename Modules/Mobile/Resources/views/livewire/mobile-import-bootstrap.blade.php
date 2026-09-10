@@ -39,7 +39,15 @@
                 </p>
             </header>
 
-            <form wire:submit="submit" class="space-y-4">
+            {{-- The code lives here and not in a wire:model, because a rejected
+                 submit returns before submit() empties anything, and a code held
+                 as a property would ride that render's snapshot. Kept on reject
+                 rather than blanked: retyping is what this form set out to end. --}}
+            <form
+                class="space-y-4"
+                x-data="{ pin: '', confirmPin: '' }"
+                x-on:submit.prevent="$wire.submit(pin, confirmPin)"
+            >
                 <x-core::form-field
                     :label="Lang::get('mobile::import.username')"
                     name="username"
@@ -90,7 +98,7 @@
                     type="password"
                     :hint="Lang::get('mobile::import.pin_help')"
                     inputmode="numeric"
-                    wire:model="pin"
+                    x-model="pin"
                     autocomplete="off"
                 />
 
@@ -100,7 +108,7 @@
                     field-id="confirm-pin"
                     type="password"
                     inputmode="numeric"
-                    wire:model="confirmPin"
+                    x-model="confirmPin"
                     autocomplete="off"
                 />
 

@@ -55,9 +55,27 @@ final readonly class PreSyncHistoryCapture
             return 0;
         }
 
+        // The user-action entry, and the only one that clears a stall: sync
+        // switched on, a pairing confirmed. Both are the reader telling this
+        // device something the fruitless-slice count could not have learnt by
+        // repeating itself.
+        $this->progress->clearStall($userId);
         $this->progress->open($userId);
 
         return $this->slice($userId, $budget);
+    }
+
+    // Owes a walk without working one and without reviving a stalled one, for
+    // the request tail: opening is the whole of what the resume driver needs.
+    // capture() here cleared the stall every tick, which is a bound that does
+    // not bind.
+    public function owe(int $userId): void
+    {
+        if ($this->holdsNoEpoch($userId)) {
+            return;
+        }
+
+        $this->progress->open($userId);
     }
 
     // Continues a capture already owed, and does nothing at all otherwise.

@@ -77,7 +77,42 @@ sign-up, change-password, reset-password, add-user and admin-sets-partner-passwo
 forms; the app-lock and delete-account confirmations, which re-type the account
 password to authorise a security downgrade or an irreversible delete; the
 BYO-OAuth wizard, where the user pastes their own `client_secret`; and the mobile
-import bootstrap, which creates the first account on a new device.
+import bootstrap, which creates the first account on a new device. Ten components
+hold a password or passphrase this way, and that is the pattern, not an oversight:
+the argument above is what each of them rests on.
+
+### The app-lock code is not on that list, and the argument is why
+
+The argument above is that the value in the snapshot is what the user just
+typed, so its presence discloses nothing the browser did not already hold. It is
+sound for a password and it does not reach the app-lock code, which is a
+*second* gate: the whole point of the lock is that it is not the account
+password, so a screen that puts the code on the wire hands over the thing the
+lock exists to keep back.
+
+The lock screen never did. Digits accumulate in the pad's Alpine scope, the pad
+renders bullets rather than a control anything reads back, and the code crosses
+once as a `submit()` argument. The settings screen bound five of them with
+`wire:model` — `newPin`, `confirmPin`, `currentPin`, `enrollPin`, `deenrollPin`
+— and now does the same as the pad: each panel carries its own Alpine scope, the
+inputs are `x-model` and `autocomplete="off"`, and the action takes the code as a
+method argument. The account password beside them keeps its `wire:model`, on the
+argument above, which is the argument it actually fits.
+
+`tests/Contracts/ACodeIsNeverAComponentPropertyArchTest.php` reads the templates
+rather than the components, because a `wire:model` target IS a property and
+Livewire can bind to nothing else. It judges the element the binding sits on: a
+name cannot separate a code from a panel named after one, and
+`confirmingChangePin` is the boolean that opens a modal. It admits no exceptions.
+
+`MobileImportBootstrap` was the one site argued for keeping, on the grounds that
+the code there is being *chosen* on a device with no lock yet. What defeated the
+argument was the branch: `reportBrokenFieldRules()` returns above every line that
+empties a box, so a mistyped confirm field — the everyday event on a five-box
+phone form — rendered the snapshot with the chosen code still in it. Its two code
+boxes are now an Alpine scope, and unlike the settings panels they are *not*
+blanked on submit, because leaving a rejected form to be retyped is the cost that
+screen was built to avoid.
 
 Several of those go further than the argument requires, and the extra step is
 worth knowing about when editing them:
@@ -86,9 +121,10 @@ worth knowing about when editing them:
   not leave plaintext in the next snapshot.
 - `DeleteAccountSection::cancel()` zeroes the password when the confirmation is
   abandoned.
-- `MobileImportBootstrap` zeroes the password, its confirmation and the PIN the
-  moment `submit()` consumes them; its retry path re-reads from a server-side
-  session stash rather than from those properties.
+- `MobileImportBootstrap` zeroes the password and its confirmation the moment
+  `submit()` consumes them; its retry path re-reads from a server-side session
+  stash rather than from those properties. The stash holds plaintext, which is
+  what `config/session.php` encrypting the session at rest is carrying.
 - `OAuthClientWizardModal` hands the pasted plaintext to the file sink only after
   `submit()` validates — the wizard never reads an existing secret back.
 

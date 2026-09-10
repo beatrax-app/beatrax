@@ -113,17 +113,19 @@ final class MobileImportBootstrap extends Component
 
     public string $passwordConfirmation = '';
 
-    public string $pin = '';
-
-    public string $confirmPin = '';
-
     // The second way an account is made, and the country is asked of every
     // joiner rather than synced, so one left unset here stays unset. Not
     // choosing is still a real answer: it widens classification to every
     // region rather than pinning the device to a guessed one.
     public string $country = '';
 
+    // The code crosses once, as an argument, because a rejected submit returns
+    // above the lines that empty the boxes -- so a code held as a property sits
+    // in the snapshot of the everyday typo. The password beside it is a
+    // different case: see .docs/architecture/livewire-snapshot-secrets.md.
     public function submit(
+        string $pin,
+        string $confirmPin,
         SignupAction $signup,
         MobileLockGateway $lockGateway,
         PairingGateway $pairingGateway,
@@ -137,7 +139,7 @@ final class MobileImportBootstrap extends Component
         // Every broken rule at once, and none of the boxes emptied: a rejected
         // submit used to clear both password boxes, so a mistyped PIN cost a
         // 12-character passphrase retyped on a phone keyboard.
-        if ($this->reportBrokenFieldRules()) {
+        if ($this->reportBrokenFieldRules($pin, $confirmPin)) {
             return;
         }
 
@@ -156,13 +158,11 @@ final class MobileImportBootstrap extends Component
             return;
         }
 
-        // Handed to provisioning and then dropped from the properties: past
-        // this point they are no longer what the reader is typing, and a public
-        // property rides the serialized wire:snapshot to the browser on every
-        // later render.
-        $credentials = new MobileProvisioningCredentials($userId, $this->pin, $this->password);
-        $this->pin = '';
-        $this->confirmPin = '';
+        // The password pair is dropped here: past this point it is no longer
+        // what the reader is typing, and a public property rides the serialized
+        // wire:snapshot to the browser on every later render. The code needs no
+        // such line — it arrives as an argument and was never a property.
+        $credentials = new MobileProvisioningCredentials($userId, $pin, $this->password);
         $this->password = '';
         $this->passwordConfirmation = '';
 
@@ -195,7 +195,7 @@ final class MobileImportBootstrap extends Component
     // control carries aria-invalid. One shared line reported the password rule
     // beneath the PIN's own "6-10 digits" hint, where the two read as a
     // contradiction — and said nothing at all about an empty username.
-    private function reportBrokenFieldRules(): bool
+    private function reportBrokenFieldRules(string $pin, string $confirmPin): bool
     {
         $broken = [];
 
@@ -211,13 +211,13 @@ final class MobileImportBootstrap extends Component
             $broken['passwordConfirmation'] = Lang::get('mobile::import.errors.passwords_mismatch');
         }
 
-        $pinRule = $this->brokenPinRule($this->pin);
+        $pinRule = $this->brokenPinRule($pin);
 
         if ($pinRule !== null) {
             $broken['pin'] = $pinRule;
         }
 
-        if ($this->pin !== $this->confirmPin) {
+        if ($pin !== $confirmPin) {
             $broken['confirmPin'] = Lang::get('mobile::import.errors.pins_mismatch');
         }
 
@@ -245,7 +245,7 @@ final class MobileImportBootstrap extends Component
     // Idempotent-safe retry of the provisioning steps only - never
     // re-runs SignupAction (the account already exists). Reads the
     // originally submitted PIN/password from the server-side session
-    // stash, never the emptied `$this->pin`/`$this->password` properties.
+    // stash, never the emptied `$this->password` property.
     public function retryProvisioning(
         CurrentUser $currentUser,
         MobileLockGateway $lockGateway,
@@ -290,8 +290,6 @@ final class MobileImportBootstrap extends Component
         }
 
         $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
-        $this->pin = '';
-        $this->confirmPin = '';
         $this->password = '';
         $this->passwordConfirmation = '';
         $this->flashMessage = '';

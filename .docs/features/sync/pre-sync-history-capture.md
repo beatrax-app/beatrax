@@ -128,8 +128,21 @@ A walk still cannot be worked forever. `sync_backfill_state.failed_slices` count
 slices that captured nothing; past `BackfillProgress::MAX_FAILED_SLICES` the walk **stalls** —
 still owed, never finished, no longer picked up by the request tail. A slice that captures rows
 clears the count; a slice that captures none does not, because a table no keyring can read would
-otherwise be retried until the install is deleted. Stalled is not complete, and both callers of
-`capture()` are user actions that reopen it.
+otherwise be retried until the install is deleted.
+
+Stalled is not complete, and the ceiling only ends anything if the thing it bounds cannot reset
+it. `open()` therefore leaves *any* unfinished walk alone — stalled as well as in flight — where
+it once read only `isOpen()`, which made stalled and never-started the same answer and reopened
+the first as freely as the second. That is the whole of what `DeliversOwedEpochs` could reach:
+it opens a capture on the tail of every request it is allowed to tick, so a peer permanently
+owed its epochs cleared the count every few seconds and eight fruitless slices apart was a
+ceiling nothing ever arrived at.
+
+The two entries are now named for who is behind them. `capture()` is the user-action entry —
+sync switched on, a pairing confirmed — and clears the stall before it opens, because the reader
+doing something is information the count cannot hold: a pairing delivers the very epoch the walk
+could not read. `owe()` opens a walk and works none, which is all the request tail ever needed
+(`ResumesPreSyncCapture` finishes it), and it revives nothing.
 
 A **locked app is not any of those cases**. With the app-lock engaged there is no signing key, so
 no `OpLogWriter` can be built at all — a reason to come back, not a verdict on any row, and not a

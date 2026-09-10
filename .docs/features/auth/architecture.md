@@ -638,7 +638,11 @@ accumulate client-side in transient Alpine state rather than a public
 Livewire property, so they never appear in the `wire:snapshot` DOM
 attribute or in a Livewire update response — the full PIN crosses the
 wire exactly once, as a `submit()` method argument, forwarded straight to
-`PinVerificationService`.
+`PinVerificationService`. `AppLockSettingsSection` holds its five to the
+same shape: each confirmation panel carries its own Alpine scope and the
+action takes the code as an argument, so setting, changing, resetting,
+disabling, enrolling and de-enrolling all put nothing in the snapshot
+([why](../../architecture/livewire-snapshot-secrets.md#the-app-lock-code-is-not-on-that-list-and-the-argument-is-why)).
 
 Three refusals reach the reader, and `LockScreen::refusalMessage()` is the
 one place they are told apart. An active backoff window is checked *before*

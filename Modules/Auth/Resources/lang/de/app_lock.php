@@ -6,6 +6,7 @@ return [
     'error_enroll_unsupported' => 'Diese Version von Beatrax kann keinen Entsperrschlüssel ablegen, deshalb wird biometrisches Entsperren nicht angeboten. Nicht dein Gerät ist die Einschränkung.',
     'error_enroll_unprotected' => 'Biometrisches Entsperren braucht einen Schlüsselspeicher des Betriebssystems, und diese Installation hat keinen. Eine Registrierung würde den Entsperrschlüssel lesbar neben deinen Daten liegen lassen, deshalb wird sie hier nicht angeboten.',
     'error_enroll_failed' => 'Dein Gerät hat das Speichern des Schlüssels abgelehnt. Biometrisches Entsperren ist nicht verfügbar.',
+    'error_enroll_pin_expired' => 'Die Bestätigung mit der PIN ist abgelaufen, bevor dein Gerät fertig war. Gib deine PIN ein und versuche es erneut.',
     'heading' => 'App-Sperre',
 
     'toggle_label' => 'App mit PIN sperren',

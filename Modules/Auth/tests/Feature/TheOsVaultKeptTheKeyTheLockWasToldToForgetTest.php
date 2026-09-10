@@ -39,18 +39,15 @@ function vaultKeptEnroll(string $pin): void
 {
     Livewire::test(AppLockSettingsSection::class)
         ->call('startEnroll')
-        ->set('enrollPin', $pin)
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', $pin)
         ->assertSet('biometricEnrolled', true);
 }
 
 function vaultKeptEnableAndEnroll(string $pin): void
 {
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', $pin)
-        ->set('confirmPin', $pin)
         ->set('accountPassword', 'vault-account-pass')
-        ->call('setPin')
+        ->call('setPin', $pin, $pin)
         ->assertSet('lockEnabled', true);
 
     vaultKeptEnroll($pin);
@@ -67,8 +64,7 @@ it('drops the OS-vault copy of the data key when the lock is turned off', functi
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmDisable')
-        ->set('currentPin', '135790')
-        ->call('disable')
+        ->call('disable', '135790')
         ->assertSet('lockEnabled', false);
 
     expect($vault->keys)->toBe([], 'disable() clears every durable wrap of the data key, and the OS vault holds one');
@@ -85,15 +81,12 @@ it('leaves the native unlock off after the lock is turned off and back on, until
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmDisable')
-        ->set('currentPin', '135790')
-        ->call('disable')
+        ->call('disable', '135790')
         ->assertSet('lockEnabled', false);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '246802')
-        ->set('confirmPin', '246802')
         ->set('accountPassword', 'vault-account-pass')
-        ->call('setPin')
+        ->call('setPin', '246802', '246802')
         ->assertSet('lockEnabled', true);
 
     /** @var Session $session */
@@ -156,8 +149,7 @@ it('says so when the OS would not release the key it was told to forget', functi
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmDeenroll')
-        ->set('deenrollPin', '135790')
-        ->call('deenroll')
+        ->call('deenroll', '135790')
         ->assertSet('flashMessage', Lang::get('auth::app_lock.error_vault_kept_key'))
         ->assertSet('biometricEnrolled', true);
 
@@ -173,8 +165,7 @@ it('clears the screen when the key actually went', function (): void {
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmDeenroll')
-        ->set('deenrollPin', '135790')
-        ->call('deenroll')
+        ->call('deenroll', '135790')
         ->assertSet('flashMessage', '')
         ->assertSet('biometricEnrolled', false);
 

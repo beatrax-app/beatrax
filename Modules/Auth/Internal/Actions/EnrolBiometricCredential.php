@@ -7,6 +7,7 @@ namespace Modules\Auth\Internal\Actions;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\BiometricEnrolmentOutcome;
+use Modules\Auth\Internal\Lock\FreshPinProof;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
@@ -22,6 +23,7 @@ final readonly class EnrolBiometricCredential
         private LockStateManager $lockState,
         private SecretShield $shield,
         private CurrentUser $currentUser,
+        private FreshPinProof $pinProof,
     ) {}
 
     /**
@@ -29,11 +31,10 @@ final readonly class EnrolBiometricCredential
      */
     public function __invoke(array $credentialResponse, string $userAgent, Session $session): BiometricEnrolmentOutcome
     {
-        // The enrolled row is `secret || wrapped_key` in the same SQLite file
-        // as the ledger, so a shield that leaves those bytes readable turns
-        // enrolment into a plaintext copy of the app-lock data key.
-        if (! $this->shield->protectsAtRest()) {
-            return BiometricEnrolmentOutcome::Unshielded;
+        $refusal = $this->refusal($session);
+
+        if ($refusal !== null) {
+            return $refusal;
         }
 
         // Through the custodian, so the enrolled biometric wraps the real key
@@ -43,6 +44,23 @@ final readonly class EnrolBiometricCredential
         return $dataKey === null
             ? BiometricEnrolmentOutcome::SessionLocked
             : $this->record($credentialResponse, $userAgent, $dataKey, $session);
+    }
+
+    // Both answers are reached before a key is read and before a byte is
+    // written, so a ceremony either refusal turns away leaves nothing behind
+    // and cannot be replayed on the same proof.
+    private function refusal(Session $session): ?BiometricEnrolmentOutcome
+    {
+        // The enrolled row is `secret || wrapped_key` in the same SQLite file
+        // as the ledger, so a shield that leaves those bytes readable turns
+        // enrolment into a plaintext copy of the app-lock data key.
+        if (! $this->shield->protectsAtRest()) {
+            return BiometricEnrolmentOutcome::Unshielded;
+        }
+
+        return $this->pinProof->consume($session, $this->currentUser->user()->id)
+            ? null
+            : BiometricEnrolmentOutcome::PinNotProved;
     }
 
     /**
