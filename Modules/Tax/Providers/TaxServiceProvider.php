@@ -10,6 +10,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Events\UserCountryChanged;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Tax\Commands\SweepUntaggableTaxTagsCommand;
 use Modules\Tax\Internal\Actions\TaxCategoryStore;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
@@ -56,5 +57,7 @@ final class TaxServiceProvider extends ServiceProvider
 
         $livewire->component('tax.tax-page', TaxPage::class);
         $livewire->component('tax.summary-card', TaxSummaryCard::class);
+
+        $this->commands([SweepUntaggableTaxTagsCommand::class]);
     }
 }

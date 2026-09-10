@@ -57,6 +57,51 @@ losing it. Without the exclusion, a tag applied before the transaction
 was split would be exported alongside the legs that replaced it, and the
 year total would count the same money twice.
 
+## Which rows may carry a tag
+
+`TaxYearQuery` splits a tagged row into two buckets — income when
+`transactions.type` is `income`, deductions otherwise — and takes `abs()` of
+the amount on the way in. Whatever is tagged therefore becomes a positive
+figure in one of the two totals, so which rows may be tagged *is* the
+correctness of the total.
+
+`TaxableMovement::canCarryATag()` answers it, and `TagTransaction` asks
+before it writes. A row may carry a tag when it is external movement that
+stayed crossed:
+
+| Type | May be tagged | Why |
+|---|---|---|
+| `expense` | yes | a deductible cost |
+| `income` | yes | taxable income |
+| `fee` | yes | a deductible charge |
+| `refund` | no | the money crossed back; `abs()` would file a return as a cost |
+| `transfer_out` / `transfer_in` | no | the reader's own money moving between their own accounts |
+| `adjustment` | no | reconciles against nobody |
+
+A return is recognised by the same two marks the rollups read it by —
+`payment_type` from the narrative detector or the processor's event map, and
+`type` for a row a reader labelled by hand — because
+[`transactions.type` is never `refund` on imported data](../ledger/architecture.md#moneyflow--the-one-definition-of-spend-income-and-net).
+
+The refusal is silent, in the same shape and for the same reason as the
+reconciled-row refusal above it: the rule engine, a batch tag, the demo
+seeder and a receipt conflict resolution all reach this action without a
+screen in front of them, and none of them can render an error. The badge on
+an ineligible row therefore still offers "Tag" and the tag does not take —
+a control that does nothing, which is worth fixing separately and is not
+worth a wrong tax total in the meantime.
+
+## Sweeping the rows tagged before the rule existed
+
+`php artisan tax:sweep-untaggable` reports every tag sitting on a row that
+can no longer carry one; `--apply` removes them. It removes them through
+`UntagTransaction` rather than with a bulk `DELETE`, because a delete that
+does not reach the operation log is replayed back by the next paired device
+to sync.
+
+It is a command rather than a migration for the same reason: a migration
+runs unattended on every device, and this one removes data a reader entered.
+
 ## Uniqueness is two indexes, not one
 
 The table started with `unique(user_id, transaction_id)`. Adding leg
