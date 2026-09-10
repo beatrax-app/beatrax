@@ -136,7 +136,7 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
                 'transaction_id' => $transactionId,
                 'subject' => $subject,
                 'sender' => $parsed->headers['from'] ?? '',
-                'body_excerpt' => substr($body, 0, 200),
+                'body_excerpt' => mb_strcut($body, 0, 200),
             ],
         );
 
