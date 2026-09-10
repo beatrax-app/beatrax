@@ -16,6 +16,8 @@ enum CounterpartyMetadataKey: string
 
     case DefaultName = 'default_name';
 
+    case MergedFrom = 'merged_from';
+
     // The JSON path a query builder addresses the key by, so a SQL predicate
     // and an in-PHP read of the same flag cannot spell it differently.
     public function column(): string
