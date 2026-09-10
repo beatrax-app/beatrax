@@ -33,6 +33,15 @@ final readonly class CommandSpawner
         private string $phpBinary = PHP_BINARY,
     ) {}
 
+    // Whether this runtime can spawn a child at all, so a caller can ask
+    // before offering a control instead of learning it from a refusal. The
+    // embed SAPI on Android and iOS leaves PHP_BINARY empty; a desktop has a
+    // real interpreter path.
+    public function canSpawn(): bool
+    {
+        return $this->phpBinary !== '';
+    }
+
     /**
      * @param  array<string, mixed>  $args
      *
@@ -44,7 +53,7 @@ final readonly class CommandSpawner
         // platform that cannot spawn leaves none of them behind. An empty
         // interpreter would otherwise build `'' artisan cache:clear`, which a
         // shell accepts and reports as a started run that did nothing.
-        if ($this->phpBinary === '') {
+        if (! $this->canSpawn()) {
             throw new ProcessSpawningUnavailableException(
                 'No PHP interpreter path is available to spawn a child process with.',
             );
