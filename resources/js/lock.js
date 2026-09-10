@@ -717,11 +717,10 @@ document.addEventListener('alpine:init', () => {
                     // responses is what made every refusal here silent.
                     const result = await enrollRes.json().catch(() => ({}));
 
-                    if (window.Livewire) {
-                        window.Livewire.dispatch(
-                            result.enrolled ? 'biometric-enrolled' : 'biometric-enrol-failed',
-                            result.enrolled ? {} : { reason: result.error || '' },
-                        );
+                    if (window.Livewire && result.enrolled) {
+                        window.Livewire.dispatch('biometric-enrolled');
+                    } else if (window.Livewire) {
+                        window.Livewire.dispatch('biometric-enrol-failed', { reason: result.error || '' });
                     }
                 } catch (e) {
                     // Enrollment cancelled or failed — no-op.

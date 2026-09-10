@@ -23,10 +23,7 @@ it('changePin flashes the too-short copy and bails before touching the provision
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '123456')
-        ->set('newPin', '12')
-        ->set('confirmPin', '12')
-        ->call('changePin')
+        ->call('changePin', '123456', '12', '12')
         ->assertSet('flashMessage', 'PIN must be at least 6 digits.')
         ->assertSet('changePinSuccessMessage', '');
 });
@@ -36,10 +33,7 @@ it('changePin flashes the mismatch copy when the confirmation differs', function
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '123456')
-        ->set('newPin', '432100')
-        ->set('confirmPin', '999999')
-        ->call('changePin')
+        ->call('changePin', '123456', '432100', '999999')
         ->assertSet('flashMessage', "PINs don't match. Try again.");
 });
 
@@ -49,9 +43,7 @@ it('resetForgottenPin flashes the validation copy before checking the password',
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('accountPassword', 'settings-pass')
-        ->set('newPin', '12')
-        ->set('confirmPin', '12')
-        ->call('resetForgottenPin')
+        ->call('resetForgottenPin', '12', '12')
         ->assertSet('flashMessage', 'PIN must be at least 6 digits.');
 });
 
@@ -64,10 +56,8 @@ it('setPin names the empty account-password box rather than calling it wrong', f
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', '')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->assertSet('flashMessage', 'Enter your account password.')
         ->assertSet('lockEnabled', false);
 });
@@ -77,10 +67,8 @@ it('setPin still calls a filled-in account password wrong when it is', function 
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', 'not-the-password')
-        ->call('setPin')
+        ->call('setPin', '123456', '123456')
         ->assertSet('flashMessage', 'Incorrect account password.')
         ->assertSet('lockEnabled', false);
 });
@@ -90,10 +78,8 @@ it('resetForgottenPin names the empty account-password box rather than calling i
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
         ->set('accountPassword', '')
-        ->call('resetForgottenPin')
+        ->call('resetForgottenPin', '123456', '123456')
         ->assertSet('flashMessage', 'Enter your account password.');
 });
 
@@ -102,8 +88,7 @@ it('disable names the empty PIN box rather than calling it incorrect', function 
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '')
-        ->call('disable')
+        ->call('disable', '')
         ->assertSet('flashMessage', 'Enter your PIN.');
 });
 
@@ -112,10 +97,7 @@ it('changePin names the empty current-PIN box rather than calling it incorrect',
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '')
-        ->set('newPin', '123456')
-        ->set('confirmPin', '123456')
-        ->call('changePin')
+        ->call('changePin', '', '123456', '123456')
         ->assertSet('flashMessage', 'Enter your PIN.');
 });
 
@@ -124,7 +106,6 @@ it('deenroll names the empty PIN box rather than calling it incorrect', function
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('deenrollPin', '')
-        ->call('deenroll')
+        ->call('deenroll', '')
         ->assertSet('flashMessage', 'Enter your PIN.');
 });

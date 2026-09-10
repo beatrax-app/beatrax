@@ -124,8 +124,7 @@ it('the settings section still starts a browser enrolment where a real shield is
         ->assertNotDispatched('beatrax:webauthn-create')
         ->assertSet('confirmingEnroll', true)
         ->assertSet('flashMessage', '')
-        ->set('enrollPin', '123456')
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', '123456')
         ->assertDispatched('beatrax:webauthn-create')
         ->assertSet('flashMessage', '');
 });
@@ -139,8 +138,7 @@ it('does not start the browser ceremony on a wrong PIN', function (): void {
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('startEnroll')
-        ->set('enrollPin', '999999')
-        ->call('enrollWithPin')
+        ->call('enrollWithPin', '999999')
         ->assertNotDispatched('beatrax:webauthn-create')
         ->assertSet('confirmingEnroll', true);
 });

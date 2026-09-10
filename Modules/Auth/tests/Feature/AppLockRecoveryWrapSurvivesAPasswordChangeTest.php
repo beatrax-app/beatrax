@@ -36,10 +36,8 @@ function recoveryWrapOwner(string $username, string $password): array
 function recoveryWrapSetPin(string $pin, string $password): void
 {
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', $pin)
-        ->set('confirmPin', $pin)
         ->set('accountPassword', $password)
-        ->call('setPin');
+        ->call('setPin', $pin, $pin);
 }
 
 // What the account password is actually worth: the data key it produces at the
@@ -118,9 +116,7 @@ it('keeps the forgotten-PIN reset working after a password change', function ():
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('accountPassword', 'new-password-456')
-        ->set('newPin', '654321')
-        ->set('confirmPin', '654321')
-        ->call('resetForgottenPin')
+        ->call('resetForgottenPin', '654321', '654321')
         ->assertSet('flashMessage', '')
         ->assertDispatched('toast');
 });
@@ -191,9 +187,8 @@ it('offers the re-link on the screen the lock is configured from, and repairs th
         ->assertSet('recoveryWrapStale', true)
         ->assertSee('no longer opens this app lock')
         ->call('confirmRelinkRecovery')
-        ->set('currentPin', '123456')
         ->set('accountPassword', 'code-reset-password')
-        ->call('relinkRecovery')
+        ->call('relinkRecovery', '123456')
         ->assertSet('recoveryWrapStale', false)
         ->assertDispatched('toast');
 
@@ -220,9 +215,8 @@ it('refuses the re-link on a wrong PIN and leaves the wrap stale', function (): 
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmRelinkRecovery')
-        ->set('currentPin', '999999')
         ->set('accountPassword', 'code-reset-password')
-        ->call('relinkRecovery')
+        ->call('relinkRecovery', '999999')
         ->assertSee('Incorrect PIN.');
 
     expect(app(AppLockProvisioner::class)->keyState((int) $user->id))->toBe(AppLockKeyState::RecoveryUnreadable);

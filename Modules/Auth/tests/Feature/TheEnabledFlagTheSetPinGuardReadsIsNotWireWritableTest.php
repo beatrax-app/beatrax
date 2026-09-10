@@ -59,10 +59,8 @@ beforeEach(function (): void {
     $this->actingAs($this->user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '135790')
-        ->set('confirmPin', '135790')
         ->set('accountPassword', 'guard-pass-12')
-        ->call('setPin')
+        ->call('setPin', '135790', '135790')
         ->assertSet('lockEnabled', true);
 });
 

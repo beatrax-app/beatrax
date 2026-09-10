@@ -61,10 +61,8 @@ it('refuses to enable the lock from the settings screen with a lettered PIN', fu
     test()->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', 'abcdef')
-        ->set('confirmPin', 'abcdef')
         ->set('accountPassword', 'account-password')
-        ->call('setPin')
+        ->call('setPin', 'abcdef', 'abcdef')
         ->assertSet('lockEnabled', false)
         ->assertSee(Lang::get('auth::app_lock.error_pin_digits', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]));
 });
@@ -78,10 +76,8 @@ it('refuses to reset a forgotten PIN to a lettered one', function (): void {
     $provisioner->enable($user->id, '246810', 'account-password');
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', 'abcdefg')
-        ->set('confirmPin', 'abcdefg')
         ->set('accountPassword', 'account-password')
-        ->call('resetForgottenPin')
+        ->call('resetForgottenPin', 'abcdefg', 'abcdefg')
         ->assertSee(Lang::get('auth::app_lock.error_pin_digits', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]));
 
     // The PIN that was already there still opens the lock.

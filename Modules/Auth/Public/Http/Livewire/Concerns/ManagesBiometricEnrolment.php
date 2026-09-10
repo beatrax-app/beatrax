@@ -54,7 +54,6 @@ trait ManagesBiometricEnrolment
         }
 
         $this->confirmingEnroll = true;
-        $this->enrollPin = '';
         $this->flashMessage = '';
     }
 
@@ -81,6 +80,7 @@ trait ManagesBiometricEnrolment
     // removing one costs. The box in front of the reader is a gate rather than
     // a formality because the PIN is what produces the key being wrapped.
     public function enrollWithPin(
+        string $pin,
         CurrentUser $currentUser,
         ColdStartEnroller $enroller,
         BrowserEnrolmentAuthoriser $browser,
@@ -88,16 +88,13 @@ trait ManagesBiometricEnrolment
         AppLockCredentialRejections $rejections,
         Session $session,
     ): void {
-        $rejection = $rejections->pinRequired($this->enrollPin);
+        $rejection = $rejections->pinRequired($pin);
 
         if ($rejection !== null) {
             $this->flashMessage = $rejection;
 
             return;
         }
-
-        $pin = $this->enrollPin;
-        $this->enrollPin = '';
 
         $vault->isAvailable()
             ? $this->armTheOsVault($enroller->enrol($currentUser->user()->id, $pin, $session))
@@ -161,17 +158,17 @@ trait ManagesBiometricEnrolment
     public function confirmDeenroll(): void
     {
         $this->confirmingDeenroll = true;
-        $this->deenrollPin = '';
     }
 
     public function deenroll(
+        string $pin,
         CurrentUser $currentUser,
         BiometricDeviceStore $biometricStore,
         AppLockProvisioner $provisioner,
         ColdStartVault $vault,
         AppLockCredentialRejections $rejections,
     ): void {
-        $rejection = $rejections->pinRequired($this->deenrollPin);
+        $rejection = $rejections->pinRequired($pin);
 
         if ($rejection !== null) {
             $this->flashMessage = $rejection;
@@ -181,7 +178,7 @@ trait ManagesBiometricEnrolment
 
         $user = $currentUser->user();
 
-        if (! $provisioner->verifyPin($user->id, $this->deenrollPin)) {
+        if (! $provisioner->verifyPin($user->id, $pin)) {
             $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
 
             return;
@@ -195,7 +192,6 @@ trait ManagesBiometricEnrolment
         // screen would otherwise show as gone until the next full render.
         $this->biometricEnrolled = $vault->isEnrolled($user->id);
         $this->confirmingDeenroll = false;
-        $this->deenrollPin = '';
 
         // Saying nothing about a key the OS would not release tells the reader
         // it was destroyed.

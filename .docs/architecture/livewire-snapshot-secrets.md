@@ -79,6 +79,33 @@ password to authorise a security downgrade or an irreversible delete; the
 BYO-OAuth wizard, where the user pastes their own `client_secret`; and the mobile
 import bootstrap, which creates the first account on a new device.
 
+### The app-lock code is not on that list, and the argument is why
+
+The argument above is that the value in the snapshot is what the user just
+typed, so its presence discloses nothing the browser did not already hold. It is
+sound for a password and it does not reach the app-lock code, which is a
+*second* gate: the whole point of the lock is that it is not the account
+password, so a screen that puts the code on the wire hands over the thing the
+lock exists to keep back.
+
+The lock screen never did. Digits accumulate in the pad's Alpine scope, the pad
+renders bullets rather than a control anything reads back, and the code crosses
+once as a `submit()` argument. The settings screen bound five of them with
+`wire:model` — `newPin`, `confirmPin`, `currentPin`, `enrollPin`, `deenrollPin`
+— and now does the same as the pad: each panel carries its own Alpine scope, the
+inputs are `x-model` and `autocomplete="off"`, and the action takes the code as a
+method argument. The account password beside them keeps its `wire:model`, on the
+argument above, which is the argument it actually fits.
+
+`tests/Contracts/ACodeIsNeverAComponentPropertyArchTest.php` reads the templates
+rather than the components, because a `wire:model` target IS a property and
+Livewire can bind to nothing else. It judges the element the binding sits on: a
+name cannot separate a code from a panel named after one, and
+`confirmingChangePin` is the boolean that opens a modal. One site is recorded in
+it and may not grow — `MobileImportBootstrap`, where the code is being *chosen*
+on a device with no lock yet, with live per-field validation keyed on those
+names, on the first-run screen of a phone.
+
 Several of those go further than the argument requires, and the extra step is
 worth knowing about when editing them:
 
