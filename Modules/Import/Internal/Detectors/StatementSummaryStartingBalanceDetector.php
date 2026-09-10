@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
+use Modules\Ledger\Public\Support\StatementDenomination;
 
 // Every format that writes a `statement_summaries` row detects its opening
 // balance the same way; only the source_format it filters on differs.
@@ -33,9 +34,12 @@ abstract class StatementSummaryStartingBalanceDetector implements DetectsStartin
 
         $sourceFormat = $this->sourceFormat();
 
-        $rows = $this->db->connection()
-            ->table('statement_summaries')
-            ->join('import_runs', 'import_runs.id', '=', 'statement_summaries.import_run_id')
+        $rows = StatementDenomination::boundToTheAccount(
+            $this->db->connection()
+                ->table('statement_summaries')
+                ->join('import_runs', 'import_runs.id', '=', 'statement_summaries.import_run_id'),
+            'opening_balance_currency',
+        )
             ->where('statement_summaries.user_id', $user->id)
             ->where('import_runs.user_id', $user->id)
             ->where('import_runs.source_format', $sourceFormat)

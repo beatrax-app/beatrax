@@ -11,6 +11,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Contracts\AnchorsStartingBalanceFromStatements;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Services\AccountWriter;
+use Modules\Ledger\Public\Support\StatementDenomination;
 
 // Re-running is safe: an account whose pair is already set is left alone, so
 // a user-confirmed override survives later imports.
@@ -49,8 +50,11 @@ final readonly class BackfillStartingBalanceFromStatementSummaries implements An
             // file the reader discarded -- or previewed and walked away from --
             // leaves one behind. Anchoring off that set the account's opening
             // balance from a statement that never entered the ledger.
-            $candidates = $connection->table('statement_summaries')
-                ->join('import_runs', 'import_runs.id', '=', 'statement_summaries.import_run_id')
+            $candidates = StatementDenomination::boundToTheAccount(
+                $connection->table('statement_summaries')
+                    ->join('import_runs', 'import_runs.id', '=', 'statement_summaries.import_run_id'),
+                'opening_balance_currency',
+            )
                 ->where('import_runs.status', ImportRunStatus::Confirmed->value)
                 ->select([
                     'statement_summaries.account_id',
