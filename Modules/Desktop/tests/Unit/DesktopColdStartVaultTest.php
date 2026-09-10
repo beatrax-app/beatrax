@@ -143,36 +143,32 @@ it('recovers nothing when the user was never enrolled', function (): void {
     expect(coldStartVault()->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
 });
 
-it('recovers nothing when the authentication is refused', function (): void {
+// A blob that survived a successful prompt and still would not open is not an
+// authentication that failed: nothing on this machine will ever open it, and
+// isEnrolled() reads the same file — so a survivor keeps the lock screen
+// offering an unlock whose only possible answer is another refusal.
+it('drops a stored key it cannot open, so nothing goes on offering it', function (string $unreadable): void {
+    $vault = coldStartVault();
+    $vault->enroll(COLD_START_USER_ID, random_bytes(32));
+    file_put_contents(coldStartKeyFile(), $unreadable);
+
+    expect($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull()
+        ->and($vault->isEnrolled(COLD_START_USER_ID))->toBeFalse();
+})->with([
+    'the keychain will not decrypt it' => ['written-by-another-machine'],
+    'it is not the blob that was written' => ['enc:'.base64_encode('too-short')],
+    'it is empty' => [''],
+]);
+
+// A prompt the reader declined leaves the entry exactly where it was: the file
+// is never read, so nothing about it has been learned.
+it('keeps a stored key whose prompt was declined', function (): void {
     coldStartVault()->enroll(COLD_START_USER_ID, random_bytes(32));
 
-    expect(coldStartVault(prompted: false)->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
-});
+    $declined = coldStartVault(prompted: false);
 
-it('recovers nothing when the stored file is empty', function (): void {
-    $vault = coldStartVault();
-    $vault->enroll(COLD_START_USER_ID, random_bytes(32));
-    file_put_contents(coldStartKeyFile(), '');
-
-    expect($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
-});
-
-// The keychain refusing to decrypt is the ordinary shape of "this file was
-// written on another machine", so it has to be a null rather than a throw.
-it('recovers nothing when the keychain will not decrypt', function (): void {
-    $vault = coldStartVault();
-    $vault->enroll(COLD_START_USER_ID, random_bytes(32));
-    file_put_contents(coldStartKeyFile(), 'written-by-another-machine');
-
-    expect($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
-});
-
-it('recovers nothing when the decrypted payload is not the blob it wrote', function (): void {
-    $vault = coldStartVault();
-    $vault->enroll(COLD_START_USER_ID, random_bytes(32));
-    file_put_contents(coldStartKeyFile(), 'enc:'.base64_encode('too-short'));
-
-    expect($vault->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull();
+    expect($declined->recover(COLD_START_USER_ID, 'Unlock Beatrax'))->toBeNull()
+        ->and($declined->isEnrolled(COLD_START_USER_ID))->toBeTrue();
 });
 
 it('forgets an enrollment and stays silent when there is nothing to forget', function (): void {
