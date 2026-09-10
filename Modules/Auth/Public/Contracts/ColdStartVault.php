@@ -25,6 +25,11 @@ interface ColdStartVault
 
     // Prompts, then returns the data key, or null when the user cancelled,
     // the prompt failed, or nothing is enrolled.
+
+    // Implementations MUST drop an entry they could not read before answering,
+    // so that isEnrolled() afterwards separates a prompt the reader declined
+    // from an enrolment the platform destroyed. Nothing else can tell them
+    // apart: only the read learns that a stored wrap will never open again.
     public function recover(int $userId, string $reason): ?string;
 
     // A passphrase change leaves the stored key undecryptable, so it goes

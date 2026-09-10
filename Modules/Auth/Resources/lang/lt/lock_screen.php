@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Atrakinti Beatrax',
     'native_unlock_failed' => 'Nepavyko atrakinti. Vietoj to įvesk PIN kodą.',
+    'native_unlock_reset' => 'Biometrinis atrakinimas buvo panaikintas. Įvesk PIN kodą, tada vėl jį įjunk skiltyje Programėlės užraktas.',
     'page_title' => 'Atrakinti · Beatrax',
     'sign_out' => 'Atsijungti',
     'forgot_pin' => 'Pamiršai PIN kodą? Atsijunk',

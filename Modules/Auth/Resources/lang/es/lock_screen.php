@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Desbloquear Beatrax',
     'native_unlock_failed' => 'No se pudo desbloquear. Introduce tu PIN.',
+    'native_unlock_reset' => 'El desbloqueo biométrico se ha restablecido. Introduce tu PIN y vuelve a activarlo en Bloqueo de la app.',
     'page_title' => 'Desbloquear · Beatrax',
     'sign_out' => 'Cerrar sesión',
     'forgot_pin' => '¿Has olvidado el PIN? Cierra sesión',

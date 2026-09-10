@@ -21,6 +21,7 @@ use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
+use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 
 final class MobileLockScreen extends Component
@@ -171,15 +172,33 @@ final class MobileLockScreen extends Component
         // key only after the OS releases the entry for a live biometric.
         // Firing the bridge prompt too would add a bypassable second one.
         $result = $vault->recover($currentUser->id());
+
         if ($result->isRecovered() && $result->dataKey !== null) {
             // Also stamps last_activity_at, or the idle-timeout middleware
             // re-locks this usually long-idle cold start immediately.
             $gateway->unlockWithRecoveredKey($currentUser->id(), $result->dataKey, $session);
             $this->redirectToIntendedUrl($session, $urls);
+        } elseif ($result->status === BiometricRecoverResult::MISSING) {
+            $this->coldStartEnrolmentIsGone($gateway, $currentUser->id());
         }
 
         // Every other outcome changes no state: the PIN pad completes the
         // unlock. Android returns pending_async and answers via the events.
+    }
+
+    // MISSING is the OS saying it holds nothing here it can read, and adding a
+    // fingerprint is enough to produce it: the Keystore key dies while the flag
+    // and the hardware probe mount() consulted read exactly as before. So the
+    // answer is authoritative and the enrolment is recorded as gone.
+    /**
+     * @link ../../../../../.docs/design/cold-start-biometric-unlock.md
+     */
+    private function coldStartEnrolmentIsGone(MobileLockGateway $gateway, int $userId): void
+    {
+        $gateway->markColdStartEnrolled($userId, false);
+
+        $this->biometricAvailable = false;
+        $this->flashMessage = Lang::get('mobile::lock.errors.biometric_reset');
     }
 
     // Android async completion: the native prompt has already authenticated

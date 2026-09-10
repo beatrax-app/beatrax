@@ -66,13 +66,19 @@ final readonly class DesktopColdStartVault implements ColdStartVault
         }
 
         $blob = $this->readBlob($userId);
+        $dataKey = $blob === null ? null : $this->codec->unwrap($blob);
 
-        if ($blob === null) {
-            return null;
+        if ($blob !== null) {
+            sodium_memzero($blob);
         }
 
-        $dataKey = $this->codec->unwrap($blob);
-        sodium_memzero($blob);
+        // A stored key that survived the prompt and still would not open is not
+        // an authentication that failed — nothing on this machine will ever
+        // open it. isEnrolled() reads the same file, so a survivor keeps the
+        // lock screen offering an unlock whose only answer is another refusal.
+        if ($dataKey === null) {
+            $this->forget($userId);
+        }
 
         return $dataKey;
     }

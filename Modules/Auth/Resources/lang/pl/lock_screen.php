@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Odblokuj Beatrax',
     'native_unlock_failed' => 'Nie udało się odblokować. Wpisz kod PIN.',
+    'native_unlock_reset' => 'Odblokowanie biometryczne zostało zresetowane. Wpisz kod PIN, a potem włącz je ponownie w sekcji Blokada aplikacji.',
     'page_title' => 'Odblokuj · Beatrax',
     'sign_out' => 'Wyloguj się',
     'forgot_pin' => 'Nie pamiętasz PIN-u? Wyloguj się',

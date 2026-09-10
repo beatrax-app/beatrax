@@ -26,5 +26,7 @@ return [
         'incorrect_pin' => 'Napačen PIN.',
 
         'pin_changed' => 'PIN te naprave je bil spremenjen med odklepanjem. Vnesi trenutni PIN.',
+
+        'biometric_reset' => 'Biometrično odklepanje je bilo ponastavljeno. Vnesi PIN, nato pa ga znova vklopi v razdelku Zaklepanje aplikacije.',
     ],
 ];

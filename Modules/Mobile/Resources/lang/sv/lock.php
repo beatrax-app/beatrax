@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Fel PIN-kod.',
 
         'pin_changed' => 'PIN-koden för den här enheten ändrades under upplåsningen. Ange den aktuella PIN-koden.',
+
+        'biometric_reset' => 'Biometrisk upplåsning återställdes. Ange din PIN-kod och slå sedan på den igen under Applås.',
     ],
 ];

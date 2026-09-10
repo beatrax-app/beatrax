@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Incorrect PIN.',
 
         'pin_changed' => 'The PIN for this device was changed while you were unlocking. Enter the current PIN.',
+
+        'biometric_reset' => 'Biometric unlock was reset. Enter your PIN, then turn it back on under App lock.',
     ],
 ];

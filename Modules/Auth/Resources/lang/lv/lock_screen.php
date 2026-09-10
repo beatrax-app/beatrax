@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Atbloķēt Beatrax',
     'native_unlock_failed' => 'Neizdevās atbloķēt. Ievadiet PIN kodu.',
+    'native_unlock_reset' => 'Biometriskā atbloķēšana tika atiestatīta. Ievadiet PIN kodu un pēc tam ieslēdziet to atkal sadaļā Lietotnes bloķēšana.',
     'page_title' => 'Atbloķēt · Beatrax',
     'sign_out' => 'Atteikties',
     // i18n-review: lv · forgot_pin — "Atteikties" now matches the button word for

@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Onjuiste pincode.',
 
         'pin_changed' => 'De pincode voor dit apparaat is gewijzigd tijdens het ontgrendelen. Voer de huidige pincode in.',
+
+        'biometric_reset' => 'Biometrisch ontgrendelen is vervallen. Voer je pincode in en schakel het daarna weer in bij App-vergrendeling.',
     ],
 ];

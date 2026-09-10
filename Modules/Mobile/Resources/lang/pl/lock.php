@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Nieprawidłowy PIN.',
 
         'pin_changed' => 'PIN tego urządzenia został zmieniony podczas odblokowywania. Wpisz aktualny PIN.',
+
+        'biometric_reset' => 'Odblokowanie biometryczne zostało zresetowane. Wpisz kod PIN, a potem włącz je ponownie w sekcji Blokada aplikacji.',
     ],
 ];

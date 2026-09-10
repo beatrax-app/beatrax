@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'PIN incorreto.',
 
         'pin_changed' => 'O PIN deste dispositivo foi alterado durante o desbloqueio. Introduz o PIN atual.',
+
+        'biometric_reset' => 'O desbloqueio biométrico foi reposto. Introduz o teu PIN e depois volta a ativá-lo em Bloqueio da aplicação.',
     ],
 ];
