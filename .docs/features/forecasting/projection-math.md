@@ -486,7 +486,7 @@ written on a scenario's behalf in a table no scenario read ever filters
 | `40` | `RangeProjector::HIGH_VARIANCE_THRESHOLD_PERCENT` | Minimum declared tolerance to consider the percentile tier |
 | `6` | `RangeProjector::MIN_OCCURRENCES_FOR_PERCENTILE` | Minimum observed occurrences to actually use it |
 | `3` | `CadenceJitter::WINDOW_DAYS` | Half-width in days; the replica window is 7 days |
-| `0.95` / `1.05` | `ScenarioApplier::ADD_RECURRING_ENVELOPE_LOW_MULTIPLIER` / `..._HIGH_MULTIPLIER` | The fixed ±5% band for a scenario-added recurring series, which has no tolerance field. An `add_one_off` carries no envelope at all: `low = point = high`, the same shape a booked row has |
+| `95` / `105` | `ScenarioApplier::ADD_RECURRING_ENVELOPE_LOW_PERCENT` / `..._HIGH_PERCENT`, applied with `CrossCurrencyTotal::percentOf()` | The fixed ±5% band for a scenario-added recurring series, which has no tolerance field. An `add_one_off` carries no envelope at all: `low = point = high`, the same shape a booked row has |
 | `horizonDays + 1` | `DailyFold` | Points emitted per account per run |
 
 No day count in this column is written as a bare integer anywhere under

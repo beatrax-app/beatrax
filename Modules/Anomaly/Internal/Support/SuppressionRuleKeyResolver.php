@@ -9,6 +9,7 @@ use Modules\Anomaly\Internal\Enums\AnomalyDetector;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
 // One derivation shared by the write and the undo. Two of them drifting is how
@@ -17,9 +18,9 @@ final readonly class SuppressionRuleKeyResolver
 {
     use CoercesScalars;
 
-    private const float BAND_LOW_MULTIPLIER = 0.85;
+    private const int BAND_LOW_PERCENT = 85;
 
-    private const float BAND_HIGH_MULTIPLIER = 1.15;
+    private const int BAND_HIGH_PERCENT = 115;
 
     public function __construct(
         private DatabaseManager $db,
@@ -50,14 +51,14 @@ final readonly class SuppressionRuleKeyResolver
             $currency ??= $settled['currency'];
         }
 
-        $boundA = (int) round(self::BAND_LOW_MULTIPLIER * $latestMinor);
-        $boundB = (int) round(self::BAND_HIGH_MULTIPLIER * $latestMinor);
+        $boundA = CrossCurrencyTotal::percentOf($latestMinor, self::BAND_LOW_PERCENT);
+        $boundB = CrossCurrencyTotal::percentOf($latestMinor, self::BAND_HIGH_PERCENT);
 
         return new SuppressionRuleKey(
             counterpartyId: $this->counterpartyIdForTransaction($user, $alert->transaction_id),
             direction: $alert->direction,
-            // For an expense (negative) the 1.15x bound is the more-negative
-            // one, so min/max — not the multipliers — decide which end is which.
+            // For an expense (negative) the 115% bound is the more-negative
+            // one, so min/max — not the percentages — decide which end is which.
             bandLowMinor: min($boundA, $boundB),
             bandHighMinor: max($boundA, $boundB),
             currency: $currency ?? $this->baseCurrency->forUser($user),

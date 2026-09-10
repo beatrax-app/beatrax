@@ -164,7 +164,9 @@ direction, and the charge's settled amount within `[band_low, band_high]`
 in the same currency). `Internal\Support\SuppressionRuleKey` is that
 tuple, and `SuppressionRuleKeyResolver` derives it from an alert once, for
 both the write and the undo — the band is ±15% of the alert's
-`latest_amount_minor` (`round(0.85x)` / `round(1.15x)`), falling back to the
+`latest_amount_minor` (`CrossCurrencyTotal::percentOf(x, 85)` /
+`percentOf(x, 115)`, integer arithmetic because the nearest double to 1.15
+is under it and rounded EUR 14.835 down to EUR 14.83), falling back to the
 alert transaction's own settled amount for a duplicate-only or
 first-time-only alert (which carries no per-merchant `latest_amount_minor`),
 so suppression still works for those detectors.

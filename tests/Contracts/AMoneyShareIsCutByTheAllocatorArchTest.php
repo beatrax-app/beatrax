@@ -18,10 +18,6 @@ const MONEY_ALLOCATOR = 'Modules/FX/Public/Services/CrossCurrencyTotal.php';
 // Each entry is one that does not cut a whole into parts, and says what it does
 // instead; `proves` re-checks that against the code.
 const MONEY_SHARE_PINS = [
-    'Modules/Anomaly/Internal/Support/SuppressionRuleKeyResolver.php' => [
-        'reason' => 'an amount BAND a later charge is matched against, and the key it becomes is never printed or summed as money',
-        'proves' => '/BAND_LOW_MULTIPLIER/',
-    ],
     'Modules/Chains/Internal/Resolvers/PaypalFundingResolver.php' => [
         'reason' => 'a matching tolerance around a settlement, used to decide whether two rows are the same payment',
         'proves' => '/AMOUNT_BAND_PERCENT/',
