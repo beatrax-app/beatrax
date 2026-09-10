@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Goals\Public\Dto\GoalProgressRow;
 use Modules\Ledger\Public\Dto\TopCategoryRow;
 use Modules\Ledger\Public\Support\OutwardSpend;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 function goalAt(int $targetMinor, int $contributedMinor): GoalProgressRow
 {
