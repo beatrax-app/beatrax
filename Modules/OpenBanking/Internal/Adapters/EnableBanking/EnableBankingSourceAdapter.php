@@ -168,6 +168,20 @@ final readonly class EnableBankingSourceAdapter implements RemoteSourceAdapter
     private function buildDto(EnableBankingTransactionData $row, string $ownIban, int $rowIndex): ?SourceTransactionDto
     {
         $currency = strtoupper($row->currency);
+
+        // The direction is what carries the sign, and an absent field reaches
+        // here as '' -- which is not DBIT, so the row used to land as money
+        // coming IN. Skipped like a malformed amount rather than guessed: this
+        // adapter already refuses a row it cannot read a figure from.
+        if ($row->creditDebitIndicator !== 'DBIT' && $row->creditDebitIndicator !== 'CRDT') {
+            $this->logger->warning(
+                'EnableBankingSourceAdapter: skipping booked row that did not state its direction.',
+                ['row_index' => $rowIndex, 'currency' => $row->currency],
+            );
+
+            return null;
+        }
+
         $isDebit = $row->creditDebitIndicator === 'DBIT';
 
         // An empty/unknown currency or a non-numeric/over-precise amount
