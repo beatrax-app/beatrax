@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Elvesztetted a jelszavad? Használj helyreállítási kódot.',
 
     'error_invalid' => 'A felhasználónév vagy a jelszó helytelen.',
+    'error_throttled' => 'Túl sok próbálkozás — próbáld újra ennyi múlva: :wait.',
 ];

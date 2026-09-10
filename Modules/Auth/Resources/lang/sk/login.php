@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Stratené heslo? Použi záložný kód.',
 
     'error_invalid' => 'Používateľské meno alebo heslo je nesprávne.',
+    'error_throttled' => 'Príliš veľa pokusov — skús to znova o :wait.',
 ];

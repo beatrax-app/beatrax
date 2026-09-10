@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Kaotasid parooli? Kasuta taastekoodi.',
 
     'error_invalid' => 'Kasutajanimi või parool on vale.',
+    'error_throttled' => 'Liiga palju katseid — proovi uuesti :wait pärast.',
 ];

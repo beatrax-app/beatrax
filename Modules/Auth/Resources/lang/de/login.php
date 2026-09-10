@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Passwort vergessen? Nutze einen Wiederherstellungscode.',
 
     'error_invalid' => 'Benutzername oder Passwort ist falsch.',
+    'error_throttled' => 'Zu viele Versuche — versuche es in :wait erneut.',
 ];
