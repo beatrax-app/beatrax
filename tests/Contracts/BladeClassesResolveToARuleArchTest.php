@@ -57,16 +57,22 @@ function bladeScopedClassNames(array $blades): array
     return $names;
 }
 
+// The layouts sit in the walk beside the modules. `<main class="safe-below">`
+// is written in one of them, and that class reached a phone with no rule
+// behind it while this rule read clean — the same bundle was failing here on
+// two module classes at that moment.
 /**
  * @return list<string>
  */
 function bladeTemplatePaths(): array
 {
     $paths = [];
-    $tree = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules')));
-    foreach ($tree as $file) {
-        if ($file instanceof SplFileInfo && str_ends_with($file->getFilename(), '.blade.php')) {
-            $paths[] = $file->getPathname();
+    foreach ([base_path('Modules'), base_path('resources/views')] as $root) {
+        $tree = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
+        foreach ($tree as $file) {
+            if ($file instanceof SplFileInfo && str_ends_with($file->getFilename(), '.blade.php')) {
+                $paths[] = $file->getPathname();
+            }
         }
     }
     sort($paths);
@@ -82,19 +88,18 @@ const MARKER_CLASSES_WITHOUT_A_RULE = [
     'palette-row',
 ];
 
-// The claim is narrower than "every class": only a fully static class="…" in a
-// module template, and within it only a hyphenated lowercase token. A class
-// written into an @class([...]) array, a single-quoted attribute, a one-word
-// utility like `flex`, a variant like `md:hidden`, and every template under
-// resources/views are all outside what this reads — and the compiled stylesheet
-// it compares against has to be built first, which is why the walk says so
-// rather than skipping.
-it('has every static hyphenated class in a module Blade template resolving to a rule', function (): void {
+// The claim is narrower than "every class": only a fully static class="…", and
+// within it only a hyphenated lowercase token. A class written into an
+// @class([...]) array, a single-quoted attribute, a one-word utility like
+// `flex` and a variant like `md:hidden` are all outside what this reads — and
+// the compiled stylesheet it compares against has to be built first, which is
+// why the walk says so rather than skipping.
+it('has every static hyphenated class in a Blade template resolving to a rule', function (): void {
     $blades = bladeTemplatePaths();
 
     expect(count($blades))->toBeGreaterThan(
         100,
-        'The walk opened almost no module template, so the empty offender list below is a tree nobody read.',
+        'The walk opened almost no template, so the empty offender list below is a tree nobody read.',
     );
 
     $defined = builtCssClassNames() + bladeScopedClassNames($blades)

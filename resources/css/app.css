@@ -3857,6 +3857,20 @@ td.date,
         padding-bottom: var(--safe-bottom);
     }
 
+    /* .safe-lift — the same seam for an overlay pinned to the viewport instead
+     * of standing in the flow. A toast at `bottom-4` measures its gap from the
+     * screen edge, and both phone shells paint that edge under the navigation
+     * bar, so the gap the design asked for is spent on the bar and the overlay's
+     * own controls sit behind it. .safe-below cannot answer this: padding grows
+     * a fixed box downwards and leaves its bottom edge where it was. A bottom
+     * margin moves the origin instead, so every site keeps whatever gap it was
+     * drawn with and only the edge it counts from changes. A bar that must stay
+     * full-bleed wears .safe-below and pads its content; a detached overlay
+     * wears this and moves. */
+    .safe-lift {
+        margin-bottom: var(--safe-bottom);
+    }
+
     /* The padding above only holds the heading clear of the status bar at
      * rest. Under viewport-fit=cover the bars are painted OVER the page, so a
      * screen taller than the viewport scrolls its own <h1> up under the clock
