@@ -28,6 +28,8 @@ function coldStartOrphanUser(bool $flag): User
         'idle_timeout_minutes' => 5,
         'failed_attempts' => 0,
         'cold_start_biometric_enrolled' => $flag,
+        // The enrolling PIN is a PIN unlock, so a real enrolment is inside the floor.
+        'last_pin_unlock_at' => CarbonImmutable::now()->toDateTimeString(),
         'last_activity_at' => CarbonImmutable::now()->toDateTimeString(),
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),

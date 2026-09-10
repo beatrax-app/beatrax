@@ -1,11 +1,21 @@
-# Cold-start biometric unlock (mobile)
+# Cold-start biometric unlock
 
 **Status:** the app-side path exists; the native enclave binding and its
 on-device verification do not — see "What exists in code" and "What is not
 built yet" below. Extends the LOCK-04 model.
 
 **Decided (owner):** biometric is allowed to be a **full cryptographic root**
-on mobile (see Decision 1).
+(see Decision 1).
+
+**Both shells, one bargain.** The problem was posed on mobile and the enclave
+half is still written from the phone's side, because that is where the two
+plugin tiers and the transient slot live. What the page decides is not the
+phone's, though: `ColdStartVault` is Auth's contract, the desktop implements it
+over Touch ID and safeStorage, and `LockScreen::nativeUnlock()` is the desktop
+leg of the same unlock. The title said "(mobile)" for long enough that the PIN
+floor was built on one screen and not the other — the floor is a property of
+what the credential is worth, and a fingerprint on a laptop buys exactly what a
+face on a phone buys.
 
 ---
 
@@ -336,7 +346,8 @@ on-device UAT):
   through to the PIN pad; `missing` takes the enrolment flag down, takes the
   trigger off the screen and prints `mobile::lock.errors.biometric_reset`.
   Async (Android) handled by the event, see below.
-- `LockScreen::nativeUnlock()` — reads the enrolment flag before it prompts, for
+- `LockScreen::nativeUnlock()` — reads the enrolment flag and the PIN floor
+  before it prompts, at both boundaries the mobile screen uses, for
   the reason `MobileLockScreen::biometricPrompt()` re-checks its own gates: a
   Livewire method is callable whatever `mount()` rendered, and the desktop vault
   keys its file on the user id alone, so an entry left by an earlier holder of
