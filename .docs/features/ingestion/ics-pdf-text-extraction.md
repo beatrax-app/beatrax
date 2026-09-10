@@ -228,11 +228,27 @@ nieuwe uitgaven`, `Nieuw openstaand saldo`) and then four
 `Bestedingslimiet` / `Minimaal te betalen bedrag`. Any cell that fails to
 parse is simply omitted rather than aborting the statement.
 
-ICS displays opening balance, closing balance, and period charges as
-positive amounts with an `Af` marker meaning "owed to ICS". They are
-persisted negated, so ledger sign semantics hold across the project
-(debits negative, credits positive). Received payments stay positive;
-credit limit and minimum due are informational and stay positive.
+Every summary cell prints a positive amount with a direction marker
+beside it, and the marker decides the sign — the same convention the
+transaction rows are read by. `Af` means owed to ICS and persists
+negated; `Bij` means credit and persists positive, so ledger sign
+semantics hold across the project (debits negative, credits positive)
+and the four columns still balance: closing = opening + received +
+charges. Credit limit and minimum due carry no marker and stay positive.
+
+The marker used to be discarded. The cell fragment captured the figure
+through a non-capturing `(?:Af|Bij)`, and the sign was then applied per
+column instead: opening, closing and period charges negated, received
+left positive. That is the shipped `ics-sample-1.txt`'s own reading —
+`Af / Bij / Af / Af` — and nothing else's. A card paid off past zero
+closes `Bij`, and its credit was persisted as the same amount owed; an
+opening `Bij` was the same defect one column over, and the opening
+balance is what anchors `accounts.starting_balance_minor`, so the
+account was out by twice the credit on every balance, net-worth point,
+forecast anchor and reconcile target. `ics-sample-credit.txt` is the
+fixture that opens and closes `Bij`, and the test asserting it asserts
+the column arithmetic too, because that identity holds for statements
+this repository has never seen.
 
 `statementMetadata()` is assembled in the parse generator's terminator
 step. A caller that abandons the iterator early leaves it at `null`.

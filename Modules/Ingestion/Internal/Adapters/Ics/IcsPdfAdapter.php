@@ -26,7 +26,11 @@ final class IcsPdfAdapter implements SourceAdapter
 
     private const string SCRUB_LITERAL = '<discarded per security policy>';
 
-    private const string AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(?:Af|Bij)';
+    // ICS prints every figure positive and states its direction beside it, on
+    // the rows and on the totals alike. "Af" is owed to ICS, "Bij" is credit.
+    private const string DIRECTION_OWED_TO_ICS = 'Af';
+
+    private const string AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(Af|Bij)';
 
     private const string TRAILING_COUNTRY_CODE_REGEX = '/\s+[A-Z]{2}$/';
 
@@ -199,10 +203,10 @@ final class IcsPdfAdapter implements SourceAdapter
         }
         $rest = trim($amountMatch[1]);
         $settledRaw = $amountMatch[2];
-        $settledMinor = $this->amounts->parse($settledRaw, IcsPdfHeaderProfile::STATEMENT_CURRENCY);
-        if ($direction === 'Af') {
-            $settledMinor = -$settledMinor;
-        }
+        $settledMinor = self::signedByDirection(
+            $this->amounts->parse($settledRaw, IcsPdfHeaderProfile::STATEMENT_CURRENCY),
+            $direction,
+        );
 
         $nativeAmountMinor = null;
         $nativeCurrency = null;
@@ -211,10 +215,10 @@ final class IcsPdfAdapter implements SourceAdapter
             // The foreign column is read at ITS currency's scale, not the
             // euro column's: a yen has no minor unit, and the fixed hundredth
             // refused the row outright rather than reading it wrong.
-            $nativeAmountMinor = $this->amounts->parse($fxMatch[2], $fxMatch[3]);
-            if ($direction === 'Af') {
-                $nativeAmountMinor = -$nativeAmountMinor;
-            }
+            $nativeAmountMinor = self::signedByDirection(
+                $this->amounts->parse($fxMatch[2], $fxMatch[3]),
+                $direction,
+            );
             $nativeCurrency = $fxMatch[3];
         }
 
@@ -357,12 +361,6 @@ final class IcsPdfAdapter implements SourceAdapter
         $creditLimit = $twoColumn['creditLimit'] ?? null;
         $minDue = $twoColumn['minDue'] ?? null;
 
-        // ICS prints the summary block positive with an "Af" marker meaning owed
-        // to ICS; the ledger stores what is owed as a negative balance.
-        $opening = $opening === null ? null : -$opening;
-        $closing = $closing === null ? null : -$closing;
-        $charges = $charges === null ? null : -$charges;
-
         // ICS books a charge on or after the day the card was used, so a period
         // spanning the BOOKED days always opens later than the earliest charge
         // billed on it -- and every reader of this period tests membership on
@@ -423,23 +421,27 @@ final class IcsPdfAdapter implements SourceAdapter
             return [];
         }
 
+        // A column's sign is the marker printed beside it, never the column it
+        // sits in. Fixed per column, an overpaid card's closing credit was
+        // stored as the same figure owed, and the account that figure anchors
+        // was out by twice the credit on every screen that reads a balance.
         $opening = $this->safeParseAmount($m[1]);
-        $received = $this->safeParseAmount($m[2]);
-        $charges = $this->safeParseAmount($m[3]);
-        $closing = $this->safeParseAmount($m[4]);
+        $received = $this->safeParseAmount($m[3]);
+        $charges = $this->safeParseAmount($m[5]);
+        $closing = $this->safeParseAmount($m[7]);
 
         $out = [];
         if ($opening !== null) {
-            $out['opening'] = $opening;
+            $out['opening'] = self::signedByDirection($opening, $m[2]);
         }
         if ($received !== null) {
-            $out['received'] = $received;
+            $out['received'] = self::signedByDirection($received, $m[4]);
         }
         if ($charges !== null) {
-            $out['charges'] = $charges;
+            $out['charges'] = self::signedByDirection($charges, $m[6]);
         }
         if ($closing !== null) {
-            $out['closing'] = $closing;
+            $out['closing'] = self::signedByDirection($closing, $m[8]);
         }
 
         return $out;
@@ -481,5 +483,12 @@ final class IcsPdfAdapter implements SourceAdapter
         } catch (InvalidAmountException) {
             return null;
         }
+    }
+
+    // The ledger stores what is owed as a negative balance, so the marker maps
+    // onto the sign here for a row and for a total alike.
+    private static function signedByDirection(int $magnitude, string $direction): int
+    {
+        return $direction === self::DIRECTION_OWED_TO_ICS ? -$magnitude : $magnitude;
     }
 }

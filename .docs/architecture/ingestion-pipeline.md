@@ -574,6 +574,31 @@ After the row loop completes, the pipeline asks the adapter for its
 `RecordsStatementSummary` writer — a one-row-per-statement-period
 write to the `statement_summaries` table.
 
+The account it is filed under is the one the summary's own `ibanOwner`
+resolves to through the same `AccountResolver` the rows went through —
+never the last account a row resolved to. A CAMT.053 message may carry
+a statement per account, and the adapter publishes the first
+statement's metadata while going on to yield the later statements'
+rows under their own IBANs, so the last row resolved belongs to a
+different account than the summary describes. Filed that way, a
+two-account export wrote a row naming one IBAN in `iban_owner` and a
+different account in `account_id`, and the anchor
+`BackfillStartingBalanceFromStatementSummaries` derives from it started
+the second account at the first one's opening balance. The DTO's
+`ibanOwner` is load-bearing because of this — it decides the account
+rather than merely riding along into the column of the same name — and
+the two therefore always agree in a row this pipeline wrote.
+
+An IBAN the user has no account for resolves to nothing and the summary
+is not written at all — the same answer the rows of an unknown account
+get. The accounts a multi-statement file describes in its *later*
+statements therefore take no anchor from that run: an account with no
+anchor reads as unanchored everywhere, while one anchored off a
+statement that was never about it is wrong on every balance,
+net-worth point, forecast anchor and reconcile target and says so
+nowhere. The `multiStatement` extras flag records that the file held
+more statements than the one summary describes.
+
 CSV adapters return `null` from `statementMetadata()` (CSV carries no
 period boundary). Receipt-path formats (`.eml`, `.mbox`) are excluded
 from the writer call because each receipt is its own logical record
