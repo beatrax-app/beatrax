@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => "L'identità del tuo dispositivo è bloccata. Sblocca l'app e riprova.",
     'identity_absent' => 'La sincronizzazione non è ancora configurata su questo dispositivo, quindi non ha un\'identità da abbinare. Attiva prima la sincronizzazione.',
+    'cannot_be_answered' => 'A un codice mostrato qui nessuno potrebbe rispondere: questo dispositivo non è raggiungibile in rete e non è configurato alcun relay. Mostra il codice dell\'altro dispositivo e inseriscilo qui.',
     'invalid_code' => "Questo codice non è valido o è scaduto. Chiedi all'altro dispositivo di generarne uno nuovo.",
     'already_under_way' => 'Questo dispositivo ha già accettato quel codice e attende la conferma dell\'altro. Se non arriva, chiedi un codice nuovo e usa quello.',
     'vouched_but_refused' => 'L\'altro dispositivo ha ancora quel codice, ma questo non è riuscito ad accettarlo. Chiedigli un codice nuovo e usa quello.',

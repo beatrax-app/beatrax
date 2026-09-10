@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Identita tvojho zariadenia je uzamknutá. Odomkni aplikáciu a skús to znova.',
     'identity_absent' => 'Synchronizácia na tomto zariadení ešte nie je nastavená, takže nemá identitu na spárovanie. Najprv zapni synchronizáciu.',
+    'cannot_be_answered' => 'Na kód zobrazený tu by nikto nemohol odpovedať: toto zariadenie nie je dostupné cez sieť a nie je nastavené žiadne relé. Zobraz kód druhého zariadenia a zadaj ho sem.',
     'invalid_code' => 'Tento kód je neplatný alebo vypršal. Nechaj druhé zariadenie vygenerovať nový.',
     'already_under_way' => 'Toto zariadenie už kód prijalo a čaká na potvrdenie z druhého zariadenia. Ak nepríde, nechaj vygenerovať nový kód a použi ten.',
     'vouched_but_refused' => 'Druhé zariadenie kód stále má, ale toto zariadenie ho nedokázalo prijať. Nechaj na ňom vygenerovať nový kód a použi ten.',

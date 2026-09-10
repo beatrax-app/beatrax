@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Ierīces identitāte ir bloķēta. Atbloķējiet lietotni un mēģiniet vēlreiz.',
     'identity_absent' => 'Sinhronizācija šajā ierīcē vēl nav iestatīta, tāpēc tai nav identitātes, ko sapārot. Vispirms ieslēdziet sinhronizāciju.',
+    'cannot_be_answered' => 'Uz šeit parādīto kodu neviens nevarētu atbildēt: šī ierīce nav sasniedzama tīklā, un retranslators nav iestatīts. Parādiet otras ierīces kodu un ievadiet to šeit.',
     'invalid_code' => 'Šis kods nav derīgs vai tam ir beidzies termiņš. Palūdziet otrai ierīcei izveidot jaunu.',
     'already_under_way' => 'Šī ierīce šo kodu jau ir pieņēmusi un gaida otras ierīces apstiprinājumu. Ja tas nepienāk, palūdziet jaunu kodu un izmantojiet to.',
     'vouched_but_refused' => 'Otrai ierīcei šis kods joprojām ir, bet šī ierīce to nevarēja pieņemt. Palūdziet tai jaunu kodu un izmantojiet to.',

@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Laitteesi identiteetti on lukittu. Avaa sovelluksen lukitus ja yritä uudelleen.',
     'identity_absent' => 'Synkronointia ei ole vielä otettu käyttöön tällä laitteella, joten sillä ei ole identiteettiä paritettavaksi. Ota synkronointi ensin käyttöön.',
+    'cannot_be_answered' => 'Tässä näytettyyn koodiin ei voitaisi vastata: tähän laitteeseen ei saa yhteyttä verkon yli eikä välityspalvelinta ole määritetty. Näytä toisen laitteen koodi ja syötä se tähän.',
     'invalid_code' => 'Tämä koodi on virheellinen tai vanhentunut. Pyydä toista laitetta luomaan uusi.',
     'already_under_way' => 'Tämä laite on jo ottanut koodin vastaan ja odottaa toisen laitteen vahvistusta. Jos sitä ei tule, pyydä uusi koodi ja käytä sitä.',
     'vouched_but_refused' => 'Toisella laitteella on koodi yhä, mutta tämä laite ei voinut ottaa sitä vastaan. Pyydä siltä uusi koodi ja käytä sitä.',

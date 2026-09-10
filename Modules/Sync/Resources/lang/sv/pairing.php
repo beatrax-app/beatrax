@@ -38,6 +38,7 @@ return [
 
     'identity_locked' => 'Enhetens identitet är låst. Lås upp appen och försök igen.',
     'identity_absent' => 'Synkronisering är inte konfigurerad på den här enheten ännu, så den har ingen identitet att parkoppla. Aktivera synkronisering först.',
+    'cannot_be_answered' => 'En kod som visas här kan inte besvaras: den här enheten går inte att nå över nätverket och inget relay är konfigurerat. Visa den andra enhetens kod och ange den här i stället.',
     'invalid_code' => 'Koden är ogiltig eller har gått ut. Låt den andra enheten skapa en ny.',
     'already_under_way' => 'Den här enheten har redan tagit emot koden och väntar på att den andra enheten ska bekräfta. Händer det inte, be om en ny kod och använd den.',
     'vouched_but_refused' => 'Den andra enheten har kvar koden, men den här enheten kunde inte ta emot den. Be om en ny kod och använd den.',
