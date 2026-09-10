@@ -252,20 +252,23 @@ it and left the other six where they were. `CadenceJitter` passes a
 contribution that is not marked through untouched, so an envelope-tier
 series and a scenario-added one reach the fold exactly as emitted.
 
-Each replica is the original scaled by an equal share:
+Each replica carries an equal share of the original, and the shares add
+back up to it exactly. `CrossCurrencyTotal::apportion()` does the split —
+the same largest-remainder pass every converted subtotal in the repo goes
+through — with one unit of weight per replica day:
 
 ```
-window = jitterDays × 2 + 1          = 7
-weight = 100 / window                = 14.2857…
-replica.field = round(original.field × weight / 100)
+window = jitterDays × 2 + 1                      = 7
+replica.field = apportion(original.field, [1,1,1,1,1,1,1])[i]
 ```
 
-`weight` is a float, not a rounded integer — a detail worth pinning,
-because rounding it to 14 first would lose 2% of every jittered
-series' magnitude. For a -1000 minor contribution each replica is
-`round(-142.857) = -143`, and the seven together sum to -1001: one
-minor unit more outflow than the original, which is the whole of the
-rounding error.
+For a -1000 minor contribution the seven shares are
+`-142, -143, -143, -143, -143, -143, -143`, which sum to -1000.
+
+Rounding each seventh on its own instead is what this replaced, and it
+neither preserved the occurrence nor stayed small: -1000 came out as
+-1001, -50000 as -50001, and a single minor unit rounded to nought on
+all seven days and left the projection altogether.
 
 Only the percentile tier is jittered. Envelope-tier series have
 predictable charge dates — that predictability is why they qualified
@@ -297,8 +300,8 @@ within three days of either boundary would land in a bucket the fold
 never visits. `CadenceJitter` therefore takes the walk's own bounds and
 clamps each replica's date into them: a replica that would fall before
 `asOf` lands on `asOf`, one past the horizon end lands on the horizon
-end. The occurrence's magnitude is preserved to the rounding error
-above, and the boundary day carries the extra shares.
+end. The occurrence's magnitude is preserved whole, and the boundary day
+carries the extra shares.
 
 Left unclamped, roughly 3/7 of an occurrence dated on `asOf` was
 silently dropped — on the one day the reader is looking at — and the

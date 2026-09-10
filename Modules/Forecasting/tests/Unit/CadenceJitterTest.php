@@ -56,17 +56,15 @@ it('replicates a single contribution into 7 jittered entries across a ±3-day wi
     ]);
 });
 
-it('distributes the point magnitude across replicas within ±2 minor units of perfect division', function (): void {
-    // The weight (100/7) stays unrounded, so only the per-replica minor
-    // amount rounds; the ±2 tolerance is what that rounding can cost.
+it('gives each replica a seventh of the point magnitude, to the minor unit', function (): void {
     $contributions = [cjContribution(-1000, -1100, -900)];
 
     $jittered = $this->jitter->apply($contributions, cjWindowStart(), cjWindowEnd(), 3);
 
-    $perReplicaExpected = (int) round(-1000 * (100 / 7) / 100); // = -143.
-    foreach ($jittered as $j) {
-        expect(abs($j->pointMinor - $perReplicaExpected))->toBeLessThanOrEqual(2);
-    }
+    $shares = array_map(static fn (ForecastContribution $c): int => $c->pointMinor, $jittered);
+
+    expect($shares)->toBe([-142, -143, -143, -143, -143, -143, -143])
+        ->and(array_sum($shares))->toBe(-1000);
 });
 
 it('preserves seriesId, accountId and currency on every replica', function (): void {
