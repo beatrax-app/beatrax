@@ -65,7 +65,13 @@ What the module explicitly does NOT do:
     aggregate totals in the reader's own base currency, the codes those
     totals left out for want of a rate (`isPartial()` /
     `unconvertedList()`, rendered in the search strip), and an optional
-    "did you mean" string.
+    "did you mean" string. The two totals are bucketed by
+    [`MoneyFlow`](../ledger/architecture.md#moneyflow--the-one-definition-of-spend-income-and-net)
+    like every other money figure in the app. They were bucketed by the
+    amount's sign, which is the one thing that rule exists to prevent:
+    both legs of one internal move landed in the strip, one on each side,
+    so moving EUR 500.00 between two of the reader's own accounts read as
+    EUR 500.00 out and EUR 500.00 in.
   + `SearchRowDto` — mirrors `TransactionRowDto`, extended with
     sentinel-marked `highlightedCounterparty`/`snippet` HTML.
 + **Services/**

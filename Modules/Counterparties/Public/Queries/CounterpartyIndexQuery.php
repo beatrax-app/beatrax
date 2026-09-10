@@ -15,6 +15,7 @@ use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -211,6 +212,7 @@ final readonly class CounterpartyIndexQuery
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereNotNull('counterparty_id')
+            ->whereIn('type', TransactionType::externalMovementValues())
             ->where('posted_at', '>=', $cutoffDate)
             ->groupBy('counterparty_id', 'settled_currency')
             ->selectRaw('counterparty_id, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total, COUNT(*) as cnt')
@@ -273,6 +275,7 @@ final readonly class CounterpartyIndexQuery
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereNotNull('counterparty_id')
+            ->whereIn('type', TransactionType::externalMovementValues())
             ->where('posted_at', '>=', $cutoffDate)
             ->groupBy('counterparty_id', 'ym', 'settled_currency')
             ->selectRaw("counterparty_id, strftime('%Y-%m', posted_at) as ym, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total")

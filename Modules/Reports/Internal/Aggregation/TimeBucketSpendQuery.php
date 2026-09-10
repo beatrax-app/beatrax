@@ -37,7 +37,7 @@ final readonly class TimeBucketSpendQuery
     ): array {
         $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
         $reportMetric = ReportMetric::fromMetric($metric);
-        $types = $reportMetric->types();
+        $counted = $reportMetric->predicate();
         $amountExpr = $reportMetric->sumExpr();
 
         $result = [];
@@ -45,7 +45,7 @@ final readonly class TimeBucketSpendQuery
             $row = $this->db->connection()
                 ->table('transactions')
                 ->where('user_id', $user->id)
-                ->whereIn('type', $types)
+                ->whereRaw(...$counted)
                 ->where('settled_currency', $currency)
                 ->where('posted_at', '>=', $bucket->start->toDateString())
                 ->where('posted_at', '<', $bucket->endExclusive->toDateString())

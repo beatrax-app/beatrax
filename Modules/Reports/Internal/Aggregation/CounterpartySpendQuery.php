@@ -42,7 +42,7 @@ final readonly class CounterpartySpendQuery
         $rows = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->whereIn('type', $reportMetric->types())
+            ->whereRaw(...$reportMetric->predicate())
             ->where('settled_currency', $currency)
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())

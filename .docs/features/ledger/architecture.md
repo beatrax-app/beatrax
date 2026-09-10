@@ -1275,21 +1275,55 @@ abstaining on it is silent.
 
 ## `MoneyFlow` — the one definition of spend, income and net
 
-`Public/Enums/MoneyFlow` answers a single question: which
-`transactions.type` values each of the three rollups counts. `Spend` is
-`expense` + `refund`, `Income` is `income` alone, and `Net` is all three.
+`Public/Enums/MoneyFlow` answers two questions, and keeping them apart is
+the whole of it.
 
-A refund reverses an expense, so it belongs in spend with the sign it
-already carries rather than in income: counted as income, `income -
-spend` and `net` would disagree about it. `transfer_in`/`transfer_out`
-are the two halves of one internal move and appear in no rollup;
+`types()` says which `transactions.type` **labels** each flow owns:
+`Spend` is `expense` + `refund`, `Income` is `income` alone, `Net` is all
+three. Only `Reports`' disclosure reads it, to name the real movement a
+metric does not count.
+
+`predicate()` says which **rows** a flow counts, and every `SUM` asks it.
+`type` still decides membership — `transfer_in`/`transfer_out` are the two
+halves of one internal move and appear in no rollup, and
 `fee`/`adjustment` are disclosed beside a total rather than folded into
-one (see `Reports`' `ReportMetric::disclosedTypes()`).
+one (see `ReportMetric::disclosedTypes()`) — but within that set the
+**sign** decides which side the row lands on.
 
-Three surfaces read this: `SpendByCategoryQuery` (and through it the
-dashboard's "Top spending"), `ThisPeriodAtAGlanceQuery`'s
-inflow/outflow/net, and `Reports`' `ReportMetric`, which now delegates
-here rather than listing the types again.
+The sign decides because the label does not. Nothing in the app writes
+`type` from the money: `NormalizeStage` derives it from the amount's sign
+at import (`> 0` is `income`), the PayPal event map overrides it from the
+processor's own vocabulary, and the reclassify picker on the detail page
+will write any of the seven onto any row. A EUR 100.00 charge relabelled
+`income` put its debit in the tile that means money in, and the tile read
+**In -EUR 100.00**; the same row arriving from a paired device does the
+same thing, which is why the rollups rather than the picker are where
+this is settled.
+
+A refund is the exception that proves the rule, and the reason a bare
+sign test is not enough either. It is a credit, so the sign alone makes
+it income; counted there, `income - spend` and `net` disagree about it and
+the category it was refunded from still reads the whole charge. It belongs
+in spend, with the sign it already carries. A row is a refund when
+`payment_type` says so — the narrative detector and the processor's event
+map both write that — or when `type` does, for a row somebody labelled by
+hand. **`transactions.type` is never `refund` on imported data**: the
+importer types from the sign, so a return arrives typed `income`, and
+reading the type alone counted every one of them as pay.
+
+Four surfaces read this: `SpendByCategoryQuery` (and through it the
+dashboard's "Top spending" and the envelope grid's spend),
+`ThisPeriodAtAGlanceQuery`'s inflow/outflow/net and its two income reads
+(the envelope period's "Ready to assign"), `Reports`' `ReportMetric`,
+which delegates here rather than listing the rule again, and
+`CurrencyModeApplier`, which has to discover a currency on the same terms
+the dimension query will count it on or the rows in it are never asked
+for.
+
+One surface deliberately does not: `DrilldownUrlBuilder` narrows the
+transactions list by type label, because a URL filter can only name a
+label. A drilldown from a spend figure therefore lists the rows whose
+label says spend, not every row the figure counted.
 
 They did not agree. The dashboard counted `income`/`expense` only, so a
 EUR100.00 purchase with a EUR30.00 refund against it in the same month
@@ -1301,12 +1335,12 @@ in `SpendByCategoryQuery` asserted the agreement that was not there.
 
 ## `SpendByCategoryQuery` — the split-aware spend read model
 
-`Public/Services/SpendByCategoryQuery` selects the types
+`Public/Services/SpendByCategoryQuery` selects the rows
 [`MoneyFlow::Spend`](#moneyflow--the-one-definition-of-spend-income-and-net)
-names — never the amount's sign, and no sign filter of its own, because a
-refund is signed the other way and is exactly what reduces the total. A
-`transfer_out` to the reader's own card is negative and is not money
-spent; selecting on the sign put one in the dashboard's "Top spending" as
+counts — a membership test on `type` first, and only then the sign, never
+the sign on its own. A `transfer_out` to the reader's own card is negative
+and is not money spent; selecting on the sign alone put one in the
+dashboard's "Top spending" as
 EUR325.00 and made "this month vs last" read EUR2,818.11 against the
 EUR2,459.11 the OUT tile on the same page gave for the same month.
 

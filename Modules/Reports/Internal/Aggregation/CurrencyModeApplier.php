@@ -61,7 +61,7 @@ final readonly class CurrencyModeApplier
         $values = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->whereIn('type', ReportMetric::fromMetric($metric)->types())
+            ->whereRaw(...ReportMetric::fromMetric($metric)->predicate())
             ->where('posted_at', '>=', $period->start->toDateString())
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->whereNotNull('settled_currency')

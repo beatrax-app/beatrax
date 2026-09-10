@@ -170,6 +170,10 @@ const BOUNDED_READ_ALLOWED = [
         'reads' => 1,
         'why' => 'KNOWN UNBOUNDED. The cleared-rows predicate has no lower bound, so a first Complete-reconcile plucks every cleared row the account ever held and dispatches one sync op per id.',
     ],
+    'Modules/Reports/Internal/Aggregation/CurrencyModeApplier.php::transactions' => [
+        'reads' => 1,
+        'why' => 'Plucks distinct settled_currency, which is a handful however long the ledger is. It read as bounded until the type filter became a whereRaw: whereIn counts as a bound here and the predicate it replaced does the same narrowing.',
+    ],
     'Modules/Recurring/Internal/Detectors/IncomeSeriesDetector.php::transactions' => [
         'reads' => 2,
         'why' => 'One plucks distinct currency, which is a handful; the other is the detection window, user-settable up to RecurringDetectionWindow::MAXIMUM_MONTHS, where it becomes the whole ledger.',

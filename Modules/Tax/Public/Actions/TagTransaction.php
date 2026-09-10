@@ -15,6 +15,7 @@ use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Tax\Internal\Support\TaxableMovement;
 use Modules\Tax\Internal\Support\TaxYearBounds;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -54,10 +55,17 @@ final readonly class TagTransaction
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $userId)
-            ->first(['status']);
+            ->first(['status', 'type', 'payment_type']);
 
         if ($txRow === null) {
             throw new NotFoundHttpException('Transaction not found.');
+        }
+
+        // Refused where the tag is asked for, not where the total is read: the
+        // rule engine, a batch tag and a replay all reach this action, and the
+        // year figure takes abs() of whatever it finds.
+        if (! TaxableMovement::canCarryATag($txRow->type ?? null, $txRow->payment_type ?? null)) {
+            return;
         }
 
         // The rule engine, a bulk tag and a replay all reach this action
