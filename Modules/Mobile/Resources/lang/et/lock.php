@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Vale PIN-kood.',
 
         'pin_changed' => 'Selle seadme PIN-koodi muudeti avamise ajal. Sisesta praegune PIN-kood.',
+
+        'biometric_reset' => 'Biomeetriline avamine lähtestati. Sisesta PIN-kood ja lülita see siis jaotises Rakenduse lukk uuesti sisse.',
     ],
 ];

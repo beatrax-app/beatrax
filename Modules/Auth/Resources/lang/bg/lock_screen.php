@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Отключи Beatrax',
     'native_unlock_failed' => 'Отключването не бе успешно. Въведи ПИН кода си вместо това.',
+    'native_unlock_reset' => 'Биометричното отключване беше нулирано. Въведи ПИН кода си, след което го включи отново от Заключване на приложението.',
     'page_title' => 'Отключване · Beatrax',
     'sign_out' => 'Изход',
     // i18n-review: bg · forgot_pin — the sentence says "Излез" and the button says

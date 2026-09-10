@@ -140,7 +140,20 @@ final class LockScreen extends Component
         $dataKey = $vault->recover($user->id, Lang::get('auth::lock_screen.native_unlock_reason'));
 
         if ($dataKey === null) {
-            $this->flashMessage = Lang::get('auth::lock_screen.native_unlock_failed');
+            // A vault drops an entry it could not read before it answers, so
+            // asking again separates a prompt the reader declined from an
+            // enrolment the platform destroyed under them. mount() had nothing
+            // to read that from, and said "try again" to both.
+            $enrolled = $vault->isEnrolled($user->id);
+
+            if (! $enrolled) {
+                $gateway->markColdStartEnrolled($user->id, false);
+                $this->nativeUnlockAvailable = false;
+            }
+
+            $this->flashMessage = Lang::get($enrolled
+                ? 'auth::lock_screen.native_unlock_failed'
+                : 'auth::lock_screen.native_unlock_reset');
 
             return;
         }

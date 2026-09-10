@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => "Beatrax'ın kilidini aç",
     'native_unlock_failed' => 'Kilit açılamadı. Bunun yerine PIN kodunu gir.',
+    'native_unlock_reset' => 'Biyometrik kilit açma sıfırlandı. PIN kodunu gir, sonra Uygulama kilidi bölümünden yeniden aç.',
     'page_title' => 'Kilidi aç · Beatrax',
     'sign_out' => 'Çıkış yap',
     'forgot_pin' => 'PIN kodunu mu unuttun? Çıkış yap',

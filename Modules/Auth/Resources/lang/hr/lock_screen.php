@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Otključaj Beatrax',
     'native_unlock_failed' => 'Otključavanje nije uspjelo. Umjesto toga upiši PIN.',
+    'native_unlock_reset' => 'Biometrijsko otključavanje je poništeno. Upiši PIN, a zatim ga ponovno uključi u odjeljku Zaključavanje aplikacije.',
     'page_title' => 'Otključavanje · Beatrax',
     'sign_out' => 'Odjavi se',
     'forgot_pin' => 'Zaboravio si PIN? Odjavi se',

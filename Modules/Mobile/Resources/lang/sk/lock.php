@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Nesprávny PIN.',
 
         'pin_changed' => 'PIN tohto zariadenia bol zmenený počas odomykania. Zadaj aktuálny PIN.',
+
+        'biometric_reset' => 'Biometrické odomknutie bolo zrušené. Zadaj PIN a potom ho znova zapni v časti Zámok aplikácie.',
     ],
 ];

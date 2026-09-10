@@ -938,6 +938,29 @@ to read through the existing `AppLockKeyService::release()` gate:
   `onColdStartRecovered()` collects it PHP-side via
   `completePendingRecover($userId)`, and does so before re-checking the
   gates rather than after, so a refusal leaves no blob resident.
+- **An entry the enclave can no longer read** is the one refusal that is
+  durable, and `missing` is how both platforms say it: adding a
+  fingerprint destroys the Keystore key, and `Get` then answers inline
+  without raising a prompt at all. Nothing `mount()` consults can see
+  it — the enrolment flag is a database column and `IsAvailable` is a
+  hardware probe, and both read exactly as they did the day the
+  enrolment worked. So the answer is treated as authoritative where it
+  arrives: `biometricPrompt()` records the enrolment as gone through
+  `markColdStartEnrolled(false)`, drops `$biometricAvailable` so the
+  trigger leaves the same response, and prints
+  `mobile::lock.errors.biometric_reset`. Re-arming is the settings
+  toggle, which spends a PIN like every other enrolment. Canceled,
+  failed and pendingAsync leave the enrolment alone — the first two are
+  a live entry the reader did not open, the third a ceremony still
+  running.
+
+  Biometric-primary is what makes that answer arrive at mount rather
+  than at a tap: the view's `x-init` calls `biometricPrompt()` as the
+  screen renders, so the enclave is asked before the reader reaches for
+  anything, and this is the one refusal it gives without a sheet. The
+  trigger therefore leaves in the same round trip that would have
+  raised the prompt, and the unlock path pays nothing for it — there is
+  no second call.
 
 A false/aborted biometric never reaches `AppLockKeyService::release()` in
 either path — the PIN pad is always the fallback of last resort. Every

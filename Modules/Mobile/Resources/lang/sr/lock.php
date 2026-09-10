@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Neispravan PIN.',
 
         'pin_changed' => 'PIN ovog uređaja je promenjen tokom otključavanja. Unesi trenutni PIN.',
+
+        'biometric_reset' => 'Biometrijsko otključavanje je poništeno. Unesi PIN, a zatim ga ponovo uključi u odeljku Zaključavanje aplikacije.',
     ],
 ];

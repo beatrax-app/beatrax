@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'PIN hatalı.',
 
         'pin_changed' => 'Bu cihazın PIN kodu kilit açılırken değiştirildi. Güncel PIN kodunu gir.',
+
+        'biometric_reset' => 'Biyometrik kilit açma sıfırlandı. PIN kodunu gir, sonra Uygulama kilidi bölümünden yeniden aç.',
     ],
 ];

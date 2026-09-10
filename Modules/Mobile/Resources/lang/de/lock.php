@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Falsche PIN.',
 
         'pin_changed' => 'Die PIN für dieses Gerät wurde beim Entsperren geändert. Gib die aktuelle PIN ein.',
+
+        'biometric_reset' => 'Biometrisches Entsperren wurde zurückgesetzt. Gib deine PIN ein und aktiviere es dann wieder unter App-Sperre.',
     ],
 ];

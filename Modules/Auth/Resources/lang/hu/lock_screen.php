@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'A Beatrax feloldása',
     'native_unlock_failed' => 'A feloldás nem sikerült. Add meg inkább a PIN-kódot.',
+    'native_unlock_reset' => 'A biometrikus feloldás visszaállt. Add meg a PIN-kódot, majd kapcsold be újra az Alkalmazászár alatt.',
     'page_title' => 'Feloldás · Beatrax',
     'sign_out' => 'Kijelentkezés',
     'forgot_pin' => 'Elfelejtetted a PIN-kódot? Jelentkezz ki',

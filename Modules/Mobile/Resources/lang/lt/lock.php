@@ -22,5 +22,7 @@ return [
         'incorrect_pin' => 'Neteisingas PIN kodas.',
 
         'pin_changed' => 'Šio įrenginio PIN kodas buvo pakeistas atrakinant. Įvesk dabartinį PIN kodą.',
+
+        'biometric_reset' => 'Biometrinis atrakinimas buvo panaikintas. Įvesk PIN kodą, tada vėl jį įjunk skiltyje Programėlės užraktas.',
     ],
 ];

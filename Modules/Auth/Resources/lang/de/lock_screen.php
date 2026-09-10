@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Beatrax entsperren',
     'native_unlock_failed' => 'Entsperren fehlgeschlagen. Gib stattdessen deine PIN ein.',
+    'native_unlock_reset' => 'Biometrisches Entsperren wurde zurückgesetzt. Gib deine PIN ein und aktiviere es dann wieder unter App-Sperre.',
     'page_title' => 'Entsperren · Beatrax',
     'sign_out' => 'Abmelden',
     'forgot_pin' => 'PIN vergessen? Melde dich ab',

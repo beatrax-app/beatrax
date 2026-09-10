@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'native_unlock_reason' => 'Unlock Beatrax',
     'native_unlock_failed' => 'Could not unlock. Enter your PIN instead.',
+    'native_unlock_reset' => 'Biometric unlock was reset. Enter your PIN, then turn it back on under App lock.',
     'page_title' => 'Unlock · Beatrax',
     'sign_out' => 'Sign out',
     'forgot_pin' => 'Forgot your PIN? Sign out',
