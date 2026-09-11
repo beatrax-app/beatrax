@@ -6,6 +6,7 @@ namespace Modules\Ledger\Internal\Http\Livewire\Concerns;
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use InvalidArgumentException;
 use Livewire\Attributes\Locked;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -15,6 +16,7 @@ use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -369,7 +371,11 @@ trait ManagesSplitEditor
         $rows = $db->connection()
             ->table('transaction_splits')
             ->where('transaction_id', $this->transactionId)
-            ->where('user_id', $userId)
+            // Through the parent, not the leg's own nullable copy. A leg this
+            // editor cannot see is one the save's diff never touches, so it
+            // outlives a save made to sum without it -- and a leg set that does
+            // not sum is a broken split every fold reads as the parent's money.
+            ->tap(static fn (Builder $legs): Builder => SplitLegs::ownedBy($legs, $userId))
             ->orderBy('sort_order')
             ->get(['id', 'category_id', 'settled_amount_minor', 'note']);
 
