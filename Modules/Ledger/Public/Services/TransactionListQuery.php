@@ -43,10 +43,20 @@ final readonly class TransactionListQuery
         ?string $cursorPostedAt = null,
         ?string $currency = null,
     ): TransactionListPage {
-        $cutoff = $this->clock->now()->subDays($daysBack);
+        $now = $this->clock->now();
 
+        // Bounded at BOTH ends. A lower bound alone is a half-line, not a
+        // window: an import carrying a scheduled or not-yet-settled entry puts
+        // a row dated after today at the head of a list captioned "the last 90
+        // days", because the order is posted_at descending. `posted_at` is a
+        // date column with no time part, so the upper bound keeps today whole.
+        // Nothing becomes unreachable: fullHistory() does not filter on
+        // posted_at at all, and the toggle for it sits beside this list.
         $query = $this->baseQuery($user, $currency)
-            ->where('transactions.posted_at', '>=', $cutoff->toDateString())
+            ->whereBetween('transactions.posted_at', [
+                $now->subDays($daysBack)->toDateString(),
+                $now->toDateString(),
+            ])
             ->limit($limit + 1);
 
         TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
