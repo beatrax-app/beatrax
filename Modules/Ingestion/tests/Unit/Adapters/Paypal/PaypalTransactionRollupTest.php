@@ -462,3 +462,89 @@ it('produces 82 logical-payment groups when given the full redacted fixture rows
     expect($dtos)->toHaveCount(82);
     expect($this->rollup->skippedHoldCount())->toBe(0);
 })->group('phase-4');
+
+// A wallet may really hold two balances at once, and then no one currency
+// describes the file. Each payment still has its own pair, which is the one
+// that paid for it.
+it('settles each payment against the balance its own conversion pair names', function (): void {
+    $pair = function (string $balance, string $balanceGross, string $parentId, string $legId): array {
+        return [
+            paypalRow([
+                'Valuta' => 'USD', 'Bruto ' => '-10,46', 'Netto' => '-10,46',
+                'Transactiereferentie' => $parentId, 'Naam' => 'Cloudflare Inc',
+                'Reference Txn ID' => 'B-0PP830545R8631912',
+            ]),
+            paypalRow([
+                'Omschrijving' => 'Algemene valutaomrekening',
+                'Valuta' => $balance, 'Bruto ' => $balanceGross, 'Netto' => $balanceGross,
+                'Transactiereferentie' => $legId.'A', 'Naam' => '',
+                'Reference Txn ID' => $parentId,
+            ]),
+            paypalRow([
+                'Omschrijving' => 'Algemene valutaomrekening',
+                'Valuta' => 'USD', 'Bruto ' => '10,46', 'Netto' => '10,46',
+                'Transactiereferentie' => $legId.'B', 'Naam' => '',
+                'Reference Txn ID' => $parentId,
+            ]),
+        ];
+    };
+
+    $dtos = $this->rollup->rollup([
+        ...$pair('GBP', '-8,05', 'O-00000000000000034', 'O-0000000000000003'),
+        ...$pair('EUR', '-9,27', 'O-00000000000000044', 'O-0000000000000004'),
+    ], 'nl');
+
+    $pounds = collect($dtos)->firstOrFail(fn (SourceTransactionDto $d): bool => $d->sourceRef === 'O-00000000000000034');
+    $euros = collect($dtos)->firstOrFail(fn (SourceTransactionDto $d): bool => $d->sourceRef === 'O-00000000000000044');
+
+    expect($pounds->settledCurrency)->toBe('GBP')
+        ->and($pounds->settledAmountMinor)->toBe(-805)
+        ->and($euros->settledCurrency)->toBe('EUR')
+        ->and($euros->settledAmountMinor)->toBe(-927);
+})->group('phase-4');
+
+// A statement cut at a month boundary keeps one half of a conversion pair, and
+// half a pair does not say which side the balance is. The rest of the file does.
+it('lends the balance the rest of the file names to a conversion pair cut in half', function (): void {
+    $whole = [
+        paypalRow([
+            'Valuta' => 'USD', 'Bruto ' => '-10,46', 'Netto' => '-10,46',
+            'Transactiereferentie' => 'O-00000000000000034', 'Naam' => 'Cloudflare Inc',
+            'Reference Txn ID' => 'B-0PP830545R8631912',
+        ]),
+        paypalRow([
+            'Omschrijving' => 'Algemene valutaomrekening',
+            'Valuta' => 'GBP', 'Bruto ' => '-8,05', 'Netto' => '-8,05',
+            'Transactiereferentie' => 'O-00000000000000035', 'Naam' => '',
+            'Reference Txn ID' => 'O-00000000000000034',
+        ]),
+        paypalRow([
+            'Omschrijving' => 'Algemene valutaomrekening',
+            'Valuta' => 'USD', 'Bruto ' => '10,46', 'Netto' => '10,46',
+            'Transactiereferentie' => 'O-00000000000000097', 'Naam' => '',
+            'Reference Txn ID' => 'O-00000000000000034',
+        ]),
+    ];
+    $halved = [
+        paypalRow([
+            'Valuta' => 'USD', 'Bruto ' => '-22,50', 'Netto' => '-22,50',
+            'Transactiereferentie' => 'O-00000000000000044', 'Naam' => 'Cloudflare Inc',
+            'Reference Txn ID' => 'B-0PP830545R8631913',
+        ]),
+        paypalRow([
+            'Omschrijving' => 'Algemene valutaomrekening',
+            'Valuta' => 'GBP', 'Bruto ' => '-17,32', 'Netto' => '-17,32',
+            'Transactiereferentie' => 'O-00000000000000045', 'Naam' => '',
+            'Reference Txn ID' => 'O-00000000000000044',
+        ]),
+    ];
+
+    $dtos = $this->rollup->rollup([...$whole, ...$halved], 'nl');
+
+    $cut = collect($dtos)->firstOrFail(fn (SourceTransactionDto $d): bool => $d->sourceRef === 'O-00000000000000044');
+
+    expect($cut->currency)->toBe('USD')
+        ->and($cut->amountMinor)->toBe(-2250)
+        ->and($cut->settledCurrency)->toBe('GBP')
+        ->and($cut->settledAmountMinor)->toBe(-1732);
+})->group('phase-4');

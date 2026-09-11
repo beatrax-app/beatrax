@@ -23,6 +23,8 @@ final class PaypalTransactionRollup
 
     private int $unreadableChildLegCount = 0;
 
+    private ?string $balanceCurrency = null;
+
     public function __construct(
         private readonly PaypalCsvEventTypeMap $events,
         private readonly PaypalAmountParser $amounts,
@@ -43,6 +45,7 @@ final class PaypalTransactionRollup
 
         $surviving = $this->filterSurviving($rawRows, $language);
         [$parents, $childrenByParent] = $this->partitionParents($surviving, $language);
+        $this->balanceCurrency = $this->deriveBalanceCurrency($parents, $childrenByParent, $language);
 
         // A malformed parent amount drops the whole logical-payment group rather
         // than raising, so one unreadable cell does not refuse the export. The
@@ -149,6 +152,67 @@ final class PaypalTransactionRollup
         return [$parents, $childrenByParent];
     }
 
+    // What the whole file says the balance is, for the payment a statement cut
+    // at a month boundary left holding half a pair. Its own pair always wins;
+    // this is only what stands in when the file kept the other half.
+    /**
+     * @param  list<array<string, string>>  $parents
+     * @param  array<string, list<array<string, string>>>  $childrenByParent
+     *
+     * @link ../../../../../.docs/features/ingestion/a-paypal-wallet-that-is-not-in-euros.md
+     */
+    private function deriveBalanceCurrency(array $parents, array $childrenByParent, string $language): ?string
+    {
+        $stated = null;
+
+        foreach ($parents as $parentRow) {
+            $parentTxnId = $this->columns->value('transactionId', $language, $parentRow) ?? '';
+            $balanceLeg = $this->pairedBalanceCurrency(
+                $childrenByParent[$parentTxnId] ?? [],
+                $language,
+                $this->columns->value('currency', $language, $parentRow) ?? '',
+            );
+
+            // Two pairs naming different balances is a wallet the file does not
+            // describe, and absorbing: no later pair agreeing undoes it.
+            if ($balanceLeg !== null && $stated !== null && $stated !== $balanceLeg) {
+                return null;
+            }
+
+            $stated ??= $balanceLeg;
+        }
+
+        return $stated;
+    }
+
+    // A conversion pair restates one payment in two denominations. The leg
+    // carrying the parent's own currency is the parent restated, which leaves
+    // the leg in the other currency as the balance the wallet moved by — an
+    // answer read off the file, so every device reads the same one.
+    /**
+     * @param  list<array<string, string>>  $children
+     */
+    private function pairedBalanceCurrency(array $children, string $language, string $parentCurrency): ?string
+    {
+        $restatesParent = false;
+        $otherCurrency = null;
+
+        foreach ($children as $childRow) {
+            $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
+            if ($this->events->classify($childEventType, $language) !== PaypalEventAction::ChildFx) {
+                continue;
+            }
+
+            $childCurrency = $this->columns->value('currency', $language, $childRow) ?? '';
+            $restatesParent = $restatesParent || $childCurrency === $parentCurrency;
+            if ($childCurrency !== '' && $childCurrency !== $parentCurrency) {
+                $otherCurrency = $childCurrency;
+            }
+        }
+
+        return $restatesParent ? $otherCurrency : null;
+    }
+
     public function skippedHoldCount(): int
     {
         return $this->skippedHoldCount;
@@ -168,12 +232,14 @@ final class PaypalTransactionRollup
     }
 
     // PayPal books each conversion leg in the direction ITS OWN balance moved,
-    // so the euro leg funding an outgoing dollar payment is a credit. One
+    // so the balance leg funding an outgoing dollar payment is a credit. One
     // payment has one direction, the parent's; a leg lends the magnitude and
     // nothing else.
 
-    // The foreign leg is identified by its currency, never by row order: both
+    // The balance leg is identified by its currency, never by row order: both
     // legs of a conversion pair share an event type and a Reference Txn ID.
+    // Its own pair answers first, so a wallet really holding two balances gets
+    // each payment against the one that paid for it.
     /**
      * @param  list<array<string, string>>  $children
      * @return array{0: int, 1: string, 2: ?int, 3: ?string}
@@ -185,6 +251,9 @@ final class PaypalTransactionRollup
         $parentAmountMinor = $nativeAmountMinor;
         $settledAmountMinor = null;
         $settledCurrency = null;
+        $balanceCurrency = $this->pairedBalanceCurrency($children, $language, $nativeCurrency)
+            ?? $this->balanceCurrency
+            ?? $nativeCurrency;
 
         foreach ($children as $childRow) {
             $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
@@ -193,17 +262,17 @@ final class PaypalTransactionRollup
                 continue;
             }
 
-            $childCurrency = $this->columns->value('currency', $language, $childRow) ?? Currency::Eur->value;
+            $childCurrency = $this->columns->value('currency', $language, $childRow) ?? $balanceCurrency;
             $childAmountMinor = $this->childLegAmount($childRow, $language, $childCurrency);
 
             if ($childAmountMinor === null) {
                 continue;
             }
 
-            if ($childCurrency === Currency::Eur->value && $nativeCurrency !== Currency::Eur->value) {
+            if ($childCurrency === $balanceCurrency && $nativeCurrency !== $balanceCurrency) {
                 $settledAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
                 $settledCurrency = $childCurrency;
-            } elseif ($childCurrency !== Currency::Eur->value && $nativeCurrency === Currency::Eur->value) {
+            } elseif ($childCurrency !== $balanceCurrency && $nativeCurrency === $balanceCurrency) {
                 $settledAmountMinor = $nativeAmountMinor;
                 $settledCurrency = $nativeCurrency;
                 $nativeAmountMinor = self::asParentDirected($parentAmountMinor, $childAmountMinor);
@@ -257,7 +326,9 @@ final class PaypalTransactionRollup
             );
         }
 
-        $parentCurrency = $this->columns->value('currency', $language, $parentRow) ?? Currency::Eur->value;
+        $parentCurrency = $this->columns->value('currency', $language, $parentRow)
+            ?? $this->balanceCurrency
+            ?? Currency::Eur->value;
 
         [$nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency] = $this->withFxLegApplied(
             $children,

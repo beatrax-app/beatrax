@@ -481,12 +481,21 @@ cut at a month boundary is how that happens) is promoted to a standalone
 parent, where the classifier raises
 `OrphanedPaypalChildRowException` and the reader is told which row and
 that the neighbouring statement holds its parent. Pass 3 folds each parent + its children into one
-`SourceTransactionDto`: `amountMinor`/`currency` is the native
-(non-EUR) leg of any `child-fx` pair (else the parent's Gross);
-`settledAmountMinor`/`settledCurrency` is the EUR leg (else null). The
-FX-direction safety net identifies the foreign leg by `Currency !=
-'EUR'`, never by row order, since both legs of a currency-conversion
-pair share the same event type and Reference Txn ID.
+`SourceTransactionDto`: `amountMinor`/`currency` is the merchant's leg,
+`settledAmountMinor`/`settledCurrency` the leg the wallet's own balance
+moved by (else null).
+
+**Which leg is which comes from the file, not from a currency literal.**
+A `child-fx` pair restates one payment in two denominations, so the leg
+carrying the parent's own currency is the parent restated and the leg in
+the other currency is the balance. A pair cut in half by a month boundary
+borrows the currency every complete pair in the file agrees on. Both
+branches of the fold used to gate on `EUR`, which left a wallet holding
+its balance in anything else with no settled leg, no closing balance and
+the reader's reporting currency stamped on the account — see [a PayPal
+wallet that is not in euros](a-paypal-wallet-that-is-not-in-euros.md).
+Never by row order, either way: both legs of a conversion pair share an
+event type and a Reference Txn ID.
 
 A conversion leg lends its magnitude and nothing else: PayPal books each
 leg in the direction *its own* balance moved, so the euro leg of an
@@ -502,7 +511,8 @@ reading it — ICS takes its balances off the document, CAMT.053 and
 MT940 off the file. It sums the **settled** leg of each rolled-up DTO
 (`settledAmountMinor ?? amountMinor`) and reports the currency those
 legs are in, rather than each row's native minor units under a
-hardcoded EUR label. Summing the native leg added the sample export's
+hardcoded EUR label. That is already wallet-agnostic; what it depends on
+is the rollup having filled the settled leg in at all. Summing the native leg added the sample export's
 two USD parents into a euro total: `statement_summaries` carried a
 figure the ledger's own rows never summed to, and
 `/reconcile` rendered "Difference — −€2.72" beside "Toggle cleared
