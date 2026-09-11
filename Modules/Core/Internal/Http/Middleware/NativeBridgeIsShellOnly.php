@@ -23,7 +23,12 @@ final readonly class NativeBridgeIsShellOnly
 
     private const string SECRET_HEADER = 'X-NativePHP-Secret';
 
-    private const string SECRET_COOKIE = '_php_native';
+    // What Chromium puts on everything a browsing context originates and what
+    // the shell's own post -- axios, from the Electron main process -- carries
+    // neither of. Either one present means a page issued this, whatever
+    // credential it came with.
+    /** @var list<string> */
+    private const array BROWSING_CONTEXT_HEADERS = ['Sec-Fetch-Site', 'Origin'];
 
     public function __construct(private Repository $config) {}
 
@@ -32,7 +37,7 @@ final readonly class NativeBridgeIsShellOnly
     // is none -- the same answer every other unowned surface here gives.
     public function handle(Request $request, Closure $next): Response
     {
-        if ($this->namesTheBridge($request) && ! $this->carriesTheShellSecret($request)) {
+        if ($this->namesTheBridge($request) && ! $this->isTheShellItself($request)) {
             throw new NotFoundHttpException;
         }
 
@@ -47,10 +52,30 @@ final readonly class NativeBridgeIsShellOnly
         return str_starts_with(ltrim($request->path(), '/'), self::BRIDGE_PREFIX);
     }
 
+    // The secret alone answers the wrong question. Electron stamps it onto
+    // every request ADDRESSED to the PHP port, whoever issued it, so a page the
+    // window is sitting on -- a bank's consent screen, which is where the
+    // open-banking flow sends it -- presents exactly what the shell presents.
+    private function isTheShellItself(Request $request): bool
+    {
+        return ! $this->issuedByAPage($request) && $this->carriesTheShellSecret($request);
+    }
+
+    private function issuedByAPage(Request $request): bool
+    {
+        foreach (self::BROWSING_CONTEXT_HEADERS as $header) {
+            if ($request->headers->has($header)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // Asked without reference to `running`: a deployment that is not a bundle
     // has no secret at all, so nothing can be presented and the prefix closes
-    // on its own. Electron injects the header on every request it originates,
-    // which is what the shell has and a browser on the same port does not.
+    // on its own. The header only: the `_php_native` cookie reaches this from a
+    // browsing context or from nowhere, and those are refused above.
     private function carriesTheShellSecret(Request $request): bool
     {
         $secret = $this->config->get('nativephp-internal.secret');
@@ -60,9 +85,7 @@ final readonly class NativeBridgeIsShellOnly
         }
 
         $header = $request->header(self::SECRET_HEADER);
-        $cookie = $request->cookie(self::SECRET_COOKIE);
 
-        return (is_string($header) && hash_equals($secret, $header))
-            || (is_string($cookie) && hash_equals($secret, $cookie));
+        return is_string($header) && hash_equals($secret, $header);
     }
 }

@@ -509,7 +509,13 @@ it('says so when the log it repairs from cannot be read', function (): void {
     expect($repaired)->toBe(0, 'nothing can be repaired from a log that cannot be read')
         ->and($logger->records)->not->toBeEmpty('a sweep that failed must not answer like a clean one');
 
+    // The statement is what this driver writes into a QueryException's message,
+    // bindings interpolated, and a log line is the one place it must not reach.
+    $context = implode(' ', array_map(strval(...), $logger->records[0][2]));
+
     expect($logger->records[0][0])->toBe('error')
         ->and($logger->records[0][1])->toContain('SelfReferenceDeferral')
-        ->and($logger->records[0][2])->toHaveKeys(['table', 'column', 'exception']);
+        ->and($context)->not->toContain('select ')
+        ->and($context)->not->toContain('op_log_entries')
+        ->and($logger->records[0][2])->toHaveKeys(['table', 'column', 'reason']);
 });
