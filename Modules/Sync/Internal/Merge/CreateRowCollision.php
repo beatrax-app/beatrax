@@ -26,6 +26,7 @@ final readonly class CreateRowCollision
         private DatabaseManager $db,
         private SensitiveFieldRegistry $sensitive,
         private LoggerInterface $log,
+        private RowOwnership $ownership,
     ) {}
 
     // A birth time the stored row does not share, AND some other column that
@@ -35,15 +36,37 @@ final readonly class CreateRowCollision
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function contradicts(string $table, int|string $pk, array $payload, ?string $seededCreatedAt = null): bool
+    public function contradicts(string $table, int|string $pk, array $payload, int $userId, ?string $seededCreatedAt = null): bool
     {
-        $stored = $this->storedRow($table, $pk);
+        $stored = $this->storedRow($table, $pk, $userId);
 
-        if ($stored === null || ! $this->birthTimesDisagree($table, $payload, $stored, $seededCreatedAt)) {
+        if ($stored === null) {
+            return $this->heldByAnother($table, $pk);
+        }
+
+        if (! $this->birthTimesDisagree($table, $payload, $stored, $seededCreatedAt)) {
             return false;
         }
 
         return $this->anyOtherColumnDisagrees($table, $payload, $stored);
+    }
+
+    // Asked only once the owner-scoped read came back empty: one autoincrement
+    // serves every reader on the install, so an id the arriving row cannot be
+    // found under is an id somebody else's row holds. That is the collision,
+    // not the replay -- and a read that failed answers false, as it did before.
+    private function heldByAnother(string $table, int|string $pk): bool
+    {
+        try {
+            return $this->db->connection()->table($table)->where('id', $pk)->exists();
+        } catch (Throwable $e) {
+            $this->log->warning('CreateRowCollision: could not tell whether another reader holds that id, so an arriving create was not checked against it.', [
+                'table' => $table,
+                'exception' => $e::class,
+            ]);
+
+            return false;
+        }
     }
 
     // A row whose first half carried no birth time was given one from the op's
@@ -116,17 +139,18 @@ final readonly class CreateRowCollision
         };
     }
 
-    // Answered null rather than raised, so a replay that would otherwise
-    // continue is never stopped by this question. Null reads as "not a
-    // collision", though, and the create then lands over whatever is here — so
-    // a read that failed is said out loud rather than taken for an empty table.
+    // The row THIS reader holds at that id. One autoincrement serves every
+    // reader on the install, so an unscoped read answered with a housemate's
+    // row and a create that is nowhere was called the same one arriving again.
+    // A read that failed answers null as well, and says so.
     /**
      * @return array<string, mixed>|null
      */
-    private function storedRow(string $table, int|string $pk): ?array
+    private function storedRow(string $table, int|string $pk, int $userId): ?array
     {
         try {
-            $row = $this->db->connection()->table($table)->where('id', $pk)->first();
+            $query = $this->db->connection()->table($table)->where('id', $pk);
+            $row = $this->ownership->scopeToUser($query, $table, $userId)->first();
         } catch (Throwable $e) {
             $this->log->warning('CreateRowCollision: could not read the stored row, so an arriving create was not checked against it.', [
                 'table' => $table,

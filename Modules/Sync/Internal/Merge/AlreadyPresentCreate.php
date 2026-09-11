@@ -50,7 +50,7 @@ final readonly class AlreadyPresentCreate
             return $this->aliases->resolvePk($table, $deviceId, $pk, $userId);
         }
 
-        if (! $this->collisions->contradicts($table, $pk, $payload, SuppliedCreationTime::seededValueFor($fields))) {
+        if (! $this->collisions->contradicts($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields))) {
             // The same row, so this is the create arriving again — and a
             // transport that splits one row's ops across two frames makes the
             // second half look exactly like that. Returning here without it

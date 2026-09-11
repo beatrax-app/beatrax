@@ -608,6 +608,22 @@ from the stored value on every replay. `id` and `user_id` are seeded by the
 applier from the op envelope rather than the wire, and `updated_at` moves
 whenever anything about the row does.
 
+**The stored row is the reader's own.** One autoincrement serves every reader on
+the install, and the ids interleave: the development database has user 4 holding
+transaction ids 164..327 and user 5 holding 303..325 inside that range. So the
+row sitting at an arriving id can belong to a housemate, and the read is scoped
+through `RowOwnership::scopeToUser()` — the same bound `SplitCreateTail::write()`
+has always had. An id no row of this reader's is at, which another reader's row
+does hold, is a collision outright: the arriving row is not here under it on any
+reading, and the create goes to the re-home. Unscoped, the comparison was made
+against the housemate's row, and wherever that row happened to agree —
+`created_at` holds seconds, so two members importing on one evening share one —
+`contradicts()` answered "the same row arriving again". The owner-scoped tail
+write then matched nothing, `AlreadyPresentCreate` returned the pk as though the
+create had landed, and the row was lost with no quarantine row and no alias.
+`SplitCreateTail::planFill()` read the same row the same way and is scoped with
+it.
+
 `contradicts()` still runs first, and re-homing depends on it: a create that
 does NOT contradict the stored row is the same row arriving again, or the other
 half of one the transport split, and re-homing either would duplicate it. Only

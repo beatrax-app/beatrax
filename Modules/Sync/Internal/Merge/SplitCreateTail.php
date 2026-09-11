@@ -46,9 +46,9 @@ final class SplitCreateTail
      * @param  array<string, mixed>  $payload
      * @return array{values: array<string, mixed>, after: array<string, mixed>}|null
      */
-    public function planFill(string $table, int|string $pk, array $payload, ?string $seededTime = null): ?array
+    public function planFill(string $table, int|string $pk, array $payload, int $userId, ?string $seededTime = null): ?array
     {
-        $stored = $this->storedRow($table, $pk);
+        $stored = $this->storedRow($table, $pk, $userId);
 
         if ($stored === null) {
             return null;
@@ -86,7 +86,7 @@ final class SplitCreateTail
      */
     public function fill(string $table, int|string $pk, array $payload, int $userId, ?string $seededTime = null): void
     {
-        $plan = $this->planFill($table, $pk, $payload, $seededTime);
+        $plan = $this->planFill($table, $pk, $payload, $userId, $seededTime);
 
         if ($plan !== null) {
             $this->write($table, $pk, $plan['values'], $userId);
@@ -164,13 +164,16 @@ final class SplitCreateTail
     /**
      * @return array<string, mixed>|null
      */
-    private function storedRow(string $table, int|string $pk): ?array
+    private function storedRow(string $table, int|string $pk, int $userId): ?array
     {
         try {
-            $row = $this->db->connection()->table($table)->where('id', $pk)->first();
+            $query = $this->db->connection()->table($table)->where('id', $pk);
+            $row = $this->ownership->scopeToUser($query, $table, $userId)->first();
         } catch (\Throwable $e) {
-            // Null reads as "no stored row", so the tail fills nothing and the
-            // columns the second half of the create carried are never written.
+            // Null reads as "no stored row of this reader's", so the tail
+            // fills nothing and the columns the second half of the create
+            // carried are never written. write() is scoped the same way, so a
+            // plan read off another reader's row could only ever write nothing.
             $this->logger?->warning('SplitCreateTail: could not read the stored row, so the tail of a split create was not filled in.', [
                 'table' => $table,
                 'pk' => (string) $pk,
