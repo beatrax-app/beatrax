@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'proračunska opozorila',
         'daily-triggers' => 'dnevne opomnike in povzetek',
+        'withheld-triggers' => 'druga opozorila',
     ],
 
     'messages' => [

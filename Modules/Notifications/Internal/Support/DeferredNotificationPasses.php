@@ -58,6 +58,19 @@ final readonly class DeferredNotificationPasses
         return true;
     }
 
+    // Marked by the writer rather than by the emitter, which is the whole
+    // point: this seam's first two marks are made by the two schedule entries
+    // that remembered to ask, and the triggers below were the ones nobody did.
+    // Ask nothing here — reaching the writer at all is the answer.
+    public function markWithheld(int $userId): void
+    {
+        $this->cache->put(
+            self::key($userId, DeferredNotificationPass::WithheldTriggers),
+            true,
+            DailyLocalWindow::claimTtlSeconds(),
+        );
+    }
+
     /**
      * @return list<DeferredNotificationPass>
      */
