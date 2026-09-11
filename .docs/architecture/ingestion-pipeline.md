@@ -531,6 +531,41 @@ once. Its `booked_at` stays the second the entry was typed — real information,
 unlike a bank's midnight — and it is also what keeps a coffee typed on the phone
 from merging into one typed on the desktop.
 
+A receipt fetched from an inbox or dropped in the scan folder has no file
+either: one message is one document, and `ReceiptLedgerBridge` sees it alone.
+Every receipt matcher books at the day the mail was sent, `startOfDay()`, so the
+second of two identical same-day receipts hashed to the first one's fingerprint
+and `RecordTransactions`' `insertOrIgnore` dropped it — the defect the ordinal
+exists to close, on the one path that did not stamp it. A Google Play purchase
+has no statement export to recover it from either, which is why
+`FingerprintParityTest` declares no parity pair for that matcher.
+
+The bridge therefore reads the ordinal off the ledger, like the cash book, but
+counts over the *receipts* in the group rather than over all of it: one past the
+highest ordinal a receipt already holds. A statement that booked this occurrence
+is the row the receipt belongs on, and stepping past it would write the purchase
+a second time instead of deduping into it — which is why the two rows the
+`FingerprintParityTest` pair produces still meet.
+
+What tells a second purchase apart from the same message read a second time is
+the reference the message names — PayPal's transaction id, Google Play's order
+id, the ICS `Referentienummer`. A reference already stored in the group means
+this message is in the ledger and nothing is written; `RecordReceipt` hands a
+caller the same `Parsed` outcome for bytes it has already recorded, so that
+second read has to stay a no-op. A message carrying no reference cannot be told
+apart from itself and stays the sole occurrence at 0, which is what the whole
+path did before.
+
+This is a deliberate departure from A3-R20, which requires the occurrence number
+to come from the file's own contents and row order alone so two devices compute
+it alike. A receipt has no file to count within — one message is one document —
+and the requirement's own subject is a statement. The cost is that the number
+depends on the order the messages were processed in. Two devices scanning one
+mailbox still derive it alike, because `InboxMessageQuery` walks
+`inbox_messages` by `id` and those ids follow the provider's own order, and
+`inbox_messages` does not sync — nothing stronger than that is claimed. The
+alternative is the collapse this replaces, which loses a purchase outright.
+
 ## Per-row error handling
 
 Per-row exceptions inside the try-catch around stages 4-8 produce

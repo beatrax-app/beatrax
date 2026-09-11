@@ -119,7 +119,10 @@ What the module explicitly does NOT do:
   `ReceiptSourceAdapter` → `Import::NormalizeStage` →
   `Categorization::AppliesAutoCategory` →
   `Counterparties::ResolvesCounterparties` →
-  `Ledger::RecordsTransactions`. The two stages between the
+  `Ledger::RecordsTransactions`, stamping the occurrence ordinal off
+  the ledger on the way (see
+  [the occurrence ordinal](../../architecture/ingestion-pipeline.md#the-occurrence-ordinal)).
+  The two stages between the
   normaliser and the recorder are the ones a wizard upload gets from
   `ImportPipeline`: without them the same message arrived
   uncategorised and with no counterparty row when the inbox fetched
