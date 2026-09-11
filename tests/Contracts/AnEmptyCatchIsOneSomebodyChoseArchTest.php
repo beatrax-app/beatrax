@@ -57,8 +57,8 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'why' => 'A mid-rotation filesystem state is transient, and the counts read so far beat a hard error on a developer dashboard.',
         ],
         'Modules/DevMode/Internal/Services/OAuthScrubSet.php' => [
-            'count' => 1,
-            'why' => 'The alert write runs inside a logger call, so raising there would crash every request that emits a log line.',
+            'count' => 2,
+            'why' => 'Raising the alert and withdrawing it again both run inside a logger call, so throwing there would crash every request that emits a log line.',
         ],
         'Modules/EmailScan/Internal/Http/Livewire/InboxesPage.php' => [
             'count' => 1,

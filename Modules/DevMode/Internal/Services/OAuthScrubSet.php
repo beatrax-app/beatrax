@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Services;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\SecretShield;
@@ -42,6 +43,12 @@ class OAuthScrubSet
 
     /** @var array<int, true> the oauth_secrets rows already reported as keyless */
     protected array $keylessRowsReported = [];
+
+    // Reset at the top of every load(), because the memo above answers "have we
+    // said this yet", not "is it still true": a second pass over a credential
+    // that still will not decrypt reports nothing, and reading the memo as the
+    // pass's verdict would take the banner down while redaction was still off.
+    protected bool $passLeftACredentialUnread = false;
 
     // Without the shield the set would hold desktop safeStorage ciphertext,
     // and the plaintext that actually reaches the logs would go unredacted.
@@ -111,6 +118,11 @@ class OAuthScrubSet
 
         $this->set = $loaded;
 
+        // After the memo, never before: this writes to the database, and a
+        // logged query re-enters through compiledPattern() -- which would walk
+        // straight back into load() while the set was still null.
+        $this->withdrawOfflineAlert();
+
         return $loaded;
     }
 
@@ -122,6 +134,7 @@ class OAuthScrubSet
     protected function load(): ?array
     {
         $collected = [];
+        $this->passLeftACredentialUnread = false;
 
         try {
             /** @var iterable<OAuthSecret> $rows */
@@ -209,6 +222,8 @@ class OAuthScrubSet
     // compiledPattern() runs on every log record and bust() reloads.
     private function reportKeylessCredential(OAuthSecret $row, DecryptException $e): void
     {
+        $this->passLeftACredentialUnread = true;
+
         if (isset($this->keylessRowsReported[$row->id])) {
             return;
         }
@@ -245,6 +260,31 @@ class OAuthScrubSet
         } catch (Throwable) {
             // Swallowed: this runs inside a logger call, so a failing alert
             // write would crash every request that emits a log line.
+        }
+    }
+
+    // "until the next successful load" is what the banner promises the reader,
+    // and this is the load it names: every credential read, nothing left
+    // unopened. The in-process gates come down with it, so the next failure is
+    // reported rather than swallowed by a memo from before the recovery.
+    private function withdrawOfflineAlert(): void
+    {
+        if ($this->passLeftACredentialUnread) {
+            return;
+        }
+
+        try {
+            $this->alerts->withdrawSystemWide(
+                OAuthAlertKind::ScrubSetFailed->value,
+                CarbonImmutable::now(),
+            );
+
+            $this->runtimeFailureReported = false;
+            $this->keylessRowsReported = [];
+        } catch (Throwable) {
+            // Swallowed for the same reason the raise is: this runs inside a
+            // logger call, and a failed withdrawal must not crash the request
+            // that emitted the line.
         }
     }
 

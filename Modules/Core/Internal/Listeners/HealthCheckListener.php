@@ -21,6 +21,12 @@ use Throwable;
 
 final readonly class HealthCheckListener
 {
+    // Spelled once because raising and withdrawing have to agree: a withdrawal
+    // that names a kind nothing raised closes nothing and reports success.
+    private const string WAL_ALERT_KIND = 'wal_mode_missing';
+
+    private const string SYNCHRONOUS_ALERT_KIND = 'synchronous_misconfigured';
+
     public function __construct(
         private BootProbeState $state,
         private Clock $clock,
@@ -69,24 +75,28 @@ final readonly class HealthCheckListener
 
         if ($journalMode !== 'wal') {
             $this->recordDriftAlert(
-                kind: 'wal_mode_missing',
+                kind: self::WAL_ALERT_KIND,
                 line: CopyLine::of('core::alerts.messages.wal_mode_missing', ['mode' => $journalMode]),
                 logMessage: sprintf("SQLite is not in WAL mode (currently '%s').", $journalMode),
                 metadata: ['current_mode' => $journalMode],
                 cutoff: $cutoff,
                 hour: $hour,
             );
+        } else {
+            $this->withdrawDriftAlert(self::WAL_ALERT_KIND);
         }
 
         if ($synchronousLevel !== 1) {
             $this->recordDriftAlert(
-                kind: 'synchronous_misconfigured',
+                kind: self::SYNCHRONOUS_ALERT_KIND,
                 line: CopyLine::of('core::alerts.messages.synchronous_misconfigured', ['level' => $synchronousLevel]),
                 logMessage: sprintf('SQLite synchronous level is %d (expected NORMAL/1).', $synchronousLevel),
                 metadata: ['current_level' => $synchronousLevel],
                 cutoff: $cutoff,
                 hour: $hour,
             );
+        } else {
+            $this->withdrawDriftAlert(self::SYNCHRONOUS_ALERT_KIND);
         }
 
         $this->raiseOverdueBackupAlert();
@@ -171,6 +181,29 @@ final readonly class HealthCheckListener
         } catch (Throwable $e) {
             $this->logger->warning(
                 'HealthCheckListener: failed to write '.$kind.' alert; continuing.',
+                SafeExceptionContext::describe($e),
+            );
+        }
+    }
+
+    // The pass that raises is the pass that takes it down. Both lines promise
+    // the reader a restart usually clears the drift, and the restart that
+    // cleared the pragma has to clear the banner with it -- a banner naming a
+    // remedy nothing performs teaches them to stop reading the next one.
+    private function withdrawDriftAlert(string $kind): void
+    {
+        try {
+            $closed = $this->alerts->withdrawSystemWide($kind, $this->clock->now());
+
+            if ($closed > 0) {
+                $this->logger->info(
+                    'HealthCheckListener: withdrew '.$kind.'; the pragma is back at its documented default.',
+                    ['closed' => $closed],
+                );
+            }
+        } catch (Throwable $e) {
+            $this->logger->warning(
+                'HealthCheckListener: failed to withdraw '.$kind.' alert; continuing.',
                 SafeExceptionContext::describe($e),
             );
         }
