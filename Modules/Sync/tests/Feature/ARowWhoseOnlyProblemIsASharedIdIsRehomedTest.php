@@ -343,3 +343,34 @@ it('still quarantines a collision on a table with no natural key', function (): 
         ->and($this->db->connection()->table('goals')->where('id', 4242)->value('name'))->toBe('Nieuwe fiets')
         ->and(rehomeQuarantineReasons($this->db, $userId))->toContain('unplaceable_collision');
 });
+
+// Two devices seeded the same row and numbered it differently, which is what
+// the alias map is for: the arriving create matches a local row by its natural
+// key, under an id the peer never used. The pair is remembered -- and the
+// create is still the only carrier for a column that row does not have.
+it('fills a column the row it aliases onto does not have', function (): void {
+    $userId = (int) $this->user->id;
+
+    $counterpartyId = (int) $this->db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $userId,
+        'type' => 'merchant',
+        'slug' => 'rehome-ah-'.bin2hex(random_bytes(3)),
+        'display_name' => 'Albert Heijn',
+        'created_at' => '2026-01-01 00:00:00',
+        'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
+    expect($this->db->connection()->table('transactions')->where('id', $this->localId)->value('counterparty_id'))
+        ->toBeNull();
+
+    // Same day and amount as the stored row, so it matches on the natural key
+    // rather than the pk, under an id this device has never issued.
+    $peerRow = rehomeRow($userId, $this->accountId, $this->runId, '2026-08-01', -125000, '2026-08-01 18:12:03');
+
+    rehomePeerCreate($userId, 9999, [...$peerRow, 'counterparty_id' => $counterpartyId]);
+    rehomeReplay($this->db, $userId);
+
+    expect(rehomeAliasFor($this->db, $userId, 'transactions', 9999))->toBe((string) $this->localId)
+        ->and((int) $this->db->connection()->table('transactions')->where('id', $this->localId)->value('counterparty_id'))
+        ->toBe($counterpartyId);
+});
