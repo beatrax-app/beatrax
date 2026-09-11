@@ -105,18 +105,12 @@ final readonly class OpLogEntryApplier
 
         foreach ($creates as $table => $rows) {
             foreach ($rows as $pk => $fields) {
-                $selfRefs = $this->applyCreatedRow(
-                    $table,
-                    $pk,
-                    $fields,
-                    $tombstones[$table][$pk] ?? null,
-                    $userId,
-                    $now,
-                    $applied,
-                );
-
-                if ($selfRefs !== []) {
-                    $deferred[] = ['table' => $table, 'pk' => $pk, 'values' => $selfRefs];
+                // Keyed by the id the row is HERE under, which a re-homed
+                // create makes different from the one the op names: written
+                // back under the peer's, the deferred link landed on the
+                // unrelated local row already sitting at it.
+                foreach ($this->applyCreatedRow($table, $pk, $fields, $tombstones[$table][$pk] ?? null, $userId, $now, $applied) as $link) {
+                    $deferred[] = $link;
                 }
             }
         }
@@ -125,10 +119,11 @@ final readonly class OpLogEntryApplier
     }
 
     // Runs one created row through the gates and writes it, handing back the
-    // self-referential columns it could not carry at insert time.
+    // self-referential columns it could not carry at insert time, under the id
+    // they have to be written back to.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
-     * @return array<string, mixed>
+     * @return list<array{table: string, pk: int|string, values: array<string, mixed>}>
      */
     private function applyCreatedRow(
         string $table,
@@ -157,13 +152,15 @@ final readonly class OpLogEntryApplier
         // partner that does not exist. Stripped here, set once both exist.
         $selfRefs = $this->selfReferences->extract($table, $payload);
 
-        if (! $this->insertCreatedRow($table, $payload, $fields, $now, $deviceId, $pk, $userId)) {
+        $local = $this->insertCreatedRow($table, $payload, $fields, $now, $deviceId, $pk, $userId);
+
+        if ($local === null) {
             return [];
         }
 
-        $applied->rowCreated($table, $pk, $userId);
+        $applied->rowCreated($table, $local, $userId);
 
-        return $selfRefs;
+        return $selfRefs === [] ? [] : [['table' => $table, 'pk' => $local, 'values' => $selfRefs]];
     }
 
     // buildCreatePayload() writes these from the op itself — the pk, and the
@@ -237,13 +234,14 @@ final readonly class OpLogEntryApplier
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
+     * @return int|string|null The id the row is here under, or null when it was refused and recorded.
      */
-    private function insertCreatedRow(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): bool
+    private function insertCreatedRow(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): int|string|null
     {
         try {
             $this->db->connection()->table($table)->insert($payload);
 
-            return true;
+            return $pk;
         } catch (QueryException $e) {
             // By the pk it is the idempotent re-apply. By ANOTHER unique index
             // it is a second id for one row, and the peer's id has to keep
@@ -252,24 +250,18 @@ final readonly class OpLogEntryApplier
                 return $this->alreadyPresent->answer($table, $payload, $fields, $now, $deviceId, $pk, $userId);
             }
 
-            return $this->recordRefusedInsert($table, $e, $fields, $now);
+            $this->recordRefusedInsert($table, $e, $fields, $now);
+
+            return null;
         }
     }
 
-    // The row is here, but a row is not THE row. An alias means the peer's id
-    // names a local twin and the content did land, under the other id. Without
-    // one, a create contradicting what is stored is two devices' rows wearing
-    // a single id, and answering true is how a phone's move went missing.
-    /**
-     * @param  array<string, mixed>  $payload
-     * @param  array<string, list<OpLogEntry>>  $fields
-     */
     // Every refusal the database itself raised. The already-present arm is
     // answered above, where the payload that identifies the twin is in hand.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now): bool
+    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now): void
     {
         $failure = CreateRowInsertFailure::classify($e);
 
@@ -288,8 +280,6 @@ final readonly class OpLogEntryApplier
             'quarantine_reason' => $failure->quarantineReason()->value,
             ...SafeExceptionContext::describe($e),
         ]);
-
-        return false;
     }
 
     // A strictly later tombstone always wins and an earlier one never does; the

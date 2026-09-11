@@ -9,9 +9,9 @@ use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Psr\Log\LoggerInterface;
 
 // What it means when the database refuses a replayed create as already
-// present. Three different things arrive here: the row is here under a peer's
-// own id, the row is here and this is the same create again (possibly its
-// other half), or the row is here and it is a DIFFERENT row wearing the same id.
+// present: the row is here under a peer's own id, the row is here and this is
+// the same create again (possibly its other half), or a DIFFERENT row wears the
+// id and the arriving one is not here at all.
 /**
  * @link ../../../../.docs/features/sync/architecture.md
  */
@@ -22,22 +22,24 @@ final readonly class AlreadyPresentCreate
         private CreateRowCollision $collisions,
         private OpLogQuarantine $quarantine,
         private SplitCreateTail $tail,
+        private RehomedCreate $rehome,
         private ?LoggerInterface $logger = null,
     ) {}
 
-    // True when the create is answered and replay carries on, false when it was
-    // refused and recorded. An alias means the content landed under the other
-    // id; only a payload that contradicts the stored row is a real loss.
+    // The id the content is under here, or null when the create was refused
+    // and recorded. An alias means it landed under the other id, a re-home
+    // under one this device minted; both are answers, and the caller addresses
+    // the row by what comes back rather than by the id the peer used.
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    public function answer(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): bool
+    public function answer(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): int|string|null
     {
         $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
 
         if ($this->aliases->localFor($table, $deviceId, $pk, $userId) !== null) {
-            return true;
+            return $this->aliases->resolvePk($table, $deviceId, $pk, $userId);
         }
 
         if (! $this->collisions->contradicts($table, $pk, $payload, SuppliedCreationTime::seededValueFor($fields))) {
@@ -47,7 +49,26 @@ final readonly class AlreadyPresentCreate
             // dropped every column the first half did not carry.
             $this->tail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
 
-            return true;
+            return $pk;
+        }
+
+        return $this->rehomeOrRefuse($table, $payload, $fields, $now, $deviceId, $pk, $userId);
+    }
+
+    // The stored row at that id is a different row, so the arriving one is not
+    // here under any id. It is stored under a fresh one where a natural key
+    // can find it again, and quarantined where none can — which is the whole
+    // of what `primary_key_collision` still means.
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<OpLogEntry>>  $fields
+     */
+    private function rehomeOrRefuse(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): ?int
+    {
+        $rehomed = $this->rehome->under($table, $payload, $deviceId, $pk, $userId);
+
+        if ($rehomed !== null) {
+            return $rehomed;
         }
 
         // The newest entry in the group, not the first: replay rehydrates the
@@ -67,7 +88,7 @@ final readonly class AlreadyPresentCreate
             'device_id' => $deviceId,
         ]);
 
-        return false;
+        return null;
     }
 
     /**
