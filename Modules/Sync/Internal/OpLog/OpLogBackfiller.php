@@ -376,7 +376,7 @@ final readonly class OpLogBackfiller
         $query->orderBy($table.'.id')
             ->chunk(self::CHUNK, function ($rows) use ($connection, $table, $userId, $writer, $budget, &$captured): bool {
                 $written = $connection->transaction(
-                    fn (): int => $this->captureChunk($connection, $table, $userId, $writer, $budget !== null, $rows),
+                    fn (): int => $this->captureChunk($table, $userId, $writer, $budget !== null, $rows),
                     self::LOCK_ATTEMPTS,
                 );
 
@@ -398,7 +398,6 @@ final readonly class OpLogBackfiller
      * @param  Collection<int, \stdClass>  $rows
      */
     private function captureChunk(
-        Connection $connection,
         string $table,
         int $userId,
         OpLogWriter $writer,
