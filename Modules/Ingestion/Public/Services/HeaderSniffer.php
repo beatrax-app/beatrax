@@ -12,6 +12,7 @@ use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvLanguageProfile;
 use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvLanguageException;
 use Modules\Ingestion\Internal\Exceptions\UnsupportedPaypalCsvShapeException;
+use Modules\Ingestion\Internal\Support\SourceFileCeilings;
 use Modules\Ingestion\Public\Dto\CsvPreset;
 use Modules\Ingestion\Public\Dto\PositionalCsvPreset;
 use Modules\Ingestion\Public\Dto\SniffResult;
@@ -91,6 +92,8 @@ final readonly class HeaderSniffer
             ));
         }
 
+        SourceFileCeilings::refuseLongCsvLine($path);
+
         $firstLine = strtok($head, "\r\n");
         if ($firstLine === false) {
             throw new SniffMismatchException(self::EMPTY_FILE_MESSAGE);
@@ -135,6 +138,8 @@ final readonly class HeaderSniffer
                 $preset->label,
             ));
         }
+
+        SourceFileCeilings::refuseLongCsvLine($path);
 
         $firstLine = strtok($head, "\r\n");
         if ($firstLine === false) {
@@ -218,6 +223,8 @@ final readonly class HeaderSniffer
                 "That file doesn't look like a CSV. In the PayPal portal, open the custom statements view, switch to the Betalingen tab, and download Rapport Transactiegegevens as CSV."
             );
         }
+
+        SourceFileCeilings::refuseLongCsvLine($path);
 
         $firstLine = strtok($head, "\r\n");
         if ($firstLine === false) {
@@ -330,6 +337,8 @@ final readonly class HeaderSniffer
                 .'the CAMT.053 statement from the ASN portal.'
             );
         }
+
+        SourceFileCeilings::refuseCamtEntryCount($path);
 
         return new SniffResult(
             format: Camt053HeaderProfile::FORMAT,

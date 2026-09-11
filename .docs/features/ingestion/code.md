@@ -58,7 +58,9 @@ Modules/Ingestion/
 │   │   │   ├── IcsDateParser.php
 │   │   │   ├── IcsPdfExtractionMap.php
 │   │   │   ├── IcsPdfHeaderProfile.php
-│   │   │   └── PdfTextExtractor.php
+│   │   │   ├── PdfContentSize.php            # what a page costs to lay out
+│   │   │   ├── PdfTextExtractor.php
+│   │   │   └── PdfTextLayoutReader.php       # the phone's reader
 │   │   └── Paypal/
 │   │       ├── PaypalCsvAdapter.php
 │   │       ├── PaypalAmountParser.php
@@ -68,13 +70,16 @@ Modules/Ingestion/
 │   │       └── PaypalTransactionRollup.php
 │   ├── Enums/
 │   │   └── StatementExtraKey.php            # statement_summaries extras keys
-│   └── Exceptions/                          # module-internal parse failures
-│       ├── InvalidAmountException.php
-│       ├── InvalidDateException.php
-│       ├── PdfExtractionFailed.php
-│       ├── SniffMismatchException.php
-│       ├── UnsupportedPaypalCsvLanguageException.php
-│       └── UnsupportedPaypalCsvShapeException.php
+│   ├── Exceptions/                          # module-internal parse failures
+│   │   ├── InvalidAmountException.php
+│   │   ├── InvalidDateException.php
+│   │   ├── PdfExtractionFailed.php
+│   │   ├── ReadCeilingExceededException.php
+│   │   ├── SniffMismatchException.php
+│   │   ├── UnsupportedPaypalCsvLanguageException.php
+│   │   └── UnsupportedPaypalCsvShapeException.php
+│   └── Support/
+│       └── SourceFileCeilings.php           # see what-a-file-expands-into.md
 ├── Database/Migrations/   (empty — no DB schema owned here)
 ├── Routes/
 │   ├── web.php

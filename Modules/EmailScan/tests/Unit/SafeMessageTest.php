@@ -36,3 +36,27 @@ it('leaves a short single-line message unchanged', function (): void {
     expect(SafeMessage::cap('invalid_grant: refresh token revoked'))
         ->toBe('invalid_grant: refresh token revoked');
 });
+
+// The provider writes the hint in the reader's own language, so the 300th byte
+// lands inside a character routinely rather than exceptionally. Swept across
+// every alignment, a plain substr split one in three of them and the cut end
+// rendered as a lozenge.
+it('never cuts a multibyte character in half, at any alignment', function (): void {
+    $split = 0;
+
+    for ($pad = 0; $pad <= 20; $pad++) {
+        $raw = str_repeat('a', $pad).str_repeat('é', 400);
+        $out = SafeMessage::cap($raw);
+
+        expect(mb_check_encoding($out, 'UTF-8'))->toBeTrue("pad {$pad} cut a character in half");
+        expect(strlen($out))->toBeLessThanOrEqual(300);
+
+        if (strlen($out) < 300) {
+            $split++;
+        }
+    }
+
+    // The control: a sweep that never reached the boundary would pass the
+    // assertion above without testing it.
+    expect($split)->toBeGreaterThan(0, 'no alignment in the sweep landed the cut inside a character');
+});

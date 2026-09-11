@@ -86,6 +86,7 @@ What the module explicitly does NOT do:
   `Internal/` —
   `InvalidAmountException`, `InvalidDateException`,
   `SniffMismatchException`, `PdfExtractionFailed`,
+  `ReadCeilingExceededException`,
   `UnsupportedPaypalCsvLanguageException`,
   `UnsupportedPaypalCsvShapeException` — because `Import` reaches them
   through the `NamesAFormatMismatch` marker, never by class name.
@@ -127,7 +128,10 @@ What the module explicitly does NOT do:
   (delimiter, has-header, encoding, column count). It is not
   advisory: a mismatch is an exception, and every adapter calls
   it again itself on the first line of `parse()`, so a caller
-  that skipped the wizard is refused just the same.
+  that skipped the wizard is refused just the same. It is also
+  where a file's **read ceiling** is enforced, for the same
+  reason — see
+  [what a file expands into](what-a-file-expands-into.md).
 - `SourceAdapterRegistry::for($formatId)` — keyed lookup;
   unknown id raises `UnsupportedFormatException`.
 - `SourceAdapter::parse($localPath, $accounts)` — each concrete
@@ -221,7 +225,13 @@ element, `bookedAt` is zeroed to `00:00:00` to match the CSV adapter's
 `startOfDay()` semantics, so a CSV row and a CAMT entry for the same
 logical transaction produce identical `FingerprintComposer` v4 hashes;
 an `<Ntry>` with neither `<BookgDt>` nor `<ValDt>` is rejected as a
-parse error rather than falling back to the wall clock. Security: before
+parse error rather than falling back to the wall clock. Size: the sniffer counts
+`<Ntry` elements and refuses a statement booking more than
+`SourceFileCeilings::MAX_CAMT_ENTRIES` (20,000), because genkgo builds the
+whole statement before the adapter yields a row and the cost is per entry, not
+per byte — 62,497 entries inside the 10 MB upload cap exhausted a phone's heap
+before the first row, where 3,676 entries in the same 9.5 MB did not
+([what a file expands into](what-a-file-expands-into.md)). Security: before
 any `Reader` construction, `libxml_set_external_entity_loader()` is
 installed and returns `null` for every entity — file, scheme-less, or
 network — mitigating XXE regardless of the underlying PHP/libxml defaults
@@ -647,6 +657,14 @@ read through `optionalCell()` (Revolut's `Fee`) stays out of the list. It also h
 reaches an adapter in this module. The sniff is the wizard's one
 validation seam, and moving those two out would give the receipt
 transports a different failure message for the same kind of mistake.
+It is also where a file's read ceiling is enforced: the CSV arms refuse a file
+carrying a line longer than `SourceFileCeilings::MAX_CSV_LINE_BYTES` (64 KB),
+and the CAMT arm refuses a statement past `MAX_CAMT_ENTRIES`. Both raise
+`ReadCeilingExceededException`, which is deliberately not a
+`NamesAFormatMismatch` — the file is the format it claims to be — so the reader
+is told the file stopped short rather than sent to check their bank. The
+measurements are on
+[what a file expands into](what-a-file-expands-into.md).
 A leading UTF-8 byte-order mark is stripped before parsing so
 files exported through tools that prepend one (Excel, some browser
 downloads) sniff cleanly. The PayPal CSV sniff additionally rejects the
