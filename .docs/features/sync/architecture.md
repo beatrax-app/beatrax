@@ -1868,6 +1868,31 @@ reconcile seeing a mismatch and trying again. Nothing retries on a timer:
 else — a failed restart therefore stays failed until one of those happens
 again.
 
+**The key that records it must not outlive the daemon it describes.** The
+credentialled-device key is written to the configured cache store, and
+`CACHE_STORE` is `file` in both `.env.bundled` and the development `.env`, so
+what the app writes survives the run of the app that wrote it. Measured on the
+desktop install on 2026-09-11: the cache file holding the Mac's own device id
+was written at 20:16, the daemon holding `:51337` was started at 22:14:55 with
+no `BEATRAX_SYNC_*` variable in its environment, and the unlock at 22:19:18 read
+the 20:16 key, found it equal to the identity it was about to hand over, and
+logged `sync listener: already listening with these credentials; leaving it in
+place.` A fresh install syncs because its store is empty; every start of the app
+after the first one did not.
+
+`spawn()` therefore rewrites the key on **every** start it makes — including the
+keyless boot start, before the early return that one takes — so the key names the
+process now listening rather than one a previous run started. The reconcile path
+deliberately leaves it standing in the one case where this app did not start the
+listener at all (`$environment === []` with the port already bound): that is the
+previous run's persistent child, and the previous run's key describes it
+correctly. Asking the shell instead — `GET child-process/get/sync-listener`
+carries the environment it recorded — was rejected for that same case: the shell
+has no entry for a child that outlived the Electron process which registered it,
+and reading "no entry" as "not credentialled" would restart a daemon
+`ChildProcess::stop()` cannot reach, leaving the replacement to fatal on the
+bound port.
+
 **Pairing-offer route.** `PairingOfferRequestHandler` is mounted in front of
 the `Websocket` handler and serves exactly one route, `GET /pair/offer`,
 delegating every other request to `Websocket::handleRequest()`. It is a
