@@ -10,9 +10,11 @@ use Illuminate\Database\QueryException;
 use Modules\Categorization\Public\Events\TransactionCategorized;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\QueryFailure;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Sync\Public\Events\EntityMutated;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 final readonly class MerchantMemoryWriter
 {
@@ -22,6 +24,8 @@ final readonly class MerchantMemoryWriter
         private DatabaseManager $db,
         private Clock $clock,
         private Dispatcher $events,
+        private SensitiveColumnCodec $codec,
+        private SessionFactory $session,
     ) {}
 
     public function handle(TransactionCategorized $event): void
@@ -138,6 +142,8 @@ final readonly class MerchantMemoryWriter
 
         if ($merchantId === 0) {
             $merchantId = $this->createMerchant($event, $row, $normalized);
+        } else {
+            $this->healSealedName($merchantId, $event->userId);
         }
 
         return $merchantId === 0 ? null : $merchantId;
@@ -151,7 +157,7 @@ final readonly class MerchantMemoryWriter
     {
         $connection = $this->db->connection();
         $now = $this->clock->now()->toDateTimeString();
-        $counterparty = self::toString($row->counterparty_name ?? null);
+        $counterparty = $this->readable(self::toString($row->counterparty_name ?? null), $event->userId);
         $name = $counterparty === '' ? $normalized : $counterparty;
 
         // insertOrIgnore against the (user_id, normalized_name) UNIQUE, then
@@ -188,6 +194,71 @@ final readonly class MerchantMemoryWriter
         }
 
         return $merchantId;
+    }
+
+    // merchants.name is plaintext by decision while transactions.counterparty_name
+    // is sealed, so the stored bytes are ciphertext and this is the one place
+    // holding a key when they are copied across. The codec answers '' for a
+    // value it cannot open, which the caller reads as "no name here".
+    private function readable(string $stored, int $userId): string
+    {
+        if ($stored === '') {
+            return '';
+        }
+
+        return trim($this->codec->decryptValue(
+            'transactions',
+            'counterparty_name',
+            $stored,
+            $userId,
+            ($this->session)(),
+        )['value']);
+    }
+
+    // Rows written before the decrypt above hold ciphertext no migration can
+    // repair: a migration runs without an unlocked session and so holds no
+    // key. This is the moment one is held, so a name that opens is put back
+    // in the clear -- only on a real decrypt, never on the blanking path.
+    private function healSealedName(int $merchantId, int $userId): void
+    {
+        $stored = self::toString($this->db->connection()->table('merchants')
+            ->where('id', $merchantId)
+            ->where('user_id', $userId)
+            ->value('name'));
+
+        if ($stored === '') {
+            return;
+        }
+
+        $opened = $this->codec->decryptValue(
+            'transactions',
+            'counterparty_name',
+            $stored,
+            $userId,
+            ($this->session)(),
+        );
+
+        if ($opened['decrypted'] !== true) {
+            return;
+        }
+
+        $name = trim($opened['value']);
+        if ($name === '' || $name === $stored) {
+            return;
+        }
+
+        $this->db->connection()->table('merchants')
+            ->where('id', $merchantId)
+            ->where('user_id', $userId)
+            ->update(['name' => $name, 'updated_at' => $this->clock->now()->toDateTimeString()]);
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'merchants',
+            pk: $merchantId,
+            userId: $userId,
+            mutationType: 'edit',
+            dirtyFields: ['name' => $name],
+        ));
     }
 
     private function captureMerchant(int $merchantId, int $userId): void
