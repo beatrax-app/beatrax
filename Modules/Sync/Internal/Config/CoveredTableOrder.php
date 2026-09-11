@@ -18,6 +18,22 @@ use Throwable;
 // SQLite rejected the insert, aborting the catch-up.
 final readonly class CoveredTableOrder
 {
+    // Parent references the schema cannot be asked about. Each was left without
+    // a foreign key on purpose and for its own reason -- a counterparty leaving
+    // must not take its transaction history with it, and a series belongs to
+    // another module -- and that constraint is also what parentColumns() reads.
+
+    // So both ids arrived holding the number the PEER minted, naming whichever
+    // local row happens to hold it. Declared here rather than constrained,
+    // because the reasons the constraints were declined still stand.
+    /**
+     * @var array<string, array<string, string>>
+     */
+    private const array UNCONSTRAINED_PARENTS = [
+        'forecast_scenario_mutations' => ['target_series_id' => 'recurring_series'],
+        'transactions' => ['counterparty_id' => 'counterparties'],
+    ];
+
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
@@ -129,6 +145,11 @@ final readonly class CoveredTableOrder
                 $column = $foreignKey['columns'][0] ?? null;
 
                 if (is_string($column) && $target !== $table && in_array($target, $covered, true)) {
+                    $columns[$column] = $target;
+                }
+            }
+            foreach (self::UNCONSTRAINED_PARENTS[$table] ?? [] as $column => $target) {
+                if (in_array($target, $covered, true)) {
                     $columns[$column] = $target;
                 }
             }
