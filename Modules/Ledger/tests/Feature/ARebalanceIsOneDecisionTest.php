@@ -20,8 +20,9 @@ uses(RefreshDatabase::class);
 // separate rows and merge as separate ops. Announcing only the legs whose
 // numbers moved let two rebalances interleave into a set neither device chose:
 // per-field last-writer-wins picks a winner per leg, and the survivors need not
-// sum to the parent. The applier never re-asks -- SplitOverfillGate is reached
-// from the create path only, and it refuses an overfill rather than a shortfall.
+// sum to the parent. SplitOverfillGate now re-asks on the Set path too, but it
+// refuses an overfill rather than a shortfall, so announcing the whole set is
+// still what makes the two rebalances converge rather than merely not overfill.
 
 function rebalanceUser(): User
 {

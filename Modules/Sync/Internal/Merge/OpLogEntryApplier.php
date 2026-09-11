@@ -438,6 +438,8 @@ final readonly class OpLogEntryApplier
         /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
         $deferred = [];
 
+        $batch = new ArrivingBatch($userId, $now, $this->splitAmountsArriving($candidatesByField, $userId));
+
         foreach ($candidatesByField as $table => $rows) {
             foreach ($rows as $pk => $fields) {
                 $tomb = $tombstones[$table][$pk] ?? null;
@@ -449,7 +451,7 @@ final readonly class OpLogEntryApplier
                 }
 
                 foreach ($fields as $field => $fieldEntries) {
-                    $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $userId, $now, $deferred);
+                    $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $batch, $deferred);
                 }
 
                 $applied->rowUpdated($table, $pk, $userId);
@@ -470,7 +472,7 @@ final readonly class OpLogEntryApplier
      * @param  list<OpLogEntry>  $fieldEntries
      * @param  list<array{table: string, pk: int|string, values: array<string, mixed>}>  $deferred
      */
-    private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, int $userId, string $now, array &$deferred): void
+    private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, ArrivingBatch $batch, array &$deferred): void
     {
         try {
             $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
@@ -478,28 +480,32 @@ final readonly class OpLogEntryApplier
             // A Set rewrites the same column a create gated, so the day is
             // read on both paths or on neither.
             if ($this->suppliedDates->refuses($table, $field, $columnValue)) {
-                $this->quarantine->record($fieldEntries[0], QuarantineReason::ImpossibleDate, $now);
+                $this->quarantine->record($fieldEntries[0], QuarantineReason::ImpossibleDate, $batch->now);
 
                 return;
             }
 
             $columnValue = $this->suppliedDates->normalise($table, $field, $columnValue);
 
-            $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
+            $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $batch->userId);
 
             // A Set names ids the same way a create does, and addresses a row
             // by one. Both are rewritten before ownership reads them, so the
             // check runs against the id this device will actually write.
             $setDevice = $fieldEntries[0]->deviceId;
-            $columnValue = $this->aliases->translate($table, $setDevice, [$field => $columnValue], $userId)[$field] ?? $columnValue;
-            $pk = $this->aliases->resolvePk($table, $setDevice, $pk, $userId);
+            $columnValue = $this->aliases->translate($table, $setDevice, [$field => $columnValue], $batch->userId)[$field] ?? $columnValue;
+            $pk = $this->aliases->resolvePk($table, $setDevice, $pk, $batch->userId);
 
-            // The create path gates the ids a row NAMES, but a Set rewrites
-            // that same column afterwards: create a transaction against your
-            // own account, then Set account_id to another member's, and the
-            // row scopes to you while reading their balance.
-            if (! $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $userId, $pk)) {
-                $this->quarantine->record($fieldEntries[0], QuarantineReason::CrossUser, $now);
+            // Both gates gate a create, and a Set rewrites the same column
+            // afterwards: Set account_id to another member's and the row scopes
+            // to you while reading their balance; raise a leg and the legs stop
+            // adding up to the charge. Ownership answers first, as on create.
+            $refusal = $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $batch->userId, $pk)
+                ? $this->splitOverfill->reasonToRefuseSet($table, $field, $pk, $columnValue, $batch->splitAmounts)
+                : QuarantineReason::CrossUser;
+
+            if ($refusal !== null) {
+                $this->quarantine->record($fieldEntries[0], $refusal, $batch->now);
 
                 return;
             }
@@ -523,11 +529,50 @@ final readonly class OpLogEntryApplier
                 $query->where('id', $pk);
             }
 
-            $this->ownership->scopeToUser($query, $table, $userId)
+            $this->ownership->scopeToUser($query, $table, $batch->userId)
                 ->update([$field => $columnValue]);
         } catch (\Throwable) {
-            $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
+            $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $batch->now);
         }
+    }
+
+    // Every leg amount this batch will write, under the id THIS device knows
+    // the leg by. A rebalance announces its whole leg set, so a leg judged
+    // against the stored siblings alone is judged on a set that is halfway
+    // applied, and the order the legs arrive in decides which one is refused.
+    /**
+     * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $candidatesByField
+     * @return array<int|string, int>
+     */
+    private function splitAmountsArriving(array $candidatesByField, int $userId): array
+    {
+        $arriving = [];
+
+        foreach ($candidatesByField[SplitOverfillGate::TABLE] ?? [] as $pk => $fields) {
+            $entries = $fields[SplitOverfillGate::AMOUNT] ?? [];
+
+            if ($entries === []) {
+                continue;
+            }
+
+            try {
+                $value = $this->projector->encodeColumnValue(
+                    $this->projector->resolveStrategy(SplitOverfillGate::TABLE, SplitOverfillGate::AMOUNT)->resolve($entries),
+                );
+            } catch (\Throwable) {
+                // applyFieldMerge() quarantines this same op as a strategy
+                // error, so the value it could not resolve never lands and
+                // must not be counted as though it will.
+                continue;
+            }
+
+            if (is_numeric($value)) {
+                $local = $this->aliases->resolvePk(SplitOverfillGate::TABLE, $entries[0]->deviceId, $pk, $userId);
+                $arriving[$local] = (int) $value;
+            }
+        }
+
+        return $arriving;
     }
 
     // Tombstones for (table, pk) pairs that had NO field SET entries — pairs

@@ -23,7 +23,9 @@ use Throwable;
  */
 final readonly class SplitOverfillGate
 {
-    private const string TABLE = 'transaction_splits';
+    public const string TABLE = 'transaction_splits';
+
+    public const string AMOUNT = 'settled_amount_minor';
 
     public function __construct(private DatabaseManager $db) {}
 
@@ -32,11 +34,12 @@ final readonly class SplitOverfillGate
     // has always been.
     /**
      * @param  array<string, mixed>  $payload
+     * @param  array<int|string, int>  $arriving
      */
-    public function reasonToRefuse(string $table, int|string $pk, array $payload): ?QuarantineReason
+    public function reasonToRefuse(string $table, int|string $pk, array $payload, array $arriving = []): ?QuarantineReason
     {
         $transactionId = $table === self::TABLE ? self::asInt($payload['transaction_id'] ?? null) : null;
-        $incoming = self::asInt($payload['settled_amount_minor'] ?? null);
+        $incoming = self::asInt($payload[self::AMOUNT] ?? null);
 
         if ($transactionId === null || $incoming === null) {
             return null;
@@ -45,15 +48,42 @@ final readonly class SplitOverfillGate
         $currency = is_string($payload['settled_currency'] ?? null) ? $payload['settled_currency'] : '';
 
         try {
-            return $this->verdict($transactionId, $pk, $incoming, $currency);
+            return $this->verdict($transactionId, $pk, $incoming, $currency, $arriving);
         } catch (SplitSumUnreadableException) {
             return QuarantineReason::SplitSumUnreadable;
         }
     }
 
+    // A Set carries one column and no row, so the transaction and the currency
+    // the sum is taken in come off the stored leg rather than the op. An op for
+    // a leg that is not here yet is nobody's overfill: the update it precedes
+    // matches no row either.
+    /**
+     * @param  array<int|string, int>  $arriving
+     */
+    public function reasonToRefuseSet(string $table, string $field, int|string $pk, mixed $value, array $arriving = []): ?QuarantineReason
+    {
+        if ($table !== self::TABLE || $field !== self::AMOUNT || self::asInt($value) === null) {
+            return null;
+        }
+
+        try {
+            $leg = $this->storedLeg($pk);
+        } catch (SplitSumUnreadableException) {
+            return QuarantineReason::SplitSumUnreadable;
+        }
+
+        return $leg === null
+            ? null
+            : $this->reasonToRefuse($table, $pk, [...$leg, self::AMOUNT => $value], $arriving);
+    }
+
     // Separated from reasonToRefuse() so the one catch above covers both reads
     // and neither can be answered from a value it did not produce.
-    private function verdict(int $transactionId, int|string $pk, int $incoming, string $currency): ?QuarantineReason
+    /**
+     * @param  array<int|string, int>  $arriving
+     */
+    private function verdict(int $transactionId, int|string $pk, int $incoming, string $currency, array $arriving): ?QuarantineReason
     {
         $parent = $this->parentAmount($transactionId, $currency);
 
@@ -61,7 +91,7 @@ final readonly class SplitOverfillGate
             return null;
         }
 
-        return abs($this->legsAlreadyThere($transactionId, $pk, $currency) + $incoming) > abs($parent)
+        return abs($this->legsAlreadyThere($transactionId, $pk, $currency, $arriving) + $incoming) > abs($parent)
             ? QuarantineReason::SplitWouldOverfillTransaction
             : null;
     }
@@ -76,7 +106,7 @@ final readonly class SplitOverfillGate
     {
         try {
             $row = $this->db->connection()->table('transactions')->where('id', $transactionId)
-                ->first(['settled_amount_minor', 'settled_currency']);
+                ->first([self::AMOUNT, 'settled_currency']);
         } catch (Throwable $e) {
             throw SplitSumUnreadableException::reading('transactions', $e);
         }
@@ -88,22 +118,55 @@ final readonly class SplitOverfillGate
         return self::asInt($row->settled_amount_minor ?? null);
     }
 
+    // What the other legs hold once the batch lands: the amount an op in the
+    // same batch is about to write where it names the leg, the stored one
+    // otherwise. A rebalance announces its WHOLE set, so counting only what is
+    // stored refuses the order in which a raised leg happens to arrive first.
     /**
+     * @param  array<int|string, int>  $arriving
+     *
      * @throws SplitSumUnreadableException when the legs already stored cannot be summed
      */
-    private function legsAlreadyThere(int $transactionId, int|string $pk, string $currency): int
+    private function legsAlreadyThere(int $transactionId, int|string $pk, string $currency, array $arriving): int
     {
         try {
-            $sum = $this->db->connection()->table(self::TABLE)
+            $legs = $this->db->connection()->table(self::TABLE)
                 ->where('transaction_id', $transactionId)
                 ->where('settled_currency', $currency)
                 ->where('id', '!=', $pk)
-                ->sum('settled_amount_minor');
+                ->get(['id', self::AMOUNT]);
         } catch (Throwable $e) {
             throw SplitSumUnreadableException::reading(self::TABLE, $e);
         }
 
-        return (int) $sum;
+        $total = 0;
+
+        foreach ($legs as $leg) {
+            $id = $leg->id ?? null;
+            $stored = self::asInt($leg->settled_amount_minor ?? null) ?? 0;
+            $total += is_numeric($id) ? ($arriving[(int) $id] ?? $stored) : $stored;
+        }
+
+        return $total;
+    }
+
+    /**
+     * @return array{transaction_id: mixed, settled_currency: mixed}|null
+     *
+     * @throws SplitSumUnreadableException when the leg cannot be read
+     */
+    private function storedLeg(int|string $pk): ?array
+    {
+        try {
+            $row = $this->db->connection()->table(self::TABLE)->where('id', $pk)
+                ->first(['transaction_id', 'settled_currency']);
+        } catch (Throwable $e) {
+            throw SplitSumUnreadableException::reading(self::TABLE, $e);
+        }
+
+        return is_object($row)
+            ? ['transaction_id' => $row->transaction_id ?? null, 'settled_currency' => $row->settled_currency ?? null]
+            : null;
     }
 
     private static function asInt(mixed $value): ?int
