@@ -165,10 +165,23 @@ it('tells the reader they are waiting rather than that they are wrong', function
 
     $flash = $page->get('flashMessage');
 
+    // The wait is whatever the limiter has left, counted in real seconds off
+    // the cache's own timer, so pinning it to 60 fails the moment one elapses
+    // between spending the meter and reading the flash -- which is why this
+    // failed under coverage, where instrumentation makes that second likely,
+    // while the uninstrumented shards passed. The template is asserted whole so
+    // a reader still cannot be told they are wrong when they are waiting; only
+    // the digits are free.
+    $anyWait = '/^'.str_replace(
+        '__WAIT__',
+        '\d+s',
+        preg_quote(Lang::get('auth::login.error_throttled', ['wait' => '__WAIT__']), '/'),
+    ).'$/u';
+
     expect($flash)
         ->toBeString()
         ->not->toBe(Lang::get('auth::login.error_invalid'))
-        ->toBe(Lang::get('auth::login.error_throttled', ['wait' => '60s']));
+        ->toMatch($anyWait);
 });
 
 // The positive control for the case above: the same screen, a meter with room,
