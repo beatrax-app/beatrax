@@ -131,7 +131,8 @@ What the module explicitly does NOT do:
   - `SurfaceWorkerCrashAlert` — accumulates `ProcessExited` events
     in a rolling window held on `ShellState`, because each exit
     arrives in a request of its own; raises a `SystemAlert` when the
-    threshold is crossed.
+    threshold is crossed, and withdraws it again from
+    `handleWorkerLoop()`, which runs inside the worker itself.
 - **Internal/Http/Livewire/**
   - `SetupScreen` — first-run setup landing.
   - `WelcomeScreen` — first-launch welcome.
@@ -189,9 +190,64 @@ What the module explicitly does NOT do:
   `SystemAlertsBanner` will render. The window is pruned on both the write
   and the read, and the row carries a TTL of the window itself, so exits a
   year apart never add up and a device that stops crashing leaves nothing.
+- `SurfaceWorkerCrashAlert::handleWorkerLoop()` — the same watchdog
+  answering the sentence it wrote. See
+  [the banner comes down when the loop stops](#the-banner-comes-down-when-the-loop-stops).
 - `FileOpenedFromOs` event — the cross-module surface for "the OS
   just handed us a file". Subscribed by `Import` (starts an import
   preview) and `Receipts` (starts a receipt match).
+
+### The banner comes down when the loop stops
+
+The crash alert's copy instructs rather than promises — *"Reopen the app to
+restart it."* — and for as long as `ProcessExited` was the only thing this
+listener heard, the reader could do exactly that and still be told their
+imports were paused. Nothing anywhere said the worker had come back.
+
+`handleWorkerLoop()` is that signal, and it is subscribed to Laravel's
+`Illuminate\Queue\Events\Looping` — the event the `queue:work` daemon fires
+before each turn of its own loop. The choice of signal is the whole change:
+
+- **Not a spawn.** NativePHP restarts the child after every exit, so a
+  `ProcessSpawned` withdrawal would take the banner down in the gap between two
+  crashes of a worker that is still crash-looping. That is worse than the stale
+  banner: out of date becomes false.
+- **Not a cached heartbeat.** `WriteWorkerHeartbeat` stamps a cache key with a
+  minute's expiry, and a crash-looping worker re-stamps it on every respawn — so
+  "the heartbeat is fresh" is *consistent with* the fault. It is also the wrong
+  question read from inside the worker, where the tick doing the reading already
+  proves what the stamp is for.
+- **Not a processed job.** A completed job would prove the most, and an idle
+  household would never produce one, so the banner would stand until work
+  happened to arrive.
+
+The tick proves liveness; what separates *came back* from *keeps coming back* is
+the exit bucket the raise already keeps. The withdrawal runs only when **no**
+supervised alias has an exit inside `CRASH_LOOP_WINDOW_SECONDS` — the exact
+inverse of the rule that raised the row. A crash loop therefore cannot flicker
+the banner: raising needs three exits inside one window and withdrawing needs a
+whole window with none, so the two can never alternate faster than the window
+itself, and each raise in that sequence is a real crash loop.
+
+Two consequences worth knowing:
+
+- The loop ticks every few seconds for as long as the app is open, and the
+  question reaches the database, so it is asked at most once a minute —
+  `RECOVERY_PROBE_SLOT` on `ShellState` is the throttle. The first tick after a
+  reopen finds it unset, which is the moment the answer has actually changed.
+- `Looping` fires from `Worker::daemon()` only. Under `native:run` the shell
+  starts `queue:listen`, whose per-job children never reach that loop, so the
+  withdrawal is a packaged-app path — the same limitation the dev console's
+  worker-heartbeat tile already has.
+
+Withdrawal is `SystemAlertWriter::withdrawSystemWide()` stamping
+`acknowledged_at`, never a `DELETE`: `system_alerts` syncs, a raw delete emits no
+tombstone and the peer resurrects the row, and the stamp is what fires the
+`system_alerts_release_dedup_key` trigger — which is why the kind can be claimed
+again by the next genuine crash loop. The listener registers **above** the bundle
+gate, unlike the `ProcessExited` half: it calls no Electron API, and the worker
+process does not set `nativephp-internal.running`, so gating it would leave the
+reopened app with nobody able to answer the sentence.
 
 ### Submenus never hang off a role
 
@@ -621,6 +677,10 @@ and spent, while these are values that are read repeatedly and stay.
   crash-looping worker cannot grow the row. The row itself is written with a TTL
   of the window, which is a janitor rather than the rule: exits a year apart are
   already dropped by the prune before the TTL is consulted.
+- **The recovery probe.** One slot with a minute's TTL, written by the worker
+  process rather than by a shell event, so the question
+  [that takes the banner down](#the-banner-comes-down-when-the-loop-stops) is
+  asked once a minute instead of on every turn of the daemon loop.
 - **The focus flag.** Absent reads as focused, because a window opens in front
   of the reader and treating a launch as blurred pops an OS toast on top of the
   in-app banner it duplicates. `TrackWindowFocus::handleBooted` clears the slot
