@@ -325,12 +325,13 @@ final readonly class OpLogReplayer
                 /** @var array<string, array<int|string, OpLogEntry>> $pendingDeletes */
                 $pendingDeletes = [];
 
-                $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $userId, $now, $applied);
+                $batch = $this->applier->arrivingBatch($candidatesByField, $userId, $now);
+
+                $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $batch, $applied);
                 $this->applier->applyFieldMerges(
                     $candidatesByField,
                     $tombstones,
-                    $userId,
-                    $now,
+                    $batch,
                     $pendingDeletes,
                     $applied,
                 );

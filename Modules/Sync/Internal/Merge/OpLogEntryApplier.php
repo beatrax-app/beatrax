@@ -17,6 +17,8 @@ use Psr\Log\LoggerInterface;
 
 final readonly class OpLogEntryApplier
 {
+    private CreateRowGates $gates;
+
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
@@ -33,7 +35,12 @@ final readonly class OpLogEntryApplier
         private SplitOverfillGate $splitOverfill,
         private DependentRowCascade $cascade,
         private ?LoggerInterface $logger = null,
-    ) {}
+    ) {
+        // Built here, not injected: these are this class's own gates split out
+        // of it, and a parameter added to the middle of the list above becomes
+        // somebody else's argument at the positional call sites.
+        $this->gates = new CreateRowGates($ownership, $splitOverfill, $quarantine);
+    }
 
     /**
      * @param  list<OpLogEntry>  $verified
@@ -96,8 +103,7 @@ final readonly class OpLogEntryApplier
     public function applyCreates(
         array $creates,
         array $tombstones,
-        int $userId,
-        string $now,
+        ArrivingBatch $batch,
         ReplayedRows $applied,
     ): void {
         /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
@@ -109,18 +115,19 @@ final readonly class OpLogEntryApplier
                 // create makes different from the one the op names: written
                 // back under the peer's, the deferred link landed on the
                 // unrelated local row already sitting at it.
-                foreach ($this->applyCreatedRow($table, $pk, $fields, $tombstones[$table][$pk] ?? null, $userId, $now, $applied) as $link) {
+                foreach ($this->applyCreatedRow($table, $pk, $fields, $tombstones[$table][$pk] ?? null, $batch, $applied) as $link) {
                     $deferred[] = $link;
                 }
             }
         }
 
-        $this->selfReferences->apply($deferred, $userId);
+        $this->selfReferences->apply($deferred, $batch->userId);
     }
 
-    // Runs one created row through the gates and writes it, handing back the
-    // self-referential columns it could not carry at insert time, under the id
-    // they have to be written back to.
+    // Builds, translates, THEN judges. Every gate here reads ids, and until
+    // translate() has run they are the peer's: a legitimate row was refused as
+    // another reader's, and a leg that overfills was admitted because the
+    // transaction it named could not be found under the id it arrived with.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
      * @return list<array{table: string, pk: int|string, values: array<string, mixed>}>
@@ -130,102 +137,128 @@ final readonly class OpLogEntryApplier
         int|string $pk,
         array $fields,
         ?OpLogEntry $tomb,
-        int $userId,
-        string $now,
+        ArrivingBatch $batch,
         ReplayedRows $applied,
     ): array {
-        $payload = $this->admissiblePayload($table, $pk, $fields, $tomb, $userId, $now);
+        $first = reset($fields);
+        $deviceId = $first !== false && $first !== [] ? $first[0]->deviceId : '';
 
-        if ($payload === null) {
+        $admitted = $this->admissibleCreate($table, $pk, $fields, $tomb, $batch, $deviceId);
+
+        if ($admitted === null) {
             return [];
         }
 
-        // The ids this row NAMES, rewritten to the ones this device uses for
-        // the same logical rows: a peer that seeded its own reference data
-        // names it by an id only that device ever had.
-        $first = reset($fields);
-        $deviceId = $first !== false && $first !== [] ? $first[0]->deviceId : '';
-        $payload = $this->aliases->translate($table, $deviceId, $payload, $userId);
+        ['payload' => $payload, 'here' => $here] = $admitted;
 
         // A self-referential FK cannot be satisfied at insert time: transfer
         // pairs point at EACH OTHER, so whichever row lands first names a
         // partner that does not exist. Stripped here, set once both exist.
         $selfRefs = $this->selfReferences->extract($table, $payload);
 
-        $local = $this->insertCreatedRow($table, $payload, $fields, $now, $deviceId, $pk, $userId);
+        $local = $this->insertCreatedRow($table, $payload, $fields, $batch->now, $deviceId, $here, $batch->userId);
 
         if ($local === null) {
             return [];
         }
 
-        $applied->rowCreated($table, $local, $userId);
+        $applied->rowCreated($table, $local, $batch->userId);
 
         return $selfRefs === [] ? [] : [['table' => $table, 'pk' => $local, 'values' => $selfRefs]];
     }
 
-    // buildCreatePayload() writes these from the op itself — the pk, and the
-    // owner it re-seeds even when the op carries one — so a rule naming either
-    // is satisfied before a field is read. Requiring them discarded rows the
-    // applier could have written, and seven covered tables named user_id.
-    private const array SEEDED_BY_APPLIER = ['id', 'user_id'];
-
-    // The row to write, or null when a gate refused it: a tombstone that
-    // outranks the create, a create with fields still missing, a payload that
-    // could not be built, or a row belonging to someone else.
+    // The row to insert, or null when there is nothing left to insert: a
+    // tombstone outranks it, no payload could be built, a gate refused it, or
+    // it was the second half of a create and has been filled in as one.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
-     * @return array<string, mixed>|null
+     * @return array{payload: array<string, mixed>, here: int|string}|null
      */
-    private function admissiblePayload(
+    private function admissibleCreate(
         string $table,
         int|string $pk,
         array $fields,
         ?OpLogEntry $tomb,
-        int $userId,
-        string $now,
+        ArrivingBatch $batch,
+        string $deviceId,
     ): ?array {
-        $refused = ($tomb !== null && $this->tombstoneWins($table, $tomb, $fields))
-            || ! $this->createRowComplete($table, $pk, $fields, $userId, $now);
-
-        $payload = $refused ? null : $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+        $outranked = $tomb !== null && $this->tombstoneWins($table, $tomb, $fields);
+        $payload = $outranked ? null : $this->buildCreatePayload($table, $pk, $fields, $batch->userId, $batch->now);
 
         if ($payload === null) {
             return null;
         }
 
-        // The gates that refuse a payload that WAS built, each with the reason
-        // it is refused under. Ordered: ownership answers whose row this is,
-        // and the sum only means anything once that is settled.
-        $reason = match (true) {
-            ! $this->ownershipAdmits($table, $payload, $userId, $pk) => QuarantineReason::CrossUser,
-            default => $this->splitOverfill->reasonToRefuse($table, $pk, $payload),
-        };
+        // The ids this row NAMES, rewritten to the ones this device uses for
+        // the same logical rows: a peer that seeded its own reference data
+        // names it by an id only that device ever had.
+        $payload = $this->aliases->translate($table, $deviceId, $payload, $batch->userId);
 
-        if ($reason !== null) {
-            $firstField = reset($fields);
+        // And the id the row itself is here under. A create re-homed on an
+        // earlier frame is already here under another one, and re-sent once
+        // the row that collided is gone it inserted a SECOND row for the
+        // same logical one rather than colliding with its own.
+        $here = $this->aliases->resolvePk($table, $deviceId, $pk, $batch->userId);
+        $payload['id'] = $here;
 
-            if ($firstField !== false) {
-                $this->quarantine->record($firstField[0], $reason, $now);
-            }
+        // The tail branch used to fill() from inside this question and return
+        // false, so the caller bailed before the gates -- and before
+        // translate(), which never ran on what it had already written.
+        $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_BY_APPLIER);
+
+        if (array_diff($required, array_keys($fields)) !== []) {
+            $this->applyCreatedTail($table, $here, $payload, $fields, $batch);
 
             return null;
         }
 
-        return $payload;
+        $reason = $this->gates->refusalFor($table, $here, $payload, $batch);
+
+        if ($reason !== null) {
+            $this->gates->record($fields, $reason, $batch->now);
+        }
+
+        return $reason === null ? ['payload' => $payload, 'here' => $here] : null;
     }
 
-    // Both halves of the cross-user gate, in the order they must run. The ids a
-    // row NAMES are minted per device, so one can land on another household
-    // member's row; and a child row carries no user_id, so without the second
-    // check an op could attach a condition to ANOTHER user's rule by naming it.
+    // The fourth way a row arrives, and the one that used to write with no gate
+    // between it and the table. Judged on the row the write would LEAVE, not on
+    // the payload offered: the tail skips a column already holding a value, and
+    // refusing the whole payload loses a tail over a column it would not touch.
     /**
      * @param  array<string, mixed>  $payload
+     * @param  array<string, list<OpLogEntry>>  $fields
      */
-    private function ownershipAdmits(string $table, array $payload, int $userId, int|string $pk): bool
+    private function applyCreatedTail(string $table, int|string $pk, array $payload, array $fields, ArrivingBatch $batch): void
     {
-        return $this->ownership->referencesBelongToUser($table, $payload, $userId, $pk)
-            && $this->ownership->parentBelongsToUser($table, $payload, $userId);
+        if (! $this->splitTail->rowIsHere($table, $pk, $batch->userId)) {
+            $this->gates->record($fields, QuarantineReason::IncompleteCreateRow, $batch->now);
+
+            return;
+        }
+
+        $plan = $this->splitTail->planFill($table, $pk, $payload, SuppliedCreationTime::seededValueFor($fields));
+
+        if ($plan === null) {
+            return;
+        }
+
+        $reason = $this->gates->refusalFor($table, $pk, $plan['after'], $batch);
+
+        if ($reason !== null) {
+            $this->gates->record($fields, $reason, $batch->now);
+
+            return;
+        }
+
+        $this->splitTail->write($table, $pk, $plan['values'], $batch->userId);
     }
+
+    // buildCreatePayload() writes these from the op itself -- the pk, and the
+    // owner it re-seeds even when the op carries one -- so a rule naming either
+    // is satisfied before a field is read. Requiring them discarded rows the
+    // applier could have written, and seven covered tables named user_id.
+    private const array SEEDED_BY_APPLIER = ['id', 'user_id'];
 
     // Mirrors applyFieldMerge(): one unusable op is isolated, not allowed to
     // roll back every op replayed with it. A plain insert, NOT insertOrIgnore:
@@ -316,41 +349,6 @@ final readonly class OpLogEntryApplier
         return $order > 0 || ($order === 0 && $this->rules->deleteWins($table));
     }
 
-    // A CreateRow needs every required column, minus the ones
-    // buildCreatePayload() seeds itself. A row already here is the second half
-    // of a create the transport split and carries what the first half missed,
-    // so quarantining it loses their only carrier.
-    /**
-     * @param  array<string, list<OpLogEntry>>  $fields
-     */
-    private function createRowComplete(string $table, int|string $pk, array $fields, int $userId, string $now): bool
-    {
-        $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_BY_APPLIER);
-        $missing = array_diff($required, array_keys($fields));
-
-        if ($missing === []) {
-            return true;
-        }
-
-        if ($this->splitTail->rowIsHere($table, $pk, $userId)) {
-            $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
-
-            if ($payload !== null) {
-                $this->splitTail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
-            }
-
-            return false;
-        }
-
-        $firstField = reset($fields);
-
-        if ($firstField !== false && $firstField !== []) {
-            $this->quarantine->record($firstField[0], QuarantineReason::IncompleteCreateRow, $now);
-        }
-
-        return false;
-    }
-
     // A CreateRow op may legitimately carry a 'user_id' field, and the resolve
     // loop would let it overwrite the seeded authoritative one. insertOrIgnore
     // has no WHERE clause, so the forced re-seed below is what stops a device
@@ -426,15 +424,14 @@ final readonly class OpLogEntryApplier
     public function applyFieldMerges(
         array $candidatesByField,
         array $tombstones,
-        int $userId,
-        string $now,
+        ArrivingBatch $batch,
         array &$pendingDeletes,
         ReplayedRows $applied,
     ): void {
         /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
         $deferred = [];
 
-        $batch = new ArrivingBatch($userId, $now, $this->splitAmountsArriving($candidatesByField, $userId));
+        $userId = $batch->userId;
 
         foreach ($candidatesByField as $table => $rows) {
             foreach ($rows as $pk => $fields) {
@@ -569,6 +566,17 @@ final readonly class OpLogEntryApplier
         }
 
         return $arriving;
+    }
+
+    // One batch for the whole replay. applyCreates() ran with none at all, so
+    // a leg created by a rebalance was judged against its siblings' STORED
+    // amounts while the ops lowering them sat in the same frame, unapplied.
+    /**
+     * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $candidatesByField
+     */
+    public function arrivingBatch(array $candidatesByField, int $userId, string $now): ArrivingBatch
+    {
+        return new ArrivingBatch($userId, $now, $this->splitAmountsArriving($candidatesByField, $userId));
     }
 
     // Tombstones for (table, pk) pairs that had NO field SET entries — pairs

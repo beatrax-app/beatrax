@@ -45,6 +45,14 @@ final readonly class SplitOverfillGate
             return null;
         }
 
+        // The batch may carry a Set for THIS leg as well, and it lands after
+        // the row does. Judging the arriving row's own amount against the
+        // siblings' post-batch ones refused a historical create the same frame
+        // was about to overwrite.
+        if (is_numeric($pk) && array_key_exists((int) $pk, $arriving)) {
+            $incoming = $arriving[(int) $pk];
+        }
+
         $currency = is_string($payload['settled_currency'] ?? null) ? $payload['settled_currency'] : '';
 
         try {
