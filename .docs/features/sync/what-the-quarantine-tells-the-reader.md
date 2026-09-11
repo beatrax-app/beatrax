@@ -210,6 +210,22 @@ sending side: the pre-sync walk counts rows against captured creates for every c
 before it is allowed to record itself as finished, and says what it covered even when it covered
 everything. See [Silence is not a report](pre-sync-history-capture.md#silence-is-not-a-report).
 
+## A hold that outlives its answer
+
+Being recoverable is two promises, and they have to name the same rows: the pass
+replays the hold, and the pass retires it. `HistoryReprojector` asked those two
+questions with two different predicates. `openableRows()` — the replay half —
+takes a hold whose `gdk_epoch` is null **or** one naming an epoch this device
+holds. `keyRecoverableHoldIds()` — the retirement half — asked only
+`whereIn('gdk_epoch', $held)`, and a null is in no such list.
+
+So a `strategy_error` names no epoch at all: the value was readable and the
+merge refused it. Every pass replayed those rows and no pass could ever retire
+one, whatever the answer. The retirement half now asks through `openableRows()`
+itself, so the set a pass answers and the set it retires cannot drift apart
+again. A hold whose epoch this device does not have is still kept, because that
+pass did not answer it.
+
 ## A reason code is not a cause
 
 A paired phone held 35 `strategy_error` rows — seven distinct rows, each
