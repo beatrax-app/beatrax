@@ -66,6 +66,24 @@ A one-shot `migrate` service runs first and the other three wait on it. Without
 that ordering the workers boot against a schema that does not exist and
 crash-loop until someone runs step 4.
 
+FrankenPHP answers for everything under `public/` itself and never enters PHP
+to do it, so a static file receives none of the headers the application's
+middleware writes — measured on the desktop's own server, `/site.webmanifest`
+came back with `Content-Type` and nothing else while `/health` carried the full
+policy. The `app` service therefore sets `CADDY_SERVER_EXTRA_DIRECTIVES`, the
+base image's own seam for adding directives to its site block, rather than
+replacing its Caddyfile.
+
+The matcher is the load-bearing part: `file` matches only a request that
+resolves to a file on disk, and `not path *.php` keeps `index.php` out, so a
+routed response never reaches the header block and keeps the nonce-based policy
+the application composed for it. That is G1-R21 — a nearer layer may narrow the
+base policy, never replace it — and it was verified against the real image: a
+routed response comes back carrying exactly one `Content-Security-Policy`, its
+own. No policy is written for static files on purpose, because
+`public/offline.html` styles itself from an inline `<style>` and the service
+worker serves it from cache with the headers it was stored under.
+
 The FrankenPHP base image installs no `php.ini`, so the image copies
 `deploy/server/conf.d/` onto the interpreter's scan path. It carries
 `zend.exception_ignore_args=1`: with that Off — the compiled default —
