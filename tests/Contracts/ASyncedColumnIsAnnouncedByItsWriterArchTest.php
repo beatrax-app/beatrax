@@ -92,6 +92,12 @@ const SILENT_COLUMN_WRITERS = [
         'announcedBy' => 'Modules/Tax/Public/Services/TaxCategoryWriter.php',
         'proves' => "/->store->rename\(.*?'name_is_default' => false/s",
     ],
+    'Modules/Transfers/Internal/Listeners/ClearHalfPairsOnMergedRows.php' => [
+        'columns' => ['transactions.pair_transaction_id'],
+        'reason' => 'symmetry is derived from the merged rows, so every device clears the same dangling link from the same pair of rows; an op here would hand a peer back a column it can compute, and a system-stamped HLC on a column with no tombstone to anchor it would suppress a later honest re-pair',
+        'announcedBy' => '.docs/features/sync/merge-registry-authoring.md',
+        'proves' => '/it \\*\\*announces nothing\\*\\*, and must not/',
+    ],
     'Modules/Transfers/Public/Services/PairUnlinker.php' => [
         'columns' => ['transactions.type'],
         'reason' => 'the retype is announced by both callers: DeleteTransaction as an edit, TransferPairCascade as a system-cascade op with the tombstone HLC',

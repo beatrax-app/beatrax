@@ -97,6 +97,9 @@ What the module explicitly does NOT do:
   candidate search to `PairLookup::counterLegOnAccount`; only
   the reverse arm still runs a SELECT of its own, because it
   reads back ciphertext to match in PHP rather than in SQL.
+- **Internal/Listeners/ClearHalfPairsOnMergedRows** — listens for
+  `Sync::PeerRowsApplied`; restores the pair's symmetry after a merge.
+  See [A pair only one side let go of](#a-pair-only-one-side-let-go-of).
 - **Internal/Listeners/PairTransferCandidates** — listens for
   `Import::TransactionImported`; calls
   `TransferPairer::pairOne()` per row inside the import
@@ -166,6 +169,78 @@ signal and the returned value is valid plaintext.
 
 The module raises no events; it persists in response to the
 upstream `TransactionImported`.
+
+## A pair only one side let go of
+
+`transactions.pair_transaction_id` is a symmetric involution: if A names B
+then B names A, and no third row names either. `PairLinkWriter` is the one
+writer that establishes it and writes both directions inside one transaction,
+so a partial pair cannot land locally.
+
+Nothing holds that invariant across two devices. The migration adds a nullable
+self-referencing foreign key with `nullOnDelete()` and a NON-unique partial
+index; a foreign key guarantees the target exists, never that it points back.
+The column travels as plain LWW, and a pair is two columns on two rows, each
+merging on its own clock.
+
+So the two legs can be let go of separately:
+
+1. Device B imports both legs and pairs them: `t1 ↔ t2`.
+2. Device A has not drained B's ops yet, so on A `t1.pair_transaction_id` is
+   still NULL. The reader retypes `t1` to Expense.
+   `Ledger::TransactionDetail` computes whether the retype breaks a pair from
+   **A's own copy** of the link, which is NULL, so it emits `t1.type = expense`
+   and `t1.pair_transaction_id = null` — and nothing at all for `t2`.
+3. Both devices converge on `t1` = Expense with a NULL pair, and `t2` still
+   `transfer_in` naming `t1`.
+
+`t2` is then real money counted nowhere. `MoneyFlow::predicate()` counts a row
+only where its type is one of expense / income / refund **and** its pair is
+NULL, so a `transfer_in` naming a partner is excluded twice over. It is also
+invisible to `TransferPairer::pairOrphansForUser()`, which selects on
+`pair_transaction_id IS NULL`, and to every `counterLegOnAccount` search a
+neighbouring leg runs with `unpairedOnly: true` — so it can never re-pair.
+
+`ClearHalfPairsOnMergedRows` repairs this on the arrival path, which is where
+both devices see the same merged rows. For every transaction the replay
+touched, and for every row naming one, it clears the link where the partner
+**demonstrably cannot name the leg back**:
+
+- the partner names a third row — the "no third row names either" half of the
+  invariant, which two devices pairing the same leg concurrently produce; or
+- the partner is no longer typed as a transfer at all, which is exactly what a
+  reclassification to a non-transfer type leaves behind.
+
+A partner still typed as a transfer with an empty link is deliberately left
+alone. That shape is indistinguishable from a `Set` the deferral will deliver
+in a later batch, and clearing on it would unpair a healthy pair whose two
+links straddled a batch boundary.
+
+Both passes are chunked at `Core::RowChunk::DEFAULT_SIZE`, because a rebuild
+announces every row it re-creates: the arriving ids and the rows naming them are
+the whole ledger on a phone, and one `whereIn` over them would pass SQLite's
+bind ceiling as well as its memory. Every verdict is read off the state the
+merge left and the clears are written only once all of them are in — a leg
+cleared early must not be able to change the answer for a leg that names it, or
+the repair would depend on the order rows were reached and the two devices would
+diverge again.
+
+Clearing the link is the whole repair. Which side "should" have stayed a
+transfer is a product decision and not a derivation, so the type is never
+touched: clearing is what makes the row visible to `pairOrphansForUser()` again
+and what makes a later reader retype effective. The matcher stays the only
+writer that SETS the pointer; clearing it is what the reclassification path,
+the delete path and the sync merge are each permitted to do, and this listener
+is on the last of those.
+
+The repair **announces nothing**, for the reason
+[merge-registry-authoring](../sync/merge-registry-authoring.md#a-derived-column-is-not-a-mergeable-one)
+gives: it is derived, every device computes the same clearance from the same
+merged rows, and a rebuild re-announces every row it re-creates, so the repair
+is reproduced rather than reverted. This is the one way it differs from
+`Sync::TransferPairCascade`, which persists its reclassification as a
+system-cascade op precisely because a deleted partner leaves nothing to
+re-derive it from.
 
 ## Data flow
 

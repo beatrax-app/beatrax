@@ -8,6 +8,8 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Public\Contracts\UnpairsTransferLegs;
+use Modules\Sync\Public\Events\PeerRowsApplied;
+use Modules\Transfers\Internal\Listeners\ClearHalfPairsOnMergedRows;
 use Modules\Transfers\Internal\Listeners\PairTransferCandidates;
 use Modules\Transfers\Internal\Services\TransferPairer;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
@@ -27,5 +29,6 @@ final class TransfersServiceProvider extends ServiceProvider
     public function boot(Dispatcher $events): void
     {
         $events->listen(TransactionImported::class, PairTransferCandidates::class);
+        $events->listen(PeerRowsApplied::class, [ClearHalfPairsOnMergedRows::class, 'handle']);
     }
 }
