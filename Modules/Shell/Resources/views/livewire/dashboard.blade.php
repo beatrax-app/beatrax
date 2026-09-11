@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Navigation\Destination')
+@use('Modules\Core\Public\Support\CornerNotices')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -378,14 +379,17 @@
          'needs_reauth' filtered by user_id. Suppressed for the rest of
          the session once the user dismisses it; reappears on next login if
          any inbox is still needs_reauth. Same chrome as the failed-job
-         toast below but with its own copy + a distinct surface order
-         (this toast renders above the failed-job toast when both are
-         visible). --}}
+         toast below. Both are drawn in the shared corner region rather than
+         at a bottom offset of their own: the hand-tuned bottom-24 that used
+         to hold this one clear of the toast below it said nothing about the
+         receipt-conflict prompt, which is taller than both and was drawn
+         under this notice with its question covered. --}}
     @if ($reauthInboxCount > 0 && ! $reauthToastDismissed)
+        @teleport(CornerNotices::TELEPORT_TARGET)
         <div
             aria-atomic="true"
             aria-live="polite"
-            class="safe-lift fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
+            class="order-2 pointer-events-auto w-full rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
             <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
@@ -405,6 +409,7 @@
                 >✖️</x-core::emoji-action>
             </div>
         </div>
+        @endteleport
     @endif
 
     {{-- Failed-job toast. Persistent (no auto-dismiss) backed by
@@ -418,10 +423,11 @@
          exists). The toast hides when the audit row is cleared
          (e.g. the developer retried via the queue inspector). --}}
     @if ($failedChainResolutionExists && $isDeveloper)
+        @teleport(CornerNotices::TELEPORT_TARGET)
         <div
             aria-atomic="true"
             aria-live="polite"
-            class="safe-lift fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
+            class="order-2 pointer-events-auto w-full rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.failed_chain.title') }}</p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -432,5 +438,6 @@
                 class="tap-link mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100"
             >{{ Lang::get('core::dashboard.failed_chain.link') }}</a>
         </div>
+        @endteleport
     @endif
 </div>

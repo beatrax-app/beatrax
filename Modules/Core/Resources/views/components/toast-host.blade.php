@@ -1,11 +1,13 @@
 @use('Modules\Core\Public\Support\Lang')
 {{--
-    Global toast stack. Mounted by the main app and dev-console shells so the
-    same $this->dispatch('toast', message: '...') reaches a visible surface no
-    matter which layout the current request resolved through. Listens for the
-    window `toast` event, renders each message for 5s, and dismisses on click.
-    role="status" carries the implicit aria-live="polite" / aria-atomic="true"
-    a polite live region needs.
+    Global toast stack. An occupant of <x-core::corner-notices />, which both
+    shells mount, so the same $this->dispatch('toast', message: '...') reaches a
+    visible surface no matter which layout the current request resolved through.
+    It no longer pins itself: it used to count its own gap from the same screen
+    edge as three other boxes and drew over whichever of them was taller.
+    Listens for the window `toast` event, renders each message for 5s, and
+    dismisses on click. role="status" carries the implicit aria-live="polite" /
+    aria-atomic="true" a polite live region needs.
 
     An undo-able toast carries the dispatching component's own id, because a
     browser event says nothing about where it came from and this host is
@@ -38,7 +40,7 @@
         },
     }"
     x-on:toast.window="push($event.detail)"
-    class="safe-lift pointer-events-none fixed bottom-4 right-4 z-[10000] flex w-[min(380px,calc(100vw-2rem))] flex-col-reverse gap-2"
+    class="order-3 flex w-full flex-col-reverse gap-2"
     role="status"
     aria-live="polite"
     data-testid="toast-host"
