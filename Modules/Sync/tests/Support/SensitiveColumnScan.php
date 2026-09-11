@@ -95,6 +95,11 @@ final class SensitiveColumnScan
     }
 
     /**
+     * Seeders and factories are in, because `Database/` as a whole was not: the
+     * demo dataset ships behind a control every reader has, writes the same
+     * tables production writes, and put 341 readable values into sealed columns
+     * without one file of it ever being read here.
+     *
      * @return array<string, string> absolute path => repo-relative path, for production PHP only
      */
     public static function productionFiles(string $repositoryRoot): array
@@ -115,7 +120,7 @@ final class SensitiveColumnScan
                 if ($file->getExtension() !== 'php') {
                     continue;
                 }
-                if (str_contains($path, '/tests/') || str_contains($path, '/Database/') || str_contains($path, '/Resources/')) {
+                if (str_contains($path, '/tests/') || str_contains($path, '/Database/Migrations/') || str_contains($path, '/Resources/')) {
                     continue;
                 }
                 $files[$path] = str_replace($repositoryRoot, '', $path);
@@ -236,7 +241,8 @@ final class SensitiveColumnScan
 
             foreach (PatternScan::allWithOffsets('/[\'"]'.$quoted.'[\'"]\s*=>/', $arguments)[0] as $key) {
                 $value = self::valueExpression($arguments, $key[1] + strlen($key[0]));
-                $cleared = self::codedBy($contents, $arguments, $value, $key[1], $column, $sealedPairs);
+                $cleared = self::codedBy($contents, $arguments, $value, $key[1], $column, $sealedPairs)
+                    ?? self::sealedByCallee($contents, $call[0][1], $call[1][0], $column, $sealedPairs);
 
                 $hits[] = self::hit(
                     $relative,
@@ -310,6 +316,30 @@ final class SensitiveColumnScan
         $callee = PatternScan::first('/(?:\$this->|self::|static::)(\w+)\s*\(/', $value);
         if ($callee !== [] && PatternScan::matches(self::CODEC_CALLS, self::methodBody($contents, $callee[1]))) {
             return 'the value comes from '.$callee[1].'(), which seals it';
+        }
+
+        return null;
+    }
+
+    // The mirror of codedBy()'s one hop, taken on the CALL rather than the
+    // value: `$this->insertTransaction(['description' => 'BOL.COM'])` is a
+    // write here because the verb is matched as a word part, and the seal it
+    // is cleared by sits in the callee's own body one line above its insert.
+    /**
+     * @param  list<string>  $sealedPairs
+     */
+    private static function sealedByCallee(string $contents, int $callOffset, string $name, string $column, array $sealedPairs): ?string
+    {
+        if (substr($contents, max(0, $callOffset - 5), 5) !== '$this') {
+            return null;
+        }
+
+        $body = self::methodBody($contents, $name);
+
+        foreach (self::sealedTablesFor($column, $sealedPairs) as $table) {
+            if (PatternScan::matches('/encryptAttrs\(\s*[\'"]'.preg_quote($table, '/').'[\'"]/', $body)) {
+                return 'the array goes to '.$name.'(), which seals it with encryptAttrs('.$table.')';
+            }
         }
 
         return null;
