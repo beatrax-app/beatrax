@@ -2715,6 +2715,10 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // the Public spelling the layout uses; this needs the constant itself,
         // because the whole claim is that no second copy of it exists.
         'tests/Contracts/AWindowAReaderIsToldAboutHasOneDefinitionArchTest.php -> Modules\\Auth\\Internal\\Lock\\IdleTimeoutOptions',
+        // The registry IS the subject: the case asserts which columns it
+        // declares, so reading them through a Public seam would assert about
+        // the seam rather than about the configuration under test.
+        'tests/Contracts/AnEditedColumnTheGuardCannotSeeArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\DriftEvaluator',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\Jobs\\RevivedExpiredDriftSnoozesJob',
         'tests/Contracts/DriftDetectionContractTest.php -> Modules\\DriftAlerts\\Internal\\StateMachines\\DriftAlertStateMachine',
