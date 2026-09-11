@@ -232,11 +232,11 @@
     </style>
 
     <script nonce="{{ Vite::cspNonce() }}">
-        /* global Alpine */
         if (typeof window !== 'undefined' && !window.__devLogTailerRegistered) {
             window.__devLogTailerRegistered = true;
-            document.addEventListener('alpine:init', () => {
-                Alpine.data('logTailer', (opts) => ({
+
+            const registerLogTailer = (alpine) => {
+                alpine.data('logTailer', (opts) => ({
                     pollUrl: opts.pollUrl,
                     contextUrl: opts.contextUrl,
                     statsUrl: opts.statsUrl,
@@ -628,7 +628,17 @@
                         return this.localised(mb / BYTES_PER_UNIT, 2) + ' GB';
                     },
                 }));
-            });
+            };
+
+            // `alpine:init` is dispatched once, by Alpine.start(). wire:navigate
+            // re-runs this script on arrival and never restarts Alpine, so a
+            // registration waiting on the event would never run and the x-data
+            // above would bind an empty scope: no polling, no filter, no copy.
+            if (window.Alpine) {
+                registerLogTailer(window.Alpine);
+            } else {
+                document.addEventListener('alpine:init', () => registerLogTailer(window.Alpine), { once: true });
+            }
         }
     </script>
 

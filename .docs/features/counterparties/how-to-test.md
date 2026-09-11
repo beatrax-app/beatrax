@@ -228,6 +228,15 @@ and the assertion — see
   read that was already whole-set.
   (`Modules/Tax/tests/Feature/ATaxRowNamesItsCounterpartyInTheReadersLanguageTest.php`,
   `Modules/Search/tests/Feature/APlaceholderCounterpartyIsFoundByTheReadersOwnWordTest.php`)
+- **"12 mo" is closed at both ends.** The headline total, the average
+  it is divided by, the twelve sparkline bars and the profile's
+  category breakdown are decompositions of one window, so they read
+  both edges from `RollingTwelveMonths`. Filtered only from
+  `startDate()`, a booked future-dated direct debit — a row the ledger
+  holds on purpose — landed in the total and the average with no bar
+  to draw it on.
+  (`tests/Feature/TheTwelveMonthCutoffKeepsALeapDayYearWholeTest.php`,
+  `tests/Feature/ARowBookedAheadIsOutsideTheTwelveMonthWindowTest.php`)
 - **Every resolution dispatches `CounterpartyResolved` exactly once.**
   v1.0.0 ships zero listeners; the event exists for future
   subscribers.

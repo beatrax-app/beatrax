@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Reports\Internal\Aggregation\Dto\OtherMovementTotals;
 use stdClass;
 
 // A bank fee, a manual adjustment and -- for a metric that does not already
@@ -28,31 +29,36 @@ final readonly class OtherMovementQuery
     /**
      * @param  SpendQueryFilters  $filters  bounds as the reader typed them, in their own currency
      * @param  callable(string $currency): ?SpendQueryFilters  $boundsForCurrency  the same set restated in one settled currency, or null where no rate reaches it
-     * @return array<string, int> settled currency => total, signed the same way $metric signs its own rows
      */
-    public function totalsByCurrency(User $user, Period $period, string $metric, SpendQueryFilters $filters, callable $boundsForCurrency): array
+    public function totalsByCurrency(User $user, Period $period, string $metric, SpendQueryFilters $filters, callable $boundsForCurrency): OtherMovementTotals
     {
         // Without a bound the whole disclosure is one grouped query, which is
         // what it costs on every report that sets no amount filter.
         $totals = $this->sumByCurrency($user, $period, $metric, $filters->withoutAmountBounds());
 
         if (! $filters->hasAmountBounds()) {
-            return $totals;
+            return new OtherMovementTotals($totals);
         }
 
         // With one, the threshold is a different number in each currency, so
         // each currency's own bucket is re-summed under its own bound.
         $bounded = [];
+        $excluded = [];
         foreach (array_keys($totals) as $currency) {
             $scoped = $boundsForCurrency($currency);
             if ($scoped === null) {
+                // Named, never dropped: this bucket cannot be restated under
+                // the reader's own bound, and a filter that removes the one
+                // disclosure saying money is missing is worse than no filter.
+                $excluded[] = $currency;
+
                 continue;
             }
 
             $bounded += $this->sumByCurrency($user, $period, $metric, $scoped, $currency);
         }
 
-        return $bounded;
+        return new OtherMovementTotals($bounded, $excluded);
     }
 
     /**
@@ -73,7 +79,7 @@ final readonly class OtherMovementQuery
             ->when($onlyCurrency !== null, static fn (QueryBuilder $q): QueryBuilder => $q->where('settled_currency', $onlyCurrency))
             ->tap(fn (QueryBuilder $q): QueryBuilder => $this->filterApplier->apply($q, $filters))
             ->groupBy('settled_currency')
-            ->get(['settled_currency', $connection->raw($reportMetric->sumExpr().' AS amount_minor')]);
+            ->get(['settled_currency', $connection->raw($this->filterApplier->amountExpr($reportMetric, $filters).' AS amount_minor')]);
 
         $totals = [];
         foreach ($rows as $row) {

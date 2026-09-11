@@ -78,9 +78,28 @@ module:
   pre-validation query is needed.
 - **Dimension queries** (`Internal/Aggregation/*SpendQuery.php`) —
   `AccountSpendQuery`/`CounterpartySpendQuery`/`TimeBucketSpendQuery`
-  aggregate the `transactions` parent rows directly with no split-leg
-  join (`account_id`/`counterparty_id` are invariant across a split
-  parent's legs — `transaction_splits` carries only `category_id`).
+  aggregate the `transactions` parent rows directly and group by a column
+  that is invariant across a split parent's legs, so none of them joins
+  `transaction_splits` to find its GROUP. **A category filter is the one
+  predicate that has to.** `SpendFilterApplier` tested
+  `transactions.category_id` alone, so one €100.00 split — €24.50
+  Groceries, €75.50 Household, parent uncategorised — read €24.50 grouped
+  by Category and €0.00 grouped by Account, with no exclusion banner
+  either, because an empty row list is "nothing matched" and not "this was
+  left out". Categorise the parent as well and the same three dimensions
+  answered €100.00 for a €24.50 leg. `Internal\Aggregation\CategoryAttribution`
+  is the one definition of what a category filter selects and of what the
+  selected transaction then contributes: a `transaction_splits` subquery
+  grouped per transaction is left-joined on the parent's own currency and
+  on the leg pass's consistency test, and the amount summed is
+  `COALESCE(matched_legs.matched_minor, transactions.settled_amount_minor)`
+  — the legs the filter matched where the legs carry the money, the
+  transaction's own figure where they do not. The parent's own
+  `category_id` selects only when the parent holds the amount, which is
+  exactly `CategorySpendQuery`'s first-pass predicate, so the four
+  dimensions cannot disagree about a split. No category filter, no join:
+  the unfiltered SQL is unchanged, which is what keeps the cost of the
+  common report where it was.
   `CounterpartySpendQuery` draws the same two-label distinction the
   category dimension does, from `reports::builder.no_counterparty` and
   `reports::builder.unavailable_counterparty`: a transaction whose
@@ -213,12 +232,24 @@ module:
   matched" — and `CurrencyModeApplier` adds it to `excludedCurrencies`
   in BOTH modes. A silent 1:1 threshold is the same forbidden guess as a
   silent 1:1 conversion. `OtherMovementQuery` re-sums each currency's
-  bucket under its own bound for the same reason, and pays the extra
-  statements only when a bound is actually set.
+  bucket under its own bound for the same reason, pays the extra
+  statements only when a bound is actually set, and names rather than
+  drops a bucket it cannot restate.
 - `OtherMovementQuery::totalsByCurrency()` — the money the chosen metric is
   not defined over, per settled currency: `fee` and `adjustment` always,
   plus `refund` for the one metric (`income`) that does not already count
-  it. The set is derived by subtracting the metric's own types rather than
+  it. It answers an `Aggregation\Dto\OtherMovementTotals`, two fields
+  because it is two facts: the buckets it could state, and the currencies
+  whose bucket the reader's own amount bound cannot be restated in. A
+  currency carrying only fees is in no dimension query's result and so
+  reaches `discoverCurrencies()` never, which made this line the only one
+  that ever named it — and dropping the bucket in silence meant turning an
+  amount filter ON removed a disclosure: base EUR with no EUR↔JPY rate,
+  one €50.00 expense and ¥1,000 of fees, read "EUR 50.00" with no banner
+  and no other-movement line the moment `amount_min` was set.
+  `CurrencyModeApplier` seeds `excludedCurrencies` from that list in BOTH
+  modes, before the row loop, so the page says `JPY not converted`
+  instead. The set is derived by subtracting the metric's own types rather than
   listed, so nothing can be reported twice — once inside the total and
   again beside it. `ReportResultDto::otherMovementsByCurrency` is keyed by
   currency because `'original'` mode converts nothing: a fee bucket outside

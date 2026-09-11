@@ -50,7 +50,9 @@ final readonly class CounterpartyProfileQuery
         }
 
         $cpId = $cp->id;
-        $cutoffDate = RollingTwelveMonths::startDate($this->clock->now());
+        $now = $this->clock->now();
+        $cutoffDate = RollingTwelveMonths::startDate($now);
+        $endDate = RollingTwelveMonths::endDate($now);
         $connection = $this->db->connection();
 
         // settled_amount_minor grouped by settled_currency: a roll-up is what
@@ -60,7 +62,7 @@ final readonly class CounterpartyProfileQuery
             ->where('user_id', $user->id)
             ->where('counterparty_id', $cpId)
             ->whereIn('type', TransactionType::externalMovementValues())
-            ->where('posted_at', '>=', $cutoffDate)
+            ->whereBetween('posted_at', [$cutoffDate, $endDate])
             ->groupBy('settled_currency')
             ->selectRaw('settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total')
             ->get();
@@ -260,7 +262,9 @@ final readonly class CounterpartyProfileQuery
      */
     public function categoryBreakdown(Counterparty $cp, User $user): Collection
     {
-        $cutoffDate = RollingTwelveMonths::startDate($this->clock->now());
+        $now = $this->clock->now();
+        $cutoffDate = RollingTwelveMonths::startDate($now);
+        $endDate = RollingTwelveMonths::endDate($now);
 
         $joined = $this->db->connection()->table('transactions as t')
             ->leftJoin('categories as c', 'c.id', '=', 't.category_id');
@@ -269,7 +273,7 @@ final readonly class CounterpartyProfileQuery
             ->where('t.user_id', $cp->user_id)
             ->where('t.counterparty_id', $cp->id)
             ->whereIn('t.type', TransactionType::externalMovementValues())
-            ->where('t.posted_at', '>=', $cutoffDate)
+            ->whereBetween('t.posted_at', [$cutoffDate, $endDate])
             ->select(['t.category_id as category_id', 't.settled_currency as settled_currency', ...CategoryPathName::columns('c', 'cp')])
             ->selectRaw('COALESCE(SUM(t.settled_amount_minor), 0) as total_minor')
             ->groupBy('t.category_id', 't.settled_currency', ...CategoryDisplayName::bareColumns('c'), ...CategoryDisplayName::bareColumns('cp'))

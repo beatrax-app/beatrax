@@ -48,7 +48,7 @@ final readonly class CounterpartySpendQuery
             ->where('posted_at', '<', $period->endExclusive->toDateString())
             ->tap(fn (QueryBuilder $q): QueryBuilder => $this->filterApplier->apply($q, $filters))
             ->groupBy('counterparty_id')
-            ->selectRaw('counterparty_id, '.$reportMetric->sumExpr().' AS amount_minor')
+            ->selectRaw('counterparty_id, '.$this->filterApplier->amountExpr($reportMetric, $filters).' AS amount_minor')
             ->get();
 
         /** @var array<int, int> $map */

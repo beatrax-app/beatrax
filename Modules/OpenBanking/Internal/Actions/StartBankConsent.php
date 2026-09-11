@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Country;
 use Modules\Core\Public\Services\UserCountry;
+use Modules\Core\Public\Support\PublicHost;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Dto\OpenBankingCredentials;
@@ -26,15 +27,6 @@ final readonly class StartBankConsent
     // are Dutch, so that is the country to fall back to — never the one to
     // assume over a reader who has said otherwise.
     private const string FALLBACK_ASPSP_COUNTRY = 'NL';
-
-    // Special-use names that resolve inside the network rather than on the
-    // public internet (RFC 6761/8375, plus the cloud metadata suffix).
-    private const array RESERVED_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.invalid'];
-
-    // A strict LDH name of at least two labels whose last label is alphabetic.
-    // The alphabetic TLD is what does the work: it is the one rule that
-    // rejects every numeric notation at once.
-    private const string HOSTNAME_PATTERN = '/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/';
 
     public function __construct(
         private OpenBankingSecretsRepository $secrets,
@@ -133,34 +125,12 @@ final readonly class StartBankConsent
         }
     }
 
-    // Fails CLOSED, like RelayConfig::isLanHost. Falling through to "contains
-    // a dot" answered "public" for every notation FILTER_VALIDATE_IP cannot
-    // parse -- 0177.0.0.1, 127.1, 0x7f.0x0.0x0.0x1, [::ffff:127.0.0.1] -- for a
-    // value both allow-listed for egress and handed to an outward redirect.
+    // Fails CLOSED, like RelayConfig::isLanHost, for a value both allow-listed
+    // for egress and handed to an outward redirect. PublicHost holds the rule:
+    // it lived here and in ExternalUrl at once, and only this copy was ever
+    // corrected.
     private function isPublicScaHost(string $host): bool
     {
-        $host = strtolower($host);
-
-        // One trailing dot is a legal absolute-name suffix and normalises away;
-        // anything else with an empty label is malformed.
-        if (str_ends_with($host, '.')) {
-            $host = substr($host, 0, -1);
-        }
-
-        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
-            return filter_var(
-                $host,
-                FILTER_VALIDATE_IP,
-                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
-            ) !== false;
-        }
-
-        // An empty host names nothing, and neither does anything the hostname
-        // pattern rejects: one answer for both.
-        if ($host === '' || preg_match(self::HOSTNAME_PATTERN, $host) !== 1) {
-            return false;
-        }
-
-        return array_all(self::RESERVED_SUFFIXES, fn (string $suffix): bool => ! str_ends_with($host, $suffix));
+        return PublicHost::names($host);
     }
 }

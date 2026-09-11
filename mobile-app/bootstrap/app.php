@@ -11,6 +11,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Auth\Internal\Http\Middleware\ForgetsSpentRecoveryCodes;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
+use Modules\Core\Internal\Http\Middleware\NativeBridgeIsShellOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetInstallTimezone;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
@@ -77,6 +78,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // this long-lived would otherwise still hold from sign-in.
         $middleware->prepend(ForgetGuardsBetweenRequests::class);
         $middleware->prepend(RestoreFrameworkRedirector::class);
+        // Inert today: the mobile package registers no _native route. Carried
+        // so the two roots stay identical, because the day one is added the
+        // prefix is already closed here rather than open on the root nobody
+        // remembered was the one that skipped it.
+        $middleware->prepend(NativeBridgeIsShellOnly::class);
         $middleware->prepend(LoopbackOnly::class);
         // LoopbackOnly gates the interface the connection arrived on; this gates
         // the Host the client asked for, which is the half a DNS-rebinding site

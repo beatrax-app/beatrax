@@ -65,7 +65,12 @@
                         "
                         data-options="{{ $card['optionsJson'] }}"
                     >
+                        {{-- wire:ignore, and it is not decoration: the morph
+                             removes a drawn SVG the server's HTML has no
+                             counterpart for. Nothing re-renders this component
+                             today; the first #[On] added here blanks the cards. --}}
                         <div
+                            wire:ignore
                             id="{{ $card['chartElementId'] }}"
                             data-testid="pinned-report-chart"
                             class="min-h-[180px]"
