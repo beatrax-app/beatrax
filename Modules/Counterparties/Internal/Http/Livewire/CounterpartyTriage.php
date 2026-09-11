@@ -113,13 +113,14 @@ final class CounterpartyTriage extends Component
         CurrentUser $currentUser,
         CounterpartyTriageQueue $queue,
         LabelCounterparty $labeller,
+        Session $session,
     ): void {
         $current = $this->resolveCurrent($currentUser, $queue);
         if ($current === null) {
             return;
         }
 
-        $labeller->ignore($current, $currentUser->id());
+        $labeller->ignore($current, $currentUser->id(), $session);
 
         $this->recordDecision($current, $currentUser, $queue);
     }
