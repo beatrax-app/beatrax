@@ -8,7 +8,9 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
 use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
+use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Internal\ReceiptLedgerBridge;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
@@ -44,6 +46,28 @@ it('keeps both of two receipts a reader was sent for one day', function (): void
     expect(($this->rowCount)())->toBe(2)
         ->and(DB::table('transactions')->orderBy('occurrence_ordinal')->pluck('occurrence_ordinal')->all())
         ->toBe([0, 1]);
+});
+
+it('hashes each row over the ordinal it actually stored', function (): void {
+    $bridge = app(ReceiptLedgerBridge::class);
+
+    $runId = $bridge->bridge(($this->coffee)('order-1'), $this->fixtureUser, null, SourceFormat::Eml);
+    $bridge->bridge(($this->coffee)('order-2'), $this->fixtureUser, $runId, SourceFormat::Eml);
+
+    $composer = app(FingerprintComposer::class);
+
+    foreach (DB::table('transactions')->orderBy('occurrence_ordinal')->get() as $row) {
+        expect($row->fingerprint)->toBe($composer->composeTuple(new FingerprintTuple(
+            userId: (int) $row->user_id,
+            accountId: (int) $row->account_id,
+            postedAtDate: (string) $row->posted_at,
+            bookedAtDateTime: (string) $row->booked_at,
+            amountMinor: (int) $row->amount_minor,
+            currency: (string) $row->currency,
+            counterpartyNormalized: (string) $row->counterparty_normalized,
+            occurrenceOrdinal: (int) $row->occurrence_ordinal,
+        )));
+    }
 });
 
 it('writes one row when the same message is read a second time', function (): void {

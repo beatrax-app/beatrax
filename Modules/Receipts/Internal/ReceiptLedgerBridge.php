@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\Receipts\Internal;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\IdReadBack;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
@@ -27,8 +27,6 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 // discard the outcome, which read as a successful import of nothing.
 final readonly class ReceiptLedgerBridge
 {
-    use CoercesScalars;
-
     // Not an ingestion format: no adapter parses it. It marks the ImportRun a
     // receipt bridged through when the reader never uploaded a file.
     private const string HANDOFF_FORMAT = 'inbox-handoff';
@@ -91,38 +89,32 @@ final readonly class ReceiptLedgerBridge
             return 0;
         }
 
-        $group = [];
-        $rows = $this->db->connection()->table('transactions')
+        if ($this->sameOccurrenceAs($tx, $user)->where('source_ref', $tx->sourceRef)->exists()) {
+            return null;
+        }
+
+        // Counted over the receipts alone: a statement that already booked this
+        // occurrence is the row this receipt belongs on, and stepping past it
+        // would write the purchase a second time instead of deduping into it.
+        $highest = $this->sameOccurrenceAs($tx, $user)
+            ->whereIn('source_format', SourceFormat::receiptFormats())
+            ->max('occurrence_ordinal');
+
+        return is_numeric($highest) ? (int) $highest + 1 : 0;
+    }
+
+    // The seven columns the dedup tuple reads before the ordinal completes it,
+    // which is the group an ordinal numbers a row within.
+    private function sameOccurrenceAs(CanonicalTransaction $tx, User $user): Builder
+    {
+        return $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->where('account_id', $tx->accountId)
             ->where('posted_at', $tx->postedAt->toDateString())
             ->where('booked_at', $tx->bookedAt->toDateTimeString())
             ->where('amount_minor', $tx->amountMinor)
             ->where('currency', $tx->currency)
-            ->where('counterparty_normalized', $tx->counterpartyNormalized)
-            ->get(['occurrence_ordinal', 'source_ref', 'source_format']);
-
-        foreach ($rows as $row) {
-            $group[self::toInt($row->occurrence_ordinal)] = $row;
-        }
-
-        // A statement that already booked this occurrence stops the walk: the
-        // receipt is that row, and the recorder's insertOrIgnore leaves it there
-        // rather than writing the purchase a second time.
-        $ordinal = 0;
-        while (isset($group[$ordinal]) && self::isReceipt($group[$ordinal]->source_format)) {
-            if (self::toString($group[$ordinal]->source_ref) === $tx->sourceRef) {
-                return null;
-            }
-            $ordinal++;
-        }
-
-        return $ordinal;
-    }
-
-    private static function isReceipt(mixed $sourceFormat): bool
-    {
-        return is_string($sourceFormat) && SourceFormat::tryFrom($sourceFormat)?->isReceiptFile() === true;
+            ->where('counterparty_normalized', $tx->counterpartyNormalized);
     }
 
     private function resolveHandoffRun(User $user): int

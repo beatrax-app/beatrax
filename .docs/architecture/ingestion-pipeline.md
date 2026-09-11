@@ -541,20 +541,30 @@ has no statement export to recover it from either, which is why
 `FingerprintParityTest` declares no parity pair for that matcher.
 
 The bridge therefore reads the ordinal off the ledger, like the cash book, but
-walks the group rather than taking one past its highest: it stops on the first
-occurrence no *receipt* has claimed, so a receipt whose purchase a statement
-already booked still lands on that statement's row and dedupes into it. What
-tells a second purchase apart from the same message read a second time is the
-reference the message names — PayPal's transaction id, Google Play's order id,
-the ICS `Referentienummer`. A message carrying none of those cannot be told
-apart from itself and stays the sole occurrence at 0, which is exactly what the
-whole path did before.
+counts over the *receipts* in the group rather than over all of it: one past the
+highest ordinal a receipt already holds. A statement that booked this occurrence
+is the row the receipt belongs on, and stepping past it would write the purchase
+a second time instead of deduping into it — which is why the two rows the
+`FingerprintParityTest` pair produces still meet.
 
-Unlike a statement's, this number is a function of the ledger and so of the
-order the messages were processed in. Two devices scanning the same mailbox
-derive it alike because `InboxMessageQuery` walks `inbox_messages` by `id` and
-those ids follow the provider's own order; nothing stronger than that is
-claimed, and `inbox_messages` does not sync.
+What tells a second purchase apart from the same message read a second time is
+the reference the message names — PayPal's transaction id, Google Play's order
+id, the ICS `Referentienummer`. A reference already stored in the group means
+this message is in the ledger and nothing is written; `RecordReceipt` hands a
+caller the same `Parsed` outcome for bytes it has already recorded, so that
+second read has to stay a no-op. A message carrying no reference cannot be told
+apart from itself and stays the sole occurrence at 0, which is what the whole
+path did before.
+
+This is a deliberate departure from A3-R20, which requires the occurrence number
+to come from the file's own contents and row order alone so two devices compute
+it alike. A receipt has no file to count within — one message is one document —
+and the requirement's own subject is a statement. The cost is that the number
+depends on the order the messages were processed in. Two devices scanning one
+mailbox still derive it alike, because `InboxMessageQuery` walks
+`inbox_messages` by `id` and those ids follow the provider's own order, and
+`inbox_messages` does not sync — nothing stronger than that is claimed. The
+alternative is the collapse this replaces, which loses a purchase outright.
 
 ## Per-row error handling
 
