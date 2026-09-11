@@ -682,6 +682,56 @@ arrive quarantined with a reason. Resolving it needs a rule about the *set* —
 one save's legs are one value, and the later save replaces the earlier entirely
 — which is a separate decision.
 
+### Build, translate, then judge, then write
+
+`applyCreatedRow()` runs in that order, and every step of it is load-bearing.
+It did not always: the gates ran inside `admissiblePayload()` and
+`PeerRowAliases::translate()` ran eleven lines after them, so each gate read
+the ids the **peer** minted rather than the ones this device uses.
+
+| the gate | what it read | what that cost |
+|---|---|---|
+| `RowOwnership::referencesBelongToUser()` | `counterparty_id` as the peer numbered it | a legitimate row refused as `cross_user` where that id happens to be another household member's row — and that reason is not recoverable |
+| `SplitOverfillGate::reasonToRefuse()` | `transaction_id` as the peer numbered it | no transaction found under it, so the sum was never taken; translation then moved the leg onto one whose legs already filled it |
+
+A fourth arrival path wrote **upstream of all of it**. `createRowComplete()`
+called `SplitCreateTail::fill()` and returned `false`, and that `false`
+short-circuited the caller — so the write had already happened before any gate
+ran, and `translate()` never ran on it at all. The column that shows this
+worst is `transactions.counterparty_id`: it carries no foreign key (see
+*A foreign key is carrying more than one thing* in
+[merge-registry-authoring.md](merge-registry-authoring.md)), so the ownership
+gate this path skipped is the only thing that would ever have asked.
+
+Three rules come out of it, and each has a test that fails without it:
+
+1. **Translate before judging.** Ids off the wire mean nothing until they are
+   the ids this device uses.
+2. **Resolve the row's own pk too.** A create re-homed on an earlier frame is
+   here under an id this device minted; the tail asked for the row at the id
+   the peer used, found nothing there, and dropped the whole second half
+   silently.
+3. **Judge the row the write will leave, not the payload offered.**
+   `planFill()` returns both the columns it would write and the row as it
+   would then stand, because `fill()` skips a column already holding a value —
+   refusing the payload loses a tail over a column it was never going to touch.
+
+### One `ArrivingBatch`, both phases
+
+`applyCreates()` used to run with no batch at all, so a leg created by a
+rebalance was judged against its siblings' **stored** amounts while the ops
+lowering them sat unapplied in the same frame. The refusal,
+`split_would_overfill_transaction`, is terminal. `OpLogReplayer` now builds one
+`ArrivingBatch` and hands it to both phases.
+
+That makes the gate batch-aware, which it has to be about **every** leg — the
+one under judgement included. A historical create replayed beside the
+rebalance that supersedes it carries the amount the leg *held*; its siblings
+are being read at the amounts they *will hold*. Mixing the two refused a row
+whose own `Set`, later in the same frame, was about to overwrite it. So
+`reasonToRefuse()` prefers the arriving value for the leg it is judging,
+exactly as `legsAlreadyThere()` already did for the others.
+
 ### A row that arrives without a birth time (`Internal\Merge\SuppliedCreationTime`)
 
 `buildCreatePayload()` writes only the columns the create names, so a row from a
