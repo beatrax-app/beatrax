@@ -7,6 +7,7 @@ namespace Modules\Receipts\Internal;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\IdReadBack;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
@@ -15,6 +16,7 @@ use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
@@ -25,6 +27,8 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 // discard the outcome, which read as a successful import of nothing.
 final readonly class ReceiptLedgerBridge
 {
+    use CoercesScalars;
+
     // Not an ingestion format: no adapter parses it. It marks the ImportRun a
     // receipt bridged through when the reader never uploaded a file.
     private const string HANDOFF_FORMAT = 'inbox-handoff';
@@ -64,9 +68,61 @@ final readonly class ReceiptLedgerBridge
         $canonical = $this->autoCategory->apply($canonical, $user)->canonical;
         $canonical = $this->resolveCounterparty->run($canonical, $user);
 
-        ($this->recorder)([$canonical], $user);
+        $ordinal = $this->occurrenceOrdinalFor($canonical, $user);
+        if ($ordinal === null) {
+            return $importRunId;
+        }
+
+        ($this->recorder)([$canonical->withOccurrenceOrdinal($ordinal)], $user);
 
         return $importRunId;
+    }
+
+    // A receipt is its own document, so there is no file to count occurrences
+    // within and the ledger is asked instead. Null means this very message is
+    // already in the ledger; a message with no reference of its own cannot be
+    // told apart from a second reading of itself and stays the sole occurrence.
+    /**
+     * @link ../../../.docs/architecture/ingestion-pipeline.md#the-occurrence-ordinal
+     */
+    private function occurrenceOrdinalFor(CanonicalTransaction $tx, User $user): ?int
+    {
+        if ($tx->sourceRef === null) {
+            return 0;
+        }
+
+        $group = [];
+        $rows = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('account_id', $tx->accountId)
+            ->where('posted_at', $tx->postedAt->toDateString())
+            ->where('booked_at', $tx->bookedAt->toDateTimeString())
+            ->where('amount_minor', $tx->amountMinor)
+            ->where('currency', $tx->currency)
+            ->where('counterparty_normalized', $tx->counterpartyNormalized)
+            ->get(['occurrence_ordinal', 'source_ref', 'source_format']);
+
+        foreach ($rows as $row) {
+            $group[self::toInt($row->occurrence_ordinal)] = $row;
+        }
+
+        // A statement that already booked this occurrence stops the walk: the
+        // receipt is that row, and the recorder's insertOrIgnore leaves it there
+        // rather than writing the purchase a second time.
+        $ordinal = 0;
+        while (isset($group[$ordinal]) && self::isReceipt($group[$ordinal]->source_format)) {
+            if (self::toString($group[$ordinal]->source_ref) === $tx->sourceRef) {
+                return null;
+            }
+            $ordinal++;
+        }
+
+        return $ordinal;
+    }
+
+    private static function isReceipt(mixed $sourceFormat): bool
+    {
+        return is_string($sourceFormat) && SourceFormat::tryFrom($sourceFormat)?->isReceiptFile() === true;
     }
 
     private function resolveHandoffRun(User $user): int

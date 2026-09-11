@@ -531,6 +531,31 @@ once. Its `booked_at` stays the second the entry was typed — real information,
 unlike a bank's midnight — and it is also what keeps a coffee typed on the phone
 from merging into one typed on the desktop.
 
+A receipt fetched from an inbox or dropped in the scan folder has no file
+either: one message is one document, and `ReceiptLedgerBridge` sees it alone.
+Every receipt matcher books at the day the mail was sent, `startOfDay()`, so the
+second of two identical same-day receipts hashed to the first one's fingerprint
+and `RecordTransactions`' `insertOrIgnore` dropped it — the defect the ordinal
+exists to close, on the one path that did not stamp it. A Google Play purchase
+has no statement export to recover it from either, which is why
+`FingerprintParityTest` declares no parity pair for that matcher.
+
+The bridge therefore reads the ordinal off the ledger, like the cash book, but
+walks the group rather than taking one past its highest: it stops on the first
+occurrence no *receipt* has claimed, so a receipt whose purchase a statement
+already booked still lands on that statement's row and dedupes into it. What
+tells a second purchase apart from the same message read a second time is the
+reference the message names — PayPal's transaction id, Google Play's order id,
+the ICS `Referentienummer`. A message carrying none of those cannot be told
+apart from itself and stays the sole occurrence at 0, which is exactly what the
+whole path did before.
+
+Unlike a statement's, this number is a function of the ledger and so of the
+order the messages were processed in. Two devices scanning the same mailbox
+derive it alike because `InboxMessageQuery` walks `inbox_messages` by `id` and
+those ids follow the provider's own order; nothing stronger than that is
+claimed, and `inbox_messages` does not sync.
+
 ## Per-row error handling
 
 Per-row exceptions inside the try-catch around stages 4-8 produce
