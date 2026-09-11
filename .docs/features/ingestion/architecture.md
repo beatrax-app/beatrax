@@ -445,6 +445,15 @@ maps to `Bankrekening`, which the NL export ships empty on every row
 (funding-source child rows carry no IBAN) — the rollup walker promotes
 the empty string to `null`.
 
+`PaypalAmountParser` reads the NL locale the export renders: comma
+decimal, and a period grouping thousands. The separator is stripped only
+from a figure that actually groups in threes — `1.234,56`, `1.234.567,89`,
+and a zero-decimal `1.000` — so a stray period is still a refusal rather
+than a hundred times the money, and `12.34` is still not an amount. Passed
+through, any payment of a thousand or more was refused and its row dropped
+whole; `IcsAmountParser` and `GenericCsvAmountParser` were already
+stripping it, so this was the one parser of three that did not.
+
 `PaypalCsvLanguageProfile::detect()` matches a discriminator token
 subset per locale; `Reference Txn ID` is universally English (PayPal
 never localises it) and is the strongest discriminator against a
