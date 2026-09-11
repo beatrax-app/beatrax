@@ -19,6 +19,7 @@ final readonly class CreateRowGates
         private RowOwnership $ownership,
         private SplitOverfillGate $splitOverfill,
         private OpLogQuarantine $quarantine,
+        private UnplacedPeerCreates $unplaced,
     ) {}
 
     // Ordered: ownership answers whose row this is, and the sum only means
@@ -32,6 +33,33 @@ final readonly class CreateRowGates
             ! $this->ownershipAdmits($table, $payload, $batch->userId, $pk) => QuarantineReason::CrossUser,
             default => $this->splitOverfill->reasonToRefuse($table, $pk, $payload, $batch),
         };
+    }
+
+    // The one gate that reads the ids as the PEER minted them. Every other
+    // runs after translate(), where an id already means a row here -- and a
+    // reference this device could not translate is precisely the one whose
+    // number is the peer's alone, which is what translation then hides.
+    /**
+     * @param  array<string, mixed>  $arriving
+     */
+    public function unplacedParentFor(string $table, array $arriving, string $deviceId, int $userId): ?QuarantineReason
+    {
+        foreach ($this->ownership->ownedReferences($table) as $column => $parentTable) {
+            $named = $arriving[$column] ?? null;
+
+            // A column targeting its own table is the deferral's, not this
+            // gate's: translate() never touches one, the partner routinely has
+            // not landed, and refusing the row loses a create over its link.
+            if ($parentTable === $table || (! is_int($named) && ! is_string($named)) || $named === '') {
+                continue;
+            }
+
+            if ($this->unplaced->refusedFor($parentTable, $deviceId, $named, $userId)) {
+                return QuarantineReason::MissingReference;
+            }
+        }
+
+        return null;
     }
 
     /**

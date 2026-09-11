@@ -54,6 +54,11 @@ final readonly class OpLogQuarantine
                 'table_name' => $entry->table,
                 'pk' => (string) $entry->pk,
                 'device_id' => $entry->deviceId,
+                // Which op was refused, not just why. A hold on a create says
+                // the pk it names reached no row here, and no reason can say
+                // that on its own -- a key that would not open is recorded
+                // the same whether it held a create or an edit.
+                'op_type' => $entry->opType->value,
                 'reason' => $reason->value,
                 // The epoch this entry needs, so a later pass can tell an
                 // entry waiting for a key that is coming from one waiting for
