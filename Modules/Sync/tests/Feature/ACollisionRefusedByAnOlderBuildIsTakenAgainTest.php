@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -217,6 +218,11 @@ beforeEach(function (): void {
         pkrtRow($userId, $this->accountId, $this->runId, '2026-08-01', -125000, '2026-08-01 18:12:03'),
     );
 
+    // Recorded before the stamp the window test passes, so that test's premise
+    // — an earlier pass answered these and nothing has happened since — is true
+    // of the log as well as of the hold.
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-01 21:00:00'));
+
     // The peer's row under the same id, refused. Written FIRST so this device's
     // own capture of the row it already holds carries the later clock — which
     // is the state the desktop is in, and the reason the pass cannot simply
@@ -233,7 +239,13 @@ beforeEach(function (): void {
         pkrtRow($userId, $this->accountId, $this->runId, '2026-08-01', -125000, '2026-08-01 18:12:03'),
     );
 
+    CarbonImmutable::setTestNow();
+
     pkrtHold($db, $userId, 'transactions', $this->localId);
+});
+
+afterEach(function (): void {
+    CarbonImmutable::setTestNow();
 });
 
 // The fixture's own premise. Without both devices' creates under one id, a pass
@@ -363,9 +375,9 @@ it('retries a collision no natural key can place exactly once', function (): voi
         ->and(pkrtHoldIds($this->db, $userId))->toBe($afterOne);
 });
 
-// The other bound: a hold older than the caller's stamp is one an earlier pass
-// already answered for this keyring. Retrying it on every request is the
-// recurring full replay the pass window exists to stop.
+// The other bound: a hold older than the caller's stamp, on a log that has
+// recorded nothing since, is one an earlier pass already answered. Retrying it
+// on every request is the recurring full replay the pass window exists to stop.
 it('does not take a collision again outside the pass window', function (): void {
     $userId = (int) $this->user->id;
 
@@ -376,4 +388,23 @@ it('does not take a collision again outside the pass window', function (): void 
     expect($this->db->connection()->table('transactions')->where('user_id', $userId)->count())->toBe(1)
         ->and(pkrtHoldIds($this->db, $userId))->toBe($before)
         ->and(pkrtAliasFor($this->db, $userId, 'transactions', $this->localId))->toBeNull();
+});
+
+// And the half the stamp cannot speak for. What undoes a collision is a row
+// turning up, so a log that has moved since the stamp is the one event that
+// makes the same hold worth asking about again.
+it('takes it again once the log has recorded something since that stamp', function (): void {
+    $userId = (int) $this->user->id;
+
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-03 10:00:00'));
+    pkrtCreate(
+        $userId, PKRT_PEER, $this->peerSecret, $this->peerPublic,
+        'transactions', 9001,
+        pkrtRow($userId, $this->accountId, $this->runId, '2026-03-03', -1234, '2026-03-03 08:30:00'),
+    );
+    CarbonImmutable::setTestNow();
+
+    pkrtReproject($userId, since: '2026-09-02 00:00:00');
+
+    expect(pkrtAliasFor($this->db, $userId, 'transactions', $this->localId))->not->toBeNull();
 });
