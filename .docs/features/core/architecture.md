@@ -958,6 +958,25 @@ The `system_alerts` write's recency check uses the raw Query Builder
 Eloquent so timestamp casts + fillable filtering apply, and every step
 is wrapped in try/catch so a write failure logs and continues.
 
+The same pass withdraws. Both banner lines tell the reader that Beatrax
+re-applies the pragma on every start, so restarting usually clears the
+drift — and for a year that was true of the *condition* and false of
+the *banner*, which stood until somebody pressed "Mark as resolved". A
+boot that reads `journal_mode = wal` now calls
+`SystemAlertWriter::withdrawSystemWide('wal_mode_missing', …)`, and a
+boot that reads `synchronous = 1` does the same for
+`synchronous_misconfigured`; each logs at `info` only when it actually
+closed a row, so the silence of a healthy boot stays silent. Withdrawal
+is the machine stamping `acknowledged_at`, never a `DELETE`: the row is
+the record that the drift happened, and `system_alerts` is a synced
+table where a raw delete emits no tombstone and the peer resurrects the
+row. Because the withdrawal goes through `acknowledgeForUser()`, the
+`system_alerts_release_dedup_key` trigger fires and the kind can be
+raised again the moment the pragma drifts a second time. Only these two
+kinds are withdrawn here — `backup_corrupt` records an event rather than
+a state, and a corrupt-backup banner that cleared itself would be a
+worse defect than the one this fixed.
+
 Models (`SystemAlert`, `User`, `UserPreference`) and
 `AcknowledgeSystemAlert`:
 
@@ -965,7 +984,13 @@ Models (`SystemAlert`, `User`, `UserPreference`) and
 persistent dashboard banner. Severity (`info`/`warning`/`critical`) is
 schema-trigger-enforced, so the Eloquent cast map is purely
 informational. Rows are never deleted; acknowledging stamps
-`acknowledged_at` so the audit trail accumulates forever.
+`acknowledged_at` so the audit trail accumulates forever. Two different
+writers stamp it and they mean different things: a reader dismissing a
+row they own, and the machine answering that a fault it raised has
+stopped being true (`SystemAlertWriter::withdrawForUser()` /
+`withdrawSystemWide()`). A reader's dismissal of a *system-wide* row is
+neither — it lands in `system_alert_acknowledgements`, so one household
+member hiding a banner does not hide it from the rest.
 `user_id` is nullable — NULL means a system-wide alert visible to
 every authenticated user (e.g. a SQLite PRAGMA drift); the
 `BelongsToUser` per-user global scope is widened at the read-service

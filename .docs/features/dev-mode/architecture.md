@@ -740,7 +740,19 @@ JWT-shaped tokens out of both the rolling log file and the
   request, and `compiledPattern()` runs on every log record, so a
   per-record alert would be a flood). A failure is never cached as
   "nothing to scrub": the next call reloads, so redaction resumes as
-  soon as the cause clears.
+  soon as the cause clears. The banner says the same in the reader's
+  words — logs may carry unredacted tokens "until the next successful
+  load" — so the load that names is the load that takes it down: a pass
+  that throws nothing AND leaves no credential unopened calls
+  `SystemAlertWriter::withdrawSystemWide()` and clears the in-process
+  report gates with it. A pass that read the table fine but still could
+  not decrypt one row is NOT a recovery and withdraws nothing; the
+  per-pass flag is separate from the per-row "already reported" memo,
+  because the memo answers "have we said this yet", not "is it still
+  true". The withdrawal is issued from `loadedSet()` after the memo is
+  filled, never from inside `load()`: it writes to the database, and a
+  logged query re-enters through `compiledPattern()`, which would walk
+  straight back into `load()` while the set was still null.
 - **`RedactSecretsProcessor`** (on-write) — a Monolog `ProcessorInterface`
   registered via **`PushRedactProcessor`** (a Laravel logging "tap"
   class) onto every handler of **every channel that can write
