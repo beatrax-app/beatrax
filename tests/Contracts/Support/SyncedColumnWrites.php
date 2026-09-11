@@ -156,6 +156,8 @@ final class SyncedColumnWrites
     // whole file at once called four such files offenders.
     public static function namesItsTableIndirectly(string $source): bool
     {
+        $held = self::buildersHoldingAVariableTable($source);
+
         foreach (PatternScan::split('/;/', $source) as $statement) {
             if (! PatternScan::matches('/'.self::WRITE_TERMINAL.'/', $statement)) {
                 continue;
@@ -172,9 +174,37 @@ final class SyncedColumnWrites
                 && ! PatternScan::matches("/->\s*table\(\s*'/", $statement)) {
                 return true;
             }
+
+            foreach ($held as $name) {
+                if (PatternScan::matches('/'.preg_quote($name, '/').'\b/', $statement)) {
+                    return true;
+                }
+            }
         }
 
         return false;
+    }
+
+    // A builder kept in a variable still writes to whatever table made it.
+    // Splitting `->table($t)->delete()` over two statements hid the write from
+    // a read that only ever looks at one, and the pin covering that file then
+    // reported itself stale -- which is the guard losing sight, not the write.
+    /**
+     * @return list<string>
+     */
+    private static function buildersHoldingAVariableTable(string $source): array
+    {
+        $names = [];
+
+        foreach (PatternScan::sets('/(\$\w+)\s*=\s*[^;]*?->\s*table\(\s*(?:\$|[A-Za-z_\\\\]+::)/', $source) as $set) {
+            $name = $set[1] ?? '';
+
+            if (is_string($name) && $name !== '') {
+                $names[] = $name;
+            }
+        }
+
+        return array_values(array_unique($names));
     }
 
     // Whole-file, exactly as the delete and users guards ask it. A file writing
