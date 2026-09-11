@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 
 /**
@@ -150,6 +151,50 @@ function externalUrlPinnedFor(string $rule): array
         static fn (array $pin): bool => $pin['rule'] === $rule,
     ));
 }
+
+// `rel` is the other half of the same sentence. Without `noopener` the opened
+// window holds `window.opener` on the one that opened it, and in this shell that
+// is another window of this application; without `noreferrer` the third party is
+// told which screen the reader was on when they left.
+it('gives every new-window link both halves of rel', function (): void {
+    $offenders = [];
+    $anchors = 0;
+
+    foreach (externalUrlBladeFiles() as $file) {
+        $source = (string) file_get_contents($file);
+
+        // Through MarkupSource, never a pattern shaped like a tag: `target` and
+        // `rel` are written on separate lines here in either order, and an
+        // x-data or @class([...]) between them carries characters a tag pattern
+        // reads as the end of the tag.
+        foreach (MarkupSource::tags($source) as $element) {
+            if ($element->attribute('target') !== '_blank') {
+                continue;
+            }
+
+            $anchors++;
+            $rel = $element->attribute('rel') ?? '';
+
+            if (! str_contains($rel, 'noopener') || ! str_contains($rel, 'noreferrer')) {
+                $offenders[] = str_replace(base_path().'/', '', $file);
+            }
+        }
+    }
+
+    // Read before the verdict: no anchors found is a scan that stopped, and it
+    // reads exactly like a tree with nothing to fix.
+    expect($anchors)->toBeGreaterThan(
+        4,
+        'The walk found '.$anchors.' new-window links, too few to be this application.'
+    );
+
+    expect(array_values(array_unique($offenders)))->toBe([], implode("\n", [
+        'A target="_blank" link needs rel="noopener noreferrer".',
+        'This is a desktop shell: the window it opens is another window of this',
+        'application, same preload, sandbox: false. Offenders:',
+        implode(', ', array_unique($offenders)),
+    ]));
+});
 
 it('hands a URL to the operating system from one place only', function (): void {
     $sanctioned = externalUrlPinnedFor('openExternal');
