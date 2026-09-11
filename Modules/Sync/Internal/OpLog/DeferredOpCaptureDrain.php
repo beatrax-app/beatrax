@@ -31,6 +31,7 @@ final readonly class DeferredOpCaptureDrain
         private DeferredOpCaptures $queue,
         private StoredRowPlaintext $plaintext,
         private MergeRulesRegistry $rules,
+        private AnnouncedCreates $announced,
         private LoggerInterface $log,
     ) {}
 
@@ -104,8 +105,8 @@ final readonly class DeferredOpCaptureDrain
         try {
             $row = $this->liveRow($table, $pk, $userId);
 
-            $this->db->connection()->transaction(function () use ($writer, $group, $table, $pk, $row): void {
-                $this->emit($writer, $group, $table, $pk, $row);
+            $this->db->connection()->transaction(function () use ($userId, $writer, $group, $table, $pk, $row): void {
+                $this->emit($writer, $group, $table, $pk, $row, $userId);
                 $this->queue->forget(array_column($group, 'id'));
             });
 
@@ -133,7 +134,7 @@ final readonly class DeferredOpCaptureDrain
      * @param  list<array{id: int, table_name: string, pk: string, field: string, op_kind: string, delta: ?int}>  $group
      * @param  array<string, mixed>|null  $row
      */
-    private function emit(OpLogWriter $writer, array $group, string $table, string $pk, ?array $row): void
+    private function emit(OpLogWriter $writer, array $group, string $table, string $pk, ?array $row, int $userId): void
     {
         $id = PersistedOpLogEntries::normalizePk($pk);
         $creates = [];
@@ -146,11 +147,37 @@ final readonly class DeferredOpCaptureDrain
         }
 
         if ($creates !== []) {
-            $writer->writeCreateRow($table, $id, $creates);
+            $this->announce($writer, $table, $id, $creates, $userId);
         }
 
         foreach ($group as $entry) {
             $this->emitOne($writer, $table, $id, $entry, $row);
+        }
+    }
+
+    // A coordinate waits for a key; the pre-sync walk does not, so the walk can
+    // reach the row first. A column that create did not carry is all this one
+    // still owes, and it owes it as a Set — a second create only ever fills the
+    // columns the receiver's row is missing, which is that same column.
+    /**
+     * @param  array<string, mixed>  $creates
+     *
+     * @link ../../../../.docs/features/sync/pre-sync-history-capture.md#announced-once-whichever-announcer-arrives-first
+     */
+    private function announce(OpLogWriter $writer, string $table, int|string $id, array $creates, int $userId): void
+    {
+        $announced = $this->announced->fieldsOf($userId, $table, $id);
+
+        if ($announced === []) {
+            $writer->writeCreateRow($table, $id, $creates);
+
+            return;
+        }
+
+        foreach ($creates as $field => $value) {
+            if (! isset($announced[$field])) {
+                $writer->writeSet($table, $id, $field, $value);
+            }
         }
     }
 
