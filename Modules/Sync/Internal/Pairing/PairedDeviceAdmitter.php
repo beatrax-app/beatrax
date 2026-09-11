@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\Lang;
+use Modules\Sync\Internal\Support\LanOnlyHost;
 use Modules\Sync\Public\Dto\PairingPeerIdentity;
 
 /**
@@ -78,14 +79,27 @@ final readonly class PairedDeviceAdmitter
             return null;
         }
 
+        $host = $this->asLanHost($lanHost);
+
         return new PairingPeerIdentity(
             $deviceId,
             $edHex,
             $kxHex,
             $this->asString($deviceName),
-            $this->asString($lanHost),
-            $this->asInt($lanPort),
+            $host,
+            $host === null ? null : $this->asInt($lanPort),
         );
+    }
+
+    // The address on the pairing row is unauthenticated — a scanned QR wrote it,
+    // or an offer fetch observed it — and this is where it stops being a row and
+    // becomes the address every later sync dials. Refusing it here loses a fast
+    // path and costs a browse; keeping it would dial wherever the QR said.
+    private function asLanHost(mixed $lanHost): ?string
+    {
+        $host = $this->asString($lanHost);
+
+        return $host !== null && LanOnlyHost::admits($host) ? $host : null;
     }
 
     // The safety-number words always derive from (initiatorEd, responderEd)

@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Pairing;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Instant;
+use Modules\Sync\Internal\Support\LanOnlyHost;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 
@@ -14,6 +15,11 @@ use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
 // seeded from that scan. One reader because three questions turn on it: where
 // to send a frame, where to collect one from, and whether the screen may blame
 // the network for a frame it never had anywhere to send (see @link).
+
+// The one place the scanned address is judged, rather than each of the three
+// dial sites judging it: the column also holds rows written by builds that
+// stored whatever the QR said, so a guard on the write alone would leave every
+// one of those still dialable.
 /**
  * @link ../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
  */
@@ -37,7 +43,7 @@ final readonly class ScannedPeerAddress
 
         // Manual, not Mdns: it came from a scan rather than the network, so
         // isFromNetwork() stays false for every caller that asks.
-        return is_string($host) && $host !== '' && is_numeric($port) && (int) $port > 0
+        return is_string($host) && LanOnlyHost::admits($host) && is_numeric($port) && (int) $port > 0
             ? new DiscoveredPeer($peerDeviceId, $host, (int) $port, DiscoveryMode::Manual)
             : null;
     }
@@ -82,7 +88,7 @@ final readonly class ScannedPeerAddress
         $port = $row->initiator_lan_port ?? null;
 
         return is_string($deviceId) && $deviceId !== ''
-            && is_string($host) && $host !== ''
+            && is_string($host) && LanOnlyHost::admits($host)
             && is_numeric($port) && (int) $port > 0
                 ? new DiscoveredPeer($deviceId, $host, (int) $port, DiscoveryMode::Manual)
                 : null;
