@@ -267,9 +267,9 @@ final readonly class SeriesEntryPlacer
         $k = $this->firstOccurrenceIndex($anchor, $cadence, $gridStart);
 
         // Backward steps are history fill-in. The anchor is the app's own
-        // answer to when the next charge falls, and the forecast walks
-        // forward from it, so a step behind the anchor that lands on a day
-        // still to come is an entry no balance line will ever account for.
+        // answer to when the next charge falls, and the forecast walks forward
+        // from it, so a step behind the anchor landing on a day still to come
+        // is an entry no balance line will ever account for. Today is not one.
         $today = $this->clock->now()->startOfDay();
 
         // Dates increase strictly in k, so the first one past the grid's last
@@ -290,7 +290,11 @@ final readonly class SeriesEntryPlacer
             if ($seriesStart !== null && $occurrence->lt($seriesStart)) {
                 continue;
             }
-            if ($occurrence->lt($anchor) && $occurrence->gte($today)) {
+            // gt, not gte: today sits on the same side as the past for
+            // placement. A series whose billing day IS today's has its
+            // instalment one step behind an anchor in the next period, and
+            // gte dropped it -- on that one day of the month and no other.
+            if ($occurrence->lt($anchor) && $occurrence->gt($today)) {
                 continue;
             }
             $results[] = $occurrence;
