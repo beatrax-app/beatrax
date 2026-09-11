@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Arhivēt šo krājkasi? Atlikums :amount atgriezīsies nepiešķirtajā daļā.',
+    'archive_confirm_overdrawn' => 'Arhivēt šo krājkasi? Tā ir :amount zem nulles, tāpēc arhivēšana šo summu paņem no nepiešķirtās daļas, nevis kaut ko atdod.',
     'confirm_archive_aria' => 'Apstiprināt :name arhivēšanu',
     'more_actions_aria' => 'Vairāk darbību ar :name',
 

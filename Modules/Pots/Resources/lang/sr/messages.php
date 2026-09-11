@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Arhivirati ovu kasicu? Stanje od :amount vratiće se u neraspoređeno.',
+    'archive_confirm_overdrawn' => 'Arhivirati ovu kasicu? Ona je :amount ispod nule, pa arhiviranje taj iznos oduzima od neraspoređenog umesto da išta vrati.',
     'confirm_archive_aria' => 'Potvrdi arhiviranje kasice :name',
     'more_actions_aria' => 'Više radnji za :name',
 

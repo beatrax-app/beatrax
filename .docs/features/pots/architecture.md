@@ -63,12 +63,22 @@ the reader to fund the pot by the shortfall. Nothing is clamped: rounding the
 balance up to nought would hide the very disagreement between two devices the
 reader has to settle.
 
-What *is* clamped is the pair of sentences that quote the balance as money still
-to be had. "Available in :name" offered a taking the writer refuses at that
-sign, and `archive_confirm` promised a release `archive()` does not perform — it
-releases only a balance above zero. Both read through the blade's `$available`
-closure, which floors the figure at nought, the same way `PotsPage` already
-floors `errorAmountLimitMinor`.
+What *is* clamped is "Available in :name", which offered a taking the writer
+refuses at that sign. It reads through the blade's `$available` closure, which
+floors the figure at nought, the same way `PotsPage` already floors
+`errorAmountLimitMinor`.
+
+The archive prompt is not clamped, because clamping it produced a sentence that
+was wrong in both directions at once. `archive_confirm` says a balance returns
+to unallocated; floored to nought it read "Balance of 0,00 will return", while
+what archiving an overdrawn pot actually does is take the shortfall *out* of
+unallocated — the release below runs at either sign. A reader was confirming a
+write the sentence did not describe. `archive_confirm_overdrawn` is the second
+key, named from the blade's `$archiveQuestion` closure on `balanceMinor < 0`, and
+it quotes the shortfall as the amount archiving will take. Neither sentence
+names a step: the reader's way out of an overdrawn pot is
+`recon.overdrawn` on the card, and at the moment of confirming there is nothing
+to do but decide.
 
 ## Writes: fund, withdraw, transfer, archive, restore
 
@@ -241,6 +251,16 @@ no case for is named as such rather than folded into one of the four:
 spelling through the op log and `PotMovementKind::from()` used to take the
 whole page down on the older device
 ([a peer may be on a newer version](../sync/a-peer-may-be-on-a-newer-version.md)).
+
+Each line takes its direction — the emerald colour and the leading `+` — from
+the **sign of `amount_minor`**, never from the kind. Four of the five kinds are
+written at one sign only, so a kind-keyed answer agreed with the column for all
+of them; `released_on_archive` is written at the negative of the balance and is
+therefore positive whenever the pot was below zero, and that one line was drawn
+in the grey an outflow wears while it was money coming back. The column is the
+authority the kind cannot be, and it answers for an arriving row whose kind and
+sign disagree as well. A kind this build cannot name still claims no direction
+at all, which is the same reasoning that gives it its own wording.
 
 `linkedPotBalancesForUser()` reports `hasMovements` beside each linked pot's
 balance, which is not `balance !== 0`: a pot funded and then emptied has a

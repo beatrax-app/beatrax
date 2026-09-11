@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => '¿Archivar esta hucha? El saldo de :amount volverá a lo no asignado.',
+    'archive_confirm_overdrawn' => '¿Archivar esta hucha? Está :amount por debajo de cero, así que archivarla resta esa cantidad de lo no asignado en vez de devolver nada.',
     'confirm_archive_aria' => 'Confirmar el archivado de :name',
     'more_actions_aria' => 'Más acciones para :name',
 

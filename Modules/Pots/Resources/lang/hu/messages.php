@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Archiválod ezt a perselyt? A(z) :amount egyenleg visszakerül a kiosztatlan keretbe.',
+    'archive_confirm_overdrawn' => 'Archiválod ezt a perselyt? :amount összeggel nulla alatt van, így az archiválás ezt az összeget kiveszi a kiosztatlan keretből, ahelyett hogy bármit visszaadna.',
     'confirm_archive_aria' => 'A(z) :name archiválásának megerősítése',
     'more_actions_aria' => 'További műveletek: :name',
 
