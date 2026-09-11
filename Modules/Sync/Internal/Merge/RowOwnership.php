@@ -242,7 +242,13 @@ final class RowOwnership
     private function polymorphicReferenceBelongsToUser(string $table, array $payload, int $userId, int|string|null $pk): bool
     {
         foreach (self::POLYMORPHIC_REFERENCES[$table] ?? [] as $column => $typeColumn) {
-            $referenced = $payload[$column] ?? null;
+            // A Set names one column. Naming the TYPE reinterprets an id the
+            // stored row already holds, so the id is read back the same way
+            // the type is below -- and only then, because every other Set on
+            // this table would otherwise pay for a read it does not need.
+            $referenced = $payload[$column] ?? (array_key_exists($typeColumn, $payload)
+                ? $this->siblingValue($table, $pk, $column)
+                : null);
 
             if ($referenced === null) {
                 continue;
@@ -266,7 +272,7 @@ final class RowOwnership
     // The type column as the row already holds it, for a Set that carries
     // only the id. Not memoised: this is the value an earlier op in the very
     // same replay may have just rewritten.
-    private function siblingValue(string $table, int|string|null $pk, string $column): ?string
+    private function siblingValue(string $table, int|string|null $pk, string $column): int|string|null
     {
         if ($pk === null) {
             return null;
@@ -274,7 +280,7 @@ final class RowOwnership
 
         $value = $this->db->connection()->table($table)->where('id', $pk)->value($column);
 
-        return is_string($value) ? $value : null;
+        return is_int($value) || is_string($value) ? $value : null;
     }
 
     // Null when the row is absent. Only a found owner is memoised: a replay
