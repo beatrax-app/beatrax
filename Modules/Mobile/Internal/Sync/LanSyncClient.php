@@ -133,7 +133,7 @@ final readonly class LanSyncClient
         }
 
         $this->logger?->info('LanSyncClient: the peer answered and no secure session opened.', [
-            'reason' => $e::class,
+            'reason' => $e->reason(),
         ]);
 
         return LanDialOutcome::NotSecured;

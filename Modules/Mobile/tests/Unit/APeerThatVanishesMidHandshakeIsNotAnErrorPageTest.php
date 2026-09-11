@@ -26,3 +26,25 @@ it('keeps the revocation flag independent of the new one', function (): void {
         ->and(LanSyncException::peerDisconnectedBeforeHandshakeMessage('msg2')->isPeerRevocation())->toBeFalse()
         ->and(LanSyncException::peerFailedConfirmedDeviceGate()->isPeerRevocation())->toBeFalse();
 });
+
+// The log line for a refusal that reached the peer carried `$e::class`, and
+// all three refusals ARE that class — so a phone that could not open a secure
+// session logged the same line whether the desktop had gone to sleep or had
+// stopped confirming it. The first expectation is why the second one exists.
+it('names which of the three refusals it is, because the class name cannot', function (): void {
+    $classes = [
+        LanSyncException::peerFailedConfirmedDeviceGate()::class,
+        LanSyncException::peerRevokedThisDevice()::class,
+        LanSyncException::peerDisconnectedBeforeHandshakeMessage('msg2')::class,
+    ];
+
+    expect(array_unique($classes))->toHaveCount(1);
+
+    $reasons = [
+        LanSyncException::peerFailedConfirmedDeviceGate()->reason(),
+        LanSyncException::peerRevokedThisDevice()->reason(),
+        LanSyncException::peerDisconnectedBeforeHandshakeMessage('msg2')->reason(),
+    ];
+
+    expect(array_unique($reasons))->toHaveCount(3);
+});
