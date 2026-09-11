@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Fixtures\Livewire\SyntheticEventListenerEndpoint;
 use Tests\Contracts\Support\WireCallableMethods;
 
 /**
@@ -138,6 +139,11 @@ function serverOwnedPropertyExemptions(): array
         'Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList::$preSearchFullHistory' => 'the window to restore when the search box is cleared',
         'Modules\\Onboarding\\Internal\\Http\\Livewire\\StartingBalanceCard::$isConfirmed' => 'which of two labels the card draws after an edit is cancelled',
         'Modules\\Sync\\Public\\Http\\Livewire\\DevicesAndSyncSettingsSection::$encryptionProgress' => 'a poll percentage, read only to decide whether to stop polling',
+
+        // Unlocked on purpose: the gate belongs to the value rather than to the
+        // one method that asks for it, and AStepCannotCompleteItselfOutOfOrder
+        // drives a forged step over the wire to prove that gate holds.
+        'Modules\\Onboarding\\Internal\\Http\\Livewire\\SetupWizard::$currentStepKey' => 'advance() refuses a step the registry does not call reachable, and the write it makes is filtered on the reader\'s own user_id',
     ];
 }
 
@@ -504,5 +510,50 @@ it('reads a trait property against the trait\'s module as well as the component\
         0,
         'No component takes a public property from another module\'s trait, so this rule proved nothing — and the '
         .'sixteen tax-picker properties that made it necessary would read as a clean tree.'
+    );
+});
+
+// The rule above reads a property's readers out of WireCallableMethods, so the
+// set that walk returns IS this rule's reach. It once dropped every #[On]
+// listener as "framework-driven", and nine properties whose only reader is a
+// listener sat outside the rule reading green.
+it('reads an event listener as an endpoint, and a computed property as not one', function (): void {
+    $names = array_map(
+        static fn (ReflectionMethod $method): string => $method->getName(),
+        WireCallableMethods::invokableOn(SyntheticEventListenerEndpoint::class),
+    );
+
+    // toBeTrue over a membership test rather than toContain: toContain reads
+    // every further argument as another NEEDLE, so the explanation would become
+    // a second string the array has to hold.
+    expect(in_array('onSomethingDispatched', $names, true))->toBeTrue(
+        'A `calls` entry naming an #[On] listener reaches it with the payload\'s own arguments — Livewire\'s '
+        .'SupportEvents refuses nothing — so a property only a listener reads is still the browser\'s to choose.',
+    );
+
+    expect(in_array('derivedTotal', $names, true))->toBeFalse(
+        'Livewire answers a direct call on a #[Computed] method with CannotCallComputedDirectlyException, so '
+        .'counting one here would demand a lock for a body no payload can reach.',
+    );
+});
+
+// The fixture above proves the reader can tell the two attributes apart; this
+// proves the production walk actually meets some. A tree whose listeners all
+// vanished from the set reads as clean to the rule above.
+it('reaches the listeners the shipped components subscribe with', function (): void {
+    $listeners = [];
+
+    foreach (WireCallableMethods::components() as $component) {
+        foreach (WireCallableMethods::invokableOn($component) as $method) {
+            if (WireCallableMethods::subscribesToAnEvent($method)) {
+                $listeners[] = $component.'::'.$method->getName();
+            }
+        }
+    }
+
+    expect(count($listeners))->toBeGreaterThan(
+        20,
+        'The walk returned '.count($listeners).' #[On] listeners across the whole module tree, which is the shape '
+        .'of a set that has been narrowed back to "what Livewire calls itself" — the narrowing this rule cannot survive.'
     );
 });

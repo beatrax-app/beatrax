@@ -78,8 +78,10 @@ final class WireCallableMethods
     }
 
     /**
-     * The methods a crafted `/livewire/update` payload could invoke, minus the
-     * ones Livewire itself calls.
+     * The methods a crafted `/livewire/update` payload could invoke. Livewire
+     * refuses a lifecycle hook and a computed property BY NAME and refuses
+     * nothing else, so what is left here is the endpoint surface itself — a
+     * narrowing beyond those two would be a hole, not a tidy-up.
      *
      * @param  class-string<Component>  $component
      * @return list<ReflectionMethod>
@@ -103,7 +105,7 @@ final class WireCallableMethods
             if ($method->isStatic() || $method->isConstructor() || str_starts_with($method->getName(), '__')) {
                 continue;
             }
-            if (self::isLifecycle($method->getName()) || self::isFrameworkDriven($method)) {
+            if (self::isLifecycle($method->getName()) || self::isComputed($method)) {
                 continue;
             }
 
@@ -189,11 +191,22 @@ final class WireCallableMethods
         return false;
     }
 
-    // #[On] is a subscription and #[Computed] is a property in method form;
-    // both are called by Livewire, not by a caller a grep could find.
-    private static function isFrameworkDriven(ReflectionMethod $method): bool
+    /**
+     * A subscription Livewire calls, so no grep finds its caller. Deliberately
+     * NOT a narrowing of invokableOn(): SupportEvents adds no refusal of its
+     * own, so `calls[{method:"onFoo",params:[…]}]` reaches the listener with
+     * the payload's own arguments. Only the dead-code guard may drop these.
+     */
+    public static function subscribesToAnEvent(ReflectionMethod $method): bool
     {
-        return $method->getAttributes(On::class) !== [] || $method->getAttributes(Computed::class) !== [];
+        return $method->getAttributes(On::class) !== [];
+    }
+
+    // A property in method form, which Livewire answers with
+    // CannotCallComputedDirectlyException, so no payload reaches the body.
+    private static function isComputed(ReflectionMethod $method): bool
+    {
+        return $method->getAttributes(Computed::class) !== [];
     }
 
     /**

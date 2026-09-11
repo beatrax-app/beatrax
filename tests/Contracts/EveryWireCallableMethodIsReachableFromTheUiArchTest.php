@@ -34,6 +34,14 @@ function unreachableWireActions(array $allowList): array
         foreach (WireCallableMethods::invokableOn($component) as $method) {
             $name = $method->getName();
 
+            // Dropped here rather than in the walk: a listener IS an endpoint,
+            // and the guard asking which endpoints a payload can call has to
+            // keep seeing it. Livewire is its caller, so only this guard — the
+            // one asking whether a caller exists — is answered by that.
+            if (WireCallableMethods::subscribesToAnEvent($method)) {
+                continue;
+            }
+
             if (isset($reachable[$name]) || in_array($name, $allowList[$component] ?? [], true)) {
                 continue;
             }

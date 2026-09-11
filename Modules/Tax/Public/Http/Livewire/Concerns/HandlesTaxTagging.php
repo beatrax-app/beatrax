@@ -36,6 +36,10 @@ trait HandlesTaxTagging
 
     public ?int $pickerYearOverride = null;
 
+    // The year the banner counts and applies against. openPickerFor() reads it
+    // off the row and no control writes it, so a payload choosing it moved the
+    // batch tag onto a filing year the reader was never shown.
+    #[Locked]
     public ?int $pickerPostedYear = null;
 
     public ?int $pickerTaxYear = null;
@@ -50,6 +54,9 @@ trait HandlesTaxTagging
     #[Locked]
     public ?array $batchSuggestion = null;
 
+    // Only dismissBatch() and applyBatchTag() write it, and the popover reads
+    // it back to decide whether to count at all.
+    #[Locked]
     public bool $batchSuggestionDismissed = false;
 
     // Locked because the popover reads $cat->id off every row: the picker is
