@@ -113,6 +113,11 @@ final class MergeRulesRegistry
                 'pair_transaction_id' => ['nullable' => true],
                 'type' => ['nullable' => false],
                 'status' => ['nullable' => false],
+                // One key per protected column, and the columns above merge
+                // independently — so whole-value LWW loses the key the OTHER
+                // device stamped and the next re-apply overwrites a hand edit it
+                // can no longer see. Only category_id has a second source.
+                'field_provenance' => ['strategy' => MergeStrategy::JsonKeyUnion->value, 'nullable' => true],
                 '_delete_wins' => true,
                 // NOT NULL columns without defaults in transactions (status has default 'cleared',
                 // payment_type has default 'unknown' — omitted from required list).

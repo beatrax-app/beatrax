@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
+use Modules\Sync\Internal\Merge\Strategies\JsonKeyUnionStrategy;
 use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\MergeStrategyInterface;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
@@ -28,6 +29,7 @@ final readonly class OpLogValueProjector
             MergeStrategy::Lww->value => new LwwPerFieldStrategy,
             MergeStrategy::GCounter->value => new GCounterStrategy,
             MergeStrategy::OrSet->value => new OrSetStrategy,
+            MergeStrategy::JsonKeyUnion->value => new JsonKeyUnionStrategy,
         ];
     }
 
