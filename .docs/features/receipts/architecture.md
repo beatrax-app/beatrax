@@ -421,3 +421,29 @@ that, because the listener writes an op-log a rollback cannot reach.
   toast: the same conflict re-rendered and the same button threw again.
   It is now caught at the UPDATE — the stored row stands, the conflict
   still clears, nothing is announced, and the collision is logged.
+
+## The conflict heading names a field the sentence never sees
+
+`conflict.heading_different` and `conflict.heading_cleaner` take the field name as
+`:field` and put an adjective in front of it. That works in English, where the adjective
+does not inflect. It does not work in a language that agrees the adjective with the noun's
+gender, because the template cannot know which noun it will receive — `field.amount_minor`,
+`.currency`, `.description`, `.counterparty_name` or `.default`.
+
+Two locales already solve it by agreeing with a word the template owns:
+
+| locale | template | agrees with |
+|---|---|---|
+| `de` | `Ein E-Mail-Beleg hat beim Feld :field einen anderen Wert` | `Wert`, fixed |
+| `fr` | `Un reçu par e-mail enregistre :field autrement` | nothing — adverb, and the nouns carry their own article |
+| `nl` | `Een e-mailbon heeft bij :field een andere waarde` | `waarde`, fixed |
+
+**Still carrying the broken shape: `hr`, `sr`, `sl`.** Each inflects for a masculine noun
+while `valuta` is feminine in the accusative — `drugačiji valutu`, `drugačen valuto`. The
+remedy is the same restructuring, and it needs someone who reads the language; it has not
+been guessed at here. `en` is unaffected.
+
+One wart is shared with `de` and left alone: when the field is unrecognised, `field.default`
+is itself the fixed noun, so the sentence reads `bij waarde een andere waarde` (German:
+`beim Feld Wert einen anderen Wert`). It is a fallback for a field the match arm does not
+name, and narrowing the diff mattered more than the stutter.
