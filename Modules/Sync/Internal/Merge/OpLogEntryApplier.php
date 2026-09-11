@@ -160,7 +160,7 @@ final readonly class OpLogEntryApplier
         // partner that does not exist. Stripped here, set once both exist.
         $selfRefs = $this->selfReferences->extract($table, $payload);
 
-        $local = $this->insertCreatedRow($table, $payload, $fields, $batch->now, $deviceId, $here, $batch->userId);
+        $local = $this->insertCreatedRow($table, $payload, $fields, $batch->now, $deviceId, new ArrivingRowId($pk, $here), $batch->userId);
 
         if ($local === null) {
             return [];
@@ -282,21 +282,22 @@ final readonly class OpLogEntryApplier
      * @param  array<string, list<OpLogEntry>>  $fields
      * @return int|string|null The id the row is here under, or null when it was refused and recorded.
      */
-    private function insertCreatedRow(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): int|string|null
+    private function insertCreatedRow(string $table, array $payload, array $fields, string $now, string $deviceId, ArrivingRowId $id, int $userId): int|string|null
     {
         try {
             $this->db->connection()->table($table)->insert($payload);
 
-            return $pk;
+            return $id->here;
         } catch (QueryException $e) {
             // By the pk it is the idempotent re-apply. By ANOTHER unique index
             // it is a second id for one row, and the peer's id has to keep
-            // meaning something or every child naming it is orphaned.
+            // meaning something or every child naming it is orphaned. Both ids
+            // go over: the answer needs the peer's, the write used this one.
             if (CreateRowInsertFailure::classify($e) === CreateRowInsertFailure::AlreadyPresent) {
-                return $this->alreadyPresent->answer($table, $payload, $fields, $now, $deviceId, $pk, $userId);
+                return $this->alreadyPresent->answer($table, $payload, $fields, $now, $deviceId, $id, $userId);
             }
 
-            $this->refusals->databaseRefusedInsert($table, $pk, $e, $fields, $now);
+            $this->refusals->databaseRefusedInsert($table, $id->here, $e, $fields, $now);
 
             return null;
         }
