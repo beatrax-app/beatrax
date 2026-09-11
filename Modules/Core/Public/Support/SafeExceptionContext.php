@@ -39,6 +39,18 @@ final class SafeExceptionContext
         return $cell?->toLogContext() ?? [];
     }
 
+    // For a column or a screen, where describe()'s two keys have nowhere to go.
+    // Same promise as the narrowed read a broad catch is allowed: the message
+    // survives only from a class that claimed it names no value out of a row.
+    // mb_strcut and not substr, so the cap cannot split a character in half.
+    public static function reason(Throwable $e, int $maxBytes = 500): string
+    {
+        $message = $e instanceof MessageNamesNoUserData ? $e->getMessage() : '';
+        $oneLine = trim(PatternScan::replace('/\s+/', ' ', $message));
+
+        return $oneLine === '' ? self::shortName($e) : mb_strcut($oneLine, 0, $maxBytes);
+    }
+
     // The unqualified name, for a line a reader sees rather than a log. Same
     // guarantee as describe(): it names the failure, never the row.
     public static function shortName(Throwable $e): string

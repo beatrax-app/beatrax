@@ -21,6 +21,7 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
@@ -419,13 +420,18 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         $container = Container::getInstance();
         $sm = $container->make(InboxScanStateMachine::class);
         $logger = $container->make(LoggerInterface::class);
-        $reason = $exception?->getMessage() ?? 'unknown failure';
+
+        // error_message is a plaintext column read back into a Public DTO, and
+        // the raw message put whatever the job threw in it — a QueryException
+        // against `inbox_messages` writes its bindings, which are the sender
+        // address and the subject line of somebody's mail.
+        $reason = $exception === null ? 'unknown failure' : SafeExceptionContext::reason($exception);
 
         try {
             $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                mb_strcut($reason, 0, 500),
+                $reason,
             );
         } catch (Throwable $stateWriteFailure) {
             // An invalid transition here is fine, but a real write failure
@@ -469,10 +475,13 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 InboxScanStatus::NeedsReauth->value,
                 'No OAuth credentials are persisted for this inbox.',
             ),
+            // The three arms above name the failure they matched; this one
+            // catches everything else, so a QueryException raised anywhere in
+            // the walk landed here and wrote its bindings into the column.
             default => $context->sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                substr($e->getMessage(), 0, 500),
+                SafeExceptionContext::reason($e),
             ),
         };
 

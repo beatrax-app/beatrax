@@ -192,7 +192,12 @@ Modules/DevMode/
   in the directory tree.
 - `Internal/Listeners/LogQueueLifecycle::processed($event) /
   failed($event)` — writes a structured log line for every
-  `JobProcessed` / `JobFailed`.
+  `JobProcessed` / `JobFailed`. `failed()` spreads
+  `SafeExceptionContext::describe()` and `::refusedCell()` into the
+  context and keeps `$e->getMessage()` only for a class implementing
+  `MessageNamesNoUserData`: `$event->exception` is as broad as
+  `catch (Throwable)`, and this listener is registered outside the
+  dev-mode conditional.
 - `Internal/Listeners/WriteWorkerHeartbeat::__invoke()` —
   cache-bumps the heartbeat key on every queue tick.
 - `Internal/Listeners/ResetAdvancedToggleOnLogin::handle($event)` —

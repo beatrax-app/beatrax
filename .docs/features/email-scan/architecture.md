@@ -632,9 +632,15 @@ permanent: a revoked grant needs a Reconnect and an inbox with no
 persisted credentials needs the wizard, and neither is something a
 later attempt can reach. Rethrowing is what schedules the retry, so
 only a condition a later attempt could clear may leave through it. Any
-other throwable → transition to `error` (with the
-first 500 chars of the message) and rethrow so the job-failed listener
-can surface the failure. `failed()` (Laravel's post-retry-exhaustion
+other throwable → transition to `error` (with
+`SafeExceptionContext::reason($e)`, which is the exception's short
+class name unless the class implements `MessageNamesNoUserData`) and
+rethrow so the job-failed listener can surface the failure. The
+column used to take the first 500 characters of the raw message, and
+`inbox_scan_state.error_message` is plaintext read back through
+`InboxQuery` into a Public DTO — so a `QueryException` from anywhere in
+the walk wrote its bindings, the sender address and the subject line,
+into it. `failed()` (Laravel's post-retry-exhaustion
 hook) applies the same terminal `error` transition; if that write
 itself fails (e.g. `SQLITE_BUSY`), the failure is logged as a warning
 rather than escalated, since an invalid transition here (e.g. an
@@ -819,7 +825,8 @@ and rethrows so the queue worker honours the project-wide backoff.
 Reconnect or finishes the OAuth-client wizard; rethrowing either would
 spend the whole retry budget on a condition no attempt can clear). Any
 other `Throwable`
-transitions to `error` (first 500 chars of the message) and rethrows
+transitions to `error` (`SafeExceptionContext::reason($e)`, never the
+raw message) and rethrows
 so the job-failed listener can surface the failure. `failed()`
 (Laravel's post-retry-exhaustion hook) applies the same terminal
 `error` transition via container-resolved `InboxScanStateMachine`,
@@ -1035,8 +1042,10 @@ wires the nav badge View Factory composer.
 **Failed-job lifecycle:** `BackfillInboxJob` and `IncrementalScanJob`
 each define their own `failed(Throwable, InboxScanStateMachine)`
 method; Laravel resolves `InboxScanStateMachine` via container DI and
-the job flips its own `inbox_scan_state.status` to `error` with the
-truncated exception message. The state machine remains the sole
+the job flips its own `inbox_scan_state.status` to `error` with
+`SafeExceptionContext::reason($e)` — the exception's short class name,
+or its message only where the class implements `MessageNamesNoUserData`
+and has therefore promised the message names no value out of a row. The state machine remains the sole
 mutator of the status column (`BoundaryArchTest` invariant). Per-job
 `failed()` hooks tie failure handling to the typed job class itself,
 keeping the lookup independent of Laravel's serialized-payload format.

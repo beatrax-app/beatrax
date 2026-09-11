@@ -267,6 +267,10 @@ address the whole subnet can reach.
   metal the default `daily` channel writes rotating files under
   `storage/logs/`; set `LOG_CHANNEL=stderr` instead if a process manager
   captures stdout. Set `LOG_LEVEL=info` (or `warning`) in production.
+  Every channel in `config/logging.php` taps the secret redactor, `stderr`
+  included, so the choice of channel is not also a choice about whether
+  tokens are scrubbed. Treat `docker compose logs` as readable by anyone who
+  can reach the host all the same.
 - **Queue.** Beatrax uses the **database** queue driver — no Redis. The Docker
   stack runs a dedicated `queue` service (`php artisan queue:work`); on bare
   metal run that as a systemd/supervisor process (see above). The scheduler
