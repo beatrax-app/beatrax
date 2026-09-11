@@ -212,6 +212,7 @@ it('says so when a deferred self-reference is refused', function (): void {
     $deferral = new SelfReferenceDeferral(
         mergeFaultRealDb(),
         new RowOwnership(mergeFaultRealDb()),
+        app(PeerRowAliases::class),
         mergeFaultLogger('keeps a null where its pair should be'),
     );
 
@@ -226,6 +227,7 @@ it('says so when a deferred self-reference is refused', function (): void {
     $deferral->apply([[
         'table' => 'merge_fault_pairs',
         'pk' => 1,
+        'deviceId' => 'merge-fault-device',
         'values' => ['no_such_column' => 2],
     ]], 1);
 });
