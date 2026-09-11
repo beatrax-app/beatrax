@@ -13,7 +13,12 @@
             <x-core::neutral-button
                 class="disabled:cursor-not-allowed disabled:opacity-50"
                 data-testid="doctor-rerun-button"
-                x-data="{ running: false }"
+                x-data="{
+                    running: false,
+                    stream: null,
+                    close() { if (this.stream) { this.stream.close(); this.stream = null; } },
+                    destroy() { this.close(); },
+                }"
                 x-on:click="
                     running = true;
                     fetch('/dev/artisan/spawn', {
@@ -26,9 +31,9 @@
                         body: JSON.stringify({ command: '{{ $commandName }}', args: {} })
                     }).then(r => r.json()).then(d => {
                         if (d.run_id) {
-                            const es = new EventSource('/dev/artisan/stream/' + d.run_id);
-                            es.addEventListener('done', () => { es.close(); window.location.reload(); });
-                            es.onerror = () => { es.close(); window.location.reload(); };
+                            this.stream = new EventSource('/dev/artisan/stream/' + d.run_id);
+                            this.stream.addEventListener('done', () => { this.close(); window.location.reload(); });
+                            this.stream.onerror = () => { this.close(); window.location.reload(); };
                         } else {
                             running = false;
                             if (d.message) {

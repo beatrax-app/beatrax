@@ -128,6 +128,10 @@
                             const s = String(this.remaining % 60).padStart(2, '0');
                             return m + ':' + s;
                         },
+                        destroy() {
+                            clearInterval(this.interval);
+                            this.interval = null;
+                        },
                     }"
                     {{-- What is left comes from the clock, never from a tally of
                          ticks. A background window is clamped to one tick a
