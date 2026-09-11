@@ -73,12 +73,13 @@ final readonly class SplitSumHealthCheck
             return ['severity' => 'warning', 'message' => 'could not be read — run php artisan migrate'];
         }
 
-        if ($checked === 0) {
-            return ['severity' => 'ok', 'message' => 'no transaction is split'];
-        }
-
         if ($ids === []) {
-            return ['severity' => 'ok', 'message' => "{$checked} split, each adding up to its transaction"];
+            return [
+                'severity' => 'ok',
+                'message' => $checked === 0
+                    ? 'no transaction is split'
+                    : "{$checked} split, each adding up to its transaction",
+            ];
         }
 
         // A warning rather than a blocker: both rollups fail safe to the
