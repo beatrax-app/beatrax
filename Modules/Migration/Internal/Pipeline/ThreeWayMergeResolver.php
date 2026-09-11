@@ -437,12 +437,17 @@ final readonly class ThreeWayMergeResolver
         return $map !== null ? self::toInt($map->beatrax_id) : null;
     }
 
+    // Newest first, the survivor rule the index migration deduped on: the leg
+    // this compares against has to be the last import's, not whichever row a
+    // peer's pre-index create left beside it.
     private function baselineValue(User $user, int $mapId, string $field): ?string
     {
         $value = $this->db->connection()->table('migration_import_baseline')
             ->where('migration_source_map_id', $mapId)
             ->where('field_name', $field)
             ->where('user_id', $user->id)
+            ->orderByDesc('imported_at')
+            ->orderByDesc('id')
             ->value('baseline_value');
 
         return is_string($value) ? $value : null;
