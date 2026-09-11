@@ -173,9 +173,10 @@ function staticAssetDirectives(): string
     return $compose['services']['app']['environment']['CADDY_SERVER_EXTRA_DIRECTIVES'] ?? '';
 }
 
-// The matcher is what keeps this from becoming the G1-R21 defect it closes: a
-// header block that also caught routed responses would write a second policy
-// over the one the application composes with a nonce.
+// The matcher is what keeps this from becoming the defect it closes: a header
+// block that also caught routed responses would write a second policy over the
+// one the application composes with a per-request nonce, which is the inversion
+// of the rule -- a nearer layer may narrow the base policy, never replace it.
 it('gives a static file the headers PHP never runs to write, and only a static file', function (): void {
     $directives = staticAssetDirectives();
 
