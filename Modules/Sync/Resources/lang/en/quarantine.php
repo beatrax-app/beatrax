@@ -23,5 +23,10 @@ return [
         'body' => 'Something arrived that this device could not store: a record that is missing part of itself, a date that does not exist, a split that no longer adds up, a record that two devices had already given the same identity, or a deletion for something still in use here. What was refused is on your other device and not on this one, so the two no longer hold the same thing.',
         'action' => 'Compare the record on your other device against what you see here and make the change again on this device — or delete it again here, if something you removed elsewhere is still present. Nothing refused is sent again on its own.',
     ],
+    'held' => [
+        'summary' => ':count change from another device has not been applied here yet|:count changes from another device have not been applied here yet',
+        'body' => 'These arrived and could not be stored yet: something they refer to was not here at the time, or this device could not read part of them. They are kept rather than discarded, and they are still on the device that made them.',
+        'action' => 'There is nothing to do here. If they are still listed after your devices have synced again, open the record on your other device and compare it with what you see here — what is counted above is on that device and not on this one.',
+    ],
     'last_seen' => 'Most recent: :when',
 ];

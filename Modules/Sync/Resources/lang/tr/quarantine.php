@@ -23,5 +23,10 @@ return [
         'body' => 'Bu cihazın saklayamadığı bir şey geldi: kendisinin bir parçası eksik olan bir kayıt, var olmayan bir tarih, artık tutmayan bir bölüştürme, iki cihazın daha önce aynı kimliği verdiği bir kayıt ya da burada hâlâ kullanılan bir şey için gelen bir silme. Reddedilen şey diğer cihazında var, bu cihazda yok; yani ikisi artık aynı şeyi tutmuyor.',
         'action' => 'Diğer cihazındaki kaydı burada gördüğünle karşılaştır ve değişikliği burada yeniden yap — ya da başka yerde kaldırdığın bir şey hâlâ buradaysa, burada yeniden sil. Reddedilen hiçbir şey kendiliğinden yeniden gönderilmez.',
     ],
+    'held' => [
+        'summary' => 'Başka bir cihazdan gelen :count değişiklik buraya henüz uygulanmadı',
+        'body' => 'Bunlar geldi ve henüz saklanamadı: işaret ettikleri bir şey o sırada burada yoktu ya da bu cihaz bir kısmını okuyamadı. Atılmak yerine saklanıyorlar ve hâlâ onları yapan cihazda duruyorlar.',
+        'action' => 'Burada yapılacak bir şey yok. Cihazların yeniden senkronize olduktan sonra hâlâ listedeyseler, diğer cihazındaki kaydı aç ve burada gördüğünle karşılaştır — yukarıda sayılanlar o cihazda var, bu cihazda yok.',
+    ],
     'last_seen' => 'En son: :when',
 ];

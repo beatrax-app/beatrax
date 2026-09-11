@@ -23,5 +23,10 @@ return [
         'body' => 'Olyasmi érkezett, amit ez az eszköz nem tudott tárolni: egy rekord, amelyből hiányzik egy része, egy dátum, amely nem létezik, egy felosztás, amely már nem jön ki, egy rekord, amelynek két eszköz már ugyanazt az azonosítót adta, vagy egy törlés olyasmire, ami itt még használatban van. Az elutasított módosítás a másik eszközödön van, ezen nem, így a kettő már nem ugyanazt tartalmazza.',
         'action' => 'Hasonlítsd össze a másik eszközödön lévő rekordot azzal, amit itt látsz, és készítsd el újra a módosítást itt — vagy töröld itt ismét, ha valami, amit máshol eltávolítottál, itt még megvan. Az elutasítottat magától nem küldi el újra semmi.',
     ],
+    'held' => [
+        'summary' => ':count módosítás egy másik eszközről még nincs itt alkalmazva|:count módosítás egy másik eszközről még nincs itt alkalmazva',
+        'body' => 'Ezek megérkeztek, de még nem lehetett tárolni őket: valami, amire hivatkoznak, akkor nem volt itt, vagy ez az eszköz egy részüket nem tudta elolvasni. Megőrizzük őket, nem dobjuk el, és továbbra is azon az eszközön vannak, amelyik készítette őket.',
+        'action' => 'Itt nincs mit tenni. Ha az eszközeid újabb szinkronizálása után is szerepelnek a listán, nyisd meg a rekordot a másik eszközödön, és hasonlítsd össze azzal, amit itt látsz — ami fent meg van számolva, az azon az eszközön van, ezen nem.',
+    ],
     'last_seen' => 'Legutóbbi: :when',
 ];

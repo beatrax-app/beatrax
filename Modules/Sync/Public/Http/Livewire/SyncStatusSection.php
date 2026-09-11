@@ -38,6 +38,11 @@ final class SyncStatusSection extends Component
 
     public ?string $lastSyncedHuman = null;
 
+    // Records, not entries, and only the ones the drawn status speaks for.
+    // Zero for every status that reports no refusal, so the surface never has
+    // to work out which half of the quarantine a sentence belongs to.
+    public int $refusedRecords = 0;
+
     // Clock is injected here for the relative time derivation
     // (noGlobalLaravelFunction guard).
     public function mount(
@@ -57,7 +62,9 @@ final class SyncStatusSection extends Component
             $now,
             $devices->otherDeviceNames($userId),
         );
-        $this->overallStatus = $statusService->overallStatus($userId)->value;
+        $overall = $statusService->overallStatus($userId);
+        $this->overallStatus = $overall->value;
+        $this->refusedRecords = $statusService->refusedRecordCount($userId, $overall);
         $this->lastSyncedHuman = $statusService->lastSyncedHuman($now, $userId);
     }
 

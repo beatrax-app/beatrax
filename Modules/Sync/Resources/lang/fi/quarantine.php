@@ -23,5 +23,10 @@ return [
         'body' => 'Tänne saapui jotain, mitä tämä laite ei voinut tallentaa: tietue, josta puuttuu osa itseään, päivämäärä, jota ei ole olemassa, jako, joka ei enää täsmää, tietue, jolle kaksi laitetta oli jo antanut saman identiteetin, tai poisto sellaiselle, joka on täällä yhä käytössä. Se, mikä hylättiin, on toisella laitteellasi eivätkä tällä, joten laitteilla ei enää ole sama sisältö.',
         'action' => 'Vertaa toisen laitteesi tietuetta siihen, mitä näet täällä, ja tee muutos täällä uudelleen — tai poista se täällä uudestaan, jos jokin muualla poistamasi on täällä yhä. Hylättyä ei lähetetä uudelleen itsestään.',
     ],
+    'held' => [
+        'summary' => ':count muutos toiselta laitteelta on täällä vielä toteuttamatta|:count muutosta toiselta laitteelta on täällä vielä toteuttamatta',
+        'body' => 'Nämä saapuivat, eikä niitä voitu vielä tallentaa: jokin, johon ne viittaavat, ei ollut silloin täällä, tai tämä laite ei pystynyt lukemaan osaa niistä. Ne säilytetään eikä hylätä, ja ne ovat yhä sillä laitteella, joka ne teki.',
+        'action' => 'Täällä ei ole mitään tehtävää. Jos ne ovat yhä luettelossa sen jälkeen, kun laitteesi ovat synkronoineet uudelleen, avaa tietue toisella laitteellasi ja vertaa sitä siihen, mitä näet täällä — se, mikä yllä on laskettu, on sillä laitteella eikä tällä.',
+    ],
     'last_seen' => 'Viimeisin: :when',
 ];

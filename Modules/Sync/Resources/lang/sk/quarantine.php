@@ -23,5 +23,10 @@ return [
         'body' => 'Prišlo niečo, čo toto zariadenie nedokázalo uložiť: záznam, ktorému chýba časť jeho samého, dátum, ktorý neexistuje, rozdelenie, ktoré už nesedí, záznam, ktorému dve zariadenia už priradili rovnakú identitu, alebo zmazanie niečoho, čo sa tu ešte používa. To, čo bolo odmietnuté, je na tvojom druhom zariadení a na tomto nie, takže obe zariadenia už neobsahujú to isté.',
         'action' => 'Porovnaj záznam na svojom druhom zariadení s tým, čo vidíš tu, a vykonaj zmenu tu ešte raz — alebo ju tu znovu zmaž, ak je tu stále niečo, čo si odstránil inde. Nič odmietnuté sa samo od seba znovu neposiela.',
     ],
+    'held' => [
+        'summary' => ':count zmena z iného zariadenia sa tu zatiaľ neuplatnila|:count zmeny z iného zariadenia sa tu zatiaľ neuplatnili|:count zmien z iného zariadenia sa tu zatiaľ neuplatnilo',
+        'body' => 'Prišli a zatiaľ sa nedali uložiť: niečo, na čo odkazujú, tu v tom čase nebolo, alebo toto zariadenie nedokázalo prečítať ich časť. Namiesto zahodenia sa uchovávajú a naďalej sú aj na zariadení, ktoré ich vytvorilo.',
+        'action' => 'Tu nie je čo robiť. Ak sú uvedené aj po tom, ako sa tvoje zariadenia znovu zosynchronizujú, otvor záznam na svojom druhom zariadení a porovnaj ho s tým, čo vidíš tu — to, čo je spočítané vyššie, je na tom zariadení a na tomto nie.',
+    ],
     'last_seen' => 'Najnovšie: :when',
 ];

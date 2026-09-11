@@ -23,5 +23,10 @@ return [
         'body' => 'Es kam etwas an, das dieses Gerät nicht speichern konnte: ein Datensatz, dem ein Teil von sich fehlt, ein Datum, das es nicht gibt, eine Aufteilung, die nicht mehr aufgeht, ein Datensatz, dem zwei Geräte bereits dieselbe Identität gegeben hatten, oder eine Löschung für etwas, das hier noch in Verwendung ist. Was abgelehnt wurde, liegt auf deinem anderen Gerät und nicht auf diesem, die beiden halten also nicht mehr dasselbe.',
         'action' => 'Vergleiche den Datensatz auf deinem anderen Gerät mit dem, was du hier siehst, und mach die Änderung hier noch einmal — oder lösche es hier erneut, wenn etwas, das du anderswo entfernt hast, hier noch steht. Abgelehntes wird von allein nicht erneut gesendet.',
     ],
+    'held' => [
+        'summary' => ':count Änderung von einem anderen Gerät wurde hier noch nicht angewendet|:count Änderungen von einem anderen Gerät wurden hier noch nicht angewendet',
+        'body' => 'Diese sind angekommen und konnten noch nicht gespeichert werden: etwas, worauf sie sich beziehen, war zu diesem Zeitpunkt nicht hier, oder dieses Gerät konnte einen Teil davon nicht lesen. Sie werden aufbewahrt statt verworfen, und sie liegen weiterhin auf dem Gerät, das sie gemacht hat.',
+        'action' => 'Hier gibt es nichts zu tun. Stehen sie noch in der Liste, nachdem deine Geräte erneut synchronisiert haben, dann öffne den Datensatz auf deinem anderen Gerät und vergleiche ihn mit dem, was du hier siehst — was oben gezählt wird, liegt auf jenem Gerät und nicht auf diesem.',
+    ],
     'last_seen' => 'Zuletzt: :when',
 ];

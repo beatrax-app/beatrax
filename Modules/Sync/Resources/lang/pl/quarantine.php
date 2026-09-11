@@ -23,5 +23,10 @@ return [
         'body' => 'Przyszło coś, czego to urządzenie nie mogło zapisać: rekord, któremu brakuje części siebie, data, która nie istnieje, podział, który już się nie zgadza, rekord, któremu dwa urządzenia nadały już tę samą tożsamość, albo usunięcie czegoś, co jest tu jeszcze w użyciu. To, co zostało odrzucone, jest na twoim drugim urządzeniu, a nie na tym, więc oba nie zawierają już tego samego.',
         'action' => 'Porównaj rekord na swoim drugim urządzeniu z tym, co widzisz tutaj, i wprowadź zmianę tutaj jeszcze raz — albo usuń to tutaj ponownie, jeśli coś, co usunąłeś gdzie indziej, wciąż tu jest. Nic odrzuconego nie jest wysyłane ponownie samo z siebie.',
     ],
+    'held' => [
+        'summary' => ':count zmiana z innego urządzenia nie została tu jeszcze zastosowana|:count zmiany z innego urządzenia nie zostały tu jeszcze zastosowane|:count zmian z innego urządzenia nie zostało tu jeszcze zastosowanych',
+        'body' => 'Przyszły i nie mogły jeszcze zostać zapisane: czegoś, do czego się odwołują, w tamtej chwili tu nie było, albo to urządzenie nie mogło odczytać ich części. Są przechowywane, a nie odrzucane, i nadal są na urządzeniu, które je wprowadziło.',
+        'action' => 'Nie ma tu nic do zrobienia. Jeśli po ponownej synchronizacji twoich urządzeń nadal są na liście, otwórz rekord na swoim drugim urządzeniu i porównaj go z tym, co widzisz tutaj — to, co policzono powyżej, jest na tamtym urządzeniu, a nie na tym.',
+    ],
     'last_seen' => 'Najnowsze: :when',
 ];

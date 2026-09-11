@@ -23,5 +23,10 @@ return [
         'body' => 'Llegó algo que este dispositivo no pudo almacenar: un registro al que le falta una parte de sí mismo, una fecha que no existe, un desglose que ya no cuadra, un registro al que dos dispositivos ya habían dado la misma identidad, o una eliminación de algo que aquí todavía está en uso. Lo que se rechazó está en tu otro dispositivo y no en este, así que los dos ya no contienen lo mismo.',
         'action' => 'Compara el registro de tu otro dispositivo con lo que ves aquí y vuelve a hacer el cambio aquí — o vuelve a eliminarlo aquí, si algo que borraste en otro sitio sigue estando aquí. Lo rechazado no se vuelve a enviar por sí solo.',
     ],
+    'held' => [
+        'summary' => ':count cambio de otro dispositivo aún no se ha aplicado aquí|:count cambios de otro dispositivo aún no se han aplicado aquí',
+        'body' => 'Llegaron y aún no se pudieron almacenar: algo a lo que se refieren no estaba aquí en ese momento, o este dispositivo no pudo leer una parte de ellos. Se conservan en lugar de perderse, y siguen en el dispositivo que los hizo.',
+        'action' => 'Aquí no hay nada que hacer. Si siguen en la lista después de que tus dispositivos vuelvan a sincronizarse, abre el registro en tu otro dispositivo y compáralo con lo que ves aquí — lo que se cuenta arriba está en ese dispositivo y no en este.',
+    ],
     'last_seen' => 'Más reciente: :when',
 ];

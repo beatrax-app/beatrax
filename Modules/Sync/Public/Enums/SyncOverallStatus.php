@@ -22,6 +22,16 @@ enum SyncOverallStatus: string
     // that holds it, and only the reader confirming that author releases it.
     case Withheld = 'withheld';
 
+    // An operation a peer sent arrived here, was refused, and nothing takes
+    // it again. The mirror of Withheld: that one is intact on the device
+    // holding it, this one is a record the two devices no longer agree about.
+    case Refused = 'refused';
+
+    // Arrived, refused, and still answerable — the verdict rests on a state
+    // this device was in rather than on the entry. Kept apart from Refused
+    // because a wait must never be dressed in the words for a loss.
+    case Held = 'held';
+
     // Changes made after the last session closed, with nothing in flight to
     // carry them. This state used to borrow "syncing", which told the reader an
     // exchange was in progress while nothing at all was connected.
@@ -40,6 +50,8 @@ enum SyncOverallStatus: string
             self::Syncing => 'sync::status.syncing',
             self::Offline => 'sync::status.offline',
             self::Withheld => 'sync::status.withheld',
+            self::Refused => 'sync::status.refused',
+            self::Held => 'sync::status.held',
             self::Behind => 'sync::status.behind',
             self::AllSynced => 'sync::status.all_synced',
         };

@@ -23,5 +23,10 @@ return [
         'body' => "Quelque chose est arrivé que cet appareil ne pouvait pas stocker : un enregistrement auquel il manque une partie de lui-même, une date qui n'existe pas, une ventilation qui ne tombe plus juste, un enregistrement auquel deux appareils avaient déjà donné la même identité, ou une suppression visant quelque chose encore utilisé ici. Ce qui a été refusé est sur ton autre appareil et pas sur celui-ci, donc les deux ne contiennent plus la même chose.",
         'action' => "Compare l'enregistrement sur ton autre appareil avec ce que tu vois ici et refais le changement ici — ou supprime-le de nouveau ici, si quelque chose que tu as supprimé ailleurs est encore là. Ce qui a été refusé n'est pas renvoyé de soi-même.",
     ],
+    'held' => [
+        'summary' => ":count changement venant d'un autre appareil n'a pas encore été appliqué ici|:count changements venant d'un autre appareil n'ont pas encore été appliqués ici",
+        'body' => "Ceux-ci sont arrivés et n'ont pas encore pu être enregistrés : quelque chose auquel ils se réfèrent n'était pas là à ce moment-là, ou cet appareil n'a pas pu en lire une partie. Ils sont conservés plutôt que jetés, et ils se trouvent toujours sur l'appareil qui les a faits.",
+        'action' => "Il n'y a rien à faire ici. S'ils sont encore listés après que tes appareils se sont synchronisés de nouveau, ouvre l'enregistrement sur ton autre appareil et compare-le avec ce que tu vois ici — ce qui est compté ci-dessus est sur cet appareil et pas sur celui-ci.",
+    ],
     'last_seen' => 'Le plus récent : :when',
 ];

@@ -23,5 +23,10 @@ return [
         'body' => 'Något kom in som den här enheten inte kunde lagra: en post som saknar en del av sig själv, ett datum som inte finns, en uppdelning som inte längre går ihop, en post som två enheter redan gett samma identitet, eller en radering av något som fortfarande används här. Det som avvisades finns på din andra enhet men inte på den här, så de två innehåller inte längre samma sak.',
         'action' => 'Jämför posten på din andra enhet med det du ser här och gör om ändringen här — eller radera den här igen, om något du tog bort någon annanstans fortfarande finns här. Inget avvisat skickas igen av sig själv.',
     ],
+    'held' => [
+        'summary' => ':count ändring från en annan enhet har inte tillämpats här än|:count ändringar från en annan enhet har inte tillämpats här än',
+        'body' => 'De kom in och kunde inte lagras än: något som de hänvisar till fanns inte här då, eller så kunde den här enheten inte läsa en del av dem. De behålls i stället för att kastas, och de finns fortfarande kvar på enheten som gjorde dem.',
+        'action' => 'Det finns inget att göra här. Om de fortfarande står kvar efter att dina enheter har synkroniserat igen, öppna posten på din andra enhet och jämför den med det du ser här — det som räknas ovan finns på den enheten och inte på den här.',
+    ],
     'last_seen' => 'Senast: :when',
 ];

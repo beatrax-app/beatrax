@@ -23,5 +23,10 @@ return [
         'body' => 'Atėjo kai kas, ko šis įrenginys negalėjo išsaugoti: įrašas, kuriam trūksta dalies savęs, data, kurios nėra, padalijimas, kuris nebesutampa, įrašas, kuriam du įrenginiai jau buvo suteikę tą pačią tapatybę, arba trynimas to, kas čia dar naudojama. Tai, kas buvo atmesta, yra tavo kitame įrenginyje, o šiame ne, todėl abu nebeturi to paties.',
         'action' => 'Palygink įrašą savo kitame įrenginyje su tuo, ką matai čia, ir padaryk pakeitimą čia dar kartą — arba čia jį vėl ištrink, jei kas nors, ką pašalinai kitur, vis dar yra čia. Tai, kas buvo atmesta, savaime iš naujo nesiunčiama.',
     ],
+    'held' => [
+        'summary' => ':count pakeitimas iš kito įrenginio čia dar nepritaikytas|:count pakeitimai iš kito įrenginio čia dar nepritaikyti|:count pakeitimų iš kito įrenginio čia dar nepritaikyta',
+        'body' => 'Jie atėjo, bet jų dar nepavyko išsaugoti: to, ką jie nurodo, tuo metu čia dar nebuvo, arba šis įrenginys negalėjo perskaityti jų dalies. Jie yra saugomi, o ne išmetami, ir tebėra įrenginyje, kuris juos padarė.',
+        'action' => 'Čia nieko daryti nereikia. Jei jie vis dar rodomi po to, kai tavo įrenginiai vėl susinchronizuos, atidaryk įrašą savo kitame įrenginyje ir palygink jį su tuo, ką matai čia — tai, kas suskaičiuota aukščiau, yra tame įrenginyje, o ne šiame.',
+    ],
     'last_seen' => 'Naujausia: :when',
 ];

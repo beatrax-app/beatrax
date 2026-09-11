@@ -23,5 +23,10 @@ return [
         'body' => 'Der kom noget ind, som denne enhed ikke kunne gemme: en post, der mangler en del af sig selv, en dato, der ikke findes, en opdeling, der ikke længere går op, en post, som to enheder allerede havde givet den samme identitet, eller en sletning af noget, der stadig er i brug her. Det, der blev afvist, ligger på din anden enhed og ikke på denne, så de to indeholder ikke længere det samme.',
         'action' => 'Sammenlign posten på din anden enhed med det, du ser her, og lav ændringen om her — eller slet den her igen, hvis noget, du fjernede et andet sted, stadig er her. Intet afvist bliver sendt igen af sig selv.',
     ],
+    'held' => [
+        'summary' => ':count ændring fra en anden enhed er ikke anvendt her endnu|:count ændringer fra en anden enhed er ikke anvendt her endnu',
+        'body' => 'De kom ind og kunne ikke gemmes endnu: noget, de henviser til, var ikke her på det tidspunkt, eller denne enhed kunne ikke læse en del af dem. De bliver beholdt i stedet for kasseret, og de ligger stadig på den enhed, der lavede dem.',
+        'action' => 'Der er ikke noget at gøre her. Hvis de stadig står på listen, efter at dine enheder har synkroniseret igen, så åbn posten på din anden enhed og sammenlign den med det, du ser her — det, der er talt op ovenfor, ligger på den enhed og ikke på denne.',
+    ],
     'last_seen' => 'Senest: :when',
 ];
