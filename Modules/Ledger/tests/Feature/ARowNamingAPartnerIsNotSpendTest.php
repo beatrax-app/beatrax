@@ -21,7 +21,7 @@ uses(RefreshDatabase::class);
 // can write, and one MoneyFlow counted as spend at full amount while the
 // partner stayed excluded.
 
-function rnpUser(): User
+function partnerLegUser(): User
 {
     return User::query()->create([
         'username' => 'rnp-'.bin2hex(random_bytes(4)),
@@ -30,7 +30,7 @@ function rnpUser(): User
     ]);
 }
 
-function rnpTransaction(DatabaseManager $db, int $userId, string $type, ?int $pairId): int
+function partnerLegTransaction(DatabaseManager $db, int $userId, string $type, ?int $pairId): int
 {
     static $row = 700000;
     $row++;
@@ -84,7 +84,7 @@ function rnpTransaction(DatabaseManager $db, int $userId, string $type, ?int $pa
     ]);
 }
 
-function rnpSpendMinor(DatabaseManager $db, int $userId): int
+function partnerLegSpendMinor(DatabaseManager $db, int $userId): int
 {
     [$sql, $bindings] = MoneyFlow::Spend->predicate();
 
@@ -98,35 +98,35 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
-    $this->user = rnpUser();
+    $this->user = partnerLegUser();
 });
 
 // The positive control comes first: without a partner the row is ordinary spend,
 // so a predicate that counted nothing at all would not pass here.
 it('counts an ordinary expense that names no partner', function (): void {
-    rnpTransaction($this->db, (int) $this->user->id, 'expense', null);
+    partnerLegTransaction($this->db, (int) $this->user->id, 'expense', null);
 
-    expect(rnpSpendMinor($this->db, (int) $this->user->id))->toBe(-4000);
+    expect(partnerLegSpendMinor($this->db, (int) $this->user->id))->toBe(-4000);
 });
 
 it('leaves out a row that still names its partner', function (): void {
-    $partner = rnpTransaction($this->db, (int) $this->user->id, 'transfer_in', null);
-    rnpTransaction($this->db, (int) $this->user->id, 'refund', $partner);
+    $partner = partnerLegTransaction($this->db, (int) $this->user->id, 'transfer_in', null);
+    partnerLegTransaction($this->db, (int) $this->user->id, 'refund', $partner);
 
-    expect(rnpSpendMinor($this->db, (int) $this->user->id))->toBe(0);
+    expect(partnerLegSpendMinor($this->db, (int) $this->user->id))->toBe(0);
 });
 
 it('leaves out an expense that still names its partner', function (): void {
-    $partner = rnpTransaction($this->db, (int) $this->user->id, 'transfer_in', null);
-    rnpTransaction($this->db, (int) $this->user->id, 'expense', $partner);
+    $partner = partnerLegTransaction($this->db, (int) $this->user->id, 'transfer_in', null);
+    partnerLegTransaction($this->db, (int) $this->user->id, 'expense', $partner);
 
-    expect(rnpSpendMinor($this->db, (int) $this->user->id))->toBe(0);
+    expect(partnerLegSpendMinor($this->db, (int) $this->user->id))->toBe(0);
 });
 
 it('keeps a transfer out of the fold whether or not it names one', function (): void {
-    rnpTransaction($this->db, (int) $this->user->id, 'transfer_out', null);
+    partnerLegTransaction($this->db, (int) $this->user->id, 'transfer_out', null);
 
-    expect(rnpSpendMinor($this->db, (int) $this->user->id))->toBe(0);
+    expect(partnerLegSpendMinor($this->db, (int) $this->user->id))->toBe(0);
 });
 
 // The other half: the retype announces the cleared link even on a device that
@@ -142,7 +142,7 @@ it('announces the cleared link on a retype that saw no partner', function (): vo
         }
     });
 
-    $txId = rnpTransaction($this->db, (int) $this->user->id, 'expense', null);
+    $txId = partnerLegTransaction($this->db, (int) $this->user->id, 'expense', null);
 
     $this->actingAs($this->user);
     Livewire::test(TransactionDetail::class, ['transactionId' => $txId])
