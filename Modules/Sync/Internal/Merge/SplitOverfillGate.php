@@ -18,6 +18,10 @@ use Throwable;
 // number, so a sum that could not be taken read as legs that fit. Refusing on
 // a reason the reprojector retries keeps a busy database from admitting the
 // money the gate exists to stop.
+
+// Every read is bounded to the reader the batch is for. One device holds both
+// household members under one id sequence, so an id a peer minted is a number
+// rather than a row here, and this gate turns that number into money.
 /**
  * @link ../../../../.docs/features/sync/architecture.md
  */
@@ -27,16 +31,15 @@ final readonly class SplitOverfillGate
 
     public const string AMOUNT = 'settled_amount_minor';
 
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(private DatabaseManager $db, private RowOwnership $ownership) {}
 
     // Null admits the leg. The row's own id is excluded from what is already
     // there, so replaying a leg that is present is the idempotent re-apply it
     // has always been.
     /**
      * @param  array<string, mixed>  $payload
-     * @param  array<int|string, int>  $arriving
      */
-    public function reasonToRefuse(string $table, int|string $pk, array $payload, array $arriving = []): ?QuarantineReason
+    public function reasonToRefuse(string $table, int|string $pk, array $payload, ArrivingBatch $batch): ?QuarantineReason
     {
         $transactionId = $table === self::TABLE ? self::asInt($payload['transaction_id'] ?? null) : null;
         $incoming = self::asInt($payload[self::AMOUNT] ?? null);
@@ -49,14 +52,14 @@ final readonly class SplitOverfillGate
         // the row does. Judging the arriving row's own amount against the
         // siblings' post-batch ones refused a historical create the same frame
         // was about to overwrite.
-        if (is_numeric($pk) && array_key_exists((int) $pk, $arriving)) {
-            $incoming = $arriving[(int) $pk];
+        if (is_numeric($pk) && array_key_exists((int) $pk, $batch->splitAmounts)) {
+            $incoming = $batch->splitAmounts[(int) $pk];
         }
 
         $currency = is_string($payload['settled_currency'] ?? null) ? $payload['settled_currency'] : '';
 
         try {
-            return $this->verdict($transactionId, $pk, $incoming, $currency, $arriving);
+            return $this->verdict($transactionId, $pk, $incoming, $currency, $batch);
         } catch (SplitSumUnreadableException) {
             return QuarantineReason::SplitSumUnreadable;
         }
@@ -66,40 +69,34 @@ final readonly class SplitOverfillGate
     // the sum is taken in come off the stored leg rather than the op. An op for
     // a leg that is not here yet is nobody's overfill: the update it precedes
     // matches no row either.
-    /**
-     * @param  array<int|string, int>  $arriving
-     */
-    public function reasonToRefuseSet(string $table, string $field, int|string $pk, mixed $value, array $arriving = []): ?QuarantineReason
+    public function reasonToRefuseSet(string $table, string $field, int|string $pk, mixed $value, ArrivingBatch $batch): ?QuarantineReason
     {
         if ($table !== self::TABLE || $field !== self::AMOUNT || self::asInt($value) === null) {
             return null;
         }
 
         try {
-            $leg = $this->storedLeg($pk);
+            $leg = $this->storedLeg($pk, $batch->userId);
         } catch (SplitSumUnreadableException) {
             return QuarantineReason::SplitSumUnreadable;
         }
 
         return $leg === null
             ? null
-            : $this->reasonToRefuse($table, $pk, [...$leg, self::AMOUNT => $value], $arriving);
+            : $this->reasonToRefuse($table, $pk, [...$leg, self::AMOUNT => $value], $batch);
     }
 
     // Separated from reasonToRefuse() so the one catch above covers both reads
     // and neither can be answered from a value it did not produce.
-    /**
-     * @param  array<int|string, int>  $arriving
-     */
-    private function verdict(int $transactionId, int|string $pk, int $incoming, string $currency, array $arriving): ?QuarantineReason
+    private function verdict(int $transactionId, int|string $pk, int $incoming, string $currency, ArrivingBatch $batch): ?QuarantineReason
     {
-        $parent = $this->parentAmount($transactionId, $currency);
+        $parent = $this->parentAmount($transactionId, $currency, $batch->userId);
 
         if ($parent === null) {
             return null;
         }
 
-        return abs($this->legsAlreadyThere($transactionId, $pk, $currency, $arriving) + $incoming) > abs($parent)
+        return abs($this->legsAlreadyThere($transactionId, $pk, $currency, $batch) + $incoming) > abs($parent)
             ? QuarantineReason::SplitWouldOverfillTransaction
             : null;
     }
@@ -107,13 +104,18 @@ final readonly class SplitOverfillGate
     // Only when the leg is denominated in the transaction's own currency. A leg
     // in another one is not this gate's question, and adding the two together
     // would be minor units of two currencies under one sign.
+
+    // A transaction this reader does not own answers the same as one that is
+    // not here: the sum is not taken, which is what the gate has always done
+    // with an id it cannot resolve.
     /**
      * @throws SplitSumUnreadableException when the transaction cannot be read
      */
-    private function parentAmount(int $transactionId, string $currency): ?int
+    private function parentAmount(int $transactionId, string $currency, int $userId): ?int
     {
         try {
-            $row = $this->db->connection()->table('transactions')->where('id', $transactionId)
+            $row = $this->ownership
+                ->scopeToUser($this->db->connection()->table('transactions')->where('id', $transactionId), 'transactions', $userId)
                 ->first([self::AMOUNT, 'settled_currency']);
         } catch (Throwable $e) {
             throw SplitSumUnreadableException::reading('transactions', $e);
@@ -131,14 +133,12 @@ final readonly class SplitOverfillGate
     // otherwise. A rebalance announces its WHOLE set, so counting only what is
     // stored refuses the order in which a raised leg happens to arrive first.
     /**
-     * @param  array<int|string, int>  $arriving
-     *
      * @throws SplitSumUnreadableException when the legs already stored cannot be summed
      */
-    private function legsAlreadyThere(int $transactionId, int|string $pk, string $currency, array $arriving): int
+    private function legsAlreadyThere(int $transactionId, int|string $pk, string $currency, ArrivingBatch $batch): int
     {
         try {
-            $legs = $this->db->connection()->table(self::TABLE)
+            $legs = $this->ownership->scopeToUser($this->db->connection()->table(self::TABLE), self::TABLE, $batch->userId)
                 ->where('transaction_id', $transactionId)
                 ->where('settled_currency', $currency)
                 ->where('id', '!=', $pk)
@@ -152,7 +152,7 @@ final readonly class SplitOverfillGate
         foreach ($legs as $leg) {
             $id = $leg->id ?? null;
             $stored = self::asInt($leg->settled_amount_minor ?? null) ?? 0;
-            $total += is_numeric($id) ? ($arriving[(int) $id] ?? $stored) : $stored;
+            $total += is_numeric($id) ? ($batch->splitAmounts[(int) $id] ?? $stored) : $stored;
         }
 
         return $total;
@@ -163,10 +163,11 @@ final readonly class SplitOverfillGate
      *
      * @throws SplitSumUnreadableException when the leg cannot be read
      */
-    private function storedLeg(int|string $pk): ?array
+    private function storedLeg(int|string $pk, int $userId): ?array
     {
         try {
-            $row = $this->db->connection()->table(self::TABLE)->where('id', $pk)
+            $row = $this->ownership->scopeToUser($this->db->connection()->table(self::TABLE), self::TABLE, $userId)
+                ->where('id', $pk)
                 ->first(['transaction_id', 'settled_currency']);
         } catch (Throwable $e) {
             throw SplitSumUnreadableException::reading(self::TABLE, $e);
