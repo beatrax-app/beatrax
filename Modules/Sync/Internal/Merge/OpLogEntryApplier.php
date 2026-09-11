@@ -496,24 +496,16 @@ final readonly class OpLogEntryApplier
             $columnValue = $this->aliases->translate($table, $setDevice, [$field => $columnValue], $batch->userId)[$field] ?? $columnValue;
             $pk = $this->aliases->resolvePk($table, $setDevice, $pk, $batch->userId);
 
-            // The create path gates the ids a row NAMES, but a Set rewrites
-            // that same column afterwards: create a transaction against your
-            // own account, then Set account_id to another member's, and the
-            // row scopes to you while reading their balance.
-            if (! $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $batch->userId, $pk)) {
-                $this->quarantine->record($fieldEntries[0], QuarantineReason::CrossUser, $batch->now);
+            // Both gates gate a create, and a Set rewrites the same column
+            // afterwards: Set account_id to another member's and the row scopes
+            // to you while reading their balance; raise a leg and the legs stop
+            // adding up to the charge. Ownership answers first, as on create.
+            $refusal = $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $batch->userId, $pk)
+                ? $this->splitOverfill->reasonToRefuseSet($table, $field, $pk, $columnValue, $batch->splitAmounts)
+                : QuarantineReason::CrossUser;
 
-                return;
-            }
-
-            // The create path asks whether a leg fits its transaction and a Set
-            // rewrites that same column afterwards: a peer that re-split while
-            // apart raised a leg past the whole charge, and the legs stopped
-            // adding up to it with nothing anywhere saying so.
-            $overfill = $this->splitOverfill->reasonToRefuseSet($table, $field, $pk, $columnValue, $batch->splitAmounts);
-
-            if ($overfill !== null) {
-                $this->quarantine->record($fieldEntries[0], $overfill, $batch->now);
+            if ($refusal !== null) {
+                $this->quarantine->record($fieldEntries[0], $refusal, $batch->now);
 
                 return;
             }
