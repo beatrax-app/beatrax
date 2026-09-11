@@ -7684,6 +7684,7 @@ changed. Three of them — `assertSee('750')`, `assertSee('40')`,
 needle that generated markup answers is a test that cannot go red. The re-apply
 progress strip now asserts its whole sentence rather than the two numbers
 inside it.
+
 ## Four overlays pinned to one corner, stacked by nothing
 
 `tests/Contracts/NothingButTheRegionPinsItselfToTheCornerArchTest.php`
