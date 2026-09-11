@@ -87,11 +87,12 @@
             @if ($expiresInSeconds > 0)
                 {{-- 240px QR on a white tile (QR needs a white background in dark mode too) --}}
                 {{-- $qrSvg is raw-echoed by necessity (inline SVG). SAFE because
-                     the QR payload is built ENTIRELY from server-side identity + a CSPRNG
-                     token (QrPayloadBuilder) — NO user input ever reaches it, and the
-                     property is #[Locked] so the client cannot rehydrate markup into it.
-                     Do not feed any user-controlled string into the QR payload, and do
-                     not remove the #[Locked], or this becomes XSS. --}}
+                     QrPayloadBuilder::renderSvg() emits only sprintf('<rect x="%d" …>')
+                     over the encoded matrix — the payload reaches the markup as module
+                     coordinates and never as text. The device name it carries IS reader-
+                     written, so "no user input" is not what makes this safe. Keep every
+                     interpolation in renderSvg() a %d, and keep the #[Locked] so the
+                     client cannot rehydrate markup into the property. --}}
                 <div class="mx-auto w-fit rounded-xl bg-white dark:bg-white p-4">
                     <div class="h-[240px] w-[240px]">{!! $qrSvg !!}</div>
                 </div>
