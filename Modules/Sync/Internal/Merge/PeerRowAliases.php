@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
+use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -26,6 +27,7 @@ final readonly class PeerRowAliases
         private DatabaseManager $db,
         private CoveredTableOrder $tableOrder,
         private LoggerInterface $log,
+        private SensitiveFieldRegistry $sensitive = new SensitiveFieldRegistry,
     ) {}
 
     // Called when an insert was refused because the row is already present. If
@@ -43,6 +45,17 @@ final readonly class PeerRowAliases
             return;
         }
 
+        $this->rememberAs($table, $deviceId, $remoteId, $localId, $payload, $userId);
+    }
+
+    // The same pair for a twin remember() cannot find because it does not
+    // exist yet: a create re-homed under an id this device minted is the row
+    // the peer's id names, and nothing else on the table holds its natural key.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function rememberAs(string $table, string $deviceId, int|string $remoteId, int|string $localId, array $payload, int $userId): void
+    {
         $this->db->connection()->table(self::TABLE)->insertOrIgnore([
             'user_id' => $userId,
             'table_name' => $table,
@@ -51,6 +64,18 @@ final readonly class PeerRowAliases
             'local_id' => (string) $localId,
             'created_at' => self::asText($payload['updated_at'] ?? $payload['created_at'] ?? ''),
         ]);
+    }
+
+    // Whether a row stored with this payload could be found by localTwinOf()
+    // afterwards. Asked before a create is re-homed under a fresh id: a replay
+    // that cannot recognise the re-homed row inserts a second copy of it, and
+    // every replay after that adds another.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function naturalKeyIdentifies(string $table, array $payload): bool
+    {
+        return $this->usableIndexes($table, $payload) !== [];
     }
 
     // The id to address a row by HERE: the peer's own where the two agree, the
@@ -128,26 +153,11 @@ final readonly class PeerRowAliases
      */
     private function localTwinOf(string $table, array $payload): int|string|null
     {
-        foreach ($this->uniqueIndexes($table) as $columns) {
+        foreach ($this->usableIndexes($table, $payload) as $columns) {
             $query = $this->db->connection()->table($table);
-            $usable = true;
 
             foreach ($columns as $column) {
-                // A null is not a key. SQLite counts nulls as distinct, so the
-                // index constrains nothing here -- and `where($col, null)` is
-                // `whereNull`, which matches every row holding one and hands
-                // back an arbitrary id as though it were this row's twin.
-                if (! array_key_exists($column, $payload) || $payload[$column] === null) {
-                    $usable = false;
-
-                    break;
-                }
-
                 $query->where($column, $payload[$column]);
-            }
-
-            if (! $usable) {
-                continue;
             }
 
             $found = $query->value('id');
@@ -158,6 +168,48 @@ final readonly class PeerRowAliases
         }
 
         return null;
+    }
+
+    // The indexes that can answer for THIS payload, which is what makes the
+    // question the re-home gate asks the same question the finder answers.
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return list<list<string>>
+     */
+    private function usableIndexes(string $table, array $payload): array
+    {
+        $usable = [];
+
+        foreach ($this->uniqueIndexes($table) as $columns) {
+            if ($this->identifies($table, $columns, $payload)) {
+                $usable[] = $columns;
+            }
+        }
+
+        return $usable;
+    }
+
+    // A null is not a key: SQLite counts nulls as distinct, so the index
+    // constrains nothing, and `where($col, null)` is `whereNull`, which hands
+    // back an arbitrary row holding one as though it were the twin. Nor is
+    // AEAD ciphertext, re-sealed under a fresh nonce on every write.
+    /**
+     * @param  list<string>  $columns
+     * @param  array<string, mixed>  $payload
+     */
+    private function identifies(string $table, array $columns, array $payload): bool
+    {
+        foreach ($columns as $column) {
+            if (! array_key_exists($column, $payload) || $payload[$column] === null) {
+                return false;
+            }
+
+            if ($this->sensitive->isSensitive($table, $column)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // Column names and timestamps arrive as mixed from PRAGMA rows and from a
