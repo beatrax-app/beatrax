@@ -15,6 +15,8 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 // booked in February with a January value date left the month it belongs to,
 // and the same row read from two of one bank's own exports hashed twice.
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
+
     $this->resolver = new class implements AccountResolver
     {
         public function resolve(string $iban): AccountResolution
