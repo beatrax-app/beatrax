@@ -51,6 +51,33 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    # FrankenPHP serves everything under public/ itself and never enters PHP to
+    # do it, so a static file receives none of the headers the middleware
+    # writes -- measured on the desktop's own server, /site.webmanifest came
+    # back carrying Content-Type and nothing else. Injected through the base
+    # image's own seam rather than by replacing its Caddyfile.
+    #
+    # The matcher is the load-bearing part. `file` matches only a request that
+    # resolves to a file on disk and `not path *.php` keeps index.php out, so a
+    # routed response never reaches this header block and keeps the nonce-based
+    # policy the application writes for it (G1-R21: a nearer layer may narrow
+    # the base policy, never replace it). Verified against the real image: a
+    # routed response carries exactly one Content-Security-Policy, its own.
+    #
+    # No CSP here on purpose. public/offline.html carries an inline <style>,
+    # and a default-src that did not allow it would strip the offline page --
+    # which the service worker serves from cache, header and all.
+    environment:
+      CADDY_SERVER_EXTRA_DIRECTIVES: |
+        @staticAsset {
+          not path *.php
+          file
+        }
+        header @staticAsset {
+          X-Content-Type-Options nosniff
+          Referrer-Policy no-referrer
+          X-Frame-Options DENY
+        }
     ports:
       - "${HTTP_PORT:-8000}:80"
     # Fetches a real route and reads the body, rather than testing that the
