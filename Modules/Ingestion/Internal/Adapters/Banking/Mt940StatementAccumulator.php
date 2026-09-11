@@ -23,6 +23,14 @@ final class Mt940StatementAccumulator
 
     public ?string $currency = null;
 
+    // The account and currency of the statement being read RIGHT NOW, which
+    // after the first :62F: is no longer the pair the summary describes: a bulk
+    // delivery holds one statement per account, and its entries belong to their
+    // own. The frozen pair above stays the summary's.
+    public ?string $rowOwnIban = null;
+
+    public ?string $rowCurrency = null;
+
     // A balance tag arrived, whether or not it parsed. Without it a :61: with
     // no currency can only be reported as a tag that never came.
     public bool $balanceTagSeen = false;
