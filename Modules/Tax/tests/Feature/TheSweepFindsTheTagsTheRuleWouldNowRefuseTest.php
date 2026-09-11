@@ -86,7 +86,7 @@ it('reports what it would remove and changes nothing until it is told to', funct
     expect($this->db->connection()->table('tax_transaction_tags')->count())->toBe(1);
 });
 
-it('removes only the tags the rule refuses, and takes their weight off the total', function (): void {
+it('removes only the tags the rule refuses, and moves no total doing it', function (): void {
     $deductible = taxSweepRow($this->db, $this->userId, 'expense', -12500);
     $transfer = taxSweepRow($this->db, $this->userId, 'transfer_out', -50000, 'transfer');
     $correction = taxSweepRow($this->db, $this->userId, 'adjustment', 500);
@@ -95,7 +95,10 @@ it('removes only the tags the rule refuses, and takes their weight off the total
         taxSweepTagDirectly($this->db, $this->userId, $txId);
     }
 
-    expect(app(TaxYearQuery::class)->forUser($this->userId, 2026)->deductionsTotalMinor)->toBe(63000);
+    // The figure does not move across the sweep, because the readers narrow to
+    // the same rule: this used to report EUR 630.00 until the command was run,
+    // on a device with no terminal to run it from.
+    expect(app(TaxYearQuery::class)->forUser($this->userId, 2026)->deductionsTotalMinor)->toBe(12500);
 
     $this->artisan('tax:sweep-untaggable', ['--apply' => true])->assertSuccessful();
 
