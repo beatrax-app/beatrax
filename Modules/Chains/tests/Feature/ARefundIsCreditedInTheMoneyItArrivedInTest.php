@@ -128,6 +128,25 @@ it('carries a refund that arrived in the statement currency forward as a credit'
         ->and($credit?->to_statement_id)->toBe($next->id);
 });
 
+// The destination is named in a currency too, the one call site of
+// nextOpenStatementId() that used to name none. A statement in another money
+// can never count this credit -- priorCreditsMinor() sums only the statement's
+// own -- so the pointer is left open for attachDanglingCredits() to close when
+// a statement that can count it lands, rather than parked where nothing will.
+it('leaves the credit unattached rather than pointing it at a statement that could never count it', function (): void {
+    ['user' => $user, 'next' => $next] = refundAfterCloseFixture('refund-no-home-yet', 'EUR');
+
+    CardStatement::query()->whereKey($next->id)->update(['currency' => 'USD']);
+
+    app(IcsSettlementResolver::class)->resolveForUser($user);
+
+    $credit = DB::table('card_statement_credits')->where('user_id', $user->id)->first();
+
+    expect($credit?->currency)->toBe('EUR')
+        ->and($credit?->amount_minor)->toBe(5000)
+        ->and($credit?->to_statement_id)->toBeNull();
+});
+
 it('writes no credit for a refund that arrived in a money the statement is not in', function (): void {
     ['user' => $user] = refundAfterCloseFixture('refund-foreign-money', 'JPY');
 

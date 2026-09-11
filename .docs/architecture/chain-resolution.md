@@ -235,7 +235,11 @@ credit, and a €200.00 statement the reader paid €150.00 of settled on it.
 The original-purchase lookup was equally blind — an opposite-sign
 `settled_amount_minor` of the same magnitude in any money answered it —
 and the destination statement was taken without naming a currency at all,
-where every other caller of `nextOpenStatementId()` names one.
+where every other caller of `nextOpenStatementId()` names one. Where the next
+open statement is in another money the pointer is now left null rather than
+parked on a statement `priorCreditsMinor()` will never count it against —
+`attachDanglingCredits()` closes it on the run a statement that can count it
+lands.
 
 `card_statement_credits` rows carry the surplus/refund amounts flowing
 between statements: `from_statement_id` is the source (the one that
