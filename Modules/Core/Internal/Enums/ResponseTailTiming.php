@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Core\Public\Enums;
+namespace Modules\Core\Internal\Enums;
 
 use Modules\Core\Public\Services\UserDataPathService;
 
