@@ -6,6 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
+use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Import\Public\Pipeline\NormalizeStage;
@@ -14,6 +16,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Services\CounterpartyKey;
+use Modules\Sync\Internal\Crypto\BlindIndexDivergenceAlerts;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
@@ -194,6 +197,15 @@ function bikEnrolThenImport(User $user, Session $session): string
     app(RecordsTransactions::class)([$canonical], $user, captureForSync: false);
 
     return (string) app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session);
+}
+
+function bikOpenDivergenceAlerts(User $user): int
+{
+    return SystemAlert::query()
+        ->where('user_id', (int) $user->id)
+        ->where('kind', BlindIndexDivergenceAlerts::KIND)
+        ->whereNull('acknowledged_at')
+        ->count();
 }
 
 // The question adoptsBlindIndexKey() actually asks. Given a device id so it
@@ -657,6 +669,53 @@ it('keeps the peer wrap when both devices hold keyed rows, rather than retiring 
     expect($outcome)->toBe(GdkWrapOutcome::Retained);
     expect($outcome->consumesCarrier())->toBeFalse();
     expect(app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session))->toBe($localKeyHex);
+});
+
+// Two paired devices held this state for a day and reported it ten times into
+// a log no reader opens. A divergence nothing re-derives is permanent, so the
+// report has to be raised once, where the person whose merchants stopped
+// matching can see it — and taken down by whatever ends it.
+it('reports a divergence neither side can resolve once, not on every sync pass', function (): void {
+    $user = bikUser('bik-divergence-once');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    bikEnrolThenImport($user, $session);
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+
+    $logSpy = Log::spy();
+
+    foreach (range(1, 3) as $ignored) {
+        expect(bikDeliverOutcome($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true))
+            ->toBe(GdkWrapOutcome::Retained);
+    }
+
+    $logSpy->shouldHaveReceived('error')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'different blind-index keys'))
+        ->once();
+
+    expect(bikOpenDivergenceAlerts($user))->toBe(1);
+});
+
+// The wrap the peer re-sends after one side is re-derived carries the key this
+// device already holds, which is the only evidence either device ever gets
+// that the split is over.
+it('takes the divergence report down once the peer sends the key this device holds', function (): void {
+    $user = bikUser('bik-divergence-healed');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    $localKeyHex = bikEnrolThenImport($user, $session);
+
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+    bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true);
+
+    expect(bikOpenDivergenceAlerts($user))->toBe(1);
+
+    bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $localKeyHex, senderKeyed: true);
+
+    expect(bikOpenDivergenceAlerts($user))->toBe(0);
 });
 
 // An epoch wrap does not sign this field and must never read it: a party that

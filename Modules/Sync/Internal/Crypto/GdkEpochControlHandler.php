@@ -36,6 +36,7 @@ final readonly class GdkEpochControlHandler
         private DeviceRegistryService $deviceRegistry,
         private DeviceKeySigner $signer,
         private LocallyKeyedRowsProbe $keyedRows,
+        private BlindIndexDivergenceAlerts $divergence,
     ) {}
 
     // Never throws on a malformed/tampered/foreign message — every rejection
@@ -434,6 +435,10 @@ final readonly class GdkEpochControlHandler
                 'user_id' => $userId,
             ]);
 
+            // Agreement is the only evidence either device gets that a split
+            // it once reported has ended.
+            $this->divergence->converged($userId);
+
             return GdkWrapOutcome::Applied;
         }
 
@@ -463,11 +468,10 @@ final readonly class GdkEpochControlHandler
 
         if ($localKeyed && $senderKeyed) {
             // Neither side can give way without orphaning its own digests, so
-            // both keep what they have and the divergence is raised rather
-            // than half-resolved into a doubled ledger on one of them.
-            $this->logger->error('GdkEpochControlHandler: both this device and the peer already hold rows keyed under different blind-index keys — keeping the local key; merchant identity will not match across the two devices until one side is re-derived.', [
-                'user_id' => $userId,
-            ]);
+            // both keep what they have rather than half-resolving into a
+            // doubled ledger on one of them. Nothing re-derives either side,
+            // so the wrap returns every pass and the report is the once-only one.
+            $this->divergence->diverged($userId);
 
             return false;
         }
