@@ -129,6 +129,16 @@ writer is built, and no row is touched. This is the same shape and the same
 argument as [`ResumesPreSyncCapture`](pre-sync-history-capture.md#the-driver-is-a-request-because-nothing-else-holds-the-key)
 and `CarriesPendingPairingFrames`, which sit beside it in the same stack.
 
+"After the response" is true of the desktop and self-hosted roots and **false of
+the phone**, where the runtime terminates before it returns the response and the
+shell has nothing to draw until it does. Measured: 12,563 ms for `/data-devices`
+on a Galaxy A51 against 249 ms with the queue empty. So the tick is bounded by
+`ResponseTailBudget` as well as by `BATCH`: one row's coordinates are always
+replayed, then the budget decides whether a second row's are. A queue too large
+for one request is finished by the requests after it, in the same capture order,
+and [the argument for why nothing is lost or doubled](../mobile/a-tail-the-reader-waits-for.md)
+is on its own page.
+
 ## Why a device that never enabled sync defers nothing
 
 `OpCaptureSinkFactory` asks `DeviceIdentityLoader::exists()` — a bare

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Container\Container;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
+use Modules\Core\Public\Http\ResponseTailBudget;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
@@ -43,7 +44,10 @@ final readonly class CarriesPendingPairingFrames extends AfterResponseMiddleware
         private SessionFactory $session,
         private Cache $cache,
         private LoggerInterface $log,
-    ) {}
+        ResponseTailBudget $tail,
+    ) {
+        parent::__construct($tail);
+    }
 
     // After the response rather than in front of it, so a browse that burns
     // its full timeout and a relay round trip are not paid ahead of a page

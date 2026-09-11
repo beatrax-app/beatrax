@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Http\Middleware;
 
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
+use Modules\Core\Public\Http\ResponseTailBudget;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
@@ -26,7 +27,10 @@ final readonly class RunDeferredNotificationPasses extends AfterResponseMiddlewa
         private DeferredNotificationPasses $passes,
         private SessionFactory $session,
         private LoggerInterface $log,
-    ) {}
+        ResponseTailBudget $tail,
+    ) {
+        parent::__construct($tail);
+    }
 
     // After the response, never in front of it. The unlock is the one
     // interaction that has to feel instant, and it is also the first request

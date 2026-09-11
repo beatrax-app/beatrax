@@ -355,7 +355,13 @@ first would report a wait the same mount had already ended.
 
 `RecoverSealedLedger` is a `web`-group middleware on the desktop root, and it does its work
 after the response has been sent — in the `afterResponse()` hook its `AfterResponseMiddleware`
-base calls from `terminate()`.
+base calls from `terminate()`. The desktop root is the only one that registers it, and that is
+the only root where "after the response has been sent" is true: the mobile runtime terminates
+*before* it returns the response, so a tail there is paid inside the reader's wait
+([a tail the reader waits for](../mobile/a-tail-the-reader-waits-for.md)). The phone reaches
+this pass by another door — `MobileSyncTriggerService::recoverHeldEntries()`, in the handle
+phase of the **Sync now** tap — and the costs below are stated for the middleware, not for
+that press.
 
 - **On unlock alone** is incomplete, not merely unavailable. `AppLockUnlocked` now exists and
   Sync already listens to it, so it could be hung there — but the desktop case that produces
@@ -409,8 +415,8 @@ cannot open, and a watermark taken first would read those rows back as new work 
 next request.
 
 The honest cost, per drain that quarantined something: one `EXISTS`, one keyring read, and a
-replay of the rows the quarantine names — not of the log. It is paid in `terminate()`, so the
-page the reader is looking at is already rendered. A device holding entries under an epoch it
+replay of the rows the quarantine names — not of the log. It is paid in `terminate()` on the
+desktop root, so the page the reader is looking at is already rendered. A device holding entries under an epoch it
 will never receive costs the two reads and nothing more, on every request, until the keyring
 changes.
 
@@ -455,7 +461,8 @@ So the gate is `resealed_columns_at`, and the cost is the thing to state honestl
 to do is unchanged at **8 queries, none of them against a swept table** — the two marks come off
 one row, not two. Having something to do is a full sweep, measured at **9.7 ms over 500 rows,
 100.5 ms over 5,000 and 542.9 ms over 20,000** (`notifications`, four sealed columns each, so
-80,000 values in the last), paid in `terminate()` after the response has gone. At 24 hours that
+80,000 values in the last), paid in `terminate()` after the response has gone on the root that
+registers this middleware. At 24 hours that
 is under a second a day on a ledger far larger than any this app has seen; at one hour it would
 be twenty-four times that for a **build** defect, which persists until a new build ships and is
 therefore not made less harmful by being found twenty-three hours sooner.
