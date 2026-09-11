@@ -792,6 +792,54 @@ Three rules come out of it, and each has a test that fails without it:
    would then stand, because `fill()` skips a column already holding a value —
    refusing the payload loses a tail over a column it was never going to touch.
 
+### The two ids `translate()` is not allowed to touch
+
+`PeerRowAliases::translate()` walks `CoveredTableOrder::parentColumns()`, and
+that map excludes a column whose foreign key targets its **own** table. The
+exclusion is right where it came from: `parentColumns()` also feeds
+`dependencies()`, and no insertion order satisfies a transfer pair. But
+`translate()` reads the same map, so the two columns in
+`SelfReferenceDeferral::SELF_REFERENCES` — `transactions.pair_transaction_id`
+and `categories.parent_id` — were the only foreign keys a peer's op carried
+through the merge untranslated.
+
+They cannot simply be added to the map. At `extract()` time the partner has not
+landed yet, so there is no alias to read and resolving there would freeze the
+peer's id into the carry. The device id is therefore carried **on the deferred
+record** (`array{table, pk, deviceId, values}`) and the target is resolved
+through `PeerRowAliases::resolvePk()` inside `apply()`, on every round.
+
+`resolveFromHistory()` had no device context at all: it reads `op_log_entries`
+raw and used `$entry->value` as the target and `$entry->pk` as the row. Both are
+the id the **writing** device minted, so it now selects `device_id` beside them
+and resolves both through the same map.
+
+What the gap cost is worth separating from what it looked like.
+`resolvableTargets()` asks only whether a row exists at the id, scoped to the
+user, so a wrong-but-existing local row answered for the partner and `write()`
+linked to it:
+
+- **`categories.parent_id`** — both devices seed their own tree, which is
+  exactly what the alias map exists for, so a peer's parent id routinely names a
+  different local category. Nothing downstream checks the link: the breadcrumb
+  (`CategoryAncestry::fullPath()`) and the picker follow it, and the category
+  moves. The cycle guard there is a visited set and a depth cap, so a cycle
+  reads as a truncated path rather than a hang.
+- **`transactions.pair_transaction_id`** — a leg links to the wrong row, but
+  `ClearHalfPairsOnMergedRows` runs on `PeerRowsApplied` and clears any leg whose
+  named partner *cannot name it back*: already paired elsewhere, or not a
+  transfer at all. On the merge path that turns most wrong links into lost
+  links, which `TransferPairer::pairOrphansForUser()` can heal. Two cases sit
+  outside it — a named row that is itself an unpaired transfer leg, which
+  `cannotNameBack()` deliberately leaves alone; and everything
+  `resolveFromHistory()` writes, because `HistoryReprojector::replayQuarantined()`
+  runs the sweep **before** a replay that may return early and announce nothing.
+
+`MoneyFlow::predicate()` counts a row only when `pair_transaction_id IS NULL`,
+and the wrongly named row's own column is never written, so no spend, income or
+net total moves on this. What moves is which row the ledger calls the other
+half.
+
 ### One `ArrivingBatch`, both phases
 
 `applyCreates()` used to run with no batch at all, so a leg created by a

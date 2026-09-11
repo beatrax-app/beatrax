@@ -147,7 +147,7 @@ final readonly class OpLogReplayer
             $quarantine,
             $ownership,
             new SuppliedDateGate($db),
-            new SelfReferenceDeferral($db, $ownership, $log),
+            new SelfReferenceDeferral($db, $ownership, $aliases, $log),
             $splitTail,
             $this->pairCascade,
             $aliases,
