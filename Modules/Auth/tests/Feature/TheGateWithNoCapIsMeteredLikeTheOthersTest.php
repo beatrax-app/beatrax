@@ -3,11 +3,17 @@
 declare(strict_types=1);
 
 use Illuminate\Cache\RateLimiter;
+use Illuminate\Contracts\Routing\UrlGenerator;
+use Livewire\Livewire;
+use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Services\GuestAttemptCap;
+use Modules\Auth\Internal\Services\SignInThrottle;
 use Modules\Auth\Public\Actions\LoginAction;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Exceptions\SignInThrottled;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\Duration;
+use Modules\Core\Public\Support\Lang;
 
 // Recovery is capped at five a minute and a wrong app-lock code escalates a
 // backoff to a hard cap. The account password had one bcrypt check and no
@@ -140,4 +146,52 @@ it('lets that pipeline through while the meter has room', function (): void {
     ]);
 
     expect(auth()->check())->toBeTrue();
+});
+
+// The screen, not the action. A reader who is waiting and a reader who is wrong
+// take different actions, and the catch that tells them apart is only reachable
+// through the component.
+it('tells the reader they are waiting rather than that they are wrong', function (): void {
+    meteredOwner();
+
+    spendTheMeter(METERED_ACCOUNT);
+
+    $page = Livewire::test(LoginPage::class)
+        ->set('username', METERED_ACCOUNT)
+        ->set('password', METERED_PASSWORD)
+        ->call('submit', app(LoginAction::class), app(UrlGenerator::class));
+
+    $page->assertSet('password', '');
+
+    $flash = $page->get('flashMessage');
+
+    expect($flash)
+        ->toBeString()
+        ->not->toBe(Lang::get('auth::login.error_invalid'))
+        ->toBe(Lang::get('auth::login.error_throttled', ['wait' => '60s']));
+});
+
+// The positive control for the case above: the same screen, a meter with room,
+// a wrong password -- the reader is told they are wrong.
+it('still says wrong where the meter has room', function (): void {
+    meteredOwner();
+
+    $page = Livewire::test(LoginPage::class)
+        ->set('username', METERED_ACCOUNT)
+        ->set('password', 'not-the-password')
+        ->call('submit', app(LoginAction::class), app(UrlGenerator::class));
+
+    expect($page->get('flashMessage'))->toBe(Lang::get('auth::login.error_invalid'));
+});
+
+it('carries the wait the limiter answers rather than a constant', function (): void {
+    meteredOwner();
+
+    spendTheMeter(METERED_ACCOUNT);
+
+    /** @var SignInThrottle $throttle */
+    $throttle = app(SignInThrottle::class);
+
+    expect($throttle->availableIn(METERED_ACCOUNT))->toBeGreaterThan(0)
+        ->and($throttle->availableIn(METERED_ACCOUNT))->toBeLessThanOrEqual(Duration::Minute->seconds());
 });
