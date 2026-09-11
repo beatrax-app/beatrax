@@ -2287,6 +2287,10 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php pending_enrichment_conflicts 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php transactions 1',
         'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php users 1',
+        // The same column, cleared rather than set: symmetry is a rule across two
+        // of Ledger's rows that only this module knows is a rule, and the arrival
+        // path is where both devices see the same merged pair.
+        'Modules/Transfers/Internal/Listeners/ClearHalfPairsOnMergedRows.php transactions 1',
         // `pair_transaction_id` names a row in the table Ledger owns, and both
         // legs have to carry it or neither does. The Transfers module is the one
         // that knows a pair exists, so the link is written here and announced

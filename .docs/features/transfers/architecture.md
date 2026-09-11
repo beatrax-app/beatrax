@@ -216,6 +216,15 @@ alone. That shape is indistinguishable from a `Set` the deferral will deliver
 in a later batch, and clearing on it would unpair a healthy pair whose two
 links straddled a batch boundary.
 
+Both passes are chunked at `Core::RowChunk::DEFAULT_SIZE`, because a rebuild
+announces every row it re-creates: the arriving ids and the rows naming them are
+the whole ledger on a phone, and one `whereIn` over them would pass SQLite's
+bind ceiling as well as its memory. Every verdict is read off the state the
+merge left and the clears are written only once all of them are in — a leg
+cleared early must not be able to change the answer for a leg that names it, or
+the repair would depend on the order rows were reached and the two devices would
+diverge again.
+
 Clearing the link is the whole repair. Which side "should" have stayed a
 transfer is a product decision and not a derivation, so the type is never
 touched: clearing is what makes the row visible to `pairOrphansForUser()` again
