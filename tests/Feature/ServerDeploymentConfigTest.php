@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\Artisan;
 use Modules\Core\Public\Support\PatternScan;
+use Symfony\Component\Yaml\Yaml;
 
 // This file used to assert the opposite — that `pgsql`, `mysql` and `mariadb`
 // were defined "so DB_CONNECTION can select them". They were, and selecting one
@@ -158,6 +159,48 @@ it('stops the server image recording exception arguments', function (): void {
     // Dockerfile copies the directory onto the scan path.
     expect((string) file_get_contents(base_path('deploy/server/Dockerfile')))
         ->toContain('COPY deploy/server/conf.d/ $PHP_INI_DIR/conf.d/');
+});
+
+// FrankenPHP answers for public/ without entering PHP, so the middleware that
+// writes the app's headers never runs for a static file. Read out of the parsed
+// YAML rather than matched in the file: every string below also appears in the
+// prose explaining it, and a guard a comment can satisfy is not a guard.
+function staticAssetDirectives(): string
+{
+    /** @var array{services: array{app: array{environment?: array<string, string>}}} $compose */
+    $compose = Yaml::parseFile(base_path('deploy/server/docker-compose.yml'));
+
+    return $compose['services']['app']['environment']['CADDY_SERVER_EXTRA_DIRECTIVES'] ?? '';
+}
+
+// The matcher is what keeps this from becoming the defect it closes: a header
+// block that also caught routed responses would write a second policy over the
+// one the application composes with a per-request nonce, which is the inversion
+// of the rule -- a nearer layer may narrow the base policy, never replace it.
+it('gives a static file the headers PHP never runs to write, and only a static file', function (): void {
+    $directives = staticAssetDirectives();
+
+    expect($directives)->not->toBe('', 'The app service declares no extra directives, so the assertions below read an empty string.');
+
+    foreach (['X-Content-Type-Options nosniff', 'Referrer-Policy no-referrer', 'X-Frame-Options DENY'] as $header) {
+        expect($directives)->toContain($header);
+    }
+
+    expect($directives)->toContain('not path *.php')
+        ->and($directives)->toContain('file');
+});
+
+// public/offline.html styles itself from an inline <style> block, and the
+// service worker serves it from cache with whatever headers it was stored
+// under. A policy here that did not name inline styles would strip the offline
+// page, so the absence of one is the decision rather than an omission.
+it('writes no Content-Security-Policy over a static file', function (): void {
+    expect(staticAssetDirectives())->not->toContain('Content-Security-Policy');
+
+    // str_contains rather than toContain(): the latter reads every argument as
+    // another needle, so the explanation would be searched for in the file.
+    expect(str_contains((string) file_get_contents(base_path('public/offline.html')), '<style'))
+        ->toBeTrue('offline.html no longer carries an inline style, so the reason above has gone stale.');
 });
 
 it('registers the interactive beatrax:setup command', function (): void {
