@@ -7,6 +7,7 @@ namespace Modules\FX\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
+use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Enums\ConversionOutcome;
 use Modules\FX\Public\Support\BundledRates;
@@ -60,7 +61,11 @@ final class ExchangeRateService
             return ConversionResult::passthrough($money);
         }
 
-        return $this->convertWithRows($money, $targetCurrency, $this->ratesForDate($date));
+        // Measured against the day being converted, not against today. A rate
+        // published on the date it prices is the right one however long ago
+        // that was, and the series would otherwise mark every historical point
+        // stale for the sole reason that the past is not the present.
+        return $this->convertWithRows($money, $targetCurrency, $this->ratesForDate($date), $date);
     }
 
     /**
@@ -117,13 +122,14 @@ final class ExchangeRateService
             ->get();
     }
 
-    /**
-     * @param  Collection<int, \stdClass>  $rows
-     */
     // Rows arrive with the bundled snapshot first, so a live provider's row for
     // the same pair and day overwrites it in both the table and the metadata:
     // the snapshot is a floor, never an answer that outranks a real feed.
-    private function convertWithRows(Money $money, string $targetCurrency, Collection $rows): ConversionResult
+    /**
+     * @param  Collection<int, \stdClass>  $rows
+     * @param  string|null  $asAt  The day the figure is priced for; null prices it for today.
+     */
+    private function convertWithRows(Money $money, string $targetCurrency, Collection $rows, ?string $asAt = null): ConversionResult
     {
         if ($rows->isEmpty()) {
             return ConversionResult::noRate($money);
@@ -169,7 +175,17 @@ final class ExchangeRateService
         $rate = $table->rateFor($money->currency(), $targetCurrency);
 
         [$asOf, $source] = $this->resolveRateMetadata($money->currency(), $targetCurrency, $rateMeta);
-        $isStale = $asOf !== null && $asOf->diffInDays(CarbonImmutable::now()->startOfDay()) > self::STALE_DAYS_THRESHOLD;
+        // Through SafeDate, because the day arrives from a caller and a bare
+        // parse of an empty string is NOW — which would price a historical
+        // figure against today and reinstate the very thing measured here. A
+        // day SafeDate refuses is one this pass does not know, so it says today.
+        $pricedFor = ($asAt === null ? null : SafeDate::dayOrNull($asAt))
+            ?? CarbonImmutable::now()->startOfDay();
+
+        // Absolute, because RATE_DATE_IN_EFFECT falls FORWARD when it holds
+        // nothing on or before the day: a rate published a month after the
+        // figure it prices is as far from it as one published a month before.
+        $isStale = $asOf !== null && abs($asOf->diffInDays($pricedFor)) > self::STALE_DAYS_THRESHOLD;
 
         return new ConversionResult(
             original: $money,
