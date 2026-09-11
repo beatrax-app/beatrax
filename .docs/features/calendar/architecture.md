@@ -84,7 +84,12 @@ history month before a series existed would render a phantom "expected — not
 found" entry.
 
 The backward walk is also **ceilinged at today**: a negative-index occurrence
-that lands on a day still to come is dropped. Backward steps exist to fill in
+that lands on a day still to come is dropped — *after* today, not on it. The
+comparison shipped as `gte` for a while, and the one case that separates the two
+is a series whose billing day IS today's day-of-month: this period's instalment
+is then exactly one step behind an anchor in the next period, so `gte` deleted
+it. That is invisible on twenty-nine or thirty days out of every thirty-one,
+which is how it survived a suite that runs on a rolling today. Backward steps exist to fill in
 history, and the anchor is the app's own answer to when the next charge falls,
 so the forecast's forward walk
 ([range projection](../forecasting/architecture.md)) never emits a
