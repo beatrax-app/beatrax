@@ -67,7 +67,7 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
         return strtolower($msg->senderEmail) === self::GOOGLE_PLAY_SENDER;
     }
 
-    public function match(string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto
+    public function match(string $emlRaw): MatchOutcomeDto
     {
         $parsed = $this->reader->read($emlRaw);
 
