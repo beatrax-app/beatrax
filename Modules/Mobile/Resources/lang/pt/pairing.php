@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Esse não é um endereço que este dispositivo consiga contactar. Introduz como host e porta, por exemplo 192.168.1.20:8100.',
         'code_not_accepted' => 'Nenhum dispositivo nesta rede aceitou esse código. Verifica o código e se o outro dispositivo ainda o está a mostrar.',
         'no_peer_answered' => 'Nada nesta rede respondeu a esse código. Verifica se a sincronização está a correr no outro dispositivo, ou digitaliza o código dele com a câmara — a câmara não precisa de procurar na rede.',
+        'no_peer_answered_local_network' => 'Nada nesta rede respondeu a esse código. O Beatrax precisa primeiro da tua autorização para alcançar dispositivos nesta rede e, sem ela, não funciona nenhum caminho até ao outro dispositivo — nem sequer a câmara. Ativa Rede local para o Beatrax nas definições do teu dispositivo e envia o código novamente.',
         'no_peer_answered_ios' => 'Nada nesta rede respondeu a esse código. Procurar o outro dispositivo na rede ainda não funciona no iPhone, por isso digitaliza o código dele com a câmara.',
         'no_peer_answered_camera_off' => 'Nada nesta rede respondeu a esse código. Procurar o outro dispositivo na rede ainda não funciona no iPhone e o acesso à câmara está desativado — volta por isso a autorizar a câmara para o Beatrax nas definições do teu dispositivo e digitaliza o código do outro dispositivo.',
         'rate_limited' => 'Demasiadas tentativas. Espera um minuto e tenta novamente.',

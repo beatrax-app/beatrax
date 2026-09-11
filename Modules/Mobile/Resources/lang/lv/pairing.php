@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Šī nav adrese, uz kuru šī ierīce var zvanīt. Ievadi to kā hostu un portu, piemēram, 192.168.1.20:8100.',
         'code_not_accepted' => 'Neviena šī tīkla ierīce nepieņēma šo kodu. Pārbaudi kodu un vai otra ierīce to joprojām rāda.',
         'no_peer_answered' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Pārbaudi, vai otrā ierīcē darbojas sinhronizācija, vai arī noskenē tās kodu ar kameru — kamerai tīklā nekas nav jāmeklē.',
+        'no_peer_answered_local_network' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Beatrax vispirms ir vajadzīga tava atļauja sasniegt ierīces šajā tīklā, un bez tās nedarbojas neviens ceļš uz otru ierīci — arī kamera ne. Ierīces iestatījumos ieslēdz Beatrax iespēju Lokālais tīkls un nosūti kodu vēlreiz.',
         'no_peer_answered_ios' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Otras ierīces meklēšana tīklā iPhone vēl nedarbojas, tāpēc noskenē tās kodu ar kameru.',
         'no_peer_answered_camera_off' => 'Šajā tīklā uz šo kodu neviens neatbildēja. Otras ierīces meklēšana tīklā iPhone vēl nedarbojas, un piekļuve kamerai ir izslēgta — tāpēc ierīces iestatījumos atkal atļauj kameru Beatrax un noskenē otras ierīces kodu.',
         'rate_limited' => 'Pārāk daudz mēģinājumu. Pagaidi minūti un mēģini vēlreiz.',
