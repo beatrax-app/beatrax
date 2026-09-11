@@ -112,6 +112,13 @@ three units and each unit is a whole re-derivation that cannot be halved, so a
 budget could only ever defer two of three. It holds a budget, by constructor,
 for the day a pass is measured expensive.
 
+A shared budget has an order to it, and on the mobile root the drain is last —
+`CarriesPendingPairingFrames` opens the budget, the passes run, and the drain
+asks what is left. Where the two ahead of it spend the whole 100 ms, the drain
+still replays one row, because the first unit is never denied. That is the floor
+the arrangement guarantees, and it is why a pass measured expensive later is
+bounded rather than left to squeeze the tail behind it.
+
 **`CarriesPendingPairingFrames`** is deliberately not bounded. Its cost is a
 network wait — `ProtocolTimings::BROWSE_SECONDS` is 2.0 — rather than work that
 can stop between units, and it only runs at all while a pairing handshake is
