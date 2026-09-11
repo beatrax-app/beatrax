@@ -130,29 +130,8 @@ final readonly class CoveredTableOrder
      */
     public function parentColumns(string $table): array
     {
-        $covered = array_keys($this->rules->rules());
-        $columns = [];
-
         try {
-            $schema = $this->db->connection()->getSchemaBuilder();
-
-            if (! $schema->hasTable($table)) {
-                return [];
-            }
-
-            foreach ($schema->getForeignKeys($table) as $foreignKey) {
-                $target = $foreignKey['foreign_table'];
-                $column = $foreignKey['columns'][0] ?? null;
-
-                if (is_string($column) && $target !== $table && in_array($target, $covered, true)) {
-                    $columns[$column] = $target;
-                }
-            }
-            foreach (self::UNCONSTRAINED_PARENTS[$table] ?? [] as $column => $target) {
-                if (in_array($target, $covered, true)) {
-                    $columns[$column] = $target;
-                }
-            }
+            return $this->parentColumnsOrThrow($table);
         } catch (Throwable $e) {
             // Same posture as insertionOrder(): a schema that cannot be read
             // leaves the caller where it was rather than failing the write.
@@ -165,6 +144,41 @@ final readonly class CoveredTableOrder
             ]);
 
             return [];
+        }
+    }
+
+    // The same question, raising rather than answering nothing. dependencies()
+    // asks it this way so a schema that will not answer reaches insertionOrder()
+    // and is reported there as the fallback it really is, instead of thirty-nine
+    // tables each quietly reporting that they name no parent.
+    /**
+     * @return array<string, string> column => the covered table it names
+     *
+     * @throws Throwable when the schema will not answer
+     */
+    private function parentColumnsOrThrow(string $table): array
+    {
+        $covered = array_keys($this->rules->rules());
+        $columns = [];
+        $schema = $this->db->connection()->getSchemaBuilder();
+
+        if (! $schema->hasTable($table)) {
+            return [];
+        }
+
+        foreach ($schema->getForeignKeys($table) as $foreignKey) {
+            $target = $foreignKey['foreign_table'];
+            $column = $foreignKey['columns'][0] ?? null;
+
+            if (is_string($column) && $target !== $table && in_array($target, $covered, true)) {
+                $columns[$column] = $target;
+            }
+        }
+
+        foreach (self::UNCONSTRAINED_PARENTS[$table] ?? [] as $column => $target) {
+            if (in_array($target, $covered, true)) {
+                $columns[$column] = $target;
+            }
         }
 
         return $columns;
@@ -183,7 +197,7 @@ final readonly class CoveredTableOrder
         // down before the rows naming it, not merely translated once both are
         // here. Self-references and uncovered targets are excluded there.
         foreach ($covered as $table) {
-            $dependencies[$table] = array_values(array_unique(array_values($this->parentColumns($table))));
+            $dependencies[$table] = array_values(array_unique(array_values($this->parentColumnsOrThrow($table))));
         }
 
         return $dependencies;
