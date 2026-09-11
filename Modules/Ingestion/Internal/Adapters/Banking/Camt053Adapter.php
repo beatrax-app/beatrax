@@ -212,19 +212,19 @@ final class Camt053Adapter implements SourceAdapter
         ?string $msgId,
         bool $isBatch,
     ): SourceTransactionDto {
-        // genkgo/camt's Decoder already negates the entry-level Money for a
-        // DBIT entry, so this value arrives signed; no second flip needed.
-        $money = $isBatch && $txDtls?->getAmountDetails() !== null
-            ? $txDtls->getAmountDetails()
-            : $entry->getAmount();
+        // TxDtls/Amt is the ordinary spelling of a batch child's own amount and
+        // AmtDtls/TxAmt the instructed one. Reading only the second dropped a
+        // child that wrote the first onto the ENTRY total, which a three-child
+        // batch then booked three times over.
+        $childAmount = $isBatch ? ($txDtls?->getAmountDetails() ?? $txDtls?->getAmount()) : null;
+        $money = $childAmount ?? $entry->getAmount();
         $signed = $this->moneyToMinor($money);
-        if ($isBatch && $txDtls?->getAmountDetails() !== null) {
-            // AmtDtls/InstdAmt is not auto-signed the way the entry-level Amt is, so
-            // applying the indicator by hand keeps a batch split's sign matching its entry total.
-            $cdi = $txDtls->getCreditDebitIndicator() ?? $entry->getCreditDebitIndicator();
-            if ($cdi === 'DBIT' && $signed > 0) {
-                $signed = -$signed;
-            }
+        if ($childAmount !== null) {
+            // Applied by hand because genkgo signs both child elements off the
+            // ENTRY's indicator, so a child stating its own direction keeps the
+            // batch total's until it is asked.
+            $cdi = $txDtls?->getCreditDebitIndicator() ?? $entry->getCreditDebitIndicator();
+            $signed = $cdi === 'DBIT' ? -abs($signed) : abs($signed);
         }
         $currency = $money->getCurrency()->getCode();
 
