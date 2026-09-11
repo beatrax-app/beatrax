@@ -134,6 +134,18 @@ it('flips snoozed -> open when snoozed_until is in the past and writes the audit
     expect($transition?->actor)->toBe('detector');
 });
 
+// The sweep is the only thing that reopens a snooze, and it used to require an
+// expiry to be present. A merge can leave the state without one, and the alert
+// was then invisible to the queue and unreachable by this job at once.
+it('reopens a snooze left with no expiry at all', function (): void {
+    $user = asrUser('asr-nulluntil');
+    $alert = asrAlert($user, state: 'snoozed', snoozedUntil: null);
+
+    asrRunJob();
+
+    expect(AnomalyAlert::query()->findOrFail($alert->id)->state)->toBe('open');
+});
+
 it('does NOT flip snoozed alerts whose snoozed_until is in the future', function (): void {
     $user = asrUser('asr-future');
     $alert = asrAlert($user, state: 'snoozed', snoozedUntil: CarbonImmutable::parse('2026-05-21 12:00:00'));
