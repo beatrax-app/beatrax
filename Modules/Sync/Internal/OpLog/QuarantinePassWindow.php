@@ -23,7 +23,7 @@ final readonly class QuarantinePassWindow
     // hold it never gave an answer to.
     public function narrow(Builder $query, int $userId, string $since): Builder
     {
-        if (! $this->logMovedSince($userId, $since)) {
+        if (! $this->aStateHoldStands($userId, $since) || ! $this->logMovedSince($userId, $since)) {
             return $query->where('created_at', '>', $since);
         }
 
@@ -33,10 +33,23 @@ final readonly class QuarantinePassWindow
         });
     }
 
+    // Asked FIRST, and of the small table: a device holding nothing the log
+    // could undo must not pay a read on a 20,000-entry history to be told the
+    // answer cannot matter. That is every healthy device, on every request.
+    private function aStateHoldStands(int $userId, string $since): bool
+    {
+        return $this->db->connection()
+            ->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->whereIn('reason', QuarantineReason::stateRecoverable())
+            ->where('created_at', '<=', $since)
+            ->exists();
+    }
+
     // Anything this device recorded since the last pass, its own writes
     // included: a parent lands as an entry whether a peer sent it or the
-    // reader typed it. False in the steady state, and a pass stamps its own
-    // watermark, so one arrival buys one pass rather than one per request.
+    // reader typed it. One seek on (user_id, recorded_at), and a pass stamps
+    // its own watermark, so an arrival buys one pass rather than one a request.
     private function logMovedSince(int $userId, string $since): bool
     {
         return $this->db->connection()

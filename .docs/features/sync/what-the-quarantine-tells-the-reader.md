@@ -174,6 +174,7 @@ which is why a second exchange left the count at ten.
 The wording it settles stands either way. `Held` says a change has **not been
 applied yet** and stops; it does not promise a retry, which is the right
 sentence whether or not a pass is due to take the hold again.
+
 ## A window stamped against a key cannot bound a hold a key never held
 
 `HistoryReprojector` does not sweep the whole quarantine on every request. It
@@ -217,9 +218,25 @@ before.
 That question is asked of `op_log_entries.recorded_at`, which covers a peer's
 frame and this reader's own writing equally — a parent lands as an entry either
 way. It is self-limiting: a pass stamps its own watermark, so one arrival buys
-exactly one pass rather than one per request. `op_log_entries_recorded_idx`
-exists because the steady-state answer is *no*, and that is the walk that does
-not stop early.
+exactly one pass rather than one per request.
+
+It is also asked **second**. A device holding no state-recoverable hold has
+nothing the answer could undo, and that is every healthy device on every
+request, so the small table is asked first: is a hold of that kind standing
+outside the window at all? Without that ordering the setup gate read the
+op-log on a 20,000-entry history to be told the answer could not have mattered,
+which is what `TheSetupGateReprojectsWhatQuarantinedNotEverythingTest` counts.
+
+Both probes are index seeks rather than scans, and the plans say so:
+
+```text
+SEARCH op_log_quarantine USING INDEX op_log_quarantine_user_idx (user_id=? AND created_at<?)
+SEARCH op_log_entries    USING INDEX op_log_entries_recorded_idx (user_id=? AND recorded_at>?)
+```
+
+`op_log_entries_recorded_idx` is what buys the second line. Without it the same
+query plans as `SCAN op_log_entries`, which is the whole-log read the gate above
+exists to refuse.
 
 The same predicate is used by `hasUnexaminedQuarantine()`, which decides whether
 a pass is entered at all. Those two disagreeing is a pass that is never entered

@@ -5,7 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -301,6 +303,40 @@ it('retires a hold held for a sum it could not read', function (): void {
     arrvPass($userId);
 
     expect(arrvReasons($this->db, $userId))->toBe([]);
+});
+
+// The cost of asking. The log question is meaningless with no hold for its
+// answer to undo, and a device holding none is every healthy one — so it is
+// asked of the small table first, and a 20,000-entry history is never read to
+// be told the answer could not have mattered.
+it('asks the log nothing once no hold is left for an arrival to undo', function (): void {
+    $userId = (int) $this->user->id;
+
+    /** @var list<string> $logReads */
+    $logReads = [];
+    DB::listen(function (QueryExecuted $q) use (&$logReads): void {
+        if (str_contains($q->sql, 'select * from "op_log_entries"')) {
+            $logReads[] = $q->sql;
+        }
+    });
+
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-03 10:00:00'));
+    arrvReplay($this->db, $userId, [['table' => 'accounts', 'pk' => (string) ARRV_ACCOUNT]]);
+    CarbonImmutable::setTestNow();
+
+    arrvPass($userId, since: '2026-09-02 00:00:00');
+
+    // The positive control: while the hold stood, the log WAS asked. Without
+    // it an empty second count reads the same whether the short circuit works
+    // or the listener never fired at all.
+    expect($logReads)->not->toBe([]);
+
+    $logReads = [];
+
+    arrvPass($userId, since: '2026-09-03 12:00:00');
+
+    expect(arrvReasons($this->db, $userId))->toBe([])
+        ->and($logReads)->toBe([]);
 });
 
 // Every reason a pass takes again is on exactly one side of the question the
