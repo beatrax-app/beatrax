@@ -39,7 +39,7 @@ final readonly class OpLogEntryApplier
         // Built here, not injected: these are this class's own gates split out
         // of it, and a parameter added to the middle of the list above becomes
         // somebody else's argument at the positional call sites.
-        $this->gates = new CreateRowGates($ownership, $splitOverfill, $quarantine);
+        $this->gates = new CreateRowGates($ownership, $splitOverfill, $quarantine, new UnplacedPeerCreates($db, $aliases));
     }
 
     /**
@@ -192,6 +192,11 @@ final readonly class OpLogEntryApplier
             return null;
         }
 
+        // Asked here because this is the last point at which the ids are the
+        // peer's. A parent whose own create was refused is here under nobody's
+        // id, so the number names whatever local row happens to wear it.
+        $unplaced = $this->gates->unplacedParentFor($table, $payload, $deviceId, $batch->userId);
+
         // The ids this row NAMES, rewritten to the ones this device uses for
         // the same logical rows: a peer that seeded its own reference data
         // names it by an id only that device ever had.
@@ -208,20 +213,21 @@ final readonly class OpLogEntryApplier
         // false, so the caller bailed before the gates -- and before
         // translate(), which never ran on what it had already written.
         $required = array_diff($this->rules->requiredCreateColumns($table), self::SEEDED_BY_APPLIER);
+        $whole = array_diff($required, array_keys($fields)) === [];
 
-        if (array_diff($required, array_keys($fields)) !== []) {
-            $this->applyCreatedTail($table, $here, $payload, $fields, $batch);
-
-            return null;
-        }
-
-        $reason = $this->gates->refusalFor($table, $here, $payload, $batch);
+        // A half create is judged on the row the fill would leave, inside the
+        // tail; the gates below read a payload it does not have. An unplaced
+        // parent is the exception and refuses either, because the id is wrong
+        // whichever of the two would write it.
+        $reason = $unplaced ?? ($whole ? $this->gates->refusalFor($table, $here, $payload, $batch) : null);
 
         if ($reason !== null) {
             $this->gates->record($fields, $reason, $batch->now);
+        } elseif (! $whole) {
+            $this->applyCreatedTail($table, $here, $payload, $fields, $batch);
         }
 
-        return $reason === null ? ['payload' => $payload, 'here' => $here] : null;
+        return $reason === null && $whole ? ['payload' => $payload, 'here' => $here] : null;
     }
 
     // The fourth way a row arrives, and the one that used to write with no gate

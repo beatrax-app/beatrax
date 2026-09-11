@@ -258,6 +258,12 @@ Only a referenced row that **exists and belongs to someone else** is refused. An
 target is an ordering problem, not a cross-user one — children legitimately arrive before
 their parents — and the deferral and foreign-key paths already handle it.
 
+An absent target that a local row *happens to wear the number of* is neither, and the
+foreign key cannot see the difference. That one is answered before translation by
+`CreateRowGates::unplacedParentFor()`, off the hold the parent's own refused create left
+behind: [An id whose row never
+landed](architecture.md#an-id-whose-row-never-landed).
+
 `parentBelongsToUser()` covers the other direction. Child tables (`rule_conditions`,
 `rule_actions`) carry no `user_id` column at all, so nothing on the row itself proves
 ownership; without the parent check an op could attach a condition to another user's rule
