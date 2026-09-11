@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Receipts\Internal;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -15,6 +16,7 @@ use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
@@ -64,9 +66,55 @@ final readonly class ReceiptLedgerBridge
         $canonical = $this->autoCategory->apply($canonical, $user)->canonical;
         $canonical = $this->resolveCounterparty->run($canonical, $user);
 
-        ($this->recorder)([$canonical], $user);
+        $ordinal = $this->occurrenceOrdinalFor($canonical, $user);
+        if ($ordinal === null) {
+            return $importRunId;
+        }
+
+        ($this->recorder)([$canonical->withOccurrenceOrdinal($ordinal)], $user);
 
         return $importRunId;
+    }
+
+    // A receipt is its own document, so there is no file to count occurrences
+    // within and the ledger is asked instead. Null means this very message is
+    // already in the ledger; a message with no reference of its own cannot be
+    // told apart from a second reading of itself and stays the sole occurrence.
+    /**
+     * @link ../../../.docs/architecture/ingestion-pipeline.md#the-occurrence-ordinal
+     */
+    private function occurrenceOrdinalFor(CanonicalTransaction $tx, User $user): ?int
+    {
+        if ($tx->sourceRef === null) {
+            return 0;
+        }
+
+        if ($this->sameOccurrenceAs($tx, $user)->where('source_ref', $tx->sourceRef)->exists()) {
+            return null;
+        }
+
+        // Counted over the receipts alone: a statement that already booked this
+        // occurrence is the row this receipt belongs on, and stepping past it
+        // would write the purchase a second time instead of deduping into it.
+        $highest = $this->sameOccurrenceAs($tx, $user)
+            ->whereIn('source_format', SourceFormat::receiptFormats())
+            ->max('occurrence_ordinal');
+
+        return is_numeric($highest) ? (int) $highest + 1 : 0;
+    }
+
+    // The seven columns the dedup tuple reads before the ordinal completes it,
+    // which is the group an ordinal numbers a row within.
+    private function sameOccurrenceAs(CanonicalTransaction $tx, User $user): Builder
+    {
+        return $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('account_id', $tx->accountId)
+            ->where('posted_at', $tx->postedAt->toDateString())
+            ->where('booked_at', $tx->bookedAt->toDateTimeString())
+            ->where('amount_minor', $tx->amountMinor)
+            ->where('currency', $tx->currency)
+            ->where('counterparty_normalized', $tx->counterpartyNormalized);
     }
 
     private function resolveHandoffRun(User $user): int
