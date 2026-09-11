@@ -57,6 +57,29 @@ So an outside URL here is not "a page in a tab". It is a page inside the
 application's own frame, on a machine that also serves the application over
 loopback and answers on the LAN.
 
+## What the shell around it is
+
+Reviewed 2026-09-11, because two things this page reasons about had never been
+read. Both hold:
+
+- **The renderer's web preferences.** NativePHP's `webPreferences.ts` puts
+  `contextIsolation: true` and the preload path in `requiredWebPreferences`,
+  which are spread **after** anything a caller passes — so no window this
+  application opens can weaken either. `nodeIntegration` is false,
+  `webSecurity` is left at its default of true, and
+  `allowRunningInsecureContent` is never set. `sandbox: false` is the package's
+  own fixed choice, and it is the reason the section above is written the way
+  it is.
+- **The desktop PHP server's bind.** `php -S 127.0.0.1:{port}`, and the
+  NativePHP API server listens on `127.0.0.1` too. Loopback only, which is the
+  premise `LoopbackOnly` is written against.
+
+`rel` is the other half of `target="_blank"`, and
+`OneGateJudgesAnExternalUrlArchTest` now holds it: without `noopener` the opened
+window keeps `window.opener` on the one that opened it, which in this shell is
+another window of this application; without `noreferrer` the third party is told
+which screen the reader left from. Three links carried only `noopener`.
+
 ## What the gate refuses, and in what order
 
 The order is load-bearing: each answer names a cause the ones before it have

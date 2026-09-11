@@ -151,6 +151,47 @@ function externalUrlPinnedFor(string $rule): array
     ));
 }
 
+// `rel` is the other half of the same sentence. Without `noopener` the opened
+// window holds `window.opener` on the one that opened it, and in this shell that
+// is another window of this application; without `noreferrer` the third party is
+// told which screen the reader was on when they left.
+it('gives every new-window link both halves of rel', function (): void {
+    $offenders = [];
+    $anchors = 0;
+
+    foreach (externalUrlBladeFiles() as $file) {
+        $source = (string) file_get_contents($file);
+
+        // The attribute block of one element, taken from the `target` back to
+        // the tag that opened it and forward to the one that closes it: `rel`
+        // and `target` are written on separate lines here, in either order.
+        $elements = PatternScan::all('/<[a-zA-Z][^>]*target="_blank"[^>]*>/s', $source)[0] ?? [];
+
+        foreach ($elements as $element) {
+            $anchors++;
+            $rel = PatternScan::first('/\brel="([^"]*)"/', $element)[1] ?? '';
+
+            if (! str_contains($rel, 'noopener') || ! str_contains($rel, 'noreferrer')) {
+                $offenders[] = str_replace(base_path().'/', '', $file);
+            }
+        }
+    }
+
+    // Read before the verdict: no anchors found is a scan that stopped, and it
+    // reads exactly like a tree with nothing to fix.
+    expect($anchors)->toBeGreaterThan(
+        4,
+        'The walk found '.$anchors.' new-window links, too few to be this application.'
+    );
+
+    expect(array_values(array_unique($offenders)))->toBe([], implode("\n", [
+        'A target="_blank" link needs rel="noopener noreferrer".',
+        'This is a desktop shell: the window it opens is another window of this',
+        'application, same preload, sandbox: false. Offenders:',
+        implode(', ', array_unique($offenders)),
+    ]));
+});
+
 it('hands a URL to the operating system from one place only', function (): void {
     $sanctioned = externalUrlPinnedFor('openExternal');
 
