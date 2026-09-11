@@ -19,9 +19,10 @@ final readonly class SyncListenerProcess
 {
     private const string ALIAS = 'sync-listener';
 
-    // Which device id the listener now running was spawned with. Survives the
-    // request that spawned it because the app and the daemon are separate
-    // processes, so nothing in memory can answer this on the next unlock.
+    // Which device id the listener now running was spawned with. The app and the
+    // daemon are separate processes, so nothing in memory can answer this on the
+    // next unlock — and the store outlives the app as well, which is why every
+    // start rewrites it rather than only the ones that carried an identity.
     private const string CREDENTIALLED_DEVICE_KEY = 'sync-listener:credentialled-device';
 
     public function __construct(
@@ -75,6 +76,13 @@ final readonly class SyncListenerProcess
     {
         $offered = $environment[SyncDaemonIdentity::ENV_DEVICE] ?? null;
         $carried = $this->start($environment);
+        $credentialled = $offered !== null && $offered !== '' && $carried === $offered;
+
+        // Written before the early return below, which is the boot start's: that
+        // start replaces the listener with a keyless daemon, and a key left on
+        // disk by a previous run of the app otherwise answers the next unlock
+        // for a daemon that exited with it.
+        $this->rememberDevice($credentialled ? $offered : null);
 
         // Boot hands nothing over on purpose — the identity is sealed until the
         // app is unlocked — so there is no claim to check and none to make.
@@ -82,17 +90,11 @@ final readonly class SyncListenerProcess
             return;
         }
 
-        if ($carried === $offered) {
-            $this->rememberCredentials($environment);
+        if ($credentialled) {
             $this->logger->info('sync listener: running with the device credentials it was handed.');
 
             return;
         }
-
-        // Forgotten rather than left standing, so the next reconcile sees a
-        // mismatch and tries again instead of reading the keyless daemon as
-        // the credentialled one it never became.
-        $this->cache?->forget(self::CREDENTIALLED_DEVICE_KEY);
 
         $this->logger->warning('sync listener: started without the device credentials it was handed.', [
             'offered_device_id' => $offered,
@@ -136,6 +138,8 @@ final readonly class SyncListenerProcess
      */
     private function reconcileRunningListener(array $environment): void
     {
+        // The key stands here on purpose: a listener this app did not start is
+        // the previous run's persistent child, and that run's key describes it.
         if ($environment === []) {
             $this->logger->info('sync listener: already listening; leaving the running process in place.');
 
@@ -155,13 +159,8 @@ final readonly class SyncListenerProcess
         $this->restartWith($environment);
     }
 
-    /**
-     * @param  array<string, string>  $environment
-     */
-    private function rememberCredentials(array $environment): void
+    private function rememberDevice(?string $deviceId): void
     {
-        $deviceId = $environment[SyncDaemonIdentity::ENV_DEVICE] ?? null;
-
         if ($deviceId === null || $deviceId === '') {
             $this->cache?->forget(self::CREDENTIALLED_DEVICE_KEY);
 
