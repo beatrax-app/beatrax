@@ -7,6 +7,9 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\RenderedMarkup;
+use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 function cpblUser(string $suffix = 'cpbl'): User
 {
@@ -111,13 +114,20 @@ it('renders the day-end balance from summed forecast points for balance-included
     cpblForecastRun($db, $user->id, $account1, '2026-06-20', 50000);
     cpblForecastRun($db, $user->id, $account2, '2026-06-20', 25000);
 
-    Livewire::actingAs($user)
-        ->test(CalendarPage::class, [
-            'month' => 6,
-            'year' => 2026,
-            'balanceAccountIds' => [$account1, $account2],
-        ])
-        ->assertSee('750');
+    // Asked of the corner the reader is shown, and asked as the whole figure:
+    // a bare `750` is also answered by `wire:key="lw-<crc32>-<n>"`, which is a
+    // digit run whose value follows the path the checkout sits at.
+    $shown = RenderedMarkup::of(
+        Livewire::actingAs($user)
+            ->test(CalendarPage::class, [
+                'month' => 6,
+                'year' => 2026,
+                'balanceAccountIds' => [$account1, $account2],
+            ])
+            ->html(),
+    )->text();
+
+    expect($shown)->toContain(Money::ofMinor(75_000, Currency::Eur->value)->formatWholeUnits());
 });
 
 // The aria-label is the only place a phone announces the balance at all: the

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
@@ -63,7 +64,10 @@ it('shows when a paired device was last heard from', function (): void {
 });
 
 // A device confirmed but never yet connected has a null column, and "Last seen
-// 56 years ago" is what reading that as a date would produce.
+// 56 years ago" is what reading that as a date would produce. The epoch year is asked
+// of the reader's text, not of the response: `wire:key="lw-<crc32 of the
+// view's path>-<n>"` is a digit run that a four-digit needle lands inside on
+// one checkout and misses on the next.
 it('says so when a device has never connected, rather than reading null as a date', function (): void {
     $user = lastSeenUser('never');
     $this->actingAs($user);
@@ -72,8 +76,11 @@ it('says so when a device has never connected, rather than reading null as a dat
     $db = $this->app->make(DatabaseManager::class);
     lastSeenPeer($db, $user->id, 'peer-never-seen', null);
 
-    Livewire::test(DevicesAndSyncSettingsSection::class)
-        ->set('syncEnabled', true)
-        ->assertSee(Lang::get('sync::devices.last_seen_never'))
-        ->assertDontSee('1970');
+    $shown = RenderedMarkup::of(
+        Livewire::test(DevicesAndSyncSettingsSection::class)->set('syncEnabled', true)->html(),
+    )->text();
+
+    expect($shown)
+        ->toContain(Lang::get('sync::devices.last_seen_never'))
+        ->not->toContain('1970');
 });

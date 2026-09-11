@@ -14,8 +14,10 @@ use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
 
@@ -246,11 +248,16 @@ it('renders the re-apply progress strip from a seeded running cache payload', fu
         'finished_at' => null,
     ], 3600);
 
-    Livewire::test(RulesPage::class)
-        ->set('reapplyDispatched', true)
-        ->assertSee('Re-applying rules…')
-        ->assertSee('40')
-        ->assertSee('100');
+    // The strip's whole sentence, in the reader's text: `40` and `100` on their
+    // own are also answered by `wire:key="lw-<crc32>-<n>"` and by the snapshot
+    // checksum, so neither needle was evidence that the strip drew anything.
+    $shown = RenderedMarkup::of(
+        Livewire::test(RulesPage::class)->set('reapplyDispatched', true)->html(),
+    )->text();
+
+    expect($shown)->toContain(
+        Lang::choice('categorization::rules.reapply_progress', 100, ['checked' => Fmt::number(40)]),
+    );
 });
 
 it('folds a completed re-apply run into the flash-message summary', function (): void {

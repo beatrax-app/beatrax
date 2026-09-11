@@ -91,3 +91,27 @@ it('is not satisfied by a value that sits outside the element asked about', func
     expect($hop)->toBeTrue('the pattern this replaced reaches past the element it named')
         ->and(RenderedMarkup::of($html)->firstOrFail('[data-testid="tile"] span:last-child')->text())->toBe('0');
 });
+
+// `Document::textContent` is null, so the whole-response reading answered the
+// empty string: every `not->toContain(...)` asked of a page passed, and the two
+// below are the questions that were being answered by markup instead — a
+// Livewire key folds a crc32 of the view's path into a digit run.
+
+it('reads the whole document, not the empty string a document node answers with', function (): void {
+    $html = '<div wire:key="lw-1250277421-0" wire:id="vsYtpRiI64F8WCxo4idX"><p>-¥1,250</p></div>';
+
+    $text = RenderedMarkup::of($html)->text();
+
+    expect($text)->toBe('-¥1,250')
+        ->and(str_contains($html, '-1250'))->toBeTrue()
+        ->and(str_contains($text, '-1250'))->toBeFalse();
+});
+
+it('leaves out the elements a reader is never shown', function (): void {
+    $html = <<<'HTML'
+        <div><script>const total = -1250;</script><style>.a{width:1250px}</style>
+        <noscript>enable it</noscript><template><b>1250</b></template><p>visible</p></div>
+        HTML;
+
+    expect(RenderedMarkup::of($html)->text())->toBe('visible');
+});
