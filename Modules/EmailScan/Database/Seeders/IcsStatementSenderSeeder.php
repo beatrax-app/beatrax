@@ -9,6 +9,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Seeder;
 use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\StoredCopy;
 
 final class IcsStatementSenderSeeder extends Seeder
@@ -47,7 +48,15 @@ final class IcsStatementSenderSeeder extends Seeder
                 continue;
             }
 
+            // Derived rather than left to the sequence. The table has no
+            // AUTOINCREMENT, so an insert naming no id takes max(id) + 1 —
+            // which lands above the derived ids already there and names a
+            // different domain on any device holding a different set.
             $connection->table('known_senders')->insert([
+                'id' => DerivedRowId::for('known_senders', [
+                    'user_id' => null,
+                    'email_pattern' => $pattern,
+                ]),
                 'user_id' => null,
                 'email_pattern' => $pattern,
                 // The issuer's own name is the same in every language, so the
