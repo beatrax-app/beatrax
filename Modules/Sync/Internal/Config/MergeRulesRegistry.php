@@ -232,6 +232,9 @@ final class MergeRulesRegistry
             'counterparties' => [
                 'display_name' => ['nullable' => false],
                 'type' => ['nullable' => false],
+                'slug' => ['nullable' => false],
+                'merchant_name' => ['nullable' => true],
+                'iban' => ['nullable' => true],
                 'metadata' => ['strategy' => MergeStrategy::JsonKeyUnion->value, 'nullable' => true],
                 '_delete_wins' => true,
                 '_create_required' => ['slug', 'type', 'display_name'],
@@ -242,6 +245,9 @@ final class MergeRulesRegistry
             'pots' => [
                 'name' => ['nullable' => false],
                 'currency' => ['nullable' => false],
+                'status' => ['nullable' => false],
+                'goal_id' => ['nullable' => true],
+                'category_id' => ['nullable' => true],
                 '_delete_wins' => true,
                 '_create_required' => ['account_id', 'name', 'currency'],
             ],
@@ -265,6 +271,7 @@ final class MergeRulesRegistry
                 'target_minor' => ['nullable' => false],
                 'target_currency' => ['nullable' => false],
                 'target_date' => ['nullable' => false],
+                'status' => ['nullable' => false],
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'target_minor', 'start_date', 'target_date'],
             ],
@@ -347,6 +354,8 @@ final class MergeRulesRegistry
             'transaction_splits' => [
                 'category_id' => ['nullable' => false],
                 'settled_amount_minor' => ['nullable' => false],
+                'settled_currency' => ['nullable' => false],
+                'sort_order' => ['nullable' => false],
                 'note' => ['nullable' => true],
                 '_delete_wins' => true,
                 '_create_required' => ['transaction_id', 'category_id', 'settled_amount_minor', 'settled_currency'],
@@ -602,11 +611,12 @@ final class MergeRulesRegistry
                 // flag has no prior amount to compare against.
                 '_create_required' => ['transaction_id', 'direction', 'reasons'],
             ],
-            // AFTER anomaly_alerts, whose id its provenance column names.
-            // Written once and deleted whole, so there is no mergeable field.
-            // Uncovered, "mark as expected" muted the merchant on one device
-            // while the peer kept re-raising the alert and syncing it back.
+            // AFTER anomaly_alerts, whose id its provenance column names. A
+            // counterparty merge repoints the rule at the survivor, so the FK
+            // is edited and declared; nothing else on the row is. Uncovered,
+            // "mark as expected" muted one device while the peer re-raised it.
             'anomaly_suppression_rules' => [
+                'counterparty_id' => ['nullable' => true],
                 '_delete_wins' => true,
                 '_create_required' => [
                     'detector',
