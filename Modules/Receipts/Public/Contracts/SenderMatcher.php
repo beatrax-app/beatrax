@@ -27,8 +27,8 @@ interface SenderMatcher
     public function canHandle(InboxMessageDto $msg): bool;
 
     // May return MatchOutcomeDto::skipped(...) when canHandle() claimed
-    // responsibility but the body is not a transaction. $ownerCurrency
-    // denominates a figure the message did not; null falls back to the format's
-    // own. Handed in because a queue worker has no reader to read it from.
-    public function match(string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto;
+    // responsibility but the body is not a transaction. The message is the only
+    // thing that says what money its figures are in: a matcher reads the code
+    // or the glyph the sender printed, or it records a miss.
+    public function match(string $emlRaw): MatchOutcomeDto;
 }

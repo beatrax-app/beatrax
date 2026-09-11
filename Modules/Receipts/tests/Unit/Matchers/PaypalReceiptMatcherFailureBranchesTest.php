@@ -33,7 +33,7 @@ it('returns unmatched when the body has no transaction id', function (): void {
     expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
-it('returns unmatched when no amount anchor matches (USD, EUR and labelled all miss)', function (): void {
+it('returns unmatched when no amount anchor matches (both the USD and the marked anchor miss)', function (): void {
     $body = "Aan: Netflix BV\r\nTransaction ID: PAYPALNOAMOUNT001\r\n";
     $outcome = paypalFailMatcher()->match(paypalPlainEml($body));
 
@@ -47,14 +47,11 @@ it('returns unmatched when a charge is present but no merchant line is found', f
     expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
 });
 
-it('parses the native leg from a bare labelled amount (no USD/EUR anchor)', function (): void {
-    // "Total: 25,00" hits neither the USD nor the bare-EUR anchor, so the amount
-    // comes from nativeFromLabelled(), which defaults the currency to EUR.
+it('names the miss when a total is present and its denomination is not', function (): void {
     $body = "Merchant: Labelled Store\r\nTotal: 25,00\r\nTransaction ID: PAYPALLABEL000001\r\n";
     $outcome = paypalFailMatcher()->match(paypalPlainEml($body));
 
-    expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed);
-    expect($outcome->parsed?->merchantName)->toBe('Labelled Store');
-    expect($outcome->parsed?->amountMinor)->toBe(-2500);
-    expect($outcome->parsed?->currency)->toBe('EUR');
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched);
+    expect($outcome->unmatchedReason)->toBe('unmarked_total');
+    expect($outcome->parsed)->toBeNull();
 });

@@ -282,10 +282,10 @@ parsed at — and the glyph lists were written before JPY was seeded.
 PayPal's conversion anchor accepted `[€$£]`, so a `Conversion to JPY: ¥ 1250`
 leg was not matched at all and the receipt settled in its native currency
 instead; its labelled anchor accepted no glyph, so `Bedrag: ¥ 1250` fell
-through to nothing and a code-less total was denominated at the **reader's
-base**; ICS parsed at `Currency::Eur` whatever the mail said; Google Play's
-settled leg required `(€… EUR)`, so a store billing `(¥1,250 JPY)` settled
-in USD.
+through to nothing and a code-less total was denominated at the reader's base
+(which the section below has since removed); ICS parsed at `Currency::Eur`
+whatever the mail said; Google Play's settled leg required `(€… EUR)`, so a
+store billing `(¥1,250 JPY)` settled in USD.
 
 One alternation now serves all three anchors — `ReceiptBodyText::currencyMarkers()`,
 built from `Money::SYMBOLS` plus the `Currency` cases — and
@@ -295,9 +295,38 @@ than open to `[A-Z]{3}`: the ICS and PayPal anchors are matched against a
 whole message body, where a bare three-letter class reads
 `Referentienummer: ABC123` as an amount.
 
-The reader's base survives in exactly one place, `nativeFromLabelled()`: a
-PayPal total carrying no code and no glyph is denominated by nothing the mail
-says, and the reader's own money is the last thing left to name it with.
+### A total the message denominated with nothing is a miss
+
+The reader's base used to survive in one place, `nativeFromLabelled()`: a PayPal
+total carrying no code and no glyph was denominated at `users.base_currency`.
+That column is a **reporting** preference — what roll-ups render in
+([B10](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md)
+bounds it to the roll-up and leaves accounts their own money) — and a preference
+is not a fact about anybody's money. It is also mutable, so one message had as
+many readings as the picker in `/settings` has options, and a re-parse after the
+reader changed it gave a different answer from the first.
+
+The currency does not label the figure, it **scales** it. Measured on
+`Bedrag: 1250` under four reporting currencies, one message and one set of
+bytes: `EUR 1 250,00`, `USD 1 250.00`, `GBP 1 250.00` — and `JPY 1 250`, a
+hundredth of the others in major units, because a yen has no minor unit.
+`Bedrag: 12,50` was a booked transaction for a euro reader and a **miss** for a
+yen one, the decimal being a shape JPY cannot hold.
+
+So the anchor is gone and the fallback with it. A figure under one of PayPal's
+own labels with no code and no glyph against it is recorded as a miss naming
+`unmarked_total` — the outcome
+[A5-R3](https://github.com/beatrax-app/spec/blob/main/10-functional/features/a-ingestion/a5-receipt-matching.md)
+already reserves for a message nothing can read, which keeps the bytes on
+`file_imports` for a matcher that reads more of the format later. ICS and Google
+Play already worked this way: both require a mark before they will read a figure
+at all, and neither ever used the value handed to them. `SenderMatcher::match()`
+no longer takes one, so no matcher can reach for a reporting preference again.
+
+This is the same shape as [an account denominated by its
+reader](../import/an-account-is-denominated-by-its-statement.md), one layer
+earlier — and with nothing to fall back *to*, because a receipt's total is the
+receipt's own figure and the sender either printed its money or did not.
 
 ## When a total is the thing that disagrees
 
