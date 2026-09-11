@@ -407,25 +407,22 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     ): int {
         try {
             $context->storeFetchedMessage($messageId, $fetchRawEml($messageId), $internalDate);
+
+            return 1;
         } catch (BoundedReadException $e) {
             $context->skipOversized($messageId, $e);
-
-            return 0;
-        } catch (MessageUnavailableException) {
-            // The provider no longer holds the id its own page named. An
-            // absence is what the mailbox is reporting, so there is nothing
-            // here to write down.
-            return 0;
         } catch (GmailRawDecodeException $e) {
             // Bytes this device received and could not read, which is a loss
             // and not an absence, so the skip is recorded before the walk
             // goes on without it.
             $context->recordUndecodableMessage($messageId, $e);
-
-            return 0;
+        } catch (MessageUnavailableException) {
+            // The provider no longer holds the id its own page named. An
+            // absence is what the mailbox is reporting, so there is nothing
+            // of it here to write down.
         }
 
-        return 1;
+        return 0;
     }
 
     // Laravel calls this as a bare `$command->failed($e)` with no container
