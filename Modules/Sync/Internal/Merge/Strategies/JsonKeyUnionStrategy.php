@@ -30,9 +30,10 @@ final class JsonKeyUnionStrategy implements MergeStrategyInterface
                 continue;
             }
 
-            // Later entries overwrite earlier ones key by key, which is what
-            // makes this last-writer-wins per key rather than per column.
-            $merged = [...$merged, ...$this->decode($entry->value)];
+            // array_replace, not a spread: a spread renumbers integer keys
+            // rather than merging on them, so a map carrying a numeric key
+            // would grow an entry per op instead of overwriting one.
+            $merged = array_replace($merged, $this->decode($entry->value));
             $everCarriedAMap = true;
         }
 
