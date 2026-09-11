@@ -75,16 +75,21 @@ final readonly class FingerprintStage
             ? FingerprintDisposition::newRow()
             : FingerprintDisposition::enriched(
                 existingId: self::toInt($near->id),
-                fromSourceRef: is_string($near->source_ref) ? $near->source_ref : null,
+                fromSourceRef: self::storedRefOf($near),
                 toSourceRef: $incomingRef,
                 conflictingFields: $this->detectConflicts($near, $tx, $user),
             );
     }
 
+    private static function storedRefOf(stdClass $row): ?string
+    {
+        return is_string($row->source_ref) ? $row->source_ref : null;
+    }
+
     private function rankedDisposition(stdClass $existing, CanonicalTransaction $tx, User $user): FingerprintDisposition
     {
         $existingFormat = is_string($existing->source_format) ? $existing->source_format : '';
-        $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
+        $existingRef = self::storedRefOf($existing);
         $incomingRef = $tx->sourceRef;
 
         // Two statements colliding drop as duplicates with no source_ref
