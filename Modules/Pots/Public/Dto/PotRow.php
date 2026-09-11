@@ -62,6 +62,18 @@ final class PotRow extends Data
         ));
     }
 
+    // Derived, never carried: a pot's balance is the signed sum of its
+    // movements and a second field holding "that sum was negative" is a copy
+    // that can disagree with it. The writer refuses a withdrawal past nought,
+    // so this is only ever true of a sum two devices arrived at apart.
+    /**
+     * @link ../../../../.docs/features/pots/over-allocation-guard.md
+     */
+    public function isOverdrawn(): bool
+    {
+        return $this->balanceMinor < 0;
+    }
+
     public function categorySpentIsPartial(): bool
     {
         return $this->categorySpentUnconverted !== [];

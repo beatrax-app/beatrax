@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Potit ylittävät todellisen saldon :amount — korjaa tasapainottamalla',
+        'overdrawn' => 'Tämä potti on :amount alle nollan, koska se tyhjennettiin useammalla kuin yhdellä laitteella — lisää sama summa, niin asia korjaantuu',
         'real_balance' => 'Todellinen saldo:',
         'allocated' => 'Jaettu:',
         'unallocated' => 'Jakamaton:',

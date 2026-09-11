@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Les cagnottes dépassent le solde réel de :amount — rééquilibre pour corriger',
+        'overdrawn' => 'Cette cagnotte est :amount en dessous de zéro parce qu\'elle a été vidée sur plus d\'un appareil — alimente-la du même montant pour corriger',
         'real_balance' => 'Solde réel :',
         'allocated' => 'Affecté :',
         'unallocated' => 'Non affecté :',

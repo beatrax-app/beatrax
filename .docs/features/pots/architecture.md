@@ -36,6 +36,40 @@ codes in `unconverted` and the header renders `core::money.not_converted`
 beside them, the same way every other money surface in the app does — the
 figures used to just be smaller, with nothing saying why.
 
+## A pot below zero
+
+`unallocated` is not the only figure that can go negative. A pot's own balance
+can too, and the way there is two devices used apart: `PotWriter` checks a
+withdrawal against `balanceForPot()` inside its own write transaction, but that
+is a cross-row sum over `pot_movements` which no index can express and which
+nothing re-checks on arrival. `pot_movements` is registered `_create_required`
+with no last-write-wins field, so every arriving row is a create, and
+`DeviceMintedRowId` makes two devices' ids disjoint — both withdrawals land and
+the pot reads below what it held.
+
+The applier is deliberately not the place to stop it. A movement that appears to
+overdraw may simply be *early*: the compensating row from the same or another
+device can arrive in a later batch of a paged catch-up, and refusing it would
+quarantine real money. That is the same reasoning that rules a gate out for
+`envelope_moves`.
+
+So the page names it instead, exactly as it names over-allocation.
+`PotRow::isOverdrawn()` is `balanceMinor < 0` — derived at read time rather than
+carried as a field, because a second column holding "that sum was negative" is a
+copy that can disagree with the sum it came from. The card draws the balance in
+the same amber the negative unallocated figure wears and puts
+`pots::messages.recon.overdrawn` beneath it, which says what happened and asks
+the reader to fund the pot by the shortfall. Nothing is clamped: rounding the
+balance up to nought would hide the very disagreement between two devices the
+reader has to settle.
+
+What *is* clamped is the pair of sentences that quote the balance as money still
+to be had. "Available in :name" offered a taking the writer refuses at that
+sign, and `archive_confirm` promised a release `archive()` does not perform — it
+releases only a balance above zero. Both read through the blade's `$available`
+closure, which floors the figure at nought, the same way `PotsPage` already
+floors `errorAmountLimitMinor`.
+
 ## Writes: fund, withdraw, transfer, archive, restore
 
 Every pot mutation is a row insert into `pot_movements`, never a balance

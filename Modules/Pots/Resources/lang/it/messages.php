@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'I salvadanai superano il saldo reale di :amount — riequilibra per correggere',
+        'overdrawn' => 'Questo salvadanaio è :amount sotto lo zero perché è stato svuotato su più di un dispositivo — alimentalo dello stesso importo per sistemarlo',
         'real_balance' => 'Saldo reale:',
         'allocated' => 'Assegnato:',
         'unallocated' => 'Non assegnato:',

@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Krājkases pārsniedz reālo atlikumu par :amount — līdzsvarojiet, lai to novērstu',
+        'overdrawn' => 'Šī krājkase ir :amount zem nulles, jo tā tika iztukšota vairāk nekā vienā ierīcē — papildiniet to par to pašu summu, lai to labotu',
         'real_balance' => 'Reālais atlikums:',
         'allocated' => 'Piešķirts:',
         'unallocated' => 'Nepiešķirts:',

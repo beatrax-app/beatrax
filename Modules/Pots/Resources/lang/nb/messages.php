@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Sparepottene overstiger den faktiske saldoen med :amount — balanser på nytt for å rette det',
+        'overdrawn' => 'Denne sparepotten er :amount under null fordi den ble tømt på mer enn én enhet — sett inn det samme beløpet for å rette det',
         'real_balance' => 'Faktisk saldo:',
         'allocated' => 'Fordelt:',
         'unallocated' => 'Ufordelt:',

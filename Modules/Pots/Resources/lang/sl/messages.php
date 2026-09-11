@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Hranilniki presegajo dejansko stanje za :amount — uravnoteži jih',
+        'overdrawn' => 'Ta hranilnik je :amount pod ničlo, ker je bil izpraznjen na več kot eni napravi — napolni ga z enakim zneskom, da to popraviš',
         'real_balance' => 'Dejansko stanje:',
         'allocated' => 'Razporejeno:',
         'unallocated' => 'Nerazporejeno:',

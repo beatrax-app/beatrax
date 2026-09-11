@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Taupyklės viršija tikrą likutį :amount — subalansuok',
+        'overdrawn' => 'Ši taupyklė yra :amount žemiau nulio, nes buvo ištuštinta daugiau nei viename įrenginyje — papildyk ją ta pačia suma, kad viskas susitvarkytų',
         'real_balance' => 'Tikras likutis:',
         'allocated' => 'Paskirstyta:',
         'unallocated' => 'Nepaskirstyta:',

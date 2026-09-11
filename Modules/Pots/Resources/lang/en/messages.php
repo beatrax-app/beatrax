@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Pots exceed real balance by :amount — rebalance to fix',
+        'overdrawn' => 'This pot is :amount below zero, because it was emptied on more than one device — fund it by the same amount to put it right',
         'real_balance' => 'Real balance:',
         'allocated' => 'Allocated:',
         'unallocated' => 'Unallocated:',

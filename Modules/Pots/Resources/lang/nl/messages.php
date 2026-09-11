@@ -33,6 +33,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Potjes overschrijden het werkelijke saldo met :amount — herverdeel om dit op te lossen',
+        'overdrawn' => 'Dit potje staat :amount onder nul omdat het op meer dan één apparaat is geleegd — stort hetzelfde bedrag om dit op te lossen',
         'real_balance' => 'Werkelijk saldo:',
         'allocated' => 'Toegewezen:',
         'unallocated' => 'Niet-toegewezen:',

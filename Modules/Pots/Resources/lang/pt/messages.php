@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'As reservas excedem o saldo real em :amount — reequilibra para corrigir',
+        'overdrawn' => 'Esta reserva está :amount abaixo de zero porque foi esvaziada em mais do que um dispositivo — deposita o mesmo valor para corrigir',
         'real_balance' => 'Saldo real:',
         'allocated' => 'Alocado:',
         'unallocated' => 'Não alocado:',
