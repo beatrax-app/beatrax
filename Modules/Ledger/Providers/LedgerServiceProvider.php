@@ -12,6 +12,7 @@ use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
+use Modules\Ledger\Internal\Listeners\RederiveFingerprintOnMergedRows;
 use Modules\Ledger\Internal\Listeners\SweepAsnDelimitersOnUnlock;
 use Modules\Ledger\Internal\Services\BackfillStartingBalanceFromStatementSummaries;
 use Modules\Ledger\Internal\Services\CounterpartyKeyProvenance;
@@ -40,6 +41,7 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\StatementSummaryWriter;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
 use Modules\Sync\Public\Contracts\BlindIndexProvenance;
+use Modules\Sync\Public\Events\PeerRowsApplied;
 
 final class LedgerServiceProvider extends ServiceProvider
 {
@@ -89,6 +91,11 @@ final class LedgerServiceProvider extends ServiceProvider
         // at a moment no app-lock key is held. Every unlock is a moment one is,
         // so the pass is retried there until a user is recorded done.
         $events->listen(AppLockUnlocked::class, [SweepAsnDelimitersOnUnlock::class, 'handle']);
+
+        // The merge writes through the query builder, so no model event fires,
+        // and the digest it leaves can describe neither device's row. Derived,
+        // so every device recomposes the same value and none announces it.
+        $events->listen(PeerRowsApplied::class, [RederiveFingerprintOnMergedRows::class, 'handle']);
 
         if ($this->app->runningInConsole()) {
             $this->commands([
