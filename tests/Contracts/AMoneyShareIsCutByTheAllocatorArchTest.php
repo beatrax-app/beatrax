@@ -34,13 +34,13 @@ const MONEY_SHARE_PINS = [
         'reason' => 'a percentage announced beside a bar rather than a slice: the shares are not required to add back up to a hundred, nothing is stored from it, and cutting it from the two integers is what stopped 29, 57 and 58 coming out a point light',
         'proves' => '/public static function percent\(/',
     ],
-    'Modules/Recurring/Internal/Detectors/DetectedSeries.php' => [
-        'reason' => 'a cadence rewritten as its monthly equivalent, which is a rate and not a slice: nothing else has to add back up to the yearly figure',
-        'proves' => '/SeriesCadence::Quarterly/',
-    ],
     'Modules/Recurring/Internal/Queries/RecurringSeriesProjector.php' => [
         'reason' => 'a float multiplier that only ever builds an ORDER BY key, so the ordering is what it decides and no figure is stored or shown from it',
         'proves' => '/ORDER BY|orderBy/',
+    ],
+    'Modules/Recurring/Internal/Support/MonthlyEquivalent.php' => [
+        'reason' => 'a cadence rewritten as its monthly equivalent, which is a rate and not a slice: nothing else has to add back up to the yearly figure',
+        'proves' => '/SeriesCadence::Quarterly/',
     ],
 ];
 
