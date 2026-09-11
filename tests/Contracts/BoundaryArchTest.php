@@ -2701,6 +2701,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // channel enum and OsFamily's per-platform suffixes. Listing the six in
         // the guard would let the pipeline and the fetcher drift apart while
         // the guard went on agreeing with itself.
+        'tests/Contracts/APredicateOnASealedColumnMatchesNothingArchTest.php -> Modules\\Sync\\Internal\\Crypto\\SensitiveFieldRegistry',
         'tests/Contracts/APreviewChannelAsksForAManifestThePipelinePublishesArchTest.php -> Modules\\Core\\Internal\\Enums\\OsFamily',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
