@@ -131,6 +131,29 @@ it('returns open alerts with the resolved merchant display name', function (): v
         ->and($open[0]->reasons)->toBe([AnomalyDetector::Large]);
 });
 
+// `snoozed` with no expiry is a state no single device can write -- the snooze
+// always stamps a date. It arrives when a revival's null and a re-snooze's
+// state cross on the wire, and without this the alert is hidden from the queue
+// AND skipped by the only sweep that would reopen it.
+it('treats a snooze carrying no expiry as one that has run out', function (): void {
+    anomQueryAlert($this->user, 'snoozed', 'spotify', ['snoozed_until' => null]);
+
+    $open = $this->query->openForUser($this->user);
+
+    expect($open)->toHaveCount(1)
+        ->and($open[0]->state)->toBe('snoozed');
+});
+
+// The control. A live snooze still hides, so the branch above cannot be
+// reopening every snoozed alert.
+it('still hides a snooze that has not run out', function (): void {
+    anomQueryAlert($this->user, 'snoozed', 'spotify', [
+        'snoozed_until' => CarbonImmutable::parse('2026-07-01 09:00:00'),
+    ]);
+
+    expect($this->query->openForUser($this->user))->toHaveCount(0);
+});
+
 it('treats a snoozed-but-expired alert as open (revival-aware)', function (): void {
     anomQueryAlert($this->user, 'snoozed', 'spotify', [
         'snoozed_until' => CarbonImmutable::parse('2026-06-18 09:00:00'),

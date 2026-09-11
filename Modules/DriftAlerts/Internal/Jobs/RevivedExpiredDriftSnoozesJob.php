@@ -7,6 +7,7 @@ namespace Modules\DriftAlerts\Internal\Jobs;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -32,8 +33,9 @@ final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
 
         $rows = $db->connection()->table('drift_alerts')
             ->where('state', DriftAlertState::Snoozed->value)
-            ->whereNotNull('snoozed_until')
-            ->where('snoozed_until', '<=', $now)
+            ->where(static function (Builder $expiry) use ($now): void {
+                $expiry->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', $now);
+            })
             ->get(['id']);
 
         foreach ($rows as $row) {

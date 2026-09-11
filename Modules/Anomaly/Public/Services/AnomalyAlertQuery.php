@@ -217,8 +217,9 @@ final readonly class AnomalyAlertQuery
         $query->where('state', AnomalyAlertState::Open->value)
             ->orWhere(function (Builder $q) use ($now): void {
                 $q->where('state', AnomalyAlertState::Snoozed->value)
-                    ->whereNotNull('snoozed_until')
-                    ->where('snoozed_until', '<=', $now);
+                    ->where(static function (Builder $expiry) use ($now): void {
+                        $expiry->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', $now);
+                    });
             });
     }
 

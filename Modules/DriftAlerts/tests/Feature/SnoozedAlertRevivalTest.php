@@ -215,6 +215,28 @@ it('DriftAlertQuery::openForUser query-time conditional returns snoozed-but-expi
     expect($ids)->toContain($alert->id);
 });
 
+// Same merge-only state as the anomaly side: a revival's null expiry and a
+// re-snooze's state cross on the wire. Three readers asked for the expiry to be
+// present, so the alert was hidden, uncounted and never swept.
+it('reads a snooze with no expiry as one that has run out, everywhere it is read', function (): void {
+    $user = sarUser('sar-nulluntil');
+    $alert = sarAlert($user, state: 'snoozed', snoozedUntil: null);
+
+    /** @var DriftAlertQuery $query */
+    $query = app(DriftAlertQuery::class);
+
+    $ids = array_map(static fn ($r) => $r->driftAlertId, $query->openForUser($user));
+
+    expect($ids)->toContain($alert->id)
+        ->and($query->openCountForUser($user))->toBe(1);
+
+    /** @var RevivedExpiredDriftSnoozesJob $job */
+    $job = app(RevivedExpiredDriftSnoozesJob::class);
+    $job->handle(app(DatabaseManager::class), app(DriftAlertStateMachine::class), app(Clock::class));
+
+    expect(DriftAlert::query()->findOrFail($alert->id)->state)->toBe('open');
+});
+
 it('DriftAlertQuery::openCountForUser counts open + snoozed-but-expired', function (): void {
     $user = sarUser('sar-count');
     sarAlert($user, state: 'open');

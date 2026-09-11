@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Internal\Jobs;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -37,8 +38,9 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
 
         $db->connection()->table('anomaly_alerts')
             ->where('state', AnomalyAlertState::Snoozed->value)
-            ->whereNotNull('snoozed_until')
-            ->where('snoozed_until', '<=', $now)
+            ->where(static function (Builder $expiry) use ($now): void {
+                $expiry->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', $now);
+            })
             ->orderBy('id')
             ->select('id')
             ->lazyById(self::CHUNK)
