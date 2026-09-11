@@ -14,6 +14,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPaylo
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Throwable;
 
 final readonly class ScenarioSeriesResolver
 {
@@ -28,7 +29,7 @@ final readonly class ScenarioSeriesResolver
      */
     public function existingTemplateScenario(User $user, ScenarioTemplate $template, int $seriesId): ?array
     {
-        $row = $this->db->connection()->table('forecast_scenarios')
+        $rows = $this->db->connection()->table('forecast_scenarios')
             ->join(
                 'forecast_scenario_mutations',
                 'forecast_scenario_mutations.forecast_scenario_id',
@@ -39,20 +40,50 @@ final readonly class ScenarioSeriesResolver
             ->where('forecast_scenario_mutations.kind', $template->mutationKind()->value)
             ->where('forecast_scenario_mutations.target_series_id', $seriesId)
             ->orderBy('forecast_scenarios.id')
-            ->first([
+            ->get([
                 'forecast_scenarios.id as scenario_id',
                 'forecast_scenario_mutations.id as mutation_id',
+                'forecast_scenario_mutations.payload as payload',
             ]);
 
-        if ($row === null) {
+        foreach ($rows as $row) {
+            /** @var stdClass $row */
+            if ($this->seriesThePayloadNames($template, $row->payload ?? null) !== $seriesId) {
+                continue;
+            }
+
+            $scenarioId = is_numeric($row->scenario_id ?? null) ? (int) $row->scenario_id : 0;
+            $mutationId = is_numeric($row->mutation_id ?? null) ? (int) $row->mutation_id : 0;
+
+            if ($scenarioId !== 0) {
+                return ['scenarioId' => $scenarioId, 'mutationId' => $mutationId];
+            }
+        }
+
+        return null;
+    }
+
+    // `target_series_id` denormalises the payload, and per-field merge moves
+    // the two columns independently: two devices retargeting one mutation can
+    // leave the pointer naming one series while the payload acts on another.
+    // The applier dispatches on the payload, so the payload is the answer.
+    private function seriesThePayloadNames(ScenarioTemplate $template, mixed $payload): ?int
+    {
+        /** @var mixed $decoded */
+        $decoded = is_string($payload) && $payload !== '' ? json_decode($payload, true) : null;
+
+        if (! is_array($decoded)) {
             return null;
         }
 
-        /** @var stdClass $row */
-        $scenarioId = is_numeric($row->scenario_id ?? null) ? (int) $row->scenario_id : 0;
-        $mutationId = is_numeric($row->mutation_id ?? null) ? (int) $row->mutation_id : 0;
-
-        return $scenarioId === 0 ? null : ['scenarioId' => $scenarioId, 'mutationId' => $mutationId];
+        try {
+            return $this->targetSeriesIdFor($template->mutationKind()->payloadClass()::from($decoded));
+        } catch (Throwable) {
+            // A payload this build cannot read is one this lookup cannot claim
+            // is already there. Creating a second scenario is recoverable;
+            // handing back one that cancels another series is not.
+            return null;
+        }
     }
 
     public function existingScenarioIdByName(User $user, string $name): ?int
