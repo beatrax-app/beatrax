@@ -61,6 +61,7 @@ final readonly class OpLogBackfiller
         private MergeRulesRegistry $rules,
         private BackfillProgress $progress,
         private StoredRowPlaintext $plaintext,
+        private AnnouncedCreates $announced,
         private LoggerInterface $log,
     ) {}
 
@@ -202,7 +203,7 @@ final readonly class OpLogBackfiller
             }
 
             $rows = $this->scopedQuery($connection, $table, $userId, ['id'])->count();
-            $captured = $this->ownCreates($connection, $table, $userId)->distinct()->count('pk');
+            $captured = $this->announced->rowCount($userId, $table);
 
             if ($captured < $rows) {
                 $shortfall[$table] = ['rows' => $rows, 'captured' => $captured];
@@ -272,6 +273,11 @@ final readonly class OpLogBackfiller
             ->whereIn($table.'.id', $ids)
             ->orderBy($table.'.id')
             ->chunk(self::CHUNK, function ($rows) use ($table, $userId, $writer, &$captured): void {
+                // The same skip the walk makes, for the same reason: an import
+                // that re-reaches a row it already captured would announce a
+                // create the peer can only discard.
+                $already = $this->alreadyCaptured($table, $userId, $rows);
+
                 foreach ($rows as $row) {
                     /** @var array<string, mixed> $fields */
                     $fields = (array) $row;
@@ -279,6 +285,10 @@ final readonly class OpLogBackfiller
                     unset($fields['id']);
 
                     if (! is_int($pk) && ! is_string($pk)) {
+                        continue;
+                    }
+
+                    if (isset($already[(string) $pk])) {
                         continue;
                     }
 
@@ -290,36 +300,13 @@ final readonly class OpLogBackfiller
         return $captured;
     }
 
-    // The creates this device authored, and no one else's. A peer holds only
-    // the devices it paired with itself, so an op signed by a former peer is
-    // coverage here and unverifiable there — which left a replaced phone
-    // missing every row its predecessor wrote.
-    /**
-     * @return Builder
-     */
-    private function ownCreates(Connection $connection, string $table, int $userId)
-    {
-        return $connection->table('op_log_entries')
-            ->where('user_id', $userId)
-            ->where('table_name', $table)
-            ->where('op_type', OpType::CreateRow->value)
-            ->whereIn('device_id', static function (Builder $query) use ($userId): void {
-                $query->select('device_id')
-                    ->from('device_registry')
-                    ->where('user_id', $userId)
-                    ->where('is_self', 1);
-            });
-    }
-
     // Which of THIS chunk's rows already carry a create op a peer could
-    // actually verify, as a lookup keyed by pk. Asked per chunk rather than
-    // per table so neither the result set nor the IN list grows with the size
-    // of the table.
+    // actually verify, as a lookup keyed by pk.
     /**
      * @param  Collection<int, \stdClass>  $rows
      * @return array<string, true>
      */
-    private function alreadyCaptured(Connection $connection, string $table, int $userId, $rows): array
+    private function alreadyCaptured(string $table, int $userId, $rows): array
     {
         $pks = [];
         foreach ($rows as $row) {
@@ -329,23 +316,7 @@ final readonly class OpLogBackfiller
             }
         }
 
-        if ($pks === []) {
-            return [];
-        }
-
-        $found = $this->ownCreates($connection, $table, $userId)
-            ->whereIn('pk', $pks)
-            ->distinct()
-            ->pluck('pk');
-
-        $lookup = [];
-        foreach ($found as $pk) {
-            if (is_int($pk) || is_string($pk)) {
-                $lookup[(string) $pk] = true;
-            }
-        }
-
-        return $lookup;
+        return $this->announced->among($userId, $table, $pks);
     }
 
     private function captureUserSettings(Connection $connection, int $userId, OpLogWriter $writer): int
@@ -405,7 +376,7 @@ final readonly class OpLogBackfiller
         $query->orderBy($table.'.id')
             ->chunk(self::CHUNK, function ($rows) use ($connection, $table, $userId, $writer, $budget, &$captured): bool {
                 $written = $connection->transaction(
-                    fn (): int => $this->captureChunk($connection, $table, $userId, $writer, $budget !== null, $rows),
+                    fn (): int => $this->captureChunk($table, $userId, $writer, $budget !== null, $rows),
                     self::LOCK_ATTEMPTS,
                 );
 
@@ -427,14 +398,13 @@ final readonly class OpLogBackfiller
      * @param  Collection<int, \stdClass>  $rows
      */
     private function captureChunk(
-        Connection $connection,
         string $table,
         int $userId,
         OpLogWriter $writer,
         bool $resumable,
         $rows,
     ): int {
-        $already = $this->alreadyCaptured($connection, $table, $userId, $rows);
+        $already = $this->alreadyCaptured($table, $userId, $rows);
 
         $captured = 0;
         $lastPk = null;

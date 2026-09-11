@@ -171,6 +171,40 @@ skips a row on, so the audit can never call a row covered that the walk would st
   the missed table can sit anywhere in it, and a cursor pointing past it would never reach it
   again. Row-wise idempotence makes the re-walk two indexed reads per row already captured.
 
+## Announced once, whichever announcer arrives first
+
+Two things announce a row this device already holds, and they do not know about
+each other. The walk on this page reads the table. `DeferredOpCaptureDrain`
+replays a coordinate a keyless process left behind — the daily `recurring:detect`
+and `anomaly:detect` runs create rows at 00:00 holding no signing key, and the
+coordinate waits for the first request that can sign
+([a mutation a keyless process cannot
+sign](a-mutation-a-keyless-process-cannot-sign.md)). Where the walk reaches the
+row first, the drain used to announce it a second time.
+
+Measured on the paired desktop: the scheduler created 52 rows at 00:00:08, the
+walk announced them between 16:24:05 and 16:26:51, and the drain announced every
+one of them again at 18:16:59 — **438 create field-ops across `anomaly_alerts`,
+`recurring_series` and `recurring_series_occurrences`, which was the whole of
+what that tick wrote.** 436 of the install's 12,445 op-log entries were repeats
+of a create the same device had already published.
+
+None of that reaches a peer as anything. A create naming a row the receiver
+holds is answered by `SplitCreateTail`, which fills only the columns the stored
+row never received and refuses to talk over one that carries anything else —
+so a repeat can change nothing there by construction, and suppressing it can
+lose nothing either.
+
+`AnnouncedCreates` is the one place the question is asked, and all three
+announcers ask it: the walk's chunk, `captureRowsById()`, and the drain. It
+counts only the creates a **self** device signed, for the same reason the audit
+does — an op signed by a former peer is coverage here and unverifiable there.
+
+A column the earlier create never carried is the one thing still owed, and the
+drain announces it as a `Set` rather than as a second create. That is the same
+column a tail-fill would have reached, and a `Set` merges through the field
+strategy instead of depending on the receiver's row still being blank.
+
 ## Rows the walk does not take
 
 - **Device-local tables** (`categorization_rules`, `rule_conditions`, `rule_actions`) are never
@@ -188,4 +222,6 @@ skips a row on, so the audit can never call a row covered that the walk would st
   decrypted before it is written into the log.
 - [The peer session, from connect to close](peer-session-lifecycle.md) — how the captured
   history reaches a peer.
+- [A mutation a keyless process cannot sign](a-mutation-a-keyless-process-cannot-sign.md) — the
+  other announcer, and what it owes.
 - [Sync architecture](architecture.md).
