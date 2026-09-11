@@ -18,6 +18,7 @@ use Modules\Sync\Internal\Merge\RowHistoryPolicy;
 use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\ParentsAHeldRowNames;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
+use Modules\Sync\Internal\OpLog\QuarantinePassWindow;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
 use Modules\Sync\Public\Exceptions\SensitiveColumnKeyUnavailableException;
@@ -38,7 +39,7 @@ final readonly class HistoryReprojector
     /**
      * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#telling-not-yet-openable-apart-from-never-openable-here
      */
-    public const string PASS_REACH = '2026-09-11.key-union-unwrap';
+    public const string PASS_REACH = '2026-09-12.state-holds-reopen';
 
     public function __construct(
         private DatabaseManager $db,
@@ -48,6 +49,7 @@ final readonly class HistoryReprojector
         private Container $container,
         private RetriedCollisionCreates $collisions,
         private SealedProjectionReadiness $readiness,
+        private QuarantinePassWindow $window,
     ) {}
 
     // Readable with no app-lock key at all, which is what makes it usable as
@@ -129,7 +131,7 @@ final readonly class HistoryReprojector
         // Read BEFORE the replay so the ids name only holds that existed going
         // in. An op that fails again is recorded afresh by the pass itself,
         // under a new id, so retiring these cannot swallow the new answer.
-        $spent = $this->keyRecoverableHoldIds($userId, $session, $since, $lastFingerprint);
+        $spent = $this->answeredHoldIds($userId, $session, $since, $lastFingerprint);
 
         // forRows() already fetched every op of every row named, which is
         // exactly what a strategy has to resolve over.
@@ -140,20 +142,20 @@ final readonly class HistoryReprojector
         return $collisions['rows'] + count($rows);
     }
 
-    // Every hold the pass above replayed, which is what openableRows() names --
-    // asked here through that same method. Asked with an epoch predicate of its
-    // own, it missed the holds that name no epoch at all, so a strategy error
-    // was replayed on every pass and retired by nothing.
+    // Every hold the replay below took again, asked through the predicate that
+    // named them -- rows and reasons both. Narrowed on either, a reason is
+    // replayed by every pass and retired by none: an epoch predicate missed the
+    // holds naming none, and `keyRecoverable()` missed `split_sum_unreadable`.
     /**
      * @return list<int>
      */
-    private function keyRecoverableHoldIds(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
+    private function answeredHoldIds(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
     {
         $ids = [];
 
         $query = $this->withinPassWindow(
             $this->openableRows($userId, $session)
-                ->whereIn('reason', QuarantineReason::keyRecoverable()),
+                ->where('reason', '!=', QuarantineReason::PrimaryKeyCollision->value),
             $userId,
             $since,
             $lastFingerprint,
@@ -173,11 +175,11 @@ final readonly class HistoryReprojector
     // apart retires a hold that pass never gave an answer to.
     private function withinPassWindow(Builder $query, int $userId, ?string $since, ?string $lastFingerprint): Builder
     {
-        if ($since !== null && $this->passIdentity($userId) === $lastFingerprint) {
-            $query->where('created_at', '>', $since);
+        if ($since === null || $this->passIdentity($userId) !== $lastFingerprint) {
+            return $query;
         }
 
-        return $query;
+        return $this->window->narrow($query, $userId, $since);
     }
 
     /**
@@ -391,7 +393,7 @@ final readonly class HistoryReprojector
         $query = $this->recoverableQuarantine($userId);
 
         if ($since !== null) {
-            $query->where('created_at', '>', $since);
+            $query = $this->window->narrow($query, $userId, $since);
         }
 
         return $query->exists();
