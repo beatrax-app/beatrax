@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Har du mistet passordet ditt? Bruk en gjenopprettingskode.',
 
     'error_invalid' => 'Brukernavnet eller passordet er feil.',
+    'error_throttled' => 'For mange forsøk — prøv igjen om :wait.',
 ];

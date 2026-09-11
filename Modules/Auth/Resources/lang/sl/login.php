@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Si izgubil geslo? Uporabi kodo za obnovitev.',
 
     'error_invalid' => 'Uporabniško ime ali geslo ni pravilno.',
+    'error_throttled' => 'Preveč poskusov — poskusi znova čez :wait.',
 ];

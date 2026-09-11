@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Ți-ai pierdut parola? Folosește un cod de recuperare.',
 
     'error_invalid' => 'Numele de utilizator sau parola este incorect.',
+    'error_throttled' => 'Prea multe încercări — încearcă din nou peste :wait.',
 ];

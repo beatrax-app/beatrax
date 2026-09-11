@@ -81,6 +81,10 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Auth/Public/Actions/LoginAction.php',
         'Modules/Auth/Public/Actions/RegenerateRecoveryCodesAction.php',
         'Modules/Auth/Public/Actions/ResetPasswordAction.php',
+        // The declared throw type of LoginAction, which is Public, and a
+        // Public class may not name an Internal one. Caught inside Auth today
+        // because the only sign-in screen lives there.
+        'Modules/Auth/Public/Exceptions/SignInThrottled.php',
         'Modules/Budgets/Public/Dto/EnvelopeMoveRow.php',
         'Modules/Budgets/Public/Dto/EnvelopeRow.php',
         // The declared type of EnvelopeMoveRow::$kind. That DTO is Public and

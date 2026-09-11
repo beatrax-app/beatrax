@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Pamiršai slaptažodį? Naudok atkūrimo kodą.',
 
     'error_invalid' => 'Neteisingas naudotojo vardas arba slaptažodis.',
+    'error_throttled' => 'Per daug bandymų — bandyk dar kartą po :wait.',
 ];

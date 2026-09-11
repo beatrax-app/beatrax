@@ -206,6 +206,38 @@ user-enumeration oracle for a cheaper request, so it stays where it is and
 attempts per minute, keyed on the username as typed (so an unknown one is
 metered exactly like a known one) and cleared on a successful redemption.
 
+### Sign-in is metered the same way
+
+Recovery was the only guest credential with a cap. `/login` had none: one
+bcrypt check per submission, no counter, no lockout, no alert. The reasoning
+written above `FortifyServiceProvider` was that a local-only single-machine
+deployment makes the hash cost the whole defence — but a widened install is a
+supported shape and `deploy/server` documents a Docker deployment reachable off
+the machine, so on that shape the gate was reachable and unmetered.
+
+`Auth\Internal\Services\SignInThrottle` is the meter. The number is
+`GuestAttemptCap::PER_MINUTE`, which the recovery gate reads too: the two
+credentials reach the same account from the same screenless place, so they are
+one rule with one declaration rather than two that drift. It is keyed the same
+way as recovery: on the username as
+typed and normalised, so an unknown one is metered exactly like a known one and
+the counter answers nothing the constant failure message and the equalised hash
+refuse to answer in words. A successful sign-in clears it, so it is a ceiling on
+a machine's rate rather than a lockout a household can be walked into.
+
+**Both** sign-in paths consult it, because there are two. The Livewire form
+reaches `LoginAction`; a form posted before Livewire has booted goes through
+Fortify's own pipeline and never touches that action — the same split
+`PrimeAppLockSession` exists for. A limiter declared on the `/login` route
+would have covered neither: the Livewire submission arrives on
+`/livewire/update`, which route middleware on `/login` never sees.
+
+The two paths differ in what they can say. `LoginAction` throws
+`SignInThrottled` carrying the wait, and `LoginPage` renders it as its own
+message rather than folding it into `error_invalid` — a reader who is waiting
+and a reader who is wrong take different actions. Fortify has no channel for a
+wait, so a spent meter answers there exactly as a wrong password does.
+
 ### Handing the codes over
 
 The one-time display offers Copy codes and Download as .txt, and where the

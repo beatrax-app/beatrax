@@ -49,18 +49,6 @@ const REAL_ICS_MONTHS = [
 // by renaming rather than by merging.
 /** @var array<string, array{reason: string, sites: int, proves: array<string, list<string>>}> */
 const TUNING_NUMBER_PINS = [
-    'MAX_ATTEMPTS = 5' => [
-        'reason' => 'One bounds a guest route against enumeration; the other is how many booked-at nudges a manual entry may take before it gives up on a fingerprint collision. Merged, tuning the throttle would move a ledger write.',
-        'sites' => 2,
-        'proves' => [
-            'Modules/Auth/Public/Actions/ResetPasswordAction.php' => [
-                '/tooManyAttempts\(\$throttleKey, self::MAX_ATTEMPTS\)/',
-            ],
-            'Modules/CashBook/Internal/Actions/RecordManualTransaction.php' => [
-                '/for \(\$attempt = 0; \$attempt < self::MAX_ATTEMPTS; \$attempt\+\+\)/',
-            ],
-        ],
-    ],
     'MIN_OCCURRENCES = 2' => [
         'reason' => 'One counts sightings of an email sender, the other transactions forming a recurring series. EmailScan already single-sources its own within its module, which is the model; crossing into Recurring would tie a mailbox badge to a detector gate.',
         'sites' => 2,
