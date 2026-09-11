@@ -77,6 +77,7 @@ final readonly class TogglePin
                 ->table('saved_reports')
                 ->where('user_id', $user->id)
                 ->where('pinned', true)
+                ->whereNotNull('pin_order')
                 ->count();
 
             if ($pinnedCount >= self::MAX_PINS) {
@@ -92,6 +93,7 @@ final readonly class TogglePin
                 ->table('saved_reports')
                 ->where('user_id', $user->id)
                 ->where('pinned', true)
+                ->whereNotNull('pin_order')
                 ->max('pin_order');
             $nextOrder = self::toInt($maxOrder) + 1;
 
