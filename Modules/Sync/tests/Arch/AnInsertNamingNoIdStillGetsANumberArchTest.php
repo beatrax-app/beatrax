@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 
@@ -35,12 +36,15 @@ function modelClassesOverDerivedIdTables(): array
         }
 
         $source = (string) file_get_contents($path);
+        $class = basename($path, '.php');
         $declared = PatternScan::first("/protected \\\$table = '([a-z_]+)'/", $source);
-        $table = $declared[1] ?? null;
 
-        if (is_string($table)) {
-            $byTable[$table][] = basename($path, '.php');
-        }
+        // Most models here declare no $table and take Laravel's own name for
+        // it, so reading only the declaration would have left AnomalyAlert —
+        // the other table this rule covers — with no model at all.
+        $table = $declared[1] ?? Str::snake(Str::pluralStudly($class));
+
+        $byTable[$table][] = $class;
     }
 
     return $byTable;
@@ -200,7 +204,8 @@ it('reads a derived-id table, its model and a tree of writers', function (): voi
     // leave the rule walking nothing and reporting a clean pass.
     expect(in_array('known_senders', coveredTablesSqliteStillNumbers(), true))->toBeTrue();
 
-    expect(modelClassesOverDerivedIdTables()['known_senders'] ?? [])->toContain('KnownSender');
+    expect(modelClassesOverDerivedIdTables()['known_senders'] ?? [])->toContain('KnownSender')
+        ->and(modelClassesOverDerivedIdTables()['anomaly_alerts'] ?? [])->toContain('AnomalyAlert');
 
     expect(count(productionFilesThatCouldWriteARow()))->toBeGreaterThan(500);
 });
