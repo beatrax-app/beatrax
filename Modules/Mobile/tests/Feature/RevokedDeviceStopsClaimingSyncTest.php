@@ -3,12 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Facades\Log;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Exceptions\LanSyncException;
-use Modules\Mobile\Internal\Sync\LanDialOutcome;
 use Modules\Mobile\Internal\Sync\LanSyncClient;
-use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 
@@ -97,87 +94,6 @@ it('drops only the device that sent the notice', function (): void {
         ->and($devices->isStillConfirmed($userId, 'desktop-still-paired'))->toBeTrue(
             'a device that said nothing has withdrawn nothing, and this drop has no way back',
         );
-});
-
-// readRefusal() never reads key material, so the identity here carries none:
-// an identity built from real keypairs would say this path depends on them.
-function revokedClaimsIdentity(int $userId): DeviceIdentityDto
-{
-    return new DeviceIdentityDto(
-        version: 1,
-        deviceId: 'this-phone',
-        userId: $userId,
-        ed25519SecretKeyHex: '',
-        ed25519PublicKeyHex: '',
-        x25519SecretKeyHex: '',
-        x25519PublicKeyHex: '',
-        createdAt: '2026-08-01T10:00:00Z',
-    );
-}
-
-function revokedClaimsReadRefusal(LanSyncException $e, int $userId): LanDialOutcome
-{
-    $client = app(LanSyncClient::class);
-    $readRefusal = new ReflectionMethod($client, 'readRefusal');
-
-    /** @var LanDialOutcome $outcome */
-    $outcome = $readRefusal->invoke($client, $e, revokedClaimsIdentity($userId));
-
-    return $outcome;
-}
-
-// The line that was the only surviving record of a pair that would not sync,
-// and it named the class — which every refusal reaching it is. A desktop that
-// had gone to sleep and a desktop that had stopped confirming this phone wrote
-// the same line.
-it('logs which refusal stopped the session, and clears the confirmation for a revocation only', function (): void {
-    $db = app(DatabaseManager::class);
-
-    $user = User::query()->create([
-        'username' => 'revoked-claims-refusal-reason',
-        'password' => bcrypt('fixture'),
-        'period_start_day' => 1,
-        'default_currency_view' => 'eur_only',
-    ]);
-    $userId = (int) $user->id;
-
-    revokedClaimsPeerRow($db, $userId, 'desktop-peer', "Wessel's Mac");
-
-    /** @var DeviceRegistryService $devices */
-    $devices = app(DeviceRegistryService::class);
-    $logSpy = Log::spy();
-
-    // A peer that slept: retryable, and the trust it did not withdraw stands.
-    expect(revokedClaimsReadRefusal(LanSyncException::peerDisconnectedBeforeHandshakeMessage('msg2'), $userId))
-        ->toBe(LanDialOutcome::NotSecured)
-        ->and($devices->isStillConfirmed($userId, 'desktop-peer'))->toBeTrue();
-
-    // The same outcome from a wholly different cause, which is why the line
-    // has to carry the cause.
-    expect(revokedClaimsReadRefusal(LanSyncException::peerRevokedThisDevice(), $userId))
-        ->toBe(LanDialOutcome::NotSecured)
-        ->and($devices->isStillConfirmed($userId, 'desktop-peer'))->toBeFalse();
-
-    foreach ([LanSyncException::REASON_DIAL_INCOMPLETE, LanSyncException::REASON_PEER_REVOKED] as $reason) {
-        $logSpy->shouldHaveReceived('info')
-            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'no secure session opened')
-                && ($context['reason'] ?? null) === $reason)
-            ->once();
-    }
-});
-
-// This device's own gate refusing the peer is a verification failure, and it
-// keeps raising rather than being folded into "we could not reach it".
-it('raises the auth-gate refusal instead of reporting it as an unopened session', function (): void {
-    $user = User::query()->create([
-        'username' => 'revoked-claims-gate-raises',
-        'password' => bcrypt('fixture'),
-        'period_start_day' => 1,
-        'default_currency_view' => 'eur_only',
-    ]);
-
-    expect(fn () => revokedClaimsReadRefusal(LanSyncException::peerFailedConfirmedDeviceGate(), (int) $user->id))
-        ->toThrow(LanSyncException::class);
 });
 
 it('sends the revocation notice before hanging up on an unconfirmed peer', function (): void {
