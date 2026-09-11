@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Throwable;
 
@@ -22,6 +21,26 @@ final readonly class SplitSumHealthCheck
     // and the parent's own settled_amount_minor merges as plain LWW, so either
     // side of the equation can move on its own.
     private const int REPORT_AT_MOST = 20;
+
+    // The sum names the currency it counts with a where, and a leg group in a
+    // currency its transaction is not denominated in is caught beside it
+    // rather than added to it: minor units of two currencies are not a figure.
+    // Mirrors CategoryAttribution::PARENT_HOLDS_THE_AMOUNT, read the other way.
+    private const string LEGS_DISAGREE = <<<'SQL'
+        EXISTS (SELECT 1 FROM transaction_splits AS leg WHERE leg.transaction_id = transactions.id)
+        AND (
+            COALESCE((
+                SELECT SUM(leg.settled_amount_minor) FROM transaction_splits AS leg
+                 WHERE leg.transaction_id = transactions.id
+                   AND leg.settled_currency = transactions.settled_currency
+            ), 0) <> transactions.settled_amount_minor
+            OR EXISTS (
+                SELECT 1 FROM transaction_splits AS leg
+                 WHERE leg.transaction_id = transactions.id
+                   AND leg.settled_currency <> transactions.settled_currency
+            )
+        )
+        SQL;
 
     public function __construct(private DatabaseManager $db) {}
 
@@ -82,52 +101,24 @@ final readonly class SplitSumHealthCheck
     {
         $connection = $this->db->connection();
 
-        // Grouped by currency as well as transaction, because minor units of
-        // two currencies added together are not a figure. A leg group in a
-        // currency its transaction is not denominated in cannot add up to it,
-        // which is why the currency is compared rather than filtered on.
-        $legs = $connection->table('transaction_splits')
-            ->selectRaw('transaction_id, settled_currency, sum(settled_amount_minor) as leg_total')
-            ->groupBy('transaction_id', 'settled_currency');
+        $checked = $connection->table('transaction_splits')->distinct()->count('transaction_id');
+
+        if ($checked === 0) {
+            return [0, []];
+        }
 
         $rows = $connection->table('transactions')
-            ->joinSub($legs, 'legs', static fn (JoinClause $join): JoinClause => $join->on('legs.transaction_id', '=', 'transactions.id'))
-            ->orderBy('transactions.id')
-            ->get([
-                'transactions.id',
-                'transactions.settled_amount_minor',
-                'transactions.settled_currency',
-                'legs.settled_currency as leg_currency',
-                'legs.leg_total',
-            ]);
-
-        /** @var array<int, bool> $balanced */
-        $balanced = [];
-
-        foreach ($rows as $row) {
-            $id = self::toInt($row->id ?? null);
-
-            $agrees = self::toString($row->leg_currency ?? null) === self::toString($row->settled_currency ?? null)
-                && self::toInt($row->leg_total ?? null) === self::toInt($row->settled_amount_minor ?? null);
-
-            // A second group for one transaction is a second currency, so the
-            // first group's agreement no longer settles it.
-            $balanced[$id] = $agrees && ! array_key_exists($id, $balanced);
-        }
+            ->whereRaw(self::LEGS_DISAGREE)
+            ->orderBy('id')
+            ->limit(self::REPORT_AT_MOST)
+            ->get(['id']);
 
         $ids = [];
-        foreach ($balanced as $id => $agrees) {
-            if ($agrees) {
-                continue;
-            }
 
-            $ids[] = $id;
-
-            if (count($ids) >= self::REPORT_AT_MOST) {
-                break;
-            }
+        foreach ($rows as $row) {
+            $ids[] = self::toInt($row->id ?? null);
         }
 
-        return [count($balanced), $ids];
+        return [$checked, $ids];
     }
 }
