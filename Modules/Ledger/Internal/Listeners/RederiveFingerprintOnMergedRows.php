@@ -15,6 +15,9 @@ use stdClass;
 // announcement is not one op: each column takes its own HLC tick, so a merge
 // can seat the digest from one device beside values from the other. The row
 // then fails to match its own re-import and the statement lands twice.
+
+// A create is the other way that happens, and the commoner one: account_id is
+// translated to the id this device uses while the digest travels verbatim.
 /**
  * @link ../../../../.docs/features/sync/architecture.md#one-announcement-is-not-one-op
  */
@@ -41,7 +44,14 @@ final readonly class RederiveFingerprintOnMergedRows
 
     public function handle(PeerRowsApplied $event): void
     {
-        $pks = $event->updated[self::TABLE] ?? [];
+        // Created as well as updated. A peer's transaction arrives as a
+        // CreateRow, and translate() rewrites the account_id the digest was
+        // composed over on the way in -- so the row most in need of this was
+        // the one path it never read.
+        $pks = array_values(array_unique([
+            ...$event->created[self::TABLE] ?? [],
+            ...$event->updated[self::TABLE] ?? [],
+        ], SORT_REGULAR));
 
         if ($pks === []) {
             return;

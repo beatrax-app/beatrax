@@ -31,7 +31,7 @@ final class RederiveFingerprintsCommand extends Command
         $isDryRun = $this->option('dry-run') === true;
         $isConfirmed = $this->option('confirm') === true;
 
-        $outcome = $this->service->run(apply: $isConfirmed && ! $isDryRun);
+        $outcome = $this->service->run(apply: $isConfirmed && ! $isDryRun, includeStaleAtTarget: true);
 
         return $this->report($outcome);
     }
