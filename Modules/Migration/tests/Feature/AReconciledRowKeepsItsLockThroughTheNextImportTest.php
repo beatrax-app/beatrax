@@ -132,6 +132,7 @@ function lockTheJanuaryStatement(int $transactionId): int
         test()->user,
         $accountId,
         CarbonImmutable::parse('2026-01-15'),
+        'EUR',
     );
 }
 

@@ -225,6 +225,22 @@ carrying forward to the next open statement on the same account. This
 pass stays ICS-side because the Mijn ICS PDF does carry per-row refund
 entries — only the bulk-settlement entry is absent.
 
+Every one of those three reads is scoped to the closed statement's own
+currency, for the same reason step 1 refuses a payment in another money.
+The credit this pass writes is denominated in the statement, and
+`priorCreditsMinor()` sums it at face value against the next one, so a
+refund that settled in a different currency arrived there as its own
+integer wearing the statement's code: a ¥5,000 refund became a €50.00
+credit, and a €200.00 statement the reader paid €150.00 of settled on it.
+The original-purchase lookup was equally blind — an opposite-sign
+`settled_amount_minor` of the same magnitude in any money answered it —
+and the destination statement was taken without naming a currency at all,
+where every other caller of `nextOpenStatementId()` names one. Where the next
+open statement is in another money the pointer is now left null rather than
+parked on a statement `priorCreditsMinor()` will never count it against —
+`attachDanglingCredits()` closes it on the run a statement that can count it
+lands.
+
 `card_statement_credits` rows carry the surplus/refund amounts flowing
 between statements: `from_statement_id` is the source (the one that
 went overpaid or accepted a refund after close); `to_statement_id` is

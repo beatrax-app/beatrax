@@ -129,7 +129,7 @@ final class ReconcilePage extends Component
         }
 
         try {
-            $lockedCount = $writer->completeReconcile($user, $this->accountId, $date);
+            $lockedCount = $writer->completeReconcile($user, $this->accountId, $date, $statementCurrency);
         } catch (InvalidArgumentException) {
             // Foreign/missing accountId (IDOR) — silent no-op, mirrors the
             // cross-user convention used by PotWriter::archive et al.
@@ -206,7 +206,7 @@ final class ReconcilePage extends Component
             'statementCurrency' => $statementCurrency,
             'isReachable' => $reachable,
             'hasBaseline' => $this->hasRecordedBaseline($connection, $user->id, $ownedAccountId),
-            'lockableCount' => $this->lockableRowCount($connection, $user->id, $ownedAccountId, $statementDate),
+            'lockableCount' => $this->lockableRowCount($connection, $user->id, $ownedAccountId, $statementDate, $statementCurrency),
             'reconciledThrough' => $this->reconciledThrough($connection, $user->id, $ownedAccountId),
         ]);
 
@@ -219,8 +219,13 @@ final class ReconcilePage extends Component
     // instead of reported after it: a matched target over an empty candidate
     // set left Complete standing as the enabled primary action for a write
     // whose only possible answer was "nothing to lock".
-    private function lockableRowCount(ConnectionInterface $connection, int $userId, ?int $accountId, ?CarbonImmutable $statementDate): int
-    {
+    private function lockableRowCount(
+        ConnectionInterface $connection,
+        int $userId,
+        ?int $accountId,
+        ?CarbonImmutable $statementDate,
+        string $statementCurrency,
+    ): int {
         if ($accountId === null || $statementDate === null) {
             return 0;
         }
@@ -229,6 +234,7 @@ final class ReconcilePage extends Component
             ->where('user_id', $userId)
             ->where('account_id', $accountId)
             ->where('status', ClearedStatus::Cleared->value)
+            ->where('settled_currency', $statementCurrency)
             ->where('posted_at', '<=', $statementDate->toDateString())
             ->count();
     }

@@ -19,20 +19,20 @@ final readonly class ReconciliationWriter
         private TransactionStatusWriter $status,
     ) {}
 
-    // The reconcile flow's own vocabulary: an account and the balance date its
-    // statement was printed for. The account is this class's to vouch for; the
-    // column belongs to TransactionStatusWriter, which is the only thing in the
-    // tree that writes it.
+    // The reconcile flow's own vocabulary: an account, the day its statement was
+    // printed for, and the money it was printed in. The account is this class's
+    // to vouch for; the column belongs to TransactionStatusWriter, the only
+    // thing in the tree that writes it.
     /**
      * @return int the number of rows actually transitioned to `reconciled`
      *
      * @throws InvalidArgumentException when `$accountId` is not owned by `$user`.
      */
-    public function completeReconcile(User $user, int $accountId, CarbonImmutable $statementDate): int
+    public function completeReconcile(User $user, int $accountId, CarbonImmutable $statementDate, string $settledCurrency): int
     {
         $this->assertOwnedAccount($user, $accountId);
 
-        return $this->status->reconcileClearedUpTo($user, $accountId, $statementDate);
+        return $this->status->reconcileClearedUpTo($user, $accountId, $statementDate, $settledCurrency);
     }
 
     // A foreign or missing transaction id, or one not currently
