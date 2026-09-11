@@ -9,8 +9,9 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 // Orders the covered tables so parents are written before the rows that
-// reference them, derived from the live foreign keys rather than a
-// hand-maintained list.
+// reference them, read off the live foreign keys wherever they answer and off
+// the declarations below where a constraint was declined -- never off a
+// hand-kept list of all of them.
 
 // The rule groups are organised for readers, not for referential integrity:
 // transactions sit in the first group and the accounts they reference in the
@@ -18,6 +19,22 @@ use Throwable;
 // SQLite rejected the insert, aborting the catch-up.
 final readonly class CoveredTableOrder
 {
+    // Parent references the schema cannot be asked about. Each was left without
+    // a foreign key on purpose and for its own reason -- a counterparty leaving
+    // must not take its transaction history with it, and a series belongs to
+    // another module -- and that constraint is also what parentColumns() reads.
+
+    // So both ids arrived holding the number the PEER minted, naming whichever
+    // local row happens to hold it. Declared here rather than constrained,
+    // because the reasons the constraints were declined still stand.
+    /**
+     * @var array<string, array<string, string>>
+     */
+    private const array UNCONSTRAINED_PARENTS = [
+        'forecast_scenario_mutations' => ['target_series_id' => 'recurring_series'],
+        'transactions' => ['counterparty_id' => 'counterparties'],
+    ];
+
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
@@ -114,24 +131,8 @@ final readonly class CoveredTableOrder
      */
     public function parentColumns(string $table): array
     {
-        $covered = array_keys($this->rules->rules());
-        $columns = [];
-
         try {
-            $schema = $this->db->connection()->getSchemaBuilder();
-
-            if (! $schema->hasTable($table)) {
-                return [];
-            }
-
-            foreach ($schema->getForeignKeys($table) as $foreignKey) {
-                $target = $foreignKey['foreign_table'];
-                $column = $foreignKey['columns'][0] ?? null;
-
-                if (is_string($column) && $target !== $table && in_array($target, $covered, true)) {
-                    $columns[$column] = $target;
-                }
-            }
+            return $this->parentColumnsOrThrow($table);
         } catch (Throwable $e) {
             // Same posture as insertionOrder(): a schema that cannot be read
             // leaves the caller where it was rather than failing the write.
@@ -145,6 +146,41 @@ final readonly class CoveredTableOrder
 
             return [];
         }
+    }
+
+    // The same question, raising rather than answering nothing. dependencies()
+    // asks it this way so a schema that will not answer reaches insertionOrder()
+    // and is reported there as the fallback it really is, instead of thirty-nine
+    // tables each quietly reporting that they name no parent.
+    /**
+     * @return array<string, string> column => the covered table it names
+     *
+     * @throws Throwable when the schema will not answer
+     */
+    private function parentColumnsOrThrow(string $table): array
+    {
+        $covered = array_keys($this->rules->rules());
+        $columns = [];
+        $schema = $this->db->connection()->getSchemaBuilder();
+
+        if (! $schema->hasTable($table)) {
+            return [];
+        }
+
+        foreach ($schema->getForeignKeys($table) as $foreignKey) {
+            $target = $foreignKey['foreign_table'];
+            $column = $foreignKey['columns'][0] ?? null;
+
+            if (is_string($column) && $target !== $table && in_array($target, $covered, true)) {
+                $columns[$column] = $target;
+            }
+        }
+
+        foreach (self::UNCONSTRAINED_PARENTS[$table] ?? [] as $column => $target) {
+            if (in_array($target, $covered, true)) {
+                $columns[$column] = $target;
+            }
+        }
 
         return $columns;
     }
@@ -155,26 +191,14 @@ final readonly class CoveredTableOrder
      */
     private function dependencies(array $covered): array
     {
-        $schema = $this->db->connection()->getSchemaBuilder();
         $dependencies = [];
 
+        // Read through parentColumns() rather than the foreign keys directly, so
+        // a reference declared there because it carries no constraint is written
+        // down before the rows naming it, not merely translated once both are
+        // here. Self-references and uncovered targets are excluded there.
         foreach ($covered as $table) {
-            $parents = [];
-
-            if ($schema->hasTable($table)) {
-                foreach ($schema->getForeignKeys($table) as $foreignKey) {
-                    $target = $foreignKey['foreign_table'];
-
-                    // Self-references order themselves within one table, and
-                    // an uncovered target is either always present or already
-                    // reported by the merge-rules schema contract.
-                    if ($target !== $table && in_array($target, $covered, true)) {
-                        $parents[] = $target;
-                    }
-                }
-            }
-
-            $dependencies[$table] = array_values(array_unique($parents));
+            $dependencies[$table] = array_values(array_unique(array_values($this->parentColumnsOrThrow($table))));
         }
 
         return $dependencies;

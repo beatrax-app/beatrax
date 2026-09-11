@@ -84,10 +84,23 @@ function parentCaptureTransaction(): array
         'updated_at' => '2026-01-01 00:00:00',
     ]);
 
+    // Named by the transaction through a column carrying no foreign key, so
+    // the parent walk could not see it and the peer got the charge without the
+    // merchant it is filed under.
+    $counterpartyId = $connection->table('counterparties')->insertGetId([
+        'user_id' => $user->id,
+        'type' => 'merchant',
+        'display_name' => 'Albert Heijn',
+        'slug' => 'albert-heijn-'.bin2hex(random_bytes(3)),
+        'created_at' => '2026-01-01 00:00:00',
+        'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
     $transactionId = (int) $connection->table('transactions')->insertGetId([
         'user_id' => $user->id,
         'account_id' => $accountId,
         'category_id' => $categoryId,
+        'counterparty_id' => $counterpartyId,
         'import_run_id' => $runId,
         'type' => 'expense',
         'posted_at' => '2026-01-15',
@@ -163,4 +176,12 @@ it('emits every covered parent the schema says a transaction has', function (): 
     }
 
     expect($missing)->toBe([], 'parents named by a transaction but never captured: '.implode(', ', $missing));
+});
+
+it('emits the merchant a captured transaction is filed under', function (): void {
+    [$user] = parentCaptureTransaction();
+
+    // The category case beside this one was found the same way: the walk read
+    // the foreign keys, and a column without one was a parent nobody sent.
+    expect(parentCaptureTables($user))->toContain('counterparties');
 });

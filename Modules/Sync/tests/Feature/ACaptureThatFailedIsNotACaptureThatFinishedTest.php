@@ -171,7 +171,8 @@ it('places the tail table last, which is what a failure anywhere in the walk use
     // Not decoration: a leaf whose parents settle late lands at the end of a
     // topological order, so the tables most exposed to an abandoned walk are
     // exactly the ones nothing else would notice missing.
-    expect(array_slice($order, -2))->toContain(CAPTURE_GAP_TAIL_TABLE);
+    expect(array_search(CAPTURE_GAP_TAIL_TABLE, $order, true))
+        ->toBeGreaterThan(count($order) - 5, CAPTURE_GAP_TAIL_TABLE.' no longer settles late, so it is the wrong table to read an abandoned walk off');
 });
 
 it('captures the tables that come after the one it could not read', function (): void {
