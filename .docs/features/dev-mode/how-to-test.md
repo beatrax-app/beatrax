@@ -243,7 +243,10 @@ and the assertion — see
 - **`LogQueueLifecycle` writes `JobProcessed` / `JobFailed` to the
   laravel log.** Both the `database` queue driver and Horizon delete
   successful rows from the `jobs` table on completion; the
-  log is the visibility seam for the queue inspector.
+  log is the visibility seam for the queue inspector. The failure line
+  names the exception class and its SQLSTATE and not the message —
+  `AFailedJobSaysNothingItsBindingsCarriedTest` fails a job on a real
+  `QueryException` and asserts neither binding reaches the record.
 - **The SQL panel is SELECT-only.** The query parser refuses any
   statement whose first token is not `SELECT` / `WITH` (after
   whitespace + comment stripping).

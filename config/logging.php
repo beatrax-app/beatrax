@@ -21,9 +21,10 @@ return [
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
     ],
 
-    // Only the channels that write to the local log file tap
-    // PushRedactProcessor, which redacts the OAuth scrub set, Bearer tokens
-    // and JWTs before the formatter reaches disk.
+    // Every channel that can write anywhere taps PushRedactProcessor, which
+    // redacts the OAuth scrub set, Bearer tokens and JWTs before the formatter
+    // runs. It used to be the three file channels, which made redaction a
+    // property of a deployment shape: LOG_CHANNEL=stderr shipped unredacted.
     'channels' => [
 
         'stack' => [
@@ -52,6 +53,20 @@ return [
             'tap' => [PushRedactProcessor::class],
         ],
 
+        // Not ours: the framework's own config supplies this channel for any key
+        // config/logging.php leaves out, so it was reachable, writing to
+        // storage/logs, and tapping nothing. Declared here to carry the tap,
+        // and pointed at the same file `daily` uses with the same permission.
+        'monthly' => [
+            'driver' => 'monthly',
+            'path' => UserDataPathService::logsFile(),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'max_files' => 3,
+            'permission' => SecretFileMode::FILE,
+            'replace_placeholders' => true,
+            'tap' => [PushRedactProcessor::class],
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
@@ -59,7 +74,7 @@ return [
             'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
             'level' => env('LOG_LEVEL', 'critical'),
             'replace_placeholders' => true,
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
         'papertrail' => [
@@ -72,7 +87,7 @@ return [
                 'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
             ],
             'processors' => [PsrLogMessageProcessor::class],
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
         'stderr' => [
@@ -84,7 +99,7 @@ return [
             ],
             'formatter' => env('LOG_STDERR_FORMATTER'),
             'processors' => [PsrLogMessageProcessor::class],
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
         'syslog' => [
@@ -92,25 +107,28 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
             'replace_placeholders' => true,
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
         'errorlog' => [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
-            'tap' => [],
+            'tap' => [PushRedactProcessor::class],
         ],
 
+        // The two channels with no 'tap' key, each for its own reason. This one
+        // discards by construction, and NullHandler is not processable anyway,
+        // so the tap would be resolved and then skipped.
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,
         ],
 
-        // No 'permission' here on purpose: LogManager::createEmergencyLogger()
-        // constructs its StreamHandler with only a path and a level, so the key
-        // would read as a decision and change nothing. EnsurePrivateLogFiles
-        // narrows the whole logs directory instead, which is what covers this.
+        // No 'permission' and no 'tap' here on purpose: createEmergencyLogger()
+        // builds its StreamHandler from a path and a level and never calls
+        // tap(), so both keys would read as a decision and change nothing.
+        // EnsurePrivateLogFiles narrows the whole logs directory instead.
         'emergency' => [
             'path' => UserDataPathService::logsFile(),
         ],

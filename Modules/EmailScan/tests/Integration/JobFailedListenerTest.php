@@ -48,7 +48,7 @@ beforeEach(function (): void {
     ]);
 });
 
-it('BackfillInboxJob::failed() flips inbox_scan_state.status to error with truncated message', function (): void {
+it('BackfillInboxJob::failed() flips inbox_scan_state.status to error naming the class, not the message', function (): void {
     $job = new BackfillInboxJob(inboxId: $this->inboxId, windowMonths: 3);
     /** @var InboxScanStateMachine $sm */
     $sm = $this->app->make(InboxScanStateMachine::class);
@@ -67,12 +67,16 @@ it('BackfillInboxJob::failed() flips inbox_scan_state.status to error with trunc
         ->where('folder', 'INBOX')
         ->first(['status', 'error_message']);
 
+    // RuntimeException does not implement MessageNamesNoUserData, so the class
+    // name is what the column may hold: the message is where a QueryException
+    // would have written its bindings.
     expect($row)->not->toBeNull();
     expect($row->status)->toBe('error');
-    expect((string) $row->error_message)->toContain('Synthetic backfill failure');
+    expect((string) $row->error_message)->toBe('RuntimeException');
+    expect((string) $row->error_message)->not->toContain('Synthetic backfill failure');
 });
 
-it('IncrementalScanJob::failed() flips inbox_scan_state.status to error with truncated message', function (): void {
+it('IncrementalScanJob::failed() flips inbox_scan_state.status to error naming the class, not the message', function (): void {
     $job = new IncrementalScanJob(inboxId: $this->inboxId);
     /** @var InboxScanStateMachine $sm */
     $sm = $this->app->make(InboxScanStateMachine::class);
@@ -89,7 +93,8 @@ it('IncrementalScanJob::failed() flips inbox_scan_state.status to error with tru
 
     expect($row)->not->toBeNull();
     expect($row->status)->toBe('error');
-    expect((string) $row->error_message)->toContain('Synthetic incremental failure');
+    expect((string) $row->error_message)->toBe('RuntimeException');
+    expect((string) $row->error_message)->not->toContain('Synthetic incremental failure');
 });
 
 // What the swallow must NOT be is the only thing standing between a revoked
