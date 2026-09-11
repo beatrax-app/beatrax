@@ -57,8 +57,7 @@ final readonly class AlreadyPresentCreate
 
     // The stored row at that id is a different row, so the arriving one is not
     // here under any id. It is stored under a fresh one where a natural key
-    // can find it again, and quarantined where none can — which is the whole
-    // of what `primary_key_collision` still means.
+    // can find it again, and quarantined where none can.
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
@@ -78,7 +77,7 @@ final readonly class AlreadyPresentCreate
         $arriving = self::latestOf($fields);
 
         if ($arriving !== null) {
-            $this->quarantine->record($arriving, QuarantineReason::PrimaryKeyCollision, $now);
+            $this->quarantine->record($arriving, $this->refusal($table, $payload), $now);
             $deviceId = $arriving->deviceId;
         }
 
@@ -89,6 +88,20 @@ final readonly class AlreadyPresentCreate
         ]);
 
         return null;
+    }
+
+    // Which of the two halves of a collision this is, asked of the finder that
+    // decided: a table with no natural key can never take this row, so the
+    // verdict is terminal and disclosed, while a re-home the database refused
+    // is a hold a later pass takes again.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function refusal(string $table, array $payload): QuarantineReason
+    {
+        return $this->aliases->naturalKeyIdentifies($table, $payload)
+            ? QuarantineReason::PrimaryKeyCollision
+            : QuarantineReason::UnplaceableCollision;
     }
 
     /**

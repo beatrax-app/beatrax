@@ -74,6 +74,7 @@ enum QuarantineOutcome: string
                 QuarantineReason::DeleteBlockedByReference,
                 QuarantineReason::ImpossibleDate,
                 QuarantineReason::PrimaryKeyCollision,
+                QuarantineReason::UnplaceableCollision,
                 QuarantineReason::SplitWouldOverfillTransaction,
             ],
         };
