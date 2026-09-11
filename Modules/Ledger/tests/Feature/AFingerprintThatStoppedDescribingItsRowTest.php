@@ -170,3 +170,41 @@ it('stays inside the user the replay ran for', function (): void {
 
     expect(DB::table('transactions')->where('id', $txId)->value('fingerprint'))->toBe($before);
 });
+
+// A peer's transaction arrives as a CreateRow, not as a field merge, and the
+// applier translates its account_id to the one this device uses on the way in.
+// The digest is composed over that id and travels verbatim, so a created row
+// is the commonest way one stops describing itself -- and the listener read
+// only the updated map.
+it('recomposes a digest on a row the merge created, not only one it rewrote', function (): void {
+    $version = app(FingerprintComposer::class)->version();
+    $txId = fpdTransaction((int) $this->user->id, -1299, 'albert heijn', $version);
+
+    $stale = DB::table('transactions')->where('id', $txId)->value('fingerprint');
+
+    app('events')->dispatch(new PeerRowsApplied(
+        userId: (int) $this->user->id,
+        created: ['transactions' => [$txId]],
+    ));
+
+    expect(DB::table('transactions')->where('id', $txId)->value('fingerprint'))
+        ->not->toBe($stale)
+        ->and(DB::table('transactions')->where('id', $txId)->value('fingerprint'))
+        ->toBe(fpdExpected((int) $this->user->id, $txId));
+});
+
+// A row named in both maps is read once. The union is what makes that true,
+// and a second pass would be harmless but would hide a double announcement.
+it('reads a row named as both created and updated exactly once', function (): void {
+    $version = app(FingerprintComposer::class)->version();
+    $txId = fpdTransaction((int) $this->user->id, -1299, 'albert heijn', $version);
+
+    app('events')->dispatch(new PeerRowsApplied(
+        userId: (int) $this->user->id,
+        created: ['transactions' => [$txId]],
+        updated: ['transactions' => [$txId]],
+    ));
+
+    expect(DB::table('transactions')->where('id', $txId)->value('fingerprint'))
+        ->toBe(fpdExpected((int) $this->user->id, $txId));
+});
