@@ -639,6 +639,53 @@ first is recoverable, the second terminal and disclosed by
 finder's own question — `PeerRowAliases::naturalKeyIdentifies()` — so the
 reason is chosen by the same predicate that gated the re-home.
 
+#### An alias the answer could never find
+
+The three answers above are separated by one question put to
+`PeerRowAliases::localFor()`, and until now it was put to the wrong id.
+`applyCreatedRow()` resolves the peer's pk to the id this device uses before it
+inserts — rule 2 under [Build, translate, then judge, then
+write](#build-translate-then-judge-then-write) — and handed **that** id to
+`AlreadyPresentCreate::answer()`, which asked the alias map which local row it
+names. An alias is keyed by the id the *peer* minted, so the map was asked about
+a number no peer had ever used and answered nothing. The first branch could not
+be taken in precisely the case an alias existed to describe.
+
+What ran instead was the third. `contradicts()` compared the arriving row
+against the local row it **is** — one alert, opened independently by the
+detector on each device, so the two birth times differ and `detected_at` differs
+with them — concluded a different row wears the id, and re-homed. The re-home
+insert was then refused by `anomaly_alerts_uniq` against that same row, and the
+verdict recorded was `primary_key_collision`.
+
+It is a treadmill rather than a loss, which is why it survived the pass that was
+built to clear it: the *first* replay of a create takes the branch, because
+`remember()` has just written the alias and the id in hand is still the peer's.
+Every replay after that is handed the resolved id and refuses. A retry pass
+retires all eight holds and records all eight again.
+
+Measured on the paired Mac and Galaxy A51 on 2026-09-12, after the pass that
+took 65 holds to 8: all eight that remained were `anomaly_alerts`, all eight
+already carried an alias, and the local row that alias names was present for all
+eight. Hold `1929229273309390028` is the desktop's alert on its transaction 211;
+the alias translates the charge to local transaction 40 and the alert to local
+`7688329760185376051`, which is this device's alert on that same charge, for the
+same `latest_amount_minor` of -27698. It is symmetric, which is the tell: the
+desktop holds a hold naming remote `953974957274267463` against local
+`3620284585551316360`, and the phone holds its mirror image. One alert, refused
+on both devices at once, each against the other's id, while each already held
+the translation between them.
+
+`Internal\Merge\ArrivingRowId` carries both numbers across the seam now — the
+one the peer minted and the one the row is addressed by here — so each question
+is put to the id it is about: the alias map and the re-home's `rememberAs()` to
+the peer's, the content comparison and the tail fill to this device's.
+
+**Nothing on disk has to move.** The alias rows the refused passes already wrote
+are the translation, so a fixed build places these creates on the next pass with
+no migration. Re-deriving the local ids instead would move a primary key with no
+tombstone behind it, and the peer resurrects the old row.
+
 ### Retrying a create two devices minted one id for
 
 `primary_key_collision` is in `QuarantineReason::recoverable()`. It was not

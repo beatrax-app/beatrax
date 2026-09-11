@@ -34,11 +34,15 @@ final readonly class AlreadyPresentCreate
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
      */
-    public function answer(string $table, array $payload, array $fields, string $now, string $deviceId, int|string $pk, int $userId): int|string|null
+    public function answer(string $table, array $payload, array $fields, string $now, string $deviceId, ArrivingRowId $id, int $userId): int|string|null
     {
-        $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
+        $this->aliases->remember($table, $deviceId, $id->peer, $payload, $userId);
 
-        $local = $this->aliases->localFor($table, $deviceId, $pk, $userId);
+        // Both put to the id the PEER minted, never the one the applier already
+        // resolved it to. An alias is keyed by the remote id, so asking with the
+        // local one asks for an alias no device could have recorded -- which is
+        // the case precisely when an alias is what made the two ids differ.
+        $local = $this->aliases->localFor($table, $deviceId, $id->peer, $userId);
 
         if ($local !== null) {
             // For the reason the branch below fills, and at the id this device
@@ -47,25 +51,28 @@ final readonly class AlreadyPresentCreate
             // to carry, permanently: nothing comes back through this branch.
             $this->tail->fill($table, $local, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
 
-            return $this->aliases->resolvePk($table, $deviceId, $pk, $userId);
+            return $this->aliases->resolvePk($table, $deviceId, $id->peer, $userId);
         }
 
-        if (! $this->collisions->contradicts($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields))) {
+        // The content comparison and the fill below are about the row the insert
+        // was refused BY, so both name the id here.
+        if (! $this->collisions->contradicts($table, $id->here, $payload, $userId, SuppliedCreationTime::seededValueFor($fields))) {
             // The same row, so this is the create arriving again — and a
             // transport that splits one row's ops across two frames makes the
             // second half look exactly like that. Returning here without it
             // dropped every column the first half did not carry.
-            $this->tail->fill($table, $pk, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
+            $this->tail->fill($table, $id->here, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
 
-            return $pk;
+            return $id->here;
         }
 
-        return $this->rehomeOrRefuse($table, $payload, $fields, $now, $deviceId, $pk, $userId);
+        return $this->rehomeOrRefuse($table, $payload, $fields, $now, $deviceId, $id->peer, $userId);
     }
 
     // The stored row at that id is a different row, so the arriving one is not
     // here under any id. It is stored under a fresh one where a natural key
-    // can find it again, and quarantined where none can.
+    // can find it again, and quarantined where none can. Takes the peer's id:
+    // the alias the re-home records is read back by that, and by nothing else.
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, list<OpLogEntry>>  $fields
