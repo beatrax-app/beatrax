@@ -31,6 +31,7 @@ use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\InvalidStateTransitionException;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
+use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
@@ -424,11 +425,18 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
     // so only a condition a later attempt could clear may leave through it.
     private function transitionOnScanError(InboxScanStateMachine $sm, Throwable $e): void
     {
-        $terminal = $e instanceof InvalidGrantException || $e instanceof InboxNotConfiguredException;
+        // A refresh call that comes back revoked is the ordinary end of a
+        // grant and the one failure a reader can act on. Landed on `error` it
+        // kept its place in the scheduler's `!= needs_reauth` filter, so every
+        // tick spent another refresh on a grant that was gone.
+        $terminal = $e instanceof InvalidGrantException
+            || $e instanceof InboxNotConfiguredException
+            || $e instanceof ReconsentRequiredException;
 
         match (true) {
             $e instanceof RateLimitedException => $sm->applyRateLimited($this->inboxId, $e->retryAfterSeconds),
-            $e instanceof InvalidGrantException => $sm->applyStatus(
+            $e instanceof InvalidGrantException,
+            $e instanceof ReconsentRequiredException => $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::NeedsReauth->value,
                 'OAuth grant revoked or expired.',
