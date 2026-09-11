@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Backup;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Exceptions\BackupIoException;
+use Modules\Core\Public\Services\LiveConnectionPurge;
 use SQLite3;
 
 // Replacing a WAL database means replacing the `-wal` beside it, and no restore
@@ -20,6 +21,7 @@ final readonly class LiveDatabaseTransplant
     public function __construct(
         private DatabaseManager $db,
         private Filesystem $files,
+        private LiveConnectionPurge $purge,
     ) {}
 
     /**
@@ -90,7 +92,7 @@ final readonly class LiveDatabaseTransplant
             $resolved = realpath($configured);
 
             if ($configured === $livePath || ($target !== false && $resolved === $target)) {
-                $this->db->purge($name);
+                $this->purge->purge($name);
             }
         }
     }

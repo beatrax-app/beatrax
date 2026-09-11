@@ -1660,14 +1660,29 @@ device the directory already exists and both calls are no-ops.
    `UserDataPathService::databaseFile()` path. The connection otherwise targets
    `…/Library/Application Support/…` while the accessor resolves
    `…/Documents/app/…` — two divergent, both-unmigrated files, which surfaces
-   as `no such table: sessions`.
+   as `no such table: sessions`. It retires the connection through
+   `LiveConnectionPurge`, never `DatabaseManager::purge()` on its own: providers
+   have already booted by here, so the cache store holds the very connection a
+   bare purge would strand — see
+   [a purged connection two services still hold](../core/a-purged-connection-two-services-still-hold.md).
 2. **Recreates the `storage/framework` tree** the native app-copy strips
    (views, cache, sessions), then drives session and cache through the
-   reconciled database rather than the filesystem: the build caches config with
+   reconciled database rather than the filesystem: the cached config carries
    file paths that do not exist at runtime, so a file-backed session or cache
    500s every request. `view.compiled` is the exception — Blade genuinely needs
    a directory, and an empty value raises "Please provide a valid cache path."
    on every render.
+
+   That config cache is written **on the device**, not by the build: the Android
+   shell runs `optimize:clear`, `migrate --force` and then `config:cache` once
+   per process (`LaravelEnvironment.runBaseArtisanCommands`), because the paths
+   a host would freeze are the wrong ones. `config:cache` boots the application
+   before it dumps, so the overrides this hook sets are *in* the dump. Every
+   later boot therefore loads `cache.default = database` and
+   `session.driver = database` at config-load time, whatever `.env` says — and
+   `.env` is not even read once a cached config exists. A shipped
+   `CACHE_STORE=file` has no effect on this root, and reading the store off
+   `.env` is reading the wrong file.
 3. **Boots `NativeMobileAppServiceProvider`** and runs
    `MobileFirstLaunchBootstrap`.
 

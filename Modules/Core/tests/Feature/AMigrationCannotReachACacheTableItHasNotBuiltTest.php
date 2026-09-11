@@ -6,12 +6,13 @@ use Illuminate\Cache\DatabaseStore;
 use Illuminate\Cache\Repository as CacheRepositoryImpl;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Config;
 use Modules\Core\Internal\Listeners\ForgetNavCountsOnWrite;
 use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\NavCountsService;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerTrait;
 
 // Mobile has no `sqlite3` binary, so MigrateCommand's schema-dump shortcut is
 // unavailable to it: MobileFirstLaunchBootstrap drives the Migrator directly
@@ -33,7 +34,7 @@ use Modules\Core\Public\Services\NavCountsService;
 // left RefreshDatabase holding a connection that no longer existed — every
 // later test in that worker then failed in its own setUp. A cache store with
 // no table behind it is the same fault the phone hit, and it costs nothing.
-function listenerOverACachelessStore(MigrationWindow $window): ForgetNavCountsOnWrite
+function listenerOverACachelessStore(MigrationWindow $window, LoggerInterface $log): ForgetNavCountsOnWrite
 {
     $file = sys_get_temp_dir().'/cacheless-'.bin2hex(random_bytes(5)).'.sqlite';
     touch($file);
@@ -55,7 +56,27 @@ function listenerOverACachelessStore(MigrationWindow $window): ForgetNavCountsOn
     return new ForgetNavCountsOnWrite(
         new NavCountsService($db, new CacheRepositoryImpl($store), app(Clock::class)),
         $window,
+        $log,
     );
+}
+
+/**
+ * @return LoggerInterface&object{lines: list<string>}
+ */
+function cachelessStoreLog(): LoggerInterface
+{
+    return new class implements LoggerInterface
+    {
+        use LoggerTrait;
+
+        /** @var list<string> */
+        public array $lines = [];
+
+        public function log($level, string|Stringable $message, array $context = []): void
+        {
+            $this->lines[] = (string) $message;
+        }
+    };
 }
 
 function theTableRebuildStatement(): QueryExecuted
@@ -73,17 +94,24 @@ function theTableRebuildStatement(): QueryExecuted
 it('does not reach for the cache table while a migration is building it', function (): void {
     $window = new MigrationWindow;
     $window->open();
+    $log = cachelessStoreLog();
 
-    listenerOverACachelessStore($window)->handle(theTableRebuildStatement());
-})->throwsNoExceptions();
+    listenerOverACachelessStore($window, $log)->handle(theTableRebuildStatement());
+
+    expect($log->lines)->toBe([], 'inside the window the bump is not attempted at all');
+});
 
 it('still invalidates the badges for an ordinary write once the run is over', function (): void {
     $window = new MigrationWindow;
     $window->open();
     $window->close();
+    $log = cachelessStoreLog();
 
     // The same statement, outside the window, reaches a cache table that is
-    // not there — which is exactly what killed the first-launch run.
-    expect(fn () => listenerOverACachelessStore($window)->handle(theTableRebuildStatement()))
-        ->toThrow(QueryException::class);
+    // not there — which is exactly what killed the first-launch run. It is
+    // reported rather than raised now: the listener runs inside somebody
+    // else's statement, and raising here refuses a write that had succeeded.
+    listenerOverACachelessStore($window, $log)->handle(theTableRebuildStatement());
+
+    expect($log->lines)->toHaveCount(1, 'outside the window the bump IS attempted, and its failure is said out loud');
 });

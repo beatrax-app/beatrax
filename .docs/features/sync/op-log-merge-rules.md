@@ -319,6 +319,20 @@ The three apply passes run inside one `transaction()` scoped to `$userId`. Three
   [What an arriving row announces](#what-an-arriving-row-announces). It runs last of the
   three: it is the only step that hands control to another module.
 
+A fourth thing runs inside it that nothing in the merge asked for: every
+statement the three passes issue is read by `ForgetNavCountsOnWrite`, Core's
+`QueryExecuted` listener, which bumps the sidebar badge generation in the cache.
+That listener is dispatched from `Connection::logQuery()` — *after* the statement
+it is reading has already succeeded, and outside the `try` that turns a driver
+error into a `QueryException`. Anything it raises is therefore attributed to the
+merge's own write, as a raw `PDOException` the per-op catches are not looking
+for. On the phone, where the cache is the database store and it opened a
+transaction of its own, that took down the whole replay: 367 received ops applied
+nothing and 47 rows were held behind creates that never landed. The bump is now
+contained where it runs — a badge five minutes stale is the cost of a failure
+there, and a refused merge is not. The condition that made it fail at all is
+[a purged connection two services still hold](../core/a-purged-connection-two-services-still-hold.md).
+
 Search freshness can therefore never fail a replay. Each index call is individually guarded,
 and a failure is reported as a warning naming the row, the operation and `search:reindex` —
 a stale index recovers on the next write or on that rebuild, a half-applied replay does not.

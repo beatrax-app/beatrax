@@ -18,6 +18,7 @@ use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Bootstrap\EnsurePrivateDatabaseFile;
 use Modules\Core\Public\Bootstrap\EnsurePrivateLogFiles;
+use Modules\Core\Public\Services\LiveConnectionPurge;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LivewireClientRefusal;
@@ -181,7 +182,7 @@ return Application::configure(basePath: dirname(__DIR__))
             SqliteDatabase::livePathKey($config),
             $canonicalDb,
         );
-        $app->make('db')->purge(SqliteDatabase::connectionName($config));
+        $app->make(LiveConnectionPurge::class)->purge(SqliteDatabase::connectionName($config));
 
         // The native app-copy strips storage/framework, so at config-load
         // realpath(storage_path('framework/views')) is false, view.compiled
