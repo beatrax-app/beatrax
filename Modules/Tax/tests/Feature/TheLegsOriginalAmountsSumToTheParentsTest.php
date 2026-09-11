@@ -309,12 +309,13 @@ it('leaves an untagged leg out of the reader\'s column while the parent\'s full 
     expect($column)->toBe([$tagged => -1001]);
 });
 
-// The denominator is the parent's whole leg set, read straight off
-// transaction_splits by transaction id. The ids handed to it are already this
-// reader's, so nothing foreign has reached it -- but a leg is a money row and
-// the query that weighs one must say whose it is, because the share every other
-// leg is given moves when the sum does.
-it('weighs the parent against this readers legs alone', function (): void {
+// The denominator is the parent's whole leg set, and whose it is comes from the
+// parent: `transactions.user_id` is NOT NULL and the op-log applier forces it on
+// every arriving row, while `transaction_splits.user_id` is a nullable copy no
+// reader should take as the authority. A row whose copy disagrees is corrupt in
+// the copy, not in the relationship: it is still that parent's leg, and the
+// legs of a parent sum to the parent.
+it('weighs the parent against every leg the parent has', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
@@ -331,18 +332,14 @@ it('weighs the parent against this readers legs alone', function (): void {
 
     expect(loasOriginalColumnByLeg($owner->id))->toBe([$tagged => -2203]);
 
-    // A leg on this reader's transaction carrying somebody else's user_id. The
-    // writer keys a leg to its parent's owner, so this is the shape a second
-    // one would have to produce -- and if it reached the weights, the tagged
-    // leg's share of its own parent would fall to -1500.
+    // The mislabelled copy. Dropping this leg would leave the shares summing
+    // to more than the parent they were taken from.
     loasLeg($db, $stranger->id, $txId, loasSpendCategory($db, $stranger->id), -1277, 2);
 
-    expect(loasOriginalColumnByLeg($owner->id))->toBe([$tagged => -2203]);
+    expect(loasOriginalColumnByLeg($owner->id))->toBe([$tagged => -1500]);
 });
 
-// A leg written before user_id was denormalised onto the table has none, and it
-// hangs off a transaction already narrowed to this reader. Dropping it would be
-// the same defect the other way round: a denominator missing one of its own.
+// A leg written with no copy at all reads the same way, for the same reason.
 it('keeps a leg that names no owner in the parents own weights', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
