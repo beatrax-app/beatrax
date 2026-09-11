@@ -58,8 +58,9 @@ final readonly class IncomeSeriesDetector implements SeriesDetector
     ) {}
 
     // The floor is an amount in the reader's money: a ¥250,000 stipend worth
-    // about €1,571 carried the integer 250000 past a floor meaning €2,000. A
-    // currency no rate reaches keeps the reader's integer, as before.
+    // about €1,571 carried the integer 250000 past a floor meaning €2,000.
+    // Unfloored where no rate reaches, never floored by a number meaning
+    // nothing in that currency.
     /**
      * @return array<string, int>
      *
@@ -83,14 +84,21 @@ final readonly class IncomeSeriesDetector implements SeriesDetector
         $floor = Money::tryOfMinor($readerMinor, $readerCurrency);
         $floors = [];
         foreach ($currencies as $currency) {
-            if ($currency === $readerCurrency || $floor === null) {
+            if ($currency === $readerCurrency) {
                 $floors[$currency] = $readerMinor;
 
                 continue;
             }
 
-            $converted = $this->fx->convert($floor, $currency, $this->fx->ratesTo([$readerCurrency], $currency));
-            $floors[$currency] = $converted?->toMinor() ?? $readerMinor;
+            $converted = $floor === null
+                ? null
+                : $this->fx->convert($floor, $currency, $this->fx->ratesTo([$readerCurrency], $currency));
+
+            // Zero is this setting's own word for "no floor", so a floor that
+            // cannot be expressed here switches off rather than standing in as
+            // the reader's integer. AnomalyEvaluator::floorIn() answers the
+            // same question the same way; the two used to disagree.
+            $floors[$currency] = $converted?->toMinor() ?? 0;
         }
 
         return $floors === [] ? [$readerCurrency => $readerMinor] : $floors;
