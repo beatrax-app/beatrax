@@ -135,11 +135,22 @@ final readonly class SystemAlertWriter
         $connection = $this->db->connection();
         $stamped = 0;
 
-        $connection->transaction(static function () use ($connection, $alertId, $stamp, &$stamped): void {
-            $stamped = $connection->table('system_alerts')
+        $connection->transaction(static function () use ($connection, $alertId, $userId, $stamp, &$stamped): void {
+            $row = $connection->table('system_alerts')
                 ->where('id', $alertId)
-                ->whereNull('acknowledged_at')
-                ->update(['acknowledged_at' => $stamp]);
+                ->whereNull('acknowledged_at');
+
+            // ForUser in the name, and the predicate to match. The one caller
+            // resolves the row through SystemAlertQuery::visibleTo() first, so
+            // this changes nothing today; a second caller that forgot would
+            // have stamped a row belonging to somebody else.
+            if ($userId === null) {
+                $row->whereNull('user_id');
+            } else {
+                $row->where('user_id', $userId);
+            }
+
+            $stamped = $row->update(['acknowledged_at' => $stamp]);
         });
 
         if ($stamped === 0) {
