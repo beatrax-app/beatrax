@@ -34,12 +34,26 @@ it('reads the PayPal figure the message labelled, not the digits inside its tran
 
     $outcome = $matcher->match(referenceEml('service@paypal.com', implode("\n", [
         'Merchant: Nintendo',
-        'Amount: 12.99',
+        'Amount: EUR 12,99',
         'Transaction ID: PAYPALTXNUSD00001',
     ])));
 
     expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed)
-        ->and($outcome->parsed?->amountMinor)->toBe(-1299);
+        ->and($outcome->parsed?->amountMinor)->toBe(-1299)
+        ->and($outcome->parsed?->currency)->toBe(Currency::Eur->value);
+});
+
+it('does not fall back to the transaction id when the message denominates nothing', function (): void {
+    $matcher = new PaypalReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
+
+    $outcome = $matcher->match(referenceEml('service@paypal.com', implode("\n", [
+        'Merchant: Nintendo',
+        'Amount: 12.99',
+        'Transaction ID: PAYPALTXNUSD00001',
+    ])));
+
+    expect($outcome->kind)->toBe(MatchOutcomeKind::Unmatched)
+        ->and($outcome->parsed)->toBeNull();
 });
 
 it('reads the ICS figure the message marked, not the digits inside its reference', function (): void {

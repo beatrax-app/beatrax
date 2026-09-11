@@ -74,7 +74,7 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
         return in_array($domain, self::ICS_DOMAINS, true);
     }
 
-    public function match(string $emlRaw, ?string $ownerCurrency = null): MatchOutcomeDto
+    public function match(string $emlRaw): MatchOutcomeDto
     {
         $parsed = $this->reader->read($emlRaw);
         $body = $this->resolveBody($parsed);
