@@ -7457,6 +7457,54 @@ measured by position: a registration written before the script first mentions
 there, and keep the listener as the fallback for the page that loads before
 Alpine exists.
 
+## A template names a store the script never registered
+
+`tests/Contracts/AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest.php`
+
+Alpine keeps three registries and `x-data` reaches exactly one of them. A
+component factory is named there and nowhere else, which is why the rule above
+reads that one attribute. A store and a magic are reachable from every
+expression on the page — `$store.overlay.add('drawer')` in an `x-on:click`,
+`$plural(…)` in an `x-text` — and nothing read those at all. Fifteen
+registrations in `resources/js`, six of them stores and magics, and the only
+template-side question anybody asked was about the nine.
+
+The silence is the one the two rules above are named for, and a shade worse. A
+store nothing registered reads back `undefined`, so the property access after it
+throws inside the expression: Alpine logs it and the click handler does nothing.
+A magic nothing registered is not defined at all, so the call throws on the way
+in and the text node keeps whatever the server rendered. Neither reaches the
+server, neither is written anywhere a test opens, and both return 200.
+
+Nothing was missing on the day the gap was found — `overlay`, `mobileNav`,
+`platform`, `plural` and `line` were all registered and all in the bundle, and
+the fourth store, `beatraxLock`, is read only from `lock.js` itself. What was
+missing was the question. A typo in `$store.overlayy`, a store deleted from
+`app.js` while a template still read it, and the four-day-old bundle that
+shipped the notification-bridge failure would each have gone straight past.
+
+The kind is asked beside the name. The registries are separate, so a name
+written into the data registry is not reachable as `$store.x` and a store is not
+callable as `$x()`; asking only whether the name appears somewhere in the bundle
+would accept a template reading the wrong one of the three.
+
+Two readings are declined on purpose, and both were false offenders in the first
+draft. A `:prop="$fn($row)"` on a Blade component tag is PHP the compiler
+evaluates rather than JavaScript the browser runs — this repository defines
+closures in `@php` blocks and passes them exactly that way, and `$archiveQuestion`
+and `$rowSecondary` reported as unregistered magics. A call inside a Blade echo
+is the same refusal spelled differently: `x-text="'{{ $money($row) }}'"` hands
+the browser the result and never the call, so the value is put through
+`BladePhpSource` and its islands subtracted before what is left is read as
+JavaScript. `$wire.$set('a', 1)` names no magic either — the `$` is reached
+through a dot, which is the whole of what separates a magic from the methods
+Livewire hangs off `$wire`.
+
+What the rule reads is measured rather than assumed: 686 Alpine expressions
+across the 282 templates, beside the 112 `x-data` values the rule above reads. A
+count that collapses is a scan that stopped, and both rules fail on it before
+they report a clean tree.
+
 ## Redaction that was a property of three channels
 
 `tests/Contracts/AShippedLogChannelRedactsBeforeItWritesArchTest.php`
