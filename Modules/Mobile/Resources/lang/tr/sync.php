@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Diğer cihazınla senkronize edildi.',
         'unreachable' => 'Diğer cihazına ulaşılamadı — ikisinin de aynı ağda olduğundan emin ol.',
+        'not_secured' => 'Diğer cihazın yanıt verdi ama onunla güvenli bir bağlantı açılamadı. O cihazda Beatrax\'ın kilidini aç ve yeniden dene; yine olmazsa iki cihazı yeniden eşleştir.',
         'locked' => 'Senkronize etmek için uygulamanın kilidini aç.',
         'not_enabled' => 'Senkronizasyon bu cihazda henüz kurulmadı.',
         'unreadable' => 'Bu cihazın anahtarı artık açılmıyor. Senkronizasyonu sürdürmek için yeniden eşleştir.',

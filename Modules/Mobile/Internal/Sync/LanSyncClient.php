@@ -50,16 +50,15 @@ final readonly class LanSyncClient
     ) {}
 
     /**
-     * @return bool `true` on a completed catch-up exchange; `false` for any
-     *              retryable outcome. An unconfirmed peer key still throws.
+     * @throws LanSyncException when this device's own gate refuses the peer.
      */
-    public function syncOnce(string $host, int $port, DeviceIdentityDto $identity, Session $session): bool
+    public function syncOnce(string $host, int $port, DeviceIdentityDto $identity, Session $session): LanDialOutcome
     {
         $peerStaticHex = $this->resolvePeerStaticKeyHex($identity);
         if ($peerStaticHex === null) {
             $this->logger?->info('LanSyncClient: no confirmed LAN peer key yet — skipping (retryable).');
 
-            return false;
+            return LanDialOutcome::NotReached;
         }
 
         return $this->runExchange($host, $port, $identity, $session, $peerStaticHex);
@@ -71,7 +70,7 @@ final readonly class LanSyncClient
         DeviceIdentityDto $identity,
         Session $session,
         string $peerStaticHex,
-    ): bool {
+    ): LanDialOutcome {
         $uri = "ws://{$host}:{$port}/";
         $connection = null;
 
@@ -101,23 +100,9 @@ final readonly class LanSyncClient
 
             $syncSession->close();
 
-            return true;
+            return LanDialOutcome::Synced;
         } catch (LanSyncException $e) {
-            // An incomplete dial is the same condition as the block below and
-            // rethrowing it put an error page in front of a reader whose other
-            // device had merely gone to sleep. A revocation cannot be retried
-            // either, so both answer false and only a refusal still raises.
-            if ($e->isDialIncomplete()) {
-                $this->logger?->info('LanSyncClient: LAN dial did not complete (retryable).', [
-                    'reason' => $e::class,
-                ]);
-            } elseif ($e->isPeerRevocation()) {
-                $this->forgetRevokedPeer($identity->userId, $this->resolvePeerDeviceId($identity));
-            } else {
-                throw $e;
-            }
-
-            return false;
+            return $this->readRefusal($e, $identity);
         } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {
             // The first LAN connect per install can hit the iOS Local Network
             // Privacy gate, which reads as a clean timeout or refusal before
@@ -126,10 +111,32 @@ final readonly class LanSyncClient
                 'reason' => $e::class,
             ]);
 
-            return false;
+            return LanDialOutcome::NotReached;
         } finally {
             $connection?->close();
         }
+    }
+
+    // Every refusal here reached the peer: the WebSocket was open and the Noise
+    // session is what did not open. Rethrowing an incomplete dial once put an
+    // error page in front of a reader whose other device had merely gone to
+    // sleep, so only this device's own gate still raises.
+    /**
+     * @throws LanSyncException
+     */
+    private function readRefusal(LanSyncException $e, DeviceIdentityDto $identity): LanDialOutcome
+    {
+        if ($e->isPeerRevocation()) {
+            $this->forgetRevokedPeer($identity->userId, $this->resolvePeerDeviceId($identity));
+        } elseif (! $e->isDialIncomplete()) {
+            throw $e;
+        }
+
+        $this->logger?->info('LanSyncClient: the peer answered and no secure session opened.', [
+            'reason' => $e::class,
+        ]);
+
+        return LanDialOutcome::NotSecured;
     }
 
     // Best-effort notice sent on the raw Noise session, since SyncSession is

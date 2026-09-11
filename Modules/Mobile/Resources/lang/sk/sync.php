@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Synchronizované s druhým zariadením.',
         'unreachable' => 'Druhé zariadenie je nedostupné — skontroluj, či sú obe v rovnakej sieti.',
+        'not_secured' => 'Tvoje druhé zariadenie odpovedalo, ale nepodarilo sa s ním nadviazať zabezpečené spojenie. Odomkni na ňom Beatrax a skús to znova; ak to stále zlyháva, spáruj obe zariadenia nanovo.',
         'locked' => 'Odomkni aplikáciu a spusť synchronizáciu.',
         'not_enabled' => 'Synchronizácia na tomto zariadení zatiaľ nie je nastavená.',
         'unreadable' => 'Kľúč tohto zariadenia sa už nedá otvoriť. Spáruj znova a obnov synchronizáciu.',

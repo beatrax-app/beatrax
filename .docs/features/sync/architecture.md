@@ -1825,9 +1825,48 @@ On signal receipt: stop the WS server and the mDNS advertiser, then return
 service container — the binding in `SyncServiceProvider` provides the device
 credentials resolved from `DeviceIdentityLoader` at container resolve-time.
 When no identity is available (fresh install, app locked), the injected
-handler carries empty placeholder credentials and closes all incoming
-connections at the auth gate. The NativePHP `persistent:true` host
-auto-restarts the command after setup completes.
+handler carries empty placeholder credentials. The NativePHP `persistent:true`
+host auto-restarts the command after setup completes.
+
+### A listener without its identity
+
+The empty placeholder credentials do not fail at the auth gate — they fail one
+step earlier, inside the Noise handshake, because the responder has no static
+secret to decrypt msg1 with. The daemon therefore **accepts the connection**,
+logs `SyncWebSocketHandler: Noise handshake failed.` with a
+`CryptoOperationFailedException`, and closes. Measured on the desktop install
+on 2026-09-11: the phone's dial reached `101 Switching Protocols` and the
+handshake was refused a second later.
+
+This is a state the design reaches on purpose — the boot spawn happens before
+the app is unlocked, and the sealed identity cannot be opened until it is — so
+two things follow from it.
+
+**The dialling side must report it as what it is.** A peer that answered and
+then refused the handshake is a verification failure (E6-R10), not an
+unreachable one (E6-R9). `Modules\Mobile\Internal\Sync\LanDialOutcome` carries
+that distinction out of `LanSyncClient`, and `MobileSyncTriggerService` turns it
+into `SyncAttemptOutcome::NotSecured` rather than `Unreachable`. Reported as
+unreachable, the one sentence the reader got told them to check a network the
+connection had already proved was fine.
+
+**The restart that replaces it has to prove it happened.**
+`Modules\Desktop\Internal\Native\SyncListenerProcess` hands the credentials over
+on unlock by stopping the alias and starting it again. The shell frees an alias
+on the child's *exit* event, not when the stop is issued, so a start arriving in
+that window is answered with the entry still registered under the alias — the
+previous, keyless settings — and nothing new runs. The same call answers a start
+it cannot serve with a body that is not a process, which
+`ChildProcess::fromRuntimeProcess()` reads as an array offset on `null`.
+
+So the start is only treated as a success when the shell reports the device id
+back in the environment it recorded. When it does not, the credentialled-device
+cache key is forgotten and the failure is logged, which leaves the next
+reconcile seeing a mismatch and trying again. Nothing retries on a timer:
+`startIfEnabled()` runs at desktop boot, on `DeviceSyncEnabled`, on
+`AppLockUnlocked` and on `SyncTransportCredentialsAvailable`, and on nothing
+else — a failed restart therefore stays failed until one of those happens
+again.
 
 **Pairing-offer route.** `PairingOfferRequestHandler` is mounted in front of
 the `Websocket` handler and serves exactly one route, `GET /pair/offer`,

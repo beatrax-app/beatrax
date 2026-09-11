@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Sincronizat cu celălalt dispozitiv.',
         'unreachable' => 'Celălalt dispozitiv nu poate fi contactat — verifică dacă amândouă sunt în aceeași rețea.',
+        'not_secured' => 'Celălalt dispozitiv a răspuns, dar nu s-a putut deschide o conexiune securizată cu el. Deblochează Beatrax pe acel dispozitiv și încearcă din nou; dacă tot nu merge, împerechează din nou cele două dispozitive.',
         'locked' => 'Deblochează aplicația pentru a sincroniza.',
         'not_enabled' => 'Sincronizarea nu este încă configurată pe acest dispozitiv.',
         'unreadable' => 'Cheia acestui dispozitiv nu se mai deschide. Asociază din nou pentru a relua sincronizarea.',

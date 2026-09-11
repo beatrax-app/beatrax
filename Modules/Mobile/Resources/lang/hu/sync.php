@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Szinkronizálva a másik eszközöddel.',
         'unreachable' => 'A másik eszköz nem érhető el — ellenőrizd, hogy mindkettő ugyanazon a hálózaton van-e.',
+        'not_secured' => 'A másik eszközöd válaszolt, de nem sikerült biztonságos kapcsolatot nyitni vele. Oldd fel a Beatraxot azon az eszközön, és próbáld újra; ha továbbra sem sikerül, párosítsd újra a két eszközt.',
         'locked' => 'Oldd fel az appot a szinkronizáláshoz.',
         'not_enabled' => 'A szinkronizálás még nincs beállítva ezen az eszközön.',
         'unreadable' => 'Ennek az eszköznek a kulcsa már nem nyílik. Párosítsd újra a szinkronizálás folytatásához.',

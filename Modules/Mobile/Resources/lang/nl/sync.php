@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Gesynchroniseerd met je andere apparaat.',
         'unreachable' => 'Geen verbinding met je andere apparaat — controleer of beide op hetzelfde netwerk zitten.',
+        'not_secured' => 'Je andere apparaat reageerde wel, maar er kon geen beveiligde verbinding mee worden geopend. Ontgrendel Beatrax op dat apparaat en probeer het opnieuw; blijft het misgaan, koppel de twee apparaten dan opnieuw.',
         'locked' => 'Ontgrendel de app om te synchroniseren.',
         'not_enabled' => 'Synchroniseren is nog niet ingesteld op dit apparaat.',
         'unreadable' => 'De sleutel op dit apparaat opent niet meer. Koppel opnieuw om te blijven synchroniseren.',
