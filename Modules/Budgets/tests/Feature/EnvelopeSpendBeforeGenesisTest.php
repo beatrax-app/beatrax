@@ -137,5 +137,5 @@ it('converts spend in another currency before it reaches the figures it reports'
 
     expect($row->spentMinor)->toBe(25441 + 10593)
         ->and($row->availableMinor)->toBe(-(25441 + 10593))
-        ->and($row->unconvertedSpentMinor)->toBe(0);
+        ->and($row->unconvertedSpentCurrencies)->toBe([]);
 });

@@ -64,7 +64,7 @@ empty too is there no anchor to walk from, and what comes back then is
 not zeroes. `unstartedRows()` reads this period's real spend per category,
 so a category already spending against nothing assigned returns a negative
 `availableMinor`, counts toward `overspentCount`, and carries the same
-`unconvertedSpentMinor` split the fold applies; "Ready to assign" is the
+`unconvertedSpentCurrencies` split the fold applies; "Ready to assign" is the
 period's own income, because carry and assigned are both nought
 pre-genesis and income is all the fold would have had to add. An
 all-zero result told a reader with a month's pay banked that they had
@@ -93,12 +93,15 @@ the pool. Envelopes are held in the user's base currency, and settled
 spend the ledger holds in another currency is converted into it at the
 rate table's rate and folded into `spentMinor` like any other spend — a
 USD Google Play charge counts against its envelope. What does not fold in
-is spend in a currency the rate table cannot *reach* at all: that is
-summed separately into `EnvelopeRow::$unconvertedSpentMinor` so the grid
-can surface it rather than silently drop it or count it at one to one.
-Because that residue may mix several unreachable currencies it is only
-ever a "there is spend not shown here" signal, never an authoritative
-amount.
+is spend in a currency the rate table cannot *reach* at all: those codes
+are listed in `EnvelopeRow::$unconvertedSpentCurrencies` so the grid can
+surface it rather than silently drop it or count it at one to one. It is
+the codes and not their minor units because a signal that is a sum across
+currencies can cancel: a bucket of XPF 1,000 against a return of ARS 10.00
+added to nought, and the "there is spend not shown here" dot went out over
+about EUR 8 the fold had left out. A code is listed only where its own
+bucket is non-zero — a currency whose spend and returns net to nothing is
+not money the total is missing.
 
 `CarryoverQuery` is bound as a request-lifetime singleton so the grid, the
 sticky "Ready to assign" header, and the dashboard glance card share one

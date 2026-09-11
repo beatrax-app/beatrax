@@ -9,6 +9,10 @@ use Spatie\LaravelData\Data;
 
 final class EnvelopeRow extends Data
 {
+    /**
+     * @param  list<string>  $unconvertedSpentCurrencies  codes whose spend the rate
+     *                                                    table could not price into $currency, so $spentMinor leaves them out
+     */
     public function __construct(
         public readonly int $categoryId,
         public readonly string $categoryName,
@@ -19,7 +23,7 @@ final class EnvelopeRow extends Data
         public readonly int $availableMinor,
         public readonly OverspendMode $overspendMode,
         public readonly string $currency,
-        public readonly int $unconvertedSpentMinor = 0,
+        public readonly array $unconvertedSpentCurrencies = [],
         public readonly int $notifyThresholdPercent = 90,
         // $categoryName is already resolved for whoever asked. These two carry
         // the provenance behind it, so a nudge built in a queue worker can
