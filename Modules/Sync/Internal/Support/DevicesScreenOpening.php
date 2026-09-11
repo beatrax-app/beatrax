@@ -90,7 +90,7 @@ final readonly class DevicesScreenOpening
                 $userId,
                 $session,
                 $this->markers->historyReprojectedAt($userId),
-                $this->markers->reprojectedKeyringFingerprint($userId),
+                $this->markers->reprojectedPassIdentity($userId),
             );
         } catch (Throwable) {
             // The markers are left where they were, so the next open retries.
@@ -113,7 +113,7 @@ final readonly class DevicesScreenOpening
                 $userId,
                 $session,
                 $this->markers->historyReprojectedAt($userId),
-                $this->markers->reprojectedKeyringFingerprint($userId),
+                $this->markers->reprojectedPassIdentity($userId),
             );
         } catch (Throwable) {
             return SyncBacklogState::None;

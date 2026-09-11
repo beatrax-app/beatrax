@@ -41,7 +41,12 @@ final readonly class SealedLedgerRecovery
 
         $digest = PlaintextResidueSweep::columnsDigest();
         $fingerprint = $this->reprojector->keyringFingerprint($userId);
-        $lastFingerprint = $this->markers->reprojectedKeyringFingerprint($userId);
+        // Two questions, deliberately not one value. The index repair asks
+        // which keyring failed it; the re-projection asks whether anything
+        // that decided its last answer has moved, and this build reaching
+        // further than the one that stamped the watermark is such a thing.
+        $passIdentity = $this->reprojector->passIdentity($userId);
+        $lastPass = $this->markers->reprojectedPassIdentity($userId);
         $since = $this->markers->historyReprojectedAt($userId);
 
         $needsReseal = $this->markers->resealedColumnsDigest($userId) !== $digest;
@@ -52,7 +57,7 @@ final readonly class SealedLedgerRecovery
         // Deliberately the cheap, epoch-blind question. The exact one needs the
         // keyring, and asking it here would make every page load of an enrolled
         // device decrypt a key file to learn there is nothing to do.
-        $mayHaveWork = $fingerprint !== $lastFingerprint
+        $mayHaveWork = $passIdentity !== $lastPass
             || $this->reprojector->hasUnexaminedQuarantine($userId, $since);
 
         if (! $needsReseal && ! $mayHaveWork && ! $needsIndexRepair) {
@@ -64,7 +69,7 @@ final readonly class SealedLedgerRecovery
         }
 
         if ($mayHaveWork) {
-            $this->replayQuarantined($userId, $session, $since, $lastFingerprint, $fingerprint);
+            $this->replayQuarantined($userId, $session, $since, $lastPass, $passIdentity);
         }
 
         if ($needsReseal) {
@@ -81,18 +86,18 @@ final readonly class SealedLedgerRecovery
 
     // The marks move whether or not anything replayed. A pass that found only
     // entries this device holds no key for has answered the question for THIS
-    // keyring, and re-asking it every request is the recurring full replay this
-    // seam exists to stop.
+    // keyring and THIS reach, and re-asking it every request is the recurring
+    // full replay this seam exists to stop.
     private function replayQuarantined(
         int $userId,
         Session $session,
         ?string $since,
-        ?string $lastFingerprint,
-        ?string $fingerprint,
+        ?string $lastPass,
+        ?string $passIdentity,
     ): void {
-        $replayed = $this->reprojector->replayQuarantined($userId, $session, $since, $lastFingerprint);
+        $replayed = $this->reprojector->replayQuarantined($userId, $session, $since, $lastPass);
 
-        $this->markers->markHistoryReprojected($userId, $fingerprint);
+        $this->markers->markHistoryReprojected($userId, $passIdentity);
 
         if ($replayed > 0) {
             $this->log->info(

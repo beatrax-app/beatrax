@@ -175,9 +175,10 @@ it('keeps a hold the pass did not replay', function (): void {
         ->where('user_id', $userId)->where('id', '>', $stale)
         ->update(['created_at' => '2026-09-03 00:00:00']);
 
-    // The same fingerprint the pass reads, so the keyring counts as unmoved
-    // and the window is the caller's stamp rather than "everything".
-    $fingerprint = app(HistoryReprojector::class)->keyringFingerprint($userId);
+    // The same identity the pass would stamp, so neither the keyring nor this
+    // build's reach counts as moved and the window is the caller's stamp
+    // rather than "everything".
+    $fingerprint = app(HistoryReprojector::class)->passIdentity($userId);
 
     app(HistoryReprojector::class)
         ->replayQuarantined($userId, $session, '2026-09-02 00:00:00', $fingerprint);
