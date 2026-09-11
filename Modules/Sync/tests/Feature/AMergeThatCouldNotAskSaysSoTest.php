@@ -130,9 +130,10 @@ it('says so when the row a create would land on cannot be read', function (): vo
         mergeFaultDb(),
         app(SensitiveFieldRegistry::class),
         mergeFaultLogger('was not checked against it'),
+        new RowOwnership(mergeFaultDb()),
     );
 
-    expect($collisions->contradicts('transactions', 1, ['amount_minor' => 100]))->toBeFalse();
+    expect($collisions->contradicts('transactions', 1, ['amount_minor' => 100], 1))->toBeFalse();
 });
 
 it('says so when it cannot tell whether the row is already here', function (): void {
