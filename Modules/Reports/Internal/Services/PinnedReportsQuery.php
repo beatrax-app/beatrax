@@ -25,12 +25,14 @@ final readonly class PinnedReportsQuery
     public function forUser(User $user): array
     {
         /** @var iterable<stdClass> $rows */
-        // saved_reports replicates, and pin_order carries no UNIQUE, so two
-        // devices pinning at once converge on one value. Without the id
-        // tiebreak the MAX_PINS cut drops a different report on each.
+        // pin_order carries no UNIQUE, so two devices pinning at once converge
+        // on one value and the id tiebreak is what stops the MAX_PINS cut
+        // dropping a different report on each. Both columns are required
+        // because either alone can cross: a pin pressed again costs less.
         $rows = $this->db->connection()->table('saved_reports')
             ->where('user_id', $user->id)
             ->where('pinned', true)
+            ->whereNotNull('pin_order')
             ->orderBy('pin_order')
             ->orderBy('id')
             ->limit(self::MAX_PINS)
