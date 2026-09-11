@@ -14,6 +14,7 @@ use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogRebuilder;
+use Modules\Sync\Internal\OpLog\RebuildWouldLoseRowsException;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Throwable;
 
@@ -68,6 +69,22 @@ final class SyncRebuildCommand extends Command
     {
         try {
             $this->rebuilderFor($userId)->rebuild($userId);
+        } catch (RebuildWouldLoseRowsException $e) {
+            // Not an error the operator can retry into. A console run holds no
+            // group data key, so every encrypted create is refused and the rows
+            // it deleted cannot come back -- which is why this is checked
+            // before the commit rather than reported after it.
+            $this->error('Rebuild was rolled back: the replay did not restore every row it deleted. Nothing changed.');
+
+            foreach ($e->missingByTable as $table => $count) {
+                $this->line(sprintf('  %-32s %d row(s) not restored', $table, $count));
+            }
+
+            foreach ($e->quarantinedByReason as $reason => $count) {
+                $this->line(sprintf('  refused: %-24s %d op(s)', $reason, $count));
+            }
+
+            return self::FAILURE;
         } catch (Throwable $e) {
             // Rolled back already, so this says what happened rather than
             // warning about a half-rebuilt database. Described rather than

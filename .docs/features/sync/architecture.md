@@ -770,6 +770,44 @@ on `']`) and `(int) $accountId` (a cast in front, which only `$entry->id` ever
 survived because `->` gave it a second way in). A ternary between two ids would
 still slip; nothing writes one.
 
+### A rebuild has to prove it restored what it deleted
+
+`sync:rebuild` deletes every row the log can recreate and replays the log over
+them. Rehearsed against a copy of a real paired install (9,946 ops, 174
+transactions), the replay did not put them all back:
+
+| refused as | ops |
+|---|---|
+| `gdk_decrypt_failed` | 703 |
+| `incomplete_create_row` | 42 |
+| `strategy_error` | 19 |
+
+A console command has no unlocked session and therefore no group data key, so
+every encrypted create is refused. 19 transactions and 42 counterparties were
+deleted and not restored. That contradicts **E1-R6** outright — the database is
+not reproducible by replaying the log from scratch on that install.
+
+It had never committed that outcome, for a reason unrelated to any of it. The
+delete aborts on a foreign key first: derived tables such as
+`recurring_series_occurrences`, `forecast_runs` and the `*_transitions` audit
+tables are not captured, so they carry no create op, are not in
+`fkSafeDeletionOrder()`, and still reference rows that are. Nine such
+relationships dangle on that install, 51 rows. The operator saw
+`QueryException (23000)` and nothing else.
+
+**An unrelated constraint firing first is not a guard.** So the foreign keys
+are now deferred to the commit — ordering cannot help, because the child is not
+in the order — and the rebuild instead records every id it removed and requires
+each one back before committing. A row counts as restored when it is present
+again, when `op_log_row_aliases` says this device minted another id for it, or
+when the log carries a tombstone naming it, which is the replay working rather
+than failing. Anything else raises `RebuildWouldLoseRowsException` and rolls the
+whole transaction back, reporting the missing counts per table beside the
+refusals that caused them.
+
+The command still cannot rebuild that install. It now says so, and changes
+nothing, instead of depending on a foreign key to notice for it.
+
 ### Capture listener (`Internal\Listeners\SyncCaptureListener`)
 
 Routes each module's `*Mutated` events to the `OpLogWriter`. Wired in

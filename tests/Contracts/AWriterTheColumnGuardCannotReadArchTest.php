@@ -182,18 +182,25 @@ it('reads a write whose table is not a literal', function (): void {
     $viaConstant = "<?php \$c->table(Searched::DOCS)->insert(['a' => 1]);";
     $viaArgument = '<?php $this->ownership->scopeToUser($q, $table, $userId)->update($values);';
 
+    // The builder assigned first and written two statements later. Reading one
+    // statement at a time cannot see the table that made it.
+    $viaHeldBuilder = "<?php \$q = \$c->table(\$name)->where('user_id', 1); \$rows = \$q->clone()->pluck('id'); \$q->delete();";
+
     expect(SyncedColumnWrites::namesItsTableIndirectly($viaVariable))->toBeTrue()
         ->and(SyncedColumnWrites::namesItsTableIndirectly($viaMethod))->toBeTrue()
         ->and(SyncedColumnWrites::namesItsTableIndirectly($viaConstant))->toBeTrue()
-        ->and(SyncedColumnWrites::namesItsTableIndirectly($viaArgument))->toBeTrue();
+        ->and(SyncedColumnWrites::namesItsTableIndirectly($viaArgument))->toBeTrue()
+        ->and(SyncedColumnWrites::namesItsTableIndirectly($viaHeldBuilder))->toBeTrue();
 
     // The three shapes that are NOT this: a literal, a literal with an alias,
     // and a $table that only ever reads.
     $literal = "<?php \$c->table('accounts')->where('id', 1)->update(['a' => 1]);";
     $aliased = "<?php \$c->table('categories as c')->where('id', 1)->update(['a' => 1]);";
     $readOnly = "<?php \$row = \$c->table(\$table)->where('id', 1)->first(); \$c->table('accounts')->update(['a' => 1]);";
+    $heldLiteral = "<?php \$q = \$c->table('accounts')->where('id', 1); \$q->delete();";
 
     expect(SyncedColumnWrites::namesItsTableIndirectly($literal))->toBeFalse()
         ->and(SyncedColumnWrites::namesItsTableIndirectly($aliased))->toBeFalse()
-        ->and(SyncedColumnWrites::namesItsTableIndirectly($readOnly))->toBeFalse();
+        ->and(SyncedColumnWrites::namesItsTableIndirectly($readOnly))->toBeFalse()
+        ->and(SyncedColumnWrites::namesItsTableIndirectly($heldLiteral))->toBeFalse();
 });

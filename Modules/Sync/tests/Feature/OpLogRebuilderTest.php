@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpLogRebuilder;
 use Modules\Sync\Internal\OpLog\OpType;
+use Modules\Sync\Internal\OpLog\RebuildWouldLoseRowsException;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Psr\Log\LoggerInterface;
 
@@ -529,4 +530,116 @@ it('owes the index doc of a row the rebuild could not re-index', function (): vo
 
     expect($db->connection()->table('search_index_repairs')->where('transaction_id', $txnId)->exists())
         ->toBeTrue('the rebuild left the row unfindable with nothing owed for it');
+});
+
+// The rebuild deletes every row the log can recreate before it replays. So a
+// create the replay cannot apply is not a failed op, it is a row that was here
+// and now is not -- and the delete has already happened.
+/**
+ * @param  list<OpLogEntry>  $entries
+ */
+function rebuildGuardPersist(DatabaseManager $db, int $userId, array $entries): void
+{
+    foreach ($entries as $index => $entry) {
+        $db->connection()->table('op_log_entries')->insert([
+            'user_id' => $userId,
+            'device_id' => $entry->deviceId,
+            'table_name' => $entry->table,
+            'pk' => (string) $entry->pk,
+            'field' => $entry->field,
+            'op_type' => $entry->opType->value,
+            'value' => $entry->value,
+            'hlc_l' => $entry->hlcL,
+            'hlc_c' => $index,
+            'signature' => $entry->signature,
+            'recorded_at' => '2026-06-15 10:00:00',
+        ]);
+    }
+}
+
+/** @return list<OpLogEntry> */
+function rebuildGuardCreates(DeviceKeySigner $signer, string $sk, int $userId, int $pk): array
+{
+    return [
+        rebuildSignedEntry($signer, $sk, $userId, 'categorization_rules', $pk, 'id', (string) $pk, OpType::CreateRow, 1000),
+        rebuildSignedEntry($signer, $sk, $userId, 'categorization_rules', $pk, 'priority', '777', OpType::CreateRow, 1000),
+        rebuildSignedEntry($signer, $sk, $userId, 'categorization_rules', $pk, 'combinator', json_encode('all', JSON_THROW_ON_ERROR), OpType::CreateRow, 1000),
+        rebuildSignedEntry($signer, $sk, $userId, 'categorization_rules', $pk, 'hits_count', '0', OpType::CreateRow, 1000),
+        rebuildSignedEntry($signer, $sk, $userId, 'categorization_rules', $pk, 'active', 'true', OpType::CreateRow, 1000),
+    ];
+}
+
+it('rebuild() refuses to commit when the replay cannot restore what it deleted', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->db;
+    [$userId] = rebuildSeedBase($db, 'guard');
+
+    $pk = 8811;
+    $creates = rebuildGuardCreates($this->signer, $this->sk, $userId, $pk);
+
+    (new OpLogReplayer($db, ['device-rebuild' => $this->pkHex]))->replay($creates, $userId);
+    rebuildGuardPersist($db, $userId, $creates);
+
+    expect($db->connection()->table('categorization_rules')->where('id', $pk)->count())->toBe(1);
+
+    // No key for the device that signed the log, which is the shape a console
+    // run takes against an encrypted install: every op is refused, and the row
+    // the delete already took cannot come back.
+    $stranger = bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair()));
+    $rebuilder = new OpLogRebuilder($db, new OpLogReplayer($db, ['device-rebuild' => $stranger]), new MergeRulesRegistry, ['categorization_rules']);
+
+    expect(fn () => $rebuilder->rebuild($userId))->toThrow(RebuildWouldLoseRowsException::class);
+
+    expect($db->connection()->table('categorization_rules')->where('id', $pk)->count())->toBe(1);
+});
+
+it('rebuild() names what went missing and what the replay refused', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->db;
+    [$userId] = rebuildSeedBase($db, 'names');
+
+    $pk = 8812;
+    $creates = rebuildGuardCreates($this->signer, $this->sk, $userId, $pk);
+
+    (new OpLogReplayer($db, ['device-rebuild' => $this->pkHex]))->replay($creates, $userId);
+    rebuildGuardPersist($db, $userId, $creates);
+
+    $stranger = bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair()));
+    $rebuilder = new OpLogRebuilder($db, new OpLogReplayer($db, ['device-rebuild' => $stranger]), new MergeRulesRegistry, ['categorization_rules']);
+
+    try {
+        $rebuilder->rebuild($userId);
+        expect(false)->toBeTrue('the rebuild should not have committed');
+    } catch (RebuildWouldLoseRowsException $e) {
+        expect($e->missingByTable)->toBe(['categorization_rules' => 1])
+            ->and($e->quarantinedByReason)->not->toBe([]);
+    }
+});
+
+it('rebuild() does not count a row the log deletes as one it failed to restore', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->db;
+    [$userId] = rebuildSeedBase($db, 'tomb');
+
+    $pk = 8813;
+    $creates = rebuildGuardCreates($this->signer, $this->sk, $userId, $pk);
+
+    (new OpLogReplayer($db, ['device-rebuild' => $this->pkHex]))->replay($creates, $userId);
+
+    // The create cannot replay AND the log says the row is deleted. Absent is
+    // the right answer, so the check must read the tombstone rather than count
+    // the row as one the replay failed to bring back.
+    rebuildGuardPersist($db, $userId, [
+        ...$creates,
+        rebuildSignedEntry($this->signer, $this->sk, $userId, 'categorization_rules', $pk, '__tombstone__', null, OpType::DeleteTombstone, 2000),
+    ]);
+
+    expect($db->connection()->table('categorization_rules')->where('id', $pk)->count())->toBe(1);
+
+    $stranger = bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair()));
+    $rebuilder = new OpLogRebuilder($db, new OpLogReplayer($db, ['device-rebuild' => $stranger]), new MergeRulesRegistry, ['categorization_rules']);
+
+    $rebuilder->rebuild($userId);
+
+    expect($db->connection()->table('categorization_rules')->where('id', $pk)->count())->toBe(0);
 });
