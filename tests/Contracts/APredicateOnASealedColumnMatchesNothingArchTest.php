@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Tests\Contracts\Support\BackendSourceFiles;
 
@@ -294,11 +295,10 @@ function sealedRawSqlInSource(string $path, string $source, array $columns): arr
 
             // Every mention the shapes above account for is struck out, and the
             // question is asked of what is left. A name still standing is being
-            // read for its content rather than for its presence.
-            $rest = $sql;
-            foreach (sealedPresenceTests($column) as $presence) {
-                $rest = (string) preg_replace($presence, '', $rest);
-            }
+            // read for its content rather than for its presence. PatternScan
+            // throws where preg_replace() answers null: an engine that gave up
+            // would otherwise hand the check an empty subject and clear the file.
+            $rest = PatternScan::replace(sealedPresenceTests($column), '', $sql);
 
             if (preg_match($mention, $rest) === 1) {
                 $found[] = $token[1].'('.$column.')';
