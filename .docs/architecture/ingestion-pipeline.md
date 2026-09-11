@@ -172,7 +172,20 @@ adapter already classified as `refund`/`fee`/`adjustment`. Its algorithm:
    already raises a typed exception for anything genuinely unmappable at
    parse time).
 4. Subtractive income rule: positive amount AND type not already one of
-   `transfer_in`/`transfer_out`/`refund`/`fee` → `income`.
+   `transfer_in`/`transfer_out`/`refund`/`fee` → `income` — **except on an
+   account whose kind `AccountKind::isLiability()`, where it is
+   `transfer_in`**. A card balance is what is owed, so money arriving on
+   one is the reader paying it down: the other half of a transfer their
+   bank statement already books as `transfer_out` through the alias arm
+   above, and the half `TransferPairer` needs a transfer type on before it
+   will pair the two. The card statement carries no counterparty IBAN for
+   either arm of step 2 to match, so before this the monthly settlement
+   read as a second salary — €606,96 of it on the committed ICS fixture,
+   every month, on the dashboard and in every report. A merchant refund
+   credited to a card takes the same answer, which excludes it from both
+   flows rather than counting it as earnings; the type a refund wants is
+   `refund`, and nothing on a card statement says which of the two a credit
+   is.
 5. Default: leave `NormalizeStage`'s amount-sign-derived type untouched.
 
 ### 5. Payment-type classification (`PaymentTypeClassifierStage`)
