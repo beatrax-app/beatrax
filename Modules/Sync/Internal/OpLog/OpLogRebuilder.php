@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Collection;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -85,14 +86,23 @@ final class OpLogRebuilder
             $this->db->connection()->transaction(function () use ($userId): void {
                 $triggerSnapshots = $this->snapshotTriggers();
 
+                // Deferred to the commit, not disabled: the delete takes every
+                // row the log can recreate, and a derived child the log does
+                // not carry still references one. Ordering cannot help -- the
+                // child is not in the order, because nothing captures it.
+                $this->db->connection()->unprepared('PRAGMA defer_foreign_keys = ON');
+
                 $this->dropTriggers($triggerSnapshots);
-                $this->deleteReplayableRows($userId);
+                $removed = $this->deleteReplayableRows($userId);
+                $quarantineMark = $this->quarantineMark($userId);
 
                 // The production replayer, so rebuild equals incremental —
                 // injected without a SearchIndexWriterContract so FTS writes
                 // are suppressed here, and handed the whole log, which is
                 // already every op of every row it names.
                 $this->replayer->replay($this->loadEntries($userId), $userId, RowHistoryPolicy::AsGiven);
+
+                $this->verifyRestored($removed, $userId, $quarantineMark);
 
                 $this->restoreTriggers($triggerSnapshots);
             });
@@ -250,8 +260,13 @@ final class OpLogRebuilder
     // user). Rows predating capture have no create op and are preserved so
     // their SET ops replay on top; imports now DO carry create ops. FK-safe
     // order avoids aborting on foreign_keys=ON.
-    private function deleteReplayableRows(int $userId): void
+    /**
+     * @return array<string, list<int>> the ids actually removed, per table
+     */
+    private function deleteReplayableRows(int $userId): array
     {
+        $removed = [];
+
         foreach ($this->fkSafeDeletionOrder() as $table) {
             $createdPks = $this->createdRowPks($userId, $table);
 
@@ -259,12 +274,129 @@ final class OpLogRebuilder
                 continue;
             }
 
-            $this->db->connection()
+            $query = $this->db->connection()
                 ->table($table)
                 ->where('user_id', $userId)
-                ->whereIn('id', $createdPks)
-                ->delete();
+                ->whereIn('id', $createdPks);
+
+            // Read before the delete, not after: the check at the end compares
+            // what was actually here against what came back, and the log names
+            // creates for rows this device never stored.
+            $here = self::asIds($query->clone()->pluck('id'));
+
+            $query->delete();
+
+            if ($here !== []) {
+                $removed[$table] = $here;
+            }
         }
+
+        return $removed;
+    }
+
+    // Every row the delete took, back under its own id or under one this
+    // device minted for it. Measured on a paired install: a console run holds
+    // no group data key, 703 creates were quarantined as gdk_decrypt_failed,
+    // and 12 accounts never came back. Only the foreign keys stopped it.
+    /**
+     * @param  array<string, list<int>>  $removed
+     *
+     * @throws RebuildWouldLoseRowsException
+     */
+    private function verifyRestored(array $removed, int $userId, int $quarantineMark): void
+    {
+        $missing = [];
+
+        foreach ($removed as $table => $pks) {
+            $gone = array_values(array_diff($pks, $this->accountedFor($table, $pks, $userId)));
+
+            if ($gone !== []) {
+                $missing[$table] = count($gone);
+            }
+        }
+
+        if ($missing === []) {
+            return;
+        }
+
+        throw new RebuildWouldLoseRowsException($missing, $this->quarantinedSince($userId, $quarantineMark));
+    }
+
+    // Present again, aliased to a row stored under another id, or tombstoned
+    // by the log — a delete the log carries is the replay working, not a row
+    // it failed to bring back.
+    /**
+     * @param  list<int>  $pks
+     * @return list<int>
+     */
+    private function accountedFor(string $table, array $pks, int $userId): array
+    {
+        $present = self::asIds($this->db->connection()->table($table)->whereIn('id', $pks)->pluck('id'));
+
+        $aliased = self::asIds($this->db->connection()->table('op_log_row_aliases')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->whereIn('remote_id', array_map(static fn (int $pk): string => (string) $pk, $pks))
+            ->pluck('remote_id'));
+
+        $tombstoned = self::asIds($this->db->connection()->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->where('op_type', OpType::DeleteTombstone->value)
+            ->whereIn('pk', array_map(static fn (int $pk): string => (string) $pk, $pks))
+            ->distinct()
+            ->pluck('pk'));
+
+        return [...$present, ...$aliased, ...$tombstoned];
+    }
+
+    private function quarantineMark(int $userId): int
+    {
+        $max = $this->db->connection()->table('op_log_quarantine')->where('user_id', $userId)->max('id');
+
+        return is_numeric($max) ? (int) $max : 0;
+    }
+
+    // What this replay refused, which is almost always why a row did not come
+    // back. Reported beside the missing counts so the operator is not left to
+    // guess between a missing key, a refused gate and a broken log.
+    /**
+     * @return array<string, int>
+     */
+    private function quarantinedSince(int $userId, int $mark): array
+    {
+        $reasons = [];
+
+        foreach ($this->db->connection()->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->where('id', '>', $mark)
+            ->selectRaw('reason, count(*) as n')
+            ->groupBy('reason')
+            ->get() as $row) {
+            $reason = is_string($row->reason ?? null) ? $row->reason : 'unknown';
+            $reasons[$reason] = is_numeric($row->n ?? null) ? (int) $row->n : 0;
+        }
+
+        arsort($reasons);
+
+        return $reasons;
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $values
+     * @return list<int>
+     */
+    private static function asIds(Collection $values): array
+    {
+        $ids = [];
+
+        foreach ($values as $value) {
+            if (is_numeric($value)) {
+                $ids[] = (int) $value;
+            }
+        }
+
+        return $ids;
     }
 
     // Load the full op-log for this user, HLC-sorted, then map rows back to
