@@ -185,7 +185,23 @@ final readonly class OpLogEntryVerifier
         // column is a real one and clears the gate above. Refused here because
         // the capture filter that keeps these off the wire is the SENDER's
         // promise, and it is only as old as the oldest build in the household.
-        return $this->namesADeviceLocalColumn($entry) ? QuarantineReason::DeviceLocalColumn : null;
+        return $this->namesADeviceLocalColumn($entry) || $this->namesAColumnThisDeviceSeeds($entry)
+            ? QuarantineReason::DeviceLocalColumn
+            : null;
+    }
+
+    // The row's identity and its owner are seeded here, never read off the
+    // wire: the pk comes from the op and the user from the session, and a
+    // create re-forces both after its field loop. A Set has no such loop, so a
+    // peer naming either column would write straight over them.
+
+    // Refused rather than ignored for the reason the gate above gives: not
+    // emitting these is the sender's promise, and a Set carrying `user_id`
+    // hands the row to another member of the household.
+    private function namesAColumnThisDeviceSeeds(OpLogEntry $entry): bool
+    {
+        return $entry->opType === OpType::Set
+            && in_array($entry->field, ['id', 'user_id'], true);
     }
 
     private function hasRegisteredColumn(OpLogEntry $entry): bool
