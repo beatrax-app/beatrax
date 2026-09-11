@@ -15,6 +15,7 @@ use Modules\Core\Public\Support\SafeDate;
 use Modules\Forecasting\Internal\Exceptions\OpeningBalanceDivergenceWarning;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Enums\ForecastHorizon;
+use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\Services\AccountWriter;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -133,12 +134,16 @@ final readonly class SetAccountOpeningBalance
             return null;
         }
 
-        $baselineMinor = is_numeric($account->starting_balance_minor ?? null)
-            ? (int) $account->starting_balance_minor
-            : 0;
-        $baselineDate = is_string($account->starting_balance_date ?? null) && $account->starting_balance_date !== ''
-            ? SafeDate::normalisedDayOrNull($account->starting_balance_date)
-            : null;
+        $rawMinor = $account->starting_balance_minor ?? null;
+        $baselineMinor = is_numeric($rawMinor) ? (int) $rawMinor : 0;
+        $rawDate = $account->starting_balance_date ?? null;
+        // Through the one statement of the rule: this read defaulted the amount
+        // to zero and honoured the date anyway, which drops every row before it
+        // and adds nothing back.
+        $baselineDate = AccountStartingBalanceQuery::baselineDate(
+            $rawMinor,
+            is_string($rawDate) ? $rawDate : null,
+        );
 
         // settled_amount_minor in the account's own denomination and bounded on
         // posted_at, the same pair every balance in this app sums. amount_minor
