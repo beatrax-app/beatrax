@@ -169,7 +169,9 @@ write reaches paired devices.
 The data itself is fine: the demo seeders are hand-authored literals
 (`demo-1` / `demo-2`, a `PAYPAL-DEMO-1` sentinel pinned by
 `OneSpellingPerSyntheticIbanArchTest`) and read none of the anonymised bank
-fixtures.
+fixtures. It lands sealed for a reader who has turned encryption on, the same
+as an import would — [the sample
+dataset](../features/sync/sensitive-columns-at-rest.md#the-sample-dataset).
 
 ## What a listing may not say
 
