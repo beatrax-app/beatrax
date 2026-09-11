@@ -62,7 +62,7 @@ final readonly class LabelCounterparty
         $this->announce($row->id, $userId, $fields);
     }
 
-    public function ignore(Counterparty $row, int $userId): void
+    public function ignore(Counterparty $row, int $userId, Session $session): void
     {
         $metadata = is_array($row->metadata) ? $row->metadata : [];
         $metadata[CounterpartyMetadataKey::Ignored->value] = true;
@@ -70,7 +70,22 @@ final readonly class LabelCounterparty
         $row->metadata = $metadata;
         $row->save();
 
-        $this->announce($row->id, $userId, ['metadata' => $metadata]);
+        $fields = ['metadata' => $metadata];
+
+        // The flag above says the name is the app's, and it rides inside a blob
+        // that merges whole. Sent alone it lands on top of a peer's rename and
+        // reads that reader's own words back as the placeholder.
+        if (CounterpartyDefaultName::tokenIn($metadata) !== null) {
+            $fields['display_name'] = $this->codec->decryptValue(
+                'counterparties',
+                'display_name',
+                $row->display_name,
+                $userId,
+                $session,
+            )['value'];
+        }
+
+        $this->announce($row->id, $userId, $fields);
     }
 
     // The triage queue selects on type='unknown' and nothing else, so without
