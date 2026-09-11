@@ -308,3 +308,54 @@ it('leaves an untagged leg out of the reader\'s column while the parent\'s full 
     // the page — tagging one leg cannot move another leg's cent.
     expect($column)->toBe([$tagged => -1001]);
 });
+
+// The denominator is the parent's whole leg set, read straight off
+// transaction_splits by transaction id. The ids handed to it are already this
+// reader's, so nothing foreign has reached it -- but a leg is a money row and
+// the query that weighs one must say whose it is, because the share every other
+// leg is given moves when the sum does.
+it('weighs the parent against this readers legs alone', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $owner = loasUser('loas-owned-weights');
+    $stranger = loasUser('loas-stranger-weights');
+
+    $txId = loasTransaction($db, $owner->id, loasAccount($db, $owner->id), loasImportRun($db, $owner->id), -3000, -2723);
+    $spend = loasSpendCategory($db, $owner->id);
+    $deduction = loasDeductionCategory($db, $owner->id);
+
+    $tagged = loasLeg($db, $owner->id, $txId, $spend, -2000, 0);
+    loasLeg($db, $owner->id, $txId, $spend, -723, 1);
+    loasTag($db, $owner->id, $txId, $deduction, $tagged);
+
+    expect(loasOriginalColumnByLeg($owner->id))->toBe([$tagged => -2203]);
+
+    // A leg on this reader's transaction carrying somebody else's user_id. The
+    // writer keys a leg to its parent's owner, so this is the shape a second
+    // one would have to produce -- and if it reached the weights, the tagged
+    // leg's share of its own parent would fall to -1500.
+    loasLeg($db, $stranger->id, $txId, loasSpendCategory($db, $stranger->id), -1277, 2);
+
+    expect(loasOriginalColumnByLeg($owner->id))->toBe([$tagged => -2203]);
+});
+
+// A leg written before user_id was denormalised onto the table has none, and it
+// hangs off a transaction already narrowed to this reader. Dropping it would be
+// the same defect the other way round: a denominator missing one of its own.
+it('keeps a leg that names no owner in the parents own weights', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $user = loasUser('loas-ownerless-leg');
+    $txId = loasTransaction($db, $user->id, loasAccount($db, $user->id), loasImportRun($db, $user->id), -3000, -2723);
+    $spend = loasSpendCategory($db, $user->id);
+    $deduction = loasDeductionCategory($db, $user->id);
+
+    $tagged = loasLeg($db, $user->id, $txId, $spend, -2000, 0);
+    $ownerless = loasLeg($db, $user->id, $txId, $spend, -723, 1);
+    $db->connection()->table('transaction_splits')->where('id', $ownerless)->update(['user_id' => null]);
+    loasTag($db, $user->id, $txId, $deduction, $tagged);
+
+    expect(loasOriginalColumnByLeg($user->id))->toBe([$tagged => -2203]);
+});

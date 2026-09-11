@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Tax\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
@@ -129,7 +130,7 @@ final readonly class TaxYearQuery
         /** @var array<string, int> $incomeByCurrency */
         $incomeByCurrency = [];
 
-        $legNativeMinor = $this->legNativeMinorByLeg($rawRows);
+        $legNativeMinor = $this->legNativeMinorByLeg($userId, $rawRows);
 
         foreach ($rawRows as $row) {
             $signedMinor = self::toInt($row->settled_amount_minor);
@@ -323,7 +324,7 @@ final readonly class TaxYearQuery
      * @param  Collection<int, \stdClass>  $rawRows
      * @return array<int, int> leg id => native minor
      */
-    private function legNativeMinorByLeg(Collection $rawRows): array
+    private function legNativeMinorByLeg(int $userId, Collection $rawRows): array
     {
         /** @var array<int, int> $nativeByTransaction */
         $nativeByTransaction = [];
@@ -334,7 +335,7 @@ final readonly class TaxYearQuery
         }
 
         $native = [];
-        foreach ($this->legWeightsByTransaction(array_keys($nativeByTransaction)) as $transactionId => $weights) {
+        foreach ($this->legWeightsByTransaction($userId, array_keys($nativeByTransaction)) as $transactionId => $weights) {
             $shares = CrossCurrencyTotal::apportion($nativeByTransaction[$transactionId], $weights);
 
             foreach ($shares ?? [] as $legId => $legMinor) {
@@ -349,7 +350,7 @@ final readonly class TaxYearQuery
      * @param  list<int>  $transactionIds
      * @return array<int, array<int, int>> transaction id => leg id => settled minor
      */
-    private function legWeightsByTransaction(array $transactionIds): array
+    private function legWeightsByTransaction(int $userId, array $transactionIds): array
     {
         $weights = [];
 
@@ -357,6 +358,13 @@ final readonly class TaxYearQuery
             $legs = $this->db->connection()
                 ->table('transaction_splits')
                 ->whereIn('transaction_id', $chunk)
+                // The denominator this apportionment is taken over: a leg that
+                // is not the reader's would move a figure on their page. The
+                // column is the parent's nullable copy, and a leg carrying none
+                // hangs off a transaction already narrowed to this reader.
+                ->where(static function (Builder $owned) use ($userId): void {
+                    $owned->where('user_id', $userId)->orWhereNull('user_id');
+                })
                 ->orderBy('transaction_id')
                 ->orderBy('sort_order')
                 ->orderBy('id')
