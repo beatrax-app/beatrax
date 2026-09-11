@@ -104,6 +104,12 @@ signing and field encryption happen exactly where they always did.
   the reader's settings with this device's own password and theme.
 - **A create is emitted before the sets for its row**, whatever order the
   coordinates come back in.
+- **A create is dropped where this device has already announced one for the
+  row.** The pre-sync walk reads the table and does not know a coordinate is
+  pending, so a row created while locked can be announced by the walk before the
+  drain ever gets a key. Only a column that earlier create did not carry is
+  still owed, and it goes as a `Set`: [announced once, whichever announcer
+  arrives first](pre-sync-history-capture.md#announced-once-whichever-announcer-arrives-first).
 - **A create or set whose row is gone is dropped.** A later delete superseded it,
   and announcing it would resurrect on the peer a row this device no longer has.
   A `delete` is the one kind that needs no row: the tombstone *is* the fact.
