@@ -17,6 +17,10 @@ use Modules\Onboarding\Internal\Services\StartingBalanceRule;
 
 final class StartingBalanceCard extends Component
 {
+    // Locked like the three figures below it: confirm(), save() and
+    // pickConflictCandidate() each dispatch this id to the step that anchors
+    // the opening balance, and no control on the card writes it.
+    #[Locked]
     public int $accountId = 0;
 
     public string $accountLabel = '';
