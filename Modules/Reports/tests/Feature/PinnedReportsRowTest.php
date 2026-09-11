@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
@@ -71,6 +72,43 @@ it('renders one chart-only mini card per pinned report, up to 3', function (): v
 
     $chartCount = substr_count($component->html(), 'data-testid="pinned-report-chart"');
     expect($chartCount)->toBe(3);
+});
+
+// `pinned` and `pin_order` are written together and merge apart, so a device
+// that unpinned while the other re-pinned can land either crossed pair. NULL
+// sorts first in SQLite, so a pin with no order jumps the whole row.
+it('does not render a pin whose order crossed it', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+
+    $kept = app(SaveReport::class)->save($user, prrDefinition(), 'Spend by category');
+    $crossed = app(SaveReport::class)->save($user, prrDefinition(), 'Income this year');
+    app(TogglePin::class)->toggle($user, $kept->id);
+    app(TogglePin::class)->toggle($user, $crossed->id);
+
+    DB::table('saved_reports')->where('id', $crossed->id)->update(['pin_order' => null]);
+
+    Livewire::test(PinnedReportsRow::class)
+        ->assertSee('Spend by category')
+        ->assertDontSee('Income this year');
+});
+
+// The mirror pair, and the control: an order with the flag cleared is not a pin
+// either, and the row that agrees with itself still renders.
+it('does not render an order whose flag crossed it', function (): void {
+    $user = prrUser();
+    test()->actingAs($user);
+
+    $kept = app(SaveReport::class)->save($user, prrDefinition(), 'Spend by category');
+    $crossed = app(SaveReport::class)->save($user, prrDefinition(), 'Income this year');
+    app(TogglePin::class)->toggle($user, $kept->id);
+    app(TogglePin::class)->toggle($user, $crossed->id);
+
+    DB::table('saved_reports')->where('id', $crossed->id)->update(['pinned' => false]);
+
+    Livewire::test(PinnedReportsRow::class)
+        ->assertSee('Spend by category')
+        ->assertDontSee('Income this year');
 });
 
 it('caps at 3 mini cards even if a 4th pinned row somehow exists (defense in depth)', function (): void {

@@ -23,6 +23,7 @@ final class PinOrderCompactor
             ->table('saved_reports')
             ->where('user_id', $user->id)
             ->where('pinned', true)
+            ->whereNotNull('pin_order')
             ->orderBy('pin_order')
             ->orderBy('id')
             ->get(['id', 'pin_order']);
