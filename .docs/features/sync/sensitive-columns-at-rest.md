@@ -670,6 +670,58 @@ site is broken, unfixed or a TODO fails outright.
 
 Anything else is the bug the guard exists to find, and the fix is the query, not the list.
 
+## The sample dataset
+
+The Dev Console is closed on a store build, so `SampleDataCard` on the settings page is the
+sample dataset's only door on one. It ran the demo seeders and left **341 readable values** in
+columns this registry seals for a reader whose ledger was encrypted: 148 descriptions, 148
+counterparty names, 33 counterparty IBANs, and the 6 display names and 6 IBANs of the extra
+demo counterparties.
+
+Nothing about that was visible from the model. Sealing here is not an Eloquent cast — there is
+no `casts()` entry for `description`, `counterparty_name` or `counterparty_iban`, and every
+write site calls `encryptAttrs()` itself, as `RecordTransactions` does. `DemoTransactionsSeeder`
+and `DemoTransferPairsSeeder` insert through `Transaction::query()->insertOrIgnore()`, a base
+query-builder insert that bypasses casts, model events and the codec alike;
+`DemoCounterpartiesSeeder` writes its six extra rows straight through `updateOrCreate()`,
+past the resolver that seals the other thirty-six. Both now seal, and the fingerprint is
+composed from the DTO before they do, so the `(user_id, fingerprint)` and
+`(user_id, account_id, posted_at, booked_at, amount_minor, currency, counterparty_normalized)`
+UNIQUEs are still over plaintext and a re-seed is still a no-op.
+
+### Why sealing the writer is only half of it
+
+Six demo seeders found their rows again by the literal `description` they had seeded, so
+sealing the writer alone seals correctly and empties the dataset. Measured, with the writer
+sealed and the six predicates left alone: **0 chain links, 0 split legs, 0 tax tags, 0 receipt
+conflicts**, and the two ICS settlements still carrying the flat `-22500` that
+`IcsSettlementAligner` exists to replace. A reader with encryption on would have been handed a
+ledger with none of the relationships the screens are drawn for, and no error anywhere.
+
+They match on `source_ref` instead. `DemoTransactionRef` owns the vocabulary and mints the
+value: an untagged row keeps `DEMO-{userId}-{accountId}-{rowIndex}` and a tagged one takes
+`DEMO-{tag}#{userId}-{accountId}-{rowIndex}`, matched with a `LIKE 'DEMO-{tag}#%'`. The `#`
+closes the tag, so no tag is a prefix of another and `paypal-top-up` cannot answer for
+`paypal-top-up-arrival`.
+
+`source_ref` is not on `columns()` and the tag is not a shadow of the sealed description: it
+names a fixture, and the fixture is a hand-authored literal in this repository, identical on
+every install. It discloses nothing the source tree does not already publish. That argument
+holds for demo rows and for nothing else — a tag must never be derived from a value a reader
+supplied.
+
+### The resolver is the same coupling one hop out
+
+`DemoCounterpartiesSeeder::resolveForUser()` rebuilds a `CanonicalTransaction` from the stored
+row and hands it to the production resolver, which in production only ever sees the plaintext
+DTO the row was sealed from. Handed ciphertext it resolved one counterparty per row: **157
+instead of 42**, no merchant names at all, and two anomaly alerts that should not exist. The
+three content columns are opened through `decryptRow()` before the DTO is rebuilt.
+
+This is the shape to look for wherever demo data re-reads what it wrote: a predicate is the
+loud half, and a value read back out of a sealed column and fed to a production service is the
+quiet one.
+
 ## The guard that catches a column rendered as ciphertext
 
 The predicate guard above is a source scan, and this class of defect is not visible to one.
@@ -1102,7 +1154,8 @@ not touch it. The consequence is stated plainly below.
 ones that *compute* the value and the ones that only *copy* it. Only three production sites
 compute, and every one of them is an authenticated Livewire request behind `AppLockMiddleware`:
 the import wizard, the cash book, and the migration importer. There is no headless import path.
-(Three demo seeders also compute; they run from dev mode, which is a request too.) Op-log
+(Four demo seeders also compute, and all four are reachable from `SampleDataCard`, which a
+store build carries — that is a request too, so the key is held there as well.) Op-log
 replay never computes — `OpLogValueProjector::reencryptForProjection()` passes a non-sensitive
 column through unchanged, so the digest the originating device computed is what the peer
 stores, and the sync daemon needs no key at all. That is also why this column is deliberately

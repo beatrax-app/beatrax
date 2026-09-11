@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Ledger\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Import\Public\Enums\SyntheticSourceFormat;
@@ -23,6 +25,7 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\CalendarSpan;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 final class DemoTransactionsSeeder
 {
@@ -45,6 +48,8 @@ final class DemoTransactionsSeeder
         private readonly DemoPeriodWindow $window,
         private readonly Clock $clock,
         private readonly IcsSettlementAligner $settlements,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly SessionFactory $session,
     ) {}
 
     /**
@@ -100,10 +105,10 @@ final class DemoTransactionsSeeder
         $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, [
             ['day' => 25, 'type' => 'income', 'amountMinor' => 385000, 'description' => 'Salaris MijnWerkgever BV', 'counterpartyName' => 'MijnWerkgever BV', 'counterpartyIban' => 'NL44RABO0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'income-salary'],
             ['day' => 1, 'type' => 'expense', 'amountMinor' => -125000, 'description' => 'Huur Vesteda', 'counterpartyName' => 'Vesteda', 'counterpartyIban' => 'NL36INGB0007654321', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-rent'],
-            ['day' => 3, 'type' => 'expense', 'amountMinor' => -4500, 'description' => 'KPN Mobile + Internet', 'counterpartyName' => 'KPN BV', 'counterpartyIban' => 'NL27INGB0010040004', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-internet'],
+            ['day' => 3, 'type' => 'expense', 'amountMinor' => -4500, 'description' => 'KPN Mobile + Internet', 'counterpartyName' => 'KPN BV', 'counterpartyIban' => 'NL27INGB0010040004', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-internet', 'ref' => DemoTransactionRef::Kpn],
             ['day' => 5, 'type' => 'expense', 'amountMinor' => -5995, 'description' => 'Ziggo abonnement', 'counterpartyName' => 'Ziggo', 'counterpartyIban' => 'NL05INGB0700057757', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-internet'],
             ['day' => 1, 'type' => 'expense', 'amountMinor' => -2500, 'priorAmountMinor' => -2250, 'priorMonths' => 1, 'description' => 'Sport City', 'counterpartyName' => 'Sport City Nederland BV', 'counterpartyIban' => 'NL02ABNA0123456789', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'subscriptions-memberships'],
-            ['day' => 28, 'type' => 'expense', 'amountMinor' => -14250, 'description' => 'Zilveren Kruis Zorgverzekering', 'counterpartyName' => 'Zilveren Kruis', 'counterpartyIban' => 'NL39INGB0686806266', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'insurance-health'],
+            ['day' => 28, 'type' => 'expense', 'amountMinor' => -14250, 'description' => 'Zilveren Kruis Zorgverzekering', 'counterpartyName' => 'Zilveren Kruis', 'counterpartyIban' => 'NL39INGB0686806266', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'insurance-health', 'ref' => DemoTransactionRef::ZilverenKruis],
             ['day' => 27, 'type' => 'expense', 'amountMinor' => -8500, 'description' => 'Belastingdienst motorrijtuigenbelasting', 'counterpartyName' => 'Belastingdienst', 'counterpartyIban' => 'NL86INGB0002445588', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => null],
         ]);
 
@@ -117,7 +122,7 @@ final class DemoTransactionsSeeder
             ['name' => 'Jumbo', 'description' => 'Jumbo Supermarkt Utrecht', 'amounts' => [-3211, -2890, -4055], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
             ['name' => 'Lidl', 'description' => 'Lidl Filiaal 0042', 'amounts' => [-1989, -2210, -1875], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
             ['name' => 'Dirk', 'description' => 'Dirk van den Broek', 'amounts' => [-2755, -3120, -2480], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
-            ['name' => 'HEMA', 'description' => 'HEMA bv Utrecht', 'amounts' => [-1295, -1750, -2105], 'category' => $this->categoryId('personal-care'), 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'HEMA', 'description' => 'HEMA bv Utrecht', 'amounts' => [-1295, -1750, -2105], 'category' => $this->categoryId('personal-care'), 'iban' => null, 'paymentType' => PaymentType::Pin, 'ref' => DemoTransactionRef::Hema],
         ];
         foreach ($diversityRows as $merchant) {
             foreach ($this->monthlyDates(14, olderMonthStride: 2) as $idx => $date) {
@@ -130,6 +135,7 @@ final class DemoTransactionsSeeder
                     'date' => $date,
                     'paymentType' => $merchant['paymentType'],
                     'categoryId' => $merchant['category'],
+                    'ref' => $merchant['ref'] ?? null,
                 ]);
             }
         }
@@ -161,8 +167,8 @@ final class DemoTransactionsSeeder
         // description rather than position, so this stays a table.
         $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, [
             ['day' => 8, 'type' => 'expense', 'amountMinor' => -10000, 'description' => 'GEA ASN BANK Utrecht', 'counterpartyName' => 'ASN Bank GEA', 'counterpartyIban' => null, 'paymentType' => PaymentType::Cash, 'categorySlug' => 'cash-withdrawal'],
-            ['day' => 10, 'type' => 'transfer_out', 'amountMinor' => -10000, 'description' => 'PayPal top-up', 'counterpartyName' => 'PayPal', 'counterpartyIban' => 'PAYPAL-DEMO-1', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
-            ['day' => 18, 'type' => 'transfer_out', 'amountMinor' => -22500, 'description' => 'ICS afrekening MasterCard', 'counterpartyName' => 'International Card Services', 'counterpartyIban' => 'NL09ABNA0596780870', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+            ['day' => 10, 'type' => 'transfer_out', 'amountMinor' => -10000, 'description' => 'PayPal top-up', 'counterpartyName' => 'PayPal', 'counterpartyIban' => 'PAYPAL-DEMO-1', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal', 'ref' => DemoTransactionRef::PaypalTopUp],
+            ['day' => 18, 'type' => 'transfer_out', 'amountMinor' => -22500, 'description' => 'ICS afrekening MasterCard', 'counterpartyName' => 'International Card Services', 'counterpartyIban' => 'NL09ABNA0596780870', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal', 'ref' => DemoTransactionRef::IcsSettlementBankSide],
             ['day' => 20, 'type' => 'transfer_out', 'amountMinor' => -2500, 'description' => 'Tikkie aandeel diner', 'counterpartyName' => 'M VAN BUREN', 'counterpartyIban' => 'NL51ABNA0987654321', 'paymentType' => PaymentType::Transfer, 'categorySlug' => null],
         ]);
 
@@ -191,6 +197,7 @@ final class DemoTransactionsSeeder
                 'date' => $date,
                 'paymentType' => PaymentType::Online,
                 'categoryId' => $onlineCategory,
+                'ref' => DemoTransactionRef::BolOnCard,
             ]);
         }
 
@@ -203,6 +210,7 @@ final class DemoTransactionsSeeder
             'date' => $windowStart->addDays(45),
             'paymentType' => PaymentType::Online,
             'categoryId' => null,
+            'ref' => DemoTransactionRef::Coolblue,
         ]);
 
         foreach ([20, 68] as $dayOffset) {
@@ -219,6 +227,7 @@ final class DemoTransactionsSeeder
                 'date' => $date,
                 'paymentType' => PaymentType::Online,
                 'categoryId' => null,
+                'ref' => DemoTransactionRef::MediaMarkt,
             ]);
         }
 
@@ -256,7 +265,7 @@ final class DemoTransactionsSeeder
         // The monthly ICS card settlement, and the `to_transaction` side of
         // the ics_bulk_settle chain.
         $inserted += $this->seedMonthlySeries($user, $ics, $run, $rowIndex, [
-            ['day' => 18, 'type' => 'transfer_in', 'amountMinor' => 22500, 'description' => 'Afrekening MasterCard ICS', 'counterpartyName' => self::ASN_COUNTERPARTY, 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+            ['day' => 18, 'type' => 'transfer_in', 'amountMinor' => 22500, 'description' => 'Afrekening MasterCard ICS', 'counterpartyName' => self::ASN_COUNTERPARTY, 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal', 'ref' => DemoTransactionRef::IcsSettlementCardSide],
         ]);
 
         return $inserted;
@@ -310,6 +319,7 @@ final class DemoTransactionsSeeder
                 'date' => $date,
                 'paymentType' => PaymentType::Pin,
                 'categoryId' => $transit,
+                'ref' => DemoTransactionRef::JrEast,
             ]);
         }
 
@@ -438,16 +448,16 @@ final class DemoTransactionsSeeder
         // The purchase and the ASN→PayPal funding that covers it, both on the
         // 10th: the chain_link wires that pair.
         $inserted += $this->seedMonthlySeries($user, $paypal, $run, $rowIndex, [
-            ['day' => 10, 'type' => 'expense', 'amountMinor' => -7995, 'description' => 'Bol.com via PayPal', 'counterpartyName' => 'Bol.com', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-cloud'],
-            ['day' => 10, 'type' => 'transfer_in', 'amountMinor' => 10000, 'description' => 'Top-up from ASN', 'counterpartyName' => self::ASN_COUNTERPARTY, 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+            ['day' => 10, 'type' => 'expense', 'amountMinor' => -7995, 'description' => 'Bol.com via PayPal', 'counterpartyName' => 'Bol.com', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-cloud', 'ref' => DemoTransactionRef::BolViaPaypal],
+            ['day' => 10, 'type' => 'transfer_in', 'amountMinor' => 10000, 'description' => 'Top-up from ASN', 'counterpartyName' => self::ASN_COUNTERPARTY, 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal', 'ref' => DemoTransactionRef::PaypalTopUpArrival],
         ]);
 
         // Two rows, so the `refund` type and the `Refund` chip each have
         // more than one datapoint to render against.
         $refundsCategory = $this->categoryId('income-refunds');
         $refundRows = [
-            ['day' => 35, 'amount' => 1250, 'description' => 'Retour Bol.com', 'merchant' => 'Bol.com'],
-            ['day' => 62, 'amount' => 3499, 'description' => 'Retour Coolblue', 'merchant' => 'Coolblue'],
+            ['day' => 35, 'amount' => 1250, 'description' => 'Retour Bol.com', 'merchant' => 'Bol.com', 'ref' => DemoTransactionRef::BolRefund],
+            ['day' => 62, 'amount' => 3499, 'description' => 'Retour Coolblue', 'merchant' => 'Coolblue', 'ref' => DemoTransactionRef::CoolblueRefund],
         ];
         foreach ($refundRows as $refund) {
             $date = $windowStart->addDays($refund['day']);
@@ -463,6 +473,7 @@ final class DemoTransactionsSeeder
                 'date' => $date,
                 'paymentType' => PaymentType::Refund,
                 'categoryId' => $refundsCategory,
+                'ref' => $refund['ref'],
             ]);
         }
 
@@ -580,12 +591,8 @@ final class DemoTransactionsSeeder
     // the relationship shape chains, recurring and the queries expect.
     private function linkUser1Transfers(User $user): void
     {
-        $pairs = Transaction::query()
-            ->where('user_id', $user->id)
-            ->where('source_format', 'demo')
-            ->whereIn('type', TransactionType::transferValues())
-            ->whereIn('description', ['PayPal top-up', 'Top-up from ASN'])
-            ->get(['id', 'type', 'posted_at', 'amount_minor', 'description']);
+        $pairs = $this->taggedTransfers($user, DemoTransactionRef::PaypalTopUp)
+            ->concat($this->taggedTransfers($user, DemoTransactionRef::PaypalTopUpArrival));
 
         $byDate = [];
         foreach ($pairs as $tx) {
@@ -607,6 +614,19 @@ final class DemoTransactionsSeeder
                 Transaction::query()->where('id', $inId)->update(['pair_transaction_id' => $outId]);
             }
         }
+    }
+
+    /**
+     * @return Collection<int, Transaction>
+     */
+    private function taggedTransfers(User $user, DemoTransactionRef $ref): Collection
+    {
+        return Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('source_format', 'demo')
+            ->whereIn('type', TransactionType::transferValues())
+            ->where('source_ref', 'like', $ref->pattern())
+            ->get(['id', 'type', 'posted_at', 'amount_minor']);
     }
 
     private function seedUser1AhWeekly(
@@ -687,7 +707,7 @@ final class DemoTransactionsSeeder
     }
 
     /**
-     * @param  list<array{day: int, type: string, amountMinor: int, priorAmountMinor?: int, priorMonths?: int, description: string, counterpartyName: string, counterpartyIban: ?string, paymentType: PaymentType, categorySlug: ?string}>  $definitions
+     * @param  list<array{day: int, type: string, amountMinor: int, priorAmountMinor?: int, priorMonths?: int, description: string, counterpartyName: string, counterpartyIban: ?string, paymentType: PaymentType, categorySlug: ?string, ref?: DemoTransactionRef}>  $definitions
      */
     private function seedMonthlySeries(
         User $user,
@@ -723,6 +743,7 @@ final class DemoTransactionsSeeder
                     'categoryId' => $series['categorySlug'] === null
                         ? null
                         : $this->categoryId($series['categorySlug']),
+                    'ref' => $series['ref'] ?? null,
                 ]);
             }
         }
@@ -830,7 +851,7 @@ final class DemoTransactionsSeeder
     // insertOrIgnore, so a re-seed is a no-op: the fingerprint UNIQUE and
     // the v3 tuple UNIQUE both catch a duplicate.
     /**
-     * @param  array{type: string, amountMinor: int, description: string, counterpartyName: ?string, counterpartyIban: ?string, date: CarbonImmutable, paymentType: PaymentType, categoryId: ?int, currency?: string, settledAmountMinor?: int, settledCurrency?: string}  $row
+     * @param  array{type: string, amountMinor: int, description: string, counterpartyName: ?string, counterpartyIban: ?string, date: CarbonImmutable, paymentType: PaymentType, categoryId: ?int, currency?: string, settledAmountMinor?: int, settledCurrency?: string, ref?: ?DemoTransactionRef}  $row
      */
     private function insertTransaction(
         User $user,
@@ -850,7 +871,10 @@ final class DemoTransactionsSeeder
 
         $bookedAt = $row['date']->setTime(12, 0, 0);
 
-        $sourceRef = 'DEMO-'.$user->id.'-'.$account->id.'-'.$rowIndex;
+        $ref = $row['ref'] ?? null;
+        $sourceRef = $ref instanceof DemoTransactionRef
+            ? $ref->tagged($user->id, $account->id, $rowIndex)
+            : DemoTransactionRef::plain($user->id, $account->id, $rowIndex);
 
         $canonical = new CanonicalTransaction(
             userId: $user->id,
@@ -888,6 +912,11 @@ final class DemoTransactionsSeeder
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+
+        // Composed above from the DTO, so the fingerprint and the two UNIQUEs
+        // are over plaintext and stay stable once the content columns below
+        // hold a fresh nonce on every write.
+        $attrs = $this->codec->encryptAttrs('transactions', $attrs, $user->id, ($this->session)());
 
         return Transaction::query()->insertOrIgnore($attrs);
     }

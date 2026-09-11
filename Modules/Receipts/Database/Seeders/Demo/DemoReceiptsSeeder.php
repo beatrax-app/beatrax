@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ingestion\Public\Enums\SourceFormat;
+use Modules\Ledger\Database\Seeders\Demo\DemoTransactionRef;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
@@ -67,7 +68,7 @@ final class DemoReceiptsSeeder
         $bolPaypalTransaction = Transaction::query()
             ->where('user_id', $primary->id)
             ->where('source_format', 'demo')
-            ->where('description', 'Bol.com via PayPal')
+            ->where('source_ref', 'like', DemoTransactionRef::BolViaPaypal->pattern())
             ->orderBy('posted_at', 'desc')
             ->first();
 

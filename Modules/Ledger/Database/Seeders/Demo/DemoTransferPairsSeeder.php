@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Models\Account;
@@ -19,6 +20,7 @@ use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // One explicit reimbursement pair, distinct from DemoTransactionsSeeder's
 // monthly chain-flow transfers; idempotent via its own demo ImportRun.
@@ -37,6 +39,8 @@ final class DemoTransferPairsSeeder
         private readonly CounterpartyKey $counterpartyKey,
         private readonly DemoPeriodWindow $window,
         private readonly Clock $clock,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly SessionFactory $session,
     ) {}
 
     /**
@@ -160,6 +164,10 @@ final class DemoTransferPairsSeeder
             'created_at' => $stamp,
             'updated_at' => $stamp,
         ]);
+
+        // The fingerprint above is composed from the DTO, so it is over the
+        // plaintext and stays stable while these columns hold ciphertext.
+        $attrs = $this->codec->encryptAttrs('transactions', $attrs, $user->id, ($this->session)());
 
         Transaction::query()->insertOrIgnore($attrs);
     }

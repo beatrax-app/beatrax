@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Ledger\Database\Seeders\Demo\DemoTransactionRef;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransactionSplitsSeeder;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
@@ -13,9 +14,9 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Models\TransactionSplit;
 
 // applySplit and the rows it takes are both private, so the rows come in by
-// reflection. Three of the four outcomes are refusals: a drifted description, a
-// moved parent amount or a missing category must skip the row rather than abort
-// the run or write a split that does not sum to its parent.
+// reflection. Three of the four outcomes are refusals: a tag that names no row,
+// a moved parent amount or a missing category must skip the row rather than
+// abort the run or write a split that does not sum to its parent.
 
 uses(RefreshDatabase::class);
 
@@ -53,6 +54,7 @@ beforeEach(function (): void {
         'settled_amount_minor' => -8000,
         'settled_currency' => 'EUR',
         'description' => 'DEMO SPLIT PARENT',
+        'source_ref' => DemoTransactionRef::MediaMarkt->tagged((int) $this->user->id, (int) $account->id, 1),
         'counterparty_name' => 'Shop',
         'counterparty_normalized' => 'shop',
         'normalization_version' => 1,
@@ -73,10 +75,10 @@ beforeEach(function (): void {
 /**
  * @param  list<array{categoryPath: list<string>, minor: int, note: ?string}>  $legs
  */
-function dtssApply(object $seeder, User $user, string $descriptionMatch, array $legs): void
+function dtssApply(object $seeder, User $user, DemoTransactionRef $ref, array $legs): void
 {
     $method = new ReflectionMethod(DemoTransactionSplitsSeeder::class, 'applySplit');
-    $method->invoke($seeder, $user, ['descriptionMatch' => $descriptionMatch, 'legs' => $legs]);
+    $method->invoke($seeder, $user, ['ref' => $ref, 'legs' => $legs]);
 }
 
 function dtssSplitCount(int $transactionId): int
@@ -85,7 +87,7 @@ function dtssSplitCount(int $transactionId): int
 }
 
 it('splits a parent whose legs sum to it exactly', function (): void {
-    dtssApply($this->seeder, $this->user, 'DEMO SPLIT PARENT', [
+    dtssApply($this->seeder, $this->user, DemoTransactionRef::MediaMarkt, [
         ['categoryPath' => ['Groceries'], 'minor' => -5000, 'note' => 'part one'],
         ['categoryPath' => ['Groceries'], 'minor' => -3000, 'note' => null],
     ]);
@@ -93,8 +95,8 @@ it('splits a parent whose legs sum to it exactly', function (): void {
     expect(dtssSplitCount((int) $this->parent->id))->toBe(2);
 });
 
-it('skips a row whose description matches nothing', function (): void {
-    dtssApply($this->seeder, $this->user, 'NO SUCH DESCRIPTION', [
+it('skips a row whose tag names nothing', function (): void {
+    dtssApply($this->seeder, $this->user, DemoTransactionRef::Hema, [
         ['categoryPath' => ['Groceries'], 'minor' => -8000, 'note' => null],
     ]);
 
@@ -102,7 +104,7 @@ it('skips a row whose description matches nothing', function (): void {
 });
 
 it('skips a row whose legs no longer sum to the parent', function (): void {
-    dtssApply($this->seeder, $this->user, 'DEMO SPLIT PARENT', [
+    dtssApply($this->seeder, $this->user, DemoTransactionRef::MediaMarkt, [
         ['categoryPath' => ['Groceries'], 'minor' => -5000, 'note' => null],
         ['categoryPath' => ['Groceries'], 'minor' => -1000, 'note' => null],
     ]);
@@ -112,7 +114,7 @@ it('skips a row whose legs no longer sum to the parent', function (): void {
 
 it('writes nothing when a category path is not in the default tree', function (): void {
     // The legs sum correctly, so only the unknown category stops this.
-    dtssApply($this->seeder, $this->user, 'DEMO SPLIT PARENT', [
+    dtssApply($this->seeder, $this->user, DemoTransactionRef::MediaMarkt, [
         ['categoryPath' => ['Groceries'], 'minor' => -5000, 'note' => null],
         ['categoryPath' => ['Nowhere', 'Missing'], 'minor' => -3000, 'note' => null],
     ]);
@@ -126,8 +128,8 @@ it('leaves an already-split parent alone on a second run', function (): void {
         ['categoryPath' => ['Groceries'], 'minor' => -3000, 'note' => null],
     ];
 
-    dtssApply($this->seeder, $this->user, 'DEMO SPLIT PARENT', $legs);
-    dtssApply($this->seeder, $this->user, 'DEMO SPLIT PARENT', $legs);
+    dtssApply($this->seeder, $this->user, DemoTransactionRef::MediaMarkt, $legs);
+    dtssApply($this->seeder, $this->user, DemoTransactionRef::MediaMarkt, $legs);
 
     expect(dtssSplitCount((int) $this->parent->id))->toBe(2);
 });

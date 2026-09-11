@@ -15,36 +15,10 @@ use Tests\Contracts\Support\BackendSourceFiles;
  * @link ../../.docs/features/sync/sensitive-columns-at-rest.md
  */
 
-// Listed, not excused. They match plaintext TODAY: the demo writer inserts
-// through the query builder, bypassing the codec, so nothing it writes is
-// sealed. They go inert the moment that writer starts sealing, which is what
-// couples the two changes — this list is where that coupling is recorded.
-const SEALED_PREDICATE_DEMO_SEEDERS = [
-    'Modules/Chains/Database/Seeders/Demo/DemoChainsSeeder.php' => [
-        'reason' => 'links six demo transactions to each other by the description each was seeded with',
-        'proves' => "/->where\\('description'/",
-    ],
-    'Modules/Ledger/Database/Seeders/Demo/DemoTransactionsSeeder.php' => [
-        'reason' => 'finds the two demo top-ups to pair as transfers by the description each was given',
-        'proves' => "/->whereIn\\('description'/",
-    ],
-    'Modules/Ledger/Database/Seeders/Demo/DemoTransactionSplitsSeeder.php' => [
-        'reason' => 'finds the charge to split by the description the transaction seeder gave it',
-        'proves' => '/descriptionMatch/',
-    ],
-    'Modules/Ledger/Database/Seeders/Demo/IcsSettlementAligner.php' => [
-        'reason' => 'pairs the bank side and the card side of one settlement by their two literal descriptions',
-        'proves' => '/BANK_SIDE|CARD_SIDE/',
-    ],
-    'Modules/Receipts/Database/Seeders/Demo/DemoReceiptsSeeder.php' => [
-        'reason' => 'attaches a demo receipt to the charge whose description names the same order',
-        'proves' => "/->where\\('description'/",
-    ],
-    'Modules/Tax/Database/Seeders/Demo/DemoTaxTagsSeeder.php' => [
-        'reason' => 'tags the deductible charges by a LIKE over the description, which ciphertext answers with nothing',
-        'proves' => "/->where\\('description', 'like'/",
-    ],
-];
+// The six demo seeders this guard shipped with an allow-list for now match on
+// the plaintext source_ref tag DemoTransactionRef mints, so the rule holds over
+// the whole tree and the list, and the case that kept it true, are gone with
+// them. The control at the foot of this file replaces what they proved.
 
 // Two of the twelve sealed names also sit on a table that does NOT seal them:
 // `description` on three staging and audit tables, `iban` on accounts. A bare
@@ -143,7 +117,19 @@ function sealedColumnNames(): array
  */
 function sealedPredicatesIn(string $path, array $columns): array
 {
-    $tokens = BackendSourceFiles::codeTokens($path);
+    return sealedPredicatesInSource($path, (string) file_get_contents($path), $columns);
+}
+
+/**
+ * The same reading over source held in hand, so the control below can plant a
+ * subject instead of nominating a file the rule would then have to excuse.
+ *
+ * @param  list<string>  $columns
+ * @return list<string>
+ */
+function sealedPredicatesInSource(string $path, string $source, array $columns): array
+{
+    $tokens = BackendSourceFiles::tokensOf($path, $source);
     $found = [];
 
     foreach ($tokens as $index => $token) {
@@ -192,7 +178,7 @@ function sealedPredicatesIn(string $path, array $columns): array
     return array_values(array_unique($found));
 }
 
-it('compares no sealed column against a value outside the demo seeders', function (): void {
+it('compares no sealed column against a value anywhere in the tree', function (): void {
     $columns = sealedColumnNames();
     expect($columns)->not->toBe([], 'The registry named no sealed columns, so a clean answer below is this guard reading nothing.');
 
@@ -200,7 +186,6 @@ it('compares no sealed column against a value outside the demo seeders', functio
     expect(count($files))->toBeGreaterThan(500, 'The walk opened almost no PHP, so a clean answer below is the walk being broken.');
 
     $offenders = [];
-    $seeded = [];
 
     foreach ($files as $path) {
         $relative = str_replace(base_path().'/', '', $path);
@@ -210,19 +195,8 @@ it('compares no sealed column against a value outside the demo seeders', functio
             continue;
         }
 
-        if (array_key_exists($relative, SEALED_PREDICATE_DEMO_SEEDERS)) {
-            $seeded[$relative] = $hits;
-
-            continue;
-        }
-
         $offenders[] = $relative.'  '.implode(' ', $hits);
     }
-
-    // The positive control rides along: the demo seeders are the known shape,
-    // so a run that finds none of them found nothing at all and would report
-    // the tree clean whatever it held.
-    expect($seeded)->not->toBe([], 'The scan matched none of the demo seeders, so it cannot be trusted to have matched a real one.');
 
     expect($offenders)->toBe([], implode("\n", [
         'A sealed column holds ciphertext with a fresh nonce per write, so comparing one',
@@ -233,28 +207,26 @@ it('compares no sealed column against a value outside the demo seeders', functio
     ]));
 });
 
-// The list above earns its place by staying true. A seeder that stops matching
-// on a sealed column should leave the list in the same change, and one that is
-// merely renamed should not read as fixed.
-it('keeps every listed demo seeder present and still matching on a sealed column', function (): void {
-    $stale = [];
+// Counting the files proves the walk opened the tree; this proves the matcher
+// inside it still recognises the shape, which a clean tree cannot. Planted
+// source and not a nominated file: a file kept in the tree to be found would
+// have to be excused from the very rule it is the evidence for.
+it('still recognises a sealed predicate, and still leaves a column merely named alone', function (): void {
+    $columns = sealedColumnNames();
+    $path = base_path('Modules/PlantedByTheControl.php');
 
-    foreach (SEALED_PREDICATE_DEMO_SEEDERS as $relative => $entry) {
-        $path = base_path($relative);
+    $compared = <<<'PHP'
+        <?php
+        $db->table('transactions')->where('user_id', 1)->where('description', 'Bol.com via PayPal')->first();
+        PHP;
 
-        if (! is_file($path)) {
-            $stale[] = $relative.' is listed and does not exist';
+    $named = <<<'PHP'
+        <?php
+        $db->table('transactions')->where('user_id', 1)->whereNotNull('description')->get();
+        PHP;
 
-            continue;
-        }
-
-        if (preg_match($entry['proves'], (string) file_get_contents($path)) !== 1) {
-            $stale[] = $relative.' no longer shows '.$entry['proves'].' — '.$entry['reason'];
-        }
-    }
-
-    expect($stale)->toBe([], implode("\n", [
-        'A listed seeder no longer holds the shape it was listed for:',
-        ...$stale,
-    ]));
+    expect(sealedPredicatesInSource($path, $compared, $columns))
+        ->toBe(['where(description)'], 'The scan no longer reports a sealed column compared to a value, so a clean tree above says nothing.')
+        ->and(sealedPredicatesInSource($path, $named, $columns))
+        ->toBe([], 'The scan reports a column it only NAMES, so what it found above need not have been a comparison.');
 });
