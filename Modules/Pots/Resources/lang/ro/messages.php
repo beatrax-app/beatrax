@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Pușculițele depășesc soldul real cu :amount — reechilibrează pentru a corecta',
+        'overdrawn' => 'Această pușculiță este :amount sub zero pentru că a fost golită pe mai mult de un dispozitiv — alimenteaz-o cu aceeași sumă pentru a corecta',
         'real_balance' => 'Sold real:',
         'allocated' => 'Alocat:',
         'unallocated' => 'Nealocat:',

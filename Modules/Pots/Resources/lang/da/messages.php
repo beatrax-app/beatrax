@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Puljerne overstiger den reelle saldo med :amount — genbalancér for at rette det',
+        'overdrawn' => 'Denne pulje er :amount under nul, fordi den er blevet tømt på mere end én enhed — indsæt det samme beløb for at rette det',
         'real_balance' => 'Reel saldo:',
         'allocated' => 'Fordelt:',
         'unallocated' => 'Ufordelt:',

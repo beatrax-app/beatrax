@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Rücklagen übersteigen den tatsächlichen Saldo um :amount — verteile neu, um das zu beheben',
+        'overdrawn' => 'Diese Rücklage liegt :amount unter null, weil sie auf mehr als einem Gerät geleert wurde — zahle denselben Betrag ein, um das zu beheben',
         'real_balance' => 'Tatsächlicher Saldo:',
         'allocated' => 'Zugeteilt:',
         'unallocated' => 'Nicht zugeteilt:',

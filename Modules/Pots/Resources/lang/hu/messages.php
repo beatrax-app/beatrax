@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'A perselyek :amount összeggel meghaladják a valós egyenleget — rendezd el',
+        'overdrawn' => 'Ez a persely :amount összeggel nulla alatt van, mert egynél több eszközön ürítetted ki — töltsd fel ugyanennyivel, hogy rendben legyen',
         'real_balance' => 'Valós egyenleg:',
         'allocated' => 'Kiosztva:',
         'unallocated' => 'Kiosztatlan:',

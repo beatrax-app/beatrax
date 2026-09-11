@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Kasice premašuju stvarno stanje za :amount — uravnoteži da to ispraviš',
+        'overdrawn' => 'Ova kasica je :amount ispod nule jer je ispražnjena na više od jednog uređaja — uplati isti iznos da to ispraviš',
         'real_balance' => 'Stvarno stanje:',
         'allocated' => 'Raspoređeno:',
         'unallocated' => 'Neraspoređeno:',

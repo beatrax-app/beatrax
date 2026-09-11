@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Potid ületavad tegelikku jääki :amount võrra — paranda tasakaalustamisega',
+        'overdrawn' => 'See pott on :amount alla nulli, sest see tühjendati rohkem kui ühes seadmes — lisa sama summa, et see korda teha',
         'real_balance' => 'Tegelik jääk:',
         'allocated' => 'Jaotatud:',
         'unallocated' => 'Jaotamata:',

@@ -22,6 +22,13 @@
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)
         ->format();
 
+    // What this pot can still give back, never less than nothing. A pot two
+    // devices emptied apart reads below zero, and the sentences quoting this
+    // figure offered a taking and promised a release the writer refuses at
+    // that sign.
+    $available = static fn (int $minor, string $currency): string => Money::ofMinor(max(0, $minor), $currency)
+        ->format();
+
     // The accounts a pot may be created on. A group whose account is not among
     // them is a pot the server now refuses to add to, so the button is not drawn.
     $allocatableAccountIds = array_map(static fn ($account) => (int) $account->id, $accounts);
@@ -166,7 +173,17 @@
                             <p class="primary truncate">{{ $pot->name }}</p>
                             <p class="secondary">{{ $pot->accountName }}</p>
                         </div>
-                        <span class="amount">{{ $fmt($pot->balanceMinor, $pot->currency) }}</span>
+                        <span class="amount {{ $pot->isOverdrawn() ? 'text-amber-600 dark:text-amber-400' : '' }}">{{ $fmt($pot->balanceMinor, $pot->currency) }}</span>
+                        {{-- The same amber the negative unallocated figure
+                             wears one block up, for the same reason: a minus
+                             sign in front of a balance is not a sentence, and
+                             the reader has no other way to learn a second
+                             device took what this one had already taken. --}}
+                        @if ($pot->isOverdrawn())
+                            <p class="mt-2 w-full text-xs font-medium text-amber-600 dark:text-amber-400" role="alert">
+                                {{ Lang::get('pots::messages.recon.overdrawn', ['amount' => $fmt(abs($pot->balanceMinor), $pot->currency)]) }}
+                            </p>
+                        @endif
                         {{-- Actions on their own line. Five 44px targets and
                              the amount left the name 6px wide on a 375pt
                              screen, so the row said which pot it was not.
@@ -187,7 +204,7 @@
                         @if ($archivingPotId === $pot->id)
                             <x-core::confirm-strip
                                 class="mt-3 w-full"
-                                :question="Lang::get('pots::messages.archive_confirm', ['amount' => $fmt($pot->balanceMinor, $pot->currency)])"
+                                :question="Lang::get('pots::messages.archive_confirm', ['amount' => $available($pot->balanceMinor, $pot->currency)])"
                                 :cancel-label="Lang::get('pots::messages.common.cancel')"
                                 :confirm-label="Lang::get('pots::messages.actions.archive')"
                                 :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
@@ -301,9 +318,22 @@
                                 </div>
 
                                 {{-- Pot balance --}}
-                                <p class="mt-1 font-semibold text-slate-900 dark:text-slate-100" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; font-size: var(--text-md, 1rem);">
+                                <p class="mt-1 font-semibold {{ $pot->isOverdrawn() ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; font-size: var(--text-md, 1rem);">
                                     {{ $fmt($pot->balanceMinor, $pot->currency) }}
                                 </p>
+
+                                {{-- Named, not clamped. The sum below zero is
+                                     the true one and rounding it up to nought
+                                     would hide the very disagreement between
+                                     two devices the reader has to settle. --}}
+                                @if ($pot->isOverdrawn())
+                                    <x-core::alert tone="warning" class="mt-2" role="alert">
+                                        <span class="mr-1" aria-hidden="true">
+                                            <flux:icon.exclamation-triangle class="inline-block h-4 w-4 align-text-bottom" />
+                                        </span>
+                                        {{ Lang::get('pots::messages.recon.overdrawn', ['amount' => $fmt(abs($pot->balanceMinor), $pot->currency)]) }}
+                                    </x-core::alert>
+                                @endif
 
                                 {{-- Coverage insight: category-linked only --}}
                                 @if ($pot->categoryId !== null && $pot->categorySpentMinor !== null)
@@ -319,7 +349,7 @@
                                 @if ($archivingPotId === $pot->id)
                                     <x-core::confirm-strip
                                         class="mt-3"
-                                        :question="Lang::get('pots::messages.archive_confirm', ['amount' => $fmt($pot->balanceMinor, $pot->currency)])"
+                                        :question="Lang::get('pots::messages.archive_confirm', ['amount' => $available($pot->balanceMinor, $pot->currency)])"
                                         :cancel-label="Lang::get('pots::messages.common.cancel')"
                                         :confirm-label="Lang::get('pots::messages.actions.archive')"
                                         :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
@@ -702,7 +732,7 @@
                 @endif
                 @if ($operationPot !== null)
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('pots::messages.available_in', ['name' => $operationPot->name, 'amount' => $fmt($operationPot->balanceMinor, $operationPot->currency)]) }}
+                        {{ Lang::get('pots::messages.available_in', ['name' => $operationPot->name, 'amount' => $available($operationPot->balanceMinor, $operationPot->currency)]) }}
                     </p>
                 @endif
             </div>
@@ -1015,7 +1045,7 @@
                     />
                     @if ($moveSrcPot !== null)
                         <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                            {{ Lang::get('pots::messages.available_in', ['name' => $moveSrcPot->name, 'amount' => $fmt($moveSrcPot->balanceMinor, $moveSrcPot->currency)]) }}
+                            {{ Lang::get('pots::messages.available_in', ['name' => $moveSrcPot->name, 'amount' => $available($moveSrcPot->balanceMinor, $moveSrcPot->currency)]) }}
                         </p>
                     @endif
                     @if ($errorAmount !== '')
@@ -1062,7 +1092,7 @@
                     />
                     @if ($operationPot !== null)
                         <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                            {{ Lang::get('pots::messages.available_in', ['name' => $operationPot->name, 'amount' => $fmt($operationPot->balanceMinor, $operationPot->currency)]) }}
+                            {{ Lang::get('pots::messages.available_in', ['name' => $operationPot->name, 'amount' => $available($operationPot->balanceMinor, $operationPot->currency)]) }}
                         </p>
                     @endif
                     @if ($errorAmount !== '')
