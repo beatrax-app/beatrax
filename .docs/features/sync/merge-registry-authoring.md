@@ -94,10 +94,11 @@ string computed by domain code before insert rather than a database
 autoincrement, and the insert fails the `id` NOT NULL constraint if it is
 missing. So that one *is* listed.
 
-`anomaly_alerts.id` looks like the same case and is not. It is derived from the
-`(user_id, transaction_id)` its own unique index names, so both devices compute
-the same value for the same charge — and the applier still seeds it from the
-op's pk, so it stays out.
+`anomaly_alerts.id` looks like the same case and is not. It is minted — it was
+briefly derived from `(user_id, transaction_id)`, until the transaction id in
+that tuple turned out to be a number each device counts for itself — and the
+applier still seeds it from the op's pk, so it stays out. What makes two devices
+one row there is `anomaly_alerts_uniq`, not the id.
 
 ### `user_id` is usually nullable, and sometimes is not
 
@@ -213,7 +214,9 @@ is meaningless, and `SyncCaptureListener` reports an `edit` on
 `recurring_series_occurrences` leans on the same idempotency seam on the peer
 that it uses locally: its `(series, transaction)` unique index is what absorbs a
 duplicate replay, which `CreateRowInsertFailure::AlreadyPresent` classifies and
-passes over in silence.
+`PeerRowAliases` then remembers the peer's id against. The index carries that on
+its own — the row's id is minted, because the transaction half of the pair is a
+number each device counts for itself.
 
 ## Registration order is not insertion order
 

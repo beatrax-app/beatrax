@@ -6,7 +6,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Http\Livewire\ChainHintsQueue;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
@@ -75,7 +74,10 @@ function browserTripHint(): array
         'fingerprint_version' => 3,
     ]);
 
-    $id = ChainLinkInsertHelper::idFor($user->id, (int) $charge->id, null, 'funded_by_card_hint');
+    // A literal rather than a draw: DeviceMintedRowId::mint() lands under 2^53
+    // about once in a thousand, and the assertions below are about what a page
+    // does with an id a double cannot hold, not about how often one comes up.
+    $id = 8508975233290539533;
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -104,11 +106,12 @@ function browserTripHintExists(int $id): bool
     return $db->connection()->table('chain_links')->where('id', $id)->exists();
 }
 
-it('mints a hint id the browser cannot hold as a number', function (): void {
+it('writes a hint id the browser cannot hold as a number', function (): void {
     [, $id] = browserTripHint();
 
     expect($id)->toBeGreaterThan(9007199254740991)
-        ->and((int) (float) $id)->not->toBe($id);
+        ->and((int) (float) $id)->not->toBe($id)
+        ->and($id)->toBeLessThanOrEqual(PHP_INT_MAX);
 });
 
 it('dismisses the hint when the id arrives as the string the wire now sends', function (): void {

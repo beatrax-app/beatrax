@@ -142,8 +142,8 @@ rather than a sequence of anonymous flips.
 ## Cursor pagination across the tabs
 
 Both streams on this page order on `(detected_at, id)`. Neither id ascends with
-insertion any more: each is derived from the alert's own columns so that two
-devices agree on it, which means it sorts in hash order and can only break ties
+insertion any more: each is minted, which means it sorts in no order at all and
+can only break ties
 within one `detected_at` second — which the revival sweep and the detector
 listener both produce, each writing a batch inside one scheduler tick. Both
 `DriftAlertQuery` and `AnomalyAlertQuery` offer a keyset cursor on that pair. `DriftPage` does

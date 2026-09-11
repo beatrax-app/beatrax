@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Public\Http\Livewire\ChainDrawer;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -86,7 +86,7 @@ it('reads the account names once for the whole fan-out, not once per covered cha
     for ($i = 1; $i <= 50; $i++) {
         $charge = fanOutNamesTx($this, $this->ics, -1000, 'expense', 'Shop', $i + 1);
         $this->db->connection()->table('chain_links')->insert([
-            'id' => ChainLinkInsertHelper::idFor($this->user->id, (int) $settlement->id, (int) $charge->id, 'ics_bulk_settle'),
+            'id' => DeviceMintedRowId::mint(),
             'user_id' => $this->user->id,
             'from_transaction_id' => $settlement->id,
             'to_transaction_id' => $charge->id,

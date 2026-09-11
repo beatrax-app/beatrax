@@ -161,9 +161,10 @@ Modules/Chains/
   the demo seeder — so no two callers can drift on evidence whitespace,
   key order, or on the pair-uniqueness guard. The hash that backs the
   auto-promotion learning loop is computed against this canonical JSON.
-  `idFor()` folds the same pair-uniqueness tuple into the row's id, so
-  two devices resolving one hint write one row; both entry points emit
-  the `EntityMutated` create.
+  `chain_links_pair_uq` states the same pair-uniqueness tuple, so two
+  devices resolving one link meet on that index rather than on a shared
+  id — a hint's NULL endpoint is not bound by it, and stays two rows.
+  Both entry points emit the `EntityMutated` create.
 - `Internal/AutoPromotion` — the learning loop's confirmation
   threshold, and the countdown the review queue renders from it.
 - `Internal/ConfidenceScale` — the DECIMAL(4,3) spelling both resolvers

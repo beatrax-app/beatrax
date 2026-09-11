@@ -19,11 +19,11 @@ uses(RefreshDatabase::class);
 function mintsItsOwnRowIds(): array
 {
     return [
-        'anomaly_suppression_rules' => "DerivedRowId::for('anomaly_suppression_rules')",
-        'chain_links' => "DerivedRowId::for('chain_links')",
         'envelope_moves' => "DerivedRowId::for('envelope_moves')",
         'system_alerts' => "DerivedRowId::for('system_alerts')",
         'transaction_splits' => "DerivedRowId::for('transaction_splits')",
+        'anomaly_suppression_rules' => 'DeviceMintedRowId::mint() in DismissAnomalyAlertAsExpected',
+        'chain_links' => 'DeviceMintedRowId::mint() in ChainLinkInsertHelper',
         'forecast_scenario_mutations' => 'DeviceMintedRowId::mint() in AddScenarioMutation',
         'goals' => 'DeviceMintedRowId::mint() in GoalWriter',
         'migration_import_baseline' => 'DeviceMintedRowId::mint() in SourceMapWriter',
@@ -61,6 +61,10 @@ function uniqueIndexesThatAreNotACrossDeviceIdentity(): array
         'system_alerts_dedup_key_unique' => 'A device-local claim on the one OPEN alert of a kind: '
             .'NULL on every row that is meant to repeat, and SystemAlertWriter::storedRow() strips it '
             .'before an owned alert travels, so the peer never sees the value at all.',
+        'chain_links_pair_uq' => 'What both resolvers dedupe on, stated where the database can '
+            .'enforce it. Two of its four columns are transaction ids each device takes for itself, so '
+            .'the tuple only agrees across devices once PeerRowAliases has translated them — and it does '
+            .'not bind a hint row at all, whose NULL endpoint SQLite counts as distinct.',
         'migration_import_baseline_map_field_unique' => 'The map row and the field it holds a baseline '
             .'for. Its leading column is migration_source_map\'s own autoincrement, which each device '
             .'takes for itself, so the pair only agrees across devices once PeerRowAliases has '
