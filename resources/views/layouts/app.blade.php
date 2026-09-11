@@ -306,7 +306,11 @@
                      escapes to a real network that has nothing on 127.0.0.1 and
                      fails on every single page load. There is no offline story
                      to lose: the app IS local there. --}}
-                <script nonce="{{ Vite::cspNonce() }}">
+                {{-- data-navigate-once, because a wire:navigate swap re-runs every
+                     body script that lacks it. The load event this one waits on has
+                     already fired by then, so each navigation left one more listener
+                     on the window that could never run again. --}}
+                <script nonce="{{ Vite::cspNonce() }}" data-navigate-once>
                     if ('serviceWorker' in navigator) {
                         window.addEventListener('load', function () {
                             navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
@@ -338,7 +342,11 @@
                     here previously 500'd every mobile surface —
                     MobileSurfaceParityTest run from `mobile-app/` caught it.
                 --}}
-                <script nonce="{{ Vite::cspNonce() }}">
+                {{-- data-navigate-once, because a wire:navigate swap re-runs every
+                     body script that lacks it and a window listener outlives the
+                     element tree it was bound from, so one close-window-choice would
+                     POST the choice once per navigation already made. --}}
+                <script nonce="{{ Vite::cspNonce() }}" data-navigate-once>
                     (function () {
                         if (typeof window === 'undefined' || typeof document === 'undefined') {
                             return;

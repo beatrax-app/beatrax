@@ -231,7 +231,10 @@
         .cursor-blink { animation: cursor-blink-1s 1s steps(1) infinite; }
     </style>
 
-    <script nonce="{{ Vite::cspNonce() }}">
+    {{-- data-navigate-once beside the flag below, not instead of it: the flag
+         answers a second mount inside one document, and the attribute is what
+         stops a wire:navigate swap re-running the tag at all. --}}
+    <script nonce="{{ Vite::cspNonce() }}" data-navigate-once>
         if (typeof window !== 'undefined' && !window.__devLogTailerRegistered) {
             window.__devLogTailerRegistered = true;
 

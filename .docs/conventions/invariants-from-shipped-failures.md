@@ -7497,6 +7497,57 @@ construction, and `LogManager::createEmergencyLogger()` builds its handler from 
 path and a level without ever calling `tap()`, so a key there would read as a
 decision and change nothing.
 
+## A listener bound to the window outlived the page that bound it
+
+`tests/Contracts/AScriptThatBindsToTheWindowRunsOnceArchTest.php`
+
+`wire:navigate` never reloads the document. It fetches the new page, adopts its
+body element and calls `document.body.replaceWith(newBody)` — and just before
+that, it walks every `<script>` the incoming body carries and replaces each one
+with a fresh clone, which is what makes it execute. The only tag it skips is one
+marked `data-navigate-once` whose content it has already seen in a body on this
+document. Livewire marks its own config tag that way; nothing this repository
+wrote did.
+
+Everything inside the old body dies with it, so a listener bound to an element
+there is collected along with the element. `window` and `document` are not
+inside it. A tag that calls `window.addEventListener` with no attribute and no
+re-entry flag therefore adds one more live listener on every navigation, and
+they accumulate for as long as the tab stays open.
+
+Three tags were found and two of them bound. The service-worker registration
+waits on `load`, which has already fired by the time a navigated page arrives,
+so each navigation left behind a closure that could never run again — dead
+weight and nothing worse. The close-window glue is the one with teeth: every
+navigation added another `close-window-choice` listener, and each listener POSTs
+the chosen action to `desktop.close-action` on its own.
+
+That second one is latent rather than shipped, and the distinction is worth
+writing down. `close-window-choice` is dispatched by exactly one component, on
+exactly one route, and the Electron main process reaches that route by loading
+the URL — a full document load, which destroys every listener the previous
+document had accumulated. So the prompt has always fired against exactly one
+listener. Nothing links `/desktop/close-prompt` with `wire:navigate` today; it
+was one link away from posting a quit N times. The endpoint absorbs the
+duplicates — `App::quit()` and `Window::hide()` are both idempotent and the
+controller re-validates the choice against a two-string allow-list — so the cost
+would have been duplicate requests rather than a wrong window action.
+
+The layout's third tag assigns `window.beatraxIdleMs` and two values beside it.
+Re-running that writes the same properties again, which is why the rule is
+keyed on what a tag *binds* rather than on the tag existing: an idempotent
+assignment needs no attribute, and marking it would only hide that it is safe.
+
+`data-navigate-once` is the fix rather than a hand-rolled `window.__thing`
+flag, for two reasons. It is declarative, so a guard can read it out of the
+template, where a flag is a convention a reader has to recognise. And it is
+hashed on the tag's content with `nonce` on Livewire's exempt-attribute list, so
+this application's per-request CSP nonce does not defeat the match — the same
+tag on two pages hashes the same. The dev log tailer keeps its
+`window.__devLogTailerRegistered` flag *as well*: the attribute stops the tag
+re-running across a swap, and the flag answers a second mount inside one
+document. They are not the same question.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
