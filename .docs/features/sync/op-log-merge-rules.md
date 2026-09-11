@@ -415,12 +415,14 @@ rebuild already has fully hydrated. That is the intended cost: a rebuild is the
 operation most likely to have changed what the derived state was built from, and
 the alternative is a device whose forecasts describe the database it had before.
 
-Two listeners hear it today:
+Four listeners hear it today:
 
 | listener | what it would otherwise miss |
 |---|---|
 | `DeactivateRulesOnReferentDelete` | Categorization rules name a category or a counterparty through an opaque JSON payload with no foreign key. Rules are device-local, so the device holding one is the only side that can deactivate it, and a peer's delete reached neither the model-event arm nor the `EntityMutated` arm. |
 | `ProjectForecastOnPeerRowsApplied` | `forecast_runs` and `forecast_shortfall_windows` are derived and device-local, while every input the eight local forecast listeners fire on travels. A series a household member approved reached this device's tables and none of its forecasts until the daily sweep. |
+| `RederiveFingerprintOnMergedRows` | The dedup digest is composed over seven columns that merge on seven clocks, so a row can end up keyed by a digest describing neither device's values — and the next import of the same statement then matches nothing and lands a duplicate. |
+| `ClearHalfPairsOnMergedRows` | `transactions.pair_transaction_id` is a symmetric involution across two rows and the schema holds only the foreign key, never the symmetry. A retype on one device and a pairing on the other leave one leg naming a partner that has let go — money no flow counts and the orphan sweep cannot see. |
 
 **Not every event belongs on this path**, and that is the harder half. An unlock
 happened *here*; a notification the origin device already delivered would ring a
