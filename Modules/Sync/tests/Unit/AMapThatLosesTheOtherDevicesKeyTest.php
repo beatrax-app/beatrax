@@ -53,15 +53,14 @@ it('is exactly the key last-writer-wins would have dropped', function (): void {
         ->and($lww)->not->toHaveKey('note');
 });
 
-// A numeric key is still one key. A spread renumbers integer keys instead of
-// merging on them, so this map would have grown an entry per op.
-it('overwrites a numeric key rather than appending it', function (): void {
-    $resolved = (new JsonKeyUnionStrategy)->resolve([
-        amltEntry('{"0":"rule"}', 100, 'device-a'),
-        amltEntry('{"0":"manual"}', 200, 'device-b'),
-    ]);
-
-    expect($resolved)->toBe([0 => 'manual']);
+// `{"0":"manual"}` decodes to [0 => 'manual'], which PHP cannot tell from the
+// list ["manual"] -- so the guard refuses it rather than guessing. No key this
+// column carries is numeric: they are column names. The merge below uses
+// array_replace regardless, because a spread would renumber an integer key
+// instead of merging on it and the refusal is the only thing stopping that.
+it('refuses an object whose keys cannot be told from a list', function (): void {
+    expect(fn () => (new JsonKeyUnionStrategy)->resolve([amltEntry('{"0":"manual"}', 100, 'device-a')]))
+        ->toThrow(UnexpectedValueException::class);
 });
 
 it('lets a later stamp of the same key win', function (): void {
