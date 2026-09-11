@@ -232,7 +232,14 @@ downstream IBAN/amount validators enforce structure instead. Money
 handling: `genkgo/camt` exposes amounts as `Money\Money`
 (moneyphp/money); the adapter converts to integer minor units at the
 boundary and never lets `Money\Money` escape into the Public DTO
-surface. `Camt053HeaderProfile::XML_NAMESPACE_REGEX` anchors on the
+surface. A batch booking — one `<Ntry>` carrying several `<TxDtls>` —
+takes each child's own amount, and a child may spell it either way: as
+`<AmtDtls><TxAmt>` (the instructed figure, which a bank that converted
+nothing has no reason to write) or as the ordinary `<Amt>`. Reading only
+the first left a child that wrote the second on the entry TOTAL, so a
+three-child €150 collection was booked as €450. The child's own
+`<CdtDbtInd>` then re-signs it, because `genkgo/camt` signs both
+elements off the entry's. `Camt053HeaderProfile::XML_NAMESPACE_REGEX` anchors on the
 CAMT.053 family, not a specific sub-version — any
 `urn:iso:std:iso:20022:tech:xsd:camt.053.001.NN` URI passes the sniffer;
 unknown sub-versions fail at parse time instead, so a future bank
