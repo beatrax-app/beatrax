@@ -153,7 +153,7 @@ final readonly class OpLogReplayer
             $aliases,
             new AlreadyPresentCreate(
                 $aliases,
-                new CreateRowCollision($db, $sensitiveFields, $log),
+                new CreateRowCollision($db, $sensitiveFields, $log, $ownership),
                 $quarantine,
                 $splitTail,
                 new RehomedCreate($db, $aliases, $log),

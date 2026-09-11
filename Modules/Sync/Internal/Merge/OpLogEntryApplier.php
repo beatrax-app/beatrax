@@ -240,7 +240,7 @@ final readonly class OpLogEntryApplier
             return;
         }
 
-        $plan = $this->splitTail->planFill($table, $pk, $payload, SuppliedCreationTime::seededValueFor($fields));
+        $plan = $this->splitTail->planFill($table, $pk, $payload, $batch->userId, SuppliedCreationTime::seededValueFor($fields));
 
         if ($plan === null) {
             return;
