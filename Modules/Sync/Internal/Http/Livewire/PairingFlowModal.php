@@ -595,6 +595,14 @@ final class PairingFlowModal extends Component
         CurrentUser $currentUser,
         PairingTokenService $tokenService,
     ): void {
+        // The countdown is drawn only on this step, and the step is the one
+        // thing that tells it from a timer still running on a removed element:
+        // pairingTokenId stays set through Confirm, so a late tick expired a
+        // code the ceremony was still finishing.
+        if ($this->currentStep() !== PairingWizardStep::ShowCode) {
+            return;
+        }
+
         // Marks the abandoned/expired token so it is not left dangling as
         // pending — the next issue() prunes it; expiring it now keeps the
         // row's state honest the moment the countdown hits zero.

@@ -7381,6 +7381,36 @@ first argument of a `new`. An id an expression merely reads a value out of —
 `getElementById('ob-public-key').value` behind a copy button — is not a drawing,
 and freezing that field would be a defect of its own.
 
+## A resource started on an element that outlived it
+
+`tests/Contracts/AResourceStartedOnAnElementIsStoppedWithItArchTest.php`
+
+A `setInterval`, an `EventSource` and the three observers are not owned by the
+DOM. Removing the element they were started from stops none of them: the timer
+keeps ticking, the stream keeps reconnecting, and both still hold `$wire` for a
+component that is no longer on screen. Alpine calls `destroy()` on removal and
+nothing else does, so the method is the whole of the teardown.
+
+A Livewire morph removes elements constantly — a wizard step flipping, a filter
+chip, a row leaving a list. The pairing modal is where it cost something: the
+countdown is drawn only inside the `show_code` block, and when the peer scans,
+the poll flips the wizard to `confirm` and that block goes. The interval kept
+running on a scope nobody could see, and ten minutes after the code was shown it
+called `onCodeExpired()` — which expired the token by id, because
+`pairingTokenId` stays set all the way through `confirm`. The reader is on the
+"do these words match?" screen and the code under it is retired.
+
+Both halves are the fix, and the second is the one that holds. `destroy()` stops
+the timer that is there today; the step gate answers every late call, including
+one replayed off the wire, because the step is the only thing that can tell a
+screen from a timer that outlived it.
+
+The rule reads Blade through `MarkupSource`, never a pattern shaped like a tag —
+`x-data='{ init() { a.map(x => x.y) } }'` carries a `>` inside its own value, and
+a reader that stops at the first one cuts the attribute holding the answer in
+half. A factory in `resources/js` registered through `Alpine.data()` is **not**
+walked, so the same shape there is on the author.
+
 ## A provider registered from an event that has already fired
 
 `tests/Contracts/AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest.php`
