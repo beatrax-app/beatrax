@@ -48,15 +48,17 @@ final readonly class RecordCategoryPotRetirementAlert
     {
         $connection = $this->db->connection();
 
-        // A pot that was already empty releases nothing and writes no movement
-        // at all, so it is absent here — which is the population this notice
-        // wants: no money moved is nothing to raise an amber banner over.
+        // Negative rows only. An empty pot writes no movement at all, and an
+        // overdrawn one releases a POSITIVE amount that hands nothing back —
+        // it takes back an unallocated figure that was overstated. Filtering
+        // the row rather than the sum keeps the count naming the pots it counts.
         $rows = $connection->table('pot_movements')
             ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
             ->where('pots.user_id', $userId)
             ->where('pots.status', PotStatus::Archived->value)
             ->whereNotNull('pots.category_id')
             ->where('pot_movements.kind', PotMovementKind::ReleasedOnArchive->value)
+            ->where('pot_movements.amount_minor', '<', 0)
             ->groupBy('pot_movements.currency')
             ->orderBy('pot_movements.currency')
             ->get([
@@ -84,8 +86,8 @@ final readonly class RecordCategoryPotRetirementAlert
     {
         $currency = self::toString($row['currency'] ?? null);
 
-        // The release is stored as a negative movement, so the figure the
-        // reader is owed is its inverse.
+        // Every row behind this sum is negative by the predicate above, so the
+        // figure the reader is owed is its inverse.
         $minor = -self::toInt($row['released_minor'] ?? null);
         $pots = self::toInt($row['pot_count'] ?? null);
 

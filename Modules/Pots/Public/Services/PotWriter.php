@@ -414,7 +414,11 @@ final readonly class PotWriter
         $this->db->connection()->transaction(function () use ($user, $pot, &$events): void {
             $balance = $this->balance->balanceForPot($pot->id, $user);
 
-            if ($balance > 0) {
+            // Not `> 0`: two devices used apart can each withdraw the whole
+            // balance and both rows land, leaving the pot below nought.
+            // Releasing only a positive balance left that one archived still
+            // negative, and archiving is what makes a pot read as zero.
+            if ($balance !== 0) {
                 $events[] = $this->insertMovement([
                     'user_id' => $user->id,
                     'pot_id' => $pot->id,
