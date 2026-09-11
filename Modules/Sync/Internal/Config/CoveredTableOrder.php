@@ -176,26 +176,15 @@ final readonly class CoveredTableOrder
      */
     private function dependencies(array $covered): array
     {
-        $schema = $this->db->connection()->getSchemaBuilder();
         $dependencies = [];
 
+        // Read through parentColumns() rather than the foreign keys directly,
+        // so a reference declared there because it carries no constraint is
+        // written down before the rows that name it, and not merely translated
+        // once they are both here. Self-references and uncovered targets are
+        // already excluded there, for the same two reasons.
         foreach ($covered as $table) {
-            $parents = [];
-
-            if ($schema->hasTable($table)) {
-                foreach ($schema->getForeignKeys($table) as $foreignKey) {
-                    $target = $foreignKey['foreign_table'];
-
-                    // Self-references order themselves within one table, and
-                    // an uncovered target is either always present or already
-                    // reported by the merge-rules schema contract.
-                    if ($target !== $table && in_array($target, $covered, true)) {
-                        $parents[] = $target;
-                    }
-                }
-            }
-
-            $dependencies[$table] = array_values(array_unique($parents));
+            $dependencies[$table] = array_values(array_unique(array_values($this->parentColumns($table))));
         }
 
         return $dependencies;

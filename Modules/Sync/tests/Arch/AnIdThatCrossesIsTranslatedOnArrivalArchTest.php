@@ -100,3 +100,31 @@ it('keeps no entry for a column that is translated now', function (): void {
         ...$stale,
     ]));
 });
+
+it('writes a declared parent down before the rows that name it', function (): void {
+    $order = app(CoveredTableOrder::class);
+    $insertion = $order->insertionOrder();
+
+    $late = [];
+
+    foreach (['transactions', 'forecast_scenario_mutations'] as $table) {
+        foreach ($order->parentColumns($table) as $column => $parent) {
+            $parentAt = array_search($parent, $insertion, true);
+            $childAt = array_search($table, $insertion, true);
+
+            if ($parentAt === false || $childAt === false || $parentAt < $childAt) {
+                continue;
+            }
+
+            $late[] = $table.'.'.$column.' names '.$parent.', which is written after it';
+        }
+    }
+
+    // Translation reads the alias the parent's own arrival recorded, so a
+    // parent written afterwards is a parent whose id could not be rewritten.
+    expect($late)->toBe([], implode("\n", [
+        'These parents are inserted after the rows naming them, so the alias the',
+        'translation needs does not exist yet:',
+        ...$late,
+    ]));
+});
