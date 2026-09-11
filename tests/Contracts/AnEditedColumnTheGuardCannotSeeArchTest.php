@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Tests\Contracts\Support\SyncedColumnWrites;
-
-uses(RefreshDatabase::class);
 
 // The registry is not the wire filter: a dirty column a writer names travels
 // whether or not it is declared, and an undeclared one merges as a plain Lww
@@ -21,7 +18,7 @@ const EDITED_BUT_ONCE_UNDECLARED = [
 ];
 
 it('declares every column an edit announces, so the announcement guard covers it', function (): void {
-    $registry = app(MergeRulesRegistry::class);
+    $registry = new MergeRulesRegistry;
     $covered = SyncedColumnWrites::mergeableColumns($registry);
 
     $missing = [];
@@ -41,7 +38,7 @@ it('declares every column an edit announces, so the announcement guard covers it
 // mergeableColumns() skips the self-scoped and device-local tables, so an
 // accidental empty return would pass the assertion above for every column.
 it('reads a column set big enough to have found them missing', function (): void {
-    $covered = SyncedColumnWrites::mergeableColumns(app(MergeRulesRegistry::class));
+    $covered = SyncedColumnWrites::mergeableColumns(new MergeRulesRegistry);
 
     expect(count($covered))->toBeGreaterThan(20)
         ->and(array_sum(array_map('count', $covered)))->toBeGreaterThan(100);
@@ -51,7 +48,7 @@ it('reads a column set big enough to have found them missing', function (): void
 // authoring page reads as a deliberate statement that the table is
 // insert-and-never-edited. A counterparty merge repoints the rule, so it is not.
 it('does not read a repointed rule as an append-only ledger', function (): void {
-    $registry = app(MergeRulesRegistry::class);
+    $registry = new MergeRulesRegistry;
 
     expect($registry->syncedColumns('anomaly_suppression_rules'))->toContain('counterparty_id')
         ->and(SyncedColumnWrites::mergeableColumns($registry))->toHaveKey('anomaly_suppression_rules');
