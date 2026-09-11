@@ -20,6 +20,8 @@ use Modules\Core\Public\Services\NavCountsService;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\Currency;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerTrait;
 
 // The rekey deletes every assignment and re-files it, and each new row's id
 // rides an EnvelopeAssignmentMutated create op to every paired device. A rowid
@@ -58,7 +60,7 @@ afterEach(function (): void {
 // is where the phones and a self-hosted server keep the cache. Built here rather
 // than switched on in config, so the row it writes lands on the one statement
 // whose id is read back rather than on the delete that happens to precede it.
-function rekeyOwnIdWatchTheAssignmentInsert(): void
+function rekeyOwnIdWatchTheAssignmentInsert(): LoggerInterface
 {
     /** @var DatabaseManager $manager */
     $manager = app(DatabaseManager::class);
@@ -70,9 +72,26 @@ function rekeyOwnIdWatchTheAssignmentInsert(): void
         $store->put('rekey-own-id-warm-'.$n, $n, 600);
     }
 
+    // Handed back so the caller can read it: the listener reports a bump it
+    // could not make rather than raising, so a silent failure would leave this
+    // test warming a cache table nothing else writes to.
+    $log = new class implements LoggerInterface
+    {
+        use LoggerTrait;
+
+        /** @var list<string> */
+        public array $lines = [];
+
+        public function log($level, string|Stringable $message, array $context = []): void
+        {
+            $this->lines[] = (string) $message;
+        }
+    };
+
     $listener = new ForgetNavCountsOnWrite(
         new NavCountsService($manager, $store, app(Clock::class)),
         new MigrationWindow,
+        $log,
     );
 
     DB::listen(static function (QueryExecuted $query) use ($listener): void {
@@ -80,6 +99,8 @@ function rekeyOwnIdWatchTheAssignmentInsert(): void
             $listener->handle($query);
         }
     });
+
+    return $log;
 }
 
 it('gives every rekeyed create op the id its row actually has', function (): void {
@@ -90,7 +111,7 @@ it('gives every rekeyed create op the id its row actually has', function (): voi
     $writer->setAssigned($this->user, $this->groceries->id, CarbonImmutable::parse('2026-07-15'), 10000);
     $writer->setAssigned($this->user, $this->transport->id, CarbonImmutable::parse('2026-08-15'), 20000);
 
-    rekeyOwnIdWatchTheAssignmentInsert();
+    $bumpLog = rekeyOwnIdWatchTheAssignmentInsert();
 
     $announced = [];
     app(Dispatcher::class)->listen(
@@ -111,7 +132,8 @@ it('gives every rekeyed create op the id its row actually has', function (): voi
     sort($rowIds);
     sort($announced);
 
-    expect(DB::table('cache')->count())->toBeGreaterThan(3)
+    expect($bumpLog->lines)->toBe([], 'the generation bump has to land, or the cache row this test races is never written')
+        ->and(DB::table('cache')->count())->toBeGreaterThan(3)
         ->and($announced)->not->toBeEmpty()
         ->and($announced)->toBe($rowIds);
 });
