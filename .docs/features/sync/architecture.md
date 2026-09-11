@@ -682,19 +682,44 @@ were already examined — by a build that had no re-home. Clearing the stamp
 costs one full recoverable-quarantine pass per install and is what makes an
 install that hit this before the re-home heal itself.
 
-**It needs an unlocked session, and it has one.** These rows carry AEAD
-columns, and the payload is re-sealed for this device before the insert, so a
-pass without a group data key turns the create into a `strategy_error` rather
-than a re-home. The desktop reaches `replayQuarantined()` through
-`RecoverSealedLedger`, a terminate-time `web` middleware, and
-`SealedLedgerRecovery::recover()` returns early unless
-`SensitiveColumnCodec::canSeal()` answers yes — so the desktop pass always
-holds the key. The mobile root leaves that middleware out and drives the same
-method from `DevicesScreenOpening::recoverDeferred()` and
-`InitialSyncPuller::reproject()`, neither of which asks `canSeal()` first;
-both run inside a request whose session is unlocked in practice, and where one
-is not, the create re-quarantines under a key-recoverable reason that the next
-keyed pass takes again.
+**Rehearsed on a migrated copy of that install.** One pass placed all 46 rows:
+the 47 `transactions` holds, 3 `import_runs`, 1 `anomaly_alerts` and 1
+`system_alerts` went in, 42 transactions and 2 import runs came back, and
+`op_log_row_aliases` went from 1 row to 46. The recovered transactions carry
+`source_format = 'asn-csv'` — the peer's statement import, earliest `posted_at`
+2026-02-02, absent from this device since pairing. Afterwards
+`PRAGMA foreign_key_check` and `PRAGMA integrity_check` are both clean, no
+`(user_id, fingerprint)` pair is duplicated, and no `transactions.account_id`
+crosses to another reader's account. The single hold left is the `system_alerts`
+row, now `unplaceable_collision`: that table declares no natural key, which is
+the case the terminal reason exists for.
+
+**It needs an unlocked session, and the desktop has one.** These rows carry
+AEAD columns. A pass without a group data key does not refuse the create: the
+verifier cannot decrypt those entries, records each as `gdk_decrypt_failed` and
+drops it from the set the merge resolves over, so the row is re-homed with its
+sealed columns absent. Rehearsed as a keyless console pass over a copy of the
+install above: 46 rows placed, and 138 `gdk_decrypt_failed` holds left on
+`transactions`.
+
+Those columns do not arrive afterwards. A later pass that holds the key replays
+the same create, the insert is refused by the primary key, and
+`AlreadyPresentCreate::answer()` returns at the alias branch — which sits above
+the `SplitCreateTail::fill()` call, so nothing writes the fields the first pass
+could not read. The hold is retired by `keyRecoverableHoldIds()` all the same,
+because its epoch is held by then. A keyless first pass therefore leaves a
+re-homed row permanently missing its sealed columns, with nothing left saying
+so. Measured by driving two passes over a re-homed row whose create was missing
+one column: the column is still null after the second, and the hold is gone.
+
+Nothing on a device does that. `RecoverSealedLedger` is a terminate-time `web`
+middleware and `SealedLedgerRecovery::recover()` returns early unless
+`SensitiveColumnCodec::canSeal()` answers yes, so the desktop pass always holds
+the key and the sealed columns land at re-home time. The mobile root leaves
+that middleware out and drives the same method from
+`DevicesScreenOpening::recoverDeferred()` and `InitialSyncPuller::reproject()`,
+neither of which asks `canSeal()` first. **This pass must not be driven from a
+console or any other keyless process.**
 
 ### A split leg that would overfill its transaction (`Internal\Merge\SplitOverfillGate`)
 
