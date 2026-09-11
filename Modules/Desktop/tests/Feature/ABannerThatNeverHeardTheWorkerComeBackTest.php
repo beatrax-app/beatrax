@@ -176,7 +176,7 @@ it('asks the database at most once a minute', function (): void {
     expect(workerBackOpen('worker.crashed'))->toBe(0);
 });
 
-it('keeps the worker looping when the withdrawal cannot reach the table', function (): void {
+it('keeps the worker looping when the check cannot reach the table', function (): void {
     Http::fake();
 
     $clock = workerBackClock('2026-05-23T12:00:00Z');
@@ -192,7 +192,26 @@ it('keeps the worker looping when the withdrawal cannot reach the table', functi
     // Named, not merely counted: a swallowed failure nobody can find in the log
     // is the same silence as no handler at all.
     Log::shouldHaveReceived('warning')->withArgs(
-        static fn (string $message, array $context): bool => str_contains($message, 'failed to withdraw')
+        static fn (string $message, array $context): bool => str_contains($message, 'could not tell whether the worker had recovered')
+            && $context['reason'] === QueryException::class,
+    );
+});
+
+it('keeps the worker looping when its own probe store cannot be reached', function (): void {
+    Http::fake();
+
+    $clock = workerBackClock('2026-05-23T12:00:00Z');
+    $this->app->instance(Clock::class, $clock);
+
+    // The throttle is read before the alert table is touched at all, so it is a
+    // second way out of this handler and needs the same guard over it.
+    Schema::drop('cache');
+    Log::spy();
+
+    workerBackTick();
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        static fn (string $message, array $context): bool => str_contains($message, 'could not tell whether the worker had recovered')
             && $context['reason'] === QueryException::class,
     );
 });

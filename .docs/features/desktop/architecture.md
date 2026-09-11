@@ -235,10 +235,27 @@ Two consequences worth knowing:
   question reaches the database, so it is asked at most once a minute —
   `RECOVERY_PROBE_SLOT` on `ShellState` is the throttle. The first tick after a
   reopen finds it unset, which is the moment the answer has actually changed.
+  The slot is a rate limiter and never a liveness claim: nothing reads it to
+  decide the worker is running, so a copy surviving a restart can only *delay*
+  the next check, never produce a withdrawal. That is the difference between it
+  and a marker that vouches for a process — and it is also why the slot earns
+  its keep, because dropping it would roughly double the queries the loop puts
+  on the database rather than remove them.
 - `Looping` fires from `Worker::daemon()` only. Under `native:run` the shell
   starts `queue:listen`, whose per-job children never reach that loop, so the
   withdrawal is a packaged-app path — the same limitation the dev console's
   worker-heartbeat tile already has.
+
+`Looping` is dispatched from `daemonShouldRun()` at the top of the loop, before
+`getNextJob()` and after the previous `runJob()` has fully unwound, so the read
+cannot land inside a caller's open transaction. That is the structural opposite
+of a `QueryExecuted` rider, which by construction runs inside whatever the
+caller opened — the shape
+`tests/Contracts/ARiderOnEveryStatementCannotOpenATransactionArchTest.php`
+pins, and one this listener is not an instance of. The `ProcessExited` half is
+unchanged: it already read and wrote `ShellState` before this existed. And the
+mobile root does not load `DesktopServiceProvider` at all, so the phone's
+database-backed cache never sees either.
 
 Withdrawal is `SystemAlertWriter::withdrawSystemWide()` stamping
 `acknowledged_at`, never a `DELETE`: `system_alerts` syncs, a raw delete emits no

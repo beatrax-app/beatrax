@@ -86,15 +86,30 @@ final readonly class SurfaceWorkerCrashAlert
     // liveness no cached stamp can impersonate.
     public function handleWorkerLoop(): void
     {
-        if (! $this->probeIsDue()) {
+        try {
+            if (! $this->probeIsDue() || ! $this->everySupervisedWorkerIsQuiet()) {
+                return;
+            }
+
+            $closed = $this->alerts->withdrawSystemWide(self::ALERT_KIND, $this->clock->now());
+        } catch (Throwable $e) {
+            // Nothing may escape: an exception raised here propagates out of the
+            // daemon's own loop check and stops the worker, and the alert this
+            // method exists to take down is the one that would be raised next.
+            $this->logger->warning(
+                'SurfaceWorkerCrashAlert: could not tell whether the worker had recovered; continuing.',
+                SafeExceptionContext::describe($e),
+            );
+
             return;
         }
 
-        if (! $this->everySupervisedWorkerIsQuiet()) {
-            return;
+        if ($closed > 0) {
+            $this->logger->info(
+                'SurfaceWorkerCrashAlert: withdrew the worker-crashed alert; the worker has run a full window without exiting.',
+                ['closed' => $closed],
+            );
         }
-
-        $this->withdraw();
     }
 
     // The exact inverse of the rule that raised the alert: a worker that has not
@@ -190,30 +205,6 @@ final readonly class SurfaceWorkerCrashAlert
         );
 
         return true;
-    }
-
-    private function withdraw(): void
-    {
-        try {
-            $closed = $this->alerts->withdrawSystemWide(self::ALERT_KIND, $this->clock->now());
-        } catch (Throwable $e) {
-            // An exception escaping the loop check stops the daemon, and the
-            // alert this method exists to take down is the one that would then
-            // be raised.
-            $this->logger->warning(
-                'SurfaceWorkerCrashAlert: failed to withdraw the worker-crashed alert; continuing.',
-                SafeExceptionContext::describe($e),
-            );
-
-            return;
-        }
-
-        if ($closed > 0) {
-            $this->logger->info(
-                'SurfaceWorkerCrashAlert: withdrew the worker-crashed alert; the worker has run a full window without exiting.',
-                ['closed' => $closed],
-            );
-        }
     }
 
     private function escalate(): void
