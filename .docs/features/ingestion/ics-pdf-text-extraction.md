@@ -90,11 +90,26 @@ which carries every run's text matrix, and rebuilds the page the way
    separately, narrow enough that the next row starts a new line.
 3. Inside a line, runs are sorted by x and written at column
    `round(x / COLUMN_WIDTH_POINTS)` — but never closer than one space to
-   what is already written. That floor is the whole defence against the
-   fused `21,78Af`; the column figure itself only decides how wide the
-   padding looks, because every column downstream is matched with `\s+`.
+   what is already written, and never past `MAX_COLUMNS` (4,096). That
+   floor is the whole defence against the fused `21,78Af`; the column
+   figure itself only decides how wide the padding looks, because every
+   column downstream is matched with `\s+`. The ceiling is what stops the
+   figure being the file's: x is a number the PDF chooses, and a 602-byte
+   file naming 100,000,000,000 asked `str_repeat` for twenty gigabytes.
 4. Each page ends with a blank line, which is what `-nopgbrk` leaves
    behind and what the adapter reads as the end of the table.
+
+The reader is bounded on three more axes, all of them things a PDF chooses
+and none of them the file's size: the decoded content-stream bytes it will lay
+out (`MAX_CONTENT_BYTES`, 128 KB, handed to smalot's decoder as well), the page
+count (`MAX_PAGES`, 100), and — through the first — the text runs on a page,
+whose layout cost inside the parser is their square. A 49 KB file whose one
+stream inflated to 50 MB and a 12.7 KB file carrying 200,000 runs were both
+reachable from the wizard; the first exhausted a phone's heap and the second
+ran for three quarters of an hour. Each ceiling raises
+`ReadCeilingExceededException`, which `Import` reports as `FileStoppedShort`.
+The measurements are on
+[what a file expands into](what-a-file-expands-into.md).
 
 `PdfTextExtractorSmokeTest` runs the committed
 `Modules/Chains/tests/fixtures/scenario-1/ics-statement.pdf` through both

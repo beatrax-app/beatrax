@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Modules\Ingestion\Internal\Exceptions\PdfExtractionFailed;
+use Modules\Ingestion\Internal\Exceptions\ReadCeilingExceededException;
+use Smalot\PdfParser\Config;
+use Smalot\PdfParser\Page;
 use Smalot\PdfParser\Parser;
 use Throwable;
 
@@ -28,6 +31,23 @@ class PdfTextLayoutReader
     // which is what keeps the parts in their written order and off one line.
     private const float INTRA_RUN_LINE_STEP = 0.01;
 
+    // What a document may cost to lay out, in decoded content-stream bytes.
+    // Laying out a page costs the square of the runs on it inside the parser:
+    // this much is 1.7s, twice it is 7s, and a 12 KB file carrying 5 MB of it
+    // ran for three quarters of an hour. A shipped statement spends 2,643.
+    private const int MAX_CONTENT_BYTES = 131_072;
+
+    // A statement is a handful of pages, and the sum above is what a page-count
+    // of its own adds nothing to for a document whose pages carry text. It is
+    // here for the one that carries none: a hundred thousand empty pages cost
+    // no content bytes at all and still build a hundred thousand page objects.
+    private const int MAX_PAGES = 100;
+
+    // An x coordinate is the page's own, and a crafted text matrix asked for
+    // twenty gigabytes of padding on one line. A page is 612 points wide and
+    // every real column lands under 60.
+    private const int MAX_COLUMNS = 4_096;
+
     public function available(): bool
     {
         return class_exists(Parser::class);
@@ -40,8 +60,17 @@ class PdfTextLayoutReader
     {
         try {
             $lines = [];
+            $contentBytes = 0;
 
-            foreach ((new Parser)->parseFile($pdfPath)->getPages() as $page) {
+            foreach ($this->pages($pdfPath) as $page) {
+                // Not `>`: the decoder is handed the same ceiling, so a stream
+                // that reaches it exactly is one it cut, and laying out half a
+                // statement is worse than refusing the whole.
+                $contentBytes += PdfContentSize::ofPage($page);
+                if ($contentBytes >= self::MAX_CONTENT_BYTES) {
+                    throw ReadCeilingExceededException::pdfContent(self::MAX_CONTENT_BYTES);
+                }
+
                 foreach ($this->assembleLines($this->placeRuns($page->getDataTm())) as $line) {
                     $lines[] = $line;
                 }
@@ -53,6 +82,8 @@ class PdfTextLayoutReader
             }
 
             return implode("\n", $lines)."\n";
+        } catch (ReadCeilingExceededException $refused) {
+            throw $refused;
         } catch (Throwable $e) {
             throw new PdfExtractionFailed(
                 sprintf('Could not read the PDF text layer: %s', $e->getMessage()),
@@ -60,6 +91,30 @@ class PdfTextLayoutReader
                 $e,
             );
         }
+    }
+
+    /**
+     * @return list<Page>
+     *
+     * @throws ReadCeilingExceededException
+     */
+    private function pages(string $pdfPath): array
+    {
+        $config = new Config;
+        // The ceiling reaches the decoder too, because a stream that inflates
+        // past it has already spent the memory by the time read() can sum it:
+        // a 49 KB file whose one stream inflates to 50 MB exhausted a 128 MB
+        // heap inside the vendor, where E_ERROR is not a Throwable to catch.
+        $config->setDecodeMemoryLimit(self::MAX_CONTENT_BYTES);
+        $config->setRetainImageContent(false);
+
+        $pages = array_values(new Parser([], $config)->parseFile($pdfPath)->getPages());
+
+        if (count($pages) > self::MAX_PAGES) {
+            throw ReadCeilingExceededException::pdfPages(self::MAX_PAGES);
+        }
+
+        return $pages;
     }
 
     /**
@@ -157,10 +212,18 @@ class PdfTextLayoutReader
             // space to what is already written. Two cells that round to the
             // same column would otherwise fuse an amount onto its Af marker,
             // and the row would stop looking like a transaction at all.
-            $column = max(
-                (int) round($run['x'] / self::COLUMN_WIDTH_POINTS),
-                $written === 0 ? 0 : $written + 1,
+            $column = min(
+                self::MAX_COLUMNS,
+                max(
+                    (int) round($run['x'] / self::COLUMN_WIDTH_POINTS),
+                    $written === 0 ? 0 : $written + 1,
+                ),
             );
+
+            if ($column < $written) {
+                $rendered .= ' ';
+                $column = $written + 1;
+            }
 
             $rendered .= str_repeat(' ', $column - $written).$run['text'];
         }
