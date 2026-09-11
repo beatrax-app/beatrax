@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Backup\BackupFreshness;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
 use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
 use Modules\Core\Internal\Console\Probes\ExternalToolVersionProbe;
@@ -172,7 +173,7 @@ it('BackupFreshnessProbe returns warning AND writes a system_alerts row when no 
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class));
+    $probe = new BackupFreshnessProbe(new BackupFreshness($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class)));
     expect($probe->label())->toBe('Backup freshness');
 
     $result = $probe->run();
@@ -209,7 +210,7 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class));
+    $probe = new BackupFreshnessProbe(new BackupFreshness($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class)));
     $result = $probe->run();
 
     expect($result->severity)->toBe('ok');
@@ -242,7 +243,7 @@ it('BackupFreshnessProbe never reads a blank completed_at as a backup finished r
         'integrity' => 'ok',
     ]));
 
-    $result = (new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class)))->run();
+    $result = (new BackupFreshnessProbe(new BackupFreshness($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class))))->run();
 
     expect($result->severity)->toBe('warning');
     expect($result->metadata)->toHaveKey('hours_old');
@@ -271,7 +272,7 @@ it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar
         'integrity' => 'ok',
     ]));
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class));
+    $probe = new BackupFreshnessProbe(new BackupFreshness($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class)));
     $result = $probe->run();
 
     expect($result->severity)->toBe('warning');
@@ -292,7 +293,7 @@ it('BackupFreshnessProbe suppresses a second alert row within the 1-hour recency
     $backupsDir = $this->backupsDir;
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class));
+    $probe = new BackupFreshnessProbe(new BackupFreshness($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class)));
 
     $probe->run();
     // Repeat runs must be no-ops on the audit trail: the banner renders one
@@ -419,7 +420,7 @@ it('BackupFreshnessProbe returns critical when the backups directory cannot be r
         }
     };
 
-    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class));
+    $probe = new BackupFreshnessProbe(new BackupFreshness($files, $clock, $db, new UserDataPathService, app(SystemAlertWriter::class)));
     $result = $probe->run();
 
     expect($result->severity)->toBe('critical');

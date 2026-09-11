@@ -20,6 +20,7 @@ use Modules\Core\Public\Exceptions\BackupCorruptException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
+use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\CopyParam;
@@ -63,6 +64,7 @@ final class BackupDatabaseCommand extends Command
         private readonly BackupSidecar $sidecar,
         private readonly UserDataPathService $paths,
         private readonly LoggerInterface $logger,
+        private readonly SystemAlertWriter $alerts,
     ) {
         parent::__construct();
     }
@@ -119,6 +121,10 @@ final class BackupDatabaseCommand extends Command
         if ($keepsCopy) {
             $this->promoteOrFail($partial, $destination);
             $this->writeSidecarOrFail($destination, $digest, $startedAt);
+            // The fault this run just ended. Only on the branch that wrote a
+            // fresh sidecar: a skipped run leaves the old one standing, and its
+            // date is what `backup_overdue` was counting.
+            $this->alerts->withdrawSystemWide(BackupAlertKind::Overdue->value, $startedAt);
         } else {
             $this->files->delete($partial);
         }

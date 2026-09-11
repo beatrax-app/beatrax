@@ -5,31 +5,15 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Console\Probes;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
-use Modules\Core\Internal\Enums\BackupAlertKind;
-use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Enums\SystemAlertSeverity;
-use Modules\Core\Public\Services\SystemAlertWriter;
-use Modules\Core\Public\Services\UserDataPathService;
-use Modules\Core\Public\Support\CopyLine;
-use Modules\Core\Public\Support\Instant;
-use Modules\Core\Public\Support\SafeDate;
-use Modules\Core\Public\Support\StoredCopy;
+use Modules\Core\Internal\Backup\BackupFreshness;
 use Throwable;
 
 final readonly class BackupFreshnessProbe implements Probe
 {
     private const string BACKUP_AGE_MESSAGE = 'Most recent verified backup is %dh old.';
 
-    private const int STALE_AFTER_HOURS = 48;
-
     public function __construct(
-        private Filesystem $files,
-        private Clock $clock,
-        private DatabaseManager $db,
-        private UserDataPathService $paths,
-        private SystemAlertWriter $alerts,
+        private BackupFreshness $freshness,
     ) {}
 
     public function label(): string
@@ -40,7 +24,7 @@ final readonly class BackupFreshnessProbe implements Probe
     public function run(): ProbeResult
     {
         try {
-            $newestCompletedAt = $this->findNewestSidecarCompletedAt();
+            $newestCompletedAt = $this->freshness->newestVerifiedAt();
         } catch (Throwable $e) {
             return new ProbeResult(ProbeSeverity::Critical->value,
                 'Failed to read backups directory: '.$e->getMessage(),
@@ -58,7 +42,7 @@ final readonly class BackupFreshnessProbe implements Probe
     private function freshnessOf(?CarbonImmutable $newestCompletedAt): ProbeResult
     {
         if ($newestCompletedAt === null) {
-            $this->recordOverdueAlert(null);
+            $this->freshness->raiseOverdue(null);
 
             return new ProbeResult(ProbeSeverity::Warning->value,
                 'No verified backups found under the backups directory.',
@@ -66,13 +50,10 @@ final readonly class BackupFreshnessProbe implements Probe
             );
         }
 
-        // Carbon 3.x `diffInHours` returns a float by default. Compute the
-        // absolute integer hours between the sidecar timestamp and now so
-        // direction (past / future) does not flip the sign.
-        $hoursOld = (int) floor(abs($this->clock->now()->diffInHours($newestCompletedAt)));
+        $hoursOld = $this->freshness->hoursSince($newestCompletedAt);
 
-        if ($hoursOld > self::STALE_AFTER_HOURS) {
-            $this->recordOverdueAlert($hoursOld);
+        if ($this->freshness->isStale($hoursOld)) {
+            $this->freshness->raiseOverdue($hoursOld);
 
             return new ProbeResult(ProbeSeverity::Warning->value,
                 sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
@@ -84,96 +65,5 @@ final readonly class BackupFreshnessProbe implements Probe
             sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
             ['hours_old' => $hoursOld],
         );
-    }
-
-    // Returns null if the directory is missing, empty, or every sidecar is
-    // unreadable/malformed — itself an "overdue" signal the caller treats
-    // identically to a genuine ≥48h-old timestamp.
-    private function findNewestSidecarCompletedAt(): ?CarbonImmutable
-    {
-        $backupsPath = $this->paths->backups();
-
-        if (! $this->files->isDirectory($backupsPath)) {
-            return null;
-        }
-
-        $newest = null;
-        foreach ($this->files->files($backupsPath) as $entry) {
-            $candidate = $this->sidecarCompletedAt($entry);
-            if ($candidate !== null && ($newest === null || $candidate->isAfter($newest))) {
-                $newest = $candidate;
-            }
-        }
-
-        return $newest;
-    }
-
-    // One sidecar's completed_at as a timestamp, or null when the entry is
-    // not a sidecar, is unreadable/malformed, or carries no parseable date.
-    private function sidecarCompletedAt(\SplFileInfo $entry): ?CarbonImmutable
-    {
-        if (! str_ends_with($entry->getBasename(), '.meta.json')) {
-            return null;
-        }
-
-        $completedAt = $this->readCompletedAtField($entry->getPathname());
-
-        return $completedAt === null ? null : SafeDate::parseOrNull($completedAt);
-    }
-
-    // The non-empty completed_at string from a sidecar file, or null when the
-    // file cannot be read or does not decode to an object carrying the field.
-    private function readCompletedAtField(string $path): ?string
-    {
-        $raw = @file_get_contents($path);
-        if (! is_string($raw)) {
-            return null;
-        }
-
-        $decoded = json_decode($raw, true);
-        $completedAt = is_array($decoded) ? ($decoded['completed_at'] ?? null) : null;
-
-        return is_string($completedAt) && $completedAt !== '' ? $completedAt : null;
-    }
-
-    private function recordOverdueAlert(?int $hoursOld): void
-    {
-        try {
-            // Recency check uses the raw Query Builder (not Eloquent) since
-            // larastan-strict-rules rejects chained Eloquent\Builder calls
-            // after Model::query(). SystemAlert stamps created_at off the app
-            // clock, so the cutoff is built in that frame, not in UTC.
-            $cutoff = Instant::appLocal($this->clock->now()->subHour());
-            $recentExists = $this->db->connection()->table('system_alerts')
-                ->where('kind', BackupAlertKind::Overdue->value)
-                ->whereNull('acknowledged_at')
-                ->where('created_at', '>=', $cutoff)
-                ->exists();
-            if ($recentExists) {
-                return;
-            }
-
-            // The ProbeResult above keeps its English: that one is read in a
-            // console by whoever ran the doctor. This row is read later, on
-            // whichever device and in whichever language, so the line rides in
-            // metadata and the column keeps the sentence a peer can still show.
-            $line = $hoursOld === null
-                ? CopyLine::of('core::alerts.messages.backup_none_found')
-                : CopyLine::of('core::alerts.messages.backup_overdue', ['hours' => $hoursOld]);
-
-            $this->alerts->raiseOnceSystemWide(
-                kind: BackupAlertKind::Overdue->value,
-                severity: SystemAlertSeverity::Warning->value,
-                message: $line->sentence(),
-                metadata: StoredCopy::inParams($line) + [
-                    'hours_old' => $hoursOld,
-                    'backups_path' => $this->paths->backups(),
-                ],
-                window: SystemAlertWriter::hourWindow($this->clock->now()),
-            );
-        } catch (Throwable) {
-            // Alert-write failure is non-fatal — the ProbeResult itself
-            // is the load-bearing signal.
-        }
     }
 }

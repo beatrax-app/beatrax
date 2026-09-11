@@ -122,6 +122,30 @@ final readonly class SystemAlertWriter
         return $closed;
     }
 
+    // The same answer for a row that belongs to the household rather than to
+    // one reader. raiseOnceSystemWide() writes `user_id` null, so withdrawing
+    // one has to name null too -- which is what acknowledgeForUser() reads it
+    // as, and why its predicate had to say so.
+    /**
+     * @return int the number of open rows of this kind that were closed
+     */
+    public function withdrawSystemWide(string $kind, CarbonImmutable $withdrawnAt): int
+    {
+        $openIds = $this->db->connection()->table('system_alerts')
+            ->whereNull('user_id')
+            ->where('kind', $kind)
+            ->whereNull('acknowledged_at')
+            ->pluck('id');
+
+        $closed = 0;
+
+        foreach ($openIds as $id) {
+            $closed += $this->acknowledgeForUser(self::toInt($id), null, $withdrawnAt) ? 1 : 0;
+        }
+
+        return $closed;
+    }
+
     // The one write of `acknowledged_at`, so the stamp and the op carrying it
     // cannot come apart: the banner's button used to write the column itself and
     // then ask this class to announce it. A trigger releases the dedup key off

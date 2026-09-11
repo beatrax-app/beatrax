@@ -36,9 +36,9 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'count' => 1,
             'why' => 'One base64 variant of a credential id failing is how the next variant gets tried; the caller answers for all of them.',
         ],
-        'Modules/Core/Internal/Console/Probes/BackupFreshnessProbe.php' => [
+        'Modules/Core/Internal/Backup/BackupFreshness.php' => [
             'count' => 1,
-            'why' => 'The probe result carries the verdict; the alert write is the second channel and must not take the first one down with it.',
+            'why' => 'The caller carries the verdict — a probe line, or a boot that must not halt; the alert write is the second channel and must not take the first one down with it.',
         ],
         'Modules/Core/Public/Http/Livewire/SystemAlertsBanner.php' => [
             'count' => 1,
