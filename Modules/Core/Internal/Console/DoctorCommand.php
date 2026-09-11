@@ -18,6 +18,7 @@ use Modules\Core\Internal\Console\Probes\ProbeSeverity;
 use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
+use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Search\Public\Services\FtsHealthCheck;
 
 final class DoctorCommand extends Command
@@ -42,6 +43,7 @@ final class DoctorCommand extends Command
         private readonly NetworkBoundaryProbe $networkBoundaryProbe,
         private readonly HostTimezoneProbe $hostTimezoneProbe,
         private readonly ?FtsHealthCheck $ftsHealth = null,
+        private readonly ?FingerprintHealthCheck $fingerprintHealth = null,
     ) {
         parent::__construct();
     }
@@ -88,6 +90,17 @@ final class DoctorCommand extends Command
                 $blockers[] = $this->ftsHealth->label();
             } elseif ($ftsResult->severity === ProbeSeverity::Warning->value) {
                 $warnings[] = $this->ftsHealth->label();
+            }
+        }
+
+        // The same shape, for the other derived thing a row carries: optional
+        // because Ledger can be absent, and its ProbeResult is built here so
+        // the check itself stays boundary-clean.
+        if ($this->fingerprintHealth !== null) {
+            $fingerprintResult = new ProbeResult($this->fingerprintHealth->severity(), $this->fingerprintHealth->message());
+            $this->line(sprintf(self::ROW_FORMAT, $this->fingerprintHealth->label(), $fingerprintResult->severity, $fingerprintResult->message));
+            if ($fingerprintResult->severity === ProbeSeverity::Warning->value) {
+                $warnings[] = $this->fingerprintHealth->label();
             }
         }
 

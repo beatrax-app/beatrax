@@ -37,6 +37,7 @@ use Modules\Ledger\Public\Http\Livewire\AccountCurrencyEditor;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\StatementSummaryWriter;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
@@ -76,6 +77,7 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(CategorySpendTrendQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);
         $this->app->bind(FingerprintRederiveService::class);
+        $this->app->singleton(FingerprintHealthCheck::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
