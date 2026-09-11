@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Vil du arkivere denne sparepotten? Saldoen på :amount går tilbake til ufordelt.',
+    'archive_confirm_overdrawn' => 'Vil du arkivere denne sparepotten? Den er :amount under null, så arkivering trekker det beløpet fra ufordelt i stedet for å gi noe tilbake.',
     'confirm_archive_aria' => 'Bekreft arkivering av :name',
     'more_actions_aria' => 'Flere handlinger for :name',
 

@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Diese Rücklage archivieren? Der Saldo von :amount geht zurück auf nicht zugeteilt.',
+    'archive_confirm_overdrawn' => 'Diese Rücklage archivieren? Sie liegt :amount unter null, also nimmt das Archivieren diesen Betrag von nicht zugeteilt ab, statt etwas zurückzugeben.',
     'confirm_archive_aria' => 'Archivieren von :name bestätigen',
     'more_actions_aria' => 'Weitere Aktionen für :name',
 

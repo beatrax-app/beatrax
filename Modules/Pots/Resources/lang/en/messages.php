@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Archive this pot? Balance of :amount will return to unallocated.',
+    'archive_confirm_overdrawn' => 'Archive this pot? It is :amount below zero, so archiving takes that amount out of unallocated instead of returning anything.',
     'confirm_archive_aria' => 'Confirm archive of :name',
     'more_actions_aria' => 'More actions for :name',
 

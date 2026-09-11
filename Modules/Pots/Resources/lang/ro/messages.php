@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Arhivezi această pușculiță? Soldul de :amount se întoarce la nealocat.',
+    'archive_confirm_overdrawn' => 'Arhivezi această pușculiță? Este :amount sub zero, așa că arhivarea ia acea sumă din nealocat în loc să înapoieze ceva.',
     'confirm_archive_aria' => 'Confirmă arhivarea pentru :name',
     'more_actions_aria' => 'Mai multe acțiuni pentru :name',
 

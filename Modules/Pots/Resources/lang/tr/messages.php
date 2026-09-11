@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Bu kumbara arşivlensin mi? :amount tutarındaki bakiye dağıtılmamışa döner.',
+    'archive_confirm_overdrawn' => 'Bu kumbara arşivlensin mi? :amount ekside, bu yüzden arşivleme bir şey geri vermek yerine bu tutarı dağıtılmamıştan düşer.',
     'confirm_archive_aria' => ':name kumbarasının arşivlenmesini onayla',
     'more_actions_aria' => ':name için diğer eylemler',
 

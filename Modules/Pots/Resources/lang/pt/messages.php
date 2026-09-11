@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Arquivar esta reserva? O saldo de :amount volta para não alocado.',
+    'archive_confirm_overdrawn' => 'Arquivar esta reserva? Está :amount abaixo de zero, por isso arquivar tira esse valor de não alocado em vez de devolver alguma coisa.',
     'confirm_archive_aria' => 'Confirmar o arquivamento de :name',
     'more_actions_aria' => 'Mais ações para :name',
 
