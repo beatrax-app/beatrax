@@ -122,7 +122,7 @@ it('reads its marks on a device that has no encryption state row', function (): 
     $markers = app(EncryptionRecoveryMarkers::class);
 
     expect($markers->isEnrolled((int) $user->id))->toBeFalse();
-    expect($markers->resealedColumnsDigest((int) $user->id))->toBeNull();
+    expect($markers->resealedColumns((int) $user->id))->toBe(['digest' => null, 'at' => null]);
     expect($markers->historyReprojectedAt((int) $user->id))->toBeNull();
     expect($markers->reprojectedPassIdentity((int) $user->id))->toBeNull();
 

@@ -394,9 +394,10 @@ class EncryptionMigrationService
         $backfill->run($userId, $blindIndexKeyHex);
     }
 
-    // The digest is stamped here because this pass just swept every column it
-    // covers. Left null, the recovery seam would re-sweep a freshly enabled
-    // install on its very next request for nothing.
+    // Stamped here because this pass just swept every column it covers. Left
+    // null, the recovery seam would re-sweep a freshly enabled install on its
+    // very next request for nothing. What it does NOT mean is that residue is
+    // impossible from here on, which is what the time beside it re-opens.
     private function finalizeMigration(ConnectionInterface $connection, int $userId): void
     {
         $now = $this->clock->now();
@@ -407,6 +408,7 @@ class EncryptionMigrationService
                 'migration_in_progress' => false,
                 'enabled_at' => $now,
                 'resealed_columns_digest' => PlaintextResidueSweep::columnsDigest(),
+                'resealed_columns_at' => $now,
                 'updated_at' => $now,
             ]);
     }

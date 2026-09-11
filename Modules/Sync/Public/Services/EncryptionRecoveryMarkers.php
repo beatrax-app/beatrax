@@ -31,11 +31,24 @@ final readonly class EncryptionRecoveryMarkers
         return $state !== null && ($state->current_epoch ?? null) !== null;
     }
 
-    public function resealedColumnsDigest(int $userId): ?string
+    // Both marks of one pass, off one row. Two getters would be two selects on
+    // every authenticated request of every enrolled device, and this pass's
+    // whole design is that having nothing to do costs almost nothing.
+    /**
+     * @return array{digest: string|null, at: string|null}
+     */
+    public function resealedColumns(int $userId): array
     {
-        $value = $this->load($userId)->resealed_columns_digest ?? null;
+        $state = $this->load($userId);
+        /** @var mixed $digest */
+        $digest = $state->resealed_columns_digest ?? null;
+        /** @var mixed $at */
+        $at = $state->resealed_columns_at ?? null;
 
-        return is_string($value) ? $value : null;
+        return [
+            'digest' => is_string($digest) ? $digest : null,
+            'at' => is_string($at) ? $at : null,
+        ];
     }
 
     public function historyReprojectedAt(int $userId): ?string
@@ -73,9 +86,15 @@ final readonly class EncryptionRecoveryMarkers
         ]);
     }
 
+    // The time as well as the coverage. A digest alone says which columns the
+    // last pass could reach, never that nothing has been written in the clear
+    // since — and read as the second it let a whole class of writer through.
     public function markColumnsResealed(int $userId, string $digest): void
     {
-        $this->stamp($userId, ['resealed_columns_digest' => $digest]);
+        $this->stamp($userId, [
+            'resealed_columns_digest' => $digest,
+            'resealed_columns_at' => $this->clock->now()->toDateTimeString(),
+        ]);
     }
 
     /**
