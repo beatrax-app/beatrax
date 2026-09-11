@@ -174,10 +174,10 @@ it('says nothing of the kind about a pot emptied to exactly nought', function ()
         ]));
 });
 
-// The three sentences that quote a pot's balance as money the reader may still
-// take out or get back. Below zero there is none of either, and the figure they
-// quoted invited a withdrawal the writer refuses and promised a release
-// archive() does not perform.
+// The sentences that quote a pot's balance as money the reader may still take
+// out or get back. Below zero there is neither: the figure invited a withdrawal
+// the writer refuses, and archiving takes the shortfall back OUT of unallocated
+// rather than returning anything at all.
 it('offers nothing to take out of a pot that is already below zero', function (): void {
     $pot = app(PotWriter::class)->save($this->user, 'Vakantie', '100,00', $this->account->id, null, null);
     app(PotWriter::class)->withdraw($this->user, (int) $pot->id, '100,00');
@@ -218,7 +218,10 @@ it('promises no release from a pot that has nothing to give back', function (): 
     Livewire::test(PotsPage::class)
         ->set('archivingPotId', (int) $pot->id)
         ->assertOk()
-        ->assertSee(Lang::get('pots::messages.archive_confirm', [
+        ->assertSee(Lang::get('pots::messages.archive_confirm_overdrawn', [
+            'amount' => Money::ofMinor(10_000, Currency::Eur->value)->format(),
+        ]))
+        ->assertDontSee(Lang::get('pots::messages.archive_confirm', [
             'amount' => Money::ofMinor(0, Currency::Eur->value)->format(),
         ]))
         ->assertDontSee(Lang::get('pots::messages.archive_confirm', [

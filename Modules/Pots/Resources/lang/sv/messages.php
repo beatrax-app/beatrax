@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Vill du arkivera den här sparpotten? Saldot på :amount går tillbaka till ofördelat.',
+    'archive_confirm_overdrawn' => 'Vill du arkivera den här sparpotten? Den är :amount under noll, så arkiveringen drar det beloppet från ofördelat i stället för att ge något tillbaka.',
     'confirm_archive_aria' => 'Bekräfta arkivering av :name',
     'more_actions_aria' => 'Fler åtgärder för :name',
 

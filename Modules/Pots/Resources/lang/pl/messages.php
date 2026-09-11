@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Zarchiwizować tę skarbonkę? Saldo :amount wróci do nieprzydzielonych.',
+    'archive_confirm_overdrawn' => 'Zarchiwizować tę skarbonkę? Jest :amount poniżej zera, więc archiwizacja zabierze tę kwotę z nieprzydzielonych, zamiast cokolwiek zwrócić.',
     'confirm_archive_aria' => 'Potwierdź archiwizację — skarbonka: :name',
     'more_actions_aria' => 'Więcej działań — skarbonka: :name',
 

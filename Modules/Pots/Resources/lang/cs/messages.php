@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Archivovat tuto obálku? Zůstatek :amount se vrátí mezi nepřiřazené.',
+    'archive_confirm_overdrawn' => 'Archivovat tuto obálku? Je :amount pod nulou, takže archivace tuto částku vezme z nepřiřazených, místo aby něco vrátila.',
     'confirm_archive_aria' => 'Potvrdit archivaci — obálka: :name',
     'more_actions_aria' => 'Další akce — obálka: :name',
 

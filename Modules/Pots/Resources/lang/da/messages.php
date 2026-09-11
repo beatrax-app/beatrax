@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Vil du arkivere denne pulje? Saldoen på :amount går tilbage til ufordelt.',
+    'archive_confirm_overdrawn' => 'Vil du arkivere denne pulje? Den er :amount under nul, så arkivering trækker det beløb fra ufordelt i stedet for at give noget tilbage.',
     'confirm_archive_aria' => 'Bekræft arkivering af :name',
     'more_actions_aria' => 'Flere handlinger for :name',
 

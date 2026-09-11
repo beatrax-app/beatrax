@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Arhivirati ta hranilnik? Stanje :amount se bo vrnilo med nerazporejeno.',
+    'archive_confirm_overdrawn' => 'Arhivirati ta hranilnik? Je :amount pod ničlo, zato arhiviranje ta znesek vzame iz nerazporejenega, namesto da bi kaj vrnilo.',
     'confirm_archive_aria' => 'Potrdi arhiviranje hranilnika :name',
     'more_actions_aria' => 'Več dejanj za hranilnik :name',
 

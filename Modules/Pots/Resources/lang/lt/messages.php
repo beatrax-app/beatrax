@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Archyvuoti šią taupyklę? :amount likutis grįš į nepaskirstytas lėšas.',
+    'archive_confirm_overdrawn' => 'Archyvuoti šią taupyklę? Ji yra :amount žemiau nulio, todėl archyvavimas šią sumą paims iš nepaskirstytų lėšų, o ne ką nors grąžins.',
     'confirm_archive_aria' => 'Patvirtinti archyvavimą: :name',
     'more_actions_aria' => 'Daugiau veiksmų: :name',
 

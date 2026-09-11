@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Archiver cette cagnotte ? Le solde de :amount repassera en non affecté.',
+    'archive_confirm_overdrawn' => 'Archiver cette cagnotte ? Elle est :amount en dessous de zéro, donc l\'archivage retire ce montant du non affecté au lieu de rendre quoi que ce soit.',
     'confirm_archive_aria' => 'Confirmer l\'archivage de :name',
     'more_actions_aria' => 'Plus d\'actions pour :name',
 

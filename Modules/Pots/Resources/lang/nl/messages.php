@@ -51,6 +51,7 @@ return [
     ],
 
     'archive_confirm' => 'Dit potje archiveren? Het saldo van :amount keert terug naar niet-toegewezen.',
+    'archive_confirm_overdrawn' => 'Dit potje archiveren? Het staat :amount onder nul, dus archiveren haalt dat bedrag uit niet-toegewezen in plaats van iets terug te geven.',
     'confirm_archive_aria' => 'Bevestig archivering van :name',
     'more_actions_aria' => 'Meer acties voor :name',
 

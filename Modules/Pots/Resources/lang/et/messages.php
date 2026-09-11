@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Kas arhiveerida see pott? Jääk :amount läheb tagasi jaotamata raha hulka.',
+    'archive_confirm_overdrawn' => 'Kas arhiveerida see pott? See on :amount alla nulli, nii et arhiveerimine võtab selle summa jaotamata rahast, selle asemel et midagi tagasi anda.',
     'confirm_archive_aria' => 'Kinnita poti :name arhiveerimine',
     'more_actions_aria' => 'Rohkem toiminguid poti :name jaoks',
 

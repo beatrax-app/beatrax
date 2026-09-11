@@ -23,9 +23,4 @@ enum PotMovementKind: string
     // synced free-text column, so a sentence written there would have reached a
     // peer on an older build frozen in whatever language wrote it.
     case ReleasedOnArchive = 'released_on_archive';
-
-    public function isIncoming(): bool
-    {
-        return $this === self::Fund || $this === self::TransferIn;
-    }
 }

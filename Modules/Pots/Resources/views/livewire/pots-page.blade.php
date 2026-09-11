@@ -29,6 +29,14 @@
     $available = static fn (int $minor, string $currency): string => Money::ofMinor(max(0, $minor), $currency)
         ->format();
 
+    // Archiving settles whatever the pot holds at either sign, so below zero it
+    // takes the shortfall back OUT of unallocated instead of handing anything
+    // over. The one sentence said "Balance of 0,00 will return", which is the
+    // wrong promise and the wrong direction both.
+    $archiveQuestion = static fn (int $minor, string $currency): string => $minor < 0
+        ? Lang::get('pots::messages.archive_confirm_overdrawn', ['amount' => $fmt(abs($minor), $currency)])
+        : Lang::get('pots::messages.archive_confirm', ['amount' => $fmt($minor, $currency)]);
+
     // The accounts a pot may be created on. A group whose account is not among
     // them is a pot the server now refuses to add to, so the button is not drawn.
     $allocatableAccountIds = array_map(static fn ($account) => (int) $account->id, $accounts);
@@ -204,7 +212,7 @@
                         @if ($archivingPotId === $pot->id)
                             <x-core::confirm-strip
                                 class="mt-3 w-full"
-                                :question="Lang::get('pots::messages.archive_confirm', ['amount' => $available($pot->balanceMinor, $pot->currency)])"
+                                :question="$archiveQuestion($pot->balanceMinor, $pot->currency)"
                                 :cancel-label="Lang::get('pots::messages.common.cancel')"
                                 :confirm-label="Lang::get('pots::messages.actions.archive')"
                                 :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
@@ -349,7 +357,7 @@
                                 @if ($archivingPotId === $pot->id)
                                     <x-core::confirm-strip
                                         class="mt-3"
-                                        :question="Lang::get('pots::messages.archive_confirm', ['amount' => $available($pot->balanceMinor, $pot->currency)])"
+                                        :question="$archiveQuestion($pot->balanceMinor, $pot->currency)"
                                         :cancel-label="Lang::get('pots::messages.common.cancel')"
                                         :confirm-label="Lang::get('pots::messages.actions.archive')"
                                         :confirm-aria="Lang::get('pots::messages.confirm_archive_aria', ['name' => $pot->name])"
@@ -458,7 +466,10 @@
                                             <ul>
                                                 @foreach ($pot->recentMovements as $movement)
                                                     @php
-                                                        $isIncoming = $movement->kind?->isIncoming() ?? false;
+                                                        // The amount carries the direction, not the kind: a release
+                                                        // settling a pot two devices pulled below zero is POSITIVE,
+                                                        // so a kind-keyed answer read money coming back as an outflow.
+                                                        $isIncoming = $movement->kind !== null && $movement->amountMinor > 0;
                                                         // A kind this build has no case for is named as such rather
                                                         // than folded into one of the four: the wording and the '+'
                                                         // both claim a direction only the newer version knows.
@@ -483,7 +494,7 @@
                                                             class="shrink-0 text-sm tabular-nums {{ $isIncoming ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}"
                                                             style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;"
                                                         >
-                                                            {{ $movement->kind === null ? '' : ($isIncoming ? '+' : '') }}{{ $fmt($movement->amountMinor, $movement->currency) }}
+                                                            {{ $isIncoming ? '+' : '' }}{{ $fmt($movement->amountMinor, $movement->currency) }}
                                                         </span>
                                                     </li>
                                                 @endforeach

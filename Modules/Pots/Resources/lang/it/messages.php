@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Archiviare questo salvadanaio? Il saldo di :amount tornerà non assegnato.',
+    'archive_confirm_overdrawn' => 'Archiviare questo salvadanaio? È :amount sotto lo zero, quindi archiviarlo toglie quell\'importo dal non assegnato invece di restituire qualcosa.',
     'confirm_archive_aria' => 'Conferma archiviazione di :name',
     'more_actions_aria' => 'Altre azioni per :name',
 

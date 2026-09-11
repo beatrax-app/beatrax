@@ -52,6 +52,7 @@ return [
     ],
 
     'archive_confirm' => 'Arkistoidaanko tämä potti? Saldo :amount palautuu jakamattomiin varoihin.',
+    'archive_confirm_overdrawn' => 'Arkistoidaanko tämä potti? Se on :amount alle nollan, joten arkistointi ottaa tuon summan jakamattomista varoista sen sijaan, että palauttaisi mitään.',
     'confirm_archive_aria' => 'Vahvista kohteen :name arkistointi',
     'more_actions_aria' => 'Lisää toimintoja kohteelle :name',
 
