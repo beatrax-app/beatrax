@@ -671,6 +671,18 @@ place is therefore retried exactly once: the pass re-records it as
 `unplaceable_collision`, which the collision query does not select, so it
 settles as the audit row a permanent divergence is owed.
 
+Retiring on the replay having *run* was not enough, and the fresh-autoincrement
+argument is the reason why: it holds for the row, not for the reason. A create
+can be turned away before `AlreadyPresentCreate` is consulted at all — a column
+this process cannot seal, a parent that is not here — and the hold recorded
+then says something other than a collision, which moves the row onto
+`rowsWorthReplaying()`'s broad replay and hands the merge every device's ops at
+that pk. So only a **verdict on the collision** spends the hold: the row
+placed, or `primary_key_collision`/`unplaceable_collision` recorded afresh
+under a new id. `QuarantineReason::collisionVerdicts()` names that pair, and
+`OpLogQuarantine::refusedPastTheCollision()` asks the question against a hold id
+read before the replay.
+
 **What bounds it.** The pass window. `SealedLedgerRecovery` hands
 `replayQuarantined()` the `history_reprojected_at` stamp, and a hold older than
 it is not looked at again until key material moves. A collision that still
@@ -712,14 +724,19 @@ re-homed row permanently missing its sealed columns, with nothing left saying
 so. Measured by driving two passes over a re-homed row whose create was missing
 one column: the column is still null after the second, and the hold is gone.
 
-Nothing on a device does that. `RecoverSealedLedger` is a terminate-time `web`
-middleware and `SealedLedgerRecovery::recover()` returns early unless
-`SensitiveColumnCodec::canSeal()` answers yes, so the desktop pass always holds
-the key and the sealed columns land at re-home time. The mobile root leaves
+**Which is why the pass now refuses to run without a key.**
+`RecoverSealedLedger` is a terminate-time `web` middleware and
+`SealedLedgerRecovery::recover()` returns early unless
+`SensitiveColumnCodec::canSeal()` answers yes, so the desktop pass always held
+the key and the sealed columns landed at re-home time. The mobile root leaves
 that middleware out and drives the same method from
 `DevicesScreenOpening::recoverDeferred()` and `InitialSyncPuller::reproject()`,
-neither of which asks `canSeal()` first. **This pass must not be driven from a
-console or any other keyless process.**
+and both of those gated on enrolment — `current_epoch` being non-null — which is
+not the same question. `HistoryReprojector::replayQuarantined()` therefore asks
+`canProject()` itself and throws where the answer is no, so the precondition is
+one expression rather than a rule each caller had to remember. The consequences
+of running one anyway, and why the refusal is a throw rather than a count, are
+on [sensitive-columns-at-rest](sensitive-columns-at-rest.md#a-pass-that-cannot-seal-must-not-run).
 
 ### A split leg that would overfill its transaction (`Internal\Merge\SplitOverfillGate`)
 

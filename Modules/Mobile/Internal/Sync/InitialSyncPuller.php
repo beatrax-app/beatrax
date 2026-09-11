@@ -14,6 +14,7 @@ use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\HistoryReprojector;
 use Modules\Sync\Public\Services\PeerLanAddressBook;
+use Modules\Sync\Public\Services\SealedProjectionReadiness;
 use Modules\Sync\Public\Services\WithheldHistoryReport;
 use Psr\Log\LoggerInterface;
 
@@ -31,6 +32,7 @@ final readonly class InitialSyncPuller
         private Clock $clock,
         private HistoryReprojector $reprojector,
         private PeerLanAddressBook $addresses,
+        private SealedProjectionReadiness $readiness,
         private WithheldHistoryReport $withheld,
         private LoggerInterface $logger,
     ) {}
@@ -123,7 +125,12 @@ final readonly class InitialSyncPuller
         $lastHlcL = $newlyApplied > 0 ? $maxHlcL : $cursor['last_hlc_l'];
         $lastHlcC = $newlyApplied > 0 ? $maxHlcC : $cursor['last_hlc_c'];
 
-        $keysInstalled = $this->keyringIsNonEmpty($userId);
+        // Both halves: the epochs have arrived, AND this process can open them.
+        // Enrolment alone let a device whose keyring it cannot unwrap run the
+        // re-projection anyway, which records every create it cannot seal as a
+        // strategy error and then stamps the import complete over it.
+        $keysInstalled = $this->keyringIsNonEmpty($userId)
+            && $this->readiness->canProject($userId, $session);
 
         // Announce the rebuild on the tick BEFORE running it: re-projecting
         // blocks its own request, so running it in the tick that finished the
@@ -154,9 +161,10 @@ final readonly class InitialSyncPuller
             ];
         }
 
-        // The first step to see a non-empty keyring re-projects what arrived
-        // before the keys did, so those entries decrypt. At most once per
-        // (user, peer) cursor.
+        // The first step to see an openable keyring re-projects what arrived
+        // before the keys did. Once per (user, peer) cursor, and no watermark:
+        // the pass is handed a null `since`, so this stamp narrows no later
+        // build — DevicesScreenOpening is the phone's route back afterwards.
         if ($reprojectedAt === null && $keysInstalled) {
             $reprojectedAt = $this->reproject($userId, $session, $peerDeviceId, $cursor['reproject_attempts']);
         }
@@ -271,7 +279,8 @@ final readonly class InitialSyncPuller
     }
 
     // A raw column read rather than GdkKeyringService, which is off-limits to
-    // this module: current_epoch is a public, non-secret integer pointer.
+    // this module: current_epoch is a public, non-secret integer pointer. It
+    // says the keys are supposed to be here, never that they can be opened.
     private function keyringIsNonEmpty(int $userId): bool
     {
         $currentEpoch = $this->db->connection()

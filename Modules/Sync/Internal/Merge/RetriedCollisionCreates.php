@@ -17,10 +17,15 @@ use stdClass;
  */
 final readonly class RetriedCollisionCreates
 {
-    public function __construct(private PersistedOpLogEntries $entries) {}
+    public function __construct(
+        private PersistedOpLogEntries $entries,
+        private OpLogQuarantine $quarantine,
+    ) {}
 
-    // The hold ids are read BEFORE the replay, so a create refused again is
-    // recorded afresh under a new id and retiring these cannot swallow it.
+    // A hold is spent once the pass has judged the collision: the row placed,
+    // or the verdict recorded afresh under a new id, which is why retiring the
+    // old one cannot swallow the answer. A create turned away BEFORE the id is
+    // looked at has been judged on nothing, and its hold stands.
     /**
      * @param  Builder  $held  Collision holds this pass may answer, already narrowed to its window.
      * @return array{rows: int, spent: list<int>} Rows taken again, and the holds that have had their answer.
@@ -29,9 +34,10 @@ final readonly class RetriedCollisionCreates
     {
         $rows = 0;
         $spent = [];
+        $standing = $this->quarantine->latestHoldId($userId);
 
         foreach ($this->byDevice($held, $limit) as $deviceId => $collision) {
-            $entries = $this->entries->createsFromDevice($userId, $collision['rows'], $deviceId);
+            $entries = $this->entries->createsFromDevice($userId, self::rowsOf($collision), $deviceId);
 
             // A hold whose ops the log no longer carries has had no answer, and
             // retiring it would delete the only surviving record of the op.
@@ -40,8 +46,15 @@ final readonly class RetriedCollisionCreates
             }
 
             $replayer->replay($entries, $userId, RowHistoryPolicy::AsGiven);
-            $rows += count($collision['rows']);
-            $spent = [...$spent, ...$collision['ids']];
+            $rows += count($collision);
+
+            foreach ($collision as $row) {
+                if ($this->quarantine->refusedPastTheCollision($userId, $deviceId, $row['table'], $row['pk'], $standing)) {
+                    continue;
+                }
+
+                $spent = [...$spent, ...$row['ids']];
+            }
         }
 
         return ['rows' => $rows, 'spent' => $spent];
@@ -49,14 +62,14 @@ final readonly class RetriedCollisionCreates
 
     // Grouped by the device whose create was refused, because that is what
     // separates the two rows sharing the id: the ops under it are one row per
-    // author, and only the author the hold names is being retried.
+    // author, and only the author the hold names is being retried. Every hold
+    // id sits under the row it names, so one row's answer retires only its own.
     /**
-     * @return array<string, array{ids: list<int>, rows: list<array{table: string, pk: string}>}>
+     * @return array<string, list<array{table: string, pk: string, ids: list<int>}>>
      */
     private function byDevice(Builder $held, int $limit): array
     {
         $collisions = [];
-        $seen = [];
 
         foreach ($held->limit($limit)->get(['id', 'table_name', 'pk', 'device_id']) as $row) {
             $hold = self::coordinates($row);
@@ -65,17 +78,24 @@ final readonly class RetriedCollisionCreates
                 continue;
             }
 
-            $key = $hold['device']."\0".$hold['table']."\0".$hold['pk'];
-            $collisions[$hold['device']] ??= ['ids' => [], 'rows' => []];
-            $collisions[$hold['device']]['ids'][] = $hold['id'];
-
-            if (! isset($seen[$key])) {
-                $seen[$key] = true;
-                $collisions[$hold['device']]['rows'][] = ['table' => $hold['table'], 'pk' => $hold['pk']];
-            }
+            $key = $hold['table']."\0".$hold['pk'];
+            $collisions[$hold['device']][$key] ??= ['table' => $hold['table'], 'pk' => $hold['pk'], 'ids' => []];
+            $collisions[$hold['device']][$key]['ids'][] = $hold['id'];
         }
 
-        return $collisions;
+        return array_map(array_values(...), $collisions);
+    }
+
+    /**
+     * @param  list<array{table: string, pk: string, ids: list<int>}>  $collision
+     * @return list<array{table: string, pk: string}>
+     */
+    private static function rowsOf(array $collision): array
+    {
+        return array_map(
+            static fn (array $row): array => ['table' => $row['table'], 'pk' => $row['pk']],
+            $collision,
+        );
     }
 
     // Null for a row missing any of the four a replay is addressed by, which

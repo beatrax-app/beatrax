@@ -20,6 +20,7 @@ use Modules\Sync\Internal\OpLog\ParentsAHeldRowNames;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
+use Modules\Sync\Public\Exceptions\SensitiveColumnKeyUnavailableException;
 use Throwable;
 
 /**
@@ -46,6 +47,7 @@ final readonly class HistoryReprojector
         private GdkKeyringService $keyring,
         private Container $container,
         private RetriedCollisionCreates $collisions,
+        private SealedProjectionReadiness $readiness,
     ) {}
 
     // Readable with no app-lock key at all, which is what makes it usable as
@@ -71,10 +73,18 @@ final readonly class HistoryReprojector
     // replayer the live drain uses — no delete, no trigger drop, no whole-log
     // re-projection. Returns the number of rows replayed.
     /**
+     * @throws SensitiveColumnKeyUnavailableException when a sealed ledger's key is out of reach.
      * @throws Throwable re-thrown from `OpLogReplayer::replay()`.
      */
     public function replayQuarantined(int $userId, Session $session, ?string $since, ?string $lastFingerprint): int
     {
+        // Refused rather than answered with a 0 no caller can tell apart from
+        // "nothing to do": the one caller that persists a watermark off this
+        // return would stamp a history it never projected as complete.
+        if (! $this->readiness->canProject($userId, $session)) {
+            throw SensitiveColumnKeyUnavailableException::forTheRecoveryPass($userId);
+        }
+
         // Spent refusals first: a row already here needs no replay, and the
         // reasons that are not recoverable never reach the pass below, so this
         // is the only thing that ever clears one.

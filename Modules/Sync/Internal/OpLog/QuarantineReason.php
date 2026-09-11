@@ -93,6 +93,18 @@ enum QuarantineReason: string
         return [self::GdkDecryptFailed->value, self::StrategyError->value];
     }
 
+    // A verdict on the collision itself, as opposed to a refusal recorded
+    // before the collision is ever judged: an unsealable column and an absent
+    // parent both turn a create away before the id is looked at. Retiring a
+    // collision hold on one of those loses the only record that says so.
+    /**
+     * @return list<string>
+     */
+    public static function collisionVerdicts(): array
+    {
+        return [self::PrimaryKeyCollision->value, self::UnplaceableCollision->value];
+    }
+
     // The two refusals that happen while INSERTING a row, as opposed to while
     // merging a field into one. Only these are spent by the row turning up:
     // a field op held for an unreadable value is still held when the row it

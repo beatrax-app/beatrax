@@ -16,6 +16,32 @@ final readonly class OpLogQuarantine
         private LoggerInterface $log,
     ) {}
 
+    // The highest hold id standing before a pass runs, so the pass can tell a
+    // refusal it just recorded from one that was already here.
+    public function latestHoldId(int $userId): int
+    {
+        /** @var mixed $id */
+        $id = $this->db->connection()->table('op_log_quarantine')->where('user_id', $userId)->max('id');
+
+        return is_numeric($id) ? (int) $id : 0;
+    }
+
+    // Whether the pass just turned this row away for something that is not a
+    // verdict on its collision — a column it could not seal, a parent that is
+    // not here. The create never reached the id, so the collision hold it was
+    // retried from has had no answer and has to stand.
+    public function refusedPastTheCollision(int $userId, string $deviceId, string $table, string $pk, int $sinceId): bool
+    {
+        return $this->db->connection()->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->where('device_id', $deviceId)
+            ->where('table_name', $table)
+            ->where('pk', $pk)
+            ->where('id', '>', $sinceId)
+            ->whereNotIn('reason', QuarantineReason::collisionVerdicts())
+            ->exists();
+    }
+
     // A rejected or fail-closed entry is routed here, never to the
     // authoritative op_log_entries table. The write is best-effort: a
     // quarantine failure must never propagate, because replay has to
