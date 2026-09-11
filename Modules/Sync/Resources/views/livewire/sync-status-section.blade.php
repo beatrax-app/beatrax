@@ -10,6 +10,9 @@
       - Offline state when a peer cannot be reached.
       - Behind state when this device holds changes no session has carried.
       - Withheld state when a peer is holding entries this device cannot verify.
+      - Refused / Held states when operations a peer sent were turned away here,
+        split by whether anything can still undo the refusal, each linking down
+        to the quarantine notice that says what was turned away and why.
 
     Aesthetic: calm slate per sketch-findings-beatrax — emerald-600 = OK,
     amber-700 = warn, rose-700 = fail, slate-500 = muted / offline.
@@ -79,6 +82,48 @@
             @if ($lastSyncedHuman !== null)
                 <span>&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
             @endif
+        </x-core::alert>
+
+    @elseif ($overall === SyncOverallStatus::Refused)
+        {{-- Warning, not danger: a record is missing here and that is worth a
+             colour, but rose is spent on the one outcome that is a security
+             event. The link is the point — a count with no way to reach what
+             is behind it barely improves on the silence it replaces. --}}
+        <x-core::alert
+            tone="warning"
+            class="flex flex-wrap items-center gap-x-2 gap-y-1"
+            role="status"
+            data-testid="sync-status-overall"
+        >
+            <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>
+            <span style="font-feature-settings: 'tnum';">{{ Lang::choice($overall->labelKey(), $refusedRecords) }}</span>
+            @if ($lastSyncedHuman !== null)
+                <span>&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
+            @endif
+            <a href="#sync-refused-changes" class="font-medium underline underline-offset-2">
+                {{ Lang::get('sync::status.held_detail_link') }}
+            </a>
+        </x-core::alert>
+
+    @elseif ($overall === SyncOverallStatus::Held)
+        {{-- Info for the reason Behind is: nothing has failed and nothing is
+             lost yet. What must not happen is the words for a loss being used
+             over a hold a pass can still answer, so this branch and the one
+             above it differ in tone as well as in sentence. --}}
+        <x-core::alert
+            tone="info"
+            class="flex flex-wrap items-center gap-x-2 gap-y-1"
+            role="status"
+            data-testid="sync-status-overall"
+        >
+            <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-sky-500 dark:bg-sky-400" aria-hidden="true"></span>
+            <span style="font-feature-settings: 'tnum';">{{ Lang::choice($overall->labelKey(), $refusedRecords) }}</span>
+            @if ($lastSyncedHuman !== null)
+                <span>&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
+            @endif
+            <a href="#sync-refused-changes" class="font-medium underline underline-offset-2">
+                {{ Lang::get('sync::status.held_detail_link') }}
+            </a>
         </x-core::alert>
 
     @elseif ($overall === SyncOverallStatus::Behind)

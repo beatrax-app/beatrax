@@ -23,5 +23,10 @@ return [
         'body' => 'Er kwam iets binnen dat dit apparaat niet kon opslaan: een record waaraan een deel ontbreekt, een datum die niet bestaat, een splitsing die niet meer klopt, een record waaraan twee apparaten al dezelfde identiteit hadden gegeven, of een verwijdering van iets dat hier nog in gebruik is. Wat geweigerd is, staat op je andere apparaat en niet op dit apparaat, dus de twee bevatten niet langer hetzelfde.',
         'action' => 'Vergelijk het record op je andere apparaat met wat je hier ziet en voer de wijziging hier opnieuw door — of verwijder het hier opnieuw, als iets dat je elders hebt verwijderd hier nog staat. Wat geweigerd is, wordt niet vanzelf opnieuw verstuurd.',
     ],
+    'held' => [
+        'summary' => ':count wijziging van een ander apparaat is hier nog niet toegepast|:count wijzigingen van een ander apparaat zijn hier nog niet toegepast',
+        'body' => 'Deze zijn binnengekomen en konden nog niet worden opgeslagen: iets waarnaar ze verwijzen was hier op dat moment nog niet aanwezig, of dit apparaat kon een deel ervan niet lezen. Ze worden bewaard en niet weggegooid, en ze staan nog op het apparaat dat ze heeft gemaakt.',
+        'action' => 'Hier valt niets te doen. Staan ze er nog nadat je apparaten opnieuw hebben gesynchroniseerd, open dan het record op je andere apparaat en vergelijk het met wat je hier ziet — wat hierboven geteld is, staat op dat apparaat en niet op dit apparaat.',
+    ],
     'last_seen' => 'Meest recent: :when',
 ];

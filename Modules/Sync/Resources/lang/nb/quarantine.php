@@ -23,5 +23,10 @@ return [
         'body' => 'Det kom inn noe denne enheten ikke kunne lagre: en oppføring som mangler en del av seg selv, en dato som ikke finnes, en oppdeling som ikke lenger går opp, en oppføring to enheter allerede hadde gitt samme identitet, eller en sletting av noe som fortsatt er i bruk her. Det som ble avvist, ligger på den andre enheten din og ikke på denne, så de to inneholder ikke lenger det samme.',
         'action' => 'Sammenlign oppføringen på den andre enheten din med det du ser her, og gjør endringen om igjen her — eller slett den her på nytt, hvis noe du fjernet et annet sted fortsatt er her. Ingenting avvist sendes på nytt av seg selv.',
     ],
+    'held' => [
+        'summary' => ':count endring fra en annen enhet er ennå ikke tatt i bruk her|:count endringer fra en annen enhet er ennå ikke tatt i bruk her',
+        'body' => 'Disse kom inn og kunne ikke lagres ennå: noe de viser til, var ikke her på det tidspunktet, eller denne enheten kunne ikke lese en del av dem. De blir tatt vare på i stedet for å bli forkastet, og de ligger fortsatt på enheten som gjorde dem.',
+        'action' => 'Det er ingenting å gjøre her. Hvis de fortsatt står oppført etter at enhetene dine har synkronisert på nytt, åpne oppføringen på den andre enheten din og sammenlign den med det du ser her — det som er talt opp ovenfor, ligger på den enheten og ikke på denne.',
+    ],
     'last_seen' => 'Sist: :when',
 ];

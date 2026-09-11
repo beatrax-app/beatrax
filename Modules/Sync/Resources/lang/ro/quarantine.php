@@ -27,5 +27,10 @@ return [
         'body' => 'A sosit ceva ce acest dispozitiv nu a putut stoca: o înregistrare căreia îi lipsește o parte din ea însăși, o dată care nu există, o împărțire care nu mai iese la socoteală, o înregistrare căreia două dispozitive îi dăduseră deja aceeași identitate sau o ștergere pentru ceva încă folosit aici. Ceea ce a fost refuzat se află pe celălalt dispozitiv al tău și nu pe acesta, așa că cele două nu mai conțin același lucru.',
         'action' => 'Compară înregistrarea de pe celălalt dispozitiv al tău cu ce vezi aici și fă modificarea din nou aici — sau șterge-o din nou aici, dacă ceva ce ai eliminat în altă parte este încă aici. Nimic refuzat nu se retrimite de la sine.',
     ],
+    'held' => [
+        'summary' => ':count modificare de la alt dispozitiv nu a fost încă aplicată aici|:count modificări de la alt dispozitiv nu au fost încă aplicate aici|:count de modificări de la alt dispozitiv nu au fost încă aplicate aici',
+        'body' => 'Acestea au sosit și nu au putut fi încă stocate: ceva la care se referă nu era aici în acel moment sau acest dispozitiv nu a putut citi o parte din ele. Sunt păstrate, nu aruncate, și se află în continuare pe dispozitivul care le-a făcut.',
+        'action' => 'Aici nu este nimic de făcut. Dacă sunt încă în listă după ce dispozitivele tale s-au sincronizat din nou, deschide înregistrarea de pe celălalt dispozitiv al tău și compară-o cu ce vezi aici — ceea ce este numărat mai sus se află pe acel dispozitiv și nu pe acesta.',
+    ],
     'last_seen' => 'Cel mai recent: :when',
 ];

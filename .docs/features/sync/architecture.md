@@ -1907,11 +1907,21 @@ the daemon was spawned for — and answers from `PairingOfferService` behind
 ### Sync status service (`Public\Services\SyncStatusService`)
 
 Reads `sync_sessions` rows to compute per-peer statuses, an aggregate overall
-status (`'all_synced'|'syncing'|'offline'|'error'|'unknown'`, prioritized
-error > syncing > offline/all_synced > unknown), and a human-relative
-"last synced" string. The overall-status priority order and the "closed
-row still counts as all_synced" rule exist so a peer that finished syncing
-and then disconnected does not get mis-reported as offline/error.
+status, and a human-relative "last synced" string. The "closed row still counts
+as settled" rule exists so a peer that finished syncing and then disconnected is
+not mis-reported as offline/error.
+
+`SyncOverallStatus` ranks on **what clears the state**, worst first:
+
+`error` > `syncing` > `offline` > `refused` > `withheld` > `held` > `behind` >
+`all_synced` > `unknown`.
+
+The last five are decided in `settledStatus()`, once every exchange has closed
+cleanly — the four above them claim no agreement, so a refusal has nothing there
+to contradict. `refused` and `held` are the two halves of `op_log_quarantine`
+split by `QuarantineReason::recoverable()`, counted over distinct
+`(table_name, pk)` by `RefusedOperations`. See
+[what the quarantine tells the reader](what-the-quarantine-tells-the-reader.md#the-refusals-the-top-line-could-not-see).
 
 ### Devices & Sync settings section (`Internal\Http\Livewire\DevicesAndSyncSettingsSection`)
 

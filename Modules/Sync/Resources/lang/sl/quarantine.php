@@ -23,5 +23,10 @@ return [
         'body' => 'Prispelo je nekaj, česar ta naprava ni mogla shraniti: zapis, ki mu manjka del njega samega, datum, ki ne obstaja, razdelitev, ki se ne izide več, zapis, ki sta mu dve napravi že dali isto identiteto, ali izbris nečesa, kar je tu še v uporabi. Tisto, kar je bilo zavrnjeno, je na tvoji drugi napravi in ne na tej, zato napravi ne vsebujeta več istega.',
         'action' => 'Primerjaj zapis na svoji drugi napravi s tem, kar vidiš tukaj, in spremembo tukaj naredi znova — ali jo tukaj znova izbriši, če je nekaj, kar si odstranil drugje, še vedno tu. Nič zavrnjenega se samo od sebe ne pošlje znova.',
     ],
+    'held' => [
+        'summary' => ':count sprememba z druge naprave tukaj še ni uveljavljena|:count spremembi z druge naprave tukaj še nista uveljavljeni|:count spremembe z druge naprave tukaj še niso uveljavljene|:count sprememb z druge naprave tukaj še ni uveljavljenih',
+        'body' => 'Prispele so in se še niso mogle shraniti: nečesa, na kar se sklicujejo, takrat tu ni bilo, ali pa ta naprava ni mogla prebrati dela njih. Namesto da bi bile zavržene, se hranijo, in še vedno so na napravi, ki jih je naredila.',
+        'action' => 'Tukaj ni ničesar za narediti. Če so še vedno na seznamu tudi potem, ko se tvoje naprave znova sinhronizirajo, odpri zapis na svoji drugi napravi in ga primerjaj s tem, kar vidiš tukaj — tisto, kar je prešteto zgoraj, je na tisti napravi in ne na tej.',
+    ],
     'last_seen' => 'Najnovejše: :when',
 ];
