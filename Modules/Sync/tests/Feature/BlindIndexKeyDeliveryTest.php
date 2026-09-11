@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -197,6 +199,19 @@ function bikEnrolThenImport(User $user, Session $session): string
     app(RecordsTransactions::class)([$canonical], $user, captureForSync: false);
 
     return (string) app(GdkKeyringService::class)->blindIndexKeyHex((int) $user->id, $session);
+}
+
+// The whole point of SafeExceptionContext::describe(): the class and the
+// SQLSTATE survive, and the statement that carried a user's row does not.
+function bikContextNamesTheStatement(array $context): bool
+{
+    foreach ($context as $value) {
+        if (is_string($value) && (str_contains($value, 'system_alerts') || stripos($value, 'select ') !== false)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function bikOpenDivergenceAlerts(User $user): int
@@ -716,6 +731,57 @@ it('takes the divergence report down once the peer sends the key this device hol
     bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $localKeyHex, senderKeyed: true);
 
     expect(bikOpenDivergenceAlerts($user))->toBe(0);
+});
+
+// GdkEpochControlHandler is contractually forbidden from throwing, and the
+// alert write is the one thing in that branch that talks to the database. The
+// context is asserted for what it must NOT carry: a QueryException's message
+// is the statement and its bindings, and this class exists because that data
+// is worth encrypting.
+it('still reports the divergence, and still returns an outcome, when the alert row cannot be written', function (): void {
+    $user = bikUser('bik-alert-write-fails');
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    bikEnrolThenImport($user, $session);
+    [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
+
+    Schema::drop('system_alerts');
+    $logSpy = Log::spy();
+
+    $outcome = bikDeliverOutcome($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true);
+
+    expect($outcome)->toBe(GdkWrapOutcome::Retained);
+
+    $logSpy->shouldHaveReceived('error')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'different blind-index keys'))
+        ->once();
+
+    $logSpy->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'could not be written')
+            && $context['reason'] === QueryException::class
+            && array_key_exists('sqlstate', $context)
+            && ! bikContextNamesTheStatement($context))
+        ->once();
+});
+
+// The withdrawal half. Left to throw, a failure to take a stale alert down
+// would escape into the wrap handler, which may not throw at all.
+it('says why the divergence alert could not be withdrawn, without saying what it was withdrawing', function (): void {
+    $user = bikUser('bik-alert-withdraw-fails');
+
+    Schema::drop('system_alerts');
+    $logSpy = Log::spy();
+
+    expect(fn () => app(BlindIndexDivergenceAlerts::class)->converged((int) $user->id))
+        ->not->toThrow(Throwable::class);
+
+    $logSpy->shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'could not be withdrawn')
+            && $context['reason'] === QueryException::class
+            && array_key_exists('sqlstate', $context)
+            && ! bikContextNamesTheStatement($context))
+        ->once();
 });
 
 // An epoch wrap does not sign this field and must never read it: a party that
