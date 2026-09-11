@@ -6733,6 +6733,14 @@ at-risk as before: this key is NULL on most rows and never crosses. **A UNIQUE
 index is not automatically a cross-device identity**, and the ones that are not
 are now named in that guard with the reason, so the table stays under it.
 
+`migration_import_baseline_map_field_unique` is the second entry, and it fails
+the test a different way. Its columns are `(migration_source_map_id,
+field_name)` and both travel, but the leading one is the parent's own
+autoincrement — each device takes its own — so the pair names one row on both
+devices only after `PeerRowAliases` has translated the foreign key. It is a
+local dedup that reconciles through the alias table, not an identity a second
+device could compute, and `SourceMapWriter` still mints the primary key.
+
 Three test fixtures hand-write `system_alerts` rather than migrate it, and all
 three went on describing the table as it was. The write then failed on `no
 column named dedup_key` inside the very `catch (Throwable)` that exists to keep

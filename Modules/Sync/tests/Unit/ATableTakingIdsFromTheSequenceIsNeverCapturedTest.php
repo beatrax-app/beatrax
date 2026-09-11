@@ -61,6 +61,10 @@ function uniqueIndexesThatAreNotACrossDeviceIdentity(): array
         'system_alerts_dedup_key_unique' => 'A device-local claim on the one OPEN alert of a kind: '
             .'NULL on every row that is meant to repeat, and SystemAlertWriter::storedRow() strips it '
             .'before an owned alert travels, so the peer never sees the value at all.',
+        'migration_import_baseline_map_field_unique' => 'The map row and the field it holds a baseline '
+            .'for. Its leading column is migration_source_map\'s own autoincrement, which each device '
+            .'takes for itself, so the pair only agrees across devices once PeerRowAliases has '
+            .'translated it — a local dedup, not an identity, and SourceMapWriter still mints the pk.',
     ];
 }
 
