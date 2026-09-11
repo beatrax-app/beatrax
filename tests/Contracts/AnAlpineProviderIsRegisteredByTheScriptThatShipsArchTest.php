@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\RepoTree;
@@ -18,6 +19,7 @@ use Tests\Contracts\Support\RepoTree;
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#an-alpine-provider-missing-from-the-script-that-ships
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-provider-registered-from-an-event-that-has-already-fired
+ * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-template-names-a-store-the-script-never-registered
  */
 
 /**
@@ -58,6 +60,110 @@ function alpineProviderNamesInTemplates(): array
     )];
 }
 
+// Alpine's own magics, plus the ones Livewire's bundle brings with it. A name
+// here resolves without anybody in this repository registering it, so reading
+// one as a missing provider would report the framework as broken.
+const ALPINE_BUILT_IN_MAGICS = ['el', 'refs', 'store', 'watch', 'dispatch', 'nextTick', 'root', 'data', 'id', 'persist', 'focus', 'anchor', 'wire', 'parent', 'js'];
+
+/**
+ * Whether an attribute carries an Alpine expression. `x-` and the `@event`
+ * shorthand always do. The `:` shorthand does on an HTML element and does not
+ * on a Blade component tag, where `:prop="$fn($row)"` is PHP the compiler
+ * evaluates — reading that as JavaScript is how a closure a template defined
+ * for itself reports as an unregistered magic.
+ */
+function alpineExpressionAttribute(string $element, string $name): bool
+{
+    if (str_starts_with($name, 'x-') || str_starts_with($name, '@')) {
+        return true;
+    }
+
+    return str_starts_with($name, ':') && ! str_starts_with($element, 'x-') && ! str_contains($element, ':');
+}
+
+// Not preceded by a word character or a dot, which is the whole of the
+// difference between the `$set` Livewire hangs off `$wire` and a magic of that
+// name: `$wire.$set('a', 1)` names no magic at all.
+const ALPINE_STORE_READ_PATTERN = '/(?<![\w.$])\$store\s*\.\s*([A-Za-z_$][A-Za-z0-9_$]*)/';
+
+const ALPINE_MAGIC_CALL_PATTERN = '/(?<![\w.$])\$([A-Za-z_][A-Za-z0-9_$]*)\s*\(/';
+
+/**
+ * The stores and magics one Alpine expression names. A Blade island inside the
+ * value is subtracted rather than read: `x-text="'{{ $money($row) }}'"` hands
+ * the browser the result, never the call, and the call is PHP.
+ *
+ * @return array{stores: list<string>, magics: list<string>}
+ */
+function alpineRegistryNamesIn(string $element, string $attribute, string $value): array
+{
+    if ($value === '' || ! alpineExpressionAttribute(strtolower($element), $attribute)) {
+        return ['stores' => [], 'magics' => []];
+    }
+
+    $php = BladePhpSource::of($value);
+    $magics = [];
+
+    foreach (PatternScan::all(ALPINE_MAGIC_CALL_PATTERN, $value)[1] as $name) {
+        $compiled = PatternScan::matches('/(?<![\w.$])\$'.preg_quote($name, '/').'\s*\(/', $php);
+
+        if (! in_array($name, ALPINE_BUILT_IN_MAGICS, true) && ! $compiled) {
+            $magics[] = $name;
+        }
+    }
+
+    return [
+        'stores' => array_values(array_unique(PatternScan::all(ALPINE_STORE_READ_PATTERN, $value)[1])),
+        'magics' => array_values(array_unique($magics)),
+    ];
+}
+
+/**
+ * The same question the rule above asks of `x-data`, asked of the other two
+ * registries. A factory is named in one attribute and nowhere else; a store and
+ * a magic are reachable from every expression on the page — `$store.overlay` in
+ * an `x-on:click`, `$plural(…)` in an `x-text` — and they go missing from a
+ * stale bundle in exactly the same silence.
+ *
+ * @return array{attributes: int, stores: array<string, list<string>>, magics: array<string, list<string>>}
+ */
+function alpineRegistryNamesInTemplates(): array
+{
+    $attributes = 0;
+    $stores = [];
+    $magics = [];
+
+    foreach (RepoTree::files(RepoTree::EVERY_BLADE_VIEW) as $path) {
+        $where = str_replace(RepoTree::root().'/', '', $path);
+
+        foreach (MarkupSource::tags((string) file_get_contents($path)) as $element) {
+            foreach ($element->attributes() as $name => $value) {
+                if ($value === '' || ! alpineExpressionAttribute(strtolower($element->name), $name)) {
+                    continue;
+                }
+
+                $attributes++;
+                $named = alpineRegistryNamesIn($element->name, $name, $value);
+
+                foreach ($named['stores'] as $store) {
+                    $stores[$store][] = $where;
+                }
+
+                foreach ($named['magics'] as $magic) {
+                    $magics[$magic][] = $where;
+                }
+            }
+        }
+    }
+
+    ksort($stores);
+    ksort($magics);
+
+    $unique = static fn (array $where): array => array_values(array_unique($where));
+
+    return ['attributes' => $attributes, 'stores' => array_map($unique, $stores), 'magics' => array_map($unique, $magics)];
+}
+
 /**
  * Every name the front-end sources hand to Alpine. Stores and magics belong
  * here beside the component factories: all three are one write into one
@@ -96,10 +202,13 @@ function alpineRegistrationsInFrontEndSource(): array
 // a guard reports a registry it never checked.
 const ALPINE_REGISTRATION_PATTERN = '/\.(?:data|magic|store)\(\s*[\'"`]([A-Za-z_$][A-Za-z0-9_$]*)[\'"`]\s*,/';
 
-function alpineRegistersInScript(string $name, string $script): bool
+// Alpine keeps the three registries apart, so the kind matters as much as the
+// name: a name written into the magic registry is not reachable as `$store.x`,
+// and a template asking the wrong registry is handed undefined in silence.
+function alpineRegistersInScript(string $name, string $script, string $kinds = 'data|magic|store'): bool
 {
     return PatternScan::matches(
-        '/\.(?:data|magic|store)\(\s*[\'"`]'.preg_quote($name, '/').'[\'"`]\s*,/',
+        '/\.(?:'.$kinds.')\(\s*[\'"`]'.preg_quote($name, '/').'[\'"`]\s*,/',
         $script,
     );
 }
@@ -209,6 +318,42 @@ it('has every provider a template names registered by the script that ships', fu
     );
 });
 
+it('has every store and magic a template names registered by the script that ships', function (): void {
+    $named = alpineRegistryNamesInTemplates();
+    $shipped = alpineShippedScript();
+
+    expect($named['attributes'])->toBeGreaterThan(300, 'Only '.$named['attributes'].' Alpine expressions were read, so the verdict below is about markup nobody parsed.');
+    expect(count($named['stores']) + count($named['magics']))->toBeGreaterThan(3, 'Almost no store or magic was found in any template, so this rule proved nothing.');
+    expect(strlen($shipped))->toBeGreaterThan(100000, 'The built script read is far too small to be this application, so every name below would report as missing.');
+
+    $orphans = [];
+
+    foreach (['store' => $named['stores'], 'magic' => $named['magics']] as $kind => $found) {
+        foreach ($found as $name => $templates) {
+            foreach ($templates as $template) {
+                $ownScript = (string) file_get_contents(RepoTree::root().'/'.$template);
+
+                if (alpineRegistersInScript($name, $shipped, $kind) || alpineRegistersInScript($name, $ownScript, $kind)) {
+                    continue;
+                }
+
+                $orphans[] = $template.' → '.($kind === 'store' ? '$store.'.$name : '$'.$name.'()');
+            }
+        }
+    }
+
+    sort($orphans);
+
+    expect($orphans)->toBe(
+        [],
+        "A store nothing registered reads back as undefined and a magic nothing registered is not defined at\n".
+        "all: Alpine logs one expression error and the handler, the class binding or the text simply does\n".
+        "nothing. Nothing is thrown, the page returns 200, and the only trace is in a console no test opens.\n".
+        "The three registries are separate, so the name has to be registered as the kind the template reads\n".
+        "it as. Register it in resources/js and rebuild — the script under public/build is read as it is.\n  ".implode("\n  ", $orphans),
+    );
+});
+
 // The wider half of the same claim, and the one that catches a bundle nobody
 // rebuilt: a name resources/js registers is a name some template is entitled to
 // use, whether or not one does today.
@@ -305,4 +450,23 @@ it('reads a registration by its call and not by its name', function (): void {
     expect(alpineRegistersInScript('palette', 'window.Alpine.data(`palette`,rl)'))->toBeTrue();
     expect(alpineRegistersInScript('plural', "Alpine.magic('plural', () => 1);"))->toBeTrue();
     expect(alpineRegistersInScript('tab', "Alpine.data('tabStrip', tabStrip);"))->toBeFalse();
+});
+
+it('reads a store and a magic out of an expression, and leaves what is not one alone', function (): void {
+    $named = static fn (string $element, string $attribute, string $value): array => alpineRegistryNamesIn($element, $attribute, $value);
+
+    expect($named('button', 'x-on:click', '$store.overlay.add("drawer")')['stores'])->toBe(['overlay'], 'a store is read wherever an expression reaches for one, not only in x-data');
+    expect($named('span', 'x-text', '$plural(arms, "k", n)')['magics'])->toBe(['plural'], 'a magic is a call the page cannot make unless somebody registered it');
+    expect($named('button', 'x-on:click', '$wire.$set("a", 1)')['magics'])->toBe([], 'the $set Livewire hangs off $wire is reached through a dot and names no magic');
+    expect($named('div', 'x-init', '$dispatch("open")')['magics'])->toBe([], 'Alpine registers its own magics, so reading one as missing reports the framework as broken');
+    expect($named('x-ledger::amount', ':money', '$rowSecondary($row)')['magics'])->toBe([], 'a colon prop on a Blade component tag is PHP the compiler evaluates, never JavaScript');
+    expect($named('span', 'x-text', '"{{ $money($row) }}"')['magics'])->toBe([], 'a call inside a Blade echo is PHP: the browser is handed the result and never the call');
+    expect($named('div', 'class', '$store.overlay.blocking ? 1 : 2')['stores'])->toBe([], 'a plain class attribute is a class list, not an expression Alpine evaluates');
+});
+
+it('asks the registry a template reads, not merely whether the name is written somewhere', function (): void {
+    expect(alpineRegistersInScript('overlay', "Alpine.store('overlay', { names: [] });", 'store'))->toBeTrue();
+    expect(alpineRegistersInScript('overlay', "Alpine.data('overlay', () => ({}));", 'store'))->toBeFalse('a factory of that name is not reachable as $store.overlay');
+    expect(alpineRegistersInScript('plural', "Alpine.magic('plural', () => 1);", 'magic'))->toBeTrue();
+    expect(alpineRegistersInScript('plural', "Alpine.store('plural', {});", 'magic'))->toBeFalse('a store of that name is not reachable as $plural()');
 });
