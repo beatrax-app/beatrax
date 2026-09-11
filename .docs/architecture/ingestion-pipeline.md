@@ -226,6 +226,14 @@ walks the seven-step precedence chain and upserts the matching
 fingerprint boundary specifically so the resolved `counterparty_id`
 rides along into the persisted transaction.
 
+It attaches it only where stage 6 left none. A rule's `counterparty`
+action names the party outright and this chain reads the row's own text,
+so stamping unconditionally overwrote every rule's answer four lines after
+it was folded — on every row but a self-account leg, since the chain
+writes a row for every other arm. The upsert still runs either way: it is
+what lists the merchant in the reader's counterparty list whichever party
+the transaction is finally filed against.
+
 ### 7a. Occurrence ordinal (`OccurrenceOrdinals`)
 
 The last thing stamped onto a `CanonicalTransaction` before the fingerprint

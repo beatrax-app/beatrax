@@ -191,6 +191,18 @@ each action onto the `CanonicalTransaction` DTO in sequence, so a later
 pass. A malformed action payload is logged and skipped on both paths
 rather than aborting the transaction.
 
+A `counterparty` action folded at import has one more stage to survive.
+`ImportPipeline` runs `Counterparties`' resolution four lines after this,
+and that stage reads the row's own IBAN and text — so an unconditional
+stamp replaced the rule's answer on every row the seven-step chain
+resolved, which is every row but a self-account leg. The stage therefore
+leaves a `counterparty_id` the DTO already carries alone. It still
+resolves, because the upsert is what lists the merchant in the reader's
+counterparty list whichever party the row is finally filed against. The
+re-apply path's equivalent is `FieldProvenanceWriter`, which blocks a rule
+from overwriting a `manual` choice; at import there is no stored
+provenance to consult, and the rule is the only authored answer there is.
+
 At re-apply, a field whose provenance is `manual` is skipped before any
 write is attempted — see [Field provenance](field-provenance.md). Each
 action type also reads its current stored value before writing, so a
