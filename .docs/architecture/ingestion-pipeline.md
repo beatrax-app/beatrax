@@ -563,12 +563,14 @@ number may come from.
   keeps a genuine re-import a no-op, and what makes a partial overlap land
   exactly the rows it adds: a later file holding both coffees against a ledger
   holding one classifies ordinal 0 as DUPLICATE and ordinal 1 as NEW.
-- **Two devices compute the same number.** Nothing about the ordinal depends on
-  when a row was inserted, on an autoincrement, or on what a device already
-  holds — only on the bytes of the statement and their order. A phone and a
-  desktop importing one statement therefore derive identical ordinals, identical
-  fingerprints, and rows that recognise each other on arrival rather than
-  landing twice.
+- **Two devices compute the same number — but not the same digest.** Nothing
+  about the ordinal depends on when a row was inserted, on an autoincrement, or
+  on what a device already holds, only on the bytes of the statement and their
+  order. The fingerprint around it is not device-independent: it folds
+  `account_id`, which each device counts for itself. Measured on a paired
+  install, the 42 rows of one ASN statement agreed on every other term of the
+  tuple and shared **none** of their 42 digests. What makes the rows recognise
+  each other is not an identical digest but the two steps below.
 - **It sits inside the UNIQUE index, not only inside the hash.** The composite
   `transactions_fingerprint_uq` names it last. That index is a *natural key* on
   the wire: `Sync\Internal\Merge\PeerRowAliases` reads the table's unique
@@ -579,6 +581,14 @@ number may come from.
   pins both halves — a device that imported neither statement keeps two rows,
   and a device that imported the same statement itself matches each arriving
   create onto the row that is the same booking.
+- **The digest is realigned once the id has been translated.** `PeerRowAliases`
+  rewrites `account_id` to the id this device uses, which leaves the arriving
+  digest describing a row on the sender and none here.
+  `Ledger\Internal\Listeners\RederiveFingerprintOnMergedRows` recomposes it
+  against the local id, and only after that does the next import of the same
+  statement match. `AStatementThePeerAlreadySentIsNotImportedTwiceTest` pins the
+  consequence the digest exists for: without the realign the same statement row
+  classifies NEW and lands a second time.
 
 The column carries a database default of `0` and therefore stays **out** of
 `_create_required` (see
