@@ -96,11 +96,15 @@ that a partial result is worse than no result:
   adjacent in the movement history rather than letting them straddle
   another movement.
 - **`archive()`** reads the remaining balance, inserts one releasing
-  `withdraw` movement for it (memo `Released on archive`), and flips
-  `status` to `archived`, all in one transaction. An archived pot always
-  reads back as balance 0 and its money is back in unallocated; a
-  half-applied archive would strand the balance in a pot the reconciler
-  no longer counts.
+  `released_on_archive` movement for the negative of it, and flips
+  `status` to `archived`, all in one transaction. The predicate is
+  `!== 0` rather than `> 0`: the guard above serialises two writers on
+  **one** database, not two devices, so a pot both of them emptied while
+  apart sits below nought and releases a *positive* amount. Releasing only
+  a positive balance left that pot archived still negative. A pot at
+  exactly zero writes nothing at all. An archived pot always reads back as
+  balance 0; a half-applied archive would strand the balance in a pot the
+  reconciler no longer counts.
 
 `restore()` is deliberately *not* one of these. It inserts no movements
 at all — a restored pot comes back empty rather than re-funded, because

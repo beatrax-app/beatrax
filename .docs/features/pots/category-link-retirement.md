@@ -42,6 +42,13 @@ rather than leaving a user half-converted.
   holds throughout.
 - **An already-empty pot writes no movement at all** — a zero-amount row is
   refused, so a pot that held nothing is archived and nothing else.
+- **A pot below zero releases a *positive* amount**, and that is not money
+  coming back. Two devices used apart can each withdraw the whole balance and
+  both rows land, so the pot ends below nought; archiving settles it at nought
+  by taking the overdrawn amount out of an unallocated figure that was
+  overstated. `RecordCategoryPotRetirementAlert` counts only the negative
+  release rows for that reason — the amount and the pot count both, so the
+  banner never names a pot whose money it did not count.
 - **Goal-linked and unlinked pots are untouched.** The walk filters on
   `category_id`, and `PotWriter::assertXorLink()` means a pot can never hold
   both a goal and a category, so a goal-linked pot is never in the population.
@@ -82,8 +89,8 @@ counting as it goes, so the figures come from the rows themselves.
   that upgrades runs the cutover for itself over the same rows, so both land on
   one row, and the dismissal reaches a primary key the peer already holds.
 - **Nothing is raised when nothing moved.** A fresh install, and a reader whose
-  category-linked pots were all empty, see no banner: there is no released money
-  to point at.
+  category-linked pots were all empty or all overdrawn, see no banner: there is
+  no released money to point at.
 - **The sentence is a copy spec, not a sentence.** `CopyLine` plus
   `CopyParam::money()` in `metadata` means the count declines and the amount
   formats in the *reader's* language, not in whichever was active when the

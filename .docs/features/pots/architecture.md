@@ -54,10 +54,17 @@ column update:
   only — and sharing the same `currency`, which the account rule does not
   imply ([move refusals](move-refusals.md)). The source balance check runs
   inside the same transaction as both inserts.
-- **archive** — releases any remaining balance back to unallocated via one
-  final `withdraw` movement (memo: "Released on archive"), then flips
-  `status` to `archived`, both in the same transaction. An archived pot
-  always reads back as balance 0.
+- **archive** — settles whatever the pot still holds with one final
+  `released_on_archive` movement for the negative of its balance, then flips
+  `status` to `archived`, both in the same transaction. The kind carries the
+  meaning rather than a memo, because `memo` is a synced free-text column and
+  a sentence written there would reach a peer frozen in whichever language
+  wrote it. An archived pot always reads back as balance 0 — including one a
+  second device pulled **below** zero, which settles with a *positive*
+  release. That release hands nothing back: it takes the overdrawn amount out
+  of an unallocated figure that was overstated while the pot claimed a
+  negative allocation. A pot already at exactly zero writes no movement at
+  all, because a zero-amount row records no event.
 - **restore** — brings the pot back active with **no movements inserted** —
   it comes back empty, not re-funded. If another pot has since claimed the
   same linked goal while this one was archived (one-pot-per-goal), the

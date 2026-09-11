@@ -234,3 +234,55 @@ it('still tells a device whose peer did the archiving, because it reads the rows
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
         ->assertSee(Money::ofMinor(15000, 'EUR')->format());
 });
+
+// A pot two devices emptied apart sits below nought, and archiving it writes a
+// POSITIVE release that hands nothing back. Subtracted from the total it would
+// shrink the figure this banner exists to name.
+function overdrawnCategoryPot(mixed $user, Account $account, ?int $categoryId, int $fundedMinor, int $withdrawals): Pot
+{
+    $pot = fundedCategoryPot($user, $account, $categoryId, $fundedMinor);
+
+    for ($i = 0; $i < $withdrawals; $i++) {
+        DB::table('pot_movements')->insert([
+            'user_id' => $user->id,
+            'pot_id' => $pot->id,
+            'counterpart_pot_id' => null,
+            'amount_minor' => -$fundedMinor,
+            'currency' => $account->default_currency,
+            'kind' => PotMovementKind::Withdraw->value,
+            'memo' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    return $pot;
+}
+
+it('counts only the pots that gave money back, never the one that took an overstatement away', function (): void {
+    $account = noticeAccount($this->user, 'EUR');
+    fundedCategoryPot($this->user, $account, $this->groceries->id, 15000);
+    $overdrawn = overdrawnCategoryPot($this->user, $account, $this->groceries->id, 10000, 2);
+
+    app(EnvelopeActivationService::class)->activate();
+
+    // Archiving settled the overdrawn pot at nought with a +10000 release. That
+    // release is not money returning: it takes back what unallocated overstated.
+    expect((int) DB::table('pot_movements')
+        ->where('pot_id', $overdrawn->id)
+        ->where('kind', PotMovementKind::ReleasedOnArchive->value)
+        ->value('amount_minor'))->toBe(10000);
+
+    $alerts = retirementAlerts($this->user);
+    expect($alerts)->toHaveCount(1);
+
+    /** @var array<string, mixed> $metadata */
+    $metadata = json_decode((string) $alerts[0]->metadata, true, flags: JSON_THROW_ON_ERROR);
+    $spec = $metadata['copy'];
+
+    expect($spec['count'])->toBe(1)
+        ->and($spec['replace']['amount']['value'])->toBe('15000|EUR');
+
+    Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
+        ->assertSee(Money::ofMinor(15000, 'EUR')->format());
+});
