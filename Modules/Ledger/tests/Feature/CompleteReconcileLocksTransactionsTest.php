@@ -28,7 +28,7 @@ it('transitions cleared transactions up to the statement date to reconciled, lea
     $inWindowUncleared = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'uncleared', 'posted_at' => '2026-06-11']);
     $afterWindowCleared = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-20']);
 
-    app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'));
+    app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'), 'EUR');
 
     expect(DB::table('transactions')->where('id', $inWindowCleared->id)->value('status'))->toBe('reconciled');
     expect(DB::table('transactions')->where('id', $inWindowUncleared->id)->value('status'))->toBe('uncleared');
@@ -48,7 +48,7 @@ it('is scoped by user_id — never transitions another user\'s transactions', fu
     $otherRun = $this->makeImportRun($otherUser);
     $otherTx = $this->makeTransaction($otherUser, $otherAccount, $otherRun, ['status' => 'cleared', 'posted_at' => '2026-06-10']);
 
-    app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'));
+    app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'), 'EUR');
 
     expect(DB::table('transactions')->where('id', $otherTx->id)->value('status'))->toBe('cleared');
 });
@@ -62,7 +62,7 @@ it('dispatches a reconciled event only for rows the update actually transitioned
     $uncleared = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'uncleared', 'posted_at' => '2026-06-11']);
     $afterWindow = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-20']);
 
-    app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'));
+    app(ReconciliationWriter::class)->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'), 'EUR');
 
     Event::assertDispatchedTimes(TransactionMutated::class, 2);
 
@@ -84,7 +84,7 @@ it('a second reconcile under a frozen clock counts and dispatches only the newly
     // Two completeReconcile() calls in the same wall-clock second: re-selecting
     // on "status = reconciled AND updated_at = $reconciledAt" cannot tell this
     // call's rows from the previous call's. A frozen clock forces the collision.
-    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-20 09:00:00'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-20 09:00:00'), 'EUR');
 
     Event::fake([TransactionMutated::class]);
 
@@ -92,14 +92,14 @@ it('a second reconcile under a frozen clock counts and dispatches only the newly
 
     $writer = app(ReconciliationWriter::class);
 
-    $firstCount = $writer->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'));
+    $firstCount = $writer->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-15'), 'EUR');
     expect($firstCount)->toBe(1);
     expect(DB::table('transactions')->where('id', $r1->id)->value('status'))->toBe('reconciled');
 
     // A second call, still under the same frozen instant.
     $r2 = $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'posted_at' => '2026-06-16']);
 
-    $secondCount = $writer->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-20'));
+    $secondCount = $writer->completeReconcile($this->user, $this->account->id, CarbonImmutable::parse('2026-06-20'), 'EUR');
 
     expect($secondCount)->toBe(1);
     expect(DB::table('transactions')->where('id', $r2->id)->value('status'))->toBe('reconciled');

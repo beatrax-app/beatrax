@@ -405,6 +405,7 @@ final readonly class IcsSettlementResolver
                 'transactions.id as refund_id',
                 'transactions.account_id as account_id',
                 'transactions.settled_amount_minor as settled_amount_minor',
+                'transactions.settled_currency as settled_currency',
                 'transactions.posted_at as posted_at',
                 'transactions.counterparty_normalized as counterparty_normalized',
                 'card_statements.id as statement_id',
@@ -448,6 +449,16 @@ final readonly class IcsSettlementResolver
     private function resolveOneRefund(stdClass $refund, User $user, array $ibans): ?array
     {
         $connection = $this->db->connection();
+        $currency = self::currencyOrDefault($refund->statement_currency ?? null);
+
+        // The refusal resolveOne() makes for a payment, owed by this arm for
+        // the same reason: the magnitude below is carried forward as a credit
+        // denominated in the statement, and priorCreditsMinor() then spends it
+        // against the next one. A refund in another money is a different sum.
+        if (self::currencyOrDefault($refund->settled_currency ?? null) !== $currency) {
+            return null;
+        }
+
         $refundId = self::toInt($refund->refund_id ?? null);
         $accountId = self::toInt($refund->account_id ?? null);
         $refundAmount = self::toInt($refund->settled_amount_minor ?? null);
@@ -463,6 +474,7 @@ final readonly class IcsSettlementResolver
             ->where('type', TransactionType::Expense->value)
             ->where('counterparty_normalized', $merchant)
             ->where('settled_amount_minor', -$refundAmount)
+            ->where('settled_currency', $currency)
             ->whereBetween('posted_at', [self::periodDay($periodStart), self::periodDay($periodEnd)])
             ->orderByDesc('posted_at')
             ->first(['id']);
@@ -475,7 +487,7 @@ final readonly class IcsSettlementResolver
 
         $originalId = self::toInt($original->id ?? null);
 
-        $nextStatementId = $this->nextOpenStatementId($accountId, $periodEnd, null, $user);
+        $nextStatementId = $this->nextOpenStatementId($accountId, $periodEnd, $currency, $user);
 
         $signatureHash = self::signatureHash($ibans, $accountId, $periodEnd, $user);
         $now = $this->clock->now()->toDateTimeString();
@@ -503,7 +515,7 @@ final readonly class IcsSettlementResolver
                 'from_statement_id' => $closedStatementId,
                 'to_statement_id' => $nextStatementId,
                 'amount_minor' => abs($refundAmount),
-                'currency' => self::currencyOrDefault($refund->statement_currency ?? null),
+                'currency' => $currency,
                 'reason' => CardStatementCreditReason::RefundAfterClose->value,
                 'created_at' => $now,
                 'updated_at' => $now,

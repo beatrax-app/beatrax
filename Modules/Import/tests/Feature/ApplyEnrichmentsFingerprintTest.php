@@ -200,6 +200,7 @@ it('leaves a reconciled row\'s amount alone when a later file carries a stronger
         $this->fixtureUser,
         $this->account->id,
         CarbonImmutable::parse('2026-03-10'),
+        'EUR',
     ))->toBe(1);
 
     $enrichment = new PendingEnrichment(

@@ -26,12 +26,16 @@ final readonly class TransactionStatusWriter
         private Dispatcher $events,
     ) {}
 
+    // $settledCurrency is not optional and has no default: an account holds one
+    // line per currency it has settled in, a statement prints one of them, and
+    // `reconciled` is terminal. A writer left to lock "everything up to the
+    // date" locks the lines the balance it was matched against never summed.
     /**
      * @return int the number of rows actually transitioned to `reconciled`
      *             — 0 when nothing fell in the statement-date window, so
      *             callers can report the truthful outcome.
      */
-    public function reconcileClearedUpTo(User $user, int $accountId, CarbonImmutable $statementDate): int
+    public function reconcileClearedUpTo(User $user, int $accountId, CarbonImmutable $statementDate, string $settledCurrency): int
     {
         $connection = $this->db->connection();
         $statementDateString = $statementDate->toDateString();
@@ -43,11 +47,12 @@ final readonly class TransactionStatusWriter
         // duplicate dispatches under concurrent calls.
         $transactionIds = [];
 
-        $connection->transaction(function () use ($connection, $accountId, $user, $statementDateString, $reconciledAt, &$transactionIds): void {
+        $connection->transaction(function () use ($connection, $accountId, $user, $statementDateString, $settledCurrency, $reconciledAt, &$transactionIds): void {
             $candidateIds = $connection->table('transactions')
                 ->where('account_id', $accountId)
                 ->where('user_id', $user->id)
                 ->where('status', ClearedStatus::Cleared->value)
+                ->where('settled_currency', $settledCurrency)
                 ->where('posted_at', '<=', $statementDateString)
                 ->pluck('id')
                 ->map(static fn (mixed $id): int => self::toInt($id))

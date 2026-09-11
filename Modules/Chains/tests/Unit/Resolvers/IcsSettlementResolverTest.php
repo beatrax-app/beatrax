@@ -342,7 +342,9 @@ it('links a refund arriving after the statement closed back to its original char
     expect($may->state)->toBe('settled');
 
     // Stage 2: create a NEXT open statement (June) so the refund
-    // credit has a destination.
+    // credit has a destination. Denominated like the rest of the card side:
+    // omitted, it took EUR off the column default, which is the one value the
+    // opening comment above says proves nothing here.
     $june = CardStatement::query()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->icsAccount->id,
@@ -351,6 +353,7 @@ it('links a refund arriving after the statement closed back to its original char
         'period_end' => '2026-06-30 23:59:59',
         'total_amount_minor' => -50000,
         'open_balance_minor' => 50000,
+        'currency' => 'USD',
         'state' => 'open',
     ]);
 

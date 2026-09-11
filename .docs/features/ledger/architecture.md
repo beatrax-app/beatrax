@@ -307,7 +307,8 @@ watches the cleared balance converge on that target. A non-zero
 difference is flagged read-only — this flow never fabricates a
 balancing transaction. Confirming a matched reconcile calls
 `ReconciliationWriter::completeReconcile()`, which bulk-locks the
-account's cleared rows up to the statement date to `reconciled`.
+account's cleared rows up to the statement date **and in the statement's
+own currency** to `reconciled`.
 
 The on-screen difference, the confirm-button disabled gate, and
 `confirmReconcile()`'s own match check all bound the cleared balance
@@ -405,7 +406,8 @@ over-states reachability rather than calling a closable gap unclosable.
 
 **Complete is offered only when it has something to lock.** `lockableCount()`
 asks `completeReconcile()`'s own candidate question — `cleared` rows with
-`posted_at <= statementDate` — so the disabled gate is now `! $isMatched ||
+`posted_at <= statementDate` in the statement's currency — so the disabled gate
+is now `! $isMatched ||
 $lockableCount === 0`, and that predicate is the fourth thing bound by the same
 window as the difference, the match check and the write. A matched target over
 an empty candidate set used to leave Complete standing as the enabled primary
@@ -1140,14 +1142,26 @@ algorithm" — re-derive existing rows via the
 ## `ReconciliationWriter` — the terminal reconcile write path
 
 `Public/Services/ReconciliationWriter` is the reconcile flow's own
-vocabulary: an account, and the balance date the statement was printed
-for. It vouches for the account — every client-supplied id is
-re-validated as user-owned before any write — and hands the column
-itself to
+vocabulary: an account, the balance date the statement was printed for,
+and the money it was printed in. It vouches for the account — every
+client-supplied id is re-validated as user-owned before any write — and
+hands the column itself to
 [`TransactionStatusWriter`](#transactionstatuswriter--the-one-writer-of-transactionsstatus).
 `completeReconcile()` bulk-transitions an account's `cleared`
-transactions posted on or before the statement date to `reconciled`;
-`unreconcile()` reverts a single row back to `cleared`.
+transactions posted on or before the statement date, in that currency,
+to `reconciled`; `unreconcile()` reverts a single row back to `cleared`.
+
+**The currency is a required argument, not a default.** An account holds
+one line per currency it has settled in — `AccountBalanceQuery` groups by
+`settled_currency` for that reason, and a PayPal wallet or a card billed
+abroad routinely holds two. Every other question on `/reconcile` is
+narrowed to the statement's line: the cleared balance is read
+`->in($statementCurrency)`, `zeroIsReachableByToggling()` filters on it,
+and the typed figure is parsed at its scale. The write was not, so
+matching the euro line locked every cleared dollar row up to the same day
+into a state no import may revise (`restateFromSource()` refuses one) and
+only a row-by-row `unreconcile()` can undo. A writer that defaults the
+currency defaults back to that, so it has none.
 
 ## `TransactionStatusWriter` — the one writer of `transactions.status`
 

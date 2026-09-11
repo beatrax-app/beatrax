@@ -168,7 +168,7 @@ it('leaves the reconcile page balanced, because a row unlocked still counts as c
     $writer = app(ReconciliationWriter::class);
     $balances = app(AccountBalanceQuery::class);
 
-    $writer->completeReconcile($this->user, $this->account->id, $statementDate);
+    $writer->completeReconcile($this->user, $this->account->id, $statementDate, 'EUR');
     $matchedBefore = $balances->clearedBalanceAsOf($this->account->id, $this->user, $statementDate)->in('EUR');
 
     $writer->unreconcile($this->user, $inWindow->id);
