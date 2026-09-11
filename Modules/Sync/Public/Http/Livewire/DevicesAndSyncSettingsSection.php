@@ -71,6 +71,7 @@ final class DevicesAndSyncSettingsSection extends Component
     // already confirmed, both read as no ceremony here.
     public string $pairingWaitingOnPeer = '';
 
+    #[Locked]
     public ?int $renamingDeviceId = null;
 
     public string $renameValue = '';

@@ -14,6 +14,23 @@ final class TaxTaggingRefusalHost extends Component
 {
     use HandlesTaxTagging;
 
+    // The two properties below are #[Locked], which is the whole point of them:
+    // the server builds the banner and opens the picker, and no template writes
+    // either. A test exercising the handlers behind them therefore arms the
+    // state the way the server does rather than posting it from the client.
+    /**
+     * @param  array{counterpartyId: int, counterpartyName: string, untaggedCount: int, taxYear?: int, categoryId?: int|null, note?: string|null}  $suggestion
+     */
+    public function armBatchSuggestion(array $suggestion): void
+    {
+        $this->batchSuggestion = $suggestion;
+    }
+
+    public function armPicker(int $transactionId): void
+    {
+        $this->taxPickerTxId = $transactionId;
+    }
+
     public function render(): string
     {
         return '<div></div>';

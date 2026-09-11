@@ -10,6 +10,7 @@ use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Tax\Public\Services\TaxTagQuery;
+use Modules\Tax\Tests\Support\TaxTaggingRefusalHost;
 
 /**
  * @param  array<string, mixed>  $overrides
@@ -85,11 +86,15 @@ it('tagTransaction refuses to tag a reconciled transaction (warn-first, no write
     expect(DB::table('tax_transaction_tags')->where('transaction_id', $txId)->count())->toBe(0);
 });
 
+// Driven through the trait's own host from here on: taxPickerTxId and
+// batchSuggestion are #[Locked], so the state these guards act on is armed the
+// way the server arms it. A reader cannot reach saveTaxCategory on a reconciled
+// row at all -- tagTransaction refuses first -- which is what makes it defence.
 it('saveTaxCategory refuses to write a reconciled transaction (warn-first, no write)', function (): void {
     $txId = taxLockTx($this->user->id, $this->account->id, $this->run->id, ['status' => 'reconciled']);
 
-    Livewire::test(TransactionDetail::class, ['transactionId' => $txId])
-        ->set('taxPickerTxId', $txId)
+    Livewire::test(TaxTaggingRefusalHost::class)
+        ->call('armPicker', $txId)
         ->call('saveTaxCategory')
         ->assertDispatched('toast');
 
@@ -110,8 +115,8 @@ it('untag refuses to remove the tax tag of a reconciled transaction (warn-first,
         'updated_at' => now(),
     ]);
 
-    Livewire::test(TransactionDetail::class, ['transactionId' => $txId])
-        ->set('taxPickerTxId', $txId)
+    Livewire::test(TaxTaggingRefusalHost::class)
+        ->call('armPicker', $txId)
         ->call('untag')
         ->assertDispatched('toast');
 
@@ -137,8 +142,8 @@ it('applyBatchTag skips reconciled rows and tags only the editable siblings', fu
         'booked_at' => '2026-03-20 00:00:00',
     ]);
 
-    Livewire::test(TransactionDetail::class, ['transactionId' => $clearedId])
-        ->set('batchSuggestion', [
+    Livewire::test(TaxTaggingRefusalHost::class)
+        ->call('armBatchSuggestion', [
             'counterpartyId' => $cp->id,
             'counterpartyName' => 'Gym Vendor',
             'untaggedCount' => 2,
