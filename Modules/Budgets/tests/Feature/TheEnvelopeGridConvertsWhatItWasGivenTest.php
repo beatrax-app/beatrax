@@ -119,7 +119,7 @@ it('counts spend the reporting currency does not match, converted', function ():
 
     expect($row->spentMinor)->toBe(100000)
         ->and($row->availableMinor)->toBe(-4000)
-        ->and($row->unconvertedSpentMinor)->toBe(0);
+        ->and($row->unconvertedSpentCurrencies)->toBe([]);
 });
 
 it('leaves spend it has no rate for out of the fold and surfaces it beside', function (): void {
@@ -134,5 +134,5 @@ it('leaves spend it has no rate for out of the fold and surfaces it beside', fun
     $row = $fold['rows'][$this->category->id];
 
     expect($row->spentMinor)->toBe(100000)
-        ->and($row->unconvertedSpentMinor)->toBe(99900);
+        ->and($row->unconvertedSpentCurrencies)->toBe(['ZAR']);
 });

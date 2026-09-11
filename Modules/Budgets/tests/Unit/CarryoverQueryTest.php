@@ -86,6 +86,37 @@ function carryoverTx(int $userId, int $accountId, int $runId, int $settledMinor,
     ]);
 }
 
+// A settled currency the bundled snapshot ships no rate for, so the fold has to
+// leave it out. `refund` is counted as spend whichever way it is signed, which
+// is how one bucket comes out negative and can cancel another.
+function unpricedSpendRow(int $userId, int $accountId, int $runId, int $categoryId, CarbonImmutable $postedAt, string $currency, string $type, int $settledMinor): void
+{
+    static $j = 700000;
+    $j++;
+
+    Transaction::create([
+        'user_id' => $userId,
+        'account_id' => $accountId,
+        'type' => $type,
+        'posted_at' => $postedAt->toDateString(),
+        'booked_at' => $postedAt->toDateString().' 12:00:00',
+        'value_date' => $postedAt->toDateString(),
+        'amount_minor' => $settledMinor,
+        'currency' => $currency,
+        'settled_amount_minor' => $settledMinor,
+        'settled_currency' => $currency,
+        'counterparty_name' => "Unpriced{$j}",
+        'counterparty_normalized' => "unpriced{$j}",
+        'normalization_version' => 1,
+        'category_id' => $categoryId,
+        'source_format' => 'camt053',
+        'import_run_id' => $runId,
+        'source_row_index' => $j,
+        'fingerprint' => str_pad('unpriced'.$j, 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+}
+
 it('computes to-budget as income plus carryover minus assigned, to the cent, and moves symmetrically on assign/unassign', function (): void {
     $period = app(PeriodQuery::class)->current();
 
@@ -154,12 +185,12 @@ it('starts the genesis period with zero pool carry and zero carried-in', functio
     expect($row->availableMinor)->toBe(60000 - 50000);
 });
 
-it('surfaces settled spend it has no rate for via unconvertedSpentMinor without altering availableMinor or overspentCount', function (): void {
+it('names the currency of settled spend it has no rate for without altering availableMinor or overspentCount', function (): void {
     $period = app(PeriodQuery::class)->current();
 
     // A currency the rate table cannot reach: the bundled snapshot ships no
     // rate for it, so it stays out of the fold instead of being counted at one
-    // to one, and is surfaced beside the row in its own minor units.
+    // to one, and the row names the code it left out.
     Transaction::create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -193,9 +224,40 @@ it('surfaces settled spend it has no rate for via unconvertedSpentMinor without 
     expect($row->availableMinor)->toBe(20000);
     expect($result['overspentCount'])->toBe(0);
 
-    // The dropped spend stays observable, as a positive magnitude in its own
-    // currency's minor units.
-    expect($row->unconvertedSpentMinor)->toBe(999);
+    // The dropped spend stays observable, as the code it was denominated in.
+    expect($row->unconvertedSpentCurrencies)->toBe(['XPF']);
+});
+
+// Two unpriced currencies whose bare integers cancel. Added together the
+// disclosure came to nought and the badge went dark, over XPF 1,000 of spend
+// worth about EUR 8 against a return of ARS 10.00 worth about one cent.
+it('still names both currencies when their unpriced buckets cancel as bare integers', function (): void {
+    $period = app(PeriodQuery::class)->current();
+
+    unpricedSpendRow($this->user->id, $this->account->id, $this->run->id, $this->groceries->id, $period->start, 'XPF', 'expense', -1000);
+    unpricedSpendRow($this->user->id, $this->account->id, $this->run->id, $this->groceries->id, $period->start, 'ARS', 'refund', 1000);
+
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 20000);
+
+    $row = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period)['rows'][$this->groceries->id];
+
+    expect($row->spentMinor)->toBe(0)
+        ->and($row->unconvertedSpentCurrencies)->toBe(['ARS', 'XPF']);
+});
+
+// One currency whose own spend and return net to nought is not money the total
+// is missing, whatever the rate table can or cannot do with it.
+it('names no currency for an unpriced bucket that nets to nothing', function (): void {
+    $period = app(PeriodQuery::class)->current();
+
+    unpricedSpendRow($this->user->id, $this->account->id, $this->run->id, $this->groceries->id, $period->start, 'XPF', 'expense', -1000);
+    unpricedSpendRow($this->user->id, $this->account->id, $this->run->id, $this->groceries->id, $period->start, 'XPF', 'refund', 1000);
+
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $period->start, 20000);
+
+    $row = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $period)['rows'][$this->groceries->id];
+
+    expect($row->unconvertedSpentCurrencies)->toBe([]);
 });
 
 it('shows income zero for a future period unless real income transactions exist there', function (): void {

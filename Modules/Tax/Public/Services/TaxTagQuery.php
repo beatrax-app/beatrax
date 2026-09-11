@@ -165,6 +165,7 @@ final readonly class TaxTagQuery
 
         TaggedRowScope::joinLegs($query);
         TaggedRowScope::withoutSuperseded($query, $connection);
+        TaxableMovement::narrow($query, 't.');
 
         $rows = $query
             ->groupBy('t.settled_currency')

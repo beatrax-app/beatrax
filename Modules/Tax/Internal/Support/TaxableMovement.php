@@ -9,8 +9,8 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Enums\TransactionType;
 
 // The year total takes abs() of every tagged row that is not income, so a row
-// that can carry no deduction still lands in the figure as one. Judged here,
-// on the way in, rather than by the reader noticing a total that is too big.
+// that can carry no deduction still lands in the figure as one. Judged on the
+// way in and again where the total is read, because the row's type moves after.
 /**
  * @link ../../../../.docs/features/tax/tag-write-contract.md#which-rows-may-carry-a-tag
  */
@@ -29,9 +29,10 @@ final class TaxableMovement
         return ! self::isReturn($type, $paymentType);
     }
 
-    // The same question asked of rows instead of one row, so a candidate the
-    // write refuses is never counted, offered, or reported as tagged: the
-    // banner offered three siblings, wrote one, and said it had written three.
+    // The same question asked of rows instead of one row: the banner offered
+    // three siblings, wrote one, and said three. Asked of the totals as well,
+    // because `type` and `payment_type` both move after a tag is written and
+    // nothing untags — excluded at read, so a retype back brings the tag with it.
     public static function narrow(QueryBuilder $query, string $prefix = ''): QueryBuilder
     {
         return $query

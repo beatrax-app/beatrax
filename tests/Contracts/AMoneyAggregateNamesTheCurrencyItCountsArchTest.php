@@ -28,8 +28,19 @@ const MONEY_AGGREGATE_PINS = [
     ],
 ];
 
-// Adding a map keyed BY currency is the arithmetic in its purest form, so the
-// only entry here is the one place that does it knowingly.
+// Adding a map keyed BY currency is the arithmetic in its purest form, and it
+// has two spellings: array_sum() over the map, and a loop adding it a key at a
+// time. Only the first was read, and the budget grid's "spend not shown here"
+// signal was written in the second — where two unpriced buckets cancelled.
+const CROSS_CURRENCY_SUM_SPELLINGS = [
+    '/array_sum\s*\(\s*\$[A-Za-z_>\-\[\]\'\w]*currenc\w*/i',
+    '/\+=\s*\$[A-Za-z_]*currenc\w*\s*\[/i',
+];
+
+// The denominator: every add of either spelling, whatever it adds.
+const CROSS_CURRENCY_SUM_READ = '/array_sum\s*\(|\+=/';
+
+// The one place that does it knowingly.
 const CROSS_CURRENCY_SUM_PINS = [
     'Modules/Budgets/Public/Services/EnvelopePeriodRekeyer.php' => [
         'reason' => 'a bucket the rate table cannot price whole is left summed rather than losing the part that has no rate, and the row keeps the bucket own currency rather than claiming the base one',
@@ -44,6 +55,20 @@ const CROSS_CURRENCY_SUM_PINS = [
 // the tree, all thirty-seven sites the loose read excused name the column in
 // quotes, so nothing legitimate is lost by asking for the quotes.
 const MONEY_AGGREGATE_NAMES_A_CURRENCY_COLUMN = '/[\'"][^\'"]*currenc[^\'"]*[\'"]/i';
+
+/**
+ * Whether $source adds a map keyed by currency, in either spelling.
+ */
+function crossCurrencySumAdds(string $source): bool
+{
+    foreach (CROSS_CURRENCY_SUM_SPELLINGS as $spelling) {
+        if (preg_match($spelling, $source) === 1) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 /**
  * Every SUM in the tree, as "path::function" => the aggregate's source text.
@@ -179,9 +204,9 @@ it('adds a map keyed by currency only where that is a decision somebody made', f
             BackendSourceFiles::codeTokens($path),
         ));
 
-        $counted += PatternScan::count('/array_sum\s*\(/', $source);
+        $counted += PatternScan::count(CROSS_CURRENCY_SUM_READ, $source);
 
-        if (preg_match('/array_sum\s*\(\s*\$[A-Za-z_>\-\[\]\'\w]*currenc\w*/i', $source) !== 1) {
+        if (! crossCurrencySumAdds($source)) {
             continue;
         }
 
@@ -194,10 +219,11 @@ it('adds a map keyed by currency only where that is a decision somebody made', f
         $offenders[] = $relative;
     }
 
-    expect($counted)->toBeGreaterThan(10, 'Read '.$counted.' array_sum() calls, too few for an empty offender list to mean anything.');
+    expect($counted)->toBeGreaterThan(100, 'Read '.$counted.' adds of either spelling, too few for an empty offender list to mean anything.');
 
     expect($offenders)->toBe([], implode("\n  ", [
-        'array_sum() over a map keyed by currency adds euro-cents to yen. Convert',
+        'Adding a map keyed by currency adds euro-cents to yen, whether it is',
+        'written as array_sum() over the map or as a loop over its keys. Convert',
         'the buckets first — CrossCurrencyTotal::of() does it and names what it',
         'could not price — or keep the answer per currency. Offenders:',
         ...$offenders,
@@ -259,4 +285,18 @@ it('reads both spellings of a money sum, and asks the currency column be named r
 
     expect(preg_match(MONEY_AGGREGATE_NAMES_A_CURRENCY_COLUMN, 'function f(string $currency): int { return $q->sum($amountMinor); }') === 1)
         ->toBeFalse('a parameter named currency that never reaches the query says nothing about what was summed');
+});
+
+it('reads both spellings of adding a map keyed by currency, and not a fold inside one of its keys', function (): void {
+    expect(crossCurrencySumAdds('return array_sum($byCurrency);'))
+        ->toBeTrue('array_sum() over the map is the spelling the rule was first written for');
+
+    expect(crossCurrencySumAdds('$unreached += $byCurrency[$code] ?? 0;'))
+        ->toBeTrue('adding the map a key at a time is the same act, and is how it reached the tree unread');
+
+    expect(crossCurrencySumAdds('$byCurrency[$code] = ($byCurrency[$code] ?? 0) + $minor;'))
+        ->toBeFalse('adding into one currency bucket never crosses one, which is how every per-currency tally is built');
+
+    expect(crossCurrencySumAdds('$total += $spentMinor;'))
+        ->toBeFalse('a running total naming no currency map is a different rule');
 });
