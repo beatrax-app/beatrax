@@ -852,6 +852,108 @@ Three rules come out of it, and each has a test that fails without it:
    would then stand, because `fill()` skips a column already holding a value —
    refusing the payload loses a tail over a column it was never going to touch.
 
+### An id whose row never landed
+
+Rule 1 above has one exception, and it is the one gate that must read the ids
+**as the peer minted them**. `CreateRowGates::unplacedParentFor()` runs on the
+payload `buildCreatePayload()` assembled, before `translate()` touches it,
+because translation is exactly what would hide the thing it asks about.
+
+`RowOwnership::referencesBelongToUser()` asks whether a row with this id exists
+and belongs to this reader. Where the peer's create for that id was refused,
+that is the wrong question. Measured on the paired Mac and Galaxy A51: 47 of the
+phone's `transactions` creates sat in quarantine as `primary_key_collision`, so
+no alias was recorded and `translate()` had nothing to rewrite. Seven
+`anomaly_alerts` creates then arrived naming `transaction_id` 5, 16, 18, 28, 32,
+39 and 40. This device holds a charge at every one of those numbers — different
+charges — so the foreign key was satisfied and each alert inserted against the
+wrong one. Alert 1020370454756337913 said transaction 18 was a duplicate of
+EUR 20.50; transaction 18 here is EUR 85.00. They are the seven
+`2026_09_11_000001_an_alert_that_states_an_amount_the_charge_it_names_does_not_have`
+removed, and the identity half of that is [Which id a covered table gives a new
+row](#which-id-a-covered-table-gives-a-new-row); this is the reference half,
+and it survives every id scheme, because it is about the parent's id and not
+the child's.
+
+**What separates the two cases is a matter of record.** Most children name a
+parent that legitimately exists under the same id on both devices — it was
+created before the devices diverged, or its own create landed idempotently —
+and refusing those would quarantine enormous numbers of perfectly good rows. A
+peer's create that was *refused* leaves a hold in `op_log_quarantine` under the
+pk it never reached, and that hold is the whole difference:
+
+| what stands for `(device, table, pk)` | what the id means | the verdict |
+|---|---|---|
+| an alias | the two devices have agreed which row it is | `translate()` rewrites it; nothing to ask |
+| a hold on a `create_row` | the peer's row is not here under that number | `missing_reference` |
+| neither | the ids agree, which is the ordinary case | admitted |
+
+The alias is read first. A hold left standing beside one — retired late, or
+answered by a pass that did not sweep it — would otherwise keep refusing
+children a translation can now place.
+
+#### Which op a hold turned away
+
+A hold said *why* an op was refused and never said **which** op, and no reason
+can carry that on its own: a key that would not open is recorded the same
+whether it held a create or an edit, and an edit held for one says nothing
+about whether the row is here. So `op_log_quarantine` carries `op_type`, copied
+from the entry the way `gdk_epoch` already is, and
+`Internal\Merge\UnplacedPeerCreates` asks for `create_row` alone.
+
+`2026_09_11_000002_record_which_op_a_hold_turned_away` backfills the four
+verdicts no field op can carry —
+`incomplete_create_row`, `missing_reference`, `primary_key_collision`,
+`unplaceable_collision`. Every other reason is recorded on both paths, so a
+hold an older build wrote under one stays null and the gate reads it as an
+answer it does not have. It also adds `op_log_quarantine_row_idx` over
+`(user_id, device_id, table_name, pk)`: the table's only index was
+`(user_id, created_at DESC)`, and the question is now asked once per
+owner-scoped reference per arriving create.
+
+#### Why both halves get the same verdict
+
+`missing_reference` is recoverable, so the hold is retried by
+`HistoryReprojector::replayQuarantined()` and retired by `clearSettled()` once
+the row is here — the E1-R24 obligation, met by machinery that already exists.
+A parent held for a recoverable reason lands later and the alias is what the
+child's next replay spends.
+
+A parent held **terminally** — `unplaceable_collision`, `forged_signature`,
+`cross_user` — is never coming, and the child still gets `missing_reference`.
+That is deliberate. The terminal-or-recoverable judgement belongs to the
+parent's hold, where it is recorded once and retired in one row; copying it
+onto every child makes N copies of a verdict that goes stale the moment the
+parent's does, and `SyncQuarantineNotice` would then tell the reader about
+seven alerts when the one row worth naming is the charge. The retry costs
+nothing to leave open: `rowsWorthReplaying()` is bounded by the pass window, so
+a child whose parent never arrives is looked at once and then sits outside
+`created_at >` until key material moves.
+
+#### What this does not cover
+
+- **A hold an older build wrote for a reason recorded on both paths.** Its
+  `op_type` is null and the gate cannot read it, so a child naming that parent
+  is admitted as before. New holds carry the column; the old ones drain.
+- **The second half of a create landing on the row at its own pk.**
+  `applyCreatedTail()` asks `SplitCreateTail::rowIsHere()`, which is the same
+  "a row exists at this number" question this section is about, one level up:
+  where the first half was refused and an unrelated local row wears the pk, the
+  tail fills that row's null columns. Bounded — `planFill()` skips a column
+  already holding a value — and not closed here.
+- **A column whose foreign key targets its own table.**
+  `transactions.pair_transaction_id` and `categories.parent_id` are skipped:
+  `translate()` never touches one either, the partner routinely has not landed
+  when the row does, and refusing the row would lose a create over its link.
+  `SelfReferenceDeferral` owns them, and what it does not do is
+  [The two ids `translate()` is not allowed to
+  touch](#the-two-ids-translate-is-not-allowed-to-touch).
+- **A reference with no foreign key and no alias to spend.**
+  `transactions.counterparty_id` and
+  `forecast_scenario_mutations.target_series_id` are listed in
+  `RowOwnership::UNENFORCED_REFERENCES`, so the gate above covers them; nothing
+  below it does, because there is no constraint to fail.
+
 ### The two ids `translate()` is not allowed to touch
 
 `PeerRowAliases::translate()` walks `CoveredTableOrder::parentColumns()`, and
