@@ -731,8 +731,9 @@ Each event carries `mutationType` (`'create'|'edit'|'delete'`, or
 `'create'|'edit'` only for notifications, which have no delete path yet) and
 `dirtyFields` (changed field => new value, empty for deletes).
 
-**One announcement is not one op.** `dirtyFields` is a map, but it is never
-written as one. `SyncCaptureListener` loops it
+#### One announcement is not one op
+
+`dirtyFields` is a map, but it is never written as one. `SyncCaptureListener` loops it
 (`foreach ($event->dirtyFields as $field => $value)`) and calls
 `OpLogWriter::writeSet()` **once per field**; `writeCreateRow()` loops its own
 `$fields` the same way. Every path lands in `writeEntry()`, which takes a fresh
