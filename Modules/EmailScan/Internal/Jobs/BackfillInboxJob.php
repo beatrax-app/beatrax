@@ -30,6 +30,7 @@ use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\InvalidStateTransitionException;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
+use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
@@ -457,7 +458,13 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     // so only a condition a later attempt could clear may leave through it.
     private function transitionOnScanError(InboxScanContext $context, Throwable $e): void
     {
-        $terminal = $e instanceof InvalidGrantException || $e instanceof InboxNotConfiguredException;
+        // A refresh call that comes back revoked is the ordinary end of a
+        // grant and the one failure a reader can act on. Landed on `error` it
+        // kept its place in the scheduler's `!= needs_reauth` filter, so every
+        // tick spent another refresh on a grant that was gone.
+        $terminal = $e instanceof InvalidGrantException
+            || $e instanceof InboxNotConfiguredException
+            || $e instanceof ReconsentRequiredException;
 
         match (true) {
             $e instanceof RateLimitedException => $context->sm->applyStatus(
@@ -465,7 +472,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 InboxScanStatus::RateLimited->value,
                 "Retry after {$e->retryAfterSeconds}s.",
             ),
-            $e instanceof InvalidGrantException => $context->sm->applyStatus(
+            $e instanceof InvalidGrantException,
+            $e instanceof ReconsentRequiredException => $context->sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::NeedsReauth->value,
                 'OAuth grant revoked or expired.',

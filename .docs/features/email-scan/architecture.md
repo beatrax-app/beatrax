@@ -166,6 +166,17 @@ What the module explicitly does NOT do:
   de-duped `system_alerts` row per inbox in `oauth_reconsent_required`
   kind; the `SystemAlertsBanner` renders it with a Reconnect link.
 
+Both scan jobs classify `ReconsentRequiredException` as terminal and land
+the inbox on `needs_reauth`, beside `InvalidGrantException` and
+`InboxNotConfiguredException`. It is what a refresh call that comes back
+revoked raises — the ordinary end of a grant, and the common path where a
+401 on an already-refreshed token is the rare one. It is a `RuntimeException`
+and not an `InvalidGrantException`, so before this it fell to the
+catch-all arm: the inbox read `error`, which the schedulers' `!= needs_reauth`
+filter does not skip, so every tick spent another refresh on a grant that was
+gone, and `ConnectInboxFromGrant`'s "lift `needs_reauth` back to idle" had
+nothing to lift.
+
 ## Data flow
 
 The OAuth-connect handshake:
