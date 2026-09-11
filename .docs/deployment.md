@@ -66,6 +66,16 @@ A one-shot `migrate` service runs first and the other three wait on it. Without
 that ordering the workers boot against a schema that does not exist and
 crash-loop until someone runs step 4.
 
+The FrankenPHP base image installs no `php.ini`, so the image copies
+`deploy/server/conf.d/` onto the interpreter's scan path. It carries
+`zend.exception_ignore_args=1`: with that Off — the compiled default —
+`getTraceAsString()` renders the first 15 characters of every string argument,
+which on a parse frame is a row of the reader's bank statement. `SafeTrace`
+builds its own frames and never needed the directive; it is there so that
+anything *else* rendering a trace cannot leak one. The desktop publishes the
+same directive through `NativeAppServiceProvider` and the suite loads it from
+`tools/test-php-ini`, so this is the third runtime rather than a new rule.
+
 ```bash
 COMPOSE="docker compose -f deploy/server/docker-compose.yml"
 

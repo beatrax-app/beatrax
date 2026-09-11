@@ -143,6 +143,23 @@ it('installs no PDO driver in the server image beyond SQLite', function (): void
     );
 });
 
+// The third runtime. The desktop publishes the directive through
+// NativeAppServiceProvider and the suite loads it from tools/test-php-ini, so
+// the server image was the one place a rendered trace could still carry a row
+// of somebody's statement -- the FrankenPHP base installs no php.ini at all.
+it('stops the server image recording exception arguments', function (): void {
+    $ini = base_path('deploy/server/conf.d/01-security.ini');
+
+    expect(is_file($ini))->toBeTrue('deploy/server/conf.d/01-security.ini is gone, so the image ships the interpreter default.');
+    expect((string) file_get_contents($ini))
+        ->toContain('zend.exception_ignore_args=1');
+
+    // Written is not loaded: the file only reaches the interpreter because the
+    // Dockerfile copies the directory onto the scan path.
+    expect((string) file_get_contents(base_path('deploy/server/Dockerfile')))
+        ->toContain('COPY deploy/server/conf.d/ $PHP_INI_DIR/conf.d/');
+});
+
 it('registers the interactive beatrax:setup command', function (): void {
     expect(Artisan::all())->toHaveKey('beatrax:setup');
 });
