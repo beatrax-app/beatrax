@@ -731,6 +731,30 @@ Each event carries `mutationType` (`'create'|'edit'|'delete'`, or
 `'create'|'edit'` only for notifications, which have no delete path yet) and
 `dirtyFields` (changed field => new value, empty for deletes).
 
+**One announcement is not one op.** `dirtyFields` is a map, but it is never
+written as one. `SyncCaptureListener` loops it
+(`foreach ($event->dirtyFields as $field => $value)`) and calls
+`OpLogWriter::writeSet()` **once per field**; `writeCreateRow()` loops its own
+`$fields` the same way. Every path lands in `writeEntry()`, which takes a fresh
+`$this->clock->tick()` per call. So N dirty fields become N ops with N distinct
+HLC stamps. An event is therefore atomic on the writing
+device and non-atomic on the wire: a peer editing the same row concurrently
+interleaves its ops with these, and every combination of per-column winners is
+reachable. There is no multi-column merge strategy and adding one would not
+help — the unit announced is a field, not a tuple.
+
+The consequence is that **any invariant spanning two columns of one row is
+unenforced across devices**: a pointer and the value it denormalises, a total
+and its parts, a status and the reason beside it, an amount and its currency.
+Local writers usually keep such pairs consistent by construction, which makes
+sync the only path on which they can disagree — and the one no single-device
+test covers. Where one column is computable from another, **the reader must
+re-derive rather than trust the stored copy**; the stored copy is an index
+hint. Accepted templates:
+`Forecasting\Internal\Support\ScenarioSeriesResolver::existingTemplateScenario()`
+(re-derives the series from `payload` and skips a candidate whose
+`target_series_id` disagrees) and `AccountStartingBalanceQuery`.
+
 Primary-key stability varies by event and matters for LWW convergence:
 
 - `TransactionSplitMutated.splitId` is the leg's STABLE
