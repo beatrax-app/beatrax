@@ -45,13 +45,10 @@ final readonly class TransactionListQuery
     ): TransactionListPage {
         $now = $this->clock->now();
 
-        // Bounded at BOTH ends. A lower bound alone is a half-line, not a
-        // window: an import carrying a scheduled or not-yet-settled entry puts
-        // a row dated after today at the head of a list captioned "the last 90
-        // days", because the order is posted_at descending. `posted_at` is a
-        // date column with no time part, so the upper bound keeps today whole.
-        // Nothing becomes unreachable: fullHistory() does not filter on
-        // posted_at at all, and the toggle for it sits beside this list.
+        // Bounded at both ends: an import carrying a scheduled entry writes a
+        // row dated after today, and the order is posted_at descending, so a
+        // window open at the top puts it first. `posted_at` is a date column,
+        // so the upper bound keeps today whole; fullHistory() still has it.
         $query = $this->baseQuery($user, $currency)
             ->whereBetween('transactions.posted_at', [
                 $now->subDays($daysBack)->toDateString(),

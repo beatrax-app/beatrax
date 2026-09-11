@@ -17,11 +17,12 @@ beforeEach(function (): void {
     $this->account = $account;
     $this->run = $this->makeImportRun($this->fixtureUser);
 
-    // Distinct ascending dates from 2026-04-01: inside recent()'s 90-day window
-    // for the frozen clock, and totally ordered, so the DESC (posted_at, id)
-    // cursor has no ties to break.
+    // Ascending dates ending at the frozen clock, so all 130 sit inside
+    // recent()'s window -- 100 of them cannot fit on 100 distinct days when the
+    // window is 90 wide, so days carry two rows each and the DESC (posted_at,
+    // id) cursor breaks the tie on id, which is what it is ordered on.
     for ($i = 0; $i < 130; $i++) {
-        $date = CarbonImmutable::parse('2026-04-01')->addDays($i)->toDateString();
+        $date = CarbonImmutable::parse('2026-06-15')->subDays(intdiv(129 - $i, 2))->toDateString();
         $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
             'amount_minor' => -100,
             'posted_at' => $date,
