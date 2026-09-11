@@ -12,10 +12,9 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 // A refusal is two writes and neither substitutes for the other: a durable hold
-// saying an op was turned away, and a line saying why. The hold is an index into
-// the log and has no column for a cause; the line carries the cause and is
-// swept. Written apart, the two drifted -- the reason key had two spellings and
-// one of these three recorded a hold with no line beside it at all.
+// saying an op was turned away, and a line saying why. The hold is an index with
+// no column for a cause; the line carries the cause and is swept. Written by
+// hand at three sites, the two had already drifted apart.
 /**
  * @link ../../../../.docs/features/sync/what-the-quarantine-tells-the-reader.md#a-reason-code-is-not-a-cause
  */
