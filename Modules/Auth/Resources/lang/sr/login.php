@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Izgubio si lozinku? Iskoristi kod za oporavak.',
 
     'error_invalid' => 'Korisničko ime ili lozinka nisu tačni.',
+    'error_throttled' => 'Previše pokušaja — probaj ponovo za :wait.',
 ];

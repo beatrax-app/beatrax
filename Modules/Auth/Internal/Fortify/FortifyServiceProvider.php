@@ -10,12 +10,17 @@ use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Actions\AttemptToAuthenticate;
 use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
 use Laravel\Fortify\Fortify;
+use Modules\Auth\Internal\Services\SignInThrottle;
 use Modules\Auth\Public\Support\Username;
 use Modules\Core\Models\User;
 
-// No throttle middleware by design: this is a local-only, single-machine
-// deployment, so the password hash cost is the credential-guessing defence
-// rather than a per-IP limiter.
+// Metered in the callback rather than by route middleware. The Livewire form
+// posts to /livewire/update, which no route middleware on /login ever sees, so
+// a limiter declared on the route would leave the everyday path unmetered and
+// look like it had covered it.
+/**
+ * @link ../../../../.docs/features/auth/architecture.md
+ */
 final class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -24,15 +29,21 @@ final class FortifyServiceProvider extends ServiceProvider
         // all of this provider's wiring waits for boot().
     }
 
-    public function boot(Hasher $hasher): void
+    public function boot(Hasher $hasher, SignInThrottle $throttle): void
     {
-        Fortify::authenticateUsing(static function (Request $request) use ($hasher): ?User {
+        Fortify::authenticateUsing(static function (Request $request) use ($hasher, $throttle): ?User {
             $username = $request->input('username');
             $password = $request->input('password');
 
-            if (! is_string($username) || ! is_string($password)) {
+            // Fortify has no channel for a wait, so a spent meter answers here
+            // exactly as a wrong password does -- the same null a malformed
+            // payload gets. The reader told nothing useful is the one who
+            // bypassed the Livewire form.
+            if (! is_string($username) || ! is_string($password) || $throttle->isExhausted($username)) {
                 return null;
             }
+
+            $throttle->recordAttempt($username);
 
             $normalized = Username::normalize($username);
 
@@ -40,6 +51,8 @@ final class FortifyServiceProvider extends ServiceProvider
             $user = User::query()->where('username', $normalized)->first();
 
             if ($user instanceof User && $hasher->check($password, $user->password)) {
+                $throttle->clear($username);
+
                 return $user;
             }
 

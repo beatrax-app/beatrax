@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Session\Store as Session;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\LoginAction;
+use Modules\Auth\Public\Exceptions\SignInThrottled;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Public\Navigation\Destination;
@@ -46,7 +47,19 @@ final class LoginPage extends Component
 
     public function submit(LoginAction $login, UrlGenerator $urls): void
     {
-        $succeeded = $login($this->username, $this->password, $this->rememberMe);
+        try {
+            $succeeded = $login($this->username, $this->password, $this->rememberMe);
+        } catch (SignInThrottled $throttled) {
+            $this->password = '';
+            // Said plainly rather than folded into error_invalid: a reader who
+            // is waiting and a reader who is wrong take different actions, and
+            // only one of them is helped by trying again immediately.
+            $this->flashMessage = Lang::get('auth::login.error_throttled', [
+                'wait' => $throttled->secondsRemaining.'s',
+            ]);
+
+            return;
+        }
 
         // Cleared unconditionally so the plaintext never re-enters the
         // component snapshot on a failed attempt.

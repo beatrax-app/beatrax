@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Pazaudējāt paroli? Izmantojiet atkopšanas kodu.',
 
     'error_invalid' => 'Lietotājvārds vai parole ir nepareiza.',
+    'error_throttled' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :wait.',
 ];

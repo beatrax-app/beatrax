@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Parolanı mı kaybettin? Bir kurtarma kodu kullan.',
 
     'error_invalid' => 'Kullanıcı adı veya parola hatalı.',
+    'error_throttled' => 'Çok fazla deneme — :wait sonra yeniden dene.',
 ];

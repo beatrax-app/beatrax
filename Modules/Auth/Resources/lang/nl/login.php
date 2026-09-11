@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Wachtwoord kwijt? Gebruik een herstelcode.',
 
     'error_invalid' => 'Gebruikersnaam of wachtwoord is onjuist.',
+    'error_throttled' => 'Te veel pogingen — probeer het over :wait opnieuw.',
 ];

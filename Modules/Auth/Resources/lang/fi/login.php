@@ -13,4 +13,5 @@ return [
     'lost_password' => 'Hukkasitko salasanasi? Käytä palautuskoodia.',
 
     'error_invalid' => 'Käyttäjätunnus tai salasana on väärin.',
+    'error_throttled' => 'Liikaa yrityksiä — yritä uudelleen :wait kuluttua.',
 ];
