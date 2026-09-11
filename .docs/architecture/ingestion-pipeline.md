@@ -299,6 +299,53 @@ user, the stored value is decrypted before this compare — otherwise
 ciphertext could never equal the incoming plaintext and every
 receipt-vs-statement re-import would register a false-positive conflict.
 
+### A total inside the band
+
+The fingerprint hashes the amount, so a receipt printing a total a cent
+away from the statement's hashed to nothing stored and classified NEW —
+the reader got a second charge for one purchase, which is the opposite of
+what [A5](https://github.com/beatrax-app/spec/blob/main/10-functional/features/a-ingestion/a5-receipt-matching.md)'s
+edge-case table promises for a total that disagrees with the transaction
+it matched.
+
+When the exact lookup misses, `NearTotalMatch` is asked a second question:
+is there one stored row this receipt is describing anyway? Every other
+term of the tuple still has to be equal — the account, `posted_at`,
+`booked_at`, `counterparty_normalized`, and the occurrence ordinal — and
+the currency has to be equal case-normalised, which is what comparing a
+currency means here (A3-R16) and which the digest itself does not do. Only
+the total is widened, by `NearTotalMatch::BAND_PERCENT` of the figure the
+receipt states.
+
+Four rules bound it, and each is a decision rather than an accident:
+
+- **It is a proportion, never a count of minor units.** A floor of five
+  would be five cents in EUR and five whole yen in JPY.
+- **The date window is none.** Widening the total and the date at once
+  multiplies what a wrong match can reach, and A5's edge case is about the
+  total.
+- **Only an incoming receipt gets the band, and only one carrying its own
+  reference.** A statement is the authority on what settled, so no fuzzy
+  total lets one absorb a row the reader would otherwise be shown; a
+  receipt with no reference of its own has nothing to attach and nothing
+  the ranker can weigh.
+- **Two candidates inside the band match neither.** The one not chosen
+  would stay in the ledger holding the other's receipt.
+
+A near-total hit is always ENRICHED, never DUPLICATE, whatever the two
+references rank. A dropped row takes its disagreement with it, and this
+one is only here because it disagrees. `ApplyEnrichments` admits it past
+the same ranking for the same reason, and writes the stored `source_ref`
+back where the receipt's does not outrank it, so the reference never
+weakens.
+
+The band decides whether the two records are **one event**. What the
+reader is then shown about them is still compared exactly (A3-R16): a
+single minor unit inside the band is still a disagreement, recorded as an
+`amount_minor` conflict on `EnrichedDisposition::$conflictingFields`.
+Conflating the two would silently absorb the difference the reader is
+meant to answer.
+
 ## Preview vs Confirm
 
 The `ImportPipeline::preview()` method runs every stage above without
