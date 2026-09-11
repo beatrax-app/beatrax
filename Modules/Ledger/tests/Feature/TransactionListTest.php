@@ -208,3 +208,37 @@ it('renders the empty-state copy when no transactions match the window', functio
     $response->assertSee('Nothing in the last 90 days. Your older transactions are still here.');
     $response->assertSee('Show full history');
 });
+
+// The other end of the same window. An import carrying a scheduled or
+// not-yet-settled entry writes a row dated after today, and the order is
+// posted_at descending, so an unbounded top put it at the head of a list whose
+// own subtitle says "the last 90 days". Measured on a paired install: 9 such
+// rows on the phone and 14 on the desktop, every one of them from an import.
+it('excludes a row dated after today, and still counts one dated today', function (): void {
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -1500,
+        'posted_at' => '2026-05-27',
+        'booked_at' => '2026-05-27 12:00:00',
+    ]);
+    // The boundary, and the control for the assertion above it: today is inside
+    // the window, so a bound that swallowed it would be over-correction rather
+    // than a fix. `posted_at` is a date column, which is what lets the upper
+    // bound be a date string without cutting the day short.
+    $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
+        'amount_minor' => -2500,
+        'posted_at' => '2026-05-15',
+        'booked_at' => '2026-05-15 12:00:00',
+    ]);
+
+    $minorOf = static fn (object $page): array => array_map(
+        static fn (object $row): int => $row->amount->toMinor(),
+        $page->rows,
+    );
+
+    expect($minorOf($this->listQuery->recent($this->fixtureUser, daysBack: 90)))
+        ->not->toContain(-1500)
+        ->toContain(-2500);
+
+    // Not hidden, only moved: the toggle beside the list still reaches it.
+    expect($minorOf($this->listQuery->fullHistory($this->fixtureUser)))->toContain(-1500);
+});
