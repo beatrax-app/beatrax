@@ -30,6 +30,10 @@ const MONEY_SHARE_PINS = [
         'reason' => 'a bar width rather than a slice: the numerator is one row magnitude and the denominator the largest magnitude on the panel, and the integer it rounds to never leaves the width it draws',
         'proves' => '/width: \{\{ \$pct \}\}%/',
     ],
+    'Modules/Import/Internal/Services/NearTotalMatch.php' => [
+        'reason' => 'a matching tolerance around a receipt total, used to decide whether a receipt and a stored row describe one purchase; nothing is cut and nothing has to add back up',
+        'proves' => '/BAND_PERCENT/',
+    ],
     'Modules/Ledger/Public/Support/OutwardSpend.php' => [
         'reason' => 'a percentage announced beside a bar rather than a slice: the shares are not required to add back up to a hundred, nothing is stored from it, and cutting it from the two integers is what stopped 29, 57 and 58 coming out a point light',
         'proves' => '/public static function percent\(/',

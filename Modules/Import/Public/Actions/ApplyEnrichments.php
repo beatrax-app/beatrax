@@ -53,6 +53,14 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         'status',
     ];
 
+    // The two conflict fields the fingerprint hashes as themselves, which is
+    // what makes a disagreement about either a disagreement about identity.
+    /** @var array<string, true> */
+    private const array TOTAL_FIELDS = [
+        EnrichmentConflictField::AmountMinor->value => true,
+        EnrichmentConflictField::Currency->value => true,
+    ];
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -130,36 +138,67 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         return true;
     }
 
-    // Ranked again at write time, not just against the preview snapshot: a
-    // parallel import may have stored a stronger reference in between, and
-    // this is what stops it being overwritten.
+    // Ranked again at write time: a parallel import may have stored a stronger
+    // reference since the preview, and this is what stops it being overwritten.
+    // A receipt whose total disagrees is admitted past the ranking anyway — its
+    // row is written nowhere else, so declining it discards the disagreement.
     private function shouldEnrich(stdClass $row, PendingEnrichment $enrichment): bool
     {
-        $existingRef = is_string($row->source_ref) ? $row->source_ref : null;
-        if ($existingRef !== null && $existingRef === $enrichment->newSourceRef) {
-            return false;
-        }
-
         $existingFormat = is_string($row->source_format) ? $row->source_format : '';
+        $existingRank = $this->ranker->rank(self::storedRef($row), $existingFormat);
         $incomingRank = $this->ranker->rank($enrichment->newSourceRef, $enrichment->sourceFormat);
-        $existingRank = $this->ranker->rank($existingRef, $existingFormat);
 
-        if ($incomingRank <= $existingRank) {
-            $this->logger->debug(
-                'Skipping enrichment: stored source_ref is already at least as strong',
-                [
-                    'transaction_id' => $enrichment->existingTransactionId,
-                    'existing_format' => $existingFormat,
-                    'existing_rank' => $existingRank,
-                    'incoming_format' => $enrichment->sourceFormat,
-                    'incoming_rank' => $incomingRank,
-                ],
-            );
-
-            return false;
+        if (self::strengthens($row, $enrichment, $existingRank, $incomingRank) || self::disagreesAboutTheTotal($enrichment)) {
+            return true;
         }
 
-        return true;
+        $this->logger->debug(
+            'Skipping enrichment: stored source_ref is already at least as strong',
+            [
+                'transaction_id' => $enrichment->existingTransactionId,
+                'existing_format' => $existingFormat,
+                'existing_rank' => $existingRank,
+                'incoming_format' => $enrichment->sourceFormat,
+                'incoming_rank' => $incomingRank,
+            ],
+        );
+
+        return false;
+    }
+
+    private static function strengthens(stdClass $row, PendingEnrichment $enrichment, int $existingRank, int $incomingRank): bool
+    {
+        return self::storedRef($row) !== $enrichment->newSourceRef && $incomingRank > $existingRank;
+    }
+
+    // amount_minor and currency are hashed into the fingerprint as themselves,
+    // so the exact lookup can only disagree about either on a row whose digest
+    // no longer describes it. counterparty_name is out: it reaches the tuple
+    // through a key two spellings share, so re-imports would re-open forever.
+    private static function disagreesAboutTheTotal(PendingEnrichment $enrichment): bool
+    {
+        return array_intersect_key(self::TOTAL_FIELDS, $enrichment->conflictingFields) !== [];
+    }
+
+    // Null where the stored reference stands. An enrichment admitted for its
+    // disagreement alone carries one that does not outrank what is there, and
+    // writing it would trade a bank's end-to-end reference for a receipt's.
+    private function strongerRef(stdClass $row, PendingEnrichment $enrichment): ?string
+    {
+        $existingFormat = is_string($row->source_format) ? $row->source_format : '';
+        $strengthens = self::strengthens(
+            $row,
+            $enrichment,
+            $this->ranker->rank(self::storedRef($row), $existingFormat),
+            $this->ranker->rank($enrichment->newSourceRef, $enrichment->sourceFormat),
+        );
+
+        return $strengthens ? $enrichment->newSourceRef : null;
+    }
+
+    private static function storedRef(stdClass $row): ?string
+    {
+        return is_string($row->source_ref) ? $row->source_ref : null;
     }
 
     private function writeEnrichment(stdClass $row, PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): void
@@ -177,21 +216,22 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         $rederived = $this->rederivedFingerprint($row, $plainUpdates, $amount, $user);
         $extraUpdates = $this->codec->encryptAttrs('transactions', $plainUpdates, $user->id, ($this->session)());
 
+        $sourceRef = $this->strongerRef($row, $enrichment);
+
         $rawEnrichedFrom = is_string($row->enriched_from) ? $row->enriched_from : null;
         $provenance = $this->decodeEnrichedFrom($rawEnrichedFrom);
         $provenance[] = [
             'format' => $enrichment->sourceFormat,
             'ran_at' => $this->clock->now()->toIso8601String(),
             'import_run_id' => $enrichment->importRunId,
-            'added' => array_merge(['source_ref'], array_keys($plainUpdates)),
+            'added' => array_merge($sourceRef === null ? [] : ['source_ref'], array_keys($plainUpdates)),
         ];
 
         $this->db->connection()
             ->table('transactions')
             ->where('id', $enrichment->existingTransactionId)
             ->where('user_id', $user->id)
-            ->update(($amount?->toColumns() ?? []) + $extraUpdates + $rederived + [
-                'source_ref' => $enrichment->newSourceRef,
+            ->update(($amount?->toColumns() ?? []) + $extraUpdates + $rederived + ($sourceRef === null ? [] : ['source_ref' => $sourceRef]) + [
                 'enriched_from' => json_encode($provenance, JSON_THROW_ON_ERROR),
                 'updated_at' => $this->clock->now()->toDateTimeString(),
             ]);

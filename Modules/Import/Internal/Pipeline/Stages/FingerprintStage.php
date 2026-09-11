@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Import\Internal\Services\NearTotalMatch;
 use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
@@ -29,32 +30,66 @@ final readonly class FingerprintStage
         private SourceRefRanker $ranker,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
+        private NearTotalMatch $nearTotals,
     ) {}
 
     public function classify(CanonicalTransaction $tx, User $user): FingerprintDisposition
     {
-        $fingerprint = $this->fingerprints->compose($tx);
+        $existing = $this->exactMatch($tx, $user);
 
-        $existing = $this->db->connection()
+        return $existing === null
+            ? $this->nearTotalDisposition($tx, $user)
+            : $this->rankedDisposition($existing, $tx, $user);
+    }
+
+    private function exactMatch(CanonicalTransaction $tx, User $user): ?stdClass
+    {
+        return $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('fingerprint', $fingerprint)
-            ->first([
-                'id',
-                'source_ref',
-                'source_format',
-                'counterparty_name',
-                'description',
-                'currency',
-                'amount_minor',
-            ]);
+            ->where('fingerprint', $this->fingerprints->compose($tx))
+            ->first(NearTotalMatch::CONFLICT_COLUMNS);
+    }
 
-        if ($existing === null) {
+    // A receipt whose total sits inside the band is describing the row it
+    // nearly matches, so the two are one event and the difference a
+    // disagreement to record. Only an incoming receipt gets the band: a
+    // statement is the authority on what settled, and no fuzzy total absorbs one.
+    private function nearTotalDisposition(CanonicalTransaction $tx, User $user): FingerprintDisposition
+    {
+        $incomingRef = $tx->sourceRef;
+
+        // Without a reference of its own the receipt has nothing to attach and
+        // nothing the ranker can weigh, which is the same reason the ledger
+        // bridge leaves such a message as the sole occurrence of itself.
+        if ($incomingRef === null || ! $this->ranker->isReceiptFormat($tx->sourceFormat)) {
             return FingerprintDisposition::newRow();
         }
 
+        $near = $this->nearTotals->matching($tx, $user);
+
+        // Never DUPLICATE, whatever the two references rank: a dropped row
+        // takes its disagreement with it, and this one is only here because it
+        // disagrees.
+        return $near === null
+            ? FingerprintDisposition::newRow()
+            : FingerprintDisposition::enriched(
+                existingId: self::toInt($near->id),
+                fromSourceRef: self::storedRefOf($near),
+                toSourceRef: $incomingRef,
+                conflictingFields: $this->detectConflicts($near, $tx, $user),
+            );
+    }
+
+    private static function storedRefOf(stdClass $row): ?string
+    {
+        return is_string($row->source_ref) ? $row->source_ref : null;
+    }
+
+    private function rankedDisposition(stdClass $existing, CanonicalTransaction $tx, User $user): FingerprintDisposition
+    {
         $existingFormat = is_string($existing->source_format) ? $existing->source_format : '';
-        $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
+        $existingRef = self::storedRefOf($existing);
         $incomingRef = $tx->sourceRef;
 
         // Two statements colliding drop as duplicates with no source_ref

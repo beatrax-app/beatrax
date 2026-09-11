@@ -299,6 +299,48 @@ The reader's base survives in exactly one place, `nativeFromLabelled()`: a
 PayPal total carrying no code and no glyph is denominated by nothing the mail
 says, and the reader's own money is the last thing left to name it with.
 
+## When a total is the thing that disagrees
+
+Until the receipt's total was allowed to differ from the statement's, an
+`amount_minor` conflict could reach the reader from exactly one state: a
+row whose stored fingerprint no longer describes its own amount, which
+Sync's per-field `applyFieldMerge()` can produce and which
+`RederiveFingerprintOnMergedRows`, `beatrax:rederive-fingerprints` and
+`FingerprintHealthCheck` exist to repair. That route is a guard — it turns
+a corrupted row into a recorded disagreement rather than a silent
+overwrite — and it is still there.
+
+There is a second, intended route now. The amount is hashed into the
+fingerprint, so a receipt printing a cent more than the statement hashed
+to nothing stored and was written as a **second transaction** for one
+purchase. `Import`'s `NearTotalMatch` answers the question the exact
+lookup cannot: with every other term of the tuple equal and the currency
+equal case-normalised, a total inside a band of the figure the receipt
+states is the same event, and the difference between the two is a
+disagreement to record rather than a row to insert. The band, what it
+refuses, and why it is the match rather than the comparison that widened
+are in [the ingestion
+pipeline](../../architecture/ingestion-pipeline.md#a-total-inside-the-band).
+
+Two consequences land here:
+
+- The worked example below is reachable. A receipt reading EUR 13.00
+  against a statement row of EUR 12.99 now raises an `amount_minor`
+  conflict instead of a duplicate charge, which is what
+  [A5](https://github.com/beatrax-app/spec/blob/main/10-functional/features/a-ingestion/a5-receipt-matching.md)'s
+  edge-case table has always said should happen.
+- `EnrichmentConflictField::Currency` stays reachable only from the
+  corrupted-row route. The band is arithmetic on bare minor units, so it
+  never reaches across currencies; a receipt naming a different code is a
+  different transaction, and a receipt naming the same code in another
+  case is the same one with nothing to disagree about.
+
+What still produces a second row is a receipt the **inbox** path bridged:
+`ReceiptLedgerBridge` reaches `RecordsTransactions` directly and never
+asks `FingerprintStage` anything, so a near total inserted there is
+untouched by this. That seam is named in the module boundary above and is
+not closed.
+
 ## Resolving a conflict is a ledger write
 
 `ApplyReceiptConflictResolution` rewrites `transactions` columns the
