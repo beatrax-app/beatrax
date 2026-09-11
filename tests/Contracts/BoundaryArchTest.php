@@ -2663,6 +2663,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Search/tests/Feature/FtsSurvivesEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
         'Modules/Shell/tests/Feature/TheSampleDataControlSealsWhatTheRegistrySealsTest.php -> Modules\\Sync\\Internal\\Crypto\\SensitiveFieldRegistry',
+        'Modules/Sync/tests/Feature/APeerThatAnsweredAndThenRefusedIsNotAnUnreachableOneTest.php -> Modules\\Mobile\\Internal\\Sync\\MobileSyncTriggerService',
+        'Modules/Sync/tests/Feature/APeerThatAnsweredAndThenRefusedIsNotAnUnreachableOneTest.php -> Modules\\Mobile\\Internal\\Sync\\SyncAttemptOutcome',
         'Modules/Sync/tests/Feature/APrunedNotificationIsRetiredOnThePeerTooTest.php -> Modules\\Notifications\\Internal\\Jobs\\PruneNotificationsJob',
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',
         'Modules/Sync/tests/Feature/ManualEntryReachesOtherDevicesTest.php -> Modules\\CashBook\\Internal\\Actions\\RecordManualTransaction',

@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Sünkroonitud sinu teise seadmega.',
         'unreachable' => 'Teine seade ei olnud kättesaadav — kontrolli, kas mõlemad on samas võrgus.',
+        'not_secured' => 'Su teine seade vastas, kuid turvalist ühendust sellega ei õnnestunud avada. Ava selles seadmes Beatraxi lukk ja proovi uuesti; kui see ikka ei õnnestu, seo seadmed uuesti paari.',
         'locked' => 'Ava rakenduse lukk, et sünkroonida.',
         'not_enabled' => 'Sünkroonimine ei ole selles seadmes veel seadistatud.',
         'unreadable' => 'Selle seadme võti ei avane enam. Seo seadmed uuesti, et sünkroonimist jätkata.',

@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Synkronoitu toisen laitteesi kanssa.',
         'unreachable' => 'Toista laitetta ei tavoitettu — tarkista, että molemmat ovat samassa verkossa.',
+        'not_secured' => 'Toinen laitteesi vastasi, mutta suojattua yhteyttä siihen ei saatu auki. Avaa Beatraxin lukitus kyseisellä laitteella ja yritä uudelleen; jos se ei vieläkään onnistu, muodosta laitepari uudelleen.',
         'locked' => 'Avaa sovelluksen lukitus synkronointia varten.',
         'not_enabled' => 'Synkronointia ei ole vielä otettu käyttöön tällä laitteella.',
         'unreadable' => 'Tämän laitteen avain ei aukea enää. Pariliitä uudelleen jatkaaksesi synkronointia.',

@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Sinchronizuota su kitu tavo įrenginiu.',
         'unreachable' => 'Nepavyko pasiekti kito įrenginio — patikrink, ar abu yra tame pačiame tinkle.',
+        'not_secured' => 'Kitas tavo įrenginys atsakė, bet saugaus ryšio su juo užmegzti nepavyko. Atrakink Beatrax tame įrenginyje ir bandyk dar kartą; jei vis tiek nepavyksta, susiek abu įrenginius iš naujo.',
         'locked' => 'Atrakink programėlę, kad sinchronizuotum.',
         'not_enabled' => 'Sinchronizavimas šiame įrenginyje dar nenustatytas.',
         'unreadable' => 'Šio įrenginio raktas nebeatsidaro. Susiek iš naujo, kad tęstum sinchronizavimą.',

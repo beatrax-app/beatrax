@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Synced with your other device.',
         'unreachable' => 'Could not reach your other device — check both are on the same network.',
+        'not_secured' => 'Reached your other device, but could not open a secure connection to it. Unlock Beatrax on that device and try again; if it keeps failing, pair the two devices again.',
         'locked' => 'Unlock the app to sync.',
         'not_enabled' => 'Sync is not set up on this device yet.',
         'unreadable' => 'The key on this device no longer opens. Pair again to resume syncing.',

@@ -54,7 +54,7 @@ final readonly class MobileSyncTriggerService
     ): ?bool {
         return match ($this->attempt($userId, $session, $lanHost, $lanPort)) {
             SyncAttemptOutcome::Synced => true,
-            SyncAttemptOutcome::Unreachable => false,
+            SyncAttemptOutcome::Unreachable, SyncAttemptOutcome::NotSecured => false,
             default => null,
         };
     }
@@ -105,9 +105,9 @@ final readonly class MobileSyncTriggerService
         // travels over the LAN, and that leg hands over the epoch keys ahead of
         // the entries they decrypt. Draining first put a round-trip to a remote
         // host in front of every tick a peer on this network could have served.
-        $lanReached = $lanHost !== null
-            && $lanPort !== null
-            && $this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session);
+        $lan = $lanHost !== null && $lanPort !== null
+            ? $this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session)
+            : LanDialOutcome::NotReached;
 
         // Then the relay, whether or not the LAN answered: it is a fallback in
         // ORDER, not in whether it runs. It carries no ops — only epoch wraps —
@@ -126,8 +126,20 @@ final readonly class MobileSyncTriggerService
         // had nothing to retire it once setup was over.
         $this->recoverHeldEntries($userId, $session);
 
-        return $lanReached || $relayReached
-            ? SyncAttemptOutcome::Synced
+        return self::settle($lan, $relayReached);
+    }
+
+    // A peer that answered and refused the handshake is reported apart from one
+    // nothing answered for, so a verification failure is never surfaced as a
+    // network one. Which transport carried it is not the reader's question.
+    private static function settle(LanDialOutcome $lan, bool $relayReached): SyncAttemptOutcome
+    {
+        if ($lan === LanDialOutcome::Synced || $relayReached) {
+            return SyncAttemptOutcome::Synced;
+        }
+
+        return $lan === LanDialOutcome::NotSecured
+            ? SyncAttemptOutcome::NotSecured
             : SyncAttemptOutcome::Unreachable;
     }
 
@@ -145,30 +157,28 @@ final readonly class MobileSyncTriggerService
         }
     }
 
-    // Re-drives exactly ONCE on a retryable outcome (the iOS Local
-    // Network Privacy first-attempt denial). Never an unbounded loop: at
-    // most two LanSyncClient::syncOnce() calls per invocation.
-    private function dialLanWithBoundedRetry(string $host, int $port, DeviceIdentityDto $identity, Session $session): bool
+    // Re-drives exactly ONCE, and only for a dial that reached nothing: that is
+    // the iOS Local Network Privacy first-attempt denial, which the OS prompt
+    // may resolve between the two. A peer that answered and refused is not made
+    // reachable by asking again, and a second ask would lose which it was.
+    private function dialLanWithBoundedRetry(string $host, int $port, DeviceIdentityDto $identity, Session $session): LanDialOutcome
     {
         try {
-            if ($this->lanSyncClient->syncOnce($host, $port, $identity, $session)) {
-                return true;
-            }
+            $first = $this->lanSyncClient->syncOnce($host, $port, $identity, $session);
 
-            // Single bounded retry — the OS local-network permission prompt may
-            // resolve between the first and second attempt.
-            return $this->lanSyncClient->syncOnce($host, $port, $identity, $session);
+            return $first === LanDialOutcome::NotReached
+                ? $this->lanSyncClient->syncOnce($host, $port, $identity, $session)
+                : $first;
         } catch (LanSyncException $e) {
-            // The relay leg below degrades to "not reached" on any failure and
-            // this one did not, so a peer refusing the auth gate left the
-            // button raising instead of reporting. Never reached is the truth
-            // either way; the reason belongs in the log, not at the reader.
-            $this->logger?->info('MobileSyncTriggerService: LAN leg refused (not reached).', [
+            // This device's own gate refusing the peer is a verification
+            // failure and the connection that carried it was open, so it is
+            // reported as one. The reason belongs in the log, not at the reader.
+            $this->logger?->info('MobileSyncTriggerService: LAN leg refused the peer.', [
                 'reason' => $e::class,
                 'message' => $e->getMessage(),
             ]);
 
-            return false;
+            return LanDialOutcome::NotSecured;
         }
     }
 

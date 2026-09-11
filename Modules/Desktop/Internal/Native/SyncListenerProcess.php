@@ -59,19 +59,72 @@ final readonly class SyncListenerProcess
             return;
         }
 
+        $this->spawn($environment);
+    }
+
+    // A start counts only when the shell reports the identity back: it claims an
+    // alias before the process holding it has exited, so a start landing in that
+    // window is answered with the PREVIOUS, keyless settings and nothing new
+    // ever ran (see @link).
+    /**
+     * @param  array<string, string>  $environment
+     *
+     * @link ../../../../.docs/features/sync/architecture.md#a-listener-without-its-identity
+     */
+    private function spawn(array $environment): void
+    {
+        $offered = $environment[SyncDaemonIdentity::ENV_DEVICE] ?? null;
+        $carried = $this->start($environment);
+
+        // Boot hands nothing over on purpose — the identity is sealed until the
+        // app is unlocked — so there is no claim to check and none to make.
+        if ($offered === null || $offered === '') {
+            return;
+        }
+
+        if ($carried === $offered) {
+            $this->rememberCredentials($environment);
+            $this->logger->info('sync listener: running with the device credentials it was handed.');
+
+            return;
+        }
+
+        // Forgotten rather than left standing, so the next reconcile sees a
+        // mismatch and tries again instead of reading the keyless daemon as
+        // the credentialled one it never became.
+        $this->cache?->forget(self::CREDENTIALLED_DEVICE_KEY);
+
+        $this->logger->warning('sync listener: started without the device credentials it was handed.', [
+            'offered_device_id' => $offered,
+            'carried_device_id' => $carried,
+        ]);
+    }
+
+    // Null for a start that did not happen: NativePHP answers one it cannot
+    // serve with a body that is not a process, which the facade reads as an
+    // array offset on null rather than as a failure.
+    /**
+     * @param  array<string, string>  $environment
+     */
+    private function start(array $environment): ?string
+    {
         try {
-            ChildProcess::artisan(
+            $started = ChildProcess::artisan(
                 'sync:serve --port='.$this->ports->lan(),
                 self::ALIAS,
                 $environment === [] ? null : $environment,
                 true,
             );
 
-            $this->rememberCredentials($environment);
+            $carried = $started->env[SyncDaemonIdentity::ENV_DEVICE] ?? null;
+
+            return is_string($carried) && $carried !== '' ? $carried : null;
         } catch (Throwable $e) {
             $this->logger->warning('sync listener: failed to start sync:serve child process.', [
                 'exception' => $e,
             ]);
+
+            return null;
         }
     }
 
@@ -134,22 +187,18 @@ final readonly class SyncListenerProcess
     {
         try {
             ChildProcess::stop(self::ALIAS);
-
-            ChildProcess::artisan(
-                'sync:serve --port='.$this->ports->lan(),
-                self::ALIAS,
-                $environment,
-                true,
-            );
-
-            $this->rememberCredentials($environment);
-
-            $this->logger->info('sync listener: restarted with device credentials.');
         } catch (Throwable $e) {
-            $this->logger->warning('sync listener: failed to restart with credentials.', [
+            // The one branch that must not go on to start: a stop that threw
+            // may have left the old listener holding the port, and a second
+            // bind fatals with "Address already in use".
+            $this->logger->warning('sync listener: failed to stop the running listener.', [
                 'exception' => $e,
             ]);
+
+            return;
         }
+
+        $this->spawn($environment);
     }
 
     // Connects, never binds: a bind test races the daemon for the very port it is

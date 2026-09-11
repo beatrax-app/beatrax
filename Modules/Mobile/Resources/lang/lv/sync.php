@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Sinhronizēts ar tavu otru ierīci.',
         'unreachable' => 'Neizdevās sasniegt otru ierīci — pārbaudi, vai abas ir vienā tīklā.',
+        'not_secured' => 'Tava otra ierīce atbildēja, taču drošu savienojumu ar to neizdevās atvērt. Atbloķē Beatrax tajā ierīcē un mēģini vēlreiz; ja joprojām neizdodas, savieno abas ierīces pārī no jauna.',
         'locked' => 'Atbloķē lietotni, lai sinhronizētu.',
         'not_enabled' => 'Sinhronizācija šajā ierīcē vēl nav iestatīta.',
         'unreadable' => 'Šīs ierīces atslēga vairs neatveras. Savieno pārī vēlreiz, lai atsāktu sinhronizāciju.',

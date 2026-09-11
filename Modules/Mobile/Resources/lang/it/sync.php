@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Sincronizzato con il tuo altro dispositivo.',
         'unreachable' => 'Impossibile raggiungere il tuo altro dispositivo — controlla che siano sulla stessa rete.',
+        'not_secured' => 'Il tuo altro dispositivo ha risposto, ma non è stato possibile aprire una connessione sicura. Sblocca Beatrax su quel dispositivo e riprova; se continua a non funzionare, accoppia di nuovo i due dispositivi.',
         'locked' => 'Sblocca l\'app per sincronizzare.',
         'not_enabled' => 'La sincronizzazione non è ancora configurata su questo dispositivo.',
         'unreadable' => 'La chiave di questo dispositivo non si apre più. Abbina di nuovo per riprendere la sincronizzazione.',
