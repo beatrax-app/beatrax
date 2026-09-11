@@ -11,6 +11,7 @@ use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
 use Modules\Core\Internal\Console\Probes\HostTimezoneProbe;
 use Modules\Core\Internal\Console\Probes\NetworkBoundaryProbe;
 use Modules\Core\Internal\Console\Probes\NodeVersionProbe;
+use Modules\Core\Internal\Console\Probes\OwnerBoundaryProbe;
 use Modules\Core\Internal\Console\Probes\PhpVersionProbe;
 use Modules\Core\Internal\Console\Probes\Probe;
 use Modules\Core\Internal\Console\Probes\ProbeResult;
@@ -43,6 +44,7 @@ final class DoctorCommand extends Command
         private readonly BackgroundScheduleProbe $backgroundScheduleProbe,
         private readonly NetworkBoundaryProbe $networkBoundaryProbe,
         private readonly HostTimezoneProbe $hostTimezoneProbe,
+        private readonly OwnerBoundaryProbe $ownerBoundaryProbe,
         private readonly ?FtsHealthCheck $ftsHealth = null,
         private readonly ?FingerprintHealthCheck $fingerprintHealth = null,
         private readonly ?SplitSumHealthCheck $splitSumHealth = null,
@@ -74,6 +76,7 @@ final class DoctorCommand extends Command
             $this->backgroundScheduleProbe,
             $this->networkBoundaryProbe,
             $this->hostTimezoneProbe,
+            $this->ownerBoundaryProbe,
         ];
 
         foreach ($probes as $probe) {
