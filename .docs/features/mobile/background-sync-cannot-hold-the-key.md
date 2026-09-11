@@ -314,8 +314,11 @@ passes whose entire output is notification content — `budget-nudges` and
 ### Why the unlock still feels instant
 
 The unlock is both the one interaction that has to be immediate and the first
-request that can run any of this, so the two would collide on every open. They do
-not, because the work is terminate-time: the response is already sent.
+request that can run any of this, so the two would collide on every open. The
+work is terminate-time — but on this runtime terminate-time is still inside the
+reader's wait, which was measured afterwards and cost a settings page 12,563 ms:
+see [a tail the reader waits for](a-tail-the-reader-waits-for.md). What keeps the
+unlock instant is that there is nothing to do, not that doing it would be free.
 
 The cost of a request with nothing to do is one cache read per pass — two. The
 keyring is opened only once a mark says something is waiting on it, so an install

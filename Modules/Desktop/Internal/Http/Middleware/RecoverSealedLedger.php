@@ -6,6 +6,7 @@ namespace Modules\Desktop\Internal\Http\Middleware;
 
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
+use Modules\Core\Public\Http\ResponseTailBudget;
 use Modules\Core\Public\Services\SealedLedgerRecovery;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\SafeExceptionContext;
@@ -26,7 +27,10 @@ final readonly class RecoverSealedLedger extends AfterResponseMiddleware
         private SealedLedgerRecovery $recovery,
         private SessionFactory $session,
         private LoggerInterface $log,
-    ) {}
+        ResponseTailBudget $tail,
+    ) {
+        parent::__construct($tail);
+    }
 
     // After the response rather than in front of it, so a full history
     // re-projection is not paid ahead of a page the user is waiting for.

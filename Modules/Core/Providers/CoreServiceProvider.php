@@ -42,6 +42,7 @@ use Modules\Core\Public\Contracts\KdfCost;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Contracts\SampleDataLoader;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Enums\ResponseTailTiming;
 use Modules\Core\Public\Http\Livewire\AutoImportSettingsSection;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Public\Http\Livewire\EncryptedBackupRestore;
@@ -49,6 +50,7 @@ use Modules\Core\Public\Http\Livewire\ExportEverythingDownload;
 use Modules\Core\Public\Http\Livewire\SystemAlertsBanner;
 use Modules\Core\Public\Http\Livewire\UpdateChannelSettingsSection;
 use Modules\Core\Public\Http\Livewire\UpdateCheckSettingsSection;
+use Modules\Core\Public\Http\ResponseTailBudget;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\CurrentUserService;
 use Modules\Core\Public\Services\NavCountsService;
@@ -109,6 +111,15 @@ final class CoreServiceProvider extends ServiceProvider
         // closure) is correct; the backup command, restore command, and
         // freshness probe all inject this service to resolve the backups dir.
         $this->app->singleton(UserDataPathService::class);
+
+        // One per request, not one per middleware: six terminable middlewares
+        // may run on a single request and the wait they add up to is what this
+        // bounds. The timing is asked once — it is a fact about the runtime,
+        // not about the request.
+        $this->app->singleton(
+            ResponseTailBudget::class,
+            fn (): ResponseTailBudget => new ResponseTailBudget(ResponseTailTiming::ofThisRuntime()->milliseconds()),
+        );
 
         // Built beside public/ rather than beside base_path(): the tree that
         // directory resolves into is the tree its contents were compiled from,

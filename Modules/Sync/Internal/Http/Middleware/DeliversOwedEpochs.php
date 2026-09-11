@@ -9,6 +9,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Session\Session;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
+use Modules\Core\Public\Http\ResponseTailBudget;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
@@ -34,7 +35,10 @@ final readonly class DeliversOwedEpochs extends AfterResponseMiddleware
         private Container $container,
         private Cache $cache,
         private LoggerInterface $log,
-    ) {}
+        ResponseTailBudget $tail,
+    ) {
+        parent::__construct($tail);
+    }
 
     protected function afterResponse(): void
     {
