@@ -225,13 +225,14 @@ final class MergeRulesRegistry
     private function financialEntityRules(): array
     {
         return [
-            // The ignored flag and the subcategory are folded into the
-            // `metadata` JSON column — no dedicated columns exist. `slug`
-            // (UNIQUE user_id, slug) is the identity string; slug, type and
-            // display_name are all NOT-NULL-without-default.
+            // Four independent facts are folded into `metadata` and no
+            // dedicated columns exist, so its keys merge rather than its blob.
+            // `slug` (UNIQUE user_id, slug) is the identity string; slug, type
+            // and display_name are all NOT-NULL-without-default.
             'counterparties' => [
                 'display_name' => ['nullable' => false],
                 'type' => ['nullable' => false],
+                'metadata' => ['strategy' => MergeStrategy::JsonKeyUnion->value, 'nullable' => true],
                 '_delete_wins' => true,
                 '_create_required' => ['slug', 'type', 'display_name'],
             ],
