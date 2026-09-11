@@ -163,7 +163,10 @@ final readonly class DependentRowCascade
             $this->sweep($childTable, $fresh, $userId, $events, $seen, $deviceLocalOnly);
             $this->deleteRows($childTable, $fresh, $userId);
 
-            if ($deviceLocalOnly || ! array_key_exists($childTable, $this->rules->rules())) {
+            // travels(), not a bare rules() lookup: the three rule tables carry
+            // merge rules for an older peer's ops and never go on the wire, so
+            // a tombstone for one addresses a pk only this device minted.
+            if ($deviceLocalOnly || ! $this->travels($childTable)) {
                 continue;
             }
 
