@@ -18,7 +18,7 @@ final class PaypalAmountParser
     {
         $scale = CurrencyScale::minorUnitsPerMajor($currencyCode);
         $decimals = CurrencyScale::decimals($currencyCode);
-        $normalized = trim($raw);
+        $normalized = self::ungrouped(trim($raw));
 
         // MAX_WHOLE_DIGITS bounds the whole part, so an over-range gross reaches
         // PaypalTransactionRollup as the InvalidAmountException its catch names.
@@ -36,5 +36,16 @@ final class PaypalAmountParser
         $fractional = $decimals === 0 ? 0 : (int) $m[3];
 
         return $sign * ($whole * $scale + $fractional);
+    }
+
+    // PayPal renders NL locale, where the period groups thousands, and a
+    // payment of a thousand or more was refused whole for carrying one.
+    // Stripped only from a figure that actually groups in threes, so a stray
+    // period is still a refusal rather than a hundred times the money.
+    private static function ungrouped(string $raw): string
+    {
+        return preg_match('/^([+-]?)(\d{1,3}(?:\.\d{3})+)(,\d+)?$/', $raw, $m) === 1
+            ? $m[1].str_replace('.', '', $m[2]).($m[3] ?? '')
+            : $raw;
     }
 }
