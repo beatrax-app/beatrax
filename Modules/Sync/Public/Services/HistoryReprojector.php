@@ -9,7 +9,6 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
-use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
@@ -17,10 +16,10 @@ use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\RetriedCollisionCreates;
 use Modules\Sync\Internal\Merge\RowHistoryPolicy;
 use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
+use Modules\Sync\Internal\OpLog\ParentsAHeldRowNames;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
-use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -28,13 +27,17 @@ use Throwable;
  */
 final readonly class HistoryReprojector
 {
-    // Deep enough for a child, its parent and its grandparent, which is as
-    // far as the covered schema nests.
-    private const int PARENT_WALK_LIMIT = 3;
-
     // One pass does not have to finish the sweep; what it leaves, the next
     // one takes. The bound is what keeps a large quarantine off the request.
     private const int SETTLED_SWEEP_LIMIT = 500;
+
+    // Bump this whenever the pass learns to answer a hold an older build
+    // recorded and walked past. Its watermark says those holds have had their
+    // answer, and the window below would otherwise never look at them again.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#telling-not-yet-openable-apart-from-never-openable-here
+     */
+    public const string PASS_REACH = '2026-09-11.collision-retry';
 
     public function __construct(
         private DatabaseManager $db,
@@ -51,6 +54,17 @@ final readonly class HistoryReprojector
     public function keyringFingerprint(int $userId): ?string
     {
         return $this->keyring->keyringFingerprint($userId);
+    }
+
+    // Everything that decided the last pass's answer, not just the key half.
+    // A hold is undone by key material moving OR by this build reaching
+    // further than the one that recorded it, and a watermark stamped against
+    // the keyring alone survives the upgrade that was supposed to clear it.
+    public function passIdentity(int $userId): ?string
+    {
+        $fingerprint = $this->keyringFingerprint($userId);
+
+        return $fingerprint === null ? null : self::PASS_REACH.':'.$fingerprint;
     }
 
     // Replays ONLY the rows a quarantined entry names, through the same
@@ -97,7 +111,7 @@ final readonly class HistoryReprojector
             return $collisions['rows'];
         }
 
-        $entries = $this->entries->forRows($userId, $this->withParentsNamed($rows, $userId));
+        $entries = $this->entries->forRows($userId, $this->container->make(ParentsAHeldRowNames::class)->including($rows, $userId));
         if ($entries === []) {
             return $collisions['rows'];
         }
@@ -155,7 +169,7 @@ final readonly class HistoryReprojector
     // apart retires a hold that pass never gave an answer to.
     private function withinPassWindow(Builder $query, int $userId, ?string $since, ?string $lastFingerprint): Builder
     {
-        if ($since !== null && $this->keyringFingerprint($userId) === $lastFingerprint) {
+        if ($since !== null && $this->passIdentity($userId) === $lastFingerprint) {
             $query->where('created_at', '>', $since);
         }
 
@@ -307,97 +321,6 @@ final readonly class HistoryReprojector
         }
 
         return $rows;
-    }
-
-    // A row held for a missing reference NAMES the row that is missing, whose
-    // own ops sit in the log unreplayed. Replaying only the held row re-ran the
-    // same failure; pulling its parents in is what lets the parent land, or
-    // records the id pair when it is already here under a locally minted id.
-    /**
-     * @param  list<array{table: string, pk: string}>  $rows
-     * @return list<array{table: string, pk: string}>
-     */
-    private function withParentsNamed(array $rows, int $userId): array
-    {
-        $order = new CoveredTableOrder(
-            $this->db,
-            new MergeRulesRegistry,
-            $this->container->make(LoggerInterface::class),
-        );
-        $seen = [];
-
-        foreach ($rows as $row) {
-            $seen[$row['table'].':'.$row['pk']] = true;
-        }
-
-        // A grandparent can be missing too, so the walk follows what it finds.
-        // Bounded because a cycle in the foreign keys would otherwise not end.
-        $frontier = $rows;
-
-        for ($depth = 0; $depth < self::PARENT_WALK_LIMIT && $frontier !== []; $depth++) {
-            $next = [];
-
-            foreach ($frontier as $row) {
-                foreach ($this->parentsNamedBy($order, $row, $userId) as $parent) {
-                    if (isset($seen[$parent['table'].':'.$parent['pk']])) {
-                        continue;
-                    }
-
-                    $seen[$parent['table'].':'.$parent['pk']] = true;
-                    $rows[] = $parent;
-                    $next[] = $parent;
-                }
-            }
-
-            $frontier = $next;
-        }
-
-        return $rows;
-    }
-
-    // The parent rows one held row points at, read off its own create ops
-    // rather than off the table — the row is held precisely because it is not
-    // in the table.
-    /**
-     * @param  array{table: string, pk: string}  $row
-     * @return list<array{table: string, pk: string}>
-     */
-    private function parentsNamedBy(CoveredTableOrder $order, array $row, int $userId): array
-    {
-        try {
-            $parents = $order->parentColumns($row['table']);
-        } catch (Throwable) {
-            return [];
-        }
-
-        unset($parents['user_id']);
-
-        if ($parents === []) {
-            return [];
-        }
-
-        $named = [];
-
-        $entries = $this->db->connection()->table('op_log_entries')
-            ->where('user_id', $userId)
-            ->where('table_name', $row['table'])
-            ->where('pk', $row['pk'])
-            ->whereIn('field', array_keys($parents))
-            ->get(['field', 'value']);
-
-        foreach ($entries as $entry) {
-            $field = is_string($entry->field ?? null) ? $entry->field : '';
-            $parent = $parents[$field] ?? null;
-            $value = is_string($entry->value ?? null) ? json_decode($entry->value, true) : null;
-
-            if ($parent === null || (! is_int($value) && ! is_string($value)) || (string) $value === '') {
-                continue;
-            }
-
-            $named[] = ['table' => $parent, 'pk' => (string) $value];
-        }
-
-        return $named;
     }
 
     // A null epoch is a refusal rather than a failed decrypt — the codec

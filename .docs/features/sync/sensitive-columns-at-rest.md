@@ -258,11 +258,22 @@ Nothing is discarded on that verdict. The entry stays in `op_log_entries`, the a
 in `op_log_quarantine`, and the pass only declines to replay it **now** — the same distinction
 `GdkWrapOutcome::Deferred` draws for the wrap itself, and for the same reason: a GDK epoch can
 arrive after the frame that needed it. What reopens the question is
-`sync_encryption_state.reprojected_keyring_fingerprint`, a content hash of the keyring file.
-It needs no app-lock key to read, so it can gate the pass on a request that holds none, and it
-changes whenever an epoch is appended, replaced or rewrapped. A pass that runs with a different
-fingerprint than the one recorded ignores its own watermark and asks across all of history
-again.
+`sync_encryption_state.reprojected_keyring_fingerprint`, which holds
+`HistoryReprojector::passIdentity()`: a content hash of the keyring file, prefixed by
+`PASS_REACH`. Neither half needs an app-lock key to read, so it can gate the pass on a request
+that holds none. The keyring half changes whenever an epoch is appended, replaced or rewrapped;
+the reach half changes when the pass learns to answer a hold it used to walk past. A pass that
+runs with a different identity than the one recorded ignores its own watermark and asks across
+all of history again.
+
+The reach half is there because a hold is not undone by key material alone. A
+`primary_key_collision` is undone by the *applier* learning to re-home the row, which is a
+property of the build and not of the keyring — so before it was counted, an install that ran one
+pass on an older build had those holds sitting permanently under a watermark that build stamped
+while walking past them, invisible to every later build. `PASS_REACH` is bumped by hand, in the
+same change that widens what the pass can answer. The column keeps its name because that is all
+it once held; `EncryptionRecoveryMarkers::reprojectedPassIdentity()` is the reader that says
+what it holds now.
 
 Both marks are stamped whenever a pass **ran**, not only when it replayed something. A pass that
 looked and found only entries it has no key for has still answered the question for this
@@ -326,8 +337,10 @@ A file hash and two indexed reads, before the keyring is touched:
 
 - one row of `sync_encryption_state`, which answers "is this device enrolled at all" and
   carries all three marks;
-- `HistoryReprojector::keyringFingerprint()`, a hash of a key file a few hundred bytes long,
-  read without the app-lock key;
+- `HistoryReprojector::passIdentity()`, a hash of a key file a few hundred bytes long behind a
+  build-reach prefix, read without the app-lock key. The index repair beside it still asks
+  `keyringFingerprint()` on its own, because "which keyring failed this row" is a different
+  question from "has anything that decided the last pass's answer moved";
 - one `EXISTS` against `op_log_quarantine`, which carries `(user_id, created_at DESC)`.
 
 That last question is deliberately the cheap, epoch-blind one — "has anything arrived that no

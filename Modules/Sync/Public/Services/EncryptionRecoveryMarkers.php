@@ -45,7 +45,11 @@ final readonly class EncryptionRecoveryMarkers
         return is_string($value) ? $value : null;
     }
 
-    public function reprojectedKeyringFingerprint(int $userId): ?string
+    // The column is still named for the keyring because that is all it once
+    // held. What it stores now is HistoryReprojector::passIdentity() — the
+    // keyring AND the reach of the build that stamped it — so a value written
+    // by an older build compares unequal and reopens the window it closed.
+    public function reprojectedPassIdentity(int $userId): ?string
     {
         $value = $this->load($userId)->reprojected_keyring_fingerprint ?? null;
 
@@ -57,15 +61,15 @@ final readonly class EncryptionRecoveryMarkers
     // no key for has still answered the question for this keyring, and leaving
     // the marks behind would make it ask again on every request.
     /**
-     * @param  string|null  $fingerprint  The keyring the pass evaluated against.
+     * @param  string|null  $passIdentity  The keyring and reach the pass evaluated against.
      */
-    public function markHistoryReprojected(int $userId, ?string $fingerprint): void
+    public function markHistoryReprojected(int $userId, ?string $passIdentity): void
     {
         $this->stamp($userId, [
             // Compared against `op_log_quarantine.created_at`, which the
             // replayer writes in this same format.
             'history_reprojected_at' => $this->clock->now()->toDateTimeString(),
-            'reprojected_keyring_fingerprint' => $fingerprint,
+            'reprojected_keyring_fingerprint' => $passIdentity,
         ]);
     }
 
