@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Encryption;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
@@ -16,6 +17,12 @@ use stdClass;
  */
 final readonly class PlaintextResidueSweep
 {
+    // How long a stamped sweep stands for. The digest answers "has the column
+    // list changed"; a writer that bypasses the codec changes nothing it can
+    // see, so the second gate is time, and 24h of exposure buys a pass whose
+    // measured cost is 543ms per 80,000 sealed values, paid after the response.
+    public const int RESWEEP_AFTER_HOURS = 24;
+
     public function __construct(
         private DatabaseManager $db,
         private SensitiveColumnCodec $codec,
@@ -27,6 +34,17 @@ final readonly class PlaintextResidueSweep
     public static function columnsDigest(): string
     {
         return substr(hash('sha256', json_encode(PreMigrationSnapshot::PROJECTION_COLUMNS, JSON_THROW_ON_ERROR)), 0, 32);
+    }
+
+    // Null is an install enrolled by a build that stamped only the digest, and
+    // it has the longest-standing residue of any state here — so it is due.
+    public static function sweepIsOverdue(?string $sweptAt, CarbonImmutable $now): bool
+    {
+        if ($sweptAt === null) {
+            return true;
+        }
+
+        return CarbonImmutable::parse($sweptAt)->addHours(self::RESWEEP_AFTER_HOURS)->lessThanOrEqualTo($now);
     }
 
     // Seals values still sitting in the clear in a registered column. Returns
