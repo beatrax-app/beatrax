@@ -2711,6 +2711,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ASyncedRowIsAnnouncedWhicheverWayItIsWrittenArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
+        // The enum IS the subject: the case asks which re-derivations exist and
+        // which triggers each one claims, so reading them through a Public seam
+        // would assert about the seam rather than about the declaration a
+        // twelfth NotificationTrigger case has to be added to.
+        'tests/Contracts/ATriggerAKeylessProcessCanRaiseHasSomethingThatReDerivesItArchTest.php -> Modules\\Notifications\\Internal\\Enums\\DeferredNotificationPass',
         // The guard reads the printed due date off the committed statement
         // through the same named anchor the adapter reads it through, so a
         // parser that stops recognising the paragraph fails there too. Spelling

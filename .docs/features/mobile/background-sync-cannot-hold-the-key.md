@@ -263,6 +263,11 @@ forecast shortfall both leave a row the app already renders on its own screen,
 so a reader whose notification was refused can still find them. A budget nudge, a
 payment reminder, a digest and a savings prompt exist only as the notification.
 
+That surviving row turned out to be the repair for rows three and four rather
+than a consolation: it is what
+[The triggers no scheduled pass covers](#the-triggers-no-scheduled-pass-covers)
+re-announces from.
+
 ### Re-deriving, not buffering
 
 Holding the refused draft until a key turns up is the obvious repair and it is
@@ -274,9 +279,11 @@ Instead the pass is re-run. `NotificationWriter` derives the row id from
 `(user, trigger, subject, occurrence)` and inserts with `insertOrIgnore`, so
 running an emitter again writes exactly what the keyless run would have written
 and nothing twice. `Modules\Notifications\Internal\Enums\DeferredNotificationPass`
-names the two passes whose entire output is notification content —
-`budget-nudges` and `daily-triggers` — and `DeferredNotificationPasses` is the
-seam:
+names the re-derivations a keyed request can run. Two of them are scheduled
+passes whose entire output is notification content — `budget-nudges` and
+`daily-triggers` — and the third, `withheld-triggers`, is the subject of
+[the section after next](#the-triggers-no-scheduled-pass-covers).
+`DeferredNotificationPasses` is the seam for all three:
 
 - **The gate is asked before the pass reads anything.**
   `deferIfKeyless()` answers `EncryptionMigrationService::isEnabled()` **and**
@@ -324,6 +331,101 @@ even when it can seal nothing, and that is deliberate: the claim gates the
 replay a claim of its own would only add a second key to keep in step for work
 that is already idempotent.
 
+### The triggers no scheduled pass covers
+
+`deferIfKeyless()` is asked from exactly two places, the two schedule entries
+above. Eight `Persist*` listeners reach `NotificationWriter`, so six of the
+eleven `NotificationTrigger` cases had no schedule entry to put the question in:
+
+| Trigger | Raised by | Where that runs |
+|---|---|---|
+| `drift_changed` | `DriftEvaluator`, reached only from `DetectDriftAlertsJob` | a queue worker, always |
+| `forecast_shortfall` | `ShortfallDetector`, reached only from `ProjectForecastJob` | a queue worker, always |
+| `ics_statement_ready` | `DetectIcsStatementReadyJob` | a queue worker, always |
+| `receipts_found`, `import_finished`, `manual_entry_recorded`, `migration_finished` | `RecordTransactions` | wherever the import ran |
+
+`QUEUE_CONNECTION` is `database` in every shell, so the first three are raised
+in a worker process and in no other. Being dispatched from a reader's own tap
+does not help: `ProjectForecastJob` has four dispatch sites, three of them a
+setting the reader just changed, and all four hand it to the same keyless
+worker. On a sealed ledger those notifications were not late. They never came,
+and the only trace was one warning line per user per process.
+
+The fourth row is **not** a notification defect, which is why no arm re-derives
+it. `RecordTransactions` seals `transactions.description`,
+`.counterparty_name`, `.counterparty_iban`, `.note` and `.raw_payload` before it
+dispatches `TransactionBatchImported`, so a keyless import is refused a layer
+earlier and the announcement is never reached at all. What such a run loses is
+the import — the `open-banking:sync-due` and `receipts:scan-drop-folder` rows of
+the table above, still open.
+
+#### The mark belongs to the writer
+
+Four of the eight emitters remembered to ask and four did not, so the question
+was moved to the one place none of them can skip: `NotificationWriter` already
+knows it deferred, and it calls `DeferredNotificationPasses::markWithheld()`
+beside the warning it was already filing. A trigger added tomorrow is covered
+without its author knowing this page exists.
+
+That costs one property the two scheduled marks have. Theirs is made *before*
+the pass reads anything, so it records only that a keyless process was asked to
+run. The writer's cannot be: it is downstream of the content by construction. So
+the mark is deliberately **undifferentiated** — one key per user for all of
+them, `withheld-triggers`, naming no trigger — and what it re-runs is every
+uncovered re-derivation rather than the one that set it. A per-trigger key would
+have put in the clear the very thing sealing `notifications.trigger_type` hides.
+
+#### Re-announcing, not re-detecting
+
+`DeferredNotificationPass::reDerives()` names what each pass is expected to
+produce, and for `withheld-triggers` that is the three triggers above. None of
+the three re-runs its detector:
+
+- `DriftAlertReannouncer` re-dispatches `DriftAlertOpened` for the reader's
+  **open** `drift_alerts` rows. Re-running the detector recovers nothing here —
+  `DriftEvaluator` dispatches only when its insert wins the table's UNIQUE, so a
+  second pass over an alert it already opened says nothing at all. Acknowledged,
+  snoozed and dismissed alerts are skipped: the reader has answered those.
+- `ForecastShortfallReannouncer` re-dispatches `ForecastShortfallDetected` for
+  the baseline `forecast_shortfall_windows` rows. Re-projecting *would* re-emit,
+  because the detector deletes and rewrites its windows every run — but the
+  projection needs no key and already landed, and making a reader pay for a
+  second sweep to recover a notification is the granularity mistake this section
+  exists to avoid. Scenario rows are skipped, matching the detector: a what-if
+  raises nothing.
+- `IcsStatementReadyDispatch` runs `DetectIcsStatementReadyJob` with
+  `dispatchSync`. That job only reads `inbox_messages` and dispatches, so
+  re-running it *is* the reconciliation from the rows the scan already filed.
+
+All three are safe to run when nothing was withheld, because all three end at
+`NotificationWriter`, whose row id is derived from the draft. A notification
+already written costs an `insertOrIgnore` that changes nothing.
+
+The writer asks whether the row is there before it marks, and returns
+`Duplicate` rather than `Deferred` when it is. A keyed process learns that from
+`insertOrIgnore`; a keyless one is refused before the insert and has to ask. On
+a real install the midnight sweep was measured refusing a shortfall whose row
+the device already held — seeded before enrolment, with the same derived id —
+and a mark made there would have had every later unlock re-derive content
+nothing was missing.
+
+The bound is the mark's TTL, `DailyLocalWindow::claimTtlSeconds()` — the same
+two days the scheduled marks use. Nothing re-makes the writer's mark on a
+schedule the way the scheduler re-makes theirs, so a device left closed for
+longer than that loses the announcement rather than the row. The row is still on
+its own screen, which is the property the table above turns on.
+
+#### The guard
+
+`NotificationTrigger::reachableWithoutTheKey()` is a `match` with no default
+arm, so a twelfth case cannot be added without answering whether a keyless
+process can raise it.
+`tests/Contracts/ATriggerAKeylessProcessCanRaiseHasSomethingThatReDerivesItArchTest.php`
+holds every case answering yes to appearing in exactly one pass's `reDerives()`,
+and every case appearing there to answering yes — two declarations that cannot
+drift apart by adding to the easier one. It asserts both sides of the predicate
+are non-empty first, because an aggregate over an empty set agrees with anything.
+
 ### Change capture was behind the same wall
 
 `SyncCaptureListener` resolved `OpLogWriter` lazily and logged the refusal at
@@ -334,17 +436,22 @@ sign](../sync/a-mutation-a-keyless-process-cannot-sign.md).
 
 ### What is not fixed here, and why not
 
-`forecasting:project`, `recurring:detect` and `open-banking:sync-due` are left
-alone on purpose. Gating them the way the two notification passes are gated would
-suppress work that needs no key — the projection, the series, the import — to
-protect a notification at the end of it. The repair for those is a reconciliation
-from the row that *did* land, computing the deterministic notification id and
-emitting only what is missing, and it needs its own decision about which alerts
-still deserve a notification days later. `open-banking:sync-due` carried a second
-defect of its own besides — a sync that fetched rows, filed none of them and
-reported success, forever, with no failed job to show for it. That one is fixed:
-see [A feed that imports nothing](../open-banking/a-feed-that-imports-nothing.md).
-The notification at the end of its import is still on the list above.
+`forecasting:project` and `recurring:detect` are still never gated the way the
+two notification passes are, because gating them would suppress work that needs
+no key — the projection, the series — to protect a notification at the end of
+it. Their notification half is repaired instead, by the reconciliation from the
+row that *did* land that
+[The triggers no scheduled pass covers](#the-triggers-no-scheduled-pass-covers)
+describes.
+
+`open-banking:sync-due` is the one left alone. Its notification rides on an
+import that is refused a layer earlier, so there is no landed row to reconcile
+from and the repair is whatever fixes the import. It carried a second defect of
+its own besides — a sync that fetched rows, filed none of them and reported
+success, forever, with no failed job to show for it. That one is fixed: see
+[A feed that imports nothing](../open-banking/a-feed-that-imports-nothing.md).
+The import itself, and `receipts:scan-drop-folder` beside it, are still on the
+list above.
 
 ### The outcome is nameable now
 

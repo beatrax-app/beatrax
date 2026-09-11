@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'vos alertes de budget',
         'daily-triggers' => 'vos rappels quotidiens et votre récapitulatif',
+        'withheld-triggers' => 'vos autres alertes',
     ],
 
     'messages' => [

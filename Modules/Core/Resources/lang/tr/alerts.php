@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'bütçe uyarılarını',
         'daily-triggers' => 'günlük hatırlatmaları ve özeti',
+        'withheld-triggers' => 'diğer uyarıları',
     ],
 
     'messages' => [

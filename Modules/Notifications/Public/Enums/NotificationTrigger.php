@@ -51,6 +51,34 @@ enum NotificationTrigger: string
         };
     }
 
+    // Whether a process holding no app-lock key can reach this trigger's
+    // content. It cannot seal what it derives there, so a trigger answering yes
+    // needs a re-derivation a keyed request can run — without one the
+    // notification is not delayed, it never arrives.
+    /**
+     * @link ../../../../.docs/features/mobile/background-sync-cannot-hold-the-key.md#the-triggers-no-scheduled-pass-covers
+     */
+    public function reachableWithoutTheKey(): bool
+    {
+        return match ($this) {
+            self::BudgetNudge,
+            self::DriftChanged,
+            self::ForecastShortfall,
+            self::IcsStatementReady,
+            self::PaymentReminder,
+            self::PositionDigest,
+            self::SavingsPrompt => true,
+            // The four PersistCoalescedImport triggers, and no arm re-derives
+            // them: their emitter writes sealed `transactions` columns before it
+            // announces the batch, so a keyless import is refused there. What
+            // such a run loses is the import, which is a defect of its own.
+            self::ImportFinished,
+            self::ManualEntryRecorded,
+            self::MigrationFinished,
+            self::ReceiptsFound => false,
+        };
+    }
+
     // No default arm, so a twelfth case is a static-analysis failure here
     // rather than a row rendered under the placeholder glyph with only a log
     // line saying which kind it was. That leaves the placeholder reachable by

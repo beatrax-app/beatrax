@@ -6,7 +6,10 @@ namespace Modules\Notifications\Internal\Support;
 
 use Modules\Budgets\Public\Services\BudgetNudgeDispatch;
 use Modules\Core\Models\User;
+use Modules\DriftAlerts\Public\Services\DriftAlertReannouncer;
 use Modules\DriftAlerts\Public\Services\SavingsPromptDispatch;
+use Modules\EmailScan\Public\Services\IcsStatementReadyDispatch;
+use Modules\Forecasting\Public\Services\ForecastShortfallReannouncer;
 use Modules\Notifications\Internal\Enums\DeferredNotificationPass;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Position\Public\Services\PositionDigestDispatch;
@@ -26,6 +29,9 @@ final readonly class DeferredNotificationPassRunner
         private PaymentReminderDispatch $reminders,
         private PositionDigestDispatch $digest,
         private SavingsPromptDispatch $savingsPrompts,
+        private DriftAlertReannouncer $driftAlerts,
+        private ForecastShortfallReannouncer $shortfalls,
+        private IcsStatementReadyDispatch $icsStatements,
         private NotificationPreferenceQuery $preferences,
     ) {}
 
@@ -34,7 +40,19 @@ final readonly class DeferredNotificationPassRunner
         match ($pass) {
             DeferredNotificationPass::BudgetNudges => $this->nudges->forUserNow($userId),
             DeferredNotificationPass::DailyTriggers => $this->dailyTriggers($userId),
+            DeferredNotificationPass::WithheldTriggers => $this->withheldTriggers($userId),
         };
+    }
+
+    // All three, whichever one the writer's mark was made for: the mark names
+    // no trigger, because the writer only learns which one it is by deriving
+    // the content, and a key that recorded that would put in the clear the very
+    // thing sealing `notifications.trigger_type` hides.
+    private function withheldTriggers(int $userId): void
+    {
+        $this->driftAlerts->openForUser($userId);
+        $this->shortfalls->baselineForUser($userId);
+        $this->icsStatements->forUserNow($userId);
     }
 
     private function dailyTriggers(int $userId): void

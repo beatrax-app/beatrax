@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'eelarveteateid',
         'daily-triggers' => 'igapäevaseid meeldetuletusi ja kokkuvõtet',
+        'withheld-triggers' => 'ülejäänud teateid',
     ],
 
     'messages' => [

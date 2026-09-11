@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'a költségvetési értesítéseket',
         'daily-triggers' => 'a napi emlékeztetőket és az összefoglalót',
+        'withheld-triggers' => 'a többi értesítést',
     ],
 
     'messages' => [
