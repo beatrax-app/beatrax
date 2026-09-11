@@ -446,11 +446,13 @@ final readonly class OpLogEntryApplier
                     continue;
                 }
 
-                foreach ($fields as $field => $fieldEntries) {
-                    $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $batch, $deferred);
-                }
+                foreach ($this->aliases->splitFieldsByLocalRow($table, $pk, $fields, $userId) as $row) {
+                    foreach ($row['fields'] as $field => $fieldEntries) {
+                        $this->applyFieldMerge($table, $row['pk'], $field, $fieldEntries, $batch, $deferred);
+                    }
 
-                $applied->rowUpdated($table, $pk, $userId);
+                    $applied->rowUpdated($table, $row['pk'], $userId);
+                }
             }
         }
 
@@ -485,12 +487,12 @@ final readonly class OpLogEntryApplier
 
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $batch->userId);
 
-            // A Set names ids the same way a create does, and addresses a row
-            // by one. Both are rewritten before ownership reads them, so the
-            // check runs against the id this device will actually write.
+            // A Set names ids the same way a create does. The id it addresses
+            // was resolved by the caller, which groups a field's entries by
+            // the row each device's copy belongs to; this rewrites the ids the
+            // value itself names, before ownership reads them.
             $setDevice = $fieldEntries[0]->deviceId;
             $columnValue = $this->aliases->translate($table, $setDevice, [$field => $columnValue], $batch->userId)[$field] ?? $columnValue;
-            $pk = $this->aliases->resolvePk($table, $setDevice, $pk, $batch->userId);
 
             // Both gates gate a create, and a Set rewrites the same column
             // afterwards: Set account_id to another member's and the row scopes

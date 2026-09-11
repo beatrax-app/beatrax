@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Merge;
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -131,6 +132,31 @@ final readonly class PeerRowAliases
         }
 
         return $payload;
+    }
+
+    // Entries for one pk whose devices resolve it to DIFFERENT local rows are
+    // not one row's history. partitionByOpType keys a field group by pk alone,
+    // so two devices that minted one id put both rows' Sets in one group, to
+    // be resolved by a single LWW and written wherever the earliest one points.
+    /**
+     * @param  array<string, list<OpLogEntry>>  $fields
+     * @return list<array{pk: int|string, fields: array<string, list<OpLogEntry>>}>
+     */
+    public function splitFieldsByLocalRow(string $table, int|string $pk, array $fields, int $userId): array
+    {
+        $rows = [];
+
+        foreach ($fields as $field => $entries) {
+            foreach ($entries as $entry) {
+                $local = $this->resolvePk($table, $entry->deviceId, $pk, $userId);
+                $key = (string) $local;
+
+                $rows[$key] ??= ['pk' => $local, 'fields' => []];
+                $rows[$key]['fields'][$field][] = $entry;
+            }
+        }
+
+        return array_values($rows);
     }
 
     // Called through rather than guarded: CoveredTableOrder answers with an
