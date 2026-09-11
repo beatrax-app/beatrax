@@ -211,7 +211,67 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             $events[] = $this->insertLeg($user, $transactionId, $leg, $index, $currency, $now);
         }
 
+        $events = $this->everyLegOfARebalance($events, $user, $transactionId, $legs, $incomingIds);
+
         return [...$events, ...$this->deleteRemovedLegs($user, $existingIds, $incomingIds)];
+    }
+
+    // A rebalance is one decision over the WHOLE leg set, and announcing only
+    // the legs whose numbers moved lets two of them interleave into a set
+    // neither device chose: legs are separate rows, so per-field last-writer-
+    // wins picks a winner per leg and the survivors need not sum to the parent.
+    /**
+     * @param  list<object>  $events
+     * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
+     * @param  list<int>  $incomingIds
+     * @return list<object>
+     */
+    private function everyLegOfARebalance(array $events, User $user, int $transactionId, array $legs, array $incomingIds): array
+    {
+        $moved = false;
+        foreach ($events as $event) {
+            if ($event instanceof TransactionSplitMutated && array_key_exists('settled_amount_minor', $event->dirtyFields)) {
+                $moved = true;
+            }
+        }
+
+        if (! $moved) {
+            return $events;
+        }
+
+        $announced = [];
+        foreach ($events as $event) {
+            if ($event instanceof TransactionSplitMutated) {
+                $announced[$event->splitId] = true;
+            }
+        }
+
+        $amounts = [];
+        foreach ($legs as $leg) {
+            $legId = $leg['id'] ?? null;
+            if ($legId !== null && in_array($legId, $incomingIds, true)) {
+                $amounts[$legId] = $leg['settled_amount_minor'];
+            }
+        }
+
+        foreach ($amounts as $legId => $amountMinor) {
+            if (isset($announced[$legId])) {
+                continue;
+            }
+
+            // The leg this save did not change, carrying the number it keeps.
+            // Its value is the one the OTHER device's rebalance has to lose to,
+            // and without an op of its own it has nothing to lose to.
+            $events[] = new TransactionSplitMutated(
+                splitId: $legId,
+                transactionId: $transactionId,
+                userId: $user->id,
+                mutationType: 'edit',
+                dirtyFields: ['settled_amount_minor' => $amountMinor],
+            );
+        }
+
+        return $events;
     }
 
     /**
