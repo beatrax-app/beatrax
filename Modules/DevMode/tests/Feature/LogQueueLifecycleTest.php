@@ -34,7 +34,7 @@ it('emits queue.processed at INFO with stable context keys on JobProcessed', fun
     ]);
 });
 
-it('emits queue.failed at WARNING with exception message on JobFailed', function (): void {
+it('emits queue.failed at WARNING naming the exception class rather than its message', function (): void {
     $logger = new RecordingLogger;
     $listener = new LogQueueLifecycle($logger);
 
@@ -54,7 +54,9 @@ it('emits queue.failed at WARNING with exception message on JobFailed', function
         'connection' => 'database',
         'attempts' => 5,
         'uuid' => 'boom-1',
-        'exception' => 'catastrophic failure',
+        'reason' => RuntimeException::class,
+        'sqlstate' => '',
+        'message' => null,
     ]);
 });
 
@@ -80,5 +82,5 @@ it('is wired in DevModeServiceProvider so dispatched JobFailed events reach the 
 
     expect($logger->records)->toHaveCount(1);
     expect($logger->records[0]['message'])->toBe('queue.failed');
-    expect($logger->records[0]['context']['exception'])->toBe('boom');
+    expect($logger->records[0]['context']['reason'])->toBe(RuntimeException::class);
 });

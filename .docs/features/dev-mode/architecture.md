@@ -225,7 +225,10 @@ layout to render the ⌘K palette and the sidebar nav-list:
   DoctorPanelPage, SqlPanelPage, SystemSnapshotPage,
   TripleGateModal, CommandPaletteModal, CommandArgPromptModal).
 - **Internal/Listeners/** — `LogQueueLifecycle` (logs `JobProcessed`
-  - `JobFailed` so `/dev/logs` shows completions),
+  - `JobFailed` so `/dev/logs` shows completions; the failure line
+  carries `SafeExceptionContext::describe()` — the class and the
+  SQLSTATE — never the raw message, because it is registered outside
+  the dev-mode gate and runs on every install),
   `WriteWorkerHeartbeat` (queue-looping closure that bumps the
   heartbeat cache key on every tick), `ResetAdvancedToggleOnLogin`,
   `BustOAuthScrubSetOnSecretChange`.
@@ -736,7 +739,19 @@ JWT-shaped tokens out of both the rolling log file and the
   soon as the cause clears.
 - **`RedactSecretsProcessor`** (on-write) — a Monolog `ProcessorInterface`
   registered via **`PushRedactProcessor`** (a Laravel logging "tap"
-  class) onto every handler of the `stack`/`single`/`daily` channels.
+  class) onto every handler of **every channel that can write
+  somewhere**. It used to be the three file channels, which made
+  redaction a property of a deployment shape rather than of the
+  application: `deploy/server/.env.example` sets `LOG_CHANNEL=stderr`,
+  and `stderr` — like `slack`, `papertrail`, `syslog` and `errorlog` —
+  tapped nothing, so `docker compose logs` printed what the file
+  channels were scrubbing. `null` and `emergency` are
+  the two that still carry no tap: the first discards by construction,
+  and `LogManager::createEmergencyLogger()` builds its handler without
+  ever calling `tap()`.
+  `tests/Contracts/AShippedLogChannelRedactsBeforeItWritesArchTest.php`
+  pins both halves — every channel taps it, and every channel a shipped
+  `.env` template names resolves to one that does.
   Container resolution (rather than `new RedactSecretsProcessor`) keeps
   the processor's DI chain invisible to `config/logging.php`; the
   `OAuthScrubSet` constructor argument is nullable so direct
@@ -770,7 +785,7 @@ JWT-shaped tokens out of both the rolling log file and the
   processor to every chunk returned by `/dev/logs/poll` and `/dev/logs/context`,
   giving belt-and-braces redaction at both write time and read time.
 - **`PushRedactProcessor`** — a Laravel-style "tap class" registered
-  into a channel's `tap` array in `config/logging.php`; Laravel
+  into every channel's `tap` array in `config/logging.php`; Laravel
   resolves it on every channel boot and invokes `__invoke($logger)` so
   the channel's Monolog handlers can be decorated AFTER the channel
   driver constructs them. It resolves `RedactSecretsProcessor` from the

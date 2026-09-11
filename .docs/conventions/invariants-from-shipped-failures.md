@@ -7381,6 +7381,56 @@ measured by position: a registration written before the script first mentions
 there, and keep the listener as the fallback for the page that loads before
 Alpine exists.
 
+## Redaction that was a property of three channels
+
+`tests/Contracts/AShippedLogChannelRedactsBeforeItWritesArchTest.php`
+
+`PushRedactProcessor` — the tap that strips the OAuth scrub set, `Authorization:
+Bearer`, JWTs and `ya29.` tokens out of a record before the formatter runs — sat
+in the `tap` array of `stack`, `single` and `daily`. Those are the three channels
+that write to the local log file, and the comment above them said so — which is
+how it read as complete from the day the redaction landed.
+`slack`, `papertrail`, `stderr`, `syslog` and `errorlog` each carried
+`'tap' => []`.
+
+`LOG_CHANNEL` is not this repository's decision. `deploy/server/.env.example`,
+the documented Docker recipe, sets `LOG_CHANNEL=stderr` on purpose — the daily
+channel writes into a container layer that `down` throws away — so the
+deployment shape a self-hoster is told to use was the one shape with no
+redaction at all, and `docker compose logs` is readable by anyone who can reach
+the host. Nothing in the tree connected the two facts: the channel config named
+no deployment, and the deployment template named no processor.
+
+The other half arrived through `Illuminate\Queue\Events\JobFailed`.
+`LogQueueLifecycle::failed()` wrote `$event->exception->getMessage()` into the
+context, and that listener is registered outside the `app.dev_mode` conditional,
+so it runs on every install. `$event->exception` is whatever the job threw, which
+is as broad as `catch (Throwable)` — and the rule beside this one,
+`LoggedExceptionsDropThePayloadArchTest`, is keyed on the `catch` keyword. An
+exception that arrives as an event property is invisible to it. So is one that
+arrives as a `failed(?Throwable $e)` parameter, which is how `BackfillInboxJob`
+and `IncrementalScanJob` were writing a raw message into
+`inbox_scan_state.error_message`, a plaintext column read back through
+`InboxQuery` into a Public DTO.
+
+The tap cannot stand in for the source fix, and this is the part worth keeping:
+the redactor matches credential *shapes* and secret key *names*. A
+`QueryException`'s message is ordinary prose — `insert into "counterparties"
+("name", "iban") values (Dr A. Specialist, NL91…)` — and matches none of its
+patterns. A channel that redacts everything it knows how to redact still writes
+the row. Both fixes are needed and neither is the other's substitute:
+`SafeExceptionContext::describe()` at the source, and the tap on every channel
+so the next line somebody writes is scrubbed of what the redactor *can* see.
+
+The rule is mechanical in two directions, which is why it is worth a file: every
+channel `config/logging.php` defines taps the processor, and every channel a
+shipped `.env` template names — `LOG_CHANNEL`, each entry of `LOG_STACK`,
+`LOG_DEPRECATIONS_CHANNEL` — resolves to one that does. `null` and `emergency`
+are declined with their reasons in the rule itself: the first discards by
+construction, and `LogManager::createEmergencyLogger()` builds its handler from a
+path and a level without ever calling `tap()`, so a key there would read as a
+decision and change nothing.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

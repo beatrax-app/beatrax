@@ -19,6 +19,7 @@ use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Internal\Clients\CursorExpiredException;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GmailRawDecodeException;
@@ -408,7 +409,10 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                substr($exception?->getMessage() ?? 'unknown failure', 0, 500),
+                // The same refusal BackfillInboxJob::failed() makes, and the
+                // same reason: error_message is plaintext and a QueryException
+                // writes its bindings into whatever holds its message.
+                $exception === null ? 'unknown failure' : SafeExceptionContext::reason($exception),
             );
         } catch (Throwable) {
             // An invalid transition here must not escalate into a hard
@@ -434,10 +438,13 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
                 InboxScanStatus::NeedsReauth->value,
                 'No OAuth credentials are persisted for this inbox.',
             ),
+            // The three arms above name the failure they matched; this one
+            // catches everything else, so a QueryException raised anywhere in
+            // the walk landed here and wrote its bindings into the column.
             default => $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                substr($e->getMessage(), 0, 500),
+                SafeExceptionContext::reason($e),
             ),
         };
 

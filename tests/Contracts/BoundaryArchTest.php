@@ -2697,6 +2697,10 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/APreviewChannelAsksForAManifestThePipelinePublishesArchTest.php -> Modules\\Core\\Internal\\Enums\\OsFamily',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ARowDeletedFromASyncedTableIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
+        // config/logging.php names this class in every channel's `tap`, and the
+        // rule asks whether each channel names THAT class. Spelling the tap as
+        // a string here would let a rename pass the guard silently.
+        'tests/Contracts/AShippedLogChannelRedactsBeforeItWritesArchTest.php -> Modules\\DevMode\\Internal\\Logging\\PushRedactProcessor',
         'tests/Contracts/ASyncedColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ASyncedRowIsAnnouncedWhicheverWayItIsWrittenArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/ASyncedUserColumnIsAnnouncedByItsWriterArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
