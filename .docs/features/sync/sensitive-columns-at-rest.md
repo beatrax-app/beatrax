@@ -1383,9 +1383,32 @@ unconditionally, but it now answers only one question — has the one-time sweep
 what stops it rescanning three tables on every screen mount.
 
 The genuine residual is the `yes | yes` row: two devices that each enrolled, each imported, and
-only then paired. Both keep their own key and both log an error. Nothing re-derives one side
-automatically; the recovery is to re-derive from the decrypted `counterparty_name`, which
-`MerchantDisplayName::fromTransactions()` shows is readable.
+only then paired. Both keep their own key. Nothing re-derives one side automatically, and nothing
+on either device's screens offers to: `CounterpartyKeyBackfill::run()` has one production caller,
+`EncryptionMigrationService`, which gates it behind `hasSweptCounterpartyKeys()` and so runs it
+once in an install's life. The mechanical recovery is to re-derive from the decrypted
+`counterparty_name`, which `MerchantDisplayName::fromTransactions()` shows is readable; no code
+does it, so the only recovery a reader actually has is to set one device up again from scratch
+and let it take its copy from the other. **Re-pairing does not help** — the blind-index key is
+never rotated, so a device removed and paired again brings the same key back to the same standoff.
+
+#### Reporting a divergence that will not end
+
+This is a permanent state, and the wrap that reports it arrives on every pass — pushed on connect
+and again out of the drained mailbox. A desktop and a phone in this state logged the error ten
+times in the twenty-two hours after they were paired, at `error`, into a file no reader opens,
+while the screens on both devices said the pairing had worked.
+
+So the report is not made per pass and not made to the log alone. `BlindIndexDivergenceAlerts`
+raises a `sync.blind_index.diverged` SystemAlert through `raiseOnceForUser()`, and the error line
+is written only when that raise is the one that created the row — the row IS the idempotence key,
+which is why there is no second marker to keep in step with it. The copy states what stops working
+and names the one action that exists; it does not name the re-derive, because a reader cannot
+reach it.
+
+`converged()` takes the row down from the `hash_equals` branch, the only evidence either device
+ever gets that the split has ended. An alert that outlives the fault it reported teaches the
+reader to dismiss the next one unread.
 
 That refusal returns `GdkWrapOutcome::Retained` rather than `Applied`, and the difference is the
 whole point: `Retained` leaves the mailbox row alone. The wrap is the only copy of the peer's

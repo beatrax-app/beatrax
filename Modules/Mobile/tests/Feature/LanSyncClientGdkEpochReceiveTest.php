@@ -17,12 +17,14 @@ use Amp\Websocket\WebsocketTimestamp;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Exceptions\LanSyncException;
+use Modules\Mobile\Internal\Sync\LanDialOutcome;
 use Modules\Mobile\Internal\Sync\LanSyncClient;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
@@ -451,6 +453,93 @@ function lanScriptedFakeConnection(array $script): WebsocketConnection
         }
     };
 }
+
+// The identity stays untyped here for the same reason the fixtures above build
+// one through the service: readRefusal() reads no key material, and naming the
+// DTO would cross a module boundary this file has no other reason to cross.
+function lanReceiveReadRefusal(LanSyncException $e, object $identity): LanDialOutcome
+{
+    $client = app(LanSyncClient::class);
+    $readRefusal = new ReflectionMethod($client, 'readRefusal');
+
+    /** @var LanDialOutcome $outcome */
+    $outcome = $readRefusal->invoke($client, $e, $identity);
+
+    return $outcome;
+}
+
+function lanReceiveConfirmedDesktop(int $userId, string $deviceId): void
+{
+    app(DatabaseManager::class)->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => "Wessel's Mac",
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        'x25519_public_key_hex' => sodium_bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-08-01T10:00:00Z',
+        'confirmed_at' => '2026-08-01T10:05:00Z',
+        'created_at' => '2026-08-01T10:00:00Z',
+        'updated_at' => '2026-08-01T10:00:00Z',
+    ]);
+}
+
+// Every refusal that reaches readRefusal() got there over an open WebSocket,
+// and all three of them are one class — so the line it writes named nothing a
+// reader of the log could act on. A desktop asleep and a desktop that had
+// stopped confirming this phone wrote the same line.
+it('logs which refusal stopped the session, and clears the confirmation for a revocation only', function (): void {
+    $user = lanReceiveUser('lan-refusal-reason');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    $phone = app(DeviceIdentityService::class)->generateAndPersist($userId, $session);
+    lanReceiveConfirmedDesktop($userId, 'desktop-peer');
+
+    /** @var DeviceRegistryService $devices */
+    $devices = app(DeviceRegistryService::class);
+    $logSpy = Log::spy();
+
+    // A peer that slept: retryable, and the trust it never withdrew stands.
+    expect(lanReceiveReadRefusal(LanSyncException::peerDisconnectedBeforeHandshakeMessage('msg2'), $phone))
+        ->toBe(LanDialOutcome::NotSecured)
+        ->and($devices->isStillConfirmed($userId, 'desktop-peer'))->toBeTrue();
+
+    // The same outcome from a wholly different cause, which is why the line
+    // has to carry the cause.
+    expect(lanReceiveReadRefusal(LanSyncException::peerRevokedThisDevice(), $phone))
+        ->toBe(LanDialOutcome::NotSecured)
+        ->and($devices->isStillConfirmed($userId, 'desktop-peer'))->toBeFalse();
+
+    foreach ([LanSyncException::REASON_DIAL_INCOMPLETE, LanSyncException::REASON_PEER_REVOKED] as $reason) {
+        $logSpy->shouldHaveReceived('info')
+            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'no secure session opened')
+                && ($context['reason'] ?? null) === $reason)
+            ->once();
+    }
+});
+
+// This device's own gate refusing the peer is a verification failure, and it
+// keeps raising rather than being folded into "we could not reach it".
+it('raises the auth-gate refusal instead of reporting it as an unopened session', function (): void {
+    $user = lanReceiveUser('lan-refusal-gate-raises');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    $phone = app(DeviceIdentityService::class)->generateAndPersist($userId, $session);
+
+    expect(fn () => lanReceiveReadRefusal(LanSyncException::peerFailedConfirmedDeviceGate(), $phone))
+        ->toThrow(LanSyncException::class);
+});
 
 it('throws LanSyncException when the peer disconnects before sending the Noise msg2 handshake frame', function (): void {
     $user = lanReceiveUser('lan-handshake-disconnect');
