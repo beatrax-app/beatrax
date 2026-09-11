@@ -1110,6 +1110,36 @@ are named there rather than quietly passing — the three rule tables, which nev
 travel in either direction, and `transaction_splits`, which needs a decision
 about the *set* of legs rather than one row's id.
 
+#### Giving a table an id of its own does not stop SQLite numbering it
+
+Installing a derived or minted id means dropping `AUTOINCREMENT`, and that is
+not the same as taking the number away. An `INTEGER` primary key is still an
+alias for the rowid, so an insert that names no `id` gets `max(id) + 1` — one
+above the largest derived value in the table, with no error and nothing in a
+log. Whether that number means anything depends entirely on what the device
+happened to be holding when the row was written.
+
+Both guards above read the literal `AUTOINCREMENT` out of the DDL, so a table
+that dropped it left the set they walk. Measured on the paired install:
+`known_senders` held `7045951761402201544` and `...545` for Spotify and
+Bol.com, one and two above `paypal.com`'s derived `...543`. Three writers had
+left the id out — the sample dataset, the ICS seeder and the create migration
+— and the derive migration running after the first two had been hiding it,
+which is an accident of file dates rather than a property of those inserts.
+
+`AnInsertNamingNoIdStillGetsANumberArchTest` covers that gap: for every covered
+table whose primary key is a single `INTEGER` column with no `AUTOINCREMENT`,
+every production write must name the id, through `DerivedRowId::for()` or
+`DeviceMintedRowId::mint()`. The rule is proved against a writer under
+`Modules/Sync/tests/Fixtures/DerivedIdWriters/` that leaves the id out — kept
+outside the tree the rule walks, because a probe the rule could reach would
+make the rule pass by being fixed.
+
+The sample dataset matters here beyond the developer console: the Settings
+screen offers it on a store build, so both devices of a pair can populate the
+same table independently, which is exactly the case an id taken from the
+sequence cannot survive.
+
 Both id kinds run past 2<sup>53</sup>, so these ids reach the browser **quoted**
 and come back through `DerivedRowId::fromWire()`.
 `ADerivedIdNeverReachesTheBrowserAsANumberArchTest` covers both, and is
