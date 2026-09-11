@@ -65,8 +65,8 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'why' => 'A concurrent acknowledge from another surface retires the row between the id list and this call.',
         ],
         'Modules/EmailScan/Internal/Jobs/IncrementalScanJob.php' => [
-            'count' => 1,
-            'why' => 'Runs in failed(); an invalid status transition there must not escalate into a hard queue-worker error, and the hourly schedule re-enters.',
+            'count' => 2,
+            'why' => 'One runs in failed(); an invalid status transition there must not escalate into a hard queue-worker error, and the hourly schedule re-enters. The other is a message Graph no longer holds — an absence rather than a loss, so there is nothing to record and no later attempt that could recover it, and the Gmail branch has answered the same 404 the same way since it was written.',
         ],
         'Modules/Forecasting/Internal/Http/Livewire/ScenarioEditorSidebar.php' => [
             'count' => 2,
