@@ -123,6 +123,15 @@ export const emojiActionHold = () => {
             this.shown = false;
         },
 
+        // Alpine removes the element; nothing removes a pending timeout. A row
+        // that leaves its list mid-hold — a morph, a wire:navigate swap — used
+        // to leave both of these running against a scope nobody can see, and
+        // the 450ms one goes on to call place() on a detached tip.
+        destroy() {
+            this.disarm();
+            this.clearFade();
+        },
+
         guard(event) {
             if (! this.swallow) {
                 return;
@@ -154,8 +163,14 @@ export const emojiActionHold = () => {
             // the first measurement can land on a display:none box. Clamping
             // against a width of 0 put the Archive tip 9.6px off a 375px
             // screen, measured.
+            //
+            // Connected, because a detached node measures 0x0 for as long as
+            // the tab is open: retrying on one is a frame callback that can
+            // never reach its own exit and re-queues itself forever.
             if (width === 0 || height === 0) {
-                window.requestAnimationFrame(() => this.place());
+                if (tip.isConnected) {
+                    window.requestAnimationFrame(() => this.place());
+                }
 
                 return;
             }

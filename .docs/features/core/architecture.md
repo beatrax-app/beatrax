@@ -803,9 +803,22 @@ that nothing could ever call. A module raising one must go through
 `toastWithUndo()`: a call site inventing its own param names is invisible
 to the host in exactly the same way.
 
-`x-core::install-hint` has exactly two arms: a `beforeinstallprompt` capture,
+`x-core::install-hint` has exactly two arms: the `beforeinstallprompt` offer,
 which is Chromium-only, and an always-on desktop hint gated on a >=1024px
-media query. An iPhone matches neither, so the card never renders there. The
+media query. An iPhone matches neither, so the card never renders there.
+
+The offer does not reach the card through a listener of its own alone. That
+event is dispatched once per document, so an element Alpine initialises on a
+`wire:navigate` arrival binds for something that has already gone, and the
+install button — gated on `installable` — is then a control nobody can reach.
+`resources/js/app.js` catches it at module scope, before any component exists,
+and holds it on `window.beatraxInstallPrompt`; the card reads that stash in
+`init()` as well as binding its own listener, and takes the listener back off
+the window in `destroy()`. A listener on the window is not collected with the
+element, so one left behind is one more per navigation, each holding a scope
+nobody can see.
+
+The
 component's own docblock, and a comment on the dashboard, both used to promise
 an iOS Safari "Tap Share, then Add to Home Screen" branch; no such branch and
 no copy for one has ever existed. Adding it is a copy job first: both strings

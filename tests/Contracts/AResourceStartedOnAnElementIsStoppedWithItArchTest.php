@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\MarkupSource;
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\RepoTree;
 
 /**
@@ -24,6 +25,75 @@ const RESOURCE_STARTERS = [
     'new MutationObserver(',
     'new ResizeObserver(',
     'new IntersectionObserver(',
+    'window.addEventListener(',
+    'document.addEventListener(',
+];
+
+/**
+ * The modules `resources/js/app.js` imports an Alpine factory from. One file is
+ * one element-scoped component there, so the whole-file question the Blade half
+ * asks of a start tag is the right question to ask of the file.
+ *
+ * `app.js` itself is not among them and cannot be: it also carries the page's
+ * own machinery — the submit delegate, the theme watcher, the wizard's back
+ * gesture — which binds to the document on purpose and has no element to be
+ * stopped with.
+ *
+ * @return array<string, string> name Alpine.data() was given => the module it came from
+ */
+function alpineFactoryModules(): array
+{
+    $entry = RepoTree::root().'/resources/js/app.js';
+
+    if (! is_file($entry)) {
+        return [];
+    }
+
+    $source = (string) file_get_contents($entry);
+    $imported = [];
+
+    foreach (PatternScan::sets('/import\s*\{([^}]*)\}\s*from\s*[\'"]\.\/([A-Za-z0-9_-]+\.js)[\'"]/', $source) as $match) {
+        foreach (explode(',', $match[1]) as $name) {
+            $name = trim($name);
+
+            if ($name !== '') {
+                $imported[$name] = $match[2];
+            }
+        }
+    }
+
+    $factories = [];
+
+    foreach (PatternScan::sets('/\.data\(\s*[\'"`]([A-Za-z0-9_$]+)[\'"`]\s*,\s*([A-Za-z0-9_$]+)\s*\)/', $source) as $match) {
+        if (isset($imported[$match[2]])) {
+            $factories[$match[1]] = $imported[$match[2]];
+        }
+    }
+
+    ksort($factories);
+
+    return $factories;
+}
+
+/**
+ * The same list, plus the two a component arms on itself. A `setTimeout` and a
+ * `requestAnimationFrame` are single-shot, so neither is a resource in a start
+ * tag — but a factory holds them on `this` and re-arms them, and a retry that
+ * re-queues itself is a timer wearing another name.
+ *
+ * @var list<string>
+ */
+const FACTORY_RESOURCE_STARTERS = [
+    'setInterval(',
+    'setTimeout(',
+    'requestAnimationFrame(',
+    'new EventSource(',
+    'new WebSocket(',
+    'new MutationObserver(',
+    'new ResizeObserver(',
+    'new IntersectionObserver(',
+    'window.addEventListener(',
+    'document.addEventListener(',
 ];
 
 /**
@@ -116,10 +186,90 @@ it('stops every timer, stream and observer an element started', function (): voi
         "row leaving a list — and what is left behind still holds \$wire for the\n".
         "component that is no longer on screen. A pairing countdown that outlived\n".
         "its own screen expired a code the confirm step was still using.\n".
-        "This rule reads Blade only. A factory in resources/js registered with\n".
-        "Alpine.data() is not walked, so the same shape there is on the author.\n".
+        "window and document are not inside the element either: a listener bound\n".
+        "to one of them survives the morph, and the event it was bound for may\n".
+        "already have fired by the time a later element binds it again.\n".
+        "The factory modules under resources/js are held to the same rule by the\n".
+        "test below.\n".
         "Offenders:\n  ".implode("\n  ", $offenders),
     );
+});
+
+// The other half of the same claim. An Alpine factory is an element-scoped
+// component written in JavaScript rather than in an attribute, and it is torn
+// down by the same destroy() call — so a timer it holds on `this`, or a listener
+// it puts on the window, outlives its element in exactly the same way.
+//
+// The install hint is why this half exists. It bound beforeinstallprompt from
+// its own x-data and took it back off nowhere, which the rule above could not
+// see because addEventListener was not on the starter list.
+it('stops what an Alpine factory started, in the modules the entry script registers', function (): void {
+    $factories = alpineFactoryModules();
+
+    expect(count($factories))->toBeGreaterThan(
+        3,
+        'Only '.count($factories).' Alpine factories were resolved out of resources/js/app.js, so this rule read almost nothing. '
+        .'An import or a registration was rewritten into a shape the resolver does not recognise.'
+    );
+
+    $starting = 0;
+    $offenders = [];
+
+    foreach (array_unique($factories) as $module) {
+        $path = RepoTree::root().'/resources/js/'.$module;
+
+        expect(is_file($path))->toBeTrue('resources/js/'.$module.' is registered with Alpine.data() and is not on disk.');
+
+        $source = (string) file_get_contents($path);
+
+        $started = array_values(array_filter(
+            FACTORY_RESOURCE_STARTERS,
+            static fn (string $starter): bool => str_contains($source, $starter),
+        ));
+
+        if ($started === []) {
+            continue;
+        }
+
+        $starting++;
+
+        if (str_contains($source, 'destroy(')) {
+            continue;
+        }
+
+        $offenders[] = 'resources/js/'.$module.' — '.implode(', ', $started);
+    }
+
+    expect($starting)->toBeGreaterThan(
+        0,
+        'No factory module starts a timer, a frame callback, a stream or a listener at all, so this rule proved nothing.'
+    );
+
+    sort($offenders);
+
+    expect($offenders)->toBe(
+        [],
+        "This factory starts something its element does not own and declares no\n".
+        "destroy(). Alpine calls destroy() when the element goes and nothing else\n".
+        "does: a wire:navigate swap destroys the whole body, and a morph takes a\n".
+        "row out of a list mid-gesture. What is left runs against a scope nobody\n".
+        "can see — a debounce asking a wire:id the new page does not answer to, a\n".
+        "hold timer measuring a detached node, a window listener holding an offer\n".
+        "for a component that is gone.\n".
+        "Offenders:\n  ".implode("\n  ", $offenders),
+    );
+});
+
+it('resolves the factory modules out of the entry script, and not the entry script itself', function (): void {
+    $factories = alpineFactoryModules();
+
+    expect($factories)->toHaveKey('emojiActionHold')
+        ->and($factories['emojiActionHold'])->toBe('emoji-action-hold.js', 'the registered name is resolved back to the module the factory was imported from');
+
+    expect($factories)->toHaveKey('palette')
+        ->and($factories['palette'])->toBe('palette.js');
+
+    expect(array_values($factories))->not->toContain('app.js', 'a factory declared in the entry script is out of scope: that file also carries the page-level machinery, which binds to the document on purpose');
 });
 
 // The tree satisfies the rule, so it reports on what it cannot find and the
@@ -156,4 +306,22 @@ it('tells an element that stops what it started from one that does not', functio
 
     $stream = resourceStartedOffendersIn("<pre x-data=\"{ init() { new EventSource('/s') } }\">x</pre>\n");
     expect($stream['offenders'])->toBe(['1 — new EventSource(']);
+
+    $bound = resourceStartedOffendersIn(
+        "<div x-data=\"{ init() { window.addEventListener('beforeinstallprompt', (e) => { this.e = e }) } }\">x</div>\n"
+    );
+    expect($bound['starting'])->toBe(1)
+        ->and($bound['offenders'])->toBe(['1 — window.addEventListener('], 'window outlives the element, so the listener has to come back off it');
+
+    $unbound = resourceStartedOffendersIn(
+        "<div x-data=\"{ h: null, init() { this.h = () => 1; document.addEventListener('native-event', this.h) },"
+        ." destroy() { document.removeEventListener('native-event', this.h) } }\">x</div>\n"
+    );
+    expect($unbound['starting'])->toBe(1)
+        ->and($unbound['offenders'])->toBe([]);
+
+    $own = resourceStartedOffendersIn(
+        "<div x-data=\"{ init() { this.\$el.addEventListener('click', () => 1) } }\">x</div>\n"
+    );
+    expect($own['starting'])->toBe(0, 'a listener on a node inside the element is collected with the element');
 });

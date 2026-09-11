@@ -6,7 +6,11 @@
     Settings → General row ("Install as app"). Use the same component in both.
 
     Behavior — and there are exactly two arms, which is the whole of it:
-    - Captures beforeinstallprompt on phones/Chromium to show a native install CTA.
+    - Takes the beforeinstallprompt offer on phones/Chromium to show a native
+      install CTA. The offer is read from the stash app.js keeps, not only from
+      a listener bound here: the event fires once per document, so a component
+      Alpine initialises on a wire:navigate arrival would otherwise be waiting
+      for something that has already happened.
     - Always shown on desktop as a feature-discovery hint ("Also want to see your
       data on your phone?") pointing the user to open Beatrax on their phone.
     - Dismissable but returns (standing hint, not one-time dismissed forever).
@@ -29,6 +33,7 @@
         shown: false,
         installable: false,
         deferredPrompt: null,
+        offer: null,
         init() {
             // Check localStorage persistence before showing.
             // If the user dismissed within the last 30 days, stay hidden.
@@ -38,16 +43,33 @@
                     return;
                 }
             } catch (e) {}
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                this.deferredPrompt = e;
-                this.installable = true;
-                this.shown = true;
-            });
+            // The stash first, because beforeinstallprompt fires once per
+            // document: an element Alpine initialises on a wire:navigate
+            // arrival is binding for an event that has already gone, and
+            // app.js caught it at module scope for exactly this read.
+            this.take(window.beatraxInstallPrompt);
+            this.offer = (e) => this.take(e);
+            window.addEventListener('beforeinstallprompt', this.offer);
             // Always show on desktop as a feature discovery hint
             if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(min-width: 1024px)').matches) {
                 this.shown = true;
             }
+        },
+        // window outlives this element, so the listener has to come back off
+        // it: a morph or a navigation leaves every one that does not behind,
+        // each holding a scope nobody can see.
+        destroy() {
+            if (this.offer) {
+                window.removeEventListener('beforeinstallprompt', this.offer);
+                this.offer = null;
+            }
+        },
+        take(prompt) {
+            if (! prompt) return;
+            if (typeof prompt.preventDefault === 'function') prompt.preventDefault();
+            this.deferredPrompt = prompt;
+            this.installable = true;
+            this.shown = true;
         },
         dismiss() {
             this.shown = false;
@@ -57,7 +79,11 @@
             if (!this.deferredPrompt) return;
             this.deferredPrompt.prompt();
             await this.deferredPrompt.userChoice;
+            // The stash goes with it. A prompt() may only be answered once, so
+            // a copy left on the window would hand the next screen an offer
+            // the browser has already spent.
             this.deferredPrompt = null;
+            window.beatraxInstallPrompt = null;
             this.shown = false;
         },
     }"
