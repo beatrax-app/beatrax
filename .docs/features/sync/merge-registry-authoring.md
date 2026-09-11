@@ -30,13 +30,14 @@ paste fails the build — and reads as correct to everyone who does not run it.
 An invented name cannot be pasted in by accident, and has no migration to drift
 from.
 
-**Strategies.** The `MergeStrategy` enum names three: `Lww` (last writer wins,
+**Strategies.** The `MergeStrategy` enum names four: `Lww` (last writer wins,
 per field), `GCounter` (a grow-only counter that sums rather than overwrites —
-`merchant_memories.occurrence_count` is the one that needs it), and `OrSet` (an
-observed-remove set, for a `{v, tag}`-shaped collection). **Lww is the default
-and is never written out**: a field entry carries a `'strategy'` key only where
-it is one of the other two. An unregistered table or field falls back to Lww
-the same way.
+`merchant_memories.occurrence_count` is the one that needs it), `OrSet` (an
+observed-remove set, for a `{v, tag}`-shaped collection), and `JsonKeyUnion` (a
+JSON object whose KEYS are independent facts, merged key by key). **Lww is the
+default and is never written out**: a field entry carries a `'strategy'` key
+only where it is one of the other three. An unregistered table or field falls
+back to Lww the same way.
 
 **`_delete_wins`** decides the tie: when a tombstone and an edit carry the same
 HLC, does the row die? Default true.
@@ -115,6 +116,56 @@ NOT-NULL-without-default set, in both directions; the per-table files
 the exact expected list where the column set carries a specific trap. A typo
 here is a create that fails only on a peer, only during catch-up, and only for
 that one table.
+
+## When a column is really several columns
+
+A JSON column whose keys are independent facts is not one field, whatever the
+schema says. Under `Lww` the whole blob merges as a unit, so a device that
+writes one key overwrites every key the other device wrote — and because each
+writer read-modify-writes the whole map, that is every writer. Absence is
+usually not neutral either: a key nobody has written falls back to a default,
+so losing a key does not leave that fact untouched, it resets it.
+
+`JsonKeyUnion` is the answer, and it is currently declared on
+`transactions.field_provenance`, `counterparties.metadata` and
+`users.community_settings`. Two preconditions have to hold before it is safe,
+and each one has already bitten:
+
+**1. No writer may remove a key.** A key union cannot express an absence: an
+absent key reads to the peer as "this device never held it", so the peer's own
+copy survives. `LabelCounterparty` cleared the default-name flag with `unset()`,
+which under a key union would have handed the reader's own wording back as a
+placeholder. Clear to a **present null** instead — a null value is carried, an
+absent key is not.
+
+**2. The op has to carry a map, not the stored JSON text.** A writer that reads
+the column back through the query builder — which `WriteUserPreference` and
+`OpLogBackfiller::captureUserSettings()` both do deliberately, so a JSON column
+travels as its stored text and a cast column as its stored scalar — hands over a
+string. `JsonKeyUnionStrategy::decode()` refuses a non-object, so every op on
+the column quarantines instead of merging. `OpLogWriter::writeSet()` decodes a
+string on any column the registry declares a key union, which covers both
+producers and the next one; a value that is not an object is passed through
+untouched so the strategy's own refusal is what reports it.
+
+Whole-value `Lww` round-trips that string correctly, which is why the wire shape
+only becomes a problem the moment the strategy changes.
+
+The residual is worth knowing: because every writer restates the whole map,
+per-key LWW still loses a key when the second writer's restated map is stale for
+a key the first device just changed. It is strictly better than losing keys the
+device never held, but it is not a full per-key CRDT. A list nested **inside**
+the map (`counterparties.metadata.merged_from`) is not protected at all — that
+needs an `OrSet` on its own column.
+
+### A derived column is not a mergeable one
+
+Where a column can be computed from other columns on the same row, declaring a
+strategy for it does not help: the copy and its sources are separate fields with
+separate HLC ticks, so any strategy still lets them disagree. **The reader must
+re-derive**, and the stored column is an index hint. `ScenarioSeriesResolver`
+and `RecurringSeriesDtoMapper` are the accepted templates. See
+[architecture.md](architecture.md) — *One announcement is not one op*.
 
 ## Append-only ledgers declare no strategy at all
 
