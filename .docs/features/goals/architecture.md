@@ -21,7 +21,8 @@ on recent contribution behaviour.
   `goal_contributions` pivot: `attribute()` and `detach()`.
 - **Public/Services/GoalContributionQuery** — the picker list
   (`attributableGoals()`) and the per-transaction attribution list
-  (`forTransaction()`) the Ledger transaction detail screen renders.
+  (`forTransaction()`) the Ledger transaction detail screen renders. Both leave
+  out goals an active pot funds, for the same reason.
 - **Public/Dto/GoalProgressRow** — one goal's progress row.
 - **Public/Dto/GoalAttributionRow** — one (goal id, goal name) pair for the
   attribution picker.
@@ -71,13 +72,23 @@ own statement that the money funds the goal, so a backdated one is not silently
 dropped.
 
 A goal with an active linked pot takes its whole figure from that pot, so an
-attribution to one would be discarded on the next render. It is refused at both
-ends rather than accepted and dropped: `attributableGoals()` leaves those goals
-out of the picker, and `GoalContributionWriter::attribute()` returns false for
-one, because the picker is a page and the writer is reachable from the browser.
-Archiving the pot puts the goal back in the picker. The discarding version
-shipped: EUR3.850,00 attributed, a bar that did not move, and a transaction
-screen that listed the attribution as a fact.
+attribution to one would be discarded on the next render. It is refused rather
+than accepted and dropped: `attributableGoals()` leaves those goals out of the
+picker, and `GoalContributionWriter::attribute()` returns false for one, because
+the picker is a page and the writer is reachable from the browser. The discarding
+version shipped: EUR3.850,00 attributed, a bar that did not move, and a
+transaction screen that listed the attribution as a fact.
+
+Refusing the write is not the whole rule, because the link can arrive **after**
+the attribution: a goal funded by attributions can be given a pot on the Goals
+or the Pots page, and nothing about that link removes the rows already there —
+nor should it, since archiving the pot puts the goal back in the picker and those
+attributions count again. So `forTransaction()` leaves out any goal an active pot
+funds as well. That is the third end, and it is the one the reader sees: without
+it the transaction screen kept the chip, with its remove button, for a claim the
+bar had stopped reading. Two devices reach the same state with no write to
+refuse — one attributes while the other links — so the read has to hold the rule
+whatever the writes did.
 
 `goal_contributions` is append-only and holds no amount of its own: the funded
 figure is always read back through the joined transaction, so an edited or

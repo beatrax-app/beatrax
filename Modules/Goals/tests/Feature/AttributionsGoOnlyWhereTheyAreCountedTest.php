@@ -130,6 +130,43 @@ it('still accepts an attribution to a goal no pot funds', function (): void {
     expect($row->contributedMinor)->toBe(10000);
 });
 
+it('stops listing an attribution once a pot takes the goal over', function (): void {
+    $transaction = ($this->credit)(10000, 3);
+
+    expect(app(GoalContributionWriter::class)->attribute($this->user, $this->unfunded->id, $transaction->id))
+        ->toBeTrue();
+    expect(app(GoalContributionQuery::class)->forTransaction($this->user, $transaction->id))
+        ->toHaveCount(1);
+
+    $later = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => null,
+        'category_id' => null,
+    ]);
+
+    app(PotWriter::class)->linkGoal($this->user, $later->id, $this->unfunded->id);
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+    $row = array_values(array_filter($rows, fn ($r) => $r->id === $this->unfunded->id))[0];
+
+    expect($row->contributedMinor)->toBe(0);
+    expect(app(GoalContributionQuery::class)->forTransaction($this->user, $transaction->id))->toBe([]);
+});
+
+it('lists an attribution to a goal no pot funds', function (): void {
+    $transaction = ($this->credit)(10000, 4);
+
+    app(GoalContributionWriter::class)->attribute($this->user, $this->unfunded->id, $transaction->id);
+
+    $names = array_map(
+        static fn (GoalAttributionRow $row): string => $row->goalName,
+        app(GoalContributionQuery::class)->forTransaction($this->user, $transaction->id),
+    );
+
+    expect($names)->toBe(['Winterbanden']);
+});
+
 it('offers the goal again once its pot is archived', function (): void {
     app(PotWriter::class)->archive($this->user, $this->pot->id);
 
