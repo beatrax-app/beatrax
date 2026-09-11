@@ -212,6 +212,69 @@ it('follows one hop to a helper that seals the value', function (): void {
         ->and(sensitiveColumnGuardProbe($unsealed))->toBe(['Probe.php::note::write']);
 });
 
+// The shape the demo seeders are written in, and the shape the walk could
+// not see at all: a row literal handed to a private helper whose own last act
+// is encryptAttrs(). The seal is on the callee, so clearing the call site has
+// to read the callee — and NOT clear it when the callee never seals.
+it('follows one hop to a callee that seals the whole array it is handed', function (): void {
+    $sealed = <<<'PHP'
+        <?php
+
+        final class ScratchProbe
+        {
+            public function seed(): void
+            {
+                $this->insertTransaction(['description' => 'BOL.COM B.V. UTRECHT', 'amountMinor' => -2495]);
+            }
+
+            private function insertTransaction(array $row): int
+            {
+                $attrs = $this->codec->encryptAttrs('transactions', $row, $this->userId, $this->session);
+
+                return Transaction::query()->insertOrIgnore($attrs);
+            }
+        }
+        PHP;
+
+    $unsealed = str_replace('$this->codec->encryptAttrs(\'transactions\', $row, $this->userId, $this->session)', '$row', $sealed);
+
+    expect(sensitiveColumnGuardProbe($sealed))->toBe([])
+        ->and(sensitiveColumnGuardProbe($unsealed))->toBe(['Probe.php::description::write']);
+});
+
+// One hop and one receiver. A same-named method on somebody else's object is
+// not this file's to read, and clearing on the name alone would hand every
+// write an exemption any unrelated helper in the file could mint.
+it('does not follow a callee that is not this object', function (): void {
+    $source = <<<'PHP'
+        <?php
+
+        final class ScratchProbe
+        {
+            public function seed(): void
+            {
+                $this->rows->insertTransaction(['description' => 'BOL.COM B.V. UTRECHT']);
+            }
+
+            private function insertTransaction(array $row): int
+            {
+                return Transaction::query()->insertOrIgnore($this->codec->encryptAttrs('transactions', $row, $this->userId, $this->session));
+            }
+        }
+        PHP;
+
+    expect(sensitiveColumnGuardProbe($source))->toBe(['Probe.php::description::write']);
+});
+
+// Why the walk was opened. Not one file of the demo dataset was read by this
+// guard, and the dataset is the shipped sample-data control rather than a
+// fixture — it writes the same tables, for a reader whose ledger is sealed.
+it('reads the demo seeders, which ship behind a control every reader has', function (): void {
+    $files = SensitiveColumnScan::productionFiles(sensitiveColumnGuardRoot());
+
+    expect($files)->toHaveKey(sensitiveColumnGuardRoot().'Modules/Ledger/Database/Seeders/Demo/DemoTransactionsSeeder.php');
+});
+
 it('sees a write verb it has never been told the name of', function (string $call, array $expected): void {
     expect(sensitiveColumnGuardProbe("<?php\n".$call))->toBe($expected);
 })->with([
@@ -362,7 +425,8 @@ it('keeps the sealed list and the knowingly-plaintext list disjoint', function (
 // a knowingly-plaintext column left its exemptions silently covering the most
 // dangerous predicates in the codebase. Nothing is skipped now, so promoting
 // the column turns every call that rests on it red, and the answer is the list
-// of them — eleven files were written down, and there are twenty call sites.
+// of them — eleven files were written down, and there are twenty-one call
+// sites now that the walk reads the demo seeders it used to skip whole.
 it('turns every accounts.iban call red the moment that column joins the registry', function (): void {
     $promoted = [...SensitiveFieldRegistry::columns(), 'accounts.iban'];
 
@@ -389,6 +453,7 @@ it('turns every accounts.iban call red the moment that column joins the registry
         'Modules/Import/Public/Actions/EnsurePaypalAccountAction.php::iban::write',
         'Modules/Import/Public/Services/AccountNamer.php::iban::where',
         'Modules/Import/Public/Services/EloquentAccountResolver.php::iban::where',
+        'Modules/Ledger/Database/Seeders/Demo/DemoAccountsSeeder.php::iban::write',
         'Modules/Migration/Internal/Pipeline/PromoteStagingToDomain.php::iban::write',
         'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectBankStep.php::iban::where',
         'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectBankStep.php::iban::write',

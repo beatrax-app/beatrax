@@ -392,12 +392,13 @@ page load of an enrolled device decrypt a key file to learn there is nothing to 
 of the three says there may be work does the pass ask `SensitiveColumnCodec::canSeal()`, and a
 request that arrives while the app is locked stops there having written nothing.
 
-The re-seal is gated on a **digest of `PreMigrationSnapshot::PROJECTION_COLUMNS`** rather than a
-boolean, stamped in `sync_encryption_state.resealed_columns_digest`. A boolean would cover the
-install that has residue today and nothing else; the digest also re-sweeps when a release
-registers a new column on an install that is **already** enabled, which is the one door
-plaintext can still arrive through and the exact shape of the `notifications` bug above.
-`finalizeMigration()` stamps it, because that pass has just swept every column it covers.
+The re-seal is gated on two marks of one pass, read off the row above: a **digest of
+`PreMigrationSnapshot::PROJECTION_COLUMNS`** in `sync_encryption_state.resealed_columns_digest`,
+and the time it ran in `resealed_columns_at`. The digest re-sweeps when a release registers a
+new column on an install that is already enabled — the shape of the `notifications` bug above.
+The time re-sweeps every `PlaintextResidueSweep::RESWEEP_AFTER_HOURS`. `finalizeMigration()`
+stamps both, because that pass has just swept every column it covers. Why it takes two marks
+rather than one is [below](#a-digest-that-was-asked-to-answer-two-questions).
 
 The replay is gated on the watermark `history_reprojected_at`, compared against
 `op_log_quarantine.created_at` for the two reasons a key can undo —
@@ -412,6 +413,56 @@ replay of the rows the quarantine names — not of the log. It is paid in `termi
 page the reader is looking at is already rendered. A device holding entries under an epoch it
 will never receive costs the two reads and nothing more, on every request, until the keyring
 changes.
+
+### A digest that was asked to answer two questions
+
+For most of this seam's life the re-seal had one gate, and the gate was the digest alone:
+
+```php
+$needsReseal = $this->markers->resealedColumnsDigest($userId) !== $digest;
+```
+
+`columnsDigest()` hashes the **column list**, nothing about the data, and `finalizeMigration()`
+stamps that same hash at enrolment. So on every normally enrolled install the two were equal
+from the moment encryption was switched on, and stayed equal until somebody edited
+`PROJECTION_COLUMNS`. The sweep whose own docblock says it exists for "rows a background writer
+left in the clear" ran **zero times** after enrolment. Measured: a `notifications` row inserted
+raw after enrolment was still readable after two further `recover()` passes, and only the three
+test files that null the column by hand ever made the pass run — no production code ever
+cleared it.
+
+The mistake was not the digest. It was letting "I have swept for the current column list" mean
+"there can be no residue". Those are different questions and only one of them has an answer the
+registry can give.
+
+**Why the second question is time, and not something sharper.** The residue class this is a net
+for is written by code that went around every seam at once — `Transaction::query()->insertOrIgnore()`
+bypasses the codec, the model events and the op log alike, which is exactly what the demo
+seeders did. A writer like that raises no signal for a cheap gate to read:
+
+- **A mark the writer raises when it could not seal** is the pattern `deferred_op_captures` and
+  `DeferredNotificationPasses` already implement, and it is the right one for a writer that
+  *asks*. A writer that never asked the codec cannot answer it. The existing rejection of
+  "after a detected refusal" is the same point one step on: a refusal means nothing was written.
+- **A bounded probe over rows written since the last pass** needs an ordering that means "written
+  after". This tree has neither — ids on these tables are derived rather than autoincrement, and
+  the demo seeders and every importer write `created_at`/`updated_at` backdated on purpose.
+- **A shape test in SQL** cannot be sound: `looksLikeCiphertext()` is deliberately conservative
+  because a real bank description can decode as base64, and the negation would still have to
+  scan the rows it is testing.
+
+So the gate is `resealed_columns_at`, and the cost is the thing to state honestly. Having nothing
+to do is unchanged at **8 queries, none of them against a swept table** — the two marks come off
+one row, not two. Having something to do is a full sweep, measured at **9.7 ms over 500 rows,
+100.5 ms over 5,000 and 542.9 ms over 20,000** (`notifications`, four sealed columns each, so
+80,000 values in the last), paid in `terminate()` after the response has gone. At 24 hours that
+is under a second a day on a ledger far larger than any this app has seen; at one hour it would
+be twenty-four times that for a **build** defect, which persists until a new build ships and is
+therefore not made less harmful by being found twenty-three hours sooner.
+
+An install enrolled by a build that stamped only the digest has `resealed_columns_at` null, and
+null is overdue — so the upgrade sweeps once on the first authenticated request that holds a key,
+and stamps.
 
 ### The re-seal writes through the codec, not around it
 
@@ -605,7 +656,7 @@ None of these raise; they just quietly stop being right.
 
 `SensitiveColumnPredicateGuardTest` is a source scan standing in for the type system that
 would otherwise have caught it. It walks every production file under `Modules/` and `app/` —
-skipping `tests/`, `Database/` and `Resources/` — and looks for each bare column name from
+skipping `tests/`, `Database/Migrations/` and `Resources/` — and looks for each bare column name from
 `SensitiveFieldRegistry::columns()` appearing in one of the shapes that only makes sense
 against plaintext: a `where`/`whereIn`/`orWhere`/`whereLike`, an `orderBy`/`groupBy`, a join
 predicate, a `whereRaw`/`havingRaw`/`orderByRaw`, a `json_decode` of the column read off a
@@ -623,13 +674,40 @@ is asked its own `getTable()` rather than having its name pluralised by hand. A 
 names a table whose column of this name the registry does not seal is cleared, and the
 clearance says so: *names `accounts.iban`, which the registry does not seal*. Promote that
 column to `columns()` and every one of those calls goes red in the same run — which is what
-the last test in the file asserts, naming all twenty of them.
+the last test in the file asserts, naming all twenty-one of them.
 
 **Is this write coded?** A write is cleared when the value bound to that key routes through
 `encryptValue`, when the array holding it is an argument to `encryptAttrs('<table>', …)` for
-the table that seals it, or when the value comes from a method **in the same file** whose body
-seals it. One hop, and the callee's body is bounded at its own closing brace, so a codec call
-somewhere further down the file cannot clear a write that has none of its own.
+the table that seals it, when the value comes from a method **in the same file** whose body
+seals it, or when the whole array is handed to `$this->someMethod(…)` whose body seals it with
+`encryptAttrs('<table>', …)`. One hop in each case, and the callee's body is bounded at its own
+closing brace, so a codec call somewhere further down the file cannot clear a write that has
+none of its own. The receiver has to be `$this`: a same-named method on another object is not
+this file's to read, and clearing on the name alone would let any unrelated helper in the file
+mint an exemption.
+
+That last clearance is what the demo seeders need. `DemoTransactionsSeeder` hands 23 plain
+`'description' => …` keys to its own `insertTransaction()`, whose last act before the insert is
+`encryptAttrs('transactions', …)` — correct code the scan reported as 23 offenders until it
+read the callee. Its value is in what it does **not** clear: the same 23 calls against the
+seeder as it stood before [#628](#the-sample-dataset), where `insertTransaction()` did not seal,
+are 24 offenders, and `DemoCounterpartiesSeeder` is 3 more.
+
+### The walk that skipped every seeder in the tree
+
+`Database/` was excluded whole. Every demo seeder lives under `Modules/*/Database/Seeders/Demo/`,
+so **not one file of the sample dataset was ever scanned** — which is the larger part of why the
+341 readable values below went unnoticed. The dataset is not a fixture: it ships behind
+`SampleDataCard`, a control every reader has on every build, and it writes the same tables
+production writes. Seeders and factories are in the walk now.
+
+`Database/Migrations/` stays out, and not because it is safe. Opening it reports 5 `whereRaw`
+sites over sealed columns in two shipped Search backfill migrations, each asking
+`coalesce(<sealed column>, '') <> ''` — a question ciphertext answers the same way plaintext
+does, so they are probably right, but "probably" is not what an allowlist entry may rest on
+(its reason has to name a column `knowinglyPlaintext()` records, and these cannot). A shipped
+migration also may not be edited. That is a decision for whoever owns those two files, and it
+is recorded here rather than settled by an exemption.
 
 A write is found by its verb matched as a *word part* — `insert`, `update`, `upsert`,
 `create`, `fill`, `save` anywhere in the method name. `->insert(` alone could not see

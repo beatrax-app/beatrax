@@ -6,6 +6,7 @@ namespace Modules\Core\Public\Services;
 
 use Illuminate\Contracts\Session\Session;
 use Modules\Core\Internal\Encryption\PlaintextResidueSweep;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexRepairContract;
 use Modules\Sync\Public\Services\EncryptionRecoveryMarkers;
 use Modules\Sync\Public\Services\HistoryReprojector;
@@ -22,6 +23,7 @@ final readonly class SealedLedgerRecovery
         private HistoryReprojector $reprojector,
         private EncryptionRecoveryMarkers $markers,
         private PlaintextResidueSweep $sweep,
+        private Clock $clock,
         private LoggerInterface $log,
         // Nullable for the same reason DoctorCommand's probe is: a build
         // without the Search module registers no implementation, and the
@@ -49,7 +51,13 @@ final readonly class SealedLedgerRecovery
         $lastPass = $this->markers->reprojectedPassIdentity($userId);
         $since = $this->markers->historyReprojectedAt($userId);
 
-        $needsReseal = $this->markers->resealedColumnsDigest($userId) !== $digest;
+        // The registry question and the residue question, off one row. The
+        // digest says which columns the last pass could reach; it never said
+        // none had been written in the clear since, and a writer that goes
+        // around the codec announces nothing else for a gate to read.
+        $reseal = $this->markers->resealedColumns($userId);
+        $needsReseal = $reseal['digest'] !== $digest
+            || PlaintextResidueSweep::sweepIsOverdue($reseal['at'], $this->clock->now());
         // Asked here rather than after the gate below: an index body a keyless
         // drain emptied is owed work with no quarantine row and no keyring
         // move behind it, so neither of the two questions above finds it.

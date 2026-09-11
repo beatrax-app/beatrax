@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
+use Modules\Core\Internal\Encryption\PlaintextResidueSweep;
+use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SealedLedgerRecovery;
@@ -161,4 +164,95 @@ it('does not touch the row when the session holds no key', function (): void {
     app(SealedLedgerRecovery::class)->recover((int) $user->id, $worker);
 
     expect(residueRow($user, str_repeat('d', 64))->title)->toBe(RESIDUE_TITLE);
+});
+
+// A pass that swept shows up here whatever it found, because the sweep reads
+// every table it covers. The gate in front of it is the subject: an install
+// with nothing to do must not be reading rows.
+/**
+ * @return list<string>
+ */
+function residueQueriesAgainstSweptTables(Closure $pass): array
+{
+    $seen = [];
+    $tables = array_keys(PreMigrationSnapshot::PROJECTION_COLUMNS);
+
+    app(DatabaseManager::class)->listen(function (QueryExecuted $query) use (&$seen, $tables): void {
+        foreach ($tables as $table) {
+            if (str_contains($query->sql, '"'.$table.'"')) {
+                $seen[] = $query->sql;
+            }
+        }
+    });
+
+    $pass();
+
+    return $seen;
+}
+
+// The defect this file was extended for. The enable-time pass stamps the
+// coverage digest, so on a normally enrolled install the digest gate is equal
+// from that moment and never reopens — a writer that goes around the codec
+// afterwards leaves a value no later pass ever looks at.
+/**
+ * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#a-digest-that-was-asked-to-answer-two-questions
+ */
+it('sweeps again on its own, with no registry change to announce the residue', function (): void {
+    $user = residueUser();
+    $session = residueEnrol($user);
+    residueWriteInTheClear($user, str_repeat('e', 64));
+
+    /** @var SealedLedgerRecovery $recovery */
+    $recovery = app(SealedLedgerRecovery::class);
+    $recovery->recover((int) $user->id, $session);
+    $recovery->recover((int) $user->id, $session);
+
+    $this->travel(PlaintextResidueSweep::RESWEEP_AFTER_HOURS + 1)->hours();
+    $recovery->recover((int) $user->id, $session);
+
+    $row = residueRow($user, str_repeat('e', 64));
+    expect($row->title)->not->toBe(RESIDUE_TITLE);
+
+    /** @var SensitiveColumnCodec $codec */
+    $codec = app(SensitiveColumnCodec::class);
+    expect($codec->decryptValue('notifications', 'title', (string) $row->title, (int) $user->id, $session))
+        ->toBe(['value' => RESIDUE_TITLE, 'decrypted' => true]);
+});
+
+// The other half of the same change, and it has to pass before it as well as
+// after: closing a silent gap by making every request scan the ledger would be
+// a silent cost in its place.
+it('reads no row of a swept table on a clean enrolled install', function (): void {
+    $user = residueUser();
+    $session = residueEnrol($user);
+
+    /** @var SealedLedgerRecovery $recovery */
+    $recovery = app(SealedLedgerRecovery::class);
+
+    $seen = residueQueriesAgainstSweptTables(function () use ($recovery, $user, $session): void {
+        $recovery->recover((int) $user->id, $session);
+        $recovery->recover((int) $user->id, $session);
+    });
+
+    expect($seen)->toBe([]);
+});
+
+// A pass that swept and did not stamp would sweep again on the next request,
+// which is the recurring full scan the digest gate was built to stop.
+it('stamps the pass it just ran, so the window opens once and not per request', function (): void {
+    $user = residueUser();
+    $session = residueEnrol($user);
+    residueWriteInTheClear($user, str_repeat('f', 64));
+
+    /** @var SealedLedgerRecovery $recovery */
+    $recovery = app(SealedLedgerRecovery::class);
+
+    $this->travel(PlaintextResidueSweep::RESWEEP_AFTER_HOURS + 1)->hours();
+    $recovery->recover((int) $user->id, $session);
+
+    $seen = residueQueriesAgainstSweptTables(function () use ($recovery, $user, $session): void {
+        $recovery->recover((int) $user->id, $session);
+    });
+
+    expect($seen)->toBe([]);
 });
