@@ -22,11 +22,11 @@ uses(RefreshDatabase::class);
 // instead. Compared with toBe() in both directions, so an entry that stops
 // being needed fails as loudly as a reference that stops being translated.
 const IDS_THAT_NAME_NO_COVERED_ROW = [
-    'categories.parent_id' => 'a category in this same table, which insertionOrder() writes before its children and which localTwinOf() reconciles by slug',
+    'categories.parent_id' => 'a category in this same table, excluded from parentColumns() because no insertion order satisfies a self-reference; SelfReferenceDeferral resolves it through the alias map instead',
     'envelope_moves.move_group_id' => 'the uuid the two legs of one move share, minted once and never an id of a row',
     'migration_source_map.beatrax_id' => 'a row in whichever table source_entity_type names, so no single target can be declared for it -- it is the one reference here that is still untranslated',
     'migration_source_map.source_external_id' => "the source product's own identifier for the thing, which names nothing in this database",
-    'transactions.pair_transaction_id' => 'the other leg, in this same table; SelfReferenceDeferral owns it and ClearHalfPairsOnMergedRows clears a pair that came apart',
+    'transactions.pair_transaction_id' => 'the other leg, in this same table; SelfReferenceDeferral owns it and resolves it through the alias map, and ClearHalfPairsOnMergedRows clears a pair that came apart',
 ];
 
 /**

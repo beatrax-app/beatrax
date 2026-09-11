@@ -30,12 +30,13 @@ final class SelfReferenceDeferral
     // and the oldest have had the most chances already.
     private const int MAX_PENDING = 10000;
 
-    /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> */
+    /** @var list<array{table: string, pk: int|string, deviceId: string, values: array<string, mixed>}> */
     private array $pending = [];
 
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly RowOwnership $ownership,
+        private readonly PeerRowAliases $aliases,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -77,7 +78,7 @@ final class SelfReferenceDeferral
     // there cost a first sync every transfer pair whose partner sat further
     // down the log — the link was never retried once the partner landed.
     /**
-     * @param  list<array{table: string, pk: int|string, values: array<string, mixed>}>  $deferred
+     * @param  list<array{table: string, pk: int|string, deviceId: string, values: array<string, mixed>}>  $deferred
      */
     public function apply(array $deferred, int $userId): void
     {
@@ -86,7 +87,13 @@ final class SelfReferenceDeferral
         $stillWaiting = [];
 
         foreach ($this->pending as $row) {
-            $resolvable = $this->resolvableTargets($row['table'], $row['values'], $userId);
+            // Translated here and not at extract() time: the partner has not
+            // landed yet then, so there is no alias to read and the peer's id
+            // would be frozen into the carry. The carry keeps the peer's id
+            // and every round asks the map again.
+            $here = $this->localTargets($row['table'], $row['deviceId'], $row['values'], $userId);
+
+            $resolvable = $this->resolvableTargets($row['table'], $here, $userId);
 
             if ($resolvable !== []) {
                 $this->write($row['table'], $row['pk'], $resolvable, $userId);
@@ -95,11 +102,32 @@ final class SelfReferenceDeferral
             $waiting = array_diff_key($row['values'], $resolvable);
 
             if ($waiting !== []) {
-                $stillWaiting[] = ['table' => $row['table'], 'pk' => $row['pk'], 'values' => $waiting];
+                $stillWaiting[] = ['table' => $row['table'], 'pk' => $row['pk'], 'deviceId' => $row['deviceId'], 'values' => $waiting];
             }
         }
 
         $this->pending = $stillWaiting;
+    }
+
+    // The one foreign key PeerRowAliases::translate() does not rewrite. It walks
+    // parentColumns(), which drops a self-reference because dependencies() reads
+    // the same map and no insertion order satisfies a pair — so a peer's id for
+    // a partner reaches here untranslated, and is asked of the map column by column.
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function localTargets(string $table, string $deviceId, array $values, int $userId): array
+    {
+        $translated = [];
+
+        foreach ($values as $column => $target) {
+            $translated[$column] = is_int($target) || is_string($target)
+                ? $this->aliases->resolvePk($table, $deviceId, $target, $userId)
+                : $target;
+        }
+
+        return $translated;
     }
 
     // A backfill spanning several sync sessions gets a fresh instance for each
@@ -134,7 +162,7 @@ final class SelfReferenceDeferral
                 ->where('field', $column)
                 ->whereNotNull('value')
                 ->where('value', '!=', 'null')
-                ->select(['pk', 'value'])
+                ->select(['pk', 'value', 'device_id'])
                 ->orderBy('id')
                 ->cursor();
 
@@ -169,6 +197,14 @@ final class SelfReferenceDeferral
         if ((! is_int($target) && ! is_string($target)) || (! is_int($pk) && ! is_string($pk))) {
             return false;
         }
+
+        // Both ids in the entry are the ones the DEVICE THAT WROTE IT minted,
+        // and this sweep reads the log raw rather than through the applier that
+        // would have translated them. Either the row addressed or the row named
+        // can be re-homed here, so both are asked of the alias map.
+        $deviceId = is_string($entry->device_id) ? $entry->device_id : '';
+        $pk = $this->aliases->resolvePk($table, $deviceId, $pk, $userId);
+        $target = $this->aliases->resolvePk($table, $deviceId, $target, $userId);
 
         $empty = $this->ownership->scopeToUser(
             $this->db->connection()->table($table)->where('id', $pk)->whereNull($column),

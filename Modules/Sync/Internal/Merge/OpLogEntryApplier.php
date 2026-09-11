@@ -106,7 +106,7 @@ final readonly class OpLogEntryApplier
         ArrivingBatch $batch,
         ReplayedRows $applied,
     ): void {
-        /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
+        /** @var list<array{table: string, pk: int|string, deviceId: string, values: array<string, mixed>}> $deferred */
         $deferred = [];
 
         foreach ($creates as $table => $rows) {
@@ -130,7 +130,7 @@ final readonly class OpLogEntryApplier
     // transaction it named could not be found under the id it arrived with.
     /**
      * @param  array<string, list<OpLogEntry>>  $fields
-     * @return list<array{table: string, pk: int|string, values: array<string, mixed>}>
+     * @return list<array{table: string, pk: int|string, deviceId: string, values: array<string, mixed>}>
      */
     private function applyCreatedRow(
         string $table,
@@ -164,7 +164,10 @@ final readonly class OpLogEntryApplier
 
         $applied->rowCreated($table, $local, $batch->userId);
 
-        return $selfRefs === [] ? [] : [['table' => $table, 'pk' => $local, 'values' => $selfRefs]];
+        // The device is carried, not the resolution: the partner an extracted
+        // link names has not landed yet, so there is no alias to read now. The
+        // deferral asks the map for it on every round instead.
+        return $selfRefs === [] ? [] : [['table' => $table, 'pk' => $local, 'deviceId' => $deviceId, 'values' => $selfRefs]];
     }
 
     // The row to insert, or null when there is nothing left to insert: a
@@ -428,7 +431,7 @@ final readonly class OpLogEntryApplier
         array &$pendingDeletes,
         ReplayedRows $applied,
     ): void {
-        /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
+        /** @var list<array{table: string, pk: int|string, deviceId: string, values: array<string, mixed>}> $deferred */
         $deferred = [];
 
         $userId = $batch->userId;
@@ -463,7 +466,7 @@ final readonly class OpLogEntryApplier
     // quarantined instead.
     /**
      * @param  list<OpLogEntry>  $fieldEntries
-     * @param  list<array{table: string, pk: int|string, values: array<string, mixed>}>  $deferred
+     * @param  list<array{table: string, pk: int|string, deviceId: string, values: array<string, mixed>}>  $deferred
      */
     private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, ArrivingBatch $batch, array &$deferred): void
     {
@@ -508,7 +511,7 @@ final readonly class OpLogEntryApplier
             // key refuses it and the catch below records a strategy error
             // nothing retries. The deferral writes it when the partner arrives.
             if ($columnValue !== null && $this->selfReferences->isSelfReference($table, $field)) {
-                $deferred[] = ['table' => $table, 'pk' => $pk, 'values' => [$field => $columnValue]];
+                $deferred[] = ['table' => $table, 'pk' => $pk, 'deviceId' => $setDevice, 'values' => [$field => $columnValue]];
 
                 return;
             }

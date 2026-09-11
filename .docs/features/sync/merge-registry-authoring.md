@@ -291,6 +291,14 @@ says, so no single target can be declared for it.
 The smell is a `unsignedBigInteger('x_id')` beside siblings that use
 `foreignId()->constrained()`.
 
+The mirror case is a column that HAS the constraint and is still not translated:
+`parentColumns()` drops a foreign key targeting its own table, because
+`dependencies()` reads the same map and no insertion order satisfies a pair.
+`transactions.pair_transaction_id` and `categories.parent_id` are the two, and
+`SelfReferenceDeferral` resolves them through `PeerRowAliases::resolvePk()` when
+it writes the deferred link rather than at translate time — see *The two ids
+`translate()` is not allowed to touch* in [architecture.md](architecture.md).
+
 ## A gate covers one arrival path, not three
 
 A row arrives three ways — created, set, deleted — and each has its own gate
