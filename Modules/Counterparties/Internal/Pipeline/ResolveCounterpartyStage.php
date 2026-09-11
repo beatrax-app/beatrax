@@ -20,14 +20,17 @@ final readonly class ResolveCounterpartyStage implements ResolvesCounterparties
     public function run(CanonicalTransaction $tx, User $user): CanonicalTransaction
     {
         $dto = $this->resolver->resolve($tx, $user);
-        if ($dto === null) {
+        if ($dto === null || $dto->counterpartyId === null) {
             return $tx;
         }
 
-        if ($dto->counterpartyId === null) {
-            return $tx;
-        }
-
-        return $tx->withCounterpartyId($dto->counterpartyId);
+        // A rule the reader wrote names the party outright; this stage reads
+        // the row's own text. Running after the rules, an unconditional stamp
+        // replaced every one of their answers with the file's. The resolve
+        // still runs: its upsert is what lists the merchant either way.
+        /** @link ../../../../.docs/features/categorization/rule-evaluation-order.md */
+        return $tx->counterpartyId === null
+            ? $tx->withCounterpartyId($dto->counterpartyId)
+            : $tx;
     }
 }
