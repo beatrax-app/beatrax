@@ -80,6 +80,26 @@ it('refuses a denomination the payload chose for the card however the bundle was
     'production build' => [false],
 ]);
 
+// The account the card is about. confirm(), save() and pickConflictCandidate()
+// each dispatch this id to the step that anchors the opening balance, and the
+// card draws no control the reader can point at another account with.
+it('refuses an account the payload chose for the card however the bundle was built', function (bool $debug): void {
+    config()->set('app.debug', $debug);
+
+    startingBalanceTamper($this->snapshot, ['accountId' => 99_999])->assertForbidden();
+})->with([
+    'debug build' => [true],
+    'production build' => [false],
+]);
+
+it('throws rather than accepting a write to the account the card is about', function (): void {
+    Livewire::test(StartingBalanceCard::class, [
+        'accountId' => 1,
+        'accountLabel' => 'ASN account',
+        'accountShort' => 'ASN',
+    ])->set('accountId', 2);
+})->throws(CannotUpdateLockedPropertyException::class);
+
 it('leaves the two boxes the edit form is bound to writable', function (): void {
     startingBalanceTamper($this->snapshot, ['editedMinor' => 250, 'editedDate' => '2026-01-16'])->assertOk();
 });
