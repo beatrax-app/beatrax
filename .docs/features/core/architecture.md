@@ -903,7 +903,23 @@ See [deployment](../../deployment.md#opening-the-loopback-boundary).
 `NoStoreFinancialData` adds strict no-store
 cache-control headers to every response, preventing the browser from
 caching authenticated finance pages where the back button could
-otherwise reveal sensitive balances after sign-out.
+otherwise reveal sensitive balances after sign-out. It also owns the
+app-wide Content-Security-Policy: a per-response nonce on `script-src`
+with no `unsafe-inline`, plus `object-src 'none'`, `base-uri 'self'`,
+`form-action 'self'` and `frame-ancestors 'none'`. It is appended
+globally, which means **every route middleware runs inside it** — so a
+policy already on the response was written by a layer with narrower
+knowledge, never a wider mandate, and the base is what such a layer
+EXTENDS. A route that needs its own frame policy sets
+`Content-Security-Policy: frame-ancestors …` on its own response and
+this middleware merges that directive over the base; `frame-ancestors`
+is the whole of `OVERRIDABLE_DIRECTIVES`, and any other directive an
+inner layer writes is dropped so the base value stands. An override
+with an empty source list is dropped too: a browser answers a directive
+it cannot parse by ignoring it, which for `frame-ancestors` means
+framed by anyone. `X-Frame-Options` is withdrawn whenever a policy is
+present, because browsers disagree on which of the two wins — safe only
+because the merge guarantees the policy carries `frame-ancestors`.
 
 SQLite substrate + boot listeners (`SqliteOptimizationsProvider`,
 `HealthCheckListener`):

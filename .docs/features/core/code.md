@@ -225,7 +225,11 @@ Modules/Core/
   `APP_URL` agrees with the widening.
 - `Internal/Http/Middleware/NoStoreFinancialData` — sets
   `Cache-Control: no-store` on every authenticated response so the
-  browser never caches a transaction list.
+  browser never caches a transaction list, and writes the app-wide
+  Content-Security-Policy. Appended globally, so every route middleware
+  runs inside it: a policy an inner layer left on the response is
+  merged over the base one directive at a time, narrowed to
+  `OVERRIDABLE_DIRECTIVES` (`frame-ancestors`), never taken whole.
 - `Internal/Http/Livewire/Dashboard` — the `/` landing page.
 - `Internal/Http/Livewire/SettingsPage` — the `/settings` surface
   (theme, currency view, close-behavior, period-start-day, dev-mode

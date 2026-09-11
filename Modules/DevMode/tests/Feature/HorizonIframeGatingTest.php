@@ -153,7 +153,15 @@ it('emits Content-Security-Policy: frame-ancestors self on GET /dev/horizon (cli
     $response = $this->actingAs($user)->get('/dev/horizon');
 
     $response->assertOk();
-    expect($response->headers->get('Content-Security-Policy'))->toBe("frame-ancestors 'self'");
+
+    // The frame rule is merged over the app-wide policy rather than standing
+    // in for it, so this route carries its own frame-ancestors AND the nine
+    // directives it never wrote.
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($csp)->toContain("frame-ancestors 'self'")
+        ->and($csp)->toContain("default-src 'self'")
+        ->and($csp)->toContain("object-src 'none'");
 });
 
 it('renders the Horizon iframe with sandbox + referrerpolicy attributes (clickjacking + referer leak guards)', function (): void {

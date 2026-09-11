@@ -101,6 +101,48 @@ instance missing either a device id or an address is skipped when the table is
 converted to peers: without the id there is nothing to match against the
 registry, and without the address there is nowhere to dial.
 
+## An address that came from a scan answers the same question
+
+mDNS answers "is this address on my network?" structurally: the address kept for
+an instance is the host its datagram physically arrived from, so an off-network
+address is not a value the table can hold. A pairing QR has no equivalent. Its
+`host=` is a string, `QrScanBridge::extractIdentity()` takes any non-empty one,
+and `PairingTokenService` stores it on `pairing_tokens.initiator_lan_host` —
+where three plaintext HTTP dials read it: `LanPairingFramePuller`,
+`LanPairingFrameCourier` and `LanPairingOfferFetcher`. A QR that named a public
+address or a domain name sent the pull proof and the token hash straight off the
+network, to a host chosen by whoever printed the code.
+
+`LanOnlyHost::admits()` is the rule that replaces the structural guarantee, and
+it is the one `RelayConfig` already holds the relay endpoint out of that same
+QR to: an IPv4 literal in `127/8` or an RFC 1918 range, and nothing else. A
+domain name is refused outright — DNS answers to whoever runs it, and may
+answer differently between the check and the dial. Link-local is refused with
+the rest of the reserved space, which is what keeps `169.254.169.254` out.
+
+Two places apply it, because the scanned address has two lifetimes:
+
+- `ScannedPeerAddress` judges it on every read, so the guard also covers rows
+  written before there was one. It is the single reader all three dials go
+  through, which is why the check sits there rather than at each of them.
+- `PairedDeviceAdmitter` judges it once more on the way into
+  `device_registry.last_lan_host`, the remembered address `PeerLanAddressBook`
+  hands to every later sync. Refusing there costs a browse; keeping it would
+  have let one scan pick the dial target for the life of the pairing.
+
+`LanPeerBrowser::peerRequest()` refuses redirects for the same reason. Whoever
+answers one of these probes chooses the `Location`, and following it would carry
+the query — a pull proof, or a token hash — to a host the rule never saw.
+
+None of this makes a scanned address trusted. It is still a candidate the Noise
+handshake and the safety number have to prove; the rule only bounds *where* a
+candidate may be, so the attempt itself cannot be aimed off the network.
+
+`Modules/Sync/tests/Feature/AScannedHostIsJudgedTheWayADiscoveredOneIsTest.php`
+drives it from the puller, and dials a browse-found peer first so that the
+silences it asserts afterwards are the rule and not a harness with nothing to
+send.
+
 ## Advertising
 
 `MdnsAdvertiser` publishes `Beatrax-{deviceId}` with a `did={deviceId}` TXT

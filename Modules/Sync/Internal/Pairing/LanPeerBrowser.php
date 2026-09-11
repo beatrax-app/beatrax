@@ -61,9 +61,15 @@ final readonly class LanPeerBrowser
     // Plaintext http as the listener speaks it: everything these roads carry
     // is either signed or worthless to an eavesdropper, and the safety-number
     // comparison — never the transport — is the trust gate.
+
+    // Redirects off, because whoever answers a browse chooses the Location: a
+    // 302 would carry the pull proof and the token hash in the query to any
+    // host it named, and the address bound by the LAN-only rule would be the
+    // one address the request never ended up at.
     public function peerRequest(): PendingRequest
     {
         return $this->http->createPendingRequest()
+            ->withOptions(['allow_redirects' => false])
             ->connectTimeout(ProtocolTimings::PAIRING_PROBE_CONNECT_SECONDS)
             ->timeout(ProtocolTimings::PAIRING_PROBE_REQUEST_SECONDS);
     }

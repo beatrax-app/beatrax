@@ -132,20 +132,20 @@ it('asks the address the scanned code named when the browse finds nothing', func
     Http::fake(['*' => Http::response(['frames' => []])]);
 
     $identity = pullerIdentity();
-    pullerScannedRow($identity->deviceId, '192.0.2.77', 51337);
+    pullerScannedRow($identity->deviceId, '192.168.0.77', 51337);
 
     framePuller([])->pullAndApply(1, $identity);
 
-    Http::assertSent(static fn ($request): bool => str_starts_with($request->url(), 'http://192.0.2.77:51337/pair/frames'));
+    Http::assertSent(static fn ($request): bool => str_starts_with($request->url(), 'http://192.168.0.77:51337/pair/frames'));
 });
 
 it('does not ask the scanned address twice when the browse names it too', function (): void {
     Http::fake(['*' => Http::response(['frames' => []])]);
 
     $identity = pullerIdentity();
-    pullerScannedRow($identity->deviceId, '192.0.2.77', 51337);
+    pullerScannedRow($identity->deviceId, '192.168.0.77', 51337);
 
-    framePuller([new DiscoveredPeer('desktop', '192.0.2.77', 51337, DiscoveryMode::Mdns)])
+    framePuller([new DiscoveredPeer('desktop', '192.168.0.77', 51337, DiscoveryMode::Mdns)])
         ->pullAndApply(1, $identity);
 
     Http::assertSentCount(1);
@@ -157,8 +157,8 @@ it('ignores a scanned address from a finished ceremony or another device', funct
     Http::fake();
 
     $identity = pullerIdentity();
-    pullerScannedRow($identity->deviceId, '192.0.2.77', 51337, 'confirmed');
-    pullerScannedRow('99999999-2222-4333-8444-555555555555', '192.0.2.78', 51337);
+    pullerScannedRow($identity->deviceId, '192.168.0.77', 51337, 'confirmed');
+    pullerScannedRow('99999999-2222-4333-8444-555555555555', '192.168.0.78', 51337);
 
     framePuller([])->pullAndApply(1, $identity);
 
