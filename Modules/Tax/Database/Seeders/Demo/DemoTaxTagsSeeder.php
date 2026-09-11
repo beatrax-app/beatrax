@@ -7,6 +7,7 @@ namespace Modules\Tax\Database\Seeders\Demo;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Database\Seeders\Demo\DemoTransactionRef;
 use Modules\Tax\Internal\Actions\TaxCategoryStore;
 use Modules\Tax\Public\Actions\TagTransaction;
 
@@ -16,31 +17,32 @@ final class DemoTaxTagsSeeder
 {
     private const COUNTRY = 'nl';
 
-    // Matched against transactions.description with a LIKE, so one entry tags
-    // every occurrence of a recurring charge. yearOffset is added to the
-    // current calendar year and written as tax_year_override.
-    /** @var list<array{match: string, corpusKey: string, note: ?string, yearOffset: ?int}> */
+    // Matched against the seeded source_ref tags, so one entry tags every
+    // occurrence of a recurring charge — and a charge the ledger holds under
+    // two spellings is named here by both of its tags. yearOffset is added to
+    // the current calendar year and written as tax_year_override.
+    /** @var list<array{refs: list<DemoTransactionRef>, corpusKey: string, note: ?string, yearOffset: ?int}> */
     private const TAGS = [
         [
-            'match' => 'Zilveren Kruis%',
+            'refs' => [DemoTransactionRef::ZilverenKruis],
             'corpusKey' => 'nl_zorgkosten',
             'note' => 'Zorgverzekering premie',
             'yearOffset' => null,
         ],
         [
-            'match' => 'MEDIAMARKT%',
+            'refs' => [DemoTransactionRef::MediaMarkt],
             'corpusKey' => 'nl_ondernemerskosten',
             'note' => 'Monitor voor de werkplek',
             'yearOffset' => null,
         ],
         [
-            'match' => 'KPN Mobile%',
+            'refs' => [DemoTransactionRef::Kpn],
             'corpusKey' => 'nl_ondernemerskosten',
             'note' => 'Internet, zakelijk deel',
             'yearOffset' => null,
         ],
         [
-            'match' => 'BOL.COM%',
+            'refs' => [DemoTransactionRef::BolOnCard, DemoTransactionRef::BolViaPaypal],
             'corpusKey' => 'nl_ondernemerskosten',
             'note' => 'Vakliteratuur',
             'yearOffset' => null,
@@ -49,7 +51,7 @@ final class DemoTaxTagsSeeder
         // through April /tax opens on the year before it. Without a row filed
         // back a year, four months of the year land on an empty page.
         [
-            'match' => 'COOLBLUE ROTTERDAM',
+            'refs' => [DemoTransactionRef::Coolblue],
             'corpusKey' => 'nl_ondernemerskosten',
             'note' => 'Laptop, geboekt op het vorige belastingjaar',
             'yearOffset' => -1,
@@ -85,7 +87,7 @@ final class DemoTaxTagsSeeder
     }
 
     /**
-     * @param  array{match: string, corpusKey: string, note: ?string, yearOffset: ?int}  $row
+     * @param  array{refs: list<DemoTransactionRef>, corpusKey: string, note: ?string, yearOffset: ?int}  $row
      */
     private function tagMatching(User $user, array $row, int $currentYear): void
     {
@@ -99,14 +101,17 @@ final class DemoTaxTagsSeeder
             return;
         }
 
-        $transactionIds = $this->db->connection()
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('description', 'like', $row['match'])
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
-            ->pluck('id')
-            ->all();
+        $transactionIds = [];
+        foreach ($row['refs'] as $ref) {
+            $transactionIds = array_merge($transactionIds, $this->db->connection()
+                ->table('transactions')
+                ->where('user_id', $user->id)
+                ->where('source_ref', 'like', $ref->pattern())
+                ->orderByDesc('posted_at')
+                ->orderByDesc('id')
+                ->pluck('id')
+                ->all());
+        }
 
         foreach ($transactionIds as $transactionId) {
             $id = is_numeric($transactionId) ? (int) $transactionId : 0;

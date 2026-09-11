@@ -14,17 +14,17 @@ final class DemoTransactionSplitsSeeder
 {
     // Legs are minor units of the parent's settled amount and must sum to it
     // exactly; the mutator rejects any drift.
-    /** @var list<array{descriptionMatch: string, legs: list<array{categoryPath: list<string>, minor: int, note: ?string}>}> */
+    /** @var list<array{ref: DemoTransactionRef, legs: list<array{categoryPath: list<string>, minor: int, note: ?string}>}> */
     private const SPLITS = [
         [
-            'descriptionMatch' => 'MEDIAMARKT UTRECHT',
+            'ref' => DemoTransactionRef::MediaMarkt,
             'legs' => [
                 ['categoryPath' => ['Subscriptions', 'Cloud / Software'], 'minor' => -2450, 'note' => 'Software licence'],
                 ['categoryPath' => ['Personal care'], 'minor' => -10000, 'note' => 'Monitor'],
             ],
         ],
         [
-            'descriptionMatch' => 'HEMA bv Utrecht',
+            'ref' => DemoTransactionRef::Hema,
             'legs' => [
                 ['categoryPath' => ['Groceries'], 'minor' => -1105, 'note' => null],
                 ['categoryPath' => ['Personal care'], 'minor' => -1000, 'note' => null],
@@ -35,7 +35,7 @@ final class DemoTransactionSplitsSeeder
         // ¥200.00 against a ¥13,840 parent, so the split refuses as
         // over-allocated rather than rendering a merely odd number.
         [
-            'descriptionMatch' => 'JR EAST TOKYO STATION',
+            'ref' => DemoTransactionRef::JrEast,
             'legs' => [
                 ['categoryPath' => ['Transport', 'Public transport'], 'minor' => -11840, 'note' => null],
                 ['categoryPath' => ['Eating out'], 'minor' => -2000, 'note' => null],
@@ -67,14 +67,14 @@ final class DemoTransactionSplitsSeeder
     }
 
     /**
-     * @param  array{descriptionMatch: string, legs: list<array{categoryPath: list<string>, minor: int, note: ?string}>}  $row
+     * @param  array{ref: DemoTransactionRef, legs: list<array{categoryPath: list<string>, minor: int, note: ?string}>}  $row
      */
     private function applySplit(User $user, array $row): void
     {
         $parent = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('description', $row['descriptionMatch'])
+            ->where('source_ref', 'like', $row['ref']->pattern())
             ->orderByDesc('booked_at')
             ->first(['id', 'settled_amount_minor']);
 

@@ -17,10 +17,6 @@ use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 // as the card's own rows grew past it — and /chains said "Balances exactly".
 final class IcsSettlementAligner
 {
-    private const string BANK_SIDE = 'ICS afrekening MasterCard';
-
-    private const string CARD_SIDE = 'Afrekening MasterCard ICS';
-
     public function align(User $user, Account $card): void
     {
         $periodStart = null;
@@ -41,7 +37,7 @@ final class IcsSettlementAligner
         return Transaction::query()
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
-            ->where('description', self::BANK_SIDE)
+            ->where('source_ref', 'like', DemoTransactionRef::IcsSettlementBankSide->pattern())
             ->orderBy('posted_at')
             ->get();
     }
@@ -64,7 +60,7 @@ final class IcsSettlementAligner
     }
 
     // Both legs move together or the transfer stops balancing, and the card
-    // side is the positive one. They are found by date and description: these
+    // side is the positive one. They are found by date and seeded tag: these
     // two carry no pair_transaction_id, which linkUser1Transfers sets for the
     // PayPal top-ups alone.
     private function rewriteBothLegs(User $user, Transaction $settlement, int $chargedMinor): void
@@ -78,7 +74,7 @@ final class IcsSettlementAligner
         Transaction::query()
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
-            ->where('description', self::CARD_SIDE)
+            ->where('source_ref', 'like', DemoTransactionRef::IcsSettlementCardSide->pattern())
             ->whereDate('posted_at', $settlement->posted_at->toDateString())
             ->update(TransactionAmount::relate(-$chargedMinor, $currency, -$chargedMinor, $currency)->toColumns());
     }
