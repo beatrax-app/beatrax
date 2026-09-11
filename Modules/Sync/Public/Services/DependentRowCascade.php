@@ -7,6 +7,7 @@ namespace Modules\Sync\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Merge\RowOwnership;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
 use Modules\Sync\Public\Events\EntityMutated;
 
@@ -79,10 +80,18 @@ final readonly class DependentRowCascade
         return self::NOT_OWNED;
     }
 
+    private RowOwnership $ownership;
+
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
-    ) {}
+    ) {
+        // Built here rather than injected: the one construction site passes
+        // its arguments positionally, and this is the same question the
+        // applier already asks -- asking it twice is how the two answers
+        // drifted apart.
+        $this->ownership = new RowOwnership($db);
+    }
 
     // Call inside the parent's transaction, before the parent row goes. The
     // events are for dispatch after it commits, never from inside it.
@@ -224,12 +233,12 @@ final readonly class DependentRowCascade
         $query->delete();
     }
 
-    // A child with no user_id of its own is reached only through a parent this
-    // caller already owns, so the parent's scope is the child's scope.
+    // A table with no user_id used to be left unscoped, so a delete meant for
+    // one reader's children was bounded only by the parent key it named.
+    // RowOwnership reaches the owner through the parent and refuses outright
+    // where it cannot -- a cascade that cannot scope must delete nothing.
     private function scopeToUser(Builder $query, string $table, int $userId): void
     {
-        if (in_array('user_id', $this->db->connection()->getSchemaBuilder()->getColumnListing($table), true)) {
-            $query->where('user_id', $userId);
-        }
+        $this->ownership->scopeToUser($query, $table, $userId);
     }
 }
