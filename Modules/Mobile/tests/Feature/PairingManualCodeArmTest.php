@@ -21,7 +21,9 @@ use Modules\Sync\Internal\Transport\Discovery\LocalNetworkGate;
 use Modules\Sync\Internal\Transport\Discovery\NativeBridge;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Enums\LocalNetworkAccess;
 use Modules\Sync\Public\Enums\PairingWizardStep;
+use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
@@ -621,6 +623,11 @@ it('stops naming the permission once the shell says the reader granted it', func
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
 
     try {
+        // Read across the seam this screen actually uses, so a gateway that
+        // stopped carrying the answer fails here rather than silently picking
+        // the line for a state the shell had already ruled out.
+        expect(app(PairingGateway::class)->localNetworkAccess())->toBe(LocalNetworkAccess::Granted);
+
         Livewire::test(MobilePairingScan::class)
             ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
             ->call('submitCode', null)
@@ -643,6 +650,8 @@ it('leaves every platform without such a prompt alone', function (): void {
     Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    expect(app(PairingGateway::class)->localNetworkAccess())->toBe(LocalNetworkAccess::Granted);
 
     Livewire::test(MobilePairingScan::class)
         ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
