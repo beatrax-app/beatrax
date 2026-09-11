@@ -60,9 +60,16 @@ enum QuarantineReason: string
     case ImpossibleDate = 'impossible_date';
 
     // Two devices that were apart both took the same autoincrement, so one id
-    // names two different rows. Discarded in silence this read as the ordinary
-    // idempotent replay, and a move made on a phone was simply never there.
+    // names two different rows, and storing it under a fresh one was refused.
+    // Recoverable: a natural key can find the row again, so what stopped the
+    // write is a state — an absent parent, an unheld key — that a pass undoes.
     case PrimaryKeyCollision = 'primary_key_collision';
+
+    // The same collision on a table declaring no unique index a re-homed row
+    // could be recognised by afterwards. Storing it under a fresh id would
+    // have every later replay insert another copy, so the row stays out and
+    // the reader is told — which is the half of this that no pass can undo.
+    case UnplaceableCollision = 'unplaceable_collision';
 
     // Writing this split leg would carry a transaction's legs past the
     // transaction. The writer requires them to add up exactly; a device that
@@ -124,6 +131,7 @@ enum QuarantineReason: string
             ...self::deleteRefusals(),
             self::MissingReference->value,
             self::SplitSumUnreadable->value,
+            self::PrimaryKeyCollision->value,
         ];
     }
 }

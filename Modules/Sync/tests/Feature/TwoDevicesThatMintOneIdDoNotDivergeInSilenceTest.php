@@ -118,7 +118,7 @@ it('quarantines a create naming an id a different row already holds', function (
 
     expect($stored?->name)->toBe('Nieuwe fiets')
         ->and($stored?->target_minor)->toBe(125000)
-        ->and(pkcReasons($this->db))->toContain('primary_key_collision');
+        ->and(pkcReasons($this->db))->toContain('unplaceable_collision');
 });
 
 it('leaves the peer row out rather than writing a blend of the two', function (): void {

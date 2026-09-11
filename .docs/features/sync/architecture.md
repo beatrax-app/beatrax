@@ -613,12 +613,88 @@ does NOT contradict the stored row is the same row arriving again, or the other
 half of one the transport split, and re-homing either would duplicate it. Only
 a create that contradicts is a candidate.
 
-What remains `primary_key_collision` in `op_log_quarantine` is therefore
-narrower than it was: a contradicting create on a table no natural key can
-identify. It is still deliberately out of `QuarantineReason::recoverable()` —
-the id is taken by another row and no op arriving later frees it, nor does a
-later replay give the table an index it does not declare. `SyncQuarantineNotice`
-remains the reader's only warning for those.
+A contradicting create on a table no natural key can identify is recorded as
+`unplaceable_collision` rather than `primary_key_collision`. The two are the
+same event and not the same verdict: one is a create this device could not
+place *this time*, the other is one it can never place, because the answer
+depends on an index the table does not declare and no arriving op adds. The
+first is recoverable, the second terminal and disclosed by
+`SyncQuarantineNotice`. `AlreadyPresentCreate` decides between them with the
+finder's own question — `PeerRowAliases::naturalKeyIdentifies()` — so the
+reason is chosen by the same predicate that gated the re-home.
+
+### Retrying a create two devices minted one id for
+
+`primary_key_collision` is in `QuarantineReason::recoverable()`. It was not
+before the re-home above existed: nothing a later state could do freed the id,
+so the verdict was terminal and `SyncQuarantineNotice` disclosed it. The
+re-home changed what produces the verdict, and E1-R24 makes that a two-part
+obligation — a recoverable reason MUST be both retried and retired — so the
+entries an older build refused are owed the question a second time.
+
+**The retry is not the row replay.** `HistoryReprojector::replayQuarantined()`
+answers every other recoverable reason by replaying every op the durable log
+holds for the row a hold names, which is right where one pk means one row. It
+is wrong here by construction: the whole point of a collision is that two
+devices wrote two different rows under one id, so `op_log_entries` holds both
+their histories at that `(table_name, pk)`, and a merge strategy handed both
+resolves them per field into a single payload. Measured on the desktop that
+carried 52 such holds, the local device's create was later than the arriving
+one on 45 of the 46 rows, so LWW returned the local row's own values in every
+column — `CreateRowCollision::contradicts()` then answers "same row", the
+create is taken for an idempotent replay, and the peer's row is lost with its
+audit row deleted behind it. That is worse than the divergence it replaced.
+
+So `Internal\Merge\RetriedCollisionCreates` replays the refused author's own
+`create_row` entries for the row and nothing else —
+`PersistedOpLogEntries::createsFromDevice()`, scoped by `device_id` and
+`op_type` — through the replayer the pass already built, with
+`RowHistoryPolicy::AsGiven` so nothing widens it back out. The applier then
+sees exactly the create as it arrived, and `AlreadyPresentCreate` decides it
+with the gates above: an alias where the row is here under another id, a
+tail-fill where it is the same row, a re-home where it is not here at all,
+`primary_key_collision` again where the re-home was refused by the database,
+and `unplaceable_collision` where no natural key could have found it.
+Sets are deliberately left out of the pass: without an alias they would land on
+the local row occupying the id, and `applyCreates()` runs before
+`applyFieldMerges()` in the same transaction, so the alias a re-home records is
+already in place for every set that follows it on the ordinary path.
+
+**What retires it.** The hold ids are read before the replay and deleted after
+it, the same shape `keyRecoverableHoldIds()` uses. A create refused again is
+recorded by the applier during the pass under a fresh autoincrement, so
+retiring the ids read going in cannot swallow the new answer, and the
+quarantine table does not grow a row per pass. A hold whose ops the log no
+longer carries is left alone — there is nothing to retry, and the audit row is
+the only surviving record that the op existed. A collision no natural key can
+place is therefore retried exactly once: the pass re-records it as
+`unplaceable_collision`, which the collision query does not select, so it
+settles as the audit row a permanent divergence is owed.
+
+**What bounds it.** The pass window. `SealedLedgerRecovery` hands
+`replayQuarantined()` the `history_reprojected_at` stamp, and a hold older than
+it is not looked at again until key material moves. A collision that still
+cannot be placed is therefore retried once per window, not once per request.
+The same window is why the fix ships with a migration that nulls
+`history_reprojected_at`: on the device this was measured on the 52 holds were
+written at 22:44:19 and the stamp reads 22:48:53, so the marks say those rows
+were already examined — by a build that had no re-home. Clearing the stamp
+costs one full recoverable-quarantine pass per install and is what makes an
+install that hit this before the re-home heal itself.
+
+**It needs an unlocked session, and it has one.** These rows carry AEAD
+columns, and the payload is re-sealed for this device before the insert, so a
+pass without a group data key turns the create into a `strategy_error` rather
+than a re-home. The desktop reaches `replayQuarantined()` through
+`RecoverSealedLedger`, a terminate-time `web` middleware, and
+`SealedLedgerRecovery::recover()` returns early unless
+`SensitiveColumnCodec::canSeal()` answers yes — so the desktop pass always
+holds the key. The mobile root leaves that middleware out and drives the same
+method from `DevicesScreenOpening::recoverDeferred()` and
+`InitialSyncPuller::reproject()`, neither of which asks `canSeal()` first;
+both run inside a request whose session is unlocked in practice, and where one
+is not, the create re-quarantines under a key-recoverable reason that the next
+keyed pass takes again.
 
 ### A split leg that would overfill its transaction (`Internal\Merge\SplitOverfillGate`)
 

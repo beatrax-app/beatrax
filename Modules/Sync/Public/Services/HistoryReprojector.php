@@ -14,6 +14,7 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
+use Modules\Sync\Internal\Merge\RetriedCollisionCreates;
 use Modules\Sync\Internal\Merge\RowHistoryPolicy;
 use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
 use Modules\Sync\Internal\OpLog\PersistedOpLogEntries;
@@ -41,6 +42,7 @@ final readonly class HistoryReprojector
         private DeviceRegistryService $registry,
         private GdkKeyringService $keyring,
         private Container $container,
+        private RetriedCollisionCreates $collisions,
     ) {}
 
     // Readable with no app-lock key at all, which is what makes it usable as
@@ -71,14 +73,33 @@ final readonly class HistoryReprojector
         // import spanning several sessions ends one with the partner to come.
         $this->container->make(SelfReferenceDeferral::class)->resolveFromHistory($userId);
 
+        // Answered apart from the sweep below, and before it: a pk two devices
+        // minted carries two rows' histories, so replaying every op under it
+        // hands the merge the row already here. Only the refused author's own
+        // create is taken again.
+        $replayer = $this->buildReplayer($userId);
+
+        $collisions = $this->collisions->replay(
+            $this->withinPassWindow(
+                $this->openableRows($userId, $session)->where('reason', QuarantineReason::PrimaryKeyCollision->value),
+                $userId,
+                $since,
+                $lastFingerprint,
+            ),
+            $replayer,
+            $userId,
+            self::SETTLED_SWEEP_LIMIT,
+        );
+        $this->retire($collisions['spent']);
+
         $rows = $this->rowsWorthReplaying($userId, $session, $since, $lastFingerprint);
         if ($rows === []) {
-            return 0;
+            return $collisions['rows'];
         }
 
         $entries = $this->entries->forRows($userId, $this->withParentsNamed($rows, $userId));
         if ($entries === []) {
-            return 0;
+            return $collisions['rows'];
         }
 
         // Read BEFORE the replay so the ids name only holds that existed going
@@ -88,11 +109,11 @@ final readonly class HistoryReprojector
 
         // forRows() already fetched every op of every row named, which is
         // exactly what a strategy has to resolve over.
-        $this->buildReplayer($userId)->replay($entries, $userId, RowHistoryPolicy::AsGiven);
+        $replayer->replay($entries, $userId, RowHistoryPolicy::AsGiven);
         $this->retire($spent);
         $this->clearSettled($userId);
 
-        return count($rows);
+        return $collisions['rows'] + count($rows);
     }
 
     // A hold naming an epoch this device now holds has had its answer: the pass
@@ -233,7 +254,17 @@ final readonly class HistoryReprojector
             return SyncBacklogState::AwaitingKey;
         }
 
-        return $this->rowsWorthReplaying($userId, $session, $since, $lastFingerprint) === []
+        // Asked as an index seek and asked first: the sweep below materialises
+        // every row it names, and a collision held in this window already
+        // answers the question that walk would be run to answer.
+        $collisionHeld = $this->withinPassWindow(
+            $this->openableRows($userId, $session)->where('reason', QuarantineReason::PrimaryKeyCollision->value),
+            $userId,
+            $since,
+            $lastFingerprint,
+        )->exists();
+
+        return ! $collisionHeld && $this->rowsWorthReplaying($userId, $session, $since, $lastFingerprint) === []
             ? SyncBacklogState::None
             : SyncBacklogState::Deferred;
     }
@@ -247,7 +278,15 @@ final readonly class HistoryReprojector
      */
     private function rowsWorthReplaying(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
     {
-        $query = $this->withinPassWindow($this->openableRows($userId, $session), $userId, $since, $lastFingerprint);
+        // Minus the collisions: replayQuarantined() answers those from the
+        // refused author's own creates, and widening one to every op under its
+        // pk is what hands the merge the local row's history as well.
+        $query = $this->withinPassWindow(
+            $this->openableRows($userId, $session)->where('reason', '!=', QuarantineReason::PrimaryKeyCollision->value),
+            $userId,
+            $since,
+            $lastFingerprint,
+        );
 
         $rows = [];
         $seen = [];

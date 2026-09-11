@@ -67,6 +67,35 @@ final readonly class PersistedOpLogEntries
         return $entries;
     }
 
+    // The create ONE device sent for these rows. A pk two devices minted holds
+    // two rows' histories, and a strategy handed both resolves them into a row
+    // that is neither, so a create refused for its id is taken again as it
+    // arrived rather than as the durable log reads under that id.
+    /**
+     * @param  list<array{table: string, pk: string}>  $rows
+     * @return list<OpLogEntry>
+     */
+    public function createsFromDevice(int $userId, array $rows, string $deviceId): array
+    {
+        $entries = [];
+
+        foreach ($this->pksByTable($rows) as $table => $pks) {
+            foreach (array_chunk($pks, self::PK_CHUNK) as $chunk) {
+                $query = $this->ordered($userId)
+                    ->where('table_name', $table)
+                    ->where('device_id', $deviceId)
+                    ->where('op_type', OpType::CreateRow->value)
+                    ->whereIn('pk', $chunk);
+
+                foreach (self::fromRows($query->get()->all()) as $entry) {
+                    $entries[] = $entry;
+                }
+            }
+        }
+
+        return $entries;
+    }
+
     /**
      * @param  list<array{table: string, pk: string}>  $rows
      * @return array<string, list<string>>
