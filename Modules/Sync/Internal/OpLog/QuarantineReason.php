@@ -129,10 +129,31 @@ enum QuarantineReason: string
         return [self::DeleteBlockedByReference->value];
     }
 
+    // The ones a key never undoes, because a key was never what stopped them:
+    // an absent parent, a child still referencing the row, legs that did not
+    // add up, an id another row was wearing. Each is cleared by something
+    // ARRIVING, which no keyring fingerprint and no build version speaks for.
+    /**
+     * @return list<string>
+     */
+    public static function stateRecoverable(): array
+    {
+        return [
+            ...self::deleteRefusals(),
+            self::MissingReference->value,
+            self::SplitSumUnreadable->value,
+            self::PrimaryKeyCollision->value,
+        ];
+    }
+
     // Every verdict a later state can undo. MissingReference is not a verdict
     // on the entry the way a forged signature is: the parent had not landed
     // HERE yet and routinely lands afterwards — two charges went missing from a
     // paired phone whose op log still held every entry needed to place them.
+
+    // Composed from the two halves rather than listed again, so a reason can
+    // never be recoverable without also being on one side of the question
+    // "what undoes this".
     /**
      * @return list<string>
      */
@@ -140,10 +161,7 @@ enum QuarantineReason: string
     {
         return [
             ...self::keyRecoverable(),
-            ...self::deleteRefusals(),
-            self::MissingReference->value,
-            self::SplitSumUnreadable->value,
-            self::PrimaryKeyCollision->value,
+            ...self::stateRecoverable(),
         ];
     }
 }

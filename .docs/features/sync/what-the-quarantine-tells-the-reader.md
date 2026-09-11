@@ -9,9 +9,11 @@ one reached nobody who was not holding a developer flag.
 
 `QuarantineReason` has **fifteen** cases.
 
-`QuarantineReason::recoverable()` names **four** of them:
-`gdk_decrypt_failed`, `strategy_error`, `missing_reference` and
-`split_sum_unreadable`. Those four are the whole of what a reader saw:
+`QuarantineReason::recoverable()` named **four** of them at the time this was
+written: `gdk_decrypt_failed`, `strategy_error`, `missing_reference` and
+`split_sum_unreadable`. It has grown twice since — `delete_blocked_by_reference`
+and `primary_key_collision` — which is the movement the split below is built to
+follow. Those four were the whole of what a reader saw:
 `HistoryReprojector::backlogState()` filters on exactly that list, and the
 `SyncBacklogState` it returns is what the devices screen renders as *"Waiting to
 be added"*.
@@ -151,26 +153,77 @@ whose detail surface is empty is barely better than the silence it replaced.
 The held block's copy names a **condition and never an act**, the same rule the
 withheld copy is written under and for a sharper reason — see the next section.
 
-### Nothing retries a hold whose blocker is data
+### Nothing retried a hold whose blocker was data
 
-`QuarantineReason::recoverable()` claims a retry for `missing_reference`, and in
-steady state there is none. `withinPassWindow()` reopens only on two events: key
-material moving, or `HistoryReprojector::PASS_REACH` being bumped. Neither of
-those is the event that undoes a missing reference — **the parent row arriving
-is**, and no watermark moves when it does. `clearSettled()` retires a hold once
-the held row itself turns up; it does not look at the row the hold *references*.
+`QuarantineReason::recoverable()` claims a retry for `missing_reference`, and
+until the next section there was none. `withinPassWindow()` reopened on two
+events: key material moving, or `HistoryReprojector::PASS_REACH` being bumped.
+Neither of those is the event that undoes a missing reference — **the parent row
+arriving is**, and no watermark moves when it does. `clearSettled()` retires a
+hold once the held row itself turns up; it does not look at the row the hold
+*references*.
 
-Measured on the same phone: the three `anomaly_alerts` creates held for
-`missing_reference` name transactions 6, 7 and 8, and all three of those
-transactions are on the device. Two of the three would apply today; the third
-would be recognised as already present. None of them will be offered again — the
-sender counts what it delivered, which is why a second exchange left the count
-at ten — and no pass will take them again either.
+The three `anomaly_alerts` creates held for `missing_reference` name
+transactions 6, 7 and 8 **as the desktop minted them**, and those three are the
+quarantined creates — the phone holds its own unrelated 6, 7 and 8 at those ids.
+An earlier reading of this took the local rows for the named ones and concluded
+all three alerts could apply today; they cannot until their own parents land.
+They are also never offered again, because the sender counts what it delivered,
+which is why a second exchange left the count at ten.
 
-That is recorded here rather than repaired here: the merge path is being worked
-on elsewhere. What it settles is the wording. `Held` says a change has **not
-been applied yet** and stops; it does not say one is waiting to be retried,
-because on this build nothing is.
+The wording it settles stands either way. `Held` says a change has **not been
+applied yet** and stops; it does not promise a retry, which is the right
+sentence whether or not a pass is due to take the hold again.
+## A window stamped against a key cannot bound a hold a key never held
+
+`HistoryReprojector` does not sweep the whole quarantine on every request. It
+reads a watermark — `history_reprojected_at` plus the identity of the pass that
+stamped it — and looks only at holds recorded since. That watermark is stamped
+against two things, and only two: the keyring fingerprint, and `PASS_REACH`,
+which this build bumps when it learns to answer a hold an older one walked past.
+
+So the window can speak for a hold that a **key** undoes, and for one that a
+**newer build** undoes. It cannot speak for any other kind, and four of the six
+recoverable reasons are another kind:
+
+| Reason | What actually undoes it |
+|---|---|
+| `gdk_decrypt_failed` | the key arriving |
+| `strategy_error` | a build that resolves the value |
+| `missing_reference` | **the parent row arriving** |
+| `delete_blocked_by_reference` | **the referencing child going away** |
+| `split_sum_unreadable` | **the legs adding up** |
+| `primary_key_collision` | **a row this device can re-home against turning up** |
+
+None of the four in bold moves a keyring fingerprint or a build version. A hold
+recorded for one of them therefore fell outside every later window and was never
+looked at again, whatever happened afterwards. Measured on the paired Galaxy
+A51: ten `missing_reference` holds naming three rows whose parents were held for
+an unrelated defect, and eight `primary_key_collision` holds dated
+`2026-09-10 22:47` against a watermark of `2026-09-11 23:21:11`.
+
+`QuarantineReason::keyRecoverable()` and `QuarantineReason::stateRecoverable()`
+are that split, and `recoverable()` is composed from the two so a reason cannot
+be recoverable without being on one side of it.
+
+### What reopens a state hold
+
+`QuarantinePassWindow` asks one extra question before it narrows: has this
+device recorded an op-log entry since the watermark? If it has, the
+state-recoverable reasons are admitted whatever their age; if it has not,
+nothing can have arrived that would undo one, and the window is applied as
+before.
+
+That question is asked of `op_log_entries.recorded_at`, which covers a peer's
+frame and this reader's own writing equally — a parent lands as an entry either
+way. It is self-limiting: a pass stamps its own watermark, so one arrival buys
+exactly one pass rather than one per request. `op_log_entries_recorded_idx`
+exists because the steady-state answer is *no*, and that is the walk that does
+not stop early.
+
+The same predicate is used by `hasUnexaminedQuarantine()`, which decides whether
+a pass is entered at all. Those two disagreeing is a pass that is never entered
+for the rows it would have answered.
 
 ## Where it renders
 
@@ -319,6 +372,17 @@ one, whatever the answer. The retirement half now asks through `openableRows()`
 itself, so the set a pass answers and the set it retires cannot drift apart
 again. A hold whose epoch this device does not have is still kept, because that
 pass did not answer it.
+
+The predicate has two halves, and narrowing either one reopens the same gap.
+Asked for `keyRecoverable()` alone it still walked past `split_sum_unreadable`,
+which `clearSettled()` does not sweep either — replayed by every pass, retired
+by nothing, the same shape one reason over. `answeredHoldIds()` therefore asks
+for the rows **and** the reasons the replay half asks for: every openable hold
+except a collision. A hold whose answer is still a refusal is re-recorded under
+a new id by the pass itself, which is why retiring the old one cannot swallow
+it. Collisions are excluded because `RetriedCollisionCreates` owns their
+retirement — a create turned away *before* its id was looked at has been judged
+on nothing.
 
 ## A reason code is not a cause
 
