@@ -144,6 +144,35 @@ replaying an op-log entry minted before the repair writes that entry's payload
 back through the query builder, so the long shape can still arrive from a device
 that has been offline.
 
+## A date with no amount behind it
+
+`AccountStartingBalanceQuery::forAccount()` has always refused the combination:
+a date without an amount is not a baseline, because honouring its lower bound
+drops every earlier row and adds nothing back. That is A9-R14 read the other
+way round — an account with no entered balance anchors at zero, which means from
+the beginning, not from a day nobody put a figure against.
+
+The rule was spelled twice more and both copies said the opposite.
+`EFFECTIVE_DATE_SQL` chose `starting_balance_date` whenever
+`opening_balance_minor` was null, whatever `starting_balance_minor` held, so
+`AT_OR_AFTER_BASELINE_SQL` bounded on an orphaned date — in the calendar's
+past-day line and in `BookedFutureRowQuery`. And
+`SetAccountOpeningBalance::positionOn()` read the amount as zero when it was
+absent and then applied the date anyway, so the figure the divergence warning
+compares the reader's entry against was short by everything posted before it.
+
+The pair is reachable in that state without any writer here producing it.
+`starting_balance_minor` and `starting_balance_date` are two independently
+merged synced columns — `MergeRulesRegistry` lists them as separate nullable
+fields on `accounts` — so a device that clears the amount leaves the other
+device's date standing on the merged row. The registry knows some pairs must
+travel together and says so for `categories.name_is_default`; it says nothing
+for this one.
+
+`AccountStartingBalanceQuery::baselineDate()` is now the single statement of the
+rule and both PHP readers call it. The SQL grew a third branch and its comment
+names the same rule, which is as close as a query string gets to sharing one.
+
 ## A statement is only this account's balance in this account's currency
 
 `statement_summaries` records `opening_balance_currency` and

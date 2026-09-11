@@ -25,7 +25,13 @@ final readonly class AccountStartingBalanceQuery
     // together, so a row is answered by one pair or the other, never a mix.
     private const string EFFECTIVE_MINOR_SQL = 'case when accounts.opening_balance_minor is not null then accounts.opening_balance_minor else accounts.starting_balance_minor end';
 
-    private const string EFFECTIVE_DATE_SQL = 'case when accounts.opening_balance_minor is not null then accounts.opening_balance_as_of_date else accounts.starting_balance_date end';
+    // Three branches, not two: the else arm used to hand back
+    // starting_balance_date whatever starting_balance_minor held, which is the
+    // rule baselineDate() refuses, spelled the other way round.
+    private const string EFFECTIVE_DATE_SQL = 'case'
+        .' when accounts.opening_balance_minor is not null then accounts.opening_balance_as_of_date'
+        .' when accounts.starting_balance_minor is not null then accounts.starting_balance_date'
+        .' end';
 
     // The one spelling of the lower bound for a grouped, multi-account sum
     // that cannot reach a per-account date in PHP. Both sides must be joined
@@ -70,20 +76,35 @@ final readonly class AccountStartingBalanceQuery
         $override = is_numeric($row->opening_balance_minor);
         $minor = $override ? $row->opening_balance_minor : $row->starting_balance_minor;
 
-        // A date without an amount is not a baseline: honouring its lower
-        // bound would drop every earlier row and add nothing back. The account
-        // still names the currency the zero is denominated in.
+        // The account still names the currency the zero is denominated in.
         if (! is_numeric($minor)) {
             return self::zeroIn(self::toString($row->default_currency));
         }
 
-        $rawDate = self::toStringOrNull($override ? $row->opening_balance_as_of_date : $row->starting_balance_date);
-
         return [
             'minorUnits' => self::toInt($minor),
             'currency' => self::toString($row->default_currency),
-            'date' => $rawDate === null ? null : SafeDate::normalisedDayOrNull($rawDate),
+            'date' => self::baselineDate(
+                $minor,
+                self::toStringOrNull($override ? $row->opening_balance_as_of_date : $row->starting_balance_date),
+            ),
         ];
+    }
+
+    // A date without an amount is not a baseline: honouring its lower bound
+    // would drop every earlier row and add nothing back. The pair is two
+    // separately merged synced columns, so one device clearing the amount
+    // leaves the other's date standing on the row.
+    /**
+     * @link ../../../../.docs/features/ledger/reconcile-needs-an-anchor.md#two-columns-two-shapes
+     */
+    public static function baselineDate(mixed $minor, ?string $rawDate): ?CarbonImmutable
+    {
+        if (! is_numeric($minor) || $rawDate === null || $rawDate === '') {
+            return null;
+        }
+
+        return SafeDate::normalisedDayOrNull($rawDate);
     }
 
     /**
