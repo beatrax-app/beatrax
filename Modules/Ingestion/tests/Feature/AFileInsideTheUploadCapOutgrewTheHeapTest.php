@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Exceptions\ReadCeilingExceededException;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Internal\Support\SourceFileCeilings;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
@@ -109,3 +110,17 @@ function camtAround(string $entries): string
         .$entries
         .'</Stmt></BkToCstmrStmt></Document>';
 }
+
+// A ceiling is not the reader that decides a file exists. HeaderSniffer::sniff()
+// refuses an unreadable path before any arm runs, so a ceiling that cannot open
+// one has nothing to add and says nothing rather than raising a second, worse
+// answer to a question already answered.
+it('says nothing about a file it cannot open, which the sniff already refused', function (): void {
+    $missing = sys_get_temp_dir().'/ceiling-no-such-file-'.uniqid().'.csv';
+
+    SourceFileCeilings::refuseLongCsvLine($missing);
+    SourceFileCeilings::refuseCamtEntryCount($missing);
+
+    expect(fn () => $this->sniffer->sniff($missing, CsvPresetRegistry::N26))
+        ->toThrow(SniffMismatchException::class);
+});

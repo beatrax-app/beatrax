@@ -20,7 +20,9 @@ final class PdfContentSize
         $contents = $page->get('Contents');
 
         if ($contents instanceof ElementArray) {
-            return self::ofElements($contents->getContent());
+            $listed = $contents->getContent();
+
+            return is_array($listed) ? self::ofElements($listed) : 0;
         }
 
         if ($contents instanceof PDFObject) {
@@ -35,12 +37,11 @@ final class PdfContentSize
         return 0;
     }
 
-    private static function ofElements(mixed $elements): int
+    /**
+     * @param  array<array-key, mixed>  $elements
+     */
+    private static function ofElements(array $elements): int
     {
-        if (! is_array($elements)) {
-            return 0;
-        }
-
         $bytes = 0;
 
         foreach ($elements as $element) {

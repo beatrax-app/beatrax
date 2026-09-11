@@ -208,22 +208,14 @@ class PdfTextLayoutReader
         foreach ($row as $run) {
             $written = mb_strlen($rendered);
 
-            // The column the coordinate asks for, but never closer than one
-            // space to what is already written. Two cells that round to the
-            // same column would otherwise fuse an amount onto its Af marker,
-            // and the row would stop looking like a transaction at all.
-            $column = min(
-                self::MAX_COLUMNS,
-                max(
-                    (int) round($run['x'] / self::COLUMN_WIDTH_POINTS),
-                    $written === 0 ? 0 : $written + 1,
-                ),
+            // The column the coordinate asks for, clamped, and then never
+            // closer than one space to what is already written. Clamping after
+            // the floor instead put a second clamped run BEHIND the first, and
+            // str_repeat refuses a negative count.
+            $column = max(
+                min(self::MAX_COLUMNS, (int) round($run['x'] / self::COLUMN_WIDTH_POINTS)),
+                $written === 0 ? 0 : $written + 1,
             );
-
-            if ($column < $written) {
-                $rendered .= ' ';
-                $column = $written + 1;
-            }
 
             $rendered .= str_repeat(' ', $column - $written).$run['text'];
         }
