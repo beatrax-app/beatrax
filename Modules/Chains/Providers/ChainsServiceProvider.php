@@ -29,6 +29,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\MessageNamesNoUserData;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 final class ChainsServiceProvider extends ServiceProvider
@@ -121,10 +122,16 @@ final class ChainsServiceProvider extends ServiceProvider
             $clock = $app->make(Clock::class);
             $now = $clock->now()->toDateTimeString();
 
-            $messageLines = preg_split('/\r?\n/', $event->exception->getMessage());
+            // `last_error` is durable and nothing narrowed what the job threw:
+            // a QueryException's first line is the statement WITH its bindings.
+            // The class names the failure; only a class that promised its
+            // message names no row value gets to add one.
+            $failure = $event->exception;
+            $message = $failure instanceof MessageNamesNoUserData ? $failure->getMessage() : '';
+            $messageLines = preg_split('/\r?\n/', $message);
             $firstLine = is_array($messageLines) && $messageLines !== [] ? $messageLines[0] : '';
             $lastError = substr(
-                $event->exception::class.': '.$firstLine,
+                $failure::class.($firstLine === '' ? '' : ': '.$firstLine),
                 0,
                 500,
             );

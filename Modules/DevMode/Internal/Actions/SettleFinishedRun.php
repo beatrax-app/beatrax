@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Actions;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Process\RunExitCodeFile;
 use Modules\DevMode\Internal\Process\RunRegistry;
@@ -47,9 +48,13 @@ final readonly class SettleFinishedRun
     private function logFinalizeFailure(string $runId, Throwable $error): void
     {
         try {
+            // The throwable arrives as a parameter, so the catch that made it
+            // is one frame up and cannot narrow what lands here. FinalizeRunAudit
+            // writes audit rows, and a QueryException's message is the statement
+            // with its bindings.
             $this->logger->error('FinalizeRunAudit failed for run '.$runId, [
-                'exception' => $error->getMessage(),
-                'exception_class' => $error::class,
+                ...SafeExceptionContext::describe($error),
+                ...SafeExceptionContext::refusedCell($error),
             ]);
         } catch (Throwable) {
             // Nothing is left to try: this IS the report of a failure, and the
