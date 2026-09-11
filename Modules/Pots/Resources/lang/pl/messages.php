@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Skarbonki przekraczają rzeczywiste saldo o :amount — zrównoważ je, aby to naprawić',
+        'overdrawn' => 'Ta skarbonka jest :amount poniżej zera, bo została opróżniona na więcej niż jednym urządzeniu — zasil ją tą samą kwotą, aby to naprawić',
         'real_balance' => 'Rzeczywiste saldo:',
         'allocated' => 'Przydzielone:',
         'unallocated' => 'Nieprzydzielone:',

@@ -129,6 +129,24 @@ is real-world spending, and no pot rule applies to it. When it happens,
 warning. The system never rewrites a pot's balance to make the books
 look tidy.
 
+Nor does it hold across devices. The transaction boundary serialises two
+writers on **one** database; two devices used apart have two, and neither
+re-read can see the other's insert. `pot_movements` is registered
+`_create_required` with no last-write-wins field, so every arriving row
+is a create rather than a merge, and `DeviceMintedRowId::mint()` draws
+from `random_int(1, PHP_INT_MAX)` — the two withdrawals cannot collide,
+and both land. The pot then reads below what it held.
+
+The applier is not where that is caught. A movement that appears to
+overdraw may simply be **early**: the compensating row from the same or
+another device can arrive in a later batch of a paged catch-up, and a
+gate there would refuse ordinary sync and quarantine real money. The same
+reasoning already rules a gate out for `envelope_moves`. So the pot card
+names the state instead — `PotRow::isOverdrawn()` and
+`pots::messages.recon.overdrawn`, in the amber the over-allocation banner
+wears — and asks the reader to fund the pot back to nought. Clamping the
+sum would hide the disagreement that is the whole problem.
+
 ## See also
 
 - [`architecture.md`](architecture.md) — the reconciliation model, the

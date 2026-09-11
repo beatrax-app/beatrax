@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Kumbaralar gerçek bakiyeyi :amount aşıyor — düzeltmek için yeniden dengele',
+        'overdrawn' => 'Bu kumbara :amount eksiye düştü, çünkü birden fazla cihazda boşaltıldı — düzeltmek için aynı tutarda para ekle',
         'real_balance' => 'Gerçek bakiye:',
         'allocated' => 'Dağıtılan:',
         'unallocated' => 'Dağıtılmamış:',

@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Obálky presahujú skutočný zostatok o :amount — vyrovnaj to',
+        'overdrawn' => 'Táto obálka je :amount pod nulou, pretože bola vyprázdnená na viac než jednom zariadení — vlož do nej rovnakú sumu, aby to bolo v poriadku',
         'real_balance' => 'Skutočný zostatok:',
         'allocated' => 'Priradené:',
         'unallocated' => 'Nepriradené:',

@@ -34,6 +34,7 @@ return [
 
     'recon' => [
         'over_allocated' => 'Las huchas superan el saldo real en :amount — reequilibra para arreglarlo',
+        'overdrawn' => 'Esta hucha está :amount por debajo de cero porque se vació en más de un dispositivo — ingresa la misma cantidad para arreglarlo',
         'real_balance' => 'Saldo real:',
         'allocated' => 'Asignado:',
         'unallocated' => 'Sin asignar:',
