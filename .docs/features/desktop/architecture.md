@@ -474,6 +474,52 @@ key material to stop, and `SafeStorageSecretShield::protectsAtRest()` now asks
 it *before* the round-trip probe, because the probe alone answers yes about
 ciphertext anyone can open.
 
+## What the shell's secret proves, and what it does not
+
+`_native/api/*` is the one ingress that cannot use the session, so what stands
+in front of it is `X-NativePHP-Secret` and `NativeBridgeIsShellOnly`. The
+credential is weaker than it reads, and in one exact way: the shell attaches it
+**by destination**. `electron-plugin/src/index.ts` registers
+
+```js
+const filter = { urls: [`http://127.0.0.1:${state.phpPort}/*`] };
+session.defaultSession.webRequest.onBeforeSendHeaders(filter, …)
+```
+
+and a `webRequest` filter matches the URL being *requested*, never the context
+that asked. So every request reaching the PHP port from anywhere inside the
+Electron session leaves with the secret on it — including one issued by a page.
+Measured against the shipped Electron: a document served from a different origin
+did a no-preflight `fetch()` at the PHP port and arrived carrying
+`Origin: http://localhost:8198`, `Sec-Fetch-Site: cross-site` **and**
+`X-NativePHP-Secret`. The main process's own post, in the same run, arrived with
+the secret and no `Origin`, no `Sec-Fetch-*` and no `Referer` at all.
+
+A page is not a hypothetical here. `OpenBankingConnectController` and
+`EmailScan`'s `OAuthConnectController` both end in `redirector->away($url)`, and
+`NativeAppServiceProvider::boot()` opens the window with neither
+`preventLeaveDomain` nor `preventLeavePage` — so consenting to a bank or a
+mailbox navigates **this** window to a third-party origin, which then holds a
+credential indistinguishable from the shell's. Behind the gate,
+`DispatchEventFromAppController` does `new $event(...$payload)` on what the
+request named, and the package declares the route `withoutMiddleware(CSRF)`.
+
+The gate therefore asks two questions, not one: the secret, and whether a
+browsing context issued the request at all. Chromium puts Fetch Metadata on
+everything a page originates; the shell's axios post carries none. `Origin` is
+checked beside `Sec-Fetch-Site` because a GET navigation sends no `Origin`, and
+the pair covers every shape a page can send.
+
+The `_php_native` cookie is no longer read as proof of anything. Only a browsing
+context can present a cookie, and those are refused whatever they carry — and
+the cookie the shell plants (`utils.ts`, `appendCookie()`) is not marked
+httpOnly, so keeping it as a credential meant keeping a copy of the secret where
+a script can read it.
+
+What this does **not** close is the window standing on a third-party origin in
+the first place. That page still owns the window it is in; what it can no longer
+do is speak to the app as the shell.
+
 ## A native event never holds the window's session
 
 The shell delivers every `Native\Desktop\Events\*` event by posting

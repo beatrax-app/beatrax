@@ -72,3 +72,63 @@ it('refuses a secret that is only nearly right', function (): void {
             'payload' => [],
         ])->assertNotFound();
 });
+
+// The shipped shell stamps the secret onto every request ADDRESSED to the PHP
+// port -- `onBeforeSendHeaders` filters on the destination URL, not on who
+// asked -- so the bank consent screen the open-banking flow navigates this same
+// window to presents the credential the test above assumed only the shell had.
+it('refuses a page the shell is hosting, secret and all', function (): void {
+    $headers = ShellBridge::arm();
+    config()->set('nativephp-internal.running', true);
+
+    $this->withHeaders($headers + [
+        'Origin' => 'https://consent.example-bank.test',
+        'Sec-Fetch-Site' => 'cross-site',
+        'Sec-Fetch-Mode' => 'no-cors',
+    ])->post('/_native/api/events', [
+        'event' => 'Illuminate\\Foundation\\Events\\Terminating',
+        'payload' => [],
+    ])->assertNotFound();
+});
+
+// And the app's own page, which is stamped identically. A same-origin caller is
+// the one this gate was always read as admitting, and it is the one an injected
+// script would be.
+it('refuses the app own page too', function (): void {
+    $headers = ShellBridge::arm();
+    config()->set('nativephp-internal.running', true);
+
+    $this->withHeaders($headers + [
+        'Origin' => 'http://127.0.0.1:8100',
+        'Sec-Fetch-Site' => 'same-origin',
+    ])->post('/_native/api/events', [
+        'event' => 'Illuminate\\Foundation\\Events\\Terminating',
+        'payload' => [],
+    ])->assertNotFound();
+});
+
+// A GET carries no Origin, so Sec-Fetch-Site is the only thing separating this
+// from the shell -- and it is the request that would hand a page the secret in
+// a cookie it can read.
+it('refuses the cookie route to a page that carries the secret', function (): void {
+    $headers = ShellBridge::arm();
+    config()->set('nativephp-internal.running', true);
+
+    $this->withHeaders($headers + ['Sec-Fetch-Site' => 'same-origin'])
+        ->get('/_native/api/cookie')
+        ->assertNotFound();
+});
+
+// The cookie was a second copy of the secret, planted raw by the shell and not
+// marked httpOnly. Nothing can present it except a browsing context, and those
+// are refused above, so the header is the whole credential now.
+it('does not take the shell cookie as proof of anything', function (): void {
+    ShellBridge::arm();
+    config()->set('nativephp-internal.running', true);
+
+    $this->withUnencryptedCookie('_php_native', 'shell-bridge-secret-for-tests')
+        ->post('/_native/api/events', [
+            'event' => 'Illuminate\\Foundation\\Events\\Terminating',
+            'payload' => [],
+        ])->assertNotFound();
+});

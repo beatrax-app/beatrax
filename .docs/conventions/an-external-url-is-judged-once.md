@@ -55,12 +55,22 @@ of the main window; no `preventLeaveDomain` handler is installed.
 
 So an outside URL here is not "a page in a tab". It is a page inside the
 application's own frame, on a machine that also serves the application over
-loopback and answers on the LAN.
+loopback and answers on the LAN — and, until the third bullet below was fixed,
+a page the shell handed its own credential to.
+
+`target="_blank"` is not the only way one arrives, and not the likeliest.
+`OpenBankingConnectController` and `EmailScan`'s `OAuthConnectController` both
+end in `redirector->away($url)`, and `NativeAppServiceProvider::boot()` opens
+the window with a bare `Window::open()`. Connecting a bank or a mailbox is
+therefore a navigation of **this** window to a third-party origin, by design.
+That is the decision this page records; what changed is what such a page can
+reach, not whether it is allowed to be there.
 
 ## What the shell around it is
 
-Reviewed 2026-09-11, because two things this page reasons about had never been
-read. Both hold:
+Reviewed 2026-09-11, because things this page reasons about had never been
+read. The first two hold as written; the third did not, and is the seam this
+page stopped one step short of:
 
 - **The renderer's web preferences.** NativePHP's `webPreferences.ts` puts
   `contextIsolation: true` and the preload path in `requiredWebPreferences`,
@@ -73,6 +83,17 @@ read. Both hold:
 - **The desktop PHP server's bind.** `php -S 127.0.0.1:{port}`, and the
   NativePHP API server listens on `127.0.0.1` too. Loopback only, which is the
   premise `LoopbackOnly` is written against.
+- **What the shell stamps on the way out.** `electron-plugin/src/index.ts`
+  registers `onBeforeSendHeaders` against
+  ``{ urls: [`http://127.0.0.1:${state.phpPort}/*`] }`` and adds
+  `X-NativePHP-Secret`. A `webRequest` filter matches the URL being requested,
+  never the context that asked — so a page in one of these windows reached the
+  bridge carrying the shell's own credential. Measured on the shipped Electron:
+  a document from another origin posted at the PHP port and arrived with
+  `Origin`, `Sec-Fetch-Site: cross-site` **and** the secret; the main process's
+  axios post arrived with the secret and no browsing-context header at all.
+  `NativeBridgeIsShellOnly` now asks both questions — see
+  [the desktop page](../features/desktop/architecture.md#what-the-shells-secret-proves-and-what-it-does-not).
 
 `rel` is the other half of `target="_blank"`, and
 `OneGateJudgesAnExternalUrlArchTest` now holds it: without `noopener` the opened

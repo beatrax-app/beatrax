@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Psr\Log\LoggerInterface;
 
 // Handles the columns whose foreign key targets their own table. Ordering
@@ -176,11 +177,14 @@ final class SelfReferenceDeferral
             // transfer_out is counted as money leaving the household. Returning
             // zero on its own said there was nothing to repair, which is the
             // same answer a clean log gives.
+
+            // Never getMessage(): the driver interpolates the statement's
+            // bindings into it, which is what describe() exists to withhold
+            // and what `write()` below already withheld.
             $this->logger?->error('SelfReferenceDeferral: the log could not be read to repair a self-reference.', [
                 'table' => $table,
                 'column' => $column,
-                'exception' => $e->getMessage(),
-            ]);
+            ] + SafeExceptionContext::describe($e));
         }
 
         return $repaired;
