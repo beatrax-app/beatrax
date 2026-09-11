@@ -9,8 +9,9 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 // Orders the covered tables so parents are written before the rows that
-// reference them, derived from the live foreign keys rather than a
-// hand-maintained list.
+// reference them, read off the live foreign keys wherever they answer and off
+// the declarations below where a constraint was declined -- never off a
+// hand-kept list of all of them.
 
 // The rule groups are organised for readers, not for referential integrity:
 // transactions sit in the first group and the accounts they reference in the
