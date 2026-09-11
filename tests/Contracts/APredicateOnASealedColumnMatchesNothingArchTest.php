@@ -230,3 +230,194 @@ it('still recognises a sealed predicate, and still leaves a column merely named 
         ->and(sealedPredicatesInSource($path, $named, $columns))
         ->toBe([], 'The scan reports a column it only NAMES, so what it found above need not have been a comparison.');
 });
+
+// Raw SQL is the half of the rule above that the fluent scan cannot see: these
+// hand the database a string, so the column and the value it is compared to are
+// never call arguments and never tokens. Migrations are walked here and nowhere
+// else — BackendSourceFiles::all() skips them for the whole guard suite, and a
+// migration is the one kind of shipped code that runs on a device whose reader
+// enrolled long ago, where a sealed column is already ciphertext.
+const SEALED_RAW_SQL_CALLS = ['whereRaw', 'orWhereRaw', 'havingRaw', 'orHavingRaw', 'orderByRaw'];
+
+/**
+ * The shapes that survive sealing, spelled as SQL writes them.
+ *
+ * Asking whether a row HAS a value reads correctly through ciphertext: NULL
+ * coalesces to the empty string either way and a sealed value is never empty.
+ * Asking what the value IS does not, which is the whole rule. The one seam is a
+ * column whose plaintext was '': sealing makes it non-empty and the row joins
+ * the answer. That over-includes a row with no content and never hides one.
+ *
+ * @return list<string>
+ */
+function sealedPresenceTests(string $column): array
+{
+    $name = '(?:[a-z_]+\.)?'.preg_quote($column, '/');
+
+    return [
+        '/coalesce\(\s*'.$name.'\s*,\s*\'\'\s*\)\s*(?:<>|!=|=)\s*\'\'/i',
+        '/\b'.$name.'\s+is\s+(?:not\s+)?null\b/i',
+    ];
+}
+
+/**
+ * @param  list<string>  $columns
+ * @return list<string>
+ */
+function sealedRawSqlIn(string $path, array $columns): array
+{
+    return sealedRawSqlInSource($path, (string) file_get_contents($path), $columns);
+}
+
+/**
+ * @param  list<string>  $columns
+ * @return list<string>
+ */
+function sealedRawSqlInSource(string $path, string $source, array $columns): array
+{
+    $tokens = BackendSourceFiles::tokensOf($path, $source);
+    $found = [];
+
+    foreach ($tokens as $index => $token) {
+        if (! is_array($token) || $token[0] !== T_STRING || ! in_array($token[1], SEALED_RAW_SQL_CALLS, true)) {
+            continue;
+        }
+
+        $sql = BackendSourceFiles::callArguments($tokens, $index);
+
+        foreach ($columns as $column) {
+            $mention = '/\b'.preg_quote($column, '/').'\b/i';
+
+            if (preg_match($mention, $sql) !== 1) {
+                continue;
+            }
+
+            // Every mention the shapes above account for is struck out, and the
+            // question is asked of what is left. A name still standing is being
+            // read for its content rather than for its presence.
+            $rest = $sql;
+            foreach (sealedPresenceTests($column) as $presence) {
+                $rest = (string) preg_replace($presence, '', $rest);
+            }
+
+            if (preg_match($mention, $rest) === 1) {
+                $found[] = $token[1].'('.$column.')';
+            }
+        }
+    }
+
+    return array_values(array_unique($found));
+}
+
+/**
+ * @return list<string>
+ */
+function shippedMigrationFiles(): array
+{
+    $files = [];
+
+    foreach ([base_path('Modules/*/Database/Migrations/*.php'), base_path('database/migrations/*.php')] as $pattern) {
+        foreach ((array) glob($pattern) as $path) {
+            if (is_string($path)) {
+                $files[] = $path;
+            }
+        }
+    }
+
+    return $files;
+}
+
+it('compares no sealed column inside raw SQL, the migrations included', function (): void {
+    $columns = sealedColumnNames();
+    expect($columns)->not->toBe([], 'The registry named no sealed columns, so a clean answer below is this guard reading nothing.');
+
+    $migrations = shippedMigrationFiles();
+    expect(count($migrations))->toBeGreaterThan(150, 'The migration walk opened almost nothing, so a clean answer below says nothing about migrations.');
+
+    $offenders = [];
+    $presenceTested = [];
+
+    foreach ([...BackendSourceFiles::all(), ...$migrations] as $path) {
+        $relative = str_replace(base_path().'/', '', $path);
+        $source = (string) file_get_contents($path);
+
+        // Read twice on purpose: once under the rule, and once with the
+        // presence shapes disabled. The difference is the set this guard is
+        // deliberately letting through, and it is what the control below reads.
+        $hits = sealedRawSqlInSource($path, $source, $columns);
+        $mentions = sealedRawSqlMentions($path, $source, $columns);
+
+        if ($hits !== []) {
+            $offenders[] = $relative.'  '.implode(' ', $hits);
+        }
+
+        if ($mentions !== [] && $hits === []) {
+            $presenceTested[] = $relative;
+        }
+    }
+
+    // The positive control rides along: raw SQL over a sealed column exists in
+    // the migrations, and a run that saw none of it read neither raw SQL nor a
+    // migration, and would report the tree clean whatever it held.
+    expect($presenceTested)->not->toBe([], 'The scan found no raw SQL naming a sealed column at all, so it cannot be trusted to have found one that compares.');
+
+    expect($offenders)->toBe([], implode("\n", [
+        'A sealed column holds ciphertext with a fresh nonce per write, so raw SQL that',
+        'compares one to a value matches nothing for a reader who has enabled encryption.',
+        'Asking whether the column HAS a value is fine; asking what it IS is not. A',
+        'migration cannot be edited once shipped, so the answer there is a new migration:',
+        ...$offenders,
+    ]));
+});
+
+/**
+ * Every raw-SQL mention of a sealed column, the presence shapes not applied.
+ *
+ * @param  list<string>  $columns
+ * @return list<string>
+ */
+function sealedRawSqlMentions(string $path, string $source, array $columns): array
+{
+    $tokens = BackendSourceFiles::tokensOf($path, $source);
+    $found = [];
+
+    foreach ($tokens as $index => $token) {
+        if (! is_array($token) || $token[0] !== T_STRING || ! in_array($token[1], SEALED_RAW_SQL_CALLS, true)) {
+            continue;
+        }
+
+        $sql = BackendSourceFiles::callArguments($tokens, $index);
+
+        foreach ($columns as $column) {
+            if (preg_match('/\b'.preg_quote($column, '/').'\b/i', $sql) === 1) {
+                $found[] = $token[1].'('.$column.')';
+            }
+        }
+    }
+
+    return array_values(array_unique($found));
+}
+
+// The tree is clean of the compared shape, so a planted subject is the only way
+// to show the matcher still knows one — and the presence case has to be planted
+// beside it, because a rule that reported everything would also be "clean" of
+// false negatives while failing the tree.
+it('still recognises raw SQL that compares a sealed column, and leaves a presence test alone', function (): void {
+    $columns = sealedColumnNames();
+    $path = base_path('Modules/PlantedByTheControl.php');
+
+    $compared = <<<'PHP'
+        <?php
+        $q->whereRaw("lower(transactions.description) like ?", ['%paypal%']);
+        PHP;
+
+    $presence = <<<'PHP'
+        <?php
+        $q->whereRaw("coalesce(transactions.description, '') <> ''");
+        PHP;
+
+    expect(sealedRawSqlInSource($path, $compared, $columns))
+        ->toBe(['whereRaw(description)'], 'The scan no longer reports raw SQL comparing a sealed column, so a clean tree above says nothing.')
+        ->and(sealedRawSqlInSource($path, $presence, $columns))
+        ->toBe([], 'The scan reports a presence test, which sealing does not break — so the rule refuses what it should allow.');
+});
