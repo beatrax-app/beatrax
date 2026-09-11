@@ -69,12 +69,8 @@ final readonly class ScenarioSeriesResolver
     // The applier dispatches on the payload, so the payload is the answer.
     private function seriesThePayloadNames(ScenarioTemplate $template, mixed $payload): ?int
     {
-        if (! is_string($payload) || $payload === '') {
-            return null;
-        }
-
         /** @var mixed $decoded */
-        $decoded = json_decode($payload, true);
+        $decoded = is_string($payload) && $payload !== '' ? json_decode($payload, true) : null;
 
         if (! is_array($decoded)) {
             return null;

@@ -76,6 +76,53 @@ it('does not hand back a what-if whose payload cancels a different series', func
         ->and(retargetedWhatIfPayloadSeries($this->db, $cancelsNetflix))->toBe($netflix);
 });
 
+// A payload this build cannot read is one the lookup cannot claim is already
+// there. A duplicate scenario is recoverable; handing back one that cancels
+// another series is not.
+it('skips a candidate whose payload it cannot read at all', function (): void {
+    $netflix = retargetedWhatIfSeries($this->db, (int) $this->user->id, 'Netflix');
+
+    $first = ($this->create)(ScenarioTemplate::Cancel, $netflix, $this->user);
+
+    $this->db->connection()->table('forecast_scenario_mutations')
+        ->where('forecast_scenario_id', $first)
+        ->update(['payload' => 'not json at all']);
+
+    // The name lookup is the fallback behind the series lookup, so the row has
+    // to be renamed out of its way for the skip to be what is read here.
+    $this->db->connection()->table('forecast_scenarios')
+        ->where('id', $first)
+        ->update(['name' => 'renamed-'.bin2hex(random_bytes(4))]);
+
+    $second = ($this->create)(ScenarioTemplate::Cancel, $netflix, $this->user);
+
+    expect($second)->not->toBe($first)
+        ->and(retargetedWhatIfPayloadSeries($this->db, $second))->toBe($netflix);
+});
+
+// Readable JSON the payload class still refuses: the seriesId it requires is
+// not there, so constructing it raises rather than returning a wrong series.
+it('skips a candidate whose payload decodes but does not build', function (): void {
+    $netflix = retargetedWhatIfSeries($this->db, (int) $this->user->id, 'Netflix');
+
+    $first = ($this->create)(ScenarioTemplate::Cancel, $netflix, $this->user);
+
+    $this->db->connection()->table('forecast_scenario_mutations')
+        ->where('forecast_scenario_id', $first)
+        ->update(['payload' => '{"notASeriesId":1}']);
+
+    // The name lookup is the fallback behind the series lookup, so the row has
+    // to be renamed out of its way for the skip to be what is read here.
+    $this->db->connection()->table('forecast_scenarios')
+        ->where('id', $first)
+        ->update(['name' => 'renamed-'.bin2hex(random_bytes(4))]);
+
+    $second = ($this->create)(ScenarioTemplate::Cancel, $netflix, $this->user);
+
+    expect($second)->not->toBe($first)
+        ->and(retargetedWhatIfPayloadSeries($this->db, $second))->toBe($netflix);
+});
+
 it('still hands back the one whose payload agrees with its pointer', function (): void {
     $netflix = retargetedWhatIfSeries($this->db, (int) $this->user->id, 'Netflix');
 
