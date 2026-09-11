@@ -143,15 +143,17 @@ final class TransactionDetail extends Component
             }
         });
 
-        // Both halves of the break are announced. TransferPairCascade unpicks a
-        // pair only behind a TOMBSTONE, and nothing is deleted here — so a peer
-        // told only about the type kept two rows naming each other, one of them
-        // no longer a transfer at all.
+        // The null rides with EVERY non-transfer retype, not only the ones this
+        // device sees a partner for: $breaksPair reads this device's own copy of
+        // the link, and a peer that paired while this one was away kept two rows
+        // naming each other, one of them no longer a transfer at all.
         $events->dispatch(new TransactionMutated(
             transactionId: $this->transactionId,
             userId: $user->id,
             mutationType: 'edit',
-            dirtyFields: $breaksPair ? ['type' => $newType, 'pair_transaction_id' => null] : ['type' => $newType],
+            dirtyFields: $type->isTransfer()
+                ? ['type' => $newType]
+                : ['type' => $newType, 'pair_transaction_id' => null],
         ));
 
         if ($breaksPair) {
