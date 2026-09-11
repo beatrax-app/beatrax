@@ -15,9 +15,10 @@ use Tests\Contracts\Support\BackendSourceFiles;
  * @link ../../.docs/features/sync/sensitive-columns-at-rest.md
  */
 
-// Listed, not excused: each is INERT for an enrolled reader, so a demo install
-// with encryption on grows no chain links, split legs, tax tags or matched
-// receipts. Fixing that is its own change; this list stops the count growing.
+// Listed, not excused. They match plaintext TODAY: the demo writer inserts
+// through the query builder, bypassing the codec, so nothing it writes is
+// sealed. They go inert the moment that writer starts sealing, which is what
+// couples the two changes — this list is where that coupling is recorded.
 const SEALED_PREDICATE_DEMO_SEEDERS = [
     'Modules/Chains/Database/Seeders/Demo/DemoChainsSeeder.php' => [
         'reason' => 'links six demo transactions to each other by the description each was seeded with',
