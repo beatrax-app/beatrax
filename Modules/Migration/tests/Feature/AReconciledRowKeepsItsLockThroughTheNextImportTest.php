@@ -17,6 +17,7 @@ use Modules\Migration\Internal\Enums\MigrationSourceProduct;
 use Modules\Migration\Internal\Enums\UnmappedItemType;
 use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
+use Modules\Sync\Public\Events\EntityMutated;
 
 // A YNAB4 row's identity is its account, date, payee and category; its
 // fingerprint here is the account, dates, amount and counterparty. Recategorise
@@ -196,6 +197,38 @@ it('still carries the source flag across for a row the reader never reconciled',
     // the case above would still read as "the lock held".
     expect(statusOfPromotedRow($groceryTxId))->toBe(ClearedStatus::Cleared->value)
         ->and(reconciledLockRefusalsIn($secondRun))->toBe([]);
+});
+
+// The generic branch writes a table held in a VARIABLE, which is why the writer
+// guards rooted at a table literal or a model never saw it. It announced
+// nothing, so a re-import restated the row on this device alone.
+it('tells the other device about the description it restated', function (): void {
+    $firstRun = importYnab4Export('v1');
+    $groceryTxId = promotedTransactionId($firstRun, '2026-01-15', -4500);
+    $sourceExternalId = sourceExternalIdOfPromotedRow($firstRun, '2026-01-15', -4500);
+
+    $announced = [];
+    app('events')->listen(EntityMutated::class, function (EntityMutated $e) use (&$announced): void {
+        if ($e->table === 'transactions' && $e->mutationType === 'edit') {
+            $announced[] = $e;
+        }
+    });
+
+    expect(app(EntityChangeApplier::class)->apply(
+        $this->user,
+        MigrationSourceProduct::Ynab4->value,
+        MigrationEntityType::Transaction->value,
+        $sourceExternalId,
+        ['description' => 'Renamed by a later export'],
+    ))->toBeTrue();
+
+    $forRow = array_values(array_filter(
+        $announced,
+        static fn (EntityMutated $e): bool => (int) $e->pk === $groceryTxId,
+    ));
+
+    expect($forRow)->not->toBeEmpty()
+        ->and($forRow[0]->dirtyFields['description'] ?? null)->toBe('Renamed by a later export');
 });
 
 // The staged status was refused and the rest of the row was not: a re-run could
