@@ -20,6 +20,31 @@ The corpus files are contributed. A pull request against them is the supported
 way to add a merchant, so the strings in them are written by people outside this
 project and have to be treated that way.
 
+## What counts as a public host
+
+`Modules\Core\Public\Support\PublicHost` answers it, and it is the only place
+the rule is written. It fails **closed**: a host is public when it positively
+looks like one, never because nothing recognised it.
+
+- An IP the platform can parse must pass `NO_PRIV_RANGE|NO_RES_RANGE`.
+- Anything else must match a strict LDH name of at least two labels whose last
+  label is alphabetic. That single rule rejects every numeric notation at once —
+  `0177.0.0.1`, `127.1`, `0x7f.0x0.0x0.0x1`, `2130706433`,
+  `[::ffff:127.0.0.1]` — and rejects a bare LAN name with no dot in it.
+- The name must not end in a suffix a resolver answers from the local network:
+  `.local`, `.localhost`, `.internal`, `.home.arpa`, `.invalid`, `.lan`,
+  `.intranet`, `.corp`, `.private`. None of the last four was ever delegated.
+
+The predicate lived in two files at once — here and in
+`OpenBanking\Internal\Actions\StartBankConsent` — and only the second copy was
+ever corrected. This one fell through to "contains a dot", which answered
+*public* for all five notations above.
+
+`ExternalUrl` adds one clause of its own on top: it refuses an address literal
+even where it routes, because a merchant's contact page is never a bare address.
+A bank's SCA host may be, so `StartBankConsent` does not add it. That is the
+only point at which the two callers differ, and it is stated in both.
+
 ## Why this is not a browser tab
 
 The desktop shell does not call `suppressNewWindows()`, so `target="_blank"`
@@ -42,7 +67,7 @@ ruled out, so a refusal never blames a scheme the check already accepted.
 | `NotHttps` | anything that is not an absolute `https://` URL — `http:` downgrades the connection, and `javascript:`, `data:` and `file:` are not connections |
 | `Malformed` | control characters (a bare CR ends the log line, not the URL), a length past 512, or a shape the parser refuses |
 | `CarriesCredentials` | `https://github.com@example.test/` — reads as GitHub, resolves to example.test, and a general URL validator accepts it |
-| `HostIsNotPublic` | an address literal, `localhost`, a `.local`/`.internal` name, or a name with no dot: all of them point back at the reader's own machine or network |
+| `HostIsNotPublic` | an address literal, `localhost`, a reserved suffix, or a name with no dot: all of them point back at the reader's own machine or network |
 | `NonDefaultPort` | any port but 443 — a contact page is served where the web is |
 | `HostNotAllowListed` | only for callers that have a finite list. Opening has one (`github.com`); a rendered corpus link cannot |
 
