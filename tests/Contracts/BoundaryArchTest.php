@@ -2258,7 +2258,7 @@ it('pins every cross-module raw-table write to the allow-list (crossModuleRawTab
         // Nothing in production ever wrote `merchants`, so merchant memory
         // could not grow: the listener that owns the memory now find-or-creates
         // the merchant its NOT NULL FK points at, beside the memory itself.
-        'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchants 1',
+        'Modules/Categorization/Internal/Listeners/MerchantMemoryWriter.php merchants 2',
         'Modules/Core/Internal/Console/FailedJobsCommand.php failed_jobs 1',
         // The enable-time sweep and its rollback restore reach six tables this
         // module does not own, all through one table-agnostic batched writer in
