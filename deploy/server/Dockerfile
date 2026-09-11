@@ -34,6 +34,9 @@ RUN apt-get update \
 WORKDIR /app
 COPY . .
 COPY --from=assets /app/public/build ./public/build
+# The base image ships no php.ini, so a trace rendered by anything other than
+# SafeTrace would carry the first 15 characters of every string argument.
+COPY deploy/server/conf.d/ $PHP_INI_DIR/conf.d/
 # --no-dev: production only. post-autoload-dump runs `package:discover` (safe);
 # native:install only runs on `composer update`, never here.
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist \
