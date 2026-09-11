@@ -15,6 +15,7 @@ use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Import\Public\Services\BuildConsolidatedPreviewQuery;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
@@ -233,11 +234,20 @@ final readonly class PreviewCache
             return null;
         }
 
+        // Lazy, so the null arm the caller checked has already been passed by
+        // the time a chunk is read. A run whose pieces do not all outlive each
+        // other is expired, which is the answer ConfirmImport is written around.
         return (function () use ($importRunId, $head): Generator {
             for ($chunk = 0; $chunk < $head->canonicalChunkCount; $chunk++) {
+                $rows = $this->jsonChunk($importRunId, PreviewKeys::canonicalChunk($importRunId, $chunk));
+
+                if ($rows === null) {
+                    throw new PreviewExpiredException($importRunId);
+                }
+
                 yield array_values(array_map(
                     static fn (array $row): CanonicalTransaction => CanonicalTransaction::from($row),
-                    $this->jsonChunk($importRunId, PreviewKeys::canonicalChunk($importRunId, $chunk)),
+                    $rows,
                 ));
             }
         })();
@@ -279,7 +289,13 @@ final readonly class PreviewCache
         $all = [];
 
         for ($chunk = 0; $chunk < $head->enrichmentChunkCount; $chunk++) {
-            foreach ($this->jsonChunk($importRunId, PreviewKeys::enrichmentChunk($importRunId, $chunk)) as $row) {
+            $rows = $this->jsonChunk($importRunId, PreviewKeys::enrichmentChunk($importRunId, $chunk));
+
+            if ($rows === null) {
+                return null;
+            }
+
+            foreach ($rows as $row) {
                 $all[] = PendingEnrichment::from($row);
             }
         }
@@ -452,9 +468,20 @@ final readonly class PreviewCache
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function jsonChunk(int $importRunId, string $key): array
+    // Null for a key that is GONE, an exception only for one that is there and
+    // unreadable -- the distinction head() states and rowChunk() keeps. Reading
+    // an expiry as corruption sent a confirm past the `=== null` arm that
+    // exists for it and out of the wizard as a 500.
+    /**
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function jsonChunk(int $importRunId, string $key): ?array
     {
         $raw = $this->cache->get($key);
+
+        if ($raw === null) {
+            return null;
+        }
 
         if (! is_string($raw)) {
             throw new PreviewCacheCorruptedException($importRunId, $key);
