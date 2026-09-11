@@ -178,11 +178,10 @@ final readonly class CoveredTableOrder
     {
         $dependencies = [];
 
-        // Read through parentColumns() rather than the foreign keys directly,
-        // so a reference declared there because it carries no constraint is
-        // written down before the rows that name it, and not merely translated
-        // once they are both here. Self-references and uncovered targets are
-        // already excluded there, for the same two reasons.
+        // Read through parentColumns() rather than the foreign keys directly, so
+        // a reference declared there because it carries no constraint is written
+        // down before the rows naming it, not merely translated once both are
+        // here. Self-references and uncovered targets are excluded there.
         foreach ($covered as $table) {
             $dependencies[$table] = array_values(array_unique(array_values($this->parentColumns($table))));
         }
