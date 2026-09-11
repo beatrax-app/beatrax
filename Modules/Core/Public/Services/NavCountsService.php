@@ -131,8 +131,9 @@ final readonly class NavCountsService
                 $group->where('state', DriftAlertState::Open->value)
                     ->orWhere(static function (Builder $revived) use ($now): void {
                         $revived->where('state', DriftAlertState::Snoozed->value)
-                            ->whereNotNull('snoozed_until')
-                            ->where('snoozed_until', '<=', $now);
+                            ->where(static function (Builder $expiry) use ($now): void {
+                                $expiry->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', $now);
+                            });
                     });
             },
         );
