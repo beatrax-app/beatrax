@@ -415,6 +415,12 @@ final readonly class OpLogEntryApplier
             unset($payload['user_id']);
         }
 
+        // The same overwrite for the pk, and for the same reason. A create
+        // that names `id` is ordinary -- a derived id repeats itself in the
+        // payload -- but the row is the one the op addresses, so a field that
+        // disagreed would land it where nothing else recorded it.
+        $payload['id'] = $pk;
+
         return $this->creationTime->seed($table, $payload, $fields);
     }
 
