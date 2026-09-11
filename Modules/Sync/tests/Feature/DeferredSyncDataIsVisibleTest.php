@@ -124,7 +124,7 @@ it('reads its marks on a device that has no encryption state row', function (): 
     expect($markers->isEnrolled((int) $user->id))->toBeFalse();
     expect($markers->resealedColumnsDigest((int) $user->id))->toBeNull();
     expect($markers->historyReprojectedAt((int) $user->id))->toBeNull();
-    expect($markers->reprojectedKeyringFingerprint((int) $user->id))->toBeNull();
+    expect($markers->reprojectedPassIdentity((int) $user->id))->toBeNull();
 
     Livewire::actingAs($user)->test(DevicesAndSyncSettingsSection::class)
         ->assertSet('syncBacklog', SyncBacklogState::None->value);
