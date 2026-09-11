@@ -499,7 +499,7 @@ final readonly class OpLogEntryApplier
             // to you while reading their balance; raise a leg and the legs stop
             // adding up to the charge. Ownership answers first, as on create.
             $refusal = $this->ownership->referencesBelongToUser($table, [$field => $columnValue], $batch->userId, $pk)
-                ? $this->splitOverfill->reasonToRefuseSet($table, $field, $pk, $columnValue, $batch->splitAmounts)
+                ? $this->splitOverfill->reasonToRefuseSet($table, $field, $pk, $columnValue, $batch)
                 : QuarantineReason::CrossUser;
 
             if ($refusal !== null) {

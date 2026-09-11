@@ -758,6 +758,24 @@ Three things it must not do, each with a test of its own:
   values, so the verdict is taken on the set the batch lands and does not depend
   on the order the legs are reached in.
 
+Every read it takes is bounded to the reader the batch is for, through
+`RowOwnership::scopeToUser()`. One device holds both household members under a
+single id sequence — on a live database user 1 held transactions 1–174 while
+user 2 held 146–167 — so an id a peer minted is a *number* here, not a row.
+`transaction_splits` declares no unique index besides its primary key, so
+`PeerRowAliases` can never record an alias for a leg: bounded by id alone,
+`reasonToRefuseSet()` read the id straight through onto the **other** reader's
+leg, took that leg's transaction, and refused the arriving change as
+`split_would_overfill_transaction` against a charge its author does not own. A
+transaction or a leg the reader does not own now answers the same as one that
+is not here at all — the sum is not taken.
+
+On the create path the ordering in `CreateRowGates::refusalFor()` had already
+kept this gate off another reader's transaction: `referencesBelongToUser()`
+refuses the payload's `transaction_id` as `cross_user` before the sum is asked
+for. That path was latent rather than live, and the bound no longer depends on
+which arm of a neighbouring gate runs first.
+
 Two adjacent gaps are **not** closed, and both are named here so neither reads as
 covered:
 

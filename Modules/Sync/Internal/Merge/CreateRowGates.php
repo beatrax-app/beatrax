@@ -30,7 +30,7 @@ final readonly class CreateRowGates
     {
         return match (true) {
             ! $this->ownershipAdmits($table, $payload, $batch->userId, $pk) => QuarantineReason::CrossUser,
-            default => $this->splitOverfill->reasonToRefuse($table, $pk, $payload, $batch->splitAmounts),
+            default => $this->splitOverfill->reasonToRefuse($table, $pk, $payload, $batch),
         };
     }
 

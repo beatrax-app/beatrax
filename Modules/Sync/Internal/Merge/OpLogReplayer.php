@@ -160,7 +160,7 @@ final readonly class OpLogReplayer
                 $log,
             ),
             new SuppliedCreationTime($db, $log),
-            new SplitOverfillGate($db),
+            new SplitOverfillGate($db, $ownership),
             new DependentRowCascade($db, $rules),
             $log,
         );

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
+use Modules\Sync\Internal\Merge\ArrivingBatch;
+use Modules\Sync\Internal\Merge\RowOwnership;
 use Modules\Sync\Internal\Merge\SplitOverfillGate;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 
@@ -53,9 +55,10 @@ function unreadableSumDatabase(): DatabaseManager
 }
 
 it('refuses a leg whose sum it could not take instead of admitting it', function (): void {
-    $gate = new SplitOverfillGate(unreadableSumDatabase());
+    $db = unreadableSumDatabase();
+    $gate = new SplitOverfillGate($db, new RowOwnership($db));
 
-    expect($gate->reasonToRefuse('transaction_splits', 'leg-1', unreadableSumLegPayload()))
+    expect($gate->reasonToRefuse('transaction_splits', 'leg-1', unreadableSumLegPayload(), new ArrivingBatch(1, '2026-06-14 10:00:00')))
         ->toBe(QuarantineReason::SplitSumUnreadable);
 });
 
