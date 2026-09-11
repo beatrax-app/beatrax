@@ -18,7 +18,10 @@ final readonly class Mt940Tag61Parser
         .'(?:(?P<entry_month>\d{2})(?P<entry_day>\d{2}))?'
         .'(?P<status>R?[CD])'
         .'(?P<funds_code>[A-Z])?'
-        .'(?P<amount>\d+(?:,\d{0,2})?)'
+        // Three, not two: BankAmountParser reads a dinar at its own scale and
+        // the group that feeds it has to reach that far. A fraction wider than
+        // the currency holds is still refused there, where that rule lives.
+        .'(?P<amount>\d+(?:,\d{0,3})?)'
         .'(?P<id>[A-Z][A-Z0-9 ]{3})?'
         .'(?P<customer_reference>[^\/\n]{0,34})'
         .'(?:\/\/(?P<bank_reference>[^\n]{0,16}))?'
