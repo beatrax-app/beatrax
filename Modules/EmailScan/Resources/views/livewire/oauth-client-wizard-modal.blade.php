@@ -58,7 +58,7 @@
                                 size="sm"
                                 class="gap-1"
                                 target="_blank"
-                                rel="noopener"
+                                rel="noopener noreferrer"
                             >{{ Lang::get('email-scan::wizard.gmail.step1_link') }}</x-core::secondary-button>
                         </div>
                     </li>
@@ -149,7 +149,7 @@
                                 size="sm"
                                 class="gap-1"
                                 target="_blank"
-                                rel="noopener"
+                                rel="noopener noreferrer"
                             >{{ Lang::get('email-scan::wizard.microsoft.step1_link') }}</x-core::secondary-button>
                         </div>
                     </li>

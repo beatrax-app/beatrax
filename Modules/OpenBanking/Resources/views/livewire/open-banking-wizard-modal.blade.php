@@ -87,7 +87,7 @@
                         size="sm"
                         class="gap-1"
                         target="_blank"
-                        rel="noopener"
+                        rel="noopener noreferrer"
                     >{{ Lang::get('openbanking::messages.wizard.open_portal') }}</x-core::secondary-button>
                 </div>
             @elseif ($step === WizardStep::ApplicationId->value)
