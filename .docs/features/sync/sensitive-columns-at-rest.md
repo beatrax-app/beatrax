@@ -282,6 +282,49 @@ cannot be allowed to cover is a hold the pass never *reached* — the one above,
 change would ever reopen — so the reasons that are spent by construction are retired outside the
 window rather than filtered by it.
 
+### A pass that cannot seal must not run
+
+Enrolment and a held key are two different facts, and for a while three callers disagreed about
+which one gated the recovery pass. `SealedLedgerRecovery::recover()` asked
+`SensitiveColumnCodec::canSeal()`, which needs the app-lock key material actually present in the
+session. `DevicesScreenOpening::recoverDeferred()` asked `EncryptionRecoveryMarkers::isEnrolled()`,
+and `InitialSyncPuller` asked whether `sync_encryption_state.current_epoch` is non-null. Those
+last two are the same question, and it is not the one that matters: `current_epoch` is a plain
+integer pointer that says the rows are *supposed* to be sealed. A keyring file that is missing,
+that a rotated app-lock key no longer opens, or an epoch committed with no keyring behind it —
+the state `StrandedEncryptionEpochException` is named for — all read as enrolled.
+
+What a keyless pass does to a `primary_key_collision` hold is worse than leaving it alone.
+`OpLogEntryApplier::buildCreatePayload()` re-seals every registered column on the way into the
+projection, so a create carrying one is refused with `QuarantineReason::StrategyError` and
+returns null — before `AlreadyPresentCreate` is ever consulted, so nothing is re-homed and no
+alias is written. That is the correct refusal. What was not correct is what happened to the hold
+it was retried from: `RetriedCollisionCreates::replay()` retired it anyway, and
+`HistoryReprojector::rowsWorthReplaying()` excludes **only** `primary_key_collision` from the
+broad replay. The row therefore moved from the narrow retry, which takes the refused author's own
+create and nothing else, onto the replay that resolves every device's ops at that pk into one
+payload. Measured on a fixture holding both devices' creates under one id: one keyless pass left
+the collision hold gone and two `strategy_error` holds in its place, and no later pass re-homed
+the peer's row however many keys arrived — while a peer `set` at that pk landed on this device's
+unrelated row.
+
+Both halves are now closed. `HistoryReprojector::replayQuarantined()` asks `canProject()` before
+it does anything — not enrolled, or enrolled and holding the key — and throws
+`SensitiveColumnKeyUnavailableException` when it cannot, so the gate is one expression that every
+caller gets rather than a precondition each one had to remember. It throws rather than returning
+a count, because a `0` is indistinguishable from "there was nothing to do" and `InitialSyncPuller`
+persists `reprojected_at` off that return: a silent skip would have stamped an import Complete
+over a history it never projected. `SealedLedgerRecovery` keeps its own early return, since it
+gates the re-seal and the index repair on the same key. `InitialSyncPuller` now reads
+`canProject()` alongside the `current_epoch` pointer, so a stranded phone reports
+`SyncBlockedReason::NoKeys` — "waiting for the encryption keys from the other device", which puts
+the reader on the Keys step instead of on a rebuild that is not running.
+
+And `RetriedCollisionCreates` no longer retires a hold on a create the pass turned away before it
+reached the id. Only a verdict on the collision itself — the row placed, or the collision
+recorded afresh as `primary_key_collision` or `unplaceable_collision` under a new autoincrement —
+spends the hold. `QuarantineReason::collisionVerdicts()` is where that pair is named.
+
 ### What the reader is told
 
 A desktop that has been synced to but not opened holds the data in its op log and shows none of
