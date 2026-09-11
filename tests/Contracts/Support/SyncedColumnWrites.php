@@ -138,6 +138,41 @@ final class SyncedColumnWrites
             && PatternScan::matches('/->\s*save(?:Quietly)?\(\)/', $source);
     }
 
+    // Every write this file performs, asked as one substring so the walk below
+    // can skip a file that writes nothing at all.
+    private const string WRITE_TERMINAL = '->\s*(?:update|insert|upsert|insertOrIgnore|updateOrInsert|delete|statement)\s*\(';
+
+    // The blind spot of the guard beside this one. That guard roots every column
+    // at a table literal, so a statement naming its table any other way is a
+    // write it walks straight past -- an applier wrote four columns of
+    // `transactions` through `->table($table)` and no guard ever said a word.
+
+    // Asked per statement, not per file: a `string $table` lookup sitting
+    // beside an unrelated literal write is not this shape, and reading the
+    // whole file at once called four such files offenders.
+    public static function namesItsTableIndirectly(string $source): bool
+    {
+        foreach (PatternScan::split('/;/', $source) as $statement) {
+            if (! PatternScan::matches('/'.self::WRITE_TERMINAL.'/', $statement)) {
+                continue;
+            }
+
+            // `->table($this->table())`, `->table($table)`, `->table(Foo::BAR)`
+            if (PatternScan::matches('/->\s*table\(\s*(?:\$|[A-Za-z_\\\\]+::)/', $statement)) {
+                return true;
+            }
+
+            // The builder came from somewhere else and the table rode along as
+            // an argument: `scopeToUser($query, $table, $userId)->update(...)`.
+            if (PatternScan::matches('/\$\w*[Tt]able\w*\b/', $statement)
+                && ! PatternScan::matches("/->\s*table\(\s*'/", $statement)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // Whole-file, exactly as the delete and users guards ask it. A file writing
     // one column of a table and announcing another is not the failure this
     // catches; a file that tells no peer anything at all is.
