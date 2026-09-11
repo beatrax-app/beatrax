@@ -8,13 +8,32 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Sync\Public\Enums\PairingSide;
 use Modules\Sync\Public\Enums\PairingWizardStep;
+use Modules\Sync\Public\Services\PairingGateway;
 
-// Which of the two ways in is on screen — the camera or the keypad — and every
-// move between them. Here rather than on the component because a Livewire
-// screen accretes one action per affordance, and these six answer one question
-// no later step of the ceremony asks.
+// Which of the two ways in is on screen — the camera or the keypad — the moves
+// between them, and the permission both need before either reaches anything.
+// Here rather than on the component because a Livewire screen accretes one
+// action per affordance, and these answer a question no later step asks.
 trait ChoosesCodeEntryArm
 {
+    // From the view once painted, not from mount(): the probe blocks for the
+    // browse timeout, and the reader should be looking at the pairing screen
+    // while iOS asks its question rather than at a blank one. Answering it
+    // opens every road to the peer, not only the browse.
+    /**
+     * @link ../../../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md#the-second-gate-and-the-one-a-reader-can-open
+     */
+    public function askForLocalNetwork(PairingGateway $gateway): void
+    {
+        if ($this->localNetworkAsked) {
+            return;
+        }
+
+        $this->localNetworkAsked = true;
+
+        $gateway->askForLocalNetworkAccess();
+    }
+
     // entryStep is not #[Locked], so a crafted payload can name any step here,
     // and a reset would then land the reader on a later screen than the arm
     // they actually chose. Only the two arms this page offers are honoured.

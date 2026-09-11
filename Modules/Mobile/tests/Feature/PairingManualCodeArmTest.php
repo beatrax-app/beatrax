@@ -17,9 +17,13 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveredPeer;
 use Modules\Sync\Internal\Transport\Discovery\DiscoveryMode;
+use Modules\Sync\Internal\Transport\Discovery\LocalNetworkGate;
+use Modules\Sync\Internal\Transport\Discovery\NativeBridge;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Enums\LocalNetworkAccess;
 use Modules\Sync\Public\Enums\PairingWizardStep;
+use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
 
@@ -49,6 +53,35 @@ function manualArmDiscovers(array $peers, LanDiscoveryReach $reach = LanDiscover
         public function browse(string $serviceType, float $timeoutSeconds = 2.0): array
         {
             return $this->peers;
+        }
+    });
+}
+
+// The second gate, and the only one a reader can open. `null` is the shipped
+// iOS build: no plugin registers the function, so nothing on the device can say
+// whether the prompt was ever answered and the copy has to hedge.
+function manualArmLocalNetwork(?bool $granted): void
+{
+    app()->instance(NativeBridge::class, new class($granted) implements NativeBridge
+    {
+        public function __construct(private readonly ?bool $granted) {}
+
+        public function supports(string $function): bool
+        {
+            return $this->granted !== null && $function === LocalNetworkGate::STATUS_FUNCTION;
+        }
+
+        /**
+         * @param  array<string, scalar>  $parameters
+         * @return array<mixed>|null
+         */
+        public function call(string $function, array $parameters): ?array
+        {
+            if ($this->granted === null || $function !== LocalNetworkGate::STATUS_FUNCTION) {
+                return null;
+            }
+
+            return ['granted' => $this->granted];
         }
     });
 }
@@ -216,6 +249,11 @@ it('sends a device that cannot search to the camera rather than to its router', 
     // search could run at all, so an iPhone that later gains the entitlement
     // gets the ordinary sentence without anyone editing this branch.
     manualArmDiscovers([], LanDiscoveryReach::Unsupported);
+
+    // Granted, because this line is about the SEARCH. A device still behind the
+    // permission gate reaches no peer by any road, and the camera this sentence
+    // sends them to is one of them.
+    manualArmLocalNetwork(granted: true);
     Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
 
     putenv('NATIVEPHP_PLATFORM=ios');
@@ -249,7 +287,7 @@ it('carries every line the entry arms can select in all twenty-six locales', fun
         $pairing = require $root.'/'.$locale.'/pairing.php';
         $errors = $pairing['errors'] ?? [];
 
-        foreach (['no_peer_answered', 'no_peer_answered_ios', 'no_peer_answered_camera_off'] as $key) {
+        foreach (['no_peer_answered', 'no_peer_answered_ios', 'no_peer_answered_camera_off', 'no_peer_answered_local_network'] as $key) {
             $copy = is_array($errors) ? ($errors[$key] ?? null) : null;
 
             if (! is_string($copy) || $copy === '') {
@@ -501,4 +539,149 @@ it('still calls an unreadable scanned payload invalid', function (): void {
     Livewire::test(MobilePairingScan::class)
         ->call('submitCode', 'not-a-beatrax-pairing-payload')
         ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.invalid_code'));
+});
+
+// iphone-02, measured 2026-09-11 on a fresh install. The phone typed a real
+// code, was told nothing answered and to scan instead, and was given the
+// desktop's address and told the same thing again. iOS's own nehelper had the
+// local-network prompt outstanding for the bundle throughout, and the TCP flow
+// to the desktop closed having carried nothing. The camera the message sends
+// the reader to needs that same permission to deliver its pairing frame, so the
+// one remedy on offer was shut by the cause.
+
+it('names the permission that shut every road rather than the camera that is one of them', function (): void {
+    $user = manualArmUser('armperm');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Unsupported);
+
+    // What a shipped build reports: the declaration is in Info.plist, no plugin
+    // reads the grant back, and the reader has not answered the prompt.
+    manualArmLocalNetwork(granted: null);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    putenv('NATIVEPHP_PLATFORM=ios');
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    try {
+        $flashed = Livewire::test(MobilePairingScan::class)
+            ->call('useWordCode')
+            ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
+            ->call('submitCode', null)
+            ->get('flashMessage');
+    } finally {
+        putenv('NATIVEPHP_PLATFORM');
+    }
+
+    expect($flashed)->toBe(Lang::get('mobile::pairing.errors.no_peer_answered_local_network'));
+
+    // The two claims that made the old line worse than silence: an order the
+    // reader cannot carry out, and a cause that is not the one holding them up.
+    expect($flashed)->not->toContain('scan its code with the camera instead');
+    expect($flashed)->not->toContain('does not work on iPhone yet');
+});
+
+// The permission outranks the reach because it outranks every road: a device
+// allowed to search still cannot open a connection to what it finds.
+
+it('blames the permission before the search on a device that could otherwise look', function (): void {
+    $user = manualArmUser('armrank');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Available);
+    manualArmLocalNetwork(granted: null);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    putenv('NATIVEPHP_PLATFORM=ios');
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    try {
+        Livewire::test(MobilePairingScan::class)
+            ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
+            ->call('submitCode', null)
+            ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.no_peer_answered_local_network'));
+    } finally {
+        putenv('NATIVEPHP_PLATFORM');
+    }
+});
+
+// The line retires itself the day a shell can read the grant back and answers
+// yes — the same property the reach-driven lines already have.
+
+it('stops naming the permission once the shell says the reader granted it', function (): void {
+    $user = manualArmUser('armgrant');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Available);
+    manualArmLocalNetwork(granted: true);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    putenv('NATIVEPHP_PLATFORM=ios');
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    try {
+        // Read across the seam this screen actually uses, so a gateway that
+        // stopped carrying the answer fails here rather than silently picking
+        // the line for a state the shell had already ruled out.
+        expect(app(PairingGateway::class)->localNetworkAccess())->toBe(LocalNetworkAccess::Granted);
+
+        Livewire::test(MobilePairingScan::class)
+            ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
+            ->call('submitCode', null)
+            ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.no_peer_answered'));
+    } finally {
+        putenv('NATIVEPHP_PLATFORM');
+    }
+});
+
+// Nothing on a desktop or an Android holds LAN traffic behind a prompt, and a
+// platform read that called them unconfirmed on suspicion would print the
+// iPhone's remedy to readers who have no such setting to change.
+
+it('leaves every platform without such a prompt alone', function (): void {
+    $user = manualArmUser('armother');
+    test()->actingAs($user);
+
+    manualArmDiscovers([]);
+    manualArmLocalNetwork(granted: null);
+    Http::fake(['*' => Http::response(['error' => 'not_found'], 404)]);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    expect(app(PairingGateway::class)->localNetworkAccess())->toBe(LocalNetworkAccess::Granted);
+
+    Livewire::test(MobilePairingScan::class)
+        ->set('wordCode', (new WordCodeEncoder)->encode(bin2hex(random_bytes(16))))
+        ->call('submitCode', null)
+        ->assertSet('flashMessage', Lang::get('mobile::pairing.errors.no_peer_answered'));
+});
+
+// Prompting beats explaining, and the moment is the whole of it: iOS raises its
+// question on the first attempt to reach a LAN address, so the screen makes one
+// on arrival. Before this it was the submit that made the attempt, and the
+// system's offer of local-network access landed on top of the app's own message
+// saying nothing on the network had answered.
+
+it('asks for the permission when the screen is drawn, not when the code is submitted', function (): void {
+    expect(manualArmBlade())->toContain('wire:init="askForLocalNetwork"');
+});
+
+it('asks the platform once per visit, however often the client calls', function (): void {
+    $user = manualArmUser('armonce');
+    test()->actingAs($user);
+
+    manualArmDiscovers([], LanDiscoveryReach::Unsupported);
+    manualArmLocalNetwork(granted: null);
+
+    app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
+
+    Livewire::test(MobilePairingScan::class)
+        ->assertSet('localNetworkAsked', false)
+        ->call('askForLocalNetwork')
+        ->assertSet('localNetworkAsked', true)
+        ->call('askForLocalNetwork')
+        ->assertSet('localNetworkAsked', true);
 });

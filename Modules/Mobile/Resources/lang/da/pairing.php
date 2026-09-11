@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Det er ikke en adresse, denne enhed kan ringe op. Indtast den som host og port, for eksempel 192.168.1.20:8100.',
         'code_not_accepted' => 'Ingen enhed på dette netværk accepterede koden. Tjek koden, og at den anden enhed stadig viser den.',
         'no_peer_answered' => 'Intet på dette netværk svarede på koden. Tjek, at synkronisering kører på den anden enhed, eller scan dens kode med kameraet — kameraet søger ikke på netværket.',
+        'no_peer_answered_local_network' => 'Intet på dette netværk svarede på koden. Beatrax skal først have din tilladelse til at nå enheder på dette netværk, og uden den virker ingen vej til den anden enhed — heller ikke kameraet. Slå Lokalt netværk til for Beatrax i enhedens indstillinger, og send koden igen.',
         'no_peer_answered_ios' => 'Intet på dette netværk svarede på koden. At søge efter den anden enhed på netværket virker endnu ikke på iPhone, så scan dens kode med kameraet.',
         'no_peer_answered_camera_off' => 'Intet på dette netværk svarede på koden. At søge efter den anden enhed på netværket virker endnu ikke på iPhone, og kameraadgang er slået fra — slå derfor kameraadgang til igen for Beatrax i enhedens indstillinger, og scan koden på den anden enhed.',
         'rate_limited' => 'For mange forsøg. Vent et minut, og prøv igen.',

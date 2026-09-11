@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'To není adresa, na kterou se toto zařízení může dovolat. Zadej ji jako host a port, například 192.168.1.20:8100.',
         'code_not_accepted' => 'Žádné zařízení v této síti tento kód nepřijalo. Zkontroluj kód a jestli ho druhé zařízení stále zobrazuje.',
         'no_peer_answered' => 'Na této síti na tento kód nic neodpovědělo. Zkontroluj, že na druhém zařízení běží synchronizace, nebo naskenuj jeho kód fotoaparátem — ten síť prohledávat nemusí.',
+        'no_peer_answered_local_network' => 'Na této síti na tento kód nic neodpovědělo. Beatrax nejdřív potřebuje tvé svolení oslovovat zařízení v této síti a bez něj k druhému zařízení nefunguje žádná cesta — ani fotoaparát. V nastavení zařízení zapni Beatraxu Místní síť a odešli kód znovu.',
         'no_peer_answered_ios' => 'Na této síti na tento kód nic neodpovědělo. Vyhledání druhého zařízení v síti na iPhonu zatím nefunguje, takže naskenuj jeho kód fotoaparátem.',
         'no_peer_answered_camera_off' => 'Na této síti na tento kód nic neodpovědělo. Vyhledání druhého zařízení v síti na iPhonu zatím nefunguje a přístup k fotoaparátu je vypnutý — povol proto fotoaparát Beatraxu v nastavení zařízení a naskenuj kód z druhého zařízení.',
         'rate_limited' => 'Příliš mnoho pokusů. Počkej minutu a zkus to znovu.',

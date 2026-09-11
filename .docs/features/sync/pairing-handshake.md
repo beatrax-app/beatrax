@@ -520,6 +520,14 @@ poll it already runs — from the address its scan recorded first, then from any
 peer a browse turned up. The scanned address is not a fallback on iOS: it is the
 only road, because the browse there returns nothing and cannot be made to.
 
+Both routes are ordinary unicast HTTP to a LAN address, which is a second iOS
+permission and not the entitlement the browse needs. Until the reader answers
+"Allow Beatrax to find devices on local networks?" neither route carries a byte,
+and neither does the WebSocket import behind them — so on a fresh install the
+scanned address is not a road either, and the pairing screen names the
+permission rather than the search
+([the second gate](../mobile/ios-lan-discovery-entitlement.md#the-second-gate-and-the-one-a-reader-can-open)).
+
 `POST /pair/frame` answers **204** when it applied the frame, **202** when it is
 holding one it cannot finish yet, and **404** for a refusal it will never change
 its mind about. The 202 exists because `Deferred` is not `Applied`: a valid

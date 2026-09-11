@@ -101,6 +101,11 @@ final class MobilePairingScan extends Component
     // overwritten by (or confused with) the amber camera notice.
     public bool $cameraUnavailableNotice = false;
 
+    // One shot per visit to this screen. #[Locked] so a client cannot clear it
+    // and turn the arrival probe into something it can ask for repeatedly.
+    #[Locked]
+    public bool $localNetworkAsked = false;
+
     // Whether this READER is mid-import, read from MobileImportIntentGate and
     // never from ?mode=import: the phone is killed and relaunched mid-flow as a
     // matter of course, and a re-entry that lost the query string is the same
