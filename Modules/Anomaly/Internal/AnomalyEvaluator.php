@@ -18,7 +18,7 @@ use Modules\Anomaly\Public\Events\AnomalyAlertOpened;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Support\DerivedRowId;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Core\Public\Support\QueryFailure;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
@@ -169,14 +169,11 @@ final readonly class AnomalyEvaluator
             'updated_at' => $now,
         ];
 
-        // Derived, not minted: the detector runs on every paired device, and an
-        // autoincrement would give each a different id for one charge's alert.
-        // Both halves of the tuple are immutable, so the ids agree and the
-        // second device's create collides harmlessly.
-        $alertId = DerivedRowId::for('anomaly_alerts', [
-            'user_id' => $userId,
-            'transaction_id' => $transactionId,
-        ]);
+        // Minted, not derived: `transaction_id` is immutable but not agreed —
+        // each device counts its own — so one folded number named a different
+        // charge on the peer. UNIQUE(transaction_id) is what makes two devices
+        // one row, once the arriving id has been translated to the local one.
+        $alertId = DeviceMintedRowId::mint();
 
         try {
             $this->db->connection()->table('anomaly_alerts')->insert(['id' => $alertId] + $row);

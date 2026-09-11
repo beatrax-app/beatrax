@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -70,7 +70,7 @@ beforeEach(function (): void {
     ]);
 
     $this->db->connection()->table('chain_links')->insert([
-        'id' => ChainLinkInsertHelper::idFor($this->user->id, (int) $transfer->id, null, 'ics_bulk_settle'),
+        'id' => DeviceMintedRowId::mint(),
         'user_id' => $this->user->id,
         'from_transaction_id' => $transfer->id,
         'to_transaction_id' => null,

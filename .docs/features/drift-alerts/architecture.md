@@ -124,8 +124,11 @@ are surfaced at the Public Action layer.
 
 Cursor pagination is keyed on `(detected_at, id)`. `drift_alerts.id` used to be
 a SQLite autoincrementing surrogate that ascended with insertion; it is now
-derived from `(recurring_series_id, latest_occurrence_id)` so that two devices
-name the same alert, which means it sorts in hash order and cannot lead. The id
+minted, which means it sorts in no order at all and cannot lead. It was briefly
+derived from `(recurring_series_id, latest_occurrence_id)` instead — an id
+folded from an occurrence id, which each device counts for itself, so the
+number named a different month's rise on the peer. `drift_alerts_uniq` is what
+makes two devices one row now. The id
 still breaks ties within one `detected_at` second — which the revival sweep and
 the detector listener both produce, each writing a batch inside one scheduler
 tick — and the cursor row's `detected_at` is read back scoped to the reader

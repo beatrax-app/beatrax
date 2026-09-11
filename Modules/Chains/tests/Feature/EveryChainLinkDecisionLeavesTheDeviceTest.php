@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
-use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -54,11 +54,11 @@ function ecdTransaction(User $user, Account $account, ImportRun $run, int $amoun
     ]);
 }
 
-// Written with the id the resolvers would derive, because that is the id every
-// later op has to name.
+// Written with an id of the shape the resolvers mint, because that is the id
+// every later op has to name.
 function ecdLink(DatabaseManager $db, User $user, int $from, int $to, string $state, string $signatureHash): int
 {
-    $id = ChainLinkInsertHelper::idFor((int) $user->id, $from, $to, 'paypal_funding');
+    $id = DeviceMintedRowId::mint();
 
     $db->connection()->table('chain_links')->insert([
         'id' => $id,

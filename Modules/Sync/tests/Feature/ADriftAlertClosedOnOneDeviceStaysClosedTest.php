@@ -6,7 +6,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Support\DerivedRowId;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
@@ -196,32 +195,26 @@ function dacRaiseOnDevice(DatabaseManager $db, User $user, string $deviceId): ar
     return [$key, $ops, $alertId];
 }
 
-it('gives two devices the same drift alert id for the same price rise', function (): void {
+it('gives one row to the price rise two devices each raised under their own id', function (): void {
     $userId = (int) $this->user->id;
 
-    [, $phoneOps, $onPhone] = dacRaiseOnDevice($this->db, $this->user, 'device-phone');
-    [, $desktopOps, $onDesktop] = dacRaiseOnDevice($this->db, $this->user, 'device-desktop');
+    [$phoneKey, $phoneOps, $onPhone] = dacRaiseOnDevice($this->db, $this->user, 'device-phone');
+    [$desktopKey, $desktopOps, $onDesktop] = dacRaiseOnDevice($this->db, $this->user, 'device-desktop');
 
-    $latestOccurrenceId = (int) $this->db->connection()->table('recurring_series_occurrences')
-        ->where('recurring_series_id', $this->seriesId)
-        ->orderByDesc('observed_at')
-        ->value('id');
-
+    // The id is minted now, because the occurrence it used to fold is itself a
+    // number each device counts for itself. Neither device knows the other's,
+    // and `drift_alerts_uniq` is what makes the two one row.
     expect($onPhone)->toBeGreaterThan(0)
-        ->and($onPhone)->toBe($onDesktop)
-        ->and($onPhone)->toBe(DerivedRowId::for('drift_alerts', [
-            'recurring_series_id' => $this->seriesId,
-            'latest_occurrence_id' => $latestOccurrenceId,
-        ]))
+        ->and($onDesktop)->toBeGreaterThan(0)
+        ->and($onPhone)->not->toBe($onDesktop)
         ->and($phoneOps)->not->toBeEmpty('the phone raised a drift alert and captured nothing')
         ->and($desktopOps)->not->toBeEmpty('the desktop raised a drift alert and captured nothing');
 
-    // Next month's rise on the same series is a different alert, so the
-    // identity has to separate them.
-    expect(DerivedRowId::for('drift_alerts', [
-        'recurring_series_id' => $this->seriesId,
-        'latest_occurrence_id' => $latestOccurrenceId + 1,
-    ]))->not->toBe($onPhone);
+    $deviceKeys = ['device-phone' => $phoneKey, 'device-desktop' => $desktopKey];
+    (new OpLogReplayer($this->db, $deviceKeys, new MergeRulesRegistry))->replay([...$phoneOps, ...$desktopOps], $userId);
+
+    expect($this->db->connection()->table('drift_alerts')->where('user_id', $userId)->count())->toBe(1)
+        ->and($this->db->connection()->table('op_log_quarantine')->where('user_id', $userId)->count())->toBe(0);
 });
 
 it('does not re-raise on the phone a drift alert the desktop dismissed', function (): void {
