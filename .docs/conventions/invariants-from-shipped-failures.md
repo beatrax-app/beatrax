@@ -7748,6 +7748,26 @@ the same attribute at runtime. Whether the region is a column or something else
 is then a decision with one site to change, and a decision control can no longer
 be pressable while the sentence it answers is behind another box.
 
+Consolidating also moved a neighbouring guard's ground, and the way it broke is
+worth keeping. `SafeAreaReadsTheSeamArchTest` requires an overlay pinned to the
+bottom edge to reserve the safe-area seam, or its controls stand under the
+navigation bar with nothing to scroll. It proved it had looked at something by
+counting the overlays it recognised — more than three. Four boxes that each
+pinned themselves became one that pins and four occupants that inherit, so the
+population fell to two and the anti-vacuity check failed on a tree that had just
+got better.
+
+Lowering that number to fit would have ended the check: the next change to take
+the last overlay away would then pass in silence, which is the one thing those
+three lines exist to prevent. The floor is a name now — the corner region must
+be among the bottom-anchored elements and must reserve the seam. A name cannot
+be quietly lowered to fit the tree, and it fails when its subject disappears,
+which is exactly what a number set to the current population does not do.
+
+The consolidation cost nothing here: all five of the originals wore
+`.safe-lift`, and the region wears it on behalf of all of them, so every
+occupant clears the bar through one class instead of five.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
