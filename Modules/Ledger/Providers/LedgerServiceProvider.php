@@ -39,6 +39,7 @@ use Modules\Ledger\Public\Services\CategorySpendTrendQuery;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Ledger\Public\Services\PeriodQuery;
+use Modules\Ledger\Public\Services\SplitSumHealthCheck;
 use Modules\Ledger\Public\Services\StatementSummaryWriter;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
 use Modules\Sync\Public\Contracts\BlindIndexProvenance;
@@ -78,6 +79,7 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->singleton(TopCategoriesByPeriodQuery::class);
         $this->app->bind(FingerprintRederiveService::class);
         $this->app->singleton(FingerprintHealthCheck::class);
+        $this->app->singleton(SplitSumHealthCheck::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
