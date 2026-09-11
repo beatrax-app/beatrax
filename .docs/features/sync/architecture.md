@@ -395,6 +395,16 @@ guards:
   may be written via op-log replay, closing a full trust-store takeover via
   an arbitrary wire-supplied table name.
 
+#### The apply path writes raw on purpose
+
+`OpLogEntryApplier`, `SelfReferenceDeferral`, `SplitCreateTail` and
+`OpLogRebuilder` write every merged row through the query builder rather than
+through a model or an action, and that is the mechanism by which they raise no
+`EntityMutated`. They must not raise one: the row is a peer's, so an op here
+would hand that peer back what it just sent, and the two devices would trade
+the same row forever. A module that needs to react to a merged row listens for
+`PeerRowsApplied` instead, which runs once the batch has committed.
+
 Rejected ops (`cross_user`, `missing_device_key`, `unconfirmed_device`,
 `forged_signature`, `unknown_table`, `strategy_error`, `incomplete_create_row`,
 `missing_reference`, `gdk_decrypt_failed`) write a structured row to
