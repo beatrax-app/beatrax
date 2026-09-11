@@ -18,6 +18,7 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Support\TaggedRowScope;
+use Modules\Tax\Internal\Support\TaxableMovement;
 use Modules\Tax\Internal\Support\TaxCorpusWording;
 use Modules\Tax\Public\Dto\TaxYearData;
 
@@ -72,6 +73,7 @@ final readonly class TaxYearQuery
 
         TaggedRowScope::joinLegs($query);
         TaggedRowScope::withoutSuperseded($query, $connection);
+        TaxableMovement::narrow($query, 't.');
 
         return $query
             ->orderBy('cat.sort_order')
@@ -441,6 +443,7 @@ final readonly class TaxYearQuery
             ->where('tag.user_id', $userId);
 
         TaggedRowScope::withoutSuperseded($query, $connection);
+        TaxableMovement::narrow($query, 't.');
 
         $rows = $query
             ->selectRaw('DISTINCT '.TaggedRowScope::EFFECTIVE_YEAR.' AS effective_year')

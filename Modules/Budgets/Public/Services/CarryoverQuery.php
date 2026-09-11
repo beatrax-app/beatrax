@@ -86,7 +86,7 @@ final readonly class CarryoverQuery
                 availableMinor: $available,
                 overspendMode: OverspendMode::tryFrom($settings['modes'][$categoryId] ?? '') ?? self::DEFAULT_OVERSPEND_MODE,
                 currency: $currency,
-                unconvertedSpentMinor: $spendByCategory[$categoryId]['unconverted'] ?? 0,
+                unconvertedSpentCurrencies: $spendByCategory[$categoryId]['unconverted'] ?? [],
                 notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
@@ -263,7 +263,7 @@ final readonly class CarryoverQuery
      * @param  array<int, int>  $assignedByCategory
      * @param  array<int, int>  $movedByCategory
      * @param  array<int, int>  $carriedIn
-     * @param  array<int, array{spent: int, unconverted: int}>  $spendByCategory
+     * @param  array<int, array{spent: int, unconverted: list<string>}>  $spendByCategory
      */
     private function foldPeriod(
         FoldContext $context,
@@ -295,7 +295,7 @@ final readonly class CarryoverQuery
             $moved = $movedByCategory[$categoryId] ?? 0;
             $spent = $spendByCategory[$categoryId]['spent'] ?? 0;
             $carriedInForCategory = $carriedIn[$categoryId] ?? 0;
-            $unconvertedSpent = $spendByCategory[$categoryId]['unconverted'] ?? 0;
+            $unconvertedSpent = $spendByCategory[$categoryId]['unconverted'] ?? [];
 
             $availableMoney = Money::ofMinor($assigned, $currency)
                 ->plus(Money::ofMinor($carriedInForCategory, $currency))
@@ -331,7 +331,7 @@ final readonly class CarryoverQuery
                 availableMinor: $available,
                 overspendMode: $mode,
                 currency: $currency,
-                unconvertedSpentMinor: $unconvertedSpent,
+                unconvertedSpentCurrencies: $unconvertedSpent,
                 notifyThresholdPercent: $notifyThreshold,
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
@@ -354,7 +354,7 @@ final readonly class CarryoverQuery
     // stays out of it, surfaced beside the row rather than counted at par.
     /**
      * @param  list<Period>  $periodsWalk
-     * @return array<string, array<int, array{spent: int, unconverted: int}>>
+     * @return array<string, array<int, array{spent: int, unconverted: list<string>}>>
      */
     private function batchSpend(User $user, array $periodsWalk, Period $span): array
     {
@@ -413,13 +413,14 @@ final readonly class CarryoverQuery
         return $buckets;
     }
 
-    // The unconverted figure is summed from the buckets the rate table could
-    // not reach, not from the difference between two totals: a converted total
-    // is rounded and the subtraction would report the rounding as unpriced.
+    // The codes the rate table could not reach, never their minor units added
+    // together: XPF 1,000 of spend against an ARS 10.00 return cancelled as
+    // bare integers and darkened the badge over about EUR 8 left out. Read off
+    // the buckets, not a difference of totals, which reports rounding as unpriced.
     /**
      * @param  array<int, array<string, int>>  $buckets
      * @param  array<string, string>  $rates
-     * @return array<int, array{spent: int, unconverted: int}>
+     * @return array<int, array{spent: int, unconverted: list<string>}>
      */
     private function spendFromBuckets(array $buckets, string $currency, array $rates): array
     {
@@ -427,9 +428,13 @@ final readonly class CarryoverQuery
         foreach ($buckets as $categoryId => $byCurrency) {
             $converted = $this->fx->withRates($byCurrency, $currency, $rates);
 
-            $unreached = 0;
+            // A bucket that nets to nought is money the total is not missing,
+            // whichever currency it was in.
+            $unreached = [];
             foreach ($converted->unconverted as $code) {
-                $unreached += $byCurrency[$code] ?? 0;
+                if (($byCurrency[$code] ?? 0) !== 0) {
+                    $unreached[] = $code;
+                }
             }
 
             $spend[$categoryId] = ['spent' => $converted->minor, 'unconverted' => $unreached];

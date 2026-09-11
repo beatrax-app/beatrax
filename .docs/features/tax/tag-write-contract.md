@@ -97,13 +97,36 @@ A query that offers rows to this action asks the same question of them
 before it counts: `TaxableMovement::narrow()` is the table-side spelling of
 `canCarryATag()`, with its type list derived by putting every
 `TransactionType` case through `canCarryATag()` rather than listed again.
-`TaxTagQuery::untaggedIdsForCounterparty()` is its one caller today — see
+`TaxTagQuery::untaggedIdsForCounterparty()` narrows what it offers — see
 [the batch-tag suggestion](batch-tag-suggestion.md).
+
+**And so does every read that produces a figure.** The write gate alone was
+not enough, because both columns it reads move afterwards and nothing
+untags: the reclassify picker will write any of the seven types onto any
+row, a peer's retype merges in on its own clock, and a re-import or the
+narrative detector stamps `payment_type`. A EUR 200.00 purchase tagged as
+deductible and then returned kept landing in deductions at `abs()` — in the
+year cockpit, in the dashboard card, and in both exports. `narrow()` is
+therefore applied at `TaxYearQuery::fetchTaggedRows()`, at
+`TaxYearQuery::availableYears()` and at `TaxTagQuery::summaryForUser()`,
+alongside `TaggedRowScope::withoutSuperseded()` and for the same reason.
+The badge queries — `forTransactionIds()` and `forTransactionIdsWithLegs()`
+— do **not** narrow: a row the reader can no longer deduct is still a row
+they tagged, and hiding the badge would take away the only control that
+removes it.
+
+Like supersession, this is a read-time exclusion and not a delete, so
+retyping the row back to something deductible brings its tag with it. The
+year switcher narrows for the same reason the supersession rule made it
+narrow: every year it offers has to render something in the cockpit.
 
 ## Sweeping the rows tagged before the rule existed
 
 `php artisan tax:sweep-untaggable` reports every tag sitting on a row that
-can no longer carry one; `--apply` removes them. It removes them through
+can no longer carry one; `--apply` removes them. It is housekeeping rather
+than a fail-safe: it is not scheduled, and neither shipped shell has a
+terminal to run it from, so the totals can never have depended on it. It
+removes them through
 `UntagTransaction` rather than with a bulk `DELETE`, because a delete that
 does not reach the operation log is replayed back by the next paired device
 to sync.

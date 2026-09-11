@@ -165,7 +165,7 @@
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative)
                                 <x-core::status-pill tone="warning" class="ml-2">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
-                            @if ($row->unconvertedSpentMinor != 0)
+                            @if ($row->unconvertedSpentCurrencies !== [])
                                 <span
                                     class="ml-2 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
                                     role="img"
@@ -308,7 +308,7 @@
                             @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative)
                                 <x-core::status-pill tone="warning" class="ml-1">{{ Lang::get('budgets::messages.badge.carries_negative') }}</x-core::status-pill>
                             @endif
-                            @if ($row->unconvertedSpentMinor != 0)
+                            @if ($row->unconvertedSpentCurrencies !== [])
                                 <span
                                     class="ml-1 inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 align-middle dark:bg-amber-500"
                                     role="img"
