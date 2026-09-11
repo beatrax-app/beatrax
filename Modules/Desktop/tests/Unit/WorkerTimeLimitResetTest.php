@@ -3,7 +3,14 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\Looping;
+
+// Looping now also reaches SurfaceWorkerCrashAlert, which reads ShellState --
+// the database cache store. The listener degrades to a logged warning without
+// the table, and a case dispatching the real event should drive the real
+// subscribers rather than pass through the one path that swallows them.
+uses(RefreshDatabase::class);
 
 // NativePHP spawns the bundled `queue:work` daemon under a 120s wall-clock
 // ceiling. On Windows ext-pcntl is absent, so Laravel's alarm-based timeout

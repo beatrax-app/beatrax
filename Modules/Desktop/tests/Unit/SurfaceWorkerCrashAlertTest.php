@@ -13,6 +13,7 @@ use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\ShellState;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -29,6 +30,7 @@ function crashListener(Clock $clock): SurfaceWorkerCrashAlert
         app(SystemAlertWriter::class),
         app(ShellState::class),
         app(ConfigRepository::class),
+        app(LoggerInterface::class),
     );
 }
 
@@ -150,4 +152,43 @@ it('uses the verbatim UI-SPEC body for the worker-crashed alert', function (): v
 
     expect(SurfaceWorkerCrashAlert::OS_NOTIFICATION_TITLE)->toBe('Background work stopped');
     expect(SurfaceWorkerCrashAlert::ALERT_KIND)->toBe('worker.crashed');
+});
+
+it('calls the worker quiet only once the whole window has passed without an exit', function (): void {
+    $now = CarbonImmutable::parse('2026-05-23T12:00:00Z');
+    $clock = new class($now) implements Clock
+    {
+        public function __construct(public CarbonImmutable $time) {}
+
+        public function now(): CarbonImmutable
+        {
+            return $this->time;
+        }
+    };
+
+    expect(crashListener($clock)->everySupervisedWorkerIsQuiet())->toBeTrue();
+
+    crashListener($clock)->recordExit(new ProcessExited(alias: SurfaceWorkerCrashAlert::WORKER_ALIAS_PREFIX.'default', code: 1));
+
+    expect(crashListener($clock)->everySupervisedWorkerIsQuiet())->toBeFalse(
+        'One exit inside the window is a worker that may still be crash-looping, whatever this tick proves.',
+    );
+
+    $clock->time = $now->addSeconds(SurfaceWorkerCrashAlert::CRASH_LOOP_WINDOW_SECONDS + 1);
+
+    expect(crashListener($clock)->everySupervisedWorkerIsQuiet())->toBeTrue();
+});
+
+it('does not hold the banner down for an exit under an alias nobody supervises', function (): void {
+    $clock = new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse('2026-05-23T12:00:00Z');
+        }
+    };
+
+    crashListener($clock)->recordExit(new ProcessExited(alias: 'something-else', code: 1));
+
+    expect(crashListener($clock)->everySupervisedWorkerIsQuiet())->toBeTrue();
 });

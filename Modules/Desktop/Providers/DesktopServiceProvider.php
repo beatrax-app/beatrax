@@ -9,6 +9,7 @@ use Illuminate\Auth\Events\Logout;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Queue\Events\Looping;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
@@ -199,6 +200,12 @@ final class DesktopServiceProvider extends ServiceProvider
                 exit(0);
             }
         });
+
+        // Above the gate for the reason the block over it names: the alert is
+        // raised in the shell's own process and withdrawn in the worker's, and
+        // gating this would leave the sentence "Reopen the app to restart it"
+        // with nobody in the reopened app able to answer it.
+        $events->listen(Looping::class, [SurfaceWorkerCrashAlert::class, 'handleWorkerLoop']);
 
         // NOT bundle-gated: the pending-intent round-trip must work in local dev and
         // tests too, and the listener touches only the Session contract, no facade.

@@ -8,17 +8,21 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\StoredCopy;
 use Modules\Desktop\Internal\Native\ShellState;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Facades\Notification;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 // NativePHP fires ProcessExited on every restart of the supervised queue:work
 // child, and a single exit is normal steady-state (auto-restart on a memory-limit
@@ -32,6 +36,8 @@ final readonly class SurfaceWorkerCrashAlert
     public const string WORKER_ALIAS_PREFIX = 'queue_';
 
     public const string EXIT_LOG_SLOT_PREFIX = 'desktop.shell-state.process-exits.';
+
+    public const string RECOVERY_PROBE_SLOT = 'desktop.shell-state.worker-recovery-probed';
 
     public const int CRASH_LOOP_THRESHOLD = 3;
 
@@ -53,6 +59,7 @@ final readonly class SurfaceWorkerCrashAlert
         private SystemAlertWriter $alerts,
         private ShellState $state,
         private ConfigRepository $config,
+        private LoggerInterface $logger,
     ) {}
 
     public function handle(ProcessExited $event): void
@@ -71,6 +78,53 @@ final readonly class SurfaceWorkerCrashAlert
         }
 
         $this->escalate();
+    }
+
+    // ProcessExited says the worker went, and nothing said it came back, so
+    // "Reopen the app to restart it" stood after the reader had done exactly
+    // that. This runs inside the worker: a tick of its own daemon loop is
+    // liveness no cached stamp can impersonate.
+    public function handleWorkerLoop(): void
+    {
+        try {
+            if (! $this->probeIsDue() || ! $this->everySupervisedWorkerIsQuiet()) {
+                return;
+            }
+
+            $closed = $this->alerts->withdrawSystemWide(self::ALERT_KIND, $this->clock->now());
+        } catch (Throwable $e) {
+            // Nothing may escape: an exception raised here propagates out of the
+            // daemon's own loop check and stops the worker, and the alert this
+            // method exists to take down is the one that would be raised next.
+            $this->logger->warning(
+                'SurfaceWorkerCrashAlert: could not tell whether the worker had recovered; continuing.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return;
+        }
+
+        if ($closed > 0) {
+            $this->logger->info(
+                'SurfaceWorkerCrashAlert: withdrew the worker-crashed alert; the worker has run a full window without exiting.',
+                ['closed' => $closed],
+            );
+        }
+    }
+
+    // The exact inverse of the rule that raised the alert: a worker that has not
+    // exited once across the whole window has stopped crash-looping by the same
+    // definition that said it was. Withdrawing on a spawn would take the banner
+    // down in the gap between two crashes, where it is not stale but false.
+    public function everySupervisedWorkerIsQuiet(): bool
+    {
+        foreach ($this->supervisedAliases() as $alias) {
+            if ($this->exitsInsideTheWindow($alias) !== []) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function recordExit(ProcessExited $event): void
@@ -134,6 +188,23 @@ final readonly class SurfaceWorkerCrashAlert
     private static function exitSlot(string $alias): string
     {
         return self::EXIT_LOG_SLOT_PREFIX.hash('sha256', $alias);
+    }
+
+    // The loop ticks every few seconds for as long as the app is open and the
+    // question below reaches the database, so it is asked at most once a minute.
+    private function probeIsDue(): bool
+    {
+        if ($this->state->read(self::RECOVERY_PROBE_SLOT) !== null) {
+            return false;
+        }
+
+        $this->state->write(
+            self::RECOVERY_PROBE_SLOT,
+            ['at' => $this->clock->now()->getTimestamp()],
+            Duration::Minute->seconds(),
+        );
+
+        return true;
     }
 
     private function escalate(): void
