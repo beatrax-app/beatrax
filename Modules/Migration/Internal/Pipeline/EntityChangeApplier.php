@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
@@ -20,6 +21,7 @@ use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Search\Public\Support\SearchedColumns;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -37,6 +39,7 @@ final readonly class EntityChangeApplier
         private SessionFactory $session,
         private TransactionStatusQuery $statusQuery,
         private SearchIndexWriterContract $searchIndex,
+        private Dispatcher $events,
     ) {}
 
     /**
@@ -73,6 +76,10 @@ final readonly class EntityChangeApplier
                 ->where('id', $beatraxId)
                 ->where('user_id', $user->id)
                 ->update($storedFields);
+
+            // Plaintext, not $storedFields: OpLogWriter seals a sensitive column
+            // itself, and a peer handed ciphertext would encrypt it twice.
+            $this->announce($table, $beatraxId, $user->id, $fields);
 
             $this->reindexIfSearched($table, $beatraxId, $user, array_keys($fields));
         }
@@ -200,11 +207,13 @@ final readonly class EntityChangeApplier
 
         $fingerprint = $this->fingerprints->compose($canonical);
 
+        $written = $amount->toColumns() + ['fingerprint' => $fingerprint];
+
         try {
             $connection->table('transactions')
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
-                ->update($amount->toColumns() + ['fingerprint' => $fingerprint]);
+                ->update($written);
         } catch (QueryException $e) {
             // Only a fingerprint-uniqueness violation is a benign collision;
             // reclassifying any other QueryException would mask a real failure.
@@ -222,7 +231,31 @@ final readonly class EntityChangeApplier
             return false;
         }
 
+        $this->announce('transactions', $transactionId, $user->id, $written);
+
         return true;
+    }
+
+    // Nothing here announced anything, so a re-import rewrote rows the peer
+    // never heard about: no op, no quarantine, and two devices disagreeing for
+    // good. The table is a variable, which is why the writer guards rooted at a
+    // table literal or a model never saw it.
+    /**
+     * @param  array<string, mixed>  $fields
+     */
+    private function announce(string $table, int $pk, int $userId, array $fields): void
+    {
+        if ($fields === []) {
+            return;
+        }
+
+        $this->events->dispatch(new EntityMutated(
+            table: $table,
+            pk: $pk,
+            userId: $userId,
+            mutationType: 'edit',
+            dirtyFields: $fields,
+        ));
     }
 
     private static function isFingerprintUniqueViolation(QueryException $e): bool

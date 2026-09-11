@@ -12,6 +12,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Pipeline\EntityChangeApplier;
+use Modules\Sync\Public\Events\EntityMutated;
 
 uses(RefreshDatabase::class);
 
@@ -131,6 +132,35 @@ it('a corrected single-currency amount moves the settled leg the balance actuall
     $balanceAfter = app(AccountBalanceQuery::class)->currentBalance($account->id, $user)->in('EUR');
     expect($balanceAfter - $balanceBefore)->toBe(-1000);
 })->group('ACorrectedAmountMovesBothLegs');
+
+// Nothing in this pipeline announced anything, so a re-import rewrote rows the
+// peer never heard about: no op, no quarantine, two devices disagreeing for
+// good. The table is a variable here, which is why the writer guards rooted at
+// a table literal or a model never saw the write.
+it('tells the other device about the amount it corrected', function (): void {
+    $user = acamblUser();
+    $account = acamblAccount($user, 'EUR');
+    $transactionId = acamblSeedTransaction($user, $account, -125000, 'EUR', -125000, 'EUR', null);
+
+    $announced = [];
+    app('events')->listen(EntityMutated::class, function (EntityMutated $e) use (&$announced): void {
+        $announced[] = $e;
+    });
+
+    expect(app(EntityChangeApplier::class)->applyTransactionAmount($user, $transactionId, -126000))->toBeTrue();
+
+    $forRow = array_values(array_filter(
+        $announced,
+        static fn (EntityMutated $e): bool => $e->table === 'transactions' && (int) $e->pk === $transactionId,
+    ));
+
+    expect($forRow)->not->toBeEmpty()
+        ->and($forRow[0]->mutationType)->toBe('edit')
+        ->and($forRow[0]->userId)->toBe((int) $user->id)
+        ->and($forRow[0]->dirtyFields)->toHaveKey('amount_minor')
+        ->and($forRow[0]->dirtyFields['amount_minor'])->toBe(-126000)
+        ->and($forRow[0]->dirtyFields)->toHaveKey('fingerprint');
+});
 
 it('a corrected native amount on a converted row keeps the settled leg and re-derives the rate beside it', function (): void {
     $user = acamblUser();
