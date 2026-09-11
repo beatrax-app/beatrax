@@ -22,6 +22,9 @@ final readonly class RederiveFingerprintOnMergedRows
 {
     use CoercesScalars;
 
+    // Spelled out at both query roots rather than reached through this
+    // constant: the writer guards read a table LITERAL, so a constant hides a
+    // silent write from the one test that would ask it to justify itself.
     private const string TABLE = 'transactions';
 
     /** @var list<string> */
@@ -44,7 +47,7 @@ final readonly class RederiveFingerprintOnMergedRows
             return;
         }
 
-        $rows = $this->db->connection()->table(self::TABLE)
+        $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $event->userId)
             ->whereIn('id', $pks)
             ->get(self::READ);
@@ -82,7 +85,7 @@ final readonly class RederiveFingerprintOnMergedRows
         // No announcement: the value is derived, so every device recomposes the
         // same digest from its own merged row. An op here would send a peer
         // back a column it can compute, and loop.
-        $this->db->connection()->table(self::TABLE)
+        $this->db->connection()->table('transactions')
             ->where('id', self::toInt($row->id ?? null))
             ->where('user_id', $userId)
             ->update(['fingerprint' => $composed]);
