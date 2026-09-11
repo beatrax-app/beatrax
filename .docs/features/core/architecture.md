@@ -399,6 +399,16 @@ seeds is one the peer's own row can no longer land beside. See
   (headless CI, early-boot race, or a value written before shielding
   was enabled), `reveal()` returns its input unchanged so legacy /
   unshielded rows keep working.
+- `SampleDataLoader` — the contract behind the settings-page sample-data
+  control, implemented by `App\Support\SampleData\SampleDatasetSeeder`.
+  One ordering of the demo seeders serves both callers: `demo:seed` over
+  invented accounts, and `SampleDataCard` over the reader's own. Because
+  the Dev Console is closed on a store build, the second is the only
+  door a shipped install has, and every column the demo seeders write
+  that `SensitiveFieldRegistry` seals has to be sealed on the way in —
+  see [the sample dataset](../sync/sensitive-columns-at-rest.md#the-sample-dataset)
+  for what that took, and why the seeders that find their rows again
+  match on `source_ref` rather than on a description.
 
 ## Data flow
 

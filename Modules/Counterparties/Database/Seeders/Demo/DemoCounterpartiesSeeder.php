@@ -7,6 +7,7 @@ namespace Modules\Counterparties\Database\Seeders\Demo;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Instant;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Models\Counterparty;
@@ -15,6 +16,7 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // Every demo transaction goes through the production resolver rather than
 // hand-rolled rows, so the demo data can only ever be shaped like a real import.
@@ -57,6 +59,8 @@ final class DemoCounterpartiesSeeder
         private readonly DatabaseManager $db,
         private readonly CounterpartyResolver $resolver,
         private readonly Clock $clock,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly SessionFactory $session,
     ) {}
 
     // The resolver never produces bank or self_account rows for this dataset —
@@ -134,25 +138,29 @@ final class DemoCounterpartiesSeeder
             ->count();
     }
 
+    // The resolver seals what it writes; these six bypass it, so they seal
+    // here. The match keys above are user_id and slug, neither of them sealed.
     private function seedExtraTypeCoverageForUser(User $user): void
     {
         foreach (self::EXTRA_COUNTERPARTIES as $row) {
+            $values = [
+                'type' => $row['type'],
+                // A bank and a person are named the same in every
+                // language; "my current account" is not.
+                'display_name' => $row['displayNameKey'] === null
+                    ? (string) $row['displayName']
+                    : Lang::get('core::demo.'.$row['displayNameKey']),
+                'iban' => $row['iban'],
+                'merchant_name' => $row['merchantName'],
+                'metadata' => null,
+            ];
+
             Counterparty::query()->updateOrCreate(
                 [
                     'user_id' => $user->id,
                     'slug' => $row['slug'],
                 ],
-                [
-                    'type' => $row['type'],
-                    // A bank and a person are named the same in every
-                    // language; "my current account" is not.
-                    'display_name' => $row['displayNameKey'] === null
-                        ? (string) $row['displayName']
-                        : Lang::get('core::demo.'.$row['displayNameKey']),
-                    'iban' => $row['iban'],
-                    'merchant_name' => $row['merchantName'],
-                    'metadata' => null,
-                ],
+                $this->codec->encryptAttrs('counterparties', $values, $user->id, ($this->session)()),
             );
         }
     }
@@ -204,9 +212,17 @@ final class DemoCounterpartiesSeeder
     }
 
     // The resolver reads four of these fields, but the DTO has no partial
-    // constructor, so the whole row is rebuilt.
+    // constructor, so the whole row is rebuilt. The three content columns are
+    // opened first: production hands the resolver the plaintext DTO it sealed
+    // the row from, and ciphertext here resolves one counterparty per row.
     private function reconstructCanonical(Transaction $tx): CanonicalTransaction
     {
+        $opened = $this->codec->decryptRow('transactions', [
+            'counterparty_name' => $tx->counterparty_name,
+            'counterparty_iban' => $tx->counterparty_iban,
+            'description' => $tx->description,
+        ], $tx->user_id, ($this->session)());
+
         $paymentType = $tx->payment_type instanceof PaymentType
             ? $tx->payment_type
             : PaymentType::Unknown;
@@ -222,11 +238,11 @@ final class DemoCounterpartiesSeeder
             currency: $tx->currency,
             settledAmountMinor: $tx->settled_amount_minor,
             settledCurrency: $tx->settled_currency,
-            counterpartyName: $tx->counterparty_name,
-            counterpartyIban: $tx->counterparty_iban,
+            counterpartyName: is_string($opened['counterparty_name']) ? $opened['counterparty_name'] : null,
+            counterpartyIban: is_string($opened['counterparty_iban']) ? $opened['counterparty_iban'] : null,
             counterpartyNormalized: $tx->counterparty_normalized,
             normalizationVersion: $tx->normalization_version,
-            description: $tx->description,
+            description: is_string($opened['description']) ? $opened['description'] : null,
             categoryId: $tx->category_id,
             sourceFormat: $tx->source_format,
             importRunId: $tx->import_run_id,

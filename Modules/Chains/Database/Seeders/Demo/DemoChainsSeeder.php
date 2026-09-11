@@ -13,6 +13,7 @@ use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Chains\Public\Support\SettlementTolerance;
 use Modules\Core\Models\User;
+use Modules\Ledger\Database\Seeders\Demo\DemoTransactionRef;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
@@ -49,7 +50,7 @@ final class DemoChainsSeeder
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
             ->where('type', 'expense')
-            ->where('description', 'Bol.com via PayPal')
+            ->where('source_ref', 'like', DemoTransactionRef::BolViaPaypal->pattern())
             ->orderBy('posted_at')
             ->get();
 
@@ -58,7 +59,7 @@ final class DemoChainsSeeder
                 ->where('user_id', $user->id)
                 ->where('source_format', 'demo')
                 ->where('type', 'transfer_out')
-                ->where('description', 'PayPal top-up')
+                ->where('source_ref', 'like', DemoTransactionRef::PaypalTopUp->pattern())
                 ->whereDate('posted_at', $charge->posted_at->toDateString())
                 ->first();
 
@@ -105,7 +106,7 @@ final class DemoChainsSeeder
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
             ->where('type', 'transfer_out')
-            ->where('description', 'ICS afrekening MasterCard')
+            ->where('source_ref', 'like', DemoTransactionRef::IcsSettlementBankSide->pattern())
             ->orderBy('posted_at')
             ->get();
 
@@ -177,13 +178,7 @@ final class DemoChainsSeeder
 
     private function seedFundedByCardHintCandidate(User $user): void
     {
-        $expense = Transaction::query()
-            ->where('user_id', $user->id)
-            ->where('source_format', 'demo')
-            ->where('type', 'expense')
-            ->where('description', 'COOLBLUE ROTTERDAM')
-            ->orderBy('posted_at')
-            ->first();
+        $expense = $this->demoTransactionTagged($user, 'expense', DemoTransactionRef::Coolblue);
 
         if ($expense === null) {
             return;
@@ -204,13 +199,7 @@ final class DemoChainsSeeder
 
     private function seedRefundOfHintCandidate(User $user): void
     {
-        $refund = Transaction::query()
-            ->where('user_id', $user->id)
-            ->where('source_format', 'demo')
-            ->where('type', 'refund')
-            ->where('description', 'Retour Bol.com')
-            ->orderBy('posted_at')
-            ->first();
+        $refund = $this->demoTransactionTagged($user, 'refund', DemoTransactionRef::BolRefund);
 
         if ($refund === null) {
             return;
@@ -235,8 +224,8 @@ final class DemoChainsSeeder
     // confirm.
     private function seedRefundOfCandidate(User $user): void
     {
-        $refund = $this->demoTransactionByDescription($user, 'refund', 'Retour Coolblue');
-        $charge = $this->demoTransactionByDescription($user, 'expense', 'COOLBLUE ROTTERDAM');
+        $refund = $this->demoTransactionTagged($user, 'refund', DemoTransactionRef::CoolblueRefund);
+        $charge = $this->demoTransactionTagged($user, 'expense', DemoTransactionRef::Coolblue);
 
         if ($refund === null || $charge === null) {
             return;
@@ -257,13 +246,13 @@ final class DemoChainsSeeder
         );
     }
 
-    private function demoTransactionByDescription(User $user, string $type, string $description): ?Transaction
+    private function demoTransactionTagged(User $user, string $type, DemoTransactionRef $ref): ?Transaction
     {
         return Transaction::query()
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
             ->where('type', $type)
-            ->where('description', $description)
+            ->where('source_ref', 'like', $ref->pattern())
             ->orderBy('posted_at')
             ->first();
     }
