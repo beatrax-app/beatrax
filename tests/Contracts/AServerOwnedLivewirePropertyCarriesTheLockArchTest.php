@@ -461,6 +461,7 @@ it('reads a binding into the module whose template writes it', function (): void
 it('reads a trait property against the trait\'s module as well as the component\'s', function (): void {
     $modulesRoot = str_replace(DIRECTORY_SEPARATOR, '/', base_path('Modules')).'/';
     $crossModule = [];
+    $unseen = [];
 
     foreach (WireCallableMethods::components() as $component) {
         $reflection = new ReflectionClass($component);
@@ -478,15 +479,26 @@ it('reads a trait property against the trait\'s module as well as the component\
 
             foreach ($trait->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
                 $crossModule[] = $own.' uses '.$traitScope.'::$'.$property->getName();
+                $scopes = clientBoundScopesFor($reflection, $property->getName(), $modulesRoot);
 
-                expect(clientBoundScopesFor($reflection, $property->getName(), $modulesRoot))->toContain(
-                    $traitScope,
-                    $component.'::$'.$property->getName().' is declared in '.$traitScope.
-                    ', whose templates bind it, and the scope reader did not say so.'
-                );
+                if (! in_array($traitScope, $scopes, true)) {
+                    $unseen[] = $component.'::$'.$property->getName().' — declared in '.$traitScope
+                        .', read against '.implode(' + ', $scopes);
+                }
             }
         }
     }
+
+    sort($unseen);
+
+    // toBe with a message rather than toContain with one: toContain takes its
+    // arguments as further NEEDLES, so an explanation passed there becomes a
+    // second string the array has to hold, and the rule fails on its own prose.
+    expect($unseen)->toBe([], implode("\n  ", [
+        'A property one module\'s trait declares is bound from THAT module\'s templates. The scope reader',
+        'answered without it, so the lock rule reads these as server-owned and demands a lock they do not need:',
+        ...$unseen,
+    ]));
 
     expect(count($crossModule))->toBeGreaterThan(
         0,
