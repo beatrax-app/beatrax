@@ -852,12 +852,36 @@ which was fragile against serializer-format changes and any future job
 class whose property name happened to share a prefix with `inboxId`.
 
 **A message the provider will not hand over does not stall the walk.**
-`MessageUnavailableException` (a `users.messages.get` 404) and
-`GmailRawDecodeException` are permanent for that id, so the fetch is
-skipped and the batch carries on to the cursor write. Letting either
-out would leave the cursor where it was, and every later tick would
-read the same history, meet the same message and abort again — one
-unfetchable message freezing the mailbox for good.
+`MessageUnavailableException` (a `users.messages.get` 404, or a 404 on
+Graph's `/me/messages/{id}/$value`) and `GmailRawDecodeException` are
+permanent for that id, so the fetch is skipped and the batch carries on
+to the cursor write. Letting either out would leave the cursor where it
+was, and every later tick would read the same history, meet the same
+message and abort again — one unfetchable message freezing the mailbox
+for good.
+
+This held on the Gmail branch alone until the Graph 404 was typed.
+`GraphErrorMapper` had no arm for 404, so it left the mapper as the
+default `RuntimeException`, escaped `persistDeltaMessage` and took the
+tick down before `recordCursor` — and Graph message ids are mutable, so
+an ordinary inbox rule moving a message is all it takes. The client
+sends no `Prefer: IdType="ImmutableId"` header, and adding one is not
+the fix for this: immutable ids are a *different id space*, so every
+`inbox_messages.provider_message_id` and every `.eml` path already
+written under a mutable id would stop matching, and the next scan would
+re-fetch and re-store the whole mailbox under new ids. That is a
+migration, not a header.
+
+**The same holds for the backfill window, and for the same reason.**
+`BackfillInboxJob::storeOrSkip` skips exactly the three failures that
+are permanent for one id — oversized, unavailable, undecodable — and
+lets every other one out. A refusal that escapes there abandons every
+page after it, and once the retry budget is spent the rest of the
+window is never fetched. The boundary is deliberate: a throttle, a
+grant failure, a transport error or a provider 5xx is the *walk's*
+condition rather than the message's, and skipping past one would spend
+the window on refusals or drop a receipt a later attempt could still
+have had.
 
 **Two early-exit paths skip the provider call entirely:** a
 `needs_reauth` inbox exits immediately on the first status read (no
@@ -1489,9 +1513,13 @@ carrying `Retry-After`; mapping only 429 flipped a throttled inbox to
 `error` (a red badge, not "rate limited"), never bumped
 `retry_attempts`, and discarded the provider's own delay.
 `users.history.list` 404 / Graph `$delta` 410 become
-`CursorExpiredException`; a `users.messages.get` 404 becomes
+`CursorExpiredException`; a `users.messages.get` 404 and a 404 on
+Graph's `/me/messages/{id}/$value` both become
 `MessageUnavailableException`, which is the signal the incremental scan
-uses to skip that id rather than stall the cursor behind it. Token payloads never appear in a thrown
+and the backfill walk use to skip that id rather than stall the cursor
+behind it. The Graph arm is gated on the call being a single-message
+fetch: the same status on a collection is an endpoint that moved, not a
+message that went, and stays the plain failure it is. Token payloads never appear in a thrown
 exception message. The discovery surface deliberately never calls
 `getRawMessage` — only the `format=metadata` / minimal-field fetch —
 so no `.eml` blob is ever persisted from a discovery walk.
