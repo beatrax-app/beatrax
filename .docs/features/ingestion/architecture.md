@@ -296,8 +296,15 @@ Multi-statement files: when a file carries a second statement — one
 that opens after the first has been closed by its FINAL `:62F:` balance
 — the *first* statement's metadata is captured for
 `statement_summaries` and `entry_count` reflects only that first
-statement; the later statements' entries still yield rows, and
-`extras.multiStatement: true` surfaces the fact. CAMT.053 now answers
+statement; the later statements' entries still yield rows **under their
+own `:25:` and their own `:60F:` currency**, and
+`extras.multiStatement: true` surfaces the fact. Those two follow the
+statement being read rather than the summary, which is what CAMT.053
+does by computing its own-IBAN inside the per-`Stmt` loop: a bulk
+delivery holds one statement per account, and freezing the pair wrote
+the second account's entries into the first — read at the first
+statement's scale, so a yen statement under a euro one came out a
+hundred times the figure. CAMT.053 now answers
 the same question the same way — see the section above. A statement PAGED
 across several messages is not that: `:62M:` and `:60M:` are the
 intermediate close and open that hand one statement from one page to

@@ -68,7 +68,7 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         if ($state->pendingTag61 !== null) {
-            yield $this->buildDto($state->pendingTag61, null, (string) $state->ownIban, (string) $state->currency, $state->rowIndex);
+            yield $this->buildDto($state->pendingTag61, null, (string) $state->rowOwnIban, (string) $state->rowCurrency, $state->rowIndex);
         }
 
         $this->lastStatementMetadata = $state->toMetadata();
@@ -106,6 +106,8 @@ final class Mt940Adapter implements SourceAdapter
 
     private function applyOwnIban(Mt940StatementAccumulator $state, string $content): void
     {
+        $state->rowOwnIban = trim($content);
+
         if ($state->firstStatementFrozen) {
             return;
         }
@@ -124,12 +126,16 @@ final class Mt940Adapter implements SourceAdapter
 
     private function applyOpeningBalance(Mt940StatementAccumulator $state, string $content): void
     {
+        $balance = $this->parseBalance($content);
+        if ($balance !== null) {
+            $state->rowCurrency = $balance->currency;
+        }
+
         if ($state->firstStatementFrozen) {
             return;
         }
 
         $state->balanceTagSeen = true;
-        $balance = $this->parseBalance($content);
         if ($balance === null) {
             return;
         }
@@ -166,12 +172,12 @@ final class Mt940Adapter implements SourceAdapter
      */
     private function handleEntryLine(Mt940StatementAccumulator $state, string $content): Generator
     {
-        if ($state->ownIban === null) {
+        if ($state->rowOwnIban === null) {
             throw new InvalidAmountException(
                 'MT940 :61: encountered before :25:; file is malformed.',
             );
         }
-        if ($state->currency === null) {
+        if ($state->rowCurrency === null) {
             // Never "no balance tag" when one was read and refused: the reader
             // then hunts for a tag that is present, in a file that has one.
             throw new InvalidAmountException($state->balanceTagSeen
@@ -180,11 +186,11 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         if ($state->pendingTag61 !== null) {
-            yield $this->buildDto($state->pendingTag61, null, $state->ownIban, $state->currency, $state->rowIndex);
+            yield $this->buildDto($state->pendingTag61, null, $state->rowOwnIban, $state->rowCurrency, $state->rowIndex);
             $state->rowIndex++;
         }
 
-        $state->pendingTag61 = $this->tag61->parse($content, $state->currency);
+        $state->pendingTag61 = $this->tag61->parse($content, $state->rowCurrency);
         if (! $state->firstStatementFrozen) {
             $state->entryCount++;
         }
@@ -200,9 +206,9 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         $narrative = $this->tag86->parse($content);
-        // The :61: branch is the only path that populates $pendingTag61, and
-        // it has already proved $ownIban and $currency non-null.
-        yield $this->buildDto($state->pendingTag61, $narrative, (string) $state->ownIban, (string) $state->currency, $state->rowIndex);
+        // The :61: branch is the only path that populates $pendingTag61, and it
+        // has already proved the pair non-null.
+        yield $this->buildDto($state->pendingTag61, $narrative, (string) $state->rowOwnIban, (string) $state->rowCurrency, $state->rowIndex);
         $state->rowIndex++;
         $state->pendingTag61 = null;
     }
