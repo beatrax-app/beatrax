@@ -103,8 +103,24 @@ it('aborts with a clear error when the current tuple would collide on older data
     expect($currentCount)->toBe(0);
 })->group('phase-2');
 
+// A row at the current version whose digest no longer describes it is the
+// case the doctor points here for: account_id is translated on arrival and the
+// digest travels verbatim. Version alone answered "already done" and the
+// command reported nothing to do against rows it was sent to repair.
+it('repairs a row stale at the current version', function (): void {
+    $this->seedOneCurrentVersionRow();
+
+    $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
+        ->expectsOutputToContain('Re-derived 1 rows to v'.FingerprintComposer::NORMALIZATION_VERSION)
+        ->assertSuccessful();
+})->group('phase-2');
+
 it('skips rows already on the current version (idempotent re-run)', function (): void {
     $this->seedOneCurrentVersionRow();
+
+    // The first run repairs the placeholder the fixture stamps; the second is
+    // the idempotency asserted here.
+    $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])->assertSuccessful();
 
     $this->artisan('beatrax:rederive-fingerprints', ['--confirm' => true])
         ->expectsOutputToContain('0 rows would be re-derived')

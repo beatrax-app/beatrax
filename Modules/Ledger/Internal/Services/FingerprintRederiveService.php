@@ -7,6 +7,7 @@ namespace Modules\Ledger\Internal\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -27,8 +28,15 @@ final readonly class FingerprintRederiveService
      *                       transaction. When false, the call is a
      *                       dry-run: the service reports how many rows
      *                       would be touched but writes nothing.
+     * @param  bool  $includeStaleAtTarget  Also read rows already at the
+     *                                      target version, and re-derive the ones whose
+     *                                      stored fingerprint no longer describes them.
+     *                                      Off for the migrations, which upgrade a version
+     *                                      and would otherwise re-hash a whole ledger on a
+     *                                      phone; on for the command, which is asked to
+     *                                      repair exactly those rows.
      */
-    public function run(bool $apply): FingerprintRederiveOutcome
+    public function run(bool $apply, bool $includeStaleAtTarget = false): FingerprintRederiveOutcome
     {
         $connection = $this->db->connection();
         $targetVersion = $this->fingerprints->version();
@@ -62,8 +70,12 @@ final readonly class FingerprintRederiveService
                 'source_row_index',
                 'source_ref',
                 'occurrence_ordinal',
+                'fingerprint',
             ])
-            ->where('normalization_version', '<', $targetVersion)
+            ->when(
+                ! $includeStaleAtTarget,
+                static fn (Builder $below): Builder => $below->where('normalization_version', '<', $targetVersion),
+            )
             ->orderBy('id');
 
         /** @var array<string, int> $seen Maps `${user_id}|${fingerprint}` to the first transactions.id that produced it */
@@ -91,6 +103,14 @@ final readonly class FingerprintRederiveService
             }
 
             $seen[$key] = $rowId;
+
+            // A row already at the target whose stored value still describes
+            // it is why this may read the whole table: it is scanned so it can
+            // be compared, and skipped so the count stays a count of repairs.
+            if ($this->alreadyDescribesItsRow($row, $newFingerprint, $targetVersion)) {
+                continue;
+            }
+
             $updates[$rowId] = $newFingerprint;
         }
 
@@ -105,6 +125,15 @@ final readonly class FingerprintRederiveService
             ! $apply => FingerprintRederiveOutcome::dryRun($targetVersion, $pendingCount),
             default => $this->applyUpdates($connection, $updates, $targetVersion, $pendingCount),
         };
+    }
+
+    // A fingerprint can go stale without the version moving: it is derived
+    // from account_id, and a row arriving from a peer has that id rewritten to
+    // the one this device uses while the fingerprint travels verbatim.
+    private function alreadyDescribesItsRow(stdClass $row, string $newFingerprint, int $targetVersion): bool
+    {
+        return self::toIntOrNull($row->normalization_version, 0) === $targetVersion
+            && self::toStringOrNull($row->fingerprint) === $newFingerprint;
     }
 
     /**
