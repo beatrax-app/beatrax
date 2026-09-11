@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'See ei ole aadress, mida see seade helistada saab. Sisesta see hosti ja pordina, näiteks 192.168.1.20:8100.',
         'code_not_accepted' => 'Ükski selle võrgu seade ei võtnud koodi vastu. Kontrolli koodi ja seda, kas teine seade näitab seda veel.',
         'no_peer_answered' => 'Selles võrgus ei vastanud sellele koodile miski. Kontrolli, kas teises seadmes töötab sünkroonimine, või skanni selle kood kaameraga — kaamera ei pea võrgust otsima.',
+        'no_peer_answered_local_network' => 'Selles võrgus ei vastanud sellele koodile miski. Beatrax vajab kõigepealt sinu luba, et selle võrgu seadmeteni jõuda, ja ilma selleta ei tööta teise seadmeni ükski tee — ka kaamera mitte. Lülita oma seadme seadetes Beatraxi jaoks Kohtvõrk sisse ja saada kood uuesti.',
         'no_peer_answered_ios' => 'Selles võrgus ei vastanud sellele koodile miski. Teise seadme otsimine võrgust ei tööta iPhone’is veel, seega skanni selle kood kaameraga.',
         'no_peer_answered_camera_off' => 'Selles võrgus ei vastanud sellele koodile miski. Teise seadme otsimine võrgust ei tööta iPhone’is veel ja kaamera kasutamine on välja lülitatud — luba seetõttu kaamera Beatraxile oma seadme seadetes ja skanni teise seadme kood.',
         'rate_limited' => 'Liiga palju katseid. Oota minut ja proovi uuesti.',

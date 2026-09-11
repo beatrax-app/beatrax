@@ -16,9 +16,12 @@ use Modules\Sync\Internal\Pairing\PairingTokenRowReader;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
+use Modules\Sync\Internal\Transport\Discovery\LocalNetworkGate;
+use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Discovery\PeerDiscovery;
 use Modules\Sync\Public\Dto\PairingPeerIdentity;
 use Modules\Sync\Public\Enums\LanDiscoveryReach;
+use Modules\Sync\Public\Enums\LocalNetworkAccess;
 use Modules\Sync\Public\Enums\PairingAcceptRefusal;
 use Modules\Sync\Public\Enums\PairingFrameSend;
 use Modules\Sync\Public\Enums\PairingOfferLookup;
@@ -52,7 +55,38 @@ final readonly class PairingGateway
         private PairingPeerLink $peerLink,
         private SafetyNumberDeriver $safetyDeriver,
         private PeerDiscovery $discovery,
+        private LocalNetworkGate $localNetwork,
     ) {}
+
+    // Asked before the reach, because it outranks it: a device that may not
+    // open a LAN connection at all has no road to a peer by any means, so
+    // nothing the browse did or did not find can be the reason.
+    /**
+     * @link ../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md#the-second-gate-and-the-one-a-reader-can-open
+     */
+    public function localNetworkAccess(): LocalNetworkAccess
+    {
+        return $this->localNetwork->access();
+    }
+
+    // Put the platform's own permission question to the reader now, so it
+    // arrives while they are reading the pairing screen rather than on top of
+    // a failure thirty-two typed characters later.
+    public function askForLocalNetworkAccess(): void
+    {
+        if (! $this->localNetwork->access()->mayExplainSilence()) {
+            return;
+        }
+
+        if ($this->localNetwork->askTheReader()) {
+            return;
+        }
+
+        // No shell answers for it, so ask the network instead. iOS gates on the
+        // attempt, which is why the prompt turns up unbidden at submit today;
+        // making the attempt here moves it, and warms the peer cache besides.
+        $this->discovery->browse(MdnsAdvertiser::SERVICE_TYPE);
+    }
 
     // The companion question to discoverInitiatorOnLan()'s NoPeerReached: could
     // this device have looked at all? An empty browse means "nobody answered"

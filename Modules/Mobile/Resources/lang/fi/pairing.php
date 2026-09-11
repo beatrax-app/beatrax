@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Tuo ei ole osoite, johon tämä laite voi soittaa. Anna se hostina ja porttina, esimerkiksi 192.168.1.20:8100.',
         'code_not_accepted' => 'Mikään tämän verkon laite ei hyväksynyt koodia. Tarkista koodi ja se, näyttääkö toinen laite sitä yhä.',
         'no_peer_answered' => 'Mikään tässä verkossa ei vastannut koodiin. Tarkista, että synkronointi on käynnissä toisella laitteella, tai skannaa sen koodi kameralla — kamera ei etsi verkosta.',
+        'no_peer_answered_local_network' => 'Mikään tässä verkossa ei vastannut koodiin. Beatrax tarvitsee ensin lupasi tavoittaa laitteita tässä verkossa, eikä ilman sitä toimi mikään reitti toiseen laitteeseen — ei myöskään kamera. Ota Paikallisverkko käyttöön Beatraxille laitteesi asetuksista ja lähetä koodi uudelleen.',
         'no_peer_answered_ios' => 'Mikään tässä verkossa ei vastannut koodiin. Toisen laitteen etsiminen verkosta ei vielä toimi iPhonessa, joten skannaa sen koodi kameralla.',
         'no_peer_answered_camera_off' => 'Mikään tässä verkossa ei vastannut koodiin. Toisen laitteen etsiminen verkosta ei vielä toimi iPhonessa, ja kameran käyttöoikeus on pois päältä — salli siis kamera Beatraxille laitteesi asetuksista ja skannaa toisen laitteen koodi.',
         'rate_limited' => 'Liian monta yritystä. Odota minuutti ja yritä uudelleen.',

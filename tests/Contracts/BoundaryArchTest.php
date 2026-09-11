@@ -2587,6 +2587,8 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Pairing\\WordCodeEncoder',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveredPeer',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\DiscoveryMode',
+        'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\LocalNetworkGate',
+        'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\NativeBridge',
         'Modules/Mobile/tests/Feature/PairingManualCodeArmTest.php -> Modules\\Sync\\Internal\\Transport\\Discovery\\PeerDiscovery',
         'Modules/Mobile/tests/Feature/TheCredentialsSetupTakesNeverRideBackToTheBrowserTest.php -> Modules\\Desktop\\Internal\\Http\\Middleware\\EnsureDatabaseReady',
         'Modules/Mobile/tests/Feature/TheLocalNetworkIsTriedBeforeTheRelayTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',

@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Dat is geen adres dat dit apparaat kan bellen. Vul het in als host en poort, bijvoorbeeld 192.168.1.20:8100.',
         'code_not_accepted' => 'Geen enkel apparaat in dit netwerk accepteerde die code. Controleer de code en of het andere apparaat hem nog toont.',
         'no_peer_answered' => 'Niets in dit netwerk reageerde op die code. Controleer of synchronisatie op het andere apparaat draait, of scan zijn code met de camera — de camera hoeft niet in het netwerk te zoeken.',
+        'no_peer_answered_local_network' => 'Niets in dit netwerk reageerde op die code. Beatrax heeft eerst je toestemming nodig om apparaten in dit netwerk te bereiken, en zonder die werkt geen enkele route naar het andere apparaat — de camera ook niet. Zet Lokaal netwerk aan voor Beatrax in je apparaatinstellingen en verstuur de code opnieuw.',
         'no_peer_answered_ios' => 'Niets in dit netwerk reageerde op die code. Zoeken naar het andere apparaat in het netwerk werkt nog niet op de iPhone, dus scan zijn code met de camera.',
         'no_peer_answered_camera_off' => 'Niets in dit netwerk reageerde op die code. Zoeken naar het andere apparaat in het netwerk werkt nog niet op de iPhone, en cameratoegang staat uit — zet cameratoegang daarom weer aan voor Beatrax in je apparaatinstellingen en scan de code op het andere apparaat.',
         'rate_limited' => 'Te veel pogingen. Wacht een minuut en probeer het opnieuw.',

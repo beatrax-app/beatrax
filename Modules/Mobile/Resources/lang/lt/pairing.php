@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Tai nėra adresas, kuriuo šis įrenginys galėtų skambinti. Įvesk jį kaip hostą ir prievadą, pavyzdžiui 192.168.1.20:8100.',
         'code_not_accepted' => 'Nė vienas šio tinklo įrenginys nepriėmė šio kodo. Patikrink kodą ir ar kitas įrenginys jį vis dar rodo.',
         'no_peer_answered' => 'Šiame tinkle į šį kodą niekas neatsakė. Patikrink, ar kitame įrenginyje veikia sinchronizavimas, arba nuskaityk jo kodą kamera — kamerai tinkle ieškoti nereikia.',
+        'no_peer_answered_local_network' => 'Šiame tinkle į šį kodą niekas neatsakė. Pirmiausia turi leisti Beatrax pasiekti įrenginius šiame tinkle, o be šio leidimo neveikia joks kelias iki kito įrenginio — ir kamera taip pat. Įrenginio nustatymuose įjunk Beatrax parinktį Vietinis tinklas ir išsiųsk kodą dar kartą.',
         'no_peer_answered_ios' => 'Šiame tinkle į šį kodą niekas neatsakė. Kito įrenginio paieška tinkle „iPhone“ dar neveikia, tad nuskaityk jo kodą kamera.',
         'no_peer_answered_camera_off' => 'Šiame tinkle į šį kodą niekas neatsakė. Kito įrenginio paieška tinkle „iPhone“ dar neveikia, o kameros prieiga išjungta — tad įrenginio nustatymuose vėl leisk kamerą Beatrax ir nuskaityk kito įrenginio kodą.',
         'rate_limited' => 'Per daug bandymų. Palauk minutę ir bandyk dar kartą.',

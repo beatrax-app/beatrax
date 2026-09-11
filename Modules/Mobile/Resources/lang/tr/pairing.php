@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Bu, bu cihazın arayabileceği bir adres değil. Host ve port olarak gir, örneğin 192.168.1.20:8100.',
         'code_not_accepted' => 'Bu ağdaki hiçbir cihaz bu kodu kabul etmedi. Kodu ve diğer cihazın onu hâlâ gösterip göstermediğini kontrol et.',
         'no_peer_answered' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazda eşitlemenin çalıştığını kontrol et ya da kodunu kamerayla tara — kameranın ağda arama yapması gerekmez.',
+        'no_peer_answered_local_network' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Beatrax’in bu ağdaki cihazlara ulaşabilmesi için önce senin iznin gerekiyor ve bu izin olmadan diğer cihaza giden hiçbir yol çalışmaz — kamera da çalışmaz. Cihaz ayarlarından Beatrax için Yerel Ağ’ı aç ve kodu yeniden gönder.',
         'no_peer_answered_ios' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazı ağda aramak iPhone’da henüz çalışmıyor, bu yüzden kodunu kamerayla tara.',
         'no_peer_answered_camera_off' => 'Bu ağda bu koda hiçbir şey yanıt vermedi. Diğer cihazı ağda aramak iPhone’da henüz çalışmıyor ve kamera erişimi kapalı — bu yüzden cihaz ayarlarından Beatrax için kamera erişimini yeniden aç ve diğer cihazdaki kodu tara.',
         'rate_limited' => 'Çok fazla deneme. Bir dakika bekle ve tekrar dene.',

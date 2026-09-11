@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'That is not an address this device can dial. Enter it as host and port, for example 192.168.1.20:8100.',
         'code_not_accepted' => 'No device on this network accepted that code. Check the code, and that the other device is still showing it.',
         'no_peer_answered' => 'Nothing on this network answered that code. Check that sync is running on the other device, or scan its code with the camera — the camera needs no network search.',
+        'no_peer_answered_local_network' => 'Nothing on this network answered that code. Beatrax needs your permission to reach devices on this network first, and without it no route to the other device works — not the camera either. Turn Local Network on for Beatrax in your device settings, then submit the code again.',
         'no_peer_answered_ios' => 'Nothing on this network answered that code. Searching the network for the other device does not work on iPhone yet, so scan its code with the camera instead.',
         'no_peer_answered_camera_off' => 'Nothing on this network answered that code. Searching the network for the other device does not work on iPhone yet, and camera access is off — so turn camera access back on for Beatrax in your device settings, then scan the code shown on the other device.',
         'rate_limited' => 'Too many attempts. Wait a minute and try again.',

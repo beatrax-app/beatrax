@@ -112,18 +112,22 @@ trait AcceptsPairingCode
     }
 
     // Nothing answered is the EXPECTED outcome on iOS, which drops the app's
-    // own multicast query, so that reader is sent to the camera rather than to
-    // their router. No line names a cause this device cannot observe: it knows
-    // only that it asked and heard nothing back.
+    // own multicast query. No line names a cause this device cannot observe: it
+    // knows only that it asked, heard nothing back, and which of the two gates
+    // between it and the network it is still behind.
     /**
      * @link ../../../../../../.docs/features/mobile/ios-lan-discovery-entitlement.md
      */
-    // Asked of the transport, not of the platform: reach() flips on its own the
-    // day the entitlement lands, so the advice retires itself. The third line is
-    // for the reader whose camera is the road that was refused — sending them
-    // back to it is the order the amber notice above has already ruled out.
+    // Permission first, because it outranks the reach: a device that may not
+    // open a LAN connection reaches no peer by ANY road, and the lines below
+    // end by sending the reader to the camera, which is one of them. Both are
+    // asked of the capability, so each line retires itself when its gate opens.
     private function nothingAnsweredKey(PairingGateway $gateway): string
     {
+        if ($gateway->localNetworkAccess()->mayExplainSilence()) {
+            return 'mobile::pairing.errors.no_peer_answered_local_network';
+        }
+
         if ($gateway->lanDiscoveryReach()->silenceMeansNoPeers()) {
             return 'mobile::pairing.errors.no_peer_answered';
         }

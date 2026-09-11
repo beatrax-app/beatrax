@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'To nie jest adres, pod który to urządzenie może zadzwonić. Podaj go jako host i port, na przykład 192.168.1.20:8100.',
         'code_not_accepted' => 'Żadne urządzenie w tej sieci nie przyjęło tego kodu. Sprawdź kod i czy drugie urządzenie nadal go pokazuje.',
         'no_peer_answered' => 'Nic w tej sieci nie odpowiedziało na ten kod. Sprawdź, czy na drugim urządzeniu działa synchronizacja, albo zeskanuj jego kod aparatem — aparat nie musi niczego szukać w sieci.',
+        'no_peer_answered_local_network' => 'Nic w tej sieci nie odpowiedziało na ten kod. Beatrax potrzebuje najpierw twojej zgody, aby sięgać po urządzenia w tej sieci, a bez niej nie działa żadna droga do drugiego urządzenia — aparat też nie. Włącz opcję Sieć lokalna dla Beatrax w ustawieniach urządzenia i wyślij kod ponownie.',
         'no_peer_answered_ios' => 'Nic w tej sieci nie odpowiedziało na ten kod. Wyszukiwanie drugiego urządzenia w sieci na iPhonie jeszcze nie działa, więc zeskanuj jego kod aparatem.',
         'no_peer_answered_camera_off' => 'Nic w tej sieci nie odpowiedziało na ten kod. Wyszukiwanie drugiego urządzenia w sieci na iPhonie jeszcze nie działa, a dostęp do aparatu jest wyłączony — włącz więc z powrotem dostęp do aparatu dla Beatrax w ustawieniach urządzenia i zeskanuj kod z drugiego urządzenia.',
         'rate_limited' => 'Zbyt wiele prób. Poczekaj minutę i spróbuj ponownie.',

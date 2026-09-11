@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'Ez nem olyan cím, amelyet ez az eszköz fel tud hívni. Add meg gazdagépként és portként, például 192.168.1.20:8100.',
         'code_not_accepted' => 'A hálózaton egyetlen eszköz sem fogadta el ezt a kódot. Ellenőrizd a kódot, és hogy a másik eszköz még mutatja-e.',
         'no_peer_answered' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. Ellenőrizd, hogy fut-e a szinkronizálás a másik eszközön, vagy olvasd be a kódját a kamerával — a kamerának nem kell keresnie a hálózaton.',
+        'no_peer_answered_local_network' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. A Beatraxnak először engedélyre van szüksége tőled, hogy elérje az ezen a hálózaton lévő eszközöket, enélkül pedig semmilyen út nem működik a másik eszközhöz — a kamera sem. Kapcsold be a Helyi hálózat kapcsolót a Beatrax számára az eszközbeállításokban, majd küldd be újra a kódot.',
         'no_peer_answered_ios' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. A másik eszköz keresése a hálózaton iPhone-on még nem működik, ezért olvasd be a kódját a kamerával.',
         'no_peer_answered_camera_off' => 'Ezen a hálózaton semmi sem válaszolt erre a kódra. A másik eszköz keresése a hálózaton iPhone-on még nem működik, a kamerahozzáférés pedig ki van kapcsolva — kapcsold ezért vissza a kamerahozzáférést a Beatrax számára az eszközbeállításokban, majd olvasd be a másik eszköz kódját.',
         'rate_limited' => 'Túl sok próbálkozás. Várj egy percet, és próbáld újra.',

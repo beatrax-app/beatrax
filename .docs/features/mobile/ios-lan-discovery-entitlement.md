@@ -179,6 +179,105 @@ discovery path that uses `NWBrowser` through a native plugin, which
 `NSBonjourServices` already covers, behind the existing `PeerDiscovery`
 contract.
 
+## The second gate, and the one a reader can open
+
+Everything above concerns `com.apple.developer.networking.multicast`, which gates
+the *search*. There is a second iOS gate, it is the one a reader can actually
+open, and on a fresh install it is shut: until **"Allow Beatrax to find devices
+on local networks?"** is answered, iOS drops *every* LAN connection the app
+makes — unicast included.
+
+That matters because the advice this page wrote for the first gate runs straight
+into the second. "Scan the code with the camera instead" removes the *browse*,
+and nothing else. Delivering the accept is still `POST /pair/frame` to the
+desktop's address, collecting the confirm is still `GET /pair/frames`, and the
+import that follows is still a WebSocket dial. All three are ordinary unicast TCP
+to a LAN address, and all three are shut by the same ungranted permission. On a
+device whose reader has not answered the prompt, the escape this page documented
+cannot work either — which is the same shape as
+[a documented workaround sharing the broken dependency](../sync/pairing-handshake.md),
+one gate lower.
+
+From inside the app it looks like nothing at all.
+`LanPairingFrameCourier::deliverTo()` catches `Throwable` and logs nothing by
+design, `LanPairingOfferFetcher` answers `NoPeerReached`, and the screen reports
+that nothing on this network answered the code — which is true, and names none
+of it.
+
+### What the device said
+
+**Measured 2026-09-11**, iPhone 12 mini on iOS 26.5.2, app reinstalled from
+`main` that evening and taken through Welcome → Import to the pairing step. A
+well-formed code was typed, and then the desktop's own address
+(`192.168.178.66:51337`, `sync:serve` listening on `*:51337`, macOS application
+firewall off) was given to the screen when it asked for one. Both submits came
+back "nothing on this network answered that code". iOS's own log says what the
+app could not:
+
+```
+UserEventAgent(com.apple.networkextension): Got local network blocked
+    notification: pid: 12341, uuid: 2ECE25D4-…
+nehelper(CoreServices): Got values for keys { NSLocalNetworkUsageDescription }
+nehelper: We've already got a prompt outstanding for
+    NV5645J73B.com.beatrax.mobile, joining queue
+nehelper: Prompt for NV5645J73B.com.beatrax.mobile enqueued, stopping
+kernel: SK[4]: flow_entry_alloc … NativePHP … dst=<IPv4-redacted>.51337 …
+symptomsd: NativePHP TCP4 flow id 4353 (close) … first 1 pkts rx 0 tx 0, bytes 0 0
+```
+
+The flow to the desktop was allocated and closed having carried **zero bytes**,
+SpringBoard held the app's scene deactivated for a system modal alert across
+the window, and the desktop logged no inbound request. The declaration was never the
+problem: `nehelper` reads `NSLocalNetworkUsageDescription` off this very build in
+order to compose the prompt it is holding.
+
+### A probe from the WebView cannot answer this
+
+The first attempt to prove it ran `fetch()` from the app's own WebView against
+the desktop's address, with `fetch('/')` as the positive control. The LAN fetch
+failed, the control passed, and that reads as proof. It is not. This app serves
+`connect-src 'self'`, so **every** off-origin fetch from that page fails
+instantly with the identical `TypeError: Load failed` — including
+`https://captive.apple.com/`, in about a millisecond, on a phone whose internet
+is fine. Same-origin is the wrong control for a cross-origin question. The
+pairing HTTP is PHP, which no page policy touches, so the probe has to be made to
+run there or the state read off the platform as above.
+
+### Reading it, rather than guessing at it
+
+`LocalNetworkGate` asks the shell for `LocalNetwork.Status` over the same
+`NativeBridge` seam `Discovery.Browse` uses, and answers
+`Modules\Sync\Public\Enums\LocalNetworkAccess`:
+
+| Case | Means |
+|---|---|
+| `Granted` | this platform holds nothing back, or the shell says the reader allowed it |
+| `Unconfirmed` | the reader was asked and has not allowed it, or nothing here can say |
+
+The two halves of `Unconfirmed` share a case deliberately: they share their
+advice, and neither may be stated as a fact. **No build registers
+`LocalNetwork.Status` today**, so on iOS the answer falls through to the platform
+and is `Unconfirmed` — the same shape `BonjourBridgeQuery` shipped in, and with
+the same property, that the day a plugin answers it the copy stops hedging with
+nothing to remember.
+
+What may never stand in for it is the declaration. Every build carries
+`NSLocalNetworkUsageDescription`, so reading that back would have answered
+"granted" on the device measured above while iOS was dropping that build's
+packets. A declared permission is not a granted one.
+
+### Asked on arrival, not after thirty-two characters
+
+iOS raises the prompt on the first attempt to reach a LAN address, and that
+attempt used to be the reader's submit — so the system's offer of exactly the
+capability the app needs arrived on top of the app's own message saying the
+network had answered nothing. `MobilePairingScan` now carries
+`wire:init="askForLocalNetwork"`, and `PairingGateway::askForLocalNetworkAccess()`
+puts the question through the shell where one offers it and otherwise runs a
+single browse. The browse **is** the attempt; iOS does the rest. It costs one
+browse timeout after the page has painted, and warms `CachedPeerDiscovery` for
+the submit that follows.
+
 ## What the pairing screen says when nothing answers
 
 The screen used to answer `PairingOfferLookup::NoPeerReached` with "Cannot
@@ -188,20 +287,31 @@ same wifi, `sync:serve` live, seven interfaces advertising — and the message
 appeared while the system's own "allow Beatrax to find devices on local
 networks?" prompt was still sitting unanswered on top of the app.
 
-`AcceptsPairingCode::nothingAnsweredKey()` picks between three lines, and none
+`AcceptsPairingCode::nothingAnsweredKey()` picks between four lines, and none
 names a cause this device cannot observe — it knows only that it asked, heard
-nothing, and whether the question could leave this device at all:
+nothing, and which of the two gates between it and the network it is still
+behind:
 
-| `silenceMeansNoPeers()` | camera | Key |
-|---|---|---|
-| `true` | either | `mobile::pairing.errors.no_peer_answered` |
-| `false` | usable | `mobile::pairing.errors.no_peer_answered_ios` |
-| `false` | refused | `mobile::pairing.errors.no_peer_answered_camera_off` |
+| `mayExplainSilence()` | `silenceMeansNoPeers()` | camera | Key |
+|---|---|---|---|
+| `true` | either | either | `mobile::pairing.errors.no_peer_answered_local_network` |
+| `false` | `true` | either | `mobile::pairing.errors.no_peer_answered` |
+| `false` | `false` | usable | `mobile::pairing.errors.no_peer_answered_ios` |
+| `false` | `false` | refused | `mobile::pairing.errors.no_peer_answered_camera_off` |
+
+The permission is asked first because it outranks the reach: a device that may
+not open a LAN connection reaches no peer by any road, so nothing the browse did
+or did not find can be the reason, and the three lines below it all end by
+sending the reader somewhere the same permission has shut. The first line asks
+for the one action that opens every road, and says plainly that the camera is
+shut by the same thing. It does not claim the permission is off — under
+`Unconfirmed` the app does not know that — only that it is needed before
+anything works, which is true either way.
 
 The iOS line says the network search does not work on iPhone *yet* and sends
 the reader to the camera, which needs no discovery — true only since the QR
-began carrying an address; before that the advice named the other dead end. **That line is bound
-to this page.** If the multicast entitlement is granted and the search starts
+began carrying an address, and only once local-network access is granted.
+**That line is bound to this page.** If the multicast entitlement is granted and the search starts
 working, `no_peer_answered_ios` becomes false and has to go — the general line
 is true on iOS too from that moment.
 
@@ -241,10 +351,14 @@ relay, or an address the code carried — and falls back to
 this device cannot search and the code carried no address, and asks for a
 fresh code, which is the one action that helps.
 
-The permission state itself is not readable. iOS exposes no API for whether
-local-network access was granted, so the app cannot wait for the prompt to be
-answered before it reports, and nothing on that surface may claim to know why
-the silence happened.
+The permission state is not readable *from PHP*, and no build ships a shell that
+answers for it yet, so the app still cannot wait for the prompt to be answered
+before it reports and nothing on that surface may claim to know why the silence
+happened. It is readable in principle, though, which is what
+[`LocalNetworkGate`](#the-second-gate-and-the-one-a-reader-can-open) exists for:
+iOS itself distinguishes the two states and logs the distinction, so a shell
+plugin can be asked. Until one is, the answer is `Unconfirmed` and the copy
+hedges rather than asserts.
 
 ### Answering the prompt does not make the search work
 
@@ -257,7 +371,14 @@ can succeed. **Allow** was tapped on the device and the identical code
 resubmitted, and the identical message came back. Without
 `com.apple.developer.networking.multicast` iOS drops outgoing multicast whether
 or not local-network access was granted, so "just answer the prompt" is not a
-theory this page leaves open, and the line is accurate as written.
+theory this page leaves open about *the search*.
+
+It is the whole story about everything else. Answering the prompt is what opens
+the typed address, the address a scanned QR carries, both pairing-frame routes
+and the sync dial that follows — every road to the peer except the one the
+entitlement holds. That is why the prompt is now raised on arrival rather than
+left to turn up unbidden under a failure message, and why a silence measured
+behind it names the permission and not the search.
 
 ### Said before the code is typed, not after
 

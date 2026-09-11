@@ -25,8 +25,14 @@
      which brought the drawer, sidebar and mobile top bar along with it —
      app navigation wrapped around a blocking setup step the user cannot
      leave, and tapping it left the wizard mid-ceremony. --}}
+{{-- wire:init, not mount(): the probe behind it blocks for the browse
+     timeout, and on iOS it exists to make the system raise "allow Beatrax to
+     find devices on local networks?" here, while the reader is looking at the
+     pairing screen — rather than unbidden on top of a failure, after they have
+     typed thirty-two characters of a code. --}}
 <div class="safe-screen min-h-screen bg-white dark:bg-slate-950"
      data-testid="mobile-pairing-scan"
+     wire:init="askForLocalNetwork"
      wire:key="pairing-step-{{ $wizardStep->value }}">
 <div class="max-w-lg mx-auto px-4 sm:px-6 py-8 space-y-4">
 

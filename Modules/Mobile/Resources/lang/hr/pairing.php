@@ -49,6 +49,7 @@ return [
         'initiator_address_invalid' => 'To nije adresa koju ovaj uređaj može nazvati. Upiši je kao host i port, primjerice 192.168.1.20:8100.',
         'code_not_accepted' => 'Nijedan uređaj na ovoj mreži nije prihvatio taj kôd. Provjeri kôd i prikazuje li ga drugi uređaj još uvijek.',
         'no_peer_answered' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Provjeri radi li sinkronizacija na drugom uređaju ili skeniraj njegov kod kamerom — kamera ne treba pretraživati mrežu.',
+        'no_peer_answered_local_network' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Beatraxu je najprije potrebno tvoje dopuštenje da dopre do uređaja na ovoj mreži, a bez njega ne radi nijedan put do drugog uređaja — ni kamera. U postavkama uređaja uključi opciju Lokalna mreža za Beatrax i ponovno pošalji kod.',
         'no_peer_answered_ios' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Traženje drugog uređaja na mreži na iPhoneu još ne radi, pa skeniraj njegov kod kamerom.',
         'no_peer_answered_camera_off' => 'Ništa na ovoj mreži nije odgovorilo na taj kod. Traženje drugog uređaja na mreži na iPhoneu još ne radi, a pristup kameri je isključen — zato ponovno uključi pristup kameri za Beatrax u postavkama uređaja i skeniraj kod s drugog uređaja.',
         'rate_limited' => 'Previše pokušaja. Pričekaj minutu i pokušaj ponovno.',
