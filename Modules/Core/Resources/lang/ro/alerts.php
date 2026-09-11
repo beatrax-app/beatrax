@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'alertele de buget',
         'daily-triggers' => 'mementourile zilnice și rezumatul',
+        'withheld-triggers' => 'celelalte alerte',
     ],
 
     'messages' => [

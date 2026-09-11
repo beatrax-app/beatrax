@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'powiadomień budżetowych',
         'daily-triggers' => 'codziennych przypomnień i podsumowania',
+        'withheld-triggers' => 'pozostałych powiadomień',
     ],
 
     'messages' => [

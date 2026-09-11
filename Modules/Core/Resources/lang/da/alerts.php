@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'budgetadvarslerne',
         'daily-triggers' => 'de daglige påmindelser og oversigten',
+        'withheld-triggers' => 'de øvrige advarsler',
     ],
 
     'messages' => [

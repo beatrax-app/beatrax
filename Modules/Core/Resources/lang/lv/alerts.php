@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'budžeta brīdinājumus',
         'daily-triggers' => 'ikdienas atgādinājumus un kopsavilkumu',
+        'withheld-triggers' => 'pārējos brīdinājumus',
     ],
 
     'messages' => [

@@ -23,6 +23,7 @@ return [
     'deferred_pass' => [
         'budget-nudges' => 'rozpočtová upozornění',
         'daily-triggers' => 'denní připomínky a souhrn',
+        'withheld-triggers' => 'ostatní upozornění',
     ],
 
     'messages' => [
