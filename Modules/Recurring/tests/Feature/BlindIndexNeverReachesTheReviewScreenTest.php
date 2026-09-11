@@ -136,6 +136,22 @@ it('shows the merchant name, never the digest, on a detected series', function (
     expect(BlindIndexCodec::looksDerived((string) $series->detected_name))->toBeFalse();
 });
 
+// A merchants row whose name is still the cluster key is a digest, and handing
+// it back short-circuits the transactions side that could have decrypted the
+// real name -- the same value forStoredKey() refuses to return itself.
+it('does not offer a keyed digest as the name it found in merchants', function (): void {
+    $user = binrUser();
+    $session = $this->enablesEncryptionForUser($user);
+    $key = binrSeed($user, $session, 'Zilveren Kruis', 'placeholder');
+
+    app(DatabaseManager::class)->connection()->table('merchants')
+        ->where('user_id', $user->id)
+        ->update(['name' => $key]);
+
+    expect(BlindIndexCodec::looksDerived($key))->toBeTrue()
+        ->and(app(MerchantDisplayName::class)->forStoredKey((int) $user->id, $key))->toBe('Zilveren Kruis');
+});
+
 it('prefers the user own naming over the bank string, both keyed the same way', function (): void {
     $user = binrUser();
     $session = $this->enablesEncryptionForUser($user);

@@ -85,7 +85,13 @@ final readonly class MerchantDisplayName
             return null;
         }
 
-        return self::nameOrNull(self::toString($row->name));
+        // A row whose name is still the clustering key holds a keyed digest on
+        // an encrypted install. Handing it back short-circuits the ?? below,
+        // so the transactions side never gets asked and the digest reaches the
+        // review screen -- the same thing forStoredKey() refuses to return.
+        $name = self::toString($row->name);
+
+        return BlindIndexCodec::looksDerived($name) ? null : self::nameOrNull($name);
     }
 
     // counterparty_name is encrypted at rest, and the codec answers '' for a
