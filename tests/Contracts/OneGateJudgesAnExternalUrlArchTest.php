@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 
 /**
@@ -162,14 +163,17 @@ it('gives every new-window link both halves of rel', function (): void {
     foreach (externalUrlBladeFiles() as $file) {
         $source = (string) file_get_contents($file);
 
-        // The attribute block of one element, taken from the `target` back to
-        // the tag that opened it and forward to the one that closes it: `rel`
-        // and `target` are written on separate lines here, in either order.
-        $elements = PatternScan::all('/<[a-zA-Z][^>]*target="_blank"[^>]*>/s', $source)[0] ?? [];
+        // Through MarkupSource, never a pattern shaped like a tag: `target` and
+        // `rel` are written on separate lines here in either order, and an
+        // x-data or @class([...]) between them carries characters a tag pattern
+        // reads as the end of the tag.
+        foreach (MarkupSource::tags($source) as $element) {
+            if ($element->attribute('target') !== '_blank') {
+                continue;
+            }
 
-        foreach ($elements as $element) {
             $anchors++;
-            $rel = PatternScan::first('/\brel="([^"]*)"/', $element)[1] ?? '';
+            $rel = $element->attribute('rel') ?? '';
 
             if (! str_contains($rel, 'noopener') || ! str_contains($rel, 'noreferrer')) {
                 $offenders[] = str_replace(base_path().'/', '', $file);
