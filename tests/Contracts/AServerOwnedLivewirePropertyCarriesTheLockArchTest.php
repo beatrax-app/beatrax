@@ -211,6 +211,47 @@ function clientBoundScopeOfComponent(string $component): string
     return explode('\\', $component)[1] ?? SHARED_BINDING_SCOPE;
 }
 
+// A trait's property is bound by the TRAIT's module. Reflection reports a
+// trait-imported property as declared on the using class, so the component's
+// own module is the wrong and only answer unless the traits are asked too:
+// HandlesTaxTagging lives in Tax and its popover is bound from Tax's views,
+// while the four components that use it are in three other modules.
+/**
+ * @param  ReflectionClass<object>  $component
+ * @return list<string> every module whose templates may name this property
+ */
+function clientBoundScopesFor(ReflectionClass $component, string $property, string $modulesRoot): array
+{
+    $scopes = [clientBoundScopeOfComponent($component->getName())];
+
+    foreach (clientBoundTraitsOf($component) as $trait) {
+        if (! $trait->hasProperty($property)) {
+            continue;
+        }
+
+        $file = str_replace(DIRECTORY_SEPARATOR, '/', (string) $trait->getFileName());
+        $scopes[] = clientBoundScopeOf($file, $modulesRoot);
+    }
+
+    return array_values(array_unique($scopes));
+}
+
+/**
+ * @param  ReflectionClass<object>  $class
+ * @return list<ReflectionClass<object>> the traits it uses, and the traits those use
+ */
+function clientBoundTraitsOf(ReflectionClass $class): array
+{
+    $traits = [];
+
+    foreach ($class->getTraits() as $trait) {
+        $traits[] = $trait;
+        $traits = [...$traits, ...clientBoundTraitsOf($trait)];
+    }
+
+    return $traits;
+}
+
 // An action method runs BEFORE render(), so a property render() rewrites is
 // still whatever the payload said for the whole of the action that reads it.
 // A method that only assigns the property is not reading the client's value,
@@ -251,16 +292,12 @@ function methodsReadingProperty(array $methods, string $property): array
 function serverOwnedUnlockedProperties(): array
 {
     $bound = clientBoundPropertyNames();
+    $modulesRoot = str_replace(DIRECTORY_SEPARATOR, '/', base_path('Modules')).'/';
     $found = [];
 
     foreach (WireCallableMethods::components() as $component) {
         $reflection = new ReflectionClass($component);
         $methods = WireCallableMethods::invokableOn($component);
-
-        $boundHere = array_merge(
-            $bound[SHARED_BINDING_SCOPE] ?? [],
-            $bound[clientBoundScopeOfComponent($component)] ?? [],
-        );
 
         foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             // A static or readonly property is not part of the snapshot the
@@ -282,6 +319,11 @@ function serverOwnedUnlockedProperties(): array
             // the reader writes it by navigating and it cannot be locked.
             if ($property->getAttributes(Locked::class) !== [] || $property->getAttributes(Url::class) !== []) {
                 continue;
+            }
+
+            $boundHere = $bound[SHARED_BINDING_SCOPE] ?? [];
+            foreach (clientBoundScopesFor($reflection, $property->getName(), $modulesRoot) as $scope) {
+                $boundHere = array_merge($boundHere, $bound[$scope] ?? []);
             }
 
             if (isset($boundHere[$property->getName()])) {
@@ -410,4 +452,45 @@ it('reads a binding into the module whose template writes it', function (): void
     expect(clientBoundScopeOf('/repo/resources/views/layouts/app.blade.php', '/repo/Modules/'))->toBe(SHARED_BINDING_SCOPE);
     expect(clientBoundScopeOf('/Modules/repo/Modules/Ledger/a.blade.php', '/Modules/repo/Modules/'))->toBe('Ledger');
     expect(clientBoundScopeOfComponent('Modules\\Onboarding\\Internal\\Http\\Livewire\\StartingBalanceCard'))->toBe('Onboarding');
+});
+
+// The case that broke this rule the first time it was narrowed: the four
+// tax-picker properties are declared by Tax's HandlesTaxTagging and bound from
+// Tax's own popover, while the four components using them sit in three other
+// modules. Self-discovering, so a renamed trait cannot quietly empty it.
+it('reads a trait property against the trait\'s module as well as the component\'s', function (): void {
+    $modulesRoot = str_replace(DIRECTORY_SEPARATOR, '/', base_path('Modules')).'/';
+    $crossModule = [];
+
+    foreach (WireCallableMethods::components() as $component) {
+        $reflection = new ReflectionClass($component);
+        $own = clientBoundScopeOfComponent($component);
+
+        foreach (clientBoundTraitsOf($reflection) as $trait) {
+            $traitScope = clientBoundScopeOf(
+                str_replace(DIRECTORY_SEPARATOR, '/', (string) $trait->getFileName()),
+                $modulesRoot,
+            );
+
+            if ($traitScope === SHARED_BINDING_SCOPE || $traitScope === $own) {
+                continue;
+            }
+
+            foreach ($trait->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+                $crossModule[] = $own.' uses '.$traitScope.'::$'.$property->getName();
+
+                expect(clientBoundScopesFor($reflection, $property->getName(), $modulesRoot))->toContain(
+                    $traitScope,
+                    $component.'::$'.$property->getName().' is declared in '.$traitScope.
+                    ', whose templates bind it, and the scope reader did not say so.'
+                );
+            }
+        }
+    }
+
+    expect(count($crossModule))->toBeGreaterThan(
+        0,
+        'No component takes a public property from another module\'s trait, so this rule proved nothing — and the '
+        .'sixteen tax-picker properties that made it necessary would read as a clean tree.'
+    );
 });
