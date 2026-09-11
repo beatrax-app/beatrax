@@ -50,6 +50,14 @@ final class JsonKeyUnionStrategy implements MergeStrategyInterface
     {
         $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
 
+        // A build whose create path encoded the column's stored TEXT rather
+        // than the map inside it signed those ops, so their bytes can never be
+        // corrected. Unwrapped here or the op is refused on every pass forever.
+        if (is_string($decoded)) {
+            /** @var mixed $decoded */
+            $decoded = json_decode($decoded, true);
+        }
+
         // Coercing a malformed value to [] would drop every key with no signal,
         // which is the failure this strategy exists to stop. The replayer
         // catches this and quarantines the op as a strategy error.

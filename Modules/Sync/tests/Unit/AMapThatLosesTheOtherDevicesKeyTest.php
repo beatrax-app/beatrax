@@ -99,3 +99,16 @@ it('refuses a value that is not an object of keys', function (): void {
     expect(fn () => (new JsonKeyUnionStrategy)->resolve([amltEntry('"manual"', 100, 'device-a')]))
         ->toThrow(UnexpectedValueException::class);
 });
+
+// A build whose create path encoded the column's stored TEXT rather than the map
+// inside it signed those ops, so their bytes can never be corrected where they
+// are stored. The one wrapping is unwrapped; anything else is still refused.
+it('unwraps a map an older build encoded twice', function (): void {
+    expect((new JsonKeyUnionStrategy)->resolve([
+        amltEntry(json_encode('{"note":"manual"}', JSON_THROW_ON_ERROR), 100, 'device-a'),
+    ]))->toBe(['note' => 'manual']);
+
+    expect(fn () => (new JsonKeyUnionStrategy)->resolve([
+        amltEntry(json_encode('["note"]', JSON_THROW_ON_ERROR), 100, 'device-a'),
+    ]))->toThrow(UnexpectedValueException::class);
+});

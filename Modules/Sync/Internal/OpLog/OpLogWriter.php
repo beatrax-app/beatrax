@@ -81,9 +81,9 @@ final readonly class OpLogWriter implements OpCaptureSink
     }
 
     // A key-union column merges its keys, so its op has to carry a map. A
-    // writer that read the column back through the query builder hands over
-    // the stored JSON TEXT, which reaches the strategy as a string and
-    // quarantines the op rather than merging it.
+    // writer that read the column back through the query builder hands over the
+    // stored JSON TEXT, which reaches the strategy as a string and quarantines
+    // the op. Both write paths ask: the backfill reads rows exactly that way.
     private function asMapIfKeysMerge(string $table, string $field, mixed $value): mixed
     {
         if (! is_string($value) || $this->rules->strategyFor($table, $field) !== MergeStrategy::JsonKeyUnion) {
@@ -154,6 +154,7 @@ final readonly class OpLogWriter implements OpCaptureSink
         $sealed = [];
 
         foreach ($fields as $field => $rawValue) {
+            $rawValue = $this->asMapIfKeysMerge($table, $field, $rawValue);
             $jsonValue = $rawValue !== null ? json_encode($rawValue, JSON_THROW_ON_ERROR) : null;
             $result = $this->seal($table, $pk, $field, $jsonValue);
 

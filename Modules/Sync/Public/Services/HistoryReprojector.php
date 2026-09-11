@@ -38,7 +38,7 @@ final readonly class HistoryReprojector
     /**
      * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#telling-not-yet-openable-apart-from-never-openable-here
      */
-    public const string PASS_REACH = '2026-09-11.collision-retry';
+    public const string PASS_REACH = '2026-09-11.key-union-unwrap';
 
     public function __construct(
         private DatabaseManager $db,
@@ -140,26 +140,20 @@ final readonly class HistoryReprojector
         return $collisions['rows'] + count($rows);
     }
 
-    // A hold naming an epoch this device now holds has had its answer: the pass
-    // above replayed it with the key in hand. Nothing used to delete one, so a
-    // phone just handed its key kept reporting 385 rows "waiting to be added"
-    // through every later pass. clearSettled() now sweeps these too.
+    // Every hold the pass above replayed, which is what openableRows() names --
+    // asked here through that same method. Asked with an epoch predicate of its
+    // own, it missed the holds that name no epoch at all, so a strategy error
+    // was replayed on every pass and retired by nothing.
     /**
      * @return list<int>
      */
     private function keyRecoverableHoldIds(int $userId, Session $session, ?string $since, ?string $lastFingerprint): array
     {
-        $held = $this->heldEpochIds($userId, $session);
-        if ($held === []) {
-            return [];
-        }
-
         $ids = [];
 
         $query = $this->withinPassWindow(
-            $this->recoverableQuarantine($userId)
-                ->whereIn('reason', QuarantineReason::keyRecoverable())
-                ->whereIn('gdk_epoch', $held),
+            $this->openableRows($userId, $session)
+                ->whereIn('reason', QuarantineReason::keyRecoverable()),
             $userId,
             $since,
             $lastFingerprint,

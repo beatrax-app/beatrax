@@ -141,11 +141,16 @@ it('classifies every device-local row a peer tombstone would have to clear', fun
 // The classification above is inert unless the arrival path reads it. The
 // local delete path has run this cascade since the clauses were dropped; the
 // path that applies a PEER's tombstone deleted the parent row directly.
+//
+// All three markers are call sites inside applyDeletions(), and all three are
+// matched without their receiver: both the sweep and the hold are calls into a
+// collaborator, and which class declares either is not what this reads. Keyed
+// to a declaration instead, the scan broke the day one of them moved.
 function tombstoneBlockerSweepPrecedesTheHold(string $source): bool
 {
     $loop = PatternScan::firstWithOffsets('/foreach \(\$refused as \$blocked\) \{/', $source);
     $sweep = PatternScan::firstWithOffsets('/->clearDeviceLocalChildren\(/', $source);
-    $hold = PatternScan::firstWithOffsets('/\$this->recordBlockedDelete\(/', $source);
+    $hold = PatternScan::firstWithOffsets('/->blockedDelete\(/', $source);
 
     if ($loop === [] || $sweep === [] || $hold === []) {
         return false;
@@ -155,11 +160,15 @@ function tombstoneBlockerSweepPrecedesTheHold(string $source): bool
 }
 
 it('clears what only this device has before it files the tombstone as blocked', function (): void {
-    $path = base_path('Modules/Sync/Internal/Merge/OpLogEntryApplier.php');
-    $source = (string) file_get_contents($path);
+    $source = (string) file_get_contents(base_path('Modules/Sync/Internal/Merge/OpLogEntryApplier.php'));
+    $recorder = (string) file_get_contents(base_path('Modules/Sync/Internal/Merge/RefusedOpRecord.php'));
 
+    // Both halves of what the scan reads, named where each one lives: the call
+    // sites here and the method they reach. A call with no declaration behind
+    // it, or a declaration nothing calls, leaves the order below unread.
     expect($source)->toContain('public function applyDeletions(')
-        ->and($source)->toContain('private function recordBlockedDelete(');
+        ->and($source)->toContain('->blockedDelete(')
+        ->and($recorder)->toContain('public function blockedDelete(');
 
     expect(tombstoneBlockerSweepPrecedesTheHold($source))->toBeTrue(implode("\n", [
         'applyDeletions() files a refused tombstone as delete_blocked_by_reference',
@@ -178,7 +187,7 @@ it('clears what only this device has before it files the tombstone as blocked', 
 it('reads the order it claims to read', function (): void {
     $loop = 'foreach ($refused as $blocked) {';
     $sweep = '            $this->cascade->clearDeviceLocalChildren($t, $pk, $u);';
-    $hold = '            $this->recordBlockedDelete($t, $pk, $tomb, $now);';
+    $hold = '            $this->refusals->blockedDelete($t, $pk, $tomb, $now);';
 
     expect(tombstoneBlockerSweepPrecedesTheHold($loop."\n".$sweep."\n".$hold))->toBeTrue()
         ->and(tombstoneBlockerSweepPrecedesTheHold($loop."\n".$hold))->toBeFalse()

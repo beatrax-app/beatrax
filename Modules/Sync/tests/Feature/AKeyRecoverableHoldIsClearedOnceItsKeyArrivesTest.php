@@ -36,7 +36,7 @@ function keyHoldUser(): User
 // The entry the hold is the audit row for. The pass replays what the op log
 // holds for the row named, so without one it returns before reaching an answer
 // — which is not the state a phone that has just synced is in.
-function keyHoldEntry(DatabaseManager $db, int $userId, int $epochId): void
+function keyHoldEntry(DatabaseManager $db, int $userId, ?int $epochId): void
 {
     $db->connection()->table('op_log_entries')->insert([
         'user_id' => $userId,
@@ -55,7 +55,7 @@ function keyHoldEntry(DatabaseManager $db, int $userId, int $epochId): void
     ]);
 }
 
-function keyHoldQuarantine(DatabaseManager $db, int $userId, int $epochId): void
+function keyHoldQuarantine(DatabaseManager $db, int $userId, ?int $epochId, string $reason = 'gdk_decrypt_failed'): void
 {
     $db->connection()->table('op_log_quarantine')->insert([
         'user_id' => $userId,
@@ -63,7 +63,7 @@ function keyHoldQuarantine(DatabaseManager $db, int $userId, int $epochId): void
         'table_name' => 'transactions',
         'pk' => '4242',
         'device_id' => 'keyhold-peer',
-        'reason' => 'gdk_decrypt_failed',
+        'reason' => $reason,
         'gdk_epoch' => $epochId,
         'hlc_l' => 1,
         'hlc_c' => 0,
@@ -186,4 +186,28 @@ it('keeps a hold the pass did not replay', function (): void {
     // toContain takes NEEDLES, so an explanation passed beside the id becomes a
     // second needle and fails against a correct value. The reason lives above.
     expect(keyHoldIds($db, $userId))->toContain($stale);
+});
+
+// A strategy error names no epoch: the value was readable and the merge refused
+// it. The retirement sweep asked for an epoch this device holds, and a NULL is
+// in no such list, so those holds were replayed by every pass and retired by
+// none of them -- a row that outlives the answer it was given.
+it('retires a hold that never named an epoch', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $userId = (int) keyHoldUser()->id;
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    keyHoldEntry($db, $userId, null);
+    keyHoldQuarantine($db, $userId, null, 'strategy_error');
+
+    $before = keyHoldIds($db, $userId);
+    expect($before)->toHaveCount(1);
+
+    app(HistoryReprojector::class)->replayQuarantined($userId, $session, null, null);
+
+    expect(keyHoldIds($db, $userId))->not->toContain($before[0]);
 });
