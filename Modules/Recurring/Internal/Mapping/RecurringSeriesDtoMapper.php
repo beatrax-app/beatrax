@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Internal\Support\MonthlyEquivalent;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
@@ -38,9 +39,14 @@ final class RecurringSeriesDtoMapper
     ): RecurringSeriesDto {
         $latestCurrency = self::toString($row->latest_currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor), $latestCurrency);
+        $cadence = SeriesCadence::from(self::toString($row->cadence));
 
+        // Derived, not read: the stored column and the two values it is derived
+        // from merge as three independent fields, so a row that crossed a sync
+        // boundary can carry a monthly figure its own amount disagrees with.
+        $stored = isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0;
         $monthlyEquivalent = Money::ofMinor(
-            isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0,
+            MonthlyEquivalent::forCadence($latestAmount->toMinor(), $cadence) ?? $stored,
             $latestCurrency !== '' ? $latestCurrency : $baseCurrency,
         );
 
@@ -83,7 +89,7 @@ final class RecurringSeriesDtoMapper
             // from() rather than tryFrom(): a trigger built from
             // SeriesCadence::values() constrains the column, so an unmapped value
             // is a broken database and a silent fallback would hide it.
-            cadence: SeriesCadence::from(self::toString($row->cadence)),
+            cadence: $cadence,
             latestAmount: $latestAmount,
             eurEquivalent: $baseEquivalent,
             monthlyEquivalent: $monthlyEquivalent,

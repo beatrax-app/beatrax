@@ -12,9 +12,11 @@ use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Recurring\Internal\Detectors\OccurrenceWriter;
+use Modules\Recurring\Internal\Support\MonthlyEquivalent;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 
 // Transitions bypass RecurringSeriesStateMachine: the demo data models a file
 // that is already established, not one transitioning into that shape.
@@ -229,7 +231,13 @@ final class DemoRecurringSeeder
                 'state' => $row['state'],
                 'cadence' => $row['cadence'],
                 'latest_amount_minor' => $signedMinor,
-                'monthly_equivalent_minor' => $signedMinor,
+                // Through the same derivation the detector uses: every demo row
+                // is monthly today, so a literal agrees by coincidence and a
+                // yearly one added later would read twelve times its worth.
+                'monthly_equivalent_minor' => MonthlyEquivalent::forCadence(
+                    $signedMinor,
+                    SeriesCadence::from($row['cadence']),
+                ) ?? $signedMinor,
                 'variance_tolerance_percent' => 25,
                 'latest_funding_chain_link_id' => null,
                 'snoozed_until' => $snoozedUntil,

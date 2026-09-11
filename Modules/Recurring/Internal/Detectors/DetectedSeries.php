@@ -6,6 +6,7 @@ namespace Modules\Recurring\Internal\Detectors;
 
 use Carbon\CarbonImmutable;
 use Modules\Recurring\Internal\InferredCadence;
+use Modules\Recurring\Internal\Support\MonthlyEquivalent;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
@@ -46,15 +47,6 @@ final readonly class DetectedSeries
 
     private static function monthlyEquivalent(int $latestAmountMinor, SeriesCadence $cadence): ?int
     {
-        return match ($cadence) {
-            // 52/12 is the exact weeks-per-month conversion; the rounded
-            // literal 4.33 drifted by about 0.07% on every weekly row, so a
-            // weekly ten projects to 43.33 a month rather than 43.30.
-            SeriesCadence::Weekly => (int) round($latestAmountMinor * 52 / 12),
-            SeriesCadence::Monthly => $latestAmountMinor,
-            SeriesCadence::Quarterly => (int) round($latestAmountMinor / 3),
-            SeriesCadence::Yearly => (int) round($latestAmountMinor / 12),
-            SeriesCadence::Irregular => null,
-        };
+        return MonthlyEquivalent::forCadence($latestAmountMinor, $cadence);
     }
 }
