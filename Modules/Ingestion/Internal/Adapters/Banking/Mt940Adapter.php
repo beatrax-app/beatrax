@@ -228,11 +228,15 @@ final class Mt940Adapter implements SourceAdapter
             ? $eref
             : $line->customerReference;
 
-        $bookedAt = $line->valueDate->startOfDay();
+        // SWIFT states the value date first and the booking (entry) date
+        // second, and a row belongs to the day the bank BOOKED it — which is
+        // what every other adapter files on and what a CSV of the same
+        // statement carries. Optional in :61:, and absent it the two are one.
+        $bookedOn = ($line->entryDate ?? $line->valueDate)->startOfDay();
 
         return new SourceTransactionDto(
-            bookedAt: $bookedAt,
-            postedAt: $line->valueDate,
+            bookedAt: $bookedOn,
+            postedAt: $bookedOn,
             valueDate: $line->valueDate,
             ownIban: $ownIban,
             counterpartyIban: $counterpartyIban,

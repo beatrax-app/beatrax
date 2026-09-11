@@ -75,6 +75,14 @@ const LEDGER_DAY_VIEW_PINS = [
 // Each names the same value into bookedAt on the line above or below.
 /** @var array<string, array{reason: string, sites: int, proves: list<string>}> */
 const LEDGER_DAY_SINGLE_DAY_SOURCE_PINS = [
+    'Modules/Ingestion/Internal/Adapters/Banking/Mt940Adapter.php' => [
+        'reason' => ":61:'s entry date is the day the bank booked the row, and it drives both days, zeroed to midnight, to match the CAMT adapter. The value date reaches valueDate only, outside the fingerprint tuple.",
+        'sites' => 1,
+        'proves' => [
+            '/bookedAt: \$bookedOn,\n\s+postedAt: \$bookedOn,\n\s+valueDate: \$line->valueDate,/',
+            '/a row belongs to the day the bank BOOKED it/',
+        ],
+    ],
     'Modules/Ingestion/Internal/Adapters/Paypal/PaypalTransactionRollup.php' => [
         'reason' => 'A PayPal export has one date column. All three canonical days collapse onto it.',
         'sites' => 1,
