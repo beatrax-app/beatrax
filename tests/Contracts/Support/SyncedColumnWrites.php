@@ -140,9 +140,10 @@ final class SyncedColumnWrites
 
     // Every write this file performs, asked as one substring so the walk below
     // can skip a file that writes nothing at all.
-    // Longest first: the alternation is first-match, so `insert` ahead of
-    // `insertGetId` matched the prefix and then demanded the open paren the
-    // longer name had not reached yet -- three of the eight never fired.
+    // `insertGetId` was absent rather than mis-ordered: the alternation
+    // backtracks, so `insertOrIgnore` and `updateOrInsert` matched from behind
+    // their own prefixes all along. Listed longest-first anyway, because
+    // reading it in that order is what turned the missing one up.
     private const string WRITE_TERMINAL = '->\s*(?:insertGetId|insertOrIgnore|updateOrInsert|update|insert|upsert|delete|statement)\s*\(';
 
     // The blind spot of the guard beside this one. That guard roots every column
