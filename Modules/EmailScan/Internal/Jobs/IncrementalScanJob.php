@@ -396,6 +396,11 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             );
         } catch (BoundedReadException $e) {
             $context->skipOversized($messageId, $e);
+        } catch (MessageUnavailableException) {
+            // Graph no longer holds the id its own delta page named, which is
+            // what a rule moving the mail does to it. There is nothing to lose
+            // and nothing to write down, and letting it out would strand
+            // last_delta_link behind an id that will never resolve again.
         }
     }
 

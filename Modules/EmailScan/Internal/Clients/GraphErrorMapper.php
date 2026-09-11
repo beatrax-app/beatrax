@@ -38,6 +38,7 @@ final readonly class GraphErrorMapper
         ?ResponseInterface $response,
         string $context,
         bool $expectsDelta = false,
+        bool $expectsMessage = false,
     ): RuntimeException {
         if ($response === null) {
             return new RuntimeException(
@@ -61,6 +62,13 @@ final readonly class GraphErrorMapper
                 message: 'Microsoft Graph rate limit exceeded: '.$safeBodyMessage,
             ),
             $expectsDelta && $status === Response::HTTP_GONE => CursorExpiredException::graph($safeBodyMessage),
+            // A 404 on a collection is an endpoint that moved; on one message
+            // it is the message, and a Graph id changes the moment an inbox
+            // rule moves the mail. Untyped, it reached the walk as a plain
+            // failure and took the cursor down with the one message.
+            $expectsMessage && $status === Response::HTTP_NOT_FOUND => new MessageUnavailableException(
+                'Microsoft Graph no longer holds the message: '.$safeBodyMessage,
+            ),
             // Every call goes out behind ensureFreshAccessToken(), so a 401 is
             // the provider refusing a token just refreshed. The default arm is
             // re-thrown and tried again, and no later attempt clears this —
