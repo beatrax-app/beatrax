@@ -133,7 +133,11 @@ final readonly class PeerRowAliases
             $usable = true;
 
             foreach ($columns as $column) {
-                if (! array_key_exists($column, $payload)) {
+                // A null is not a key. SQLite counts nulls as distinct, so the
+                // index constrains nothing here -- and `where($col, null)` is
+                // `whereNull`, which matches every row holding one and hands
+                // back an arbitrary id as though it were this row's twin.
+                if (! array_key_exists($column, $payload) || $payload[$column] === null) {
                     $usable = false;
 
                     break;
@@ -165,6 +169,11 @@ final readonly class PeerRowAliases
 
     // SQLite names its unique indexes in pragma_index_list; the primary key is
     // excluded because an id collision is not a second identity for one row.
+
+    // Partial indexes are excluded too: their WHERE predicate is not read here,
+    // so a row the index never covered would answer as a twin. `pots` declares
+    // only one unique index and it is partial, which is how a peer's pot came
+    // to match an arbitrary unlinked pot of this device's.
     /**
      * @return list<list<string>>
      */
@@ -174,7 +183,7 @@ final readonly class PeerRowAliases
         $indexes = [];
 
         try {
-            $rows = $connection->select('SELECT name FROM pragma_index_list(?) WHERE "unique" = 1', [$table]);
+            $rows = $connection->select('SELECT name FROM pragma_index_list(?) WHERE "unique" = 1 AND partial = 0', [$table]);
         } catch (Throwable $e) {
             // No indexes means no natural key, which means no alias: the peer's
             // row is inserted beside the local one holding the same key instead
