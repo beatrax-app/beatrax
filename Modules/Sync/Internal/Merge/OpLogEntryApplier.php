@@ -19,6 +19,8 @@ final readonly class OpLogEntryApplier
 {
     private CreateRowGates $gates;
 
+    private RefusedOpRecord $refusals;
+
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
@@ -36,10 +38,12 @@ final readonly class OpLogEntryApplier
         private DependentRowCascade $cascade,
         private ?LoggerInterface $logger = null,
     ) {
-        // Built here, not injected: these are this class's own gates split out
-        // of it, and a parameter added to the middle of the list above becomes
-        // somebody else's argument at the positional call sites.
+        // Built here, not injected: these are this class's own gates and its own
+        // refusal record split out of it, and a parameter added to the middle
+        // of the list above becomes somebody else's argument at the positional
+        // call sites.
         $this->gates = new CreateRowGates($ownership, $splitOverfill, $quarantine, new UnplacedPeerCreates($db, $aliases));
+        $this->refusals = new RefusedOpRecord($quarantine, $logger);
     }
 
     /**
@@ -292,36 +296,10 @@ final readonly class OpLogEntryApplier
                 return $this->alreadyPresent->answer($table, $payload, $fields, $now, $deviceId, $pk, $userId);
             }
 
-            $this->recordRefusedInsert($table, $e, $fields, $now);
+            $this->refusals->databaseRefusedInsert($table, $pk, $e, $fields, $now);
 
             return null;
         }
-    }
-
-    // Every refusal the database itself raised. The already-present arm is
-    // answered above, where the payload that identifies the twin is in hand.
-    /**
-     * @param  array<string, list<OpLogEntry>>  $fields
-     */
-    private function recordRefusedInsert(string $table, QueryException $e, array $fields, string $now): void
-    {
-        $failure = CreateRowInsertFailure::classify($e);
-
-        $firstField = reset($fields);
-
-        if ($firstField !== false && $firstField !== []) {
-            $this->quarantine->record($firstField[0], $failure->quarantineReason(), $now);
-        }
-
-        // Not 'reason': describe() returns its own, and spread last it wins —
-        // so the line reported the exception class, and every refusal read as
-        // QueryException/23000. SQLite answers NOT NULL, FOREIGN KEY and UNIQUE
-        // all with 23000, which is exactly what the classification separates.
-        $this->logger?->warning('OpLogEntryApplier: the database refused a replayed CreateRow.', [
-            'table' => $table,
-            'quarantine_reason' => $failure->quarantineReason()->value,
-            ...SafeExceptionContext::describe($e),
-        ]);
     }
 
     // A strictly later tombstone always wins and an earlier one never does; the
@@ -395,8 +373,8 @@ final readonly class OpLogEntryApplier
                 $resolved = $this->suppliedDates->normalise($table, $field, $resolved);
 
                 $payload[$field] = $this->projector->reencryptForProjection($table, $field, $resolved, $userId);
-            } catch (\Throwable) {
-                $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
+            } catch (\Throwable $e) {
+                $this->refusals->strategyError($fieldEntries[0], $table, $field, $pk, $now, $e);
 
                 return null;
             }
@@ -535,8 +513,8 @@ final readonly class OpLogEntryApplier
 
             $this->ownership->scopeToUser($query, $table, $batch->userId)
                 ->update([$field => $columnValue]);
-        } catch (\Throwable) {
-            $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $batch->now);
+        } catch (\Throwable $e) {
+            $this->refusals->strategyError($fieldEntries[0], $table, $field, $pk, $batch->now, $e);
         }
     }
 
@@ -682,7 +660,7 @@ final readonly class OpLogEntryApplier
                 continue;
             }
 
-            $this->recordBlockedDelete($blocked['table'], $blocked['pk'], $blocked['tomb'], $now);
+            $this->refusals->blockedDelete($blocked['table'], $blocked['pk'], $blocked['tomb'], $now);
         }
     }
 
@@ -701,20 +679,6 @@ final readonly class OpLogEntryApplier
                 ...SafeExceptionContext::describe($e),
             ]);
         }
-    }
-
-    // A row this device holds that no op deletes still references the one the
-    // tombstone names, so the two devices now disagree about it. Swallowed,
-    // that disagreement had nothing anywhere reporting it.
-    private function recordBlockedDelete(string $table, int|string $pk, OpLogEntry $tomb, string $now): void
-    {
-        $this->quarantine->record($tomb, QuarantineReason::DeleteBlockedByReference, $now);
-
-        $this->logger?->warning('OpLogEntryApplier: the database refused a replayed tombstone.', [
-            'table' => $table,
-            'pk' => $pk,
-            'reason' => QuarantineReason::DeleteBlockedByReference->value,
-        ]);
     }
 
     // False ONLY when the database refused the delete under a foreign key. A

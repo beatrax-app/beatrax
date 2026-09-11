@@ -140,17 +140,29 @@ placeholder. Clear to a **present null** instead — a null value is carried, an
 absent key is not.
 
 **2. The op has to carry a map, not the stored JSON text.** A writer that reads
-the column back through the query builder — which `WriteUserPreference` and
-`OpLogBackfiller::captureUserSettings()` both do deliberately, so a JSON column
-travels as its stored text and a cast column as its stored scalar — hands over a
-string. `JsonKeyUnionStrategy::decode()` refuses a non-object, so every op on
-the column quarantines instead of merging. `OpLogWriter::writeSet()` decodes a
-string on any column the registry declares a key union, which covers both
-producers and the next one; a value that is not an object is passed through
+the column back through the query builder — which `WriteUserPreference`,
+`OpLogBackfiller::captureUserSettings()` and the backfill's own whole-row walk
+all do deliberately, so a JSON column travels as its stored text and a cast
+column as its stored scalar — hands over a string.
+`JsonKeyUnionStrategy::decode()` refuses a non-object, so every op on the column
+quarantines instead of merging. **Both** write paths decode a string on any
+column the registry declares a key union: `OpLogWriter::writeSet()` and
+`OpLogWriter::writeCreateRow()`. A value that is not an object is passed through
 untouched so the strategy's own refusal is what reports it.
 
 Whole-value `Lww` round-trips that string correctly, which is why the wire shape
-only becomes a problem the moment the strategy changes.
+only becomes a problem the moment the strategy changes. That is exactly how it
+went wrong: the create path was left out of the `writeSet()` normalisation, and
+the fault stayed invisible until `transactions.field_provenance` stopped merging
+as `Lww`. A paired phone then held seven rows it re-quarantined on every pass —
+six transactions and one counterparty, `strategy_error`, all `create_row`.
+
+An op's bytes are covered by its Ed25519 signature, so a value an older build
+put on the wire can never be corrected where it is stored. `decode()` therefore
+unwraps exactly one level of string wrapping before it judges the shape;
+anything that is still not an object of keys is refused as before. Without that,
+every op an older build signed stays refused on every pass for good — a sender
+fix alone leaves the rows already in both logs permanently unapplied.
 
 The residual is worth knowing: because every writer restates the whole map,
 per-key LWW still loses a key when the second writer's restated map is stale for
