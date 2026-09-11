@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -18,6 +19,11 @@ use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
 // receipt records a different amount (“-3199”) than the statement (“-3200”)" —
 // a count of minor units offered to the reader as money, and nothing on screen
 // said which currency either figure was in.
+
+// Read as the reader's text and not as the response: `assertDontSee('-1250')`
+// is answered by the `wire:key="lw-<crc32 of the view's path>-<n>"` Livewire
+// writes onto the root, so the same assertion passed here and went red on CI,
+// whose checkout sits at another path.
 
 beforeEach(function (): void {
     $seeded = $this->seedFixtureUserAndAccount();
@@ -78,20 +84,24 @@ function seedAmountConflict(User $user, Account $account, string $currency, int 
 it('quotes a euro conflict as money the reader can read, not as its minor units', function (): void {
     seedAmountConflict($this->fixtureUser, $this->fixtureAccount, Currency::Eur->value, -3200, -3199);
 
-    Livewire::test(ReceiptConflictToast::class)
-        ->assertSee(Money::ofMinor(-3199, Currency::Eur->value)->format())
-        ->assertSee(Money::ofMinor(-3200, Currency::Eur->value)->format())
-        ->assertDontSee('-3199')
-        ->assertDontSee('-3200');
+    $shown = RenderedMarkup::of(Livewire::test(ReceiptConflictToast::class)->html())->text();
+
+    expect($shown)
+        ->toContain(Money::ofMinor(-3199, Currency::Eur->value)->format())
+        ->toContain(Money::ofMinor(-3200, Currency::Eur->value)->format())
+        ->not->toContain('-3199')
+        ->not->toContain('-3200');
 });
 
 it('quotes a yen conflict at the scale a yen has, never at a hundredth of it', function (): void {
     seedAmountConflict($this->fixtureUser, $this->fixtureAccount, Currency::Jpy->value, -1300, -1250);
 
-    Livewire::test(ReceiptConflictToast::class)
-        ->assertSee(Money::ofMinor(-1250, Currency::Jpy->value)->format())
-        ->assertDontSee('12.50')
-        ->assertDontSee('-1250');
+    $shown = RenderedMarkup::of(Livewire::test(ReceiptConflictToast::class)->html())->text();
+
+    expect($shown)
+        ->toContain(Money::ofMinor(-1250, Currency::Jpy->value)->format())
+        ->not->toContain('12.50')
+        ->not->toContain('-1250');
 });
 
 it('quotes the receipt figure in the currency the receipt named, not the stored one', function (): void {
@@ -114,7 +124,9 @@ it('quotes the receipt figure in the currency the receipt named, not the stored 
         ->where('field_name', 'amount_minor')
         ->update(['id' => 9_000]);
 
-    Livewire::test(ReceiptConflictToast::class)
-        ->assertSee(Money::ofMinor(-3199, Currency::Usd->value)->format())
-        ->assertSee(Money::ofMinor(-3200, Currency::Eur->value)->format());
+    $shown = RenderedMarkup::of(Livewire::test(ReceiptConflictToast::class)->html())->text();
+
+    expect($shown)
+        ->toContain(Money::ofMinor(-3199, Currency::Usd->value)->format())
+        ->toContain(Money::ofMinor(-3200, Currency::Eur->value)->format());
 });

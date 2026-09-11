@@ -7558,6 +7558,85 @@ tag on two pages hashes the same. The dev log tailer keeps its
 re-running across a swap, and the flag answers a second mount inside one
 document. They are not the same question.
 
+## A needle short enough to match generated markup
+
+`tests/Contracts/ANeedleShortEnoughToMatchGeneratedMarkupArchTest.php`
+
+CI run 34644145972 failed on an assertion nobody had touched:
+
+```text
+Modules/Receipts/tests/Feature/TheConflictToastQuotesMoneyNotMinorUnitsTest.php:94
+->assertDontSee('-1250')
+Expected: <div wire:key="lw-1250277421-0" wire:snapshot="" wire:effects="" …>
+Not to contain: -1250
+```
+
+The assertion is a good one: the toast quotes two disagreeing amounts, and a
+count of minor units is not money a reader can read. What answered it was not
+the toast. `assertSee` and `assertDontSee` are substring matches over the whole
+response, and Livewire writes three digit runs into every render that no
+template holds:
+
+- `wire:key="lw-<crc32 of the view's path>-<n>"`, from
+  `Livewire\Mechanisms\ExtendBlade\DeterministicBladeKeys`. The hash is taken of
+  the **absolute** path of the compiled view, so it is a different number on
+  every checkout. The same render is `lw-531002258-0` in a local worktree and
+  `lw-1250277421-0` on the CI runner, and only the second one contains `-1250`.
+- `wire:id`, twenty random alphanumerics per render.
+- the snapshot's `checksum`, sixty-four hex characters, which is sixty-four
+  digit-capable positions.
+
+So the needle was hash-dependent: green here, red there, and green again on the
+next run. It had been latent on `main` for as long as the assertion existed and
+it burned an unrelated PR before anyone read it.
+
+`assertDontSee($values, $escape, $stripInitialData)` does not help. Its third
+argument defaults to `true` and blanks the **first** `wire:snapshot` and
+`wire:effects` value only — which is what kept this test green at all, since
+the snapshot carries `"receiptValue":"-1250"` verbatim. `wire:key` and `wire:id`
+survive it, and so does every nested component's snapshot.
+
+### Ask the reader's text, not the response
+
+`Modules\Core\Public\Support\RenderedMarkup::of($html)->text()` is the reading:
+attributes are not text, so no generated identifier can answer a question about
+what a page says. Two things were wrong with it before it could be used that way.
+
+`Document::textContent` is **null** per the DOM specification — only elements
+concatenate their descendants — so `RenderedMarkup::of($html)->text()` answered
+the empty string for a whole response and every `not->toContain(...)` asked of
+it passed. Every call site in the tree happened to select an element first,
+which is why nothing had noticed. `text()` now walks the tree itself.
+
+The walk also drops `script`, `style`, `template` and `noscript`. `textContent`
+hands their source back as if a reader saw it, and an inline script is where the
+numbers are.
+
+Do **not** reach for a tag-stripping pattern instead: `<[^>]*>` ends the tag at
+the first `>` an Alpine expression puts inside an attribute, which is the
+failure [A guard that reads HTML with a regex](#a-guard-that-reads-html-with-a-regex)
+is about. PHP's `strip_tags()` is quote-aware and would survive that, but it
+keeps script and style bodies and decodes nothing.
+
+### What the rule refuses
+
+A string literal handed directly to `assertSee`, `assertDontSee`,
+`assertSeeHtml`, `assertDontSeeHtml`, `assertSeeInOrder` or
+`assertSeeHtmlInOrder` may not be a bare run of digits, signed or not. The
+`…Text` variants are outside the rule: both strip the tags before matching, so
+no attribute answers them.
+
+The literal has to be the needle. `Lang::choice('k', 3, ['count' => '3'])` is an
+argument to something else and is read as such, which is why the walk is a
+tokeniser tracking bracket depth rather than a pattern.
+
+The sweep found seven such needles across four test files, and all seven
+changed. Three of them — `assertSee('750')`, `assertSee('40')`,
+`assertSee('100')` — were positive assertions, which fail the other way round: a
+needle that generated markup answers is a test that cannot go red. The re-apply
+progress strip now asserts its whole sentence rather than the two numbers
+inside it.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

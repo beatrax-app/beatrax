@@ -6,6 +6,7 @@ namespace Modules\Core\Public\Support;
 
 use Dom\Element;
 use Dom\HTMLDocument;
+use Dom\Text;
 use Modules\Core\Public\Exceptions\MarkupParseFailedException;
 use Throwable;
 
@@ -18,6 +19,9 @@ use Throwable;
  */
 final class RenderedMarkup
 {
+    // What a reader never sees, and what `textContent` hands back anyway.
+    private const array NOT_RENDERED = ['script', 'style', 'template', 'noscript'];
+
     private function __construct(
         private readonly HTMLDocument $document,
         private readonly ?Element $element,
@@ -82,9 +86,13 @@ final class RenderedMarkup
         return $this->scope()->querySelectorAll($selector)->length;
     }
 
+    // The text a reader is shown, which is the only honest subject for a
+    // question about what a page says. `Document::textContent` is null, so the
+    // whole-response reading answered '' and every question asked of it passed;
+    // a walk also drops the elements above, whose source textContent returns.
     public function text(): string
     {
-        $flat = str_replace(["\r", "\n", "\t"], ' ', $this->scope()->textContent ?? '');
+        $flat = str_replace(["\r", "\n", "\t"], ' ', self::readerText($this->scope()));
 
         return implode(' ', array_filter(explode(' ', $flat), static fn (string $word): bool => $word !== ''));
     }
@@ -109,6 +117,25 @@ final class RenderedMarkup
     private function scope(): HTMLDocument|Element
     {
         return $this->element ?? $this->document;
+    }
+
+    private static function readerText(HTMLDocument|Element $node): string
+    {
+        $text = '';
+
+        foreach ($node->childNodes as $child) {
+            if ($child instanceof Text) {
+                $text .= $child->data;
+
+                continue;
+            }
+
+            if ($child instanceof Element && ! in_array(strtolower($child->tagName), self::NOT_RENDERED, true)) {
+                $text .= self::readerText($child);
+            }
+        }
+
+        return $text;
     }
 
     // An HTML5 parse never reports failure: it answers html/head/body for any
