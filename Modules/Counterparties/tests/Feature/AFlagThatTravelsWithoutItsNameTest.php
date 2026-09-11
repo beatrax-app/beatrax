@@ -102,6 +102,32 @@ it('sends the name beside the flag that says whose words it is', function (): vo
         ->and($fields['metadata'])->toHaveKey(CounterpartyMetadataKey::DefaultName->value);
 });
 
+// The blob merges by key now, and a key union cannot carry an absence: an
+// unset reaches the peer as "this device never held the key", which its own
+// copy of the token then survives. Cleared to a present null instead, which
+// tokenIn() has always read as no token.
+it('clears the flag with a key it still sends, not by dropping it', function (): void {
+    $row = ftwCounterparty((int) $this->user->id, 'Unknown', CounterpartyDefaultName::UNKNOWN);
+
+    ftwForget();
+
+    $this->labeller->label(
+        $row,
+        (int) $this->user->id,
+        CounterpartyType::Unknown,
+        'Albert Heijn',
+        null,
+        $this->session,
+    );
+
+    $fields = ftwAnnouncedFields();
+
+    expect($fields)->toHaveKey('metadata')
+        ->and($fields['metadata'])->toHaveKey(CounterpartyMetadataKey::DefaultName->value)
+        ->and($fields['metadata'][CounterpartyMetadataKey::DefaultName->value])->toBeNull()
+        ->and(CounterpartyDefaultName::tokenIn($fields['metadata']))->toBeNull();
+});
+
 // The positive control. A row the reader already named carries no token, so
 // there is no provenance to land on a peer's rename and no reason to republish
 // a name this edit did not touch.

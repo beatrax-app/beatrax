@@ -49,11 +49,12 @@ final readonly class LabelCounterparty
 
         // These are the reader's own words now, so the flag marking the name as
         // the app's has to go with the name it described. Left behind, the next
-        // read would translate their name back into a placeholder.
+        // read would translate their name back into a placeholder. Cleared to a
+        // present null, not unset: a key union cannot carry an absence.
         $metadata = is_array($row->metadata) ? $row->metadata : [];
         if (CounterpartyDefaultName::tokenIn($metadata) !== null) {
-            unset($metadata[CounterpartyMetadataKey::DefaultName->value]);
-            $fields['metadata'] = $metadata === [] ? null : $metadata;
+            $metadata[CounterpartyMetadataKey::DefaultName->value] = null;
+            $fields['metadata'] = $metadata;
         }
 
         $row->forceFill($this->codec->encryptAttrs('counterparties', $fields, $userId, $session));

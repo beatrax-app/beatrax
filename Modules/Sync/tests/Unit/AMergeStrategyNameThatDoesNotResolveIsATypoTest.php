@@ -49,11 +49,12 @@ it('names no merge strategy the enum does not have', function (): void {
 
 // Pinned rather than counted: a line deleted from the registry leaves no trace
 // at all, because the field then merges as Lww exactly as an unlisted one does.
-it('keeps the three fields that are not last-writer-wins', function (): void {
+it('keeps the four fields that are not last-writer-wins', function (): void {
     $registry = app(MergeRulesRegistry::class);
 
     expect($registry->strategyFor('merchant_memories', 'occurrence_count'))->toBe(MergeStrategy::GCounter)
         ->and($registry->strategyFor('merchant_aliases', 'merged_from'))->toBe(MergeStrategy::OrSet)
         ->and($registry->strategyFor('transactions', 'field_provenance'))->toBe(MergeStrategy::JsonKeyUnion)
-        ->and(declaredMergeStrategies())->toHaveCount(3);
+        ->and($registry->strategyFor('counterparties', 'metadata'))->toBe(MergeStrategy::JsonKeyUnion)
+        ->and(declaredMergeStrategies())->toHaveCount(4);
 });
