@@ -114,6 +114,28 @@ function reachesARowWrite(string $source, string $needle): bool
     return false;
 }
 
+// A table's identity tuple often lives in a class of its own — EnvelopeMoveId
+// holds envelope_moves' — so a writer calling that names the id just as much as
+// one calling DerivedRowId directly. Without this the rule reports the caller.
+/**
+ * @param  list<string>  $paths
+ * @return list<string>
+ */
+function idHelpersFor(string $table, array $paths): array
+{
+    $helpers = [];
+
+    foreach ($paths as $path) {
+        $source = (string) file_get_contents($path);
+
+        if (str_contains($source, "DerivedRowId::for('".$table."'")) {
+            $helpers[] = basename($path, '.php');
+        }
+    }
+
+    return $helpers;
+}
+
 /**
  * @param  list<string>  $paths
  * @return list<string>
@@ -125,6 +147,7 @@ function derivedIdWritesNamingNoId(array $paths): array
 
     foreach (coveredTablesSqliteStillNumbers() as $table) {
         $needles = ["table('".$table."')", "table: '".$table."'"];
+        $helpers = idHelpersFor($table, $paths);
 
         foreach ($models[$table] ?? [] as $class) {
             $needles[] = $class.'::';
@@ -139,12 +162,17 @@ function derivedIdWritesNamingNoId(array $paths): array
                 $writes = $writes || reachesARowWrite($source, $needle);
             }
 
-            // Either answer counts. The rule is that the id is NAMED at the
+            // Either answer counts, and either directly or through the class
+            // that owns the tuple. The rule is that the id is NAMED at the
             // write, not which of the two schemes names it: anomaly_alerts
             // mints because its identity tuple would have to fold a foreign
             // key each device numbers for itself.
             $names = str_contains($source, "DerivedRowId::for('".$table."'")
                 || str_contains($source, 'DeviceMintedRowId::mint(');
+
+            foreach ($helpers as $helper) {
+                $names = $names || str_contains($source, $helper.'::');
+            }
 
             if ($writes && ! $names) {
                 $offenders[] = str_replace(base_path().'/', '', $path).' writes '.$table;
