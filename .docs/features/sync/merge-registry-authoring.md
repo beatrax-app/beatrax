@@ -162,10 +162,43 @@ needs an `OrSet` on its own column.
 
 Where a column can be computed from other columns on the same row, declaring a
 strategy for it does not help: the copy and its sources are separate fields with
-separate HLC ticks, so any strategy still lets them disagree. **The reader must
-re-derive**, and the stored column is an index hint. `ScenarioSeriesResolver`
-and `RecurringSeriesDtoMapper` are the accepted templates. See
-[architecture.md](architecture.md) — *One announcement is not one op*.
+separate HLC ticks, so any strategy still lets them disagree. The stored column
+is an index hint, and something has to re-derive it. There are two places to do
+that, and the choice matters. See [architecture.md](architecture.md) — *One
+announcement is not one op*.
+
+**The reader re-derives** when the derivation is cheap and the column is only a
+lookup key. Match on the stored value if it keeps the query indexed, then
+confirm against the source before answering.
+`ScenarioSeriesResolver::existingTemplateScenario()` and
+`RecurringSeriesDtoMapper` are the accepted templates.
+
+**The applier re-derives** when the readers are many, or the value is itself a
+key other code matches on. `ReplayedRows` names the seam in its own header —
+modules keeping derived state hear about a replay through `PeerRowsApplied` —
+and a module listener on that event gets three properties that matter:
+
+- it **cannot fail the merge**: `OpLogReplayer` catches a throwing listener and
+  the rows are stored either way;
+- it **announces nothing**, and must not. The value is derived, so every device
+  recomputes the same thing from the same merged row; an op would hand a peer
+  back a column it can compute, and loop;
+- it runs **after commit**, so it sees the merged row rather than one field of it.
+
+`RederiveFingerprintOnMergedRows` is the template. Guard such a listener three
+ways and pin each as a case that still passes with the listener unregistered —
+those controls are the only thing separating "re-derives what crossed" from
+"rewrites every row a replay touched": skip a row below the current version of
+the derivation, which belongs to the sweep that owns that migration; skip a row
+already correct; and stay inside the user the replay ran for.
+
+**Do not applier-derive a value whose derivation reads local state.**
+`counterparties.slug` looks like the same fix and is not:
+`CounterpartySlugResolver::resolveUnique()` walks suffixes against the slugs
+*this device* holds, so two devices can derive different values — and because
+`CounterpartyResolverService` keys its `firstOrCreate()` on `(user_id, slug)`,
+the slug is the row's identity. Deriving it per device trades a merge
+disagreement for divergent identities. That one is a product decision.
 
 ## Append-only ledgers declare no strategy at all
 
