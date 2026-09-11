@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Synkroniserad med din andra enhet.',
         'unreachable' => 'Kunde inte nå din andra enhet — kontrollera att båda är på samma nätverk.',
+        'not_secured' => 'Din andra enhet svarade, men det gick inte att öppna en säker anslutning till den. Lås upp Beatrax på den enheten och försök igen; fortsätter det att misslyckas, para ihop de två enheterna på nytt.',
         'locked' => 'Lås upp appen för att synkronisera.',
         'not_enabled' => 'Synkronisering är inte uppsatt på den här enheten än.',
         'unreadable' => 'Nyckeln på den här enheten går inte att öppna längre. Para ihop igen för att återuppta synkroniseringen.',

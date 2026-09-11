@@ -15,6 +15,11 @@ enum SyncAttemptOutcome: string
 
     case Unreachable = 'unreachable';
 
+    // The peer answered and the Noise session did not open. Distinct from
+    // Unreachable because the connection succeeded: telling this reader to
+    // check their network names a cause the dial already ruled out.
+    case NotSecured = 'not_secured';
+
     // Sealed identity, no key in this session. Distinct from NotEnabled
     // because one is answered by unlocking and the other by pairing.
     case Locked = 'locked';

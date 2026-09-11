@@ -13,6 +13,7 @@ return [
     'result' => [
         'synced' => 'Sinhronizovano sa drugim uređajem.',
         'unreachable' => 'Drugi uređaj nije dostupan — proveri da li su oba na istoj mreži.',
+        'not_secured' => 'Tvoj drugi uređaj se javio, ali sigurna veza sa njim nije mogla da se otvori. Otključaj Beatrax na tom uređaju i pokušaj ponovo; ako i dalje ne uspeva, ponovo upari oba uređaja.',
         'locked' => 'Otključaj aplikaciju za sinhronizaciju.',
         'not_enabled' => 'Sinhronizacija na ovom uređaju još nije podešena.',
         'unreadable' => 'Ključ ovog uređaja više ne može da se otvori. Ponovo upari uređaje da nastaviš sinhronizaciju.',
