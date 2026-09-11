@@ -110,6 +110,7 @@ final class MergeRulesRegistry
                 'category_id' => ['nullable' => true],
                 'note' => ['nullable' => true],
                 'counterparty_id' => ['nullable' => true],
+                'description' => ['nullable' => true],
                 'pair_transaction_id' => ['nullable' => true],
                 'type' => ['nullable' => false],
                 'status' => ['nullable' => false],
