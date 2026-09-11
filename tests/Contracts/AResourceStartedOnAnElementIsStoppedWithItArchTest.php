@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\MarkupSource;
 use Tests\Contracts\Support\RepoTree;
 
 /**
@@ -27,76 +27,29 @@ const RESOURCE_STARTERS = [
 ];
 
 /**
- * Every opening tag in the source, read with a quote-aware walk rather than a
- * pattern. `x-data='{ init() { a.map(x => x.y) } }'` carries a `>` inside its
- * own value, so a reader that stops at the first one cuts the attribute that
- * holds the answer in half.
- *
- * @return list<array{tag: string, offset: int}>
- */
-function resourceStartedOpeningTags(string $source): array
-{
-    $tags = [];
-    $length = strlen($source);
-    $cursor = 0;
-
-    while (($start = strpos($source, '<', $cursor)) !== false) {
-        $cursor = $start + 1;
-
-        if ($cursor >= $length || PatternScan::first('/^[a-zA-Z]/', $source[$cursor]) === []) {
-            continue;
-        }
-
-        $quote = '';
-        $scan = $cursor;
-
-        while ($scan < $length) {
-            $character = $source[$scan];
-
-            if ($quote !== '') {
-                if ($character === $quote) {
-                    $quote = '';
-                }
-            } elseif ($character === '"' || $character === "'") {
-                $quote = $character;
-            } elseif ($character === '>') {
-                break;
-            }
-
-            $scan++;
-        }
-
-        if ($scan >= $length) {
-            break;
-        }
-
-        $tags[] = ['tag' => substr($source, $start, $scan - $start + 1), 'offset' => $start];
-        $cursor = $scan + 1;
-    }
-
-    return $tags;
-}
-
-/**
  * @return array{tags: int, starting: int, offenders: list<string>}
  */
 function resourceStartedOffendersIn(string $source): array
 {
     $starting = 0;
     $offenders = [];
-    $tags = resourceStartedOpeningTags($source);
 
-    foreach ($tags as $tag) {
+    // MarkupSource, not a pattern shaped like a tag: `x-data='{ init() {
+    // a.map(x => x.y) } }'` carries a `>` inside its own value, and a reader
+    // that stops at the first one cuts the attribute holding the answer in half.
+    $tags = MarkupSource::tags($source);
+
+    foreach ($tags as $element) {
         // An Alpine element, not any element. A starter in a <script> body
         // belongs to the document, which is torn down by the navigation that
         // removes it.
-        if (! str_contains($tag['tag'], 'x-data') && ! str_contains($tag['tag'], 'x-init')) {
+        if (! $element->hasAttribute('x-data') && ! $element->hasAttribute('x-init')) {
             continue;
         }
 
         $started = array_values(array_filter(
             RESOURCE_STARTERS,
-            static fn (string $starter): bool => str_contains($tag['tag'], $starter),
+            static fn (string $starter): bool => str_contains($element->startTag, $starter),
         ));
 
         if ($started === []) {
@@ -105,11 +58,11 @@ function resourceStartedOffendersIn(string $source): array
 
         $starting++;
 
-        if (str_contains($tag['tag'], 'destroy(')) {
+        if (str_contains($element->startTag, 'destroy(')) {
             continue;
         }
 
-        $offenders[] = (substr_count($source, "\n", 0, $tag['offset']) + 1).' — '.implode(', ', $started);
+        $offenders[] = $element->line($source).' — '.implode(', ', $started);
     }
 
     return ['tags' => count($tags), 'starting' => $starting, 'offenders' => $offenders];
@@ -140,7 +93,7 @@ it('stops every timer, stream and observer an element started', function (): voi
 
     // Read before the verdict: the tag walk is the expensive half, and a reader
     // that stopped early would leave an empty offender list that reads exactly
-    // like a clean tree. Measured on this commit: 6,167 opening tags across 282
+    // like a clean tree. Measured on this commit: 6,020 opening tags across 282
     // views, three of them starting one of these.
     expect($tags)->toBeGreaterThan(
         3000,

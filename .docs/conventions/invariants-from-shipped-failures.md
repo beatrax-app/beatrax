@@ -7377,11 +7377,11 @@ the timer that is there today; the step gate answers every late call, including
 one replayed off the wire, because the step is the only thing that can tell a
 screen from a timer that outlived it.
 
-The rule reads Blade, matching opening tags with a quote-aware walk rather than
-a pattern — `x-data='{ init() { a.map(x => x.y) } }'` carries a `>` inside its
-own value, and a reader that stops at the first one cuts the attribute holding
-the answer in half. A factory in `resources/js` registered through
-`Alpine.data()` is **not** walked, so the same shape there is on the author.
+The rule reads Blade through `MarkupSource`, never a pattern shaped like a tag —
+`x-data='{ init() { a.map(x => x.y) } }'` carries a `>` inside its own value, and
+a reader that stops at the first one cuts the attribute holding the answer in
+half. A factory in `resources/js` registered through `Alpine.data()` is **not**
+walked, so the same shape there is on the author.
 
 ## A provider registered from an event that has already fired
 
