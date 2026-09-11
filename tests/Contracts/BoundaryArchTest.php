@@ -2800,6 +2800,13 @@ it('does not allow a cross-module Internal import outside the pinned production 
     // form: importing it would claim a dependency the file does not have.
     $pinnedInlineReferences = [
         'tests/Contracts/AMigrationIsNotTheOnlyPathToPerUserStateArchTest.php -> Modules\\FX\\Internal\\Services\\SeedBundledExchangeRates',
+        // ForgetNavCountsOnWrite is the subject of that guard's pinned
+        // listener set, read as text and never called. PlantedRider is a name
+        // inside a planted fixture string and is on disk nowhere at all --
+        // there is no module to import it from.
+        'tests/Contracts/ARiderOnEveryStatementCannotOpenATransactionArchTest.php -> Modules\\Core\\Internal\\Listeners\\ForgetNavCountsOnWrite',
+        'tests/Contracts/ARiderOnEveryStatementCannotOpenATransactionArchTest.php -> Modules\\Planted\\Internal\\Listeners\\PlantedRider',
+        'tests/Contracts/ARiderOnEveryStatementCannotOpenATransactionArchTest.php -> Modules\\Planted\\Internal\\Listeners\\PlantedRider',
         // Two of the events that guard classifies live in an Internal\Events
         // namespace, and the classification is keyed by the name a provider
         // wires a listener to. Naming them is the assertion; importing them
