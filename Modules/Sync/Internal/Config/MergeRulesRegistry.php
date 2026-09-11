@@ -118,6 +118,12 @@ final class MergeRulesRegistry
                 // device stamped and the next re-apply overwrites a hand edit it
                 // can no longer see. Only category_id has a second source.
                 'field_provenance' => ['strategy' => MergeStrategy::JsonKeyUnion->value, 'nullable' => true],
+                // Announced on an edit by two writers and undeclared, which is
+                // not "not synced" but "silently lww". Declared so the guard
+                // that watches a synced column can see them, and so every
+                // writer that rewrites one in silence has to say why.
+                'fingerprint' => ['nullable' => false],
+                'fingerprint_version' => ['nullable' => false],
                 '_delete_wins' => true,
                 // NOT NULL columns without defaults in transactions (status has default 'cleared',
                 // payment_type has default 'unknown' — omitted from required list).

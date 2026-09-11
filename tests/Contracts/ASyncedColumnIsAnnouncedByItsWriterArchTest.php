@@ -27,6 +27,18 @@ const SILENT_COLUMN_WRITERS = [
         'announcedBy' => 'Modules/Sync/Internal/Config/MergeRulesRegistry.php',
         'proves' => "/DEVICE_LOCAL_COLUMNS = \\[.*?'locale',/s",
     ],
+    'Modules/Ledger/Internal/Listeners/RederiveFingerprintOnMergedRows.php' => [
+        'columns' => ['transactions.fingerprint'],
+        'reason' => 'the digest is derived, so every device recomposes the same value from the same merged row; an op here would hand a peer back a column it can compute, and loop',
+        'announcedBy' => '.docs/features/sync/merge-registry-authoring.md',
+        'proves' => '/it \\*\\*announces nothing\\*\\*, and must not/',
+    ],
+    'Modules/Ledger/Internal/Services/FingerprintRederiveService.php' => [
+        'columns' => ['transactions.fingerprint', 'transactions.fingerprint_version'],
+        'reason' => 'the version sweep every device runs for itself, from a migration and a console command; the digest it writes is composed over columns the peer already holds, so an op per row would carry a value that device recomputes anyway',
+        'announcedBy' => '.docs/features/sync/merge-registry-authoring.md',
+        'proves' => '/it \\*\\*announces nothing\\*\\*, and must not/',
+    ],
     'Modules/Ledger/Public/Actions/ReassignCounterparty.php' => [
         'columns' => ['transactions.counterparty_id'],
         'reason' => 'both callers announce the column, gated on the affected count this returns',
