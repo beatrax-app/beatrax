@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Http\ResponseTailBudget;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Psr\Log\LoggerInterface;
@@ -20,9 +21,9 @@ use Throwable;
  */
 final readonly class DeferredOpCaptureDrain
 {
-    // Coordinates per tick. The tail is paid after the response, but it is
-    // still the reader's process: a queue built up over a week of a locked
-    // device is drained across several requests rather than one long one.
+    // Coordinates read per tick. A ceiling on the query, not on the work: what
+    // stops the tick is the budget below, because the cost of a coordinate is
+    // whatever the device it runs on charges for a signature.
     private const int BATCH = 400;
 
     public function __construct(
@@ -32,12 +33,14 @@ final readonly class DeferredOpCaptureDrain
         private StoredRowPlaintext $plaintext,
         private MergeRulesRegistry $rules,
         private AnnouncedCreates $announced,
+        private ResponseTailBudget $tail,
         private LoggerInterface $log,
     ) {}
 
     // Returns the coordinates retired by this tick; 0 when nothing was owed or
-    // no key was in reach. Never throws: the caller is a request tail, and a
-    // coordinate left standing is taken again by the next request.
+    // no key was in reach. Never throws: a coordinate left standing is taken
+    // again by the next request — which is also why the first row is replayed
+    // before the budget is asked. A tick denied its first group never advances.
     public function drain(int $userId): int
     {
         $pending = $this->queue->pending($userId, self::BATCH);
@@ -56,6 +59,10 @@ final readonly class DeferredOpCaptureDrain
 
         foreach ($this->groups($pending) as $group) {
             $retired += $this->replay($userId, $writer, $group);
+
+            if ($this->tail->spent()) {
+                break;
+            }
         }
 
         return $retired;

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Container\Container;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Middleware\AfterResponseMiddleware;
+use Modules\Core\Public\Http\ResponseTailBudget;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\OpLog\BackfillProgress;
 use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
@@ -35,7 +36,10 @@ final readonly class ResumesPreSyncCapture extends AfterResponseMiddleware
         private Container $container,
         private Cache $cache,
         private LoggerInterface $log,
-    ) {}
+        ResponseTailBudget $tail,
+    ) {
+        parent::__construct($tail);
+    }
 
     protected function afterResponse(): void
     {
