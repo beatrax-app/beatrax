@@ -438,6 +438,8 @@ final readonly class OpLogEntryApplier
         /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
         $deferred = [];
 
+        $arriving = $this->splitAmountsArriving($candidatesByField, $userId);
+
         foreach ($candidatesByField as $table => $rows) {
             foreach ($rows as $pk => $fields) {
                 $tomb = $tombstones[$table][$pk] ?? null;
@@ -449,7 +451,7 @@ final readonly class OpLogEntryApplier
                 }
 
                 foreach ($fields as $field => $fieldEntries) {
-                    $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $userId, $now, $deferred);
+                    $this->applyFieldMerge($table, $pk, $field, $fieldEntries, $userId, $now, $deferred, $arriving);
                 }
 
                 $applied->rowUpdated($table, $pk, $userId);
@@ -469,8 +471,9 @@ final readonly class OpLogEntryApplier
     /**
      * @param  list<OpLogEntry>  $fieldEntries
      * @param  list<array{table: string, pk: int|string, values: array<string, mixed>}>  $deferred
+     * @param  array<int|string, int>  $arriving
      */
-    private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, int $userId, string $now, array &$deferred): void
+    private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, int $userId, string $now, array &$deferred, array $arriving = []): void
     {
         try {
             $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
@@ -504,6 +507,18 @@ final readonly class OpLogEntryApplier
                 return;
             }
 
+            // The create path asks whether a leg fits its transaction and a Set
+            // rewrites that same column afterwards: a peer that re-split while
+            // apart raised a leg past the whole charge, and the legs stopped
+            // adding up to it with nothing anywhere saying so.
+            $overfill = $this->splitOverfill->reasonToRefuseSet($table, $field, $pk, $columnValue, $arriving);
+
+            if ($overfill !== null) {
+                $this->quarantine->record($fieldEntries[0], $overfill, $now);
+
+                return;
+            }
+
             // A transfer pair names its partner, and a Set carrying that link
             // routinely lands before the partner does: written here the foreign
             // key refuses it and the catch below records a strategy error
@@ -528,6 +543,45 @@ final readonly class OpLogEntryApplier
         } catch (\Throwable) {
             $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
         }
+    }
+
+    // Every leg amount this batch will write, under the id THIS device knows
+    // the leg by. A rebalance announces its whole leg set, so a leg judged
+    // against the stored siblings alone is judged on a set that is halfway
+    // applied, and the order the legs arrive in decides which one is refused.
+    /**
+     * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $candidatesByField
+     * @return array<int|string, int>
+     */
+    private function splitAmountsArriving(array $candidatesByField, int $userId): array
+    {
+        $arriving = [];
+
+        foreach ($candidatesByField[SplitOverfillGate::TABLE] ?? [] as $pk => $fields) {
+            $entries = $fields[SplitOverfillGate::AMOUNT] ?? [];
+
+            if ($entries === []) {
+                continue;
+            }
+
+            try {
+                $value = $this->projector->encodeColumnValue(
+                    $this->projector->resolveStrategy(SplitOverfillGate::TABLE, SplitOverfillGate::AMOUNT)->resolve($entries),
+                );
+            } catch (\Throwable) {
+                // applyFieldMerge() quarantines this same op as a strategy
+                // error, so the value it could not resolve never lands and
+                // must not be counted as though it will.
+                continue;
+            }
+
+            if (is_numeric($value)) {
+                $local = $this->aliases->resolvePk(SplitOverfillGate::TABLE, $entries[0]->deviceId, $pk, $userId);
+                $arriving[$local] = (int) $value;
+            }
+        }
+
+        return $arriving;
     }
 
     // Tombstones for (table, pk) pairs that had NO field SET entries — pairs

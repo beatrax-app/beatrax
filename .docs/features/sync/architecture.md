@@ -581,14 +581,50 @@ identity per leg they stop colliding, and **both sets land** — a desktop split
 50/30 and a phone split of 40/40 left one 80,00 charge showing four legs adding
 to 160,00, with an empty quarantine on both devices.
 
-The gate refuses a create whose leg would carry the transaction's legs past the
-transaction, and records it as `split_would_overfill_transaction`. Two things it
-must not do, each with a test of its own:
+The gate refuses an arriving leg that would carry the transaction's legs past the
+transaction, and records it as `split_would_overfill_transaction`. It is asked on
+**both** arrival paths. `admissiblePayload()` asks it for a create, which has the
+whole row to hand. `applyFieldMerge()` asks it for a Set of
+`settled_amount_minor` — a peer that re-splits a transaction while apart raises
+an *existing* leg rather than creating one, and for a long time that Set met a
+date gate, an ownership gate and no sum check at all. A Set carries one column
+and no row, so `reasonToRefuseSet()` reads the leg's `transaction_id` and
+`settled_currency` off the stored row before handing the same payload to the same
+verdict.
+
+Three things it must not do, each with a test of its own:
 
 - **Refuse a peer's split when this device has not split the transaction.** The
   legs then fit, and they apply.
 - **Refuse a leg it has already applied.** The row's own id is excluded from
   what is already there, so the idempotent re-apply stays idempotent.
+- **Refuse a leg of a rebalance that adds up.** A rebalance is one decision over
+  the whole leg set and `SaveTransactionSplit` announces *every* leg, so the
+  raised leg routinely arrives before the lowered one. Judged against the legs
+  merely stored, the first op of a set that balances exactly reads as an
+  overfill. `OpLogEntryApplier::splitAmountsArriving()` resolves the whole
+  batch's leg amounts up front and the gate substitutes them for the stored
+  values, so the verdict is taken on the set the batch lands and does not depend
+  on the order the legs are reached in.
+
+Two adjacent gaps are **not** closed, and both are named here so neither reads as
+covered:
+
+- **A tombstone removing a leg.** `transaction_splits` is `_delete_wins`, and
+  `applyDeletions()` runs no sum check, so a deleted leg leaves the survivors
+  short. That is a *shortfall*, which this gate deliberately does not refuse, and
+  it is already a defined state rather than silent corruption: B7-R5 rolls a
+  split whose legs do not sum through the parent's own category.
+- **The parent moving instead of the legs.** `transactions.settled_amount_minor`
+  is absent from that table's field map in `MergeRulesRegistry`, so it falls
+  through to plain LWW and travels whenever a writer names it dirty —
+  `EntityChangeApplier` does exactly that when a re-import corrects an amount.
+  The legs then stop summing without any leg op existing to refuse. A refusal
+  cannot be the answer there: the correction is legitimate, and nothing says how
+  the legs should be rescaled. It also means a refusal this gate issues can be
+  *caused* by the parent having moved rather than by the arriving leg being
+  wrong, in which case `split_would_overfill_transaction` is literally true of
+  the resulting set but names the wrong party.
 
 This **reports** the conflict rather than resolving it. Two devices that both
 split one transaction still disagree: each keeps its own legs and the peer's
