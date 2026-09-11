@@ -132,7 +132,7 @@ it('means what it says by "locked": the row stops accepting edits', function ():
 
     /** @var ReconciliationWriter $writer */
     $writer = $this->app->make(ReconciliationWriter::class);
-    $locked = $writer->completeReconcile($user, $account->id, CarbonImmutable::parse('2026-07-31'));
+    $locked = $writer->completeReconcile($user, $account->id, CarbonImmutable::parse('2026-07-31'), 'EUR');
 
     expect($locked)->toBe(1);
     expect($setNote($transaction->id, 'after the lock', NoteMode::Set->value, $user))->toBe(

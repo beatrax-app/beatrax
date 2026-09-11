@@ -150,8 +150,12 @@ it('answers in the currency the statement is printed in, not in every currency t
         ->call('confirmReconcile')
         ->assertDispatched('toast');
 
+    // The euro row is the half this test used to pin the other way round. The
+    // difference above was narrowed to the dollar line and the write below it
+    // was not, so a match on one line locked the other into a terminal state
+    // nothing it was matched against had counted.
     expect(DB::table('transactions')->where('id', $dollars->id)->value('status'))->toBe('reconciled');
-    expect(DB::table('transactions')->where('id', $euros->id)->value('status'))->toBe('reconciled');
+    expect(DB::table('transactions')->where('id', $euros->id)->value('status'))->toBe('cleared');
 });
 
 // The account select's "choose an account" option carries the empty string, and
