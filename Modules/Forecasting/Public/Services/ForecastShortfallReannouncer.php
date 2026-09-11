@@ -48,13 +48,17 @@ final readonly class ForecastShortfallReannouncer
 
     private static function rowToEvent(stdClass $row, int $userId): ?ForecastShortfallDetected
     {
-        if (! is_numeric($row->account_id) || ! is_string($row->currency)) {
-            return null;
-        }
-        if (! is_numeric($row->lowest_balance_minor) || ! is_numeric($row->buffer_used_minor)) {
-            return null;
-        }
-        if (! is_string($row->starts_at) || ! is_string($row->ends_at)) {
+        // One refusal over every column the event needs, rather than one per
+        // pair: the row is a wire shape and a missing field is a missing field
+        // whichever it is, so splitting the answer said nothing extra.
+        $usable = is_numeric($row->account_id)
+            && is_string($row->currency)
+            && is_numeric($row->lowest_balance_minor)
+            && is_numeric($row->buffer_used_minor)
+            && is_string($row->starts_at)
+            && is_string($row->ends_at);
+
+        if (! $usable) {
             return null;
         }
 

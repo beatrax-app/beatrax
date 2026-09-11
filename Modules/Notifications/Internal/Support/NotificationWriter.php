@@ -75,17 +75,7 @@ final class NotificationWriter
         try {
             $encrypted = $this->codec->encryptAttrs('notifications', $attrs, $draft->userId, ($this->session)());
         } catch (SensitiveColumnKeyUnavailableException) {
-            // Not an error and not a duplicate, and it used to read as both: the
-            // eight Persist* listeners logged the refusal at ERROR while the job
-            // around them still reported processed. The content is derivable, so
-            // the honest answer is to say it was withheld and hand that back.
-            if ($this->alreadyWritten($id)) {
-                return NotificationWriteResult::duplicate($id);
-            }
-
-            $this->recordDeferral($draft->userId);
-
-            return NotificationWriteResult::deferred($id);
+            return $this->withheld($id, $draft->userId);
         }
 
         $affected = $this->db->connection()->table('notifications')->insertOrIgnore($encrypted);
@@ -99,13 +89,21 @@ final class NotificationWriter
         return NotificationWriteResult::written($id);
     }
 
-    // The mark is put here and nowhere else, because "it will be re-derived" was
-    // a promise only four of the eight emitters kept: the four whose schedule
-    // entry asked deferIfKeyless() first. A trigger with no pass of its own had
-    // nothing durable recording the refusal, so nothing ever came back for it.
-    /**
-     * @link ../../../../.docs/features/mobile/background-sync-cannot-hold-the-key.md#the-triggers-no-scheduled-pass-covers
-     */
+    // Not an error and not a duplicate, and it used to read as both: the eight
+    // Persist* listeners logged the refusal at ERROR while the job around them
+    // still reported processed. The content is derivable, so the honest answer
+    // is to say it was withheld and hand that back.
+    private function withheld(string $id, int $userId): NotificationWriteResult
+    {
+        if ($this->alreadyWritten($id)) {
+            return NotificationWriteResult::duplicate($id);
+        }
+
+        $this->recordDeferral($userId);
+
+        return NotificationWriteResult::deferred($id);
+    }
+
     // A keyed process learns from insertOrIgnore that the row was already
     // there; a keyless one is refused before the insert and has to ask. Without
     // this every tick over a sealed ledger marks content the device already
@@ -115,6 +113,13 @@ final class NotificationWriter
         return $this->db->connection()->table('notifications')->where('id', $id)->exists();
     }
 
+    // The mark is put here and nowhere else, because "it will be re-derived" was
+    // a promise only four of the eight emitters kept: the four whose schedule
+    // entry asked deferIfKeyless() first. A trigger with no pass of its own had
+    // nothing durable recording the refusal, so nothing ever came back for it.
+    /**
+     * @link ../../../../.docs/features/mobile/background-sync-cannot-hold-the-key.md#the-triggers-no-scheduled-pass-covers
+     */
     private function recordDeferral(int $userId): void
     {
         if (isset($this->deferralsRecorded[$userId])) {

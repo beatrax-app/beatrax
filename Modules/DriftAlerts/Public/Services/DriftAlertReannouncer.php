@@ -48,13 +48,17 @@ final readonly class DriftAlertReannouncer
 
     private static function rowToEvent(stdClass $row, int $userId): ?DriftAlertOpened
     {
-        if (! is_numeric($row->id) || ! is_numeric($row->recurring_series_id)) {
-            return null;
-        }
-        if (! is_numeric($row->delta_minor) || ! is_numeric($row->annualized_impact_minor)) {
-            return null;
-        }
-        if (! is_string($row->direction) || ! is_string($row->currency)) {
+        // One refusal over every column the event needs, rather than one per
+        // pair: the row is a wire shape and a missing field is a missing field
+        // whichever it is, so splitting the answer said nothing extra.
+        $usable = is_numeric($row->id)
+            && is_numeric($row->recurring_series_id)
+            && is_numeric($row->delta_minor)
+            && is_numeric($row->annualized_impact_minor)
+            && is_string($row->direction)
+            && is_string($row->currency);
+
+        if (! $usable) {
             return null;
         }
 
