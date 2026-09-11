@@ -11,6 +11,7 @@ use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\TransactionType;
 
 /**
@@ -45,7 +46,7 @@ final readonly class ClassifyTransactionType
 
         $resolved = $this->transferType($tx, $user)
             ?? $this->paypalType($tx)
-            ?? $this->incomeType($tx);
+            ?? $this->incomeType($tx, $user);
 
         return $resolved === null ? $tx : $tx->withType($resolved);
     }
@@ -109,13 +110,30 @@ final readonly class ClassifyTransactionType
         }
     }
 
-    private function incomeType(CanonicalTransaction $tx): ?string
+    private function incomeType(CanonicalTransaction $tx, User $user): ?string
     {
-        if ($tx->amountMinor > 0 && ! in_array(TransactionType::tryFrom($tx->type), self::NON_INCOME_TYPES, true)) {
-            return TransactionType::Income->value;
+        if ($tx->amountMinor <= 0 || in_array(TransactionType::tryFrom($tx->type), self::NON_INCOME_TYPES, true)) {
+            return null;
         }
 
-        return null;
+        // A card balance is what is OWED, so money arriving on one is the
+        // reader paying it down — the other half of a transfer their bank
+        // already booked — and never earnings. Read as income, one card
+        // statement's settlement was a second salary every month.
+        return $this->liabilityAccount($tx->accountId, $user)
+            ? TransactionType::TransferIn->value
+            : TransactionType::Income->value;
+    }
+
+    private function liabilityAccount(int $accountId, User $user): bool
+    {
+        $kind = $this->db->connection()
+            ->table('accounts')
+            ->where('user_id', $user->id)
+            ->where('id', $accountId)
+            ->value('kind');
+
+        return is_string($kind) && AccountKind::tryFrom($kind)?->isLiability() === true;
     }
 
     /**
