@@ -81,7 +81,8 @@ final class FirstImportStep extends Component
     }
 
     // accountId comes off a dispatch and is never trusted on the UPDATE:
-    // persistCommit() re-filters on user_id so a forgery cannot write elsewhere.
+    // AccountWriter::write() re-filters on user_id, so a forged id writes
+    // nothing rather than another reader's account.
     #[On('starting-balance.confirmed')]
     public function onStartingBalanceConfirmed(int $accountId, int $minor, string $date): void
     {

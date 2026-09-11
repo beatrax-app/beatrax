@@ -16,6 +16,10 @@ use Tests\Contracts\Support\WireCallableMethods;
 // guard below is only ever asking about the rest.
 const SERVER_OWNED_BINDING_PATTERNS = [
     '/wire:model[.\w]*\s*=\s*["\']\s*([A-Za-z_][A-Za-z0-9_]*)/',
+    // The kebab spelling is a Blade component ATTRIBUTE, forwarded into the
+    // shared drop-zone, which writes the real wire:model out of it. Four upload
+    // bindings are spelled that way and none of them reached this reader.
+    '/wire-model[.\w]*\s*=\s*["\']\s*([A-Za-z_][A-Za-z0-9_]*)/',
     '/x-model[.\w]*\s*=\s*["\']\s*([A-Za-z_][A-Za-z0-9_]*)/',
     '/\$wire\.\$?set\(\s*[\'"]([A-Za-z_][A-Za-z0-9_]*)/',
     '/(?<!\w)\$set\(\s*[\'"]([A-Za-z_][A-Za-z0-9_]*)/',
@@ -55,6 +59,7 @@ function serverOwnedPropertyExemptions(): array
         // Overwritten by the reading method before it is read. The client's
         // value cannot survive to the statement that uses it.
         'Modules\\Core\\Public\\Http\\Livewire\\EncryptedBackupRestore::$snapshotPath' => 'restore() blanks it and re-fills it from the restore action before flashing it',
+        'Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage::$country' => 'setCountry() validates its argument against the Country enum and assigns it before the store() call reads it back',
 
         // Names a row, and every method that reads it re-reads that row scoped
         // to the reader in the same method — the standard
@@ -73,7 +78,7 @@ function serverOwnedPropertyExemptions(): array
         'Modules\\Import\\Internal\\Http\\Livewire\\RenameCounterpartyPopover::$categoryHint' => 'a category hint the rule writer re-validates against the reader\'s own categories',
         'Modules\\Import\\Internal\\Http\\Livewire\\RenameCounterpartyPopover::$raw' => 'the raw counterparty string the rule is written from, re-normalised by the writer',
         'Modules\\Import\\Internal\\Http\\Livewire\\RenameCounterpartyPopover::$rowIndex' => 'a row index echoed back in the dispatched event so the caller can find its own row',
-        'Modules\\Onboarding\\Internal\\Http\\Livewire\\Steps\\FirstImportStep::$balanceConfirmations' => 'persistCommit() re-filters every account id on user_id before it writes',
+        'Modules\\Onboarding\\Internal\\Http\\Livewire\\Steps\\FirstImportStep::$balanceConfirmations' => 'every account id keying this map reaches AccountWriter::write(), which re-filters on user_id',
 
         // Narrowed rather than refused, because the client legitimately writes
         // a neighbouring shape and the reader's own set is the ceiling.
@@ -122,8 +127,6 @@ function serverOwnedPropertyExemptions(): array
         // to receive it. A forged value names a temporary file of their own.
         'Modules\\Onboarding\\Internal\\Http\\Livewire\\Steps\\ConnectBankStep::$csvLayoutPicked' => 'whether the layout question has been answered for the reader\'s own upload',
         'Modules\\Onboarding\\Internal\\Http\\Livewire\\Steps\\ConnectBankStep::$selectedFormat' => 'the parser chosen for the reader\'s own upload, re-derived by the importer from the file',
-        'Modules\\Onboarding\\Internal\\Http\\Livewire\\Steps\\ConnectCardStep::$statements' => 'the reader own staged uploads, each re-read from the temporary path',
-        'Modules\\Onboarding\\Internal\\Http\\Livewire\\Steps\\ConnectPaypalStep::$activityCsv' => 'the reader own staged upload, re-read from the temporary path',
         'Modules\\Forecasting\\Internal\\Http\\Livewire\\ScenarioEditorSidebar::$selectedKind' => 'the mutation kind, re-checked against the stored kind by EditScenarioMutation',
 
         // A cursor or a window over the reader's own ledger. Every query behind
@@ -138,10 +141,21 @@ function serverOwnedPropertyExemptions(): array
     ];
 }
 
-/** @return array<string, true> every property name a template or script writes */
+// The bucket the shared layouts and scripts under resources/ write into. They
+// are served with every module, so a binding there answers for all of them.
+const SHARED_BINDING_SCOPE = '*';
+
+// Read per module rather than tree-wide. A flat set of NAMES let one module's
+// wire:model excuse another module's server-owned property: `accountId` is
+// bound on the reconcile page and on the pots page, and that alone kept the
+// onboarding card's own account id out of this rule for as long as it existed.
+/**
+ * @return array<string, array<string, true>> module (or SHARED_BINDING_SCOPE) => the property names its templates and scripts write
+ */
 function clientBoundPropertyNames(): array
 {
     $names = [];
+    $modulesRoot = str_replace(DIRECTORY_SEPARATOR, '/', base_path('Modules')).'/';
 
     foreach ([base_path('Modules'), base_path('resources')] as $root) {
         if (! is_dir($root)) {
@@ -160,18 +174,82 @@ function clientBoundPropertyNames(): array
                 continue;
             }
 
+            $scope = clientBoundScopeOf($path, $modulesRoot);
             $source = (string) file_get_contents($path);
             foreach (SERVER_OWNED_BINDING_PATTERNS as $pattern) {
                 $matches = PatternScan::all($pattern, $source);
 
                 foreach ($matches[1] as $name) {
-                    $names[$name] = true;
+                    $names[$scope][$name] = true;
                 }
             }
         }
     }
 
     return $names;
+}
+
+// Cut against the walked root rather than matched anywhere in the path. A
+// checkout directory is free to be called Modules, and the mobile composer root
+// reaches this tree through a symlink, so neither the segment nor the prefix
+// base_path() reports can be assumed to sit where an unanchored match looks.
+/** Which bucket a template's bindings belong in: its module, or the shared one. */
+function clientBoundScopeOf(string $path, string $modulesRoot): string
+{
+    if (! str_starts_with($path, $modulesRoot)) {
+        return SHARED_BINDING_SCOPE;
+    }
+
+    $match = PatternScan::first('#^([A-Za-z0-9_]+)/#', substr($path, strlen($modulesRoot)));
+
+    return $match[1] ?? SHARED_BINDING_SCOPE;
+}
+
+/** The module a Livewire component belongs to: Modules\<Module>\… */
+function clientBoundScopeOfComponent(string $component): string
+{
+    return explode('\\', $component)[1] ?? SHARED_BINDING_SCOPE;
+}
+
+// A trait's property is bound by the TRAIT's module. Reflection reports a
+// trait-imported property as declared on the using class, so the component's
+// own module is the wrong and only answer unless the traits are asked too:
+// HandlesTaxTagging lives in Tax and its popover is bound from Tax's views,
+// while the four components that use it are in three other modules.
+/**
+ * @param  ReflectionClass<object>  $component
+ * @return list<string> every module whose templates may name this property
+ */
+function clientBoundScopesFor(ReflectionClass $component, string $property, string $modulesRoot): array
+{
+    $scopes = [clientBoundScopeOfComponent($component->getName())];
+
+    foreach (clientBoundTraitsOf($component) as $trait) {
+        if (! $trait->hasProperty($property)) {
+            continue;
+        }
+
+        $file = str_replace(DIRECTORY_SEPARATOR, '/', (string) $trait->getFileName());
+        $scopes[] = clientBoundScopeOf($file, $modulesRoot);
+    }
+
+    return array_values(array_unique($scopes));
+}
+
+/**
+ * @param  ReflectionClass<object>  $class
+ * @return list<ReflectionClass<object>> the traits it uses, and the traits those use
+ */
+function clientBoundTraitsOf(ReflectionClass $class): array
+{
+    $traits = [];
+
+    foreach ($class->getTraits() as $trait) {
+        $traits[] = $trait;
+        $traits = [...$traits, ...clientBoundTraitsOf($trait)];
+    }
+
+    return $traits;
 }
 
 // An action method runs BEFORE render(), so a property render() rewrites is
@@ -214,11 +292,11 @@ function methodsReadingProperty(array $methods, string $property): array
 function serverOwnedUnlockedProperties(): array
 {
     $bound = clientBoundPropertyNames();
+    $modulesRoot = str_replace(DIRECTORY_SEPARATOR, '/', base_path('Modules')).'/';
     $found = [];
 
     foreach (WireCallableMethods::components() as $component) {
         $reflection = new ReflectionClass($component);
-        $file = (string) $reflection->getFileName();
         $methods = WireCallableMethods::invokableOn($component);
 
         foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
@@ -243,7 +321,12 @@ function serverOwnedUnlockedProperties(): array
                 continue;
             }
 
-            if (isset($bound[$property->getName()])) {
+            $boundHere = $bound[SHARED_BINDING_SCOPE] ?? [];
+            foreach (clientBoundScopesFor($reflection, $property->getName(), $modulesRoot) as $scope) {
+                $boundHere = array_merge($boundHere, $bound[$scope] ?? []);
+            }
+
+            if (isset($boundHere[$property->getName()])) {
                 continue;
             }
 
@@ -284,7 +367,8 @@ it('locks every public Livewire property the server writes and an action reads',
     }
 
     expect($offenders)->toBe([], implode("\n", array_merge(
-        ['A public Livewire property no wire:model, $wire.set, entangle, $toggle or x-model names is written by the server '.
+        ['A public Livewire property no wire:model, wire-model, $wire.set, entangle, $toggle or x-model names IN ITS OWN MODULE '.
+            'is written by the server '.
             'alone, and an action method runs BEFORE render() — so a replayed wire:snapshot chooses it for the whole of the '.
             'action that reads it. Give each of these #[Locked], or add it to serverOwnedPropertyExemptions() with the reason '.
             'the client\'s value is harmless:'],
@@ -338,6 +422,7 @@ it('reads every spelling a template writes a property with', function (string $m
     );
 })->with([
     'a plain wire:model' => ['<input wire:model="search">', 'search'],
+    'a binding forwarded as a component attribute' => ['<x-onboarding::drop-zone wire-model="file" />', 'file'],
     'a modified wire:model' => ['<input wire:model.live.debounce.300ms="search">', 'search'],
     'an Alpine model' => ['<input x-model="draft">', 'draft'],
     'a set from the wire object' => ["<button x-on:click=\"\$wire.set('tab', 'all')\">", 'tab'],
@@ -348,3 +433,76 @@ it('reads every spelling a template writes a property with', function (string $m
     'a read with no write' => ['<span x-text="$wire.total"></span>', ''],
     'a method call rather than a property' => ["<button wire:click=\"save('x')\">", ''],
 ]);
+
+// The partition is the whole rule: a binding read into one shared bucket is
+// the tree-wide set of NAMES this replaced, where a wire:model on the pots
+// page excused an account id the onboarding card never let the reader choose.
+it('reads a binding into the module whose template writes it', function (): void {
+    $bound = clientBoundPropertyNames();
+
+    $modules = array_keys(array_diff_key($bound, [SHARED_BINDING_SCOPE => true]));
+
+    expect(count($modules))->toBeGreaterThan(
+        15,
+        'Only '.count($modules).' modules contributed a binding, so the partition collapsed and every '
+        .'module is excusing every other module\'s properties again.'
+    );
+
+    expect(clientBoundScopeOf('/repo/Modules/Ledger/Resources/views/livewire/reconcile-page.blade.php', '/repo/Modules/'))->toBe('Ledger');
+    expect(clientBoundScopeOf('/repo/resources/views/layouts/app.blade.php', '/repo/Modules/'))->toBe(SHARED_BINDING_SCOPE);
+    expect(clientBoundScopeOf('/Modules/repo/Modules/Ledger/a.blade.php', '/Modules/repo/Modules/'))->toBe('Ledger');
+    expect(clientBoundScopeOfComponent('Modules\\Onboarding\\Internal\\Http\\Livewire\\StartingBalanceCard'))->toBe('Onboarding');
+});
+
+// The case that broke this rule the first time it was narrowed: the four
+// tax-picker properties are declared by Tax's HandlesTaxTagging and bound from
+// Tax's own popover, while the four components using them sit in three other
+// modules. Self-discovering, so a renamed trait cannot quietly empty it.
+it('reads a trait property against the trait\'s module as well as the component\'s', function (): void {
+    $modulesRoot = str_replace(DIRECTORY_SEPARATOR, '/', base_path('Modules')).'/';
+    $crossModule = [];
+    $unseen = [];
+
+    foreach (WireCallableMethods::components() as $component) {
+        $reflection = new ReflectionClass($component);
+        $own = clientBoundScopeOfComponent($component);
+
+        foreach (clientBoundTraitsOf($reflection) as $trait) {
+            $traitScope = clientBoundScopeOf(
+                str_replace(DIRECTORY_SEPARATOR, '/', (string) $trait->getFileName()),
+                $modulesRoot,
+            );
+
+            if ($traitScope === SHARED_BINDING_SCOPE || $traitScope === $own) {
+                continue;
+            }
+
+            foreach ($trait->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+                $crossModule[] = $own.' uses '.$traitScope.'::$'.$property->getName();
+                $scopes = clientBoundScopesFor($reflection, $property->getName(), $modulesRoot);
+
+                if (! in_array($traitScope, $scopes, true)) {
+                    $unseen[] = $component.'::$'.$property->getName().' — declared in '.$traitScope
+                        .', read against '.implode(' + ', $scopes);
+                }
+            }
+        }
+    }
+
+    sort($unseen);
+
+    // toBe with a message rather than toContain with one: toContain takes its
+    // arguments as further NEEDLES, so an explanation passed there becomes a
+    // second string the array has to hold, and the rule fails on its own prose.
+    expect($unseen)->toBe([], implode("\n  ", [
+        'A property one module\'s trait declares is bound from THAT module\'s templates. The scope reader',
+        'answered without it, so the lock rule reads these as server-owned and demands a lock they do not need:',
+        ...$unseen,
+    ]));
+
+    expect(count($crossModule))->toBeGreaterThan(
+        0,
+        'No component takes a public property from another module\'s trait, so this rule proved nothing — and the '
+        .'sixteen tax-picker properties that made it necessary would read as a clean tree.'
+    );
+});

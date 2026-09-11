@@ -2514,11 +2514,21 @@ Two things decide whether a property is the server's:
 - **`render()` is not late.** An action method runs *before* `render()`, so a
   property assigned only there is still whatever the payload said for the whole
   of the action that reads it.
-- **The Blade is the evidence.** A property no `wire:model`, `$wire.set` or
-  `entangle` names is server-owned and belongs under `#[Locked]`. The reverse is
-  just as load-bearing: `AppLockSettingsSection::$biometricCapable` is written by
+- **The Blade is the evidence, and only its own module's Blade.** A property no
+  `wire:model`, `wire-model`, `$wire.set` or `entangle` names is server-owned and
+  belongs under `#[Locked]`. The reverse is just as load-bearing:
+  `AppLockSettingsSection::$biometricCapable` is written by
   `x-init="…$wire.set('biometricCapable', true)"` and locking it would blind the
-  screen to a browser that has WebAuthn.
+  screen to a browser that has WebAuthn. The guard read the bindings as one
+  tree-wide set of *names* until a tenancy pass found what that excused:
+  `accountId` is bound on the reconcile page and on the pots page, and those two
+  alone kept `StartingBalanceCard::$accountId` — server-written in `mount()`,
+  read by `confirm()`, `save()` and `pickConflictCandidate()` — outside the rule
+  for as long as the property existed. The set is partitioned per module now.
+  `wire-model` is the other half of the same reading: it is a Blade component
+  *attribute* the wizard forwards into the shared drop-zone, which writes the
+  real `wire:model` out of it, and three upload bindings spelled that way were
+  invisible to a reader that only knew the colon form.
 
 The same read applies past money. `AppLockSettingsSection::$lockEnabled` gated
 `setPin()` — which re-provisions where `changePin()` re-wraps — so a payload
