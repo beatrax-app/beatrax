@@ -9,7 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Support\DerivedRowId;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\QueryFailure;
 use Modules\DriftAlerts\Internal\Enums\ThresholdSource;
@@ -183,14 +183,11 @@ final readonly class DriftEvaluator
         $currency = $series->latestAmount->currency();
         $now = $this->clock->now()->toDateTimeString();
 
-        // Derived, not minted: the detector runs on every paired device, and an
-        // autoincrement gave each a different id for one subscription's rise.
-        // Both halves are the table's own UNIQUE and neither ever moves, so the
-        // second device's create collides harmlessly instead of duplicating.
-        $alertId = DerivedRowId::for('drift_alerts', [
-            'recurring_series_id' => $seriesId,
-            'latest_occurrence_id' => $drift->latestOccurrenceId,
-        ]);
+        // Minted, not derived: the occurrence id in that tuple is itself minted
+        // per device, so the fold carried a number the peer reads as another
+        // month's rise. `drift_alerts_uniq` is what makes two devices one row,
+        // once the arriving occurrence id has been translated to the local one.
+        $alertId = DeviceMintedRowId::mint();
 
         $row = [
             'user_id' => $user->id,

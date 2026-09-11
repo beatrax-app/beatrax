@@ -225,12 +225,13 @@ Modules/Recurring/
 - `Internal/Detectors/OccurrenceWriter::write($userId,
   $seriesId, $rows, $currency)` — the `insertOrIgnore` into
   `recurring_series_occurrences`, called by both the insert and
-  the refresh arm. Each row carries the id
-  `OccurrenceWriter::idFor()` derives from
-  `(recurring_series_id, transaction_id)`, and the rows this
-  device did not already hold are captured as creates. Which
-  ones those are is asked BEFORE the write: `insertOrIgnore`
-  reports nothing per row.
+  the refresh arm. Each row carries a minted id — the pair
+  `rec_occ_uniq` names holds a transaction id each device counts
+  for itself, so folding it named another charge on the peer —
+  and the rows this device did not already hold are captured as
+  creates. Which ones those are is asked BEFORE the write, keyed
+  on the charge rather than on the id: `insertOrIgnore` reports
+  nothing per row.
 - `Internal/Support/DerivedSeriesId::for($userId, $direction,
   $counterpartyKey, $currency)` — the `recurring_series` id both
   devices compute. Not the table's UNIQUE; see

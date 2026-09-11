@@ -5,11 +5,11 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Internal\Http\Livewire\ChainHintsQueue;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -74,7 +74,7 @@ beforeEach(function (): void {
     // The row CreateChainLinkFromHint writes for a receipt that surfaced a card
     // last-four, spelled exactly as that listener spells it.
     $this->db->connection()->table('chain_links')->insert([
-        'id' => ChainLinkInsertHelper::idFor($this->user->id, (int) $charge->id, null, 'funded_by_card_hint'),
+        'id' => DeviceMintedRowId::mint(),
         'user_id' => $this->user->id,
         'from_transaction_id' => $charge->id,
         'to_transaction_id' => null,

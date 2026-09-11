@@ -953,12 +953,22 @@ Three answers make a table safe, and every covered table needs one:
 
 The test between the last two is not whether the row has columns that identify
 it, but **whether those columns are the same on every device**. A foreign key
-usually is not: a parent reconciled through `op_log_row_aliases` is held under a
-*different* id on each side, so an id derived from that key differs per device
-and derives nothing. `forecast_scenario_mutations` and
-`migration_import_baseline` are minted for exactly that reason, while
-`anomaly_suppression_rules` is derived because the alert it hangs off already
-has a derived id.
+almost never is, and this is the rule the five detector tables broke: a parent
+each device numbers for itself is held under a *different* id on each side, so
+an id folded from that key derives nothing — it misses the row it meant and
+lands on one it did not. `forecast_scenario_mutations`,
+`migration_import_baseline`, `anomaly_alerts`, `anomaly_suppression_rules`,
+`chain_links`, `drift_alerts` and `recurring_series_occurrences` are all minted
+for exactly that reason.
+
+`users` is the one parent whose ids do agree: a pairing is per-user, every op
+carries `user_id`, and the backfill scopes every table on it — two devices
+disagreeing about which user this is would exchange nothing at all. So `user_id`
+is the only foreign key an identity tuple may name.
+`ADerivedIdFoldsNoColumnADeviceCountsForItselfArchTest` reads every
+`DerivedRowId::for()` tuple off the source and every foreign key off the live
+schema, and fails on any other crossing — five call sites got this wrong at once
+because nothing checked.
 
 Deriving where a row is an **event** is the worse mistake, not the safer one: two
 deposits of the same amount into one pot on one day are two deposits, and an id
@@ -2140,27 +2150,50 @@ system-wide row for that reason and captures an owned one, from both paths that
 acknowledge: the banner's button via `AcknowledgeSystemAlert`, and the OAuth
 callback that clears the re-consent banner when the user finishes reconnecting.
 
-### `anomaly_alerts` gets an id both devices compute
+### `anomaly_alerts` gets an id no second device can land on
 
 A detector-written table cannot be captured while its primary key is an
-autoincrement. Both devices run the same detector, so each mints its own id for
-the same logical row; the idempotency UNIQUE then drops whichever create lands
-second, and the losing device's later SETs name a pk it does not hold.
+autoincrement. Both devices run the same detector, so each takes its own next
+number for the same logical row; the idempotency UNIQUE then drops whichever
+create lands second, and the losing device's later SETs name a pk it does not
+hold.
 
-`anomaly_alerts` is the first of the five out of that hole. Its id is now
-`Core\Public\Support\DerivedRowId::for('anomaly_alerts', [user_id,
-transaction_id])` — the columns `anomaly_alerts_uniq` already names, folded
-through sha256 into a positive 63-bit integer. Sixty-three and not sixty-four
-because SQLite's `INTEGER` and PHP's `int` are both signed: a set top bit would
-read back as a negative id.
+`anomaly_alerts` was the first of the five out of that hole, and it went out of
+it twice. The first answer was a derived id over `(user_id, transaction_id)`,
+on the stated ground that "the transaction's own id means the same thing on both
+devices because transactions already sync with their primary key preserved".
+That is not so. Transactions are ingested independently on each device and
+reconciled by `transactions_fingerprint_uq` through `PeerRowAliases`, which is
+the *first* answer in the table above, not pk-preservation: the same charge
+wears a different id on the peer, and the same id names a different charge.
 
-The tuple works because neither half of it moves. An alert is opened against one
-charge and stays against it, and the transaction's own id means the same thing
-on both devices because transactions already sync with their primary key
-preserved. Two devices therefore compute the same number, the second create
-collides harmlessly on the primary key — `CreateRowInsertFailure::AlreadyPresent`
-— and a later acknowledge lands on a row that exists. `AnomalyAlertConvergenceTest` replays exactly that: two independent
-creates plus one SET, ending as one row in the acknowledged state.
+What that produced, traced through `op_log_entries` on a paired install: the
+phone's alerts arrived carrying the phone's transaction ids, satisfied their
+foreign key against unrelated local charges, and seven of thirty-three alerts
+ended up stating an amount their own charge does not have — a EUR 85.00 debit
+described as a duplicate of EUR 20.50. Separately, a charge whose number a
+peer's alert had taken could not be given an alert at all: the evaluator's
+insert raised `UNIQUE constraint failed: anomaly_alerts.id`, and because no
+alert existed for *that* transaction the idempotency guard rethrew it.
+
+The id is now `Core\Public\Support\DeviceMintedRowId::mint()` — a random
+positive 63-bit integer, sixty-three and not sixty-four because SQLite's
+`INTEGER` and PHP's `int` are both signed. Two devices meet on
+`anomaly_alerts_uniq` instead: the arriving create has its `transaction_id`
+translated to the local charge, the index refuses it as already present
+(`CreateRowInsertFailure::AlreadyPresent`), and `PeerRowAliases::remember()`
+records the peer's id against the local row so a later acknowledge lands.
+`AnomalyAlertConvergenceTest` replays exactly that — two independent creates
+under two different ids, plus one SET, ending as one row in the acknowledged
+state.
+
+The rows already written are removed by
+`2026_09_11_000001_an_alert_that_states_an_amount_the_charge_it_names_does_not_have`,
+which deletes every alert whose `latest_amount_minor` disagrees with its
+charge's `settled_amount_minor`. Both write paths read that figure off the same
+row, so a disagreement is not a judgement call. It carries no tombstone on
+purpose: the peer's copy of such an alert is correct *there*, and a delete that
+travelled would take a good row with it.
 
 Capture itself is two dispatch sites, because the table has only two writers.
 `AnomalyEvaluator` emits the create. `AnomalyAlertStateMachine` emits the edit,
@@ -2181,35 +2214,56 @@ breaking ties, and the cursor carries both halves.
 had merge rules and travelled in the backfill, and then never moved again: an
 edit made after pairing stayed on the device that made it.
 
-Each now derives its id the same way `anomaly_alerts` does, and
-`uncapturedBacklog()` is empty.
+`uncapturedBacklog()` is empty. Two of the five take an id both devices compute;
+the other three cannot, and mint instead. Which one a table gets is decided by
+the rule above — whether the values in the tuple are the same on every device —
+and not by whether the table has a UNIQUE naming them.
 
-- **`chain_links`** — `(user_id, from_transaction_id, to_transaction_id, kind)`.
-  The table has no UNIQUE of its own, so `ChainLinkInsertHelper`'s own dedupe
-  guard was already the only statement of what makes a link the same link; the
-  id is now that same tuple. The NULL endpoint is carried as a NULL rather than
-  folded to zero, because a hint row and a resolved row off one transaction
-  differ by exactly that column. Nothing in the tuple moves: `kind` is never
-  rewritten, and a hint keeps its NULL endpoint until it is deleted whole.
-- **`recurring_series`** — `(user_id, direction, cluster_counterparty_key,
-  latest_currency)`. Not the table's UNIQUE: that names `cluster_key`, which
-  encodes the cadence band and which `SeriesRefresher` rewrites in place the
-  moment a subscription slips from monthly to quarterly. The counterparty key is
-  what the detector itself falls back to when that happens — it is what
-  `rec_series_cluster_cp_key_idx` exists for — and both detectors group their
-  transactions by exactly (counterparty key, currency), so one merchant in one
-  currency is one series on every device. `cluster_key` travels as an ordinary
-  mergeable column instead.
-- **`recurring_series_occurrences`** — `(recurring_series_id, transaction_id)`,
-  its own UNIQUE, once the series id above converges.
-- **`drift_alerts`** — `(recurring_series_id, latest_occurrence_id)`, its own
-  UNIQUE. Both halves are frozen at detection.
-- **`savings_insight_dismissals`** — `(user_id, insight_key)`, its own UNIQUE.
-  The key is `"{kind}:{recurring_series_id}"`, so it converges only because the
-  series id does.
+- **`recurring_series`** — derived from `(user_id, direction,
+  cluster_counterparty_key, latest_currency)`. Not the table's UNIQUE: that
+  names `cluster_key`, which encodes the cadence band and which `SeriesRefresher`
+  rewrites in place the moment a subscription slips from monthly to quarterly.
+  The counterparty key is what the detector itself falls back to when that
+  happens — it is what `rec_series_cluster_cp_key_idx` exists for — and both
+  detectors group their transactions by exactly (counterparty key, currency), so
+  one merchant in one currency is one series on every device. `cluster_key`
+  travels as an ordinary mergeable column instead. This is what a correct
+  derivation looks like: every value in it is computed from the charges, not
+  counted by a device.
+- **`savings_insight_dismissals`** — derived from `(user_id, insight_key)`, its
+  own UNIQUE. The key is `"{kind}:{recurring_series_id}"`, so it converges only
+  because the series id does.
+- **`recurring_series_occurrences`** — minted. Its own UNIQUE names
+  `(recurring_series_id, transaction_id)`, and the series id converges, but the
+  transaction id is a number each device counts for itself. The index still
+  makes two devices one row: the arriving create's `transaction_id` is
+  translated, the index refuses it, and the peer's id is aliased onto the local
+  row.
+- **`drift_alerts`** — minted. `drift_alerts_uniq` names
+  `(recurring_series_id, latest_occurrence_id)`, and the occurrence id is now
+  minted too, so the fold named a different month's rise on the peer. Same
+  translate-refuse-alias path.
+- **`chain_links`** — minted, and the `(user_id, from_transaction_id,
+  to_transaction_id, kind)` tuple both write paths already dedupe on is now
+  stated as `chain_links_pair_uq` rather than folded into the id. Two of its four
+  columns are transaction ids, so the fold named a different pair of charges on
+  the peer — a link between two charges that never funded each other.
 
-The same consequence as `anomaly_alerts` followed, in two more places. A derived
-id does not ascend with insertion, so `DriftAlertQuery` now orders
+  A hint carries no `to_transaction_id`, and SQLite counts NULLs as distinct, so
+  the index does not bind one, and two devices each keep their own hint row off
+  one charge. That is a known gap, pinned by
+  `DetectedChainLinkConvergesAcrossDevicesTest`, and it is not a regression: the
+  folded id agreed only when both devices had happened to number the charge
+  alike, which is the same accident that put a peer's link on the wrong pair.
+  Closing it needs a natural key the applier can match without matching a NULL —
+  `PeerRowAliases::identifies()` refuses a null key, and measured against the
+  live schema that refusal is load-bearing for `system_alerts.dedup_key`,
+  `tax_transaction_tags.transaction_split_id` and
+  `migration_source_map.source_external_id`, so it is not something to relax in
+  passing.
+
+The same consequence as `anomaly_alerts` followed, in two more places. Neither a
+derived nor a minted id ascends with insertion, so `DriftAlertQuery` now orders
 `detected_at DESC` with the id breaking ties, and `RecurringSeriesProjector`'s
 newest-first sort orders `created_at DESC` the same way; both resolve the
 cursor's sort value from the cursor row rather than comparing ids. The

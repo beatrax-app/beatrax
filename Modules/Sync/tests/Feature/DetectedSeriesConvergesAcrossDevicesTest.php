@@ -280,7 +280,7 @@ it('collapses two devices detecting the same series into one row, and lands a la
         ->and($this->db->connection()->table('op_log_quarantine')->where('user_id', $userId)->count())->toBe(0);
 });
 
-it('gives two devices the same occurrence id for the same charge', function (): void {
+it('gives one occurrence row to the charge each device recorded under its own id', function (): void {
     $userId = (int) $this->user->id;
     $seriesId = dscDerivedSeriesId($userId);
 
@@ -297,19 +297,29 @@ it('gives two devices the same occurrence id for the same charge', function (): 
     $desktopPks = $occurrenceOpPks($desktopOps);
     sort($desktopPks);
 
+    // The id is minted, so the two devices name different numbers for one charge —
+    // and must not need to agree. `rec_occ_uniq` is what says they are one row.
     expect($phonePks)->toHaveCount(count($this->transactionIds))
-        ->and($phonePks)->toBe($desktopPks);
+        ->and($desktopPks)->toHaveCount(count($this->transactionIds))
+        ->and(array_intersect($phonePks, $desktopPks))->toBe([]);
 
     dscReplay($this->db, ['device-phone' => $phoneKey, 'device-desktop' => $desktopKey], [...$phoneOps, ...$desktopOps], $userId);
 
     $stored = $this->db->connection()->table('recurring_series_occurrences')
         ->where('recurring_series_id', $seriesId)
-        ->orderBy('id')
         ->pluck('id')
         ->map(static fn (mixed $id): int => (int) $id)
         ->all();
     sort($stored);
 
+    // One row per charge, under the ids that arrived first, and the second
+    // device's ids remembered against them rather than quarantined.
+    $aliases = $this->db->connection()->table('op_log_row_aliases')
+        ->where('user_id', $userId)
+        ->where('table_name', 'recurring_series_occurrences')
+        ->count();
+
     expect($stored)->toBe($phonePks)
+        ->and($aliases)->toBe(count($this->transactionIds))
         ->and($this->db->connection()->table('op_log_quarantine')->where('user_id', $userId)->count())->toBe(0);
 });

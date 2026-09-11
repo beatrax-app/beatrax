@@ -8,9 +8,13 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Internal\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Support\DerivedRowId;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Sync\Public\Events\EntityMutated;
 
+// Minted, not derived: what makes a link the same link is (user, from, to,
+// kind), and both transaction ids in it are autoincrements each device counts
+// for itself — folding them named another pair of charges on the peer.
+// `chain_links_pair_uq` states that tuple where the database can enforce it.
 /**
  * @internal Resolvers only.
  */
@@ -23,23 +27,6 @@ final readonly class ChainLinkInsertHelper
         private Clock $clock,
         private Dispatcher $events,
     ) {}
-
-    // chain_links has no UNIQUE, so the (user, from, to, kind) tuple both write
-    // paths already dedupe on is the only statement of what makes a link the
-    // same link — and it is the id, because the resolvers run per device and an
-    // autoincrement gave each a different number for one funding pair.
-
-    // None of the four moves after insert: `kind` is never rewritten, and a
-    // hint row keeps its NULL endpoint until it is deleted whole.
-    public static function idFor(int $userId, mixed $fromTransactionId, mixed $toTransactionId, mixed $kind): int
-    {
-        return DerivedRowId::for('chain_links', [
-            'user_id' => $userId,
-            'from_transaction_id' => self::idPartOrNull($fromTransactionId),
-            'to_transaction_id' => self::idPartOrNull($toTransactionId),
-            'kind' => is_string($kind) ? $kind : '',
-        ]);
-    }
 
     /**
      * @param  array<string, mixed>  $row  Required keys: from_transaction_id, kind, state, confidence,
@@ -87,7 +74,7 @@ final readonly class ChainLinkInsertHelper
             'updated_at' => $now,
         ];
 
-        $id = self::idFor($userId, $row['from_transaction_id'], $toTxId, $row['kind']);
+        $id = DeviceMintedRowId::mint();
 
         $connection->table('chain_links')->insert(['id' => $id] + $columns);
 
@@ -121,7 +108,7 @@ final readonly class ChainLinkInsertHelper
             }
             $seen[$key] = true;
 
-            $pending[self::idFor($userId, $row['from_transaction_id'], $toTxId, $row['kind'])] = [
+            $pending[DeviceMintedRowId::mint()] = [
                 'user_id' => $userId,
                 'from_transaction_id' => $row['from_transaction_id'],
                 'to_transaction_id' => $toTxId,
@@ -212,14 +199,6 @@ final readonly class ChainLinkInsertHelper
     private static function idPart(mixed $value): string
     {
         return is_numeric($value) ? (string) (int) $value : '';
-    }
-
-    // The NULL endpoint is a value the identity has to keep, not a missing one:
-    // a hint row and a resolved row off the same transaction differ by exactly
-    // this column, so folding both onto 0 would make them one link.
-    private static function idPartOrNull(mixed $value): ?int
-    {
-        return is_numeric($value) ? (int) $value : null;
     }
 
     private static function encodeEvidence(mixed $evidence): string

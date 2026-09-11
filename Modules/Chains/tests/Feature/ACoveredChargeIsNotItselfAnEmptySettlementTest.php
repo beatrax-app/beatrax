@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
-use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Chains\Public\Http\Livewire\ChainDrawer;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
@@ -68,7 +68,7 @@ function coveredChargeTx(User $user, Account $account, ImportRun $run, int $amou
 function coveredChargeLink(DatabaseManager $db, User $user, int $fromId, int $toId, array $evidence): void
 {
     $db->connection()->table('chain_links')->insert([
-        'id' => ChainLinkInsertHelper::idFor($user->id, $fromId, $toId, 'ics_bulk_settle'),
+        'id' => DeviceMintedRowId::mint(),
         'user_id' => $user->id,
         'from_transaction_id' => $fromId,
         'to_transaction_id' => $toId,

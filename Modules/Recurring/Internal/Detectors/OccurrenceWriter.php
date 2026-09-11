@@ -8,7 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Support\DerivedRowId;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Sync\Public\Events\EntityMutated;
 use stdClass;
 
@@ -25,17 +25,6 @@ final readonly class OccurrenceWriter
         private Dispatcher $events,
     ) {}
 
-    // Derived from the pair the table's own UNIQUE names, and neither half ever
-    // moves: the occurrence one device records for a charge and the one its
-    // peer records for the same charge are then one row rather than two.
-    public static function idFor(int $seriesId, int $transactionId): int
-    {
-        return DerivedRowId::for('recurring_series_occurrences', [
-            'recurring_series_id' => $seriesId,
-            'transaction_id' => $transactionId,
-        ]);
-    }
-
     /**
      * @param  list<stdClass>  $rows
      */
@@ -51,7 +40,7 @@ final readonly class OccurrenceWriter
         foreach ($rows as $row) {
             $transactionId = self::toInt($row->id);
 
-            $payload[self::idFor($seriesId, $transactionId)] = [
+            $payload[$transactionId] = [
                 'user_id' => $userId,
                 'recurring_series_id' => $seriesId,
                 'transaction_id' => $transactionId,
@@ -65,11 +54,28 @@ final readonly class OccurrenceWriter
 
         // Asked BEFORE the write: insertOrIgnore reports nothing per row, and a
         // create op for a row this device already held republishes a create it
-        // has already published once.
-        $held = $this->heldIds(array_keys($payload));
+        // has already published once. Keyed on the charge rather than on the id,
+        // which is now minted and so says nothing about what the row is.
+        $held = $this->heldTransactionIds($seriesId, array_keys($payload));
+
+        // Minted, not derived: `transaction_id` is counted by each device for
+        // itself, so folding it named one charge here and another there.
+        // `rec_occ_uniq` is what makes two devices one row.
+        $fresh = [];
+        foreach ($payload as $transactionId => $columns) {
+            if (isset($held[$transactionId])) {
+                continue;
+            }
+
+            $fresh[DeviceMintedRowId::mint()] = $columns;
+        }
+
+        if ($fresh === []) {
+            return;
+        }
 
         $insert = [];
-        foreach ($payload as $id => $columns) {
+        foreach ($fresh as $id => $columns) {
             $insert[] = ['id' => $id] + $columns;
         }
 
@@ -81,11 +87,7 @@ final readonly class OccurrenceWriter
             return;
         }
 
-        foreach ($payload as $id => $columns) {
-            if (isset($held[$id])) {
-                continue;
-            }
-
+        foreach ($fresh as $id => $columns) {
             $this->events->dispatch(new EntityMutated(
                 table: 'recurring_series_occurrences',
                 pk: $id,
@@ -97,15 +99,20 @@ final readonly class OccurrenceWriter
     }
 
     /**
-     * @param  list<int>  $ids
+     * @param  list<int>  $transactionIds
      * @return array<int, true>
      */
-    private function heldIds(array $ids): array
+    private function heldTransactionIds(int $seriesId, array $transactionIds): array
     {
         $held = [];
 
-        foreach ($this->db->connection()->table('recurring_series_occurrences')->whereIn('id', $ids)->pluck('id') as $id) {
-            $held[self::toInt($id)] = true;
+        $rows = $this->db->connection()->table('recurring_series_occurrences')
+            ->where('recurring_series_id', $seriesId)
+            ->whereIn('transaction_id', $transactionIds)
+            ->pluck('transaction_id');
+
+        foreach ($rows as $transactionId) {
+            $held[self::toInt($transactionId)] = true;
         }
 
         return $held;

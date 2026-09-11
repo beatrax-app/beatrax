@@ -110,7 +110,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Categorization/Public/Enums/RuleCombinator.php',
         'Modules/Categorization/Public/Services/CategorizationRuleQuery.php',
         'Modules/Categorization/Public/Services/UncategorizedTriageQuery.php',
-        'Modules/Chains/Public/Actions/ConfirmChainLink.php',
         'Modules/Chains/Public/Actions/RejectChainLink.php',
         'Modules/Chains/Public/Dto/ChainLinkHintRow.php',
         'Modules/Chains/Public/Dto/ChainLinkRow.php',

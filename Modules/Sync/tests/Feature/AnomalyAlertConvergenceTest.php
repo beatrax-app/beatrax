@@ -7,7 +7,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Support\DerivedRowId;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
@@ -18,9 +18,16 @@ use Modules\Sync\Public\Events\EntityMutated;
 uses(RefreshDatabase::class);
 
 // The detector runs on every paired device, so both open an alert for the same
-// charge. Under an autoincrement id each minted a different one, the UNIQUE on
+// charge. Under an autoincrement id each took a different one, the UNIQUE on
 // transaction_id dropped whichever create landed second, and that device's
 // later acknowledge named a pk its peer had never held.
+
+// The id was briefly folded from (user_id, transaction_id) so the two would
+// agree. They did not: a charge's id is a number each device counts for itself,
+// so the fold named a different charge on the peer. The id is minted now, the
+// two devices never agree on it, and `anomaly_alerts_uniq` is what makes them
+// one row — the arriving create's transaction_id translated, the index refusing
+// it, the peer's id remembered against the local row.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-08-20 09:00:00');
@@ -143,12 +150,14 @@ function anomalyConvergeOpsAfter(DatabaseManager $db, int $userId, int $afterId)
 // The local row is removed afterwards, so the assertions can only be satisfied
 // by what replay rebuilds.
 /**
- * @return array{0: string, 1: list<OpLogEntry>}
+ * @return array{0: string, 1: list<OpLogEntry>, 2: int}
  */
-function anomalyConvergeOpenOnDevice(DatabaseManager $db, int $userId, string $deviceId, int $transactionId, int $alertId): array
+function anomalyConvergeOpenOnDevice(DatabaseManager $db, int $userId, string $deviceId, int $transactionId): array
 {
     $devicePublicKey = anomalyConvergeBindWriter($userId, $deviceId);
     $watermark = anomalyConvergeMaxOpLogId($db);
+
+    $alertId = DeviceMintedRowId::mint();
 
     $row = [
         'user_id' => $userId,
@@ -178,29 +187,49 @@ function anomalyConvergeOpenOnDevice(DatabaseManager $db, int $userId, string $d
     $ops = anomalyConvergeOpsAfter($db, $userId, $watermark);
     $db->connection()->table('anomaly_alerts')->where('id', $alertId)->delete();
 
-    return [$devicePublicKey, $ops];
+    return [$devicePublicKey, $ops, $alertId];
 }
 
-it('gives two devices the same anomaly alert id for the same charge', function (): void {
+it('gives one row to the charge two devices each opened an alert on', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $userId = (int) $this->user->id;
     $transactionId = anomalyConvergeTransaction($db, $userId);
 
-    $onPhone = DerivedRowId::for('anomaly_alerts', ['user_id' => $userId, 'transaction_id' => $transactionId]);
-    $onDesktop = DerivedRowId::for('anomaly_alerts', ['user_id' => $userId, 'transaction_id' => $transactionId]);
+    [$phoneKey, $phoneOps, $onPhone] = anomalyConvergeOpenOnDevice($db, $userId, 'device-phone', $transactionId);
+    [$desktopKey, $desktopOps, $onDesktop] = anomalyConvergeOpenOnDevice($db, $userId, 'device-desktop', $transactionId);
 
-    expect($onPhone)->toBe($onDesktop)
+    expect($onPhone)->not->toBe($onDesktop)
         ->and($onPhone)->toBeGreaterThan(0)
-        ->and($onPhone)->toBeLessThanOrEqual(PHP_INT_MAX);
+        ->and($onDesktop)->toBeLessThanOrEqual(PHP_INT_MAX)
+        ->and($phoneOps)->not->toBeEmpty()
+        ->and($desktopOps)->not->toBeEmpty();
 
-    // A different charge is a different alert, so the identity has to separate
-    // them — otherwise convergence would be indistinguishable from collapsing
-    // every alert this user has onto one row.
+    $replayer = new OpLogReplayer(
+        $db,
+        ['device-phone' => $phoneKey, 'device-desktop' => $desktopKey],
+        new MergeRulesRegistry,
+    );
+    $replayer->replay([...$phoneOps, ...$desktopOps], $userId);
+
+    $alerts = $db->connection()->table('anomaly_alerts')->where('user_id', $userId)->get();
+    $aliases = $db->connection()->table('op_log_row_aliases')
+        ->where('user_id', $userId)
+        ->where('table_name', 'anomaly_alerts')
+        ->count();
+
+    // A different charge is a different alert, so a second one must not fold
+    // onto this row — otherwise convergence would be indistinguishable from
+    // collapsing every alert this reader has onto one.
     $otherTransactionId = anomalyConvergeTransaction($db, $userId);
-    $other = DerivedRowId::for('anomaly_alerts', ['user_id' => $userId, 'transaction_id' => $otherTransactionId]);
+    [, $otherOps] = anomalyConvergeOpenOnDevice($db, $userId, 'device-phone', $otherTransactionId);
+    $replayer->replay($otherOps, $userId);
 
-    expect($other)->not->toBe($onPhone);
+    expect($alerts)->toHaveCount(1)
+        ->and((int) $alerts[0]->transaction_id)->toBe($transactionId)
+        ->and($aliases)->toBe(1)
+        ->and($db->connection()->table('anomaly_alerts')->where('user_id', $userId)->count())->toBe(2)
+        ->and($db->connection()->table('op_log_quarantine')->where('user_id', $userId)->count())->toBe(0);
 });
 
 it('collapses two devices opening the same alert into one row, and lands a later acknowledge on it', function (): void {
@@ -209,22 +238,20 @@ it('collapses two devices opening the same alert into one row, and lands a later
     $userId = (int) $this->user->id;
     $transactionId = anomalyConvergeTransaction($db, $userId);
 
-    $alertId = DerivedRowId::for('anomaly_alerts', ['user_id' => $userId, 'transaction_id' => $transactionId]);
-
-    [$phoneKey, $phoneOps] = anomalyConvergeOpenOnDevice($db, $userId, 'device-phone', $transactionId, $alertId);
-    [$desktopKey, $desktopOps] = anomalyConvergeOpenOnDevice($db, $userId, 'device-desktop', $transactionId, $alertId);
+    [$phoneKey, $phoneOps, $onPhone] = anomalyConvergeOpenOnDevice($db, $userId, 'device-phone', $transactionId);
+    [$desktopKey, $desktopOps, $onDesktop] = anomalyConvergeOpenOnDevice($db, $userId, 'device-desktop', $transactionId);
 
     expect($phoneOps)->not->toBeEmpty()->and($desktopOps)->not->toBeEmpty();
 
-    // The desktop then acknowledges it. Under the old autoincrement this SET
-    // named the id the desktop had minted locally, which the phone's create had
-    // already displaced — the edit landed on nothing.
+    // The desktop then acknowledges it, naming the id IT holds. The phone's
+    // create is the one that lands first, so the SET has to reach that row
+    // through the alias rather than through a number the two ever shared.
     anomalyConvergeBindWriter($userId, 'device-desktop');
     $watermark = anomalyConvergeMaxOpLogId($db);
 
     app(Dispatcher::class)->dispatch(new EntityMutated(
         table: 'anomaly_alerts',
-        pk: $alertId,
+        pk: $onDesktop,
         userId: $userId,
         mutationType: 'edit',
         dirtyFields: ['state' => 'acknowledged', 'actioned_at' => '2026-08-05 08:00:00'],
@@ -233,8 +260,6 @@ it('collapses two devices opening the same alert into one row, and lands a later
     $acknowledgeOps = anomalyConvergeOpsAfter($db, $userId, $watermark);
     expect($acknowledgeOps)->not->toBeEmpty();
 
-    expect($db->connection()->table('anomaly_alerts')->where('id', $alertId)->count())->toBe(0);
-
     $replayer = new OpLogReplayer(
         $db,
         ['device-phone' => $phoneKey, 'device-desktop' => $desktopKey],
@@ -242,13 +267,13 @@ it('collapses two devices opening the same alert into one row, and lands a later
     );
     $replayer->replay([...$phoneOps, ...$desktopOps, ...$acknowledgeOps], $userId);
 
-    expect($db->connection()->table('anomaly_alerts')->where('user_id', $userId)->count())->toBe(1);
+    $alert = $db->connection()->table('anomaly_alerts')->where('user_id', $userId)->first();
 
-    $alert = $db->connection()->table('anomaly_alerts')->where('id', $alertId)->first();
-    expect($alert)->not->toBeNull();
-    expect((int) $alert->transaction_id)->toBe($transactionId);
-    expect((string) $alert->state)->toBe('acknowledged');
-    expect((string) $alert->actioned_at)->toBe('2026-08-05 08:00:00');
-
-    expect($db->connection()->table('op_log_quarantine')->where('user_id', $userId)->count())->toBe(0);
+    expect($db->connection()->table('anomaly_alerts')->where('user_id', $userId)->count())->toBe(1)
+        ->and($alert)->not->toBeNull()
+        ->and((int) $alert->id)->toBe($onPhone)
+        ->and((int) $alert->transaction_id)->toBe($transactionId)
+        ->and((string) $alert->state)->toBe('acknowledged')
+        ->and((string) $alert->actioned_at)->toBe('2026-08-05 08:00:00')
+        ->and($db->connection()->table('op_log_quarantine')->where('user_id', $userId)->count())->toBe(0);
 });

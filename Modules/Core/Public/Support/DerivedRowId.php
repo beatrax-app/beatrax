@@ -13,9 +13,12 @@ final class DerivedRowId
     private const int HIGH_HALF_HEX_DIGITS = 16;
 
     /**
-     * @param  array<string, int|string|null>  $identity  The columns the table's
-     *                                                    idempotency UNIQUE names, in a fixed order — a different
-     *                                                    order is a different id, so callers must not vary it.
+     * @param  array<string, int|string|null>  $identity  Values every device computes
+     *                                                    ALIKE, in a fixed order — a different order is a different
+     *                                                    id, so callers must not vary it. Never a column a device
+     *                                                    counts for itself: the table's idempotency UNIQUE often
+     *                                                    names one, and an id folded from it names a different row
+     *                                                    on the peer. Mint instead and let the index reconcile.
      */
     public static function for(string $table, array $identity): int
     {

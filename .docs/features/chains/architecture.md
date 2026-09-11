@@ -218,10 +218,20 @@ rejected-pair non-re-proposal work — a row the user manually rejected
 stays rejected because the guard refuses to write a fresh candidate
 for the same pair.
 
-That same tuple is now the row's primary key, folded through
-`DerivedRowId::for('chain_links', ...)`. The table has no UNIQUE, so this guard
-was the only statement anywhere of what makes a link the same link; making it
-the id is what lets two devices resolve one hint into one row instead of two.
+That same tuple is now `chain_links_pair_uq`, so the guard is stated where the
+database can enforce it rather than only in this class. It was briefly the row's
+primary key instead, folded through `DerivedRowId::for('chain_links', ...)` —
+but two of its four columns are transaction ids each device counts for itself,
+so the number named a different pair of charges on the peer. The id is minted
+now and the index is what two devices meet on.
+
+A hint carries no `to_transaction_id`, and SQLite counts NULLs as distinct, so
+the index does not bind one: two devices each keep their own hint row off one
+charge. They never met before either — the folded id agreed only when both
+devices happened to have numbered the charge alike, which is the same accident
+that put a peer's link on the wrong pair. Closing it needs a key the applier can
+match without matching a NULL, which `PeerRowAliases::identifies()` refuses by
+design. `DetectedChainLinkConvergesAcrossDevicesTest` pins both halves.
 See [the sync architecture](../sync/architecture.md#capture-for-the-last-five-detector-driven-tables).
 
 When `to_transaction_id` is NULL (the exceeded-tolerance

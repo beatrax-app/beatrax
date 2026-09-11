@@ -14,7 +14,7 @@ use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertDismissed;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Support\DerivedRowId;
+use Modules\Core\Public\Support\DeviceMintedRowId;
 use Modules\Sync\Public\Events\EntityMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -99,14 +99,10 @@ final readonly class DismissAnomalyAlertAsExpected
                 'created_at' => $nowString,
                 'updated_at' => $nowString,
             ];
-            // Derived rather than taken from the autoincrement: two devices
-            // used while apart both take the next one, and this table declares
-            // no unique index to tell the two rows apart. The alert's own id is
-            // already derived, so both devices compute this one alike.
-            $ruleId = DerivedRowId::for('anomaly_suppression_rules', [
-                'source_anomaly_alert_id' => $alert->id,
-                'detector' => $detector->value,
-            ]);
+            // Minted rather than taken from the autoincrement, and not derived:
+            // the alert this hangs off is itself minted per device, and the
+            // band the rule mutes is read off a counterparty id that is too.
+            $ruleId = DeviceMintedRowId::mint();
 
             $connection->table('anomaly_suppression_rules')
                 ->insert([...$row, 'id' => $ruleId, 'user_id' => $user->id]);

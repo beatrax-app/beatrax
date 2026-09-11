@@ -56,11 +56,15 @@ it('replays each corpus fixture through the real evaluator and gets the rows the
     /** @var array{alerts: list<array<string, mixed>>} $expected */
     $expected = $fixture['expected'];
 
+    // In the order the rises happened, read off the occurrence each alert names.
+    // The id is minted, so it never ascended with insertion and never said which
+    // escalation came first.
     $actual = $this->db->connection()->table('drift_alerts')
-        ->where('user_id', $user->id)
-        ->where('recurring_series_id', $seriesId)
-        ->orderBy('id')
-        ->get()
+        ->join('recurring_series_occurrences as o', 'o.id', '=', 'drift_alerts.latest_occurrence_id')
+        ->where('drift_alerts.user_id', $user->id)
+        ->where('drift_alerts.recurring_series_id', $seriesId)
+        ->orderBy('o.observed_at')
+        ->get(['drift_alerts.*'])
         ->all();
 
     expect($actual)->toHaveCount(count($expected['alerts']));

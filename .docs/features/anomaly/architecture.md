@@ -219,27 +219,43 @@ All four jobs route through the shared `AnomalyEvaluator::evaluate()` path
 - **`ReviveExpiredAnomalySnoozesJob`** — flips `snoozed` rows back to
   `open` once `snoozed_until` passes.
 
-## The id is derived, not minted
+## The id is minted, and the charge is what two devices meet on
 
-`anomaly_alerts.id` is not an autoincrement. It is
-`Core\Public\Support\DerivedRowId::for('anomaly_alerts', [user_id,
-transaction_id])` — the sha256 of the columns `anomaly_alerts_uniq` already
-names, folded into a positive 63-bit integer (63 and not 64 because SQLite's
-`INTEGER` and PHP's `int` are both signed).
+`anomaly_alerts.id` is not an autoincrement. `AnomalyEvaluator` mints it with
+`Core\Public\Support\DeviceMintedRowId::mint()` — a random positive 63-bit
+integer (63 and not 64 because SQLite's `INTEGER` and PHP's `int` are both
+signed).
 
-The reason is sync. The detector runs on every paired device, so both of them
-open an alert for the same charge; an autoincrement gave each its own id, the
-UNIQUE dropped whichever create arrived second, and the losing device's later
-acknowledge named a row its peer had never held. Neither half of the tuple ever
-moves — an alert is opened against one charge and stays against it, and the
-transaction's id is device-stable because transactions sync pk-preserved — so
-both devices compute the same number and the duplicate create collides
-harmlessly.
+It was derived, from `(user_id, transaction_id)`, for a reason that was right
+and by a means that was not. The detector runs on every paired device, so both
+open an alert for the same charge, and an autoincrement gave each its own id.
+But `transaction_id` is itself a number each device counts for itself: the same
+charge wears a different id on the peer, and the same id names a different
+charge. An id folded from it therefore did not converge, and worse, it collided
+where nothing should have met. Measured on a paired install: seven of
+thirty-three alerts stated an amount their own charge does not have, and a
+charge whose number a peer's alert had taken could not be given an alert at all
+— the evaluator's insert raised `SQLSTATE[23000] … UNIQUE constraint failed:
+anomaly_alerts.id` and the exception left the import path.
 
-`AUTOINCREMENT` was removed with it. Explicit ids are legal alongside it, but it
-records the highest id ever used in `sqlite_sequence`, and one derived id near
-2^63 would leave any later insert that omitted the column allocating past the
-ceiling.
+What converges the two devices is `anomaly_alerts_uniq`, the UNIQUE on
+`transaction_id`: the arriving create has its `transaction_id` rewritten to the
+local charge by `PeerRowAliases::translate()`, the index refuses it as already
+present, and the peer's id is remembered against the local row so a later
+acknowledge from that device lands. One identity mechanism instead of two.
+
+`AUTOINCREMENT` was removed when the id stopped being one. Explicit ids are
+legal alongside it, but it records the highest id ever used in `sqlite_sequence`,
+and one 63-bit id would leave any later insert that omitted the column
+allocating past the ceiling.
+
+Alerts already stored that state another charge's amount are removed by
+`2026_09_11_000001_an_alert_that_states_an_amount_the_charge_it_names_does_not_have`.
+`latest_amount_minor` is the charge's own `settled_amount_minor` on both write
+paths, so a row where the two disagree describes a charge it does not name, and
+nothing in it says what the detectors would have said about the one it landed
+on. `SafetyNetAnomalySweepJob` re-evaluates a recent charge left without an
+alert, which is what puts a true one back.
 
 Capture rides on the same two writers: `AnomalyEvaluator` emits the create, and
 `AnomalyAlertStateMachine` — the sole legal mutator of `state` — emits the edit
@@ -255,7 +271,7 @@ restricts.
 
 ## Read surfaces
 
-A derived id does not ascend with insertion, so `AnomalyAlertQuery` cannot order
+A minted id does not ascend with insertion, so `AnomalyAlertQuery` cannot order
 or page on it. The list orders `detected_at DESC` with the id breaking ties
 only, backed by the existing `(user_id, state, detected_at)` index, and its
 cursor carries both halves. `DriftAlertQuery` has the same shape, so
