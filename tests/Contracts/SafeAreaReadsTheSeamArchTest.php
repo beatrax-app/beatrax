@@ -691,6 +691,12 @@ it('ships every seam class it compiles', function (): void {
     ]));
 });
 
+// The corner region names its id with a constant, so the markup carries the
+// expression and never the value. Matched as the template writes it, which is
+// also how NothingButTheRegionPinsItselfToTheCornerArchTest names the same
+// element.
+const SAFE_AREA_CORNER_REGION = 'CornerNotices::REGION_ID';
+
 // A `bottom-4` measures its gap from the screen edge, and both phone shells
 // paint that edge under the navigation bar, so the gap the design asked for is
 // spent on the bar and the overlay's own controls stand behind it. Worse than
@@ -700,7 +706,7 @@ it('measures an overlay pinned to the bottom edge from the seam', function (): v
     $seam = safeAreaBottomSeamClasses();
     $offenders = [];
     $read = 0;
-    $anchored = 0;
+    $region = null;
 
     foreach (safeAreaTemplates() as $file) {
         $read++;
@@ -713,17 +719,40 @@ it('measures an overlay pinned to the bottom edge from the seam', function (): v
                 continue;
             }
 
-            $anchored++;
+            $at = $file->getRelativePathname().':'.$element->line($source);
+
+            if (str_contains($element->attribute('id') ?? '', SAFE_AREA_CORNER_REGION)) {
+                $region = ['at' => $at, 'reserved' => safeAreaBottomSeamIsReserved($element, $seam)];
+            }
 
             if (! safeAreaBottomSeamIsReserved($element, $seam)) {
-                $offenders[] = $file->getRelativePathname().':'.$element->line($source);
+                $offenders[] = $at;
             }
         }
     }
 
     expect($read)->toBeGreaterThan(150, 'The template walk read almost nothing, so a clean answer below is the walk being broken rather than the templates being right.');
 
-    expect($anchored)->toBeGreaterThan(3, 'Almost no bottom-anchored overlay was recognised, so this rule judged next to nothing.');
+    // This floor used to be a count of bottom-anchored overlays, over three,
+    // and it broke the day the corner region landed: four boxes that each
+    // pinned themselves to one corner became one that pins and four occupants
+    // that inherit, so the population fell to two while the tree got better.
+    // A count lowered to fit is no longer a floor. The subject is named
+    // instead, which cannot pass once the subject is gone.
+    // One string rather than implode("\n", …): this matcher prints the message
+    // inline, so the line breaks the others rely on ran two sentences together.
+    expect($region)->not->toBeNull(
+        'No element carrying the corner region\'s id is anchored to the bottom of the viewport. '
+        .'Modules/Core/Resources/views/components/corner-notices.blade.php is the one surface the '
+        .'conflict prompt, the standing notices and the toast stack are all drawn on, so it is where '
+        .'the seam is read on behalf of every one of them. If it has moved or stopped anchoring, this '
+        .'rule is judging a tree it no longer describes rather than a tree that is right.',
+    );
+
+    expect($region['reserved'])->toBeTrue(
+        'The corner region at '.$region['at'].' anchors to the bottom edge and reserves nothing, so every '
+        .'notice inside it now sits under the home indicator. It is one class — .safe-lift — for all of them.',
+    );
 
     expect(count($seam))->toBeGreaterThan(1, 'app.css yielded almost no class that reads the bottom seam, so every overlay below is judged against an empty vocabulary.');
 
@@ -736,6 +765,33 @@ it('measures an overlay pinned to the bottom edge from the seam', function (): v
         'it on the row inside instead, so the surface still reaches the edge and only',
         'its content clears the bar.',
     ]));
+});
+
+// The floor above is a name, so it cannot report a healthy tree once the
+// subject is gone. What a name cannot answer is whether the two readers under
+// it still tell an anchored overlay from a static one and a reserved seam from
+// none — a rule whose readers have stopped working reports the same empty list
+// a correct tree does.
+it('tells an overlay pinned to the bottom from one that is not, and a reserved seam from none', function (): void {
+    $seam = safeAreaBottomSeamClasses();
+
+    // in_array rather than toContain: that matcher takes needles, so a message
+    // passed beside one becomes a second thing the array has to hold.
+    expect(in_array('safe-lift', $seam, true))->toBeTrue(
+        'app.css no longer declares .safe-lift against var(--safe-bottom), so the one class every '
+        .'occupant of the corner region depends on is not in the vocabulary this rule judges against.',
+    );
+
+    $bare = MarkupSource::tags('<div class="fixed bottom-4 right-4"></div>')[0];
+    $lifted = MarkupSource::tags('<div class="safe-lift fixed bottom-4 right-4"></div>')[0];
+    $inner = MarkupSource::tags('<footer class="fixed inset-x-0 bottom-0"><div class="safe-lift"></div></footer>')[0];
+    $sideways = MarkupSource::tags('<div class="fixed right-4 top-4"></div>')[0];
+
+    expect(safeAreaAnchorsToTheBottom($bare->classes()))->toBeTrue('A bottom offset stopped reading as an anchor to the bottom edge.')
+        ->and(safeAreaAnchorsToTheBottom($sideways->classes()))->toBeFalse('An overlay with no bottom offset is being judged as one pinned to that edge.')
+        ->and(safeAreaBottomSeamIsReserved($bare, $seam))->toBeFalse('An overlay reserving nothing is being credited with the seam, so this rule can no longer go red.')
+        ->and(safeAreaBottomSeamIsReserved($lifted, $seam))->toBeTrue('An overlay wearing the seam class is being reported as reserving nothing.')
+        ->and(safeAreaBottomSeamIsReserved($inner, $seam))->toBeTrue('A bar reserving the seam on the row inside it is no longer credited for it.');
 });
 
 // The seam classes live in @layer components and every Tailwind spacing

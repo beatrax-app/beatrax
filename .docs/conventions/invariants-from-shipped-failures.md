@@ -7685,6 +7685,89 @@ needle that generated markup answers is a test that cannot go red. The re-apply
 progress strip now asserts its whole sentence rather than the two numbers
 inside it.
 
+## Four overlays pinned to one corner, stacked by nothing
+
+`tests/Contracts/NothingButTheRegionPinsItselfToTheCornerArchTest.php`
+
+Seen on the desktop app with two of them up at once. The bottom-right corner
+held an inbox notice — "An inbox needs reconnecting.", with a link and a close
+control — and, underneath it, the receipt-conflict prompt. All the reader could
+see of that prompt was the tail of its sentence, "future conflicts?", and the
+two buttons "Use receipt" and "Keep statement". The question, and the two
+disagreeing values the question is about, were painted over.
+
+Pressing either button writes `users.receipt_conflict_resolution`, which is the
+preference every later conflict is resolved by. So the reader was configuring
+standing behaviour from a sentence fragment.
+
+Four boxes were at that one address, each pinning itself with `position: fixed`
+and counting its own gap from the same screen edge:
+
+| Surface | Where it pinned itself |
+| --- | --- |
+| The receipt-conflict prompt | `fixed bottom-md right-md z-50` |
+| The dashboard's reauth notice | `fixed bottom-24 right-4 z-50` |
+| The dashboard's failed-chain notice (developers only) | `fixed bottom-4 right-4 z-50` |
+| The global toast stack | `fixed bottom-4 right-4 z-[10000]` |
+
+A fifth, the recurring-review bulk action bar, is centred rather than
+right-anchored (`fixed bottom-4 left-1/2`), and its box crosses the notice
+column's on any window narrower than 1092px.
+
+`bottom-24` is the whole shape in one utility. It is a hand-tuned 96px that
+holds the reauth notice clear of the one box that was below it when somebody
+measured, and it says nothing about a third arrival. The conflict prompt is
+taller than 96px, so the notice covered its top while its buttons stayed
+pressable below. With equal `z-index` the winner is document order, and the
+prompt is mounted by the layout while the notices come from the yielded page, so
+the notices always won.
+
+Two `position: fixed` boxes have no layout relationship with each other. A flex
+column does. `<x-core::corner-notices />` is the one element in the tree allowed
+to pin to this corner; everything that wants to appear there is an occupant of
+it, laid out in a `flex-col-reverse` with a `gap`, which is the arrangement in
+which two of them *cannot* be drawn at one address. An occupant rendered
+elsewhere in the page reaches the region with Livewire's
+`@teleport(CornerNotices::TELEPORT_TARGET)`.
+
+The stack is ordered by what an occupant costs to get wrong, bottom-up:
+`order-1` for a control that must be answered, `order-2` for a standing notice,
+`order-3` for the transient toast stack. Putting the decision nearest the corner
+is not cosmetic — the stack grows upwards from the bottom edge, so a toast
+arriving cannot move a button out from under a cursor that was heading for it,
+and the empty toast box spends its gap above everything rather than lifting the
+card below.
+
+The region carries `pointer-events-none` and each occupant `pointer-events-auto`,
+so the gaps between the cards belong to the page underneath.
+
+What the guard holds is the invariant and not the arrangement: nothing but that
+one view may anchor an element to the bottom-right corner, read out of every
+Blade view's `class` attribute and out of the `@class([...])` arrays that build
+the same attribute at runtime. Whether the region is a column or something else
+is then a decision with one site to change, and a decision control can no longer
+be pressable while the sentence it answers is behind another box.
+
+Consolidating also moved a neighbouring guard's ground, and the way it broke is
+worth keeping. `SafeAreaReadsTheSeamArchTest` requires an overlay pinned to the
+bottom edge to reserve the safe-area seam, or its controls stand under the
+navigation bar with nothing to scroll. It proved it had looked at something by
+counting the overlays it recognised — more than three. Four boxes that each
+pinned themselves became one that pins and four occupants that inherit, so the
+population fell to two and the anti-vacuity check failed on a tree that had just
+got better.
+
+Lowering that number to fit would have ended the check: the next change to take
+the last overlay away would then pass in silence, which is the one thing those
+three lines exist to prevent. The floor is a name now — the corner region must
+be among the bottom-anchored elements and must reserve the seam. A name cannot
+be quietly lowered to fit the tree, and it fails when its subject disappears,
+which is exactly what a number set to the current population does not do.
+
+The consolidation cost nothing here: all five of the originals wore
+`.safe-lift`, and the region wears it on behalf of all of them, so every
+occupant clears the bar through one class instead of five.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
