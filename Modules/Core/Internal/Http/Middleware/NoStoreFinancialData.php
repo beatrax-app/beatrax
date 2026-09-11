@@ -18,6 +18,12 @@ final readonly class NoStoreFinancialData
     // recomputed from the shipped file so a package bump can never strand it.
     private const string NATIVE_BRIDGE_JS = 'vendor/nativephp/desktop/resources/electron/electron-plugin/src/preload/livewire-dispatcher.js';
 
+    // The two CSP source tokens this policy repeats. Nine directives are built
+    // from them, and a literal written nine times is a policy nine edits wide.
+    private const string ORIGIN = "'self'";
+
+    private const string NOTHING = "'none'";
+
     // The one directive a route may set for itself: whether this page is meant
     // to be framed is a question only the route knows. Every other directive is
     // an app-wide property no single route is in a position to relax.
@@ -160,23 +166,23 @@ final readonly class NoStoreFinancialData
         // 'unsafe-inline' is deliberately absent (a nonce disables it anyway).
         $nonce = $this->vite->cspNonce();
 
-        $scriptSrc = "'self' 'nonce-{$nonce}' 'unsafe-eval'";
+        $scriptSrc = self::ORIGIN." 'nonce-{$nonce}' 'unsafe-eval'";
         $bridgeHash = $this->nativeBridgeScriptHash();
         if ($bridgeHash !== null) {
             $scriptSrc .= " '{$bridgeHash}'";
         }
 
         return [
-            'default-src' => "'self'",
+            'default-src' => self::ORIGIN,
             'script-src' => $scriptSrc,
-            'style-src' => "'self' 'unsafe-inline'",
-            'img-src' => "'self' data:",
-            'font-src' => "'self' data:",
-            'connect-src' => "'self'",
-            'object-src' => "'none'",
-            'base-uri' => "'self'",
-            'form-action' => "'self'",
-            'frame-ancestors' => "'none'",
+            'style-src' => self::ORIGIN." 'unsafe-inline'",
+            'img-src' => self::ORIGIN.' data:',
+            'font-src' => self::ORIGIN.' data:',
+            'connect-src' => self::ORIGIN,
+            'object-src' => self::NOTHING,
+            'base-uri' => self::ORIGIN,
+            'form-action' => self::ORIGIN,
+            'frame-ancestors' => self::NOTHING,
         ];
     }
 
