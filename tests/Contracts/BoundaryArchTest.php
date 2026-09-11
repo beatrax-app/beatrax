@@ -2649,6 +2649,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Pots/tests/Feature/AMovementKindThisBuildCannotNameIsShownNotThrownTest.php -> Modules\\Sync\\Internal\\OpLog\\OpType',
         'Modules/Receipts/tests/Contracts/FingerprintParityTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Ics\\IcsPdfAdapter',
         'Modules/Receipts/tests/Contracts/FingerprintParityTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Paypal\\PaypalCsvAdapter',
+        'Modules/Receipts/tests/Feature/AReceiptTotalACentApartReachesTheReaderTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\FingerprintStage',
         'Modules/Receipts/tests/Feature/ChainHintFromReceiptTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
         'Modules/Receipts/tests/Feature/ChainHintFromReceiptTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ParseStage',
         'Modules/Receipts/tests/Feature/EmlFileDropTest.php -> Modules\\Import\\Internal\\Http\\Livewire\\UploadWizard',
