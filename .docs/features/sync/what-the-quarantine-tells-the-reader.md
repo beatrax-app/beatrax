@@ -65,7 +65,18 @@ Four-of-fifteen is therefore a **measurement, not a constant**: the moment
 | `TooNew` | `unknown_table`, `unknown_column` | A newer build wrote something this one has no schema for. The change is on the device that made it. | Update Beatrax here. The refused ones are not re-sent, so a change that matters has to be made again on this device. |
 | `UntrustedAuthor` | `missing_device_key`, `unconfirmed_device` | Signed by a device never paired here, or one that was removed. Nothing was written and nothing already here changed. | Nothing, if the removal was deliberate. Otherwise the device list on the same screen. |
 | `NotVerified` | `forged_signature`, `cross_user` | A signature did not verify against the key of the device claiming to have written it, or the entry named a different account. | Check the device list and remove anything unrecognised. Between a household's own devices neither of these should ever happen. |
-| `Diverged` | `incomplete_create_row`, `delete_blocked_by_reference`, `impossible_date`, `primary_key_collision`, `split_would_overfill_transaction` | The write itself could not be made, so the two devices hold different things — a row missing here, or one deleted elsewhere and still here. | Compare the record across the two devices and redo the change here. |
+| `Diverged` | `incomplete_create_row`, `delete_blocked_by_reference`, `impossible_date`, `primary_key_collision`, `unplaceable_collision`, `split_would_overfill_transaction` | The write itself could not be made, so the two devices hold different things — a row missing here, or one deleted elsewhere and still here. | Compare the record across the two devices and redo the change here. |
+
+`primary_key_collision` has since moved into `recoverable()`: the re-home gives
+it a retry and `RetriedCollisionCreates` a retirement, so
+`QuarantineOutcome::reasons()` masks it out of `Diverged` and the reader is told
+about it by `SyncBacklogState` instead. The row above keeps the line because
+`whileTerminal()` does — a reason moving back needs no archaeology to find the
+sentence it used to be given. The half of that event no pass can undo — a
+collision on a table declaring no natural key — is recorded as
+`unplaceable_collision` and is drawn here, so making the first recoverable did
+not cost the second its disclosure. See
+[architecture.md](architecture.md#retrying-a-create-two-devices-minted-one-id-for).
 
 `NotVerified` is the only one painted as a danger. Spending that colour on a
 removed device teaches the reader to read past it, and the one outcome that is a

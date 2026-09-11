@@ -18,7 +18,7 @@ use Tests\Contracts\Support\WireCallableMethods;
 // so the file cannot pass by finding nothing: a case added or removed changes
 // what "every reason" means and the author has to come back here and say what
 // the new one tells a reader.
-const QUARANTINE_READER_REASON_COUNT = 16;
+const QUARANTINE_READER_REASON_COUNT = 17;
 
 // A reason that deliberately reaches no reader, keyed by its backing value and
 // carrying the argument for it. Empty: every reason a device can refuse an

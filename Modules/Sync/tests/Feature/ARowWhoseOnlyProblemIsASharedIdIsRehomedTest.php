@@ -308,7 +308,8 @@ it('stays silent when the create names the row already sitting at that id', func
 
 // The table that has to keep quarantining. `goals` mints its ids rather than
 // declaring a natural key, so nothing can recognise a re-homed goal afterwards
-// and each replay would store another one. The disclosure stays the answer.
+// and each replay would store another one. The disclosure stays the answer,
+// under the reason that says no later pass can change it.
 it('still quarantines a collision on a table with no natural key', function (): void {
     $userId = (int) $this->user->id;
 
@@ -340,5 +341,5 @@ it('still quarantines a collision on a table with no natural key', function (): 
 
     expect($this->db->connection()->table('goals')->where('user_id', $userId)->count())->toBe(1)
         ->and($this->db->connection()->table('goals')->where('id', 4242)->value('name'))->toBe('Nieuwe fiets')
-        ->and(rehomeQuarantineReasons($this->db, $userId))->toContain('primary_key_collision');
+        ->and(rehomeQuarantineReasons($this->db, $userId))->toContain('unplaceable_collision');
 });
