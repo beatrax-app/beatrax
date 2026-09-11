@@ -54,6 +54,20 @@ transaction of its own — which is the call that turns a shared handle into a
 refused write. Session and queue drivers resolve per request, after the boot-time
 purge has run, so they are not exposed to it.
 
+The other half of the rule is what rides the statement. `QueryExecuted` is
+dispatched from `Connection::logQuery()`, after the statement succeeded and
+outside the try that turns a driver error into a `QueryException` — so a
+listener there runs inside a transaction it cannot see, and whatever it raises
+is reported as somebody else's statement failing. It must contain its own
+failures, and must not reach anything that opens a transaction of its own.
+
+Both halves are held by
+[`tests/Contracts/ARiderOnEveryStatementCannotOpenATransactionArchTest.php`](../../../tests/Contracts/ARiderOnEveryStatementCannotOpenATransactionArchTest.php),
+which pins the set of `QueryExecuted` listeners and the set of connection
+purges. A purge over a name nothing is built over is legitimate and is pinned
+there with its reason — `RestoreEncryptedBackup` configures and drops a private
+`_restore_verify` connection inside one method to run a single `PRAGMA`.
+
 ## What it cost
 
 Measured on a Galaxy A51 on 2026-09-11. The phone's cache store had been built
