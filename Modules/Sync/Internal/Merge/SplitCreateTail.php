@@ -34,19 +34,24 @@ final class SplitCreateTail
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
-    // Fills only the columns the stored row never received — still holding the
+    // Only the columns the stored row never received -- still holding the
     // schema default, or null. A column carrying anything else was written by
     // somebody, and a replayed create must not talk over an edit that followed
     // it.
+
+    // Separated from the write so the caller can gate on `after`, the row this
+    // would leave behind. Judging the payload instead refused a tail over a
+    // column it was never going to touch, and that reason is not recoverable.
     /**
      * @param  array<string, mixed>  $payload
+     * @return array{values: array<string, mixed>, after: array<string, mixed>}|null
      */
-    public function fill(string $table, int|string $pk, array $payload, int $userId, ?string $seededTime = null): void
+    public function planFill(string $table, int|string $pk, array $payload, ?string $seededTime = null): ?array
     {
         $stored = $this->storedRow($table, $pk);
 
         if ($stored === null) {
-            return;
+            return null;
         }
 
         $absent = [];
@@ -69,11 +74,23 @@ final class SplitCreateTail
             }
         }
 
-        if ($absent === []) {
-            return;
-        }
+        return $absent === [] ? null : ['values' => $absent, 'after' => [...$stored, ...$absent]];
+    }
 
-        $this->write($table, $pk, $absent, $userId);
+    // For the arm reaching here from insertCreatedRow's catch: that payload
+    // already passed the gates, and contradicts() has just said the stored row
+    // is the same one. The create path's own tail has no such upstream, so it
+    // calls planFill() and judges `after` before asking for the write.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function fill(string $table, int|string $pk, array $payload, int $userId, ?string $seededTime = null): void
+    {
+        $plan = $this->planFill($table, $pk, $payload, $seededTime);
+
+        if ($plan !== null) {
+            $this->write($table, $pk, $plan['values'], $userId);
+        }
     }
 
     /**
@@ -99,7 +116,7 @@ final class SplitCreateTail
     /**
      * @param  array<string, mixed>  $values
      */
-    private function write(string $table, int|string $pk, array $values, int $userId): void
+    public function write(string $table, int|string $pk, array $values, int $userId): void
     {
         $query = $this->db->connection()->table($table)->where('id', $pk);
 

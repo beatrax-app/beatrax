@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Merge\ArrivingBatch;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
 use Modules\Sync\Internal\Merge\ReplayedRows;
 use Modules\Sync\Internal\Merge\RowOwnership;
@@ -89,8 +90,8 @@ it('keeps the tail of a create that was split across two batches', function (): 
 
     $touched = new ReplayedRows($db);
     $applier = app(OpLogEntryApplier::class);
-    $applier->applyCreates($batchOne, [], $userId, '2026-06-10 12:00:00', $touched);
-    $applier->applyCreates($batchTwo, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($batchOne, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
+    $applier->applyCreates($batchTwo, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     $row = $db->connection()->table('transactions')->where('id', 157)->first();
 
@@ -148,8 +149,8 @@ it('does not call the rest of a create a collision when it seeded the birth time
 
     $touched = new ReplayedRows($db);
     $applier = app(OpLogEntryApplier::class);
-    $applier->applyCreates($batchOne, [], $userId, '2026-06-10 12:00:00', $touched);
-    $applier->applyCreates($batchTwo, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($batchOne, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
+    $applier->applyCreates($batchTwo, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     expect($db->connection()->table('op_log_quarantine')->where('reason', 'primary_key_collision')->count())
         ->toBe(0, 'one create split in two is not two devices minting one id')
@@ -204,8 +205,8 @@ it('never moves a birth time that came off the wire', function (): void {
 
     $touched = new ReplayedRows($db);
     $applier = app(OpLogEntryApplier::class);
-    $applier->applyCreates($first, [], $userId, '2026-06-10 12:00:00', $touched);
-    $applier->applyCreates($second, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($first, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
+    $applier->applyCreates($second, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     // The stored time came off the wire, so it is the peer's answer and not
     // this device's guess. A second create carrying a different one is a real

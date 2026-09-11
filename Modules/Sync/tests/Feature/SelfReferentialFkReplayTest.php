@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Merge\ArrivingBatch;
 use Modules\Sync\Internal\Merge\OpLogEntryApplier;
 use Modules\Sync\Internal\Merge\ReplayedRows;
 use Modules\Sync\Internal\Merge\SelfReferenceDeferral;
@@ -172,8 +173,7 @@ it('applies a mutually-referencing transfer pair without a foreign-key failure',
     $applier->applyCreates(
         selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)),
         [],
-        $userId,
-        '2026-06-10 12:00:00',
+        new ArrivingBatch($userId, '2026-06-10 12:00:00'),
         $touched,
     );
 
@@ -208,7 +208,7 @@ it('leaves a self-reference null when its target never arrives', function (): vo
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
 
-    $applier->applyCreates($creates, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($creates, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     $row = $db->connection()->table('transactions')->where('id', 251)->first(['pair_transaction_id']);
 
@@ -237,8 +237,8 @@ it('resolves a self-reference whose target lands in a later batch', function ():
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
 
-    $applier->applyCreates($first, [], $userId, '2026-06-10 12:00:00', $touched);
-    $applier->applyCreates($second, [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates($first, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
+    $applier->applyCreates($second, [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     $rows = $db->connection()->table('transactions')
         ->whereIn('id', [251, 295])
@@ -269,15 +269,14 @@ it('holds a Set naming a partner that has not arrived, and writes it when it doe
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
 
-    $applier->applyCreates(['transactions' => [251 => $creates['transactions'][251]]], [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates(['transactions' => [251 => $creates['transactions'][251]]], [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     // The pairing Set arrives before the partner row, which is the ordinary
     // shape: a transfer spans two accounts and one statement is one account.
     $applier->applyFieldMerges(
         ['transactions' => [251 => ['pair_transaction_id' => [selfRefSet(251, 295, $userId, 5)]]]],
         [],
-        $userId,
-        '2026-06-10 12:00:00',
+        new ArrivingBatch($userId, '2026-06-10 12:00:00'),
         $pendingDeletes,
         $touched,
     );
@@ -288,7 +287,7 @@ it('holds a Set naming a partner that has not arrived, and writes it when it doe
         ->toBe(0, 'a link waiting for its partner is not a refusal to record')
         ->and($db->connection()->table('transactions')->where('id', 251)->value('pair_transaction_id'))->toBeNull();
 
-    $applier->applyCreates(['transactions' => [295 => $creates['transactions'][295]]], [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates(['transactions' => [295 => $creates['transactions'][295]]], [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     expect((int) $db->connection()->table('transactions')->where('id', 251)->value('pair_transaction_id'))
         ->toBe(295, 'the held link must be written the moment the partner lands');
@@ -308,7 +307,7 @@ it('writes a Set whose partner is already here', function (): void {
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
 
-    $applier->applyCreates(selfRefUnpairedCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates(selfRefUnpairedCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     $applier->applyFieldMerges(
         ['transactions' => [
@@ -316,8 +315,7 @@ it('writes a Set whose partner is already here', function (): void {
             295 => ['pair_transaction_id' => [selfRefSet(295, 251, $userId, 5)]],
         ]],
         [],
-        $userId,
-        '2026-06-10 12:00:00',
+        new ArrivingBatch($userId, '2026-06-10 12:00:00'),
         $pendingDeletes,
         $touched,
     );
@@ -342,15 +340,14 @@ it('clears a link on a Set carrying null, which names no partner to wait for', f
     /** @var OpLogEntryApplier $applier */
     $applier = app(OpLogEntryApplier::class);
 
-    $applier->applyCreates(selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], $userId, '2026-06-10 12:00:00', $touched);
+    $applier->applyCreates(selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched);
 
     // Reclassifying a leg out of the transfer types breaks the pair on both
     // rows, and a cleared link has no referent, so it takes the ordinary path.
     $applier->applyFieldMerges(
         ['transactions' => [251 => ['pair_transaction_id' => [selfRefSet(251, null, $userId, 9)]]]],
         [],
-        $userId,
-        '2026-06-10 12:00:00',
+        new ArrivingBatch($userId, '2026-06-10 12:00:00'),
         $pendingDeletes,
         $touched,
     );
@@ -405,11 +402,11 @@ it('resolves a self-reference from the log when the partner landed in a later se
     // session holding it ended. Two appliers is what that looks like.
     $touched = new ReplayedRows($db);
     app()->make(OpLogEntryApplier::class)->applyCreates(
-        ['transactions' => [251 => $creates['transactions'][251]]], [], $userId, '2026-06-10 12:00:00', $touched,
+        ['transactions' => [251 => $creates['transactions'][251]]], [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched,
     );
     app()->forgetInstance(OpLogEntryApplier::class);
     app()->make(OpLogEntryApplier::class)->applyCreates(
-        ['transactions' => [295 => $creates['transactions'][295]]], [], $userId, '2026-06-10 12:00:00', $touched,
+        ['transactions' => [295 => $creates['transactions'][295]]], [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched,
     );
 
     expect($db->connection()->table('transactions')->where('id', 251)->value('pair_transaction_id'))
@@ -452,7 +449,7 @@ it('leaves a link alone when the sweep finds the column already filled', functio
 
     $touched = new ReplayedRows($db);
     app(OpLogEntryApplier::class)->applyCreates(
-        selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], $userId, '2026-06-10 12:00:00', $touched,
+        selfRefPairCreates($userId, $accountId, selfRefImportRun($db, $userId)), [], new ArrivingBatch($userId, '2026-06-10 12:00:00'), $touched,
     );
 
     // The log says 295, the row says otherwise. A sweep that reaches for a
