@@ -65,6 +65,15 @@ multi-balance PayPal wallet does exactly that, and
 exists because a euro line and a dollar line on one account each have to convert
 at their own rate rather than meeting as bare cents.
 
+Nor does the *single*-balance case have to be a euro one. A PayPal wallet whose
+balance is in pounds settles its dollar purchases in pounds, and the file says
+so; the rollup reads which leg is the balance off the conversion pair rather
+than off a currency literal ([a PayPal wallet that is not in
+euros](../ingestion/a-paypal-wallet-that-is-not-in-euros.md)). Before it did,
+every such row fell back to its merchant's currency, the file named two
+denominations where it holds one, and this page's own rule handed the wallet the
+reader's reporting currency.
+
 So the rule is **unanimity, or nothing**: one currency across every parsed row
 on that IBAN is the account's denomination; two is no answer at all, and the
 reader's reporting currency stands in. `null` is absorbing — once two rows have
