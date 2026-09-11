@@ -298,6 +298,15 @@ non-empty, non-`NOTPROVIDED` `EREF` keyword, that value becomes
 variant) is used; otherwise `sourceRef` stays null — MT940's reference
 channel is intentionally weaker than CAMT.053's `EndToEndId`, and a
 CAMT enrichment pass may overwrite this value later in the pipeline.
+A row is dated on the day the bank BOOKED it — `:61:`'s optional entry
+date (MMDD), falling back to the value date where the line states none —
+and the value date rides along in `value_date`, which is what CSV and
+CAMT.053 do with the same two days. Reading the value date as all three
+filed a charge booked in February with a January value date in January,
+and gave one transaction two fingerprints across two of one bank's own
+exports: the gold `asn-sample-1.csv` books the overdraft-interest row on
+05-02 with a value date of 01-02, and `asn-mt940-sample-1.sta` states it
+as `:61:2602010205` — the same two days, the same row.
 Booking-date normalisation mirrors CSV/CAMT.053 (zeroed to `00:00:00`).
 Multi-statement files: when a file carries a second statement — one
 that opens after the first has been closed by its FINAL `:62F:` balance
