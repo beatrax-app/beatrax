@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
@@ -72,39 +73,72 @@ beforeEach(function (): void {
     $this->txId = taxTamperTransaction($this->user->id);
 });
 
-// Every one of these is a /livewire/update round trip a tampered client can
-// make; the guards behind them are correct and answer by throwing, so what is
-// under test is that the answer reaches the reader as a flash.
+// A tampered /livewire/update round trip is answered in one of two places. A
+// property the reader's own template writes reaches the handler, whose guard
+// throws and whose answer must arrive as a flash. One only the server writes is
+// refused at the boundary by #[Locked], and never reaches a guard at all.
+// tagTransaction() opens the picker and writes the bare tag in one call, which
+// is the only way a reader reaches the picker now that taxPickerTxId is locked.
+// So the row exists before the tampered save, and what must not move is what it
+// carries.
+function taxTamperRow(int $txId): ?object
+{
+    return DB::table('tax_transaction_tags')->where('transaction_id', $txId)->first();
+}
+
 it('flashes rather than 500s on an out-of-range year override', function (): void {
     Livewire::test(TransactionDetail::class, ['transactionId' => $this->txId])
-        ->set('taxPickerTxId', $this->txId)
+        ->call('tagTransaction', $this->txId)
         ->set('pickerYearOverride', 9999)
         ->call('saveTaxCategory')
         ->assertDispatched('toast');
 
-    expect(DB::table('tax_transaction_tags')->where('transaction_id', $this->txId)->exists())->toBeFalse();
+    expect(taxTamperRow($this->txId)?->tax_year_override)->toBeNull();
 });
 
 it('flashes rather than 404s on a deduction category the user does not have', function (): void {
     Livewire::test(TransactionDetail::class, ['transactionId' => $this->txId])
-        ->set('taxPickerTxId', $this->txId)
+        ->call('tagTransaction', $this->txId)
         ->set('pickerCategoryId', 987654)
         ->call('saveTaxCategory')
         ->assertDispatched('toast');
 
-    expect(DB::table('tax_transaction_tags')->where('transaction_id', $this->txId)->exists())->toBeFalse();
+    expect(taxTamperRow($this->txId)?->deduction_category_id)->toBeNull();
 });
 
-it('drops a batch banner whose payload has no counterparty id at all', function (): void {
+// The positive control for the pair above: the same round trip with a category
+// the reader does have writes it, so "unchanged" is a refusal rather than a
+// save path that never works.
+it('writes a deduction category the reader does have', function (): void {
+    $categoryId = (int) DB::table('tax_deduction_categories')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'Office supplies',
+        'status' => 'active',
+        'sort_order' => 0,
+        'created_at' => '2026-01-01 00:00:00',
+        'updated_at' => '2026-01-01 00:00:00',
+    ]);
+
     Livewire::test(TransactionDetail::class, ['transactionId' => $this->txId])
-        ->set('batchSuggestion', ['zzz' => 1])
-        ->call('applyBatchTag')
-        ->assertSet('batchSuggestion', null);
+        ->call('tagTransaction', $this->txId)
+        ->set('pickerCategoryId', $categoryId)
+        ->call('saveTaxCategory');
+
+    expect(taxTamperRow($this->txId)?->deduction_category_id)->toBe($categoryId);
 });
 
-it('drops a batch banner whose counterparty id is not an id', function (): void {
-    Livewire::test(TransactionDetail::class, ['transactionId' => $this->txId])
-        ->set('batchSuggestion', ['counterpartyId' => 'zzz', 'counterpartyName' => 'x', 'untaggedCount' => 4])
-        ->call('applyBatchTag')
-        ->assertSet('batchSuggestion', null);
+// The banner is built by the server and named by no template, so the payload
+// these two used to hand applyBatchTag can no longer be handed to it. The
+// parsing behind it still stands; what is pinned here is that the round trip
+// carrying it is refused before any of that runs.
+it('refuses a batch banner payload with no counterparty id at all', function (): void {
+    expect(fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $this->txId])
+        ->set('batchSuggestion', ['zzz' => 1]))
+        ->toThrow(CannotUpdateLockedPropertyException::class);
+});
+
+it('refuses a batch banner payload whose counterparty id is not an id', function (): void {
+    expect(fn () => Livewire::test(TransactionDetail::class, ['transactionId' => $this->txId])
+        ->set('batchSuggestion', ['counterpartyId' => 'zzz', 'counterpartyName' => 'x', 'untaggedCount' => 4]))
+        ->toThrow(CannotUpdateLockedPropertyException::class);
 });

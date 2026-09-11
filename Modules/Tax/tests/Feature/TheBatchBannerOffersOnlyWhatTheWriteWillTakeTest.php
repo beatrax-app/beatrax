@@ -121,7 +121,7 @@ it('hands the write the same list it counted', function (): void {
 
 it('writes a tag to every row it offered and to none it did not', function (): void {
     Livewire::test(TaxTaggingRefusalHost::class)
-        ->set('batchSuggestion', [
+        ->call('armBatchSuggestion', [
             'counterpartyId' => $this->counterparty->id,
             'counterpartyName' => 'Bol.com',
             'untaggedCount' => 1,
@@ -136,7 +136,7 @@ it('writes a tag to every row it offered and to none it did not', function (): v
 
 it('reports the number it wrote, not the number it was handed', function (): void {
     Livewire::test(TaxTaggingRefusalHost::class)
-        ->set('batchSuggestion', [
+        ->call('armBatchSuggestion', [
             'counterpartyId' => $this->counterparty->id,
             'counterpartyName' => 'Bol.com',
             'untaggedCount' => 1,

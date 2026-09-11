@@ -36,6 +36,7 @@ trait ManagesSplitEditor
     // Distinct from $editingSplit: a freshly-opened, never-saved editor has
     // editingSplit=true but hasPersistedSplit=false. Gates the
     // whole-transaction tax section suppression.
+    #[Locked]
     public bool $hasPersistedSplit = false;
 
     // categoryId is int|string|null because Livewire's <select> wire:model
@@ -45,16 +46,19 @@ trait ManagesSplitEditor
 
     // Computed via the Money value object, never client math. Positive
     // = still to assign, negative = over-allocated, zero = exact.
+    #[Locked]
     public int $remainingMinor = 0;
 
     public ?string $splitError = null;
 
     public bool $confirmUnsplit = false;
 
+    #[Locked]
     public ?int $unsplitSurvivorIndex = null;
 
     public bool $confirmRemoveToOne = false;
 
+    #[Locked]
     public ?int $pendingRemoveIndex = null;
 
     // The parent's own currency, which is the scale every leg amount in this

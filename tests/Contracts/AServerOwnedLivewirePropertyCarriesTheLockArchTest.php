@@ -182,17 +182,26 @@ function clientBoundPropertyNames(): array
  * @param  list<ReflectionMethod>  $methods
  * @return list<string>
  */
-function methodsReadingProperty(string $file, array $methods, string $property): array
+function methodsReadingProperty(array $methods, string $property): array
 {
-    $lines = file($file) ?: [];
+    /** @var array<string, list<string>> $byFile */
+    $byFile = [];
     $readers = [];
 
+    // Read from the file the method is DECLARED in, not from the component's.
+    // Skipping every method whose file differed was skipping every method a
+    // trait brings, and a trait is where shared component state lives -- so the
+    // rule reported those properties as covered having never looked at them.
     foreach ($methods as $method) {
-        if ($method->getFileName() !== $file) {
+        $methodFile = (string) $method->getFileName();
+
+        if ($methodFile === '') {
             continue;
         }
 
-        $body = implode('', array_slice($lines, $method->getStartLine() - 1, $method->getEndLine() - $method->getStartLine() + 1));
+        $byFile[$methodFile] ??= file($methodFile) ?: [];
+        $body = implode('', array_slice($byFile[$methodFile], $method->getStartLine() - 1, $method->getEndLine() - $method->getStartLine() + 1));
+
         if (preg_match('/\$this->'.preg_quote($property, '/').'\b(?!\s*=(?!=))/', $body) === 1) {
             $readers[] = $method->getName();
         }
@@ -238,7 +247,7 @@ function serverOwnedUnlockedProperties(): array
                 continue;
             }
 
-            $readers = methodsReadingProperty($file, $methods, $property->getName());
+            $readers = methodsReadingProperty($methods, $property->getName());
             if ($readers !== []) {
                 $found[$component.'::$'.$property->getName()] = $readers;
             }
