@@ -184,18 +184,26 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
     // rethrown so one poisoned file cannot stall the whole scan.
     private function quarantine(Filesystem $files, LoggerInterface $logger, string $path, string $failedDir, Throwable $e): void
     {
+        // The throwable arrives as a parameter and the catch is one frame up,
+        // so nothing here narrowed it. The adapters below this point read the
+        // ledger, and a QueryException's message is the statement with its
+        // bindings -- which is this receipt's own amount and counterparty.
         $logger->warning(
             'ScanInboxDropFolderJob: per-file processing failed.',
             [
                 'user_id' => $this->userId,
                 'path' => $path,
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
+                ...SafeExceptionContext::refusedCell($e),
             ],
         );
         try {
             $this->moveTo($files, $path, $failedDir);
             $errorPath = $failedDir.'/'.basename($path).'.error.txt';
+            // The sidecar keeps the whole message. It is the reader's own
+            // diagnostic, written beside their own file inside their own data
+            // directory -- not the 0644 daily log the strip above is about, and
+            // the only account of the refusal they are ever given.
             $files->put($errorPath, substr($e->getMessage(), 0, 500));
         } catch (Throwable $inner) {
             $logger->warning(

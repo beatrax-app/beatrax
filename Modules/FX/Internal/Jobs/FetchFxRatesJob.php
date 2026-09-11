@@ -16,6 +16,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\FX\Internal\Exceptions\AllProvidersFailed;
 use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Enums\FxRefreshFailureReason;
@@ -156,10 +157,13 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
                 : FxRefreshFailureReason::Unexpected,
         );
 
+        // The job's last act is an upsert into `exchange_rates`, and no catch
+        // narrowed what reaches here: Laravel hands failed() whatever was
+        // thrown, and a QueryException carries the statement AND its bindings.
+        // The reason and the SQLSTATE separate a lock timeout from a violation.
         $container->make(LoggerInterface::class)->warning('FetchFxRatesJob: giving up on the rate refresh.', [
             'user_id' => $this->userId,
-            'exception' => $exception === null ? null : $exception::class,
-            'message' => $exception?->getMessage(),
+            ...($exception === null ? [] : SafeExceptionContext::describe($exception)),
         ]);
     }
 }

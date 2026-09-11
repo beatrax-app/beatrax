@@ -226,7 +226,10 @@ it('transitions chain_resolution_runs to failed when the JobFailed event fires',
     expect($row->status)->toBe('failed');
     expect($row->last_error)->not->toBeNull();
     expect((string) $row->last_error)->toContain('RuntimeException');
-    expect((string) $row->last_error)->toContain('Synthetic resolver failure');
+    // The class, never the message. `last_error` is a durable column and the
+    // job throws from around a query, so a QueryException's message here would
+    // be the statement with its bindings.
+    expect((string) $row->last_error)->not->toContain('Synthetic resolver failure');
     expect($row->completed_at)->not->toBeNull();
 });
 
@@ -347,5 +350,6 @@ it('fails a reservation the job threw before ever claiming', function (): void {
     $row = ChainResolutionRun::query()->where('user_id', $this->user->id)->latest('id')->firstOrFail();
 
     expect($row->status)->toBe('failed');
-    expect((string) $row->last_error)->toContain('Synthetic wiring failure');
+    expect((string) $row->last_error)->toContain('RuntimeException');
+    expect((string) $row->last_error)->not->toContain('Synthetic wiring failure');
 });

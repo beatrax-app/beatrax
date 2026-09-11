@@ -7,6 +7,7 @@ namespace Modules\Mobile\Internal\Spike;
 use Amp\CancelledException;
 use Amp\TimeoutCancellation;
 use Amp\Websocket\Client\WebsocketConnectException;
+use Error;
 use Illuminate\Console\Command;
 use Modules\Sync\Public\Services\SyncPorts;
 use Throwable;
@@ -56,16 +57,25 @@ final class SpikeSyncDialCommand extends Command
     // / Revolt-driver conflict the on-device run watches for (FAILURE).
     private function reportDialFailure(Throwable $e): int
     {
+        // A supervisor captures this command's stdout to the same kind of file
+        // the logger writes, and nothing narrowed what the loop threw. The two
+        // dial failures name a host and a timeout and no row, so their message
+        // is read where the type is known rather than where it was caught.
         if ($e instanceof WebsocketConnectException || $e instanceof CancelledException) {
+            $dialMessage = $e instanceof WebsocketConnectException ? $e->getMessage() : '';
             $this->warn('mobile:spike-dial: peer unreachable — no desktop sync:serve listening (or connect timed out).');
-            $this->line('  reason: '.$e::class.': '.$e->getMessage());
+            $this->line('  reason: '.$e::class.($dialMessage === '' ? '' : ': '.$dialMessage));
             $this->info('RESULT: SUCCESS (Revolt loop drove to completion; no loop-conflict).');
 
             return self::SUCCESS;
         }
 
+        // An Error is the shape this spike watches for -- a fiber driven from
+        // two loops fails as a TypeError or a fatal, and those messages name
+        // types and callables. Anything else prints its class alone.
+        $loopMessage = $e instanceof Error ? $e->getMessage() : '';
         $this->error('mobile:spike-dial: UNEXPECTED failure driving the event loop.');
-        $this->line('  '.$e::class.': '.$e->getMessage());
+        $this->line('  '.$e::class.($loopMessage === '' ? '' : ': '.$loopMessage));
         $this->info('RESULT: FAILURE (possible native-loop / Revolt-driver conflict).');
 
         return self::FAILURE;
