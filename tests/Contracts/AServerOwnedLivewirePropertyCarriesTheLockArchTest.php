@@ -155,6 +155,7 @@ const SHARED_BINDING_SCOPE = '*';
 function clientBoundPropertyNames(): array
 {
     $names = [];
+    $modulesRoot = str_replace(DIRECTORY_SEPARATOR, '/', base_path('Modules')).'/';
 
     foreach ([base_path('Modules'), base_path('resources')] as $root) {
         if (! is_dir($root)) {
@@ -173,7 +174,7 @@ function clientBoundPropertyNames(): array
                 continue;
             }
 
-            $scope = clientBoundScopeOf(str_replace(base_path().'/', '', $path));
+            $scope = clientBoundScopeOf($path, $modulesRoot);
             $source = (string) file_get_contents($path);
             foreach (SERVER_OWNED_BINDING_PATTERNS as $pattern) {
                 $matches = PatternScan::all($pattern, $source);
@@ -188,13 +189,18 @@ function clientBoundPropertyNames(): array
     return $names;
 }
 
-// Anchored at the front of the REPO-relative path. A checkout directory is
-// free to have "Modules" somewhere in it, and an unanchored match would read
-// the bindings of every module into whatever that segment happened to say.
+// Cut against the walked root rather than matched anywhere in the path. A
+// checkout directory is free to be called Modules, and the mobile composer root
+// reaches this tree through a symlink, so neither the segment nor the prefix
+// base_path() reports can be assumed to sit where an unanchored match looks.
 /** Which bucket a template's bindings belong in: its module, or the shared one. */
-function clientBoundScopeOf(string $relativePath): string
+function clientBoundScopeOf(string $path, string $modulesRoot): string
 {
-    $match = PatternScan::first('#^Modules/([A-Za-z0-9_]+)/#', $relativePath);
+    if (! str_starts_with($path, $modulesRoot)) {
+        return SHARED_BINDING_SCOPE;
+    }
+
+    $match = PatternScan::first('#^([A-Za-z0-9_]+)/#', substr($path, strlen($modulesRoot)));
 
     return $match[1] ?? SHARED_BINDING_SCOPE;
 }
@@ -400,7 +406,8 @@ it('reads a binding into the module whose template writes it', function (): void
         .'module is excusing every other module\'s properties again.'
     );
 
-    expect(clientBoundScopeOf('Modules/Ledger/Resources/views/livewire/reconcile-page.blade.php'))->toBe('Ledger');
-    expect(clientBoundScopeOf('resources/views/layouts/app.blade.php'))->toBe(SHARED_BINDING_SCOPE);
+    expect(clientBoundScopeOf('/repo/Modules/Ledger/Resources/views/livewire/reconcile-page.blade.php', '/repo/Modules/'))->toBe('Ledger');
+    expect(clientBoundScopeOf('/repo/resources/views/layouts/app.blade.php', '/repo/Modules/'))->toBe(SHARED_BINDING_SCOPE);
+    expect(clientBoundScopeOf('/Modules/repo/Modules/Ledger/a.blade.php', '/Modules/repo/Modules/'))->toBe('Ledger');
     expect(clientBoundScopeOfComponent('Modules\\Onboarding\\Internal\\Http\\Livewire\\StartingBalanceCard'))->toBe('Onboarding');
 });
