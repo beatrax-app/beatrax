@@ -23,7 +23,9 @@ use Modules\Core\Public\Exceptions\BoundedReadException;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
+use Modules\EmailScan\Internal\Clients\GmailRawDecodeException;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
+use Modules\EmailScan\Internal\Clients\MessageUnavailableException;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
@@ -389,12 +391,13 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         return $this->storeOrSkip($context, $messageId, $fetchRawEml, $extractInternalDate($msgMeta));
     }
 
-    // One message this device will not hold whole is one message skipped, not
-    // a failed backfill: a refusal let out of the walk abandons every page
-    // after it and leaves the run in error over a single mailbox item.
+    // One message this walk cannot land is one message skipped, not a failed
+    // backfill: a refusal let out of here abandons every page after it, and
+    // with the retry budget spent the rest of the window is never fetched.
+    // Only a failure permanent for this one id may be skipped.
     /**
      * @param  Closure(string): string  $fetchRawEml
-     * @return int 1 once the message is indexed, 0 for one refused as oversized
+     * @return int 1 once the message is indexed, 0 for one skipped
      */
     private function storeOrSkip(
         InboxScanContext $context,
@@ -404,13 +407,22 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     ): int {
         try {
             $context->storeFetchedMessage($messageId, $fetchRawEml($messageId), $internalDate);
+
+            return 1;
         } catch (BoundedReadException $e) {
             $context->skipOversized($messageId, $e);
-
-            return 0;
+        } catch (GmailRawDecodeException $e) {
+            // Bytes this device received and could not read, which is a loss
+            // and not an absence, so the skip is recorded before the walk
+            // goes on without it.
+            $context->recordUndecodableMessage($messageId, $e);
+        } catch (MessageUnavailableException) {
+            // The provider no longer holds the id its own page named. An
+            // absence is what the mailbox is reporting, so there is nothing
+            // of it here to write down.
         }
 
-        return 1;
+        return 0;
     }
 
     // Laravel calls this as a bare `$command->failed($e)` with no container

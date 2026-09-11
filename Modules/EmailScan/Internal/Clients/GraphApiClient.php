@@ -119,7 +119,11 @@ final readonly class GraphApiClient implements GraphApiClientContract
                 'http_errors' => true,
             ]);
         } catch (BadResponseException $e) {
-            throw $this->errorMapper->mapErrorResponse($e->getResponse(), 'GET /me/messages/{id}/$value');
+            throw $this->errorMapper->mapErrorResponse(
+                $e->getResponse(),
+                'GET /me/messages/{id}/$value',
+                expectsMessage: true,
+            );
         } catch (GuzzleException $e) {
             throw new ProviderTransportException(
                 'GraphApiClient: HTTP error fetching raw message — '.$this->errorMapper->safeMessage($e->getMessage()),
