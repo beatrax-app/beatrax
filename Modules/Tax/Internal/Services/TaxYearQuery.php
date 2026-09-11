@@ -15,6 +15,7 @@ use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Support\TaggedRowScope;
 use Modules\Tax\Internal\Support\TaxCorpusWording;
@@ -358,13 +359,9 @@ final readonly class TaxYearQuery
             $legs = $this->db->connection()
                 ->table('transaction_splits')
                 ->whereIn('transaction_id', $chunk)
-                // The denominator this apportionment is taken over: a leg that
-                // is not the reader's would move a figure on their page. The
-                // column is the parent's nullable copy, and a leg carrying none
-                // hangs off a transaction already narrowed to this reader.
-                ->where(static function (Builder $owned) use ($userId): void {
-                    $owned->where('user_id', $userId)->orWhereNull('user_id');
-                })
+                // The denominator this apportionment is taken over, so a leg
+                // that is not the reader's would move a figure on their page.
+                ->tap(static fn (Builder $legs): Builder => SplitLegs::ownedBy($legs, $userId))
                 ->orderBy('transaction_id')
                 ->orderBy('sort_order')
                 ->orderBy('id')

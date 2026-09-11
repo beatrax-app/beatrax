@@ -486,3 +486,40 @@ it('doesNotWriteACategoryOrOpWhenBackingOutOfANeverPersistedSplitEditor', functi
     $tx->refresh();
     expect($tx->category_id)->toBe($this->groceries->id);
 })->group('phase-13.1');
+
+// The editor read the leg's own nullable user_id copy while every other surface
+// read the parent. A leg it could not see is one SaveTransactionSplit's diff
+// never touches, so it survives a save made to sum without it -- and a leg set
+// that does not sum is a broken split, which every fold reads as money still
+// sitting on the parent.
+it('loads a leg of its own transaction whatever the legs user_id copy says', function (): void {
+    $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
+
+    $stranger = User::create([
+        'username' => 'tdst-stranger',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+    ]);
+
+    foreach ([
+        ['user_id' => $this->user->id, 'category_id' => $this->groceries->id, 'settled_amount_minor' => -4000, 'sort_order' => 0],
+        ['user_id' => null, 'category_id' => $this->household->id, 'settled_amount_minor' => -2500, 'sort_order' => 1],
+        ['user_id' => $stranger->id, 'category_id' => $this->household->id, 'settled_amount_minor' => -1500, 'sort_order' => 2],
+    ] as $leg) {
+        DB::table('transaction_splits')->insert($leg + [
+            'transaction_id' => $tx->id,
+            'settled_currency' => 'EUR',
+            'created_at' => CarbonImmutable::now(),
+            'updated_at' => CarbonImmutable::now(),
+        ]);
+    }
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->assertSet('hasPersistedSplit', true)
+        ->assertSet('legs.0.amount', '40.00')
+        ->assertSet('legs.1.amount', '25.00')
+        ->assertSet('legs.2.amount', '15.00')
+        // Every leg of the parent, so the editor's remainder is the real one:
+        // 40 + 25 + 15 against an 80 parent leaves nothing unallocated.
+        ->assertSet('remainingMinor', 0);
+});
