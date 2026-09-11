@@ -8,6 +8,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\StoredCopy;
 use Psr\Log\LoggerInterface;
 
@@ -49,7 +50,7 @@ final readonly class BlindIndexDivergenceAlerts
         } catch (\Throwable $e) {
             $this->logger->warning('BlindIndexDivergenceAlerts: the divergence alert could not be withdrawn.', [
                 'user_id' => $userId,
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }
@@ -73,7 +74,7 @@ final readonly class BlindIndexDivergenceAlerts
         } catch (\Throwable $e) {
             $this->logger->warning('BlindIndexDivergenceAlerts: the divergence alert could not be written.', [
                 'user_id' => $userId,
-                'error' => $e->getMessage(),
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return true;
