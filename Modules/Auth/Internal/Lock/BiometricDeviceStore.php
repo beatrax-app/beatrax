@@ -99,7 +99,8 @@ final readonly class BiometricDeviceStore
     }
 
     // Replay protection: a non-increasing counter suggests a cloned
-    // authenticator, and the caller must reject it before reaching here.
+    // authenticator. The refusal is the WebAuthn validator's, inside the
+    // check() the caller awaits -- not the caller's own, which does not look.
     public function updateCounter(int $id, int $counter): void
     {
         $this->db->connection()

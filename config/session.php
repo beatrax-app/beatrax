@@ -14,7 +14,9 @@ return [
     'expire_on_close' => false,
 
     // Flash data, validation errors and search inputs land in the sessions
-    // table, unreadable to anything opening it outside the app.
+    // table, unreadable to anything opening it outside the app. A literal, not
+    // env(): the payload also carries the app-lock data key on any shape with
+    // no OS key store, so this is not a deployment's to turn off.
     'encrypt' => true,
 
     'files' => UserDataPathService::frameworkPath('sessions'),

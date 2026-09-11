@@ -35,9 +35,25 @@ Route::post('/locale', static function (
 ): RedirectResponse {
     $negotiator->rememberChoice($request->session(), $request->string('code')->toString());
 
-    $back = $request->headers->get('referer');
+    $back = (string) $request->headers->get('referer', '');
+    $origin = $request->getSchemeAndHttpHost();
 
-    return new RedirectResponse(is_string($back) && $back !== '' ? $back : $urls->to('/'));
+    // The Referer is the caller's to write, and it went into Location as typed.
+    // Inert -- CSRF refuses a cross-site POST and the global Referrer-Policy is
+    // no-referrer -- but that is two other decisions holding it up rather than
+    // this one. Followed only where it names this same origin.
+    $absolute = $back === $origin || str_starts_with($back, $origin.'/');
+
+    // A root-relative path is same-origin by construction, and is what a
+    // server-side caller writes. `//host` and `/\host` are not: both parse as
+    // a protocol-relative address rather than as a path on this host.
+    $rooted = str_starts_with($back, '/')
+        && ! str_starts_with($back, '//')
+        && ! str_starts_with($back, '/\\');
+
+    $sameOrigin = $absolute || $rooted;
+
+    return new RedirectResponse($sameOrigin ? $back : $urls->to('/'));
 })->middleware(['web'])->name('locale.switch');
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
