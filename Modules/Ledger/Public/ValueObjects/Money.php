@@ -18,9 +18,10 @@ use ValueError;
  */
 final readonly class Money implements Stringable
 {
-    // The 2-decimal scale factor every parse and format boundary in the repo
-    // multiplies by. Currency::Jpy is declared today and JPY has no minor
-    // unit, so a JPY amount built through this constant is 100x too large.
+    // The fallback scale, for a currency code no currency table knows; two
+    // call sites reach it and both ask for the real one first. Parsing asks
+    // CurrencyScale and formatting asks Brick, because JPY has no minor unit
+    // and a figure built through this constant would be 100x too large.
     public const int MINOR_UNITS_PER_MAJOR = 100;
 
     // Public because an import adapter has to strip these glyphs off a figure
