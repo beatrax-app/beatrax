@@ -599,6 +599,34 @@ claim about a message, so it is made per exception class and checked against
 every `throw` — `InvalidAmountException` carries a raw MT940 `:61:` line and is
 deliberately not marked.
 
+### Two of the three ways it arrives have no catch at all
+
+The rule was written as a walk of `catch` bodies, which is one of the three ways
+a throwable reaches a log line and the only one with a type beside it. A queue
+job's `failed(?Throwable $e)` is called by Laravel as a bare
+`$command->failed($e)` and is handed whatever was thrown, with no catch anywhere
+in the file. A `JobFailed` listener reads it off `$event->exception`. And a catch
+that immediately calls `$this->logFailure($e)` puts the read one frame below the
+body the walk is reading, which is how a rule that was green the day it landed
+still had seven live sites in the tree: a rate refresh giving up after an upsert
+into `exchange_rates`, a chain resolution writing the first line of the message
+into a `last_error` column a screen polls, and a receipt scan copying it into a
+`.error.txt` sidecar that sits beside the file forever.
+
+So the walk reads three regions, not one: a broad `catch`, the body of any
+function whose **parameter** can be bound a `QueryException`, and a read off
+`->exception` — including one lifted into a local first, because that is the
+same read. A parameter type is not a catch type: the list is mostly builtins and
+DTOs, so the catch reader's "a name nobody can resolve is broad" clause is
+dropped there and the narrower question asked directly. The escape is unchanged
+and now works on a property chain: `$event->exception instanceof X ?
+$event->exception->getMessage() : null`.
+
+The sink list grew with it. A `failed()` hook cannot declare collaborators, so
+the one place that is obliged to resolve its logger inline —
+`$container->make(LoggerInterface::class)->warning(...)` — was a sink the walk
+could not see either.
+
 `Modules\Core\Public\Support\NamesTheCellItRefused` is the other half, for a
 refusal whose message must stay dropped because it quotes the cell. The
 migration parsers compose their refusal around a file, a column and the value
