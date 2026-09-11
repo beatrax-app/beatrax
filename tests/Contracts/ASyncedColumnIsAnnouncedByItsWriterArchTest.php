@@ -39,6 +39,12 @@ const SILENT_COLUMN_WRITERS = [
         'announcedBy' => '.docs/features/sync/merge-registry-authoring.md',
         'proves' => '/it \\*\\*announces nothing\\*\\*, and must not/',
     ],
+    'Modules/Ledger/Internal/Services/StripAsnDescriptionDelimiters.php' => [
+        'columns' => ['transactions.description'],
+        'reason' => 'a pure text strip of a value the row already holds, so every device computes the same result from the same input; and it is not once-only -- SweepAsnDelimitersOnUnlock re-runs it, so a row that arrives from a peer after the migration is still reached',
+        'announcedBy' => 'Modules/Ledger/Providers/LedgerServiceProvider.php',
+        'proves' => '/SweepAsnDelimitersOnUnlock::class/',
+    ],
     'Modules/Ledger/Public/Actions/ReassignCounterparty.php' => [
         'columns' => ['transactions.counterparty_id'],
         'reason' => 'both callers announce the column, gated on the affected count this returns',
