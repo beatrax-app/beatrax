@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\CashBook\Internal\Http\Livewire\CashBookPage;
 use Modules\Core\Models\User;
@@ -442,6 +443,36 @@ describe('TransactionsList tax badge', function (): void {
 
         expect($component->get('pickerPostedYear'))->toBe(2026);
         $component->assertDontSee('Assign to tax year');
+    });
+
+    // The year and the dismissal are both read back by tagTransaction(), which
+    // carries #[On] — a listener a `calls` entry reaches by name, so the update
+    // that precedes it is the browser's and both properties are the browser's
+    // unless the lock refuses it.
+    it('refuses a payload choosing the filing year the batch banner counts against', function (): void {
+        $user = badgeUser('tx-list-locked-picker-year-user');
+        $db = app(DatabaseManager::class);
+
+        $clock = Mockery::mock(Clock::class);
+        $clock->allows('now')->andReturn(CarbonImmutable::create(2026, 6, 15));
+        app()->instance(Clock::class, $clock);
+
+        $txId = badgeTx($db, $user->id, null, '2024-03-10 00:00:00');
+
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+        $component->dispatch('tax-tag', id: $txId);
+
+        expect(fn () => $component->set('pickerPostedYear', 1999))
+            ->toThrow(CannotUpdateLockedPropertyException::class);
+    });
+
+    it('refuses a payload silencing the batch banner before the listener reads it', function (): void {
+        $user = badgeUser('tx-list-locked-batch-dismissed-user');
+
+        $component = Livewire::actingAs($user)->test(TransactionsList::class);
+
+        expect(fn () => $component->set('batchSuggestionDismissed', true))
+            ->toThrow(CannotUpdateLockedPropertyException::class);
     });
 
     it('applyBatchTag honours a snapshotted "No category" — it never falls through to live picker state from another row', function (): void {

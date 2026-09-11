@@ -33,8 +33,34 @@ reading it. A method is reachable if its name appears
 - or on the component itself, called by one of its own methods.
 
 Livewire's own protocol is exempt: `mount`, `render`, the `boot`/`hydrate`
-family, the per-property `updatedFoo()` hooks, and anything carrying `#[On]`
-or `#[Computed]`.
+family, the per-property `updatedFoo()` hooks, anything carrying `#[Computed]`,
+and — **for this guard only** — anything carrying `#[On]`.
+
+## Which of those exemptions the endpoint surface shares
+
+Two different questions read the same walk, and only one of them may drop a
+listener.
+
+`WireCallableMethods::invokableOn()` answers *what can a payload call*, and it
+is the set `AServerOwnedLivewirePropertyCarriesTheLockArchTest` reads a
+property's readers out of. Measured against Livewire 3 rather than assumed:
+
+| A `calls` entry naming… | Livewire's answer |
+|---|---|
+| a lifecycle hook, or a trait-suffixed one | `DirectlyCallingLifecycleHooksNotAllowedException` |
+| a `#[Computed]` method | `CannotCallComputedDirectlyException` |
+| an `#[On]` listener | **runs it**, with the payload's own arguments |
+
+`HandleComponents::callMethods()` takes `Utils::getPublicMethodsDefinedBySubClass()`,
+removes `render`, and calls whatever the payload named. `SupportEvents` adds no
+refusal, so a subscription is an endpoint like any other and `invokableOn()`
+returns it.
+
+*This* guard — the one asking whether a caller exists — drops listeners
+itself, through `WireCallableMethods::subscribesToAnEvent()`, because Livewire
+is their caller and no grep can see that. Dropping them inside the walk instead
+took nine properties out of the lock rule's reach, each one read only from
+inside a listener, all of them reading green.
 
 ## The callers a grep cannot see
 
