@@ -395,8 +395,9 @@ final readonly class OpLogEntryApplier
                 $resolved = $this->suppliedDates->normalise($table, $field, $resolved);
 
                 $payload[$field] = $this->projector->reencryptForProjection($table, $field, $resolved, $userId);
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
                 $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
+                $this->reportStrategyError($table, $field, $pk, $fieldEntries[0]->deviceId, $e);
 
                 return null;
             }
@@ -535,9 +536,32 @@ final readonly class OpLogEntryApplier
 
             $this->ownership->scopeToUser($query, $table, $batch->userId)
                 ->update([$field => $columnValue]);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $batch->now);
+            $this->reportStrategyError($table, $field, $pk, $fieldEntries[0]->deviceId, $e);
         }
+    }
+
+    // The quarantine row says an op was refused and under which reason; it has
+    // no column for which FIELD, and `strategy_error` covers a merge, an encode
+    // and a re-seal alike. Both were needed to name this, and both are read off
+    // the coordinate rather than out of the value.
+    /**
+     * @link ../../../../.docs/features/sync/what-the-quarantine-tells-the-reader.md#a-reason-code-is-not-a-cause
+     */
+    private function reportStrategyError(string $table, string $field, int|string $pk, string $deviceId, \Throwable $e): void
+    {
+        // describe() is a strip by design: an exception message can quote the
+        // cell it choked on, and `transactions.note` is sealed at rest. The
+        // class names the failure and can name nothing out of a row.
+        $this->logger?->warning('OpLogEntryApplier: an op could not be merged into the column it names.', [
+            'table' => $table,
+            'field' => $field,
+            'pk' => (string) $pk,
+            'device_id' => $deviceId,
+            'quarantine_reason' => QuarantineReason::StrategyError->value,
+            ...SafeExceptionContext::describe($e),
+        ]);
     }
 
     // Every leg amount this batch will write, under the id THIS device knows

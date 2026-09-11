@@ -210,6 +210,47 @@ sending side: the pre-sync walk counts rows against captured creates for every c
 before it is allowed to record itself as finished, and says what it covered even when it covered
 everything. See [Silence is not a report](pre-sync-history-capture.md#silence-is-not-a-report).
 
+## A reason code is not a cause
+
+A paired phone held 35 `strategy_error` rows — seven distinct rows, each
+re-quarantined on five consecutive passes. Finding out what had actually thrown
+meant pulling the device's SQLite file and reasoning backwards from `raw_value`,
+because the merge layer caught `\Throwable`, recorded the reason code, and
+discarded the exception.
+
+Two facts were missing, and neither is in the row:
+
+- **Which field.** `op_log_quarantine` has a column for the table, the pk, the
+  device and the reason. It has none for the field, and a create is one row per
+  *field*, so the reason names the row and not the column that refused it.
+- **Which failure.** `strategy_error` is recorded from one `try` that spans
+  three different things: resolving the merge strategy, encoding the result for
+  a query binding, and re-sealing it for the projection column. The code is the
+  same whichever threw.
+
+Both are now logged, at `warning`, as the coordinate plus the exception class:
+table, field, pk, device id, and `SafeExceptionContext::describe()`.
+
+**The message is deliberately not logged.** `describe()` is a strip by design —
+a `QueryException` carries the statement *and* its bindings, and here the
+bindings are the reader's data; `transactions.note` is sealed at rest, so a
+message written verbatim puts into a 0644 log file exactly what the column
+encryption keeps out of the database. A class name is a type and can name
+nothing out of a row. The exceptions that have promised otherwise say so by
+implementing `MessageNamesNoUserData`, and nothing reaching this catch does.
+
+**It is not written onto the quarantine row either.** The `reason` values are a
+durable on-disk contract and `raw_value` is the refused entry's own value: the
+row is an index into the log, not a payload for a diagnostic. A column for the
+cause is a schema change plus a reader surface to render it, which is its own
+decision to take; the coordinate is the half that was missing and the half that
+costs nothing.
+
+What this does not buy is a reader-facing answer. The line lands on the device
+that refused the op — a file in the user data directory on a desktop, a cable on
+a phone. It is the difference between a defect that can be diagnosed from the
+outside and one that cannot; it is not a screen.
+
 ## Related
 
 - [Sync architecture](architecture.md) — the merge layer that produces these refusals

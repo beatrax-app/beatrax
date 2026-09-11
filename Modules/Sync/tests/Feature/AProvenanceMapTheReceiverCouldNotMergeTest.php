@@ -13,6 +13,8 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -108,6 +110,52 @@ test('a map an older build wrapped in a string still merges, because its op is s
     expect($phone->table('op_log_quarantine')->pluck('reason')->all())->toBe([])
         ->and($phone->table('transactions')->where('id', $seeded['transactionId'])->value('field_provenance'))
         ->toBe('{"note":"manual"}');
+});
+
+test('a refusal the merge layer swallowed says which field and which failure, and quotes no value', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $keypair = provenanceKeypair();
+    $seeded = provenanceSeedDesktop($db);
+
+    $phone = provenancePhone($db);
+    provenanceSeedPhone($db, $phone, $seeded);
+
+    $logger = new class extends AbstractLogger
+    {
+        /** @var list<array{message: string, context: array<string, mixed>}> */
+        public array $records = [];
+
+        public function log($level, string|Stringable $message, array $context = []): void
+        {
+            $this->records[] = ['message' => (string) $message, 'context' => $context];
+        }
+    };
+
+    app()->instance(LoggerInterface::class, $logger);
+
+    // Neither op can be merged even after the unwrap: a bare string is not a
+    // map however many times it is decoded. One is a Set onto the row the phone
+    // holds, one a create for a row it does not.
+    provenanceReplay($db, $phone, [
+        provenanceSignedEntry($keypair, $seeded['userId'], $seeded['transactionId'], OpType::Set, '"manual"', 1789073094376),
+        provenanceSignedEntry($keypair, $seeded['userId'], $seeded['transactionId'] + 900, OpType::CreateRow, '"manual"', 1789073094377),
+    ], $seeded['userId'], $keypair);
+
+    $refusals = array_values(array_filter(
+        $logger->records,
+        static fn (array $record): bool => str_contains($record['message'], 'could not be merged into the column it names'),
+    ));
+
+    expect($refusals)->toHaveCount(2);
+
+    foreach ($refusals as $refusal) {
+        expect($refusal['context']['field'] ?? null)->toBe('field_provenance')
+            ->and($refusal['context']['table'] ?? null)->toBe('transactions')
+            ->and($refusal['context']['reason'] ?? null)->toBe(UnexpectedValueException::class)
+            ->and($refusal['context'])->not->toHaveKey('message')
+            ->and($refusal['context'])->not->toHaveKey('raw_value');
+    }
 });
 
 /**
@@ -343,4 +391,33 @@ function provenanceReplay(DatabaseManager $db, Connection $phone, array $entries
     } finally {
         $db->setDefaultConnection($previous);
     }
+}
+
+function provenanceSignedEntry(string $keypair, int $userId, int $pk, OpType $opType, string $value, int $hlcL): OpLogEntry
+{
+    $entry = new OpLogEntry(
+        table: 'transactions',
+        pk: $pk,
+        field: 'field_provenance',
+        value: $value,
+        hlcL: $hlcL,
+        hlcC: 0,
+        deviceId: PROVENANCE_DESKTOP,
+        opType: $opType,
+        signature: '',
+        userId: $userId,
+    );
+
+    return new OpLogEntry(
+        table: $entry->table,
+        pk: $entry->pk,
+        field: $entry->field,
+        value: $entry->value,
+        hlcL: $entry->hlcL,
+        hlcC: $entry->hlcC,
+        deviceId: $entry->deviceId,
+        opType: $entry->opType,
+        signature: (new DeviceKeySigner)->sign($entry->signingPayload(), sodium_crypto_sign_secretkey($keypair)),
+        userId: $entry->userId,
+    );
 }
