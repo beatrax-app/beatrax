@@ -57,6 +57,10 @@ final readonly class SourceMapWriter
     // The value this field carried in the export that was last imported. Null
     // means the entity has never been promoted, which is not the same answer as
     // "the source said nothing" and callers must not collapse the two.
+
+    // Newest first, the survivor rule the index migration deduped on: a row a
+    // peer sent before that index existed must not outrank the one this device
+    // last wrote.
     public function baselineFor(User $user, SourceMapKey $key, string $field): ?string
     {
         $connection = $this->db->connection();
@@ -76,6 +80,8 @@ final readonly class SourceMapWriter
             ->where('user_id', $user->id)
             ->where('migration_source_map_id', self::toInt($map->id))
             ->where('field_name', $field)
+            ->orderByDesc('imported_at')
+            ->orderByDesc('id')
             ->value('baseline_value');
 
         return is_string($value) ? $value : null;
@@ -144,6 +150,8 @@ final readonly class SourceMapWriter
         $existing = $connection->table('migration_import_baseline')
             ->where('migration_source_map_id', $mapId)
             ->where('field_name', $field)
+            ->orderByDesc('imported_at')
+            ->orderByDesc('id')
             ->first(['id']);
 
         if ($existing !== null) {
@@ -158,9 +166,9 @@ final readonly class SourceMapWriter
         }
 
         // Minted rather than taken from the autoincrement: two devices used
-        // while apart both take the next one, and this table declares no
-        // unique index to tell the rows apart. Not derived — the map row it
-        // hangs off is matched by its natural key, so its id is this device's.
+        // while apart both take the next one. The UNIQUE index this table now
+        // carries does not answer that — its leading column is the parent's
+        // own autoincrement, which agrees across devices only after the alias.
         $connection->table('migration_import_baseline')->insert([
             'id' => DeviceMintedRowId::mint(),
             'user_id' => $user->id,

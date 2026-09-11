@@ -168,17 +168,43 @@ insert with the same `NULL source_external_id` would otherwise slip past the
 constraint entirely and create a duplicate map row. `record()` also
 snapshots `$baselineFields`, one `migration_import_baseline` row per field,
 upserted on `(migration_source_map_id, field_name)` so a re-import advances
-the same row rather than accumulating history. When a source format carries no stable per-entity id (YNAB4/
-nYNAB accounts and payees), a `natural_key` (normalized name, or
-`"<group>/<name>"` for categories) is consulted instead — but only among rows
-that themselves carry no `source_external_id`, so an entity that DOES have a
-stable id never falls back to a natural-key match (a rename then correctly
-surfaces as "field changed" rather than silently resolving to the old key).
-Category natural keys are tagged with a fixed `'cat:'` prefix and group
-synthetic-parent keys with a fixed `'grp:'` prefix — both unconditionally
-prepended regardless of source content, so the two keyspaces are provably
-disjoint for any possible group/category name, including a group literally
-named "Group".
+the same row rather than accumulating history.
+
+**That natural-key path has no production caller.** `SourceMapKey::$naturalKey`
+is `null` at all fourteen call sites, and every one of them passes a non-null
+`sourceExternalId`, so `migration_source_map.natural_key` is uniformly `NULL`
+and no production row has `source_external_id IS NULL`. Where a source format
+carries no stable per-entity id, the parser synthesises one *into
+`source_external_id`* instead: `AbstractYnabParser::naturalCategoryKey()` emits
+`'cat:' . group . '/' . name` and `naturalGroupKey()` emits `'grp:' . group`,
+both prefixes unconditionally prepended regardless of source content, so the
+two keyspaces are provably disjoint for any possible group/category name,
+including a group literally named "Group". Those values are ordinary
+`source_external_id`s and are covered by `migration_source_map_dedup_unique`
+like any other. The `natural_key` column and the `resolve()`/`record()` branch
+reading it are a seam kept for a caller that does not exist yet — which is also
+why a partial UNIQUE over `(user_id, source_product, source_entity_type,
+natural_key) WHERE source_external_id IS NULL` would buy nothing: it would
+cover no row today, and the column it keys on is `NULL` on every row it would
+ever cover, which SQLite counts as distinct just the same.
+
+`migration_import_baseline` carries
+`unique(migration_source_map_id, field_name)` —
+`migration_import_baseline_map_field_unique`. Before it, the "one row per (map
+row, field)" invariant was stated by the migration and enforced only by
+`recordBaseline()`'s select-then-insert, which sees one device. Neither table
+is captured as it is written; both travel only through `OpLogBackfiller` as
+whole-row creates, so two devices that each imported before pairing send each
+other a map row and a baseline row for entities both already hold. The map row
+is refused by its own UNIQUE and reconciled through `PeerRowAliases`; the
+baseline had nothing to be refused by, so the peer's row landed beside the
+local one and the three-way merge then read whichever row the query returned —
+comparing a hand-edited field against a baseline that was not the last
+import's. The three reads (`SourceMapWriter::baselineFor()`,
+`SourceMapWriter::recordBaseline()` and
+`ThreeWayMergeResolver::baselineValue()`) order by `imported_at` then `id`
+descending, the same survivor rule the dedup migration applied, because an
+index added today does not un-duplicate a row a peer sent yesterday.
 
 Migrated accounts have no real bank IBAN, so `PromoteStagingToDomain`
 synthesizes a deterministic pseudo-IBAN (`'MIG' . crc32b(sourceExternalId)`)
