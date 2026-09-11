@@ -19,6 +19,7 @@ use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
 use Modules\Ledger\Public\Services\FingerprintHealthCheck;
+use Modules\Ledger\Public\Services\SplitSumHealthCheck;
 use Modules\Search\Public\Services\FtsHealthCheck;
 
 final class DoctorCommand extends Command
@@ -44,6 +45,7 @@ final class DoctorCommand extends Command
         private readonly HostTimezoneProbe $hostTimezoneProbe,
         private readonly ?FtsHealthCheck $ftsHealth = null,
         private readonly ?FingerprintHealthCheck $fingerprintHealth = null,
+        private readonly ?SplitSumHealthCheck $splitSumHealth = null,
     ) {
         parent::__construct();
     }
@@ -101,6 +103,14 @@ final class DoctorCommand extends Command
             $this->line(sprintf(self::ROW_FORMAT, $this->fingerprintHealth->label(), $fingerprintResult->severity, $fingerprintResult->message));
             if ($fingerprintResult->severity === ProbeSeverity::Warning->value) {
                 $warnings[] = $this->fingerprintHealth->label();
+            }
+        }
+
+        if ($this->splitSumHealth !== null) {
+            $splitSumResult = new ProbeResult($this->splitSumHealth->severity(), $this->splitSumHealth->message());
+            $this->line(sprintf(self::ROW_FORMAT, $this->splitSumHealth->label(), $splitSumResult->severity, $splitSumResult->message));
+            if ($splitSumResult->severity === ProbeSeverity::Warning->value) {
+                $warnings[] = $this->splitSumHealth->label();
             }
         }
 
