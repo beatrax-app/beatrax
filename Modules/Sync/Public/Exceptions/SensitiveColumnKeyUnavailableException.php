@@ -25,4 +25,16 @@ final class SensitiveColumnKeyUnavailableException extends RuntimeException
             .$table.'.{'.implode(',', $fields).'} cannot be sealed. Refusing to write it in the clear.',
         );
     }
+
+    // The whole recovery pass, refused before it starts rather than one column
+    // at a time. A pass with no key records every create it rebuilds as a
+    // strategy error instead, and a hold under that reason is answered from
+    // every device's ops at the pk rather than the refused author's own create.
+    public static function forTheRecoveryPass(int $userId): self
+    {
+        return new self(
+            "HistoryReprojector: encryption is enabled for user {$userId} but no epoch key is held, so the "
+            .'quarantined history cannot be re-projected. Refusing to replay it without one.',
+        );
+    }
 }
