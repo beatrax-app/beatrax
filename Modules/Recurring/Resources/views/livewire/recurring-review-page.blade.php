@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Enums\SnoozeWindow')
+@use('Modules\Core\Public\Support\CornerNotices')
 @use('Modules\Recurring\Internal\Enums\ReviewTab')
 @use('Modules\Recurring\Public\Enums\RecurringSeriesState')
 @use('Modules\Core\Public\Support\Lang')
@@ -66,9 +67,14 @@
         @endforeach
     </nav>
 
+    {{-- In the shared corner region, not centred over the list. Centred, this
+         bar and the right-hand notice column overlapped on any window under
+         1092px, and one of that column's occupants is a prompt whose two
+         buttons write a standing preference. --}}
     @if (count($selectedIds) > 0)
+        @teleport(CornerNotices::TELEPORT_TARGET)
         <section
-            class="safe-lift fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
+            class="order-1 pointer-events-auto flex w-full items-center justify-end gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
             aria-label="{{ Lang::get('recurring::review.bulk.aria') }}"
         >
             <span class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('recurring::review.bulk.selected', ['count' => count($selectedIds)]) }}</span>
@@ -83,6 +89,7 @@
                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
             >{{ Lang::get('recurring::review.bulk.reject', ['count' => count($selectedIds)]) }}</button>
         </section>
+        @endteleport
     @endif
 
     @if (count($rows) === 0)

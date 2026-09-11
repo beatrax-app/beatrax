@@ -195,7 +195,6 @@
                     @if ($appShell)
                         @livewire('core.system-alerts-banner')
                         @livewire('categorization.rule-form-modal')
-                        @livewire('receipts.receipt-conflict-toast')
                         @livewire('community.suggest-mapping-modal')
                         @livewire('email-scan.oauth-client-wizard-modal')
 
@@ -245,7 +244,20 @@
                 @endif
             @endif
 
-            <x-core::toast-host />
+            {{-- Every viewport-pinned overlay this app draws, in one stack.
+                 The receipt-conflict prompt is mounted here rather than beside
+                 the modals above because it IS an occupant of that stack: from
+                 inside <main> it pinned itself to the same corner as the toast
+                 host and the dashboard's notices, and the shortest of them drew
+                 over its title and its question while its two buttons stayed
+                 pressable. Still behind $appShell — a screen reached before
+                 there is an application has no conflicts to answer, and a
+                 wire:snapshot is a bearer token for the component it names. --}}
+            <x-core::corner-notices>
+                @if ($appShell)
+                    @livewire('receipts.receipt-conflict-toast')
+                @endif
+            </x-core::corner-notices>
             {{--
                 Idle-timeout injection.
                 Emits window.beatraxIdleMs (milliseconds) ONLY when the app lock

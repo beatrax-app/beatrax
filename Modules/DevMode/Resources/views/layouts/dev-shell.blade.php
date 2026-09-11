@@ -153,7 +153,7 @@
              the spawn fires. --}}
         @livewire('dev.command-arg-prompt-modal')
 
-        <x-core::toast-host />
+        <x-core::corner-notices />
 
         @livewireScripts
         @fluxScripts

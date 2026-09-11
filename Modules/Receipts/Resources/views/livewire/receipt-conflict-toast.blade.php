@@ -1,5 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
-<div>
+{{-- display:contents, so an unanswered conflict is a flex item of the corner
+     region and no conflict is not an empty one spending a gap. --}}
+<div class="contents">
     @if ($visible)
         @php
             // Per-field copy mapping. The receipt-conflict policy is
@@ -21,7 +23,7 @@
         <div
             role="alert"
             aria-live="assertive"
-            class="safe-lift fixed bottom-md right-md z-50 max-w-sm rounded-lg border border-slate-200 bg-white shadow-lg p-md dark:bg-slate-950 dark:border-slate-700"
+            class="order-1 pointer-events-auto w-full rounded-lg border border-slate-200 bg-white shadow-lg p-md dark:bg-slate-950 dark:border-slate-700"
         >
             <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {{ Lang::get('receipts::messages.conflict.title') }}
