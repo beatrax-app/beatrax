@@ -40,9 +40,13 @@ enum MoneyFlow: string
      */
     public function predicate(string $prefix = ''): array
     {
-        [$type, $paymentType, $amount] = self::columns($prefix);
+        [$type, $paymentType, $amount, $pair] = self::columns($prefix);
 
-        $counted = $type.' IN (?, ?, ?)';
+        // A row naming a partner is one leg of a move inside the household,
+        // whatever its own type says. The two columns are announced by separate
+        // writers and merge on separate clocks, so a peer's link outlives this
+        // device's retype and money that never left reads as spend.
+        $counted = '('.$type.' IN (?, ?, ?) AND '.$pair.' IS NULL)';
         $refunded = '('.$paymentType.' = ? OR '.$type.' = ?)';
         $rollup = self::Net->types();
 
@@ -67,14 +71,14 @@ enum MoneyFlow: string
     // selectRaw() take a literal-string, and concatenating a caller's prefix
     // would not be one.
     /**
-     * @return array{literal-string, literal-string, literal-string}
+     * @return array{literal-string, literal-string, literal-string, literal-string}
      */
     private static function columns(string $prefix): array
     {
         return match ($prefix) {
-            '' => ['type', "COALESCE(payment_type, '')", 'settled_amount_minor'],
-            't.' => ['t.type', "COALESCE(t.payment_type, '')", 't.settled_amount_minor'],
-            'transactions.' => ['transactions.type', "COALESCE(transactions.payment_type, '')", 'transactions.settled_amount_minor'],
+            '' => ['type', "COALESCE(payment_type, '')", 'settled_amount_minor', 'pair_transaction_id'],
+            't.' => ['t.type', "COALESCE(t.payment_type, '')", 't.settled_amount_minor', 't.pair_transaction_id'],
+            'transactions.' => ['transactions.type', "COALESCE(transactions.payment_type, '')", 'transactions.settled_amount_minor', 'transactions.pair_transaction_id'],
             default => throw new InvalidArgumentException("Unknown column prefix: {$prefix}"),
         };
     }
