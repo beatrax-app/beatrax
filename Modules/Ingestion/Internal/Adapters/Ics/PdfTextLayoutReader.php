@@ -37,11 +37,11 @@ class PdfTextLayoutReader
     // ran for three quarters of an hour. A shipped statement spends 2,643.
     private const int MAX_CONTENT_BYTES = 131_072;
 
-    // A statement is a handful of pages, and the sum above is what a page-count
-    // of its own adds nothing to for a document whose pages carry text. It is
-    // here for the one that carries none: a hundred thousand empty pages cost
-    // no content bytes at all and still build a hundred thousand page objects.
-    private const int MAX_PAGES = 100;
+    // Pages of paper, not pages of a cursor — qualified for the same reason
+    // DiscoveryScanJob qualifies its own. The sum above already answers for a
+    // document whose pages carry text; this is here for the one that carries
+    // none, whose hundred thousand empty pages still build as many objects.
+    private const int MAX_STATEMENT_PAGES = 100;
 
     // An x coordinate is the page's own, and a crafted text matrix asked for
     // twenty gigabytes of padding on one line. A page is 612 points wide and
@@ -110,8 +110,8 @@ class PdfTextLayoutReader
 
         $pages = array_values(new Parser([], $config)->parseFile($pdfPath)->getPages());
 
-        if (count($pages) > self::MAX_PAGES) {
-            throw ReadCeilingExceededException::pdfPages(self::MAX_PAGES);
+        if (count($pages) > self::MAX_STATEMENT_PAGES) {
+            throw ReadCeilingExceededException::pdfPages(self::MAX_STATEMENT_PAGES);
         }
 
         return $pages;

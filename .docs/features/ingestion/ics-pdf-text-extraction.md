@@ -102,7 +102,7 @@ which carries every run's text matrix, and rebuilds the page the way
 The reader is bounded on three more axes, all of them things a PDF chooses
 and none of them the file's size: the decoded content-stream bytes it will lay
 out (`MAX_CONTENT_BYTES`, 128 KB, handed to smalot's decoder as well), the page
-count (`MAX_PAGES`, 100), and — through the first — the text runs on a page,
+count (`MAX_STATEMENT_PAGES`, 100), and — through the first — the text runs on a page,
 whose layout cost inside the parser is their square. A 49 KB file whose one
 stream inflated to 50 MB and a 12.7 KB file carrying 200,000 runs were both
 reachable from the wizard; the first exhausted a phone's heap and the second

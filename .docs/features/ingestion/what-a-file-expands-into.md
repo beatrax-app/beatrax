@@ -71,8 +71,19 @@ this device and to try a shorter date range.
   can be read; a stream the decoder cut therefore lands exactly on the ceiling,
   which is why the check is `>=` and not `>`. Laying out this much costs 1.7 s,
   twice it costs 7 s; the shipped statement spends 2,643 bytes.
-- **`PdfTextLayoutReader::MAX_PAGES` (100)** — for the document whose pages
-  carry no content at all, which the byte ceiling above cannot see.
+
+  Held against real statements rather than against the fixtures: the seven PDFs
+  in this install's own `storage/app/private/imports`, measured through
+  `PdfContentSize::ofPage()`, all sit under it, and the worst single page
+  spends 12,966 bytes — 9.9% of the ceiling, about ten times' headroom. That is
+  the number that makes it defensible rather than plausible, because a ceiling
+  that silently refuses a legitimate statement is harder to diagnose than the
+  crash it prevents.
+- **`PdfTextLayoutReader::MAX_STATEMENT_PAGES` (100)** — for the document whose
+  pages carry no content at all, which the byte ceiling above cannot see.
+  Qualified rather than left as `MAX_PAGES`, because the tree already holds a
+  `MAX_PAGES = 100` meaning pages of a bank API's pagination; `DiscoveryScanJob`
+  answers the same question the same way with `DISCOVERY_MAX_PAGES`.
 - **`PdfTextLayoutReader::MAX_COLUMNS` (4,096)** — a column index is the run's
   own x coordinate divided by a nominal glyph advance, and it reaches
   `str_repeat`. A page is 612 points wide and every column on a real statement
