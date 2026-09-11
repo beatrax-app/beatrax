@@ -38,7 +38,15 @@ final readonly class AlreadyPresentCreate
     {
         $this->aliases->remember($table, $deviceId, $pk, $payload, $userId);
 
-        if ($this->aliases->localFor($table, $deviceId, $pk, $userId) !== null) {
+        $local = $this->aliases->localFor($table, $deviceId, $pk, $userId);
+
+        if ($local !== null) {
+            // For the reason the branch below fills, and at the id this device
+            // minted rather than the one the peer used. Returning here without
+            // it left a re-homed row holding whatever its first copy happened
+            // to carry, permanently: nothing comes back through this branch.
+            $this->tail->fill($table, $local, $payload, $userId, SuppliedCreationTime::seededValueFor($fields));
+
             return $this->aliases->resolvePk($table, $deviceId, $pk, $userId);
         }
 
