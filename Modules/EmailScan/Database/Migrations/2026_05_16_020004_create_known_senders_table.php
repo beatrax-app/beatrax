@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Modules\Core\Database\Support\ModuleMigration;
+use Modules\Core\Public\Support\DerivedRowId;
 
 // `user_id` is nullable on purpose: a NULL row is an application seed every
 // user sees, read back as `WHERE user_id = ? OR user_id IS NULL`.
@@ -48,8 +49,14 @@ return new class extends ModuleMigration
         ));
 
         $now = CarbonImmutable::now()->toDateTimeString();
+
+        // 2026_08_28_000002 rewrites these three to their derived ids and takes
+        // the AUTOINCREMENT off. Naming the id here says so at the insert
+        // rather than leaving the seeds correct only for as long as that later
+        // migration keeps running after this one.
         $connection->table('known_senders')->insert([
             [
+                'id' => DerivedRowId::for('known_senders', ['user_id' => null, 'email_pattern' => 'paypal.com']),
                 'user_id' => null,
                 'email_pattern' => 'paypal.com',
                 'label' => 'PayPal',
@@ -59,6 +66,7 @@ return new class extends ModuleMigration
                 'updated_at' => $now,
             ],
             [
+                'id' => DerivedRowId::for('known_senders', ['user_id' => null, 'email_pattern' => '@ics.nl']),
                 'user_id' => null,
                 'email_pattern' => '@ics.nl',
                 'label' => 'ICS Cards',
@@ -68,6 +76,7 @@ return new class extends ModuleMigration
                 'updated_at' => $now,
             ],
             [
+                'id' => DerivedRowId::for('known_senders', ['user_id' => null, 'email_pattern' => 'googleplay-noreply@google.com']),
                 'user_id' => null,
                 'email_pattern' => 'googleplay-noreply@google.com',
                 'label' => 'Google Play',

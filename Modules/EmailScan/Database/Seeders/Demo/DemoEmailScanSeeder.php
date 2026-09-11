@@ -9,6 +9,7 @@ use DateTimeInterface;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Support\DerivedRowId;
 use Modules\EmailScan\Models\DiscoveredSender;
 use Modules\EmailScan\Models\Inbox;
 use Modules\EmailScan\Models\InboxMessage;
@@ -206,17 +207,26 @@ final class DemoEmailScanSeeder
 
     private function upsertKnownSender(User $user, string $emailPattern, string $label, CarbonImmutable $now): void
     {
-        KnownSender::query()->updateOrCreate(
-            [
-                'user_id' => $user->id,
+        $sender = KnownSender::query()->firstOrNew([
+            'user_id' => $user->id,
+            'email_pattern' => $emailPattern,
+        ]);
+
+        // known_senders has no AUTOINCREMENT, and SQLite answers an insert
+        // naming no id with max(id) + 1 — the number above the largest derived
+        // one, which says only what this device happened to hold. Both shells
+        // offer this dataset, so both would take it for a different sender.
+        if (! $sender->exists) {
+            $sender->id = DerivedRowId::for('known_senders', [
+                'user_id' => (int) $user->id,
                 'email_pattern' => $emailPattern,
-            ],
-            [
-                'label' => $label,
-                'source' => 'user',
-                'added_at' => $now->subDays(3),
-            ],
-        );
+            ]);
+        }
+
+        $sender->label = $label;
+        $sender->source = 'user';
+        $sender->added_at = $now->subDays(3);
+        $sender->save();
     }
 
     private function upsertInboxMessage(
