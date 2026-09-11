@@ -69,7 +69,36 @@ final class SyncedColumnWrites
     // an unstripped file reports the comment that explains the exemption.
     public static function stripped(string $source): string
     {
-        return PatternScan::replace('#/\*.*?\*/|//[^\n]*#s', '', $source);
+        return self::withTableConstantsResolved(
+            PatternScan::replace('#/\*.*?\*/|//[^\n]*#s', '', $source),
+        );
+    }
+
+    // Every pattern below is rooted at a table LITERAL, so a file reaching its
+    // table through `self::TABLE` was invisible to all three guards at once --
+    // which is how a re-derive listener and an ASN sweep both came to write a
+    // travelling column with nothing asking them to justify it.
+    /**
+     * @link ../../../.docs/features/sync/merge-registry-authoring.md
+     */
+    public static function withTableConstantsResolved(string $source): string
+    {
+        $names = PatternScan::all(
+            "/const\s+string\s+([A-Z][A-Z0-9_]*)\s*=\s*'([a-z0-9_]+)'\s*;/",
+            $source,
+        );
+
+        foreach ($names[1] ?? [] as $index => $name) {
+            $value = $names[2][$index] ?? null;
+
+            if (! is_string($name) || ! is_string($value)) {
+                continue;
+            }
+
+            $source = str_replace('self::'.$name, "'".$value."'", $source);
+        }
+
+        return $source;
     }
 
     // The substring both patterns below require, asked once per file instead of
