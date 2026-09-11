@@ -667,7 +667,7 @@ final class MergeRulesRegistry
                 'drift_alert_threshold_percent' => ['nullable' => false],
                 'anomaly_sensitivity_percent' => ['nullable' => false],
                 'anomaly_min_amount_minor' => ['nullable' => false],
-                'community_settings' => ['nullable' => true],
+                'community_settings' => ['strategy' => MergeStrategy::JsonKeyUnion->value, 'nullable' => true],
                 // Synced, unlike `locale` and `theme` above, because it is not
                 // a matter of taste: `app.timezone` is the frame a DATETIME
                 // column is written in, so two devices holding different

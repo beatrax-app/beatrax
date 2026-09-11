@@ -14,6 +14,7 @@ use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Modules\Sync\Internal\Merge\MergeStrategy;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
@@ -65,6 +66,7 @@ final readonly class OpLogWriter implements OpCaptureSink
      */
     public function writeSet(string $table, int|string $pk, string $field, mixed $value): void
     {
+        $value = $this->asMapIfKeysMerge($table, $field, $value);
         $jsonValue = $value !== null ? json_encode($value, JSON_THROW_ON_ERROR) : null;
         $sealed = $this->seal($table, $pk, $field, $jsonValue);
 
@@ -76,6 +78,24 @@ final readonly class OpLogWriter implements OpCaptureSink
 
         [$jsonValue, $gdkEpochId] = $sealed;
         $this->writeEntry($table, $pk, $field, $jsonValue, OpType::Set, $gdkEpochId);
+    }
+
+    // A key-union column merges its keys, so its op has to carry a map. A
+    // writer that read the column back through the query builder hands over
+    // the stored JSON TEXT, which reaches the strategy as a string and
+    // quarantines the op rather than merging it.
+    private function asMapIfKeysMerge(string $table, string $field, mixed $value): mixed
+    {
+        if (! is_string($value) || $this->rules->strategyFor($table, $field) !== MergeStrategy::JsonKeyUnion) {
+            return $value;
+        }
+
+        /** @var mixed $decoded */
+        $decoded = json_decode($value, true);
+
+        // Not an object: left exactly as it came, so the strategy's own refusal
+        // is what reports it rather than this silently inventing a shape.
+        return is_array($decoded) ? $decoded : $value;
     }
 
     // A g_counter field merges as the SUM of each device's own maximum, so an
