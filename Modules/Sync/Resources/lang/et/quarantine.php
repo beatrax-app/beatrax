@@ -23,5 +23,10 @@ return [
         'body' => 'Siia saabus midagi, mida see seade ei suutnud talletada: kirje, millel on osa endast puudu, kuupäev, mida ei ole olemas, jaotus, mis enam kokku ei lähe, kirje, millele kaks seadet olid juba andnud sama identiteedi, või kustutus millegi kohta, mis on siin veel kasutuses. See, mis lükati tagasi, on sinu teises seadmes, aga mitte selles, nii et kaks seadet ei sisalda enam sama.',
         'action' => 'Võrdle teises seadmes olevat kirjet sellega, mida siin näed, ja tee muudatus siin uuesti — või kustuta see siin uuesti, kui midagi, mille sa mujal eemaldasid, on siin veel alles. Tagasi lükatut iseenesest uuesti ei saadeta.',
     ],
+    'held' => [
+        'summary' => ':count muudatus teisest seadmest on siin veel rakendamata|:count muudatust teisest seadmest on siin veel rakendamata',
+        'body' => 'Need saabusid, aga neid ei saanud veel talletada: miski, millele nad viitavad, ei olnud tol hetkel siin, või ei suutnud see seade osa neist lugeda. Neid hoitakse alles, mitte ei visata ära, ja need on endiselt seadmes, kus need tehti.',
+        'action' => 'Siin ei ole midagi teha. Kui need on pärast seadmete järgmist sünkroonimist ikka loendis, ava kirje oma teises seadmes ja võrdle seda sellega, mida siin näed — see, mis ülal kokku loetud on, on sinu teises seadmes, aga mitte selles.',
+    ],
     'last_seen' => 'Viimane: :when',
 ];

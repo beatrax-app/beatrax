@@ -82,6 +82,96 @@ not cost the second its disclosure. See
 removed device teaches the reader to read past it, and the one outcome that is a
 security event is the one that cannot afford that.
 
+## The refusals the top line could not see
+
+Measured on a Galaxy A51 paired to a Mac, after two full exchanges the reader
+had asked for by hand and 2,348 operations crossing. The devices screen read:
+
+```
+Synchronisatiestatus
+Alle apparaten zijn up-to-date
+· gesynchroniseerd 1s geleden
+```
+
+At that instant the phone's own database held **65 refused operations** —
+`strategy_error` 38, `primary_key_collision` 17, `missing_reference` 10 — and of
+the 189 transaction ids the two devices shared, 82 named a different transaction
+on each. Nothing on any screen outside `/dev/sync-health` said so.
+
+Three surfaces each had a reason not to:
+
+- `SyncStatusService::overallStatus()` reached `AllSynced` off the **outbound**
+  queue alone. Its settled arm asked what this device still owes a peer and what
+  a peer is withholding; neither question is about an operation that arrived
+  here and was turned away. "Nothing left to send" and "the two devices agree"
+  are both worth knowing and only one of them is what that sentence claims.
+- `SyncQuarantineNotice` draws `QuarantineOutcome`, which by construction speaks
+  for the **terminal** half. All 65 were recoverable, so it drew nothing.
+- The backlog notice draws `SyncBacklogState`, and `backlogState()` filters
+  through `withinPassWindow()`. Every one of the 65 was older than the watermark
+  the last pass stamped — `history_reprojected_at` was `23:21:11` and the newest
+  hold was `23:21:10` — so it answered `None`.
+
+Each surface was answering its own question correctly. Between them they left a
+device holding 65 refusals telling the reader every device was up to date.
+
+`SyncOverallStatus` therefore gained two cases, and they are split by
+**recoverability** rather than by count, because a loss and a wait are different
+facts about the reader's data:
+
+| Case | What is true | Tone |
+|---|---|---|
+| `Refused` | A refusal nothing takes again is here. The two devices hold different things and no exchange closes the gap. | warning |
+| `Held` | A refusal a later pass can still answer is here. Nothing is lost yet. | info |
+
+Both rank inside the settled arm, below `Offline` and above `Behind`, on the
+same rule the withheld line was ranked on: **what clears the state**. Nothing at
+all clears a terminal refusal, so it goes above `Withheld`; a pass that can
+answer a hold clears one, so `Held` goes below it; the next exchange clears an
+unsent change, so both go above `Behind`. They are asked only in that arm
+because the states above it — error, syncing, offline — make no claim of
+agreement for a refusal to contradict.
+
+`RefusedOperations::tally()` is the reader behind both, and it counts **distinct
+`(table_name, pk)` per half** rather than rows. A create is captured per field,
+so the ten `missing_reference` entries measured above are three records missing
+from the phone; per half rather than per reason because a record refused twice
+under two reasons is still one record. On the measured phone the two halves come
+out at 0 terminal and **20 held**, against 65 entries.
+`SyncQuarantineNotice` counts the same way for each of its blocks, so the line
+and the notice under it cannot disagree about what counting means.
+
+### A count needs somewhere to go
+
+Both new lines carry a link to `#sync-refused-changes`, which is
+`SyncQuarantineNotice`'s root element on the same screen. That link is why the
+notice grew a block for the recoverable half: a status line reporting a number
+whose detail surface is empty is barely better than the silence it replaced.
+
+The held block's copy names a **condition and never an act**, the same rule the
+withheld copy is written under and for a sharper reason — see the next section.
+
+### Nothing retries a hold whose blocker is data
+
+`QuarantineReason::recoverable()` claims a retry for `missing_reference`, and in
+steady state there is none. `withinPassWindow()` reopens only on two events: key
+material moving, or `HistoryReprojector::PASS_REACH` being bumped. Neither of
+those is the event that undoes a missing reference — **the parent row arriving
+is**, and no watermark moves when it does. `clearSettled()` retires a hold once
+the held row itself turns up; it does not look at the row the hold *references*.
+
+Measured on the same phone: the three `anomaly_alerts` creates held for
+`missing_reference` name transactions 6, 7 and 8, and all three of those
+transactions are on the device. Two of the three would apply today; the third
+would be recognised as already present. None of them will be offered again — the
+sender counts what it delivered, which is why a second exchange left the count
+at ten — and no pass will take them again either.
+
+That is recorded here rather than repaired here: the merge path is being worked
+on elsewhere. What it settles is the wording. `Held` says a change has **not
+been applied yet** and stops; it does not say one is waiting to be retried,
+because on this build nothing is.
+
 ## Where it renders
 
 `SyncQuarantineNotice` is a Livewire component with **one** public method,
@@ -94,8 +184,12 @@ action or on any control in the template.
 It is mounted from `devices-and-sync-settings-section.blade.php`, beside the
 backlog notice and never folded into it: that one reports a wait, and a reader
 told *"waiting to be added"* about a forged signature has been told the one thing
-that is not true of it. The desktop settings page and the phone's sync screen
-both mount that section, so both get it.
+that is not true of it. `/data-devices` is the only screen that mounts that
+section, and both shells route to it, so a fix here reaches the desktop and the
+phone at once.
+
+Its root element carries `id="sync-refused-changes"` and is in the DOM whether
+or not it has a block to draw, so the status line's link never dangles.
 
 ## Two tables that stay internal, and what they owed anyway
 

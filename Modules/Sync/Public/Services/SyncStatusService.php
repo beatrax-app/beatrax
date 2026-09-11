@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\OpLog\BackfillProgress;
 use Modules\Sync\Internal\OpLog\DeferredOpCaptures;
+use Modules\Sync\Internal\OpLog\RefusedOperations;
 use Modules\Sync\Internal\Status\PeerSessionTally;
 use Modules\Sync\Public\Enums\SyncOverallStatus;
 
@@ -21,6 +22,7 @@ final readonly class SyncStatusService
         private DeferredOpCaptures $deferred,
         private BackfillProgress $backfill,
         private WithheldHistoryReport $withheld,
+        private RefusedOperations $refused,
     ) {}
 
     /**
@@ -105,18 +107,39 @@ final readonly class SyncStatusService
 
     // What is true once every exchange has closed cleanly. "Up to date" is a
     // claim about the whole ledger, not about the last session ending well,
-    // and two separate things make it false: work this device has not sent,
-    // and work a peer will not send until the reader confirms its author.
+    // and this arm used to read it off the outbound queue alone — so a phone
+    // holding 65 refused operations said every device agreed.
+    /**
+     * @link ../../../../.docs/features/sync/what-the-quarantine-tells-the-reader.md#the-refusals-the-top-line-could-not-see
+     */
     private function settledStatus(int $userId): SyncOverallStatus
     {
-        // A hold outranks being behind on what CLEARS it, never on whether
-        // the reader has an act: an unsent change leaves on the next exchange,
-        // and a hold leaves on none — including the half of them no peer can
-        // ever offer an identity for.
+        $refused = $this->refused->tally($userId);
+
+        // Ranked on what CLEARS each state, never on whether the reader has an
+        // act: nothing clears a terminal refusal, a hold clears on a pass that
+        // can answer it, an unsent change clears on the next exchange. Asked
+        // only here because error, syncing and offline claim no agreement.
         return match (true) {
+            $refused['terminal'] > 0 => SyncOverallStatus::Refused,
             $this->withheld->isHolding($userId) => SyncOverallStatus::Withheld,
+            $refused['recoverable'] > 0 => SyncOverallStatus::Held,
             $this->hasUndeliveredLocalOps($userId) => SyncOverallStatus::Behind,
             default => SyncOverallStatus::AllSynced,
+        };
+    }
+
+    // The count belonging to the status the caller is about to draw, rather
+    // than a total: the two halves are different facts about the reader's
+    // data, and one number standing for both is the sum of a loss and a wait.
+    public function refusedRecordCount(int $userId, SyncOverallStatus $status): int
+    {
+        $refused = $this->refused->tally($userId);
+
+        return match ($status) {
+            SyncOverallStatus::Refused => $refused['terminal'],
+            SyncOverallStatus::Held => $refused['recoverable'],
+            default => 0,
         };
     }
 

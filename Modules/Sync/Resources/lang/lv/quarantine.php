@@ -7,7 +7,7 @@ return [
         // i18n-review: lv · too_new.summary — Latvian selects arm 0 for zero, so
         // the genitive plural leads and the singular follows. This notice never
         // renders at zero, so that first arm ships unread and wants a native eye
-        // standing on its own. The other three summary lines follow the same order.
+        // standing on its own. The other four summary lines follow the same order.
         'summary' => ':count izmaiņu veica jaunāka Beatrax versija|:count izmaiņu veica jaunāka Beatrax versija|:count izmaiņas veica jaunāka Beatrax versija',
         'body' => 'Tas, kas tika noraidīts, norāda uz kaut ko, kā šajā Beatrax versijā nav, tāpēc šai ierīcei nebija, kur to likt. Tas joprojām ir ierīcē, kas to veica, un nekas no taviem datiem nav dzēsts.',
         'action' => 'Atjaunini Beatrax šajā ierīcē. Pēc atjaunināšanas veiktās izmaiņas pienāk kā parasti, bet nekas jau noraidīts netiek sūtīts atkārtoti — izdari izmaiņu šeit vēlreiz, ja tā vajadzīga arī šajā ierīcē.',
@@ -26,6 +26,11 @@ return [
         'summary' => ':count izmaiņu no citas ierīces šeit nevarēja saglabāt|:count izmaiņu no citas ierīces šeit nevarēja saglabāt|:count izmaiņas no citas ierīces šeit nevarēja saglabāt',
         'body' => 'Pienāca kaut kas, ko šī ierīce nevarēja saglabāt: ieraksts, kuram trūkst daļas no sevis, datums, kāda nav, sadalījums, kas vairs nesakrīt, ieraksts, kuram divas ierīces jau bija piešķīrušas vienu un to pašu identitāti, vai kāda šeit vēl lietota ieraksta dzēšana. Tas, kas tika noraidīts, ir tavā otrā ierīcē, nevis šajā, tāpēc abas vairs nesatur vienu un to pašu.',
         'action' => 'Salīdzini ierakstu savā otrā ierīcē ar to, ko redzi šeit, un izdari izmaiņu šeit vēlreiz — vai arī izdzēs to šeit vēlreiz, ja kaut kas, ko noņēmi citur, šeit joprojām ir. Nekas noraidīts netiek sūtīts atkārtoti pats no sevis.',
+    ],
+    'held' => [
+        'summary' => ':count izmaiņu no citas ierīces šeit vēl nav piemērotas|:count izmaiņa no citas ierīces šeit vēl nav piemērota|:count izmaiņas no citas ierīces šeit vēl nav piemērotas',
+        'body' => 'Tās pienāca, un tās vēl nevarēja saglabāt: kaut kā, uz ko tās norāda, tobrīd šeit nebija, vai arī šī ierīce nevarēja nolasīt daļu no tām. Tās tiek paturētas, nevis izmestas, un joprojām ir ierīcē, kas tās veica.',
+        'action' => 'Šeit nav nekā, ko darīt. Ja tās joprojām ir sarakstā pēc tam, kad tavas ierīces atkal ir sinhronizējušās, atver ierakstu savā otrā ierīcē un salīdzini to ar to, ko redzi šeit — tas, kas saskaitīts augstāk, ir tajā ierīcē, nevis šajā.',
     ],
     'last_seen' => 'Jaunākais: :when',
 ];

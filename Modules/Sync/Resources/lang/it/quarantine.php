@@ -23,5 +23,10 @@ return [
         'body' => "È arrivato qualcosa che questo dispositivo non è riuscito a memorizzare: un record a cui manca una parte di sé, una data che non esiste, una suddivisione che non torna più, un record a cui due dispositivi avevano già dato la stessa identità, oppure un'eliminazione di qualcosa ancora in uso qui. Ciò che è stato rifiutato è sull'altro tuo dispositivo e non su questo, quindi i due non contengono più la stessa cosa.",
         'action' => "Confronta il record sull'altro tuo dispositivo con quello che vedi qui e rifai la modifica qui — oppure eliminalo di nuovo qui, se qualcosa che hai rimosso altrove è ancora presente. Ciò che è stato rifiutato non viene inviato di nuovo da solo.",
     ],
+    'held' => [
+        'summary' => ':count modifica da un altro dispositivo non è ancora stata applicata qui|:count modifiche da un altro dispositivo non sono ancora state applicate qui',
+        'body' => 'Sono arrivate e non è stato ancora possibile memorizzarle: qualcosa a cui fanno riferimento non era qui in quel momento, oppure questo dispositivo non è riuscito a leggerne una parte. Vengono conservate anziché scartate e sono ancora sul dispositivo che le ha fatte.',
+        'action' => "Qui non c'è nulla da fare. Se restano elencate dopo che i tuoi dispositivi si sono sincronizzati di nuovo, apri il record sull'altro tuo dispositivo e confrontalo con quello che vedi qui — ciò che è contato sopra è su quel dispositivo e non su questo.",
+    ],
     'last_seen' => 'Più recente: :when',
 ];

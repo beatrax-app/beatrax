@@ -23,5 +23,10 @@ return [
         'body' => 'Stiglo je nešto što ovaj uređaj nije mogao pohraniti: zapis kojemu nedostaje dio njega samog, datum koji ne postoji, podjela koja se više ne poklapa, zapis kojemu su dva uređaja već dala isti identitet ili brisanje nečega što je ovdje još u upotrebi. Ono što je odbijeno nalazi se na tvojem drugom uređaju, a ne na ovom, pa dva uređaja više ne sadrže isto.',
         'action' => 'Usporedi zapis na svojem drugom uređaju s onim što vidiš ovdje i ponovno napravi promjenu ovdje — ili je ovdje ponovno obriši, ako je nešto što si uklonio drugdje još uvijek tu. Ništa odbijeno ne šalje se ponovno samo od sebe.',
     ],
+    'held' => [
+        'summary' => ':count promjena s drugog uređaja ovdje još nije primijenjena|:count promjene s drugog uređaja ovdje još nisu primijenjene|:count promjena s drugog uređaja ovdje još nije primijenjeno',
+        'body' => 'Stigle su i još se nisu mogle pohraniti: nešto na što se odnose tada nije bilo ovdje ili ovaj uređaj nije mogao pročitati dio njih. Čuvaju se umjesto da se odbace i još su na uređaju koji ih je napravio.',
+        'action' => 'Ovdje nema što raditi. Ako su i dalje na popisu nakon što se tvoji uređaji ponovno sinkroniziraju, otvori zapis na svojem drugom uređaju i usporedi ga s onim što vidiš ovdje — ono što je gore izbrojeno nalazi se na tom uređaju, a ne na ovom.',
+    ],
     'last_seen' => 'Najnovije: :when',
 ];
