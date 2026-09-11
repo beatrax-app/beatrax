@@ -481,6 +481,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
         $stored = $this->codec->decryptRow('counterparties', [
             'iban' => $row->iban,
             'merchant_name' => $row->merchant_name,
+            'display_name' => $row->display_name,
         ], $userId, $session);
 
         $changed = [];
@@ -499,6 +500,13 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
         $merged = CounterpartyDefaultName::carriedOver($storedMetadata, $metadata);
         if ($merged !== [] && $merged !== $row->metadata) {
             $changed['metadata'] = $merged;
+
+            // The token inside says the name is the app's, and the blob merges
+            // whole. Sent without the name it describes, it lands on a peer's
+            // rename and reads their words back as the placeholder.
+            if (CounterpartyDefaultName::tokenIn($merged) !== null) {
+                $changed['display_name'] = $stored['display_name'];
+            }
         }
 
         if ($changed === []) {
