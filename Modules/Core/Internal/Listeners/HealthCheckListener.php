@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Listeners;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Database\Query\Builder;
+use Modules\Core\Internal\Backup\BackupFreshness;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
@@ -26,6 +27,7 @@ final readonly class HealthCheckListener
         private LoggerInterface $logger,
         private DatabaseManager $db,
         private SystemAlertWriter $alerts,
+        private BackupFreshness $freshness,
     ) {}
 
     public function __invoke(ConnectionEstablished $event): void
@@ -87,7 +89,43 @@ final readonly class HealthCheckListener
             );
         }
 
+        $this->raiseOverdueBackupAlert();
+
         $this->state->booted = true;
+    }
+
+    // The daily run writes the backup; only `beatrax:doctor` ever said it had
+    // stopped, and neither shipped bundle carries a terminal to run that in. The
+    // copy the banner was written around -- "the app wasn't open when the daily
+    // run came round" -- is earned by opening the app, so it is read here.
+    /**
+     * @link ../../../../.docs/features/core/architecture.md
+     */
+    private function raiseOverdueBackupAlert(): void
+    {
+        try {
+            $newest = $this->freshness->newestVerifiedAt();
+        } catch (Throwable $e) {
+            $this->logger->warning(
+                'HealthCheckListener: backups directory unreadable; skipping freshness check.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return;
+        }
+
+        // An install that has never backed up is not the same fault, and boot
+        // cannot tell a first run from a broken one without a second fact. The
+        // doctor still reports it, where a human is already looking.
+        if ($newest === null) {
+            return;
+        }
+
+        $hoursOld = $this->freshness->hoursSince($newest);
+
+        if ($this->freshness->isStale($hoursOld)) {
+            $this->freshness->raiseOverdue($hoursOld);
+        }
     }
 
     // Two sentences for one fault, because they are read in two places: the
