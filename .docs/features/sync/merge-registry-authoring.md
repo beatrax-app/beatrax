@@ -264,6 +264,52 @@ history and disagree about the present, with nothing on screen saying so.
 `SyncCaptureCoverageTest` holds the two lists against each other. See
 [architecture.md](architecture.md) for the capture side.
 
+## A foreign key is carrying more than one thing
+
+Three separate mechanisms answer *"which columns of this table name a row in
+another one?"* by reading the live foreign keys:
+
+| reader | what it does |
+|---|---|
+| `CoveredTableOrder::parentColumns()` | feeds `PeerRowAliases::translate()`, which rewrites a peer's id to this device's |
+| `ImportSyncCapture::parentIdsFor()` | sends a row's parents beside it |
+| `CoveredTableOrder::dependencies()` | orders parents before the rows naming them |
+
+So a column left without a constraint is not translated, not captured and not
+ordered — and the reason it was declined is usually about something else
+entirely. Both live cases said so in their own migration: *"a counterparty
+leaving must not cascade its transaction history away"* and *"`recurring_series`
+belongs to another module"*. Good reasons, about deletes and module boundaries,
+that also silently turned off three things nobody was weighing.
+
+Declare such a column in `CoveredTableOrder::UNCONSTRAINED_PARENTS` rather than
+adding the constraint. `AnIdThatCrossesIsTranslatedOnArrivalArchTest` holds every
+`*_id` on every covered table to that question, and names the one still open:
+`migration_source_map.beatrax_id` points at whichever table `source_entity_type`
+says, so no single target can be declared for it.
+
+The smell is a `unsignedBigInteger('x_id')` beside siblings that use
+`foreignId()->constrained()`.
+
+## A gate covers one arrival path, not three
+
+A row arrives three ways — created, set, deleted — and each has its own gate
+list. `SplitOverfillGate` stops a split's legs summing past their transaction and
+was called from `admissiblePayload()`, which only `applyCreatedRow()` reaches; a
+peer op **raising an existing leg** walked past it for as long as it existed.
+
+When you add or audit a gate, name which of the three it sits on and check the
+other two by hand. And when you gate a `SET`, remember that a rebalance announces
+its *whole* set: the raised leg routinely arrives before the lowered one, so a
+verdict read off the stored siblings alone refuses a batch that balances
+exactly. Resolve the batch's arriving values first.
+
+Before writing a gate at all, ask whether the row it would refuse is **unwanted
+or merely early**. A split's extra leg is unwanted; a lone envelope-move leg is
+early in a paged catch-up, and refusing it would break ordinary sync. Where the
+answer is "early", what the invariant wants is a detector that reports after a
+sync completes, not a refusal.
+
 ## A few table facts worth not rediscovering
 
 The registry names real columns, and several of them are not the columns you
