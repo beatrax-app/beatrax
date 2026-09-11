@@ -48,6 +48,11 @@ const INDIRECT_TABLE_WRITERS = [
         'announcedBy' => '.docs/features/sync/architecture.md',
         'proves' => '/would hand that peer back what it just sent/',
     ],
+    'Modules/Sync/Internal/Merge/RehomedCreate.php' => [
+        'reason' => "a peer's row stored under an id of this device's own because the one it arrived under is taken by a different row; the row is still the peer's and announcing it would send it back",
+        'announcedBy' => '.docs/features/sync/architecture.md',
+        'proves' => '/would hand that peer back what it just sent/',
+    ],
     'Modules/Sync/Internal/Merge/SelfReferenceDeferral.php' => [
         'reason' => "the second pass over a peer's row, repairing a reference the first pass could not resolve yet; same path, same refusal",
         'announcedBy' => '.docs/features/sync/architecture.md',

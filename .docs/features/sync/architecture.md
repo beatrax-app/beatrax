@@ -551,12 +551,45 @@ failed their foreign key.
 **The row is here and this is the same op again.** The ordinary idempotent
 replay. Nothing to do.
 
-**The row is here but it is a different row.** Nine covered tables mint an
-autoincrement primary key and declare no natural unique key, so two devices
-writing while apart both take the next id and hand it to unrelated rows. The
-insert is refused by the primary key, there is no natural twin to alias, and
-for a long time the arriving row was simply dropped — two devices then held
-different money at one id with an empty quarantine on both.
+**A different row wears the id, and the arriving one is not here at all.**
+`transactions`, `accounts`, `counterparties` and `import_runs` still take a
+plain autoincrement, so two devices used apart both take the next id and hand
+it to unrelated rows. The insert is refused by the primary key and there is no
+natural twin to alias — the only thing wrong with the arriving row is that an
+unrelated local row already occupies its id.
+
+Measured on a paired Mac and Galaxy A51, each of which imported a statement
+before pairing: transaction id 4 was `2026-08-01 / -125000` on the Mac and
+`2026-02-02 / -399` on the phone. Compared by fingerprint rather than by row
+count, 107 transactions were on both and 112 of 219 distinct transactions lived
+on one device only, 52 creates sat in quarantine on the Mac and 69 on the
+phone, and both screens said "All devices are up to date".
+
+`Internal\Merge\RehomedCreate` stores such a row under an id of this device's
+own and records the pair in `op_log_row_aliases`, so every `set` and every
+tombstone the peer sends for it afterwards resolves onto it — `resolvePk()` and
+`translate()` already spend aliases, and nothing created one for this case. The
+insert re-uses the payload the applier already built: same column filtering,
+same encryption projection, same forced `user_id`, same foreign keys translated
+to this device's ids. Only `id` is dropped, so SQLite mints the next one.
+
+Re-homing is correct **only where the row can be recognised again afterwards**.
+If a replay of the same create cannot find what the previous one wrote, it
+inserts a second copy and every replay adds another. So the gate is
+`PeerRowAliases::naturalKeyIdentifies()`, which asks the finder's own question:
+is there a non-partial unique index, other than the primary key, whose every
+column the payload carries non-null and unsealed? `transactions` answers with
+`transactions_fingerprint_sha_uq` — `(user_id, fingerprint)`, both NOT NULL and
+both plaintext. AEAD columns are excluded from the answer because a fresh nonce
+per write makes stored ciphertext unmatchable; a blind-index column is keyed and
+deterministic, so it stays usable.
+
+A table with no such index keeps quarantining. `goals`, `pot_movements`,
+`saved_reports`, `notifications` and the rest of the minted- and derived-id set
+cannot be recognised from their columns, so a re-homed row there would be
+duplicated by the next replay. The re-homed id itself is device-local: it is
+carried by no op, and nothing needs it to be reproducible, because peers
+address the row through the alias and not through the id.
 
 `CreateRowCollision::contradicts()` separates the second case from the third.
 It calls it a collision when the op's `created_at` disagrees with the stored
@@ -575,10 +608,17 @@ from the stored value on every replay. `id` and `user_id` are seeded by the
 applier from the op envelope rather than the wire, and `updated_at` moves
 whenever anything about the row does.
 
-A collision is recorded in `op_log_quarantine` with reason
-`primary_key_collision` and the create is not applied. It is deliberately not
-in `QuarantineReason::recoverable()`: the id is taken by another row, and no
-op arriving later frees it.
+`contradicts()` still runs first, and re-homing depends on it: a create that
+does NOT contradict the stored row is the same row arriving again, or the other
+half of one the transport split, and re-homing either would duplicate it. Only
+a create that contradicts is a candidate.
+
+What remains `primary_key_collision` in `op_log_quarantine` is therefore
+narrower than it was: a contradicting create on a table no natural key can
+identify. It is still deliberately out of `QuarantineReason::recoverable()` —
+the id is taken by another row and no op arriving later frees it, nor does a
+later replay give the table an index it does not declare. `SyncQuarantineNotice`
+remains the reader's only warning for those.
 
 ### A split leg that would overfill its transaction (`Internal\Merge\SplitOverfillGate`)
 

@@ -139,6 +139,7 @@ final readonly class OpLogReplayer
         // same reason the ordering below is: the container answers null for a
         // concrete class nobody registered.
         $this->tableOrder = new CoveredTableOrder($db, $rules, $log);
+        $aliases = new PeerRowAliases($db, $this->tableOrder, $log, $sensitiveFields);
         $this->applier = new OpLogEntryApplier(
             $db,
             $rules,
@@ -149,12 +150,13 @@ final readonly class OpLogReplayer
             new SelfReferenceDeferral($db, $ownership, $log),
             $splitTail,
             $this->pairCascade,
-            new PeerRowAliases($db, $this->tableOrder, $log),
+            $aliases,
             new AlreadyPresentCreate(
-                new PeerRowAliases($db, $this->tableOrder, $log),
+                $aliases,
                 new CreateRowCollision($db, $sensitiveFields, $log),
                 $quarantine,
                 $splitTail,
+                new RehomedCreate($db, $aliases, $log),
                 $log,
             ),
             new SuppliedCreationTime($db, $log),

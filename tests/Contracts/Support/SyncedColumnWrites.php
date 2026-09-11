@@ -140,7 +140,11 @@ final class SyncedColumnWrites
 
     // Every write this file performs, asked as one substring so the walk below
     // can skip a file that writes nothing at all.
-    private const string WRITE_TERMINAL = '->\s*(?:update|insert|upsert|insertOrIgnore|updateOrInsert|delete|statement)\s*\(';
+    // `insertGetId` was absent rather than mis-ordered: the alternation
+    // backtracks, so `insertOrIgnore` and `updateOrInsert` matched from behind
+    // their own prefixes all along. Listed longest-first anyway, because
+    // reading it in that order is what turned the missing one up.
+    private const string WRITE_TERMINAL = '->\s*(?:insertGetId|insertOrIgnore|updateOrInsert|update|insert|upsert|delete|statement)\s*\(';
 
     // The blind spot of the guard beside this one. That guard roots every column
     // at a table literal, so a statement naming its table any other way is a
