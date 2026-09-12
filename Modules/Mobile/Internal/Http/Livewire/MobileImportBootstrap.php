@@ -386,6 +386,10 @@ final class MobileImportBootstrap extends Component
                 $lockGateway->enableAppLock($userId, $credentials->pin, $credentials->accountPassword, $session);
             }
 
+            // The row and not the key-file on purpose: a retry guard on a
+            // database this same request minted, never a reading of whether
+            // sync is on. Asking the file here would mint beside a self row
+            // naming another device_id, which restoreSelfRow() exists to stop.
             $identityAlreadyExists = $db->connection()
                 ->table('device_registry')
                 ->where('user_id', $userId)

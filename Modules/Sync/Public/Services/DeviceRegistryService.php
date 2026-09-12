@@ -6,6 +6,7 @@ namespace Modules\Sync\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Sync\Internal\Identity\DeviceIdentityFile;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Transport\WithheldLedger;
@@ -317,12 +318,26 @@ final readonly class DeviceRegistryService
     // session exists — the desktop boot hook decides whether to start the
     // sync listener at all, and a listener is only worth running once some
     // account on this device has actually enabled sync.
+
+    // Both halves, because the row alone is not that: a restored database
+    // carries the old machine's self row and never its key-file, and a daemon
+    // spawned on one binds a port it can never authenticate a peer on. The
+    // repair announces DeviceSyncEnabled, which starts it properly.
+    /**
+     * @link ../../../../.docs/features/sync/device-identity-key-files.md#the-listener-that-answered-and-refused
+     */
     public function hasLocalDevice(): bool
     {
-        return $this->db->connection()
+        foreach ($this->db->connection()
             ->table('device_registry')
             ->where('is_self', 1)
-            ->exists();
+            ->pluck('user_id') as $userId) {
+            if (is_numeric($userId) && DeviceIdentityFile::exists((int) $userId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Sanctioned crossing for Modules\Notifications; excludes the local
