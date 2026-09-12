@@ -51,21 +51,37 @@ final class Camt053XmlReader
             return [];
         }
 
+        $document = $this->parsed($localPath);
+
+        return $document === null ? [] : self::directionsIn($document);
+    }
+
+    // From the string, never simplexml_load_file(): libxml puts the main
+    // document through the external-entity resolver too, so under the denial
+    // the file loads as false and a pass over it reads nothing at all.
+    // genkgo's own Reader takes the same route for the same reason.
+    private function parsed(string $localPath): ?SimpleXMLElement
+    {
         $bytes = @file_get_contents($localPath);
         if ($bytes === false) {
-            return [];
+            return null;
         }
 
-        // From the string, never simplexml_load_file(): libxml puts the main
-        // document through the external-entity resolver too, so under the
-        // denial below the file loads as false and this pass reads nothing at
-        // all. genkgo's own Reader takes the same route for the same reason.
         $document = $this->withEntitiesDenied(static fn (): SimpleXMLElement|false => simplexml_load_string(
             $bytes,
             SimpleXMLElement::class,
             LIBXML_NONET,
         ));
-        if (! $document instanceof SimpleXMLElement || ! isset($document->BkToCstmrStmt)) {
+
+        return $document instanceof SimpleXMLElement ? $document : null;
+    }
+
+    /**
+     * @return array<int, array<int, array<int, string>>>
+     */
+    private static function directionsIn(SimpleXMLElement $document): array
+    {
+        if (! isset($document->BkToCstmrStmt)) {
             return [];
         }
 

@@ -97,8 +97,8 @@ What the module explicitly does NOT do:
 
 - **Internal/Adapters/Banking/** — the generic bank-statement parsers:
   `Camt053Adapter`, `Mt940Adapter`, plus helpers (`BankAmountParser`,
-  `Camt053XmlReader`, per-format header profile classes, the MT940 lexer
-  + Tag61 + Tag86 parsers + `Mt940CounterpartyCleaner`).
+  `Camt053XmlReader`, per-format header profile classes, the MT940
+  lexer + Tag61 + Tag86 parsers + `Mt940CounterpartyCleaner`).
 - **Internal/Adapters/Csv/** — the two preset-driven CSV importers.
   `GenericCsvAdapter` + `GenericCsvAmountParser` address columns by
   header name (N26, Revolut, ING); `PositionalCsvAdapter` addresses
