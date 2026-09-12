@@ -56,9 +56,10 @@ registered module paths plus the shared root — rather than listed anywhere, so
 a module whose migrations are registered is counted by construction.
 
 **This depends on the squashed dump keeping its files.** `schema:dump --prune`
-deletes the migration files the dump covers, and the moment it does, all 104 of
-them stop being migrations this build has while remaining migrations every
-backup records — turning every backup ever taken into one from a newer build.
+deletes the migration files the dump covers, and the moment it does, every one
+of them — 104 of the 262 this build ships, measured today — stops being a
+migration this build has while remaining one every backup records, turning
+every backup ever taken into one from a newer build.
 Nothing about the comparison would look wrong; it would simply refuse
 everything. `ABackupFromAnOlderBuildIsBroughtForwardTest` pins the precondition
 directly, by reading the names out of `database/schema/sqlite-schema.sql` and
