@@ -6,6 +6,7 @@ namespace Modules\Forecasting\Public\Dto;
 
 use Modules\Chains\Public\Dto\NextSettlementDto;
 use Modules\Forecasting\Public\Http\Livewire\ForecastHighlightsTile;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 /**
@@ -23,5 +24,6 @@ final class ForecastHighlightsDto extends Data
         public readonly int $activeShortfallCount,
         public readonly ?NextSettlementDto $nextIcsSettlement,
         public readonly bool $icsSettlementOverdue = false,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 }

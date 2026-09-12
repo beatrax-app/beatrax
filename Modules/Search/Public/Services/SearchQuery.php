@@ -10,6 +10,8 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Enums\MoneyFlow;
@@ -128,7 +130,7 @@ final readonly class SearchQuery
         // Bucketed by the currency each row settled in and converted from there
         // — counting only the rows already in the reader's own reporting
         // currency reported nothing at all over a ledger denominated elsewhere.
-        ['count' => $totalCount, 'out' => $totalOut, 'in' => $totalIn, 'unconverted' => $unconverted] = $this->totals($query, $base);
+        ['count' => $totalCount, 'out' => $totalOut, 'in' => $totalIn, 'unconverted' => $unconverted, 'rates' => $rates] = $this->totals($query, $base);
 
         $query->limit($limit + 1);
         TransactionCursor::apply($query, $cursorPostedAt, $cursorId);
@@ -150,6 +152,8 @@ final readonly class SearchQuery
             $didYouMean = $this->suggester->suggest($user, $textQuery);
         }
 
+        $unpriced = $amountBounds->alsoUnpriced($unconverted);
+
         return new SearchResultPage(
             rows: $dtos,
             totalCount: $totalCount,
@@ -159,7 +163,11 @@ final readonly class SearchQuery
             nextCursorId: $hasMore ? $lastId : null,
             nextCursorPostedAt: $hasMore ? $lastPostedAt : null,
             didYouMean: $didYouMean,
-            unconvertedCurrencies: $amountBounds->alsoUnpriced($unconverted),
+            unconvertedCurrencies: $unpriced,
+            conversion: ConversionDisclosure::of(
+                $rates->only(array_values(array_diff($rates->codes(), $unpriced))),
+                $unpriced,
+            ),
         );
     }
 
@@ -384,7 +392,7 @@ final readonly class SearchQuery
     // ledger denominated elsewhere. A bucket no rate reaches is named to the
     // reader rather than left quietly missing from the strip.
     /**
-     * @return array{count: int, out: int, in: int, unconverted: list<string>}
+     * @return array{count: int, out: int, in: int, unconverted: list<string>, rates: RateSet}
      */
     private function totals(Builder $query, string $base): array
     {
@@ -428,6 +436,10 @@ final readonly class SearchQuery
             'out' => $out->minor,
             'in' => $in->minor,
             'unconverted' => $unconverted,
+            // One read priced both figures, and the strip states both, so the
+            // set travels whole and the caller narrows it against the wider
+            // unconverted list only the caller knows.
+            'rates' => $rates,
         ];
     }
 

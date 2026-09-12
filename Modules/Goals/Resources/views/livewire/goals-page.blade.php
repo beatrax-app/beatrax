@@ -105,9 +105,12 @@
                                 · <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.status.completed') }}</span>
                             @endif
                         </p>
-                        @if ($row->isPartial())
-                            <p class="secondary text-xs" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</p>
-                        @endif
+                        <x-core::fx-disclosure
+                            :disclosure="$row->conversion"
+                            id="goal-phone-{{ $row->id }}"
+                            :label="$row->name"
+                            class="secondary block text-xs"
+                        />
 
                         {{-- A bar and a date are one line each and fit at 375pt.
                              Dropping them left the phone with a bare percentage
@@ -235,9 +238,12 @@
                     {{-- A goal funded in a currency the rate table cannot reach
                          counts nothing from it. Every other money surface names
                          what it left out; this bar used to just be short. --}}
-                    @if ($row->isPartial())
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</p>
-                    @endif
+                    <x-core::fx-disclosure
+                        :disclosure="$row->conversion"
+                        id="goal-{{ $row->id }}"
+                        :label="$row->name"
+                        class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                    />
 
                     @include('goals::partials.goal-target-date', ['row' => $row, 'class' => 'mt-1 text-xs text-slate-500 dark:text-slate-400'])
 
@@ -317,9 +323,12 @@
                                     {{ $fmt($row->targetMinor, $row->currency) }}
                                 </p>
                             </div>
-                            @if ($row->isPartial())
-                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</p>
-                            @endif
+                            <x-core::fx-disclosure
+                                :disclosure="$row->conversion"
+                                id="goal-archived-{{ $row->id }}"
+                                :label="$row->name"
+                                class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                            />
                             <div class="mt-3">
                                 <flux:dropdown>
                                     <flux:button

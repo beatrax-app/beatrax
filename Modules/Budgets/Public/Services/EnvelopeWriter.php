@@ -20,6 +20,7 @@ use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Core\Public\Support\IdReadBack;
 use Modules\Core\Public\Support\Lang;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -359,7 +360,6 @@ final readonly class EnvelopeWriter
     // month, from one click.
     /**
      * @param  array<array-key, mixed>  $existingTargetCategoryIds  keyed by the category ids already assigned in the target period
-     * @param  array<string, string>  $rates
      *
      * @throws InvalidArgumentException category not owned/global (IDOR)
      */
@@ -369,7 +369,7 @@ final readonly class EnvelopeWriter
         array $existingTargetCategoryIds,
         string $periodDate,
         string $baseCurrency,
-        array $rates,
+        RateSet $rates,
     ): ?EnvelopeAssignmentMutated {
         $categoryId = self::toInt($row->category_id);
         $minor = self::toInt($row->assigned_minor);

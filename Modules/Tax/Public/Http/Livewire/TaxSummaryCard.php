@@ -25,7 +25,7 @@ final class TaxSummaryCard extends Component
                 'total' => null,
                 'count' => 0,
                 'year' => 0,
-                'unconvertedList' => '',
+                'disclosure' => null,
             ]);
         }
 
@@ -40,7 +40,7 @@ final class TaxSummaryCard extends Component
             'total' => $summary->totalMinor,
             'count' => $summary->count,
             'year' => $year,
-            'unconvertedList' => $summary->isPartial() ? $summary->unconvertedList() : '',
+            'disclosure' => $summary->conversion,
         ]);
     }
 }

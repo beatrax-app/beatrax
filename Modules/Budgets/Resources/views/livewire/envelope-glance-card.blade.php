@@ -56,6 +56,12 @@
                     >
                         {{ $toBudgetMinor === null ? '—' : $fmt($toBudgetMinor) }}
                     </p>
+                    <x-core::fx-disclosure
+                        :disclosure="$conversion"
+                        id="budgets-glance-ready"
+                        :label="Lang::get('budgets::messages.ready.label')"
+                        class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                    />
                 </div>
 
                 @if ($overspentCount >= 1)

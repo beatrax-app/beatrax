@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
@@ -25,5 +26,6 @@ final class DashboardSummary extends Data
         public readonly int $uncategorizedCount,
         public readonly bool $isFirstRun,
         public readonly array $unconvertedCurrencies = [],
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 }

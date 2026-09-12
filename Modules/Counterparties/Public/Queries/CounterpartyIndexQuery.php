@@ -14,6 +14,8 @@ use Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter;
 use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -88,7 +90,7 @@ final readonly class CounterpartyIndexQuery
     }
 
     /**
-     * @param  array<int, array{total: int, count: int, unconverted: list<string>}>  $totals
+     * @param  array<int, array{total: int, count: int, unconverted: list<string>, conversion: ConversionDisclosure}>  $totals
      * @param  array<int, stdClass>  $recentRows
      * @param  array<int, array<string, int>>  $monthlyTotals
      * @param  list<string>  $sparklineMonths
@@ -137,6 +139,7 @@ final readonly class CounterpartyIndexQuery
             sparkline: $sparkline,
             currency: $baseCurrency,
             unconverted: $totals[$cpId]['unconverted'] ?? [],
+            conversion: $totals[$cpId]['conversion'] ?? null,
         );
     }
 
@@ -166,10 +169,9 @@ final readonly class CounterpartyIndexQuery
 
     /**
      * @param  array<int, array{minor: array<string, int>, count: int}>  $buckets
-     * @param  array<string, string>  $rates
-     * @return array<int, array{total: int, count: int, unconverted: list<string>}>
+     * @return array<int, array{total: int, count: int, unconverted: list<string>, conversion: ConversionDisclosure}>
      */
-    private function convertedTotals(array $buckets, string $baseCurrency, array $rates): array
+    private function convertedTotals(array $buckets, string $baseCurrency, RateSet $rates): array
     {
         $totals = [];
         foreach ($buckets as $cpId => $bucket) {
@@ -178,6 +180,7 @@ final readonly class CounterpartyIndexQuery
                 'total' => $converted->minor,
                 'count' => $bucket['count'],
                 'unconverted' => $converted->unconverted,
+                'conversion' => $converted->disclosure(),
             ];
         }
 
@@ -186,10 +189,9 @@ final readonly class CounterpartyIndexQuery
 
     /**
      * @param  array<int, array<string, array<string, int>>>  $monthlyBuckets
-     * @param  array<string, string>  $rates
      * @return array<int, array<string, int>>
      */
-    private function convertedMonthlyTotals(array $monthlyBuckets, string $baseCurrency, array $rates): array
+    private function convertedMonthlyTotals(array $monthlyBuckets, string $baseCurrency, RateSet $rates): array
     {
         $monthly = [];
         foreach ($monthlyBuckets as $cpId => $byMonth) {

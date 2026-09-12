@@ -190,6 +190,7 @@ final readonly class TaxTagQuery
             count: $count,
             currency: $total->currency,
             unconvertedCurrencies: $total->unconverted,
+            conversion: $total->disclosure(),
         );
     }
 

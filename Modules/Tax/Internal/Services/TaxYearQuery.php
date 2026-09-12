@@ -12,6 +12,8 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -185,6 +187,9 @@ final readonly class TaxYearQuery
             categories: self::withSubtotals($categories, $deductions['subtotals'], $income['subtotals']),
             currency: $baseCurrency,
             unconvertedCurrencies: $unconverted,
+            // ratesTo() answers only for a pair it could price, so the set it
+            // returns is exactly the legs both totals were built from.
+            conversion: ConversionDisclosure::of($rates, $unconverted),
         );
     }
 
@@ -193,10 +198,9 @@ final readonly class TaxYearQuery
     // to the sections, so they cannot stop summing to their own headline.
     /**
      * @param  list<array<string, int>>  $bucketsBySection  section index => currency => magnitude minor
-     * @param  array<string, string>  $rates
      * @return array{subtotals: array<int, int>, total: int, unconverted: list<string>}
      */
-    private function distributedSubtotals(array $bucketsBySection, string $baseCurrency, array $rates): array
+    private function distributedSubtotals(array $bucketsBySection, string $baseCurrency, RateSet $rates): array
     {
         /** @var array<string, array<int, int>> $byCurrency */
         $byCurrency = [];

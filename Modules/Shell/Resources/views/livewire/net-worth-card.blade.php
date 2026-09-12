@@ -1,9 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
-@use('Modules\FX\Public\Services\ExchangeRateService')
-@use('Modules\FX\Public\Support\BundledRates')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
-    use Modules\Ledger\Public\ValueObjects\Rate;
 
     $baseCurrency = $netWorth->currency;
 
@@ -14,50 +11,6 @@
     $amountClass = static fn (int $minor): string => $minor < 0
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-slate-900 dark:text-slate-100';
-
-    // Conversion is active when ratesSource is non-null (at least one non-base account was converted).
-    $conversionActive = $netWorth->ratesSource !== null;
-
-    // Human-readable provider label for the disclosure copy (UI-SPEC §7.2).
-    // The institution's acronym is localised — several locales say BCE and one
-    // says the Greek form — while Frankfurter is a service name that stays
-    // itself in all twenty-six.
-    $sourceLabel = static fn (?string $source): string => match ($source) {
-        'ecb' => Lang::get('core::net_worth.source_ecb'),
-        'frankfurter' => 'Frankfurter',
-        BundledRates::SOURCE => Lang::get('core::net_worth.source_bundled'),
-        'transaction' => Lang::get('core::net_worth.source_transaction'),
-        null, '' => Lang::get('core::net_worth.source_fallback'),
-        default => ucfirst($source),
-    };
-
-    // Stale-note copy depends on provenance AND on the toggle (UI-SPEC §7.2).
-    // Only fx:refresh-rates ends the wait and it skips a reader who has online
-    // fetching off, so promising them a next refresh names a job nothing runs.
-    $staleNote = static fn (?string $source): string => match (true) {
-        $source === BundledRates::SOURCE => Lang::choice('core::net_worth.stale_bundled', ExchangeRateService::STALE_DAYS_THRESHOLD),
-        ! $fxOnlineEnabled => Lang::choice('core::net_worth.stale_offline', ExchangeRateService::STALE_DAYS_THRESHOLD),
-        default => Lang::choice('core::net_worth.stale_old', ExchangeRateService::STALE_DAYS_THRESHOLD),
-    };
-
-    // The stored rate is a DECIMAL(18,8) string or a "num/den" fraction
-    // (brick/money cross-rate). Rate::forDisplay(), not a fixed four places:
-    // euro-per-yen is 0.00628536 and four decimals wrote 0.0063, two
-    // significant digits, which no longer reaches the ≈ figure beside it.
-    $fmtRate = static function (?string $rate): ?string {
-        if ($rate === null || $rate === '') {
-            return null;
-        }
-        if (str_contains($rate, '/')) {
-            [$num, $den] = array_pad(explode('/', $rate, 2), 2, '');
-            if (! is_numeric($num) || ! is_numeric($den) || (float) $den === 0.0) {
-                return null;
-            }
-            $rate = sprintf('%.'.Rate::SCALE.'F', (float) $num / (float) $den);
-        }
-
-        return Rate::of($rate)?->forDisplay();
-    };
 @endphp
 
 <div>
@@ -79,34 +32,8 @@
                         :body="Lang::get('core::help.net_worth')"
                     /></div>
 
-                    {{-- Total figure with FX disclosure affordance --}}
                     <p class="mt-1 text-3xl font-semibold {{ $amountClass($netWorth->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt($netWorth->totalMinor) }}
-                        @if ($conversionActive)
-                            {{-- Disclosure trigger: click reveals source · as-of date.
-                                 anchor-name ties the popover to this trigger (UI-SPEC §5.4). --}}
-                            <button type="button"
-                                    class="fx-disclosure-trigger"
-                                    style="anchor-name: --fx-net;"
-                                    aria-label="{{ Lang::get('core::net_worth.rate_details') }}"
-                                    x-data
-                                    x-on:click="$refs.fxPopNetworth.showPopover()">
-                                <span class="fx-icon {{ $netWorth->hasStaleRates ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
-                            </button>
-                            {{-- Native HTML Popover API — no JS library needed (UI-SPEC §5.4/§6.4).
-                                 The total mixes currencies, so it summarises source + as-of
-                                 rather than claiming a single rate; per-pair rates live on the
-                                 breakdown rows below. --}}
-                            <div popover id="fx-pop-networth" x-ref="fxPopNetworth" class="fx-popover" style="position-anchor: --fx-net; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
-                                @if ($netWorth->ratesAsOf !== null)
-                                    <p class="fx-rate">{{ Lang::get('core::net_worth.converted_to', ['currency' => $baseCurrency]) }}</p>
-                                    <p class="fx-source">{{ $sourceLabel($netWorth->ratesSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $netWorth->ratesAsOf->translatedFormat('d M Y')]) }}</p>
-                                    @if ($netWorth->hasStaleRates)
-                                        <p class="fx-stale-note">{{ $staleNote($netWorth->ratesSource) }}</p>
-                                    @endif
-                                @endif
-                            </div>
-                        @endif
                     </p>
 
                     @php($accountCount = $netWorth->accountCount())
@@ -118,12 +45,18 @@
                         @endif
                     </p>
 
-                    @if ($conversionActive)
-                        {{-- Global rates disclosure line — one per surface (UI-SPEC §5.2/§7.3) --}}
-                        <p class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
-                            {{ Lang::get('core::net_worth.global_rates', ['date' => $netWorth->ratesAsOf?->translatedFormat('d M Y'), 'source' => $sourceLabel($netWorth->ratesSource)]) }}
-                        </p>
-                    @endif
+                    {{-- Every rate, source, as-of date and stale note on this
+                         card comes from here. The card kept private copies of
+                         all four, which is how its total came to be dated by
+                         its freshest leg rather than its oldest. --}}
+                    <x-core::fx-disclosure
+                        :disclosure="$netWorth->conversion"
+                        id="net-worth"
+                        :label="Lang::get('core::net_worth.heading')"
+                        :online="(bool) $fxOnlineEnabled"
+                        class="mt-0.5 block text-xs"
+                        style="color: var(--color-text-faint);"
+                    />
                 </div>
                 <x-core::secondary-button
                     size="sm"
@@ -150,30 +83,14 @@
                                 {{-- Native amount as primary display --}}
                                 {{ $nativeFmt($account->balanceMinor, $account->currency) }}
                                 @if ($account->isConverted())
-                                    {{-- Per-account: real base-equivalent + inline FX trigger carrying
-                                         this pair's actual rate (UI-SPEC §5.2/§5.4) --}}
                                     <span class="ml-1 text-xs" style="color: var(--color-text-faint);">
                                         ≈ {{ $fmt($account->baseEquivalentMinor) }}
-                                        <button type="button"
-                                                class="fx-disclosure-trigger fx-disclosure-trigger--inline"
-                                                style="anchor-name: --fx-a{{ $lineKey }};"
-                                                aria-label="{{ Lang::get('core::net_worth.rate_details_for', ['name' => $account->name]) }}"
-                                                x-data
-                                                x-on:click="$refs.{{ 'fxPop'.$lineKey }}.showPopover()">
-                                            <span class="fx-icon {{ $account->fxIsStale ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
-                                        </button>
-                                        <div popover id="fx-pop-{{ $lineKey }}" x-ref="{{ 'fxPop'.$lineKey }}" class="fx-popover" style="position-anchor: --fx-a{{ $lineKey }}; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
-                                            @php($accountRate = $fmtRate($account->fxRate))
-                                            @if ($accountRate !== null)
-                                                <p class="fx-rate">{{ Lang::get('core::net_worth.rate_line', ['from' => $account->currency, 'rate' => $accountRate, 'to' => $baseCurrency]) }}</p>
-                                            @endif
-                                            @if ($account->fxAsOf !== null)
-                                                <p class="fx-source">{{ $sourceLabel($account->fxSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $account->fxAsOf->translatedFormat('d M Y')]) }}</p>
-                                            @endif
-                                            @if ($account->fxIsStale)
-                                                <p class="fx-stale-note">{{ $staleNote($account->fxSource) }}</p>
-                                            @endif
-                                        </div>
+                                        <x-core::fx-disclosure
+                                            :disclosure="$account->disclosure($baseCurrency)"
+                                            id="account-{{ $lineKey }}"
+                                            :label="$account->name"
+                                            :online="(bool) $fxOnlineEnabled"
+                                        />
                                     </span>
                                 @elseif ($account->hasNoRate($baseCurrency))
                                     {{-- No rate at all for this pair — show the native amount

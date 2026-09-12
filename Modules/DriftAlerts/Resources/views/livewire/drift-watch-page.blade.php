@@ -95,9 +95,12 @@
                     <span style="font-variant-numeric: tabular-nums;">{{ $fmt($monthlyTotal->minor, $monthlyTotal->currency) }}</span>
                     <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
                 </span>
-                @if ($monthlyTotal->isPartial())
-                    <span class="text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $monthlyTotal->unconvertedList()]) }}</span>
-                @endif
+                <x-core::fx-disclosure
+                    :disclosure="$monthlyTotal->disclosure()"
+                    id="drift-watch-monthly"
+                    :label="Lang::get('drift-alerts::watch.per_month_total')"
+                    class="text-slate-600 dark:text-slate-400"
+                />
             </div>
         @endif
     </header>

@@ -6,6 +6,7 @@ namespace Modules\Forecasting\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 /**
@@ -25,6 +26,7 @@ final class NetWorth extends Data
         public readonly ?CarbonImmutable $ratesAsOf = null,
         public readonly bool $hasStaleRates = false,
         public readonly int $balancesWithoutRate = 0,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function hasAccounts(): bool

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Goals\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Goals\Models\Goal;
 
@@ -43,11 +44,10 @@ final readonly class GoalProjectionService
     /**
      * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool, movementsByDay: array<string, int>}|null  $linkedPot
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed  every attribution on this goal, whenever it posted
-     * @param  array<string, string>  $rates  into the goal's own currency, as returned by CrossCurrencyTotal::ratesTo()
      * @param  CarbonImmutable  $today  read once by the caller, so a render straddling midnight cannot mix two days
      * @return array{date: ?string, beyondHorizon: bool, stalled: bool}
      */
-    public function project(Goal $goal, int $contributedMinor, ?array $linkedPot, array $attributed, array $rates, CarbonImmutable $today): array
+    public function project(Goal $goal, int $contributedMinor, ?array $linkedPot, array $attributed, RateSet $rates, CarbonImmutable $today): array
     {
         if ($this->hasNoProjection($goal, $contributedMinor, $today)) {
             return self::NO_PROJECTION;
@@ -82,9 +82,8 @@ final readonly class GoalProjectionService
     /**
      * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool, movementsByDay: array<string, int>}|null  $linkedPot
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed
-     * @param  array<string, string>  $rates
      */
-    private function dailyContributionRate(Goal $goal, ?array $linkedPot, array $attributed, array $rates, CarbonImmutable $today): float
+    private function dailyContributionRate(Goal $goal, ?array $linkedPot, array $attributed, RateSet $rates, CarbonImmutable $today): float
     {
         $effectiveStart = $this->effectiveStart($goal, $today);
         $elapsedDays = $this->observedDays($goal, $today);
@@ -126,9 +125,8 @@ final readonly class GoalProjectionService
     // date strings, which compare the same way here as they did in SQL.
     /**
      * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool, movementsByDay: array<string, int>}  $linkedPot
-     * @param  array<string, string>  $rates
      */
-    private function potWindowSum(array $linkedPot, string $targetCurrency, string $since, array $rates): int
+    private function potWindowSum(array $linkedPot, string $targetCurrency, string $since, RateSet $rates): int
     {
         $minor = 0;
         foreach ($linkedPot['movementsByDay'] as $day => $dayMinor) {
@@ -150,9 +148,8 @@ final readonly class GoalProjectionService
     // compare the same way here as they did in SQL.
     /**
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed
-     * @param  array<string, string>  $rates
      */
-    private function attributedWindowSum(Goal $goal, string $since, array $attributed, array $rates): int
+    private function attributedWindowSum(Goal $goal, string $since, array $attributed, RateSet $rates): int
     {
         $byCurrency = [];
         foreach ($attributed as $contribution) {

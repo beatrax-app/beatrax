@@ -8,6 +8,8 @@
       2. Inside <x-bottom-sheet name="day-detail"> for phone
 
     $dayDto: CalendarDayDto
+    $panelId: unique per include — both contexts render at once, and the FX
+              disclosure's popover id has to differ between them
 
     Renders: SOD balance, entry rows with series + counterparty drill links,
     approximate note, paid/missed state, EOD balance.
@@ -135,11 +137,13 @@
         @endif
     </span>
 </div>
-@if ($dayDto->unconvertedCurrencies !== [])
-    <p data-not-converted="true" class="text-xs" style="color: var(--color-text-faint);">
-        {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $dayDto->unconvertedCurrencies)]) }}
-    </p>
-@endif
+<x-core::fx-disclosure
+    :disclosure="$dayDto->conversion"
+    :id="$panelId ?? 'cal-day'"
+    :label="Lang::get('calendar::messages.panel.end_of_day')"
+    class="block text-xs"
+    style="color: var(--color-text-faint);"
+/>
 {{-- The rows above are drawn from every visible account and the two figures
      around them from the balance set alone. Where those disagree the panel
      names the account, or it has printed a start and an end the payments

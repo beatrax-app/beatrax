@@ -383,11 +383,15 @@
                          balance: one counter used to say "1 account" over four
                          unconvertible ARS accounts, because it was counting
                          currencies and the sentence named accounts. --}}
-                    @if ($result->excludedCurrencies !== [])
-                        <p class="text-xs" style="color: var(--color-amber);" data-not-converted="true">
-                            {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $result->excludedCurrencies)]) }}
-                        </p>
-                    @endif
+                    {{-- Amber only where a currency was left out: a rate the
+                         reader does have is information, not a warning. --}}
+                    <x-core::fx-disclosure
+                        :disclosure="$result->conversion"
+                        id="report-total"
+                        :label="$metricLabel"
+                        class="block text-xs"
+                        style="color: var({{ $result->excludedCurrencies === [] ? '--color-text-muted' : '--color-amber' }});"
+                    />
                     @if ($result->excludedAccountIds !== [])
                         <p class="text-xs" style="color: var(--color-amber);">
                             {{ Lang::choice('reports::builder.fx_excluded', count($result->excludedAccountIds), ['count' => count($result->excludedAccountIds)]) }}

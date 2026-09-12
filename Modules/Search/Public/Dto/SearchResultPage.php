@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Search\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
+
 // Mirrors TransactionListPage, extended with aggregate totals across ALL
 // results (not just the current page), in the reader's own base currency, and
 // an optional "did you mean" string surfaced only when FTS5 returned 0
@@ -24,6 +26,7 @@ final readonly class SearchResultPage
         public ?string $nextCursorPostedAt,
         public ?string $didYouMean,
         public array $unconvertedCurrencies = [],
+        public ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function isPartial(): bool

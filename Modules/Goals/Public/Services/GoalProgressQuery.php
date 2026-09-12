@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Dto\ConvertedTotal;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Dto\GoalProgressRow;
@@ -131,7 +132,7 @@ final readonly class GoalProgressQuery
      * @param  list<stdClass>  $goalRows
      * @param  array<int, array{balance: int, currency: string, potId: int, hasMovements: bool, movementsByDay: array<string, int>}>  $linkedPots
      * @param  array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>  $attributed
-     * @return array<string, array<string, string>>
+     * @return array<string, RateSet>
      */
     private function ratesByTargetCurrency(array $goalRows, array $linkedPots, array $attributed): array
     {
@@ -159,7 +160,7 @@ final readonly class GoalProgressQuery
     /**
      * @param  array<int, array{balance: int, currency: string, potId: int, hasMovements: bool, movementsByDay: array<string, int>}>  $linkedPots
      * @param  array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>  $attributed
-     * @param  array<string, array<string, string>>  $ratesByTarget
+     * @param  array<string, RateSet>  $ratesByTarget
      */
     private function buildRow(stdClass $row, array $linkedPots, array $attributed, array $ratesByTarget, CarbonImmutable $today): GoalProgressRow
     {
@@ -167,7 +168,7 @@ final readonly class GoalProgressQuery
         $goalId = self::toInt($row->id);
         $targetCurrency = self::toString($row->target_currency);
         $linkedPot = $linkedPots[$goalId] ?? null;
-        $rates = $ratesByTarget[$targetCurrency] ?? [];
+        $rates = $ratesByTarget[$targetCurrency] ?? RateSet::empty($targetCurrency);
         $contributions = $attributed[$goalId] ?? [];
 
         $contributed = $linkedPot !== null
@@ -202,17 +203,22 @@ final readonly class GoalProgressQuery
             projectionStalled: $stalled,
             hasContributions: $linkedPot !== null ? $linkedPot['hasMovements'] : $contributions !== [],
             unconverted: $contributed->unconverted,
+            conversion: $contributed->disclosure(),
         );
     }
 
     /**
      * @param  array{balance: int, currency: string, potId: int, hasMovements: bool, movementsByDay: array<string, int>}  $linkedPot
-     * @param  array<string, string>  $rates
      */
-    private function potContribution(array $linkedPot, string $targetCurrency, array $rates): ConvertedTotal
+    private function potContribution(array $linkedPot, string $targetCurrency, RateSet $rates): ConvertedTotal
     {
         if ($linkedPot['currency'] === '') {
-            return new ConvertedTotal(minor: $linkedPot['balance'], currency: $targetCurrency, unconverted: []);
+            return new ConvertedTotal(
+                minor: $linkedPot['balance'],
+                currency: $targetCurrency,
+                unconverted: [],
+                rates: RateSet::empty($targetCurrency),
+            );
         }
 
         return $this->fx->withRates([$linkedPot['currency'] => $linkedPot['balance']], $targetCurrency, $rates);
@@ -220,9 +226,8 @@ final readonly class GoalProgressQuery
 
     /**
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $contributions
-     * @param  array<string, string>  $rates
      */
-    private function attributedContribution(array $contributions, string $targetCurrency, array $rates): ConvertedTotal
+    private function attributedContribution(array $contributions, string $targetCurrency, RateSet $rates): ConvertedTotal
     {
         $byCurrency = [];
         foreach ($contributions as $contribution) {

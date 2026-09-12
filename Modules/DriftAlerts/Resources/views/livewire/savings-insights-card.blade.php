@@ -10,6 +10,16 @@
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {{ Lang::get('drift-alerts::savings.disclaimer') }}
             </p>
+            {{-- The order is the conversion: the list ranks by what each costs
+                 the reader, so it went through rates even though every figure
+                 in it is printed in its own currency, and a row nothing could
+                 price sits at the bottom for a reason worth naming. --}}
+            <x-core::fx-disclosure
+                :disclosure="$conversion"
+                id="savings-insights"
+                :label="Lang::get('drift-alerts::savings.heading')"
+                class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+            />
 
             <ul class="mt-4 space-y-2">
                 @foreach ($insights as $insight)

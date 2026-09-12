@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 final class ReportResultDto extends Data
@@ -27,6 +28,7 @@ final class ReportResultDto extends Data
         public readonly array $otherMovementsByCurrency = [],
         public readonly ?int $previousTotalMinor = null,
         public readonly ?string $previousCurrency = null,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function hasExclusions(): bool

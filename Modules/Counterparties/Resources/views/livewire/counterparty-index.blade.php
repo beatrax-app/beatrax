@@ -156,104 +156,137 @@
                         </div>
                     </a>
                 @elseif ($isUnknown)
-                    <a
-                        href="{{ $row->href }}"
-                        class="cp-card unknown focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                    >
-                        <header class="cp-head">
-                            <span class="cp-head-name">{{ $row->displayName }}</span>
-                            <x-counterparties::type-chip :type="$row->type" />
-                        </header>
-                        <div class="cp-stats">
-                            <div class="cp-stat">
-                                <span class="value">{{ $row->total12mFormatted }}</span>
-                                <span class="label">{{ Lang::get('counterparties::index.stat_12mo') }}</span>
+                    {{-- The card is a box holding a link, not a link painted as a box:
+                         the disclosure's trigger is a button and a button is not allowed
+                         inside a link (UI-SPEC §5.1), so .cp-card's chrome moves to the
+                         wrapper and the caption sits inside the card rather than under
+                         its border. The anchor restates the column, gap and link reset
+                         .cp-card was giving it, because these children are spaced by
+                         their parent rather than by margins of their own. --}}
+                    <div class="cp-card unknown">
+                        <a
+                            href="{{ $row->href }}"
+                            class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
+                            style="display: flex; flex-direction: column; gap: var(--space-3); flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit;"
+                        >
+                            <header class="cp-head">
+                                <span class="cp-head-name">{{ $row->displayName }}</span>
+                                <x-counterparties::type-chip :type="$row->type" />
+                            </header>
+                            <div class="cp-stats">
+                                <div class="cp-stat">
+                                    <span class="value">{{ $row->total12mFormatted }}</span>
+                                    <span class="label">{{ Lang::get('counterparties::index.stat_12mo') }}</span>
+                                </div>
                             </div>
-                        </div>
-                        @if ($row->isPartial())
-                            <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</div>
-                        @endif
-                        @if ($row->recentLine !== null)
-                            <div class="cp-recent"><span>{{ $row->recentLine }}</span></div>
-                        @endif
-                        <div style="font-size: var(--text-xs); color: var(--color-amber); margin-top: auto;">
-                            ❋ {{ Lang::get('counterparties::index.label_this') }}
-                        </div>
-                    </a>
+                            @if ($row->recentLine !== null)
+                                <div class="cp-recent"><span>{{ $row->recentLine }}</span></div>
+                            @endif
+                            <div style="font-size: var(--text-xs); color: var(--color-amber); margin-top: auto;">
+                                ❋ {{ Lang::get('counterparties::index.label_this') }}
+                            </div>
+                        </a>
+                        <x-core::fx-disclosure
+                            :disclosure="$row->conversion"
+                            id="cp-{{ $row->id }}-unknown"
+                            :label="$row->displayName"
+                            style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);"
+                        />
+                    </div>
                 @else
-                    <a
-                        href="{{ $row->href }}"
-                        class="cp-card focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                    >
-                        <header class="cp-head">
-                            <span class="cp-head-name">{{ $row->displayName }}</span>
-                            <x-counterparties::type-chip :type="$row->type" />
-                        </header>
-                        {{-- Each amount and its label are one item, so a card too
-                             narrow for both pairs breaks BETWEEN them. Flat, the
-                             row wrapped wherever it ran out: two amounts and one
-                             label on the first line, the other label under them,
-                             with nothing saying which amount it belonged to. --}}
-                        <div class="cp-stats">
-                            <div class="cp-stat">
-                                <span class="value">{{ $row->total12mFormatted }}</span>
-                                <span class="label">
-                                    @if ($row->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
-                                </span>
+                    <div class="cp-card">
+                        <a
+                            href="{{ $row->href }}"
+                            class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
+                            style="display: flex; flex-direction: column; gap: var(--space-3); flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit;"
+                        >
+                            <header class="cp-head">
+                                <span class="cp-head-name">{{ $row->displayName }}</span>
+                                <x-counterparties::type-chip :type="$row->type" />
+                            </header>
+                            {{-- Each amount and its label are one item, so a card too
+                                 narrow for both pairs breaks BETWEEN them. Flat, the
+                                 row wrapped wherever it ran out: two amounts and one
+                                 label on the first line, the other label under them,
+                                 with nothing saying which amount it belonged to. --}}
+                            <div class="cp-stats">
+                                <div class="cp-stat">
+                                    <span class="value">{{ $row->total12mFormatted }}</span>
+                                    <span class="label">
+                                        @if ($row->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
+                                    </span>
+                                </div>
+                                <div class="cp-stat">
+                                    <span class="value" style="font-size: var(--text-sm);">{{ $row->avgPerMonthFormatted }}</span>
+                                    <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
+                                </div>
                             </div>
-                            <div class="cp-stat">
-                                <span class="value" style="font-size: var(--text-sm);">{{ $row->avgPerMonthFormatted }}</span>
-                                <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
-                            </div>
-                        </div>
-                        @if ($row->isPartial())
-                            <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</div>
-                        @endif
-                        <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
-                            @php
-                                $sparkMax = max(1, max(array_map('abs', $row->sparkline)));
-                                $sparkLastIdx = count($row->sparkline) - 1;
-                            @endphp
-                            @foreach ($row->sparkline as $idx => $bar)
+                            <div role="img" class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
                                 @php
-                                    $heightPct = (int) round((abs($bar) / $sparkMax) * 100);
+                                    $sparkMax = max(1, max(array_map('abs', $row->sparkline)));
+                                    $sparkLastIdx = count($row->sparkline) - 1;
                                 @endphp
-                                <span
-                                    class="bar {{ $idx === $sparkLastIdx ? 'last' : '' }}"
-                                    style="height: {{ $heightPct }}%;"
-                                    aria-hidden="true"
-                                ></span>
-                            @endforeach
-                        </div>
-                        @if ($row->recentLine !== null)
-                            <div class="cp-recent"><span>{{ $row->recentLine }}</span></div>
-                        @endif
-                    </a>
+                                @foreach ($row->sparkline as $idx => $bar)
+                                    @php
+                                        $heightPct = (int) round((abs($bar) / $sparkMax) * 100);
+                                    @endphp
+                                    <span
+                                        class="bar {{ $idx === $sparkLastIdx ? 'last' : '' }}"
+                                        style="height: {{ $heightPct }}%;"
+                                        aria-hidden="true"
+                                    ></span>
+                                @endforeach
+                            </div>
+                            @if ($row->recentLine !== null)
+                                <div class="cp-recent"><span>{{ $row->recentLine }}</span></div>
+                            @endif
+                        </a>
+                        <x-core::fx-disclosure
+                            :disclosure="$row->conversion"
+                            id="cp-{{ $row->id }}-card"
+                            :label="$row->displayName"
+                            style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);"
+                        />
+                    </div>
                 @endif
             @endforeach
         </div>
     @else
         {{-- List view: desktop table + phone card-list-item degradation --}}
         @foreach ($rows as $row)
-            {{-- phone-only: .card-list-item renders each row as a tidy two-line card --}}
-            <a
-                href="{{ $row->href }}"
-                class="card-list-item phone-only focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
-                style="text-decoration: none; display: flex;"
+            {{-- phone-only: .card-list-item renders each row as a tidy two-line card.
+                 A box holding a link, for the reason the cards above are: the row
+                 keeps the class, so its padding, rule and the .primary/.secondary
+                 /.amount descendants all still land, and only its display is
+                 overridden to stack the caption under the row. The anchor restates
+                 the flex line, including the wrap that below 768px adds, because that
+                 line is now the anchor's and no longer the box's. --}}
+            <div
+                class="card-list-item phone-only"
+                style="display: block;"
             >
-                <div style="flex: 1 1 auto; min-width: 0;">
-                    <span class="primary">{{ $row->displayName }}</span>
-                    <span class="secondary">
-                        <x-counterparties::type-chip :type="$row->type" />
-                    </span>
-                </div>
-                <div style="flex: 0 0 auto; text-align: right;">
-                    <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $row->total12mFormatted }}</span>
-                    @if ($row->isPartial())
-                        <span class="secondary" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</span>
-                    @endif
-                </div>
-            </a>
+                <a
+                    href="{{ $row->href }}"
+                    class="focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
+                    style="display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); row-gap: var(--space-2); text-decoration: none; color: inherit;"
+                >
+                    <div style="flex: 1 1 auto; min-width: 0;">
+                        <span class="primary">{{ $row->displayName }}</span>
+                        <span class="secondary">
+                            <x-counterparties::type-chip :type="$row->type" />
+                        </span>
+                    </div>
+                    <div style="flex: 0 0 auto; text-align: right;">
+                        <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $row->total12mFormatted }}</span>
+                    </div>
+                </a>
+                <x-core::fx-disclosure
+                    :disclosure="$row->conversion"
+                    id="cp-{{ $row->id }}-list"
+                    :label="$row->displayName"
+                    class="secondary"
+                />
+            </div>
         @endforeach
 
         {{-- desktop-only: standard table --}}
@@ -283,9 +316,12 @@
                             </td>
                             <td style="padding: var(--space-2) var(--space-3); text-align: right; font-variant-numeric: tabular-nums;">
                                 {{ $row->avgPerMonthFormatted }}
-                                @if ($row->isPartial())
-                                    <span style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $row->unconvertedList()]) }}</span>
-                                @endif
+                                <x-core::fx-disclosure
+                                    :disclosure="$row->conversion"
+                                    id="cp-{{ $row->id }}-table"
+                                    :label="$row->displayName"
+                                    style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);"
+                                />
                             </td>
                         </tr>
                     @endforeach

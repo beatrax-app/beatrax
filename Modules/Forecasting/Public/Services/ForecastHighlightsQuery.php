@@ -13,6 +13,8 @@ use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
 use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Enums\ShortfallRisk;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -78,7 +80,7 @@ final readonly class ForecastHighlightsQuery
     public function forUser(User $user): ForecastHighlightsDto
     {
         $shortfallCount = $this->activeShortfallCountForUser($user);
-        $lowest = $this->lowestProjectedBalance($user);
+        [$lowest, $conversion] = $this->lowestProjectedBalance($user);
         $nextIcsSettlement = $this->cardStatementQuery->nextSettlementForUser($user);
 
         return new ForecastHighlightsDto(
@@ -95,6 +97,7 @@ final readonly class ForecastHighlightsQuery
             // one, and calling it "next" reads as a date still to come.
             icsSettlementOverdue: $nextIcsSettlement !== null
                 && $nextIcsSettlement->dueDate->lessThan($this->clock->now()->startOfDay()),
+            conversion: $conversion,
         );
     }
 
@@ -105,13 +108,13 @@ final readonly class ForecastHighlightsQuery
     /**
      * @link ../../../../.docs/features/ledger/architecture.md#accountkind--which-kinds-hold-money
      *
-     * @return array{balanceMinor: int, currency: string, date: string, accountId: int, accountName: string}|null
+     * @return array{0: array{balanceMinor: int, currency: string, date: string, accountId: int, accountName: string}|null, 1: ConversionDisclosure}
      */
-    private function lowestProjectedBalance(User $user): ?array
+    private function lowestProjectedBalance(User $user): array
     {
         $accountsBlock = $this->loadLatestAccountsBlock($user);
         if ($accountsBlock === null) {
-            return null;
+            return [null, ConversionDisclosure::none()];
         }
 
         // Forward CASH, so only money the reader holds is in the race. A card
@@ -134,11 +137,22 @@ final readonly class ForecastHighlightsQuery
 
         $lowest = null;
         $lowestInBase = null;
+        $converted = [];
+        $unconverted = [];
 
         foreach ($candidates as $candidate) {
             $inBase = $this->inBase($candidate['balanceMinor'], $candidate['currency'], $baseCurrency, $rates);
             if ($inBase === null) {
+                // Out of the race rather than last in it: the tile names one
+                // account's dip, and an account nothing could price is not the
+                // one named however far it falls.
+                $unconverted[$candidate['currency']] = true;
+
                 continue;
+            }
+
+            if ($candidate['currency'] !== $baseCurrency) {
+                $converted[$candidate['currency']] = true;
             }
 
             if ($lowestInBase === null || $inBase < $lowestInBase) {
@@ -147,7 +161,10 @@ final readonly class ForecastHighlightsQuery
             }
         }
 
-        return $lowest;
+        return [
+            $lowest,
+            ConversionDisclosure::of($rates->only(array_keys($converted)), array_keys($unconverted)),
+        ];
     }
 
     /**
@@ -176,10 +193,7 @@ final readonly class ForecastHighlightsQuery
 
     // Null for a currency the rate table cannot reach, which drops the account
     // out of the race rather than letting its raw minor units win it.
-    /**
-     * @param  array<string, string>  $rates
-     */
-    private function inBase(int $minor, string $currency, string $baseCurrency, array $rates): ?int
+    private function inBase(int $minor, string $currency, string $baseCurrency, RateSet $rates): ?int
     {
         $money = Money::tryOfMinor($minor, $currency);
 

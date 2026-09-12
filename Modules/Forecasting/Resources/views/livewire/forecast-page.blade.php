@@ -230,13 +230,16 @@
                                 <x-core::section-heading :title="Lang::get('forecasting::forecast.all_accounts').' · '.Lang::get('forecasting::forecast.baseline')" />
                                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                     {{ Lang::choice('forecasting::forecast.aggregate_subtitle', $horizon, ['days' => $horizon]) }}
-                                    @if ($aggregateUnconverted !== [])
-                                        {{-- "every account" was a claim the total could not keep:
-                                             an account in a currency no rate reaches is silently
-                                             out of it, while its tab sits two lines above. --}}
-                                        <span class="text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $aggregateUnconverted)]) }}</span>
-                                    @endif
                                 </p>
+                                {{-- "every account" was a claim the total could not keep: an
+                                     account in a currency no rate reaches is silently out of
+                                     it, while its tab sits two lines above. --}}
+                                <x-core::fx-disclosure
+                                    :disclosure="$aggregateConversion"
+                                    id="forecast-aggregate"
+                                    :label="Lang::get('forecasting::forecast.all_accounts')"
+                                    class="mt-1 block text-sm text-slate-600 dark:text-slate-400"
+                                />
                             </header>
 
                             @if ($aggregateRunFailed)
@@ -316,12 +319,15 @@
                                     @if ($baseline->isStale)
                                         <p class="mt-1 text-xs text-amber-700 dark:text-amber-500" data-testid="forecast-stale-note" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.stale_run', ['date' => $baseline->asOf->translatedFormat('d M Y')]) }}</p>
                                     @endif
-                                    @if ($baseline->unconvertedCurrencies !== [])
-                                        {{-- A series the rate table cannot reach is out of this curve
-                                             entirely. Unnamed, the reader reads a balance that is
-                                             missing a subscription and has no way to tell. --}}
-                                        <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $baseline->unconvertedCurrencies)]) }}</p>
-                                    @endif
+                                    {{-- A series the rate table cannot reach is out of this curve
+                                         entirely. Unnamed, the reader reads a balance that is
+                                         missing a subscription and has no way to tell. --}}
+                                    <x-core::fx-disclosure
+                                        :disclosure="$baselineConversion"
+                                        id="forecast-baseline"
+                                        :label="Lang::get('forecasting::forecast.baseline')"
+                                        class="mt-1 block text-xs text-slate-600 dark:text-slate-400"
+                                    />
                                 </div>
                                 @if ($selectedAccountId !== null && ! ($scenario instanceof ForecastDto))
                                     <div x-data="{ open: false }" class="relative">

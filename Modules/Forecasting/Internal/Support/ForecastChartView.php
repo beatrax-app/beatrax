@@ -13,7 +13,9 @@ use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Enums\ForecastHorizon;
 use Modules\Forecasting\Public\Services\ForecastQuery;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\FX\Public\Dto\ConvertedTotal;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -107,6 +109,7 @@ final readonly class ForecastChartView
             'shortfallWindows' => [],
             'baselineRunFailed' => false,
             'scenarioRunFailed' => false,
+            'baselineConversion' => null,
         ];
         if ($selectedAccountId === null) {
             return $defaults;
@@ -184,6 +187,13 @@ final readonly class ForecastChartView
             'shortfallWindows' => $shortfallWindows,
             'baselineRunFailed' => $baseline->runFailed,
             'scenarioRunFailed' => $scenario->runFailed ?? false,
+            // Half a disclosure, because half is all the run kept: result_json
+            // records the codes the fold could not price and not the rates it
+            // priced the rest at, so this curve can name what it left out and
+            // nothing more until the pipeline stores them.
+            'baselineConversion' => $baseline->unconvertedCurrencies === []
+                ? null
+                : ConversionDisclosure::of(RateSet::empty($baseline->defaultCurrency), $baseline->unconvertedCurrencies),
         ];
     }
 
@@ -205,6 +215,7 @@ final readonly class ForecastChartView
             'aggregateRunFailed' => false,
             'aggregateScenarioRunFailed' => false,
             'aggregateUnconverted' => [],
+            'aggregateConversion' => null,
         ];
     }
 
@@ -220,7 +231,7 @@ final readonly class ForecastChartView
         ?int $scenarioId = null,
         bool $viewByFunder = false,
     ): array {
-        [$aggregatePoints, $aggregateBufferFloor, $aggregateRunFailed, $unconverted] = $this->computeAllAccountsAggregate(
+        [$aggregatePoints, $aggregateBufferFloor, $aggregateRunFailed, $unconverted, $conversion] = $this->computeAllAccountsAggregate(
             accountList: $accountList,
             horizon: $horizon,
             user: $user,
@@ -257,12 +268,13 @@ final readonly class ForecastChartView
             'aggregateRunFailed' => $aggregateRunFailed,
             'aggregateScenarioRunFailed' => $scenarioRunFailed,
             'aggregateUnconverted' => $unconverted,
+            'aggregateConversion' => $conversion,
         ];
     }
 
     /**
      * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
-     * @return array{0: list<array{date: string, point_minor: int}>, 1: int, 2: bool, 3: list<string>}
+     * @return array{0: list<array{date: string, point_minor: int}>, 1: int, 2: bool, 3: list<string>, 4: ConversionDisclosure}
      */
     private function computeAllAccountsAggregate(
         array $accountList,
@@ -310,10 +322,14 @@ final readonly class ForecastChartView
         // above the chart said "across every account" regardless. Every other
         // money surface here carries the codes through to core::money.not_converted.
         $aggregatePoints = [];
+        $converted = [];
         foreach ($byDateCurrency as $date => $byCurrency) {
             $total = $this->fx->withRates($byCurrency, $baseCurrency, $rates);
             foreach ($total->unconverted as $code) {
                 $unconverted[$code] = true;
+            }
+            foreach ($total->rates->codes() as $code) {
+                $converted[$code] = true;
             }
             $aggregatePoints[] = ['date' => $date, 'point_minor' => $total->minor];
         }
@@ -326,7 +342,16 @@ final readonly class ForecastChartView
         $codes = array_keys($unconverted);
         sort($codes);
 
-        return [$aggregatePoints, $bufferTotal->minor, $runFailed, $codes];
+        // The floor is drawn on the curve's own axis and converted through its
+        // own batch, so its rates belong to the same figure; neither set is a
+        // subset of the other — an account can hold a currency it sets no
+        // buffer in, and set one in a currency the curve never reaches.
+        $used = $rates->only(array_keys($converted));
+        foreach ($bufferTotal->rates->all() as $rate) {
+            $used = $used->with($rate);
+        }
+
+        return [$aggregatePoints, $bufferTotal->minor, $runFailed, $codes, ConversionDisclosure::of($used, $codes)];
     }
 
     // The floor is judged against the curve above, so it is summed over the
