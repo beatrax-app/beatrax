@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Je kunt ook opnieuw beginnen: dit apparaat krijgt een nieuwe identiteit, de oude blijft ongebruikt bewaard, en apparaten die je eerder koppelde moet je opnieuw koppelen.',
     'identity_unreadable_replace' => 'Nieuwe identiteit voor dit apparaat starten',
 
+    'registered_without_identity' => 'De gegevens van dit apparaat zijn teruggezet uit een back-up, maar de sleutel die zijn wijzigingen ondertekent kan niet worden gekopieerd — die is achtergebleven op het apparaat waarop de back-up is gemaakt. Wijzigingen die je hier maakt worden vastgehouden: er gaat niets verloren, en er komt niets op je andere apparaten tot synchronisatie op dit apparaat is ingesteld.',
+    'registered_without_identity_repair_help' => 'Afronden geeft dit apparaat zijn eigen synchronisatie-identiteit en verstuurt alles wat het heeft vastgehouden. Het apparaat waar de back-up van komt blijft in je lijst staan zonder verbinding te kunnen maken, zodat de gegevens die het ondertekende leesbaar blijven — en apparaten die je eerder koppelde moet je opnieuw koppelen.',
+    'registered_without_identity_repair' => 'Instellen van synchronisatie op dit apparaat afronden',
+
     'encrypted_at_rest' => 'Gegevens versleuteld opgeslagen',
     'encrypted_at_rest_scope' => 'Notities, omschrijvingen van transacties en de namen en IBANs van wie je betaalt zijn in het grootboek versleuteld met je app-vergrendelingswachtwoord. Bedragen, datums en je eigen rekeningnaam en IBAN niet. De zoekindex bewaart een eigen leesbare kopie van wie je betaalt, van je omschrijvingen van transacties, van de notities die je bij een transactie schrijft, van de notities die je bij een categorie in een splitsing schrijft en van je belastingnotities, en sommige namen van winkeliers staan leesbaar elders in het databasebestand.',
     'on' => 'Aan',

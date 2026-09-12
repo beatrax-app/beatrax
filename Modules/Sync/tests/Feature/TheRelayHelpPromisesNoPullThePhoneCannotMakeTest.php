@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\DatabaseManager;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scheduling\MobileBackgroundSchedule;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
@@ -31,21 +33,16 @@ beforeEach(function (): void {
     $this->actingAs($this->reader);
 
     // The relay field only renders once this device is a sync peer, which is
-    // the one state in which its help text can be read at all.
-    app(DatabaseManager::class)->connection()->table('device_registry')->insert([
-        'user_id' => $this->reader->id,
-        'device_id' => 'relay-help-self',
-        'name' => 'This device',
-        'ed25519_public_key_hex' => str_repeat('ab', 32),
-        'x25519_public_key_hex' => str_repeat('cd', 32),
-        'safety_number_words' => '',
-        'is_self' => 1,
-        'paired_at' => '2026-08-01T10:00:00Z',
-        'confirmed_at' => '2026-08-01T10:00:00Z',
-        'last_seen_at' => '2026-08-01T10:00:00Z',
-        'created_at' => '2026-08-01T10:00:00Z',
-        'updated_at' => '2026-08-01T10:00:00Z',
-    ]);
+    // the one state in which its help text can be read at all — and a self row
+    // alone is not that state: without the key-file beside it the section reads
+    // as a restored database, which it is.
+    foreach ((array) glob(UserDataPathService::appPath("sync/identity/{$this->reader->id}.enc*")) as $stale) {
+        @unlink((string) $stale);
+    }
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    app(DeviceIdentityService::class)->generateAndPersist((int) $this->reader->id, $session);
 });
 
 afterEach(function (): void {

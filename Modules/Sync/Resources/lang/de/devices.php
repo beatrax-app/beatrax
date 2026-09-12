@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Du kannst auch neu anfangen: Dieses Gerät bekommt eine neue Identität, die alte bleibt ungenutzt erhalten, und zuvor gekoppelte Geräte musst du erneut koppeln.',
     'identity_unreadable_replace' => 'Neue Identität für dieses Gerät anlegen',
 
+    'registered_without_identity' => 'Die Daten dieses Geräts wurden aus einer Sicherung wiederhergestellt, aber der Schlüssel, der seine Änderungen signiert, lässt sich nicht kopieren — er ist auf dem Gerät geblieben, auf dem die Sicherung entstanden ist. Änderungen, die du hier machst, werden zurückgehalten: nichts geht verloren, und nichts erreicht deine anderen Geräte, bis die Synchronisierung auf diesem Gerät eingerichtet ist.',
+    'registered_without_identity_repair_help' => 'Mit dem Abschluss bekommt dieses Gerät seine eigene Sync-Identität und sendet alles, was es zurückgehalten hat. Das Gerät, von dem die Sicherung stammt, bleibt in deiner Liste, kann sich aber nicht verbinden, damit die von ihm signierten Daten lesbar bleiben — und zuvor gekoppelte Geräte musst du erneut koppeln.',
+    'registered_without_identity_repair' => 'Einrichtung der Synchronisierung auf diesem Gerät abschließen',
+
     'encrypted_at_rest' => 'Daten im Ruhezustand verschlüsselt',
     'encrypted_at_rest_scope' => 'Notizen, Buchungstexte und die Namen und IBANs deiner Zahlungsempfänger sind im Buchungsbestand mit der Passphrase deiner App-Sperre verschlüsselt. Beträge, Daten sowie dein eigener Kontoname und deine eigene IBAN sind es nicht. Der Suchindex behält eine eigene lesbare Kopie davon, wen du bezahlst, deiner Buchungstexte, der Notizen, die du zu einer Buchung schreibst, der Notizen, die du zu einer Kategorie einer Aufteilung schreibst, und deiner Steuernotizen, und einige Händlernamen stehen im Klartext an anderer Stelle in der Datenbankdatei.',
     'on' => 'An',

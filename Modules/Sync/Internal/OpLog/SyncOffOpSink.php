@@ -7,9 +7,9 @@ namespace Modules\Sync\Internal\OpLog;
 use Psr\Log\LoggerInterface;
 
 // The one sink allowed to lose a mutation, and it loses nothing: a device with
-// no identity key-file has never synced, so there is no peer to owe. Deferring
-// here would fill a table on every install that only ever runs on one machine,
-// and switching sync on backfills the whole database anyway.
+// neither an identity key-file nor a registered self row has never synced, so
+// there is no peer to owe, and switching sync on backfills the whole database.
+// A restored self row falsifies that, and the standing enum is what says so.
 /**
  * @link ../../../../.docs/features/sync/pre-sync-history-capture.md
  */

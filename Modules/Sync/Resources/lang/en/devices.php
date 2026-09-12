@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'You can also start fresh: this device gets a new identity, the old one is kept aside unused, and devices you paired before have to be paired again.',
     'identity_unreadable_replace' => 'Start a new identity for this device',
 
+    'registered_without_identity' => 'This device\'s data was restored from a backup, but the key that signs its changes cannot be copied — it stayed on the device the backup was made on. Changes you make here are being held: nothing is lost, and nothing reaches your other devices until sync is set up on this device.',
+    'registered_without_identity_repair_help' => 'Finishing gives this device its own sync identity and sends everything it has been holding. The device the backup came from stays in your list, unable to connect, so the data it signed stays readable — and devices you paired before have to be paired again.',
+    'registered_without_identity_repair' => 'Finish setting up sync on this device',
+
     'encrypted_at_rest' => 'Data encrypted at rest',
     'encrypted_at_rest_scope' => 'Notes, transaction descriptions and the names and IBANs of who you pay are encrypted in the ledger with your app-lock passphrase. Amounts, dates and your own account name and IBAN are not. The search index keeps its own readable copy of who you pay, your transaction descriptions, the notes you write on a transaction, the notes you write on a split category and your tax notes, and some merchant names still appear in plain text elsewhere in the database file.',
     'on' => 'On',

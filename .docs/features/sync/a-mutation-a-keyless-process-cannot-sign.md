@@ -141,17 +141,28 @@ is on its own page.
 
 ## Why a device that never enabled sync defers nothing
 
-`OpCaptureSinkFactory` asks `DeviceIdentityLoader::exists()` — a bare
-`file_exists` on the key-file, needing no KEK, no session and no authenticated
-user. False means this install has never switched sync on: it owes no peer
-anything, and switching sync on captures the whole database in one walk. Those
-mutations are discarded exactly as before, and `SyncOffOpSink` says so at debug
-level. Deferring them instead would fill a table on every install that only ever
-runs on one machine.
+`OpCaptureSinkFactory` asks `DeviceSyncStanding`, which reads the key-file and
+the `device_registry` self row together. Neither alone. `NeverEnabled` — no
+key-file and no self row — means this install has never switched sync on: it
+owes no peer anything, and switching sync on captures the whole database in one
+walk. Those mutations are discarded exactly as before, and `SyncOffOpSink` says
+so at debug level. Deferring them instead would fill a table on every install
+that only ever runs on one machine.
 
-That leaves the three states that DO defer, which are the three the loader
-already distinguishes: no authenticated user (a console), `Locked`, and
-`Unreadable`.
+**The file alone was the wrong question, and it cost a device everything it
+wrote.** A restored database brings the old machine's self row and can never
+bring its key-file, so `exists()` answered false on a device a peer was already
+syncing with. Every write went to `SyncOffOpSink` — at debug, forever — while
+the settings screen read the same registry row and said sync was enabled.
+Nothing rescues those: a peer already holds the rows, so the backfill that
+repairs a never-synced device fills only columns the receiver never had, and an
+edit or a delete made in that window reaches nobody. See [a self row and no
+key-file is a restored
+database](device-identity-key-files.md#a-self-row-and-no-key-file-is-a-restored-database)
+for the repair the reader is offered.
+
+That leaves the four states that DO defer: no authenticated user (a console),
+`Locked`, `Unreadable`, and a self row whose key-file never travelled.
 
 ## A fourth state: signed, and not sealable
 

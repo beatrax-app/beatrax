@@ -56,6 +56,10 @@ needing the KEK, precisely so a locked device is never mistaken for a fresh one 
 overwritten. `state()` names all four — `Absent`, `Locked`, `Unreadable`, `Usable` — for the
 callers that must tell the user which one it is, or must refuse to write.
 
+`Absent` is the one of the four that the file cannot answer on its own: it means "never
+enabled" only where the registry agrees, and [a restored
+database](#a-self-row-and-no-key-file-is-a-restored-database) is where it does not.
+
 ## The key file outlives the database that holds its key
 
 The key file is on the filesystem; the KEK that opens it is wrapped in
@@ -98,7 +102,80 @@ them, and a support session can still put it back.
 
 With a self row present the notice appears without the action. Retiring an identity peers
 were told about, and a history signed under it, needs the registry row and every pairing
-retired with it — more than one settings button may decide.
+retired with it, which is the operation the next section adds and this one is not.
+
+## A self row and no key-file is a restored database
+
+The key file is the one thing a backup may not carry: the private halves never leave the
+device that generated them, so an encrypted backup is a copy of the database and the GDK
+keyring (`PortableKeyMaterial` names exactly what travels) and nothing else. Restore that
+onto a fresh install and `device_registry` arrives holding the old machine's self row, with
+no `sync/identity/<id>.enc` anywhere on the machine.
+
+Neither half of the app could see that, because neither half asked both questions:
+
+- `DevicesAndSyncSettingsSection` read the **registry** and rendered sync as enabled.
+- `OpCaptureSinkFactory` read the **key-file** and chose `SyncOffOpSink`, whose premise is
+  that a device with no key-file has never synced and owes no peer anything.
+
+So the screen said sync was on while every local write was logged at debug and dropped, with
+both routes out of it shut: the enable toggle is disabled when the screen reads enabled, and
+the retire-and-replace action above is offered only when it does not. The measurable half is
+that a peer already holds these rows, so the backfill that repairs a never-synced device
+repairs nothing here — a create naming a row the receiver holds fills only the columns it
+never received, and an edit or a delete made in that window is gone for good.
+
+`DeviceSyncStanding` is the question asked in one place now, and it has four answers rather
+than two:
+
+| Key-file | Self row | Standing | What it means |
+| --- | --- | --- | --- |
+| no | no | `NeverEnabled` | Nothing has ever synced here. Writes are dropped, as before. |
+| no | yes | `IdentityMissing` | A restored database. Writes are **deferred**, and the screen says so. |
+| yes | no | `RegistrationMissing` | The row this device can put back; the ordinary enable does it. |
+| yes | yes | `Enabled` | Sync is on. |
+
+Deferring is what the state is owed rather than a courtesy: `deferred_op_captures` holds
+coordinates and never values, so it needs no key, and the drain replays them on the first
+request that can sign. The reader does not have to press anything for that to happen — the
+holding starts the moment the standing is read, and the repair is what ends it.
+
+### What the repair retires, and what it must not
+
+`repairRestoredSyncIdentity()` calls `retireSelfRegistration()` and then the ordinary enable.
+The retirement sets `is_self` to `0` on the restored row and touches nothing else:
+
+- **`is_self` has to go.** It carries no uniqueness constraint, and ten readers take
+  `where('is_self', 1)->value(...)` — a second self row is a second answer to every one of
+  them, in insertion order rather than by anything meaningful.
+- **`confirmed_at` has to stay.** The restored op log is signed by the old machine's
+  `device_id`, and a rebuild verifies it against `signatureVerificationKeys()`, which is
+  confirmed-only. Clearing it would quarantine the whole restored ledger the next time
+  anybody rebuilt, silently and much later.
+
+The old machine therefore stays in the device list as a device that cannot connect, which is
+what it is — and removing it there is the ordinary revocation, which is the right thing to do
+with a device that was lost.
+
+`retireSelfRegistration()` refuses outright where a key-file exists. A demotion cannot be
+undone without the old `device_id`, and the one state it is for is the state where nothing on
+this machine can answer for that row at all.
+
+The order inside the repair is load-bearing for the same reason. A retirement the mint does
+not follow leaves a device with no self row and no key-file — `NeverEnabled`, owing nothing,
+dropping what it writes, which is the state this page exists to end. So every gate the enable
+refuses on is asked *before* anything is retired. What remains is a mint that throws after its
+gates passed: the reader gets the failure copy, the ordinary enable is offered and works, and
+the window in which writes are dropped is one the reader is standing in rather than an
+unbounded silence.
+
+### The third reader of the same question
+
+`DeviceRegistryService::hasLocalDevice()` decides whether the desktop starts its sync and
+relay listeners, and its own comment says "without a sync identity no peer can dial in" while
+it reads the registry row. A restored desktop therefore binds a port and refuses every
+handshake it answers. That is visible failure rather than silent loss, and the repair on this
+page ends it, so it is named here rather than changed alongside.
 
 ## Staging plaintext secrets
 

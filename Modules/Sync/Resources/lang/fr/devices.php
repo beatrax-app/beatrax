@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Tu peux aussi repartir de zéro : cet appareil reçoit une nouvelle identité, l\'ancienne est conservée sans être utilisée, et les appareils déjà appairés devront l\'être à nouveau.',
     'identity_unreadable_replace' => 'Créer une nouvelle identité pour cet appareil',
 
+    'registered_without_identity' => 'Les données de cet appareil ont été restaurées depuis une sauvegarde, mais la clé qui signe ses modifications ne peut pas être copiée — elle est restée sur l\'appareil où la sauvegarde a été faite. Les modifications que tu fais ici sont retenues : rien n\'est perdu, et rien n\'arrive sur tes autres appareils tant que la synchronisation n\'est pas configurée sur cet appareil.',
+    'registered_without_identity_repair_help' => 'Terminer donne à cet appareil sa propre identité de synchronisation et envoie tout ce qu\'il a retenu. L\'appareil d\'où vient la sauvegarde reste dans ta liste sans pouvoir se connecter, pour que les données qu\'il a signées restent lisibles — et les appareils déjà appairés devront l\'être à nouveau.',
+    'registered_without_identity_repair' => 'Terminer la configuration de la synchronisation sur cet appareil',
+
     'encrypted_at_rest' => 'Données chiffrées au repos',
     'encrypted_at_rest_scope' => 'Tes notes, les libellés de transaction et les noms et IBAN de tes bénéficiaires sont chiffrés dans le registre avec la phrase secrète de verrouillage de l\'app. Les montants, les dates et le nom et l\'IBAN de ton propre compte ne le sont pas. L\'index de recherche conserve sa propre copie lisible de qui tu paies, de tes libellés de transaction, des notes que tu écris sur une transaction, des notes que tu écris sur une catégorie d\'une ventilation et de tes notes fiscales, et certains noms de commerçants restent en clair ailleurs dans le fichier de base de données.',
     'on' => 'Activé',

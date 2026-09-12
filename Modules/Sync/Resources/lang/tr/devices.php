@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Baştan da başlayabilirsin: cihaz yeni bir kimlik alır, eskisi kullanılmadan bir kenarda kalır ve daha önce eşleştirdiğin cihazları yeniden eşleştirmen gerekir.',
     'identity_unreadable_replace' => 'Bu cihaz için yeni bir kimlik oluştur',
 
+    'registered_without_identity' => 'Bu cihazın verileri bir yedekten geri yüklendi, ama değişikliklerini imzalayan anahtar kopyalanamaz — yedeğin alındığı cihazda kaldı. Burada yaptığın değişiklikler bekletiliyor: hiçbir şey kaybolmuyor ve bu cihazda senkronizasyon kurulana kadar hiçbir şey diğer cihazlarına ulaşmıyor.',
+    'registered_without_identity_repair_help' => 'Tamamladığında bu cihaz kendi senkronizasyon kimliğini alır ve beklettiği her şeyi gönderir. Yedeğin geldiği cihaz, imzaladığı veriler okunabilir kalsın diye bağlanamaz durumda listende kalır — daha önce eşleştirdiğin cihazları yeniden eşleştirmen gerekir.',
+    'registered_without_identity_repair' => 'Bu cihazda senkronizasyon kurulumunu tamamla',
+
     'encrypted_at_rest' => 'Veriler durağan halde şifreli',
     'encrypted_at_rest_scope' => 'Notlar, işlem açıklamaları ve ödeme yaptığın kişilerin adları ile IBAN\'ları defterde uygulama kilidi parolanla şifrelenir. Tutarlar, tarihler ve kendi hesabının adı ile IBAN\'ı şifrelenmez. Arama dizini kime ödeme yaptığının, işlem açıklamalarının, bir işleme yazdığın notların, bir bölüştürme kategorisine yazdığın notların ve vergi notlarının kendi okunabilir kopyasını saklar ve bazı satıcı adları veritabanı dosyasının başka yerlerinde açık metin olarak bulunur.',
     'on' => 'Açık',
