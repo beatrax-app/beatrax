@@ -40,7 +40,7 @@ final readonly class ConversionDisclosure
     {
         sort($unconverted);
 
-        return new self($rates->targetCurrency, $rates->all(), array_values($unconverted));
+        return new self($rates->targetCurrency, $rates->all(), $unconverted);
     }
 
     // Nothing to render rather than an empty line: a figure whose buckets were

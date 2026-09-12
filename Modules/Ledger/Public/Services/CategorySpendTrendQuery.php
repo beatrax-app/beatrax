@@ -118,7 +118,7 @@ final readonly class CategorySpendTrendQuery
     ): ConversionDisclosure {
         $used = [];
         foreach ([$previous, $current] as $spend) {
-            foreach ($spend->conversion?->rates ?? [] as $rate) {
+            foreach ($spend->conversion->rates ?? [] as $rate) {
                 $used[$rate->from] = $rate;
             }
         }

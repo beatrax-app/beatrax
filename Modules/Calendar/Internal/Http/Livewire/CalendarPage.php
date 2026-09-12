@@ -301,7 +301,7 @@ final class CalendarPage extends Component
     {
         $used = [];
         foreach ($days as $day) {
-            foreach ($day->conversion?->rates ?? [] as $rate) {
+            foreach ($day->conversion->rates ?? [] as $rate) {
                 $used[$rate->from] = $rate;
             }
         }
