@@ -300,6 +300,12 @@ native `[popover]` holding a line per pair, and the `core::money.not_converted`
 clause. A surface that names what it left out without naming what it
 converted at fails `AConvertedFigureNamesTheRateThatMadeItArchTest`.
 
+The rate itself is printed at the column's own eight places
+(`Rate::exact()`), not at the three significant digits `Rate::forDisplay()`
+keeps for a rate read at a glance: a reader who opened the panel came to
+check the rate, and 0.00629 does not reproduce a figure priced at
+0.00628536.
+
 The age a reader sees is Carbon's own relative phrase rather than a
 sentence of ours: it is translated in all twenty-six languages with no
 plural rule per language, and "3 days ago" against "3 months ago" is the
