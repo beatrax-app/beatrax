@@ -120,7 +120,7 @@
                 </div>
 
                 {{-- Account filter --}}
-                @if (! empty($availableAccounts))
+                @if ($availableAccounts !== [])
                     <div>
                         <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.account') }}</p>
                         <div class="srch-sheet-section">
@@ -167,7 +167,7 @@
                 </div>
 
                 {{-- Category filter --}}
-                @if (! empty($availableCategories))
+                @if ($availableCategories !== [])
                     <div>
                         <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.category') }}</p>
                         <div class="srch-sheet-section">

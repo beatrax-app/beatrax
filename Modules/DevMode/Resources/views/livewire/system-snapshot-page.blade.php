@@ -141,7 +141,7 @@
                     @foreach ($effectiveConfig as $k => $v)
                         <tr>
                             <th class="text-left font-mono text-[var(--color-text-muted)] pr-4 align-top">{{ $k }}</th>
-                            <td class="font-mono break-all">{{ is_bool($v) ? ($v ? 'true' : 'false') : (is_scalar($v) ? $v : (is_null($v) ? 'null' : json_encode($v))) }}</td>
+                            <td class="font-mono break-all">{{ is_bool($v) ? ($v ? 'true' : 'false') : (is_scalar($v) ? $v : ($v === null ? 'null' : json_encode($v))) }}</td>
                         </tr>
                     @endforeach
                 </tbody>

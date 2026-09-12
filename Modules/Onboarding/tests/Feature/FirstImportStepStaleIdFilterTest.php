@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +26,6 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->frozenNow = CarbonImmutable::parse('2026-05-15 12:00:00');
-    Carbon::setTestNow($this->frozenNow);
     CarbonImmutable::setTestNow($this->frozenNow);
 
     $this->app->instance(Clock::class, new class($this->frozenNow) implements Clock
@@ -56,7 +54,6 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    Carbon::setTestNow();
     CarbonImmutable::setTestNow();
 });
 

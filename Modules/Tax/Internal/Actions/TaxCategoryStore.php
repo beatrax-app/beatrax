@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Actions;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
@@ -37,7 +37,7 @@ final readonly class TaxCategoryStore
         }
 
         $connection = $this->db->connection();
-        $now = Carbon::now()->toDateTimeString();
+        $now = CarbonImmutable::now()->toDateTimeString();
 
         // The whole seed under one write lock, which the connection takes at
         // BEGIN: the base below is read once and handed out across the loop, so
@@ -212,7 +212,7 @@ final readonly class TaxCategoryStore
             ->where('user_id', $userId)
             ->max('sort_order');
 
-        $now = Carbon::now()->toDateTimeString();
+        $now = CarbonImmutable::now()->toDateTimeString();
 
         // The id the insert itself reports, not a second read by name: that
         // read trusted the name to still name one row, and it is the column a
@@ -272,7 +272,7 @@ final readonly class TaxCategoryStore
                 ->update([
                     'name' => $name,
                     'name_is_default' => false,
-                    'updated_at' => Carbon::now()->toDateTimeString(),
+                    'updated_at' => CarbonImmutable::now()->toDateTimeString(),
                 ]);
         } catch (UniqueConstraintViolationException) {
             // The same index that answers add(), reached the same way: the name
@@ -303,7 +303,7 @@ final readonly class TaxCategoryStore
             ->where('user_id', $userId)
             ->update([
                 'status' => TaxCategoryStatus::Archived->value,
-                'updated_at' => Carbon::now()->toDateTimeString(),
+                'updated_at' => CarbonImmutable::now()->toDateTimeString(),
             ]);
     }
 
@@ -328,7 +328,7 @@ final readonly class TaxCategoryStore
             ->where('user_id', $userId)
             ->update([
                 'status' => TaxCategoryStatus::Active->value,
-                'updated_at' => Carbon::now()->toDateTimeString(),
+                'updated_at' => CarbonImmutable::now()->toDateTimeString(),
             ]);
     }
 

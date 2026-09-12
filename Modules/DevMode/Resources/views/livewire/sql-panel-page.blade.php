@@ -143,7 +143,7 @@
                                     $value = $row[$col] ?? null;
                                 @endphp
                                 <td class="font-mono text-xs {{ is_numeric($value) ? 'text-right' : 'text-left' }}">
-                                    {{ is_null($value) ? 'NULL' : (is_scalar($value) ? $value : json_encode($value)) }}
+                                    {{ $value === null ? 'NULL' : (is_scalar($value) ? $value : json_encode($value)) }}
                                 </td>
                             @endforeach
                         </tr>

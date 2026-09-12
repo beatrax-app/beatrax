@@ -45,7 +45,7 @@
             $archived = array_filter((array) $categories, fn ($c) => ($c->status ?? '') === TaxCategoryStatus::Archived->value);
         @endphp
 
-        @if (empty($active) && $countryLabel === '')
+        @if ($active === [] && $countryLabel === '')
             <p class="text-sm text-[var(--color-text-faint)]" data-testid="categories-empty">
                 {{ Lang::get('tax::settings.categories_empty') }}
             </p>
@@ -147,7 +147,7 @@
         @endif
 
         {{-- Archived disclosure --}}
-        @if (!empty($archived))
+        @if ($archived !== [])
             <details class="mt-4">
                 <summary class="text-xs text-[var(--color-text-faint)] cursor-pointer">
                     {{ Lang::get('tax::settings.archived_count', ['count' => count($archived)]) }}

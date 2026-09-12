@@ -63,7 +63,7 @@
         >{{ Lang::get('counterparties::components.self_stub.hide_cta') }}</button>
     </div>
 
-    @if (! empty($recent) || isset($slot) && trim((string) $slot) !== '')
+    @if ($recent !== [] || isset($slot) && trim((string) $slot) !== '')
         <div style="width: 100%; max-width: 480px; margin-top: var(--space-6); text-align: left;">
             <p style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-2);">
                 {{ Lang::get('counterparties::components.self_stub.recent_legs') }}

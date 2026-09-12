@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +20,6 @@ beforeEach(function (): void {
     // goes through `Repository::getSeconds()`, which calls Carbon::now() and
     // would otherwise collapse to zero, making the cached preview unreadable.
     $frozen = CarbonImmutable::parse('2026-05-15 12:00:00');
-    Carbon::setTestNow($frozen);
     CarbonImmutable::setTestNow($frozen);
 
     $this->app->instance(Clock::class, new class($frozen) implements Clock
@@ -45,7 +43,6 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    Carbon::setTestNow();
     CarbonImmutable::setTestNow();
 });
 

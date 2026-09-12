@@ -82,7 +82,7 @@ function appOwnedSharedBindings(): array
             continue;
         }
 
-        if (empty($bindings[$abstract]['shared'])) {
+        if (($bindings[$abstract]['shared'] ?? false) !== true) {
             continue;
         }
 

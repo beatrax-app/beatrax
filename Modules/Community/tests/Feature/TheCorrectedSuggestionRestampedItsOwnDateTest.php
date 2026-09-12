@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Community\Internal\Http\Livewire\SuggestMappingModal;
@@ -21,7 +21,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    Carbon::setTestNow();
+    CarbonImmutable::setTestNow();
 });
 
 function suggestMapping(string $pattern, string $name): void
@@ -33,10 +33,10 @@ function suggestMapping(string $pattern, string $name): void
 }
 
 it('keeps the date a contribution was made when its name is corrected', function (): void {
-    Carbon::setTestNow(Carbon::parse('2026-03-04 09:15:00'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-03-04 09:15:00'));
     suggestMapping('SHELL*PIETER*', 'Shell Pieter');
 
-    Carbon::setTestNow(Carbon::parse('2026-08-19 21:40:00'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 21:40:00'));
     suggestMapping('SHELL*PIETER*', 'Shell Pieter BV');
 
     $row = DB::table('community_merchant_mappings')->where('user_id', $this->user->id)->sole();
@@ -47,7 +47,7 @@ it('keeps the date a contribution was made when its name is corrected', function
 });
 
 it('stamps a first contribution with the moment it was made', function (): void {
-    Carbon::setTestNow(Carbon::parse('2026-03-04 09:15:00'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-03-04 09:15:00'));
     suggestMapping('ALBERT*HEIJN*', 'Albert Heijn');
 
     $row = DB::table('community_merchant_mappings')->where('user_id', $this->user->id)->sole();
@@ -57,10 +57,10 @@ it('stamps a first contribution with the moment it was made', function (): void 
 });
 
 it('leaves another pattern of the reader\'s own untouched', function (): void {
-    Carbon::setTestNow(Carbon::parse('2026-03-04 09:15:00'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-03-04 09:15:00'));
     suggestMapping('SHELL*PIETER*', 'Shell Pieter');
 
-    Carbon::setTestNow(Carbon::parse('2026-08-19 21:40:00'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-19 21:40:00'));
     suggestMapping('ALBERT*HEIJN*', 'Albert Heijn');
 
     $rows = DB::table('community_merchant_mappings')
