@@ -31,12 +31,23 @@ const SENSITIVITY_PERCENTAGE_MARKS = '/[%±]/u';
 // "чутливість 50 of 100".
 const SENSITIVITY_UNTRANSLATED_SCALE = '/\bof\s+100\b/iu';
 
-/** @return array<string, string> the $key line from every locale's $group file, keyed by locale */
+/**
+ * The $key line from every locale's $group file, keyed by locale.
+ *
+ * A missing key reads as a locale with nothing to check, and a RENAMED key
+ * reads as every locale having nothing to check — which is a clean answer from
+ * all three rules below over a set of nothing. Renaming this key across the 26
+ * files took the set from 26 to 0 and left the file reporting four passes, so
+ * the count is asserted against the locales on disk rather than taken.
+ *
+ * @return array<string, string>
+ */
 function sensitivityCopyPerLocale(string $group, string $key): array
 {
     $lines = [];
+    $locales = glob(base_path('Modules/Anomaly/Resources/lang/*/'.$group.'.php')) ?: [];
 
-    foreach (glob(base_path('Modules/Anomaly/Resources/lang/*/'.$group.'.php')) ?: [] as $file) {
+    foreach ($locales as $file) {
         /** @var array<string, mixed> $strings */
         $strings = require $file;
 
@@ -45,6 +56,14 @@ function sensitivityCopyPerLocale(string $group, string $key): array
             $lines[basename(dirname($file))] = $line;
         }
     }
+
+    expect($locales)->not->toBe([], 'No '.$group.' translation file was found at all, so every rule reading this answers about nothing.');
+
+    expect($lines)->toHaveCount(
+        count($locales),
+        count($locales).' locales ship a '.$group.' file and '.count($lines).' of them carry "'.$key
+        .'". A key that moved leaves every rule below judging an empty set.',
+    );
 
     return $lines;
 }

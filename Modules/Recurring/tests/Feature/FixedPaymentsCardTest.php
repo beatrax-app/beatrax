@@ -265,20 +265,35 @@ it('labels the direction pill in the reader language, never the raw enum case', 
 // Every locale answers, so the pill cannot fall back to the raw case in one of
 // the twenty-six. A key resolving to itself is exactly what the parity test
 // cannot see, because it compares the locales to each other.
+// Read out of each locale's own array rather than asked of the translator. A
+// namespaced key missing in one locale falls back to `en`, so Lang::get() came
+// back with fluent English and never with the key it was being compared to:
+// deleting the whole `direction` block from `da` left this green while the
+// Danish pill read "Expense" / "Income".
 it('has a direction label in every locale that differs from the enum case', function (): void {
     $missing = [];
+    $files = glob(base_path('Modules/Recurring/Resources/lang/*/fixed_payments.php')) ?: [];
 
-    foreach (array_map('basename', (array) glob(base_path('Modules/Recurring/Resources/lang/*'))) as $locale) {
-        app()->setLocale((string) $locale);
+    expect($files)->not->toBe([], 'No fixed_payments translation file was found, so this rule judges nothing.');
+
+    foreach ($files as $file) {
+        $locale = basename(dirname($file));
+
+        /** @var array<string, mixed> $strings */
+        $strings = require $file;
+        $directions = $strings['direction'] ?? null;
 
         foreach (['expense', 'income'] as $case) {
-            $label = Lang::get('recurring::fixed_payments.direction.'.$case);
+            $label = is_array($directions) ? ($directions[$case] ?? null) : null;
 
-            if ($label === '' || $label === 'recurring::fixed_payments.direction.'.$case) {
+            if (! is_string($label) || trim($label) === '' || $label === $case) {
                 $missing[] = $locale.'/'.$case;
             }
         }
     }
 
-    expect($missing)->toBe([]);
+    expect($missing)->toBe([], implode("\n  ", [
+        'These locales carry no direction label of their own, so the pill falls back to English:',
+        ...$missing,
+    ]));
 });

@@ -198,9 +198,7 @@ it('does not allow any file other than CardStatementStateMachine to mutate card_
     $hits = [];
     $chainsDir = base_path('Modules/Chains');
     if (! is_dir($chainsDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $allowedFile = base_path('Modules/Chains/Internal/CardStatementStateMachine.php');
     $iterator = new RecursiveIteratorIterator(
@@ -284,9 +282,7 @@ it('does not allow any file other than InboxScanStateMachine to mutate inbox_sca
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $allowedFile = base_path('Modules/EmailScan/Internal/InboxScanStateMachine.php');
     $migrationsDir = base_path('Modules/EmailScan/Database/Migrations');
@@ -337,9 +333,7 @@ it('does not allow any file other than InboxScanStateMachine to write inboxes.ba
     $hits = [];
     $emailScanDir = base_path('Modules/EmailScan');
     if (! is_dir($emailScanDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $allowedFile = base_path('Modules/EmailScan/Internal/InboxScanStateMachine.php');
     $migrationsDir = base_path('Modules/EmailScan/Database/Migrations');
@@ -387,9 +381,7 @@ it('does not allow any file under Modules/Receipts/ to import EmailScan OAuth/cl
     $hits = [];
     $receiptsDir = base_path('Modules/Receipts');
     if (! is_dir($receiptsDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator(
@@ -432,9 +424,7 @@ it('does not allow any Modules/EmailScan migration to declare an OAuth-secret co
     $hits = [];
     $migrationsDir = base_path('Modules/EmailScan/Database/Migrations');
     if (! is_dir($migrationsDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator(
@@ -470,9 +460,7 @@ it('does not allow any file other than RecurringSeriesStateMachine to mutate rec
     $hits = [];
     $recurringDir = base_path('Modules/Recurring');
     if (! is_dir($recurringDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $allowedFile = base_path('Modules/Recurring/Internal/StateMachines/RecurringSeriesStateMachine.php');
     $migrationsDir = base_path('Modules/Recurring/Database/Migrations');
@@ -533,9 +521,7 @@ it('does not allow any file under Modules/DriftAlerts/ to mutate the recurring_s
     $hits = [];
     $driftDir = base_path('Modules/DriftAlerts');
     if (! is_dir($driftDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator(
@@ -578,9 +564,7 @@ it('does not allow any file other than DriftAlertStateMachine to mutate drift_al
     $hits = [];
     $driftDir = base_path('Modules/DriftAlerts');
     if (! is_dir($driftDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $allowedFile = base_path('Modules/DriftAlerts/Internal/StateMachines/DriftAlertStateMachine.php');
     $migrationsDir = base_path('Modules/DriftAlerts/Database/Migrations');
@@ -633,9 +617,7 @@ it('does not allow any file other than AnomalyAlertStateMachine to mutate anomal
     $hits = [];
     $anomalyDir = base_path('Modules/Anomaly');
     if (! is_dir($anomalyDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $allowedFile = base_path('Modules/Anomaly/Internal/StateMachines/AnomalyAlertStateMachine.php');
     $migrationsDir = base_path('Modules/Anomaly/Database/Migrations');
@@ -883,9 +865,7 @@ it('does not allow Laravel facades inside Modules/Core/Internal/Console/ (noFaca
     $hits = [];
     $consoleDir = base_path('Modules/Core/Internal/Console');
     if (! is_dir($consoleDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
 
     $iterator = new RecursiveIteratorIterator(
@@ -936,9 +916,7 @@ it('does not allow Laravel global path / container helpers inside Modules/Core/I
     $hits = [];
     $consoleDir = base_path('Modules/Core/Internal/Console');
     if (! is_dir($consoleDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
 
     $iterator = new RecursiveIteratorIterator(
@@ -986,9 +964,7 @@ it('does not allow the Auth facade or auth/session helpers anywhere under Module
 
     $modulesDir = base_path('Modules');
     if (! is_dir($modulesDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
 
     $hits = [];
@@ -1424,9 +1400,7 @@ it('keeps PaymentType-unique string literals inside the PaymentType enum (noPaym
     $needles = ['online', 'direct_debit'];
     $modulesDir = base_path('Modules');
     if (! is_dir($modulesDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
     $allowedFile = base_path('Modules/Import/Public/Enums/PaymentType.php');
 
@@ -1509,9 +1483,7 @@ it('requires every *Hinter class under Modules/Import/Internal/Parsers to implem
     // inherits the contract still counts.
     $parsersDir = base_path('Modules/Import/Internal/Parsers');
     if (! is_dir($parsersDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
 
     $contract = 'Modules\\Import\\Public\\Contracts\\PaymentTypeHinter';
@@ -1561,9 +1533,7 @@ it('restricts Native\\Desktop\\Contracts\\Shell imports to the allow-listed acti
 
     $modulesDir = base_path('Modules');
     if (! is_dir($modulesDir)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
 
     $hits = [];
@@ -1610,9 +1580,7 @@ it('every raw merchant_aliases query in production code carries an explicit user
     // which is exactly where a missing filter becomes a cross-user leak.
     $importRoot = base_path('Modules/Import');
     if (! is_dir($importRoot)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The module this rule is about is not present under this Composer root.');
     }
 
     $hits = [];
