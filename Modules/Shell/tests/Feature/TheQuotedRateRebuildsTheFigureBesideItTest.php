@@ -47,8 +47,13 @@ it('quotes a euro-per-yen rate at enough places to reach the figure it converted
         ['rate' => '159.10', 'created_at' => now(), 'updated_at' => now()],
     );
 
+    // 112,600 JPY is EUR 707.73 on the card. At 0.00629 a reader reproduces
+    // 708.25 and at 0.0063 they reproduce 709.38; only the column's own eight
+    // places land back on the figure the rate is quoted beside.
     Livewire::test(NetWorthCard::class)
         ->call('toggle')
-        ->assertSee('1 JPY = 0.00629 EUR')
+        ->assertSee('1 JPY = 0.00628536 EUR')
+        ->assertSee('707.73')
+        ->assertDontSee('1 JPY = 0.00629 EUR')
         ->assertDontSee('1 JPY = 0.0063 EUR');
 });
