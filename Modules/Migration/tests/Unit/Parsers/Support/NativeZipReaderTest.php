@@ -200,3 +200,41 @@ it('NativeZipReader: refuses an entry whose bytes do not match its own checksum'
     $extractor->cleanup();
     @unlink($path);
 });
+
+// The three refusals below name the archive they refused, and each message is
+// assembled rather than fixed. A reader that answers the right exception with
+// the wrong subject sends whoever is holding a broken export to the wrong file.
+it('NativeZipReader: names the archive it could not open at all', function (): void {
+    $missing = sys_get_temp_dir().'/native-zip-reader-absent-'.uniqid('', true).'.zip';
+
+    $reader = new NativeZipReader;
+
+    expect(fn () => $reader->open($missing))
+        ->toThrow(UnrecognizedMigrationFileException::class, "could not open zip archive at '".$missing."'");
+});
+
+it('NativeZipReader: refuses a file too short to carry an end record, and says so', function (): void {
+    $path = sys_get_temp_dir().'/native-zip-reader-stub-'.uniqid('', true).'.zip';
+    file_put_contents($path, "PK\x05\x06");
+
+    $reader = new NativeZipReader;
+
+    expect(fn () => $reader->open($path))
+        ->toThrow(UnrecognizedMigrationFileException::class, "'".$path."' is too short to be a zip archive");
+
+    @unlink($path);
+});
+
+it('NativeZipReader: refuses to answer about an archive nobody opened', function (): void {
+    $reader = new NativeZipReader;
+
+    expect(fn () => $reader->entryCount())
+        ->toThrow(UnrecognizedMigrationFileException::class, 'the archive was asked about before it was opened');
+
+    // close() is the one question an unopened reader may be asked, because a
+    // caller unwinding from a failed open has no way to know which it is.
+    $reader->close();
+
+    expect(fn () => $reader->index())
+        ->toThrow(UnrecognizedMigrationFileException::class, 'the archive was asked about before it was opened');
+});

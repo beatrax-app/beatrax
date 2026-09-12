@@ -22,6 +22,8 @@ final readonly class InboxScanStateMachine
     /** @var list<int> */
     private const array BACKOFF_SCHEDULE = [60, 300, 900, 3600];
 
+    private const string NO_STATE_ROW = 'InboxScanStateMachine: inbox_scan_state for inbox %s folder INBOX not found.';
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -43,7 +45,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    sprintf('InboxScanStateMachine: inbox_scan_state for inbox %s folder INBOX not found.', $inboxId),
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
@@ -101,7 +103,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    sprintf('InboxScanStateMachine: inbox_scan_state for inbox %s folder INBOX not found.', $inboxId),
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
@@ -136,7 +138,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    sprintf('InboxScanStateMachine: inbox_scan_state for inbox %s folder INBOX not found.', $inboxId),
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
@@ -175,7 +177,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    sprintf('InboxScanStateMachine: inbox_scan_state for inbox %s folder INBOX not found.', $inboxId),
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
