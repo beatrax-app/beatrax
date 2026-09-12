@@ -60,8 +60,10 @@ and happened again with nothing to notice.
 ## What notices now
 
 `Modules\Core\Public\Support\SchemaShape` asks sqlite_master the two questions
-directly, and `SchemaShapeHealthCheck` turns the answer into a label, a severity
-and a sentence. `HealthCheckListener` reads it on `ConnectionEstablished`,
+directly — it is Public because the repair migration, which lives outside every
+module, has to name it. `Core\Internal\Services\SchemaShapeHealthCheck` turns
+the answer into a label, a severity and a sentence; it is Internal because only
+Core reads it. `HealthCheckListener` reads it on `ConnectionEstablished`,
 beside the WAL and durability probes, and raises one system-wide
 `schema_shape_drifted` row — de-duplicated on the hour and on an open row of the
 same kind, so a restart storm cannot become an alert storm. The row is

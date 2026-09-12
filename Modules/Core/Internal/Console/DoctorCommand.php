@@ -19,7 +19,7 @@ use Modules\Core\Internal\Console\Probes\ProbeSeverity;
 use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
-use Modules\Core\Public\Services\SchemaShapeHealthCheck;
+use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
 use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Ledger\Public\Services\SplitSumHealthCheck;
 use Modules\Search\Public\Services\FtsHealthCheck;

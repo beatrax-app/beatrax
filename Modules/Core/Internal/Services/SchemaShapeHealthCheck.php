@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Modules\Core\Public\Services;
+namespace Modules\Core\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Support\SchemaShape;
 use Throwable;
 
-// Lives in Public so DoctorCommand and the boot listener both reach it without
-// crossing into an interior, and answers in plain values so each builds its own
-// result. Mirrors FtsHealthCheck, which asks the same shape of question about
-// another thing the database is only assumed to be holding.
+// Internal, unlike the three health checks it is shaped after: each of those
+// lives in the Public surface of the module that owns the question BECAUSE Core
+// asks it from outside. This one is Core asking Core, so nothing crosses and
+// nothing here is a contract. It answers in the same three plain values.
 final readonly class SchemaShapeHealthCheck
 {
     // Two queries over sqlite_master, on every connection the app opens. The

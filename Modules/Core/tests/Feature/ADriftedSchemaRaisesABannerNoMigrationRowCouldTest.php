@@ -10,9 +10,9 @@ use Modules\Core\Internal\Backup\BackupFreshness;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Listeners\HealthCheckListener;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
+use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Services\SchemaShapeHealthCheck;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\SchemaShape;
 use Psr\Log\LoggerInterface;
@@ -77,8 +77,13 @@ afterEach(function (): void {
     RealSqliteFixture::cleanup($sourcePath);
 });
 
-// One boot with only the health check listening: the optimisations provider
-// would repair the pragmas the other probes read before they ever read them.
+// One boot, with only the health check listening and a state nothing has spent.
+// The order is the whole of it: a statement run to DRIFT the schema resolves
+// this connection first, firing the event at the app's own listener against the
+// schema as it was BEFORE -- and the one-shot probe is then already spent.
+/**
+ * @link ../../../../.docs/features/core/a-schema-the-migrations-table-vouched-for.md
+ */
 function schemaDriftBoot(): void
 {
     $app = app();
@@ -88,15 +93,18 @@ function schemaDriftBoot(): void
     /** @var Dispatcher $events */
     $events = $app->make(Dispatcher::class);
 
+    // Including the optimisations provider's, which would repair the pragmas
+    // the checks beside this one read before they ever read them.
     $events->forget(ConnectionEstablished::class);
+
+    $db->purge('sqlite');
+    $connection = $db->connection('sqlite');
+
+    $app->instance(BootProbeState::class, new BootProbeState);
 
     (new HealthCheckServiceProvider($app))->boot($events);
 
-    $db->purge('sqlite');
-
-    $events->dispatch(new ConnectionEstablished($db->connection('sqlite')));
-
-    $app->instance(BootProbeState::class, new BootProbeState);
+    $events->dispatch(new ConnectionEstablished($connection));
 }
 
 function schemaDriftStatement(string $sql): void

@@ -157,6 +157,12 @@
         {{-- Escaped output, for the same reason as the pragma above. --}}
         {{ Lang::get('core::alerts.messages.synchronous_misconfigured', ['level' => $currentLevel]) }}
         @break
+    {{-- The counts this row carries stay in metadata: what the reader can act
+         on is that protection is missing, and a bare number beside a plural
+         noun has to decline in 26 languages to earn a place in the sentence. --}}
+    @case ('schema_shape_drifted')
+        {{ Lang::get('core::alerts.messages.schema_shape_drifted') }}
+        @break
     @case (OAuthAlertKind::ReconsentRequired->value)
         {{--
             Re-consent prompt surfaced when the background inbox scanner

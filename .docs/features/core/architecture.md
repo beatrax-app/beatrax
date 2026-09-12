@@ -596,11 +596,12 @@ awkwardly into the severity bucket model. Exit codes: `0` every probe
 at least one `critical` probe.
 
 Beside the probes, `DoctorCommand` prints one row per *health check* —
-`SchemaShapeHealthCheck` (Core), `FtsHealthCheck` (Search),
+`SchemaShapeHealthCheck` (Core, Internal), `FtsHealthCheck` (Search),
 `FingerprintHealthCheck` and `SplitSumHealthCheck` (Ledger). A health
-check is not a `Probe`: each lives in the `Public/` surface of the
-module that owns the question, so none of them may return a Core
-Internal `ProbeResult`. Each answers in three plain values —
+check is not a `Probe`: it answers in plain values rather than a Core
+Internal `ProbeResult`, because the three the other modules own have to
+cross a boundary to be read. Core's own is Internal — nothing outside
+Core asks it — and keeps the shape so the command reads one row type. Each answers in three plain values —
 `label()`, `severity()`, `message()` — and the command builds the row
 and the severity bucket itself. The Search and Ledger ones are
 optional, and are null where their module is absent from the build.

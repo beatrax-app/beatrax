@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
-use Modules\Core\Public\Services\SchemaShapeHealthCheck;
+use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
 use Modules\Core\Public\Support\SchemaShape;
 use Tests\Helpers\LiveSqliteConnection;
 

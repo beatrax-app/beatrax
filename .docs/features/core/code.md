@@ -41,7 +41,6 @@ Modules/Core/
 │   │   ├── CurrentUserService.php
 │   │   ├── DevConsoleBuildGate.php
 │   │   ├── ElectronUpdateChannel.php
-│   │   ├── SchemaShapeHealthCheck.php
 │   │   ├── SecretsColumnRegistry.php
 │   │   ├── SystemAlertQuery.php
 │   │   ├── SystemClock.php
@@ -51,6 +50,8 @@ Modules/Core/
 │       ├── SafeTrace.php
 │       └── SchemaShape.php
 ├── Internal/
+│   ├── Services/
+│   │   └── SchemaShapeHealthCheck.php
 │   ├── Providers/
 │   │   ├── HealthCheckServiceProvider.php
 │   │   └── SqliteOptimizationsProvider.php
@@ -203,9 +204,11 @@ Modules/Core/
   receipt-conflict enum guards. It also holds the trigger definitions,
   so whatever notices can put them back
   ([why](a-schema-the-migrations-table-vouched-for.md)).
-- `Public/Services/SchemaShapeHealthCheck` — turns that into the
+- `Internal/Services/SchemaShapeHealthCheck` — turns that into the
   `label()` / `severity()` / `message()` triple `DoctorCommand` prints
-  and `HealthCheckListener` raises a banner from.
+  and `HealthCheckListener` raises a banner from. Internal, unlike the
+  three checks it is shaped after: those are Public because Core asks
+  them from outside their module, and this one is Core asking Core.
 - `Internal/Console/DoctorCommand` — `beatrax:doctor`. Runs every
   probe (PHP / Composer / Node / SQLite CLI / external tools / backup
   freshness / WAL / synchronous mode) and prints a coloured pass /
