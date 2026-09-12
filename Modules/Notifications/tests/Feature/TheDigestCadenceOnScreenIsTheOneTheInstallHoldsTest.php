@@ -37,7 +37,7 @@ it('opens on the cadence a fresh install actually holds', function (): void {
         ->html();
 
     expect($html)->toContain('<option value="weekly" selected>')
-        ->and($html)->toContain('<option value="daily">');
+        ->and($html)->not->toContain('<option value="daily" selected>');
 });
 
 it('follows the stored cadence once the reader has chosen one', function (): void {

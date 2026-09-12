@@ -33,7 +33,7 @@ it('opens on the window a fresh install is actually locked by', function (): voi
         ->html();
 
     expect($html)->toContain('<option value="5" selected>')
-        ->and($html)->toContain('<option value="1">');
+        ->and($html)->not->toContain('<option value="1" selected>');
 });
 
 it('follows the stored window rather than the first one offered', function (): void {

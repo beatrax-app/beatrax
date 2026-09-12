@@ -56,5 +56,8 @@ it('reaches the PayPal export through a file type on the wizard page, not throug
 
     $response->assertOk();
     $response->assertSee('Activity Download (CSV)', false);
-    $response->assertDontSee('<option value="paypal">', false);
+    // The opening tag only: every option now also states whether it is the
+    // selected one, so a needle carrying the closing bracket could never
+    // match and the assertion could never go red.
+    $response->assertDontSee('<option value="paypal"', false);
 })->group('phase-4');

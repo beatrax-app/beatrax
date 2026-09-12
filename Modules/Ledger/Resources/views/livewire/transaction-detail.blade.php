@@ -599,11 +599,9 @@
                             class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                             data-testid="counterparty-select"
                         >
-                            <option value="">{{ Lang::get('ledger::detail.reassign.choose_option') }}</option>
+                            <option value="" @selected($transaction->counterparty_id === null)>{{ Lang::get('ledger::detail.reassign.choose_option') }}</option>
                             @foreach ($counterparties as $cp)
-                                <option value="{{ $cp->id }}"
-                                    {{ $transaction->counterparty_id == $cp->id ? 'selected' : '' }}
-                                >{{ $cp->display_name }}</option>
+                                <option value="{{ $cp->id }}" @selected($transaction->counterparty_id == $cp->id)>{{ $cp->display_name }}</option>
                             @endforeach
                         </select>
 

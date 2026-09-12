@@ -30,7 +30,7 @@ it('opens the drift threshold on the percentage a fresh install alerts at', func
         ->html();
 
     expect($html)->toContain('<option value="5" selected>')
-        ->and($html)->toContain('<option value="1">');
+        ->and($html)->not->toContain('<option value="1" selected>');
 });
 
 it('follows a stored drift threshold rather than the first one offered', function (): void {

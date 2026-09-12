@@ -169,7 +169,9 @@ it('parses the account select client-side, so clearing it cannot write an empty 
         ->test(ReconcilePage::class)
         ->html();
 
-    expect($html)->toContain('<option value="">');
+    // The opening tag only: the placeholder now also states that it is the
+    // selected one while no account is chosen.
+    expect($html)->toContain('<option value=""');
 
     $binding = PatternScan::first('/wire:model((?:\.[a-z0-9]+)*)="accountId"/', $html);
     $modifiers = array_values(array_filter(explode('.', $binding[1] ?? '')));

@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Models\Category;
 
 // Two envelopes at one path is the grid's worst case: the row carries a money
@@ -71,11 +72,15 @@ it('gives the two envelopes different accessible names on their money inputs', f
 it('tells the two apart in the move-money destination list', function (): void {
     $html = Livewire::test(BudgetsPage::class)->call('openMove', $this->seeded->id)->html();
 
-    $matches = PatternScan::sets('/<option value="(\d+)">([^<]+)<\/option>/', $html);
-
+    // Through the parser, not a pattern: an option carries an attribute saying
+    // whether it is the selected one, and a tag-shaped needle matched none of
+    // them the moment that attribute landed.
     $labels = [];
-    foreach ($matches as $match) {
-        $labels[(int) $match[1]] = trim($match[2]);
+    foreach (RenderedMarkup::of($html)->all('option') as $option) {
+        $value = $option->attribute('value');
+        if ($value !== null && ctype_digit($value)) {
+            $labels[(int) $value] = $option->text();
+        }
     }
 
     $household = array_filter($labels, static fn (string $label): bool => str_contains($label, 'Household'));

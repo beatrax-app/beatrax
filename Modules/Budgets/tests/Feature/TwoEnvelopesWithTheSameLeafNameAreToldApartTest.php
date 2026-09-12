@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Models\Category;
 
 // A migrated tree and the seeded one can each hold a "Groceries", under
@@ -109,12 +110,21 @@ it('tells the two apart in the move-money destination list', function (): void {
         ->call('openMove', $this->group->id)
         ->html();
 
-    $matches = PatternScan::all('/<option value="\d+">([^<]+)<\/option>/', $html);
+    // Through the parser, not a pattern: an option carries an attribute saying
+    // whether it is the selected one, and a tag-shaped needle matched none of
+    // them the moment that attribute landed.
+    $labels = [];
+    foreach (RenderedMarkup::of($html)->all('option') as $option) {
+        $value = $option->attribute('value');
+        if ($value !== null && ctype_digit($value)) {
+            $labels[] = $option->text();
+        }
+    }
 
     // The desktop modal and the phone sheet render the same destination list,
     // so every label appears twice; what matters is how many distinct ones.
     $groceries = array_values(array_unique(array_filter(
-        array_map(trim(...), $matches[1]),
+        $labels,
         static fn (string $label): bool => str_contains($label, 'Groceries'),
     )));
 

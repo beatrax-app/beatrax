@@ -8012,16 +8012,45 @@ assertion has to be made against the HTML.
 
 ### What the rule refuses
 
-Every `<option>` written in the Blade tree must state whether it is the
-selected one, through `@selected(...)` or a literal `selected` attribute. The
-placeholder is included: an option list is re-rendered whenever the server
+Every `<option>` whose selection the server owns must state whether it is the
+selected one, through `@selected(...)` or a literal `selected` attribute. A
+list is the server's when its `select` carries a `wire:` attribute, when the
+template already renders a selection for one of its options, or when the
+options are a fragment with no `select` of their own — `x-core::country-options`
+is that last case, and the select it lands inside is in another file.
+
+The placeholder is included: an option list is re-rendered whenever the server
 changes the value, and an unmarked list leaves the browser holding whatever it
 had. Comparisons against the empty string are written `strlen($x) === 0`, for
 the reason `x-core::country-options` gives.
 
+**Alpine's `x-model` is the exception**, and the reason the rule is about
+provenance rather than about every select on the page: `x-model` *does* write
+the element's value from its own state on initialisation, so a list whose value
+lives only in Alpine needs no rendered selection. The transaction-detail goal
+picker is the one such list in the tree.
+
+One spelling, though. The counterparty picker beside it said the same thing as
+`{{ $transaction->counterparty_id == $cp->id ? 'selected' : '' }}` — correct,
+and invisible to a reader scanning for the directive as well as to the guard.
+It now reads `@selected(...)` like every other list.
+
 `x-core::country-options` was the first fix of this shape and is the model: the
 empty option is first, both arms are marked, and four surfaces share it rather
 than each writing their own list.
+
+### What it cost to land
+
+Five tests read option markup with a tag-shaped needle and went red the moment
+the attribute arrived — four parsing `<option value="(\d+)">([^<]*)` out of a
+response, one asserting a whole `<option …>…</option>` string. The four now
+read through `RenderedMarkup`, which is a parser and does not care what else
+the tag carries. Two more asserted needles that, after the change, could never
+match in either direction: `assertDontSee('<option value="0">')` and
+`assertDontSee('<option value="paypal">')` were assertions that could no longer
+go red, which is the failure [A needle short enough to match generated
+markup](#a-needle-short-enough-to-match-generated-markup) is about, arriving
+from the other side.
 
 ## Related
 
