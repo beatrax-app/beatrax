@@ -49,6 +49,16 @@
         </p>
     </header>
 
+    {{-- A reconcile is a statement held against one account's cleared rows, so
+         with no account there is nothing for any of these controls to act on:
+         the select offered its placeholder alone, the date and balance took
+         input nobody could use, and Check answered a difference of nothing.
+         The sentence is Ledger's own, from the currency editor beside it. --}}
+    @if ($accounts->isEmpty())
+        <p class="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400" data-testid="reconcile-no-accounts">
+            {{ Lang::get('ledger::account_currency.no_accounts') }}
+        </p>
+    @else
     <div class="rounded-xl border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-800 dark:bg-slate-950">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="space-y-1">
@@ -172,4 +182,5 @@
             </button>
         </div>
     </div>
+    @endif
 </div>

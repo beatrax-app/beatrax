@@ -9,8 +9,6 @@ return [
     'entities' => ':count subjekt|:count subjekty|:count subjektov',
     'need_identification' => 'Na identifikáciu: :count',
 
-    'search_placeholder' => 'Hľadaj podľa názvu, aliasu alebo IBAN…',
-    'search_aria' => 'Hľadať protistrany',
     'sort' => 'Zoradenie: Spolu 12 mes. ↓',
 
     'view_mode' => 'Režim zobrazenia',

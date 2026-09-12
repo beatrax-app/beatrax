@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Mostra solo le recenti',
     'show_full' => 'Mostra tutta la cronologia',
 
-    'empty_period' => "Non c'è nulla per questo periodo.",
-
     'empty_recent_has_older' => 'Niente negli ultimi 90 giorni. I movimenti più vecchi sono ancora qui.',
 
     'empty_history' => 'Ancora nessun movimento.',

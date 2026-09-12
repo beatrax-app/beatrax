@@ -9,8 +9,6 @@ return [
     'entities' => ':count subjekt|:count subjekta|:count subjekti|:count subjektov',
     'need_identification' => 'Za identifikacijo: :count',
 
-    'search_placeholder' => 'Išči po imenu, aliasu ali IBAN…',
-    'search_aria' => 'Išči nasprotne stranke',
     'sort' => 'Razvrsti: skupaj 12 mes. ↓',
 
     'view_mode' => 'Način pogleda',

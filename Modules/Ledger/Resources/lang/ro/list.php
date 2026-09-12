@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Arată doar recentele',
     'show_full' => 'Arată istoricul complet',
 
-    'empty_period' => 'Nimic aici pentru această perioadă.',
-
     'empty_recent_has_older' => 'Nimic în ultimele 90 de zile. Tranzacțiile mai vechi sunt încă aici.',
 
     'empty_history' => 'Încă nicio tranzacție.',

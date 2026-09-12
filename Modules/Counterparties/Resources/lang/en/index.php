@@ -9,8 +9,6 @@ return [
     'entities' => ':count entity|:count entities',
     'need_identification' => ':count need identification',
 
-    'search_placeholder' => 'Search by name, alias, or IBAN…',
-    'search_aria' => 'Search counterparties',
     'sort' => 'Sort: Total 12mo ↓',
 
     'view_mode' => 'View mode',

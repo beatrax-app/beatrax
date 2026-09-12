@@ -9,8 +9,6 @@ return [
     'entities' => ':count üksus|:count üksust',
     'need_identification' => ':count vajab tuvastamist',
 
-    'search_placeholder' => 'Otsi nime, aliase või IBAN-i järgi…',
-    'search_aria' => 'Otsi vastaspooli',
     'sort' => 'Sortimine: 12 kuu kogusumma ↓',
 
     'view_mode' => 'Vaaterežiim',

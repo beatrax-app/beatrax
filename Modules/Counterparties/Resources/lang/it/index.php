@@ -9,8 +9,6 @@ return [
     'entities' => ':count entità|:count entità',
     'need_identification' => ':count da identificare',
 
-    'search_placeholder' => 'Cerca per nome, alias o IBAN…',
-    'search_aria' => 'Cerca controparti',
     'sort' => 'Ordina: Totale 12 mesi ↓',
 
     'view_mode' => 'Modalità di visualizzazione',

@@ -9,8 +9,6 @@ return [
     'entities' => ':count vienību|:count vienība|:count vienības',
     'need_identification' => 'Jāatpazīst: :count',
 
-    'search_placeholder' => 'Meklēt pēc nosaukuma, aizstājvārda vai IBAN…',
-    'search_aria' => 'Meklēt darījuma partnerus',
     'sort' => 'Kārtot: 12 mēn. kopā ↓',
 
     'view_mode' => 'Skata režīms',
