@@ -324,7 +324,7 @@
                                                 </td>
                                                 {{-- Counterparty --}}
                                                 <td class="px-3 py-2" style="color: var(--color-text);">
-                                                    @if (! empty($row['counterpartyName']))
+                                                    @if (($row['counterpartyName'] ?? '') !== '')
                                                         {{ $row['counterpartyName'] }}
                                                     @else
                                                         <span style="color: var(--color-text-faint);">—</span>
@@ -332,7 +332,7 @@
                                                 </td>
                                                 {{-- Note --}}
                                                 <td class="px-3 py-2" style="color: var(--color-text-muted); font-style: italic; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                                    @if (! empty($row['note']))
+                                                    @if (($row['note'] ?? '') !== '')
                                                         {{ $row['note'] }}
                                                     @else
                                                         <span style="color: var(--color-text-faint); font-style: normal;">—</span>
@@ -386,11 +386,11 @@
                                                     </p>
                                                     <p style="font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;">
                                                         {{ $postedAt ? $postedAt->translatedFormat('d M Y') : '—' }}
-                                                        @if (! empty($row['accountName']))
+                                                        @if (($row['accountName'] ?? '') !== '')
                                                             · {{ $row['accountName'] }}
                                                         @endif
                                                     </p>
-                                                    @if (! empty($row['note']))
+                                                    @if (($row['note'] ?? '') !== '')
                                                         <p style="font-size: var(--text-base); color: var(--color-text-muted); font-style: italic; margin-top: 2px;">{{ $row['note'] }}</p>
                                                     @endif
                                                 </div>

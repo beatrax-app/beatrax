@@ -27,8 +27,8 @@ function foreignColumnStatementText(string $foreignAmount, string $foreignCurren
         ."Uw Card met als laatste vier cijfers 1234 (****-****-****-1234)\n"
         ."Datum      Datum      Omschrijving                Bedrag in         Bedrag\n"
         ."transactie boeking                                 vreemde valuta    in euro's\n"
-        ."23 jan.    24 jan.    KYOTO SHOP    TOKYO    JP    {$foreignAmount} {$foreignCurrency}    7,42    Af\n"
-        ."                      Wisselkoers {$foreignCurrency}    {$rate}\n";
+        .sprintf("23 jan.    24 jan.    KYOTO SHOP    TOKYO    JP    %s %s    7,42    Af\n", $foreignAmount, $foreignCurrency)
+        .sprintf("                      Wisselkoers %s    %s\n", $foreignCurrency, $rate);
 }
 
 beforeEach(function (): void {

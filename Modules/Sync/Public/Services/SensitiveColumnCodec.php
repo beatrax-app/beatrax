@@ -42,7 +42,7 @@ final class SensitiveColumnCodec
     // can reproduce the exact same AD independently without instantiating the full codec.
     public static function associatedData(string $table, string $field, int $epochId): string
     {
-        return "{$table}:{$field}:{$epochId}";
+        return sprintf('%s:%s:%s', $table, $field, $epochId);
     }
 
     // The op-log shape, which binds the row's primary key as well. Writer and
@@ -51,7 +51,7 @@ final class SensitiveColumnCodec
     // ever see — so both sides read the shape from here, not from memory.
     public static function opLogAssociatedData(string $table, int|string $pk, string $field, int $epochId): string
     {
-        return "{$table}:{$pk}:{$field}:{$epochId}";
+        return sprintf('%s:%s:%s:%s', $table, $pk, $field, $epochId);
     }
 
     // For a caller that seals one named column itself rather than handing this
@@ -296,7 +296,7 @@ final class SensitiveColumnCodec
      */
     private function refuse(int $userId, string $table, array $fields): never
     {
-        $alarm = "{$userId}:{$table}";
+        $alarm = sprintf('%s:%s', $userId, $table);
         if (! isset($this->refusalsAlarmed[$alarm])) {
             $this->refusalsAlarmed[$alarm] = true;
             $this->log->warning(

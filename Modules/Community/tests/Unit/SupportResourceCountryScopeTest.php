@@ -15,7 +15,7 @@ function supportCorpusFixture(string $root): void
     foreach (['ch' => 'Swiss', 'es' => 'Spanish', 'international' => 'Global'] as $code => $flavour) {
         $dir = $root.'/support';
         @mkdir($dir, 0777, true);
-        file_put_contents($dir."/{$code}.yaml", <<<YAML
+        file_put_contents($dir.sprintf('/%s.yaml', $code), <<<YAML
             entries:
               - name: Sanitas
                 type: merchant

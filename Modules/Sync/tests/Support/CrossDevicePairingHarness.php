@@ -44,7 +44,7 @@ trait CrossDevicePairingHarness
         $db = $this->app->make(DatabaseManager::class);
 
         foreach (['desktop', 'phone', 'peer', 'relay'] as $name) {
-            config(["database.connections.{$name}" => [
+            config([sprintf('database.connections.%s', $name) => [
                 'driver' => 'sqlite',
                 'database' => ':memory:',
                 'prefix' => '',
@@ -174,7 +174,13 @@ trait CrossDevicePairingHarness
     }
 
     // Mirrors the production schema, indexes included, onto a genuinely separate
-    // SQLite database from the app's own default test connection.
+    // SQLite database from the app's own default test connection. Three tables
+    // mirror it column for column and four are declared subsets; a guard holds
+    // both claims to the migrations, because this one drifted silently for a
+    // week and the first thing to read a missing column was a crash.
+    /**
+     * @link ../../../../.docs/features/sync/cross-device-pairing-test-harness.md#the-schema-is-mirrored-and-a-guard-says-so
+     */
     private function harnessMigratePairingSchema(DatabaseManager $db, string $connection): void
     {
         $schema = $db->connection($connection)->getSchemaBuilder();
@@ -222,6 +228,9 @@ trait CrossDevicePairingHarness
             $table->string('last_lan_host')->nullable();
             $table->unsignedInteger('last_lan_port')->nullable();
             $table->string('epochs_delivered_at')->nullable();
+            $table->string('manual_lan_host')->nullable();
+            $table->unsignedInteger('manual_lan_port')->nullable();
+            $table->string('self_retired_at')->nullable();
             $table->text('created_at');
             $table->text('updated_at');
         });
@@ -237,6 +246,10 @@ trait CrossDevicePairingHarness
             $table->boolean('migration_in_progress')->default(false);
             $table->timestamp('enabled_at')->nullable();
             $table->timestamp('counterparty_key_backfilled_at')->nullable();
+            $table->timestamp('history_reprojected_at')->nullable();
+            $table->string('reprojected_keyring_fingerprint')->nullable();
+            $table->timestamp('resealed_columns_at')->nullable();
+            $table->string('resealed_columns_digest')->nullable();
             $table->timestamps();
         });
 

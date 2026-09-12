@@ -72,7 +72,7 @@ $anchor = <<<'SWIFT'
 SWIFT;
 
 if (! str_contains($source, $anchor)) {
-    fwrite(STDERR, "nativephp_ios_request_body_stream: request-body anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_request_body_stream: request-body anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated handler changed shape; re-check the body extraction before shipping a build.\n");
     exit(1);
 }
@@ -103,7 +103,7 @@ $patched = str_replace($anchor, $replacement, $source);
 $helperAnchor = "    private func parseSetCookieHeader(cookieString: String) -> [HTTPCookiePropertyKey: Any] {\n";
 
 if (! str_contains($patched, $helperAnchor)) {
-    fwrite(STDERR, "nativephp_ios_request_body_stream: parseSetCookieHeader anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_request_body_stream: parseSetCookieHeader anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated handler changed shape; the stream reader has nowhere to live.\n");
     exit(1);
 }
@@ -149,12 +149,12 @@ SWIFT;
 $patched = str_replace($helperAnchor, $helper.$helperAnchor, $patched);
 
 if (! str_contains($patched, 'drainBodyStream')) {
-    fwrite(STDERR, "nativephp_ios_request_body_stream: patch produced no change in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_request_body_stream: patch produced no change in %s.\n", $target));
     exit(1);
 }
 
 if (file_put_contents($target, $patched) === false) {
-    fwrite(STDERR, "nativephp_ios_request_body_stream: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_request_body_stream: could not write %s.\n", $target));
     exit(1);
 }
 

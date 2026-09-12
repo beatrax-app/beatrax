@@ -36,7 +36,7 @@ beforeEach(function (): void {
     // the one state in which its help text can be read at all — and a self row
     // alone is not that state: without the key-file beside it the section reads
     // as a restored database, which it is.
-    foreach ((array) glob(UserDataPathService::appPath("sync/identity/{$this->reader->id}.enc*")) as $stale) {
+    foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/identity/%s.enc*', $this->reader->id))) as $stale) {
         @unlink((string) $stale);
     }
 

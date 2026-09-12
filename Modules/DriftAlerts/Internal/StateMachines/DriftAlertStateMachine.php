@@ -103,7 +103,7 @@ final class DriftAlertStateMachine extends GuardedStateMachine
     protected function notFound(int $id): Throwable
     {
         return new DriftAlertNotFoundException(
-            "DriftAlertStateMachine: drift_alerts row {$id} not found.",
+            sprintf('DriftAlertStateMachine: drift_alerts row %s not found.', $id),
         );
     }
 }

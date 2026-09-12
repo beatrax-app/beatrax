@@ -45,7 +45,7 @@ function oneVoiceRequest(string $method, string $path, string $body = ''): AmpRe
     $client = Mockery::mock(AmpClient::class);
     $client->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress('198.51.100.9', 45123));
 
-    return new AmpRequest($client, $method, HttpUri::new("http://192.0.2.10:51337{$path}"), [], $body);
+    return new AmpRequest($client, $method, HttpUri::new(sprintf('http://192.0.2.10:51337%s', $path)), [], $body);
 }
 
 /**

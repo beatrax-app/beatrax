@@ -23,20 +23,20 @@ final class EnableBankingApiException extends RuntimeException
     public static function transportFailed(string $context, Throwable $previous): self
     {
         return new self(
-            "Enable Banking transport error against {$context} — {$previous->getMessage()}",
+            sprintf('Enable Banking transport error against %s — %s', $context, $previous->getMessage()),
             previous: $previous,
         );
     }
 
     public static function errorStatus(string $context, int $status, string $bodySnippet): self
     {
-        return new self("Enable Banking {$context} returned HTTP {$status} — {$bodySnippet}", $status);
+        return new self(sprintf('Enable Banking %s returned HTTP %s — %s', $context, $status, $bodySnippet), $status);
     }
 
     public static function malformedJson(string $context, Throwable $previous): self
     {
         return new self(
-            "Enable Banking response from {$context} did not decode as JSON ({$previous->getMessage()}).",
+            sprintf('Enable Banking response from %s did not decode as JSON (%s).', $context, $previous->getMessage()),
             previous: $previous,
         );
     }
@@ -49,7 +49,7 @@ final class EnableBankingApiException extends RuntimeException
     public static function missingTransactionField(string $fieldName): self
     {
         return new self(
-            "Enable Banking transaction row is missing {$fieldName}; refusing to derive a "
+            sprintf('Enable Banking transaction row is missing %s; refusing to derive a ', $fieldName)
             .'fingerprinted date from the wall clock.',
         );
     }

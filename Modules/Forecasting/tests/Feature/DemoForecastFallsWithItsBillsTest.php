@@ -35,11 +35,11 @@ it('projects every seeded expense as a fall in the balance', function (): void {
     foreach ($expenses as $dto) {
         $contributions = $projector->envelope($dto, 1, CarbonImmutable::today(), 400, $user);
 
-        expect($contributions)->not->toBeEmpty("{$dto->detectedName} projects nothing over a year");
+        expect($contributions)->not->toBeEmpty(sprintf('%s projects nothing over a year', $dto->detectedName));
 
         foreach ($contributions as $contribution) {
             expect($contribution->pointMinor)
-                ->toBeLessThan(0, "{$dto->detectedName} projects an expense as income");
+                ->toBeLessThan(0, sprintf('%s projects an expense as income', $dto->detectedName));
         }
     }
 });

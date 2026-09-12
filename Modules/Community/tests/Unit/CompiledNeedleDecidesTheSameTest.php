@@ -46,8 +46,8 @@ dataset('token cases', [
     'needle opening with a digit' => ['CCV 24SEVEN SHOP', '24seven'],
 
     'accented, composed' => ['Café Zürich', 'café'],
-    'accented, decomposed, inside a longer word' => ["betaling {$nfd}teria centraal", $nfd],
-    'accented, decomposed, standing alone' => ["betaling {$nfd} centraal", $nfd],
+    'accented, decomposed, inside a longer word' => [sprintf('betaling %steria centraal', $nfd), $nfd],
+    'accented, decomposed, standing alone' => [sprintf('betaling %s centraal', $nfd), $nfd],
     'combining mark at the needle start' => ["betaling \u{0301}abc centraal", "\u{0301}abc"],
     'cyrillic, standing alone' => ['ОПЛАТА ПЯТЁРОЧКА 1234', 'пятёрочка'],
     'cyrillic, inside a longer word' => ['ОПЛАТА ПЯТЁРОЧКАМАРКЕТ', 'пятёрочка'],

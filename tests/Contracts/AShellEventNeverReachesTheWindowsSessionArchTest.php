@@ -106,12 +106,12 @@ it('never lets a shell event name a session or auth symbol', function (): void {
 
         foreach ($forbidden as $symbol) {
             if (str_contains($source, $symbol)) {
-                $offences[] = "{$class} names {$symbol} (reached from {$seed})";
+                $offences[] = sprintf('%s names %s (reached from %s)', $class, $symbol, $seed);
             }
         }
 
         if (PatternScan::matches('/(?<![\w>$])(?:session|auth)\s*\(/', $source)) {
-            $offences[] = "{$class} calls the session()/auth() helper (reached from {$seed})";
+            $offences[] = sprintf('%s calls the session()/auth() helper (reached from %s)', $class, $seed);
         }
     }
 

@@ -33,7 +33,7 @@ function aRetiredRowUser(string $username): User
     ]);
 
     foreach (['identity', 'gdk'] as $directory) {
-        foreach ((array) glob(UserDataPathService::appPath("sync/{$directory}/{$user->id}.enc*")) as $stale) {
+        foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/%s/%s.enc*', $directory, $user->id))) as $stale) {
             @unlink((string) $stale);
         }
     }
@@ -51,7 +51,7 @@ function aRepairedRestoredDevice(DatabaseManager $db, User $user, Session $sessi
 
     $restoredDeviceId = $identityService->generateAndPersist((int) $user->id, $session)->deviceId;
 
-    @unlink(UserDataPathService::appPath("sync/identity/{$user->id}.enc"));
+    @unlink(UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id)));
 
     $db->connection()->table('user_app_lock_configs')->insert([
         'user_id' => $user->id,
@@ -179,4 +179,114 @@ it('leaves an ordinary paired peer on the list', function (): void {
 
     expect($registry->otherDeviceNames((int) $user->id))->toBe(['a-peer-still-standing' => 'The other one'])
         ->and($registry->confirmedDevices((int) $user->id))->toHaveCount(2);
+});
+
+// The transport half, which the demotion did not reach. Confirmed was all the
+// Noise admission map asked for, so the row went on offering a static key a
+// session could be opened on and an X25519 key an epoch could be wrapped to.
+it('offers the retired machine no key a session or an epoch can be addressed to', function (): void {
+    $user = aRetiredRowUser('retired-row-transport');
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var DeviceRegistryService $registry */
+    $registry = $this->app->make(DeviceRegistryService::class);
+
+    $restoredDeviceId = aRepairedRestoredDevice($db, $user, $session);
+
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $user->id,
+        'device_id' => 'a-peer-that-can-answer',
+        'name' => 'The other one',
+        'ed25519_public_key_hex' => str_repeat('ab', 32),
+        'x25519_public_key_hex' => str_repeat('cd', 32),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'self_retired_at' => null,
+        'paired_at' => '2026-09-02T10:00:00Z',
+        'confirmed_at' => '2026-09-02T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-09-02T10:00:00Z',
+        'updated_at' => '2026-09-02T10:00:00Z',
+    ]);
+
+    $admitted = $registry->deviceX25519Keys((int) $user->id);
+
+    expect(array_keys($admitted))->not->toContain($restoredDeviceId)
+        // The negative control: the narrowing takes out the retired machine and
+        // nothing else, or it would shut the transport to the whole household.
+        ->and(array_keys($admitted))->toContain('a-peer-that-can-answer')
+        ->and($registry->isStillConfirmed((int) $user->id, $restoredDeviceId))->toBeFalse()
+        ->and($registry->isStillConfirmed((int) $user->id, 'a-peer-that-can-answer'))->toBeTrue();
+});
+
+// Removal's whole mechanism is clearing confirmed_at, and on this row that
+// column is the history. The list never offers it, so the refusal has to be
+// authoritative rather than drawn: a Livewire action is client-invokable.
+it('refuses to remove the retired row, and leaves what verifies history standing', function (): void {
+    $user = aRetiredRowUser('retired-row-unremovable');
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var DeviceRegistryService $registry */
+    $registry = $this->app->make(DeviceRegistryService::class);
+    /** @var GdkRotationService $rotation */
+    $rotation = $this->app->make(GdkRotationService::class);
+
+    $restoredDeviceId = aRepairedRestoredDevice($db, $user, $session);
+
+    $retiredRowId = (int) $db->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('device_id', $restoredDeviceId)
+        ->value('id');
+
+    expect($retiredRowId)->toBeGreaterThan(0);
+
+    expect(static fn () => $rotation->rotateAndRevoke((int) $user->id, $retiredRowId, $session))
+        ->toThrow(InvalidArgumentException::class);
+
+    $registry->purge((int) $user->id, $retiredRowId);
+
+    expect($db->connection()->table('device_registry')->where('id', $retiredRowId)->value('confirmed_at'))
+        ->not->toBeNull('a purge that reached this row would clear the confirmation a rebuild verifies the restored log against')
+        ->and(array_keys($registry->signatureVerificationKeys((int) $user->id)))
+        ->toContain($restoredDeviceId);
+});
+
+// The one undemotion. A key-file that opens for this row is the machine itself
+// back, and a self row left stamped is a device hidden from its own list.
+it('takes the stamp off again when a key-file answers for the row', function (): void {
+    $user = aRetiredRowUser('retired-row-key-file-returns');
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var DeviceRegistryService $registry */
+    $registry = $this->app->make(DeviceRegistryService::class);
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+
+    $restoredDeviceId = $identityService->generateAndPersist((int) $user->id, $session)->deviceId;
+
+    $db->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('device_id', $restoredDeviceId)
+        ->update(['is_self' => 0, 'self_retired_at' => '2026-09-12T09:00:00Z']);
+
+    $identityService->generateAndPersist((int) $user->id, $session);
+
+    $row = $db->connection()->table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('device_id', $restoredDeviceId)
+        ->first();
+
+    expect($row)->not->toBeNull()
+        ->and((int) $row->is_self)->toBe(1)
+        ->and($row->self_retired_at)->toBeNull()
+        ->and(array_keys($registry->deviceX25519Keys((int) $user->id)))->toContain($restoredDeviceId);
 });

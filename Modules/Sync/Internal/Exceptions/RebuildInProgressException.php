@@ -14,6 +14,6 @@ final class RebuildInProgressException extends RuntimeException
 {
     public static function forUser(int $userId): self
     {
-        return new self("Op-log rebuild already in progress for user {$userId} (maintenance lock held).");
+        return new self(sprintf('Op-log rebuild already in progress for user %s (maintenance lock held).', $userId));
     }
 }

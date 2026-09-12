@@ -45,8 +45,8 @@ it('does not address one reader two ways inside a single locale file', function 
         // top-level lang/ that carries the framework's own lines. A rule about
         // how a locale addresses its reader cannot stop at one of them.
         $files = [
-            ...glob(base_path("Modules/*/Resources/lang/{$locale}/*.php")) ?: [],
-            ...glob(base_path("lang/{$locale}/*.php")) ?: [],
+            ...glob(base_path(sprintf('Modules/*/Resources/lang/%s/*.php', $locale))) ?: [],
+            ...glob(base_path(sprintf('lang/%s/*.php', $locale))) ?: [],
         ];
 
         foreach ($files as $file) {

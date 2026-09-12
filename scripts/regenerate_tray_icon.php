@@ -43,7 +43,7 @@ if (! extension_loaded('gd')) {
 }
 
 if (! is_file($sourcePath)) {
-    fwrite(STDERR, "regenerate_tray_icon: source {$sourcePath} not found.\n");
+    fwrite(STDERR, sprintf("regenerate_tray_icon: source %s not found.\n", $sourcePath));
 
     exit(1);
 }
@@ -51,7 +51,7 @@ if (! is_file($sourcePath)) {
 $source = @imagecreatefrompng($sourcePath);
 
 if ($source === false) {
-    fwrite(STDERR, "regenerate_tray_icon: could not decode {$sourcePath}.\n");
+    fwrite(STDERR, sprintf("regenerate_tray_icon: could not decode %s.\n", $sourcePath));
 
     exit(1);
 }
@@ -142,13 +142,13 @@ if (! is_dir(dirname($outputBase)) && ! mkdir(dirname($outputBase), 0755, true))
 }
 
 if (! imagepng($icon22, $outputBase)) {
-    fwrite(STDERR, "regenerate_tray_icon: failed to write {$outputBase}\n");
+    fwrite(STDERR, sprintf("regenerate_tray_icon: failed to write %s\n", $outputBase));
 
     exit(1);
 }
 
 if (! imagepng($icon44, $outputAt2x)) {
-    fwrite(STDERR, "regenerate_tray_icon: failed to write {$outputAt2x}\n");
+    fwrite(STDERR, sprintf("regenerate_tray_icon: failed to write %s\n", $outputAt2x));
 
     exit(1);
 }
@@ -157,6 +157,6 @@ imagedestroy($icon22);
 imagedestroy($icon44);
 imagedestroy($source);
 
-fwrite(STDOUT, "regenerate_tray_icon: wrote {$outputBase} (22x22) and {$outputAt2x} (44x44).\n");
+fwrite(STDOUT, sprintf("regenerate_tray_icon: wrote %s (22x22) and %s (44x44).\n", $outputBase, $outputAt2x));
 
 exit(0);

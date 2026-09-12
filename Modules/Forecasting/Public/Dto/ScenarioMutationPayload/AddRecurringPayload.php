@@ -32,7 +32,7 @@ final class AddRecurringPayload extends ScenarioMutationPayload
         // direction flips the sign — both silently.
         if (Direction::tryFrom($direction) === null) {
             throw new InvalidArgumentException(
-                'AddRecurringPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases()))."; got '{$direction}'."
+                'AddRecurringPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases())).sprintf("; got '%s'.", $direction)
             );
         }
         $cadenceEnum = SeriesCadence::tryFrom($cadence);
@@ -44,7 +44,7 @@ final class AddRecurringPayload extends ScenarioMutationPayload
                 array_filter(SeriesCadence::cases(), static fn (SeriesCadence $c): bool => $c !== SeriesCadence::Irregular),
             );
             throw new InvalidArgumentException(
-                'AddRecurringPayload.cadence must be one of: '.implode(' | ', $valid)."; got '{$cadence}'."
+                'AddRecurringPayload.cadence must be one of: '.implode(' | ', $valid).sprintf("; got '%s'.", $cadence)
             );
         }
     }

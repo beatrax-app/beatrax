@@ -40,7 +40,7 @@ it('renders the envelope grid with the ready-to-assign header', function (): voi
 
 it('assigns an amount inline and live-updates that rows available and the to-budget header', function (): void {
     $component = Livewire::test(BudgetsPage::class)
-        ->set("assignedInputs.{$this->groceries->id}", '50.00')
+        ->set(sprintf('assignedInputs.%s', $this->groceries->id), '50.00')
         ->call('setAssigned', $this->groceries->id);
 
     $rows = $component->viewData('rows');
@@ -57,7 +57,7 @@ it('assigns an amount inline and live-updates that rows available and the to-bud
 
 it('permits over-assignment: to-budget goes negative and the write is never rejected', function (): void {
     $component = Livewire::test(BudgetsPage::class)
-        ->set("assignedInputs.{$this->groceries->id}", '900.00')
+        ->set(sprintf('assignedInputs.%s', $this->groceries->id), '900.00')
         ->call('setAssigned', $this->groceries->id);
 
     expect($component->viewData('toBudgetMinor'))->toBeLessThan(0);
@@ -71,7 +71,7 @@ it('clears an envelopes assigned amount back to zero, tombstoning the row', func
     app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, app(PeriodQuery::class)->current()->start, 5000);
 
     Livewire::test(BudgetsPage::class)
-        ->set("assignedInputs.{$this->groceries->id}", '')
+        ->set(sprintf('assignedInputs.%s', $this->groceries->id), '')
         ->call('setAssigned', $this->groceries->id);
 
     $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $this->groceries->id]);
@@ -82,7 +82,7 @@ it('rejects assigning a category that is not the users own or a global expense c
     $foreign = Category::create(['user_id' => $other->id, 'name' => 'Therapy', 'slug' => 'envgrid-therapy-'.bin2hex(random_bytes(3)), 'kind' => 'expense', 'display_order' => 3]);
 
     Livewire::test(BudgetsPage::class)
-        ->set("assignedInputs.{$foreign->id}", '50.00')
+        ->set(sprintf('assignedInputs.%s', $foreign->id), '50.00')
         ->call('setAssigned', $foreign->id);
 
     $this->assertDatabaseMissing('envelope_assignments', ['category_id' => $foreign->id]);

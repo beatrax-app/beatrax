@@ -78,7 +78,7 @@ final readonly class SplitSumHealthCheck
                 'severity' => 'ok',
                 'message' => $checked === 0
                     ? 'no transaction is split'
-                    : "{$checked} split, each adding up to its transaction",
+                    : sprintf('%s split, each adding up to its transaction', $checked),
             ];
         }
 
@@ -91,7 +91,7 @@ final readonly class SplitSumHealthCheck
 
         return [
             'severity' => 'warning',
-            'message' => count($ids)." of {$checked} no longer add up to their transaction — their leg categories stopped counting and the spend fell back to the parent's (ids {$shown}{$more}); re-open each split to rebalance it",
+            'message' => count($ids).sprintf(" of %s no longer add up to their transaction — their leg categories stopped counting and the spend fell back to the parent's (ids %s%s); re-open each split to rebalance it", $checked, $shown, $more),
         ];
     }
 

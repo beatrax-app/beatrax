@@ -89,10 +89,10 @@ beforeEach(function () use (&$imported, &$capturedIds): void {
                 'userId' => $this->user->id,
                 'accountId' => $this->account->id,
                 'importRunId' => $this->importRun->id,
-                'bookedAt' => CarbonImmutable::parse("2026-01-15 10:{$minute}:{$second}"),
-                'counterpartyNormalized' => "merchant {$i}",
+                'bookedAt' => CarbonImmutable::parse(sprintf('2026-01-15 10:%s:%s', $minute, $second)),
+                'counterpartyNormalized' => sprintf('merchant %s', $i),
                 'sourceRowIndex' => $i,
-                'sourceRef' => "ASN-REF-{$i}",
+                'sourceRef' => sprintf('ASN-REF-%s', $i),
             ]);
         }
 
@@ -160,7 +160,7 @@ it('carries the same models in the same association and the same order', functio
     // twenty-five models in twenty-five events.
     foreach ($imported as $index => $event) {
         expect($event->transaction->source_row_index)->toBe($index)
-            ->and($event->transaction->counterparty_normalized)->toBe("merchant {$index}")
+            ->and($event->transaction->counterparty_normalized)->toBe(sprintf('merchant %s', $index))
             ->and($event->transaction->user_id)->toBe($this->user->id);
     }
 });
@@ -235,12 +235,12 @@ it('never reads another reader\'s row back for a fingerprint that collides', fun
             'currency' => 'EUR',
             'settled_amount_minor' => -500,
             'settled_currency' => 'EUR',
-            'counterparty_normalized' => "stranger {$index}",
+            'counterparty_normalized' => sprintf('stranger %s', $index),
             'normalization_version' => 1,
             'source_format' => 'asn-csv',
             'import_run_id' => $strangerRun->id,
             'source_row_index' => $index,
-            'source_ref' => "STRANGER-{$index}",
+            'source_ref' => sprintf('STRANGER-%s', $index),
             'fingerprint' => $fingerprints->compose($row),
             'fingerprint_version' => $fingerprints->version(),
             'status' => 'uncleared',

@@ -79,7 +79,7 @@ it('never formats a date month-first', function (): void {
         $patterns += PatternScan::count("/translatedFormat\\('/", $source);
 
         foreach (europeanDateMonthFirstIn($source) as $pattern) {
-            $offenders[] = str_replace(RepoTree::root().'/', '', $path)." — '{$pattern}'";
+            $offenders[] = str_replace(RepoTree::root().'/', '', $path).sprintf(" — '%s'", $pattern);
         }
     }
 

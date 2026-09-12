@@ -101,7 +101,7 @@ it('an empty-keyring phone quarantines a sensitive entry, then installs the deli
 
     /** @var OpLogFieldCrypto $fieldCrypto */
     $fieldCrypto = app(OpLogFieldCrypto::class);
-    $ad = "counterparties:{$cpId}:display_name:1";
+    $ad = sprintf('counterparties:%s:display_name:1', $cpId);
     // The op-log 'value' column is JSON-encoded before encryption, the way
     // OpLogWriter::writeSet() does it, because the decrypted output flows into the
     // same unconditional json_decode() every plaintext value takes. There is no

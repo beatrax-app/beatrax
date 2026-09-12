@@ -55,7 +55,7 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
             );
         }
 
-        $filename = "beatrax-report-{$definition->slug()}.csv";
+        $filename = sprintf('beatrax-report-%s.csv', $definition->slug());
 
         // This route is a plain navigation, so on a shell that drops the
         // download the reader is left on a page that never changed. The file

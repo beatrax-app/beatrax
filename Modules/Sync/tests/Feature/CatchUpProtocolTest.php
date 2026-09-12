@@ -153,7 +153,7 @@ it('catch-up batches large op sets into ≤ 64KB frames (backpressure guard)', f
             'pk' => (string) ($i + 1),
             'field' => 'note',
             'op_type' => 'set',
-            'value' => json_encode("value-$i"),
+            'value' => json_encode(sprintf('value-%s', $i)),
             'hlc_l' => 1_718_000_000_000 + $i,
             'hlc_c' => 0,
             'signature' => str_repeat('bb', 64),

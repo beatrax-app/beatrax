@@ -11,7 +11,7 @@ final class InvalidForecastRunTransitionException extends RuntimeException
     public static function forTransition(int $runId, string $from, string $to): self
     {
         return new self(
-            "Illegal forecast_runs transition for id={$runId}: {$from} -> {$to}",
+            sprintf('Illegal forecast_runs transition for id=%s: %s -> %s', $runId, $from, $to),
         );
     }
 }

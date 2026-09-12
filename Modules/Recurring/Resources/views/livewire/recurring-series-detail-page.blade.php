@@ -52,7 +52,7 @@
                 :label="$series->displayName()"
                 class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
             />
-            @if (! empty($counterpartyLink))
+            @if ($counterpartyLink !== null)
                 <p class="mt-2 text-sm">
                     <a
                         href="{{ route('counterparties.profile', ['slug' => $counterpartyLink['slug']]) }}"

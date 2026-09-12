@@ -84,7 +84,7 @@ function dispatchesInsideATransaction(array $paths): array
                     continue;
                 }
 
-                $hits[] = "{$path}:{$inner[2]}";
+                $hits[] = sprintf('%s:%s', $path, $inner[2]);
             }
         }
     }

@@ -57,7 +57,7 @@
     {{-- Bulk-action bar. Renders only when $selected is non-empty.
          "Retry N" is non-destructive (single-confirm modal);
          "Delete N" dispatches `triple-gate:open`. --}}
-    @if (! empty($selected))
+    @if ($selected !== [])
         <div class="card flex items-center gap-3 px-3 py-2" data-testid="bulk-actions">
             <span class="text-xs tabular-nums text-[var(--color-text-muted)]" data-testid="bulk-count">{{ Lang::get('dev::queue.selected', ['count' => count($selected)]) }}</span>
             @if ($tab === 'failed')
@@ -87,7 +87,7 @@
         role="tabpanel"
         aria-labelledby="queue-tab-{{ $tab }}"
     >
-        @if (empty($rows))
+        @if ($rows === [])
             <div class="p-4">
                 @if ($tab === 'pending')
                     <p class="text-sm text-[var(--color-text-muted)]">{{ Lang::get('dev::queue.empty_pending') }}</p>
@@ -164,8 +164,8 @@
                                     // date column showed created_at for a job scheduled next week.
                                     $reservedAt = $row['reservedAt'] ?? null;
                                     $availableAt = $row['availableAt'] ?? null;
-                                    $isReserved = ! empty($reservedAt);
-                                    $isScheduled = ! $isReserved && ! empty($availableAt) && $availableAt > time();
+                                    $isReserved = $reservedAt !== null;
+                                    $isScheduled = ! $isReserved && $availableAt !== null && $availableAt > time();
                                 @endphp
                                 <td class="px-3 py-2 text-xs" data-testid="row-state">
                                     @if ($isReserved)
@@ -179,7 +179,7 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
-                                    @if (! empty($row['createdAt']))
+                                    @if (($row['createdAt'] ?? null) !== null)
                                         {{ \Carbon\CarbonImmutable::createFromTimestamp($row['createdAt'])->diffForHumans() }}
                                     @endif
                                 </td>
@@ -204,7 +204,7 @@
                                 </td>
                                 <td class="px-3 py-2 text-xs text-slate-700 dark:text-slate-300">{{ $row['queue'] ?? '' }}</td>
                                 <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
-                                    @if (! empty($row['failedAt']))
+                                    @if (($row['failedAt'] ?? null) !== null)
                                         {{ $row['failedAt']->diffForHumans() }}
                                     @endif
                                 </td>
@@ -230,7 +230,7 @@
                                 <td class="px-3 py-2 text-right text-xs">{{ $row['pendingJobs'] ?? 0 }}</td>
                                 <td class="px-3 py-2 text-right text-xs {{ ($row['failedJobs'] ?? 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300' }}">{{ $row['failedJobs'] ?? 0 }}</td>
                                 <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
-                                    @if (! empty($row['createdAt']))
+                                    @if (($row['createdAt'] ?? null) !== null)
                                         {{ \Carbon\CarbonImmutable::createFromTimestamp($row['createdAt'])->diffForHumans() }}
                                     @endif
                                 </td>
@@ -243,7 +243,7 @@
                                             data-testid="row-retry-failures-button"
                                         >{{ Lang::get('dev::queue.retry_failures') }}</button>
                                     @endif
-                                    @if (empty($row['cancelledAt']) && empty($row['finishedAt']))
+                                    @if (($row['cancelledAt'] ?? null) === null && ($row['finishedAt'] ?? null) === null)
                                         <button
                                             type="button"
                                             wire:click="cancel('{{ $rowKey }}')"

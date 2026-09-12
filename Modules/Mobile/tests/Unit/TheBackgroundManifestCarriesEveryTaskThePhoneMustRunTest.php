@@ -181,7 +181,7 @@ it('pins the expressions the vendor generator has an interval for', function ():
 
     foreach (['15 9 * * *', '0 3 * * *', '0 9 * * *', '30 4 * * *', '0 6 * * *'] as $wallClock) {
         expect($method->invoke($generator, $wallClock))->toBeNull(
-            "The generator now has an interval for {$wallClock}; RUNNER_INTERVALS is missing it.",
+            sprintf('The generator now has an interval for %s; RUNNER_INTERVALS is missing it.', $wallClock),
         );
     }
 });

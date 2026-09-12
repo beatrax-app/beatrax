@@ -17,12 +17,12 @@ it('maps the refused-write family through the shared seam on both roots', functi
         // Named ahead of the read: an unreadable file answers as an empty
         // string, and the two assertions below would then report a bundle that
         // does not map the refusal rather than a bundle nobody could find.
-        expect(is_file(base_path($root)))->toBeTrue("{$root} was not found, so this rule has no bootstrap file to read the exception mapping out of.");
+        expect(is_file(base_path($root)))->toBeTrue(sprintf('%s was not found, so this rule has no bootstrap file to read the exception mapping out of.', $root));
 
         $contents = (string) file_get_contents(base_path($root));
 
         expect(str_contains($contents, 'LivewireClientRefusal::refusal('))->toBeTrue(
-            "{$root} does not map a refused /livewire/update write. Without it a payload the component ".
+            sprintf('%s does not map a refused /livewire/update write. Without it a payload the component ', $root).
             'correctly refused answers 500 on this bundle and 4xx on the other, which is two answers to one payload.',
         );
     }
@@ -38,7 +38,7 @@ it('registers exactly one exception mapper per root', function (): void {
 
         expect($mappers)->toBe(
             1,
-            "{$root} registers {$mappers} exception mappers. The one keyed on \\Exception shadows every other, ".
+            sprintf('%s registers %s exception mappers. The one keyed on \\Exception shadows every other, ', $root, $mappers).
             'so a new refusal belongs inside LivewireClientRefusal::refusal() rather than in a second map() call.',
         );
     }

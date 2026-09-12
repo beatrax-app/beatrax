@@ -45,7 +45,7 @@ $mainPath = $electron.'/src/main/index.js';
 
 foreach ([$configPath, $mainPath] as $required) {
     if (! is_file($required)) {
-        fwrite(STDERR, "nativephp_interpreter_into_macos: {$required} is not there — has `php artisan native:install --publish` run?\n");
+        fwrite(STDERR, sprintf("nativephp_interpreter_into_macos: %s is not there — has `php artisan native:install --publish` run?\n", $required));
 
         exit(1);
     }
@@ -54,7 +54,7 @@ foreach ([$configPath, $mainPath] as $required) {
 $config = (string) file_get_contents($configPath);
 
 if (! str_contains($config, 'mas: {')) {
-    fwrite(STDERR, "nativephp_interpreter_into_macos: no mas block in {$configPath}.\n");
+    fwrite(STDERR, sprintf("nativephp_interpreter_into_macos: no mas block in %s.\n", $configPath));
     fwrite(STDERR, "nativephp_mac_app_store_lane.php has to run first; the ordering in config/nativephp.php is what guarantees it.\n");
 
     exit(1);
@@ -64,7 +64,7 @@ if (! str_contains($config, "to: 'MacOS/php'")) {
     $anchor = "    mas: {\n";
 
     if (! str_contains($config, $anchor)) {
-        fwrite(STDERR, "nativephp_interpreter_into_macos: the mas block is not the shape this patches in {$configPath}.\n");
+        fwrite(STDERR, sprintf("nativephp_interpreter_into_macos: the mas block is not the shape this patches in %s.\n", $configPath));
 
         exit(1);
     }
@@ -84,7 +84,7 @@ JS;
     $config = str_replace($anchor, $anchor.$extraFiles."\n", $config);
 
     if (file_put_contents($configPath, $config) === false) {
-        fwrite(STDERR, "nativephp_interpreter_into_macos: could not write {$configPath}\n");
+        fwrite(STDERR, sprintf("nativephp_interpreter_into_macos: could not write %s\n", $configPath));
 
         exit(1);
     }
@@ -102,7 +102,7 @@ if (str_contains($main, $sentinel)) {
 $mainAnchor = "const phpBinary = path.join(buildPath, 'php', executable);";
 
 if (! str_contains($main, $mainAnchor)) {
-    fwrite(STDERR, "nativephp_interpreter_into_macos: the interpreter lookup is not the shape this patches in {$mainPath}.\n");
+    fwrite(STDERR, sprintf("nativephp_interpreter_into_macos: the interpreter lookup is not the shape this patches in %s.\n", $mainPath));
     fwrite(STDERR, "Confirm where the shell finds PHP before shipping a sandboxed build; a wrong path fails at launch with no output.\n");
 
     exit(1);
@@ -128,7 +128,7 @@ if (! str_contains($main, "from 'node:fs'")) {
     $importAnchor = "import path from 'path';";
 
     if (! str_contains($main, $importAnchor)) {
-        fwrite(STDERR, "nativephp_interpreter_into_macos: no path import to add the fs one beside in {$mainPath}.\n");
+        fwrite(STDERR, sprintf("nativephp_interpreter_into_macos: no path import to add the fs one beside in %s.\n", $mainPath));
 
         exit(1);
     }
@@ -137,7 +137,7 @@ if (! str_contains($main, "from 'node:fs'")) {
 }
 
 if (file_put_contents($mainPath, $main) === false) {
-    fwrite(STDERR, "nativephp_interpreter_into_macos: could not write {$mainPath}\n");
+    fwrite(STDERR, sprintf("nativephp_interpreter_into_macos: could not write %s\n", $mainPath));
 
     exit(1);
 }

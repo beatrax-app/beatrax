@@ -154,13 +154,13 @@ it('re-derives fingerprints over a realistic-scale row set without collisions', 
         $day = sprintf('%02d', ($i % 28) + 1);
         $second = sprintf('%02d', $i % 60);
         $this->seedV2Row([
-            'posted_at' => "2026-04-{$day}",
-            'booked_at' => "2026-04-{$day} 09:14:{$second}",
-            'value_date' => "2026-04-{$day}",
+            'posted_at' => sprintf('2026-04-%s', $day),
+            'booked_at' => sprintf('2026-04-%s 09:14:%s', $day, $second),
+            'value_date' => sprintf('2026-04-%s', $day),
             'amount_minor' => -100 - $i,
-            'counterparty_normalized' => "merchant {$i}",
+            'counterparty_normalized' => sprintf('merchant %s', $i),
             'source_row_index' => $i,
-            'source_ref' => "REF-{$i}",
+            'source_ref' => sprintf('REF-%s', $i),
             'fingerprint' => str_pad((string) ($i + 1), 64, '0', STR_PAD_LEFT),
         ]);
     }

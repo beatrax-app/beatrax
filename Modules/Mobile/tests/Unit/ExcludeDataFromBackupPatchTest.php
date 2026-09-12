@@ -11,7 +11,7 @@ function backupExclusionScript(): string
 {
     $script = dirname(__DIR__, 4).'/scripts/nativephp_exclude_data_from_backup.php';
 
-    expect(is_file($script))->toBeTrue("The patch script is not at {$script}.");
+    expect(is_file($script))->toBeTrue(sprintf('The patch script is not at %s.', $script));
 
     return $script;
 }

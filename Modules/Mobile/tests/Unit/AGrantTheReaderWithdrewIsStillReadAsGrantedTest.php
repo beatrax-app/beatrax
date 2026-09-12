@@ -94,7 +94,7 @@ function runReadBackPatch(string $root): array
 {
     $script = dirname(__DIR__, 4).'/scripts/nativephp_notification_grant_is_read_back.php';
 
-    expect(is_file($script))->toBeTrue("The patch script is not at {$script}.");
+    expect(is_file($script))->toBeTrue(sprintf('The patch script is not at %s.', $script));
 
     $process = proc_open(
         ['php', $script],

@@ -41,7 +41,7 @@ final class PruneDevAuditCommand extends Command
         /** @var int|mixed $deletedRaw */
         $deleted = is_int($deletedRaw) ? $deletedRaw : 0;
 
-        $this->info("Pruned {$deleted} dev_mode_audit row(s) older than {$days} day(s).");
+        $this->info(sprintf('Pruned %s dev_mode_audit row(s) older than %s day(s).', $deleted, $days));
 
         return self::SUCCESS;
     }

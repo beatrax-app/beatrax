@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\Core\Models\SystemAlert;
@@ -55,7 +55,7 @@ it('renders dev-sidebar nav items with every non-Horizon entry visible (Doctor /
 
     foreach (['Overview', 'Artisan', 'Audit', 'Logs', 'Queue', 'Doctor', 'SQL', 'System'] as $label) {
         expect(str_contains($html, $label))
-            ->toBeTrue("Dev sidebar missing nav item: {$label}");
+            ->toBeTrue(sprintf('Dev sidebar missing nav item: %s', $label));
     }
 
     // The test env has neither app.dev_mode nor the Horizon package, so that
@@ -63,7 +63,7 @@ it('renders dev-sidebar nav items with every non-Horizon entry visible (Doctor /
     $disabledCount = substr_count($html, 'nav-disabled');
     expect($disabledCount)->toBe(
         0,
-        "Expected zero nav-disabled entries (every dev route is registered), saw {$disabledCount}.",
+        sprintf('Expected zero nav-disabled entries (every dev route is registered), saw %s.', $disabledCount),
     );
 
     expect(str_contains($html, '>Horizon<'))
@@ -121,7 +121,7 @@ it('reads worker heartbeat from cache and renders the relative timestamp (or NOT
 
     $cache->put(
         WriteWorkerHeartbeat::CACHE_KEY,
-        Carbon::now()->subSeconds(7)->getTimestamp(),
+        CarbonImmutable::now()->subSeconds(7)->getTimestamp(),
         WriteWorkerHeartbeat::ttlSeconds(),
     );
     $response = $this->actingAs($user)->get('/dev');
@@ -144,7 +144,7 @@ it('renders queue count tiles (pending / failed / batches) sourced from the fram
         'queue' => 'default',
         'payload' => '{"err":1}',
         'exception' => 'boom',
-        'failed_at' => Carbon::now()->toDateTimeString(),
+        'failed_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
     DB::table('job_batches')->insert([
         'id' => (string) Str::uuid(),
@@ -156,7 +156,7 @@ it('renders queue count tiles (pending / failed / batches) sourced from the fram
         'options' => null,
         'cancelled_at' => null,
         'finished_at' => null,
-        'created_at' => Carbon::now()->getTimestamp(),
+        'created_at' => CarbonImmutable::now()->getTimestamp(),
     ]);
 
     $response = $this->actingAs($user)->get('/dev');
@@ -196,8 +196,8 @@ it('shows the current developer\'s last 5 dev_mode_audit rows in the Recent runs
                 'tier' => 'safe',
                 'exit_code' => 0,
             ], JSON_THROW_ON_ERROR),
-            'created_at' => Carbon::now()->subMinutes(10 - $i)->toDateTimeString(),
-            'updated_at' => Carbon::now()->subMinutes(10 - $i)->toDateTimeString(),
+            'created_at' => CarbonImmutable::now()->subMinutes(10 - $i)->toDateTimeString(),
+            'updated_at' => CarbonImmutable::now()->subMinutes(10 - $i)->toDateTimeString(),
         ]);
     }
     DB::table('dev_mode_audit')->insert([
@@ -218,8 +218,8 @@ it('shows the current developer\'s last 5 dev_mode_audit rows in the Recent runs
             'tier' => 'safe',
             'exit_code' => 0,
         ], JSON_THROW_ON_ERROR),
-        'created_at' => Carbon::now()->toDateTimeString(),
-        'updated_at' => Carbon::now()->toDateTimeString(),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
 
     $response = $this->actingAs($user)->get('/dev');
@@ -325,7 +325,7 @@ it('renders the last 5 structured log entries in the console pane as clickable r
     }
     $lines = [];
     for ($i = 1; $i <= 7; $i++) {
-        $lines[] = "[2026-05-24 12:00:0{$i}] testing.INFO: line number {$i}";
+        $lines[] = sprintf('[2026-05-24 12:00:0%s] testing.INFO: line number %s', $i, $i);
     }
     // A real secret literal, so the assertions below can tell a scrubbed
     // render from an unscrubbed one.

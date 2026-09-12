@@ -20,7 +20,7 @@ it('has copy for every blocked reason in both languages', function (): void {
             $key = 'mobile::setup.blocked.'.$reason->value;
 
             if (Lang::get($key) === $key) {
-                $missing[] = "{$locale}: {$reason->value}";
+                $missing[] = sprintf('%s: %s', $locale, $reason->value);
             }
         }
     }
@@ -38,7 +38,7 @@ it('has a name for every setup step in both languages', function (): void {
             $key = 'mobile::setup.step.'.$step->value;
 
             if (Lang::get($key) === $key) {
-                $missing[] = "{$locale}: {$key}";
+                $missing[] = sprintf('%s: %s', $locale, $key);
             }
         }
     }

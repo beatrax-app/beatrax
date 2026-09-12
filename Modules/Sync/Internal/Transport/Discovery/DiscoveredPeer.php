@@ -24,7 +24,7 @@ final readonly class DiscoveredPeer
     // peer auth — a WebSocket-layer TLS cert would add nothing over Noise.
     public function wsUrl(): string
     {
-        return "ws://{$this->host}:{$this->port}/sync";
+        return sprintf('ws://%s:%s/sync', $this->host, $this->port);
     }
 
     // A PTR answer names an instance without addressing it, so a peer learned

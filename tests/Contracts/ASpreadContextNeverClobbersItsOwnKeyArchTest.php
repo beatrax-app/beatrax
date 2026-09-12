@@ -61,9 +61,9 @@ it('never sets a key it then spreads SafeExceptionContext::describe() over', fun
             $literal = contextLiteralAround($source, $at);
 
             foreach ($keys as $key) {
-                if (str_contains($literal, "'{$key}' =>")) {
+                if (str_contains($literal, sprintf("'%s' =>", $key))) {
                     $line = substr_count(substr($source, 0, $at), "\n") + 1;
-                    $clobbered[] = str_replace(base_path().'/', '', $path).":{$line} sets '{$key}'";
+                    $clobbered[] = str_replace(base_path().'/', '', $path).sprintf(":%s sets '%s'", $line, $key);
                 }
             }
 

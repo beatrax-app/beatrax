@@ -231,13 +231,13 @@ it('leaves no catch body empty that is not declared with its reason', function (
         $entry = $declared[$file] ?? null;
 
         if ($entry === null) {
-            $offenders[] = "{$file} — {$count} catch body/bodies with nothing in them, and no entry saying why that is correct.";
+            $offenders[] = sprintf('%s — %s catch body/bodies with nothing in them, and no entry saying why that is correct.', $file, $count);
 
             continue;
         }
 
         if ($entry['count'] !== $count) {
-            $offenders[] = "{$file} — declares {$entry['count']} deliberately empty catch body/bodies but holds {$count}.";
+            $offenders[] = sprintf('%s — declares %s deliberately empty catch body/bodies but holds %s.', $file, $entry['count'], $count);
         }
     }
 
@@ -262,7 +262,7 @@ it('leaves no declared entry that no longer names an empty catch', function (): 
 
     foreach (catchBodiesLeftEmptyOnPurpose() as $file => $entry) {
         if (! isset($found[$file])) {
-            $stale[] = "{$file} — declared as deliberately empty, but holds no empty catch body. Remove the entry.";
+            $stale[] = sprintf('%s — declared as deliberately empty, but holds no empty catch body. Remove the entry.', $file);
         }
     }
 

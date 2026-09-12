@@ -83,7 +83,7 @@ foreach ($fixtures as $filename => $contentLines) {
         2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
         3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] '
             .'/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
-        4 => "<< /Length {$contentLen} >>\nstream\n{$content}\nendstream",
+        4 => sprintf("<< /Length %s >>\nstream\n%s\nendstream", $contentLen, $content),
         5 => '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
     ];
 
@@ -91,7 +91,7 @@ foreach ($fixtures as $filename => $contentLines) {
     $offsets = [];
     foreach ($objects as $n => $obj) {
         $offsets[$n] = strlen($pdf);
-        $pdf .= "{$n} 0 obj\n{$obj}\nendobj\n";
+        $pdf .= sprintf("%s 0 obj\n%s\nendobj\n", $n, $obj);
     }
     $xrefOffset = strlen($pdf);
     $pdf .= "xref\n0 ".(count($objects) + 1)."\n";
@@ -107,11 +107,11 @@ foreach ($fixtures as $filename => $contentLines) {
 
     $written = file_put_contents($output, $pdf);
     if ($written === false) {
-        fwrite(STDERR, "Failed to write {$output}\n");
+        fwrite(STDERR, sprintf("Failed to write %s\n", $output));
         exit(1);
     }
 
-    fwrite(STDERR, "Wrote {$written} bytes to {$output}\n");
+    fwrite(STDERR, sprintf("Wrote %s bytes to %s\n", $written, $output));
 }
 
 exit(0);

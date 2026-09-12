@@ -161,7 +161,7 @@ it('the update preview writes nothing, and discarding it leaves the ledger exact
         ->and((int) $this->db->connection()->table('transactions')->where('id', $groceryTxId)->value('amount_minor'))->toBe($before['amount']);
 
     // The reader has to be able to reach the thing they are deciding about.
-    $this->actingAs($this->user)->get("/migrations/{$secondRun->id}/preview")->assertOk();
+    $this->actingAs($this->user)->get(sprintf('/migrations/%s/preview', $secondRun->id))->assertOk();
 
     app(DiscardMigrationRun::class)->__invoke($secondRun->id, $this->user);
 

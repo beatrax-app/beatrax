@@ -79,7 +79,7 @@ final class SyncServeCommand extends Command
         $requested = $this->option('port');
         $port = is_string($requested) && $requested !== '' ? (int) $requested : $ports->lan();
         if ($port <= 0 || $port > 65535) {
-            $this->error("sync:serve: invalid port {$port}.");
+            $this->error(sprintf('sync:serve: invalid port %s.', $port));
 
             return self::FAILURE;
         }
@@ -94,7 +94,7 @@ final class SyncServeCommand extends Command
             $handler = ($this->handler)();
 
             $httpServer = SocketHttpServer::createForDirectAccess($this->logger);
-            $httpServer->expose("0.0.0.0:{$port}");
+            $httpServer->expose(sprintf('0.0.0.0:%s', $port));
 
             // No origin restriction: AllowOriginAcceptor compares the Origin
             // header against its list with in_array(), so ['*'] matched the
@@ -150,7 +150,7 @@ final class SyncServeCommand extends Command
 
             $this->logger->info('sync:serve: listener started.', ['port' => $port]);
             $stopHint = $this->canTrapSignals() ? 'SIGTERM/SIGINT to stop' : 'no signal handling on this runtime';
-            $this->info("sync:serve: listening on 0.0.0.0:{$port} ({$stopHint}).");
+            $this->info(sprintf('sync:serve: listening on 0.0.0.0:%s (%s).', $port, $stopHint));
 
             $this->startPendingPairingCourier($handler->localUserId());
 

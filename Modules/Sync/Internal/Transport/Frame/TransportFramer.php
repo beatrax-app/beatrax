@@ -278,7 +278,7 @@ final class TransportFramer
         foreach ($required as $key) {
             if (! array_key_exists($key, $row)) {
                 throw new \UnexpectedValueException(
-                    "TransportFramer::decode — missing required field '{$key}' in op entry."
+                    sprintf("TransportFramer::decode — missing required field '%s' in op entry.", $key)
                 );
             }
         }
@@ -291,7 +291,7 @@ final class TransportFramer
     {
         $value = $row[$key] ?? null;
         if (! is_string($value)) {
-            throw new \UnexpectedValueException("TransportFramer::decode — {$key} must be a string.");
+            throw new \UnexpectedValueException(sprintf('TransportFramer::decode — %s must be a string.', $key));
         }
 
         return $value;
@@ -304,7 +304,7 @@ final class TransportFramer
     {
         $value = $row[$key] ?? null;
         if (! is_int($value)) {
-            throw new \UnexpectedValueException("TransportFramer::decode — {$key} must be an int.");
+            throw new \UnexpectedValueException(sprintf('TransportFramer::decode — %s must be an int.', $key));
         }
 
         return $value;
@@ -325,7 +325,7 @@ final class TransportFramer
         $opType = OpType::tryFrom((string) $opTypeRaw);
         if ($opType === null) {
             throw new \UnexpectedValueException(
-                "TransportFramer::decode — unknown op_type: '{$opTypeRaw}'."
+                sprintf("TransportFramer::decode — unknown op_type: '%s'.", $opTypeRaw)
             );
         }
 

@@ -13,22 +13,22 @@ it('prefers the text/plain part when both text/plain and text/html are present',
         ."Date: Sat, 17 May 2026 10:00:00 +0000\r\n"
         ."Message-ID: <synth-mp-001@example.test>\r\n"
         ."MIME-Version: 1.0\r\n"
-        ."Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n"
+        .sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", $boundary)
         ."\r\n"
-        ."--{$boundary}\r\n"
+        .sprintf("--%s\r\n", $boundary)
         ."Content-Type: text/plain; charset=utf-8\r\n"
         ."Content-Transfer-Encoding: 7bit\r\n"
         ."\r\n"
         ."Plain text body wins.\r\n"
         ."Amount: EUR 12,99\r\n"
         ."\r\n"
-        ."--{$boundary}\r\n"
+        .sprintf("--%s\r\n", $boundary)
         ."Content-Type: text/html; charset=utf-8\r\n"
         ."Content-Transfer-Encoding: 7bit\r\n"
         ."\r\n"
         ."<html><body><p>HTML body should NOT win.</p></body></html>\r\n"
         ."\r\n"
-        ."--{$boundary}--\r\n";
+        .sprintf("--%s--\r\n", $boundary);
 
     $reader = new EmlMimeReader;
     $result = $reader->read($eml);

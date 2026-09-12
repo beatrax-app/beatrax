@@ -45,10 +45,10 @@ final class DetectAnomaliesJob implements ShouldBeUniqueUntilProcessing, ShouldQ
     public function uniqueId(): string
     {
         if (! isset($this->importRunId)) {
-            return "{$this->userId}:tx{$this->transactionId}";
+            return sprintf('%s:tx%s', $this->userId, $this->transactionId);
         }
 
-        return "{$this->userId}:{$this->importRunId}";
+        return sprintf('%s:%s', $this->userId, $this->importRunId);
     }
 
     public function uniqueFor(): int

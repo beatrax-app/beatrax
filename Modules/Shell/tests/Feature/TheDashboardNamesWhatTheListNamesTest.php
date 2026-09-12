@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
@@ -14,7 +13,6 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    Carbon::setTestNow();
     CarbonImmutable::setTestNow();
 });
 
@@ -34,7 +32,6 @@ it('shows the counterparty on the dashboard that the transactions list shows', f
 
     // Inside the dashboard's 90-day window, which the fixture's April dates are
     // outside of by the time anyone runs this.
-    Carbon::setTestNow('2026-05-02 12:00:00');
     CarbonImmutable::setTestNow('2026-05-02 12:00:00');
 
     $name = (string) Transaction::query()

@@ -51,7 +51,7 @@ final class DriftAlertDtoMapper
         if (! is_string($rawDetected) || $rawDetected === '') {
             $rowId = isset($row->id) && is_numeric($row->id) ? (string) $row->id : '?';
             throw new InvalidArgumentException(
-                "DriftAlertDtoMapper: drift_alerts row {$rowId} has missing or non-string detected_at.",
+                sprintf('DriftAlertDtoMapper: drift_alerts row %s has missing or non-string detected_at.', $rowId),
             );
         }
         $detectedAt = CarbonImmutable::parse($rawDetected);

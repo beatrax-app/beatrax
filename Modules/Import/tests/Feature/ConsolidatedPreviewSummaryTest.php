@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +20,6 @@ beforeEach(function (): void {
     // goes through `Repository::getSeconds()`, which calls Carbon::now() and
     // would otherwise collapse to zero, making the cached preview unreadable.
     $frozen = CarbonImmutable::parse('2026-05-15 12:00:00');
-    Carbon::setTestNow($frozen);
     CarbonImmutable::setTestNow($frozen);
 
     $this->app->instance(Clock::class, new class($frozen) implements Clock
@@ -45,7 +43,6 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
-    Carbon::setTestNow();
     CarbonImmutable::setTestNow();
 });
 
@@ -120,7 +117,7 @@ function summaryForgetSummaries(int ...$importRunIds): void
     /** @var Repository $backend */
     $backend = app(Repository::class);
     foreach ($importRunIds as $importRunId) {
-        $backend->forget("import.{$importRunId}.preview-summary");
+        $backend->forget(sprintf('import.%s.preview-summary', $importRunId));
     }
 }
 
@@ -249,7 +246,7 @@ it('reads a section without the run rows once the summary is written', function 
 
     /** @var Repository $backend */
     $backend = app(Repository::class);
-    $backend->forget("import.{$run}.preview");
+    $backend->forget(sprintf('import.%s.preview', $run));
 
     $batch = summaryBatchArray([$run], $this->user);
     $section = $batch['sections'][0];

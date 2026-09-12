@@ -36,7 +36,7 @@ it('does not read a commented line as an assignment', function (string $line): v
 ]);
 
 it('reads a quoted or padded value as the value it is', function (string $written): void {
-    expect(ShippedEnvironment::wrongIn("APP_ENV=production\nAPP_DEBUG={$written}\n"))->toBe([]);
+    expect(ShippedEnvironment::wrongIn(sprintf("APP_ENV=production\nAPP_DEBUG=%s\n", $written)))->toBe([]);
 })->with([
     'double quoted' => '"false"',
     'single quoted' => "'false'",
@@ -68,7 +68,7 @@ it('refuses the log level a shipped bundle may not carry', function (): void {
 });
 
 it('accepts a log level that is merely talkative', function (string $level): void {
-    expect(ShippedEnvironment::wrongIn("APP_ENV=production\nAPP_DEBUG=false\nLOG_LEVEL={$level}\n"))
+    expect(ShippedEnvironment::wrongIn(sprintf("APP_ENV=production\nAPP_DEBUG=false\nLOG_LEVEL=%s\n", $level)))
         ->toBe([]);
 })->with(['info', 'warning', 'error']);
 

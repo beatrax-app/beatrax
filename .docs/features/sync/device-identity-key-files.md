@@ -170,14 +170,52 @@ row in front of pass their query through.
 | `confirmedDevices()` | excluded | the device list; the machine is gone |
 | `otherDeviceNames()` | excluded | nine callers meaning "my peers" — the delete-account warning, the phone's `hasPeers`, the LAN address pick, the manual-address field, the status surface, notification preferences |
 | `peersOwedEpochs()` | excluded | it would otherwise be fanned a wrap into a mailbox nothing ever collects |
+| `deviceX25519Keys()` | excluded | the Noise admission set, and the fan-out and peer-pick that read it |
+| `isStillConfirmed()` | excluded | asks whether a device is still a peer, not whether a signature verifies |
 | `deviceKeys()`, `signatureVerificationKeys()`, `retainedDeviceKeys()`, `authorIdsWithAKeyOnFile()` | **kept** | this is the history-verification set, and it is the whole reason `confirmed_at` stays |
 
-The line is drawn at what the demotion changed and nothing else. `is_self` was the filter on
-all three excluded readers, so taking it off is what put the row in front of them; the key maps
-never filtered on `is_self` and so read exactly as they did before the repair existed. In
-particular `deviceX25519Keys()` still names the retired machine, so its Noise static key still
-admits a handshake — true before any of this and unchanged by it. Whether a restore should also
-shut the transport to the machine it was restored from is a separate question, and a real one.
+The first three excluded readers are what the demotion changed: `is_self` was the filter on all
+three, so taking it off is what put the row in front of them. The other two are wider than that,
+and they were the hole the first pass left open.
+
+### The transport the demotion did not reach
+
+The key maps never filtered on `is_self`, so they read after the repair exactly as they read
+before it — and `deviceX25519Keys()` is one of them. Confirmed was all that map asked for, so the
+Noise static key of the machine the database was *restored from* still admitted a session, still
+drew a key-epoch wrap, and was still the one peer a phone's import dialled. Measured as an
+inversion: `SyncSession::authenticate()` returned `true` for a handshake against a retired row's
+key, and returns `false` with the narrowing in place.
+
+So `deviceX25519Keys()` and `deviceKeys()` now disagree, and that disagreement is the point.
+`deviceKeys()` is the signing map — it feeds `signatureVerificationKeys()` and composes the
+introduction offer a peer needs to verify what the retired machine wrote — and narrowing it would
+quarantine that whole history. `deviceX25519Keys()` admits a live peer to a live session. An
+arch guard holds both sides of that, so an edit that makes the two maps agree fails the build
+whichever way it moves them.
+
+### The row is also not removable
+
+Removal's whole mechanism is clearing `confirmed_at`, and on this row that column *is* the
+history. The device list never offers the row, but a Livewire action is client-invokable, so both
+`GdkRotationService::rotateAndRevoke()` and `DeviceRegistryService::purge()` refuse it
+authoritatively — the first by throwing, the second by resolving no device id to sweep.
+
+There is one undemotion, and only one. `restoreSelfRow()` clears the stamp, because a key-file
+that opens for that `device_id` is the machine itself back and a self row still stamped would be
+this device hidden from its own list. `PairedDeviceAdmitter` clears it for the same reason from
+the other direction: a completed two-party ceremony naming that row says the machine is here and
+answering, and a peer the reader just paired with that no list shows and no epoch reaches is a
+worse state than the one the stamp was protecting against.
+
+### Every other query has to say which reading it wants
+
+There are 55 statements naming `device_registry` across three modules, and a new column with one
+reader taught about it is how this gap appeared in the first place.
+`AQueryOverTheDeviceRegistryDecidesAboutARetiredRowArchTest` makes each of them take a side: filter
+the stamp — through `stillADevice()`, a `whereNull()`, or a narrowing to `is_self` 1, which the
+retirement takes off — or carry a pinned reason saying why the retired row belongs in that answer.
+The pins are counted, so a query added beside one inherits nothing.
 
 The column is device-local for free: `device_registry` is declared uncovered in
 `SyncCoverageIsDeclaredTest` — *trust is established by the ceremony, not by an op that arrives

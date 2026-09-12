@@ -32,7 +32,7 @@ function csvWithoutColumn(string $fixture, string $header): string
 
     $parsed = array_map(static fn (string $line): array => str_getcsv($line, ',', '"', ''), $rows);
     $drop = array_search($header, $parsed[0], strict: true);
-    expect($drop)->not->toBeFalse("fixture {$fixture} must ship a '{$header}' column to drop");
+    expect($drop)->not->toBeFalse(sprintf("fixture %s must ship a '%s' column to drop", $fixture, $header));
 
     $out = [];
     foreach ($parsed as $cells) {

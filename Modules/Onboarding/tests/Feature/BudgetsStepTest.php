@@ -35,7 +35,7 @@ it('renders the optional budgets step with the expense categories', function ():
 
 it('saves entered amounts as month-1 envelope assignments and advances the wizard on continue', function (): void {
     Livewire::test(BudgetsStep::class)
-        ->set("amounts.{$this->groceries->id}", '50,00')
+        ->set(sprintf('amounts.%s', $this->groceries->id), '50,00')
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 
@@ -51,7 +51,7 @@ it('saves entered amounts as month-1 envelope assignments and advances the wizar
 
 it('advances without saving anything on skip', function (): void {
     Livewire::test(BudgetsStep::class)
-        ->set("amounts.{$this->groceries->id}", '50')
+        ->set(sprintf('amounts.%s', $this->groceries->id), '50')
         ->call('skip')
         ->assertDispatched('wizard.step.skipped');
 
@@ -71,7 +71,7 @@ it('ignores a foreign / non-budgetable category id on continue', function (): vo
     $foreign = Category::create(['user_id' => $other->id, 'name' => 'Therapy', 'slug' => 'therapy', 'kind' => 'expense', 'display_order' => 1]);
 
     Livewire::test(BudgetsStep::class)
-        ->set("amounts.{$foreign->id}", '50')
+        ->set(sprintf('amounts.%s', $foreign->id), '50')
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 

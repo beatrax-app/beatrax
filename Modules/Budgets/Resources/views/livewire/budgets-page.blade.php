@@ -245,7 +245,7 @@
                                 >
                                 <span class="text-sm text-slate-500 dark:text-slate-400">%</span>
                             </div>
-                            @if (! empty($thresholdErrors[$row->categoryId]))
+                            @if (($thresholdErrors[$row->categoryId] ?? '') !== '')
                                 <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
                             @endif
                         </td>
@@ -408,7 +408,7 @@
                                 style="font-variant-numeric: tabular-nums;"
                             >
                         </label>
-                        @if (! empty($thresholdErrors[$row->categoryId]))
+                        @if (($thresholdErrors[$row->categoryId] ?? '') !== '')
                             <p class="w-full text-xs text-rose-600 dark:text-rose-400">{{ $thresholdErrors[$row->categoryId] }}</p>
                         @endif
                     </div>

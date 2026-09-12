@@ -11,7 +11,7 @@ it('lets the amount range shrink to the sheet it sits in', function (): void {
 
     foreach (['.srch-amount-input', '.srch-date-input'] as $selector) {
         $start = strpos($css, $selector.' {');
-        expect($start)->not->toBeFalse("No rule for {$selector}.");
+        expect($start)->not->toBeFalse(sprintf('No rule for %s.', $selector));
 
         $rule = substr($css, (int) $start, 400);
         $rule = substr($rule, 0, (int) strpos($rule, '}'));

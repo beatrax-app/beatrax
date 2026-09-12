@@ -49,12 +49,12 @@ final class RealSqliteFixture
     {
         $base = self::baseDirectory();
         if (! is_dir($base) && ! @mkdir($base, 0o755, true) && ! is_dir($base)) {
-            throw new RuntimeException("Could not create base directory {$base}");
+            throw new RuntimeException(sprintf('Could not create base directory %s', $base));
         }
 
         $dir = $base.DIRECTORY_SEPARATOR.bin2hex(random_bytes(8));
         if (! @mkdir($dir, 0o755, true) && ! is_dir($dir)) {
-            throw new RuntimeException("Could not create fixture directory {$dir}");
+            throw new RuntimeException(sprintf('Could not create fixture directory %s', $dir));
         }
 
         $path = $dir.DIRECTORY_SEPARATOR.$name.'.sqlite';

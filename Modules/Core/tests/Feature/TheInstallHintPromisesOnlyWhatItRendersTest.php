@@ -44,7 +44,7 @@ it('ships no install copy that nothing can reach', function (): void {
 
     $unreachable = [];
     foreach (array_keys($install) as $key) {
-        if (! str_contains($source, "install.{$key}")) {
+        if (! str_contains($source, sprintf('install.%s', $key))) {
             $unreachable[] = $key;
         }
     }

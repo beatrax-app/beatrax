@@ -54,7 +54,7 @@ if (str_contains($source, 'WKDownloadDelegate')) {
 $declarationAnchor = "    class Coordinator: NSObject, WKNavigationDelegate {\n";
 
 if (! str_contains($source, $declarationAnchor)) {
-    fwrite(STDERR, "nativephp_ios_download_delegate: Coordinator anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_download_delegate: Coordinator anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated shell changed shape; re-check the navigation delegate before shipping a build.\n");
     exit(1);
 }
@@ -68,7 +68,7 @@ $patched = str_replace(
 $policyAnchor = "            // Open external URLs and system schemes with the system handler\n";
 
 if (! str_contains($patched, $policyAnchor)) {
-    fwrite(STDERR, "nativephp_ios_download_delegate: navigation-policy anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_download_delegate: navigation-policy anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated shell changed shape; a blob: navigation would still strand the WebView.\n");
     exit(1);
 }
@@ -91,7 +91,7 @@ $patched = str_replace($policyAnchor, $policyBranch.$policyAnchor, $patched);
 $methodsAnchor = "        @objc func keyboardWillShow(_ notification: Notification) {\n";
 
 if (! str_contains($patched, $methodsAnchor)) {
-    fwrite(STDERR, "nativephp_ios_download_delegate: keyboard-observer anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_download_delegate: keyboard-observer anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated shell changed shape; the download delegate has nowhere to live.\n");
     exit(1);
 }
@@ -189,12 +189,12 @@ SWIFT;
 $patched = str_replace($methodsAnchor, $methods.$methodsAnchor, $patched);
 
 if (! str_contains($patched, 'downloadDidFinish')) {
-    fwrite(STDERR, "nativephp_ios_download_delegate: patch produced no change in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_download_delegate: patch produced no change in %s.\n", $target));
     exit(1);
 }
 
 if (file_put_contents($target, $patched) === false) {
-    fwrite(STDERR, "nativephp_ios_download_delegate: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_download_delegate: could not write %s.\n", $target));
     exit(1);
 }
 
