@@ -175,14 +175,21 @@ module:
   reader with four ARS accounts, each holding an unconvertible expense,
   was told "1 account not converted" while ARS 2,300.00 of spend went
   missing. Both are now SETS — `excludedCurrencies: list<string>` and
-  `excludedAccountIds: list<int>` — which also makes the compare-mode
-  union correct: the previous window's counters used to be ADDED to the
-  current window's, so a currency unconvertible in both periods counted
-  as two. The transaction path renders through
-  `core::money.not_converted`, which names the currency, the sentence
-  the dashboard already uses; the balance path keeps
-  `reports::builder.fx_excluded`, which counts accounts and is right
-  there. The
+  `excludedAccounts: array<int, string>`, account id => name — which
+  also makes the compare-mode union correct: the previous window's
+  counters used to be ADDED to the current window's, so a currency
+  unconvertible in both periods counted as two. Keyed by id, because
+  that is the identity a series unions on: one unconvertible account
+  sampled over sixty buckets is one account. The name rides along
+  because both paths render through the same shared sentence,
+  `core::money.not_converted` — the currencies verbatim, the accounts
+  through `ReportResultDto::excludedAccountNames()`, which deduplicates
+  and sorts them. A count said the total was short without saying which
+  account to go and look at, which is what
+  [B10-R17](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md)
+  asks for; `reports::builder.fx_excluded` is retired, and the compare
+  union preserves keys (`ReportAggregator::unionAccounts`) rather than
+  renumbering them. The
   rate for every discovered currency, fees included, is fetched once
   per report: each dimension query returns rows already scoped to the
   one currency it was asked for, so converting per row read the whole

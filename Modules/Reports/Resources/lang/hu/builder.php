@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'az előző időszakhoz képest',
     'view_transactions' => 'Tranzakciók megtekintése',
 
-    'fx_excluded' => '{0} nincs átváltatlan számla — nincs elérhető árfolyam|[1,*] :count számla nincs átváltva — nincs elérhető árfolyam',
-
     'group_header' => [
         'category' => 'Kategória',
         'counterparty' => 'Partner',

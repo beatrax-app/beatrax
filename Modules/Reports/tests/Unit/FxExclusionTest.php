@@ -160,11 +160,11 @@ it('names the currency a transaction report could not convert, and does not coun
 
     expect($result->totalMinor)->toBe(20_000)
         ->and($result->excludedCurrencies)->toBe(['ARS'])
-        // Not four, and not one either: this path has no account to count.
-        ->and($result->excludedAccountIds)->toBe([]);
+        // Not four, and not one either: this path has no account to name.
+        ->and($result->excludedAccounts)->toBe([]);
 });
 
-it('counts accounts on the balance path, where four of them really are four', function (): void {
+it('names accounts on the balance path, where four of them really are four', function (): void {
     $user = fxeUser();
 
     fxeAccount($user, 'EUR');
@@ -186,6 +186,6 @@ it('counts accounts on the balance path, where four of them really are four', fu
 
     sort($arsAccounts);
 
-    expect($result->excludedAccountIds)->toBe($arsAccounts)
+    expect(array_keys($result->excludedAccounts))->toBe($arsAccounts)
         ->and($result->excludedCurrencies)->toBe([]);
 });

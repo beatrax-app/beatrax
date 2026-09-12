@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'önceki döneme göre',
     'view_transactions' => 'İşlemleri görüntüle',
 
-    'fx_excluded' => ':count hesap dönüştürülmedi — kur bulunamadı',
-
     'group_header' => [
         'category' => 'Kategori',
         'counterparty' => 'Karşı taraf',
