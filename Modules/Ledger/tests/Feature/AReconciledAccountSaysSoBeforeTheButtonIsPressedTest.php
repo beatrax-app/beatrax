@@ -27,7 +27,7 @@ function reconciledAccountCompleteButton(string $html): string
 }
 
 beforeEach(function (): void {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'reconciled-state-fixture',

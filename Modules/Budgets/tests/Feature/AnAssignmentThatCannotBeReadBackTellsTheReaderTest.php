@@ -18,7 +18,7 @@ use Modules\Ledger\Models\Currency;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::query()->create([
         'username' => 'unreadable-assignment',

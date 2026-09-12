@@ -12,7 +12,7 @@ use Modules\Ledger\Public\Support\CurrencyDisplayName;
 
 uses(RefreshDatabase::class);
 
-// `currencies.name` is seeded in English and both pickers rendered that column
+// `currencies.name` was seeded in English and both pickers rendered that column
 // straight as their option labels, so a Dutch reader adding an account was
 // offered "Pound Sterling". The code is the row's own primary key and the one
 // part of it no translation touches.
@@ -59,18 +59,27 @@ it('offers the account picker its currencies in the reader language', function (
         ->and($options['JPY'])->toBe('Japanse yen');
 });
 
-it('offers the seeded English wording to an English reader', function (): void {
+// "British Pound" rather than the "Pound Sterling" the hand-written lines said:
+// the wording is CLDR's in English exactly as it is in the other twenty-five,
+// and one source that every language shares is the point of the change.
+it('offers the English wording to an English reader', function (): void {
     app()->setLocale('en');
 
-    expect(CurrencyDisplayName::forCode('GBP', 'Pound Sterling'))->toBe('Pound Sterling');
+    expect(CurrencyDisplayName::forCode('GBP'))->toBe('British Pound');
 });
 
-// A code the table carries that no locale has a line for still reads as words:
-// the seeded name is the fallback, never the key.
-it('falls back to the stored name for a code no locale names', function (): void {
-    DB::table('currencies')->insert(['code' => 'CHF', 'name' => 'Swiss Franc', 'minor_unit' => 2]);
-
+// The table and the transcript are generated from one another's source, so a
+// row the transcript cannot name is a mismatch rather than a reader problem —
+// and it reads as its own code, never as another reader's language.
+it('names every code the table offers', function (): void {
     app()->setLocale('nl');
 
-    expect(CurrencyDisplayName::forCode('CHF', 'Swiss Franc'))->toBe('Swiss Franc');
+    $unnamed = [];
+    foreach (DB::table('currencies')->orderBy('code')->pluck('code') as $code) {
+        if (CurrencyDisplayName::forCode((string) $code) === (string) $code) {
+            $unnamed[] = (string) $code;
+        }
+    }
+
+    expect($unnamed)->toBe([], 'currency rows the transcript does not name: '.implode(', ', $unnamed));
 });

@@ -21,7 +21,7 @@ uses(RefreshDatabase::class);
 // counted it as imported.
 
 beforeEach(function (): void {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'migrated-budget-payday-reader',

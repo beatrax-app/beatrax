@@ -37,3 +37,13 @@ install and on upgrade; it is the table's second writer. The rows carry
 
 Opting into online fetching still layers fresher rows on top; nothing about the
 consent gate changes.
+
+## The snapshot decides which currencies can be chosen
+
+The thirty codes it quotes, plus the euro it quotes them against, are exactly
+the rows `currencies` is seeded with and exactly the currencies the two pickers
+offer. A reporting currency the snapshot cannot price is one every roll-up
+would have to leave out, so the set is derived rather than maintained beside
+it: replacing this file means re-running `scripts/generate_currency_names.php`,
+and [`ACurrencyIsNamedInEveryLocaleTest`](../ledger/currency-names.md) fails
+while the two disagree.

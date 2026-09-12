@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Support;
 
-// Three tables seed a display column with words and read it back: `categories`
-// by slug, `currencies` by code, `tax_deduction_categories` by corpus key. This
-// is the one rule all three obey — the reader's wording wins while the row is
-// still the seeder's, and the row wins back once the user has written over it.
+// Two tables seed a display column with words and read it back: `categories` by
+// slug and `tax_deduction_categories` by corpus key. This is the one rule both
+// obey — the reader's wording wins while the row is still the seeder's, and the
+// row wins back once the user has written over it.
 final class SeededDisplayName
 {
     /**
-     * @param  string  $group  The lang group and its trailing dot, e.g. `ledger::currencies.`
+     * @param  string  $group  The lang group and its trailing dot, e.g. `categorization::categories.`
      * @param  bool  $stillTheSeeders  False once the user has written their own wording over it.
      */
     public static function fromLang(string $group, ?string $key, ?string $stored, bool $stillTheSeeders = true): ?string

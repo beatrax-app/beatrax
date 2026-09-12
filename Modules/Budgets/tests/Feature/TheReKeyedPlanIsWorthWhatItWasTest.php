@@ -23,8 +23,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-24 09:00:00'));
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
-    Currency::query()->updateOrInsert(['code' => 'USD'], ['name' => 'US dollar', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'USD'], ['minor_unit' => 2]);
     DB::table('exchange_rates')->where('source', BundledRates::SOURCE)->delete();
     DB::table('exchange_rates')->insert([
         'base_currency' => 'EUR', 'quote_currency' => 'USD', 'rate_date' => '2026-08-01',

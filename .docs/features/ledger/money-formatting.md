@@ -152,12 +152,14 @@ page load.
 
 `formatToLocale()` constructs a PHP `NumberFormatter`, which needs ICU
 locale data for the locale it is given. **The mobile build does not
-have Dutch locale data.** The bundled PHP binaries ship an ICU data
-package filtered to English only, so `ext-intl` loads and reports a
-version, but constructing a formatter for `nl_NL` fails — as an
-`IntlException` when intl error-exceptions are enabled, and as a
-`ValueError` from the constructor otherwise. The full story of how the
-data goes missing, and why it cannot simply be added back, is in
+have Dutch locale data.** The *mobile* PHP binaries ship an ICU data
+package filtered to English only — the desktop binary does not: it
+carries ICU 77.1 in full, 881 locales, and formats `nl_NL` correctly.
+On the phone `ext-intl` loads and reports a version, but constructing a
+formatter for `nl_NL` fails — as an `IntlException` when intl
+error-exceptions are enabled, and as a `ValueError` from the
+constructor otherwise. The full story of how the data goes missing, and
+why it cannot simply be added back, is in
 [the mobile architecture page](../mobile/architecture.md) under
 "`--with-icu` ships ICU code, not ICU locale data".
 
@@ -255,5 +257,9 @@ that are easy to break:
 - [Mobile architecture](../mobile/architecture.md) — the ICU data gap
   that forces the fallback, and the other seam (`Fmt::number()`) that
   hits it.
+- [Currency names](currency-names.md) — the third thing that gap
+  decides: what a currency is *called* is transcribed from ICU rather
+  than asked of it, because on the phone the question is answered in
+  English instead of refused.
 - [`FX` architecture](../fx/architecture.md) — rate handling and
   currency conversion, which operates on the same minor units.

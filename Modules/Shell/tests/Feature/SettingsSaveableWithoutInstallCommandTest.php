@@ -46,9 +46,10 @@ it('saves the period start day, which the currency validator used to block', fun
         ->toBe(25);
 });
 
-// The base-currency select reads `currencies.name`, which is seeded in English,
-// so a Dutch reader was offered "Pound Sterling" from the very reference table
-// the account-currency editor names as its precedent.
+// The base-currency select used to read `currencies.name`, seeded in English, so
+// a Dutch reader was offered "Pound Sterling" from the very reference table the
+// account-currency editor names as its precedent. The label is ICU's now, per
+// reader, and the column it came from is gone.
 it('offers the reporting-currency select its options in the reader language', function (): void {
     app()->setLocale('nl');
 

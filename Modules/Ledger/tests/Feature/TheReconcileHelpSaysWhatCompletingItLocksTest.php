@@ -32,7 +32,7 @@ function reconcileHelpLocales(): array
 
 function reconcileHelpReader(): User
 {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     return User::create([
         'username' => 'reconcile-help-'.bin2hex(random_bytes(4)),

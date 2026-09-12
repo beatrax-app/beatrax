@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
 beforeEach(function (): void {
     // SettingsPage::save() validates baseCurrency against
     // `exists:currencies,code`; seed EUR so the default passes.
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 });
 
 function gdtUser(string $username, int $threshold = 5): User

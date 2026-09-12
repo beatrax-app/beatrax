@@ -24,8 +24,18 @@ The question and its `log10` used to be written out per class, so
 `OneSeamAnswersTheMinorUnitScaleArchTest` fails the build on a second copy
 of either.
 
-`currencies.minor_unit` is reference data for display and validation; nothing
-reads it to do arithmetic.
+`currencies.minor_unit` is reference data; nothing reads it to do arithmetic.
+It is seeded from `CurrencyScale` itself rather than from a literal, so the row
+and the arithmetic cannot disagree.
+
+**The scale is not ICU's to decide.** ICU 78 dropped HUF and IDR to zero
+fraction digits where ICU 77 and ISO 4217 give them two; the bundled desktop
+binary is ICU 77.1 and a build host may be on either. A scale read from ICU is
+one that moves when a system library is upgraded, and what a stored integer
+means cannot move — so it comes from the ISO 4217 data `brick/money` carries
+and `composer.lock` pins. `brick`'s locale formatter pins the fraction digits
+to the amount's own scale before ICU sees the number, so the rendered figure
+follows the same source.
 
 ## Why a hardcoded ÷100 is a bug, not a shortcut
 

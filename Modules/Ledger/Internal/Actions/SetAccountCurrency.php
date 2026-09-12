@@ -42,6 +42,14 @@ final readonly class SetAccountCurrency
         /** @var stdClass $account */
         $current = self::toString($account->default_currency);
 
+        // Before the check below, not after it: an importer stamps the
+        // statement's own denomination on the account it mints, and the
+        // snapshot cannot price every currency a statement arrives in. Naming
+        // the code the row already holds writes nothing and must not refuse.
+        if ($currency === $current) {
+            return;
+        }
+
         // The <select> narrows the choice; nothing enforces it. A tampered
         // Livewire payload arrives here as any three bytes, and an account
         // denominated in a code the rate table does not know drops out of
@@ -49,10 +57,6 @@ final readonly class SetAccountCurrency
         $known = $this->db->connection()->table('currencies')->where('code', $currency)->exists();
         if (! $known) {
             throw new InvalidArgumentException(Lang::get('ledger::account_currency.errors.unknown'));
-        }
-
-        if ($currency === $current) {
-            return;
         }
 
         if (! $allowRelabel) {

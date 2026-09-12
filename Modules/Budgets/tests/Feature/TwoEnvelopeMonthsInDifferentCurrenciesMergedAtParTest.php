@@ -45,8 +45,8 @@ function seedCrossCurrencyAssignment(int $userId, int $categoryId, string $perio
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-20 12:00:00'));
 
-    CurrencyRow::query()->updateOrInsert(['code' => Currency::Eur->value], ['name' => 'Euro', 'minor_unit' => 2]);
-    CurrencyRow::query()->updateOrInsert(['code' => Currency::Usd->value], ['name' => 'US Dollar', 'minor_unit' => 2]);
+    CurrencyRow::query()->updateOrInsert(['code' => Currency::Eur->value], ['minor_unit' => 2]);
+    CurrencyRow::query()->updateOrInsert(['code' => Currency::Usd->value], ['minor_unit' => 2]);
 
     // The rate table is emptied first: a bundled rate for the same pair would
     // decide the arithmetic this test is asserting the exact answer of.

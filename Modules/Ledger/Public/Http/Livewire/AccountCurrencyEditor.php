@@ -166,13 +166,20 @@ final class AccountCurrencyEditor extends Component
         // Currency enum: the enum names only the codes the code itself writes
         // as literals, and the selectable set is data the install seeds.
         $options = [];
-        foreach ($db->connection()->table('currencies')->orderBy('code')->get(['code', 'name']) as $row) {
+        foreach ($db->connection()->table('currencies')->orderBy('code')->get(['code']) as $row) {
             /** @var stdClass $row */
             $code = is_string($row->code) ? $row->code : '';
             if ($code !== '') {
-                $options[$code] = CurrencyDisplayName::forCode($code, is_string($row->name) ? $row->name : null);
+                $options[$code] = CurrencyDisplayName::forCode($code);
             }
         }
+
+        // An importer stamps the statement's own denomination on the account it
+        // mints, and the snapshot cannot price every currency a statement can
+        // arrive in. Without its own code among the options nothing is selected
+        // and the select shows the first one, which is not what the row holds.
+        $options[$this->storedCurrency] ??= CurrencyDisplayName::forCode($this->storedCurrency);
+        ksort($options);
 
         return $options;
     }

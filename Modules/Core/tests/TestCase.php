@@ -21,15 +21,15 @@ abstract class TestCase extends RootTestCase
         try {
             Currency::query()->updateOrInsert(
                 ['code' => 'EUR'],
-                ['name' => 'Euro', 'minor_unit' => 2],
+                ['minor_unit' => 2],
             );
             Currency::query()->updateOrInsert(
                 ['code' => 'USD'],
-                ['name' => 'US Dollar', 'minor_unit' => 2],
+                ['minor_unit' => 2],
             );
             Currency::query()->updateOrInsert(
                 ['code' => 'GBP'],
-                ['name' => 'Pound Sterling', 'minor_unit' => 2],
+                ['minor_unit' => 2],
             );
         } catch (QueryException) {
             // No currencies table (Unit tests without RefreshDatabase).

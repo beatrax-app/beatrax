@@ -191,6 +191,11 @@ extend-exclude = [
   "**/lang/sv/",
   "**/lang/tr/",
   "**/lang/uk/",
+  # ICU's currency names in all twenty-six shipped languages, in one file
+  # rather than one per locale, so the rule above cannot reach it: the German
+  # lew, the French dollar australien and the Polish zlot are the words CLDR
+  # uses, and this file is generated from ICU rather than written here.
+  "Modules/Ledger/Resources/currency-names.json",
   "database/seeders/data/",
   "scripts/anonymize_*.php",
   "scripts/synthesise_*.php",

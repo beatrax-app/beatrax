@@ -9,8 +9,8 @@ use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 beforeEach(function (): void {
     // Two currencies, so the picker has options and exists:currencies,code can pass.
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
-    Currency::query()->updateOrInsert(['code' => 'USD'], ['name' => 'US Dollar', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'USD'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'wessel',

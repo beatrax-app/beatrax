@@ -14,7 +14,7 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->groceries = Category::create([
         'user_id' => null,
@@ -88,7 +88,7 @@ it('copies last month forward onto the target period it was handed', function ()
 // whoever the guard carried, which is a different question from the one a
 // writer handed the owner explicitly is answering.
 it('keys the row to the owner rather than to whoever is browsing', function (): void {
-    Currency::query()->updateOrInsert(['code' => 'USD'], ['name' => 'US dollar', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'USD'], ['minor_unit' => 2]);
 
     $owner = assignWindowUser(15, 'USD');
     $browser = assignWindowUser(1);
