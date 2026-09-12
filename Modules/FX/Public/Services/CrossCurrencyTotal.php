@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\FX\Public\Services;
 
 use Modules\FX\Public\Dto\ConvertedTotal;
+use Modules\FX\Public\Dto\RateSet;
+use Modules\FX\Public\Dto\RateUsed;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\RateTable;
 
@@ -32,13 +34,13 @@ final readonly class CrossCurrencyTotal
     }
 
     // One lookup per currency, never one per bucket: convertToBase() reads the
-    // whole exchange_rates table on every call. The rate a zero amount converts
-    // at is the rate any amount converts at.
+    // whole exchange_rates table on every call. The whole ConversionResult is
+    // kept rather than its number alone — reducing it here is what left every
+    // surface unable to name the source or the day it had converted at.
     /**
      * @param  list<string>  $currencies
-     * @return array<string, string> currency code => decimal rate into $targetCurrency
      */
-    public function ratesTo(array $currencies, string $targetCurrency): array
+    public function ratesTo(array $currencies, string $targetCurrency): RateSet
     {
         $rates = [];
         foreach (array_unique($currencies) as $currency) {
@@ -47,24 +49,31 @@ final readonly class CrossCurrencyTotal
             }
 
             $probe = Money::tryOfMinor(0, $currency);
-            $rate = $probe === null ? null : $this->fx->convertToBase($probe, $targetCurrency)->rate;
+            $result = $probe === null ? null : $this->fx->convertToBase($probe, $targetCurrency);
 
-            if ($rate !== null) {
-                $rates[$currency] = $rate;
+            if ($result !== null && $result->rate !== null) {
+                $rates[$currency] = new RateUsed(
+                    from: $currency,
+                    to: $targetCurrency,
+                    rate: $result->rate,
+                    source: $result->source,
+                    asOf: $result->asOf,
+                    isStale: $result->isStale,
+                );
             }
         }
 
-        return $rates;
+        return RateSet::of($targetCurrency, $rates);
     }
 
     /**
      * @param  array<string, int>  $minorByCurrency
-     * @param  array<string, string>  $rates  as returned by ratesTo()
      */
-    public function withRates(array $minorByCurrency, string $targetCurrency, array $rates): ConvertedTotal
+    public function withRates(array $minorByCurrency, string $targetCurrency, RateSet $rates): ConvertedTotal
     {
         $minor = 0;
         $unconverted = [];
+        $converted = [];
 
         foreach ($minorByCurrency as $currency => $bucketMinor) {
             if ($currency === $targetCurrency) {
@@ -74,21 +83,30 @@ final readonly class CrossCurrencyTotal
             }
 
             $money = Money::tryOfMinor($bucketMinor, $currency);
-            $converted = $money === null ? null : $this->convert($money, $targetCurrency, $rates);
+            $inTarget = $money === null ? null : $this->convert($money, $targetCurrency, $rates);
 
-            if ($converted === null) {
+            if ($inTarget === null) {
                 $unconverted[$currency] = true;
 
                 continue;
             }
 
-            $minor += $converted->toMinor();
+            $converted[$currency] = true;
+            $minor += $inTarget->toMinor();
         }
 
         $codes = array_keys($unconverted);
         sort($codes);
 
-        return new ConvertedTotal(minor: $minor, currency: $targetCurrency, unconverted: $codes);
+        // Narrowed to the buckets this figure was actually built from, so a
+        // batched read shared by six cards does not make each of them disclose
+        // the other five's rates.
+        return new ConvertedTotal(
+            minor: $minor,
+            currency: $targetCurrency,
+            unconverted: $codes,
+            rates: $rates->only(array_keys($converted)),
+        );
     }
 
     // Converting each part on its own drifts by up to half a minor unit per
@@ -99,10 +117,9 @@ final readonly class CrossCurrencyTotal
      * @template TKey of array-key
      *
      * @param  array<TKey, int>  $partsMinor  all denominated in $currency
-     * @param  array<string, string>  $rates  as returned by ratesTo()
      * @return ?array<TKey, int> converted, summing exactly to the converted subtotal; null when the pair has no rate
      */
-    public function distribute(array $partsMinor, string $currency, string $targetCurrency, array $rates): ?array
+    public function distribute(array $partsMinor, string $currency, string $targetCurrency, RateSet $rates): ?array
     {
         if ($partsMinor === []) {
             return [];
@@ -227,16 +244,13 @@ final readonly class CrossCurrencyTotal
     // Null rather than the original amount for a pair with no rate, so a caller
     // that renders the result under the target currency's sign cannot print an
     // unconverted figure there.
-    /**
-     * @param  array<string, string>  $rates  as returned by ratesTo()
-     */
-    public function convert(Money $money, string $targetCurrency, array $rates): ?Money
+    public function convert(Money $money, string $targetCurrency, RateSet $rates): ?Money
     {
         if ($money->currency() === $targetCurrency) {
             return $money;
         }
 
-        $rate = $rates[$money->currency()] ?? null;
+        $rate = $rates->rateFor($money->currency());
 
         if ($rate === null) {
             return null;

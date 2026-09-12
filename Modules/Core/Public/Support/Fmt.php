@@ -58,6 +58,16 @@ final class Fmt
         return $negative ? $marks->minusSign().ltrim($digits, '-') : $digits;
     }
 
+    // A decimal a caller already holds as an exact string, written with the
+    // reader's own mark. Fmt::number() would have to parse it to a double
+    // first, and an FX rate's eighth place is exactly where that shows.
+    public static function decimalString(string $value): string
+    {
+        $marks = Locale::tryFrom(self::locale()) ?? Locale::En;
+
+        return str_replace('.', $marks->decimalMark(), $value);
+    }
+
     // The locale's own short-date pattern, corrected where it writes the month
     // before the day. English is the only shipped locale that does, and it is
     // what a fresh install runs on, so 08/20/2026 is what a new reader met.
