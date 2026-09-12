@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Enums\DigestCadence')
 @use('Modules\Core\Public\Support\Lang')
 {{--
     Settings "Notifications" section. Two internal groups —
@@ -90,9 +91,9 @@
                 :hint="Lang::get('notifications::settings.digest.help')"
                 wire:model="digestCadence"
             >
-                <option value="daily">{{ Lang::get('notifications::settings.digest.daily') }}</option>
-                <option value="weekly">{{ Lang::get('notifications::settings.digest.weekly') }}</option>
-                <option value="off">{{ Lang::get('notifications::settings.digest.off') }}</option>
+                <option value="{{ DigestCadence::Daily->value }}" @selected($digestCadence === DigestCadence::Daily->value)>{{ Lang::get('notifications::settings.digest.daily') }}</option>
+                <option value="{{ DigestCadence::Weekly->value }}" @selected($digestCadence === DigestCadence::Weekly->value)>{{ Lang::get('notifications::settings.digest.weekly') }}</option>
+                <option value="{{ DigestCadence::Off->value }}" @selected($digestCadence === DigestCadence::Off->value)>{{ Lang::get('notifications::settings.digest.off') }}</option>
             </x-core::form-field>
 
             {{-- Savings-opportunity prompts --}}

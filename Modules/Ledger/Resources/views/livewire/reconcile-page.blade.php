@@ -59,9 +59,9 @@
                     :label="Lang::get('ledger::reconcile.account')"
                     wire:model.number.live="accountId"
                 >
-                    <option value="">{{ Lang::get('ledger::reconcile.choose_account') }}</option>
+                    <option value="" @selected($accountId === null)>{{ Lang::get('ledger::reconcile.choose_account') }}</option>
                     @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}">{{ $account->name }}</option>
+                        <option value="{{ $account->id }}" @selected($accountId === (int) $account->id)>{{ $account->name }}</option>
                     @endforeach
                 </x-core::form-field>
 

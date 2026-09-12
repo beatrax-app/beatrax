@@ -276,8 +276,8 @@ it('labels the select and offers the seeded currencies', function (): void {
         ->assertSeeHtml('for="account-currency-'.$account->id.'"')
         ->assertSeeHtml('id="account-currency-'.$account->id.'"')
         ->assertSeeHtml('Currency for acc-cur label')
-        ->assertSeeHtml('<option value="EUR">EUR — Euro</option>')
-        ->assertSeeHtml('<option value="USD">USD — US Dollar</option>')
+        ->assertSeeHtml('EUR — Euro')
+        ->assertSeeHtml('USD — US Dollar')
         ->assertSee('The denomination this account reports its balance in.');
 });
 

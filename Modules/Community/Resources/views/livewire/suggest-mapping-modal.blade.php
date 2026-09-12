@@ -54,9 +54,9 @@
                         wire:model.live="region"
                     >
                         @foreach ($regionOptions as $regionCode => $regionLabel)
-                            <option value="{{ $regionCode }}">{{ $regionLabel }}</option>
+                            <option value="{{ $regionCode }}" @selected($region === $regionCode)>{{ $regionLabel }}</option>
                         @endforeach
-                        <option value="">{{ Lang::get('community::suggest.regions.other') }}</option>
+                        <option value="" @selected(strlen($region) === 0)>{{ Lang::get('community::suggest.regions.other') }}</option>
                     </x-core::form-field>
                 </div>
 
