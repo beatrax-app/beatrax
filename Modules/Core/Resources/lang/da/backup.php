@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Sikkerhedskopien blev åbnet, men databasen i den er beskadiget, så den blev ikke gendannet, og intet er ændret. Gendan fra en tidligere sikkerhedskopi.',
         'restore_could_not_read' => 'Sikkerhedskopifilen kunne ikke læses, så gendannelsen blev ikke kørt, og intet er ændret. Tjek at enheden har ledig plads, og prøv igen.',
         'restore_not_supported' => 'Gendannelse virker i den udgave, der holder sine data i én fil, og det er denne ikke, så intet er ændret. Brug databasens egne gendannelsesværktøjer ved en serverdatabase.',
+        'restore_from_a_newer_build' => 'Denne sikkerhedskopi er lavet af en nyere version af Beatrax end den, der kører her, så den blev ikke gendannet, og intet er ændret. Opdatér Beatrax, og gendan den derefter igen.',
+        'restore_from_an_older_build' => 'Denne sikkerhedskopi er lavet af en ældre version af Beatrax end den, der kører her, så den blev ikke gendannet, og intet er ændret. Gendan fra en sikkerhedskopi, som denne version har lavet.',
         'restore_failed' => 'Gendannelsen blev ikke kørt, og intet er ændret. Prøv igen — bliver den ved med at fejle, noterer appens log, hvad der stoppede den.',
     ],
 ];

@@ -7,16 +7,21 @@ namespace Modules\Core\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Backup\BackupFromAnotherBuildException;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Internal\Backup\BackupSchemaGeneration;
 use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
 use Modules\Core\Internal\Backup\RestoreStagingArea;
 use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Internal\Enums\BackupFailureCause;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\RestoreRefusal;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Events\DatabaseRestored;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\RestoreFailedException;
@@ -51,6 +56,8 @@ final class RestoreDatabaseCommand extends Command
         private readonly BackupKeyMaterial $keyMaterial,
         private readonly RestoreStagingArea $staging,
         private readonly OwnerOnlyPath $ownerOnly,
+        private readonly BackupSchemaGeneration $schema,
+        private readonly Dispatcher $events,
     ) {
         parent::__construct();
     }
@@ -147,6 +154,15 @@ final class RestoreDatabaseCommand extends Command
             throw new RestoreFailedException(leaveDown: false);
         }
 
+        // Refused while nothing has been touched. Migrations only move
+        // forward, so a backup from a newer build has no path to a shape this
+        // one reads, and a pending-migration check cannot see it.
+        try {
+            $this->schema->assertThisBuildCanRead($sourcePath);
+        } catch (Throwable $e) {
+            $this->refuse($e);
+        }
+
         $livePath = $this->resolveLivePath();
         // Eight random hex characters, because VACUUM INTO refuses an existing
         // target and the stamp is second-resolution: the documented undo is to
@@ -216,6 +232,15 @@ final class RestoreDatabaseCommand extends Command
 
             throw new RestoreFailedException(leaveDown: true);
         }
+
+        // Past the verification, so a listener reads a database this command
+        // has already vouched for. The rows are in by now, so a repair that
+        // throws is reported rather than turned into a failed restore.
+        try {
+            $this->events->dispatch(new DatabaseRestored($preRestorePath));
+        } catch (Throwable $e) {
+            $this->warn('The restore completed; a repair after it did not: '.SafeExceptionContext::shortName($e));
+        }
     }
 
     // Lifted out of a COPY, never out of the file the operator named:
@@ -264,11 +289,23 @@ final class RestoreDatabaseCommand extends Command
     // the advice; anything else is named by class.
     private function refuse(Throwable $e): never
     {
-        $this->error('Restore refused: '.($e instanceof BackupIoException
-            ? $e->getMessage()
-            : SafeExceptionContext::shortName($e)));
+        $this->error('Restore refused: '.$this->because($e));
 
         throw new RestoreFailedException(leaveDown: false);
+    }
+
+    // A schema mismatch is the one refusal an operator acts on rather than
+    // investigates, so it is spelled the way the screens spell it. The count of
+    // unmatched migrations goes beside it, which is the operator's half.
+    private function because(Throwable $e): string
+    {
+        if ($e instanceof BackupFromAnotherBuildException) {
+            return RestoreRefusal::forThrowable($e)->sentence().' ('.count($e->unmatched).' unmatched)';
+        }
+
+        return $e instanceof BackupIoException
+            ? $e->getMessage()
+            : SafeExceptionContext::shortName($e);
     }
 
     /**

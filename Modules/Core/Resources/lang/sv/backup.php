@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Säkerhetskopian öppnades, men databasen i den är skadad, så den återställdes inte och inget har ändrats. Återställ från en tidigare säkerhetskopia.',
         'restore_could_not_read' => 'Säkerhetskopian gick inte att läsa, så återställningen kördes inte och inget har ändrats. Kontrollera att enheten har ledigt utrymme och försök igen.',
         'restore_not_supported' => 'Återställning fungerar i den version som håller sina data i en enda fil, vilket den här inte är, så inget har ändrats. Använd databasens egna återställningsverktyg för en serverdatabas.',
+        'restore_from_a_newer_build' => 'Den här säkerhetskopian skapades av en nyare version av Beatrax än den som körs här, så den återställdes inte och inget har ändrats. Uppdatera Beatrax och återställ den sedan igen.',
+        'restore_from_an_older_build' => 'Den här säkerhetskopian skapades av en äldre version av Beatrax än den som körs här, så den återställdes inte och inget har ändrats. Återställ från en säkerhetskopia som den här versionen skapade.',
         'restore_failed' => 'Återställningen kördes inte, och inget har ändrats. Försök igen — om det fortsätter att misslyckas noterar appens logg vad som stoppade den.',
     ],
 ];
