@@ -363,12 +363,9 @@ final readonly class DeviceRegistryService
      */
     public function otherDeviceNames(int $userId): array
     {
-        // Ordered because two callers take the FIRST entry as "the peer" —
-        // PeerLanAddress dials it and ManagesManualPeerAddress offers a reader
-        // an address for it — and an unordered read answers with whichever row
-        // the scan reached first. On a household with a second confirmed
-        // desktop that is a coin toss, and one that can land differently after
-        // any insert or delete: the phone would dial one machine, remember its
+        // Two callers take the FIRST entry as "the peer" — PeerLanAddress
+        // dials it, ManagesManualPeerAddress offers a reader an address for it
+        // — so an unordered read lets the phone dial one desktop, remember its
         // address, then clear that address on behalf of the other.
         /** @var array<string, string> $names */
         $names = $this->stillADevice(

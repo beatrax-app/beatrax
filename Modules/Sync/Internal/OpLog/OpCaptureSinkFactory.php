@@ -21,14 +21,10 @@ use Throwable;
  */
 final readonly class OpCaptureSinkFactory
 {
-    /**
-     * What a device answers for rather than propagates. BindingResolutionException
-     * is the writer having no credentials to build from; the other two are
-     * DeviceIdentityLoader::load() declining to turn a genuine I/O fault into a
-     * state, which is correct of it and is why they arrive here.
-     *
-     * @var list<class-string<Throwable>>
-     */
+    // The other two are DeviceIdentityLoader::load() declining to turn a
+    // genuine I/O fault into a state, which is correct of it and is why they
+    // arrive here rather than as a missing identity.
+    /** @var list<class-string<Throwable>> */
     private const array DEFERRABLE = [
         BindingResolutionException::class,
         SecretFileException::class,
@@ -43,29 +39,19 @@ final readonly class OpCaptureSinkFactory
         private LoggerInterface $log,
     ) {}
 
-    // Five states cannot sign and all five defer: a console with no session,
-    // an engaged app-lock, a key-file no key in this database opens, a
-    // restored database whose self row names a key-file that never travelled,
-    // and the key-file failing to READ at all.
-    //
-    // The last one is not a BindingResolutionException and used to escape here.
-    // DeviceIdentityLoader::load() declares it — the loader turns "will not
-    // open" into a state and leaves a genuine I/O fault as a throw — so an
-    // EMFILE, a permissions blip or a full volume at the moment of a write
-    // reached the listener's last-resort catch, which logs and returns. That
-    // is the one path where nothing is owed afterwards: no deferred coordinate,
-    // no backfill, and the edit never reaches the peer.
+    // Five states cannot sign and all five defer. The fifth — the key-file
+    // failing to READ — is no BindingResolutionException and used to escape to
+    // the listener's last-resort catch, the one exit that owes nothing
+    // afterwards: no deferred coordinate, no backfill, no edit for the peer.
     public function forUser(int $userId): OpCaptureSink
     {
         try {
             return $this->container->make(OpLogWriter::class);
         } catch (Throwable $e) {
-            // Tested against the list rather than caught by type, because the
-            // container is where the real throw surface stops being visible:
-            // make() declares BindingResolutionException alone, so a typed
-            // multi-catch here reads as dead to the analyser even though the
-            // binding runs a closure that raises all three. Anything not on
-            // the list still leaves by the same door it always did.
+            // Tested rather than caught by type: make() declares only
+            // BindingResolutionException, so a typed multi-catch reads as dead
+            // to the analyser even though the binding's closure raises all
+            // three. Anything off the list leaves by the door it always did.
             foreach (self::DEFERRABLE as $deferrable) {
                 if ($e instanceof $deferrable) {
                     return $this->withoutASigningKey($userId);

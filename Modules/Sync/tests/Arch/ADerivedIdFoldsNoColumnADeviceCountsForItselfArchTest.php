@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Public\Support\BladePhpSource;
 use Modules\Core\Public\Support\PatternScan;
 
 uses(RefreshDatabase::class);
@@ -68,7 +69,7 @@ function derivedIdentityTuples(): array
     $tuples = [];
 
     foreach (derivedIdentitySourceFiles() as $path) {
-        $source = (string) file_get_contents($path);
+        $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
 
         // The labels are optional because the call is legal either way, and
         // this repo writes `table:` by hand all over the capture listeners. A
@@ -103,7 +104,7 @@ function derivedIdentityCallSiteCount(): int
     $calls = 0;
 
     foreach (derivedIdentitySourceFiles() as $path) {
-        $tokens = token_get_all((string) file_get_contents($path));
+        $tokens = token_get_all(BladePhpSource::forPath($path, (string) file_get_contents($path)));
         $count = count($tokens);
 
         for ($i = 0; $i < $count; $i++) {

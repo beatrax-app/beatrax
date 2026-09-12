@@ -354,12 +354,10 @@ final class DevicesAndSyncSettingsSection extends Component
             $this->encryptionProgress = $migrationService->progress($userId);
             $this->encryptionStep = EncryptionSetupStep::Done->value;
         } catch (StrandedEncryptionEpochException $e) {
-            // Separated from the rollback below because migrate() says it is:
-            // past the commit it deliberately does NOT restore plaintext, so
-            // `current_epoch` stands over sealed rows with its keyring not yet
-            // in place. Nothing else records that here, and re-running
-            // migrate() is what reconciles it. The pairing path keeps the two
-            // apart for the same reason.
+            // Past the commit migrate() deliberately does NOT restore
+            // plaintext, so `current_epoch` stands over sealed rows whose
+            // keyring never landed. Nothing else records that here, and
+            // re-running migrate() is what reconciles it.
             $logger->warning(
                 'DevicesAndSyncSettingsSection: at-rest encryption stranded — the epoch is committed but its keyring is not in place, and migrate() must be re-run to reconcile.',
                 ['user_id' => $userId, ...SafeExceptionContext::describe($e)],
