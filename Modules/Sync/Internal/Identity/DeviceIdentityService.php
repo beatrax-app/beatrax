@@ -126,8 +126,8 @@ final readonly class DeviceIdentityService
 
     // The registry half of the same consented retirement, for a restored
     // database whose self row names a key-file that never travelled. is_self
-    // goes, confirmed_at stays: a rebuild verifies the restored history
-    // against signatureVerificationKeys(), which is confirmed-only.
+    // goes and confirmed_at stays, because a rebuild verifies the restored
+    // history against it — so the stamp is what takes the row off the list.
     /**
      * @return bool whether a self registration was actually retired
      *
@@ -145,7 +145,10 @@ final readonly class DeviceIdentityService
         return $this->db->connection()->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', 1)
-            ->update(['is_self' => 0]) > 0;
+            ->update([
+                'is_self' => 0,
+                'self_retired_at' => Instant::zulu($this->clock->now()),
+            ]) > 0;
     }
 
     // Generates the device identity, encrypts the key-file, and persists the
