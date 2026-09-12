@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Merge\MergeStrategy;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Internal\OpLog\OpLogWriterFactory;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -137,12 +138,20 @@ beforeEach(function (): void {
     $this->publicKeyHex = bin2hex(sodium_crypto_sign_publickey($this->keypair));
     $this->secretKey = sodium_crypto_sign_secretkey($this->keypair);
 
-    app()->instance(OpLogWriter::class, app(OpLogWriter::class, [
-        'deviceId' => RESTATEMENT_DEVICE,
-        'userId' => (int) $this->reader->id,
-        'secretKey' => $this->secretKey,
-        'publicKey' => sodium_crypto_sign_publickey($this->keypair),
-    ]));
+    $this->bindWriter = function (string $secretKey): void {
+        // Through the factory, never app(OpLogWriter::class, [...]): once an
+        // instance is registered the container hands it back and drops the
+        // parameters, so a test rebinding a broken identity would silently get
+        // the working one.
+        app()->instance(OpLogWriter::class, app(OpLogWriterFactory::class)->make([
+            'deviceId' => RESTATEMENT_DEVICE,
+            'userId' => (int) $this->reader->id,
+            'secretKey' => $secretKey,
+            'publicKey' => sodium_crypto_sign_publickey($this->keypair),
+        ]));
+    };
+
+    ($this->bindWriter)($this->secretKey);
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -263,4 +272,27 @@ it('seats the later statement whole when two devices restate one row', function 
     // a grow-only counter would hold 3 here, which is an occurrence neither
     // statement describes and which no re-import of either file matches.
     expect((int) $row->occurrence_ordinal)->toBe(2);
+});
+
+// The arm a reader actually hits: a device holding an identity it can no
+// longer sign with. The capture contract says a device that cannot capture has
+// still imported, so the confirm must carry on -- and it must announce NOTHING
+// rather than the part of a booking it managed before the signer refused.
+it('announces nothing and still imports when the device cannot sign', function (): void {
+    $watermark = restatementWatermark($this->db);
+
+    ($this->bindWriter)('not-an-ed25519-secret-key');
+
+    restatementImport($this->reader, 'asn-the-same-card-row-restated-with-the-tip.csv');
+
+    // The reader's import is not in question. The row moved where the
+    // statement says, and the confirm returned rather than throwing out.
+    $stored = $this->db->connection()->table('transactions')->where('id', $this->storedId)->first();
+
+    expect($stored->posted_at)->toBe('2026-02-19')
+        ->and($stored->booked_at)->toBe('2026-02-19 00:00:00')
+        ->and($stored->value_date)->toBe('2026-02-19');
+
+    expect(restatementBookingOps(restatementOpsAfter($this->db, (int) $this->reader->id, $watermark)))
+        ->toBe([], 'a booking announced in part seats the peer on a day and an occurrence no statement ever stated together');
 });
