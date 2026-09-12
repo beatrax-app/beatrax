@@ -168,7 +168,7 @@ final readonly class PotBalanceQuery
             ->whereNotNull('goal_id')
             ->get(['id', 'goal_id', 'currency']);
 
-        $potIds = array_map(static fn (stdClass $row): int => self::toInt($row->id), $rows->all());
+        $potIds = array_values(array_map(static fn (stdClass $row): int => self::toInt($row->id), $rows->all()));
 
         $moved = $potIds === [] ? [] : $this->db->connection()
             ->table('pot_movements')
@@ -179,11 +179,13 @@ final readonly class PotBalanceQuery
             ->map(static fn (mixed $id): int => self::toInt($id))
             ->all();
 
+        $balances = $this->rows->balancesForPots($potIds, $user);
+
         $result = [];
         foreach ($rows as $row) {
             $potId = self::toInt($row->id);
             $result[self::toInt($row->goal_id)] = [
-                'balance' => $this->balanceForPot($potId, $user),
+                'balance' => $balances[$potId] ?? 0,
                 'currency' => self::toString($row->currency),
                 'potId' => $potId,
                 'hasMovements' => in_array($potId, $moved, true),
