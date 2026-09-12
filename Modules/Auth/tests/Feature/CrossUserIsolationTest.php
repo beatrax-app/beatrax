@@ -1611,8 +1611,24 @@ function xuiCallPath(array $tokens, int $start, int $total): ?string
         }
 
         if ($token[0] === T_CONSTANT_ENCAPSED_STRING) {
-            $path .= substr($token[1], 1, -1);
-            $dynamic = false;
+            $literal = substr($token[1], 1, -1);
+
+            // A path built with sprintf carries its dynamic segments as format
+            // specifiers inside the literal, where an interpolated one carries
+            // them as variables between literals. Collapsing a specifier to
+            // the same "1" puts the placeholder in the slot it belongs to;
+            // leaving it would append the id after the whole path instead.
+            $formatted = (string) preg_replace_callback(
+                '/%%|%[sd]/',
+                static fn (array $match): string => $match[0] === '%%' ? '%' : '1',
+                $literal,
+            );
+
+            $path .= $formatted;
+
+            // The arguments beside a format have already been placed, so the
+            // variables that follow must not each append a second segment.
+            $dynamic = $formatted !== $literal;
 
             continue;
         }

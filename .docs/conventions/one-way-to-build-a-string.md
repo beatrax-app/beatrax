@@ -40,8 +40,9 @@ expression.
 
 ## What this changed about guards that read literals
 
-Two existing rules matched on the interpolated form, and both had to move with
-it. This is worth knowing before writing a third:
+**Four** existing rules matched on the interpolated form, and every one had to
+move with it. None of them loosened, and each was re-proved by inversion rather
+than by going green. This is the part worth reading before writing a fifth:
 
 - **`APrivateKeyNeverLeavesTheDeviceThatMintedItArchTest`** pinned the sealed
   key file's path as `{$userId}.enc` — the account id and nothing else. Under
@@ -54,11 +55,29 @@ it. This is worth knowing before writing a third:
   read by scanning for `module::group` literals. A key assembled as
   `"core::settings.currency_display.{$key}"` became
   `sprintf('core::settings.currency_display.%s', $key)`. The literal still
-  names the group, so the rule reads it the same way once it accepts `%s` where
-  it accepted an interpolation.
+  names the group, so the rule reads it the same way once it accepts `%s`
+  where it accepted an interpolation.
+- **`EveryRouteReflowsAtTheReadersAccessibilitySizesArchTest`** reads a
+  control's class list to check a wrapping cap sits beside `shrink-0`. It knew
+  two spellings of a class list — `class="…"` and `'class' => "…"` — and three
+  components now build one with `sprintf`, where the **format string is the
+  class list**. A third pattern, and the tokens it reads sit in the format
+  either way.
+- **`CrossUserIsolationTest`** is the instructive one, because it already
+  walked *tokens* rather than matching a regex, with a comment saying
+  interpolation and concatenation both defeat a pattern over source text. It
+  assembles each probed path from the tokens inside `->get(…)`: literal runs
+  append themselves, and a `T_VARIABLE` appends `"1"` as the placeholder. Under
+  `sprintf` the dynamic segment stops being a variable *between* literals and
+  becomes a specifier *inside* one — so the path assembled as
+  `/migrations/%s/preview` **+ `1`**, putting the id after the whole path
+  instead of in its slot. Being a parser rather than a regex did not save it;
+  it had to learn that a specifier is a third way to spell a hole.
 
-Both are the same lesson: a rule written against one spelling of an expression
-is a rule about the spelling. Pin the property.
+All four are the same lesson: **a rule written against one spelling of an
+expression is a rule about the spelling.** Pin the property. And a guard that
+reads source is worth inverting whenever the source's shape changes — three of
+these four would have gone quietly wrong rather than red.
 
 ## The refactor
 
