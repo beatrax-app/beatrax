@@ -100,13 +100,18 @@ answers the same event by calling `showModal()`. Its listener is registered
 first — Alpine initialises the `<dialog>` before anything inside it — so the
 dialog is open by the time this one runs.
 
-Bind it on an ancestor and reach down with `x-ref` **only** where the control
-is rendered by a component rather than written out. `x-core::form-field`
-forwards `x-init` and `x-ref` like any other attribute, but nothing in this
-tree forwards an `x-on:` through a component tag, so the rename popover binds
-the listener on its `<form>` and names `$refs.friendly`. That is the one site
-that pays for the indirection, and it pays because of where the control comes
-from rather than by preference.
+Bind it on an ancestor and reach down with `x-ref` where the element that
+answers the event is not the element that takes focus. The rename popover does
+this: the listener sits on its `<form>`, which is what owns the modal's identity
+check, and names `$refs.friendly` for the control inside.
+
+Component tags are **not** a reason to reach down. A component built on
+`$attributes` forwards whatever it is not consuming as a prop, `x-on:` included:
+`x-core::form-field` splits them into `$bindings` (`wire:`) and a `$passthrough`
+of everything else, and renders both onto the control; `x-core::secondary-button`
+and its siblings `merge()` onto the `<button>`. `goals-page.blade.php:66` passes
+`x-on:click` through `x-core::neutral-button` and it lands. So `x-on:` on a
+component tag reaches the control, and `$el` inside it is the control.
 
 The trap on the way back out: **Flux's `<dialog>` binds this same event itself**,
 to open the modal. A test — or a reader — that walks up for the nearest element
