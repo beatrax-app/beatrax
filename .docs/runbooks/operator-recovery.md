@@ -19,6 +19,30 @@ verdict, and prunes the directory to the retention window described below. The
 `VACUUM INTO` mechanic is safe against a running app — WAL writes from
 the web request continue while the backup is taken.
 
+### What the copy carries, on an install with encryption at rest
+
+`VACUUM INTO` copies the database and nothing else, and the keys that open
+a reader's sealed columns — notes, transaction descriptions, counterparty
+names, IBANs — are a file **beside** it, at
+`storage/app/sync/gdk/<user_id>.enc`. So the copy carries that file too,
+inside a `beatrax_backup_keyring` table `db:restore` lifts back out.
+
+Without it the copy is restorable only onto the machine that wrote it. On
+any other machine the restore succeeds, reports success, and renders every
+sealed column blank, because the codec blanks a column it has no key for
+rather than erroring. That is the whole reason the keyring travels
+([why](../features/sync/sensitive-columns-at-rest.md#a-backup-of-the-database-alone-is-a-backup-of-ciphertext)).
+
+Two consequences for an operator:
+
+- **The backup file is now key material as well as data.** It is `0600`,
+  and the keyring inside it is still wrapped under the app-lock data key —
+  it opens for a PIN or the account password, not for whoever holds the
+  file. Treat it the way you already treat the live database.
+- **An install with no encryption at rest carries nothing extra**, and its
+  copy is byte-identical to the plain `VACUUM INTO` it has always been.
+  Nothing about the retention window, the digest or the smart skip changes.
+
 ### Daily schedule
 
 `db:backup` runs once a day under the schedule entry `db.backup-daily`.
@@ -64,7 +88,9 @@ After every successful run the command prunes
   deletes manually);
 - every `pre-restore-*.sqlite` snapshot (written by `db:restore`
   before swapping; never pruned automatically — the operator deletes
-  once confident in the restore).
+  once confident in the restore). The name carries eight random hex
+  characters after the timestamp, so two restores inside one second do
+  not collide on a target `VACUUM INTO` refuses to overwrite.
 
 Steady-state disk usage on a sub-100MB DB is bounded at roughly
 `(7 + 4)` daily-sized files plus any `.suspect` or `pre-restore-*`
@@ -100,7 +126,10 @@ the app is running.
 If `db:backup` itself ever fails to run (a PHP version swap mid-flight,
 missing storage permissions, disk full), stop the app before any
 manual copy: `php artisan down`, copy the `.sqlite`, `.sqlite-wal`,
-and `.sqlite-shm` files together as a unit, then `php artisan up`.
+and `.sqlite-shm` files together as a unit, then `php artisan up`. On an
+install with encryption at rest, take `storage/app/sync/gdk/` with them:
+a hand copy carries no keyring, and the three database files alone restore
+as a ledger nothing can read.
 
 ## Operator recovery
 
@@ -169,8 +198,10 @@ php artisan down
 
 # 2) Restore. The command takes a pre-restore snapshot of the CURRENT
 #    live DB BEFORE the swap, writing it to
-#    storage/app/backups/pre-restore-YYYY-MM-DD-HHMMSS.sqlite at 0600.
-#    If anything goes wrong, that snapshot is your undo button.
+#    storage/app/backups/pre-restore-YYYY-MM-DD-HHMMSS-XXXXXXXX.sqlite at
+#    0600, where the last eight characters are random. If anything goes
+#    wrong, that snapshot is your undo button — and it carries the keyring
+#    as well as the rows, because the swap replaces the one on the machine.
 php artisan db:restore --confirm storage/app/backups/beatrax-2026-05-20-030000.sqlite
 
 # 3) Confirm the restored DB's PRAGMAs match config.
@@ -193,6 +224,24 @@ If the post-swap integrity check fails, the command leaves the app in
 maintenance mode and prints the path to the `pre-restore-*.sqlite`
 snapshot. To undo: run `db:restore --confirm` against that snapshot,
 then `php artisan up`.
+
+#### The keyring the swap installs first
+
+Before any page is written, `db:restore` lifts the keyring the source
+carries onto this machine. A keyring already here is renamed to
+`<path>.pre-restore-<stamp>` rather than overwritten — it may hold an epoch
+the incoming database does not name, and a restore is not the moment to
+find that out.
+
+The lift reads a **copy** of the file you named, staged 0700 under
+`storage/app/tmp-restore` and deleted when the command finishes. Lifting
+the keys out of a file drops the table that carried them, so doing it in
+place would turn your backup into one that restores the ledger once and the
+keys never again. The file you pass on the command line is not modified.
+
+A file carrying no keyring — every copy written before this travelled, and
+every install with no sealed columns — is passed straight through to the
+swap, and nothing is staged.
 
 #### Why the swap is not a file copy
 

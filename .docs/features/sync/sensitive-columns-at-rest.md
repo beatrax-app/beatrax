@@ -1830,9 +1830,8 @@ The keys that open every column on the list above live in
 **beside** the database, not inside it, and `sync_encryption_state.current_epoch` — the
 pointer that says the rows are sealed — is inside it.
 
-That split is what makes the encrypted archive from Settings → Data & backup a special
-case. `VACUUM INTO` copies the database and nothing else, so an archive restored anywhere
-the keyring is not carries a `current_epoch` naming an epoch no keyring holds a key for.
+`VACUUM INTO` copies the database and nothing else, so a snapshot restored anywhere the
+keyring is not carries a `current_epoch` naming an epoch no keyring holds a key for.
 `GdkKeyringService::readKeyringFile()` returns an empty keyring for a file that does not
 exist, `currentEpoch()` then raises `KeyringStateException::missingKeyForEpoch`, and
 `SensitiveColumnCodec::decryptRow()` blanks every sealed column and marks it unreadable.
@@ -1844,14 +1843,69 @@ device with no keyring at all. That is the same outcome as the update that once 
 `storage/app` — [a database full of ciphertext with no key](../core/durable-user-data-paths.md),
 reached by a different road.
 
-So the archive carries the keyring. `Modules\Core\Internal\Backup\BackupKeyMaterial`
+So every snapshot carries the keyring. `Modules\Core\Internal\Backup\BackupKeyMaterial`
 writes every `sync/gdk/*.enc` on disk into a `beatrax_backup_keyring` table inside the
-snapshot before it is encrypted, and lifts them back out on restore — before the swap, so a
-failure there leaves the live database untouched — then **drops the table**, so the live
-database never holds key material a query could read. A keyring already on the restoring
-machine is renamed to `{path}.pre-restore-{stamp}` rather than overwritten: it may hold an
-epoch the incoming database does not name, and a restore is not the moment to find that out.
-An archive written before the table existed simply carries none, and still restores.
+snapshot, and lifts them back out on restore — before the swap, so a failure there leaves
+the live database untouched — then **drops the table**, so the live database never holds key
+material a query could read. A keyring already on the restoring machine is renamed to
+`{path}.pre-restore-{stamp}` rather than overwritten: it may hold an epoch the incoming
+database does not name, and a restore is not the moment to find that out. A file written
+before the table existed simply carries none, and still restores.
+
+### Five producers, and the three that were not asked
+
+The reasoning above is a property of `VACUUM INTO`, not of any one screen, and for a while it
+was applied as if it were a property of the encrypted archive. Five things in this tree take
+a `VACUUM INTO` snapshot a restore can read back:
+
+| Producer | What it is | Consumer |
+|---|---|---|
+| `EncryptedBackupDownload` | Settings → Data & backup | `RestoreEncryptedBackup` |
+| `ExportEverythingArchive` | the one-click export | `RestoreEncryptedBackup` |
+| `BackupDatabaseCommand` | `db:backup` — the daily schedule and the [operator runbook](../../runbooks/operator-recovery.md) | `RestoreDatabaseCommand` — `db:restore` |
+| `RestoreEncryptedBackup::snapshotCurrent()` | the pre-restore snapshot | either restore |
+| `RestoreDatabaseCommand` | the pre-restore snapshot | either restore |
+
+The first two were wired into this class. The other three were not, and they are the three
+that run with no reader watching.
+
+**`db:backup`** is what the schedule runs every day, what the freshness banner counts, and
+what the runbook calls the supported backup path — so the artefact the app itself vouches for
+was the one that could not open a sealed ledger anywhere but the machine that wrote it.
+
+**The pre-restore snapshot** is the documented undo, and a restore replaces the keyring on
+its way past: the incoming one is installed and the machine's is renamed aside. So an undo
+carrying no keys put the rows back under a keyring that was no longer the active one — the
+same unreadable ledger, reached by undoing the thing that caused it. It is packed while the
+machine still holds the keyring that snapshot belongs to, which is before the lift.
+
+All five pack now, and `EveryDatabaseSnapshotCarriesTheKeysThatOpenItArchTest` is what keeps
+it that way. It counts the producers as its positive control: a walk that stopped reading, or
+a spelling of the statement it cannot see, would otherwise leave an empty set that reads
+exactly like a tree where every producer packs. A sixth producer is free to be a deliberate
+exception — it has to be argued in that guard rather than shipped by omission.
+
+`db:restore` lifts out of a **copy**, not out of the file it was given. `unpackFrom()` drops
+the carrier table, so lifting in place would edit the operator's backup into one that
+restores the ledger once and the keys never again. The copy is staged through
+`RestoreStagingArea`, the same 0700 directory under app storage the encrypted path decrypts
+into, and discarded in a `finally`.
+
+`packInto()` writes nothing when there is no keyring on disk. An install with no sealed
+columns has nothing to carry, and an empty carrier table would make its backup differ byte
+for byte from the plain `VACUUM INTO` it used to be — which the smart skip hashes, and which
+decides whether `db:restore` needs to stage a copy at all.
+
+### The snapshot name a second could not tell apart
+
+Both pre-restore paths built `pre-restore-<Y-m-d-His>.sqlite`, and `VACUUM INTO` refuses an
+existing target — so two restores inside one second met a raw query exception thrown off the
+safety rail itself, after maintenance mode had been taken. One second apart is the ordinary
+case rather than a contrived one: the documented undo is to restore the snapshot a failed
+restore has just named. Both names now carry eight random hex characters, the way the export
+and download staging paths already did. `db:backup`'s own name deliberately does not —
+`BackupRetentionPolicy` parses it, and its same-second collision is caught and kept as
+`.suspect`.
 
 `Modules\Sync\Public\Services\PortableKeyMaterial` is the one spelling of that path.
 Three copies of `sync/gdk/{userId}.enc` existed as string literals before it, and a keyring

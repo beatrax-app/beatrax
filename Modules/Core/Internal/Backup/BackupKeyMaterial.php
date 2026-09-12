@@ -36,6 +36,16 @@ final readonly class BackupKeyMaterial
      */
     public function packInto(string $snapshotPath): void
     {
+        $keyrings = $this->keyMaterial->keyrings();
+
+        // Nothing to carry. An empty carrier table would still make the file
+        // differ from the plain VACUUM INTO it used to be, and two things read
+        // that: the smart skip hashes the finished copy, and a restore stages a
+        // copy only for a file that carries keys.
+        if ($keyrings === []) {
+            return;
+        }
+
         $pdo = $this->open($snapshotPath, 'stage the backup');
 
         // The snapshot inherits the live file's journal mode, and a WAL write
@@ -49,7 +59,7 @@ final readonly class BackupKeyMaterial
             throw new BackupIoException('Cannot stage the encryption keyring into the backup snapshot.');
         }
 
-        foreach ($this->keyMaterial->keyrings() as $userId => $path) {
+        foreach ($keyrings as $userId => $path) {
             $bytes = @file_get_contents($path);
             if ($bytes === false) {
                 throw new BackupIoException('Cannot read the encryption keyring the backup has to carry: '.$path);
@@ -101,6 +111,17 @@ final readonly class BackupKeyMaterial
         $pdo->exec('DROP TABLE '.self::TABLE);
 
         return $installed;
+    }
+
+    // Asked of a file rather than an open handle: the caller is deciding
+    // whether to copy the file at all, because lifting the keys out of one
+    // edits it and a restore must not consume the operator's only backup.
+    /**
+     * @throws BackupIoException when the file cannot be opened as a database
+     */
+    public function carriedBy(string $snapshotPath): bool
+    {
+        return $this->carriesKeyring($this->open($snapshotPath, 'see whether it carries a keyring'));
     }
 
     private function carriesKeyring(PDO $pdo): bool

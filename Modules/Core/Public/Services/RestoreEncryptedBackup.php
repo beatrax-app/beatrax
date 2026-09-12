@@ -6,11 +6,11 @@ namespace Modules\Core\Public\Services;
 
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\ExportArchiveBackup;
 use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
+use Modules\Core\Internal\Backup\RestoreStagingArea;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
@@ -27,11 +27,11 @@ final readonly class RestoreEncryptedBackup
         private Repository $config,
         private UserDataPathService $paths,
         private Clock $clock,
-        private Filesystem $files,
         private BackupKeyMaterial $keyMaterial,
         private LiveDatabaseTransplant $transplant,
         private OwnerOnlyPath $ownerOnly,
         private ExportArchiveBackup $exportArchive,
+        private RestoreStagingArea $staging,
     ) {}
 
     /**
@@ -51,7 +51,7 @@ final readonly class RestoreEncryptedBackup
             throw new BackupNotSupportedException('Restore is only available on the SQLite build.');
         }
 
-        $decryptedPath = $this->tempPath('decrypted');
+        $decryptedPath = $this->staging->path('decrypted');
         $lifted = $this->liftedFromExportArchive($encryptedPath);
 
         try {
@@ -81,9 +81,9 @@ final readonly class RestoreEncryptedBackup
 
             return $snapshotPath;
         } finally {
-            $this->files->delete($decryptedPath);
+            $this->staging->discard($decryptedPath);
             if ($lifted !== null) {
-                $this->files->delete($lifted);
+                $this->staging->discard($lifted);
             }
         }
     }
@@ -98,7 +98,7 @@ final readonly class RestoreEncryptedBackup
             return null;
         }
 
-        $lifted = $this->tempPath('archived').'.enc';
+        $lifted = $this->staging->path('archived').'.enc';
         if (! $this->ownerOnly->file($lifted)) {
             throw new BackupIoException('The staged backup could not be made owner-only: '.$lifted);
         }
@@ -110,7 +110,7 @@ final readonly class RestoreEncryptedBackup
             // one throws. The refusals here are the ones a reader retries, and
             // an empty 0600 file per attempt is what the staging area fills up
             // with when the cleanup lives only on the path that succeeded.
-            $this->files->delete($lifted);
+            $this->staging->discard($lifted);
 
             throw $e;
         }
@@ -127,7 +127,10 @@ final readonly class RestoreEncryptedBackup
             throw new BackupIoException('The backups directory could not be made owner-only: '.$dir);
         }
 
-        $stamp = $this->clock->now()->format('Y-m-d-His');
+        // Eight random hex characters: VACUUM INTO refuses an existing target
+        // and the stamp is second-resolution, so two restores inside one second
+        // threw a raw query exception off the safety rail itself.
+        $stamp = $this->clock->now()->format('Y-m-d-His').'-'.bin2hex(random_bytes(4));
         $snapshotPath = $dir.'/pre-restore-'.$stamp.'.sqlite';
         $escaped = str_replace("'", "''", $snapshotPath);
 
@@ -141,6 +144,11 @@ final readonly class RestoreEncryptedBackup
         if (! $this->ownerOnly->file($snapshotPath)) {
             throw new BackupIoException('The pre-restore snapshot could not be made owner-only: '.$snapshotPath);
         }
+
+        // An undo of the keyring as well as of the rows: step 4 replaces the
+        // one on this machine, and rows put back under a keyring that is no
+        // longer the active one are unreadable.
+        $this->keyMaterial->packInto($snapshotPath);
 
         return $snapshotPath;
     }
@@ -166,19 +174,5 @@ final readonly class RestoreEncryptedBackup
         if ($result !== 'ok') {
             throw new BackupContentsUnreadableException('The backup failed its integrity check and was not restored.');
         }
-    }
-
-    // A 0700 directory under app storage, NEVER sys_get_temp_dir(): /tmp is
-    // world-traversable at 1777, the encryptor writes through a plain fopen
-    // with no chmod, and this file is the ENTIRE database in clear — it was
-    // landing there at 0644 for as long as a restore took.
-    private function tempPath(string $tag): string
-    {
-        $dir = rtrim(UserDataPathService::appPath('tmp-restore'), '/');
-        if (! $this->ownerOnly->directory($dir)) {
-            throw new BackupIoException('The restore staging directory could not be made owner-only: '.$dir);
-        }
-
-        return $dir.'/beatrax-restore-'.$tag.'-'.bin2hex(random_bytes(6)).'.sqlite';
     }
 }
