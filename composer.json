@@ -169,7 +169,10 @@
             "@putenv PHP_INI_SCAN_DIR=:tools/test-php-ini",
             "pest --parallel --processes=4 --tia --passthru-php=\"-d pcov.enabled=1\""
         ],
-        "test:coverage": "pest --parallel --processes=4 --coverage",
+        "test:coverage": [
+            "@putenv PHP_INI_SCAN_DIR=:tools/test-php-ini:tools/coverage-php-ini",
+            "pest --parallel --processes=4 --coverage"
+        ],
         "analyse": "phpstan analyse --memory-limit=1G",
         "analyse:deps": "composer-require-checker check --config-file=composer-require-checker.json composer.json",
         "format": "pint",
