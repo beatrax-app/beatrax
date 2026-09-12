@@ -82,21 +82,51 @@ either is kept, so a fee cell that will not parse drops the payment with it
 rather than booking half a pair, and the group still spends the single index the
 loss is reported at.
 
-## Sign, currency, and zero
+## The fee is read off the movement, not off the fee column
 
-- **Sign is read, never derived.** `Kosten` is already signed: negative when
-  PayPal takes a fee, positive when it gives one back on a refund. Deriving the
-  sign from the payment's would put `+3,49` on a credit and `-1,25` on a
-  refunded fee; taking `abs()` would get the refund wrong the other way.
-- **Currency is the row's own `Valuta`**, not the payment DTO's. The FX fold can
-  rewrite a payment's native leg to the currency it settled in, and PayPal
-  states `Kosten` in neither — it states it beside the cell, in `Valuta`.
-- **Zero emits nothing.** `Kosten 0,00` is what the column reads on every row of
-  a wallet that only ever spends, and a movement of nothing is not a movement.
-- **An absent `Kosten` column emits nothing**, which is deliberately unlike the
-  absent `Bruto` column two lines above it. There, the figure the row is *about*
-  is missing and the export is refused; here, a figure the row may legitimately
-  not have is.
+`Kosten` is a label on a figure the row states twice over: `Netto - Bruto` is
+the same number, and `Netto` is the one `Saldo` steps by. Anchoring on the
+subtraction rather than on the label is what makes A1-R21 hold by construction —
+the payment books `Bruto`, the fee books `Netto - Bruto`, and the pair sums to
+`Netto` identically, whatever the fee column says.
+
+That matters because the fee column has three ways of saying nothing, and
+reading it directly booked the gross in all three:
+
+| the row says | booked before | the wallet moved by |
+|---|---:|---:|
+| no `Kosten` column at all, `Bruto 100,00`, `Netto 96,51` | `+10000` | `+9651` |
+| `Kosten` blank, `Bruto 50,00`, `Netto 48,25` | `+5000` | `+4825` |
+| `Kosten 0,00`, `Bruto -20,00`, `Netto -20,60` | `-2000` | `-2060` |
+
+None of the three is malformed enough to refuse and none was reported: the
+import came back clean and the wallet was short. `Kosten` is still read, but
+only where the row states no readable `Netto` to anchor on — and an unreadable
+`Kosten` there still refuses the payment, because a fee the file states and the
+parser cannot read is not a fee of zero.
+
+Reading `Netto` first also recovers a payment that used to be lost outright: a
+row whose `Kosten` cell is unreadable but whose `Netto` is fine used to drop
+whole, because the fee column was the only thing consulted.
+
+### Sign, currency, and zero
+
+- **Sign is neither read nor guessed — it falls out of the subtraction.** A
+  `Netto` of `-38,75` against a `Bruto` of `-40,00` gives `+1,25`, the fee
+  PayPal handed back, without anyone deciding which way a refunded fee points.
+  Where the `Kosten` fallback is used the column is already signed. Deriving the
+  sign from the *payment's* would put `+3,49` on a credit and `-1,25` on a
+  refunded fee; `abs()` gets the refund wrong the other way.
+- **Currency is the row's own `Valuta`**, not the payment DTO's, and all three
+  figures are parsed at it. The FX fold can rewrite a payment's native leg to
+  the currency it settled in, and PayPal states none of these beside that leg.
+- **Zero emits nothing.** A `Netto` equal to its `Bruto` is a row PayPal charged
+  nothing on, and a movement of nothing is not a movement. That is the common
+  case, and it is now the *measured* common case rather than a column read.
+- **A row that states neither a readable `Netto` nor a `Kosten` emits nothing**,
+  which is deliberately unlike the absent `Bruto` column. There the figure the
+  row is *about* is missing and the export is refused; here the row says nothing
+  about a fee, and nothing is what it gets.
 
 ## A fee on a converted payment
 
@@ -132,3 +162,22 @@ counterparty_normalized, occurrence_ordinal)`:
 
 A second import of `paypal-fee-wallet.csv` therefore inserts nothing and counts
 all eleven rows as duplicates.
+
+## Why `Kosten` is not in the language signature
+
+`PaypalCsvLanguageProfile::LANGUAGE_SIGNATURES` gates which files are a PayPal
+export at all, and `Bruto` is in it because a file without it read every payment
+as zero. The obvious next step — add `Kosten` beside it — was measured and
+rejected. It is wrong in both directions at once:
+
+- It **refuses a correct file**. An export with no `Kosten` column whose `Netto`
+  equals its `Bruto` on every row states no fee, sums to its own movement, and
+  satisfies A1-R21 exactly. The signature cannot see that; it sees a missing
+  header and refuses the import.
+- It **admits the broken ones**. A blank cell and a `0,00` that disagrees with
+  `Netto` both ship the column, so the signature passes them through booking the
+  gross — which is two of the three failures above.
+
+The column list was never what went wrong. A header gate answers "is this the
+right kind of file"; the harm here is arithmetic, and arithmetic is what the
+`Netto` anchor checks.
