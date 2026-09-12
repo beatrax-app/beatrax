@@ -237,6 +237,22 @@ page each cost a statement per pot: twelve linked pots were fourteen
 statements where three answer, and the count was the reader's pot count rather
 than a property of the page.
 
+There is a third shape on the same bound, for a different question.
+`dailyNetMovementForPotsSince()` answers *when* a list of pots moved, not only
+by how much: one statement grouping `sum(amount_minor)` by pot and by
+`date(created_at)`. The goals page's run-rate projection measures each pot's
+trailing window, and the window is a fixed span clipped to each goal's own
+start, so the days one read over the widest of them covers every goal's window
+([the run-rate projection](../goals/run-rate-projection.md)). Asked per goal it
+was another aggregate per card, on top of the balance. The rows it hands back
+are bounded by ninety days times the pot count rather than by the movement
+history; the sums it reads are not — `pot_movements` carries no index on
+`created_at`, so the seek is by `(user_id, pot_id)` and the window is a filter.
+Adding `(user_id, pot_id, created_at)` measures 0.518 ms against 0.167 ms over
+4,020 movements across twenty pots, and was left alone: `balancesForPots()`
+beside it sums every movement a pot ever had by definition, at 0.497 ms on the
+same fixture, so the page's floor does not move.
+
 Those buckets come from Ledger's own
 [`SpendByCategoryQuery`](../ledger/architecture.md#spendbycategoryquery--the-split-aware-spend-read-model),
 read once for every category on the page rather than once per pot. The line

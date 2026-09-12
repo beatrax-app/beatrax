@@ -126,10 +126,6 @@ const BOUNDED_READ_ALLOWED = [
         'reads' => 2,
         'why' => 'One names a single recurring series, so it is that series\' occurrence count; the other is KNOWN UNBOUNDED - hintsForReview has neither the limit nor the keyset cursor its sibling candidatesForReview carries.',
     ],
-    'Modules/DriftAlerts/Internal/Jobs/RevivedExpiredDriftSnoozesJob.php::drift_alerts' => [
-        'reads' => 1,
-        'why' => 'Self-draining: only alerts whose snooze has elapsed, and the loop transitions each one to open, so the set is the reader\'s snoozed series count.',
-    ],
     'Modules/DriftAlerts/Public/Services/DriftAlertQuery.php::drift_alerts' => [
         'reads' => 1,
         'why' => 'Plucks distinct recurring_series_id, so the ceiling is the reader\'s series count however many historical alerts each series accumulated.',

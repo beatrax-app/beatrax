@@ -6,6 +6,8 @@ namespace Modules\FX\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Dto\ConversionResult;
@@ -28,18 +30,12 @@ final class ExchangeRateService
     // resolved per pair: ECB publishes on business days only, so an exact-date
     // match drops every weekend, every holiday, and every date older than the
     // first row. Nothing on or before it falls forward to the oldest row held.
-    private const string RATE_DATE_IN_EFFECT = <<<'SQL'
-        er.rate_date = COALESCE(
-            (SELECT MAX(on_or_before.rate_date) FROM exchange_rates AS on_or_before
-              WHERE on_or_before.base_currency = er.base_currency
-                AND on_or_before.quote_currency = er.quote_currency
-                AND on_or_before.rate_date <= ?),
-            (SELECT MIN(on_or_after.rate_date) FROM exchange_rates AS on_or_after
-              WHERE on_or_after.base_currency = er.base_currency
-                AND on_or_after.quote_currency = er.quote_currency
-                AND on_or_after.rate_date >= ?)
-        )
-        SQL;
+    private const string RATE_DATE_IN_EFFECT = 'base_currency, quote_currency, COALESCE('
+        .'MAX(CASE WHEN rate_date <= ? THEN rate_date END), '
+        .'MIN(CASE WHEN rate_date >= ? THEN rate_date END)'
+        .') as rate_date';
+
+    private const string LATEST_RATE_DATE = 'base_currency, quote_currency, MAX(rate_date) as rate_date';
 
     /** @var array<string, Collection<int, \stdClass>> */
     private array $ratesByDate = [];
@@ -73,23 +69,7 @@ final class ExchangeRateService
      */
     private function fetchLatestRates(): Collection
     {
-        return $this->db->connection()
-            ->table('exchange_rates as er')
-            ->select([
-                'er.base_currency',
-                'er.quote_currency',
-                'er.rate',
-                'er.rate_date',
-                'er.source',
-            ])
-            ->whereRaw('er.rate_date = (
-                SELECT MAX(inner_er.rate_date)
-                FROM exchange_rates AS inner_er
-                WHERE inner_er.base_currency = er.base_currency
-                  AND inner_er.quote_currency = er.quote_currency
-            )')
-            ->orderByRaw('case when er.source = ? then 0 else 1 end', [BundledRates::SOURCE])
-            ->get();
+        return $this->rowsInEffect($this->perPairDate(self::LATEST_RATE_DATE));
     }
 
     // Memoised for the life of the resolved instance. A net-worth series asks
@@ -108,8 +88,39 @@ final class ExchangeRateService
      */
     private function fetchRatesForDate(string $date): Collection
     {
+        return $this->rowsInEffect($this->perPairDate(self::RATE_DATE_IN_EFFECT, [$date, $date]));
+    }
+
+    // One grouped pass over the covering index, joined back, rather than the
+    // same aggregate re-run per row of the table: the answer was always one row
+    // per pair, but the read that produced it grew with the whole rate history.
+    /**
+     * @param  literal-string  $selection
+     * @param  list<string>  $bindings
+     */
+    private function perPairDate(string $selection, array $bindings = []): Builder
+    {
+        return $this->db->connection()
+            ->table('exchange_rates')
+            ->selectRaw($selection, $bindings)
+            ->groupBy('base_currency', 'quote_currency');
+    }
+
+    // The order has to be total, not merely bundled-last. One pair and one day
+    // may hold a row per source, and both the rate the table keeps and the
+    // source the figure names are decided by whichever arrives last.
+    /**
+     * @return Collection<int, \stdClass>
+     */
+    private function rowsInEffect(Builder $inEffect): Collection
+    {
         return $this->db->connection()
             ->table('exchange_rates as er')
+            ->joinSub($inEffect, 'in_effect', static function (JoinClause $join): void {
+                $join->on('in_effect.base_currency', '=', 'er.base_currency')
+                    ->on('in_effect.quote_currency', '=', 'er.quote_currency')
+                    ->on('in_effect.rate_date', '=', 'er.rate_date');
+            })
             ->select([
                 'er.base_currency',
                 'er.quote_currency',
@@ -117,8 +128,8 @@ final class ExchangeRateService
                 'er.rate_date',
                 'er.source',
             ])
-            ->whereRaw(self::RATE_DATE_IN_EFFECT, [$date, $date])
             ->orderByRaw('case when er.source = ? then 0 else 1 end', [BundledRates::SOURCE])
+            ->orderBy('er.id')
             ->get();
     }
 

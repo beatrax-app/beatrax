@@ -62,13 +62,24 @@ accrues.
 **4. Sum the window from the goal's own funding source.** This is the
 step that keeps the answer coherent:
 
-- a **pot-linked** goal reads
-  `PotBalanceQuery::netMovementForPotSince($potId, $effectiveStart)` —
-  the *net* signed sum of that pot's movements, so a withdrawal
+- a **pot-linked** goal sums the days of its pot's movements that fall on
+  or after `$effectiveStart` — the *net* signed sum, so a withdrawal
   subtracts;
 - any **other** goal sums the transactions attributed to it through the
   `goal_contributions` pivot with `transactions.posted_at >=
   $effectiveStart`.
+
+Neither is a statement of its own. Both arrive pre-read: the caller loads
+every attribution once for the whole list, and loads every linked pot's
+movements once, bucketed by day, over `trailingWindowStart()` — the
+widest window any goal on the page can use. Each goal's own
+`$effectiveStart` is then a filter over the days it was handed. Asked per
+card instead, the projection cost the goals page one aggregate per funded
+goal ([reads bounded by the user](../../architecture/reads-bounded-by-the-user.md)),
+and there was no room in `project()` to pass anything else in — its
+parameter list was already on the analyser's ceiling of seven. What went
+instead was `User`, which was there only so the projection could issue
+that read.
 
 Both are FX-converted into the goal's `target_currency` through
 `CrossCurrencyTotal`, which is fixed at creation and never follows the

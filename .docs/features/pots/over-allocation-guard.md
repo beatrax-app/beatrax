@@ -159,4 +159,5 @@ sum would hide the disagreement that is the whole problem.
   of `linkedPotBalancesForUser()`, which reads a linked pot's balance as
   a goal's contributed figure.
 - [`../goals/run-rate-projection.md`](../goals/run-rate-projection.md) —
-  why `netMovementForPotSince()` exists.
+  why `dailyNetMovementForPotsSince()` exists, and why it answers for a
+  list of pots rather than for one.

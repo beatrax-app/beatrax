@@ -195,19 +195,49 @@ final readonly class PotBalanceQuery
         return $result;
     }
 
-    // In the pot's own denomination, the same bound balanceForPot() applies:
-    // the caller converts this figure as if it were the pot's currency, so a
-    // movement carrying another one would be re-priced at a rate it never had.
-    public function netMovementForPotSince(int $potId, string $since, User $user): int
+    // One statement for every linked pot, bucketed by day, rather than a sum
+    // per pot per window: each caller clips the window to its own goal's start,
+    // and the widest of those windows is a fixed number of days whatever the
+    // movement history holds.
+    /**
+     * @param  list<int>  $potIds
+     * @return array<int, array<string, int>> pot id => day => net movement booked on that day
+     */
+    public function dailyNetMovementForPotsSince(array $potIds, string $since, User $user): array
     {
-        return (int) $this->db->connection()
+        if ($potIds === []) {
+            return [];
+        }
+
+        // In each pot's own denomination, the same bound balanceForPot()
+        // applies: the caller converts these figures as if they were the pot's
+        // currency, so a movement carrying another one would be re-priced at a
+        // rate it never had.
+        $rows = $this->db->connection()
             ->table('pot_movements')
             ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
             ->where('pot_movements.user_id', $user->id)
-            ->where('pot_movements.pot_id', $potId)
+            ->whereIn('pot_movements.pot_id', $potIds)
             ->whereColumn('pot_movements.currency', 'pots.currency')
             ->where('pot_movements.created_at', '>=', $since)
-            ->sum('pot_movements.amount_minor');
+            ->groupByRaw('pot_movements.pot_id, date(pot_movements.created_at)')
+            ->selectRaw(
+                'pot_movements.pot_id as pot_id, date(pot_movements.created_at) as day, '
+                .'sum(pot_movements.amount_minor) as minor'
+            )
+            ->get();
+
+        $byPot = [];
+        foreach ($rows as $row) {
+            $day = self::toString($row->day);
+            if ($day === '') {
+                continue;
+            }
+
+            $byPot[self::toInt($row->pot_id)][$day] = self::toInt($row->minor);
+        }
+
+        return $byPot;
     }
 
     public function linkedPotIdForGoal(int $goalId, User $user): ?int

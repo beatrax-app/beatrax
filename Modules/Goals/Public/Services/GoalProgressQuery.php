@@ -69,7 +69,16 @@ final readonly class GoalProgressQuery
             return [];
         }
 
-        $linkedPots = $this->potBalance->linkedPotBalancesForUser($user);
+        // One read of today for the whole list, threaded into the projection:
+        // taken seven times per goal, a render that straddles midnight dated
+        // one goal from yesterday and the next from today.
+        $today = CarbonImmutable::today();
+
+        $linkedPots = $this->withWindowedMovements(
+            $this->potBalance->linkedPotBalancesForUser($user),
+            $user,
+            $today,
+        );
         $attributed = $this->attributedAmountsByGoalId(
             $user,
             array_values(array_map(static fn (stdClass $row): int => self::toInt($row->id), $goalRows->all())),
@@ -77,17 +86,42 @@ final readonly class GoalProgressQuery
 
         $ratesByTarget = $this->ratesByTargetCurrency(array_values($goalRows->all()), $linkedPots, $attributed);
 
-        // One read of today for the whole list, threaded into the projection:
-        // taken seven times per goal, a render that straddles midnight dated
-        // one goal from yesterday and the next from today.
-        $today = CarbonImmutable::today();
-
         $rows = [];
         foreach ($goalRows as $row) {
-            $rows[] = $this->buildRow($row, $linkedPots, $attributed, $user, $ratesByTarget, $today);
+            $rows[] = $this->buildRow($row, $linkedPots, $attributed, $ratesByTarget, $today);
         }
 
         return $rows;
+    }
+
+    // The projection behind each bar measures the pot's trailing window, which
+    // was a sum per card: the statement count was the reader's goal count. The
+    // window is the same fixed span for every goal, so one read over the widest
+    // of them answers the whole list.
+    /**
+     * @param  array<int, array{balance: int, currency: string, potId: int, hasMovements: bool}>  $linkedPots
+     * @return array<int, array{balance: int, currency: string, potId: int, hasMovements: bool, movementsByDay: array<string, int>}>
+     */
+    private function withWindowedMovements(array $linkedPots, User $user, CarbonImmutable $today): array
+    {
+        $movements = $this->potBalance->dailyNetMovementForPotsSince(
+            array_values(array_map(static fn (array $pot): int => $pot['potId'], $linkedPots)),
+            $this->projection->trailingWindowStart($today),
+            $user,
+        );
+
+        $withMovements = [];
+        foreach ($linkedPots as $goalId => $pot) {
+            $withMovements[$goalId] = [
+                'balance' => $pot['balance'],
+                'currency' => $pot['currency'],
+                'potId' => $pot['potId'],
+                'hasMovements' => $pot['hasMovements'],
+                'movementsByDay' => $movements[$pot['potId']] ?? [],
+            ];
+        }
+
+        return $withMovements;
     }
 
     // One lookup per (source currency, goal currency) pair for the whole list:
@@ -95,7 +129,7 @@ final readonly class GoalProgressQuery
     // behind a conversion reads the whole exchange_rates table per call.
     /**
      * @param  list<stdClass>  $goalRows
-     * @param  array<int, array{balance: int, currency: string, potId: int, hasMovements: bool}>  $linkedPots
+     * @param  array<int, array{balance: int, currency: string, potId: int, hasMovements: bool, movementsByDay: array<string, int>}>  $linkedPots
      * @param  array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>  $attributed
      * @return array<string, array<string, string>>
      */
@@ -123,11 +157,11 @@ final readonly class GoalProgressQuery
     }
 
     /**
-     * @param  array<int, array{balance: int, currency: string, potId: int, hasMovements: bool}>  $linkedPots
+     * @param  array<int, array{balance: int, currency: string, potId: int, hasMovements: bool, movementsByDay: array<string, int>}>  $linkedPots
      * @param  array<int, list<array{amountMinor: int, currency: string, postedAt: string}>>  $attributed
      * @param  array<string, array<string, string>>  $ratesByTarget
      */
-    private function buildRow(stdClass $row, array $linkedPots, array $attributed, User $user, array $ratesByTarget, CarbonImmutable $today): GoalProgressRow
+    private function buildRow(stdClass $row, array $linkedPots, array $attributed, array $ratesByTarget, CarbonImmutable $today): GoalProgressRow
     {
         $goal = $this->hydrateGoal($row);
         $goalId = self::toInt($row->id);
@@ -151,7 +185,7 @@ final readonly class GoalProgressQuery
         };
 
         ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon, 'stalled' => $stalled] =
-            $this->projection->project($goal, $contributedMinor, $user, $linkedPot, $contributions, $rates, $today);
+            $this->projection->project($goal, $contributedMinor, $linkedPot, $contributions, $rates, $today);
 
         return new GoalProgressRow(
             id: $goalId,
@@ -172,7 +206,7 @@ final readonly class GoalProgressQuery
     }
 
     /**
-     * @param  array{balance: int, currency: string, potId: int, hasMovements: bool}  $linkedPot
+     * @param  array{balance: int, currency: string, potId: int, hasMovements: bool, movementsByDay: array<string, int>}  $linkedPot
      * @param  array<string, string>  $rates
      */
     private function potContribution(array $linkedPot, string $targetCurrency, array $rates): ConvertedTotal

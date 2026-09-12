@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Modules\Goals\Public\Services;
 
 use Carbon\CarbonImmutable;
-use Modules\Core\Models\User;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Goals\Models\Goal;
-use Modules\Pots\Public\Services\PotBalanceQuery;
 
 final readonly class GoalProjectionService
 {
@@ -36,29 +34,26 @@ final readonly class GoalProjectionService
     /** @var array{date: null, beyondHorizon: true, stalled: false} */
     private const array BEYOND_DATING = ['date' => null, 'beyondHorizon' => true, 'stalled' => false];
 
-    public function __construct(
-        private CrossCurrencyTotal $fx,
-        private PotBalanceQuery $potBalance,
-    ) {}
+    public function __construct(private CrossCurrencyTotal $fx) {}
 
     // `stalled` separates the two reasons a rate can be zero, because the card
     // says one of two different things: a goal younger than the observation
     // window has too little history, and an older one with an empty trailing
     // window has plenty of history and nothing recent in it.
     /**
-     * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool}|null  $linkedPot
+     * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool, movementsByDay: array<string, int>}|null  $linkedPot
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed  every attribution on this goal, whenever it posted
      * @param  array<string, string>  $rates  into the goal's own currency, as returned by CrossCurrencyTotal::ratesTo()
      * @param  CarbonImmutable  $today  read once by the caller, so a render straddling midnight cannot mix two days
      * @return array{date: ?string, beyondHorizon: bool, stalled: bool}
      */
-    public function project(Goal $goal, int $contributedMinor, User $user, ?array $linkedPot, array $attributed, array $rates, CarbonImmutable $today): array
+    public function project(Goal $goal, int $contributedMinor, ?array $linkedPot, array $attributed, array $rates, CarbonImmutable $today): array
     {
         if ($this->hasNoProjection($goal, $contributedMinor, $today)) {
             return self::NO_PROJECTION;
         }
 
-        $dailyRateMinor = $this->dailyContributionRate($goal, $user, $linkedPot, $attributed, $rates, $today);
+        $dailyRateMinor = $this->dailyContributionRate($goal, $linkedPot, $attributed, $rates, $today);
         if ($dailyRateMinor <= 0.0) {
             return self::STALLED;
         }
@@ -85,17 +80,17 @@ final readonly class GoalProjectionService
     // movements when linked, attributed transactions otherwise — so the rate and
     // the level can never describe different money.
     /**
-     * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool}|null  $linkedPot
+     * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool, movementsByDay: array<string, int>}|null  $linkedPot
      * @param  list<array{amountMinor: int, currency: string, postedAt: string}>  $attributed
      * @param  array<string, string>  $rates
      */
-    private function dailyContributionRate(Goal $goal, User $user, ?array $linkedPot, array $attributed, array $rates, CarbonImmutable $today): float
+    private function dailyContributionRate(Goal $goal, ?array $linkedPot, array $attributed, array $rates, CarbonImmutable $today): float
     {
         $effectiveStart = $this->effectiveStart($goal, $today);
         $elapsedDays = $this->observedDays($goal, $today);
 
         $windowSum = $linkedPot !== null
-            ? $this->potWindowSum($linkedPot, $goal->target_currency, $effectiveStart, $user, $rates)
+            ? $this->potWindowSum($linkedPot, $goal->target_currency, $effectiveStart, $rates)
             : $this->attributedWindowSum($goal, $effectiveStart, $attributed, $rates);
 
         return $windowSum / max(1, $elapsedDays);
@@ -105,11 +100,19 @@ final readonly class GoalProjectionService
     // today would otherwise divide one early deposit by 90 days.
     private function effectiveStart(Goal $goal, CarbonImmutable $today): string
     {
-        $windowStart = $today->subDays(self::TRAILING_WINDOW_DAYS)->toDateString();
+        $windowStart = $this->trailingWindowStart($today);
 
         return $goal->start_date->toDateString() > $windowStart
             ? $goal->start_date->toDateString()
             : $windowStart;
+    }
+
+    // The widest window any goal's rate is measured over, so a caller loading a
+    // list can read every linked pot's movements once and hand each goal the
+    // days its own start has not clipped away.
+    public function trailingWindowStart(CarbonImmutable $today): string
+    {
+        return $today->subDays(self::TRAILING_WINDOW_DAYS)->toDateString();
     }
 
     private function observedDays(Goal $goal, CarbonImmutable $today): int
@@ -117,13 +120,22 @@ final readonly class GoalProjectionService
         return (int) CarbonImmutable::parse($this->effectiveStart($goal, $today))->diffInDays($today);
     }
 
+    // The caller has already read every linked pot's movements over the widest
+    // window any goal uses, so this goal's window is a filter over those rather
+    // than a second statement per card. The day buckets and the bound are both
+    // date strings, which compare the same way here as they did in SQL.
     /**
-     * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool}  $linkedPot
+     * @param  array{balance: int, currency: string, potId: int, hasMovements?: bool, movementsByDay: array<string, int>}  $linkedPot
      * @param  array<string, string>  $rates
      */
-    private function potWindowSum(array $linkedPot, string $targetCurrency, string $since, User $user, array $rates): int
+    private function potWindowSum(array $linkedPot, string $targetCurrency, string $since, array $rates): int
     {
-        $minor = $this->potBalance->netMovementForPotSince($linkedPot['potId'], $since, $user);
+        $minor = 0;
+        foreach ($linkedPot['movementsByDay'] as $day => $dayMinor) {
+            if ($day >= $since) {
+                $minor += $dayMinor;
+            }
+        }
 
         if ($minor === 0 || $linkedPot['currency'] === '') {
             return $minor;
