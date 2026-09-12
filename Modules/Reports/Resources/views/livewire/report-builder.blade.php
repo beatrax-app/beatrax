@@ -427,6 +427,21 @@
                             </td>
                             <td class="px-4 py-2 text-right {{ $amountClass($row->amountMinor) }}" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($row->amountMinor, $row->currency) }}
+                                {{-- A net-worth bucket is priced at the rate in
+                                     effect on its OWN day, so this row is the
+                                     only place that rate can be read. The
+                                     headline above is the most recent bucket's
+                                     figure and names that bucket's rate, which
+                                     is the one that rebuilds it. Null on a
+                                     dimension row, which converted at the one
+                                     rate set the headline already discloses. --}}
+                                <x-core::fx-disclosure
+                                    :disclosure="$row->conversion"
+                                    id="report-row-{{ $rowIndex }}"
+                                    :label="$row->groupLabel"
+                                    class="block text-xs font-normal"
+                                    style="color: var(--color-text-muted);"
+                                />
                             </td>
                             @if ($definition->compare)
                                 <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">

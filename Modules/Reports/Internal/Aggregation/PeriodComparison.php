@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Aggregation;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Dto\ReportResultRow;
@@ -45,7 +46,7 @@ final class PeriodComparison
      */
     private static function joinByGroup(array $currentRows, array $previousRows): array
     {
-        /** @var array<string, array{key: int|string|null, label: string, currency: string, current: int, previous: int}> $byKey */
+        /** @var array<string, array{key: int|string|null, label: string, currency: string, current: int, previous: int, conversion: ?ConversionDisclosure}> $byKey */
         $byKey = [];
 
         foreach ($currentRows as $row) {
@@ -55,18 +56,23 @@ final class PeriodComparison
                 'currency' => $row->currency,
                 'current' => $row->amountMinor,
                 'previous' => 0,
+                'conversion' => $row->conversion,
             ];
         }
 
         foreach ($previousRows as $row) {
             $key = self::keyFor($row);
             if (! isset($byKey[$key])) {
+                // A group only the previous window held: its own disclosure is
+                // the only one there is, since this window has no row to carry
+                // one and the figure printed beside it is that window's.
                 $byKey[$key] = [
                     'key' => $row->groupKey,
                     'label' => $row->groupLabel,
                     'currency' => $row->currency,
                     'current' => 0,
                     'previous' => 0,
+                    'conversion' => $row->conversion,
                 ];
             }
             $byKey[$key]['previous'] = $row->amountMinor;
@@ -81,6 +87,7 @@ final class PeriodComparison
                 currency: $entry['currency'],
                 previousAmountMinor: $entry['previous'],
                 deltaMinor: $entry['current'] - $entry['previous'],
+                conversion: $entry['conversion'],
             );
         }
 
@@ -116,6 +123,10 @@ final class PeriodComparison
                 currency: $row->currency,
                 previousAmountMinor: $previous,
                 deltaMinor: $previous === null ? null : $row->amountMinor - $previous,
+                // The bucket's own rate, which the comparison rebuilds the row
+                // around: dropped, and the drill-in row would name no rate on
+                // exactly the screen that puts a second figure beside it.
+                conversion: $row->conversion,
             );
         }
 

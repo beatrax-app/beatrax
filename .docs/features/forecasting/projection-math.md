@@ -353,8 +353,13 @@ currency but not the target: the router can still move a contribution
 onto a funder account denominated in something else, so a rate resolved
 before routing would be a rate into the wrong currency.
 
-The rate used is **today's**, which is the right one for an estimate of
-a charge that has not happened yet. The contrast worth holding on to is
+The rate used is **today's** — today meaning the day the RUN was computed,
+which a rehydrated curve then discloses as its as-of date rather than as the
+reader's today — and it is the right one for an estimate of a charge that has
+not happened yet. `DailyFoldResult` keeps the `RateSet` it priced with,
+narrowed to the currencies it actually converted, and `ProjectionPipeline`
+writes it into `result_json` so the curve can name it when it is read back
+([the stored output shape](architecture.md#projection-orchestration-and-output-shape)). The contrast worth holding on to is
 [drift detection](../drift-alerts/drift-detection.md), which refuses to
 convert an older occurrence at today's rate precisely because that would
 file the rate's movement as the merchant's. A projection wants the

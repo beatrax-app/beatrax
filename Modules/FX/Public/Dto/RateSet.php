@@ -41,6 +41,16 @@ final readonly class RateSet
         return self::of($this->targetCurrency, [...$this->rates, $rate->from => $rate]);
     }
 
+    // A conversion with nothing to disclose leaves the set untouched, so the
+    // caller needs no branch of its own: forgetting it is what folds a
+    // passthrough leg in as if a rate had priced it.
+    public function withConversion(ConversionResult $result): self
+    {
+        $leg = RateUsed::fromConversion($result);
+
+        return $leg === null ? $this : $this->with($leg);
+    }
+
     public function has(string $currency): bool
     {
         return isset($this->rates[$currency]);

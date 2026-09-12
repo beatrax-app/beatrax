@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kurssit päivältä :date lähteestä :source',
+    'rates_not_recorded' => 'kursseja ei tallennettu — tämä tulos tallennettiin ilman niitä',
 
     // i18n-review: fi · stale_bundled, stale_old, stale_offline — the singular arm
     // reads "yli :count päivän vanha" against the plural "yli :count päivää vanha".

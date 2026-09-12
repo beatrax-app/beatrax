@@ -7,6 +7,7 @@ namespace Modules\FX\Public\Dto;
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
+use Modules\FX\Internal\Support\RateFreshness;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\ValueObjects\Rate;
 
@@ -26,6 +27,47 @@ final readonly class RateUsed
         public ?CarbonImmutable $asOf,
         public bool $isStale,
     ) {}
+
+    // Null where a conversion has no rate to disclose: a passthrough converted
+    // at none, and a pair the table could not reach at none either. A caller
+    // that skips the check hands its set a leg that then answers for the
+    // whole figure, which is why the check is not left to callers.
+    public static function fromConversion(ConversionResult $result): ?self
+    {
+        if ($result->isPassthrough || $result->rate === null) {
+            return null;
+        }
+
+        return new self(
+            from: $result->original->currency(),
+            to: $result->converted->currency(),
+            rate: $result->rate,
+            source: $result->source,
+            asOf: $result->asOf,
+            isStale: $result->isStale,
+        );
+    }
+
+    // A rate read back out of a stored result. Staleness is a fact about the
+    // day it is READ, so storing the boolean would let it decay under an
+    // as-of date that stays true.
+    public static function asReadOn(
+        CarbonImmutable $readOn,
+        string $from,
+        string $to,
+        string $rate,
+        ?string $source,
+        ?CarbonImmutable $asOf,
+    ): self {
+        return new self(
+            from: $from,
+            to: $to,
+            rate: $rate,
+            source: $source,
+            asOf: $asOf,
+            isStale: RateFreshness::isStale($asOf, $readOn),
+        );
+    }
 
     // The column's own eight places, not the three significant digits a rate
     // reads at beside a figure: a reader cannot reproduce EUR 3,016.97 from

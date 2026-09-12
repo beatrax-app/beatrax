@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'árfolyamok, állapot: :date, forrás: :source',
+    'rates_not_recorded' => 'az árfolyamok nincsenek rögzítve — ez az eredmény nélkülük lett elmentve',
 
     'stale_bundled' => 'A csomagban szállított, :count napnál régebbi pillanatkép árfolyamát használjuk. Az aktuális árfolyamokhoz kapcsold be az online frissítést a Beállításokban.|A csomagban szállított, :count napnál régebbi pillanatkép árfolyamát használjuk. Az aktuális árfolyamokhoz kapcsold be az online frissítést a Beállításokban.',
     'stale_old' => 'Ez az árfolyam :count napnál régebbi. A következő online frissítés aktualizálja.|Ez az árfolyam :count napnál régebbi. A következő online frissítés aktualizálja.',

@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'cursuri la data de :date, sursă: :source',
+    'rates_not_recorded' => 'cursuri neînregistrate — acest rezultat a fost salvat fără ele',
 
     'stale_bundled' => 'Se folosește un curs dintr-un instantaneu inclus în aplicație, mai vechi de :count zi. Activează reîmprospătarea online în Setări pentru cursuri actuale.|Se folosește un curs dintr-un instantaneu inclus în aplicație, mai vechi de :count zile. Activează reîmprospătarea online în Setări pentru cursuri actuale.|Se folosește un curs dintr-un instantaneu inclus în aplicație, mai vechi de :count de zile. Activează reîmprospătarea online în Setări pentru cursuri actuale.',
     'stale_old' => 'Acest curs este mai vechi de :count zi. Următoarea reîmprospătare online îl va actualiza.|Acest curs este mai vechi de :count zile. Următoarea reîmprospătare online îl va actualiza.|Acest curs este mai vechi de :count de zile. Următoarea reîmprospătare online îl va actualiza.',

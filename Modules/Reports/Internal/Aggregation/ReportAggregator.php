@@ -235,12 +235,17 @@ final readonly class ReportAggregator
         // told a reader with five accounts that 4108 of them were left out.
         /** @var array<int, string> $excludedAccounts */
         $excludedAccounts = [];
+        // The headline's own legs, because the headline IS this point: a rate
+        // folded from the whole series would not rebuild the figure printed
+        // above it, and rebuilding it is what a quoted rate is for.
+        $conversion = null;
         foreach ($points as $point) {
             // Net worth is a balance, not a flow, so the total is the most recent
             // point; summing would count every account's balance once per bucket.
             // Overwritten each iteration so the last point wins.
             $totalMinor = $point->totalMinor;
             $currency = $point->currency;
+            $conversion = $point->conversion();
             foreach ($point->excludedAccounts as $accountId => $accountName) {
                 $excludedAccounts[$accountId] = $accountName;
             }
@@ -251,6 +256,7 @@ final readonly class ReportAggregator
             totalMinor: $totalMinor,
             currency: $currency,
             excludedAccounts: $excludedAccounts,
+            conversion: $conversion,
         );
     }
 
@@ -267,6 +273,10 @@ final readonly class ReportAggregator
                 groupLabel: $point->label,
                 amountMinor: $point->totalMinor,
                 currency: $point->currency,
+                // A reader drilling into one bucket is owed the rate THAT
+                // bucket was priced at, which is the only place it is legible:
+                // the headline answers for the most recent bucket alone.
+                conversion: $point->conversion(),
             );
         }
 

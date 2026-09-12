@@ -739,11 +739,47 @@ every restore, then carries.
       "today_balance_minor": 150000,
       "anchor_source": "sum_of_transactions",
       "unconverted_currencies": [],
-      "points": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}]
+      "rates": [{"from": "USD", "to": "EUR", "rate": "0.88035919", "source": "bundled", "as_of": "2026-06-05"}],
+      "points": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}],
+      "points_by_funder": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}]
     }
   }
 }
 ```
+
+`rates` is the other half of the disclosure `unconverted_currencies` had been
+writing on its own: the rates the fold priced with, narrowed by
+`RateSet::only()` to the currencies this account's curve actually converted, so
+one account does not disclose the pair a sibling needed. `StoredRateSet` owns
+both directions of the round trip, because a curve rehydrated from a shape the
+writer no longer produces discloses a rate nobody used.
+
+**The rate is an exact decimal string and staleness is not stored.** The rate
+comes out of the `DECIMAL(18,8)` column and stays text end to end
+([B10-R18](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md));
+`is_stale` is deliberately absent, because it is a fact about the day the rate
+is READ and a boolean written months ago would sit under an as-of date that is
+still true saying a ninety-nine-day-old snapshot is fresh.
+`RateUsed::asReadOn()` derives it at read time against the same three-day
+threshold every other surface uses.
+
+**A run stored before the key existed decodes to no rate set at all**, which is
+a third state rather than an empty one. An empty set renders as silence, and
+silence on `x-core::fx-disclosure` means "converted nothing" — a claim about
+the projection that no old record supports either way — so the mapper projects
+`ConversionDisclosure::unrecorded()` and the surface says only what is true:
+the rates are not on record. It is self-clearing. `forecast_runs` is a cache
+with one live row per key that a completed run prunes behind it, the scheduled
+sweep rewrites every horizon daily, and no migration or backfill is possible
+anyway: the rates a past run used are not recoverable, because the pair's rate
+today is not the rate it converted at, so a backfill would name a rate the
+projection never made.
+
+The `rates` beside `unconverted_currencies` are the PER-SERIES fold's, as those
+codes already are. The funder collapse can move a contribution onto another
+account, so the two folds need not price the same set; splitting the rates
+alone would leave the two halves of one disclosure answering for different
+curves.
 
 `ProjectForecastJob`'s concurrency contract: `ShouldBeUniqueUntilProcessing`
 keyed on `uniqueId() = "{userId}:{scenarioKey}:{horizonDays}"`, where
@@ -843,11 +879,20 @@ times. A currency the rate table cannot reach is left out of the total
 rather than added at 1:1 — the same rule `NetWorthQuery` applies to a
 line it has no rate for — and the codes it left out are carried through to
 `x-core::fx-disclosure` under the subtitle, beside the rates the aggregate
-converted at. The single-account curve discloses the codes only: it is read
-back out of `forecast_runs.result_json`, which records what the fold could not
-price and not what priced the rest. "Combined balance across every
+converted at. The single-account curve discloses both halves too, off the
+`rates` its run stored: `ForecastDto::$conversion` arrives whole from the
+mapper, so the surface reconstructs nothing. "Combined balance across every
 account" was a claim the figure could not keep while the excluded account's own
-tab sat two lines above it. The buffer floor is the sum of every account's
+tab sat two lines above it.
+
+What the AGGREGATE's disclosure names is only its own hop — each account's
+curve into the reader's currency. The hop INSIDE each curve, a contribution
+converted into its account's denomination at the rate its run stored, is not
+named there: a `RateSet` holds legs into one target by construction, and the
+aggregate's target is the reader's currency while each stored leg's is its own
+account's. Naming both would need a disclosure that spans two targets, which is
+a type this seam does not have. `Calendar`'s balance line inherits the same
+boundary for the same reason. The buffer floor is the sum of every account's
 `forecast_min_buffer_minor` (NULL treated as 0), bucketed and converted
 the same way, because a buffer is denominated in its account's currency
 too.

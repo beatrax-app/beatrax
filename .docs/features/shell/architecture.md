@@ -59,8 +59,9 @@ The move is invisible from outside the module, and deliberately so:
 - **Translation keys** — `core::dashboard.*`, `core::sidebar.*`,
   `core::settings.*`, `core::net_worth.*`, `core::fx.*` and
   `core::spending_trend.*` stay in `Core`. `core::fx.*` is the FX-disclosure
-  vocabulary — the provider labels, the rate line, the as-of line and the three
-  stale sentences — and it sits in `Core` beside `x-core::fx-disclosure`, which
+  vocabulary — the provider labels, the rate line, the as-of line, the three
+  stale sentences and the one that says a stored result was kept without the
+  rates behind it — and it sits in `Core` beside `x-core::fx-disclosure`, which
   is the only template that reads it. It was inside `core::net_worth.*`, where
   it read as net-worth copy while twenty-eight other templates needed the same
   words. `core::settings.*` is shared with `Core`'s own locale switcher and

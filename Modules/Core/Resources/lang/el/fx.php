@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'ισοτιμίες με ημερομηνία :date από :source',
+    'rates_not_recorded' => 'οι ισοτιμίες δεν έχουν καταγραφεί — αυτό το αποτέλεσμα αποθηκεύτηκε χωρίς αυτές',
 
     // i18n-review: el · stale_bundled, stale_old, stale_offline — the singular arm puts
     // a digit before a genitive singular, "παλαιότερη της :count ημέρας". It is

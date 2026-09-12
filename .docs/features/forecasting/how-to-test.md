@@ -180,10 +180,21 @@ and the assertion — see
   delete.** A NULL `user_id` cannot land; deleting the user wipes
   the scenarios cleanly.
 - **The projection is deterministic against the input set.**
-  Same inputs (scenario, recurring set, anchor, horizon) produce
-  the same `result_json`. There is no randomness anywhere in the
+  Same inputs (scenario, recurring set, anchor, horizon, **and the
+  `exchange_rates` rows the fold prices against**) produce the same
+  `result_json`. There is no randomness anywhere in the
   pipeline: `CadenceJitter` spreads a fixed `100 / window` share over a
-  fixed ±3-day window, with no seed and nothing to seed.
+  fixed ±3-day window, with no seed and nothing to seed. The rate table was
+  always an input — the fold has always converted through it — and it is named
+  here because the blob now records what it read from it, so a rate refresh
+  moves the stored bytes where it used to move only the points.
+- **A stored run names the rate it was priced at, and an old one says it
+  cannot.** `AStoredProjectionNamesTheRateItWasPricedAtTest` holds both:
+  `result_json.accounts.*.rates` carries the exact decimal, the source and the
+  as-of day; the rehydrated `ForecastDto::$conversion` names them; staleness is
+  derived against the day of the READ; a fold that converted nothing stores an
+  empty list and discloses nothing; and a run written without the key discloses
+  `ConversionDisclosure::unrecorded()` until the next projection replaces it.
 - **The percentile bands are computed from the modelled cadence
   jitter, not from random sampling.** Each series's confidence
   surfaces as P10/P50/P90; the bands reflect modelling
@@ -214,6 +225,16 @@ and the assertion — see
   prior `result_json` once complete. No uniqueness lock today on
   the projection job; the projection is fast enough that
   concurrent runs settle on the latest input.
+- **A `result_json` written before it carried a `rates` key** — the reader
+  cannot tell such a run from one that converted nothing, and must not: it
+  discloses the unrecorded state rather than silence. No migration touches
+  these rows. `forecast_runs` is a device-local cache with one live row per
+  `(user_id, scenario_id, horizon_days)` that a completed run prunes behind
+  it, the daily sweep rewrites every horizon, and the rates a past run used
+  cannot be recovered — the pair's rate today is not the rate it converted at,
+  so a backfill would name a rate the projection never made. Hand-written
+  fixtures in this suite are in exactly this shape, which is why several of
+  them now render that line.
 - **The user overrides the opening balance lower than the latest
   statement-derived anchor** — `OpeningBalanceDivergenceWarning`
   surfaces; the user can confirm intentionally (e.g. accounting

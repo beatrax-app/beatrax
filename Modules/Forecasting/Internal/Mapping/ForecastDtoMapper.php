@@ -7,17 +7,23 @@ namespace Modules\Forecasting\Internal\Mapping;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\Enums\ForecastPointSet;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
 use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
 use Modules\Forecasting\Public\Dto\ShortfallWindowDto;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use stdClass;
 
 final readonly class ForecastDtoMapper
 {
     use CoercesScalars;
+
+    // A stored rate's staleness is a fact about the day it is read, not the
+    // day the run wrote it, so the mapper is the stage that needs today.
+    public function __construct(private Clock $clock) {}
 
     /**
      * @param  array<array-key, mixed>  $accountResult
@@ -48,10 +54,13 @@ final readonly class ForecastDtoMapper
             $points[] = $this->mapPoint($day);
         }
 
+        $currency = self::toString($accountResult['default_currency'] ?? null);
+        $unconverted = self::stringList($accountResult['unconverted_currencies'] ?? null);
+
         return new ForecastDto(
             accountId: self::toInt($accountResult['account_id'] ?? null),
             accountName: self::toString($accountResult['account_name'] ?? null),
-            defaultCurrency: self::toString($accountResult['default_currency'] ?? null),
+            defaultCurrency: $currency,
             horizonDays: $window->horizonDays,
             scenarioId: $window->scenarioId,
             asOf: $window->asOf,
@@ -60,8 +69,26 @@ final readonly class ForecastDtoMapper
             seriesConfidence: $seriesConfidence,
             isComputing: $isComputing,
             isStale: $isStale,
-            unconvertedCurrencies: self::stringList($accountResult['unconverted_currencies'] ?? null),
+            unconvertedCurrencies: $unconverted,
+            conversion: $this->disclosureOf($accountResult, $currency, $unconverted),
         );
+    }
+
+    // A run written before result_json carried its rates cannot be read as
+    // having converted nothing, so it says what is true instead: whatever it
+    // converted at is not on record. The next projection replaces the row and
+    // the line goes with it.
+    /**
+     * @param  array<array-key, mixed>  $accountResult
+     * @param  list<string>  $unconverted
+     */
+    private function disclosureOf(array $accountResult, string $currency, array $unconverted): ConversionDisclosure
+    {
+        $rates = StoredRateSet::decode($accountResult[StoredRateSet::KEY] ?? null, $currency, $this->clock->now());
+
+        return $rates === null
+            ? ConversionDisclosure::unrecorded($currency, $unconverted)
+            : ConversionDisclosure::of($rates, $unconverted);
     }
 
     /**

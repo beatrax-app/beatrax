@@ -28,6 +28,12 @@
     off ConvertedTotal::disclosure(), or off ConversionDisclosure::of() where
     the surface holds the rate set itself.
 
+    A figure rebuilt from a stored result whose format kept no rates is the
+    third state, ConversionDisclosure::unrecorded(): it renders a line saying
+    so and no panel. Silence would read as "converted nothing", which is a
+    claim about the figure, and an old record supports it no more than it
+    supports the opposite.
+
     The age is Carbon's own relative phrase rather than a sentence of ours: it
     is localised in all twenty-six languages without a plural rule per
     language, and the distance between "3 days ago" and "3 months ago" is the
@@ -86,6 +92,10 @@
                 <span class="fx-icon {{ $disclosure->isStale() ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
             </button>
             @endunless
+        @endif
+
+        @if ($disclosure->ratesUnrecorded)
+            <span data-fx-rates-unrecorded="true">{{ Lang::get('core::fx.rates_not_recorded') }}</span>
         @endif
 
         @if ($disclosure->isPartial())

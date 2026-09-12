@@ -32,7 +32,7 @@ install and on upgrade; it is the table's second writer. The rows carry
   overwritten;
 - re-running the migration rewrites only its own rows;
 - the snapshot's own date is used, never `now()`, so
-  `ExchangeRateService::STALE_DAYS_THRESHOLD` marks the figures stale and the
+  `RateFreshness::STALE_DAYS_THRESHOLD` marks the figures stale and the
   reader is told the rates are old rather than shown a false "today".
 
 Opting into online fetching still layers fresher rows on top; nothing about the

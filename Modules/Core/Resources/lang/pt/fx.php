@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'taxas à data de :date, fonte: :source',
+    'rates_not_recorded' => 'taxas não registadas — este resultado foi guardado sem elas',
 
     'stale_bundled' => 'Está a ser usada uma taxa de um instantâneo incluído na aplicação com mais de :count dia. Ativa a atualização online nas Definições para teres taxas atuais.|Está a ser usada uma taxa de um instantâneo incluído na aplicação com mais de :count dias. Ativa a atualização online nas Definições para teres taxas atuais.',
     'stale_old' => 'Esta taxa tem mais de :count dia. A próxima atualização online vai renová-la.|Esta taxa tem mais de :count dias. A próxima atualização online vai renová-la.',

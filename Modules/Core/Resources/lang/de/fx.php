@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'Kurse Stand :date von :source',
+    'rates_not_recorded' => 'Kurse nicht erfasst — dieses Ergebnis wurde ohne sie gespeichert',
 
     'stale_bundled' => 'Es wird der Kurs aus einer mitgelieferten Momentaufnahme verwendet, die älter als :count Tag ist. Aktiviere in den Einstellungen die Online-Aktualisierung für aktuelle Kurse.|Es wird der Kurs aus einer mitgelieferten Momentaufnahme verwendet, die älter als :count Tage ist. Aktiviere in den Einstellungen die Online-Aktualisierung für aktuelle Kurse.',
     'stale_old' => 'Dieser Kurs ist älter als :count Tag. Die nächste Online-Aktualisierung bringt ihn auf den neuesten Stand.|Dieser Kurs ist älter als :count Tage. Die nächste Online-Aktualisierung bringt ihn auf den neuesten Stand.',

@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kursevi na dan :date iz izvora :source',
+    'rates_not_recorded' => 'kursevi nisu zabeleženi — ovaj rezultat je sačuvan bez njih',
 
     'stale_bundled' => 'Koristi se kurs iz ugrađenog snimka, stariji od :count dana. Uključi onlajn osvežavanje u Podešavanjima za aktuelne kurseve.|Koristi se kurs iz ugrađenog snimka, stariji od :count dana. Uključi onlajn osvežavanje u Podešavanjima za aktuelne kurseve.|Koristi se kurs iz ugrađenog snimka, stariji od :count dana. Uključi onlajn osvežavanje u Podešavanjima za aktuelne kurseve.',
     'stale_old' => 'Ovaj kurs je stariji od :count dana. Sledeće onlajn osvežavanje će ga ažurirati.|Ovaj kurs je stariji od :count dana. Sledeće onlajn osvežavanje će ga ažurirati.|Ovaj kurs je stariji od :count dana. Sledeće onlajn osvežavanje će ga ažurirati.',
