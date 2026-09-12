@@ -12,9 +12,14 @@ use Modules\Desktop\Internal\Native\SyncListenerProcess;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Modules\Sync\Public\Services\SyncPorts;
+use Modules\Sync\Public\Testing\DeviceIdentityTestHarness;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
+
+afterEach(function (): void {
+    DeviceIdentityTestHarness::forgetAll();
+});
 
 function credentialledListenerLogger(): object
 {
@@ -70,6 +75,8 @@ function credentialledListenerUser(): User
         'created_at' => $now,
         'updated_at' => $now,
     ]);
+
+    DeviceIdentityTestHarness::place((int) $user->id);
 
     return $user;
 }

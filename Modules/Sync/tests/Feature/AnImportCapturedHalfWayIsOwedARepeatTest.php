@@ -44,11 +44,32 @@ function halfCaptureBindWriter(int $userId): void
     ]));
 }
 
-// The one fact oweABackfill() reads before opening a walk: a device that never
-// enabled sync owes no peer anything, and the key-file is how it says so.
+// What oweABackfill() reads before opening a walk is the standing, not the
+// key-file. A device that never enabled sync owes no peer anything; a device
+// whose registry says it is a peer owes one whether or not it can sign yet.
 function halfCaptureIdentityPath(int $userId): string
 {
     return UserDataPathService::appPath("sync/identity/{$userId}.enc");
+}
+
+// The half a restored database brings, and the half it cannot: the old
+// machine's self row lands and the key-file stays where it was made.
+function halfCaptureRestoredSelfRow(int $userId): void
+{
+    app(DatabaseManager::class)->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => 'halfcap-restored-device',
+        'name' => 'The machine the backup came from',
+        'ed25519_public_key_hex' => str_repeat('a', 64),
+        'x25519_public_key_hex' => str_repeat('b', 64),
+        'safety_number_words' => '',
+        'is_self' => 1,
+        'paired_at' => '2026-01-01T00:00:00Z',
+        'confirmed_at' => '2026-01-01T00:00:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-01-01T00:00:00Z',
+        'updated_at' => '2026-01-01T00:00:00Z',
+    ]);
 }
 
 function halfCaptureEnableSync(int $userId): void
@@ -203,6 +224,25 @@ it('opens no backfill for a device that never enabled sync', function (): void {
 
     expect(halfCaptureTables((int) $user->id))->not->toContain('transactions')
         ->and(halfCaptureOwesAWalk((int) $user->id))->toBeFalse();
+});
+
+// The same premise the capture sink held, in the one other place that held it:
+// asked of the key-file alone, a restored database answers "never enabled" and
+// an import committed on it is owed nothing and reaches no peer. Its registry
+// says it is a peer, and a peer already holding these rows is exactly the case
+// a walk is for.
+it('opens a backfill for a restored device whose key-file never travelled', function (): void {
+    $user = halfCaptureUser();
+    halfCaptureRestoredSelfRow((int) $user->id);
+    halfCaptureBindWriter((int) $user->id);
+
+    $transactionId = halfCaptureTransaction($user);
+    halfCaptureRefuseTransactions();
+
+    app(ImportSyncCapture::class)->captureTransactions([$transactionId], $user);
+
+    expect(halfCaptureTables((int) $user->id))->not->toContain('transactions')
+        ->and(halfCaptureOwesAWalk((int) $user->id))->toBeTrue();
 });
 
 // A capture that finished owes nothing: opening a whole-database walk on every

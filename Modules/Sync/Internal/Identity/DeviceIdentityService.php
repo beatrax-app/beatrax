@@ -12,7 +12,6 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Instant;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
@@ -108,7 +107,7 @@ final readonly class DeviceIdentityService
             return false;
         }
 
-        $encPath = UserDataPathService::appPath("sync/identity/{$userId}.enc");
+        $encPath = DeviceIdentityFile::path($userId);
 
         // Timestamped AND random: a second retirement inside the same second
         // must not land on the first, and every reader looks for the exact
@@ -222,7 +221,7 @@ final readonly class DeviceIdentityService
             $payload = json_encode($dto->toArray(), JSON_THROW_ON_ERROR);
 
             $this->sealedFile->writeSealed(
-                UserDataPathService::appPath("sync/identity/{$userId}.enc"),
+                DeviceIdentityFile::path($userId),
                 $payload,
                 $kek,
                 self::STAGING_PREFIX,

@@ -13,7 +13,7 @@ use Modules\Import\Public\Contracts\CapturesImportForSync;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
-use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Identity\DeviceSyncStandingReader;
 use Modules\Sync\Internal\OpLog\BackfillProgress;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
@@ -188,13 +188,18 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
     // the walk. A device that never enabled sync is left alone: it owes no
     // peer anything, and enabling sync captures everything it holds.
 
+    // "Never enabled sync" is the standing, not the key-file. Asked of the file
+    // alone, a restored database answered false and an import committed there
+    // owed nothing and reached no peer — the same premise, and the same silence,
+    // as the capture sink that dropped every write.
+
     // Both callers reach this from inside a catch, on the tail of a commit the
     // reader has already been told about, so a throw here would fail an import
     // that landed. The line is what is left when even the debt cannot be filed.
     private function oweABackfill(int $userId): void
     {
         try {
-            if ($this->container->make(DeviceIdentityLoader::class)->exists($userId)) {
+            if ($this->container->make(DeviceSyncStandingReader::class)->forUser($userId)->owesAPeerItsWrites()) {
                 $this->progress->open($userId);
             }
         } catch (Throwable $e) {
