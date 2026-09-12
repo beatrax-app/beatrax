@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Alleen recente tonen',
     'show_full' => 'Volledige historie tonen',
 
-    'empty_period' => 'Niets in deze periode.',
-
     'empty_recent_has_older' => 'Niets in de laatste 90 dagen. Je oudere transacties staan er nog.',
 
     'empty_history' => 'Nog geen transacties.',

@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Rodyti tik naujausias',
     'show_full' => 'Rodyti visą istoriją',
 
-    'empty_period' => 'Šiuo laikotarpiu nieko nėra.',
-
     'empty_recent_has_older' => 'Per pastarąsias 90 dienų nieko. Senesnės operacijos vis dar čia.',
 
     'empty_history' => 'Operacijų dar nėra.',

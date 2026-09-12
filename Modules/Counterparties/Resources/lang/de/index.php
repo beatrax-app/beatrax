@@ -9,8 +9,6 @@ return [
     'entities' => ':count Einheit|:count Einheiten',
     'need_identification' => ':count zu identifizieren',
 
-    'search_placeholder' => 'Nach Name, Alias oder IBAN suchen…',
-    'search_aria' => 'Zahlungspartner suchen',
     'sort' => 'Sortierung: Summe 12 Mon. ↓',
 
     'view_mode' => 'Ansichtsmodus',

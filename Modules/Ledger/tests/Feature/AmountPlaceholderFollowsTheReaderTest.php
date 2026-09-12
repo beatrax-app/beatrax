@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Internal\Http\Livewire\ReconcilePage;
+use Modules\Ledger\Models\Account;
 
 // An amount box shows the shape of the number it wants. Two of them spelled
 // that shape out as "0,00", so an English install offered a comma placeholder
@@ -18,6 +19,17 @@ beforeEach(function (): void {
         'default_currency_view' => 'eur_only',
     ]);
     $this->actingAs($this->user);
+
+    // The box whose shape this measures is inside the reconcile form, and the
+    // form renders only once there is an account to hold a statement against.
+    Account::create([
+        'user_id' => $this->user->id,
+        'name' => 'ASN Betalen',
+        'slug' => 'amount-placeholder-account',
+        'kind' => 'bank',
+        'iban' => 'NL57ASNB0000000044',
+        'default_currency' => 'EUR',
+    ]);
 });
 
 it('offers the English amount shape to an English reader on reconcile', function (): void {

@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Zobrazit jen nedávné',
     'show_full' => 'Zobrazit celou historii',
 
-    'empty_period' => 'Za toto období tu nic není.',
-
     'empty_recent_has_older' => 'Za posledních 90 dní nic. Vaše starší transakce tu stále jsou.',
 
     'empty_history' => 'Zatím žádné transakce.',

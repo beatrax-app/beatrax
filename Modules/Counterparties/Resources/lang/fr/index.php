@@ -9,8 +9,6 @@ return [
     'entities' => ':count entité|:count entités',
     'need_identification' => ':count à identifier',
 
-    'search_placeholder' => 'Rechercher par nom, alias ou IBAN…',
-    'search_aria' => 'Rechercher des tiers',
     'sort' => 'Tri : Total 12 mois ↓',
 
     'view_mode' => 'Mode d\'affichage',

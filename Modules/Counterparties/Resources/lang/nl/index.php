@@ -9,8 +9,6 @@ return [
     'entities' => ':count entiteit|:count entiteiten',
     'need_identification' => ':count te identificeren',
 
-    'search_placeholder' => 'Zoek op naam, alias of IBAN…',
-    'search_aria' => 'Tegenpartijen zoeken',
     'sort' => 'Sorteren: Totaal 12 mnd ↓',
 
     'view_mode' => 'Weergavemodus',

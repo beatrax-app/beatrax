@@ -9,8 +9,6 @@ return [
     'entities' => ':count varlık',
     'need_identification' => ':count tanımlanmayı bekliyor',
 
-    'search_placeholder' => "Ada, takma ada veya IBAN'a göre ara…",
-    'search_aria' => 'Karşı taraflarda ara',
     'sort' => 'Sıralama: 12 aylık toplam ↓',
 
     'view_mode' => 'Görünüm modu',

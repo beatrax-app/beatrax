@@ -303,7 +303,12 @@ keeps the row count deterministic on every run date.
 reconciliation surface (there is no account-detail page in the app, so
 this is its own top-level route rather than a tab on one). The user
 picks an account, confirms/edits a statement balance + date, and
-watches the cleared balance converge on that target. A non-zero
+watches the cleared balance converge on that target. An install with no
+account yet has nothing for any of those controls to act on, so the page
+renders `ledger::account_currency.no_accounts` in place of the whole
+form — it used to open on a select holding only its placeholder, a date
+picker and a balance field nobody could act on, and a Check button that
+reported a difference computed from nothing. A non-zero
 difference is flagged read-only — this flow never fabricates a
 balancing transaction. Confirming a matched reconcile calls
 `ReconciliationWriter::completeReconcile()`, which bulk-locks the
@@ -554,6 +559,16 @@ value never silently drop between pages. `loadMore()` reads the next
 cursor from the server-side Livewire snapshot rather than accepting it
 as a browser-supplied parameter, since the snapshot is encrypted /
 HMAC-verified by Livewire and cannot be tampered with by the browser.
+
+An empty page has two cases, not three: the recent window came back
+empty while older rows exist (`empty_recent_has_older`, beside the
+toggle that widens the query), or the ledger holds nothing at all
+(`empty_history`). Neither a filter nor a query reaches this arm —
+`isSearchActive()` routes both to the search path and its own
+no-results state — so the third `empty_period` arm that used to sit
+here asked for `hasAnyTransaction && ! fullHistory`, which is exactly
+what the first arm asks, and no reader ever read it. A reader with
+nothing at all was shown "Nothing here for this period."
 
 `$currency` is URL-bound and falls back to the user's
 `default_currency_view` preference when no `?currency=` parameter is

@@ -9,8 +9,6 @@ return [
     'entities' => ':count суб’єкт|:count суб’єкти|:count суб’єктів',
     'need_identification' => 'Без ідентифікації: :count',
 
-    'search_placeholder' => 'Пошук за назвою, псевдонімом або IBAN…',
-    'search_aria' => 'Пошук контрагентів',
     'sort' => 'Сортування: сума за 12 міс. ↓',
 
     'view_mode' => 'Режим перегляду',

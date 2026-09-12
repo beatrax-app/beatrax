@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Nur aktuelle anzeigen',
     'show_full' => 'Gesamte Historie anzeigen',
 
-    'empty_period' => 'Nichts in diesem Zeitraum.',
-
     'empty_recent_has_older' => 'Nichts in den letzten 90 Tagen. Ihre älteren Buchungen sind weiterhin da.',
 
     'empty_history' => 'Noch keine Buchungen.',

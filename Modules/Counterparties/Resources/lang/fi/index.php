@@ -9,8 +9,6 @@ return [
     'entities' => ':count kohde|:count kohdetta',
     'need_identification' => ':count vaatii tunnistamista',
 
-    'search_placeholder' => 'Hae nimellä, aliaksella tai IBANilla…',
-    'search_aria' => 'Hae vastapuolia',
     'sort' => 'Järjestys: 12 kk yhteensä ↓',
 
     'view_mode' => 'Näkymätila',

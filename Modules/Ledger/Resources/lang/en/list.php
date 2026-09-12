@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Show recent only',
     'show_full' => 'Show full history',
 
-    'empty_period' => 'Nothing here for this period.',
-
     'empty_recent_has_older' => 'Nothing in the last 90 days. Your older transactions are still here.',
 
     'empty_history' => 'No transactions yet.',

@@ -106,16 +106,17 @@
         {{-- No-results state --}}
         @include('ledger::livewire.partials.search-no-results')
     @elseif (! $isSearchMode && count($page->rows) === 0)
-        {{-- An empty recent window and an empty ledger read the same on screen,
-             and the only way out is a header button nothing connects to it. --}}
+        {{-- Only the unfiltered list reaches here, so an empty page means the
+             window is empty, not that a filter excluded everything: a query or
+             a chip routes to the search path and its own no-results state.
+             There are two cases, and the third arm that used to sit here asked
+             for the same thing the first one does, so nothing ever read it. --}}
         <div class="flex flex-col items-center gap-4 rounded-lg border border-slate-200 bg-white px-6 py-12 text-center dark:bg-slate-950 dark:border-slate-700">
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 @if ($hasOlderTransactions)
                     {{ Lang::get('ledger::list.empty_recent_has_older') }}
-                @elseif ($fullHistory)
-                    {{ Lang::get('ledger::list.empty_history') }}
                 @else
-                    {{ Lang::get('ledger::list.empty_period') }}
+                    {{ Lang::get('ledger::list.empty_history') }}
                 @endif
             </p>
             @if ($hasOlderTransactions)

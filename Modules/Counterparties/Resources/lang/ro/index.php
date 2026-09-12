@@ -9,8 +9,6 @@ return [
     'entities' => ':count entitate|:count entități|:count de entități',
     'need_identification' => ':count necesită identificare',
 
-    'search_placeholder' => 'Caută după nume, alias sau IBAN…',
-    'search_aria' => 'Caută contrapărți',
     'sort' => 'Sortare: Total 12 luni ↓',
 
     'view_mode' => 'Mod de vizualizare',

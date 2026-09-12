@@ -9,8 +9,6 @@ return [
     'entities' => ':count subjektas|:count subjektai|:count subjektų',
     'need_identification' => 'Reikia atpažinti: :count',
 
-    'search_placeholder' => 'Ieškoti pagal pavadinimą, alternatyvų pavadinimą ar IBAN…',
-    'search_aria' => 'Ieškoti kitų šalių',
     'sort' => 'Rikiuoti: 12 mėn. suma ↓',
 
     'view_mode' => 'Rodinio režimas',

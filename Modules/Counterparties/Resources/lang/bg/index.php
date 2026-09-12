@@ -9,8 +9,6 @@ return [
     'entities' => ':count обект|:count обекта',
     'need_identification' => ':count изискват разпознаване',
 
-    'search_placeholder' => 'Търси по име, псевдоним или IBAN…',
-    'search_aria' => 'Търсене на контрагенти',
     'sort' => 'Подредба: Общо за 12 мес. ↓',
 
     'view_mode' => 'Изглед',
