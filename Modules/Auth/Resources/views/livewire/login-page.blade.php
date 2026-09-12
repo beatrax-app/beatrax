@@ -23,7 +23,6 @@
                 :label="Lang::get('auth::login.username')"
                 wire:model="username"
                 autocomplete="username"
-                autofocus
             />
 
             <x-core::form-field

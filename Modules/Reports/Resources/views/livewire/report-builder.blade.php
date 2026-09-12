@@ -239,7 +239,11 @@
                     <button type="button" wire:click="openSaveForm" @disabled(! $hasResults) class="pill-btn-primary">{{ $loadedReportId !== null ? Lang::get('reports::builder.actions.update_report') : Lang::get('reports::builder.actions.save_report') }}</button>
                 @else
                     <form wire:submit.prevent="save" class="flex items-center gap-2">
-                        <input type="text" wire:model="saveName" placeholder="{{ Lang::get('reports::builder.actions.report_name') }}" class="srch-amount-input" style="min-width: 200px;" aria-label="{{ Lang::get('reports::builder.actions.report_name') }}" autofocus />
+                        {{-- Focused from x-init, not from autofocus: this box is
+                             morphed in by the button above, and a document stops
+                             accepting autofocus candidates as soon as a click has
+                             moved focus off its body. --}}
+                        <input type="text" wire:model="saveName" placeholder="{{ Lang::get('reports::builder.actions.report_name') }}" class="srch-amount-input" style="min-width: 200px;" aria-label="{{ Lang::get('reports::builder.actions.report_name') }}" x-data x-init="$nextTick(() => $el.focus())" />
                         <button type="submit" class="pill-btn-primary">{{ $loadedReportId !== null ? Lang::get('reports::builder.actions.update') : Lang::get('reports::builder.actions.save') }}</button>
                         <button type="button" wire:click="cancelSaveForm" class="pill-btn-ghost">{{ Lang::get('reports::builder.actions.cancel') }}</button>
                     </form>
