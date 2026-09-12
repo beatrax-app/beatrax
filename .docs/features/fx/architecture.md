@@ -289,6 +289,18 @@ narrows it with `only()` to the buckets the figure was actually built
 from, so six cards sharing one batched lookup do not each disclose the
 other five's pairs.
 
+**A `RateSet` holds legs into ONE target currency, and that bounds what any
+disclosure can promise.** `targetCurrency` is a scalar on the type and every
+leg's `to` is that currency, so the set answers "what did this figure convert
+FROM, into the one currency it is denominated in". A figure converted in **two
+hops** therefore has no single set that describes it, and no disclosure built on
+one can name both hops: the second hop's set is the only one it can carry. This
+is a property of the type rather than a gap in a particular surface — it binds
+every figure whose legs do not all share a target, including ones not yet
+written. Naming both hops would need a disclosure spanning two targets, which
+this seam has no type for. The surfaces it reaches today are named under
+[what deliberately does not go through it](#what-deliberately-does-not-go-through-it).
+
 `ConvertedTotal::disclosure()` projects that into a
 `ConversionDisclosure`: the rates plus the codes no rate reached, with
 the **oldest** leg answering for the whole — the same rule a multi-leg
@@ -397,15 +409,17 @@ both sentences would otherwise be on screen saying it differently.
 is the mode that exists to leave every figure in the currency it was
 settled in — so only its `'base'` branch meets the seam.
 
-A roll-up converted in TWO hops discloses only the hop it made itself. The
-all-accounts forecast aggregate and the calendar balance line both add curves
-already denominated in their accounts' own currencies, each of which converted
-its own contributions at a rate the run stored; the disclosure beside those
-figures names the account-to-reader hop and not the contribution-to-account
-one. A `RateSet` holds legs into ONE target by construction, so naming both
-would need a disclosure spanning two targets, which this seam has no type for.
-A converted figure whose legs all share a target — which is every other
-surface — is unaffected.
+A roll-up converted in TWO hops discloses only the hop it made itself, because
+[a rate set holds legs into one target](#a-converted-figure-carries-the-rate-that-made-it).
+Two surfaces are in that shape today. The all-accounts forecast aggregate and
+the calendar balance line both add curves already denominated in their accounts'
+own currencies, each of which converted its own contributions at a rate the run
+stored; the disclosure beside those figures names the account-to-reader hop and
+not the contribution-to-account one. A converted figure whose legs all share a
+target — which is every other surface — is unaffected. A third surface that
+starts summing already-converted figures inherits the same limit without
+anything warning it, which is why the limit is written on the type above rather
+than only here.
 
 `FXServiceProvider::register()` tags and registers the three rate
 providers as singletons, binds `RateProviderRegistry` sorted by
