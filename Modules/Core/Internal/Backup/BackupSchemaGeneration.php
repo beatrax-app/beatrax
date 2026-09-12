@@ -77,36 +77,58 @@ final readonly class BackupSchemaGeneration
      */
     private function recordedIn(string $snapshotPath): array
     {
-        try {
-            $pdo = new PDO('sqlite:'.$snapshotPath, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-        } catch (PDOException $e) {
-            throw new BackupIoException('Cannot open the backup to read the schema it was taken at: '.$snapshotPath, 0, $e);
-        }
+        $pdo = $this->open($snapshotPath);
 
         try {
-            $table = $pdo->prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'migrations'");
-            if ($table === false) {
-                return [];
-            }
-            $table->execute();
-            if ($table->fetchColumn() === false) {
-                return [];
-            }
-
-            $rows = $pdo->query('SELECT migration FROM migrations');
-            if ($rows === false) {
-                return [];
-            }
-
-            /** @var list<string> $names */
-            $names = $rows->fetchAll(PDO::FETCH_COLUMN);
-
-            return $names;
+            return $this->namesIn($pdo);
         } catch (Throwable) {
             // A file whose migrations table will not read is a file this cannot
             // judge. The integrity check ahead of it is what refuses a damaged
-            // database; answering "no claim" here leaves that the one refusal.
+            // database; answering "no claim" leaves that the one refusal rather
+            // than adding a second, vaguer one beside it.
             return [];
         }
+    }
+
+    /**
+     * @throws BackupIoException
+     */
+    private function open(string $snapshotPath): PDO
+    {
+        try {
+            return new PDO('sqlite:'.$snapshotPath, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        } catch (PDOException $e) {
+            throw new BackupIoException('Cannot open the backup to read the schema it was taken at: '.$snapshotPath, 0, $e);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function namesIn(PDO $pdo): array
+    {
+        if (! $this->tracksMigrations($pdo)) {
+            return [];
+        }
+
+        $rows = $pdo->query('SELECT migration FROM migrations');
+
+        /** @var list<string> $names */
+        $names = $rows === false ? [] : $rows->fetchAll(PDO::FETCH_COLUMN);
+
+        return $names;
+    }
+
+    private function tracksMigrations(PDO $pdo): bool
+    {
+        $table = $pdo->prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'migrations'");
+
+        if ($table === false) {
+            return false;
+        }
+
+        $table->execute();
+
+        return $table->fetchColumn() !== false;
     }
 }

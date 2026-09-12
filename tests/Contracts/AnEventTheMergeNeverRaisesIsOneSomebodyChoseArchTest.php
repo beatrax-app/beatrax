@@ -167,6 +167,10 @@ const AN_EVENT_THE_MERGE_NEVER_RAISES = [
         'reason' => 'MerchantMemoryWriter counts an occurrence, and merchants + merchant_memories both travel — re-running it on arrival would count the peer\'s categorization twice',
         'proves' => ['Modules/Sync/Internal/Config/MergeRulesRegistry.php', "/'merchant_memories' => \\[/"],
     ],
+    'Modules\Core\Public\Events\DatabaseRestored' => [
+        'why' => 'local',
+        'reason' => 'a restore replaced the rows on THIS device, and the repairs it announces are per-install: a credential encrypted under an application key this machine does not hold is not a fact a peer shares',
+    ],
     'Modules\Core\Public\Events\UpdateInstallRequested' => [
         'why' => 'local',
         'reason' => 'the reader asked THIS device to install a build',

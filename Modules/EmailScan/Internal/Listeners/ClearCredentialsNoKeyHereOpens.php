@@ -58,10 +58,8 @@ final readonly class ClearCredentialsNoKeyHereOpens
 
     // Read past the model, so the decrypt is a call this asked for rather than
     // the side effect of touching a cast attribute — which is the same test
-    // written as an expression that does nothing.
-    //
-    // Every row, because a restore replaces every account's rows at once and
-    // the reader signed in is not necessarily the one whose mailbox this is.
+    // written as an expression that does nothing. Every row, because a restore
+    // replaces every account's at once and the reader here may own none.
     /**
      * @return list<array{0: int, 1: string}>
      */
@@ -90,23 +88,23 @@ final readonly class ClearCredentialsNoKeyHereOpens
     }
 
     // A null token blob is a row mid-authorisation, not a row this install
-    // cannot read, and clearing one would disconnect a mailbox nothing is wrong
-    // with.
+    // cannot read, and clearing one would disconnect a working mailbox.
     private function opensHere(mixed $value): bool
     {
         if ($value === null || $value === '') {
             return true;
         }
 
-        if (! is_string($value)) {
-            return false;
-        }
+        return is_string($value) && $this->decrypts($value);
+    }
 
+    // `false` for unserialize, which is exactly what the cast does in
+    // HasAttributes::fromEncryptedString(). Decrypting the other way round
+    // opens the payload and then fails to unserialize it, which is a different
+    // exception about a row that is perfectly readable.
+    private function decrypts(string $value): bool
+    {
         try {
-            // `false` for unserialize, which is exactly what the cast does in
-            // HasAttributes::fromEncryptedString(). Decrypting the other way
-            // round opens the payload and then fails to unserialize it, which
-            // is a different exception about a row that is perfectly readable.
             $this->encrypter->decrypt($value, false);
 
             return true;
