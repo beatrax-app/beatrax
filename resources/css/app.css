@@ -529,6 +529,15 @@ td.date,
     }
 
     .side-badge {
+        /* The rail's labels wrap where a locale spells them long: nl's
+         * "Ongebruikelijke afschrijvingen" takes two lines where en's
+         * "Unusual charges" takes one. The badge is a flex child, so a
+         * wrapped label shrinks it under its own digits and `37` breaks
+         * across two lines inside an 18px-high pill, spilling onto the
+         * row below. Measured on a Galaxy A51 in nl. Neither the shrink
+         * nor the break is a width the rail chose, so both are refused. */
+        flex-shrink: 0;
+        white-space: nowrap;
         margin-left: auto;
         display: inline-flex;
         align-items: center;
