@@ -287,12 +287,13 @@ final readonly class GdkRotationService
     {
         $ids = [];
 
-        foreach ($this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 0)
-            ->whereNotNull('confirmed_at')
-            ->whereNull('epochs_delivered_at')
-            ->pluck('id') as $id) {
+        foreach ($this->deviceRegistry->stillADevice(
+            $this->db->connection()->table('device_registry')
+                ->where('user_id', $userId)
+                ->where('is_self', 0)
+                ->whereNotNull('confirmed_at')
+                ->whereNull('epochs_delivered_at')
+        )->pluck('id') as $id) {
             if (is_numeric($id)) {
                 $ids[] = (int) $id;
             }

@@ -125,6 +125,13 @@ that a peer already holds these rows, so the backfill that repairs a never-synce
 repairs nothing here — a create naming a row the receiver holds fills only the columns it
 never received, and an edit or a delete made in that window is gone for good.
 
+The requirement that governs this state is `E2-R24`, and it was written alongside the fix
+rather than before it. The commit that shipped the fix cites `E1-R1` — *every local mutation
+MUST be captured* — because the governance gate refuses an identifier that does not yet exist
+on `spec@main`, and `E2-R24`'s own page had not merged when that trailer was written. `E1-R1`
+is the half the dropped writes violated; `E2-R24` is the requirement, and everything after it
+here cites that.
+
 `DeviceSyncStanding` is the question asked in one place now, and it has four answers rather
 than two:
 
@@ -153,9 +160,29 @@ The retirement sets `is_self` to `0` on the restored row and touches nothing els
   confirmed-only. Clearing it would quarantine the whole restored ledger the next time
   anybody rebuilt, silently and much later.
 
-The old machine therefore stays in the device list as a device that cannot connect, which is
-what it is — and removing it there is the ordinary revocation, which is the right thing to do
-with a device that was lost.
+That leaves a row that is confirmed and is not a device, and the two readings need separating
+by something other than `confirmed_at`. `self_retired_at` is that something: a stamp written
+by the retirement and read by `stillADevice()`, which the three readers the demotion put the
+row in front of pass their query through.
+
+| Reader | Retired row | Why |
+| --- | --- | --- |
+| `confirmedDevices()` | excluded | the device list; the machine is gone |
+| `otherDeviceNames()` | excluded | nine callers meaning "my peers" — the delete-account warning, the phone's `hasPeers`, the LAN address pick, the manual-address field, the status surface, notification preferences |
+| `peersOwedEpochs()` | excluded | it would otherwise be fanned a wrap into a mailbox nothing ever collects |
+| `deviceKeys()`, `signatureVerificationKeys()`, `retainedDeviceKeys()`, `authorIdsWithAKeyOnFile()` | **kept** | this is the history-verification set, and it is the whole reason `confirmed_at` stays |
+
+The line is drawn at what the demotion changed and nothing else. `is_self` was the filter on
+all three excluded readers, so taking it off is what put the row in front of them; the key maps
+never filtered on `is_self` and so read exactly as they did before the repair existed. In
+particular `deviceX25519Keys()` still names the retired machine, so its Noise static key still
+admits a handshake — true before any of this and unchanged by it. Whether a restore should also
+shut the transport to the machine it was restored from is a separate question, and a real one.
+
+The column is device-local for free: `device_registry` is declared uncovered in
+`SyncCoverageIsDeclaredTest` — *trust is established by the ceremony, not by an op that arrives
+claiming it* — so nothing on this table syncs, and a marker meaning "this is the machine THIS
+install was restored from" could not be right on a peer anyway.
 
 `retireSelfRegistration()` refuses outright where a key-file exists. A demotion cannot be
 undone without the old `device_id`, and the one state it is for is the state where nothing on

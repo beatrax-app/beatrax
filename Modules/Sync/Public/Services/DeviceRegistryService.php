@@ -233,13 +233,27 @@ final readonly class DeviceRegistryService
      */
     public function confirmedDevices(int $userId): array
     {
-        return $this->db->connection()
-            ->table('device_registry')
-            ->where('user_id', $userId)
-            ->whereNotNull('confirmed_at')
+        return $this->stillADevice(
+            $this->db->connection()
+                ->table('device_registry')
+                ->where('user_id', $userId)
+                ->whereNotNull('confirmed_at')
+        )
             ->orderBy('paired_at')
             ->get()
             ->all();
+    }
+
+    // A row retired out of the self role is kept confirmed on purpose, because
+    // that is what a rebuild verifies the history it signed against — so every
+    // reader asking "who are my devices" has to say so itself. The three that
+    // do are the three the demotion put it in front of.
+    /**
+     * @link ../../../../.docs/features/sync/device-identity-key-files.md#what-the-repair-retires-and-what-it-must-not
+     */
+    public function stillADevice(Builder $query): Builder
+    {
+        return $query->whereNull('self_retired_at');
     }
 
     // Used by the Noise handshake authenticator: the Noise static key is the
@@ -319,11 +333,13 @@ final readonly class DeviceRegistryService
     public function otherDeviceNames(int $userId): array
     {
         /** @var array<string, string> $names */
-        $names = $this->db->connection()
-            ->table('device_registry')
-            ->where('user_id', $userId)
-            ->whereNotNull('confirmed_at')
-            ->where('is_self', 0)
+        $names = $this->stillADevice(
+            $this->db->connection()
+                ->table('device_registry')
+                ->where('user_id', $userId)
+                ->whereNotNull('confirmed_at')
+                ->where('is_self', 0)
+        )
             ->pluck('name', 'device_id')
             ->all();
 
