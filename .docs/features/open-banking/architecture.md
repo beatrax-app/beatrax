@@ -183,7 +183,11 @@ adapter's choices byte for byte:
   separately (outside the fingerprint tuple).
 - Amounts are derived via `Brick\Money`, never `(float)`, parsed at the
   scale the row's **own** currency declares rather than a fixed hundred, and
-  explicitly negated when `credit_debit_indicator === 'DBIT'`. A yen has no
+  signed off `credit_debit_indicator` alone — `-abs()` for `DBIT` and
+  `abs()` for `CRDT`, both branches, because the figure arrives as the
+  aggregator's string and `MoneyInput::tryToMinor()` honours a leading
+  minus. Negating only where the parse came back positive left a feed that
+  signs its own figures booking a payment received as one made. A yen has no
   minor unit: parsed at the hundred, every JPY row lands a hundred times the
   figure the bank sent, and a fractional yen the currency cannot express is
   accepted instead of skipped. `MoneyInput::tryToMinor()` takes the currency

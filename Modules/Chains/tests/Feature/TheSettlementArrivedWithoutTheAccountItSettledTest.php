@@ -129,7 +129,22 @@ it('stops reporting the statement overdue the moment the statement closes', func
 
     expect($query->nextSettlementForUser($this->user))->toBeNull();
 
-    CardStatement::query()->where('user_id', $this->user->id)->update(['state' => 'open']);
+    // The control has to put the statement back the way it stood before the
+    // payment landed, not just poke its state column: the read behind this
+    // asks the open balance as well, because a statement with nothing left to
+    // settle is not the next settlement whatever its state says. Settling it
+    // spent the balance down to 0, and a statement reopened at 0 owes nothing
+    // — it would quote EUR 0.00 on a due date, which is the reading
+    // `open_balance_minor > 0` exists to refuse.
+    /** @var CardStatement $closed */
+    $closed = CardStatement::query()->where('user_id', $this->user->id)->sole();
+    expect($closed->open_balance_minor)->toBe(0);
+    expect($closed->total_amount_minor)->toBe(-84732);
+
+    CardStatement::query()->where('id', $closed->id)->update([
+        'state' => 'open',
+        'open_balance_minor' => -$closed->total_amount_minor,
+    ]);
 
     $due = $query->nextSettlementForUser($this->user);
 

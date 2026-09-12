@@ -236,8 +236,15 @@ summary. Three top-level methods:
   transfers) for the `/recurring` page; each section sorted DESC by
   absolute `monthly_equivalent_minor`.
 - `topByMonthlyEquivalent(User, $limit = 6)` — dashboard tile payload.
-- `monthlyEquivalentTotals(User)` — single SUM query partitioned by
-  direction, used by the page header net-flow summary.
+- `monthlyEquivalentTotals(User)` — one scan of the projectable series,
+  bucketed by direction and `latest_currency` and folded in PHP, used by
+  the page header net-flow summary. It re-derives each row's monthly
+  figure through `MonthlyEquivalent` exactly as `RecurringSeriesDtoMapper`
+  does for the rows the header sits above: `monthly_equivalent_minor`,
+  `latest_amount_minor` and `cadence` merge as three independent fields,
+  so `SUM(monthly_equivalent_minor)` printed a header the rows beneath it
+  disagreed with. The stored column stays an index hint — see
+  [a derived column is not a mergeable one](../sync/merge-registry-authoring.md#a-derived-column-is-not-a-mergeable-one).
 
 **Query budget:** `viewForUser` runs in at most three queries regardless of
 N — one approved-series scan with the chain_link join, one fallback-chain

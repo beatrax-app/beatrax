@@ -126,7 +126,11 @@ final readonly class CardStatementUpserter implements UpsertsCardStatements
                 'period_end' => $periodEnd,
                 'due_date' => $dueDate,
                 'total_amount_minor' => $closing,
-                'open_balance_minor' => abs($closing),
+                // Negated, never abs(): the closing balance carries the Af/Bij
+                // marker the ICS reader restored to it, and a card paid off past
+                // zero closes in CREDIT. abs() booked that credit as the same
+                // figure owed, which is the reading the reader fixed upstream.
+                'open_balance_minor' => -$closing,
                 'currency' => self::currencyOf($row),
                 'state' => CardStatementState::Open->value,
                 'created_at' => $now,

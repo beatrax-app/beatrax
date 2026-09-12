@@ -98,8 +98,9 @@ final readonly class BalanceAnchorResolver
         }
 
         /** @var stdClass $row */
-        // open_balance_minor is the amount owed, stored positive. A running
-        // balance is a position, so owing it makes it negative.
+        // open_balance_minor is the amount owed, and a card paid off past zero
+        // owes a negative one. A running balance is a position, so the two
+        // signs are opposites either way round.
         $openBalance = self::toInt($row->open_balance_minor);
 
         $rawPeriodEnd = self::toString($row->period_end ?? null);

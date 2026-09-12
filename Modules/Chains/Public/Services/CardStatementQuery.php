@@ -91,6 +91,11 @@ final readonly class CardStatementQuery
             ->where('card_statements.user_id', $user->id)
             ->where('accounts.kind', AccountKind::IcsCard->value)
             ->whereIn('card_statements.state', [CardStatementState::Open->value, CardStatementState::PartiallySettled->value])
+            // A statement with nothing left to settle is not the next
+            // settlement: a card closing in credit owes the reader rather than
+            // the other way round, and quoted from the state alone it drew a
+            // due date and an overdue banner over a payment nobody will make.
+            ->where('card_statements.open_balance_minor', '>', 0)
             ->orderByDesc('card_statements.period_end')
             ->orderByDesc('card_statements.id')
             ->select(

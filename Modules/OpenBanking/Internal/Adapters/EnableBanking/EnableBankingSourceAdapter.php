@@ -202,9 +202,11 @@ final readonly class EnableBankingSourceAdapter implements RemoteSourceAdapter
 
         $amountMinor = $money->toMinor();
 
-        if ($isDebit && $amountMinor > 0) {
-            $amountMinor = -$amountMinor;
-        }
+        // The indicator carries the sign and the amount is meant to be a
+        // magnitude -- but it arrives as a provider's string and tryToMinor()
+        // honours a leading '-', so a feed that signs its own figures reached
+        // the credit branch with a debit's sign still on it.
+        $amountMinor = $isDebit ? -abs($amountMinor) : abs($amountMinor);
 
         $counterpartyName = $isDebit ? $row->creditorName : $row->debtorName;
         $counterpartyIban = $isDebit ? $row->creditorIban : $row->debtorIban;

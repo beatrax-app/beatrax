@@ -18,7 +18,7 @@ return new class extends ModuleMigration
             $table->dateTime('period_start');
             $table->dateTime('period_end');
             $table->bigInteger('total_amount_minor');  // negative — outstanding
-            $table->bigInteger('open_balance_minor');  // positive — remaining to settle
+            $table->bigInteger('open_balance_minor');  // what is left to settle; negative where the card closed in credit
             $table->string('state', 24);
             $table->timestamps();
 

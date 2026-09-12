@@ -21,7 +21,7 @@ One row models one statement period on one ICS-kind account.
 | Column | Meaning |
 |---|---|
 | `total_amount_minor` | The statement total, **negative** — money owed. Carries `statement_summaries.closing_balance_minor`'s sign verbatim. |
-| `open_balance_minor` | What is still to settle, **positive**. Starts at `abs(total_amount_minor)`. |
+| `open_balance_minor` | What is still to settle. Starts at `-total_amount_minor` — the statement total negated, so an ordinary statement opens positive and one that closed in CREDIT opens negative, the sign the state machine already reads as overpaid. `abs()` here booked a card paid off past zero as owing the credit it holds. |
 | `currency` | What the two amounts above count. Taken from `statement_summaries.closing_balance_currency`; `EUR` when the summary states none, which is every row the ICS reader wrote. |
 | `state` | `open`, `partially_settled`, `settled`, `overpaid`. |
 | `period_start` / `period_end` | The statement window: the min and max `posted_at` of the rows the statement bills, copied off the summary the ICS reader wrote. Both are required. |
@@ -45,6 +45,16 @@ lifecycle.
 point: a statement whose state has since moved to `settled` is never
 reset back to `open` by a re-import. Rows missing either period
 boundary are skipped, because the constraint needs both.
+
+The closing balance is copied verbatim and negated into the open
+balance, never taken as a magnitude. The ICS reader signs each summary
+column by the `Af`/`Bij` marker printed beside it, so a card paid off
+past zero closes in credit and `statement_summaries` says so; `abs()`
+turned that credit back into the same figure owed one writer later.
+`2026_09_12_000001_a_card_statement_that_closed_in_credit_was_promoted_as_a_debt`
+repairs the rows already written that way — the ones still `open` whose
+open balance is a positive total nothing has settled against — and
+writes no state, because the lifecycle has one mutator.
 
 The candidate summaries are walked with `chunkById` in
 `statement_summaries.id` order and promoted a chunk at a time, one
@@ -187,7 +197,11 @@ waited for a settlement no pass would ever match.
 Every reader of that figure goes through it. `nextSettlementForUser()`
 and `forecastTileForUser()` are one row read and one amount, differing
 only in that the first also names the funder account and answers null
-where there is none. `ThisPeriodAtAGlanceQuery::nextIcsSettlement()`
+where there is none. The row they read is narrowed to
+`open_balance_minor > 0` as well as to the two live states: a statement
+with nothing left to settle is not the next settlement, and quoted from
+the state alone a credit-closing statement drew a due date and an
+overdue banner over a payment nobody will make. `ThisPeriodAtAGlanceQuery::nextIcsSettlement()`
 composed the tile from a query of its own and deducted nothing, so the
 position tile and the forecast highlights quoted one statement at two
 amounts on the same due date; it now calls `forecastTileForUser()`. The
