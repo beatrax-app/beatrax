@@ -188,11 +188,14 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         // so nothing here narrowed it. The adapters below this point read the
         // ledger, and a QueryException's message is the statement with its
         // bindings -- which is this receipt's own amount and counterparty.
+
+        // `filename`, not `path`: a bank names a statement for the account it
+        // covers, and that key is the one the shipped channel redacts by name.
         $logger->warning(
             'ScanInboxDropFolderJob: per-file processing failed.',
             [
                 'user_id' => $this->userId,
-                'path' => $path,
+                'filename' => basename($path),
                 ...SafeExceptionContext::describe($e),
                 ...SafeExceptionContext::refusedCell($e),
             ],
@@ -210,7 +213,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
                 'ScanInboxDropFolderJob: failed to quarantine failed file.',
                 [
                     'user_id' => $this->userId,
-                    'path' => $path,
+                    'filename' => basename($path),
                     ...SafeExceptionContext::describe($inner),
                 ],
             );

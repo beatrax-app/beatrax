@@ -6,6 +6,7 @@ namespace Modules\Desktop\Internal;
 
 use Closure;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\AppWindow;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
@@ -99,7 +100,7 @@ final readonly class NativeAppServiceProvider implements ProvidesPhpIni
         } catch (Throwable $e) {
             $this->logger->error(
                 "NativePHP boot: {$step} failed; the window still opens so the setup screen can recover.",
-                ['exception' => $e],
+                SafeExceptionContext::describe($e),
             );
         }
     }
@@ -117,7 +118,7 @@ final readonly class NativeAppServiceProvider implements ProvidesPhpIni
             } catch (Throwable $e) {
                 $this->logger->warning(
                     "NativePHP boot: view:cache attempt {$attempt} failed",
-                    ['exception' => $e],
+                    SafeExceptionContext::describe($e),
                 );
             }
         }

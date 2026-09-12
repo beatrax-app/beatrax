@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Logging;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Core\Public\Support\SafeTrace;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\DevMode\Internal\Support\RedactedText;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
+use Throwable;
 
 final readonly class RedactSecretsProcessor implements ProcessorInterface
 {
@@ -57,10 +60,17 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
     // shorter still, so requiring 20 in every segment let real tokens through.
     private const string JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/';
 
+    // How far down a `previous` chain the replacement below follows. Deep
+    // enough for the wrap-and-rethrow shapes this tree has, bounded because
+    // the chain is whatever the throwing code built.
+    private const int MAX_PREVIOUS_DEPTH = 3;
+
     // Nullable so the Bearer + JWT branches can be exercised without a
-    // container; the binding always passes the real singleton.
+    // container; the binding always passes the real singleton. The base path
+    // is the prefix SafeTrace strips off each frame; blank means strip none.
     public function __construct(
         private ?OAuthScrubSet $scrubSet = null,
+        private string $basePath = '',
     ) {}
 
     public function __invoke(LogRecord $record): LogRecord
@@ -88,6 +98,8 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
                 $out[$key] = $this->scrubArray($value);
             } elseif ($this->isRedactedKey($key)) {
                 $out[$key] = self::REDACTED;
+            } elseif ($value instanceof Throwable) {
+                $out[$key] = $this->describeThrowable($value, 0);
             } elseif (is_string($value)) {
                 $out[$key] = $this->scrub($value);
             } else {
@@ -96,6 +108,33 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
         }
 
         return $out;
+    }
+
+    // Every rule above reads a string or walks an array, so a throwable left
+    // here untouched and the FORMATTER rendered it: the message, the raw
+    // trace, and every `previous` beneath it. A QueryException's message is
+    // the statement with its bindings, so this one is replaced, not scrubbed.
+    /**
+     * @return array<string, mixed>
+     */
+    private function describeThrowable(Throwable $e, int $depth): array
+    {
+        $described = SafeExceptionContext::describe($e) + [
+            'at' => $e->getFile().':'.$e->getLine(),
+            // Only a class that promised its message names no row keeps it.
+            'message' => SafeExceptionContext::reason($e),
+            // SafeTrace and not the formatter's getTraceAsString(): that one
+            // renders the first fifteen characters of every string argument.
+            'trace' => SafeTrace::cap($e, $this->basePath),
+        ];
+
+        $previous = $e->getPrevious();
+
+        if ($previous instanceof Throwable && $depth < self::MAX_PREVIOUS_DEPTH) {
+            $described['previous'] = $this->describeThrowable($previous, $depth + 1);
+        }
+
+        return $described;
     }
 
     // OAuth scrub-set runs first (so JWT-shaped real tokens are

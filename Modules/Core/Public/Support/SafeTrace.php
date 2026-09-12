@@ -26,8 +26,13 @@ final class SafeTrace
 
         $frames[] = sprintf('#%d {main}', count($frames));
 
+        $joined = implode("\n", $frames);
+
+        // An empty base path is "strip nothing", not "strip every slash":
+        // rtrim('', '/').'/' is '/', and replacing that deletes the separator
+        // out of every frame path, leaving a trace nobody can read.
         $rooted = rtrim($basePath, '/').'/';
-        $stripped = str_replace($rooted, '', implode("\n", $frames));
+        $stripped = $basePath === '' ? $joined : str_replace($rooted, '', $joined);
 
         $lines = explode("\n", $stripped);
         if (count($lines) <= $maxLines) {

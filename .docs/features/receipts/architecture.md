@@ -150,6 +150,14 @@ What the module explicitly does NOT do:
   one on iOS, where the shell announces a storage root that is not the
   durable store. `UserDataLocations` answers `appPath()` for this folder,
   so the deletion procedure and the export were walking the other tree.
+  Its two failure lines name the file as `basename($path)` under a
+  `filename` key, never the whole path: this is the one import surface
+  where the reader supplies the name themselves, and the shipped log
+  channel redacts that key and not `path`
+  ([why](../../conventions/invariants-from-shipped-failures.md#a-file-name-the-reader-chose)).
+  The `.error.txt` sidecar beside the quarantined file still keeps the
+  whole message — it is the reader's own diagnostic, inside their own
+  0700 data directory, and the only account of the refusal they get.
 - **Internal/Console/ScanInboxDropFolderCommand** — `receipts:scan-drop-folder`,
   the only dispatcher of that job. It reads the per-user
   `auto_import_drop_folder` opt-in itself, so a tick costs nothing for a

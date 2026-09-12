@@ -618,3 +618,317 @@ it('tells a throwable that arrived as a parameter, off an event, and through a l
     );
     expect($lineNumber['offenders'])->toBe(['3 — read off an event property']);
 });
+
+/**
+ * The fourth way a message reaches the log, and the one the walk above cannot
+ * see: the throwable itself, handed to the sink as an argument. Monolog's
+ * LineFormatter renders it -- class, message, `getTraceAsString()`, and every
+ * `previous` beneath it -- so `['exception' => $e]` publishes strictly more
+ * than `$e->getMessage()` while containing neither of those words.
+ *
+ * @return int the number of handovers of $var in $args
+ */
+function loggedExceptionRawThrowableReads(string $args, string $var): int
+{
+    // Blanked rather than skipped: a throwable inside a nested call is that
+    // call's argument, and what reaches the sink is the call's RETURN --
+    // SafeExceptionContext::describe($e) and QueryFailure::isUniqueViolation($e) alike.
+    // Only what survives at depth zero was handed over as the object.
+    $topLevel = loggedExceptionArgsAtTopLevel($args);
+
+    // A property read, a static fetch, a type test and a comparison all leave
+    // the throwable where it is. Anything else publishes the object.
+    $matches = PatternScan::all(
+        '/\$'.preg_quote($var, '/').'\b(?!\s*(?:\?->|->|::|instanceof\b|===|!==|==|!=|\?\?))/',
+        $topLevel,
+    );
+
+    return count($matches[0] ?? []);
+}
+
+/**
+ * $args with every parenthesised region blanked to spaces, and every quoted
+ * literal with it -- a `(` inside a message would otherwise move the depth.
+ * Offsets are preserved so nothing downstream has to re-measure.
+ */
+function loggedExceptionArgsAtTopLevel(string $args): string
+{
+    $out = '';
+    $depth = 0;
+    $length = strlen($args);
+    $cursor = 0;
+
+    while ($cursor < $length) {
+        $character = $args[$cursor];
+
+        if ($character === "'" || $character === '"') {
+            $closed = loggedExceptionSkipLiteral($args, $cursor, $character);
+            $out .= str_repeat(' ', $closed - $cursor);
+            $cursor = $closed;
+
+            continue;
+        }
+
+        $depth += match ($character) {
+            '(' => 1,
+            ')' => -1,
+            default => 0,
+        };
+
+        $out .= $depth > 0 || $character === ')' ? ' ' : $character;
+        $cursor++;
+    }
+
+    return $out;
+}
+
+/** The index one past the closing quote that matches the one at $start. */
+function loggedExceptionSkipLiteral(string $args, int $start, string $quote): int
+{
+    $cursor = $start + 1;
+    $length = strlen($args);
+
+    while ($cursor < $length) {
+        if ($args[$cursor] === '\\') {
+            $cursor += 2;
+
+            continue;
+        }
+
+        if ($args[$cursor] === $quote) {
+            return $cursor + 1;
+        }
+
+        $cursor++;
+    }
+
+    return $length;
+}
+
+/**
+ * The variable a catch binds, or null for `catch (Throwable)` with no name.
+ */
+function loggedExceptionCatchVariable(string $types): ?string
+{
+    $match = PatternScan::first('/\$(\w+)\s*$/', trim($types));
+
+    return $match === [] ? null : (string) $match[1];
+}
+
+/**
+ * The locals holding a throwable this file produced itself. A method declaring
+ * `?Throwable` hands one back with no catch and no parameter above it, which
+ * is how the patch runner's failure reached a log line the two region walks
+ * below could not see.
+ *
+ * @param  array<string, string>  $aliases
+ * @return list<string> the variable names assigned from such a call
+ */
+function loggedExceptionThrowableLocals(string $source, array $aliases): array
+{
+    $returners = [];
+
+    foreach (PatternScan::sets('/\bfunction\s+(\w+)\s*\([^()]*\)\s*:\s*([^\s{;]+)/', $source) as $match) {
+        if (loggedExceptionParamIsBroad((string) $match[2], $aliases)) {
+            $returners[] = preg_quote((string) $match[1], '/');
+        }
+    }
+
+    if ($returners === []) {
+        return [];
+    }
+
+    $assignments = PatternScan::sets(
+        '/\$(\w+)\s*=\s*(?:\$this->|self::|static::)(?:'.implode('|', $returners).')\s*\(/',
+        $source,
+    );
+
+    return array_values(array_unique(array_map(static fn (array $m): string => (string) $m[1], $assignments)));
+}
+
+/**
+ * @return array{sinks: int, offenders: list<string>}
+ */
+function loggedExceptionObjectOffendersIn(string $source, bool $isCommand): array
+{
+    $aliases = loggedExceptionAliases($source);
+    $sinks = 0;
+    $offenders = [];
+
+    foreach (loggedExceptionCatches($source) as $catch) {
+        $variable = loggedExceptionCatchVariable($catch['types']);
+
+        if ($variable === null || ! loggedExceptionCatchIsBroad($catch['types'], $aliases)) {
+            continue;
+        }
+
+        foreach (loggedExceptionSinks($catch['body'], $isCommand) as $sink) {
+            $sinks++;
+
+            if (loggedExceptionRawThrowableReads($sink['args'], $variable) === 0) {
+                continue;
+            }
+
+            $line = substr_count($source, "\n", 0, $catch['offset'] + $sink['offset']) + 1;
+            $offenders[] = $line.' — $'.$variable.' handed to the sink whole';
+        }
+    }
+
+    foreach (loggedExceptionBroadParamFunctions($source, $aliases) as $function) {
+        foreach (loggedExceptionSinks($function['body'], $isCommand) as $sink) {
+            $sinks++;
+
+            if (loggedExceptionRawThrowableReads($sink['args'], $function['param']) === 0) {
+                continue;
+            }
+
+            $line = substr_count($source, "\n", 0, $function['offset'] + $sink['offset']) + 1;
+            $offenders[] = $line.' — $'.$function['param'].' handed to the sink whole';
+        }
+    }
+
+    foreach (loggedExceptionThrowableLocals($source, $aliases) as $local) {
+        foreach (loggedExceptionSinks($source, $isCommand) as $sink) {
+            if (loggedExceptionRawThrowableReads($sink['args'], $local) === 0) {
+                continue;
+            }
+
+            $line = substr_count($source, "\n", 0, $sink['offset']) + 1;
+            $offenders[] = $line.' — $'.$local.' came back from a call, with no catch to narrow';
+        }
+    }
+
+    return ['sinks' => $sinks, 'offenders' => $offenders];
+}
+
+it('hands no throwable to a log call as a value', function (): void {
+    $files = loggedExceptionShippedFiles();
+
+    expect(count($files))->toBeGreaterThan(
+        3000,
+        'RepoTree returned '.count($files).' shipped PHP files, which is too few to have read the tree.'
+    );
+
+    $sinks = 0;
+    $offenders = [];
+
+    foreach ($files as $path) {
+        $file = str_replace(RepoTree::root().'/', '', $path);
+        $source = (string) file_get_contents($path);
+
+        if (! str_contains($source, 'catch') && ! str_contains($source, 'function')) {
+            continue;
+        }
+
+        $read = loggedExceptionObjectOffendersIn($source, str_ends_with($file, 'Command.php'));
+        $sinks += $read['sinks'];
+
+        foreach ($read['offenders'] as $offender) {
+            $offenders[] = $file.':'.$offender;
+        }
+    }
+
+    // Read before the verdict: this walk reuses the same balanced-brace
+    // readers, and one of them stopping early leaves an empty offender list
+    // that reads exactly like a clean tree.
+    expect($sinks)->toBeGreaterThan(
+        5,
+        'the walk found '.$sinks.' log calls in a region a throwable reaches, which is too few to be this tree.'
+    );
+
+    sort($offenders);
+
+    expect($offenders)->toBe(
+        [],
+        "A throwable put into a log call is rendered by Monolog's LineFormatter,\n".
+        "which the shipped channels build with includeStacktraces on. It writes\n".
+        "the class, getMessage(), getTraceAsString() and the whole previous\n".
+        "chain — so ['exception' => \$e] publishes the SQL and its bindings that\n".
+        "the rule above exists to withhold, plus the fifteen characters of every\n".
+        "string argument that SafeTrace was written to drop.\n".
+        "Spread SafeExceptionContext::describe(\$e) instead, and SafeTrace::cap()\n".
+        "where the frames are worth keeping. \$e::class, \$e->getCode() and\n".
+        "\$e instanceof X are reads, not handovers, and stay allowed.\n".
+        "Offenders:\n  ".implode("\n  ", $offenders),
+    );
+});
+
+// Driven against planted sources, because the tree hands over no throwable and
+// a reader that found nothing would report that in the same words.
+it('tells a throwable handed over whole from one that is only read', function (): void {
+    $handed = loggedExceptionObjectOffendersIn(
+        "<?php\ntry { \$this->run(); } catch (Throwable \$e) { Log::error('x', ['exception' => \$e]); }\n",
+        false,
+    );
+    expect($handed['sinks'])->toBe(1)
+        ->and($handed['offenders'])->toBe(['2 — $e handed to the sink whole']);
+
+    // The throwable as the message itself, which is the same handover.
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\ntry { \$this->run(); } catch (Throwable \$e) { Log::error(\$e); }\n",
+        false,
+    )['offenders'])->toBe(['2 — $e handed to the sink whole']);
+
+    // The parameter shape, which has no catch above it at all.
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\nfunction failed(?Throwable \$e): void { Log::error('x', ['exception' => \$e]); }\n",
+        false,
+    )['offenders'])->toBe(['2 — $e handed to the sink whole']);
+
+    // The four shapes that read the throwable rather than publishing it.
+    $read = "<?php\ntry { \$this->run(); } catch (Throwable \$e) { Log::error('x', ["
+        ."'class' => \$e::class, 'code' => \$e->getCode(), "
+        .'...SafeExceptionContext::describe($e), '
+        ."'trace' => SafeTrace::cap(\$e, \$app->basePath()), "
+        ."'m' => \$e instanceof LogicException ? \$e->getMessage() : null]); }\n";
+    $allowed = loggedExceptionObjectOffendersIn($read, false);
+    expect($allowed['sinks'])->toBe(1)
+        ->and($allowed['offenders'])->toBe([]);
+
+    // A catch a QueryException cannot reach is outside the rule entirely.
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\ntry { \$this->run(); } catch (SodiumException \$e) { Log::error('x', ['exception' => \$e]); }\n",
+        false,
+    )['offenders'])->toBe([]);
+
+    // A catch with no variable binds nothing there is to hand over.
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\ntry { \$this->run(); } catch (Throwable) { Log::error('x'); }\n",
+        false,
+    )['offenders'])->toBe([]);
+
+    // The depth reader skips quoted literals: a parenthesis inside a message
+    // would otherwise leave the rest of the arguments reading as nested.
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\ntry { \$this->run(); } catch (Throwable \$e) { Log::error('it failed (badly)', ['exception' => \$e]); }\n",
+        false,
+    )['offenders'])->toBe(['2 — $e handed to the sink whole']);
+
+    // A null check is a comparison, not a handover, and the describe() beside
+    // it is the sanctioned read. This shape is in the tree.
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\nfunction failed(?Throwable \$e): void { Log::error('x', [...(\$e === null ? [] : SafeExceptionContext::describe(\$e))]); }\n",
+        false,
+    )['offenders'])->toBe([]);
+});
+
+// The third region, which has neither a catch nor a parameter: a method of
+// this same class declaring it returns one.
+it('tells a throwable that came back from a call from a value that is not one', function (): void {
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\nfunction run(): void { \$failure = \$this->attempt(); Log::error('x', ['exception' => \$failure]); }\nfunction attempt(): ?Throwable { return null; }\n",
+        false,
+    )['offenders'])->toBe(['2 — $failure came back from a call, with no catch to narrow']);
+
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\nfunction run(): void { \$failure = \$this->attempt(); Log::error('x', ...SafeExceptionContext::describe(\$failure)); }\nfunction attempt(): ?Throwable { return null; }\n",
+        false,
+    )['offenders'])->toBe([]);
+
+    // The near-miss the rule must not claim: a method handing back a string
+    // named `$failure` is a message, and the string rules above cover it.
+    expect(loggedExceptionObjectOffendersIn(
+        "<?php\nfunction run(): void { \$failure = \$this->attempt(); Log::error('x', ['exception' => \$failure]); }\nfunction attempt(): ?string { return null; }\n",
+        false,
+    )['offenders'])->toBe([]);
+});
