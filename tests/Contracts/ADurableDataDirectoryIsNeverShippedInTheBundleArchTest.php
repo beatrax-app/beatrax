@@ -150,14 +150,16 @@ function bundleExcludesEntry(array $patterns, string $entry): bool
 }
 
 /**
- * Whether a directory's CONTENTS are absent from the repository, which makes
- * whatever sits in it at build time a working artifact rather than source.
+ * Whether an entry's CONTENTS are absent from the repository, which makes
+ * whatever sits there at build time a working artifact rather than source.
+ * A file answers for itself: git lists it when it is tracked and nothing when
+ * it is not.
  *
  * A placeholder is not content: build-secrets/ tracks a .gitignore that ignores
  * everything beside it, so asking git whether the directory is ignored answers
  * no while every file that ever appears in it is.
  */
-function bundleDirectoryHoldsNoSource(string $root, string $entry): bool
+function bundleEntryHoldsNoSource(string $root, string $entry): bool
 {
     $result = Process::path($root)->run(['git', 'ls-files', '--', $entry]);
 
@@ -166,6 +168,14 @@ function bundleDirectoryHoldsNoSource(string $root, string $entry): bool
     }
 
     $tracked = array_filter(explode("\n", trim($result->output())));
+
+    // A file answers for itself, and the placeholder names below would answer
+    // for it wrongly: they exist because a directory holding only a tracked
+    // .gitignore beside ignored contents is a working directory, and .gitignore
+    // is itself one of the files this walk now reaches.
+    if (is_file($root.'/'.$entry)) {
+        return $tracked === [];
+    }
 
     foreach ($tracked as $file) {
         if (! in_array(basename($file), ['.gitignore', '.gitkeep', '.gitattributes'], true)) {
@@ -177,14 +187,18 @@ function bundleDirectoryHoldsNoSource(string $root, string $entry): bool
 }
 
 /**
- * @return array<string, array<string, string>> shell => directory => why it may
+ * @return array<string, array<string, string>> shell => entry => why it may
  *                                              reach the bundle unexcluded
  */
-function bundleDirectoriesAllowedThrough(): array
+function bundleEntriesAllowedThrough(): array
 {
     return [
         'desktop' => [
             'vendor' => 'the application cannot boot without it',
+            // Staged from .env.bundled by the bundling workflows, so the file
+            // present at copy time is the shipped one. Excluding it would ship
+            // an app with no environment at all.
+            '.env' => 'the bundling workflows stage it from .env.bundled',
             // Laravel will not boot without the tree, and the one part of it
             // that holds durable user data, storage/app, is excluded by name
             // and asserted separately above.
@@ -192,6 +206,12 @@ function bundleDirectoriesAllowedThrough(): array
         ],
         'mobile' => [
             'vendor' => 'the application cannot boot without it',
+            '.env' => 'the bundling workflows stage it from .env.bundled',
+            // Written by the packager's own tooling beside the tree it
+            // packages. nativephp.lock records the PHP and ICU build the
+            // runtime check reads; `native` is the artisan shim.
+            'nativephp.lock' => 'the ICU runtime check reads it at build time',
+            'native' => 'the packager writes this artisan shim',
             'nativephp' => "the packager's own defaults exclude it, and it is the copy target",
             'tests' => "excluded at any depth by the packager's own defaults",
             '.phpunit.cache' => "excluded at any depth by the packager's own defaults",
@@ -205,10 +225,14 @@ function bundleDirectoriesAllowedThrough(): array
 // whose contents git never sees is a working artifact, and the packager copies
 // the working tree. Two signing directories and 1.6 GB of captured application
 // screens were sitting outside the one name that had been fixed.
-it('excludes every working directory whose contents are not in the repository', function (): void {
+//
+// It read directories only, which is a second spelling of the same mistake: a
+// developer's .env saved aside before an edit is a file, and it carries the
+// same keys the live one does. So does auth.json. Both were copied.
+it('excludes every working entry whose contents are not in the repository', function (): void {
     $roots = bundleShellRoots();
     $configs = bundleConfigFiles();
-    $allowed = bundleDirectoriesAllowedThrough();
+    $allowed = bundleEntriesAllowedThrough();
 
     expect($roots)->toHaveCount(2, 'One of the two shells was not found, so its whole tree went unexamined.');
 
@@ -219,7 +243,7 @@ it('excludes every working directory whose contents are not in the repository', 
         $patterns = bundleExcludedPaths($configs[$shell]);
 
         foreach (scandir($root) ?: [] as $entry) {
-            if ($entry === '.' || $entry === '..' || ! is_dir($root.'/'.$entry)) {
+            if ($entry === '.' || $entry === '..') {
                 continue;
             }
 
@@ -229,7 +253,7 @@ it('excludes every working directory whose contents are not in the repository', 
 
             $examined++;
 
-            if (bundleDirectoryHoldsNoSource($root, $entry)) {
+            if (bundleEntryHoldsNoSource($root, $entry)) {
                 $shipping[] = $shell.':'.$entry;
             }
         }
@@ -239,12 +263,92 @@ it('excludes every working directory whose contents are not in the repository', 
     // answer a correctly excluded tree gives.
     expect($examined)->toBeGreaterThan(
         0,
-        'Every top-level directory of both shells was excluded or declared before anything was classified, so '
+        'Every top-level entry of both shells was excluded or declared before anything was classified, so '
         .'this rule read nothing.',
     )
         ->and($shipping)->toBe([], implode("\n  ", array_merge(
-            ['These directories hold no source and are copied into a shipped bundle.',
+            ['These entries hold no source and are copied into a shipped bundle.',
                 'Exclude them in that shell\'s cleanup_exclude_files, or declare why they belong:'],
             $shipping,
+        )));
+});
+
+/**
+ * Every top-level name a shell's own ignore list declares: the inventory of
+ * what may sit at that root without being source. Directory-only patterns and
+ * negations are left out — the first are covered by the entry rule above, and
+ * the second re-include rather than exclude.
+ *
+ * @return list<string>
+ */
+function bundleIgnoredTopLevelNames(string $root): array
+{
+    $file = $root.'/.gitignore';
+
+    if (! is_file($file)) {
+        return [];
+    }
+
+    $names = [];
+
+    foreach (explode("\n", (string) file_get_contents($file)) as $line) {
+        $line = trim($line);
+
+        if ($line === '' || str_starts_with($line, '#') || str_starts_with($line, '!')) {
+            continue;
+        }
+
+        if (str_contains($line, '/')) {
+            continue;
+        }
+
+        $names[] = $line;
+    }
+
+    return array_values(array_unique($names));
+}
+
+// The rule above reads scandir, so it answers for the disk it runs on: a
+// working artefact absent from this machine is one it cannot see, and CI runs
+// it on a checkout that has almost none of them. The ignore list is the
+// machine-independent half of the same question — every name in it is a thing
+// that may appear at a shell root and is not source, so the packager must
+// either drop it or the entry must be declared.
+//
+// auth.json is the one that makes the point: Composer's registry credentials,
+// ignored by git since the repository was created, never excluded from a
+// bundle, and absent from the machine this rule was written on.
+it('excludes every top-level name its own ignore list says may appear', function (): void {
+    $roots = bundleShellRoots();
+    $configs = bundleConfigFiles();
+    $allowed = bundleEntriesAllowedThrough();
+
+    expect($roots)->toHaveCount(2, 'One of the two shells was not found, so its ignore list went unread.');
+
+    $unhandled = [];
+    $examined = 0;
+
+    foreach ($roots as $shell => $root) {
+        $patterns = bundleExcludedPaths($configs[$shell]);
+
+        foreach (bundleIgnoredTopLevelNames($root) as $name) {
+            $examined++;
+
+            if (bundleExcludesEntry($patterns, $name) || isset($allowed[$shell][$name])) {
+                continue;
+            }
+
+            $unhandled[] = $shell.':'.$name;
+        }
+    }
+
+    expect($examined)->toBeGreaterThan(
+        0,
+        'Neither shell yielded an ignored top-level name, so this rule read nothing.',
+    )
+        ->and($unhandled)->toBe([], implode("\n  ", array_merge(
+            ['These names may sit at a shell root without being source, and the packager copies them:',
+                "Exclude them in that shell's cleanup_exclude_files, or declare why they belong:"],
+            $unhandled,
         )));
 });

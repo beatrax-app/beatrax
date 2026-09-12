@@ -82,7 +82,7 @@
         <p class="srch-no-results__body">{{ Lang::get('ledger::list.no_results.no_match_filters') }}</p>
     @endif
 
-    @if (! empty($didYouMean))
+    @if ($didYouMean !== null)
         <p class="srch-no-results__suggestion">
             {{ Lang::get('ledger::list.no_results.did_you_mean') }}
             <button

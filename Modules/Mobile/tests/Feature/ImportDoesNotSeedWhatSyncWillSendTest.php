@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -60,7 +60,7 @@ it('leaves the ids free for the rows the desktop is about to send', function ():
     // Exactly what OpLogEntryApplier::insertCreatedRow() does with a create
     // op: the op's own pk, and insertOrIgnore, so a local row already sitting
     // at that id is never overwritten and never reported.
-    $now = Carbon::now()->toDateTimeString();
+    $now = CarbonImmutable::now()->toDateTimeString();
     DB::table('tax_deduction_categories')->insertOrIgnore([
         'id' => 1,
         'user_id' => $user->id,

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
 use Modules\Core\Public\Contracts\Clock;
@@ -30,14 +29,12 @@ beforeEach(function (): void {
     // Carbon must be frozen alongside the Clock contract: PreviewCache's TTL
     // goes through `Repository::getSeconds()`, which calls Carbon::now() and
     // would otherwise collapse to zero, making the cached preview unreadable.
-    Carbon::setTestNow($this->clock->now());
     CarbonImmutable::setTestNow($this->clock->now());
 
     $this->cache = new PreviewCache($this->cacheBackend, $this->clock);
 });
 
 afterEach(function (): void {
-    Carbon::setTestNow();
     CarbonImmutable::setTestNow();
 });
 

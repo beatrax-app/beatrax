@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonImmutable;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SystemAlertWriter;
 
 afterEach(function (): void {
-    Carbon::setTestNow();
+    CarbonImmutable::setTestNow();
 });
 
 it('stamps an alert with the app clock rather than the database default', function (): void {
@@ -21,7 +21,7 @@ it('stamps an alert with the app clock rather than the database default', functi
         'period_start_day' => 1,
     ]);
 
-    Carbon::setTestNow(Carbon::parse('2026-05-20 01:38:47'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-20 01:38:47'));
 
     $alert = app(SystemAlertWriter::class)->raiseForUser(
         $user->id,
@@ -38,7 +38,7 @@ it('stamps an alert with the app clock rather than the database default', functi
 it('stamps an alert written through the model directly', function (): void {
     // The probes and the scrub set write the model, not the writer, and they
     // were on the same default.
-    Carbon::setTestNow(Carbon::parse('2026-05-20 01:38:47'));
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-20 01:38:47'));
 
     $alert = SystemAlert::query()->create([
         'user_id' => null,

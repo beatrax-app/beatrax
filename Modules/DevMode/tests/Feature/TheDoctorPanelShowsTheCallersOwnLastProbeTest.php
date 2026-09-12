@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 
@@ -45,7 +45,7 @@ it('does not show another developer probe output, filesystem paths and all', fun
     $other = doctorScopeUser('doctor-other-dev');
     $viewer = doctorScopeUser('doctor-viewer');
 
-    insertDoctorRun($other, "Backup freshness         ok       /Users/other/private/backups is fresh.\n", Carbon::now()->toDateTimeString());
+    insertDoctorRun($other, "Backup freshness         ok       /Users/other/private/backups is fresh.\n", CarbonImmutable::now()->toDateTimeString());
 
     $response = $this->actingAs($viewer)->get('/dev/doctor');
 
@@ -55,7 +55,7 @@ it('does not show another developer probe output, filesystem paths and all', fun
 
 it('shows the finalized probe rather than the empty eager row written in the same second', function (): void {
     $user = doctorScopeUser('doctor-same-second');
-    $sameSecond = Carbon::now()->toDateTimeString();
+    $sameSecond = CarbonImmutable::now()->toDateTimeString();
 
     // The spawner writes the eager row first and FinalizeRunAudit's fallback
     // appends the finished one, so id is the only thing that orders them.
