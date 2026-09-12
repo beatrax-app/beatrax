@@ -310,7 +310,6 @@ function seedTransactionsAccount(DatabaseManager $db): void
 {
     $db->connection()->table('currencies')->insertOrIgnore([
         'code' => 'EUR',
-        'name' => 'Euro',
         'minor_unit' => 2,
     ]);
     $db->connection()->table('accounts')->insertOrIgnore([

@@ -47,7 +47,6 @@ const FROZEN_LINE_PINS = [
         'Download beatrax-tax-:year.csv' => null,
         'Download beatrax-tax-:year.pdf' => null,
         'Estonia' => null,
-        'Euro' => null,
         'Finland' => null,
         'France' => null,
         'Latvia' => null,

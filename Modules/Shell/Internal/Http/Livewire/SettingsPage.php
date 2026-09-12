@@ -394,7 +394,7 @@ final class SettingsPage extends Component
         $currencyRows = $db->connection()
             ->table('currencies')
             ->orderBy('code')
-            ->get(['code', 'name']);
+            ->get(['code']);
 
         return $views->make('shell::livewire.settings-page', [
             // The help text needs the per-user directory the user must create,
@@ -462,9 +462,8 @@ final class SettingsPage extends Component
         $currencyOptions = [];
         foreach ($currencyRows as $row) {
             $code = is_string($row->code ?? null) ? $row->code : '';
-            $name = is_string($row->name ?? null) ? $row->name : null;
             if ($code !== '') {
-                $currencyOptions[$code] = CurrencyDisplayName::forCode($code, $name);
+                $currencyOptions[$code] = CurrencyDisplayName::forCode($code);
             }
         }
 

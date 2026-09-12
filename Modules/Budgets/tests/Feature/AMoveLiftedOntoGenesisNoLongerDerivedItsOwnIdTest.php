@@ -23,7 +23,7 @@ const LIFTED_MOVE_GROUP = 'lifted-move-group';
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-20 12:00:00'));
 
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'liftedid-'.bin2hex(random_bytes(4)),

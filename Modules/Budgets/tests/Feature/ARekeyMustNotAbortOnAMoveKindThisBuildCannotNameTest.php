@@ -29,7 +29,7 @@ const PEER_MOVE_GROUP = 'a2f0c9de-6b1e-4d33-9c77-0e5a1f8b4d21';
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-20 12:00:00'));
 
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'unnameable-rekey-'.bin2hex(random_bytes(4)),

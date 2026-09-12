@@ -10,7 +10,7 @@ use Modules\Ledger\Models\Currency;
 use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 beforeEach(function (): void {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'wessel',

@@ -13,6 +13,5 @@ it('carries JPY at minor_unit 0, so the one non-hundredth denomination is pickab
     $row = DB::table('currencies')->where('code', 'JPY')->first();
 
     expect($row)->not->toBeNull()
-        ->and((int) $row->minor_unit)->toBe(0)
-        ->and((string) $row->name)->toBe('Japanese Yen');
+        ->and((int) $row->minor_unit)->toBe(0);
 });

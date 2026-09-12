@@ -290,6 +290,39 @@ it('defaults to the base currency on a statement-less card when the account has 
     expect($anchor->currency)->toBe(Currency::Eur->value);
 });
 
+// The three above pass on a literal euro and on the reader's own currency
+// alike, because the fixture reader banks in euro and the two strings are the
+// same. The card path resolved a literal, and that currency both picks the
+// statement row and denominates the projection.
+it('anchors a card with no default currency in the currency the reader chose', function (): void {
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-05-15 09:00:00'));
+    $this->user->update(['base_currency' => 'SEK']);
+
+    // Authenticated, because the fallback asks BaseCurrency for the reader and
+    // a resolve with nobody signed in answers with the install default — which
+    // is the euro, and would let the literal pass as the reader's choice.
+    $this->actingAs($this->user->fresh());
+
+    $accountId = barInsertAccount($this->db, $this->user->id, AccountKind::IcsCard->value, ['default_currency' => '']);
+    $this->db->connection()->table('card_statements')->insert([
+        'user_id' => $this->user->id,
+        'account_id' => $accountId,
+        'import_run_id' => null,
+        'period_start' => '2026-05-01 00:00:00',
+        'period_end' => '2026-05-10 00:00:00',
+        'total_amount_minor' => -50000,
+        'open_balance_minor' => 50000,
+        'state' => 'open',
+        'created_at' => '2026-05-11 00:00:00',
+        'updated_at' => '2026-05-11 00:00:00',
+    ]);
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user->fresh());
+
+    expect($anchor->currency)->toBe('SEK')
+        ->and($anchor->currency)->not->toBe(Currency::Eur->value);
+});
+
 it('raises ModelNotFoundException for a missing or cross-user account id', function (): void {
     $otherUser = User::query()->create([
         'username' => 'anchor-other',
