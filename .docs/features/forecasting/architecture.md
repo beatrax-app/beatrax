@@ -877,6 +877,16 @@ ever saw, and
 asks for the names. `balancesWithoutRate` stays the gate — it counts
 lines, and one account holding two unconvertible currencies is two lines
 and one name.
+
+The position digest's net-worth line reads that same method rather than a
+copy of it. It used to build its own list of currency *codes*, so the card
+and the digest filled one shared sentence — `core::money.not_converted` —
+with two different kinds of answer about which money was left out of the
+same figure, and
+[B10-R17](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md)
+asks for the account. Sharing the method is what stops the two drifting
+again; the budgets roll-up beside it still names codes, because there the
+thing left out is an envelope currency and not an account.
 Two kinds are left out of the roll-up entirely, and one deliberately is not.
 `paypal_funding` and `google_play` mirror a movement the paying account already
 carries, so counting either subtracts the same money twice; `ics_card` stays in,
