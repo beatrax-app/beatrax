@@ -43,7 +43,7 @@ final readonly class ClearCredentialsNoKeyHereOpens
 
         foreach ($this->unreadable() as [$userId, $provider]) {
             try {
-                $this->reset($userId, $provider);
+                $this->reset($userId, $provider, $event->preRestoreSnapshotPath);
             } catch (Throwable $e) {
                 // One mailbox answering for itself. A reset that throws must
                 // not leave the mailboxes after it holding credentials the
@@ -116,7 +116,7 @@ final readonly class ClearCredentialsNoKeyHereOpens
     // Removed rather than blanked: every surface that asks whether a mailbox is
     // connected asks whether a credential row exists, so one left holding
     // unreadable bytes reads as connected and suppresses the reconnect.
-    private function reset(int $userId, string $provider): void
+    private function reset(int $userId, string $provider, string $undo): void
     {
         $connection = $this->db->connection();
 
@@ -143,10 +143,14 @@ final readonly class ClearCredentialsNoKeyHereOpens
             );
         }
 
+        // The snapshot is named because this is the one line an operator who
+        // thinks the reset was wrong has to work from, and undoing it means
+        // going back to the database the restore replaced.
         $this->logger->warning('A mail credential this install cannot read was cleared by a restore.', [
             'user_id' => $userId,
             'provider' => $provider,
             'inboxes' => count($inboxes),
+            'pre_restore_snapshot' => $undo,
         ]);
     }
 }
