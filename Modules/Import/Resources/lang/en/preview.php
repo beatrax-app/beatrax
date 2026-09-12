@@ -16,6 +16,8 @@ return [
     'expired_html' => 'The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.',
     'unreadable_html' => 'This preview cannot be read. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.',
 
+    'statement_difference' => 'Nothing has been written to your ledger yet. Check this file against your bank before confirming — a statement that disagrees with itself usually means a row was misread.',
+
     'save_name' => 'Save name',
     'account_name_label' => 'Account name',
     'account_placeholder' => 'e.g. Main savings account',

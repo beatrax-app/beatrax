@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Podgląd wygasł. <a href="/imports/new" class="underline">Wgraj plik ponownie</a>, aby spróbować jeszcze raz.',
     'unreadable_html' => 'Nie można odczytać podglądu. <a href="/imports/new" class="underline">Wgraj plik ponownie</a>, aby spróbować jeszcze raz.',
 
+    'statement_difference' => 'Do Twojej księgi nic jeszcze nie zostało zapisane. Przed potwierdzeniem sprawdź ten plik w swoim banku — wyciąg, który nie zgadza się sam ze sobą, zwykle oznacza, że jakiś wiersz został błędnie odczytany.',
+
     'save_name' => 'Zapisz nazwę',
     'account_name_label' => 'Nazwa konta',
     'account_placeholder' => 'np. Główne konto oszczędnościowe',

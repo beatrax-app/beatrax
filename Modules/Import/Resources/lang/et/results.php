@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Näita vigu (:count)',
     'errors_help' => 'Vead on read, mida ei õnnestunud töödelda; neid ei lisatud sinu pearaamatusse.',
 
+    'statement_difference' => 'Read ja mõlemad jäägid salvestati täpselt nii, nagu fail need andis, ja midagi ei parandatud. Kontrolli seda väljavõtet oma panga vastu: võib-olla loeti mõnda rida valesti.',
+
     'upload_another' => 'Laadi üles järgmine väljavõte',
 
     'chain' => [

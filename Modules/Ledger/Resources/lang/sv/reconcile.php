@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo enligt kontoutdrag (:symbol)',
     'balance_help' => 'Förifylls från ditt senast importerade kontoutdrag när det går — negativt för skuld, redigerbart i båda fallen.',
 
+    'prefill_difference' => 'Saldot enligt kontoutdraget nedan har förifyllts från det kontoutdraget. Det är fortfarande bara en utgångspunkt, så kontrollera siffran mot din bank innan du slutför den här avstämningen.',
+
     'cleared_balance' => 'Bokfört saldo',
     'statement_target' => 'Målsaldo enligt kontoutdrag',
     'difference' => 'Skillnad',

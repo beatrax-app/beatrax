@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Konta izraksta atlikums (:symbol)',
     'balance_help' => 'Aizpildīts no jūsu jaunākā importētā konta izraksta, ja tāds ir pieejams — negatīvs parādam, rediģējams abos gadījumos.',
 
+    'prefill_difference' => 'Zemāk redzamais konta izraksta atlikums ir aizpildīts no šī konta izraksta. Tas joprojām ir tikai sākumpunkts, tāpēc pirms šīs saskaņošanas pabeigšanas pārbaudiet skaitli bankā.',
+
     'cleared_balance' => 'Apstiprinātais atlikums',
     'statement_target' => 'Konta izraksta mērķis',
     'difference' => 'Starpība',

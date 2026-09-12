@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Esikatselu on vanhentunut. <a href="/imports/new" class="underline">Lähetä tiedosto uudelleen</a> ja yritä uudestaan.',
     'unreadable_html' => 'Esikatselua ei voi lukea. <a href="/imports/new" class="underline">Lähetä tiedosto uudelleen</a> ja yritä uudestaan.',
 
+    'statement_difference' => 'Tilikirjaasi ei ole vielä kirjoitettu mitään. Tarkista tämä tiedosto pankistasi ennen vahvistamista — tiliote, joka ei täsmää itsensä kanssa, tarkoittaa yleensä, että jokin rivi on luettu väärin.',
+
     'save_name' => 'Tallenna nimi',
     'account_name_label' => 'Tilin nimi',
     'account_placeholder' => 'esim. Pääsäästötili',

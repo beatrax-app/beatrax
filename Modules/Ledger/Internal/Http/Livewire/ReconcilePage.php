@@ -29,6 +29,7 @@ use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\Support\StatementDenomination;
+use Modules\Ledger\Public\Support\StatementDifference;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 /**
@@ -49,6 +50,12 @@ final class ReconcilePage extends Component
     #[Locked]
     public string $error = '';
 
+    // The self-check answer of the statement the box below was filled from, so
+    // the caveat describes the figure the reader is actually looking at rather
+    // than whatever the newest summary says on this round trip.
+    #[Locked]
+    public ?int $prefillDifferenceMinor = null;
+
     public function mount(Clock $clock, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency, ?int $accountId = null): void
     {
         if ($accountId !== null) {
@@ -64,6 +71,7 @@ final class ReconcilePage extends Component
     public function updatedAccountId(mixed $value, Clock $clock, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
     {
         $this->statementBalance = '';
+        $this->prefillDifferenceMinor = null;
         $this->statementDate = $clock->now()->toDateString();
         $this->loadAccount($currentUser, $db, $baseCurrency);
     }
@@ -208,6 +216,7 @@ final class ReconcilePage extends Component
             'hasBaseline' => $this->hasRecordedBaseline($connection, $user->id, $ownedAccountId),
             'lockableCount' => $this->lockableRowCount($connection, $user->id, $ownedAccountId, $statementDate, $statementCurrency),
             'reconciledThrough' => $this->reconciledThrough($connection, $user->id, $ownedAccountId),
+            'prefillDifference' => StatementDifference::ofMinor($this->prefillDifferenceMinor, $statementCurrency),
         ]);
 
         $view->extends('layouts.app', ['title' => Lang::get('ledger::reconcile.page_title').Brand::TITLE_SUFFIX]);
@@ -370,12 +379,17 @@ final class ReconcilePage extends Component
                 'statement_summaries.closing_balance_minor',
                 'statement_summaries.closing_balance_date',
                 'statement_summaries.period_end',
+                'statement_summaries.extras',
             ]);
 
         if ($row === null) {
             return;
         }
 
+        // Kept, not withheld: a figure the reader can see and question beats an
+        // empty box, and the caveat beside it has nothing to qualify once the
+        // prefill it is about is gone.
+        $this->prefillDifferenceMinor = StatementDifference::statedMinor($row->extras ?? null);
         $this->statementBalance = MoneyInput::formatMinor(
             self::toInt($row->closing_balance_minor),
             $this->statementCurrency($connection, $userId, $baseCurrency),

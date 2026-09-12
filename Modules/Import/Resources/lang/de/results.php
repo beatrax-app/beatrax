@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Fehler anzeigen (:count)',
     'errors_help' => 'Fehler sind Zeilen, die nicht eingelesen werden konnten; sie wurden deinem Hauptbuch nicht hinzugefügt.',
 
+    'statement_difference' => 'Die Zeilen und beide Salden wurden genau so erfasst, wie die Datei sie geliefert hat, und nichts wurde korrigiert. Prüfe diesen Kontoauszug bei deiner Bank: möglicherweise wurde eine Zeile falsch gelesen.',
+
     'upload_another' => 'Weiteren Kontoauszug hochladen',
 
     'chain' => [

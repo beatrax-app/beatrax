@@ -35,6 +35,16 @@ Modules/Ledger/
 │   │   ├── ThisPeriodAtAGlanceQuery.php
 │   │   ├── TopCategoriesByPeriodQuery.php
 │   │   └── TransactionListQuery.php
+│   ├── Support/
+│   │   ├── CategoryDisplayName.php
+│   │   ├── CategoryPathName.php
+│   │   ├── CurrencyDisplayName.php
+│   │   ├── LedgerDay.php
+│   │   ├── OutwardSpend.php
+│   │   ├── ReconciledRowExemptions.php
+│   │   ├── SplitLegs.php
+│   │   ├── StatementDenomination.php       # a figure is the account's only in its own currency
+│   │   └── StatementDifference.php         # the one reading of a statement's failed self-check
 │   └── ValueObjects/
 │       └── Money.php
 ├── Internal/

@@ -6,7 +6,7 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940BalanceTuple;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940StatementLine;
-use Modules\Ingestion\Internal\Enums\StatementExtraKey;
+use Modules\Ingestion\Public\Enums\StatementExtraKey;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
 final class Mt940StatementAccumulator

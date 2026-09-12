@@ -85,6 +85,16 @@
         @endunless
     </header>
 
+    {{-- Its own @if, never a branch of the chain below: an account still
+         waiting to be named and a file that does not add up are two facts
+         about one upload, and the chain would show whichever came first. --}}
+    @if ($statementDifference !== null && $hasLivePreview && ! $alreadyImported)
+        <x-core::alert tone="warning" role="alert" data-testid="preview-statement-difference">
+            <p class="font-medium">{{ Lang::get($statementDifference->copyKey(), ['amount' => $statementDifference->amount()]) }}</p>
+            <p class="mt-2">{{ Lang::get('import::preview.statement_difference') }}</p>
+        </x-core::alert>
+    @endif
+
     @if ($capturedReceipts && ! $alreadyImported)
         <x-core::alert tone="info" role="status">
             <p class="font-medium">{{ Lang::get('import::preview.receipts.heading') }}</p>

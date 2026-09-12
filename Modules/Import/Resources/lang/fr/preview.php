@@ -16,6 +16,8 @@ return [
     'expired_html' => 'L\'aperçu a expiré. <a href="/imports/new" class="underline">Téléverse à nouveau le fichier</a> pour réessayer.',
     'unreadable_html' => 'L\'aperçu ne peut pas être lu. <a href="/imports/new" class="underline">Téléverse à nouveau le fichier</a> pour réessayer.',
 
+    'statement_difference' => 'Rien n\'a encore été écrit dans ton registre. Vérifie ce fichier auprès de ta banque avant de confirmer — un relevé qui ne s\'accorde pas avec lui-même signifie le plus souvent qu\'une ligne a été mal lue.',
+
     'save_name' => 'Enregistrer le nom',
     'account_name_label' => 'Nom du compte',
     'account_placeholder' => 'ex. Compte épargne principal',

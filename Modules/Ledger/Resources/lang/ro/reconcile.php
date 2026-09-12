@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Sold din extras (:symbol)',
     'balance_help' => 'Precompletat din ultimul extras de cont importat, când există — negativ pentru bani datorați, editabil în ambele cazuri.',
 
+    'prefill_difference' => 'Soldul din extras de mai jos a fost precompletat din acel extras. Rămâne doar un punct de plecare, așa că verifică cifra la banca ta înainte de a finaliza această reconciliere.',
+
     'cleared_balance' => 'Sold decontat',
     'statement_target' => 'Ținta din extras',
     'difference' => 'Diferență',

@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Prikaži napake (:count)',
     'errors_help' => 'Napake so vrstice, ki jih ni bilo mogoče obdelati; v tvojo glavno knjigo niso bile dodane.',
 
+    'statement_difference' => 'Vrstice in obe stanji so bili zapisani točno tako, kot jih je podala datoteka, in nič ni bilo popravljeno. Preveri ta izpisek pri svoji banki: kakšna vrstica je bila morda napačno prebrana.',
+
     'upload_another' => 'Naloži še en izpisek',
 
     'chain' => [

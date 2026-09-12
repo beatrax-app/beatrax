@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Stanje sa izvoda (:symbol)',
     'balance_help' => 'Unapred popunjeno iz tvog poslednjeg uvezenog izvoda kada je dostupno — negativno za dugovanja, u oba slučaja izmenjivo.',
 
+    'prefill_difference' => 'Stanje sa izvoda ispod unapred je popunjeno iz tog izvoda. To je i dalje samo početna tačka, pa pre dovršetka ovog usaglašavanja proveri iznos u svojoj banci.',
+
     'cleared_balance' => 'Proknjiženo stanje',
     'statement_target' => 'Cilj sa izvoda',
     'difference' => 'Razlika',

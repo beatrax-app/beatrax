@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Eelvaade on aegunud. <a href="/imports/new" class="underline">Laadi fail uuesti üles</a> ja proovi uuesti.',
     'unreadable_html' => 'Eelvaadet ei saa lugeda. <a href="/imports/new" class="underline">Laadi fail uuesti üles</a> ja proovi uuesti.',
 
+    'statement_difference' => 'Sinu pearaamatusse ei ole veel midagi kirjutatud. Kontrolli seda faili oma panga vastu, enne kui kinnitad — väljavõte, mis iseendaga ei klapi, tähendab tavaliselt, et mõni rida loeti valesti.',
+
     'save_name' => 'Salvesta nimi',
     'account_name_label' => 'Konto nimi',
     'account_placeholder' => 'nt Peamine kogumiskonto',

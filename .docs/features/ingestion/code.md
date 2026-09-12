@@ -10,6 +10,10 @@ Modules/Ingestion/
 │   ├── Contracts/
 │   │   ├── SourceAdapter.php
 │   │   └── AccountResolver.php
+│   ├── Enums/
+│   │   ├── SourceFormat.php
+│   │   ├── StatementExtraKey.php            # statement_summaries extras keys
+│   │   └── SyntheticIban.php
 │   ├── Dto/
 │   │   ├── SourceTransactionDto.php
 │   │   ├── SniffResult.php
@@ -71,8 +75,6 @@ Modules/Ingestion/
 │   │       ├── PaypalCsvColumnMap.php
 │   │       ├── PaypalCsvLanguageProfile.php
 │   │       └── PaypalTransactionRollup.php
-│   ├── Enums/
-│   │   └── StatementExtraKey.php            # statement_summaries extras keys
 │   ├── Exceptions/                          # module-internal parse failures
 │   │   ├── InvalidAmountException.php
 │   │   ├── InvalidDateException.php
@@ -166,11 +168,13 @@ Modules/Ingestion/
   parsing-and-normalisation utilities, kept Internal so the
   per-source shape can evolve without leaking through the
   contract.
-- `Internal/Enums/StatementExtraKey` — the key vocabulary both
+- `Public/Enums/StatementExtraKey` — the key vocabulary both
   statement parsers write into `StatementSummaryData::$extras`.
   Shared because `multiStatement` spelled out at each site is how
   MT940 and CAMT.053 came to disagree about a file holding several
-  statements. See
+  statements — and Public because the screens that render
+  `statementDifferenceMinor` read it through the same enum rather than
+  spelling the key a third time. See
   [CAMT.053](architecture.md#camt053).
 
 ## Models + migrations

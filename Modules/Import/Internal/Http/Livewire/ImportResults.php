@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Import\Internal\Dto\ImportRowIssue;
 use Modules\Import\Internal\Enums\ImportIssueKind;
+use Modules\Import\Internal\Services\StatementDifferenceForRun;
 use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Models\ImportRun;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -34,8 +35,12 @@ final class ImportResults extends Component
         $this->importRunId = $id;
     }
 
-    public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
-    {
+    public function render(
+        ViewFactory $views,
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        StatementDifferenceForRun $differences,
+    ): View {
         $user = $currentUser->user();
 
         /** @var ImportRun $importRun */
@@ -59,6 +64,7 @@ final class ImportResults extends Component
 
         return $views->make('import::livewire.import-results', [
             'importRun' => $importRun,
+            'statementDifference' => $differences->for($this->importRunId, $user->id),
             'chainResolutionStatus' => $this->chainResolutionStatus($db, $user->id),
             'errorIssues' => array_values(array_filter(
                 $issues,

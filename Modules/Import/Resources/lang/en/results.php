@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Show errors (:count)',
     'errors_help' => 'Errors are rows that could not be parsed; they were not added to your ledger.',
 
+    'statement_difference' => 'The rows and both balances were recorded exactly as the file gave them, and nothing was corrected. Check this statement against your bank: a row may have been misread.',
+
     'upload_another' => 'Upload another statement',
 
     'chain' => [

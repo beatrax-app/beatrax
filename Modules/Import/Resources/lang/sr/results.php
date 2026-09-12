@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Prikaži greške (:count)',
     'errors_help' => 'Greške su redovi koje nije bilo moguće obraditi; nisu dodati u tvoju glavnu knjigu.',
 
+    'statement_difference' => 'Redovi i oba stanja zabeleženi su tačno onako kako ih je dala datoteka i ništa nije ispravljeno. Proveri ovaj izvod u svojoj banci: neki red je možda pogrešno pročitan.',
+
     'upload_another' => 'Otpremi još jedan izvod',
 
     'chain' => [

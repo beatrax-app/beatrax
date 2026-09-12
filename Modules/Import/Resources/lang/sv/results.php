@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Visa fel (:count)',
     'errors_help' => 'Fel är rader som inte kunde läsas in; de lades inte till bland dina transaktioner.',
 
+    'statement_difference' => 'Raderna och båda saldona registrerades exakt som filen gav dem, och ingenting rättades. Kontrollera det här kontoutdraget mot din bank: en rad kan ha lästs fel.',
+
     'upload_another' => 'Ladda upp ett kontoutdrag till',
 
     'chain' => [

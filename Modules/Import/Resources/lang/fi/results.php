@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Näytä virheet (:count)',
     'errors_help' => 'Virheet ovat rivejä, joita ei voitu jäsentää; niitä ei lisätty tilikirjaasi.',
 
+    'statement_difference' => 'Rivit ja molemmat saldot kirjattiin täsmälleen niin kuin tiedosto ne antoi, eikä mitään korjattu. Tarkista tämä tiliote pankistasi: jokin rivi on saatettu lukea väärin.',
+
     'upload_another' => 'Lähetä toinen tiliote',
 
     'chain' => [

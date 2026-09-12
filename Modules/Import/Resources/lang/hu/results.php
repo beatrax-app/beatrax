@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Hibák mutatása (:count)',
     'errors_help' => 'A hibák olyan sorok, amelyeket nem sikerült beolvasni; ezek nem kerültek a főkönyvedbe.',
 
+    'statement_difference' => 'A sorok és mindkét egyenleg pontosan úgy került rögzítésre, ahogy a fájl adta őket, és semmit nem javítottunk. Vesd össze ezt a kivonatot a bankodnál lévő adatokkal: elképzelhető, hogy egy sort félreolvastunk.',
+
     'upload_another' => 'Másik számlakivonat feltöltése',
 
     'chain' => [

@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo del extracto (:symbol)',
     'balance_help' => 'Se rellena con tu último extracto importado cuando está disponible — en negativo si debes dinero, y editable en cualquier caso.',
 
+    'prefill_difference' => 'El saldo del extracto de abajo se ha rellenado a partir de ese extracto. Sigue siendo un punto de partida, pero comprueba la cifra con tu banco antes de completar esta conciliación.',
+
     'cleared_balance' => 'Saldo compensado',
     'statement_target' => 'Objetivo del extracto',
     'difference' => 'Diferencia',

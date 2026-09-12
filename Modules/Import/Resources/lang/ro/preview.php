@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Previzualizarea a expirat. <a href="/imports/new" class="underline">Încarcă fișierul din nou</a> pentru a reîncerca.',
     'unreadable_html' => 'Previzualizarea nu poate fi citită. <a href="/imports/new" class="underline">Încarcă fișierul din nou</a> pentru a reîncerca.',
 
+    'statement_difference' => 'Încă nu s-a scris nimic în registrul tău. Verifică acest fișier la banca ta înainte de a confirma — un extras care nu se potrivește cu el însuși înseamnă de obicei că un rând a fost citit greșit.',
+
     'save_name' => 'Salvează numele',
     'account_name_label' => 'Numele contului',
     'account_placeholder' => 'de ex. Cont principal de economii',

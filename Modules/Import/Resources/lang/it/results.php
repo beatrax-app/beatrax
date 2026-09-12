@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Mostra gli errori (:count)',
     'errors_help' => 'Gli errori sono righe che non è stato possibile analizzare; non sono state aggiunte al tuo registro.',
 
+    'statement_difference' => 'Le righe e i due saldi sono stati registrati esattamente come li dava il file, e non è stato corretto nulla. Controlla questo estratto conto con la tua banca: una riga potrebbe essere stata letta male.',
+
     'upload_another' => 'Carica un altro estratto conto',
 
     'chain' => [

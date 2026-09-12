@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Afschriftsaldo (:symbol)',
     'balance_help' => 'Waar mogelijk vooraf ingevuld vanuit je laatst geïmporteerde afschrift — negatief voor verschuldigd geld, in beide gevallen bewerkbaar.',
 
+    'prefill_difference' => 'Het afschriftsaldo hieronder is vooraf ingevuld vanuit dat afschrift. Het is nog steeds een startpunt, maar controleer het bedrag bij je bank voordat je deze afstemming voltooit.',
+
     'cleared_balance' => 'Verrekend saldo',
     'statement_target' => 'Afschriftdoel',
     'difference' => 'Verschil',

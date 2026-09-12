@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Vis fejl (:count)',
     'errors_help' => 'Fejl er rækker, der ikke kunne indlæses; de blev ikke føjet til dine transaktioner.',
 
+    'statement_difference' => 'Rækkerne og begge saldi blev registreret præcis, som filen gav dem, og intet blev rettet. Tjek dette kontoudtog mod din bank: en række kan være blevet læst forkert.',
+
     'upload_another' => 'Upload endnu et kontoudtog',
 
     'chain' => [

@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Prikaži pogreške (:count)',
     'errors_help' => 'Pogreške su retci koje nije bilo moguće obraditi; nisu dodani u tvoju glavnu knjigu.',
 
+    'statement_difference' => 'Retci i oba stanja zabilježeni su točno onako kako ih je dala datoteka i ništa nije ispravljeno. Provjeri ovaj izvod u svojoj banci: neki je redak možda pogrešno pročitan.',
+
     'upload_another' => 'Učitaj još jedan izvod',
 
     'chain' => [

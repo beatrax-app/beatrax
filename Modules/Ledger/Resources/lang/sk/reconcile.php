@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Zostatok podľa výpisu (:symbol)',
     'balance_help' => 'Predvyplnené z posledného importovaného výpisu, ak je k dispozícii — záporné pri dlžnej sume, upraviť sa dá tak či tak.',
 
+    'prefill_difference' => 'Zostatok podľa výpisu nižšie sa predvyplnil z toho výpisu. Stále je to len východiskový bod, takže než toto odsúhlasenie dokončíš, skontroluj tú sumu oproti banke.',
+
     'cleared_balance' => 'Zúčtovaný zostatok',
     'statement_target' => 'Cieľ podľa výpisu',
     'difference' => 'Rozdiel',

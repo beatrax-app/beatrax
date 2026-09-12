@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Mostrar los errores (:count)',
     'errors_help' => 'Los errores son filas que no se han podido analizar; no se han añadido a tu libro mayor.',
 
+    'statement_difference' => 'Las filas y ambos saldos se han registrado exactamente como los daba el archivo, y no se ha corregido nada. Comprueba este extracto con tu banco: puede que se haya leído mal una fila.',
+
     'upload_another' => 'Subir otro extracto',
 
     'chain' => [

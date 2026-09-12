@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo ifølge kontoutskrift (:symbol)',
     'balance_help' => 'Fylles ut på forhånd fra den sist importerte kontoutskriften din når det er mulig — negativ ved gjeld, og redigerbar uansett.',
 
+    'prefill_difference' => 'Saldoen ifølge kontoutskriften nedenfor er fylt ut på forhånd fra den kontoutskriften. Den er fortsatt bare et utgangspunkt, så sjekk tallet mot banken din før du fullfører denne avstemmingen.',
+
     'cleared_balance' => 'Bokført saldo',
     'statement_target' => 'Målsaldo ifølge kontoutskrift',
     'difference' => 'Differanse',

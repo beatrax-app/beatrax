@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo do extrato (:symbol)',
     'balance_help' => 'Pré-preenchido a partir do teu extrato importado mais recente, quando disponível — negativo para dinheiro em dívida, editável nos dois sentidos.',
 
+    'prefill_difference' => 'O saldo do extrato abaixo foi pré-preenchido a partir desse extrato. Continua a ser um ponto de partida, mas confere o valor com o teu banco antes de concluir esta reconciliação.',
+
     'cleared_balance' => 'Saldo compensado',
     'statement_target' => 'Alvo do extrato',
     'difference' => 'Diferença',

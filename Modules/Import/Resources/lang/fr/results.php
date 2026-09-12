@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Afficher les erreurs (:count)',
     'errors_help' => 'Les erreurs sont des lignes qui n\'ont pas pu être analysées ; elles n\'ont pas été ajoutées à ton registre.',
 
+    'statement_difference' => 'Les lignes et les deux soldes ont été enregistrés exactement tels que le fichier les donnait, et rien n\'a été corrigé. Vérifie ce relevé auprès de ta banque : une ligne a peut-être été mal lue.',
+
     'upload_another' => 'Envoyer un autre relevé',
 
     'chain' => [

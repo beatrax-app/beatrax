@@ -768,8 +768,11 @@ against its own entries as it is parsed, and a non-zero
 `closing - (opening + every entry)` rides on the summary as
 `extras.statementDifferenceMinor`. It is recorded, never corrected: the
 rows stay as the file wrote them and both balances stay as the file
-stated them. No screen reads the key yet. See [a statement that did not
-check its own
+stated them. The import preview, the import results screen and
+`/reconcile` each read it through
+`Modules\Ledger\Public\Support\StatementDifference`, which is also
+what decides which of the two directions the sign means. See [a
+statement that did not check its own
 arithmetic](../features/ingestion/a-statement-that-did-not-check-its-own-arithmetic.md).
 
 CSV adapters return `null` from `statementMetadata()` (CSV carries no

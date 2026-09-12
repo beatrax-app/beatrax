@@ -21,6 +21,7 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Services\OwnAccountPrompt;
 use Modules\Import\Internal\Services\RemoteFetchPath;
 use Modules\Import\Internal\Services\StandInAccountName;
+use Modules\Import\Internal\Services\StatementDifferenceForRun;
 use Modules\Import\Public\Actions\DiscardImport;
 use Modules\Import\Public\Actions\EnsureGooglePlayAccountAction;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
@@ -358,6 +359,7 @@ final class PreviewWizard extends Component
         DatabaseManager $db,
         StandInAccountName $standInNames,
         OwnAccountPrompt $prompt,
+        StatementDifferenceForRun $differences,
     ): View {
         $this->assertOwnedRun($currentUser);
 
@@ -387,6 +389,7 @@ final class PreviewWizard extends Component
             'previewExpired' => $this->previewExpired,
             'previewUnreadable' => $this->previewUnreadable,
             'alreadyImported' => $this->alreadyImported($db),
+            'statementDifference' => $differences->for($this->importRunId, $currentUser->user()->id),
             'needsIcsAccountName' => $needsIcsAccountName,
             'needsPaypalAccountName' => $needsPaypalAccountName,
             'needsGooglePlayAccountName' => $needsGooglePlayAccountName,

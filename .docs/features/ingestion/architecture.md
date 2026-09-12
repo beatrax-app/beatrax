@@ -309,7 +309,7 @@ pages across *messages* (`<Pgntn>` in the group header), so a second
 `<Stmt>` inside one message — with its own `<Id>` and its own
 `OPBD`/`CLBD` balances — is a second statement, never page two of the
 first. Both parsers write the flag through
-`Modules\Ingestion\Internal\Enums\StatementExtraKey`, so the key cannot
+`Modules\Ingestion\Public\Enums\StatementExtraKey`, so the key cannot
 drift apart again the way the behaviour did.
 
 Statement self-check: both bank parsers work out `closing - (opening +

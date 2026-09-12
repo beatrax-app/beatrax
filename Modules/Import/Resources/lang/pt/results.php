@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Mostrar os erros (:count)',
     'errors_help' => 'Os erros são linhas que não foi possível interpretar; não foram adicionadas ao teu livro-razão.',
 
+    'statement_difference' => 'As linhas e os dois saldos foram registados exatamente como o ficheiro os dava, e nada foi corrigido. Confere este extrato com o teu banco: pode ter havido uma linha mal lida.',
+
     'upload_another' => 'Carregar outro extrato',
 
     'chain' => [

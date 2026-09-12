@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo wyciągu (:symbol)',
     'balance_help' => 'Wypełniane wstępnie z ostatniego zaimportowanego wyciągu, o ile jest dostępny — ujemne dla zadłużenia, w obu przypadkach edytowalne.',
 
+    'prefill_difference' => 'Saldo wyciągu poniżej zostało wstępnie wypełnione z tego wyciągu. Nadal jest to tylko punkt wyjścia, więc przed zakończeniem tego uzgadniania sprawdź tę kwotę w swoim banku.',
+
     'cleared_balance' => 'Saldo rozliczone',
     'statement_target' => 'Cel z wyciągu',
     'difference' => 'Różnica',
