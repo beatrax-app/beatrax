@@ -7,9 +7,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceIdentityState;
+use Modules\Sync\Internal\Identity\SealedJsonFile;
 
 uses(RefreshDatabase::class);
 
@@ -151,4 +153,27 @@ it('leaves no staged sibling behind on an ordinary mint', function (): void {
     expect(interruptedIdentityPath($user))->toBeFile()
         ->and((array) glob(interruptedIdentityPath($user).'.*.tmp'))->toBe([])
         ->and((array) glob(dirname(interruptedIdentityPath($user)).'/beatrax_identity_*.tmp'))->toBe([]);
+});
+
+// The finalize can fail on its own, after a seal that worked. The staged copy
+// is unlinked before the refusal leaves, so the live path is whatever it
+// already was and no readable debris sits beside it.
+it('refuses a finalize it cannot rename, and takes its staged copy with it', function (): void {
+    $directory = UserDataPathService::appPath('sync/identity');
+    @mkdir($directory, 0o700, true);
+
+    // A directory wearing the destination's name. POSIX rename() refuses to
+    // move a file onto one, which is the finalize failing after a clean seal.
+    $occupied = $directory.DIRECTORY_SEPARATOR.'interrupted-identity-rename.enc';
+    @mkdir($occupied, 0o700);
+
+    $sealed = new SealedJsonFile($this->app->make(FileEncryptor::class));
+
+    expect(fn () => $sealed->writeSealed($occupied, '{"identity":"never lands"}', str_repeat("\x11", 32), 'beatrax_identity_'))
+        ->toThrow(SecretFileException::class);
+
+    expect((array) glob($occupied.'.*.tmp'))->toBe([])
+        ->and((array) glob($directory.DIRECTORY_SEPARATOR.'beatrax_identity_*.tmp'))->toBe([]);
+
+    @rmdir($occupied);
 });

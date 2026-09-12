@@ -6,8 +6,11 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Services\ImportSyncCapture;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerTrait;
 
 uses(RefreshDatabase::class);
 
@@ -215,5 +218,51 @@ it('opens no backfill when the capture reaches every table', function (): void {
     app(ImportSyncCapture::class)->captureTransactions([$transactionId], $user);
 
     expect(halfCaptureTables((int) $user->id))->toContain('transactions')
+        ->and(halfCaptureOwesAWalk((int) $user->id))->toBeFalse();
+});
+
+// The debt itself can fail, and it is reached from inside a catch on the tail
+// of a commit the reader has already been told about. A throw here would fail
+// an import that landed, so the line is what is left when even the debt cannot
+// be filed — and it has to be an error, not a pass in silence.
+it('reports rather than throws when the backfill it owes cannot be opened', function (): void {
+    $user = halfCaptureUser();
+    $this->halfCaptureUserId = (int) $user->id;
+    halfCaptureEnableSync((int) $user->id);
+    halfCaptureBindWriter((int) $user->id);
+
+    $recorded = [];
+    $this->app->instance(LoggerInterface::class, new class($recorded) implements LoggerInterface
+    {
+        use LoggerTrait;
+
+        /**
+         * @param  list<array{level: string, message: string}>  $recorded
+         */
+        public function __construct(public array &$recorded) {}
+
+        public function log($level, string|Stringable $message, array $context = []): void
+        {
+            $this->recorded[] = ['level' => is_string($level) ? $level : (string) $level, 'message' => (string) $message];
+        }
+    });
+
+    // The one collaborator the debt reaches for, refusing to resolve at all.
+    $this->app->bind(DeviceIdentityLoader::class, static function (): DeviceIdentityLoader {
+        throw new RuntimeException('the identity loader could not be built');
+    });
+
+    $transactionId = halfCaptureTransaction($user);
+    halfCaptureRefuseTransactions();
+
+    app(ImportSyncCapture::class)->captureTransactions([$transactionId], $user);
+
+    $reported = array_values(array_filter(
+        $recorded,
+        static fn (array $line): bool => $line['level'] === 'error'
+            && str_contains($line['message'], 'no pass will carry these rows to a peer'),
+    ));
+
+    expect($reported)->toHaveCount(1)
         ->and(halfCaptureOwesAWalk((int) $user->id))->toBeFalse();
 });

@@ -166,3 +166,14 @@ it('removes a pruned backup\'s sidecar before the copy it names', function (): v
     // Nine dailies in, seven kept: the sweep really did run over this folder.
     expect(snbBackups())->toHaveCount(7);
 });
+
+// The question is asked of whatever the directory walk hands it, and the walk
+// sees the backups themselves. A path that is not a sidecar names no copy, so
+// it is answered rather than measured — `substr` off a name without the suffix
+// would cut a real path short and ask about a file nobody wrote.
+it('answers no for a path that is not a sidecar at all', function (): void {
+    $copy = snbWriteSidecar('2026-09-11-030000', '2026-09-11T03:00:00+00:00', withCopy: true);
+
+    expect(BackupSidecar::describesAPresentBackup($copy))->toBeFalse()
+        ->and(BackupSidecar::describesAPresentBackup($copy.BackupSidecar::SUFFIX))->toBeTrue();
+});
