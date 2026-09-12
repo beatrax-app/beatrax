@@ -810,6 +810,28 @@ document.addEventListener('step-changed', () => {
 });
 
 /**
+ * Hold the browser's install offer for whoever asks for it later.
+ *
+ * `beforeinstallprompt` is dispatched once per document and never again. The
+ * install hint used to bind it from its own `x-data`, which only ever hears it
+ * on the document the element was parsed into: an element Alpine initialises on
+ * a `wire:navigate` arrival is binding a listener for something that has
+ * already happened, and the install button it gates is then a control nobody
+ * can reach.
+ *
+ * One listener, at module scope, registered before any component mounts and
+ * outside the DOM Livewire swaps — the same placement the step-changed handler
+ * above takes, and for the same reason. The offer is stashed rather than acted
+ * on, because the component that shows it may not exist yet.
+ */
+window.beatraxInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    window.beatraxInstallPrompt = event;
+});
+
+/**
  * Let the platform's back gesture step the wizard back instead of leaving it.
  *
  * The nine steps share one URL, so advancing writes nothing to history and the
