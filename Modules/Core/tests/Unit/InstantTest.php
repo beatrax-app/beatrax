@@ -13,6 +13,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    CarbonImmutable::setTestNow();
     date_default_timezone_set($this->originalTimezone);
 });
 
@@ -54,6 +55,11 @@ it('leaves an instant already in the app zone exactly where it is', function ():
 });
 
 it('builds the retention cutoff on the app clock rather than on the database', function (): void {
+    // The expectation and the subject each read now(), so a run that crossed a
+    // second between them compared 15:04:42 against 15:04:43 and called a
+    // one-second gap a defect.
+    CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 5, 30, 16, 15, 22, 'Europe/Amsterdam'));
+
     /** @var Clock $clock */
     $clock = app(Clock::class);
     $expected = Instant::appLocal($clock->now()->subDays(RetentionWindow::DAYS));
