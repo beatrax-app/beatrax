@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'Ve složce se zálohami nebyla nalezena žádná ověřená záloha. Beatrax si tuto zálohu dělá sám, jednou denně, dokud je aplikace otevřená — ručně není co spouštět.',
         'wal_mode_missing' => 'Databáze není v režimu WAL (aktuálně :mode), takže ukládání se může pozastavit, když běží úloha na pozadí. Beatrax nastavuje WAL při každém spuštění, takže restart to obvykle vyřeší.',
         'synchronous_misconfigured' => 'Úroveň trvanlivosti databáze je :level místo očekávané NORMAL. Beatrax ji nastavuje při každém spuštění, takže restart to obvykle vyřeší.',
+        'schema_shape_drifted' => 'Na tomto zařízení chybí část ochran, které Beatrax zabudovává do databáze, takže smazání může tiše vzít s sebou propojené záznamy a nastavení se může uložit v podobě, kterou Beatrax nedokáže přečíst zpět. Nic z toho, co jste zadali, se neztratilo. Beatrax při každém spuštění opraví, co může, takže restart to obvykle vyřeší.',
         'oauth_scrub_set_failed' => 'Maskování tajemství OAuth je mimo provoz. Logy a výňatky z auditu mohou obsahovat nemaskované tokeny až do dalšího úspěšného načtení.',
         'oauth_reauth_required' => 'Tajemství OAuth byla přesunuta do úložiště jednotlivých uživatelů. Znovu autorizujte Gmail a Microsoft, abyste obnovili skenování e-mailů. Starý soubor s tajemstvími byl přejmenován na :file pro případ návratu.',
         'oauth_reconsent' => 'Znovu připojte svůj účet :provider',

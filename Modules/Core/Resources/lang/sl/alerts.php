@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'V mapi z varnostnimi kopijami ni bilo najdene nobene preverjene kopije. Beatrax to kopijo naredi sam, enkrat na dan, dokler je aplikacija odprta — ročno ni ničesar za zagnati.',
         'wal_mode_missing' => 'Zbirka podatkov ni v načinu WAL (trenutno :mode), zato se lahko shranjevanje ustavi, dokler se izvaja opravilo v ozadju. Beatrax nastavi WAL ob vsakem zagonu, zato ponovni zagon to običajno odpravi.',
         'synchronous_misconfigured' => 'Raven trajnosti zbirke podatkov je :level namesto pričakovane NORMAL. Beatrax jo nastavi ob vsakem zagonu, zato ponovni zagon to običajno odpravi.',
+        'schema_shape_drifted' => 'Na tej napravi manjka del zaščit, ki jih Beatrax vgradi v zbirko podatkov, zato lahko brisanje tiho odnese povezane zapise, nastavitev pa se lahko shrani v obliki, ki je Beatrax ne zna prebrati nazaj. Nič od tega, kar ste vnesli, ni izgubljeno. Beatrax ob vsakem zagonu popravi, kar lahko, zato ponovni zagon to običajno odpravi.',
         'oauth_scrub_set_failed' => 'Prikrivanje skrivnosti OAuth ne deluje. Dnevniki in izvlečki revizije lahko do naslednjega uspešnega nalaganja vsebujejo neprikrite žetone.',
         'oauth_reauth_required' => 'Skrivnosti OAuth so bile premaknjene v shrambo za posameznega uporabnika. Znova avtorizirajte Gmail in Microsoft, da se pregledovanje e-pošte nadaljuje. Stara datoteka s skrivnostmi je bila zaradi vrnitve preimenovana v :file.',
         'oauth_reconsent' => 'Znova povežite svoj :provider',

@@ -113,6 +113,54 @@ Both are the same class: `CoreServiceProvider` registers the alias so framework
 consumers that expect the default Laravel namespace —
 `auth.providers.users.model`, notification routing — resolve the module model.
 
+## A boot probe the harness spent before the test arranged anything
+
+Some checks run once per boot: a listener on `ConnectionEstablished`, guarded by
+a one-shot flag on a container singleton so a restart storm cannot repeat its
+work. A test driving one has to arrange the condition, boot, and assert — and the
+order of the first two is easy to get backwards with nothing saying so.
+
+**The symptom is nothing, with no reason given.** The assertion reads "no row
+raised", which is indistinguishable from "the condition was never detected". The
+tell is *which* tests fail: every test calling the check directly passes, and
+only the ones going through boot read zero. That asymmetry means the check works
+and the boot never reached it.
+
+**The cause is a connection resolved before the condition existed.** Whatever
+statement the test runs to arrange the condition resolves the connection first,
+which fires `ConnectionEstablished` at the listener the application registered —
+against the state as it was *before* the arrangement — and the listener sets its
+one-shot flag on the way out. The test's own boot then returns at that flag. The
+flag is not observable from the test and the early return logs nothing, so no
+evidence anywhere points at it.
+
+**The escape is to own the whole order.** Forget the listeners, reconnect while
+none is attached, install fresh state, register only the listener under test,
+then dispatch once by hand:
+
+```php
+$events->forget(ConnectionEstablished::class);
+
+$db->purge('sqlite');
+$connection = $db->connection('sqlite');
+
+$app->instance(BootProbeState::class, new BootProbeState);
+
+(new HealthCheckServiceProvider($app))->boot($events);
+
+$events->dispatch(new ConnectionEstablished($connection));
+```
+
+One listener invocation, against the arranged state, with nothing else
+listening — the optimisations provider included, which would otherwise repair the
+pragmas its neighbours read before they read them.
+
+A harness that arranges its condition through a bare `PDO` never hits this,
+because it never resolves the framework connection. That is an accident of how
+one test happened to write a pragma, not a pattern to copy: the next condition
+that can only be arranged through the framework connection reproduces the trap
+in full.
+
 ## Related
 
 - [Module boundaries](../architecture/module-boundaries.md) — where module-local

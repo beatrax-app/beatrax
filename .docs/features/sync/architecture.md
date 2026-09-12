@@ -2208,6 +2208,13 @@ Two tests hold the line: every foreign key must be classified as owning or not
 owning, and no foreign key may declare a cascade
 (`Modules/Sync/tests/Feature/EveryForeignKeySaysWhoOwnsTheRowTest.php`).
 
+Both of those read the schema the migrations build, which is not the same claim
+as "no installed database still cascades". One was found that did — 23 tables,
+42 keys, with the removal migration recorded as run in its own `migrations`
+table — so the schema is now also read back at boot, and repaired where it
+disagrees with what the migrations declare. See
+[a schema the migrations table vouched for](../core/a-schema-the-migrations-table-vouched-for.md).
+
 ### The receiver is the only side that can clear its own derived rows
 
 That cascade ran on the **local** delete path only, and it announces every child

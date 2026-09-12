@@ -35,6 +35,7 @@ use Modules\Core\Internal\Listeners\RefuseToShipAStaleFrontEnd;
 use Modules\Core\Internal\Providers\AlreadyOpenConnectionsProvider;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
+use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
 use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Models\User as CoreUser;
 use Modules\Core\Public\Contracts\Clock;
@@ -103,6 +104,10 @@ final class CoreServiceProvider extends ServiceProvider
         // the contract lives; the implementation reaches thirty seeders across
         // a dozen modules, which is why it does not.
         $this->app->singleton(SampleDataLoader::class, SampleDatasetSeeder::class);
+
+        // Two sqlite_master reads and no state, so one instance serves the boot
+        // listener and the doctor alike.
+        $this->app->singleton(SchemaShapeHealthCheck::class);
 
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(UserCountry::class);

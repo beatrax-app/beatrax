@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'No verified backup was found in the backups folder. Beatrax makes this backup itself, once a day, while the app is open — there is nothing to run by hand.',
         'wal_mode_missing' => 'The database is not in WAL mode (currently :mode), so saving can pause while a background task is running. Beatrax sets WAL every time it starts, so restarting usually clears this.',
         'synchronous_misconfigured' => 'The database durability level is :level rather than the expected NORMAL. Beatrax sets this every time it starts, so restarting usually clears it.',
+        'schema_shape_drifted' => 'Some of the safeguards Beatrax builds into the database are missing on this device, so deleting something can quietly take linked records with it and a setting can be saved in a form Beatrax cannot read back. Nothing you have entered has been lost. Beatrax repairs what it can every time it starts, so restarting usually clears this.',
         'oauth_scrub_set_failed' => 'OAuth secret redaction is offline. Logs and audit excerpts may contain unredacted tokens until the next successful load.',
         'oauth_reauth_required' => 'OAuth secrets moved to per-user storage. Re-authorize Gmail and Microsoft to resume email scanning. The old secrets file was renamed to :file for rollback.',
         'oauth_reconsent' => 'Reconnect your :provider',

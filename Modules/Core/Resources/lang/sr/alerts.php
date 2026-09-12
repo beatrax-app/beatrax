@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'U fascikli sa rezervnim kopijama nije pronađena nijedna proverena kopija. Beatrax ovu kopiju pravi sam, jednom dnevno, dok je aplikacija otvorena — ručno nema šta da se pokreće.',
         'wal_mode_missing' => 'Baza podataka nije u WAL režimu (trenutno :mode), pa čuvanje može da zastane dok se izvršava pozadinski zadatak. Beatrax postavlja WAL pri svakom pokretanju, pa ponovno pokretanje to obično reši.',
         'synchronous_misconfigured' => 'Nivo trajnosti baze podataka je :level umesto očekivanog NORMAL. Beatrax ga postavlja pri svakom pokretanju, pa ponovno pokretanje to obično reši.',
+        'schema_shape_drifted' => 'Na ovom uređaju nedostaje deo zaštita koje Beatrax ugrađuje u bazu podataka, pa brisanje može tiho da povuče povezane zapise sa sobom, a podešavanje može da se sačuva u obliku koji Beatrax ne može da pročita nazad. Ništa od onoga što ste uneli nije izgubljeno. Beatrax pri svakom pokretanju popravi što može, pa ponovno pokretanje to obično reši.',
         'oauth_scrub_set_failed' => 'Prikrivanje OAuth tajni ne radi. Zapisi i izvodi revizije mogu sadržati neprikrivene tokene do sledećeg uspešnog učitavanja.',
         'oauth_reauth_required' => 'OAuth tajne su premeštene u skladište po korisniku. Ponovo autorizujte Gmail i Microsoft da bi se nastavilo skeniranje e-pošte. Stara datoteka sa tajnama preimenovana je u :file radi vraćanja.',
         'oauth_reconsent' => 'Ponovo povežite svoj :provider',

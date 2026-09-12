@@ -11,6 +11,7 @@ use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Internal\Listeners\HealthCheckListener;
+use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
@@ -73,6 +74,7 @@ function bnrBoot(): void
         $db,
         app(SystemAlertWriter::class),
         app(BackupFreshness::class),
+        app(SchemaShapeHealthCheck::class),
     );
 
     $listener(new ConnectionEstablished($db->connection()));

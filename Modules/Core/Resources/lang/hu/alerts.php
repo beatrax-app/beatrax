@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'A biztonsági mentések mappájában nem található ellenőrzött mentés. A Beatrax ezt a mentést maga készíti, naponta egyszer, amíg az alkalmazás nyitva van — kézzel nincs mit futtatni.',
         'wal_mode_missing' => 'Az adatbázis nem WAL módban fut (jelenleg :mode), így a mentés megakadhat, amíg egy háttérfeladat fut. A Beatrax minden indításkor beállítja a WAL-t, ezért az újraindítás általában megoldja.',
         'synchronous_misconfigured' => 'Az adatbázis tartóssági szintje :level a várt NORMAL helyett. A Beatrax minden indításkor beállítja, ezért az újraindítás általában megoldja.',
+        'schema_shape_drifted' => 'Ezen az eszközön hiányzik azoknak a védelmeknek egy része, amelyeket a Beatrax beépít az adatbázisba, így egy törlés csendben magával viheti a kapcsolódó bejegyzéseket, egy beállítás pedig olyan formában mentődhet, amelyet a Beatrax nem tud visszaolvasni. Semmi nem veszett el abból, amit megadtál. A Beatrax minden induláskor kijavítja, amit tud, így az újraindítás ezt általában megoldja.',
         'oauth_scrub_set_failed' => 'Az OAuth-titkok kitakarása nem működik. A naplók és az auditrészletek a következő sikeres betöltésig kitakaratlan tokeneket tartalmazhatnak.',
         'oauth_reauth_required' => 'Az OAuth-titkok felhasználónkénti tárolóba kerültek. Engedélyezze újra a Gmailt és a Microsoftot az e-mailek vizsgálatának folytatásához. A régi titokfájl visszaállítás céljából :file névre lett átnevezve.',
         'oauth_reconsent' => 'Csatlakoztassa újra a(z) :provider fiókját',
