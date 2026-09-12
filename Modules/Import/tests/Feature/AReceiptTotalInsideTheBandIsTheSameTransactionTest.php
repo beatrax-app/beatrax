@@ -93,13 +93,34 @@ it('still matches a receipt sitting exactly on the edge of the band', function (
     expect($this->stage->classify($receipt, $this->fixtureUser)->status())->toBe(PreviewRowStatus::Enriched);
 });
 
+// The stored reference is moved off the row first, so the band is the only
+// thing left that could answer: a receipt naming the stored row's own reference
+// reaches it through that reference whatever the two totals are.
 it('reads a receipt one minor unit past the band as a different transaction', function (): void {
+    DB::table('transactions')->where('id', $this->storedId)->update(['source_ref' => 'PAYPALTXN17052026-OTHER']);
+
     $receipt = NearTotalFixture::receiptCanonical($this->fixtureUser, $this->paypalAccountId, 'total-past-the-band-receipt.eml');
     expect($receipt->amountMinor)->toBe(-1313);
     expect(abs($receipt->amountMinor - $this->statement->amountMinor))
         ->toBe(NearTotalMatch::bandMinorFor($receipt->amountMinor) + 1);
 
     expect($this->stage->classify($receipt, $this->fixtureUser)->status())->toBe(PreviewRowStatus::NewRow);
+});
+
+// Past the band and carrying the export's own transaction id: the band is an
+// approximation and the reference is not, so the reader is shown one Netflix
+// charge with a disagreement on it rather than two.
+it('reads a receipt past the band naming the stored reference as a restatement', function (): void {
+    $receipt = NearTotalFixture::receiptCanonical($this->fixtureUser, $this->paypalAccountId, 'total-past-the-band-receipt.eml');
+    expect($receipt->sourceRef)->toBe('PAYPALTXN17052026');
+
+    $disposition = $this->stage->classify($receipt, $this->fixtureUser);
+
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
+    /** @var EnrichedDisposition $disposition */
+    expect($disposition->existingTransactionId)->toBe($this->storedId);
+    expect($disposition->conflictingFields[EnrichmentConflictField::AmountMinor->value] ?? null)
+        ->toBe(['stored' => -1299, 'incoming' => -1313]);
 });
 
 // Matching either of two is worse than matching neither: the one not chosen

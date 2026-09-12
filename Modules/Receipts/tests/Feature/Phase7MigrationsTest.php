@@ -221,7 +221,7 @@ it('creates the pending_enrichment_conflicts table and enforces the UNIQUE const
         'field_name' => 'counterparty_name',
         'stored_value' => 'SPOTIFY.COM',
         'incoming_value' => 'Spotify',
-        'incoming_source_format' => 'paypal-receipt',
+        'incoming_source_format' => 'eml',
         'import_run_id' => null,
         'created_at' => '2026-05-17 00:00:00',
         'updated_at' => '2026-05-17 00:00:00',

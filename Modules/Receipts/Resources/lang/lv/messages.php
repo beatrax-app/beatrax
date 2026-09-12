@@ -18,5 +18,10 @@ return [
         'body' => ':heading — čekā (“:receipt”), konta izrakstā (“:statement”). Vai turpmākajos konfliktos Beatrax dot priekšroku čekiem?',
         'use_receipt' => 'Izmantot čeku',
         'keep_statement' => 'Paturēt konta izrakstu',
+        'heading_restated' => 'Vēlākā konta izrakstā lauks :field atšķiras',
+        'restated_title' => 'Banka pārrēķināja šo darījumu.',
+        'restated_body' => ':heading — vēlākajā izrakstā (“:incoming”), jau saglabātajā rindā (“:stored”). Vai turpmākajās neatbilstībās Beatrax dot priekšroku jaunajai vērtībai?',
+        'use_restated' => 'Izmantot jauno vērtību',
+        'keep_stored' => 'Paturēt saglabāto vērtību',
     ],
 ];

@@ -18,5 +18,10 @@ return [
         'body' => ':heading („:receipt”) niż wyciąg („:statement”). Czy Beatrax ma przy przyszłych konfliktach preferować paragony?',
         'use_receipt' => 'Użyj paragonu',
         'keep_statement' => 'Zachowaj wyciąg',
+        'heading_restated' => 'Późniejszy wyciąg zapisuje inną wartość w polu „:field”',
+        'restated_title' => 'Bank skorygował tę transakcję.',
+        'restated_body' => ':heading („:incoming”) niż już zapisany wiersz („:stored”). Czy Beatrax ma przy przyszłych rozbieżnościach preferować nową wartość?',
+        'use_restated' => 'Użyj nowej wartości',
+        'keep_stored' => 'Zachowaj zapisaną wartość',
     ],
 ];

@@ -18,5 +18,10 @@ return [
         'body' => ':heading („:receipt”) nego izvod („:statement”). Treba li Beatrax kod budućih neslaganja da daje prednost potvrdama?',
         'use_receipt' => 'Koristi potvrdu',
         'keep_statement' => 'Zadrži izvod',
+        'heading_restated' => 'Kasniji izvod beleži drugačiji :field',
+        'restated_title' => 'Banka je ispravila ovu transakciju.',
+        'restated_body' => ':heading („:incoming”) nego već sačuvani red („:stored”). Treba li Beatrax kod budućih neslaganja da daje prednost novoj vrednosti?',
+        'use_restated' => 'Koristi novu vrednost',
+        'keep_stored' => 'Zadrži sačuvanu vrednost',
     ],
 ];

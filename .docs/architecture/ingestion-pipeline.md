@@ -266,6 +266,13 @@ The stage then classifies the canonical transaction against the existing
   `source_ref` and appends a provenance entry to the `enriched_from` JSON
   column.
 
+A NEW verdict is reached only after all three lookups miss: the exact
+fingerprint, [a reference the ledger already
+holds](#a-reference-the-ledger-already-holds), and [a total inside the
+band](#a-total-inside-the-band). All three hand `enrichedAgainst()` the
+same stored-row shape, so no arm can build a disposition the applier reads
+differently.
+
 The classification yields a `PreviewRowDto` per source row plus three
 output lists — `canonical` (NEW rows ready to insert), `enrichments`
 (UPDATE work items), and `unknownIbans` (deduplicated account-resolution
@@ -345,6 +352,74 @@ single minor unit inside the band is still a disagreement, recorded as an
 `amount_minor` conflict on `EnrichedDisposition::$conflictingFields`.
 Conflating the two would silently absorb the difference the reader is
 meant to answer.
+
+### A reference the ledger already holds
+
+A bank that files a card payment at the price the terminal held and
+restates the same row at the price it settled for sends both rows under
+one reference. The amount is hashed into the fingerprint and the
+reference deliberately is not, so the restating row hashed to nothing
+stored, classified NEW, and landed beside the row it was restating: one
+€14.99 coffee read as €27.98 of spending, with nothing on any screen
+saying the two rows were one payment.
+
+`RestatedRowMatch` is the third question `classify()` asks when the exact
+lookup misses, and it is asked before the receipt band's approximate one:
+where both fire they point at one row, and the reference is the term the
+bank itself assigned. It looks for a stored row of the same user and the
+same account carrying the same `source_ref`, and — the point of the whole
+arm — a **different** `amount_minor`.
+
+Four rules bound it:
+
+- **Every other term the fingerprint hashes still has to be equal** —
+  `posted_at`, `booked_at`, `counterparty_normalized` and the occurrence
+  ordinal, with the currency equal case-normalised. The reference widens
+  the total and nothing else, for the same reason [the band widens no
+  date](#a-total-inside-the-band). It also keeps the resolved row findable:
+  taking the restated figure makes the stored row identical to the
+  restating one, so the next overlapping statement reads it as a plain
+  DUPLICATE instead of writing it again.
+- **A row stating the same total is not a candidate.** The exact lookup
+  missed it over some other term, and no amount has been restated. A
+  fixed-amount direct debit whose bank reuses one mandate reference every
+  month therefore stays a row of its own.
+- **Two stored rows under one reference restate neither.** A reference two
+  rows share is a constant the bank fills in rather than a name for either
+  of them, and matching one of two leaves the other holding the
+  restatement. Two purchases at one merchant on one day at different
+  prices are both the ordinal's first, which is exactly the shape a
+  constant reference collides on.
+- **A sentinel meaning "no reference" is not one.** SWIFT fills `:61:`
+  field 7 with `NONREF` the way SEPA fills an end-to-end field with
+  `NOTPROVIDED`; `Mt940Adapter` drops both, because stored as a reference
+  either becomes a lookup key every such row of the account shares.
+
+A hit is ENRICHED, never a fourth verdict, and the disagreement rides on
+`EnrichedDisposition::$conflictingFields` exactly as the receipt band's
+does. `ApplyEnrichments` admits it past the `source_ref` ranking on
+`disagreesAboutTheTotal()` — the two references are equal, so the
+enrichment strengthens nothing and would otherwise be dropped — and
+writes the stored reference back unchanged.
+
+**The restatement is a question for the reader, not a policy decision.**
+`ApplyEnrichments::resolutionFor()` settles a statement-incoming
+disagreement as `prefer_first_write` without asking, because the toast's
+copy asks whether to prefer receipts and only the receipt direction poses
+that. A row restating one the ledger already holds under the same
+reference is the exception: its figure is written nowhere else, so
+settling it unasked is discarding it. The conflict therefore lands with
+`resolution` NULL — the one state `ReceiptConflictQuery` reads — and
+[the toast](../features/receipts/architecture.md#resolving-a-conflict-is-a-ledger-write)
+asks in its own words rather than naming a receipt nobody sent.
+
+Re-importing is bounded in all three directions the reader can leave it:
+
+| The reader has | The next overlapping statement |
+|---|---|
+| not answered yet | restates again; the upsert on `UNIQUE (user_id, transaction_id, field_name)` keeps one outstanding question |
+| taken the new figure | matches the recomposed fingerprint exactly and drops as DUPLICATE |
+| kept the stored figure | restates again, and the stored policy settles it without asking a second time |
 
 ## Preview vs Confirm
 
@@ -531,6 +606,12 @@ updates the existing row in place and the `enriched_from` JSON column
 captures the provenance trail, so the "this row was originally imported
 as CSV on 2026-04-12, then enriched by the PayPal receipt on 2026-05-01"
 history survives.
+
+A row the bank has **restated** — the same reference at a different total
+— is neither of those. It is ENRICHED through [the reference
+lookup](#a-reference-the-ledger-already-holds) and its disagreement is
+left for the reader, so no second transaction is written and the
+re-import stays a no-op whichever way the reader answers.
 
 This is the "Idempotency" project constraint (see PROJECT.md): same
 source plus same transaction never duplicates. The fingerprint stage
@@ -810,6 +891,9 @@ every balance it reports and nothing on the screen says so. See
   `FingerprintStage`).
 - `Modules/Import/Public/Pipeline/NormalizeStage.php` — the only
   public-contract stage.
+- `Modules/Import/Internal/Services/NearTotalMatch.php` and
+  `RestatedRowMatch.php` — the two lookups `classify()` asks when the
+  exact fingerprint misses.
 - `Modules/Ledger/Public/Services/OccurrenceOrdinals.php` — the per-file
   counter behind [the occurrence ordinal](#the-occurrence-ordinal).
 - `Modules/Categorization/Internal/Pipeline/ApplyAutoCategoryStage.php`

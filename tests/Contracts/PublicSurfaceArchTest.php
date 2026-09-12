@@ -216,7 +216,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Import/Public/Services/AccountNamer.php',
         'Modules/Import/Public/Services/AliasMatchPreviewQuery.php',
         'Modules/Import/Public/Services/EloquentAccountResolver.php',
-        'Modules/Import/Public/Services/SourceRefRanker.php',
         'Modules/Ingestion/Public/Contracts/SourceAdapter.php',
         'Modules/Ingestion/Public/Dto/SniffResult.php',
         'Modules/Ingestion/Public/Exceptions/UnsupportedFormatException.php',
@@ -268,7 +267,6 @@ it('does not allow a Public class without a consumer outside its own module (pin
         // Internal subclass would reach that catch under a name the catching
         // module is not allowed to write.
         'Modules/Pots/Public/Exceptions/TargetPotNotFoundException.php',
-        'Modules/Receipts/Public/Actions/ApplyReceiptConflictResolution.php',
         'Modules/Receipts/Public/Dto/MatcherInputDto.php',
         'Modules/Receipts/Public/Dto/ParsedReceiptDto.php',
         'Modules/Receipts/Public/Exceptions/MboxReadException.php',
