@@ -142,7 +142,13 @@ What the module explicitly does NOT do:
   (`UpsertsCardStatements`, `RetypeByAliasResolver`,
   `PairsTransferLegs`, `IcsSettlementResolver`,
   `PaypalFundingResolver`), flips the audit row to `complete` with
-  `linked_count`. A `JobFailed` listener registered in
+  `linked_count`. That number is what the two resolvers report inserting,
+  summed — never the difference between two counts of `chain_links`. The
+  difference measured every writer: `chain_links` is a synced table, so the
+  applier lands a peer's rows inside the same window, a second pass for the
+  same user overlaps this one (`dispatchSync` bypasses the queue's unique
+  lock), and a cascade delete of a transaction takes its links with it, which
+  made the stored figure negative. A `JobFailed` listener registered in
   `ChainsServiceProvider::boot()` flips it to `failed` with a
   truncated `last_error` on final-retry exhaustion.
 - `CardStatementUpserter` (impl. `UpsertsCardStatements`) — promotes

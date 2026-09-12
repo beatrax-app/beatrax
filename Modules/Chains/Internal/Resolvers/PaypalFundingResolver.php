@@ -80,7 +80,10 @@ final readonly class PaypalFundingResolver
         private PaypalFundingSignatureKey $signatureKey,
     ) {}
 
-    public function resolveForUser(User $user): void
+    /**
+     * @return int chain_links rows this pass inserted
+     */
+    public function resolveForUser(User $user): int
     {
         $connection = $this->db->connection();
 
@@ -116,34 +119,38 @@ final readonly class PaypalFundingResolver
             ]);
 
         if ($rows->isEmpty()) {
-            return;
+            return 0;
         }
 
         // The registered aliases belong to the reader, not to the row, so the
         // ASN-direct arm below is handed them rather than asking per payment.
         $aliasSet = $this->paypalAliasSet($user);
 
+        $inserted = 0;
+
         foreach ($rows as $row) {
             /** @var stdClass $row */
             $link = $this->deterministicMatch($row, $user);
             if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user->id);
+                $inserted += $this->inserter->insertIfNotExists($link, $user->id) ? 1 : 0;
 
                 continue;
             }
 
             $link = $this->asnDirectMatch($row, $aliasSet, $user);
             if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user->id);
+                $inserted += $this->inserter->insertIfNotExists($link, $user->id) ? 1 : 0;
 
                 continue;
             }
 
             $link = $this->fuzzyMatch($row, $user);
             if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user->id);
+                $inserted += $this->inserter->insertIfNotExists($link, $user->id) ? 1 : 0;
             }
         }
+
+        return $inserted;
     }
 
     /**
