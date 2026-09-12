@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Public\Services\PortableKeyMaterial;
@@ -73,6 +74,15 @@ afterEach(function (): void {
 function supportedBackupKeyringBytes(): string
 {
     return 'the-only-copy-of-epoch-771122';
+}
+
+// A view where the carrier table goes. `DROP TABLE IF EXISTS` refuses a view
+// by name, so packInto() throws a PDOException — deterministic on any runner,
+// unlike a mode this process might be privileged enough to read past.
+function supportedBackupPlantACarrierView(string $livePath): void
+{
+    (new PDO('sqlite:'.$livePath, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]))
+        ->exec('CREATE VIEW '.BackupKeyMaterial::TABLE.' AS SELECT 1 AS user_id, \'x\' AS keyring');
 }
 
 /** @return list<string> */
@@ -281,4 +291,137 @@ it('takes a second pre-restore snapshot inside the same second', function (): vo
     $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
 
     expect((array) glob($backupsDir.DIRECTORY_SEPARATOR.'pre-restore-*.sqlite'))->toHaveCount(2);
+});
+
+// A snapshot that cannot take the key material is an incomplete backup, not a
+// quiet success: the copy is deleted, the operator gets the standing
+// `backup_corrupt` alert naming the phase, and no file is left behind claiming
+// to be a backup.
+//
+// The trigger is a VIEW named where the carrier table goes: `DROP TABLE IF
+// EXISTS` refuses a view, so the throw arrives as a PDOException rather than
+// one of ours — which is the arm that must name the class instead of a message
+// carrying the statement and its bindings.
+it('refuses the backup when the snapshot cannot take the key material', function (): void {
+    supportedBackupPlantACarrierView($this->livePath);
+
+    $this->artisan('db:backup', ['--force' => true])
+        ->expectsOutputToContain('its backup files could not be written')
+        ->assertExitCode(1);
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+
+    expect((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))->toBe([])
+        ->and((array) glob($backupsDir.DIRECTORY_SEPARATOR.'*.partial'))->toBe([]);
+
+    $alert = SystemAlert::query()->where('kind', 'backup_corrupt')->latest('id')->first();
+
+    expect($alert)->not->toBeNull()
+        ->and($alert->metadata['phase'] ?? null)->toBe('pack_key_material')
+        ->and($alert->metadata['cause'] ?? null)->toBe('write_failed')
+        ->and($alert->metadata['reason'] ?? null)->toBe('PDOException');
+});
+
+// The same refusal on the restore's own pre-restore snapshot. It happens
+// before the live database is touched, so it costs the reader nothing — and
+// an undo that could not carry the keys is not an undo.
+it('refuses the restore when the pre-restore snapshot cannot carry the keys', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    /** @var string $livePath */
+    $livePath = $this->livePath;
+    supportedBackupPlantACarrierView($livePath);
+    $before = (string) hash_file('sha256', $livePath);
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])
+        ->expectsOutputToContain('Restore refused')
+        ->assertExitCode(1);
+
+    expect(hash_file('sha256', $livePath))->toBe($before);
+});
+
+// A carrier row that will not base64-decode is a refusal, and the staged copy
+// goes with it rather than sitting in the staging directory as a whole ledger.
+it('refuses a restore whose carried keyring will not decode', function (): void {
+    $source = RealSqliteFixture::create('keyring-undecodable', [
+        'CREATE TABLE sync_encryption_state (user_id INTEGER PRIMARY KEY, current_epoch INTEGER)',
+        'CREATE TABLE '.BackupKeyMaterial::TABLE.' (user_id INTEGER PRIMARY KEY, keyring TEXT NOT NULL)',
+        'INSERT INTO '.BackupKeyMaterial::TABLE." (user_id, keyring) VALUES (1, '')",
+    ]);
+
+    /** @var string $livePath */
+    $livePath = $this->livePath;
+    $before = (string) hash_file('sha256', $livePath);
+
+    $this->artisan('db:restore', ['path' => $source, '--confirm' => true])
+        ->expectsOutputToContain('Restore refused')
+        ->assertExitCode(1);
+
+    expect(hash_file('sha256', $livePath))->toBe($before)
+        ->and((array) glob(UserDataPathService::appPath('tmp-restore').DIRECTORY_SEPARATOR.'*'))->toBe([]);
+
+    RealSqliteFixture::cleanup($source);
+});
+
+// The staging directory is where the whole ledger lands in clear, so a mode
+// that will not settle is a refused restore rather than a copy left somewhere
+// this application could not narrow.
+it('refuses a restore it cannot stage the copy for', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    // A regular file where the staging directory has to be: mkdir cannot make
+    // it and is_dir never becomes true, which is the refusal OwnerOnlyPath
+    // answers with.
+    $staging = UserDataPathService::appPath('tmp-restore');
+    file_put_contents(rtrim($staging, '/'), '');
+
+    /** @var string $livePath */
+    $livePath = $this->livePath;
+    $before = (string) hash_file('sha256', $livePath);
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])
+        ->expectsOutputToContain('could not be made owner-only')
+        ->assertExitCode(1);
+
+    expect(hash_file('sha256', $livePath))->toBe($before);
+});
+
+// The copy itself failing leaves nothing behind either: the same discard runs,
+// and the refusal names the class rather than a message a query could have
+// written the ledger into.
+it('refuses a restore whose staged copy will not write', function (): void {
+    $refusesToCopy = new class extends Filesystem
+    {
+        public function copy($path, $target): bool
+        {
+            return false;
+        }
+    };
+
+    // Both names and before the first artisan call: the container aliases
+    // `files` to the class, and the console application resolves every command
+    // it holds the moment one of them is run.
+    app()->instance(Filesystem::class, $refusesToCopy);
+    app()->instance('files', $refusesToCopy);
+
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])
+        ->expectsOutputToContain('could not be staged for the swap')
+        ->assertExitCode(1);
+
+    expect((array) glob(UserDataPathService::appPath('tmp-restore').DIRECTORY_SEPARATOR.'*'))->toBe([]);
 });

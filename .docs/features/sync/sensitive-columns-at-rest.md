@@ -1907,7 +1907,6 @@ and download staging paths already did. `db:backup`'s own name deliberately does
 `BackupRetentionPolicy` parses it, and its same-second collision is caught and kept as
 `.suspect`.
 
-
 `Modules\Sync\Public\Services\PortableKeyMaterial` is the one spelling of that path.
 Three copies of `sync/gdk/{userId}.enc` existed as string literals before it, and a keyring
 written where nothing looks for it is indistinguishable from no keyring at all.
