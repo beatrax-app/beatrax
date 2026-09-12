@@ -269,7 +269,13 @@ it('resolves the factory modules out of the entry script, and not the entry scri
     expect($factories)->toHaveKey('palette')
         ->and($factories['palette'])->toBe('palette.js');
 
-    expect(array_values($factories))->not->toContain('app.js', 'a factory declared in the entry script is out of scope: that file also carries the page-level machinery, which binds to the document on purpose');
+    // A factory declared in the entry script is out of scope on purpose: that
+    // file also carries the page-level machinery — the submit delegate, the
+    // theme watcher, the install-offer capture — which binds to the document
+    // deliberately and has no element to be stopped with.
+    expect(in_array('app.js', array_values($factories), true))->toBeFalse(
+        'app.js resolved as a factory module, which would put the page-level machinery under a rule written for elements.'
+    );
 });
 
 // The tree satisfies the rule, so it reports on what it cannot find and the
