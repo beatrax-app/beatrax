@@ -293,6 +293,23 @@ return [
         // app-lock veil never even loads. Never bundle it.
         'public/hot',
 
+        // Working artefacts the desktop root learned to exclude the hard way,
+        // added here before they can appear rather than after. None of these
+        // paths exists under this root today, and that is the point: the
+        // packager copies the working tree, so the first time a tool writes one
+        // it ships. .device-test and .playwright-mcp are the sharp pair — on the
+        // desktop root they held 1.6 GB of screenshots of a real ledger.
+        '.git',
+        '.docs',
+        '.github',
+        'node_modules',
+        '.claude',
+        '*/.claude',
+        '.device-test',
+        '.playwright-mcp',
+        '.phpstan-cache',
+        '.pint.cache',
+
         // Everything below is a file the repository's own ignore list says may
         // sit at a shell root without being source. The packager copies the
         // working tree, so each one is copied unless it is named here, and
