@@ -161,6 +161,14 @@ with a device that was lost.
 undone without the old `device_id`, and the one state it is for is the state where nothing on
 this machine can answer for that row at all.
 
+The order inside the repair is load-bearing for the same reason. A retirement the mint does
+not follow leaves a device with no self row and no key-file — `NeverEnabled`, owing nothing,
+dropping what it writes, which is the state this page exists to end. So every gate the enable
+refuses on is asked *before* anything is retired. What remains is a mint that throws after its
+gates passed: the reader gets the failure copy, the ordinary enable is offered and works, and
+the window in which writes are dropped is one the reader is standing in rather than an
+unbounded silence.
+
 ### The third reader of the same question
 
 `DeviceRegistryService::hasLocalDevice()` decides whether the desktop starts its sync and

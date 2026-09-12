@@ -51,6 +51,16 @@ trait RepairsARestoredSyncIdentity
             return;
         }
 
+        // Before the retirement, not after it: the enable below refuses on
+        // this and the retirement is what keeps the writes deferring, so
+        // retiring first would leave a device that owes nothing and drops
+        // what it writes — the state this whole file exists to end.
+        if (! $this->appLockConfigured) {
+            $this->flashMessage = Lang::get('sync::devices.flash.app_lock_first');
+
+            return;
+        }
+
         if (! $identityService->retireSelfRegistration($currentUser->user()->id)) {
             $this->flashMessage = Lang::get('sync::devices.flash.identity_replace_failed');
 

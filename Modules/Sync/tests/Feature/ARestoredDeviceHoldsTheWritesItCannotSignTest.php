@@ -264,6 +264,42 @@ it('mints one identity on the explicit repair and sends what the device was hold
         ->and($db->connection()->table('deferred_op_captures')->where('user_id', $user->id)->count())->toBe(0);
 });
 
+// A retirement the mint does not follow leaves a device owing nothing, which
+// is the state this file exists to end — so the gate the enable refuses on is
+// asked before anything is retired, not after.
+it('retires nothing when the enable behind the repair cannot run', function (): void {
+    $user = aRestoredDeviceUser('restored-no-app-lock');
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $restoredDeviceId = $identityService->generateAndPersist((int) $user->id, $session)->deviceId;
+    @unlink(restoredDeviceIdentityPath((int) $user->id));
+
+    $seriesId = aRestoredSeries($db, (int) $user->id);
+
+    $this->actingAs($user);
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->assertSet('appLockConfigured', false)
+        ->call('repairRestoredSyncIdentity')
+        ->assertSet('registeredWithoutIdentity', true)
+        ->assertSet('flashMessage', 'Set an app lock first to enable sync.');
+
+    /** @var SyncCaptureListener $listener */
+    $listener = $this->app->make(SyncCaptureListener::class);
+    $listener->handleEntity(new EntityMutated('recurring_series', $seriesId, (int) $user->id, 'edit', [
+        'billing_day' => 11,
+    ]));
+
+    expect(array_values(restoredSelfRows($db, (int) $user->id)))->toBe([$restoredDeviceId])
+        ->and($db->connection()->table('deferred_op_captures')->where('user_id', $user->id)->count())->toBe(1);
+});
+
 // The premise the whole defect rests on, pinned against the symbol that names
 // what travels rather than against an assumption about it.
 it('leaves the identity key-file out of the files a backup carries', function (): void {
