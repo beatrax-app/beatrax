@@ -215,6 +215,11 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Import/Public/Actions/RunImport.php',
         'Modules/Import/Public/Contracts/NamesAccounts.php',
         'Modules/Import/Public/Dto/AliasMatchPreviewResultDto.php',
+        // The declared return of AppliesEnrichments::__invoke(), which is
+        // Public. Its one production caller is ConfirmImport, inside Import;
+        // the class is part of that contract's surface all the same, and the
+        // AdoptedBooking it carries is what Sync reads.
+        'Modules/Import/Public/Dto/AppliedEnrichments.php',
         'Modules/Import/Public/Dto/DuplicateDisposition.php',
         'Modules/Import/Public/Dto/EnrichedDisposition.php',
         'Modules/Import/Public/Dto/FingerprintDisposition.php',

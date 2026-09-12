@@ -15,6 +15,7 @@ const EDITED_BUT_ONCE_UNDECLARED = [
     'goals' => ['status'],
     'pots' => ['category_id', 'goal_id', 'status'],
     'transaction_splits' => ['settled_currency', 'sort_order'],
+    'transactions' => ['booked_at', 'occurrence_ordinal', 'posted_at', 'value_date'],
 ];
 
 it('declares every column an edit announces, so the announcement guard covers it', function (): void {

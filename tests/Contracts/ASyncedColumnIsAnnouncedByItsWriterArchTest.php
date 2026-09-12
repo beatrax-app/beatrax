@@ -27,6 +27,12 @@ const SILENT_COLUMN_WRITERS = [
         'announcedBy' => 'Modules/Sync/Internal/Config/MergeRulesRegistry.php',
         'proves' => "/DEVICE_LOCAL_COLUMNS = \\[.*?'locale',/s",
     ],
+    'Modules/Import/Public/Actions/ApplyEnrichments.php' => [
+        'columns' => ['transactions.booked_at', 'transactions.occurrence_ordinal', 'transactions.posted_at', 'transactions.value_date'],
+        'reason' => 'the terms of every adopted restatement are reported to its one caller, which registers the announcement inside the confirm transaction: an op written from in here would outlive an import that rolls back, and this action cannot see whether the run it is part of commits',
+        'announcedBy' => 'Modules/Import/Public/Actions/ConfirmImport.php',
+        'proves' => '/afterCommit\(.*?captureAdoptedBookings\(/s',
+    ],
     'Modules/Ledger/Internal/Listeners/RederiveFingerprintOnMergedRows.php' => [
         'columns' => ['transactions.fingerprint'],
         'reason' => 'the digest is derived, so every device recomposes the same value from the same merged row; an op here would hand a peer back a column it can compute, and loop',
@@ -320,4 +326,20 @@ it('reports an update that leaves a mergeable column unannounced', function (): 
     // A reason quoted in prose beside a write is not the write.
     $commented = "<?php // updates accounts.name here\n\$db->table('merchants')".$update."'name' => \$n]);";
     expect(SyncedColumnWrites::updatesColumn('accounts', 'name', SyncedColumnWrites::stripped($commented), 'Account'))->toBeFalse();
+
+    // The fourth shape, and the one no pattern above can root: the payload
+    // names none of its columns, a DTO does. Unexpanded this reads as a write
+    // to nothing at all, which is how four columns of `transactions` moved on
+    // every restatement with no guard able to ask who told a peer.
+    $viaDto = '<?php $db->table('."'transactions'".')->where('."'id'".', $id)'.$update.'$booking->toColumns() + ['."'updated_at'".' => $now]);';
+    expect(SyncedColumnWrites::updatesColumn('transactions', 'posted_at', $viaDto, 'Transaction'))->toBeFalse();
+
+    $expanded = SyncedColumnWrites::stripped('<?php use Modules\Ledger\Public\Dto\TransactionBooking; '.$viaDto);
+    expect(SyncedColumnWrites::updatesColumn('transactions', 'posted_at', $expanded, 'Transaction'))->toBeTrue()
+        ->and(SyncedColumnWrites::updatesColumn('transactions', 'occurrence_ordinal', $expanded, 'Transaction'))->toBeTrue()
+        ->and(SyncedColumnWrites::updatesColumn('transactions', 'note', $expanded, 'Transaction'))->toBeFalse();
+
+    // A file naming no such DTO is left exactly as it came, so the expansion
+    // cannot invent a write out of an unrelated `toColumns()`.
+    expect(SyncedColumnWrites::withColumnSetsExpanded($viaDto))->toBe($viaDto);
 });

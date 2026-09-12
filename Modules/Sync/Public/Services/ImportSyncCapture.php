@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Public\Contracts\CapturesImportForSync;
+use Modules\Import\Public\Dto\AdoptedBooking;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\CapturesTransactionsForSync;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
@@ -78,6 +79,60 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
         $ids['transactions'] = $transactionIds;
 
         $this->captureInOrder($ids, $userId, $writer, []);
+    }
+
+    // A restatement moves four columns of a row both devices already hold, so
+    // it travels as Sets: captureRowsById() above announces creates, and
+    // AlreadyPresentCreate discards a create naming a row the peer holds, so
+    // routing this through it would announce the enrichment and change nothing.
+    public function captureAdoptedBookings(array $adopted, User $user): void
+    {
+        if ($adopted === []) {
+            return;
+        }
+
+        $writer = $this->writerOrNull($user);
+
+        if ($writer === null) {
+            return;
+        }
+
+        foreach ($adopted as $booking) {
+            if (! $this->announceOneBooking($booking, $writer, $user->id)) {
+                return;
+            }
+        }
+    }
+
+    // Four ops or none, in one transaction: the terms are the terms of one
+    // dedup tuple, and a peer that took three of them seats the row on a day
+    // and an occurrence no statement ever stated together. False stops the
+    // caller, because the next row would fail on whatever stopped this one.
+    private function announceOneBooking(AdoptedBooking $booking, OpLogWriter $writer, int $userId): bool
+    {
+        try {
+            $this->db->connection()->transaction(static function () use ($booking, $writer): void {
+                foreach ($booking->booking->toColumns() as $column => $value) {
+                    $writer->writeSet('transactions', $booking->transactionId, $column, $value);
+                }
+            });
+
+            return true;
+        } catch (Throwable $e) {
+            // The debt the sibling arms owe, and a weaker one: a backfill skips
+            // a row that already carries a create, so the pass it opens will
+            // not carry this edit either. The line is what is left.
+            $this->oweABackfill($userId);
+
+            $this->log->warning('ImportSyncCapture: a restatement reached no peer, and no backfill will carry it.', [
+                'userId' => $userId,
+                'transactionId' => $booking->transactionId,
+                'exception' => $e::class,
+                ...SafeExceptionContext::describe($e),
+            ]);
+
+            return false;
+        }
     }
 
     // Every covered parent these rows point at, read off the live foreign keys.

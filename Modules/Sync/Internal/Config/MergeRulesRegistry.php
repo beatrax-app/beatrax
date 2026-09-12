@@ -125,6 +125,26 @@ final class MergeRulesRegistry
                 // writer that rewrites one in silence has to say why.
                 'fingerprint' => ['nullable' => false],
                 'fingerprint_version' => ['nullable' => false],
+                // The booking terms a restatement adopts whole. Last-writer-
+                // wins because a source STATES them: nothing combines, and a
+                // reader handed two days has no ground to choose, so the later
+                // statement is the one that describes the row.
+
+                // Declared for the reason the digest above is: undeclared is
+                // not "not synced" but an lww nobody chose, on a column no
+                // guard can then watch stop travelling.
+                'posted_at' => ['nullable' => false],
+                'booked_at' => ['nullable' => false],
+                // The one of the four the fingerprint is not composed over, so
+                // a disagreement about it settles without moving the row's
+                // identity. The other three move it, and the applier's
+                // re-derive is what puts the digest back on the merged row.
+                'value_date' => ['nullable' => false],
+                // Which occurrence of a tuple the row is within its own file,
+                // never a running total: two devices reading one statement
+                // compute the same ordinal, and a g_counter would sum them and
+                // seat the row on an occurrence no file describes.
+                'occurrence_ordinal' => ['nullable' => false],
                 '_delete_wins' => true,
                 // NOT NULL columns without defaults in transactions (status has default 'cleared',
                 // payment_type has default 'unknown' — omitted from required list).
