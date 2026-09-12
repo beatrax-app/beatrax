@@ -17,7 +17,7 @@ use Modules\Ledger\Models\Currency;
 
 function reconcileGateReader(string $username): User
 {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     return User::query()->create([
         'username' => $username,
