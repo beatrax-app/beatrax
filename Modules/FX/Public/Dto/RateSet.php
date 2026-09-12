@@ -17,6 +17,9 @@ final readonly class RateSet
      * @param  array<string, RateUsed>  $rates  keyed by the currency converted FROM
      */
     private function __construct(
+        // ONE target, and every leg's `to` is it. A figure converted in two
+        // hops therefore has no single set that describes it, and no
+        // disclosure built on one can name both hops.
         public string $targetCurrency,
         private array $rates,
     ) {}
