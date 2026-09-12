@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Instant;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityState;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
@@ -253,7 +254,7 @@ final readonly class InitialSyncPuller
             // so the next pull() retries instead of crashing the poll.
             $this->logger->error('InitialSyncPuller: history re-projection failed; will retry on the next pull.', [
                 'user_id' => $userId,
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return null;

@@ -7,6 +7,7 @@ namespace Modules\Notifications\Internal\Console;
 use Illuminate\Console\Command;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scheduling\DailyLocalWindow;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\DriftAlerts\Public\Services\SavingsPromptDispatch;
 use Modules\Notifications\Internal\Enums\DeferredNotificationPass;
 use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
@@ -98,7 +99,7 @@ final class EmitDailyNotificationTriggersCommand extends Command
         } catch (Throwable $e) {
             $this->logger->warning('notifications:daily-triggers: one trigger failed to dispatch.', [
                 'trigger' => $trigger,
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }

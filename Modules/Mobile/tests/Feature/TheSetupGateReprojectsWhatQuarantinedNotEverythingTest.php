@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -259,4 +260,79 @@ it('claims the attempt against the stored count, not the one the tick started wi
             ->where('user_id', $userId)
             ->where('peer_device_id', $peerDeviceId)
             ->value('reproject_attempts'))->toBe(8);
+});
+
+// The sharpest site of the whole "throwable in a log context" family, and the
+// reason it is tested here rather than against a synthetic exception: this pass
+// writes decrypted peer rows into `transactions`, so the QueryException it can
+// raise carries the counterparty and the IBAN in its own message. The catch is
+// deliberately broad — a failed re-projection must not crash the poll — so what
+// it hands the logger is the whole guarantee.
+it('logs a failed re-projection as a class and a sqlstate, never as the statement', function (): void {
+    [$userId, $peerDeviceId, $session] = gateReadyToReproject(10);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    expect(app(InitialSyncPuller::class)->pull($userId, $session)['phase'])->toBe(SyncPhase::Rebuilding);
+
+    $recorder = new class extends AbstractLogger
+    {
+        /** @var list<array{level: string, message: string, context: array<array-key, mixed>}> */
+        public array $records = [];
+
+        public function log($level, string|Stringable $message, array $context = []): void
+        {
+            $this->records[] = ['level' => (string) $level, 'message' => (string) $message, 'context' => $context];
+        }
+    };
+
+    Log::swap($recorder);
+    app()->forgetInstance(InitialSyncPuller::class);
+
+    // A real QueryException from the pass itself, not a planted one: the first
+    // thing replayQuarantined() does is clear settled refusals out of this
+    // table, so removing it raises the exact failure this catch exists for,
+    // with `delete from "op_log_quarantine" …` inside the message.
+    $db->connection()->statement('DROP TABLE op_log_quarantine');
+
+    $outcome = app(InitialSyncPuller::class)->pull($userId, $session);
+
+    $failures = array_values(array_filter(
+        $recorder->records,
+        static fn (array $r): bool => $r['message'] === 'InitialSyncPuller: history re-projection failed; will retry on the next pull.',
+    ));
+
+    expect($failures)->toHaveCount(1);
+
+    $context = $failures[0]['context'];
+
+    expect($context)->toHaveKey('reason')
+        ->and($context)->toHaveKey('sqlstate')
+        ->and($context['reason'])->toBe(QueryException::class)
+        ->and($context['user_id'])->toBe($userId)
+        // The regression itself. `['exception' => $e]` reads as a diagnostic
+        // and is a publication: Monolog renders the message, the raw trace and
+        // every `previous` beneath it.
+        ->and($context)->not->toHaveKey('exception');
+
+    // Nothing anywhere in the line carries the statement, whatever key it
+    // arrived under — the assertion above only names the one key that did.
+    $flattened = [$failures[0]['message']];
+    array_walk_recursive($context, static function (mixed $value) use (&$flattened): void {
+        $flattened[] = is_scalar($value) ? (string) $value : '';
+    });
+    $whole = implode(' ', $flattened);
+
+    expect($whole)->not->toContain('op_log_quarantine')
+        ->and($whole)->not->toContain('delete from')
+        ->and($whole)->not->toContain('SQL:');
+
+    // The catch has to leave the poll able to try again, which is the reason it
+    // is broad in the first place.
+    expect($outcome['phase'])->toBe(SyncPhase::Pulling)
+        ->and($db->connection()->table('mobile_sync_progress')
+            ->where('user_id', $userId)
+            ->where('peer_device_id', $peerDeviceId)
+            ->value('reprojected_at'))->toBeNull();
 });

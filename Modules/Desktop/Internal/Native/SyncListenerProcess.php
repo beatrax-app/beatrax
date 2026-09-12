@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal\Native;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Modules\Sync\Public\Services\SyncPorts;
@@ -123,7 +124,7 @@ final readonly class SyncListenerProcess
             return is_string($carried) && $carried !== '' ? $carried : null;
         } catch (Throwable $e) {
             $this->logger->warning('sync listener: failed to start sync:serve child process.', [
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return null;
@@ -191,7 +192,7 @@ final readonly class SyncListenerProcess
             // may have left the old listener holding the port, and a second
             // bind fatals with "Address already in use".
             $this->logger->warning('sync listener: failed to stop the running listener.', [
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
 
             return;
