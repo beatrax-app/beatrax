@@ -7,8 +7,8 @@
 
 /vendor
 .env
-.env.backup
-.env.bak
+.env.backup*
+.env.bak*
 .env.production
 /node_modules
 
