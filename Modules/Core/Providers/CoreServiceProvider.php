@@ -32,6 +32,7 @@ use Modules\Core\Internal\Listeners\ApplyInstallTimezoneOffTheRequestPath;
 use Modules\Core\Internal\Listeners\ClearGuardBetweenJobs;
 use Modules\Core\Internal\Listeners\ForgetNavCountsOnWrite;
 use Modules\Core\Internal\Listeners\RefuseToShipAStaleFrontEnd;
+use Modules\Core\Internal\Providers\AlreadyOpenConnectionsProvider;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Internal\Support\MigrationWindow;
@@ -75,6 +76,7 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->register(SqliteOptimizationsProvider::class);
         $this->app->singleton(BootProbeState::class);
         $this->app->register(HealthCheckServiceProvider::class);
+        $this->app->register(AlreadyOpenConnectionsProvider::class);
         $this->app->singleton(Clock::class, SystemClock::class);
 
         // Unconditional, and the only binding of this contract anywhere: the

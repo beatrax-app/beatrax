@@ -937,7 +937,20 @@ SQLite substrate + boot listeners (`SqliteOptimizationsProvider`,
 `SqliteOptimizationsProvider` applies the WAL + `synchronous=NORMAL` +
 `busy_timeout` + foreign-key pragmas to every newly opened SQLite
 connection via Laravel's `ConnectionEstablished` event (skips
-non-sqlite connections). `HealthCheckListener` is the boot-time PRAGMA
+non-sqlite connections). "Newly opened" is the limit of that claim, and
+on the desktop it excluded the connection that matters:
+`NativeServiceProvider` defines the `nativephp` connection, makes it the
+default, and runs two PRAGMA statements through it inside its own
+`boot()` — all before this module's providers attach their listeners. A
+resolved connection is cached, so the event never fires again for it.
+Measured on the running desktop: `busy_timeout` 5000 against a
+configured 30000, `synchronous` FULL against NORMAL, and
+`HealthCheckListener` never invoked at all — which left a drift banner
+standing across every restart its own copy told the reader to perform.
+`AlreadyOpenConnectionsProvider`, registered after both, replays
+`ConnectionEstablished` for each connection already open when it boots,
+skipping any inside a transaction because SQLite refuses `synchronous`
+and `journal_mode` changes there. `HealthCheckListener` is the boot-time PRAGMA
 drift detector: on the FIRST `sqlite` `ConnectionEstablished` event in
 the process, it reads `PRAGMA journal_mode`/`PRAGMA synchronous`, and
 if either drifts from the documented defaults (WAL + synchronous=1),
