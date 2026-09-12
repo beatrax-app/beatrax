@@ -39,6 +39,15 @@ dataset('fingerprintParityPairs', [
         'csvPath' => __DIR__.'/../../../Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
         'matcherKey' => 'ics-receipt',
     ],
+    // The domestic row above is the case where the two legs are the same
+    // figure, so it holds however either source denominates the settled one.
+    // A foreign charge is where they differ, and it is the only pair that can
+    // show one source reading the euro column and the other the foreign one.
+    'ics foreign' => [
+        'emlPath' => __DIR__.'/../fixtures/ics/foreign-currency-receipt.eml',
+        'csvPath' => __DIR__.'/../../../Ingestion/tests/fixtures/ics/ics-sample-tiny-foreign.pdf',
+        'matcherKey' => 'ics-receipt',
+    ],
 ]);
 
 // A declared pair whose fixtures are absent is a contract that never runs, so
@@ -105,6 +114,8 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         expect($csvCanonical->postedAt->toDateString())->toBe($receiptCanonical->postedAt->toDateString());
         expect($csvCanonical->amountMinor)->toBe($receiptCanonical->amountMinor);
         expect($csvCanonical->currency)->toBe($receiptCanonical->currency);
+        expect($csvCanonical->settledAmountMinor)->toBe($receiptCanonical->settledAmountMinor);
+        expect($csvCanonical->settledCurrency)->toBe($receiptCanonical->settledCurrency);
         expect($csvCanonical->counterpartyNormalized)->toBe($receiptCanonical->counterpartyNormalized);
 
         expect($composer->compose($receiptCanonical))->toBe($composer->compose($csvCanonical));
@@ -144,6 +155,11 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
     expect($pdfCanonical->postedAt->toDateString())->toBe($receiptCanonical->postedAt->toDateString());
     expect($pdfCanonical->amountMinor)->toBe($receiptCanonical->amountMinor);
     expect($pdfCanonical->currency)->toBe($receiptCanonical->currency);
+    // The settled leg is outside the fingerprint and inside every balance,
+    // budget and forecast that sums a row, so a pair can hash alike and still
+    // be two different amounts of money.
+    expect($pdfCanonical->settledAmountMinor)->toBe($receiptCanonical->settledAmountMinor);
+    expect($pdfCanonical->settledCurrency)->toBe($receiptCanonical->settledCurrency);
     expect($pdfCanonical->counterpartyNormalized)->toBe($receiptCanonical->counterpartyNormalized);
 
     expect($composer->compose($receiptCanonical))->toBe($composer->compose($pdfCanonical));

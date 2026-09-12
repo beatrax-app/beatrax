@@ -421,6 +421,118 @@ labelled anchor cannot survive: a label run together with the value above it is
 no longer in front of anything. Real receipt mail is minified, so the two halves
 of this are one fix.
 
+## A direction nothing states is not a charge
+
+Every matcher negated the figure it read, unconditionally. A receipt confirms a
+payment, so a receipt's figure is money out — except that a card issuer and a
+wallet both mail on the way back too, and a credit notification therefore
+booked as a **second outgoing charge**: the money came back and the ledger
+recorded it leaving again, so one purchase was charged twice and every balance,
+budget and forecast over that row was out by twice the credit. Google Play was
+the only matcher that refused one, and it refuses on the word `refund` in a
+subject rather than on anything it read.
+
+The wording is the whole problem, so it was researched before it was coded, and
+the two senders came back differently.
+
+**ICS states its direction, and this repository already holds the proof.**
+`Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt` is the redacted
+extraction of a real Mijn ICS statement: every figure on it is printed positive
+with `Af` or `Bij` beside it, on the transaction rows and on the four summary
+columns alike — `606,96 Bij` for a payment received, `43,71 Af` for a charge.
+`IcsPdfAdapter` has read that grammar since it shipped; the notification matcher
+never did. It does now, case-sensitively and anchored on the end of the figure's
+own line, because `bij` is also the commonest Dutch preposition and
+`Bedrag: € 12,00 bij Albert Heijn` is a purchase.
+
+**ICS's refund *wording* could not be verified at all**, and the reason is worth
+recording: ICS's transaction alerting is a paid SMS product —
+[icscards.nl](https://www.icscards.nl/mijn-card/card-alerts) answers *"Nee, we
+versturen Card Alerts alleen via sms"* — and the only two alert types it
+documents are `Hoog bedrag` and `Online besteding`, both purchases. No
+refund-notification type is offered, so there is no published refund mail to
+learn the vocabulary from. The words a Dutch credit could use
+(`terugbetaling`, `creditering`, `gecrediteerd`, `storno`, `terugboeking`,
+`retour`, `terugstorting`, `terugvragen`) are therefore in the matcher **only to
+refuse with**: a body carrying one and printing no marker beside its figure is
+withheld as `ics_direction_unstated` rather than charged. Being wrong about one
+of those words then costs a miss; being wrong the other way costs money. A
+notification that states no direction in either form is withheld under the same
+reason — the only wording admitted as proof of a charge is `aankoop`, whole-word,
+which cannot name a credit in any reading. That is why five test bodies that had
+never stated a direction gained the `Af` their real counterparts print.
+
+**PayPal's direction could not be established in either language**, and its
+floor is all it gets. PayPal publishes no transactional email copy: the wording
+of a refund mail is not on paypal.com, not in the developer documentation, and
+every "sample PayPal refund email" indexed elsewhere is a phishing specimen. The
+[status labels](https://www.paypal.com/nl/cshelp/article/wat-betekent-de-status-van-mijn-betaling-of-betaalverzoek-op-mijn-paypal-rekening-help668)
+are PayPal's own (`Terugbetaald` — *"De ontvanger heeft je betaling
+teruggestort"*), PayPal's own
+[returns form](https://www.paypalobjects.com/webstatic/nl_NL/mktg/consumer/pages/returns/Formulier_NL_temporary.pdf)
+calls the mail *"de e-mail van PayPal met de bevestiging van de
+terugbetaling"*, and `terugvordering` is
+[its word for a chargeback](https://www.paypal.com/nl/cshelp/article/wat-is-een-terugvordering-en-waarom-heb-ik-er-een-gekregen-help607)
+rather than for a refund. What none of them separates is a refund the reader
+**received** from one they **issued** — and those two move money in opposite
+directions. A refund the reader issued is a payment; a refund they received is
+not. So PayPal never books a credit: any of that vocabulary in the subject or
+the body is `paypal_direction_unstated`, and the figure is not booked in either
+direction. The IPN taxonomy confirms the shape a producer would need —
+a refund carries its own `txn_id` plus the original payment's
+[`parent_txn_id`](https://developer.paypal.com/api/nvp-soap/ipn/IPNandPDTVariables/)
+— but an event name is not an email, and nothing is implemented off it.
+
+Both reasons are withholdings in the sense
+[A5](https://github.com/beatrax-app/spec/blob/main/10-functional/features/a-ingestion/a5-receipt-matching.md)
+already reserves: no enrichment, no exception, and the bytes stay on
+`file_imports` for a matcher that reads more of the format later. Both senders
+also have a twin ingestion format — the ICS statement PDF and the PayPal
+activity CSV — so a withheld notification costs the merchant detail a receipt
+adds, never the transaction.
+
+`ChainHintType::RefundOf` finally has a producer, on the one path that can name
+what it reverses: an ICS credit stating `Oorspronkelijke transactie` emits it
+with that reference. It has to be labelled as the original, because
+`REFERENCE_REGEX` matches on a substring and would otherwise read
+`Oorspronkelijk referentienummer` as the credit's own. A credit naming no
+original is still booked with the right sign and no hint — the sign is the
+money, the hint is only the pairing, and
+[B5](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b5-chain-resolution.md)
+resolves that pairing against `transactions.source_ref`, which every ICS
+statement row leaves null.
+
+### The euro column is the settled leg on both sides of one charge
+
+An ICS card bills in euros. The statement prints a foreign charge in two
+columns — `Bedrag in vreemde valuta` and `Bedrag in euro's`, `50,00 USD` and
+`43,71` on the same row — and `IcsPdfAdapter` stores the first as the native leg
+and the second as the settled one, which is what the card actually moved.
+
+The notification matcher stored the **foreign** figure as both legs. So one
+foreign charge was a different amount of money depending on which source
+imported it: `-5000 USD / -5000 USD` from the mail against
+`-5000 USD / -4371 EUR` from the statement covering it. The settled leg is the
+pair every balance, budget and forecast sums —
+[`TransactionAmount::relate()`](../../architecture/ingestion-pipeline.md) owns
+both legs and the rate between them — and it is **outside** the fingerprint, so
+the two
+rows deduplicated against each other perfectly while holding two different
+figures, and whichever arrived second was the one the reader saw.
+
+The statement is the source of truth for the settled leg, because it reads the
+column the issuer prints. The matcher now agrees with it: a euro total settles
+in itself, a foreign total settles at the figure under the mail's own euro
+label, and a foreign total with no euro figure anywhere is **withheld** as
+`ics_euro_leg_unstated`. There is no third option — the euro amount is not
+derivable from the foreign one without the rate the issuer applied, and the
+statement PDF imports that charge correctly either way.
+
+`FingerprintParityTest` pairs a foreign row now, not only the domestic one, and
+compares the settled leg as well as the native. The gap is why nothing caught
+this: the one ICS pair it held was a EUR row, where the two legs are the same
+figure and the contract holds however either side denominates them.
+
 ## When a total is the thing that disagrees
 
 Until the receipt's total was allowed to differ from the statement's, an

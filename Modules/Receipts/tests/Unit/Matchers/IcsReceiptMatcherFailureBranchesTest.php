@@ -45,7 +45,7 @@ it('falls back to the first non-empty <td> cell when the merchant label is absen
     // loose firstTableCell() path over the html body.
     $body = '<html><body><table>'
         .'<tr><td>  </td><td>ACME TABLE STORE</td></tr>'
-        .'<tr><td>Bedrag: &euro; 9,99</td></tr>'
+        .'<tr><td>Bedrag: &euro; 9,99 Af</td></tr>'
         .'</table></body></html>';
     $outcome = icsFailMatcher()->match(icsEml('text/html', $body));
 
