@@ -363,7 +363,7 @@ final class DevicesAndSyncSettingsSection extends Component
                 ['user_id' => $userId, ...SafeExceptionContext::describe($e)],
             );
 
-            $this->encryptionStep = EncryptionSetupStep::Error->value;
+            $this->encryptionStep = EncryptionSetupStep::Stranded->value;
         } catch (\Throwable $e) {
             // A genuine rollback: every DB write reverted, `current_epoch`
             // included, and the pre-migration snapshot restored.

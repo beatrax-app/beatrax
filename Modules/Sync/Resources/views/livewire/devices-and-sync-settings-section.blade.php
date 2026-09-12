@@ -504,7 +504,8 @@
 
     {{-- ===== Surface B: enable-encryption modal (single-device
          optional-offer path only). Confirm / progress / done /
-         error inner states share one flux:modal keyed on the step. ===== --}}
+         stranded / error inner states share one flux:modal keyed on the
+         step. ===== --}}
     @if ($showEncryptionModal)
         <flux:modal wire:model="showEncryptionModal" class="md:max-w-sm" data-testid="enable-encryption-modal">
             <div class="space-y-4 p-6">
@@ -578,7 +579,31 @@
                             {{ Lang::get('sync::devices.done_encryption_enabled') }}
                         </x-core::neutral-button>
                     </div>
+                @elseif ($encryptionModalStep === EncryptionSetupStep::Stranded)
+                    {{-- Past the commit migrate() deliberately leaves the rows
+                         sealed, so the two sentences below this branch — "your
+                         data was not changed", "no changes made" — are false
+                         here. The phone already says this state in words a
+                         reader can act on, in all twenty-six locales. --}}
+                    <div class="space-y-3 text-center">
+                        <svg class="mx-auto h-6 w-6 text-amber-600 dark:text-amber-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                        </svg>
+                        <x-core::section-heading :level="3" aria-live="polite" aria-atomic="true" :title="Lang::get('sync::devices.encryption_failed')" />
+                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::pairing.encryption_incomplete') }}</p>
+                        <x-core::secondary-button
+                            block="full"
+                            class="min-h-[44px]"
+                            wire:click="closeEncryptionModal"
+                            data-testid="encryption-stranded-close"
+                        >
+                            {{ Lang::get('core::help.close') }}
+                        </x-core::secondary-button>
+                    </div>
                 @else
+                    {{-- The rollback ending, and the only one these two lines
+                         are true of: every write reverted, current_epoch
+                         included, and the pre-migration snapshot restored. --}}
                     <div class="space-y-3 text-center">
                         <svg class="mx-auto h-6 w-6 text-rose-600 dark:text-rose-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />

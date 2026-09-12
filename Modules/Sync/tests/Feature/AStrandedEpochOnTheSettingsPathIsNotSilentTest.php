@@ -9,6 +9,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
+use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
@@ -155,4 +157,41 @@ it('writes nothing when the migration finishes', function (): void {
     test()->actingAs($user);
 
     expect(settingsEncryptionWarnings(settingsEnableEncryption($user, null)['records']))->toBe([]);
+});
+
+// The two endings are different states and the sentences differ with them. A
+// rollback really did leave the data alone; a stranded epoch is committed over
+// rows whose keyring never landed, and telling that reader "no changes made"
+// is the app describing the one outcome it did not have.
+it('does not tell a stranded reader that nothing changed', function (): void {
+    $user = settingsStrandedUser('settings-stranded-copy');
+    test()->actingAs($user);
+
+    app()->instance(EncryptionMigrationService::class, settingsStrandedMigrationService(
+        new StrandedEncryptionEpochException(SETTINGS_STRANDED_MESSAGE),
+    ));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('showEncryptionModal', true)
+        ->call('enableEncryption')
+        ->assertSet('encryptionStep', EncryptionSetupStep::Stranded->value)
+        ->assertSee(Lang::get('mobile::pairing.encryption_incomplete'))
+        ->assertDontSee(Lang::get('sync::devices.encryption_failed_body'))
+        ->assertDontSee(Lang::get('sync::devices.close_no_changes'));
+});
+
+it('still tells a rolled-back reader that nothing changed, because nothing did', function (): void {
+    $user = settingsStrandedUser('settings-rollback-copy');
+    test()->actingAs($user);
+
+    app()->instance(EncryptionMigrationService::class, settingsStrandedMigrationService(
+        new RuntimeException('The migration could not start.'),
+    ));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('showEncryptionModal', true)
+        ->call('enableEncryption')
+        ->assertSet('encryptionStep', EncryptionSetupStep::Error->value)
+        ->assertSee(Lang::get('sync::devices.encryption_failed_body'))
+        ->assertDontSee(Lang::get('mobile::pairing.encryption_incomplete'));
 });
