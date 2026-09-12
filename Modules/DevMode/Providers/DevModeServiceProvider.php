@@ -486,6 +486,7 @@ final class DevModeServiceProvider extends ServiceProvider
         // this binding instead of constructing the processor itself.
         $this->app->singleton(RedactSecretsProcessor::class, static fn (Application $app): RedactSecretsProcessor => new RedactSecretsProcessor(
             $app->make(OAuthScrubSet::class),
+            $app->basePath(),
         ));
     }
 

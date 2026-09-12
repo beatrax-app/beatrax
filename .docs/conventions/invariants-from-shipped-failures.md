@@ -645,6 +645,102 @@ A daemon's stdout is a log too: `relay:serve` and `sync:serve` run under a
 supervisor that captures it to the same kind of file, so a `$this->error()`
 carrying the message in a console command is the same disclosure.
 
+### The fourth shape reads no message at all
+
+Every clause above watches a *read* — `getMessage()`, spelled out, on something
+the walk can name. `['exception' => $e]` contains neither word and publishes
+strictly more. Monolog's `LineFormatter` is what renders it, and the shipped
+channels build the one `LogManager::formatter()` returns:
+`new LineFormatter(null, $dateFormat, true, true, true)`. That last argument is
+`includeStacktraces`, so a throwable in the context writes its class, its
+`getMessage()`, its `getTraceAsString()`, and then the same three again for
+every `previous` beneath it.
+
+All three of those are things this repository already decided against. The
+message is the SQL with its bindings. `getTraceAsString()` is the fifteen
+characters of every string argument that
+[`SafeTrace`](#a-stack-trace-that-carries-the-data-it-failed-on) exists to drop.
+And the `previous` chain reaches a `QueryException` that
+`bootstrap/app.php`'s `reportable(QueryException::class)` hook never sees,
+because that hook matches on the top-level type only — so a wrap-and-rethrow
+(`throw new InvalidArgumentException(…, 0, $e)`) carries the statement past it.
+
+Eleven sites in the tree wrote that shape: both NativePHP boot providers, the
+two desktop child-process listeners, the mobile initial-sync re-projection, the
+daily-notification trigger command, and `mobile-app/bootstrap/app.php`'s
+migrate-on-launch hook. The re-projection one is the clearest: it writes
+decrypted peer rows into `transactions`, so a failure there is an insert naming
+the counterparty and the IBAN. The mobile bootstrap is the second clearest —
+[the phone migrates on launch](../features/mobile/architecture.md#first-launch-and-route-gating), the
+desktop does not, so a data migration failing there is a statement over the
+reader's own rows.
+
+That eleventh one is worth its own line, because it is how a sweep miscounts.
+It sits in `mobile-app/`, the second Composer root, which
+`RepoTree::PRODUCTION_PHP` covers and an ad-hoc `Modules`-and-`app` walk does
+not. The rule found it; the manual sweep that preceded the rule reported ten.
+A count taken from anything narrower than the scope the rule itself uses is a
+count of what was looked at, not of what is there.
+
+It is closed in two places, because neither alone reaches the other's cases.
+`LoggedExceptionsDropThePayloadArchTest` grew a rule that reads the same three
+regions and asks whether the throwable was *handed over* rather than read: a
+`$e` surviving at parenthesis depth zero in a sink's arguments, with `$e::class`,
+`$e->getCode()`, `$e instanceof X`, `$e === null` and any nested call
+(`SafeExceptionContext::describe($e)`, `QueryFailure::isUniqueViolation($e)`)
+all reading rather than publishing. And `RedactSecretsProcessor` now replaces a
+`Throwable` context value outright — `describe()`'s two keys, the file and line,
+`SafeExceptionContext::reason()` for the message, and `SafeTrace::cap()` for the
+frames — following `previous` three deep.
+
+Three is a cap rather than a depth anyone counted, so it is pinned from both
+sides: a four-link chain is replaced to its last link, and a five-link one is
+truncated with the fifth **dropped** rather than handed to the formatter as an
+object. That second half is the one worth asserting — truncating by leaving the
+throwable in place would publish it and everything beneath it, which is the
+defect this rule exists for, arriving through the fix for it.
+
+The runtime half is not belt-and-braces duplication. The processor is the only
+one of the two that reaches the context Laravel's own exception handler builds,
+which appends `['exception' => $e]` to every exception it reports and is not
+first-party code a walk can read. The walk is the only one of the two that
+reaches the `emergency` channel, which
+[taps nothing](#redaction-that-was-a-property-of-three-channels) by construction.
+
+`SafeTrace::cap()` gained a guard with it: an empty `$basePath` made
+`rtrim('', '/').'/'` into `'/'`, and replacing that deleted the separator out of
+every frame path. The processor is the first caller that can be constructed
+without one.
+
+## A file name the reader chose
+
+`tests/Contracts/AFileNameTheReaderChoseIsLoggedUnderARedactedKeyArchTest.php`
+
+`RedactSecretsProcessor` holds two key lists and the second one says why:
+"an uploaded statement is named by the bank for the account it covers, so the
+filename routinely spells an IBAN, a card number or the holder's name." It
+redacts `filename`, `file_name`, `original_filename` and `source_filename` —
+and it redacts them **by key name**, because a file name has no shape a pattern
+can match.
+
+Which means the same bytes under a different key walk straight past it.
+`ScanInboxDropFolderJob` logged `'path' => $path` on every per-file failure, and
+`$path` is `inbox-drop/{userId}/` plus whatever the reader dropped there — the
+one surface in the product where the reader supplies the name themselves rather
+than a wizard sanitising it. The comment directly above that call already said
+the strip beside it was about the 0644 daily log.
+
+The fix is the key, not the value: `basename($path)` under `filename`, which the
+processor replaces, with `user_id` beside it already naming the folder. The rule
+reads the processor's own constants by reflection rather than restating them, so
+a key dropped from those lists fails here instead of quietly ceasing to redact.
+
+A path the *application* composed is a different thing and stays readable — a
+bundled corpus file, the installer electron-updater downloaded, this install's
+own secrets file. Those six files are pinned in `PATH_KEY_APPLICATION_OWNED`
+with the reason each can hold no reader's name; redacting them would cost the
+only diagnostic those lines carry.
+
 ## A view name nothing answers to
 
 `tests/Contracts/ViewReferencesResolveArchTest.php`

@@ -2689,6 +2689,10 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Tax/tests/Feature/ThePhoneSheetsNoteFieldCarriesItsOwnLabelTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionsList',
         'Modules/Tax/tests/Feature/ThePickerCategoryListIsNotWireWritableTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Transfers/tests/Feature/PairTransferCandidatesAliasBridgeTest.php -> Modules\\Import\\Internal\\Services\\KnownCounterpartyIbanResolver',
+        // The rule asks which keys the shipped channel replaces, and the answer
+        // is the processor's own list. Reading it off the class is the point:
+        // a second copy here would go on passing the day one was dropped there.
+        'tests/Contracts/AFileNameTheReaderChoseIsLoggedUnderARedactedKeyArchTest.php -> Modules\\DevMode\\Internal\\Logging\\RedactSecretsProcessor',
         // The one guard that holds seven window pairs to one definition each has
         // to reach the definitions themselves, and five of the seven are the
         // private side of their own module. A Public spelling for any of them
