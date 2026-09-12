@@ -20,7 +20,8 @@ order. The order is not cosmetic.
 
 ```
 guard is_self  →  load the keyring (proves the KEK)  →  mint the new epoch id
-      →  [ SQL transaction: revoke trust → append epoch → fan out ]
+      →  [ SQL transaction: revoke trust → stage keyring + advance current_epoch → fan out ]
+      →  rename the staged keyring into place
 ```
 
 **1. Refuse to revoke the acting device.** `is_self = 1` can never be the target. Livewire
@@ -40,18 +41,27 @@ means encryption was never enabled for this user.
 **3. Mint the new epoch id from the ids already held.** See
 [Epoch ids are minted, not counted](#epoch-ids-are-minted-not-counted).
 
-**4. Revoke, append and fan out inside one SQL transaction.**
+**4. Revoke, stage the epoch and fan out inside one SQL transaction.**
 
 - *Revoke* clears `confirmed_at` on the target row. That is the exact column
   `DeviceRegistryService`'s device-key queries filter on, so this single write closes the
   Ed25519 gate and simultaneously removes the device from `deviceX25519Keys()`.
-- *Append* adds the new epoch to the keyring and advances
-  `sync_encryption_state.current_epoch` to it. Nothing about the previous epochs is
-  discarded.
+- *Stage* writes the new epoch into a `.tmp` sibling of the keyring through
+  `GdkKeyringService::stageAppendedEpoch()` and advances
+  `sync_encryption_state.current_epoch` to it. The real keyring path is not touched.
+  Nothing about the previous epochs is discarded.
 - *Fan out* seals the new key to every device still returned by `deviceX25519Keys()`,
   skipping self, and enqueues each wrap on the relay mailbox. Because the revoke already
   ran, the removed device is structurally absent from that loop — the exclusion is a
   consequence of step order, not a second filter that could drift.
+
+The three have to commit together. A pointer advanced without its fan-out would seal new
+rows under a key no peer holds, and the retry mints a *different* id — so the rows written
+in between would stay unreadable to the rest of the household for good.
+
+**5. Rename the staged keyring into place, after the commit.**
+`finalizeStagedEpoch()` is the last thing that happens, and the only thing outside the
+database that happens at all. See [The one residual](#the-one-residual).
 
 Each wrap is signed with the acting device's own Ed25519 key, which is why the identity is
 loaded only after `loadKeyring()` has proved the KEK is available. A null identity at that
@@ -99,15 +109,38 @@ performed, but it is a loss, not a hold.
 
 ### The one residual
 
-The SQL transaction covers the revoke, the `current_epoch` advance and the mailbox rows.
-It cannot cover the keyring *file*: `appendEpoch()` re-encrypts and renames a file on disk,
-and a filesystem rename does not join a SQLite transaction. A rollback after that point
-leaves an extra epoch key in the keyring file that `current_epoch` does not point at. That
-is benign — the keyring is append-only by design and an unused key decrypts nothing — but
-it is the known edge, and it is why the rest of the operation is inside the transaction:
-so the *revoke* can never be the thing that survives alone. `removeDevice()` logs the
-exception through `SafeExceptionContext::describe()` when any of this fails, so the split
-state has something naming it; it used to catch `\Throwable` with no bound variable at all.
+The SQL transaction covers the revoke, the `current_epoch` advance and the mailbox rows. It
+cannot cover the keyring *file*: re-encrypting and renaming a file on disk does not join a
+SQLite transaction and does not roll back. So the rotation uses the same seam enabling
+encryption already used for epoch 1 — stage inside, finalize after the commit:
+
+| | What a crash or rollback in between leaves |
+| --- | --- |
+| **rollback** (the ordinary failure) | the `.tmp` is discarded; nothing changed at all |
+| **crash between COMMIT and the rename** | `current_epoch` naming an epoch the keyring has no key for |
+
+The first is why the order is this way round. Before this, the file was renamed *inside* the
+transaction, so a rolled-back rotation left an extra epoch key in the keyring that
+`current_epoch` did not point at. That was benign — the keyring is append-only and an unused
+key decrypts nothing — but it was a file describing something the database never committed,
+and `GdkKeyringService`'s own comment on `writeKeyringFile()` asserted that no caller of it
+held an ambient transaction, which this one did. Now the rollback leaves the keyring
+byte-identical to what went in.
+
+The second is the **stranded epoch**, the window `EncryptionMigrationService::migrate()`
+already names: `GdkKeyringService::currentEpoch()` throws and sensitive writes refuse until it
+is repaired. It is microseconds wide — a rename immediately after a commit — and it is not
+silent. `finalizeStagedEpoch()` deliberately does **not** unlink the `.tmp` when the rename
+fails, because at that point it is the only copy of the epoch key; a retry of the rename is
+the repair, and there is no automatic one.
+
+That trade is the one `E4-R13` already makes for the first epoch, for the same stated reason:
+a key file that references data which never landed is worse than a window in which the key
+file has not caught up yet.
+
+`removeDevice()` logs the exception through `SafeExceptionContext::describe()` when any of
+this fails, so a split state has something naming it; it used to catch `\Throwable` with no
+bound variable at all.
 
 ## The revoke half is local to the device you perform it on
 
