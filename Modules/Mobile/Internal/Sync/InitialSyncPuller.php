@@ -82,7 +82,7 @@ final readonly class InitialSyncPuller
     }
 
     /**
-     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string, reproject_attempts: int}  $cursor
+     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string}  $cursor
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason, withheld: int}
      */
     private function advance(
@@ -166,7 +166,7 @@ final readonly class InitialSyncPuller
         // the pass is handed a null `since`, so this stamp narrows no later
         // build — DevicesScreenOpening is the phone's route back afterwards.
         if ($reprojectedAt === null && $keysInstalled) {
-            $reprojectedAt = $this->reproject($userId, $session, $peerDeviceId, $cursor['reproject_attempts']);
+            $reprojectedAt = $this->reproject($userId, $session, $peerDeviceId);
         }
 
         // Finishing the sync leg is necessary but not sufficient: without the
@@ -227,13 +227,14 @@ final readonly class InitialSyncPuller
     // whole-log rebuild cost 645 bytes per entry and exhausted the phone's
     // 128 MB ceiling at 200,000 of them, which is a year of one ledger.
     /**
-     * @param  int  $attempts  Passes already started for this cursor; > 0 means one never returned.
      * @return string|null The stamp to persist, or null while the history is still unprojected.
      *
      * @link ../../../../.docs/features/mobile/mobile-initial-sync-gate.md#four-measured-costs-on-the-sync-path
      */
-    private function reproject(int $userId, Session $session, string $peerDeviceId, int $attempts): ?string
+    private function reproject(int $userId, Session $session, string $peerDeviceId): ?string
     {
+        $attempts = $this->claimReprojectAttempt($userId, $peerDeviceId);
+
         if ($attempts > 0) {
             // Nothing else says so. A pass killed by memory exhaustion writes
             // no stamp and throws nothing catchable, so every later tick redid
@@ -244,8 +245,6 @@ final readonly class InitialSyncPuller
                 'attempts' => $attempts,
             ]);
         }
-
-        $this->countReprojectAttempt($userId, $peerDeviceId, $attempts + 1);
 
         try {
             $rows = $this->reprojector->replayQuarantined($userId, $session, null, null);
@@ -269,13 +268,31 @@ final readonly class InitialSyncPuller
         return Instant::zulu($this->clock->now());
     }
 
-    private function countReprojectAttempt(int $userId, string $peerDeviceId, int $attempts): void
+    // Read and raised as one write-locked step, and the count a pass claims is
+    // the count it reports. Read from the cursor loaded at the top of pull(),
+    // two overlapping ticks both saw the same number and both wrote it back:
+    // the passes multiplied and the only record of them stood still.
+    /**
+     * @return int Passes already started for this cursor; > 0 means one never returned.
+     */
+    private function claimReprojectAttempt(int $userId, string $peerDeviceId): int
     {
-        $this->db->connection()
-            ->table('mobile_sync_progress')
-            ->where('user_id', $userId)
-            ->where('peer_device_id', $peerDeviceId)
-            ->update(['reproject_attempts' => $attempts, 'updated_at' => Instant::zulu($this->clock->now())]);
+        return $this->db->connection()->transaction(function () use ($userId, $peerDeviceId): int {
+            $row = $this->db->connection()
+                ->table('mobile_sync_progress')
+                ->where('user_id', $userId)
+                ->where('peer_device_id', $peerDeviceId);
+
+            $attempts = $row->clone()->value('reproject_attempts');
+            $claimed = is_numeric($attempts) ? (int) $attempts : 0;
+
+            $row->update([
+                'reproject_attempts' => $claimed + 1,
+                'updated_at' => Instant::zulu($this->clock->now()),
+            ]);
+
+            return $claimed;
+        });
     }
 
     // A raw column read rather than GdkKeyringService, which is off-limits to
@@ -347,7 +364,7 @@ final readonly class InitialSyncPuller
     }
 
     /**
-     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string, reproject_attempts: int}
+     * @return array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: SyncPhase, reprojected_at: ?string}
      */
     private function loadOrCreateCursor(int $userId, string $peerDeviceId): array
     {
@@ -365,7 +382,6 @@ final readonly class InitialSyncPuller
                 'last_hlc_c' => is_numeric($row->last_hlc_c) ? (int) $row->last_hlc_c : 0,
                 'phase' => SyncPhase::fromStorage($row->phase),
                 'reprojected_at' => is_string($row->reprojected_at ?? null) ? $row->reprojected_at : null,
-                'reproject_attempts' => is_numeric($row->reproject_attempts ?? null) ? (int) $row->reproject_attempts : 0,
             ];
         }
 
@@ -391,7 +407,6 @@ final readonly class InitialSyncPuller
             'last_hlc_c' => 0,
             'phase' => SyncPhase::Pending,
             'reprojected_at' => null,
-            'reproject_attempts' => 0,
         ];
     }
 
