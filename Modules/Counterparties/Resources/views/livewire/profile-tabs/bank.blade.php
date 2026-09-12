@@ -31,9 +31,12 @@
                     </div>
                     <span class="fee-total">{{ Money::ofMinor($absMinor, $cat->currency)->format() }}</span>
                 </div>
-                @if ($cat->unconverted !== [])
-                    <p style="font-size: var(--text-xs); color: var(--color-text-faint); margin: 0 0 var(--space-2);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $cat->unconverted)]) }}</p>
-                @endif
+                <x-core::fx-disclosure
+                    :disclosure="$cat->conversion"
+                    id="cp-bank-cat-{{ $cat->category_id ?? 'none' }}"
+                    :label="$cat->category_name ?? Lang::get('counterparties::profile.uncategorized')"
+                    style="display: block; font-size: var(--text-xs); color: var(--color-text-faint); margin: 0 0 var(--space-2);"
+                />
             @endforeach
         @endif
     </x-counterparties::frame>

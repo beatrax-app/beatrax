@@ -32,9 +32,12 @@ of a real account balance") and makes no claim the banner can contradict.
 
 The three figures are the account's **own currency only**, so every other line
 the account holds is left out of all three. `ReconciliationRow` names those
-codes in `unconverted` and the header renders `core::money.not_converted`
-beside them, the same way every other money surface in the app does — the
-figures used to just be smaller, with nothing saying why.
+codes in `unconverted` and the header renders them through
+`x-core::fx-disclosure`, the same component every other money surface in the
+app discloses through — the figures used to just be smaller, with nothing
+saying why. No rate is disclosed there and none is invented: these three
+figures are one currency's own and nothing was converted to reach them, so the
+row's disclosure carries an empty rate set.
 
 ## A pot below zero
 
@@ -219,9 +222,10 @@ holds is genuinely denominated in the pot's currency; "what I spent in this
 category this period" is not, and scoping it to the pot's currency dropped a
 card denominated elsewhere from a figure sitting beside a balance that counted
 everything. `categorySpent()` buckets by `settled_currency`, converts each
-bucket into the pot's currency, and hands `PotRow` the codes it could not
-price, which the card renders through `core::money.not_converted` —
-`categorySpentIsPartial()` / `categorySpentUnconvertedList()`. It also owns the one read of a pot's
+bucket into the pot's currency, and hands `PotRow` both the codes it could not
+price and the rates it priced the rest at — `categorySpentUnconverted` and
+`categorySpentConversion`, which the card renders through
+`x-core::fx-disclosure`. It also owns the one read of a pot's
 `pot_movements` sum, which `balanceForPot()` delegates to, so the pot cards
 and the guard `PotWriter` checks against cannot drift apart.
 

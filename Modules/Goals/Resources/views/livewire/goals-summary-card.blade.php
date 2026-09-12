@@ -50,33 +50,41 @@
                 {{-- Wraps below sm: the 80px bar, the percentage and the status
                      badge do not shrink, so on a phone the goal name was left
                      ~64px for text needing 113px. --}}
-                <li class="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
-                    <p class="w-full min-w-0 truncate text-sm text-slate-900 sm:w-auto sm:flex-1 dark:text-slate-100">{{ $row->name }}</p>
-                    {{-- Mini progress bar: 8px × 80px. `width` is a prop and
-                         `shrink-0` a class because two Tailwind width utilities
-                         on one element resolve by stylesheet order, not by the
-                         order the call site wrote them. --}}
-                    <x-core::progress-bar
-                        :value="$row->barWidth()"
-                        :tone="$row->progressState === GoalProgressState::Overdue->value ? 'warning' : 'positive'"
-                        :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
-                        width="w-20"
-                        class="shrink-0"
-                    />
-                    <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
-                    <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
-                        @if ($row->progressState === GoalProgressState::Overdue->value)
-                            <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>
-                        @elseif ($row->projectedFinishDate !== null)
-                            {{-- Same date, same words as /goals. The tile printed a
-                                 beyond-horizon estimate as a bare hard date, so one
-                                 fact read as two different confidences. --}}
-                            · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat(GoalProgressRow::DATE_FORMAT) }}
-                            @if ($row->projectionBeyondHorizon)
-                                {{ Lang::get('goals::messages.projection.projection_note') }}
+                <li>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
+                        <p class="w-full min-w-0 truncate text-sm text-slate-900 sm:w-auto sm:flex-1 dark:text-slate-100">{{ $row->name }}</p>
+                        {{-- Mini progress bar: 8px × 80px. `width` is a prop and
+                             `shrink-0` a class because two Tailwind width utilities
+                             on one element resolve by stylesheet order, not by the
+                             order the call site wrote them. --}}
+                        <x-core::progress-bar
+                            :value="$row->barWidth()"
+                            :tone="$row->progressState === GoalProgressState::Overdue->value ? 'warning' : 'positive'"
+                            :label="Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct])"
+                            width="w-20"
+                            class="shrink-0"
+                        />
+                        <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
+                        <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                            @if ($row->progressState === GoalProgressState::Overdue->value)
+                                <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>
+                            @elseif ($row->projectedFinishDate !== null)
+                                {{-- Same date, same words as /goals. The tile printed a
+                                     beyond-horizon estimate as a bare hard date, so one
+                                     fact read as two different confidences. --}}
+                                · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat(GoalProgressRow::DATE_FORMAT) }}
+                                @if ($row->projectionBeyondHorizon)
+                                    {{ Lang::get('goals::messages.projection.projection_note') }}
+                                @endif
                             @endif
-                        @endif
-                    </span>
+                        </span>
+                    </div>
+                    <x-core::fx-disclosure
+                        :disclosure="$row->conversion"
+                        id="goal-glance-{{ $row->id }}"
+                        :label="$row->name"
+                        class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                    />
                 </li>
             @endforeach
         </ul>

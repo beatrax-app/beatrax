@@ -16,6 +16,8 @@ use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -98,6 +100,7 @@ final readonly class CounterpartyProfileQuery
             currency: $total12m->currency,
             unconvertedCurrencies: $total12m->unconverted,
             isBankFee: self::isBankFee($cp),
+            conversion: $total12m->disclosure(),
         );
     }
 
@@ -320,7 +323,7 @@ final readonly class CounterpartyProfileQuery
                 + self::toInt($row->total_minor ?? null);
         }
 
-        [$totals, $unconverted] = $this->distributedTotals($partsByCurrency, array_keys($merged), $baseCurrency, $rates);
+        [$totals, $unconverted, $convertedFrom] = $this->distributedTotals($partsByCurrency, array_keys($merged), $baseCurrency, $rates);
 
         $result = [];
         foreach ($merged as $key => $row) {
@@ -329,6 +332,7 @@ final readonly class CounterpartyProfileQuery
             $codes = $unconverted[$key];
             sort($codes);
             $row->unconverted = $codes;
+            $row->conversion = ConversionDisclosure::of($rates->only($convertedFrom[$key]), $codes);
             unset($row->settled_currency);
             $result[] = $row;
         }
@@ -349,14 +353,15 @@ final readonly class CounterpartyProfileQuery
     /**
      * @param  array<string, array<array-key, int>>  $partsByCurrency
      * @param  list<array-key>  $keys
-     * @param  array<string, string>  $rates
-     * @return array{array<array-key, int>, array<array-key, list<string>>}
+     * @return array{array<array-key, int>, array<array-key, list<string>>, array<array-key, list<string>>}
      */
-    private function distributedTotals(array $partsByCurrency, array $keys, string $baseCurrency, array $rates): array
+    private function distributedTotals(array $partsByCurrency, array $keys, string $baseCurrency, RateSet $rates): array
     {
         $totals = array_fill_keys($keys, 0);
         /** @var array<array-key, list<string>> $unconverted */
         $unconverted = array_fill_keys($keys, []);
+        /** @var array<array-key, list<string>> $convertedFrom */
+        $convertedFrom = array_fill_keys($keys, []);
 
         foreach ($partsByCurrency as $currency => $parts) {
             $converted = $this->fx->distribute($parts, $currency, $baseCurrency, $rates);
@@ -372,12 +377,15 @@ final readonly class CounterpartyProfileQuery
                 continue;
             }
 
+            // One batched rate read serves every row, so each row is narrowed
+            // to the legs it converted and cannot disclose its siblings'.
             foreach ($converted as $key => $minor) {
                 $totals[$key] += $minor;
+                $convertedFrom[$key][] = $currency;
             }
         }
 
-        return [$totals, $unconverted];
+        return [$totals, $unconverted, $convertedFrom];
     }
 
     // Nothing writes metadata.funding_chain yet, so this returns null in

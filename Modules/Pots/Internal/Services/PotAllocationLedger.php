@@ -9,6 +9,8 @@ use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\AccountBalance;
@@ -187,6 +189,10 @@ final readonly class PotAllocationLedger
             unallocatedMinor: $unallocated,
             isOverAllocated: $unallocated < 0,
             unconverted: $leftOut,
+            // An empty rate set, because no figure on this line was converted:
+            // the disclosure is here for the one clause it does carry, the
+            // codes no line answers for.
+            conversion: ConversionDisclosure::of(RateSet::empty($currency), $leftOut),
         );
     }
 

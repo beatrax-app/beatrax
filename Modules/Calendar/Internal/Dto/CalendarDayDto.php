@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Calendar\Internal\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 final class CalendarDayDto extends Data
@@ -36,6 +37,7 @@ final class CalendarDayDto extends Data
         public readonly array $unconvertedCurrencies = [],
         public readonly bool $hasBalanceFigure = true,
         public readonly array $uncountedAccounts = [],
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function showsBalance(): bool

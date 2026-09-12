@@ -62,9 +62,12 @@
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">=</span>
                 <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($totals->net) }}</span>
                 <span class="text-slate-600 dark:text-slate-400" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.net_per_month') }}</span>
-                @if ($totals->isPartial())
-                    <span class="text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>
-                @endif
+                <x-core::fx-disclosure
+                    :disclosure="$totals->conversion"
+                    id="recurring-netflow"
+                    :label="Lang::get('recurring::index.net_flow.net_per_month')"
+                    class="text-slate-600 dark:text-slate-400"
+                />
             </div>
         @endunless
     </header>
@@ -132,6 +135,12 @@
                                             <span class="ml-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>
+                                    <x-core::fx-disclosure
+                                        :disclosure="$row->conversion"
+                                        id="recurring-row-{{ $row->seriesId }}"
+                                        :label="$row->displayName()"
+                                        class="mt-1 block text-xs text-slate-600 dark:text-slate-400"
+                                    />
                                     <p
                                         class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-400' }}"
                                         data-confidence-low="{{ $row->nextExpectedConfidenceLow ? 'true' : 'false' }}"
@@ -207,6 +216,12 @@
                                             <span class="ml-1 text-xs text-slate-600 dark:text-slate-400" style="font-variant-numeric: tabular-nums;" data-eur-shadow="true">{{ $fmt($row->eurEquivalent) }}</span>
                                         @endif
                                     </p>
+                                    <x-core::fx-disclosure
+                                        :disclosure="$row->conversion"
+                                        id="recurring-row-{{ $row->seriesId }}"
+                                        :label="$row->displayName()"
+                                        class="mt-1 block text-xs text-slate-600 dark:text-slate-400"
+                                    />
                                     <p
                                         class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-600 dark:text-slate-400' : 'text-slate-500 dark:text-slate-400' }}"
                                         data-confidence-low="{{ $row->nextExpectedConfidenceLow ? 'true' : 'false' }}"

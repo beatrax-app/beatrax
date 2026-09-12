@@ -8,6 +8,7 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // There is deliberately no `iban` field: the index must not be able to
@@ -41,6 +42,7 @@ final readonly class CounterpartyIndexRow
         public array $sparkline,
         public string $currency = '',
         public array $unconverted = [],
+        public ?ConversionDisclosure $conversion = null,
     ) {
         $this->total12mFormatted = Money::ofMinor(abs($total12mMinor), $currency)->format();
         $this->avgPerMonthFormatted = Money::ofMinor(abs($avgPerMonthMinor), $currency)->format();

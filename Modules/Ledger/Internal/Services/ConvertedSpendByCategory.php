@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Internal\Services;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Internal\Dto\ConvertedCategorySpend;
 use Modules\Ledger\Public\Dto\Period;
@@ -54,6 +55,16 @@ final readonly class ConvertedSpendByCategory
 
         sort($unconverted);
 
-        return new ConvertedCategorySpend($spendByCategoryId, $unconverted);
+        return new ConvertedCategorySpend(
+            $spendByCategoryId,
+            $unconverted,
+            // Narrowed to the buckets that reached the figures: distribute()
+            // is all-or-nothing per currency, so a code in $unconverted moved
+            // none of these rows and its rate says nothing about them.
+            ConversionDisclosure::of(
+                $rates->only(array_values(array_diff(array_keys($byCurrency), $unconverted))),
+                $unconverted,
+            ),
+        );
     }
 }

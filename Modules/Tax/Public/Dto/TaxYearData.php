@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 // Each $categories element has id/name/shortName/subtotalMinor/
@@ -27,6 +28,7 @@ final class TaxYearData extends Data
         public readonly array $categories,
         public readonly string $currency = '',
         public readonly array $unconvertedCurrencies = [],
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function isPartial(): bool

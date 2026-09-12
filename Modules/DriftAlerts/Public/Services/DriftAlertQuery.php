@@ -13,6 +13,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\Mapping\DriftAlertDtoMapper;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -285,6 +287,7 @@ final readonly class DriftAlertQuery
                 $row,
                 $displayNames[$seriesId] ?? '',
                 $this->annualizedInBase($row, $baseCurrency, $rates),
+                self::disclosureFor(self::toString($row->currency), $baseCurrency, $rates),
             );
         }
 
@@ -295,7 +298,7 @@ final readonly class DriftAlertQuery
     // a page asks for each pair once rather than once per row.
     /**
      * @param  Collection<int, stdClass>  $rows
-     * @return array{0: string, 1: array<string, string>}
+     * @return array{0: string, 1: RateSet}
      */
     private function ratesFor(User $user, Collection $rows): array
     {
@@ -311,14 +314,26 @@ final readonly class DriftAlertQuery
     // The row's yearly figure in the reader's own currency. Null for a pair the
     // rate table cannot reach, so the shadow line is withheld rather than
     // printing a foreign amount under the reader's sign.
-    /**
-     * @param  array<string, string>  $rates
-     */
-    private function annualizedInBase(stdClass $row, string $baseCurrency, array $rates): ?Money
+    private function annualizedInBase(stdClass $row, string $baseCurrency, RateSet $rates): ?Money
     {
         $money = Money::tryOfMinor(self::toInt($row->annualized_impact_minor), self::toString($row->currency));
 
         return $money === null ? null : $this->fx->convert($money, $baseCurrency, $rates);
+    }
+
+    // The one leg this row's shadow went through. $rates is batched over the
+    // whole page, so a row handed the set whole would disclose the rates of
+    // every other row's currency beside its own figure.
+    private static function disclosureFor(string $currency, string $baseCurrency, RateSet $rates): ?ConversionDisclosure
+    {
+        if ($currency === '' || $currency === $baseCurrency) {
+            return null;
+        }
+
+        return ConversionDisclosure::of(
+            $rates->only([$currency]),
+            $rates->has($currency) ? [] : [$currency],
+        );
     }
 
     // The OR stays inside one where(function...) group: chained at the top

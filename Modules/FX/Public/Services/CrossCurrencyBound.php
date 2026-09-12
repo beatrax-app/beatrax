@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\FX\Public\Services;
 
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // One typed figure is one amount of money, so a surface that tests rows in
@@ -40,10 +41,7 @@ final readonly class CrossCurrencyBound
         return $lost ? null : ['min' => $min, 'max' => $max];
     }
 
-    /**
-     * @param  array<string, string>  $rates
-     */
-    private function inCurrency(int $minor, string $from, string $to, array $rates): ?int
+    private function inCurrency(int $minor, string $from, string $to, RateSet $rates): ?int
     {
         $money = Money::tryOfMinor($minor, $from);
 

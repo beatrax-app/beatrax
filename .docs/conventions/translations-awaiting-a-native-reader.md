@@ -355,12 +355,18 @@ so that answer splits the key.
 
 ### How old a rate is
 
-`core::net_worth.stale_bundled`, `stale_old` and `stale_offline` say the same
+`core::fx.stale_bundled`, `stale_old` and `stale_offline` say the same
 thing in three settings — the rate on screen is older than `:count` days — and
 one marker per locale covers all three. What governs the noun here is the
 comparative rather than the numeral, so the arms carry the case the comparative
 takes and not the one a count alone would. Files are
-`Modules/Core/Resources/lang/<locale>/net_worth.php`.
+`Modules/Core/Resources/lang/<locale>/fx.php`.
+
+How old the rate actually is does not go through these lines at all. It is
+Carbon's own relative phrase — "3 days ago", "3 months ago" — which every
+locale already translates, so the distance between a rate fetched this morning
+and the bundled snapshot a fresh install converts at needs no sentence of ours.
+`core::fx.as_of_age` holds only the punctuation that joins the two.
 
 | Locale | What is open |
 |---|---|
@@ -370,7 +376,7 @@ takes and not the one a count alone would. Files are
 
 ### The bank's own abbreviation
 
-`core::net_worth.source_ecb` names where a rate came from, and it ships `ECB` in
+`core::fx.source_ecb` names where a rate came from, and it ships `ECB` in
 every locale. Eight of them have a settled abbreviation of their own, and each
 carries a marker saying which. The value is not free to move on its own: it is
 what that locale's `core::settings.exchange_rates.online_on` already writes, so

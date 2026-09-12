@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Budgets\Public\Dto;
 
 use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 final class EnvelopeMoveRow extends Data
@@ -24,5 +25,8 @@ final class EnvelopeMoveRow extends Data
         public readonly string $counterpartCategoryName,
         public readonly ?string $memo,
         public readonly string $createdAt,
+        // Empty where $currency is the row's own: a line the rate table could
+        // not reach travels unconverted and has no rate to name.
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 }

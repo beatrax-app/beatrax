@@ -9,6 +9,8 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\Lang;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Ledger\Internal\Dto\ConvertedCategorySpend;
 use Modules\Ledger\Internal\Services\ConvertedSpendByCategory;
 use Modules\Ledger\Public\Dto\CategoryDelta;
@@ -81,6 +83,7 @@ final readonly class CategorySpendTrendQuery
             // and must keep drawing, and so must a gap between two months of
             // records. Only a period the ledger never reached is not one.
             previousPeriodIsReachable: $this->populated->reachesBackInto($user, $previous),
+            conversion: self::mergeConversion($currentSpend, $previousSpend, $displayCurrency),
         );
     }
 
@@ -102,6 +105,28 @@ final readonly class CategorySpendTrendQuery
         sort($codes);
 
         return $codes;
+    }
+
+    // Both periods are read at their own rate, and the card states a figure
+    // for each, so the disclosure covers both reads rather than the current
+    // one alone. Keyed by the currency converted from: the same code read
+    // twice is one rate, not two.
+    private static function mergeConversion(
+        ConvertedCategorySpend $current,
+        ConvertedCategorySpend $previous,
+        string $displayCurrency,
+    ): ConversionDisclosure {
+        $used = [];
+        foreach ([$previous, $current] as $spend) {
+            foreach ($spend->conversion->rates ?? [] as $rate) {
+                $used[$rate->from] = $rate;
+            }
+        }
+
+        return ConversionDisclosure::of(
+            RateSet::of($displayCurrency, $used),
+            self::mergeUnconverted($current, $previous),
+        );
     }
 
     /**

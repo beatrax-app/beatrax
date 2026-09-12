@@ -151,10 +151,15 @@ it('shows the reader which currency was left out, not just the smaller number', 
     expect($sentence)->not->toBe('core::money.not_converted');
     expect($sentence)->toContain('ZAR');
 
+    expect($summary->conversion)->not->toBeNull();
+    expect($summary->conversion->unconvertedList())->toBe('ZAR');
+
     $blade = (string) file_get_contents(
         base_path('Modules/Shell/Resources/views/livewire/dashboard.blade.php'),
     );
 
-    expect($blade)->toContain('unconvertedCurrencies');
-    expect($blade)->toContain('core::money.not_converted');
+    // The sentence moved into x-core::fx-disclosure, which renders it beside
+    // the rate the rest of the figure was converted at rather than on its own.
+    expect($blade)->toContain('<x-core::fx-disclosure');
+    expect($blade)->toContain(':disclosure="$summary->conversion"');
 });

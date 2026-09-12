@@ -125,14 +125,20 @@ Modules/Counterparties/
     through `convertedBuckets()`, which converts one currency's whole
     bucket at a time through `CrossCurrencyTotal::distribute()` — per
     row it rounded the rows apart from the hero figure they sit under —
-    and hands each row a `currency` and an `unconverted` list of the
-    codes it could not price, which the three tab partials render.
+    and hands each row a `currency`, an `unconverted` list of the
+    codes it could not price, and a `conversion` disclosure narrowed
+    to the legs that row converted — one batched rate read serves
+    every row, so a category must not name its siblings' pairs. The
+    three tab partials render both halves through
+    `x-core::fx-disclosure`.
   - `CounterpartyProfileDto::$isBankFee` — whether the profile body
     renders the fee panel or the institution one.
   - `CounterpartyProfileDto::isPartial()` / `unconvertedList()` — the
-    codes the twelve-month hero total leaves out for want of a rate.
-    The index has said this since it was written; the profile it links
-    to computed the same list and rendered none of it.
+    codes the twelve-month hero total leaves out for want of a rate,
+    with `$conversion` carrying the rates it converted the rest at.
+    The index has said the first half since it was written; the profile
+    it links to computed the same list and rendered none of it, and
+    neither of them named a rate until the disclosure component existed.
   - `CounterpartyTriageQueue::forUser($user, $queueFirstId)`
     → `list<Counterparty>`. Excludes rows the reader marked ignored,
     as does `unknownCountForUser()` behind the sidebar badge.

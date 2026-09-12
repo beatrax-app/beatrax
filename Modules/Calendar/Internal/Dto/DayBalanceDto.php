@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Calendar\Internal\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
+
 // What one grid day's balance line actually knows. A currency the rate table
 // cannot reach is left out of $minor and named in $unconvertedCurrencies, and
 // $isNegative is the risk answer $minor alone cannot give: a balance overdrawn
@@ -21,6 +23,7 @@ final readonly class DayBalanceDto
         public array $unconvertedCurrencies = [],
         public bool $isNegative = false,
         public bool $hasFigure = true,
+        public ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function isKnown(): bool

@@ -85,8 +85,9 @@ What the module explicitly does NOT do:
     property set (accounts/categories/counterparties/date/amount).
   + `SearchResultPage` — mirrors `TransactionListPage`, extended with
     aggregate totals in the reader's own base currency, the codes those
-    totals left out for want of a rate (`isPartial()` /
-    `unconvertedList()`, rendered in the search strip), and an optional
+    totals left out for want of a rate, the `conversion` disclosure
+    naming the rates they were converted at — both halves rendered in the
+    search strip through `x-core::fx-disclosure` — and an optional
     "did you mean" string. The two totals are bucketed by
     [`MoneyFlow`](../ledger/architecture.md#moneyflow--the-one-definition-of-spend-income-and-net)
     like every other money figure in the app. They were bucketed by the

@@ -105,7 +105,8 @@ it('fetches one rate per currency however many buckets share it', function (): v
         )->minor;
     }
 
-    expect($rates)->toBe([Currency::Usd->value => '0.50000000'])
+    expect($rates->codes())->toBe([Currency::Usd->value])
+        ->and($rates->rateFor(Currency::Usd->value))->toBe('0.50000000')
         ->and($months)->toBe(12 * 150)
         ->and($queries)->toBe(0);
 });

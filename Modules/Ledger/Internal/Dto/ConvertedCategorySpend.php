@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Internal\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
+
 final readonly class ConvertedCategorySpend
 {
     /**
@@ -13,5 +15,6 @@ final readonly class ConvertedCategorySpend
     public function __construct(
         public array $byCategoryId,
         public array $unconvertedCurrencies = [],
+        public ?ConversionDisclosure $conversion = null,
     ) {}
 }

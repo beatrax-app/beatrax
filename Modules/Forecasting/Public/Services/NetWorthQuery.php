@@ -11,7 +11,10 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\FX\Public\Dto\ConversionResult;
+use Modules\FX\Public\Dto\RateSet;
+use Modules\FX\Public\Dto\RateUsed;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
@@ -54,15 +57,14 @@ final readonly class NetWorthQuery
         $total = 0;
         $hasExcluded = false;
         $balancesWithoutRate = 0;
-        /** @var array{stale: bool, source: ?string, asOf: ?CarbonImmutable} $fxMeta */
-        $fxMeta = ['stale' => false, 'source' => null, 'asOf' => null];
 
         $baseCurrency = $this->baseCurrency->forUser($user);
         $today = $this->clock->now()->startOfDay();
+        $rates = RateSet::empty($baseCurrency);
 
         foreach ($accounts as $account) {
             ['lines' => $accountLines, 'total' => $accountTotal, 'withoutRate' => $withoutRate]
-                = $this->accountLines($account, $user, $baseCurrency, $today, $fxMeta);
+                = $this->accountLines($account, $user, $baseCurrency, $today, $rates);
 
             $lines = [...$lines, ...$accountLines];
             $total += $accountTotal;
@@ -70,22 +72,28 @@ final readonly class NetWorthQuery
             $hasExcluded = $hasExcluded || $withoutRate > 0;
         }
 
+        // The oldest leg answers for the total; the metadata used to be folded
+        // newest-first, so a stale leg was reported under a fresh pair's date.
+        // No unconverted codes here: this card counts the LINES it left out,
+        // which is a different number from the distinct currencies.
+        $disclosure = ConversionDisclosure::of($rates);
+
         return new NetWorth(
             totalMinor: $total,
             currency: $baseCurrency,
             accounts: $lines,
             hasExcludedAccounts: $hasExcluded,
-            ratesSource: $fxMeta['source'],
-            ratesAsOf: $fxMeta['asOf'] instanceof CarbonImmutable ? $fxMeta['asOf'] : null,
-            hasStaleRates: $fxMeta['stale'],
+            ratesSource: $disclosure->source(),
+            ratesAsOf: $disclosure->asOf(),
+            hasStaleRates: $disclosure->isStale(),
             balancesWithoutRate: $balancesWithoutRate,
+            conversion: $disclosure,
         );
     }
 
     // One account can hold several currencies, so it yields one line per
     // currency held, each converted at its own rate.
     /**
-     * @param  array{stale: bool, source: ?string, asOf: ?CarbonImmutable}  $fxMeta
      * @return array{lines: list<AccountBalanceLine>, total: int, withoutRate: int}
      */
     private function accountLines(
@@ -93,7 +101,7 @@ final readonly class NetWorthQuery
         User $user,
         string $baseCurrency,
         CarbonImmutable $today,
-        array &$fxMeta,
+        RateSet &$rates,
     ): array {
         $accountId = self::toInt($account->id);
         $kind = is_string($account->kind) ? $account->kind : '';
@@ -142,7 +150,7 @@ final readonly class NetWorthQuery
             }
 
             $total += $result->converted->toMinor();
-            $this->trackFxMetadata($fxMeta, $result);
+            $rates = self::withRateUsed($rates, $baseCurrency, $currency, $result);
         }
 
         return ['lines' => $lines, 'total' => $total, 'withoutRate' => $withoutRate];
@@ -161,23 +169,22 @@ final readonly class NetWorthQuery
         return $lines === [] ? [$defaultCurrency => 0] : $lines;
     }
 
-    /**
-     * @param  array{stale: bool, source: ?string, asOf: ?CarbonImmutable}  $meta
-     */
-    private function trackFxMetadata(array &$meta, ConversionResult $result): void
+    // A passthrough line was already in the base currency, so it converted at
+    // no rate and has nothing to disclose. Two accounts holding one currency
+    // converted at one rate, so the set collapses them.
+    private static function withRateUsed(RateSet $rates, string $baseCurrency, string $currency, ConversionResult $result): RateSet
     {
-        // A passthrough line was already in the base currency, so it has no rate,
-        // source or as-of to contribute.
-        if ($result->isPassthrough) {
-            return;
+        if ($result->isPassthrough || $result->rate === null) {
+            return $rates;
         }
 
-        $meta['stale'] = $meta['stale'] || $result->isStale;
-        if ($result->source !== null) {
-            $meta['source'] = $result->source;
-        }
-        if ($result->asOf !== null && ($meta['asOf'] === null || $result->asOf > $meta['asOf'])) {
-            $meta['asOf'] = $result->asOf;
-        }
+        return $rates->with(new RateUsed(
+            from: $currency,
+            to: $baseCurrency,
+            rate: $result->rate,
+            source: $result->source,
+            asOf: $result->asOf,
+            isStale: $result->isStale,
+        ));
     }
 }

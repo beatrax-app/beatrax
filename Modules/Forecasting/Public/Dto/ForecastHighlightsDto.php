@@ -6,6 +6,7 @@ namespace Modules\Forecasting\Public\Dto;
 
 use Modules\Chains\Public\Dto\NextSettlementDto;
 use Modules\Forecasting\Public\Http\Livewire\ForecastHighlightsTile;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 /**
@@ -27,5 +28,6 @@ final class ForecastHighlightsDto extends Data
         // running. Every other forecast member here was read off the run that
         // one supersedes, so the tile must not print them as current.
         public readonly bool $isComputing = false,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 }

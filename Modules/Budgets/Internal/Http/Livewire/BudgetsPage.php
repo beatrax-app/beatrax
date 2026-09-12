@@ -324,6 +324,7 @@ final class BudgetsPage extends Component
                 'moveDestinations' => [],
                 'recentMoves' => [],
                 'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
+                'conversion' => null,
             ]);
 
             $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').Brand::TITLE_SUFFIX]);
@@ -391,6 +392,10 @@ final class BudgetsPage extends Component
             'moveDestinations' => $moveDestinations,
             'recentMoves' => $recentMoves,
             'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
+            // A view variable rather than a property: the fold is not hydrated
+            // back from the browser, and a disclosure that round-tripped
+            // through JSON would arrive as a plain array.
+            'conversion' => $fold['conversion'],
         ]);
 
         $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').Brand::TITLE_SUFFIX]);

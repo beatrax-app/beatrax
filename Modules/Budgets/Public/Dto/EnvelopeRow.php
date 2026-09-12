@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Budgets\Public\Dto;
 
 use Modules\Budgets\Public\Enums\OverspendMode;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 final class EnvelopeRow extends Data
@@ -12,6 +13,7 @@ final class EnvelopeRow extends Data
     /**
      * @param  list<string>  $unconvertedSpentCurrencies  codes whose spend the rate
      *                                                    table could not price into $currency, so $spentMinor leaves them out
+     * @param  ?ConversionDisclosure  $spentConversion  the rates $spentMinor was converted at, beside those same codes
      */
     public function __construct(
         public readonly int $categoryId,
@@ -33,5 +35,6 @@ final class EnvelopeRow extends Data
         // The group in front of the leaf, which is what the grid and both
         // move-money pickers render: two envelopes can share $categoryName.
         public readonly string $categoryPath = '',
+        public readonly ?ConversionDisclosure $spentConversion = null,
     ) {}
 }

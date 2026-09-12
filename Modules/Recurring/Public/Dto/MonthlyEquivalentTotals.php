@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // recurring_series.monthly_equivalent_minor is derived from latest_amount_minor,
@@ -17,6 +18,7 @@ final readonly class MonthlyEquivalentTotals
         public Money $income,
         public Money $net,
         public array $unconverted,
+        public ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function isPartial(): bool

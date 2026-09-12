@@ -131,6 +131,7 @@ final readonly class CalendarQuery
                 uncountedAccounts: $balance->isKnown()
                     ? self::accountsOutsideBalance($entries, $effectiveBalance)
                     : [],
+                conversion: $balance->conversion,
             );
 
             $prevEod = $balance->isKnown() ? $balance->minor : null;

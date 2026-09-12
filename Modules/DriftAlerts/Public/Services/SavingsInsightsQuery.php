@@ -18,6 +18,7 @@ use Modules\DriftAlerts\Internal\Dto\InsightCandidate;
 use Modules\DriftAlerts\Internal\Dto\InsightFacts;
 use Modules\DriftAlerts\Internal\Enums\SavingsInsightKind;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
@@ -172,10 +173,7 @@ final readonly class SavingsInsightsQuery
     // Null for a currency the rate table cannot reach, which withholds the
     // review prompt rather than comparing foreign minor units with a floor
     // denominated in the reader's own.
-    /**
-     * @param  array<string, string>  $rates
-     */
-    private function inBase(int $minor, string $currency, string $baseCurrency, array $rates): ?int
+    private function inBase(int $minor, string $currency, string $baseCurrency, RateSet $rates): ?int
     {
         $money = Money::tryOfMinor($minor, $currency);
 
@@ -188,10 +186,9 @@ final readonly class SavingsInsightsQuery
     // insight the rate table cannot reach sorts after every one it can.
     /**
      * @param  list<InsightFacts>  $insights
-     * @param  array<string, string>  $rates
      * @return list<InsightFacts>
      */
-    private function costliestFirst(array $insights, string $baseCurrency, array $rates): array
+    private function costliestFirst(array $insights, string $baseCurrency, RateSet $rates): array
     {
         $inBase = [];
         foreach ($insights as $index => $insight) {

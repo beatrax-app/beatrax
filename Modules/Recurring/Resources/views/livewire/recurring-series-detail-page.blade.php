@@ -46,6 +46,12 @@
                      which at least carries the currency it is denominated in. --}}
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->monthlyEquivalentInBase ?? $series->monthlyEquivalent) }}{{ Lang::get('recurring::detail.per_month_suffix') }}</span>
             </p>
+            <x-core::fx-disclosure
+                :disclosure="$series->conversion"
+                id="recurring-series-monthly"
+                :label="$series->displayName()"
+                class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+            />
             @if (! empty($counterpartyLink))
                 <p class="mt-2 text-sm">
                     <a

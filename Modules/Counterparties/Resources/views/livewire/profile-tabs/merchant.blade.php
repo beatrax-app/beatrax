@@ -31,9 +31,12 @@
                         <li style="display: flex; flex-wrap: wrap; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
                             <span>{{ $cat->category_name ?? Lang::get('counterparties::profile.uncategorized') }}</span>
                             <span>{{ Money::ofMinor(abs((int) $cat->total_minor), $cat->currency)->format() }}</span>
-                            @if ($cat->unconverted !== [])
-                                <span style="flex-basis: 100%; font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $cat->unconverted)]) }}</span>
-                            @endif
+                            <x-core::fx-disclosure
+                                :disclosure="$cat->conversion"
+                                id="cp-merchant-cat-{{ $cat->category_id ?? 'none' }}"
+                                :label="$cat->category_name ?? Lang::get('counterparties::profile.uncategorized')"
+                                style="flex-basis: 100%; font-size: var(--text-xs); color: var(--color-text-faint);"
+                            />
                         </li>
                     @endforeach
                 </ul>

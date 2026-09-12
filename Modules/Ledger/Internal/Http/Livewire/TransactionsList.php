@@ -348,6 +348,7 @@ final class TransactionsList extends Component
             'searchTotalOut' => 0,
             'searchTotalIn' => 0,
             'searchUnconverted' => '',
+            'searchConversion' => null,
             'didYouMean' => null,
             'searchRows' => [],
             'activeFilterCount' => 0,

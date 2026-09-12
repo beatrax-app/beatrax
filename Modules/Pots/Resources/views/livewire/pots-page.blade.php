@@ -170,9 +170,12 @@
                                 {{ Lang::get('pots::messages.recon.over_allocated', ['amount' => $fmt(abs($phoneRec->unallocatedMinor), $phoneRec->currency)]) }}
                             </p>
                         @endif
-                        @if ($phoneRec->isPartial())
-                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $phoneRec->unconvertedList()]) }}</p>
-                        @endif
+                        <x-core::fx-disclosure
+                            :disclosure="$phoneRec->conversion"
+                            id="recon-phone-{{ $accountId }}-{{ strtolower($phoneRec->currency) }}"
+                            :label="$phoneRec->accountName"
+                            class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                        />
                     </div>
                 @endforeach
                 @foreach ($pots as $pot)
@@ -296,9 +299,12 @@
                         {{-- A currency the account holds that no line above
                              answers for is named, the way every other money
                              surface names what it could not price. --}}
-                        @if ($rec->isPartial())
-                            <p class="mb-4 -mt-2 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $rec->unconvertedList()]) }}</p>
-                        @endif
+                        <x-core::fx-disclosure
+                            :disclosure="$rec->conversion"
+                            id="recon-{{ $accountId }}-{{ strtolower($rec->currency) }}"
+                            :label="$rec->accountName"
+                            class="mb-4 -mt-2 block text-xs text-slate-500 dark:text-slate-400"
+                        />
                     @endforeach
 
                     {{-- Pot cards --}}
@@ -348,9 +354,12 @@
                                     <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                         {{ $pot->categoryName }}: {{ $fmt($pot->categorySpentMinor, $pot->currency) }} {{ Lang::get('pots::messages.coverage.spent') }} · {{ $fmt($pot->balanceMinor, $pot->currency) }} {{ Lang::get('pots::messages.coverage.in_pot') }}
                                     </p>
-                                    @if ($pot->categorySpentIsPartial())
-                                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $pot->categorySpentUnconvertedList()]) }}</p>
-                                    @endif
+                                    <x-core::fx-disclosure
+                                        :disclosure="$pot->categorySpentConversion"
+                                        id="pot-spent-{{ $pot->id }}"
+                                        :label="$pot->categoryName ?? $pot->name"
+                                        class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400"
+                                    />
                                 @endif
 
                                 {{-- Archive micro-confirm or footer action row --}}

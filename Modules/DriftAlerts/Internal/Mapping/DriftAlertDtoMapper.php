@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\DriftAlerts\Internal\Enums\ThresholdSource;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -24,9 +25,16 @@ final class DriftAlertDtoMapper
      * @param  Money|null  $baseEquivalent  the annualized impact in the
      *                                      reader's reporting currency,
      *                                      supplied by the query layer
+     * @param  ConversionDisclosure|null  $conversion  the rate $baseEquivalent
+     *                                                 went through, narrowed to this row's own
+     *                                                 leg by the query layer
      */
-    public static function hydrate(stdClass $row, ?string $seriesDisplayName = null, ?Money $baseEquivalent = null): DriftAlertDto
-    {
+    public static function hydrate(
+        stdClass $row,
+        ?string $seriesDisplayName = null,
+        ?Money $baseEquivalent = null,
+        ?ConversionDisclosure $conversion = null,
+    ): DriftAlertDto {
         $currency = self::toString($row->currency);
         $baselineAmount = Money::ofMinor(self::toInt($row->baseline_amount_minor), $currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor), $currency);
@@ -76,6 +84,7 @@ final class DriftAlertDtoMapper
             detectedAt: $detectedAt,
             actionedAt: $actionedAt,
             snoozedUntil: $snoozedUntil,
+            conversion: $conversion,
         );
     }
 }

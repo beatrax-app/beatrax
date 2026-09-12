@@ -10,6 +10,8 @@ use Modules\Budgets\Public\Dto\EnvelopeMoveRow;
 use Modules\Budgets\Public\Enums\EnvelopeMoveKind;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -133,9 +135,8 @@ final readonly class EnvelopeBalanceQuery
 
     /**
      * @param  array<int, \stdClass>  $rows
-     * @return array<string, string>
      */
-    private function ratesFor(array $rows, string $target): array
+    private function ratesFor(array $rows, string $target): RateSet
     {
         return $this->fx->ratesTo(
             array_values(array_map(static fn (\stdClass $row): string => self::toString($row->currency), $rows)),
@@ -148,11 +149,9 @@ final readonly class EnvelopeBalanceQuery
     // reader's would print a number that was never that many euros. A kind
     // this build cannot name travels too, as a null the screen has copy for.
     /**
-     * @param  array<string, string>  $rates
-     *
      * @link ../../../../.docs/features/sync/a-peer-may-be-on-a-newer-version.md
      */
-    private function mapMoveRow(\stdClass $row, string $target, array $rates): EnvelopeMoveRow
+    private function mapMoveRow(\stdClass $row, string $target, RateSet $rates): EnvelopeMoveRow
     {
         $stored = self::toInt($row->amount_minor);
         $storedCurrency = self::toString($row->currency);
@@ -168,6 +167,9 @@ final readonly class EnvelopeBalanceQuery
             counterpartCategoryName: CategoryPathName::fromRow($row, 'counterpart_category') ?? '',
             memo: is_string($row->memo) ? $row->memo : null,
             createdAt: $this->formatCreatedAt($row->created_at ?? null),
+            conversion: ConversionDisclosure::of(
+                $converted === null ? RateSet::empty($target) : $rates->only([$storedCurrency]),
+            ),
         );
     }
 

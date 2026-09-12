@@ -22,6 +22,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
@@ -64,7 +65,7 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
         $resolved = $this->withGuardBoundTo($user, $auth, function () use ($carryover, $periods, $user): array {
             $period = $periods->current();
 
-            /** @var array{toBudgetMinor: int, overspentCount: int, rows: array<int, EnvelopeRow>} $fold */
+            /** @var array{toBudgetMinor: int, overspentCount: int, rows: array<int, EnvelopeRow>, conversion: ?ConversionDisclosure} $fold */
             $fold = $carryover->forUserAndPeriod($user, $period);
 
             return ['period' => $period, 'rows' => $fold['rows']];

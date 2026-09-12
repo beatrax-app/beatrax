@@ -125,6 +125,21 @@
             border-top: 1pt solid #e2e8f0;
             padding-top: 4pt;
         }
+
+        /* The rate lines fx-disclosure prints in `flat` mode. The class names
+           come from the shared component and this document loads no app.css,
+           so they take the size and slate this page already gives a label
+           (.summary-label) and a column head (.tx-table th). */
+        .fx-rate {
+            font-size: 8.5pt;
+            color: #475569;
+        }
+
+        .fx-source,
+        .fx-stale-note {
+            font-size: 8pt;
+            color: #64748b;
+        }
     </style>
 </head>
 <body>
@@ -150,9 +165,12 @@
             <td>{{ Money::ofMinor($data->incomeTotalMinor, $data->currency)->format() }}</td>
         </tr>
     </table>
-    @if ($data->isPartial())
-        <p data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $data->unconvertedList()]) }}</p>
-    @endif
+    <x-core::fx-disclosure
+        flat
+        :disclosure="$data->conversion"
+        id="tax-export-totals"
+        style="display: block;"
+    />
 </div>
 
 @if($data->itemCount === 0)

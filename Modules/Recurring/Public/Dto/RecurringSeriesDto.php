@@ -6,6 +6,7 @@ namespace Modules\Recurring\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\Lang;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -45,6 +46,7 @@ final class RecurringSeriesDto extends Data
         public readonly ?Money $monthlyEquivalentInBase = null,
         public readonly ?CarbonImmutable $latestObservedAt = null,
         public readonly ?int $billingDay = null,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function displayName(): string

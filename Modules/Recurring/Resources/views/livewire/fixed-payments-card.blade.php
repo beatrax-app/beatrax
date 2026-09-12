@@ -22,8 +22,14 @@
         <div>
             <x-core::section-heading :title="Lang::get('recurring::fixed_payments.heading')" />
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                {{ $fmt($totals->expense) }} {{ Lang::get('recurring::fixed_payments.summary.expenses') }} · {{ $fmt($totals->income) }} {{ Lang::get('recurring::fixed_payments.summary.income') }} · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $fmt($totals->net) }} {{ Lang::get('recurring::fixed_payments.summary.net') }}</span>@if ($totals->isPartial())<span class="text-slate-600 dark:text-slate-400" data-not-converted="true"> {{ Lang::get('core::money.not_converted', ['list' => $totals->unconvertedList()]) }}</span>@endif
+                {{ $fmt($totals->expense) }} {{ Lang::get('recurring::fixed_payments.summary.expenses') }} · {{ $fmt($totals->income) }} {{ Lang::get('recurring::fixed_payments.summary.income') }} · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $fmt($totals->net) }} {{ Lang::get('recurring::fixed_payments.summary.net') }}</span>
             </p>
+            <x-core::fx-disclosure
+                :disclosure="$totals->conversion"
+                id="recurring-fixed-net"
+                :label="Lang::get('recurring::fixed_payments.summary.net')"
+                class="mt-1 block text-xs text-slate-600 dark:text-slate-400"
+            />
         </div>
         <div
             class="inline-flex flex-wrap items-center rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs dark:bg-slate-900 dark:border-slate-700"

@@ -74,6 +74,12 @@
         <p class="mt-1 text-3xl font-semibold {{ $toBudgetColour }}" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
             {{ $fmt($toBudgetMinor) }}
         </p>
+        <x-core::fx-disclosure
+            :disclosure="$conversion"
+            id="budgets-ready"
+            :label="Lang::get('budgets::messages.ready.label')"
+            class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+        />
         @if ($toBudgetMinor < 0)
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('budgets::messages.ready.overassigned') }}
@@ -173,6 +179,16 @@
                                     title="{{ Lang::get('budgets::messages.badge.unconverted_title') }}"
                                 ></span>
                             @endif
+                            {{-- In the category cell and not beside the figure:
+                                 the seven columns after it are sized by their
+                                 own numerals, and a rate sentence under one of
+                                 them widens that column for every row. --}}
+                            <x-core::fx-disclosure
+                                :disclosure="$row->spentConversion"
+                                id="envelope-spent-{{ $row->categoryId }}"
+                                :label="Lang::get('budgets::messages.table.spent')"
+                                class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400"
+                            />
                         </td>
                         <td class="px-4 py-2 text-right">
                             <input
@@ -275,6 +291,12 @@
                                                     @if ($move->memo !== null && $move->memo !== '')
                                                         <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ $move->memo }}</span>
                                                     @endif
+                                                    <x-core::fx-disclosure
+                                                        :disclosure="$move->conversion"
+                                                        id="envelope-move-{{ $move->id }}"
+                                                        :label="Lang::get('budgets::messages.table.moved')"
+                                                        class="block text-xs text-slate-500 dark:text-slate-400"
+                                                    />
                                                 </div>
                                                 <div class="flex shrink-0 items-center gap-3">
                                                     <span class="text-sm tabular-nums {{ $isIncoming ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
@@ -337,6 +359,12 @@
                             @endif
                             ·&nbsp;<span class="{{ $row->availableMinor < 0 ? 'text-rose-600 dark:text-rose-400' : '' }}">{{ Lang::get('budgets::messages.phone.available', ['amount' => $fmt($row->availableMinor, $row->currency)]) }}</span>
                         </p>
+                        <x-core::fx-disclosure
+                            :disclosure="$row->spentConversion"
+                            id="envelope-phone-spent-{{ $row->categoryId }}"
+                            :label="Lang::get('budgets::messages.table.spent')"
+                            class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400"
+                        />
                     </div>
                     {{-- Both fields are h-8 and w-24, and each row is justify-between,
                          so the two boxes share a left edge and a right edge. The

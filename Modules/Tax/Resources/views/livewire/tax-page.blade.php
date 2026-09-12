@@ -181,11 +181,13 @@
                     </span>
                 </div>
 
-                @if ($data->isPartial())
-                    <div class="flex flex-col" data-not-converted="true">
-                        <span style="font-size: var(--text-xs); color: var(--color-text-faint);">{{ Lang::get('core::money.not_converted', ['list' => $data->unconvertedList()]) }}</span>
-                    </div>
-                @endif
+                <x-core::fx-disclosure
+                    :disclosure="$data->conversion"
+                    id="tax-year-totals"
+                    :label="Lang::get('tax::page.total_deductions')"
+                    class="flex flex-col"
+                    style="font-size: var(--text-xs); color: var(--color-text-faint);"
+                />
             </div>
 
             {{-- ──────────────────────────────────────────────────────────────── --}}

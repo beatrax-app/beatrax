@@ -73,6 +73,7 @@ final class TransactionListViewData
             'searchTotalOut' => $page->totalOutMinor,
             'searchTotalIn' => $page->totalInMinor,
             'searchUnconverted' => $page->unconvertedList(),
+            'searchConversion' => $page->conversion,
             'didYouMean' => $page->didYouMean,
             'searchRows' => $searchRows,
         ];

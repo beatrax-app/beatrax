@@ -100,8 +100,11 @@ the total under whichever code the last row carried.
 A fold can leave a bucket out for want of a rate, and a smaller number
 with nothing saying so reads as less overspend rather than a partial
 figure. So the codes it could not price get their own body line, through
-the shared `core::money.not_converted` that every other roll-up names its
-gaps with. A `CopyLine` key reaches `Lang::get()` untouched, so it may
+the shared `core::money.not_converted` that every roll-up on screen names its
+gaps with. The rate itself stays off the digest: a body line is read in an OS
+toast with no room for a popover, and every notification deep-links to a
+surface that discloses the rate in full
+([the FX seam](../fx/architecture.md#a-converted-figure-carries-the-rate-that-made-it)). A `CopyLine` key reaches `Lang::get()` untouched, so it may
 name **any** module's translation namespace — a Notifications copy of a
 sentence Core already ships in every locale would be a second thing to
 keep in parity for no gain.

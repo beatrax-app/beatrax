@@ -36,9 +36,12 @@
                 <span class="text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::spending_trend.spent_this_period') }}</span>
             </div>
 
-            @if ($trend->unconvertedCurrencies !== [])
-                <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $trend->unconvertedCurrencies)]) }}</p>
-            @endif
+            <x-core::fx-disclosure
+                :disclosure="$trend->conversion"
+                id="spend-trend"
+                :label="Lang::get('core::spending_trend.heading')"
+                class="mt-1 block text-xs text-slate-600 dark:text-slate-400"
+            />
 
             @if ($trend->hasComparison() && count($trend->movers) > 0)
                 <ul class="mt-4 space-y-1.5">

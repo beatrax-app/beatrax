@@ -14,6 +14,7 @@ use Modules\Forecasting\Public\Actions\CreateScenario;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Enums\SeriesCadence;
@@ -103,7 +104,7 @@ it('keeps the charge on the curve when the shift target has fallen behind today'
         asOf: $asOf,
         horizonDays: 30,
         defaultCurrency: Currency::Eur->value,
-        rates: [],
+        rates: RateSet::empty(Currency::Eur->value),
     )->points;
 
     // The charge is still spent by the end of the horizon; the scenario is not

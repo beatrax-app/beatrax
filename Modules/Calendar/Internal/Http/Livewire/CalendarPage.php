@@ -22,6 +22,8 @@ use Modules\Core\Public\Services\UserPreferenceWriter;
 use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
@@ -226,9 +228,12 @@ final class CalendarPage extends Component
             $user,
         );
 
+        $reader = $baseCurrency->forUser($user);
+
         $view = $views->make('calendar::livewire.calendar-page', [
             'days' => $days,
             'unconvertedCurrencies' => self::unconvertedAcross($days),
+            'conversion' => self::conversionAcross($days, $reader),
             'uncountedAccounts' => self::uncountedAcross($days),
             'hasProjectableEntries' => $calendarQuery->hasProjectableEntries($user),
             'selectedDayDto' => $this->findSelectedDay($days),
@@ -238,7 +243,7 @@ final class CalendarPage extends Component
             'accountRoster' => $accountRoster,
             'atCeiling' => $window->atCeiling($year, $month),
             'atFloor' => $window->atFloor($year, $month),
-            'baseCurrency' => $baseCurrency->forUser($user),
+            'baseCurrency' => $reader,
         ]);
 
         $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').Brand::TITLE_SUFFIX]);
@@ -284,6 +289,27 @@ final class CalendarPage extends Component
         sort($codes);
 
         return $codes;
+    }
+
+    // Every day converted at one grid-wide read, narrowed per cell to the
+    // buckets that cell held, so the union of the cells is that read minus the
+    // rates no day used — which is what the strip above the grid is about.
+    /**
+     * @param  list<CalendarDayDto>  $days
+     */
+    private static function conversionAcross(array $days, string $readerCurrency): ConversionDisclosure
+    {
+        $used = [];
+        foreach ($days as $day) {
+            foreach ($day->conversion->rates ?? [] as $rate) {
+                $used[$rate->from] = $rate;
+            }
+        }
+
+        return ConversionDisclosure::of(
+            RateSet::of($readerCurrency, $used),
+            self::unconvertedAcross($days),
+        );
     }
 
     // The same economy as the line above it: an account the balance line

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
@@ -21,6 +22,7 @@ final class TopCategories extends Data
         public readonly array $rows,
         public readonly Money $refunded,
         public readonly int $refundedCategoryCount,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     public static function none(string $currency): self

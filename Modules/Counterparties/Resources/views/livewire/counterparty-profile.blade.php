@@ -57,9 +57,12 @@
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                     {{ Money::ofMinor(abs($profile->total12mMinor), $profile->currency)->format() }}
                 </div>
-                @if ($profile->isPartial())
-                    <div style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $profile->unconvertedList()]) }}</div>
-                @endif
+                <x-core::fx-disclosure
+                    :disclosure="$profile->conversion"
+                    id="cp-profile-total"
+                    :label="$profile->type === CounterpartyType::Personal->value ? Lang::get('counterparties::profile.hero_net_received') : Lang::get('counterparties::profile.hero_12mo_total')"
+                    style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);"
+                />
             </div>
             <div class="frame frame-tight">
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">

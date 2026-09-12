@@ -33,9 +33,12 @@
                     <span style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                         {{ Money::ofMinor(abs((int) $year->total_minor), $year->currency)->format() }}
                     </span>
-                    @if ($year->unconverted !== [])
-                        <span style="font-size: var(--text-xs); color: var(--color-text-faint);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $year->unconverted)]) }}</span>
-                    @endif
+                    <x-core::fx-disclosure
+                        :disclosure="$year->conversion"
+                        id="cp-tax-year-{{ (int) $year->year }}"
+                        :label="(int) $year->year"
+                        style="font-size: var(--text-xs); color: var(--color-text-faint);"
+                    />
                 </article>
             @endforeach
         </div>

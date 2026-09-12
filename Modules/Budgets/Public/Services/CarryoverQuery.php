@@ -14,6 +14,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
+use Modules\FX\Public\Dto\RateUsed;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -91,6 +94,7 @@ final readonly class CarryoverQuery
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
                 categoryPath: $naming['path'],
+                spentConversion: $spendByCategory[$categoryId]['conversion'] ?? null,
             );
         }
 
@@ -98,7 +102,7 @@ final readonly class CarryoverQuery
     }
 
     /**
-     * @return array{toBudgetMinor: int, overspentCount: int, rows: array<int, EnvelopeRow>}
+     * @return array{toBudgetMinor: int, overspentCount: int, rows: array<int, EnvelopeRow>, conversion: ?ConversionDisclosure}
      */
     public function forUserAndPeriod(User $user, Period $target): array
     {
@@ -115,6 +119,9 @@ final readonly class CarryoverQuery
                 'toBudgetMinor' => $this->glance->incomeForPeriod($user, $target, $this->baseCurrency->code()),
                 'overspentCount' => $unstarted['overspentCount'],
                 'rows' => $unstarted['rows'],
+                // incomeForPeriod() answers with a figure and nothing else, so
+                // the rates behind this one never reach here.
+                'conversion' => null,
             ];
         }
 
@@ -124,8 +131,10 @@ final readonly class CarryoverQuery
 
         $expenseCategories = $this->budgetProgress->expenseCategoryNaming($user);
 
-        $assignedByPeriod = $this->batchAssignments($user, $genesisPeriod, $targetBounded);
-        $movedByPeriod = $this->batchMoves($user, $genesisPeriod, $targetBounded);
+        $assigned = $this->batchAssignments($user, $genesisPeriod, $targetBounded);
+        $assignedByPeriod = $assigned['byPeriod'];
+        $moved = $this->batchMoves($user, $genesisPeriod, $targetBounded);
+        $movedByPeriod = $moved['byPeriod'];
         $settings = $this->envelopeSettings($user);
         $overspendModeByCategory = $settings['modes'];
         $notifyThresholdByCategory = $settings['thresholds'];
@@ -143,7 +152,18 @@ final readonly class CarryoverQuery
         // period cost a round trip per month of the reader's whole history.
         $span = new Period($periodsWalk[0]->start, end($periodsWalk)->endExclusive, '');
         $spendByPeriod = $this->batchSpend($user, $periodsWalk, $span);
-        $incomeByPeriod = $this->batchIncome($user, $periodsWalk, $span);
+        $income = $this->batchIncome($user, $periodsWalk, $span);
+        $incomeByPeriod = $income['byPeriod'];
+
+        // To-budget is income plus carry minus assigned, and the walk converts
+        // all three, so one term's rates would disclose a third of the figure.
+        // Carry is the fold's own output, which is those same two conversions
+        // one period earlier. All three read into the same target currency.
+        $toBudgetConversion = ConversionDisclosure::of(array_reduce(
+            [...$income['rates']->all(), ...$assigned['rates']->all(), ...$moved['rates']->all()],
+            static fn (RateSet $carried, RateUsed $rate): RateSet => $carried->with($rate),
+            RateSet::empty($this->baseCurrency->code()),
+        ));
 
         foreach ($periodsWalk as $period) {
             $periodKey = $period->start->toDateString();
@@ -165,6 +185,7 @@ final readonly class CarryoverQuery
                     'toBudgetMinor' => $step->toBudgetMinor,
                     'overspentCount' => $step->overspentCount,
                     'rows' => $step->rows,
+                    'conversion' => $toBudgetConversion,
                 ];
             }
         }
@@ -180,7 +201,7 @@ final readonly class CarryoverQuery
                 'walked_from' => $periodsWalk[0]->start->toDateString(),
             ]);
 
-            return ['toBudgetMinor' => 0, 'overspentCount' => 0, 'rows' => []];
+            return ['toBudgetMinor' => 0, 'overspentCount' => 0, 'rows' => [], 'conversion' => null];
         }
 
         return $result;
@@ -263,7 +284,7 @@ final readonly class CarryoverQuery
      * @param  array<int, int>  $assignedByCategory
      * @param  array<int, int>  $movedByCategory
      * @param  array<int, int>  $carriedIn
-     * @param  array<int, array{spent: int, unconverted: list<string>}>  $spendByCategory
+     * @param  array<int, array{spent: int, unconverted: list<string>, conversion: ConversionDisclosure}>  $spendByCategory
      */
     private function foldPeriod(
         FoldContext $context,
@@ -336,6 +357,7 @@ final readonly class CarryoverQuery
                 categorySlug: $naming['slug'],
                 categoryNameIsDefault: $naming['isDefault'],
                 categoryPath: $naming['path'],
+                spentConversion: $spendByCategory[$categoryId]['conversion'] ?? null,
             );
         }
 
@@ -354,7 +376,7 @@ final readonly class CarryoverQuery
     // stays out of it, surfaced beside the row rather than counted at par.
     /**
      * @param  list<Period>  $periodsWalk
-     * @return array<string, array<int, array{spent: int, unconverted: list<string>}>>
+     * @return array<string, array<int, array{spent: int, unconverted: list<string>, conversion: ConversionDisclosure}>>
      */
     private function batchSpend(User $user, array $periodsWalk, Period $span): array
     {
@@ -419,10 +441,9 @@ final readonly class CarryoverQuery
     // the buckets, not a difference of totals, which reports rounding as unpriced.
     /**
      * @param  array<int, array<string, int>>  $buckets
-     * @param  array<string, string>  $rates
-     * @return array<int, array{spent: int, unconverted: list<string>}>
+     * @return array<int, array{spent: int, unconverted: list<string>, conversion: ConversionDisclosure}>
      */
-    private function spendFromBuckets(array $buckets, string $currency, array $rates): array
+    private function spendFromBuckets(array $buckets, string $currency, RateSet $rates): array
     {
         $spend = [];
         foreach ($buckets as $categoryId => $byCurrency) {
@@ -437,7 +458,14 @@ final readonly class CarryoverQuery
                 }
             }
 
-            $spend[$categoryId] = ['spent' => $converted->minor, 'unconverted' => $unreached];
+            $spend[$categoryId] = [
+                'spent' => $converted->minor,
+                'unconverted' => $unreached,
+                // The narrowed set off the conversion itself, and $unreached
+                // rather than $converted->unconverted, so the line beside the
+                // figure names the same codes the badge above it does.
+                'conversion' => ConversionDisclosure::of($converted->rates, $unreached),
+            ];
         }
 
         return $spend;
@@ -445,7 +473,7 @@ final readonly class CarryoverQuery
 
     /**
      * @param  list<Period>  $periodsWalk
-     * @return array<string, int>
+     * @return array{byPeriod: array<string, int>, rates: RateSet}
      */
     private function batchIncome(User $user, array $periodsWalk, Period $span): array
     {
@@ -474,10 +502,13 @@ final readonly class CarryoverQuery
 
         $rates = $this->fx->ratesTo($currencies, $currency);
 
-        return array_map(
-            fn (array $totals): int => $this->fx->withRates($totals, $currency, $rates)->minor,
-            $byPeriod,
-        );
+        return [
+            'byPeriod' => array_map(
+                fn (array $totals): int => $this->fx->withRates($totals, $currency, $rates)->minor,
+                $byPeriod,
+            ),
+            'rates' => $rates,
+        ];
     }
 
     // Built backwards from the target so the month asked for is always folded.
@@ -513,7 +544,7 @@ final readonly class CarryoverQuery
     }
 
     /**
-     * @return array<string, array<int, int>> "Y-m-d" period_start => category_id => assigned_minor
+     * @return array{byPeriod: array<string, array<int, int>>, rates: RateSet} byPeriod is "Y-m-d" period_start => category_id => assigned_minor
      */
     private function batchAssignments(User $user, Period $genesis, Period $target): array
     {
@@ -528,7 +559,7 @@ final readonly class CarryoverQuery
     }
 
     /**
-     * @return array<string, array<int, int>> "Y-m-d" period_start => category_id => net_moved_minor
+     * @return array{byPeriod: array<string, array<int, int>>, rates: RateSet} byPeriod is "Y-m-d" period_start => category_id => net_moved_minor
      */
     private function batchMoves(User $user, Period $genesis, Period $target): array
     {
@@ -550,7 +581,7 @@ final readonly class CarryoverQuery
     // fold, which then runs on figures actually denominated in what it prints.
     /**
      * @param  iterable<stdClass>  $rows
-     * @return array<string, array<int, int>>
+     * @return array{byPeriod: array<string, array<int, int>>, rates: RateSet}
      */
     private function convertedByPeriod(iterable $rows, string $minorColumn): array
     {
@@ -577,7 +608,7 @@ final readonly class CarryoverQuery
             }
         }
 
-        return $byPeriod;
+        return ['byPeriod' => $byPeriod, 'rates' => $rates];
     }
 
     /**

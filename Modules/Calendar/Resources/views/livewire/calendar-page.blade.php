@@ -36,13 +36,13 @@
     {{-- Said once, above the grid: a currency with no rate is missing on every
          day it appears on, and a cell that printed the converted figure anyway
          drew a whole-looking balance off a partial one. --}}
-    @if ($unconvertedCurrencies !== [])
-        <div class="cal-summary-strip" data-not-converted="true">
-            <span style="color: var(--color-text-faint);">
-                {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $unconvertedCurrencies)]) }}
-            </span>
-        </div>
-    @endif
+    <x-core::fx-disclosure
+        :disclosure="$conversion"
+        id="cal-grid-balance"
+        :label="Lang::get('calendar::messages.toolbar.col_balance')"
+        class="cal-summary-strip block"
+        style="color: var(--color-text-faint);"
+    />
 
     {{-- Said once here for the same reason: an account the balance line leaves
          out is left out of every corner it appears on. Which cell it sits on
@@ -374,7 +374,7 @@
                 aria-label="{{ Lang::get('calendar::messages.panel.aria') }}"
                 data-panel="day-panel"
             >
-                @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto])
+                @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto, 'panelId' => 'cal-day-rail'])
             </aside>
         @endif
     </div>
@@ -384,7 +384,7 @@
          year is not lost when the panel stops repeating it. --}}
     <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('j M Y') : ''">
         @if ($selectedDayDto !== null)
-            @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto, 'showDate' => false])
+            @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto, 'showDate' => false, 'panelId' => 'cal-day-sheet'])
         @endif
     </x-core::bottom-sheet>
 </div>

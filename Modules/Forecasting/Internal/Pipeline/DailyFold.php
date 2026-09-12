@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -14,7 +15,6 @@ final readonly class DailyFold
 
     /**
      * @param  list<ForecastContribution>  $contributions
-     * @param  array<string, string>  $rates  as returned by CrossCurrencyTotal::ratesTo()
      */
     public function fold(
         int $openingBalanceMinor,
@@ -22,7 +22,7 @@ final readonly class DailyFold
         CarbonImmutable $asOf,
         int $horizonDays,
         string $defaultCurrency,
-        array $rates,
+        RateSet $rates,
     ): DailyFoldResult {
         // spread_sq accumulates half-widths squared: same-day uncertainties
         // combine in quadrature, not by addition.
@@ -109,10 +109,9 @@ final readonly class DailyFold
     // All three bounds or none: a triple whose point converted and whose low
     // did not would state a band that does not contain its own estimate.
     /**
-     * @param  array<string, string>  $rates
      * @return array{int, int, int}|null the point, low and high in $toCurrency
      */
-    private function convertTriple(ForecastContribution $contribution, string $toCurrency, array $rates): ?array
+    private function convertTriple(ForecastContribution $contribution, string $toCurrency, RateSet $rates): ?array
     {
         if ($contribution->currency === $toCurrency) {
             return [$contribution->pointMinor, $contribution->lowMinor, $contribution->highMinor];
@@ -133,10 +132,7 @@ final readonly class DailyFold
     // rate is major-unit to major-unit, and multiplying minor units by it is
     // only right where both sides hold the same number of them. A yen holds
     // none, and JPY5,000 folded into a euro line as EUR0.30.
-    /**
-     * @param  array<string, string>  $rates
-     */
-    private function convertMinor(int $minor, string $fromCurrency, string $toCurrency, array $rates): ?int
+    private function convertMinor(int $minor, string $fromCurrency, string $toCurrency, RateSet $rates): ?int
     {
         $money = Money::tryOfMinor($minor, $fromCurrency);
 

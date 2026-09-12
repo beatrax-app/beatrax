@@ -79,6 +79,12 @@
                     <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.cancel_impact', ['amount' => $fmt($cancellationImpact->annualSavings)]) }}</span>
                 @endif
             </p>
+            <x-core::fx-disclosure
+                :disclosure="$alert->conversion"
+                id="drift-alert-{{ $alert->driftAlertId }}"
+                :label="$alert->displayName"
+                class="mt-1 block text-xs text-slate-600 dark:text-slate-400"
+            />
             @if ($seriesState === 'cadence_changed')
                 {{-- This read "/recurring/review": a route path shown as prose,
                      and the one untranslated fragment in a localised sentence.

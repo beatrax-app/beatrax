@@ -8,6 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\ConvertedTotal;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -125,6 +128,12 @@ final readonly class CurrencyModeApplier
         /** @var array<string, true> $excludedCurrencies */
         $excludedCurrencies = self::excludedSet($otherMovements);
 
+        // Which of the batched rates a figure on screen was actually built
+        // from. A currency discovered but carrying no rows in this period moved
+        // nothing, and its rate says nothing about the total.
+        /** @var array<string, true> $pricedCurrencies */
+        $pricedCurrencies = [];
+
         foreach ($currencies as $currency) {
             $rows = $queryForCurrency($currency);
 
@@ -145,6 +154,8 @@ final readonly class CurrencyModeApplier
 
                 continue;
             }
+
+            $pricedCurrencies[$currency] = true;
 
             foreach ($converted as $index => $amountMinor) {
                 $row = $rows[$index];
@@ -173,17 +184,35 @@ final readonly class CurrencyModeApplier
         // banner reads ":count not converted", so flagging without counting
         // renders a literal zero beside the warning.
         $fees = $this->fx->withRates($otherMovements->byCurrency, $baseCurrency, $rates);
-        foreach ($fees->unconverted as $code) {
-            $excludedCurrencies[$code] = true;
-        }
+        self::foldFees($fees, $excludedCurrencies, $pricedCurrencies);
+
+        $excluded = self::sortedCodes($excludedCurrencies);
 
         return new ReportResultDto(
             rows: $resultRows,
             totalMinor: $total,
             currency: $baseCurrency,
-            excludedCurrencies: self::sortedCodes($excludedCurrencies),
+            excludedCurrencies: $excluded,
             otherMovementsByCurrency: $fees->minor === 0 ? [] : [$baseCurrency => $fees->minor],
+            conversion: ConversionDisclosure::of($rates->only(self::sortedCodes($pricedCurrencies)), $excluded),
         );
+    }
+
+    // A fee bucket answers for both sets: the code it could not price belongs
+    // to the exclusion, and the code it did belongs to the disclosure.
+    /**
+     * @param  array<string, true>  $excludedCurrencies
+     * @param  array<string, true>  $pricedCurrencies
+     */
+    private static function foldFees(ConvertedTotal $fees, array &$excludedCurrencies, array &$pricedCurrencies): void
+    {
+        foreach ($fees->unconverted as $code) {
+            $excludedCurrencies[$code] = true;
+        }
+
+        foreach ($fees->rates->codes() as $code) {
+            $pricedCurrencies[$code] = true;
+        }
     }
 
     // The currency's own subtotal converts once and the remainder is handed back
@@ -192,10 +221,9 @@ final readonly class CurrencyModeApplier
     // used to drift a cent away from this very report.
     /**
      * @param  list<ReportResultRow>  $rows  all denominated in $currency
-     * @param  array<string, string>  $rates
      * @return ?list<int> converted minor units, index-aligned to $rows; null when the pair has no rate
      */
-    private function convertRowsOfOneCurrency(array $rows, string $currency, string $baseCurrency, array $rates): ?array
+    private function convertRowsOfOneCurrency(array $rows, string $currency, string $baseCurrency, RateSet $rates): ?array
     {
         $converted = $this->fx->distribute(
             array_map(static fn (ReportResultRow $row): int => $row->amountMinor, $rows),
@@ -250,6 +278,13 @@ final readonly class CurrencyModeApplier
             // and used to vanish -- a total that omits money reading as all of
             // it, which is the one thing this disclosure exists to prevent.
             otherMovementsByCurrency: array_filter($otherMovements->byCurrency, static fn (int $minor): bool => $minor !== 0),
+            // An empty rate set because this mode converted nothing: there is
+            // no rate to name, and the codes the reader's bound could not be
+            // restated in are still theirs to be told about.
+            conversion: ConversionDisclosure::of(
+                RateSet::empty($headline),
+                self::sortedCodes($excludedCurrencies),
+            ),
         );
     }
 
