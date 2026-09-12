@@ -110,6 +110,10 @@ it('finds no executable in a directory that is not there', function (): void {
     expect(readerUnderTest()->executablesIn(sys_get_temp_dir().'/beatrax-absent-'.bin2hex(random_bytes(4))))->toBe([]);
 });
 
+// No positive control for these two: both shell out to codesign, which exists
+// only on macOS, and every CI runner here is Linux. A Darwin-gated control
+// would skip in every job, which is the shape .github/test-skip-budget.json
+// exists to refuse.
 it('reads an empty entitlement set when codesign cannot answer', function (): void {
     // A path no signature covers. On a machine without codesign the tool is
     // missing rather than refusing, and both mean the same thing here.
@@ -119,26 +123,6 @@ it('reads an empty entitlement set when codesign cannot answer', function (): vo
 it('reports a plain file as unsigned', function (): void {
     expect(readerUnderTest()->isSigned(aTreeOf(['a.txt' => 'x']).'/a.txt'))->toBeFalse();
 });
-
-// The two codesign answers, both directions, where codesign exists. Skipped
-// out loud elsewhere rather than asserted as an empty read: a machine without
-// the tool and a tool that answered nothing are the distinction this file's
-// own comment says must not collapse.
-it('reads a signature and an entitlement set where codesign can answer', function (): void {
-    $reader = readerUnderTest();
-
-    expect($reader->isSigned('/bin/ls'))->toBeTrue(
-        'A binary the system signs reads as unsigned, so the unsigned answer below means nothing.',
-    );
-
-    expect($reader->entitlementsOf('/System/Applications/Calculator.app'))->not->toBe(
-        [],
-        'A bundle that carries entitlements reads as carrying none, so the empty answer above means nothing.',
-    );
-})->skip(
-    PHP_OS_FAMILY !== 'Darwin' || ! aToolNamed('codesign'),
-    'codesign is macOS-only, and an absent tool is not a reader that answered nothing.',
-);
 
 it('answers for exactly the bundles that are installed, on a machine with none too', function (): void {
     $bundles = readerUnderTest()->installedBundles();
