@@ -64,6 +64,15 @@ over ops that failed to apply would ask the peer to skip them next time and
 nothing else would ever send them again. An author never heard of through this
 peer reads `(0, 0)` — "send me everything you have of theirs".
 
+"Forwards only" is a property of the row, not of the process deciding. It is
+settled inside one transaction — read the held cursors, compare, write — because
+the same `(user_id, peer_device_id, author_device_id)` row is reachable from two
+deliveries at once: a relay drain and a LAN session. Decided in PHP against a
+row read before the other one wrote, each was free to write whatever its own
+stale read allowed, and the later, lower write won. That costs a redelivery of
+everything between the two, which the replay absorbs — but the invariant the
+paragraph above states was not one the code kept.
+
 It is deliberately NOT this device's own `hlc_clock_state`. That is the last
 LOCAL write, which is not a statement about the peer at all: A writes at 10:00
 and 10:10, B writes at 10:01, and A's request for "everything after 10:10" left

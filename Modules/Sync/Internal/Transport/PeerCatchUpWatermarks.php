@@ -67,22 +67,28 @@ final readonly class PeerCatchUpWatermarks
             return;
         }
 
-        $held = $this->for($userId, $peerDeviceId);
-        $advanced = [];
+        // Held row, comparison and write in one IMMEDIATE transaction. "Only
+        // ever forwards" was decided in PHP against a row read earlier, so a
+        // relay drain and a LAN session delivering at once each wrote what its
+        // own stale read allowed and the later, lower one won.
+        $this->db->connection()->transaction(function () use ($userId, $peerDeviceId, $delivered, $now): void {
+            $held = $this->for($userId, $peerDeviceId);
+            $advanced = [];
 
-        foreach ($delivered as $entry) {
-            [$maxL, $maxC] = $advanced[$entry->deviceId] ?? $held->for($entry->deviceId);
+            foreach ($delivered as $entry) {
+                [$maxL, $maxC] = $advanced[$entry->deviceId] ?? $held->for($entry->deviceId);
 
-            if (HybridLogicalClock::compare($entry->hlcL, $entry->hlcC, '', $maxL, $maxC, '') > 0) {
-                $advanced[$entry->deviceId] = [$entry->hlcL, $entry->hlcC];
+                if (HybridLogicalClock::compare($entry->hlcL, $entry->hlcC, '', $maxL, $maxC, '') > 0) {
+                    $advanced[$entry->deviceId] = [$entry->hlcL, $entry->hlcC];
+                }
             }
-        }
 
-        foreach ($advanced as $author => [$lastL, $lastC]) {
-            $this->db->connection()->table('sync_peer_catch_up_state')->updateOrInsert(
-                ['user_id' => $userId, 'peer_device_id' => $peerDeviceId, 'author_device_id' => $author],
-                ['last_l' => $lastL, 'last_c' => $lastC, 'updated_at' => $now],
-            );
-        }
+            foreach ($advanced as $author => [$lastL, $lastC]) {
+                $this->db->connection()->table('sync_peer_catch_up_state')->updateOrInsert(
+                    ['user_id' => $userId, 'peer_device_id' => $peerDeviceId, 'author_device_id' => $author],
+                    ['last_l' => $lastL, 'last_c' => $lastC, 'updated_at' => $now],
+                );
+            }
+        });
     }
 }
