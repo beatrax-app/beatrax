@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategória',
     'th_amount' => 'Összeg',
     'uncategorized' => 'Kategorizálatlan',
+    'uncategorized_count' => ':count tranzakció kategória nélkül|:count tranzakció kategória nélkül',
 
     'jump_to_records' => [
         'body' => 'Ebben az időszakban nincs semmi. A legutóbbi tételei továbbra is megvannak.',

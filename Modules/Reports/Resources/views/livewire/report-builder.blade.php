@@ -379,18 +379,19 @@
                             </span>
                         </div>
                     @endforeach
-                    {{-- Currencies for a transaction metric, accounts for a
-                         balance: one counter used to say "1 account" over four
-                         unconvertible ARS accounts, because it was counting
-                         currencies and the sentence named accounts. --}}
+                    {{-- Two lines, not one field: a transaction metric leaves
+                         CURRENCIES out of the total and a balance leaves
+                         ACCOUNTS out, and each names what it dropped. A count
+                         told a reader which figure was short but not which
+                         account to go and look at. --}}
                     @if ($result->excludedCurrencies !== [])
                         <p class="text-xs" style="color: var(--color-amber);" data-not-converted="true">
                             {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $result->excludedCurrencies)]) }}
                         </p>
                     @endif
-                    @if ($result->excludedAccountIds !== [])
-                        <p class="text-xs" style="color: var(--color-amber);">
-                            {{ Lang::choice('reports::builder.fx_excluded', count($result->excludedAccountIds), ['count' => count($result->excludedAccountIds)]) }}
+                    @if ($result->excludedAccounts !== [])
+                        <p class="text-xs" style="color: var(--color-amber);" data-not-converted="true">
+                            {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $result->excludedAccountNames())]) }}
                         </p>
                     @endif
                 </div>

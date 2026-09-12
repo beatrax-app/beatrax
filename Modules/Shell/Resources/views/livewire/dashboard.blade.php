@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\CornerNotices')
+@use('Modules\Core\Public\Support\Fmt')
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
@@ -125,6 +126,24 @@
     <div class="dashboard-phone-order-2 dashboard-tile">
         @livewire('anomaly.dashboard-anomaly-badge')
     </div>
+
+    {{-- Uncategorized transactions (order 2): a triage queue belongs above the
+         period figures, not only behind a nav entry. The count is already on
+         the summary this page reads, so the tile costs no query. The sentence
+         carries :count so each language puts the number where its own grammar
+         wants it; the visible figure is the same number, larger. --}}
+    @if ($summary->uncategorizedCount > 0)
+        <div class="dashboard-phone-order-2">
+            <a
+                href="{{ Destination::Categorization->url() }}"
+                class="block rounded-lg border border-slate-200 bg-white p-6 transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:hover:ring-slate-700"
+                aria-label="{{ Lang::choice('core::dashboard.uncategorized_count', $summary->uncategorizedCount, ['count' => $summary->uncategorizedCount]) }}"
+            >
+                <p class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.uncategorized') }}</p>
+                <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ Fmt::number($summary->uncategorizedCount) }}</p>
+            </a>
+        </div>
+    @endif
 
     {{-- KPI tiles (order 3 on phone): the primary focal point of the dashboard.
          Single-column at <768px (overriding the md:grid-cols-3 grid), desktop

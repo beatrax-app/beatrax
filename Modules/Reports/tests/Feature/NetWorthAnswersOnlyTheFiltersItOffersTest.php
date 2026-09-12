@@ -138,7 +138,7 @@ it('counts an unconvertible account once for the whole series, not once per buck
     // Six monthly buckets, one account that cannot convert in every one of them.
     expect($result->rows)->toHaveCount(6)
         ->and($result->hasExclusions())->toBeTrue()
-        ->and($result->excludedAccountIds)->toBe([$jpy->id]);
+        ->and(array_keys($result->excludedAccounts))->toBe([$jpy->id]);
 });
 
 it('does not offer a category, counterparty or amount filter for a balance', function (): void {

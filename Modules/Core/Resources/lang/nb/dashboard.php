@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategori',
     'th_amount' => 'Beløp',
     'uncategorized' => 'Ikke kategorisert',
+    'uncategorized_count' => ':count transaksjon uten kategori|:count transaksjoner uten kategori',
 
     'jump_to_records' => [
         'body' => 'Ingenting for denne perioden. De nyeste posteringene dine er fortsatt her.',

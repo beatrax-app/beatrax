@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'u odnosu na prethodni period',
     'view_transactions' => 'Prikaži transakcije',
 
-    'fx_excluded' => ':count račun nije preračunat — nema dostupnog kursa|:count računa nisu preračunata — nema dostupnog kursa|:count računa nije preračunato — nema dostupnog kursa',
-
     'group_header' => [
         'category' => 'Kategorija',
         'counterparty' => 'Druga strana',

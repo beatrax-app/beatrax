@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
@@ -33,7 +34,7 @@ function fxbUser(): User
     ]);
 }
 
-function fxbSpend(User $user, string $currency, int $minor): void
+function fxbSpend(User $user, string $currency, int $minor, ?string $name = null): Account
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -42,7 +43,7 @@ function fxbSpend(User $user, string $currency, int $minor): void
     /** @var Account $account */
     $account = Account::query()->create([
         'user_id' => $user->id,
-        'name' => $currency.' account '.$suffix,
+        'name' => $name ?? $currency.' account '.$suffix,
         'slug' => 'fxb-'.strtolower($currency).'-'.$suffix,
         'kind' => 'bank',
         'iban' => 'NL00FXB'.strtoupper(bin2hex(random_bytes(6))),
@@ -82,6 +83,8 @@ function fxbSpend(User $user, string $currency, int $minor): void
         'created_at' => now(),
         'updated_at' => now(),
     ]);
+
+    return $account;
 }
 
 it('names the currency it could not convert rather than counting accounts it never looked at', function (): void {
@@ -102,11 +105,13 @@ it('names the currency it could not convert rather than counting accounts it nev
         ->and($html)->not->toContain('1 account not converted');
 });
 
-it('still counts accounts on the balance report, where each one really is one', function (): void {
+// The balance report leaves ACCOUNTS out, and names each of them: a tally told
+// the reader the total was short without saying which account to go and look at.
+it('names every account on the balance report, where each one really is one', function (): void {
     $user = fxbUser();
     fxbSpend($user, 'EUR', -113_222);
-    foreach (range(1, 4) as $ignored) {
-        fxbSpend($user, 'ARS', -57_500);
+    foreach (['Cordoba cash', 'Mendoza cash', 'Rosario cash', 'Salta cash'] as $name) {
+        fxbSpend($user, 'ARS', -57_500, $name);
     }
     test()->actingAs($user);
 
@@ -117,5 +122,8 @@ it('still counts accounts on the balance report, where each one really is one', 
         ->set('customTo', '2026-04-30')
         ->html();
 
-    expect($html)->toContain('4 accounts not converted');
+    expect($html)->toContain(Lang::get('core::money.not_converted', [
+        'list' => 'Cordoba cash, Mendoza cash, Rosario cash, Salta cash',
+    ]))
+        ->and($html)->not->toContain('4 accounts not converted');
 });

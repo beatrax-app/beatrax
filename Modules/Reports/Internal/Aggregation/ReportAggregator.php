@@ -65,7 +65,7 @@ final readonly class ReportAggregator
             // Unioned, never added: a currency with no rate in both windows is
             // still one currency the reader is missing.
             excludedCurrencies: self::union($result->excludedCurrencies, $comparison['previousExcludedCurrencies']),
-            excludedAccountIds: self::union($result->excludedAccountIds, $comparison['previousExcludedAccountIds']),
+            excludedAccounts: self::unionAccounts($result->excludedAccounts, $comparison['previousExcludedAccounts']),
             comparisonRows: $comparison['rows'],
             otherMovementsByCurrency: $result->otherMovementsByCurrency,
             previousTotalMinor: $comparison['previousTotalMinor'],
@@ -159,6 +159,21 @@ final readonly class ReportAggregator
         return $merged;
     }
 
+    // The currencies union above is a list; this one is keyed by account id,
+    // so the merge has to preserve keys rather than renumber them.
+    /**
+     * @param  array<int, string>  $current
+     * @param  array<int, string>  $previous
+     * @return array<int, string>
+     */
+    private static function unionAccounts(array $current, array $previous): array
+    {
+        $merged = $current + $previous;
+        ksort($merged);
+
+        return $merged;
+    }
+
     /**
      * @return list<ReportResultRow>
      */
@@ -192,7 +207,7 @@ final readonly class ReportAggregator
         // A set of accounts, not a tally of samples: one unconvertible account
         // sampled over 60 buckets is still one account, and adding the counts up
         // told a reader with five accounts that 4108 of them were left out.
-        /** @var array<int, true> $excludedAccounts */
+        /** @var array<int, string> $excludedAccounts */
         $excludedAccounts = [];
         foreach ($points as $point) {
             // Net worth is a balance, not a flow, so the total is the most recent
@@ -200,8 +215,8 @@ final readonly class ReportAggregator
             // Overwritten each iteration so the last point wins.
             $totalMinor = $point->totalMinor;
             $currency = $point->currency;
-            foreach ($point->excludedAccountIds as $accountId) {
-                $excludedAccounts[$accountId] = true;
+            foreach ($point->excludedAccounts as $accountId => $accountName) {
+                $excludedAccounts[$accountId] = $accountName;
             }
         }
 
@@ -209,7 +224,7 @@ final readonly class ReportAggregator
             rows: $rows,
             totalMinor: $totalMinor,
             currency: $currency,
-            excludedAccountIds: array_keys($excludedAccounts),
+            excludedAccounts: $excludedAccounts,
         );
     }
 
