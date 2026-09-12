@@ -44,11 +44,49 @@ whole, carrying the signing key that made it. An archive is a copy with a
 boundary, so it is bounded the same way.
 
 Backups and logs are withheld for the plainer reason: the archive carries its
-own snapshot, and a log file is not the reader's history.
+own snapshot, and a log file is not the reader's history. So are the key
+material, the export's own staging directory, the extract directories the
+migration importer unpacks into, and the loopback TLS certificate — the first
+rides inside the snapshot already, and the rest are this install's working
+files rather than the reader's documents.
 
 The proof is not that the archive is non-empty. The test plants a credential
 file, a keyring, an earlier backup and a leftover working artefact, and asserts
 the archive holds the one statement it was given and none of the four.
+
+## The third reader, which was not one
+
+The inventory is described here as having three readers — the page, the
+deletion, and the export. For a while it had two. `UserScopedFilePurge` carried
+three lists of its own, and the disagreement between them was not a spelling:
+`private/imports/` is in `all()` and the purge named nothing inside it, so every
+statement a reader had ever imported outlived their account. Four more trees the
+purge removed — the key material, the export staging, the migration extracts and
+the TLS certificate — were in the purge and not in the inventory, so the page
+that tells a reader how to remove every trace by hand did not name them. Two of
+those four hold the keys to the reader's own sealed columns and this device's
+signing identity.
+
+So the deletion now reads the inventory, and the inventory answers the question
+the deletion actually asks. That question is not the export's. The export wants
+whole trees; a deletion wants the files **one account** owns, because a
+household shares one install and most deletions are not the last one on the
+device. `all()` is therefore partitioned three ways rather than iterated:
+
+| Partition | What it answers |
+|---|---|
+| `accountScoped($userId)` | the paths this account owns inside each location — what a deletion removes whoever else is still here |
+| `withoutAnAccountScope()` | locations with nothing one account owns, declined by name: a backup and a staged export are each the whole database, an extract directory is named for its run, the certificate is one per device |
+| `notRemovedByAFilePurge()` | the database, whose rows go inside the deletion's own transaction and whose file the next account onboards into; and the log, which carries the residue report the deletion is still writing |
+
+A test asserts those three together are exactly `all()`, the same shape the
+export's two halves are held to. It deliberately does **not** accept the
+device-wide sweep as an answer: that only runs when the last account leaves, so
+a location reachable through it alone survives every deletion on a shared
+device, which is precisely how the imported statements were lost. `Auth`
+reaches all of it through `Core\Public\Services\UserDataPurgePlan`, because
+the inventory is Core's `Internal\` and a second copy in the other module is
+the shape this whole section is about.
 
 ## Why the halves are protected differently
 
