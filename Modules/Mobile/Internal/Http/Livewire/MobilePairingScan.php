@@ -546,6 +546,9 @@ final class MobilePairingScan extends Component
             ->where('user_id', $userId)
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
+            // Confirmed and not a device: the row a restore's repair retired
+            // verifies history and collects nothing.
+            ->whereNull('self_retired_at')
             ->pluck('id');
 
         foreach ($recipients as $deviceRegistryId) {
@@ -689,6 +692,9 @@ final class MobilePairingScan extends Component
         return $importIntent->isImporting($userId) || $this->hasConfirmedPeer($userId, $db);
     }
 
+    // Whether this account has a peer that can still answer. A retired row
+    // cannot: the question decides whether to wait for an epoch that machine
+    // would have to deliver, and waiting on it is waiting forever.
     private function hasConfirmedPeer(int $userId, DatabaseManager $db): bool
     {
         return $db->connection()
@@ -696,6 +702,7 @@ final class MobilePairingScan extends Component
             ->where('user_id', $userId)
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
+            ->whereNull('self_retired_at')
             ->exists();
     }
 
