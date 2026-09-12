@@ -13,7 +13,6 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
-use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
@@ -77,7 +76,10 @@ final readonly class BalanceAnchorResolver
     // through to the reader's own figure.
     private function fromCardStatements(int $accountId, User $user, string $defaultCurrency): ?BalanceAnchorDto
     {
-        $currency = $defaultCurrency !== '' ? $defaultCurrency : Currency::Eur->value;
+        // The reader's own, as the sibling above resolves it: this currency
+        // both picks the statement row and denominates the projection, so the
+        // euro here anchored a non-euro reader's forecast by the install.
+        $currency = $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code();
 
         // The newest statement printed in the currency this anchor runs in,
         // never simply the newest: added to a charge sum filtered to the
