@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Tiliotteen saldo (:symbol)',
     'balance_help' => 'Esitäytetään uusimmasta tuodusta tiliotteesta, kun sellainen on saatavilla — negatiivinen velalle, muokattavissa kumpaankin suuntaan.',
 
+    'prefill_difference' => 'Alla oleva tiliotteen saldo on esitäytetty kyseisestä tiliotteesta. Se on silti vain lähtökohta, joten tarkista luku pankistasi ennen kuin viimeistelet tämän täsmäytyksen.',
+
     'cleared_balance' => 'Kuitattu saldo',
     'statement_target' => 'Tiliotteen tavoite',
     'difference' => 'Erotus',

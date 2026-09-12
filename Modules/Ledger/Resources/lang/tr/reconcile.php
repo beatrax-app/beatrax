@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Ekstre bakiyesi (:symbol)',
     'balance_help' => 'Mümkün olduğunda en son içe aktardığın hesap ekstresinden önceden doldurulur — borç için negatif, her iki yönde de düzenlenebilir.',
 
+    'prefill_difference' => 'Aşağıdaki ekstre bakiyesi o ekstreden önceden dolduruldu. Yine de yalnızca bir başlangıç noktası, bu yüzden bu mutabakatı tamamlamadan önce tutarı bankandaki kayıtlarla karşılaştır.',
+
     'cleared_balance' => 'Onaylanan bakiye',
     'statement_target' => 'Ekstre hedefi',
     'difference' => 'Fark',

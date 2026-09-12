@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Förhandsgranskningen har upphört att gälla. <a href="/imports/new" class="underline">Ladda upp filen igen</a> för att försöka på nytt.',
     'unreadable_html' => 'Förhandsgranskningen går inte att läsa. <a href="/imports/new" class="underline">Ladda upp filen igen</a> för att försöka på nytt.',
 
+    'statement_difference' => 'Ingenting har ännu skrivits bland dina transaktioner. Kontrollera den här filen mot din bank innan du bekräftar — ett kontoutdrag som inte stämmer med sig självt betyder oftast att en rad har lästs fel.',
+
     'save_name' => 'Spara namnet',
     'account_name_label' => 'Kontonamn',
     'account_placeholder' => 't.ex. Huvudsparkonto',

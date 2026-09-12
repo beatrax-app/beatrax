@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Pokaż błędy (:count)',
     'errors_help' => 'Błędy to wiersze, których nie udało się przetworzyć; nie zostały dodane do Twojej księgi.',
 
+    'statement_difference' => 'Wiersze i oba salda zostały zapisane dokładnie tak, jak podał je plik, i nic nie zostało poprawione. Sprawdź ten wyciąg w swoim banku: jakiś wiersz mógł zostać błędnie odczytany.',
+
     'upload_another' => 'Wgraj kolejny wyciąg',
 
     'chain' => [

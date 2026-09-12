@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Vis feil (:count)',
     'errors_help' => 'Feil er rader som ikke kunne leses inn; de ble ikke lagt til blant transaksjonene dine.',
 
+    'statement_difference' => 'Radene og begge saldoene ble registrert nøyaktig slik filen ga dem, og ingenting ble rettet. Sjekk denne kontoutskriften mot banken din: en rad kan ha blitt lest feil.',
+
     'upload_another' => 'Last opp en ny kontoutskrift',
 
     'chain' => [

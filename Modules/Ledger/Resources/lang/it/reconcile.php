@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo estratto conto (:symbol)',
     'balance_help' => 'Precompilato dal tuo ultimo estratto conto importato quando disponibile — negativo per il denaro dovuto, comunque modificabile.',
 
+    'prefill_difference' => 'Il saldo estratto conto qui sotto è stato precompilato da quell\'estratto conto. Resta un punto di partenza, ma controlla la cifra con la tua banca prima di completare questa riconciliazione.',
+
     'cleared_balance' => 'Saldo compensato',
     'statement_target' => 'Obiettivo estratto conto',
     'difference' => 'Differenza',

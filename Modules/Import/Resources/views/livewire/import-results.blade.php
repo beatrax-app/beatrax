@@ -12,6 +12,16 @@
         {{ Lang::choice('import::results.summary', $importRun->inserted_count) }}{{ Lang::choice('import::results.summary_duplicates', $importRun->duplicate_count) }}{{ $importRun->enriched_count > 0 ? Lang::get('import::results.summary_enriched', ['count' => $importRun->enriched_count]) : '' }}{{ $importRun->error_count > 0 ? Lang::choice('import::results.summary_errors', $importRun->error_count) : '' }}.
     </p>
 
+    {{-- A statement whose own opening and closing balances disagree with its
+         own rows is a file the importer read wrongly, and this screen is where
+         the reader comes back to when a balance stops matching the bank. --}}
+    @if ($statementDifference !== null)
+        <x-core::alert tone="warning" role="alert" data-testid="results-statement-difference">
+            <p class="font-medium">{{ Lang::get($statementDifference->copyKey(), ['amount' => $statementDifference->amount()]) }}</p>
+            <p class="mt-2">{{ Lang::get('import::results.statement_difference') }}</p>
+        </x-core::alert>
+    @endif
+
     {{-- Chain resolution is dispatched by the confirm, and the confirm lands
          the reader here, so this is the screen that can watch it. It used to
          be offered on the wizard, which is unmounted by the time the resolver

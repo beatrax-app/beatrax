@@ -78,7 +78,8 @@ Modules/Import/
 │   │   ├── KnownCounterpartyIbanResolver.php
 │   │   ├── AliasYamlExporter.php
 │   │   ├── AliasYamlImporter.php
-│   │   └── LongestCommonPrefix.php
+│   │   ├── LongestCommonPrefix.php
+│   │   └── StatementDifferenceForRun.php    # what both import screens ask of one summary row
 │   ├── Listeners/
 │   │   ├── HandleFileOpenedFromOs.php
 │   │   └── SeedDefaultKnownCounterpartyIbans.php

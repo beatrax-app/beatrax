@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Väljavõtte jääk (:symbol)',
     'balance_help' => 'Täidetud võimaluse korral sinu viimasest imporditud väljavõttest — võlgnetava raha puhul negatiivne, mõlemal juhul muudetav.',
 
+    'prefill_difference' => 'Allpool olev väljavõtte jääk on eeltäidetud sellest väljavõttest. See on ikkagi vaid lähtepunkt, seega kontrolli arvu oma panga vastu, enne kui selle kooskõlastuse lõpetad.',
+
     'cleared_balance' => 'Laekunud jääk',
     'statement_target' => 'Väljavõtte siht',
     'difference' => 'Vahe',

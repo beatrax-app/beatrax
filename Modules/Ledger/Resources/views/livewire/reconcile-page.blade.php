@@ -94,6 +94,16 @@
             </div>
         </div>
 
+        {{-- Above the field, not below it: the reader trusts the prefilled
+             figure the moment they read it, and a flag they meet afterwards
+             has already been overtaken. --}}
+        @if ($prefillDifference !== null)
+            <x-core::alert tone="warning" role="alert" data-testid="reconcile-prefill-difference">
+                <p class="font-medium">{{ Lang::get($prefillDifference->copyKey(), ['amount' => $prefillDifference->amount()]) }}</p>
+                <p class="mt-2">{{ Lang::get('ledger::reconcile.prefill_difference') }}</p>
+            </x-core::alert>
+        @endif
+
         <x-core::form-field
             name="statementBalance"
             field-id="rc-balance"

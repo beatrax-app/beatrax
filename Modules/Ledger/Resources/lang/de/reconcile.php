@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo laut Kontoauszug (:symbol)',
     'balance_help' => 'Wenn möglich aus deinem zuletzt importierten Kontoauszug vorausgefüllt — negativ bei Schulden, in beiden Fällen bearbeitbar.',
 
+    'prefill_difference' => 'Der Saldo laut Kontoauszug unten wurde aus diesem Kontoauszug vorausgefüllt. Er bleibt ein Ausgangspunkt, aber prüfe die Zahl bei deiner Bank, bevor du diesen Abgleich abschließt.',
+
     'cleared_balance' => 'Bestätigter Saldo',
     'statement_target' => 'Sollwert laut Kontoauszug',
     'difference' => 'Differenz',

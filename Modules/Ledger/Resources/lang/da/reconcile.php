@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Saldo ifølge kontoudtog (:symbol)',
     'balance_help' => 'Udfyldes på forhånd fra dit senest importerede kontoudtog, når det er muligt — negativ ved gæld, og redigerbar i begge tilfælde.',
 
+    'prefill_difference' => 'Saldoen ifølge kontoudtoget nedenfor er udfyldt på forhånd fra det kontoudtog. Den er stadig kun et udgangspunkt, så tjek tallet mod din bank, før du afslutter denne afstemning.',
+
     'cleared_balance' => 'Bogført saldo',
     'statement_target' => 'Målsaldo ifølge kontoudtog',
     'difference' => 'Forskel',

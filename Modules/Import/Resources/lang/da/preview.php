@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Forhåndsvisningen er udløbet. <a href="/imports/new" class="underline">Upload filen igen</a> for at prøve igen.',
     'unreadable_html' => 'Forhåndsvisningen kan ikke læses. <a href="/imports/new" class="underline">Upload filen igen</a> for at prøve igen.',
 
+    'statement_difference' => 'Der er endnu ikke skrevet noget blandt dine transaktioner. Tjek denne fil mod din bank, før du bekræfter — et kontoudtog, der ikke stemmer med sig selv, betyder som regel, at en række er blevet læst forkert.',
+
     'save_name' => 'Gem navnet',
     'account_name_label' => 'Kontonavn',
     'account_placeholder' => 'f.eks. Opsparingskonto',

@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Peržiūros galiojimas baigėsi. <a href="/imports/new" class="underline">Įkelk failą iš naujo</a> ir bandyk dar kartą.',
     'unreadable_html' => 'Peržiūros nepavyksta perskaityti. <a href="/imports/new" class="underline">Įkelk failą iš naujo</a> ir bandyk dar kartą.',
 
+    'statement_difference' => 'Į tavo didžiąją knygą kol kas nieko neįrašyta. Prieš patvirtindamas patikrink šį failą banke — išrašas, kuris nesutampa su savimi, dažniausiai reiškia, kad kuri nors eilutė nuskaityta neteisingai.',
+
     'save_name' => 'Išsaugoti pavadinimą',
     'account_name_label' => 'Sąskaitos pavadinimas',
     'account_placeholder' => 'pvz. Pagrindinė taupomoji sąskaita',
