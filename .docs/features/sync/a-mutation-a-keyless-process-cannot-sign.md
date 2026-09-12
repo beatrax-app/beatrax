@@ -216,7 +216,9 @@ the file does not name, so a twelfth handler cannot join in silence.
 `ImportSyncCapture` sits behind the same wall and is fixed differently. It
 captures rows by id in a dependency order, and re-deriving that order later is
 the walk — so a keyless import now opens a backfill rather than queueing
-coordinates. Its old comment said the rows "travel on the next backfill"; there
+coordinates. It asks `DeviceSyncStanding` which devices are owed one: asked of
+the key-file alone it answered "never enabled" for a restored database, and an
+import committed there opened no walk and reached no peer at all. Its old comment said the rows "travel on the next backfill"; there
 was no next backfill, because one is only opened at sync-enable and at pairing.
 
 The same debt is owed by its other arm, and for a while only one of the two

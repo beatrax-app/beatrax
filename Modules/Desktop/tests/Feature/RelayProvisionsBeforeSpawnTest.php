@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\LocalRelayProvisioner;
 use Modules\Sync\Public\Services\SyncPorts;
+use Modules\Sync\Public\Testing\DeviceIdentityTestHarness;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
@@ -22,6 +23,8 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    DeviceIdentityTestHarness::forgetAll();
+
     putenv('NATIVEPHP_STORAGE_PATH');
 });
 
@@ -70,6 +73,8 @@ function relayBootSelfDevice(): void
         'created_at' => $now,
         'updated_at' => $now,
     ]);
+
+    DeviceIdentityTestHarness::place((int) $user->id);
 }
 
 // `relay:serve` picks a TLS or a plaintext bind exactly once at startup, by

@@ -12,11 +12,16 @@ use Modules\Desktop\Internal\Native\SyncListenerProcess;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Modules\Sync\Public\Services\SyncPorts;
+use Modules\Sync\Public\Testing\DeviceIdentityTestHarness;
 use Native\Desktop\Contracts\ChildProcess as ChildProcessContract;
 use Native\Desktop\Facades\ChildProcess;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
+
+afterEach(function (): void {
+    DeviceIdentityTestHarness::forgetAll();
+});
 
 // Measured on the desktop install on 2026-09-11. The daemon holding :51337 had
 // neither BEATRAX_SYNC_USER_ID nor BEATRAX_SYNC_DEVICE_ID, and the shell's own
@@ -78,6 +83,8 @@ function restartListenerUser(): User
         'created_at' => $now,
         'updated_at' => $now,
     ]);
+
+    DeviceIdentityTestHarness::place((int) $user->id);
 
     return $user;
 }

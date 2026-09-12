@@ -196,13 +196,39 @@ gates passed: the reader gets the failure copy, the ordinary enable is offered a
 the window in which writes are dropped is one the reader is standing in rather than an
 unbounded silence.
 
-### The third reader of the same question
+### The listener that answered and refused
 
-`DeviceRegistryService::hasLocalDevice()` decides whether the desktop starts its sync and
-relay listeners, and its own comment says "without a sync identity no peer can dial in" while
-it reads the registry row. A restored desktop therefore binds a port and refuses every
-handshake it answers. That is visible failure rather than silent loss, and the repair on this
-page ends it, so it is named here rather than changed alongside.
+`DeviceRegistryService::hasLocalDevice()` decides whether the desktop binds a sync port and a
+relay port at boot, and its own callers say what it is for: *without a sync identity no peer
+can dial in.* It read the registry row. A restored desktop therefore came up, answered, and
+refused every handshake it was offered — which the phone reports as a network fault rather
+than as the crypto failure it is.
+
+A keyless daemon at boot is **not** itself the fault. The app-lock is engaged at launch, so the
+daemon is spawned with no credentials on purpose and `StartSyncListenerOnEnable::handleUnlocked`
+hands them over the moment the reader unlocks. What a restored desktop has is no key-file for
+that handover to ever find, so the daemon stays keyless for the life of the process. The gate
+now asks both halves, and the repair's `DeviceSyncEnabled` is what starts the listener properly
+once an identity exists.
+
+### The fourth reader, which was not a listener at all
+
+Enumerating the *question* rather than the symbol found one more, and it is the same silent
+loss rather than a visible refusal. `ImportSyncCapture::oweABackfill()` asked
+`DeviceIdentityLoader::exists()` — the capture sink's old predicate — under a comment carrying
+the capture sink's old premise: *a device that never enabled sync is left alone: it owes no
+peer anything.*
+
+An import on a restored device therefore committed, owed nothing, and reached no peer. That
+path cannot fall back on the deferred queue: it captures rows by id in a dependency order, and
+re-deriving that order later **is** the walk, which is why a keyless import opens a backfill
+instead of queueing coordinates. With the backfill never opened there was no second pass at
+all. It asks the standing now.
+
+`MobileImportBootstrap` reads the row alone and is right to: it is a retry guard on a database
+the same request minted, and asking the key-file there would mint beside a self row naming
+another `device_id` — the thing `restoreSelfRow()` exists to prevent. It carries a comment
+saying so, because it reads exactly like the others.
 
 ## Staging plaintext secrets
 

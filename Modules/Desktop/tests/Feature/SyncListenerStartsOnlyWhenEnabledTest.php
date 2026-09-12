@@ -9,9 +9,14 @@ use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Native\SyncListenerProcess;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncPorts;
+use Modules\Sync\Public\Testing\DeviceIdentityTestHarness;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
+
+afterEach(function (): void {
+    DeviceIdentityTestHarness::forgetAll();
+});
 
 // Captures whether the gate declined, without asserting on a mocked facade:
 // the "not starting" line is only ever emitted on the declining branch.
@@ -64,6 +69,8 @@ function seedDesktopSelfDevice(int $userId): void
         'created_at' => $now,
         'updated_at' => $now,
     ]);
+
+    DeviceIdentityTestHarness::place($userId);
 }
 
 // The daemon used to start on every desktop launch. With no device identity

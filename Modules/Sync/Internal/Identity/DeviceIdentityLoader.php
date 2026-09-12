@@ -9,7 +9,6 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 /**
@@ -34,7 +33,7 @@ final readonly class DeviceIdentityLoader
     // — separating the two is what makes minting safe.
     public function exists(int $userId): bool
     {
-        return file_exists(UserDataPathService::appPath("sync/identity/{$userId}.enc"));
+        return DeviceIdentityFile::exists($userId);
     }
 
     // Null for every state but Usable: sync was never enabled, the app-lock is
@@ -83,7 +82,7 @@ final readonly class DeviceIdentityLoader
     {
         // Sync never enabled for this user, or the app is locked (no KEK to
         // decrypt with) — either way, no usable identity right now.
-        $encPath = UserDataPathService::appPath("sync/identity/{$userId}.enc");
+        $encPath = DeviceIdentityFile::path($userId);
         if (! file_exists($encPath)) {
             return [DeviceIdentityState::Absent, null];
         }

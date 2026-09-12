@@ -12,11 +12,16 @@ use Modules\Desktop\Internal\Native\SyncListenerProcess;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Modules\Sync\Public\Services\SyncPorts;
+use Modules\Sync\Public\Testing\DeviceIdentityTestHarness;
 use Native\Desktop\Contracts\ChildProcess as ChildProcessContract;
 use Native\Desktop\Facades\ChildProcess;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
+
+afterEach(function (): void {
+    DeviceIdentityTestHarness::forgetAll();
+});
 
 // Measured on the desktop install on 2026-09-11. The daemon holding :51337 had
 // started at 22:14:55 with no BEATRAX_SYNC_* variable in its environment; the
@@ -80,6 +85,8 @@ function outlivedMarkerUser(): User
         'created_at' => $now,
         'updated_at' => $now,
     ]);
+
+    DeviceIdentityTestHarness::place((int) $user->id);
 
     return $user;
 }

@@ -61,6 +61,18 @@ const PRIVATE_KEY_HOLDERS = [
     ],
 ];
 
+// Where the sealed key file's path is composed, and the only place it may be:
+// four callers each spelled their own copy of it until this existed, and the
+// rule below is asked of this file because this is the file that decides.
+const PRIVATE_KEY_FILE_LOCATOR = 'Modules/Sync/Internal/Identity/DeviceIdentityFile.php';
+
+// Naming the key file is not locating it. This map says which files an account
+// owns so a deletion and an export can walk them, opens nothing, and keys its
+// template to the same account id. `proves` re-checks that reason.
+const PRIVATE_KEY_PATH_DECLARERS = [
+    'Modules/Core/Internal/Storage/UserDataLocations.php' => '#sync/identity/%d\.enc#',
+];
+
 // The two ways a device identity comes into being, and the only two there may
 // be: minted here, or unsealed from this install own key file.
 const PRIVATE_KEY_IDENTITY_SOURCES = [
@@ -188,16 +200,65 @@ it('assembles a device identity only by minting one or by opening this install o
     ]));
 });
 
-it('keys that file to the install rather than to any peer', function (): void {
-    $loader = (string) file_get_contents(base_path('Modules/Sync/Internal/Identity/DeviceIdentityLoader.php'));
+it('keys that file to the account rather than to any peer', function (): void {
+    $locator = privateKeyCode(base_path(PRIVATE_KEY_FILE_LOCATOR));
 
-    // A path taking a peer device id would be a per-peer key store, which is
-    // the shape an escrow takes before anybody calls it one.
-    expect($loader)->toMatch(
-        '#sync/identity/\{\$userId\}\.enc#',
-        'DeviceIdentityLoader no longer keys the sealed key file to the signed-in account alone. A path taking a '
-        .'peer device id is a per-peer key store, which is an escrow before anybody calls it one.'
+    // The account id and nothing else. A path taking a peer device id would be
+    // a per-peer key store, which is the shape an escrow takes before anybody
+    // calls it one.
+    expect($locator)->toMatch(
+        '#/\{\$userId\}\.enc#',
+        PRIVATE_KEY_FILE_LOCATOR.' no longer builds the sealed key file path from the account id alone. A path '
+        .'taking a peer device id is a per-peer key store, which is an escrow before anybody calls it one.'
     );
+
+    // The interpolation could name anything; the signature is what fixes what
+    // it can name. Both entry points take an account id and no device.
+    expect($locator)->toMatch('#function path\(int \$userId\)#')
+        ->and($locator)->toMatch('#function exists\(int \$userId\)#');
+});
+
+// The rule above reads one file, so it is only worth what "one file" is worth.
+// It read the loader until the path moved out of it, and passed over the move
+// rather than catching it: a guard pointed at a file that no longer decides the
+// thing says nothing about the thing. So the tree is swept for a second builder.
+it('builds that path in one place, so the rule above is asked of the whole tree', function (): void {
+    $sources = privateKeyScannedSources();
+
+    expect(count($sources))->toBeGreaterThan(
+        PRIVATE_KEY_SOURCE_FLOOR,
+        'The walk opened '.count($sources).' files of the two shipped roots, so a clean answer here is a walk '
+        .'that read almost nothing.'
+    );
+
+    $builders = [];
+
+    foreach ($sources as $path) {
+        if (PatternScan::matches('#sync/identity#', privateKeyCode($path))) {
+            $builders[privateKeyRelative($path)] = true;
+        }
+    }
+
+    foreach (PRIVATE_KEY_PATH_DECLARERS as $declarer => $proves) {
+        expect($builders)->toHaveKey(
+            $declarer,
+            $declarer.' no longer names the key file at all. It was exempted because it declares where an '
+            .'account keeps its files rather than locating one, and an exemption that names nothing is spent.'
+        );
+
+        expect(privateKeyCode(base_path($declarer)))->toMatch(
+            $proves,
+            $declarer.' still names the key file, but no longer in the shape that earned its exemption.'
+        );
+
+        unset($builders[$declarer]);
+    }
+
+    expect(array_keys($builders))->toBe([PRIVATE_KEY_FILE_LOCATOR], implode("\n  ", [
+        'A second file composes the sealed key file path. There is one, and the rule above reads it: put the',
+        'path there and call it, or this becomes a rule about whichever copy somebody happened to point at.',
+        'The tree reads: '.json_encode(array_keys($builders)),
+    ]));
 });
 
 // A guard that cannot go red says nothing, and the sweeps above are read off one
