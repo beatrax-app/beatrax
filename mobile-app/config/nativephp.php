@@ -292,5 +292,28 @@ return [
         // The result is a shipped app with no CSS and no app.js at all, so the
         // app-lock veil never even loads. Never bundle it.
         'public/hot',
+
+        // Everything below is a file the repository's own ignore list says may
+        // sit at a shell root without being source. The packager copies the
+        // working tree, so each one is copied unless it is named here, and
+        // three of them carry credentials: .env.bak*/.env.backup* are a
+        // developer's own environment saved aside before an edit and hold the
+        // same keys the live .env does, .env.production is a deployment's, and
+        // auth.json is Composer's registry credentials.
+        //
+        // `.env` itself is deliberately absent: the bundling workflows stage it
+        // from .env.bundled, and excluding it would ship an app with no
+        // environment at all.
+        '.env.bak*',
+        '.env.backup*',
+        '.env.production',
+        'auth.json',
+        '.phpactor.json',
+        '.phpunit.result.cache',
+        '.DS_Store',
+        'npm-debug.log',
+        'yarn-error.log',
+        'Homestead.json',
+        'Homestead.yaml',
     ],
 ];

@@ -111,6 +111,29 @@ return [
         // "Class Native\Desktop\NativeServiceProvider not found".
         'mobile-app',
 
+        // Everything below is a file the repository's own ignore list says may
+        // sit at a shell root without being source. The packager copies the
+        // working tree, so each one is copied unless it is named here, and
+        // three of them carry credentials: .env.bak*/.env.backup* are a
+        // developer's own environment saved aside before an edit and hold the
+        // same keys the live .env does, .env.production is a deployment's, and
+        // auth.json is Composer's registry credentials.
+        //
+        // `.env` itself is deliberately absent: the bundling workflows stage it
+        // from .env.bundled, and excluding it would ship an app with no
+        // environment at all.
+        '.env.bak*',
+        '.env.backup*',
+        '.env.production',
+        'auth.json',
+        '.phpactor.json',
+        '.phpunit.result.cache',
+        '.DS_Store',
+        'npm-debug.log',
+        'yarn-error.log',
+        'Homestead.json',
+        'Homestead.yaml',
+
         // `bootstrap/cache/*.php` is deliberately absent: PackageManifest
         // needs the directory to already exist and will not create it, and
         // package:discover overwrites the stale copies anyway.
