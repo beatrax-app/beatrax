@@ -32,7 +32,7 @@ beforeEach(function (): void {
     app()->forgetInstance(NavCountsService::class);
     app('cache')->forgetDriver(['array', 'database']);
 
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->groceries = Category::create([
         'user_id' => null,

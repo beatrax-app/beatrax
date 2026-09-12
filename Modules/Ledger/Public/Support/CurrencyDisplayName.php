@@ -4,22 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Support;
 
-use Modules\Core\Public\Support\SeededDisplayName;
+use Modules\Core\Public\Support\Lang;
 
-// `currencies.name` is seeded in English — "Pound Sterling" — and both currency
-// pickers render that column straight as their option labels, so a Dutch reader
-// adding an account was offered an English list. The code is the row's own
-// primary key and the one part of it no translation touches.
+// Both currency pickers label their options through here. The code is the row's
+// own primary key and the one part of it no language touches, so a code the
+// transcript does not carry reads as itself rather than in somebody else's
+// language — which is what a stored English `name` column used to answer.
 final class CurrencyDisplayName
 {
-    private const string KEY_PREFIX = 'ledger::currencies.';
-
-    // No provenance flag, unlike the two sibling tables: nothing in the app
-    // writes this column after the seed, and the seed migration deliberately
-    // restores the canonical name over an edited row, so a stored value is
-    // always the seeder's.
-    public static function forCode(string $code, ?string $stored): string
+    public static function forCode(string $code): string
     {
-        return SeededDisplayName::fromLang(self::KEY_PREFIX, strtolower($code), $stored) ?? $code;
+        return CurrencyNames::forLocale(Lang::locale())[$code] ?? $code;
     }
 }

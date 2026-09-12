@@ -6,6 +6,7 @@ use Illuminate\Contracts\Translation\Translator;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
+use Modules\Ledger\Public\Support\CurrencyNames;
 use Symfony\Component\Yaml\Yaml;
 
 // A seeder writes words into a column, and every screen afterwards reads that
@@ -29,16 +30,16 @@ const SEEDED_WORDING_SOURCES = [
         'resolves' => 'categories.slug through categorization::categories, guarded by name_is_default',
         'proves' => "/'slug' => '/",
     ],
-    'Modules/Ledger/Database/Seeders/CurrenciesSeeder.php' => [
-        'resolves' => 'currencies.code through ledger::currencies',
-        'proves' => "/'code' => /",
-    ],
+    // These two wrote the English word into `currencies.name`, which is the
+    // column a later migration drops: nothing reads it, and the wording a
+    // picker prints is now the ICU transcript's, resolved per reader by code.
+    // They keep the write because the column is NOT NULL until that migration.
     'Modules/Ledger/Database/Migrations/2026_08_19_000001_seed_currencies_on_every_device.php' => [
-        'resolves' => 'currencies.code through ledger::currencies',
+        'resolves' => 'currencies.code through the ICU transcript, once the column these seed is dropped',
         'proves' => "/'code' => /",
     ],
     'Modules/Ledger/Database/Migrations/2026_08_29_000003_seed_the_zero_decimal_currency.php' => [
-        'resolves' => 'currencies.code through ledger::currencies',
+        'resolves' => 'currencies.code through the ICU transcript, once the column these seed is dropped',
         'proves' => "/'code' => /",
     ],
 ];
@@ -247,28 +248,28 @@ it('resolves every default category slug in English and Dutch', function (): voi
     expect($missing)->toBe([], 'seeded category slugs with no line to resolve to: '.implode(', ', $missing));
 });
 
-// Every file registered against `currencies`, not just the seeder: EUR, USD and
-// GBP are spelled out in the install seed migration and JPY in its own, and the
-// seeder itself reaches two of them through the Currency enum rather than a
-// literal. Reading one file would have found two codes and called it complete.
+// The currency rule is the one that does not resolve through a lang group. Its
+// twenty-six files carried four hand-written names for a table that can now
+// offer thirty-one codes; the wording is ICU's, transcribed per locale, and
+// every code the install seeds owes a name in every locale it ships.
 it('resolves every seeded currency code in English and Dutch', function (): void {
-    $source = '';
-    foreach (array_keys(SEEDED_WORDING_SOURCES) as $file) {
-        if (str_contains((string) $file, 'currenc')) {
-            $source .= (string) file_get_contents(base_path((string) $file));
+    $codes = CurrencyNames::codes();
+    expect(count($codes))->toBeGreaterThan(
+        4,
+        'The transcript answered '.count($codes).' currencies, which is the hand-written set it replaced.',
+    );
+
+    $missing = [];
+    foreach ([Locale::DEFAULT, Locale::Nl->value] as $locale) {
+        foreach ($codes as $code) {
+            $name = CurrencyNames::forLocale($locale)[$code] ?? null;
+            if (! is_string($name) || $name === '') {
+                $missing[] = $locale.'.'.$code;
+            }
         }
     }
 
-    /** @var list<string> $codes */
-    $codes = array_values(array_unique(PatternScan::all("/'([A-Z]{3})'/", $source)[1]));
-    expect($codes)->toEqualCanonicalizing(['EUR', 'USD', 'GBP', 'JPY']);
-
-    $missing = array_values(array_filter(
-        $codes,
-        static fn (string $code): bool => ! seededWordingResolves('ledger::currencies.'.strtolower($code)),
-    ));
-
-    expect($missing)->toBe([], 'seeded currency codes with no line to resolve to: '.implode(', ', $missing));
+    expect($missing)->toBe([], 'seeded currency codes with no name to resolve to: '.implode(', ', $missing));
 });
 
 it('classifies every bundled corpus tree', function (): void {

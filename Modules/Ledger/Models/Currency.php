@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property string $code
- * @property string $name
  * @property int $minor_unit
  */
 final class Currency extends Model
@@ -24,7 +23,7 @@ final class Currency extends Model
     public $timestamps = false;
 
     /** @var list<string> */
-    protected $fillable = ['code', 'name', 'minor_unit'];
+    protected $fillable = ['code', 'minor_unit'];
 
     /** @return array<string, string> */
     protected function casts(): array

@@ -6,25 +6,18 @@ namespace Modules\Ledger\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\Ledger\Models\Currency;
-use Modules\Ledger\Public\Enums\Currency as CurrencyCode;
+use Modules\Ledger\Public\Support\CurrencyNames;
+use Modules\Ledger\Public\ValueObjects\CurrencyScale;
 
-// updateOrInsert keeps this idempotent so beatrax:install can safely
-// re-run without duplicating currency rows.
+// Every currency the bundled rate snapshot can price, because a reporting
+// currency no rate can reach is one every roll-up would have to leave out.
+// updateOrInsert keeps this idempotent so beatrax:install can safely re-run.
 final class CurrenciesSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach ([
-            ['code' => CurrencyCode::Eur->value, 'name' => 'Euro', 'minor_unit' => 2],
-            ['code' => 'USD', 'name' => 'US Dollar', 'minor_unit' => 2],
-            ['code' => 'GBP', 'name' => 'Pound Sterling', 'minor_unit' => 2],
-            // The only zero-decimal code the app carries, and the reason it is
-            // here: Currency, Money's symbol map and the ICS parser all already
-            // speak JPY, so leaving it out of this table made every ÷100
-            // assumption unreachable through the UI and therefore untested.
-            ['code' => CurrencyCode::Jpy->value, 'name' => 'Japanese Yen', 'minor_unit' => 0],
-        ] as $row) {
-            Currency::query()->updateOrInsert(['code' => $row['code']], $row);
+        foreach (CurrencyNames::codes() as $code) {
+            Currency::query()->updateOrInsert(['code' => $code], ['minor_unit' => CurrencyScale::decimals($code)]);
         }
     }
 }

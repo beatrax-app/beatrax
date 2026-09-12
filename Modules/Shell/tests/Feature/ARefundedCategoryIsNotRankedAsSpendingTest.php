@@ -25,7 +25,7 @@ use Modules\Shell\Internal\Http\Livewire\Dashboard;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-29 09:00:00'));
-    DB::table('currencies')->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    DB::table('currencies')->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 });
 
 afterEach(function (): void {

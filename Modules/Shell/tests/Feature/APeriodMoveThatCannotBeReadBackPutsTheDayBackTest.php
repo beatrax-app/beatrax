@@ -18,7 +18,7 @@ use Modules\Shell\Internal\Http\Livewire\SettingsPage;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-24 09:00:00'));
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'period-move-unreadable',

@@ -702,6 +702,13 @@ Direct `Illuminate\Support\Number::currency()` calls have no such guard and 500'
 the page outright — `tests/Contracts/CurrencyRendersThroughMoneyArchTest` now
 keeps them out of the tree.
 
+A third seam reaches it without throwing at all. A **currency display name**
+resolves against `curr/<locale>`, which the filtered package holds for English
+only, and ICU answers an absent locale by walking up to `root` — so the lookup
+returns the English name with no error and nothing to catch. That is why the
+names are transcribed into the tree at generation time rather than read here:
+[currency names](../ledger/currency-names.md).
+
 **Do not delete the guards on the assumption that fuller ICU data can be
 bundled.** The static libraries arrive inside a zip that `native:install`
 downloads into `mobile-app/nativephp/`, which is gitignored and regenerated —

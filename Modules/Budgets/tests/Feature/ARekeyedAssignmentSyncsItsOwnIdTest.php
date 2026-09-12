@@ -31,7 +31,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-24 09:00:00'));
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'rekey-own-id-'.bin2hex(random_bytes(4)),

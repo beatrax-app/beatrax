@@ -22,8 +22,8 @@ uses(RefreshDatabase::class);
 // base currency is EUR.
 
 beforeEach(function (): void {
-    Currency::query()->updateOrInsert(['code' => 'EUR'], ['name' => 'Euro', 'minor_unit' => 2]);
-    Currency::query()->updateOrInsert(['code' => 'USD'], ['name' => 'US dollar', 'minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'EUR'], ['minor_unit' => 2]);
+    Currency::query()->updateOrInsert(['code' => 'USD'], ['minor_unit' => 2]);
 
     $this->user = User::create([
         'username' => 'migrated-currency-reader',

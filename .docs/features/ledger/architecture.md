@@ -26,7 +26,8 @@ one class ([money representation](money-formatting.md)), and
 the reader sees a per-locale translation
 ([category display names](category-display-names.md)). Read the second
 before writing any query that matches, sorts, or groups on a category
-name.
+name. A currency's name is not a column at all — it is transcribed from
+ICU per locale ([currency names](currency-names.md)).
 
 How many minor units make one major unit is the currency's own business
 rather than a constant: JPY has no subdivision, so `1000` is ¥1,000 and
@@ -947,7 +948,21 @@ editor so the reader can correct an individual account:
 `Ledger\Internal\Actions\SetAccountCurrency`. The offered set is the
 `currencies` reference table, the same one the base-currency picker
 reads — not `Ledger\Public\Enums\Currency`, which names only the codes
-the code itself writes as literals.
+the code itself writes as literals — **plus the account's own stored
+code**. An importer stamps the statement's denomination on the account
+it mints and the bundled snapshot cannot price every currency a
+statement arrives in, so without its own code among the options nothing
+is selected and the select draws the first one, which is not what the
+row holds. The Action returns on a code equal to the stored one before
+it checks the table at all, for the same reason: naming what the row
+already says writes nothing and must not be refused. Every other code
+is still checked against the table, because one the rate table cannot
+reach would drop out of every converted roll-up instead of failing
+where it was chosen.
+
+What the options are *called* is [currency
+names](currency-names.md): ICU's wording per reader, from a bundled
+transcript rather than from the database.
 
 **The change relabels; it never converts.** `settled_amount_minor` and
 `settled_currency` are what the account was actually debited, and no
