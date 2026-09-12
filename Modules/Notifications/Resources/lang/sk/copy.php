@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count platba splatná v tomto období.|:count platby splatné v tomto období.|:count platieb splatných v tomto období.',
         'shortfall' => 'Blíži sa nedostatok hotovosti.',
         'forecast_not_run' => 'Predpoveď peňažných tokov zatiaľ neprebehla.',
+        'forecast_running' => 'Predpoveď peňažných tokov práve prebieha.',
     ],
 ];
