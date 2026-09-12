@@ -312,6 +312,13 @@ under a hint for a `/` key nothing listens for. The phone width carried
 a field bound to nothing; the type-filter chip row below is the filter
 at both widths.
 
+Neither box declares `role="search"`. Two landmarks of one type on a
+page have to be named apart to be worth anything, only one of the two
+is ever visible, and the sidebar — which renders on every page — is
+already the single search landmark. Ledger's own two-width search
+toolbar settled this the same way: it labels its inputs and declares no
+landmark.
+
 The `Sort:` span is a readout of the order `CounterpartyIndexQuery`
 already applies. There is no sort control on this page.
 

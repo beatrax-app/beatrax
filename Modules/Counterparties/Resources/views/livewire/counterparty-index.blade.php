@@ -53,7 +53,6 @@
     <div class="phone-only">
         <div
             class="side-search"
-            role="search"
             x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
             style="cursor: pointer;"
         >
@@ -80,7 +79,6 @@
              It was `disabled` with a `/` hint no binding listened for. --}}
         <div
             class="side-search"
-            role="search"
             x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
             style="flex: 1 1 280px; min-width: 240px; cursor: pointer;"
         >
