@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
 use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Public\Exceptions\BackupIoException;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SqliteDatabase;
 use PDO;
@@ -129,14 +130,24 @@ final readonly class BackupSchemaGeneration
         clearstatcache(true, $stagedPath);
     }
 
+    // Refused rather than defaulted. A bare `['driver' => 'sqlite']` is the
+    // laxer copy this exists to avoid: no foreign keys, no busy timeout, a
+    // different locking mode — a run whose result nobody measured.
     /**
      * @return array<mixed> whatever the live connection is configured with
+     *
+     * @throws BackupNotSupportedException when it is configured with nothing
      */
     private function liveSettings(): array
     {
-        $live = $this->config->get('database.connections.'.SqliteDatabase::connectionName($this->config));
+        $name = SqliteDatabase::connectionName($this->config);
+        $live = $this->config->get('database.connections.'.$name);
 
-        return is_array($live) ? $live : ['driver' => SqliteDatabase::DRIVER];
+        if (! is_array($live)) {
+            throw new BackupNotSupportedException('There is no database connection called '.$name.' to bring a backup forward against.');
+        }
+
+        return $live;
     }
 
     // The same set the phone's first launch replays, spelled the same way:

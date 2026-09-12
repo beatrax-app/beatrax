@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Config;
 use Modules\Core\Internal\Backup\BackupCouldNotBeBroughtUpToDateException;
 use Modules\Core\Internal\Backup\BackupFromANewerBuildException;
+use Modules\Core\Internal\Backup\BackupSchemaGeneration;
 use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Public\Enums\RestoreRefusal;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -353,6 +356,28 @@ it('refuses an encrypted restore whose forward run fails, before writing a snaps
         ->and(generationTablesIn($livePath))->not->toContain('a_table_the_failed_encrypted_run_added')
         ->and((array) glob($this->backupsDir.DIRECTORY_SEPARATOR.'pre-restore-*.sqlite'))->toBe([])
         ->and((array) glob($this->stagingDir.DIRECTORY_SEPARATOR.'*'))->toBe([]);
+});
+
+// The run is built from the live connection's own settings so the migrations
+// meet the foreign keys, the busy timeout and the locking mode they would meet
+// on a real run. Defaulting to a bare driver name where there are none is the
+// laxer copy that exists to avoid, and it would have succeeded.
+it('refuses to migrate against a connection this build has no settings for', function (): void {
+    $carried = generationNamesThisBuildHas();
+    $this->shipped = [...$this->shipped, generationBuildAlsoShips(
+        '2099_01_01_000000_a_table_a_settingless_run_would_add',
+        "Illuminate\\Support\\Facades\\Schema::create('a_table_a_settingless_run_would_add', function (\$table): void { \$table->id(); });",
+    )];
+
+    $source = generationSourceRecording($carried);
+    $this->sources = [...$this->sources, $source];
+
+    Config::set('database.connections.'.Config::get('database.default'), null);
+
+    expect(fn () => app(BackupSchemaGeneration::class)->bringUpToDate($source))
+        ->toThrow(BackupNotSupportedException::class);
+
+    expect(generationTablesIn($source))->not->toContain('a_table_a_settingless_run_would_add');
 });
 
 // The reader is told which of the two it is, because one of them is worth
