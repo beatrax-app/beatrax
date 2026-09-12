@@ -101,8 +101,9 @@ every class below as internal.
   $stepKey, array $progress): bool` — the jump gate itself, in
   its one home. True when the key is in `steps()` and every key
   before it is `done` or `skipped`.
-- `Internal/Events/WizardCompleted` — `(int $userId)`, dispatched
-  by `DoneStep::finish()` before it redirects to `/`. Nothing
+- `Internal/Events/WizardCompleted` — `(int $userId)`, raised by
+  `SetupWizard::next()` on the advance that leaves nothing
+  pending, and only when something was pending going in. Nothing
   listens to it today; it exists as the seam.
 - `Internal/Exceptions/EveryStagedRunWasRefusedException` —
   `(int $runsOffered)`, raised inside `commitEverything()`'s
@@ -134,8 +135,9 @@ every class below as internal.
 - `Internal/Http/Livewire/Steps/CountryStep` — the `tax-country`
   step. The step key and the class name differ on purpose: the
   key names what the answer is for, the class names the question.
-- `Internal/Http/Livewire/Steps/DoneStep` — dispatches
-  `WizardCompleted`; offers a single "Take me to the
+- `Internal/Http/Livewire/Steps/DoneStep` — bubbles
+  `wizard.step.completed` like every other step, so the parent
+  marks the terminal row; offers a single "Take me to the
   dashboard" button.
 - `Internal/Http/Livewire/StartingBalanceCard` — per-account
   starting-balance confirm card.
