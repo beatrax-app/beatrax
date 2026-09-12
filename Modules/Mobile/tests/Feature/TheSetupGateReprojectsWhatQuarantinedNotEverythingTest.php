@@ -207,6 +207,61 @@ it('counts the attempt before it runs, so one that never returns is named on the
             ->value('reproject_attempts'))->toBe(2);
 });
 
+// Two poll ticks overlap on a phone whenever one is still inside its network
+// leg when the next fires. Both had read the same cursor before either wrote,
+// so each stamped its own pass over the other's and the count stood still
+// while the passes multiplied — the one record a killed pass leaves behind.
+it('claims the attempt against the stored count, not the one the tick started with', function (): void {
+    [$userId, $peerDeviceId, $session] = gateReadyToReproject(10);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    expect(app(InitialSyncPuller::class)->pull($userId, $session)['phase'])->toBe(SyncPhase::Rebuilding);
+
+    $recorder = new class extends AbstractLogger
+    {
+        /** @var list<array{level: string, message: string}> */
+        public array $records = [];
+
+        public function log($level, string|Stringable $message, array $context = []): void
+        {
+            $this->records[] = ['level' => (string) $level, 'message' => (string) $message];
+        }
+    };
+
+    Log::swap($recorder);
+    app()->forgetInstance(InitialSyncPuller::class);
+
+    // The rival tick lands its own claim the moment this one has read the
+    // cursor and before it writes anything back, which is the whole window.
+    $rivalClaimed = false;
+    DB::listen(function (QueryExecuted $q) use (&$rivalClaimed, $db, $userId, $peerDeviceId): void {
+        if ($rivalClaimed || ! str_contains($q->sql, 'mobile_sync_progress') || ! str_starts_with(ltrim($q->sql), 'select')) {
+            return;
+        }
+        $rivalClaimed = true;
+        $db->connection()->table('mobile_sync_progress')
+            ->where('user_id', $userId)
+            ->where('peer_device_id', $peerDeviceId)
+            ->update(['reproject_attempts' => 7]);
+    });
+
+    app(InitialSyncPuller::class)->pull($userId, $session);
+
+    $messages = array_column(array_values(array_filter(
+        $recorder->records,
+        static fn (array $r): bool => $r['level'] === 'error',
+    )), 'message');
+
+    expect($rivalClaimed)->toBeTrue('the rival tick never claimed, so the test proved nothing')
+        ->and($messages)->toContain('InitialSyncPuller: a previous history re-projection never returned; starting another.')
+        ->and((int) $db->connection()->table('mobile_sync_progress')
+            ->where('user_id', $userId)
+            ->where('peer_device_id', $peerDeviceId)
+            ->value('reproject_attempts'))->toBe(8);
+});
+
 // The sharpest site of the whole "throwable in a log context" family, and the
 // reason it is tested here rather than against a synthetic exception: this pass
 // writes decrypted peer rows into `transactions`, so the QueryException it can

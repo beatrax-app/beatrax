@@ -80,7 +80,10 @@ final readonly class PaypalFundingResolver
         private PaypalFundingSignatureKey $signatureKey,
     ) {}
 
-    public function resolveForUser(User $user): void
+    /**
+     * @return int chain_links rows this pass inserted
+     */
+    public function resolveForUser(User $user): int
     {
         $connection = $this->db->connection();
 
@@ -116,34 +119,40 @@ final readonly class PaypalFundingResolver
             ]);
 
         if ($rows->isEmpty()) {
-            return;
+            return 0;
         }
 
         // The registered aliases belong to the reader, not to the row, so the
         // ASN-direct arm below is handed them rather than asking per payment.
         $aliasSet = $this->paypalAliasSet($user);
 
+        $inserted = 0;
+
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $link = $this->deterministicMatch($row, $user);
-            if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user->id);
+            $link = $this->firstMatchingArm($row, $aliasSet, $user);
 
-                continue;
-            }
-
-            $link = $this->asnDirectMatch($row, $aliasSet, $user);
-            if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user->id);
-
-                continue;
-            }
-
-            $link = $this->fuzzyMatch($row, $user);
-            if ($link !== null) {
-                $this->inserter->insertIfNotExists($link, $user->id);
+            if ($link !== null && $this->inserter->insertIfNotExists($link, $user->id)) {
+                $inserted++;
             }
         }
+
+        return $inserted;
+    }
+
+    // The three arms in their fixed order, first match winning. `??` stops at
+    // the first non-null, so a payment the deterministic arm answers never
+    // pays for the two searches below it — which is what the three-way
+    // if/continue chain this replaces was doing by hand, one level deeper.
+    /**
+     * @param  array<string, bool>  $aliasSet
+     * @return ?array<string, mixed>
+     */
+    private function firstMatchingArm(stdClass $row, array $aliasSet, User $user): ?array
+    {
+        return $this->deterministicMatch($row, $user)
+            ?? $this->asnDirectMatch($row, $aliasSet, $user)
+            ?? $this->fuzzyMatch($row, $user);
     }
 
     /**

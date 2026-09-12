@@ -62,7 +62,10 @@ final readonly class IcsSettlementResolver
         private SessionFactory $session,
     ) {}
 
-    public function resolveForUser(User $user): void
+    /**
+     * @return int chain_links rows this pass inserted
+     */
+    public function resolveForUser(User $user): int
     {
         // A surplus is recorded before the statement that will absorb it
         // exists, so the credit is written with nowhere to point. Closing that
@@ -78,6 +81,8 @@ final readonly class IcsSettlementResolver
 
         /** @var array<string, Account|null> $cardAccounts */
         $cardAccounts = [];
+
+        $inserted = 0;
 
         foreach (array_chunk($candidateIds, self::TRANSFER_CHUNK) as $chunk) {
             foreach ($this->transfersById($chunk, $user) as $transfer) {
@@ -97,13 +102,13 @@ final readonly class IcsSettlementResolver
                 if ($cardAccount === null) {
                     continue;
                 }
-                $this->resolveOne($transfer, $cardAccount, $user, $ibans);
+                $inserted += $this->resolveOne($transfer, $cardAccount, $user, $ibans);
             }
         }
 
         // Must follow the main pass: it only walks refunds inside statements
         // the main pass has already moved to settled/overpaid.
-        $this->resolveRefundsAfterClose($user, $ibans);
+        return $inserted + $this->resolveRefundsAfterClose($user, $ibans);
     }
 
     // A card answers to two names and a settlement may carry either: an alias
@@ -237,8 +242,9 @@ final readonly class IcsSettlementResolver
      *                               account, not the ASN account the
      *                               transfer_out sits on.
      * @param  array<int, string>  $ibans  account id to IBAN, read once per pass
+     * @return int chain_links rows this transfer inserted
      */
-    private function resolveOne(stdClass $transfer, Account $icsAccount, User $user, array $ibans): void
+    private function resolveOne(stdClass $transfer, Account $icsAccount, User $user, array $ibans): int
     {
         $connection = $this->db->connection();
         $transferId = self::toInt($transfer->tx_id ?? null);
@@ -255,7 +261,7 @@ final readonly class IcsSettlementResolver
         // be one currency or the sum is arithmetic on unlike quantities: a
         // USD 500.00 payment closed a EUR 500.00 statement to zero.
         if ($statement === null || $settledCurrency !== $statementCurrency) {
-            return;
+            return 0;
         }
 
         $statementId = self::toInt($statement->id ?? null);
@@ -282,103 +288,98 @@ final readonly class IcsSettlementResolver
 
         $signatureHash = self::signatureHash($ibans, $accountId, $periodEnd, $user);
 
-        if (abs($delta) <= $tolerance) {
-            $coveredCount = $expenses->count();
-            if ($coveredCount === 0) {
-                // With no expense to link, nothing records that this transfer
-                // settled this statement: candidateTransferIds() excludes only
-                // a transfer carrying a confirmed link, so applySettlement()
-                // would subtract the same amount again on every later pass.
-                return;
-            }
+        if (abs($delta) > $tolerance) {
+            // The NULL to_transaction_id is legal only for this
+            // exceeded-tolerance candidate — the chain_links NULL-endpoint
+            // trigger rejects every other.
+            $confidence = $this->computeExceededConfidence($delta, $statementTotal);
 
-            $toleranceUsed = abs($delta) <= SettlementTolerance::FLOOR_MINOR
-                ? SettlementToleranceUsed::AmountFloor
-                : SettlementToleranceUsed::Percent;
-            $evidenceBase = [
-                'statement_id' => $statementId,
-                'unaccounted_delta_minor' => $delta,
-                'tolerance_used' => $toleranceUsed->value,
-                'covered_count' => $coveredCount,
-                'credits_applied_minor' => $priorCredits,
-                'signature_hash' => $signatureHash,
-            ];
-
-            // Flushed here rather than at the end of the pass: pullExpenses()
-            // skips an expense that already carries a confirmed link, so the
-            // next transfer must see what this one just claimed.
-            $links = [];
-            foreach ($expenses as $expense) {
-                $links[] = [
-                    'from_transaction_id' => $transferId,
-                    'to_transaction_id' => self::toInt($expense->id ?? null),
-                    'kind' => ChainLinkKind::IcsBulkSettle->value,
-                    'state' => ChainLinkState::Confirmed->value,
-                    'confidence' => '1.000',
-                    'resolver' => ChainLinkResolver::Auto->value,
-                    'evidence' => $evidenceBase,
-                ];
-            }
-            // One transaction over all three writes: a crash after the links
-            // is unrecoverable, because candidateTransferIds() then drops the
-            // transfer for carrying a confirmed link and the statement it
-            // never settled stays open forever.
-            $connection->transaction(function () use ($connection, $links, $statementId, $settled, $priorCredits, $statementCurrency, $transferId, $user): void {
-                $this->inserter->insertMissing($links, $user->id);
-
-                $this->dismissStaleHint($transferId, $user);
-
-                // CardStatementStateMachine is the only sanctioned mutator of
-                // card_statements.state. It is told the credits too: the
-                // tolerance test above already spent them, so told the payment
-                // alone it left a paid-off statement reading half paid.
-                $settlement = $this->stateMachine->applySettlement($statementId, $settled + $priorCredits, $user);
-
-                if ($settlement->newState !== CardStatementState::Overpaid->value) {
-                    return;
-                }
-
-                $now = $this->clock->now()->toDateTimeString();
-                $connection->table('card_statement_credits')->insert([
-                    'user_id' => $user->id,
-                    'from_statement_id' => $statementId,
-                    'to_statement_id' => null,
-                    'amount_minor' => abs($settlement->newOpenMinor),
-                    'currency' => $statementCurrency,
-                    'reason' => CardStatementCreditReason::Overpayment->value,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-            });
-
-            return;
+            return (int) $this->inserter->insertIfNotExists([
+                'from_transaction_id' => $transferId,
+                'to_transaction_id' => null,
+                'kind' => ChainLinkKind::IcsBulkSettle->value,
+                'state' => ChainLinkState::Candidate->value,
+                'confidence' => ConfidenceScale::format($confidence),
+                'resolver' => ChainLinkResolver::Auto->value,
+                'evidence' => [
+                    'statement_id' => $statementId,
+                    'unaccounted_delta_minor' => $delta,
+                    'tolerance_used' => SettlementToleranceUsed::Exceeded->value,
+                    'covered_count' => $expenses->count(),
+                    'credits_applied_minor' => $priorCredits,
+                    'signature_hash' => $signatureHash,
+                ],
+            ], $user->id);
         }
 
-        // The NULL to_transaction_id is legal only for this exceeded-tolerance
-        // candidate — the chain_links NULL-endpoint trigger rejects every other.
-        $confidence = $this->computeExceededConfidence($delta, $statementTotal);
-        $this->inserter->insertIfNotExists([
-            'from_transaction_id' => $transferId,
-            'to_transaction_id' => null,
-            'kind' => ChainLinkKind::IcsBulkSettle->value,
-            'state' => ChainLinkState::Candidate->value,
-            'confidence' => ConfidenceScale::format($confidence),
-            'resolver' => ChainLinkResolver::Auto->value,
-            'evidence' => [
-                'statement_id' => $statementId,
-                'unaccounted_delta_minor' => $delta,
-                'tolerance_used' => SettlementToleranceUsed::Exceeded->value,
-                'covered_count' => $expenses->count(),
-                'credits_applied_minor' => $priorCredits,
-                'signature_hash' => $signatureHash,
-            ],
-        ], $user->id);
+        $toleranceUsed = abs($delta) <= SettlementTolerance::FLOOR_MINOR
+            ? SettlementToleranceUsed::AmountFloor
+            : SettlementToleranceUsed::Percent;
+        $evidenceBase = [
+            'statement_id' => $statementId,
+            'unaccounted_delta_minor' => $delta,
+            'tolerance_used' => $toleranceUsed->value,
+            'covered_count' => $expenses->count(),
+            'credits_applied_minor' => $priorCredits,
+            'signature_hash' => $signatureHash,
+        ];
+
+        // Flushed here rather than at the end of the pass: pullExpenses()
+        // skips an expense that already carries a confirmed link, so the
+        // next transfer must see what this one just claimed.
+        $links = [];
+        foreach ($expenses as $expense) {
+            $links[] = [
+                'from_transaction_id' => $transferId,
+                'to_transaction_id' => self::toInt($expense->id ?? null),
+                'kind' => ChainLinkKind::IcsBulkSettle->value,
+                'state' => ChainLinkState::Confirmed->value,
+                'confidence' => '1.000',
+                'resolver' => ChainLinkResolver::Auto->value,
+                'evidence' => $evidenceBase,
+            ];
+        }
+
+        // Nothing to link settles nothing at all, or applySettlement() would
+        // subtract this payment again on every later pass. The rest is one
+        // transaction because a crash after the links is unrecoverable: the
+        // transfer is dropped for carrying one and the statement stays open.
+        return $links === [] ? 0 : $connection->transaction(function () use ($connection, $links, $statementId, $settled, $priorCredits, $statementCurrency, $transferId, $user): int {
+            $inserted = $this->inserter->insertMissing($links, $user->id);
+
+            $this->dismissStaleHint($transferId, $user);
+
+            // CardStatementStateMachine is the only sanctioned mutator of
+            // card_statements.state. It is told the credits too: the
+            // tolerance test above already spent them, so told the payment
+            // alone it left a paid-off statement reading half paid.
+            $settlement = $this->stateMachine->applySettlement($statementId, $settled + $priorCredits, $user);
+
+            if ($settlement->newState !== CardStatementState::Overpaid->value) {
+                return $inserted;
+            }
+
+            $now = $this->clock->now()->toDateTimeString();
+            $connection->table('card_statement_credits')->insert([
+                'user_id' => $user->id,
+                'from_statement_id' => $statementId,
+                'to_statement_id' => null,
+                'amount_minor' => abs($settlement->newOpenMinor),
+                'currency' => $statementCurrency,
+                'reason' => CardStatementCreditReason::Overpayment->value,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            return $inserted;
+        });
     }
 
     /**
      * @param  array<int, string>  $ibans
+     * @return int chain_links rows this arm inserted
      */
-    private function resolveRefundsAfterClose(User $user, array $ibans): void
+    private function resolveRefundsAfterClose(User $user, array $ibans): int
     {
         $connection = $this->db->connection();
 
@@ -428,17 +429,19 @@ final readonly class IcsSettlementResolver
         }
 
         if ($links === []) {
-            return;
+            return 0;
         }
 
         // A refund's link and the credit it carries forward are one fact: the
         // link alone excludes the refund from the next pass, so the credit it
         // should have written is never reconsidered.
-        $connection->transaction(function () use ($connection, $links, $credits, $user): void {
-            $this->inserter->insertMissing($links, $user->id);
+        return $connection->transaction(function () use ($connection, $links, $credits, $user): int {
+            $inserted = $this->inserter->insertMissing($links, $user->id);
             foreach (array_chunk($credits, self::CREDIT_CHUNK) as $chunk) {
                 $connection->table('card_statement_credits')->insert($chunk);
             }
+
+            return $inserted;
         });
     }
 

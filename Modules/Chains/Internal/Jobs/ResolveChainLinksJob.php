@@ -77,11 +77,6 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
             ])];
         }
 
-        $beforeCount = $db->connection()
-            ->table('chain_links')
-            ->where('user_id', $this->userId)
-            ->count();
-
         // The three healing passes precede the resolvers because each one
         // produces rows — statements, retyped transfers, paired legs — that
         // the resolvers then iterate.
@@ -89,13 +84,12 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
         $retypeResolver->resolveForUser($user);
         $pairer->pairOrphansForUser($user);
 
-        $icsResolver->resolveForUser($user);
-        $paypalResolver->resolveForUser($user);
-
-        $afterCount = $db->connection()
-            ->table('chain_links')
-            ->where('user_id', $this->userId)
-            ->count();
+        // What the two resolvers inserted, not the difference between two
+        // counts of the whole table. A second pass, the sync applier and a
+        // cascade delete all write chain_links while this one runs, and each
+        // landed in this number — the delete as a negative link count.
+        $linkedCount = $icsResolver->resolveForUser($user)
+            + $paypalResolver->resolveForUser($user);
 
         $completedAt = $clock->now()->toDateTimeString();
         $db->connection()
@@ -104,7 +98,7 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
             ->update([
                 'status' => JobRunStatus::Complete->value,
                 'completed_at' => $completedAt,
-                'linked_count' => $afterCount - $beforeCount,
+                'linked_count' => $linkedCount,
                 'updated_at' => $completedAt,
             ]);
     }

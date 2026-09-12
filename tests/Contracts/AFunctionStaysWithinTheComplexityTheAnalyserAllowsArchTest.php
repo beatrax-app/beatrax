@@ -25,6 +25,7 @@ it('leaves no function harder to follow than the analyser allows', function (): 
     $offenders = [];
     $measured = 0;
     $highest = 0;
+    $onTheCeiling = 0;
 
     foreach ($files as $path) {
         $reading = SonarCognitiveComplexity::analyse((string) file_get_contents($path));
@@ -32,6 +33,7 @@ it('leaves no function harder to follow than the analyser allows', function (): 
         foreach ($reading['functions'] as $function) {
             $measured++;
             $highest = max($highest, $function['value']);
+            $onTheCeiling += $function['value'] === SONAR_COMPLEXITY_CEILING ? 1 : 0;
 
             if ($function['value'] > SONAR_COMPLEXITY_CEILING) {
                 $offenders[] = str_replace(base_path().'/', '', $path)
@@ -70,8 +72,16 @@ it('leaves no function harder to follow than the analyser allows', function (): 
         'file. Anything failing here fails the hosted analysis on merge.',
         '',
         'There is no pinned list to add to. The default branch carries no',
-        'function above '.SONAR_COMPLEXITY_CEILING.' — ten sit exactly on it — so every entry above is',
-        'something this branch introduced.',
+        'function above '.SONAR_COMPLEXITY_CEILING.', so every entry above is something this branch',
+        'introduced.',
+        '',
+        // Counted by the walk that just ran rather than written down beside
+        // it: a figure kept by hand says what the tree was on the day
+        // somebody last remembered to look, and this one had drifted from
+        // ten to fourteen before anybody read it against the scorer.
+        $onTheCeiling.' of the '.$measured.' functions read here sit exactly on '.SONAR_COMPLEXITY_CEILING.'. On a',
+        'tree that close to the ceiling, the room a change has to work in is',
+        'usually none, so reduce the nesting rather than move a branch sideways.',
     ]));
 });
 
