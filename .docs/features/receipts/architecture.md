@@ -295,6 +295,16 @@ than open to `[A-Z]{3}`: the ICS and PayPal anchors are matched against a
 whole message body, where a bare three-letter class reads
 `Referentienummer: ABC123` as an amount.
 
+Closed on **both** ends of an anchor, not just the mark in front of the
+figure. Google Play's settled leg took its marker from the alternation and
+its code from a bare `[A-Z]{3}` under `/i`, which is the shape of an item
+line as much as of a denominated figure: `Item: Strava Premium (30 day)`
+answered before the `(€12,07 EUR)` further down the same mail and settled
+the receipt at `-3000 USD` — not the figure, not the currency, and not a
+leg the message states anywhere. `preg_match()` returns the first match in
+the body, so a shape that can be read out of prose does not merely add a
+reading, it displaces the real one.
+
 ### A total the message denominated with nothing is a miss
 
 The reader's base used to survive in one place, `nativeFromLabelled()`: a PayPal

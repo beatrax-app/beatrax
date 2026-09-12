@@ -45,7 +45,12 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
     // used to spell twice left that leg unread and the charge settled in USD.
     private static function settledRegex(): string
     {
-        return '/\((?:'.ReceiptBodyText::currencyMarkers().')?\s*([0-9]+(?:[.,][0-9]+)*)\s*([A-Z]{3})\)/i';
+        $markers = ReceiptBodyText::currencyMarkers();
+
+        // Closed to the marks this app names, never a bare [A-Z]{3}: an item
+        // line reading `(30 day)` is the same shape as a denominated figure,
+        // and it overrode the settled leg stated further down the same mail.
+        return '/\((?:'.$markers.')?\s*([0-9]+(?:[.,][0-9]+)*)\s*('.$markers.')\)/i';
     }
 
     public function key(): string

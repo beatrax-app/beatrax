@@ -82,7 +82,8 @@ final class Mt940Adapter implements SourceAdapter
             '20' => $this->applyStatementId($state, $content),
             '25' => $this->applyOwnIban($state, $content),
             '28C' => $this->applyStatementNumber($state, $content),
-            '60F', '60M' => $this->applyOpeningBalance($state, $content),
+            '60F' => $this->applyOpeningBalance($state, $content, opensStatement: true),
+            '60M' => $this->applyOpeningBalance($state, $content, opensStatement: false),
             '62M' => $this->applyClosingBalance($state, $content, endsStatement: false),
             '62F' => $this->applyClosingBalance($state, $content, endsStatement: true),
             default => null,
@@ -124,11 +125,17 @@ final class Mt940Adapter implements SourceAdapter
         }
     }
 
-    private function applyOpeningBalance(Mt940StatementAccumulator $state, string $content): void
+    // :60F: opens a statement and :60M: reopens it on its next page, so only the
+    // first ends the currency in force. Holding that currency across a :60F: too
+    // malformed to read read the statement below at the one above's scale, which
+    // for yen under euros is a hundred times the figure.
+    private function applyOpeningBalance(Mt940StatementAccumulator $state, string $content, bool $opensStatement): void
     {
         $balance = $this->parseBalance($content);
         if ($balance !== null) {
             $state->rowCurrency = $balance->currency;
+        } elseif ($opensStatement) {
+            $state->rowCurrency = null;
         }
 
         if ($state->firstStatementFrozen) {

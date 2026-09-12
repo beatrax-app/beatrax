@@ -35,6 +35,7 @@ Modules/Ingestion/
 │   ├── Adapters/
 │   │   ├── Banking/                         # generic bank-statement parsers
 │   │   │   ├── Camt053Adapter.php
+│   │   │   ├── Camt053XmlReader.php          # both readings, one XXE guard
 │   │   │   ├── Mt940Adapter.php
 │   │   │   ├── BankAmountParser.php
 │   │   │   ├── Camt053HeaderProfile.php
