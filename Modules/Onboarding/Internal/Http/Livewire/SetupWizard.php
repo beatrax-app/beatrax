@@ -50,6 +50,11 @@ final class SetupWizard extends Component
 
     // Renders the done step rather than redirecting, so a later hit on the
     // URL shows a coherent page instead of restarting the wizard.
+
+    // Locked because next() reads it to decide whether the wizard is over: a
+    // replayed snapshot setting it would end the wizard from any step, and
+    // raise the completion event for one that was never finished.
+    #[Locked]
     public bool $allComplete = false;
 
     public function mount(
