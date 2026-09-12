@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'No se ha podido guardar — el total de las líneas debe coincidir exactamente con el total de la transacción.',
         'not_found' => 'No se ha encontrado la transacción.',
-        'amount_zero' => 'El importe no puede ser :amount',
+        'amount_positive' => 'Introduce un importe mayor que cero.',
         'choose_category' => 'Elige una categoría.',
         'choose_before_removing' => 'Elige una categoría antes de eliminar.',
         'choose_before_unsplitting' => 'Elige una categoría antes de deshacer el desglose.',

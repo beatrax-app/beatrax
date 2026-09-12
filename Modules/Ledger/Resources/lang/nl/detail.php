@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Opslaan mislukt — de regeltotalen moeten precies gelijk zijn aan het transactietotaal.',
         'not_found' => 'Transactie niet gevonden.',
-        'amount_zero' => 'Bedrag kan niet :amount zijn',
+        'amount_positive' => 'Voer een bedrag groter dan nul in.',
         'choose_category' => 'Kies een categorie.',
         'choose_before_removing' => 'Kies een categorie voordat je verwijdert.',
         'choose_before_unsplitting' => 'Kies een categorie voordat je de splitsing ongedaan maakt.',

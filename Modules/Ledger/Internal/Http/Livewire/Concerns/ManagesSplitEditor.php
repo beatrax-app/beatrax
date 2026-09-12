@@ -250,6 +250,15 @@ trait ManagesSplitEditor
 
         $this->recomputeRemaining($currentUser, $db, $readerCurrency);
 
+        // A leg that cannot be read contributes nothing to the sum above, so a
+        // split holding one reports a balanced total and then refuses. The leg
+        // is the cause and the total is the consequence, so it is named first.
+        if ($this->hasUnreadableLeg()) {
+            $this->splitError = Lang::get('ledger::detail.errors.amount_positive');
+
+            return;
+        }
+
         if ($this->remainingMinor !== 0) {
             $this->splitError = Lang::get('ledger::detail.errors.totals_must_match');
 
@@ -290,6 +299,19 @@ trait ManagesSplitEditor
         }
     }
 
+    // A magnitude, so a negative parses and is refused all the same: the sign
+    // belongs to the parent transaction, not to a leg of it.
+    private function hasUnreadableLeg(): bool
+    {
+        foreach ($this->legs as $leg) {
+            if (MoneyInput::tryToPositiveMinor($leg['amount'], $this->splitCurrency) === null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>|null
      */
@@ -300,12 +322,11 @@ trait ManagesSplitEditor
         foreach ($this->legs as $leg) {
             $abs = MoneyInput::tryToPositiveMinor($leg['amount'], $this->splitCurrency);
             if ($abs === null) {
-                // The zero rides as a parameter rather than sitting in the
-                // sentence: written into the copy it was one locale's zero in
-                // twenty-six languages.
-                $this->splitError = Lang::get('ledger::detail.errors.amount_zero', [
-                    'amount' => Money::ofMinor(0, $this->splitCurrency !== '' ? $this->splitCurrency : BaseCurrency::value())->format(),
-                ]);
+                // Four refusals reach here and only one was a zero: a negative
+                // parses fine and is refused because a leg is a magnitude, and
+                // an empty or unreadable box is neither. Naming the zero told a
+                // reader who typed -25,00 about a figure they never entered.
+                $this->splitError = Lang::get('ledger::detail.errors.amount_positive');
 
                 return null;
             }

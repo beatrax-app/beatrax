@@ -149,7 +149,7 @@ it('rejectsAZeroAmountLeg', function (): void {
         ->set('legs.1.amount', '0,00')
         ->set('legs.1.categoryId', $this->household->id)
         ->call('saveSplit')
-        ->assertSet('splitError', "Amount can't be €0.00");
+        ->assertSet('splitError', 'Enter an amount greater than zero.');
 
     expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
 })->group('phase-13.1');
@@ -170,10 +170,11 @@ it('rejectsAMissingCategory', function (): void {
 })->group('phase-13.1');
 
 it('coercesEveryLegToTheParentsSignSoAnOppositeSignEntryCannotBeSaved', function (): void {
-    // "-60,00" fails the parse regex outright, so it contributes €0 and the
-    // remaining-total gate blocks the save before the per-leg loop runs. Legs
-    // that do parse are coerced to the parent's sign inside saveSplit(), so an
-    // opposite-sign row cannot reach SaveTransactionSplit from this editor.
+    // "-60,00" parses cleanly to -6000; tryToPositiveMinor refuses it because a
+    // leg carries a magnitude and the sign belongs to the parent. It is named
+    // as its own refusal before the totals gate, which otherwise reports a
+    // balanced split for one that cannot save. Legs that pass are coerced to
+    // the parent's sign inside saveSplit().
     $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
 
     Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
@@ -523,3 +524,22 @@ it('loads a leg of its own transaction whatever the legs user_id copy says', fun
         // 40 + 25 + 15 against an 80 parent leaves nothing unallocated.
         ->assertSet('remainingMinor', 0);
 });
+
+// A leg is a magnitude. "-25,00" parses to -2500 and is refused for its sign,
+// but it contributed 0 to the running total, so the split reported itself
+// balanced and the reader was then told their leg could not be EUR 0.00 — a
+// figure they had not typed.
+it('names the leg it could not read rather than a figure the reader never entered', function (): void {
+    $tx = tdstExpense($this->user->id, $this->account->id, $this->run->id, $this->groceries->id);
+
+    Livewire::test(TransactionDetail::class, ['transactionId' => $tx->id])
+        ->call('openSplitEditor')
+        ->set('legs.0.amount', '100,00')
+        ->set('legs.0.categoryId', $this->groceries->id)
+        ->set('legs.1.amount', '-25,00')
+        ->set('legs.1.categoryId', $this->household->id)
+        ->call('saveSplit')
+        ->assertSet('splitError', 'Enter an amount greater than zero.');
+
+    expect(TransactionSplit::query()->where('transaction_id', $tx->id)->count())->toBe(0);
+})->group('phase-13.1');
