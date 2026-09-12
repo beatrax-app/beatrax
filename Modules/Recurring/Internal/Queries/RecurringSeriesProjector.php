@@ -96,12 +96,12 @@ final readonly class RecurringSeriesProjector
         $multipliers = $this->multipliers($user);
         [$worth, $bindings] = self::worthInBase($multipliers);
         $cursorCurrency = self::toString($cursorRow->latest_currency ?? null);
-        $cursorMonthly = MonthlyEquivalent::orStored(
+        $cursorMonthlyMinor = MonthlyEquivalent::orStored(
             self::toInt($cursorRow->latest_amount_minor),
             SeriesCadence::tryFrom(self::toString($cursorRow->cadence ?? null)),
             self::toInt($cursorRow->monthly_equivalent_minor),
         );
-        $cursorWorth = (int) (abs($cursorMonthly) * ($multipliers[$cursorCurrency] ?? 1.0));
+        $cursorWorth = (int) (abs($cursorMonthlyMinor) * ($multipliers[$cursorCurrency] ?? 1.0));
 
         $query->where(function (Builder $q) use ($worth, $bindings, $cursorWorth, $cursorId): void {
             $q->whereRaw($worth.' < ?', [...$bindings, $cursorWorth])
