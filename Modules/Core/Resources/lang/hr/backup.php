@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Sigurnosna kopija se otvorila, ali baza podataka u njoj je oštećena, pa nije vraćena i ništa nije promijenjeno. Vrati iz starije sigurnosne kopije.',
         'restore_could_not_read' => 'Datoteku sigurnosne kopije nije bilo moguće pročitati, pa vraćanje nije izvršeno i ništa nije promijenjeno. Provjeri ima li uređaj slobodnog prostora i pokušaj ponovno.',
         'restore_not_supported' => 'Vraćanje radi u izdanju koje drži podatke u jednoj datoteci, a ovo nije takvo, pa ništa nije promijenjeno. Kod poslužiteljske baze upotrijebi njezine vlastite alate za vraćanje.',
+        'restore_from_a_newer_build' => 'Ova sigurnosna kopija izrađena je novijom verzijom Beatraxa od one koja se ovdje izvodi, pa nije vraćena i ništa nije promijenjeno. Ažuriraj Beatrax pa je zatim vrati ponovno.',
+        'restore_from_an_older_build' => 'Ova sigurnosna kopija izrađena je starijom verzijom Beatraxa od one koja se ovdje izvodi, pa nije vraćena i ništa nije promijenjeno. Vrati iz sigurnosne kopije koju je izradila ova verzija.',
         'restore_failed' => 'Vraćanje nije izvršeno i ništa nije promijenjeno. Pokušaj ponovno — ako i dalje ne uspijeva, zapisnik aplikacije bilježi što ga je zaustavilo.',
     ],
 ];

@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Záloha se otevřela, ale databáze uvnitř je poškozená, takže se neobnovila a nic se nezměnilo. Obnov ze starší zálohy.',
         'restore_could_not_read' => 'Soubor zálohy se nepodařilo přečíst, takže obnova neproběhla a nic se nezměnilo. Zkontroluj, že má zařízení volné místo, a zkus to znovu.',
         'restore_not_supported' => 'Obnova funguje ve verzi, která drží data v jediném souboru, a tato jí není, takže se nic nezměnilo. U serverové databáze použij její vlastní nástroje obnovy.',
+        'restore_from_a_newer_build' => 'Tato záloha byla vytvořena novější verzí Beatraxu, než je ta zde spuštěná, proto nebyla obnovena a nic se nezměnilo. Aktualizuj Beatrax a poté ji obnov znovu.',
+        'restore_from_an_older_build' => 'Tato záloha byla vytvořena starší verzí Beatraxu, než je ta zde spuštěná, proto nebyla obnovena a nic se nezměnilo. Obnov ze zálohy, kterou vytvořila tato verze.',
         'restore_failed' => 'Obnova neproběhla a nic se nezměnilo. Zkus to znovu — pokud selhává dál, protokol aplikace zaznamenává, co ji zastavilo.',
     ],
 ];

@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Varnostna kopija se je odprla, a je zbirka podatkov v njej poškodovana, zato ni bila obnovljena in nič ni bilo spremenjeno. Obnovi iz starejše varnostne kopije.',
         'restore_could_not_read' => 'Datoteke varnostne kopije ni bilo mogoče prebrati, zato obnovitev ni tekla in nič ni bilo spremenjeno. Preveri, ali ima naprava prosti prostor, in poskusi znova.',
         'restore_not_supported' => 'Obnovitev deluje v izdaji, ki hrani podatke v eni sami datoteki, ta pa to ni, zato nič ni bilo spremenjeno. Pri strežniški zbirki podatkov uporabi njena lastna orodja za obnovitev.',
+        'restore_from_a_newer_build' => 'To varnostno kopijo je ustvarila novejša različica Beatraxa, kot je ta, ki teče tukaj, zato ni bila obnovljena in nič ni bilo spremenjeno. Posodobi Beatrax in jo nato obnovi znova.',
+        'restore_from_an_older_build' => 'To varnostno kopijo je ustvarila starejša različica Beatraxa, kot je ta, ki teče tukaj, zato ni bila obnovljena in nič ni bilo spremenjeno. Obnovi iz varnostne kopije, ki jo je ustvarila ta različica.',
         'restore_failed' => 'Obnovitev ni tekla in nič ni bilo spremenjeno. Poskusi znova — če še naprej spodleti, dnevnik aplikacije zabeleži, kaj jo je ustavilo.',
     ],
 ];

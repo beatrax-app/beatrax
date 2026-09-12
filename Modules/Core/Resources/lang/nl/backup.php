@@ -43,6 +43,8 @@ return [
         'restore_contents_unreadable' => 'De back-up ging open, maar de database erin is beschadigd, dus die is niet teruggezet en er is niets gewijzigd. Zet een oudere back-up terug.',
         'restore_could_not_read' => 'Het back-upbestand kon niet worden gelezen, dus het terugzetten is niet uitgevoerd en er is niets gewijzigd. Controleer of dit apparaat vrije ruimte heeft en probeer het opnieuw.',
         'restore_not_supported' => 'Terugzetten werkt op de versie die haar gegevens in één bestand bewaart, en dat is deze niet, dus er is niets gewijzigd. Gebruik bij een serverdatabase het herstelgereedschap van die database zelf.',
+        'restore_from_a_newer_build' => 'Deze back-up is gemaakt met een nieuwere versie van Beatrax dan die hier draait, dus is er niets teruggezet en niets gewijzigd. Werk Beatrax bij en zet de back-up daarna opnieuw terug.',
+        'restore_from_an_older_build' => 'Deze back-up is gemaakt met een oudere versie van Beatrax dan die hier draait, dus is er niets teruggezet en niets gewijzigd. Zet een back-up terug die met deze versie is gemaakt.',
         'restore_failed' => 'Het terugzetten is niet uitgevoerd en er is niets gewijzigd. Probeer het opnieuw — blijft het misgaan, dan staat in het app-logboek wat het tegenhield.',
     ],
 ];

@@ -5,18 +5,23 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Services;
 
 use Illuminate\Config\Repository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Internal\Backup\BackupSchemaGeneration;
 use Modules\Core\Internal\Backup\ExportArchiveBackup;
 use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
 use Modules\Core\Internal\Backup\RestoreStagingArea;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Events\DatabaseRestored;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Support\OwnerOnlyPath;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 final readonly class RestoreEncryptedBackup
@@ -32,6 +37,9 @@ final readonly class RestoreEncryptedBackup
         private OwnerOnlyPath $ownerOnly,
         private ExportArchiveBackup $exportArchive,
         private RestoreStagingArea $staging,
+        private BackupSchemaGeneration $schema,
+        private Dispatcher $events,
+        private LoggerInterface $logger,
     ) {}
 
     /**
@@ -63,21 +71,32 @@ final readonly class RestoreEncryptedBackup
             //    integrity_check must return exactly ['ok'].
             $this->assertIntegrity($decryptedPath);
 
-            // 3. Pre-restore snapshot of the CURRENT database, so the prior
+            // 3. Refuse a schema this build does not read, in either
+            //    direction, while nothing has been touched. Migrations only
+            //    move forward, so a newer one has no path to a shape this
+            //    build reads and nothing detects it after the swap.
+            $this->schema->assertThisBuildCanRead($decryptedPath);
+
+            // 4. Pre-restore snapshot of the CURRENT database, so the prior
             //    state is always recoverable if the swap goes wrong.
             $snapshotPath = $this->snapshotCurrent($connection);
 
-            // 4. Lift the encryption keyring the archive carries out onto this
+            // 5. Lift the encryption keyring the archive carries out onto this
             //    machine, BEFORE the swap, so a failure here leaves the live
             //    database untouched. Restoring the rows without it hands the
             //    reader a ledger of ciphertext and calls the restore a success.
             $this->keyMaterial->unpackFrom($decryptedPath);
 
-            // 5. Write the verified pages INTO the live database, not over
+            // 6. Write the verified pages INTO the live database, not over
             //    it. Replacing the file left a new connection running
             //    `PRAGMA journal_mode = WAL` reporting code 11, on a file
             //    whose own integrity_check passed when pulled off the device.
             ($this->transplant)($decryptedPath, $livePath, $snapshotPath);
+
+            // After the swap, so a listener reads the restored database. The
+            // state a backup cannot carry is repaired here rather than met at
+            // whatever hour a background pass next runs.
+            $this->announce($snapshotPath);
 
             return $snapshotPath;
         } finally {
@@ -85,6 +104,18 @@ final readonly class RestoreEncryptedBackup
             if ($lifted !== null) {
                 $this->staging->discard($lifted);
             }
+        }
+    }
+
+    // The rows are in by the time this runs, so a repair that throws must not
+    // be reported as a restore that failed — the reader would be told nothing
+    // was changed about a database that has just been replaced.
+    private function announce(string $snapshotPath): void
+    {
+        try {
+            $this->events->dispatch(new DatabaseRestored($snapshotPath));
+        } catch (Throwable $e) {
+            $this->logger->error('A repair after the restore did not finish.', SafeExceptionContext::describe($e));
         }
     }
 

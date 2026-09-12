@@ -145,7 +145,11 @@ final class CoreServiceProvider extends ServiceProvider
 
         $this->app->singleton(NavCountsService::class);
         $this->app->singleton(MigrationWindow::class);
-        $this->app->singleton(RestoreEncryptedBackup::class);
+        // Bound rather than a singleton: it holds no per-boot state, and a
+        // singleton that captured the dispatcher at first resolution is one
+        // Event::fake() cannot reach — which is the seam the repair after a
+        // restore is announced through.
+        $this->app->bind(RestoreEncryptedBackup::class);
 
         // The backup-first atomic encryption migration depends on
         // Modules\Sync\Internal\Crypto singletons (GdkKeyringService /

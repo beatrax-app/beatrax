@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Atsarginė kopija atsidarė, bet duomenų bazė joje sugadinta, todėl ji nebuvo atkurta ir niekas nebuvo pakeista. Atkurk iš senesnės kopijos.',
         'restore_could_not_read' => 'Atsarginės kopijos failo nepavyko perskaityti, todėl atkūrimas nevyko ir niekas nebuvo pakeista. Patikrink, ar įrenginyje yra laisvos vietos, ir bandyk dar kartą.',
         'restore_not_supported' => 'Atkūrimas veikia leidime, kuris laiko duomenis viename faile, o šis toks nėra, todėl niekas nebuvo pakeista. Serverio duomenų bazėje naudok jos pačios atkūrimo įrankius.',
+        'restore_from_a_newer_build' => 'Ši atsarginė kopija sukurta naujesne Beatrax versija nei ta, kuri veikia čia, todėl ji nebuvo atkurta ir niekas nepakeista. Atnaujink Beatrax ir tada atkurk ją iš naujo.',
+        'restore_from_an_older_build' => 'Ši atsarginė kopija sukurta senesne Beatrax versija nei ta, kuri veikia čia, todėl ji nebuvo atkurta ir niekas nepakeista. Atkurk iš atsarginės kopijos, kurią sukūrė ši versija.',
         'restore_failed' => 'Atkūrimas nevyko ir niekas nebuvo pakeista. Bandyk dar kartą — jei vis nepavyksta, programos žurnale užrašyta, kas jį sustabdė.',
     ],
 ];

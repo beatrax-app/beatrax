@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Yedek açıldı ama içindeki veritabanı bozuk, bu yüzden geri yüklenmedi ve hiçbir şey değişmedi. Daha eski bir yedekten geri yükle.',
         'restore_could_not_read' => 'Yedek dosyası okunamadı, bu yüzden geri yükleme çalışmadı ve hiçbir şey değişmedi. Bu cihazda boş alan olduğunu kontrol et ve tekrar dene.',
         'restore_not_supported' => 'Geri yükleme, verisini tek bir dosyada tutan sürümde çalışır; bu o sürüm değil, dolayısıyla hiçbir şey değişmedi. Sunucu veritabanında o veritabanının kendi geri yükleme araçlarını kullan.',
+        'restore_from_a_newer_build' => 'Bu yedek, burada çalışandan daha yeni bir Beatrax sürümüyle oluşturuldu; bu nedenle geri yüklenmedi ve hiçbir şey değişmedi. Beatrax\'i güncelleyin, sonra yeniden geri yükleyin.',
+        'restore_from_an_older_build' => 'Bu yedek, burada çalışandan daha eski bir Beatrax sürümüyle oluşturuldu; bu nedenle geri yüklenmedi ve hiçbir şey değişmedi. Bu sürümün oluşturduğu bir yedekten geri yükleyin.',
         'restore_failed' => 'Geri yükleme çalışmadı ve hiçbir şey değişmedi. Tekrar dene — hata sürerse uygulama günlüğü onu neyin durdurduğunu kaydeder.',
     ],
 ];

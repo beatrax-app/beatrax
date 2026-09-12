@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Copia de siguranță s-a deschis, dar baza de date din ea este deteriorată, așa că nu a fost restaurată și nu s-a schimbat nimic. Restaurează dintr-o copie mai veche.',
         'restore_could_not_read' => 'Fișierul copiei de siguranță nu a putut fi citit, așa că restaurarea nu a rulat și nu s-a schimbat nimic. Verifică dacă dispozitivul are spațiu liber și încearcă din nou.',
         'restore_not_supported' => 'Restaurarea funcționează în versiunea care își ține datele într-un singur fișier, iar aceasta nu este așa, deci nu s-a schimbat nimic. La o bază de date pe server, folosește uneltele proprii de restaurare ale acesteia.',
+        'restore_from_a_newer_build' => 'Această copie de rezervă a fost creată de o versiune Beatrax mai nouă decât cea care rulează aici, așa că nu a fost restaurată și nimic nu a fost modificat. Actualizează Beatrax, apoi restaureaz-o din nou.',
+        'restore_from_an_older_build' => 'Această copie de rezervă a fost creată de o versiune Beatrax mai veche decât cea care rulează aici, așa că nu a fost restaurată și nimic nu a fost modificat. Restaurează dintr-o copie creată de această versiune.',
         'restore_failed' => 'Restaurarea nu a rulat și nu s-a schimbat nimic. Încearcă din nou — dacă tot eșuează, jurnalul aplicației notează ce a oprit-o.',
     ],
 ];

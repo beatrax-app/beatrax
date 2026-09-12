@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Enums;
 
 use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
+use Modules\Core\Internal\Backup\BackupFromANewerBuildException;
+use Modules\Core\Internal\Backup\BackupFromAnOlderBuildException;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
@@ -28,12 +30,18 @@ enum RestoreRefusal: string
 
     case NotSupportedHere = 'restore_not_supported';
 
+    case FromANewerBuild = 'restore_from_a_newer_build';
+
+    case FromAnOlderBuild = 'restore_from_an_older_build';
+
     case Unknown = 'restore_failed';
 
     public static function forThrowable(Throwable $e): self
     {
         return match (true) {
             $e instanceof BackupDecryptionException => self::WrongPassphrase,
+            $e instanceof BackupFromANewerBuildException => self::FromANewerBuild,
+            $e instanceof BackupFromAnOlderBuildException => self::FromAnOlderBuild,
             $e instanceof BackupContentsUnreadableException => self::ContentsUnreadable,
             $e instanceof BackupFormatException => self::NotABackup,
             $e instanceof BackupIoException => self::CouldNotRead,
