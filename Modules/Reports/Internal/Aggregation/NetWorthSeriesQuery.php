@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Enums\ConversionOutcome;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Dto\Period;
@@ -60,14 +61,15 @@ final readonly class NetWorthSeriesQuery
         foreach ($buckets as $bucket) {
             $asOf = $bucket->endExclusive->subDay();
 
-            [$totalMinor, $excludedAccounts] = $this->sampleAt($user, $accounts, $asOf, $baseCurrency);
+            $sample = $this->sampleAt($user, $accounts, $asOf, $baseCurrency);
 
             $points[] = new NetWorthSeriesPoint(
                 date: $asOf,
                 label: $bucket->label,
-                totalMinor: $totalMinor,
+                totalMinor: $sample['total'],
                 currency: $baseCurrency,
-                excludedAccounts: $excludedAccounts,
+                rates: $sample['rates'],
+                excludedAccounts: $sample['excluded'],
             );
         }
 
@@ -76,13 +78,17 @@ final readonly class NetWorthSeriesQuery
 
     /**
      * @param  Collection<int, stdClass>  $accounts
-     * @return array{0: int, 1: array<int, string>}
+     * @return array{total: int, excluded: array<int, string>, rates: RateSet}
      */
     private function sampleAt(User $user, Collection $accounts, CarbonImmutable $asOf, string $baseCurrency): array
     {
         $total = 0;
         /** @var array<int, string> $excluded */
         $excluded = [];
+        // Each bucket prices at the rate in effect on its OWN day, so the set
+        // belongs to the bucket and not to the series: sixty of these are
+        // sixty conversions, each answering for its own figure.
+        $rates = RateSet::empty($baseCurrency);
 
         foreach ($accounts as $account) {
             $accountId = self::toInt($account->id);
@@ -108,9 +114,12 @@ final readonly class NetWorthSeriesQuery
                 }
 
                 $total += $result->converted->toMinor();
+                // Two accounts holding one currency on one day converted at one
+                // rate, so the set collapses them.
+                $rates = $rates->withConversion($result);
             }
         }
 
-        return [$total, $excluded];
+        return ['total' => $total, 'excluded' => $excluded, 'rates' => $rates];
     }
 }

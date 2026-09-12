@@ -291,6 +291,26 @@ the **oldest** leg answering for the whole — the same rule a multi-leg
 conversion follows, for the same reason. `RateSet` is required by the
 `ConvertedTotal` constructor rather than defaulted, so "I converted, and
 I will not say at what" is not a state the type can hold.
+`NetWorthSeriesPoint` takes it the same way, for the same reason.
+
+The oldest leg answers for ONE figure's own legs and no further. A series of
+figures is a series of conversions, not one conversion with more legs: folding
+the oldest rate in a sixty-bucket net-worth series onto its headline quotes a
+rate that cannot rebuild the figure printed above it, which is the same defect
+as quoting a display-rounded one. Every figure discloses the set it was built
+from, and a figure built from nothing — a passthrough — discloses nothing.
+`RateSet::withConversion()` is the one place a `ConversionResult` becomes a
+leg, and it is what drops a passthrough: every roll-up was unpacking that
+check by hand.
+
+**There are three states, not two.** Rates, or no rates because nothing was
+converted — and `ConversionDisclosure::unrecorded()`, for a figure rebuilt from
+a stored result whose format kept no rates. The second renders as silence, and
+silence on this component means "converted nothing"; an old record supports
+that claim no more than it supports the opposite, so the third state says only
+what is true. `Forecasting`'s stored projection runs are the case that needs
+it ([the stored output
+shape](../forecasting/architecture.md#projection-orchestration-and-output-shape)).
 
 One Blade component renders it everywhere:
 `x-core::fx-disclosure`, in Core beside the copy it reads
@@ -372,6 +392,16 @@ both sentences would otherwise be on screen saying it differently.
 `CurrencyModeApplier`'s `'original'` mode converts nothing at all — it
 is the mode that exists to leave every figure in the currency it was
 settled in — so only its `'base'` branch meets the seam.
+
+A roll-up converted in TWO hops discloses only the hop it made itself. The
+all-accounts forecast aggregate and the calendar balance line both add curves
+already denominated in their accounts' own currencies, each of which converted
+its own contributions at a rate the run stored; the disclosure beside those
+figures names the account-to-reader hop and not the contribution-to-account
+one. A `RateSet` holds legs into ONE target by construction, so naming both
+would need a disclosure spanning two targets, which this seam has no type for.
+A converted figure whose legs all share a target — which is every other
+surface — is unaffected.
 
 `FXServiceProvider::register()` tags and registers the three rate
 providers as singletons, binds `RateProviderRegistry` sorted by
