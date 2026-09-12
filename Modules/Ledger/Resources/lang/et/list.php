@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Näita ainult hiljutisi',
     'show_full' => 'Näita kogu ajalugu',
 
-    'empty_period' => 'Sel perioodil pole siin midagi.',
-
     'empty_recent_has_older' => 'Viimase 90 päeva jooksul pole midagi. Vanemad tehingud on endiselt alles.',
 
     'empty_history' => 'Tehinguid veel pole.',

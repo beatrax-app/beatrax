@@ -9,8 +9,6 @@ return [
     'entities' => ':count entitás|:count entitás',
     'need_identification' => ':count azonosításra vár',
 
-    'search_placeholder' => 'Keresés név, álnév vagy IBAN alapján…',
-    'search_aria' => 'Partnerek keresése',
     'sort' => 'Rendezés: 12 havi összeg ↓',
 
     'view_mode' => 'Nézetmód',

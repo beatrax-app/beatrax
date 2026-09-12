@@ -9,8 +9,6 @@ return [
     'entities' => ':count entitet|:count entiteter',
     'need_identification' => ':count skal identificeres',
 
-    'search_placeholder' => 'Søg på navn, alias eller IBAN…',
-    'search_aria' => 'Søg modparter',
     'sort' => 'Sortér: I alt 12 mdr. ↓',
 
     'view_mode' => 'Visningstilstand',

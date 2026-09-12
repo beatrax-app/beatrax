@@ -293,6 +293,28 @@ last two both rendered and then hidden by `.phone-only`/`.desktop-only`
 — and each copy was formatting the amounts and rebuilding the link from
 the same three fields.
 
+## What the index toolbar offers
+
+A search box at both widths, a sort readout, and the Cards / List
+toggle. The search box is a button wearing a field, as in the
+navigation drawer: `readonly`, with its own click and the input's focus
+both dispatching `palette:open`, because the palette is what searches
+counterparties —
+`Search\Internal\Services\EntityNameSearch::counterpartyMatches`
+matches the stored name and the reader-resolved one. It reuses the
+drawer's two lines, `core::sidebar.search_placeholder` and
+`core::sidebar.search_aria`, rather than promising a scope nothing
+implements: the retired `counterparties::index.search_placeholder`
+offered search by name, alias or IBAN on a field hard-coded `disabled`,
+under a hint for a `/` key nothing listens for. The phone width carried
+`x-core::filter-sheet-trigger` with no `wire:click` and an empty
+`searchModel`, which renders a Filters button that opens nothing beside
+a field bound to nothing; the type-filter chip row below is the filter
+at both widths.
+
+The `Sort:` span is a readout of the order `CounterpartyIndexQuery`
+already applies. There is no sort control on this page.
+
 ## Triage keyboard shortcuts
 
 `CounterpartyTriage` (`/counterparties/triage`) is a focused single-card

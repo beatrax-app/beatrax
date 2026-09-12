@@ -9,7 +9,9 @@
     for the per-row type label; the chip row and the card body are
     inlined here because both carry wire: bindings.
 
-    All copy is verbatim from 17-UI-SPEC.md (Counterparty index table).
+    All copy is verbatim from 17-UI-SPEC.md (Counterparty index table),
+    except the search box, which takes the navigation drawer's own two
+    lines because it opens the same palette the drawer's box opens.
 
     Variables exposed by `CounterpartyIndex::render()`:
       $rows         Illuminate\Support\Collection<CounterpartyIndexRow>
@@ -45,9 +47,26 @@
     </header>
 
     {{-- Toolbar: phone collapse vs. full desktop toolbar --------- --}}
-    {{-- Phone (<768px): filter-sheet-trigger row only (search + Filters badge) --}}
+    {{-- Phone (<768px): the palette affordance on its own, full width. The
+         Filters badge this row used to carry opened no sheet and counted
+         nothing; the chip row below is the filter at both widths. --}}
     <div class="phone-only">
-        <x-core::filter-sheet-trigger :activeCount="0" searchModel="" />
+        <div
+            class="side-search"
+            role="search"
+            x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
+            style="cursor: pointer;"
+        >
+            <x-core::search-mark class="ic" />
+            <input
+                type="text"
+                placeholder="{{ Lang::get('core::sidebar.search_placeholder') }}"
+                aria-label="{{ Lang::get('core::sidebar.search_aria') }}"
+                readonly
+                x-on:focus="window.Livewire && window.Livewire.dispatch('palette:open')"
+                style="cursor: pointer;"
+            />
+        </div>
     </div>
 
     {{-- Desktop (>=768px): search · sort · view toggle inline --}}
@@ -55,15 +74,32 @@
     {{-- Inner flex wrapper owns the layout so no inline display: leaks to phone width. --}}
     <div class="desktop-only">
         <div style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;">
-        <div class="side-search" role="search" style="flex: 1 1 280px; min-width: 240px;">
+        {{-- A button wearing a field, as in the navigation drawer: readonly so
+             a reader cannot type into a box that filters nothing, and both
+             handlers open the palette, which searches counterparties by name.
+             It was `disabled` with a `/` hint no binding listened for. --}}
+        <div
+            class="side-search"
+            role="search"
+            x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
+            style="flex: 1 1 280px; min-width: 240px; cursor: pointer;"
+        >
             <x-core::search-mark class="ic" />
             <input
                 type="text"
-                placeholder="{{ Lang::get('counterparties::index.search_placeholder') }}"
-                aria-label="{{ Lang::get('counterparties::index.search_aria') }}"
-                disabled
+                placeholder="{{ Lang::get('core::sidebar.search_placeholder') }}"
+                aria-label="{{ Lang::get('core::sidebar.search_aria') }}"
+                readonly
+                x-on:focus="window.Livewire && window.Livewire.dispatch('palette:open')"
+                style="cursor: pointer;"
             />
-            <span class="kbd" aria-hidden="true">/</span>
+            {{-- The Mac glyph stays a JS escape so the raw U+2318 never reaches
+                 the server-rendered HTML; Alpine writes it client-side. --}}
+            <span
+                class="kbd hidden-touch"
+                aria-hidden="true"
+                x-text="$store.platform.isMac ? '\u2318K' : 'Ctrl+K'"
+            >Ctrl+K</span>
         </div>
 
         <span style="font-size: var(--text-sm); color: var(--color-text-muted);">

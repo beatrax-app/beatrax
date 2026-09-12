@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Vis kun de seneste',
     'show_full' => 'Vis hele historikken',
 
-    'empty_period' => 'Intet her i denne periode.',
-
     'empty_recent_has_older' => 'Intet i de seneste 90 dage. Dine ældre posteringer er her stadig.',
 
     'empty_history' => 'Ingen posteringer endnu.',

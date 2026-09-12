@@ -9,8 +9,6 @@ return [
     'entities' => ':count entitet|:count entiteter',
     'need_identification' => ':count må identifiseres',
 
-    'search_placeholder' => 'Søk på navn, alias eller IBAN…',
-    'search_aria' => 'Søk i motparter',
     'sort' => 'Sorter: Totalt 12 mnd ↓',
 
     'view_mode' => 'Visningsmodus',

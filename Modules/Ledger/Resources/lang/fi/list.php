@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Näytä vain viimeaikaiset',
     'show_full' => 'Näytä koko historia',
 
-    'empty_period' => 'Ei mitään tältä jaksolta.',
-
     'empty_recent_has_older' => 'Ei mitään viimeisten 90 päivän ajalta. Vanhemmat tapahtumasi ovat yhä tallessa.',
 
     'empty_history' => 'Ei vielä tapahtumia.',
