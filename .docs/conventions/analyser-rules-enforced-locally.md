@@ -3,7 +3,7 @@
 The hosted analysis runs after a branch is pushed. Its findings arrive on a
 dashboard, which is the wrong place and the wrong time: the author has moved on,
 and the build that introduced them was green. The guards described here move
-three of those rules into the test suite, so a finding fails on the commit that
+four of those rules into the test suite, so a finding fails on the commit that
 creates it.
 
 They are ports, not opinions. Each one implements what the analyser's own check
@@ -33,7 +33,7 @@ package interface — is left alone because inheritance cannot be ruled out.
 Both exclusions are implemented in the guard. With them, the local answer on the
 default branch is zero, the same as the dashboard's.
 
-The same check was done for the other two rules. Each guard reproduces the
+The same check was done for the other three rules. Each guard reproduces the
 hosted result on the default branch exactly, and each carries an empty pinned
 list for the same reason: there is nothing to pin.
 
@@ -128,6 +128,47 @@ cannot, and stays quiet. No such case exists on the default branch — all 24
 non-constructor over-length signatures there sit on framework base classes — so
 nothing is lost today, and the direction of the gap is stated here rather than
 discovered later.
+
+## S1142 — too many return statements
+
+[`AFunctionLeavesByFewerExitsThanTheAnalyserCountsArchTest`](../../tests/Contracts/AFunctionLeavesByFewerExitsThanTheAnalyserCountsArchTest.php)
+· maximum **3**, the rule's own default
+
+Twenty-seven findings, and the one that had no local mirror while the three
+above did — which is how an extraction landed over the ceiling with a green
+build and the dashboard said so afterwards. The rule is live and its `max` is
+the shipped default: `api/rules/show?key=php:S1142` answers `max: 3`, scope
+`MAIN`, and all twenty-seven issues read *"This method has N returns, which is
+more than the 3 allowed."*
+
+The whole of the rule is which body a `return` belongs to. It belongs to the
+closest one around it, so a `return` inside a closure passed to `array_map` is
+the closure's exit and not the method's, and an arrow function has no return
+statement at all — its body is an expression. Counting the word between a
+method's braces instead finds **fifteen** bodies on the default branch that the
+hosted analysis says nothing about, of which the widest margin is a `render()`
+credited with five exits that has one.
+
+[`SonarReturnStatements`](../../tests/Contracts/Support/SonarReturnStatements.php)
+is that attribution: every braced body in a file, and each `return` charged to
+the innermost body containing it. A declaration ending at a semicolon — an
+abstract method, an interface method, `use function Foo\bar;` — has no body and
+no exits, and a `return` outside every function, which is what a config file is
+made of, is charged to nobody.
+
+Calibrated against the hosted answer at both ends. On the default branch it
+reports zero and the dashboard has zero open, with **686** bodies leaving by
+exactly three exits — the same refactored-down-to-the-threshold shape the method
+count shows. Replayed over the revisions the hosted analysis actually ran on, it
+reproduces the published findings at the same declaration and the same count:
+`RowOwnership` twice at 4, `MdnsResponseParser` twice at 4, `Fmt::datePattern`
+at 4, `MobilePairingScan::submitCode` at 5.
+
+One place it is knowingly wider than what has been observed: it reports a
+closure or a plain function over the ceiling as well as a method. Every one of
+the twenty-seven findings was a method, so no closure has ever been seen either
+reported or exempted, and none in this tree is over the ceiling today. The
+direction of the gap is stated here rather than discovered later.
 
 ## What is not guarded here, and why
 
