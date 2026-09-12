@@ -15,9 +15,14 @@
     crashed the WebView renderer outright on Android: the tap registered, the
     renderer died, and every subsequent interaction did nothing while the page
     still looked normal. Verified by removing it — the same tap then opens the
-    panel correctly. Escape and the scrim still dismiss, so the overlay is not
-    a keyboard dead end, but focus is no longer trapped inside it; restoring a
-    trap needs one that does not walk the document marking siblings inert.
+    panel correctly. Focus is therefore never moved into the panel, which is
+    why the Escape below listens at the window: a listener on the panel hears
+    only what is typed inside it, and the hamburger that opened the drawer is
+    a sibling of it, in the top bar this layout draws after the drawer.
+
+    The palette opens from the search row inside this drawer and covers it, so
+    the key is declined while that one is up: an Escape belongs to the surface
+    on top, and closing both would take the reader further back than they asked.
 
     The Data & Devices entry lives INSIDE the
     embedded core.app-sidebar component below, not as separate markup here —
@@ -67,7 +72,7 @@
     x-transition:leave="transition ease-[var(--ease-smooth)] duration-[220ms]"
     x-transition:leave-start="translate-x-0"
     x-transition:leave-end="-translate-x-full"
-    @keydown.escape="$store.mobileNav.close()"
+    @keydown.escape.window="$store.mobileNav.drawerOpen && ! $store.overlay.has('palette') && $store.mobileNav.close()"
     style="width: var(--drawer-w); position: fixed; top: 0; left: 0; height: 100dvh; z-index: 50;"
 >
     {{-- Single mount of the sidebar Livewire component — exactly one --}}

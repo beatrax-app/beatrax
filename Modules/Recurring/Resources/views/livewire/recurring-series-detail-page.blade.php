@@ -62,7 +62,7 @@
         <div class="flex flex-wrap items-center gap-4 sm:shrink-0">
             @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $series->seriesId], key('threshold-detail-'.$series->seriesId))
             @livewire('forecasting.model-what-if-dropdown', ['seriesId' => $series->seriesId], key('what-if-'.$series->seriesId))
-            <div x-data="{ open: false }" class="relative">
+            <div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="relative">
                 <x-core::secondary-button
                     size="sm"
                     class="gap-1"

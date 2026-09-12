@@ -131,6 +131,10 @@ pass for a clean one.
   — the three different things twelve templates meant by one attribute, why a
   dialog and a popover are not the rule's subject, the five sign-in screens
   decided in one paragraph, and the two spellings of focus a reader asked for
+- [An overlay answers the Escape the reader pressed](an-overlay-answers-the-escape-the-reader-pressed.md)
+  — why a key bound on a panel nothing focuses never fires, what a focus trap
+  was quietly supplying before it was removed, and which of two stacked surfaces
+  owns the key
 - [A controller hands the work to an action](a-controller-hands-the-work-to-an-action.md)
   — the four things a controller is measured on, and the five kinds of code that
   look like violations, are not, and would be made worse by moving
