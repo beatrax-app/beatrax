@@ -16,9 +16,9 @@ use Modules\Shell\Internal\Http\Livewire\Dashboard;
 
 // ThisPeriodAtAGlanceQuery has counted the uncategorised rows since the
 // dashboard was first built -- with a partial index of its own to make the
-// count cheap -- and no surface ever read it. C1-R4 puts the triage counts
-// above the period figures and B2-R8 requires the count to reach the reader;
-// the only place it reached them was /uncategorized, which they have to go to.
+// count cheap -- and no surface ever read it. The only place the count reached
+// a reader was /uncategorized, which they have to already be on: the dashboard
+// carries it now, above the period figures it makes short.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-29 09:00:00'));
@@ -110,8 +110,8 @@ it('says how many transactions are waiting for a category, and where to go', fun
         ->and($html)->toContain(Destination::Categorization->url());
 });
 
-// The count is above the period figures, not below them: C1-R4 is about the
-// order a reader meets them in, which a substring position can measure.
+// Above the period figures, not below them. The order a reader meets the two in
+// is the whole claim, and a substring offset can measure it.
 it('puts the count above the period figures it makes short', function (): void {
     $user = waitingReader();
     test()->actingAs($user);

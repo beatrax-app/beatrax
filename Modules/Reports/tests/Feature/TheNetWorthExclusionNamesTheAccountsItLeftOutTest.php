@@ -15,8 +15,7 @@ use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
 
 // The banner said "2 accounts not converted" and the reader had no way to tell
 // WHICH two: the roll-up is short by their balances and the only route to the
-// names was guessing from the account list.
-// B10-R17 and C1-R15 both ask for the accounts to be named in the exclusion.
+// names was guessing from the account list. The exclusion names them.
 
 beforeEach(function (): void {
     app(DatabaseManager::class)->connection()

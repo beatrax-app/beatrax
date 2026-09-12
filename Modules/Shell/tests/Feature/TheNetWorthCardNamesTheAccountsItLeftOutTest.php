@@ -11,9 +11,9 @@ use Modules\FX\Public\Support\BundledRates;
 use Modules\Shell\Internal\Http\Livewire\NetWorthCard;
 
 // The card said "2 balances not converted" and named the accounts only in the
-// breakdown, which is collapsed until the reader presses Breakdown. So the one
-// line that admits the total is short named nothing, and C1-R15 / B10-R17 ask
-// for the accounts by name.
+// breakdown, which is collapsed until the reader presses Breakdown, so the one
+// line that admits the total is short named nothing. It names the accounts now,
+// without the breakdown being opened.
 
 beforeEach(function (): void {
     app(DatabaseManager::class)->connection()
