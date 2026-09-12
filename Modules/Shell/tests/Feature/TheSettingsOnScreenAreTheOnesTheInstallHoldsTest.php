@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\DriftThresholdOptions;
@@ -22,6 +21,13 @@ beforeEach(function (): void {
         'default_currency_view' => 'eur_only',
     ]);
     $this->actingAs($this->reader);
+
+    // Through the model the guard is holding, not a raw UPDATE: mount() reads
+    // these off the authenticated instance, which a write straight to the row
+    // leaves as it found it.
+    $this->store = function (array $attributes): void {
+        $this->reader->forceFill($attributes)->save();
+    };
 });
 
 it('opens the drift threshold on the percentage a fresh install alerts at', function (): void {
@@ -34,7 +40,7 @@ it('opens the drift threshold on the percentage a fresh install alerts at', func
 });
 
 it('follows a stored drift threshold rather than the first one offered', function (): void {
-    DB::table('users')->where('id', $this->reader->id)->update(['drift_alert_threshold_percent' => 25]);
+    ($this->store)(['drift_alert_threshold_percent' => 25]);
 
     $html = Livewire::test(SettingsPage::class)->html();
 
@@ -43,7 +49,7 @@ it('follows a stored drift threshold rather than the first one offered', functio
 });
 
 it('names the stored reporting currency on the picker that sets it', function (): void {
-    DB::table('users')->where('id', $this->reader->id)->update(['base_currency' => 'GBP']);
+    ($this->store)(['base_currency' => 'GBP']);
 
     $html = Livewire::test(SettingsPage::class)
         ->assertSet('baseCurrency', 'GBP')
@@ -54,7 +60,7 @@ it('names the stored reporting currency on the picker that sets it', function ()
 });
 
 it('opens the currency view on the one the install renders in', function (): void {
-    DB::table('users')->where('id', $this->reader->id)->update(['default_currency_view' => 'original']);
+    ($this->store)(['default_currency_view' => 'original']);
 
     $html = Livewire::test(SettingsPage::class)->html();
 
