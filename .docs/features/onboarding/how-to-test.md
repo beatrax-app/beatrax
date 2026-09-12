@@ -206,9 +206,11 @@ and the assertion — see
   first import touched.** No card for an account with no
   imported rows.
   (`tests/Feature/StartingBalanceConfirmCardsTest.php`)
-- **`WizardCompleted` fires once when the user lands on
-  `DoneStep` for the first time.** Subsequent visits don't
-  re-fire.
+- **`WizardCompleted` fires once, on the press of Finish that
+  leaves nothing pending.** A later press on an already-finished
+  wizard redirects without raising it again, and the terminal row
+  is marked so the wizard stops offering to resume.
+  (`tests/Feature/TheWizardRecordsThatItWasFinishedTest.php`)
 - **`ConnectEmailStep` is a link, not a wizard.** The step
   dispatches `oauth-wizard:open` on the browser; the actual
   OAuth UI lives in `EmailScan::OAuthClientWizardModal`.
@@ -249,11 +251,12 @@ and the assertion — see
 - **A user navigating to `/setup-wizard` after completion** —
   `ResumeStepResolver::resolve()` returns the EMPTY STRING (not
   `'done'`, which is a real step key), and `SetupWizard::mount`
-  redirects to `/`. The `DoneStep` with its "back to dashboard"
-  CTA is what the user sees on the visit where they finish:
-  advancing past the last step sets `allComplete` in the
-  already-mounted component. A fresh visit afterwards does not
-  re-render it. `tests/Feature/ReRunWizardTest.php` asserts
+  renders the terminal step with `allComplete` set rather than
+  redirecting, because a Livewire redirect from `mount()` skips
+  the render and the phone painted the layout around nothing.
+  That state is reachable only because Finish marks the terminal
+  row: while nothing did, the resolver kept answering `'done'`
+  and every visit reopened the wizard under the resume banner. `tests/Feature/ReRunWizardTest.php` asserts
   four things: the done step rendering when every step is done
   and no force flag is set, the signed `?force=1` reset that puts
   a finished user back at `welcome`, and the two refusals — an
