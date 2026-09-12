@@ -7,7 +7,9 @@ return [
     'schema_viewer_aria' => 'Schemaviewer',
     'columns' => 'kolommen',
     'indexes' => 'indexen',
-    'foreign_keys' => 'foreign keys',
+    // i18n-review: nl · foreign_keys — Dutch database writing uses both this and
+    // "vreemde sleutels"; the neighbouring kolommen and indexen pick the calque.
+    'foreign_keys' => 'refererende sleutels',
     'browse' => 'Bladeren',
     'heading' => 'SQL',
 

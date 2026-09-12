@@ -9,9 +9,9 @@ return [
     'running' => 'Izvršava se…',
     'empty_html' => 'Još nema zabeleženog izlaza provera. Pritisni :action za pokretanje :command.',
     'latest_output' => 'Najnoviji izlaz provera',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'uspešno',
     'aria_warning' => 'upozorenje',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'neuspešno',
     'aria_info' => 'info',
     'exit_code' => 'Izlazni kod: :code',
 ];

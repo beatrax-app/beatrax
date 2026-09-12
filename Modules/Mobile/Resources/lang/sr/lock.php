@@ -8,7 +8,7 @@ return [
     'digits_entered' => 'uneta :count cifra|unete :count cifre|uneto :count cifara',
     'pin_pad' => 'PIN tastatura',
     'digit' => 'Cifra :digit',
-    'backspace' => 'Backspace',
+    'backspace' => 'Obriši znak',
     'ok' => 'U redu',
     'ok_aria' => 'U redu — potvrdi PIN',
     'sign_out' => 'Odjavi se',
