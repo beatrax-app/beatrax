@@ -133,3 +133,57 @@ it('leaves a context value that is not a throwable alone', function (): void {
         ->and($out->context['reason'])->toBe('RuntimeException')
         ->and(throwableContextArray($nested['exception'] ?? null))->toHaveKey('reason');
 });
+
+// The chain is whatever the throwing code built, so the replacement stops at a
+// fixed depth. That boundary is the one place an off-by-one would be silent:
+// too shallow and a wrapped QueryException goes unreplaced, too deep and a
+// pathological chain is unbounded work on every log line.
+it('replaces four links and stops', function (): void {
+    // Four deep exactly, so the QueryException sits on the last link the cap
+    // still reaches and is replaced rather than dropped.
+    $chain = new RuntimeException('D', 0,
+        new RuntimeException('C', 0,
+            new RuntimeException('B', 0, throwableContextQueryFailure())
+        )
+    );
+
+    $described = throwableContextArray(
+        (new RedactSecretsProcessor)(throwableContextRecord(['exception' => $chain]))->context['exception'] ?? null
+    );
+
+    $links = 0;
+    $cursor = $described;
+    $deepest = [];
+    while ($cursor !== []) {
+        $links++;
+        $deepest = $cursor;
+        $cursor = throwableContextArray($cursor['previous'] ?? null);
+    }
+
+    // Four: the throwable itself plus three `previous` links, which is
+    // MAX_PREVIOUS_DEPTH. A fifth would mean the cap moved.
+    expect($links)->toBe(4)
+        ->and($deepest['reason'])->toBe(QueryException::class);
+});
+
+it('drops rather than publishes the link past the depth limit', function (): void {
+    // One link deeper, so the QueryException — and the PDOException under it —
+    // fall past the cap. They must be absent, not handed to the formatter as
+    // throwables, which would render them and everything beneath.
+    $past = new RuntimeException('A', 0,
+        new RuntimeException('B', 0,
+            new RuntimeException('C', 0,
+                new RuntimeException('D', 0, throwableContextQueryFailure())
+            )
+        )
+    );
+
+    $line = throwableContextLine(throwableContextRecord(['exception' => $past]));
+
+    expect(substr_count($line, '"previous"'))->toBe(3)
+        ->and($line)->not->toContain(THROWABLE_CONTEXT_IBAN)
+        ->and($line)->not->toContain(THROWABLE_CONTEXT_COUNTERPARTY)
+        ->and($line)->not->toContain('insert into')
+        ->and($line)->not->toContain('QueryException')
+        ->and($line)->not->toContain('[object]');
+});

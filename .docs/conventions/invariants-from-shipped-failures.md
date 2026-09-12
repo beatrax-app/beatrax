@@ -693,6 +693,13 @@ all reading rather than publishing. And `RedactSecretsProcessor` now replaces a
 `SafeExceptionContext::reason()` for the message, and `SafeTrace::cap()` for the
 frames — following `previous` three deep.
 
+Three is a cap rather than a depth anyone counted, so it is pinned from both
+sides: a four-link chain is replaced to its last link, and a five-link one is
+truncated with the fifth **dropped** rather than handed to the formatter as an
+object. That second half is the one worth asserting — truncating by leaving the
+throwable in place would publish it and everything beneath it, which is the
+defect this rule exists for, arriving through the fix for it.
+
 The runtime half is not belt-and-braces duplication. The processor is the only
 one of the two that reaches the context Laravel's own exception handler builds,
 which appends `['exception' => $e]` to every exception it reports and is not
