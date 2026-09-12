@@ -105,7 +105,7 @@ it('keeps the two states apart in every locale', function (): void {
 
     foreach ($locales as $locale) {
         /** @var array<string, string> $strings */
-        $strings = require base_path("Modules/Sync/Resources/lang/{$locale}/devices.php");
+        $strings = require base_path(sprintf('Modules/Sync/Resources/lang/%s/devices.php', $locale));
 
         expect($strings)->toHaveKeys(['backlog_heading', 'backlog_deferred', 'backlog_awaiting_key']);
         expect($strings['backlog_deferred'])->not->toBe($strings['backlog_awaiting_key']);

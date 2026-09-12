@@ -49,7 +49,7 @@ it('pre-fills the assign box with the marks the reader’s own figures use', fun
     App::setLocale($locale);
 
     Livewire::test(BudgetsPage::class)
-        ->assertSet("assignedInputs.{$this->groceries->id}", $expected);
+        ->assertSet(sprintf('assignedInputs.%s', $this->groceries->id), $expected);
 })->with([
     ['en', '50.00'],
     ['nl', '50,00'],
@@ -63,7 +63,7 @@ it('never puts a differently written figure in the same row', function (): void 
     foreach (['en', 'nl', 'de', 'fr', 'fi', 'sv'] as $locale) {
         App::setLocale($locale);
 
-        $prefilled = (string) Livewire::test(BudgetsPage::class)->get("assignedInputs.{$this->groceries->id}");
+        $prefilled = (string) Livewire::test(BudgetsPage::class)->get(sprintf('assignedInputs.%s', $this->groceries->id));
         $readOnly = Money::ofMinor(5000, 'EUR')->format();
 
         if (! str_contains($readOnly, $prefilled)) {

@@ -99,7 +99,7 @@ it('never gives one locale the same name for two screens English names apart', f
 
     expect($merged)->toBe(
         [],
-        "These locales give two different screens one {$key}:\n  ".implode("\n  ", $merged)
+        sprintf("These locales give two different screens one %s:\n  ", $key).implode("\n  ", $merged)
     );
 })->with(['page_title', 'heading']);
 

@@ -49,7 +49,7 @@ function packageAndroid(
         file_put_contents(
             $base.'/nativephp/android/gradlew',
             "#!/bin/sh\necho 'BUILD SUCCESSFUL'\n"
-            ."printf 'apk' > \"$base/nativephp/android/app/build/outputs/apk/release/app-release.apk\"\n"
+            .sprintf("printf 'apk' > \"%s/nativephp/android/app/build/outputs/apk/release/app-release.apk\"\n", $base)
             .'exit 0'."\n",
         );
         chmod($base.'/nativephp/android/gradlew', 0o755);

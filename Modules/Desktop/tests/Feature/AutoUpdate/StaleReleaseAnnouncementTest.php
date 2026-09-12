@@ -22,7 +22,7 @@ use Psr\Log\NullLogger;
  */
 function staleAgeSignedManifest(string $version, CarbonImmutable $publishedAt, string $secretKey): array
 {
-    $body = "version: {$version}\nsha512: normalised-elsewhere\nreleaseDate: '".$publishedAt->toIso8601String()."'\n";
+    $body = sprintf("version: %s\nsha512: normalised-elsewhere\nreleaseDate: '", $version).$publishedAt->toIso8601String()."'\n";
 
     return [
         'body' => $body,

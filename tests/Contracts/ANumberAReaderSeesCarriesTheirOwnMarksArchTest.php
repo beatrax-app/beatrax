@@ -125,12 +125,12 @@ it('does not format a number a reader sees with the C locale marks', function ()
             // locales. It is the call that leans on the defaults that ends up
             // on screen in the wrong language.
             if ($arity < 4) {
-                $offenders[] = "{$relative}: number_format() with {$arity} arguments";
+                $offenders[] = sprintf('%s: number_format() with %s arguments', $relative, $arity);
             }
         }
 
         if (str_contains($source, '.toFixed(')) {
-            $offenders[] = "{$relative}: .toFixed()";
+            $offenders[] = sprintf('%s: .toFixed()', $relative);
         }
     }
 

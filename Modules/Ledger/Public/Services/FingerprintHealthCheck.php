@@ -65,7 +65,7 @@ final readonly class FingerprintHealthCheck
         [$checked, $ids] = $drifted;
 
         if ($ids === []) {
-            return ['severity' => 'ok', 'message' => "{$checked} at the current version — each describes its own row"];
+            return ['severity' => 'ok', 'message' => sprintf('%s at the current version — each describes its own row', $checked)];
         }
 
         // Not a blocker: the rows are all there and the ledger adds up. What a
@@ -76,7 +76,7 @@ final readonly class FingerprintHealthCheck
 
         return [
             'severity' => 'warning',
-            'message' => count($ids)." of {$checked} no longer describe their row — re-import would duplicate them (ids {$shown}{$more}); run beatrax:rederive-fingerprints",
+            'message' => count($ids).sprintf(' of %s no longer describe their row — re-import would duplicate them (ids %s%s); run beatrax:rederive-fingerprints', $checked, $shown, $more),
         ];
     }
 

@@ -19,8 +19,8 @@ final class BlindIndexKeyMalformedException extends RuntimeException
     public static function forUser(int $userId, string $domain, ?Throwable $previous = null): self
     {
         return new self(
-            "BlindIndexCodec: the blind-index key held for user {$userId} is not valid hex, "
-            ."so the '{$domain}' blind index cannot be derived.",
+            sprintf('BlindIndexCodec: the blind-index key held for user %s is not valid hex, ', $userId)
+            .sprintf("so the '%s' blind index cannot be derived.", $domain),
             0,
             $previous,
         );

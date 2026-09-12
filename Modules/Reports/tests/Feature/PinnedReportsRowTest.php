@@ -117,7 +117,7 @@ it('caps at 3 mini cards even if a 4th pinned row somehow exists (defense in dep
 
     $reports = [];
     for ($i = 1; $i <= 4; $i++) {
-        $reports[] = app(SaveReport::class)->save($user, prrDefinition(), "Report {$i}");
+        $reports[] = app(SaveReport::class)->save($user, prrDefinition(), sprintf('Report %s', $i));
     }
     foreach (array_slice($reports, 0, 3) as $report) {
         app(TogglePin::class)->toggle($user, $report->id);

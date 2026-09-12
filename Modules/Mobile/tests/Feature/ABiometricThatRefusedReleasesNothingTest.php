@@ -155,7 +155,7 @@ it('releases no key on the lock screen for any outcome that is not a completed r
             ->call('biometricPrompt')
             ->assertNoRedirect();
 
-        expect(refusedBiometricReleasedKey())->toBeNull("the {$factory} outcome must leave the app locked");
+        expect(refusedBiometricReleasedKey())->toBeNull(sprintf('the %s outcome must leave the app locked', $factory));
     }
 });
 
@@ -177,6 +177,6 @@ it('releases no key on the event the asynchronous leg finishes on either', funct
             ->dispatch('native:BiometricVault.Recovered')
             ->assertNoRedirect();
 
-        expect(refusedBiometricReleasedKey())->toBeNull("the {$factory} outcome must leave the app locked on the asynchronous leg");
+        expect(refusedBiometricReleasedKey())->toBeNull(sprintf('the %s outcome must leave the app locked on the asynchronous leg', $factory));
     }
 });

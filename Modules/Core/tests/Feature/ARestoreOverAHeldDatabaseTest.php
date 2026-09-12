@@ -49,7 +49,7 @@ function heldWalDatabase(string $path): PDO
     // Enough pages that SQLite has not auto-checkpointed them back into the
     // main file, so the sidecar genuinely holds the newest state.
     for ($row = 0; $row < 500; $row++) {
-        $held->exec("INSERT INTO marker (val) VALUES ('pad-{$row}')");
+        $held->exec(sprintf("INSERT INTO marker (val) VALUES ('pad-%s')", $row));
     }
 
     expect(is_file($path.'-wal'))->toBeTrue('The fixture did not produce a write-ahead log to restore over.');
@@ -61,7 +61,7 @@ function markerDatabase(string $path, string $marker): void
 {
     $pdo = new PDO('sqlite:'.$path, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $pdo->exec('CREATE TABLE marker (val TEXT)');
-    $pdo->exec("INSERT INTO marker (val) VALUES ('{$marker}')");
+    $pdo->exec(sprintf("INSERT INTO marker (val) VALUES ('%s')", $marker));
 }
 
 /**

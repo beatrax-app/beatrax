@@ -19,6 +19,6 @@ final class UnsafeOpenBankingRequestException extends RuntimeException
     {
         $named = $host !== null && $host !== '' ? $host : '(unparseable)';
 
-        return new self("Refusing to send an Enable Banking bearer token to non-allow-listed host: {$named}");
+        return new self(sprintf('Refusing to send an Enable Banking bearer token to non-allow-listed host: %s', $named));
     }
 }

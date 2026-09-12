@@ -25,7 +25,7 @@ function segmentedToggleRule(string $selector): string
 {
     $rule = UnlayeredCss::ruleAt($selector.' {');
 
-    expect($rule)->not->toBeNull("No unlayered rule for {$selector}; a layered one loses to Flux's own utilities.");
+    expect($rule)->not->toBeNull(sprintf("No unlayered rule for %s; a layered one loses to Flux's own utilities.", $selector));
 
     return (string) $rule;
 }

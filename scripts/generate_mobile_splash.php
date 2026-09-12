@@ -41,7 +41,7 @@ const ICON_WIDTH = 360;
 $iconPath = __DIR__.'/../public/icon.png';
 
 if (! is_file($iconPath)) {
-    fwrite(STDERR, "Icon not found: {$iconPath}\n");
+    fwrite(STDERR, sprintf("Icon not found: %s\n", $iconPath));
 
     exit(1);
 }
@@ -49,7 +49,7 @@ if (! is_file($iconPath)) {
 $icon = imagecreatefrompng($iconPath);
 
 if ($icon === false) {
-    fwrite(STDERR, "Could not decode icon: {$iconPath}\n");
+    fwrite(STDERR, sprintf("Could not decode icon: %s\n", $iconPath));
 
     exit(1);
 }

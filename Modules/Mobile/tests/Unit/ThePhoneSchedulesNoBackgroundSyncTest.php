@@ -17,7 +17,7 @@ it('declares the background work a phone cannot run, and why', function (): void
     expect($impossible)->toHaveKey('mobile.sync-pull');
 
     foreach ($impossible as $name => $reason) {
-        expect(strlen($reason))->toBeGreaterThan(40, "{$name} is declared unrunnable with no reason to read.");
+        expect(strlen($reason))->toBeGreaterThan(40, sprintf('%s is declared unrunnable with no reason to read.', $name));
     }
 });
 
@@ -69,7 +69,7 @@ it('declares each task exactly once across the four lists', function (): void {
     foreach ($lists as $listName => $entries) {
         foreach (array_keys($entries) as $name) {
             if (isset($seen[$name])) {
-                $duplicates[] = "{$name} ({$seen[$name]} and {$listName})";
+                $duplicates[] = sprintf('%s (%s and %s)', $name, $seen[$name], $listName);
             }
             $seen[$name] = $listName;
         }

@@ -105,7 +105,7 @@ final readonly class RecordTransactions implements RecordsTransactions
                     throw new InvalidArgumentException('CanonicalTransaction.userId must not be null when recording transactions.');
                 }
                 if (TransactionType::tryFrom($row->type) === null) {
-                    throw new InvalidArgumentException("Invalid transaction type: '{$row->type}'");
+                    throw new InvalidArgumentException(sprintf("Invalid transaction type: '%s'", $row->type));
                 }
 
                 // Composed from the DTO, never the possibly-encrypted $attrs

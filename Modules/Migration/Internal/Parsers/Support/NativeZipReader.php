@@ -59,7 +59,7 @@ final class NativeZipReader implements ArchiveReader
     {
         $handle = @fopen($path, 'rb');
         if ($handle === false) {
-            throw new UnrecognizedMigrationFileException("could not open zip archive at '{$path}'");
+            throw new UnrecognizedMigrationFileException(sprintf("could not open zip archive at '%s'", $path));
         }
 
         $this->handle = $handle;
@@ -136,7 +136,7 @@ final class NativeZipReader implements ArchiveReader
         $raw = $this->readAt($eocd['offset'], $eocd['size']);
         if (strlen($raw) !== $eocd['size']) {
             throw new UnrecognizedMigrationFileException(
-                "central directory of '{$path}' is shorter than its own end record declares",
+                sprintf("central directory of '%s' is shorter than its own end record declares", $path),
             );
         }
 
@@ -163,14 +163,14 @@ final class NativeZipReader implements ArchiveReader
         $position = strrpos($tail, self::EOCD_SIGNATURE);
         if ($position === false) {
             throw new UnrecognizedMigrationFileException(
-                "'{$path}' carries no zip end-of-central-directory record",
+                sprintf("'%s' carries no zip end-of-central-directory record", $path),
             );
         }
 
         $record = substr($tail, $position, self::EOCD_FIXED_BYTES);
         if (strlen($record) < self::EOCD_FIXED_BYTES) {
             throw new UnrecognizedMigrationFileException(
-                "'{$path}' ends inside its own end-of-central-directory record",
+                sprintf("'%s' ends inside its own end-of-central-directory record", $path),
             );
         }
 
@@ -185,7 +185,7 @@ final class NativeZipReader implements ArchiveReader
             || $size === self::ZIP64_SENTINEL_LONG
             || $offset === self::ZIP64_SENTINEL_LONG) {
             throw new ArchiveReaderUnavailableException(
-                "'{$path}' is a ZIP64 archive, which the built-in reader cannot open",
+                sprintf("'%s' is a ZIP64 archive, which the built-in reader cannot open", $path),
             );
         }
 
@@ -201,7 +201,7 @@ final class NativeZipReader implements ArchiveReader
         if (strlen($header) < self::CENTRAL_FIXED_BYTES
             || ! str_starts_with($header, self::CENTRAL_SIGNATURE)) {
             throw new UnrecognizedMigrationFileException(
-                "could not read zip entry metadata at index {$index}",
+                sprintf('could not read zip entry metadata at index %s', $index),
             );
         }
 
@@ -211,7 +211,7 @@ final class NativeZipReader implements ArchiveReader
         $name = substr($raw, $cursor + self::CENTRAL_FIXED_BYTES, $nameLength);
         if (strlen($name) !== $nameLength) {
             throw new UnrecognizedMigrationFileException(
-                "zip entry name at index {$index} runs past the end of the central directory",
+                sprintf('zip entry name at index %s runs past the end of the central directory', $index),
             );
         }
 
@@ -397,12 +397,12 @@ final class NativeZipReader implements ArchiveReader
     {
         $handle = $this->opened();
         if (fseek($handle, 0, SEEK_END) !== 0) {
-            throw new UnrecognizedMigrationFileException("could not measure '{$path}'");
+            throw new UnrecognizedMigrationFileException(sprintf("could not measure '%s'", $path));
         }
 
         $size = ftell($handle);
         if ($size === false || $size < self::EOCD_FIXED_BYTES) {
-            throw new UnrecognizedMigrationFileException("'{$path}' is too short to be a zip archive");
+            throw new UnrecognizedMigrationFileException(sprintf("'%s' is too short to be a zip archive", $path));
         }
 
         return $size;
@@ -416,7 +416,7 @@ final class NativeZipReader implements ArchiveReader
 
         $handle = $this->opened();
         if (fseek($handle, $offset) !== 0) {
-            throw new UnrecognizedMigrationFileException("could not seek to byte {$offset} of the archive");
+            throw new UnrecognizedMigrationFileException(sprintf('could not seek to byte %s of the archive', $offset));
         }
 
         $read = fread($handle, $length);

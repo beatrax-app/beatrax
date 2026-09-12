@@ -43,7 +43,7 @@ function systemAlertWritesOutsideTheSeam(array $paths): array
             }
 
             if (preg_match("/'user_id'\s*=>\s*null/", $args) !== 1) {
-                $hits[] = "{$path}:{$token[2]}";
+                $hits[] = sprintf('%s:%s', $path, $token[2]);
             }
         }
     }

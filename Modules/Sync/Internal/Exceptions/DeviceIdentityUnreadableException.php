@@ -15,12 +15,12 @@ final class DeviceIdentityUnreadableException extends RuntimeException
     public static function willNotOverwrite(int $userId): self
     {
         return new self(
-            "The device identity key-file for user {$userId} exists but does not open under the app-lock key this device holds; it is not overwritten.",
+            sprintf('The device identity key-file for user %s exists but does not open under the app-lock key this device holds; it is not overwritten.', $userId),
         );
     }
 
     public static function couldNotRetire(string $path): self
     {
-        return new self("Could not move the unreadable device identity key-file aside: {$path}");
+        return new self(sprintf('Could not move the unreadable device identity key-file aside: %s', $path));
     }
 }

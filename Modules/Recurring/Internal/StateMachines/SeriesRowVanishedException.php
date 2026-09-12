@@ -13,7 +13,7 @@ final class SeriesRowVanishedException extends RuntimeException
     public static function forSeries(int $seriesId): self
     {
         return new self(
-            "RecurringSeriesStateMachine: recurring_series row {$seriesId} not found.",
+            sprintf('RecurringSeriesStateMachine: recurring_series row %s not found.', $seriesId),
         );
     }
 }

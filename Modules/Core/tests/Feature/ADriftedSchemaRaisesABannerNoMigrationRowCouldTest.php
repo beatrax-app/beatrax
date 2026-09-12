@@ -225,11 +225,11 @@ it('stays quiet on a database whose tables the first migration has not built yet
 it('bounds the names it lists when a whole schema drifted at once', function (): void {
     foreach (range(1, 12) as $n) {
         schemaDriftStatement(
-            "create table drifted_{$n} (
+            sprintf('create table drifted_%s (
                 id integer primary key,
                 owner_id integer null,
                 foreign key(owner_id) references users(id) on delete cascade
-            )",
+            )', $n),
         );
     }
 

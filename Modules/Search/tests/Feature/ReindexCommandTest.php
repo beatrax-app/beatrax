@@ -11,7 +11,7 @@ it('it_rebuilds_the_fts_index', function (): void {
     // thing that fills it.
     for ($i = 1; $i <= 3; $i++) {
         $this->searchTestTransaction($userId, [
-            'counterparty_name' => "Vendor {$i}",
+            'counterparty_name' => sprintf('Vendor %s', $i),
         ], seedFts: false);
     }
 

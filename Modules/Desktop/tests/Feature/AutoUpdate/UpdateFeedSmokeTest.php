@@ -46,7 +46,7 @@ function smokePublishManifest(
     bool $tamperBody = false,
 ): void {
     $sha512Base64 = base64_encode(hash('sha512', $binaryBytes, true));
-    $body = "version: {$version}\nsha512: {$sha512Base64}\nreleaseDate: '".SMOKE_RELEASE_DATE."'\n";
+    $body = sprintf("version: %s\nsha512: %s\nreleaseDate: '", $version, $sha512Base64).SMOKE_RELEASE_DATE."'\n";
 
     $signature = sodium_crypto_sign_detached($body, $secretKey);
     if ($tamperSignature) {
@@ -60,8 +60,8 @@ function smokePublishManifest(
 
     $name = smokeManifestName($platformFamily);
     Http::fake([
-        SMOKE_FEED_URL."/{$name}" => Http::response($body, 200),
-        SMOKE_FEED_URL."/{$name}.sig" => Http::response(sodium_bin2hex($signature), 200),
+        SMOKE_FEED_URL.sprintf('/%s', $name) => Http::response($body, 200),
+        SMOKE_FEED_URL.sprintf('/%s.sig', $name) => Http::response(sodium_bin2hex($signature), 200),
     ]);
 }
 

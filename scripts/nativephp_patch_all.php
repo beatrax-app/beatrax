@@ -63,7 +63,7 @@ foreach ($patches as $patch) {
     $script = __DIR__.'/'.$patch.'.php';
 
     if (! is_file($script)) {
-        fwrite(STDERR, "nativephp_patch_all: {$patch}.php is missing.\n");
+        fwrite(STDERR, sprintf("nativephp_patch_all: %s.php is missing.\n", $patch));
         $failed[] = $patch;
 
         continue;

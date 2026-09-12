@@ -67,7 +67,7 @@ it('creates the logs directory owner-only when the install has never logged', fu
 
 it('hands the file channels a permission Laravel actually forwards', function (): void {
     foreach (['single', 'daily'] as $channel) {
-        expect(config("logging.channels.{$channel}.permission"))->toBe(SecretFileMode::FILE);
+        expect(config(sprintf('logging.channels.%s.permission', $channel)))->toBe(SecretFileMode::FILE);
     }
 });
 

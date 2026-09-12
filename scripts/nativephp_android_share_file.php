@@ -46,7 +46,7 @@ $pathsTarget = $root.'/res/xml/file_paths.xml';
 
 foreach ([$registrationTarget, $pathsTarget] as $required) {
     if (! is_file($required)) {
-        fwrite(STDERR, "nativephp_android_share_file: expected {$required} in the generated project.\n");
+        fwrite(STDERR, sprintf("nativephp_android_share_file: expected %s in the generated project.\n", $required));
         exit(1);
     }
 }
@@ -135,7 +135,7 @@ object BeatraxShareFunctions {
 KOTLIN;
 
 if (file_put_contents($functionsTarget, $function."\n") === false) {
-    fwrite(STDERR, "nativephp_android_share_file: could not write {$functionsTarget}.\n");
+    fwrite(STDERR, sprintf("nativephp_android_share_file: could not write %s.\n", $functionsTarget));
     exit(1);
 }
 
@@ -147,7 +147,7 @@ if (! str_contains($registration, 'BeatraxShareFunctions')) {
 
     foreach ([$importAnchor, $registerAnchor] as $anchor) {
         if (! str_contains($registration, $anchor)) {
-            fwrite(STDERR, "nativephp_android_share_file: anchor not found in {$registrationTarget}.\n");
+            fwrite(STDERR, sprintf("nativephp_android_share_file: anchor not found in %s.\n", $registrationTarget));
             fwrite(STDERR, "The generated registration file changed shape; re-derive the anchor.\n");
             exit(1);
         }
@@ -166,7 +166,7 @@ if (! str_contains($registration, 'BeatraxShareFunctions')) {
     );
 
     if (file_put_contents($registrationTarget, $registration) === false) {
-        fwrite(STDERR, "nativephp_android_share_file: could not write {$registrationTarget}.\n");
+        fwrite(STDERR, sprintf("nativephp_android_share_file: could not write %s.\n", $registrationTarget));
         exit(1);
     }
 }
@@ -180,7 +180,7 @@ $paths = (string) file_get_contents($pathsTarget);
 $pathsAnchor = '<cache-path name="cache" path="." />';
 
 if (! str_contains($paths, $pathsAnchor)) {
-    fwrite(STDERR, "nativephp_android_share_file: no cache-path root in {$pathsTarget} to stage a share into.\n");
+    fwrite(STDERR, sprintf("nativephp_android_share_file: no cache-path root in %s to stage a share into.\n", $pathsTarget));
     exit(1);
 }
 

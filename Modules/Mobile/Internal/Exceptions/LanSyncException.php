@@ -63,7 +63,7 @@ final class LanSyncException extends RuntimeException
     // treat it like the timeout it is, rather than raising it at the reader.
     public static function peerDisconnectedBeforeHandshakeMessage(string $message): self
     {
-        $instance = new self("LanSyncClient: peer disconnected before sending Noise {$message}.");
+        $instance = new self(sprintf('LanSyncClient: peer disconnected before sending Noise %s.', $message));
         $instance->dialIncomplete = true;
 
         return $instance;

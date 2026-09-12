@@ -460,7 +460,7 @@ final readonly class GraphApiClient implements GraphApiClientContract
         $creds = $this->secrets->loadInbox($inboxId);
         if ($creds === null) {
             throw new InboxNotConfiguredException(
-                "GraphApiClient: no OAuth credentials persisted for inbox {$inboxId}.",
+                sprintf('GraphApiClient: no OAuth credentials persisted for inbox %s.', $inboxId),
             );
         }
 

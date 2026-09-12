@@ -44,7 +44,7 @@ trait CrossDevicePairingHarness
         $db = $this->app->make(DatabaseManager::class);
 
         foreach (['desktop', 'phone', 'peer', 'relay'] as $name) {
-            config(["database.connections.{$name}" => [
+            config([sprintf('database.connections.%s', $name) => [
                 'driver' => 'sqlite',
                 'database' => ':memory:',
                 'prefix' => '',

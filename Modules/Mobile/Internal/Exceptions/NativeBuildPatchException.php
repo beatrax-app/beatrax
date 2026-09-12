@@ -15,8 +15,8 @@ final class NativeBuildPatchException extends RuntimeException
     public static function requiredScriptFailed(string $script, string $failure): self
     {
         return new self(
-            "NativeBuildPatches: {$script} failed, and the artefact it writes is required for App Store "
-            ."submission. Refusing to build without it.\n{$failure}",
+            sprintf('NativeBuildPatches: %s failed, and the artefact it writes is required for App Store ', $script)
+            .sprintf("submission. Refusing to build without it.\n%s", $failure),
         );
     }
 }

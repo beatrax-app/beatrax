@@ -112,7 +112,7 @@ function errorResumeRefusingClient(string $nextLink): GraphApiClientContract
         public function getRawMessage(int $inboxId, string $providerMessageId): string
         {
             return "From: service@paypal.com\r\nTo: cardholder@example.test\r\nSubject: Receipt\r\n"
-                ."Date: Mon, 11 May 2026 09:14:21 +0000\r\nMessage-ID: <{$providerMessageId}@paypal.com>\r\n\r\nBody.";
+                .sprintf("Date: Mon, 11 May 2026 09:14:21 +0000\r\nMessage-ID: <%s@paypal.com>\r\n\r\nBody.", $providerMessageId);
         }
 
         public function deltaPage(int $inboxId, ?string $deltaLink, ?DateTimeImmutable $sinceOverride = null): array

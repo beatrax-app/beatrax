@@ -133,7 +133,7 @@ it('says which relay file could not be written', function (): void {
 it('names the session operation attempted before the handshake', function (string $operation): void {
     $e = SessionNotAuthenticatedException::forOperation($operation);
 
-    expect($e->getMessage())->toContain("SyncSession::{$operation}")
+    expect($e->getMessage())->toContain(sprintf('SyncSession::%s', $operation))
         ->and($e->getMessage())->toContain('session not authenticated yet');
 })->with(['encrypt', 'decrypt', 'receiveOps']);
 

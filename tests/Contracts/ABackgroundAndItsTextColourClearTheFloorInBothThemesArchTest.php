@@ -82,7 +82,7 @@ it('leaves alone a background with no text, a transparent ground and a style it 
     $source = (string) file_get_contents(base_path($path));
 
     expect(implode("\n", $report['failing']))->not->toContain('--color-amber');
-    expect($report['transparent'])->toContain("{$path}:23  color: var(--color-text-muted, #64748b);");
+    expect($report['transparent'])->toContain(sprintf('%s:23  color: var(--color-text-muted, #64748b);', $path));
     expect(ColourPairs::opaqueInlineStyles($path, $source))->toHaveCount(1);
 });
 

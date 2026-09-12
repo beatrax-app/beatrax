@@ -49,7 +49,7 @@ if ($isDirectlyInvoked) {
     $builderPath = dirname(__DIR__).'/nativephp/electron/electron-builder.mjs';
 
     if (! is_file($builderPath)) {
-        fwrite(STDERR, "nativephp_inject_file_associations: {$builderPath} not found — run `php artisan native:install --publish` first.\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_associations: %s not found — run `php artisan native:install --publish` first.\n", $builderPath));
 
         exit(1);
     }
@@ -57,7 +57,7 @@ if ($isDirectlyInvoked) {
     $source = file_get_contents($builderPath);
 
     if ($source === false) {
-        fwrite(STDERR, "nativephp_inject_file_associations: could not read {$builderPath}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_associations: could not read %s\n", $builderPath));
 
         exit(1);
     }
@@ -65,7 +65,7 @@ if ($isDirectlyInvoked) {
     [$patched, $reason] = injectFileAssociations($source);
 
     if ($patched === null) {
-        fwrite(STDERR, "nativephp_inject_file_associations: {$reason}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_associations: %s\n", $reason));
 
         exit(1);
     }
@@ -77,12 +77,12 @@ if ($isDirectlyInvoked) {
     }
 
     if (file_put_contents($builderPath, $patched) === false) {
-        fwrite(STDERR, "nativephp_inject_file_associations: could not write {$builderPath}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_associations: could not write %s\n", $builderPath));
 
         exit(1);
     }
 
-    fwrite(STDOUT, "nativephp_inject_file_associations: declared .csv/.eml document types in {$builderPath}.\n");
+    fwrite(STDOUT, sprintf("nativephp_inject_file_associations: declared .csv/.eml document types in %s.\n", $builderPath));
 
     exit(0);
 }
@@ -141,11 +141,11 @@ function fileAssociationsBlock(): string
 
     foreach (fileAssociationTypes() as $ext => $type) {
         $lines[] = '        {';
-        $lines[] = "            ext: '{$ext}',";
-        $lines[] = "            name: '{$type['name']}',";
-        $lines[] = "            description: '{$type['description']}',";
-        $lines[] = "            role: '{$type['role']}',";
-        $lines[] = "            mimeType: '{$type['mimeType']}',";
+        $lines[] = sprintf("            ext: '%s',", $ext);
+        $lines[] = sprintf("            name: '%s',", $type['name']);
+        $lines[] = sprintf("            description: '%s',", $type['description']);
+        $lines[] = sprintf("            role: '%s',", $type['role']);
+        $lines[] = sprintf("            mimeType: '%s',", $type['mimeType']);
         $lines[] = '        },';
     }
 

@@ -61,6 +61,6 @@ it('Contract: format() is documented to return one of the three source products'
     expect($docComment)->toBeString();
     /** @var string $docComment */
     foreach (['ynab4', 'nynab', 'actual'] as $product) {
-        expect(str_contains($docComment, $product))->toBeTrue("format() docblock should mention '{$product}'");
+        expect(str_contains($docComment, $product))->toBeTrue(sprintf("format() docblock should mention '%s'", $product));
     }
 });

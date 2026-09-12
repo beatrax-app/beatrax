@@ -35,7 +35,7 @@ return new class extends Migration
             SQL;
 
         DB::statement(
-            "UPDATE recurring_series SET detected_name = ({$match}) WHERE EXISTS ({$match})"
+            sprintf('UPDATE recurring_series SET detected_name = (%s) WHERE EXISTS (%s)', $match, $match)
         );
     }
 

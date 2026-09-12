@@ -32,7 +32,7 @@ function pipedCategoryExportDir(string $budgeted): string
     );
     file_put_contents(
         $dir.'/Home as of 2026-01-20 - Budget.csv',
-        "Month,\"Category Group\",Category,Budgeted,Outflows,\"Category Balance\"\n2026-01,Frequent,\"".PIPED_CATEGORY_NAME."\",{$budgeted},45.00,155.00\n",
+        "Month,\"Category Group\",Category,Budgeted,Outflows,\"Category Balance\"\n2026-01,Frequent,\"".PIPED_CATEGORY_NAME.sprintf("\",%s,45.00,155.00\n", $budgeted),
     );
 
     return $dir;
@@ -74,5 +74,5 @@ it('names the month and the category of a budget conflict whose category name ca
     expect($summary->unmapped['conflict']['count'])->toBe(1)
         ->and($summary->unmapped['conflict']['items'][0]['label'])->toBe(PIPED_CATEGORY_NAME.' · January 2026 budget');
 
-    $this->actingAs($this->user)->get("/migrations/{$secondRun->id}/preview")->assertOk();
+    $this->actingAs($this->user)->get(sprintf('/migrations/%s/preview', $secondRun->id))->assertOk();
 });

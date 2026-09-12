@@ -213,7 +213,7 @@ final class ReportBuilder extends Component
             return null;
         }
 
-        $filename = "beatrax-report-{$definition->slug()}.csv";
+        $filename = sprintf('beatrax-report-%s.csv', $definition->slug());
 
         // A shell whose WebView drops the download gets the OS share sheet and
         // a line saying so. The response it would have been sent goes nowhere,

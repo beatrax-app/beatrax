@@ -110,7 +110,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
                 default => $sm->applyStatus(
                     $this->inboxId,
                     InboxScanStatus::Error->value,
-                    "Unknown provider '{$prepared->provider}' — incremental scan cannot proceed.",
+                    sprintf("Unknown provider '%s' — incremental scan cannot proceed.", $prepared->provider),
                 ),
             };
 

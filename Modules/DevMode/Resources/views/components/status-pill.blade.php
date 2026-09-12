@@ -23,7 +23,7 @@
     };
 @endphp
 <span {{ $attributes->merge([
-    'class' => "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-medium tabular-nums {$variantClasses}",
+    'class' => sprintf('inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-medium tabular-nums %s', $variantClasses),
 ]) }}>
     <span class="inline-block h-1.5 w-1.5 rounded-full {{ $dotColor }}" aria-hidden="true"></span>
     {{ $label !== '' ? $label : $slot }}

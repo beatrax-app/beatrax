@@ -14,6 +14,6 @@ final class PeerDisconnectedException extends RuntimeException
 {
     public static function beforeHandshakeMessage(string $message): self
     {
-        return new self("Sync peer disconnected before sending Noise {$message}.");
+        return new self(sprintf('Sync peer disconnected before sending Noise %s.', $message));
     }
 }

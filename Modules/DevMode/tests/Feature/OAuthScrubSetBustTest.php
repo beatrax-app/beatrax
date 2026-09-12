@@ -159,7 +159,7 @@ it('runs the OAuth scrub-set BEFORE Bearer + JWT so an OAuth secret that LOOKS l
         'tokens_blob' => null,
     ]);
 
-    $contents = logWithRedactionToTempFile("token: {$jwtShapedToken}");
+    $contents = logWithRedactionToTempFile(sprintf('token: %s', $jwtShapedToken));
 
     expect($contents)->toContain('[REDACTED]');
     expect($contents)->not->toContain('[JWT_REDACTED]');

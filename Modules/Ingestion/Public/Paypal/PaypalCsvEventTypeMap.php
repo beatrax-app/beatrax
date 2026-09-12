@@ -83,7 +83,7 @@ final class PaypalCsvEventTypeMap
     {
         if (! isset(self::MAP[$language][$eventType])) {
             throw new UnknownPaypalEventTypeException(
-                "PayPal CSV uses an unrecognised event type '{$eventType}' for language '{$language}'. This event type isn't yet mapped — file an issue with the redacted CSV."
+                sprintf("PayPal CSV uses an unrecognised event type '%s' for language '%s'. This event type isn't yet mapped — file an issue with the redacted CSV.", $eventType, $language)
             );
         }
 
@@ -97,7 +97,7 @@ final class PaypalCsvEventTypeMap
         // code-internal inconsistency (narrower exception below).
         if (! isset(self::MAP[$language][$eventType])) {
             throw new UnknownPaypalEventTypeException(
-                "PayPal CSV parent event type '{$eventType}' for language '{$language}' is not catalogued in PaypalCsvEventTypeMap::MAP. PayPal may have shipped a new event-type string — file an issue with the redacted CSV."
+                sprintf("PayPal CSV parent event type '%s' for language '%s' is not catalogued in PaypalCsvEventTypeMap::MAP. PayPal may have shipped a new event-type string — file an issue with the redacted CSV.", $eventType, $language)
             );
         }
 
@@ -110,7 +110,7 @@ final class PaypalCsvEventTypeMap
 
         if (! isset(self::TRANSACTION_TYPE[$language][$eventType])) {
             throw new MissingPaypalTransactionTypeMapException(
-                "PayPal CSV parent event type '{$eventType}' for language '{$language}' has no TransactionType mapping. This is a code-internal inconsistency: every event type classified as Parent in MAP must have a corresponding TRANSACTION_TYPE entry."
+                sprintf("PayPal CSV parent event type '%s' for language '%s' has no TransactionType mapping. This is a code-internal inconsistency: every event type classified as Parent in MAP must have a corresponding TRANSACTION_TYPE entry.", $eventType, $language)
             );
         }
 

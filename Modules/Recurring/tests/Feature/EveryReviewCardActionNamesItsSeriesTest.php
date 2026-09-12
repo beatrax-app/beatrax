@@ -24,7 +24,7 @@ it('gives every action on a review card an aria-label naming its series', functi
     $unbound = [];
 
     foreach ($actions as $key) {
-        if (! str_contains($blade, "Lang::get('recurring::review.{$key}', ['id' => \$row->seriesId])")) {
+        if (! str_contains($blade, sprintf("Lang::get('recurring::review.%s', ['id' => \$row->seriesId])", $key))) {
             $unbound[] = $key;
         }
     }
@@ -44,11 +44,11 @@ it('carries those labels in every language the app offers', function () use ($ac
 
     foreach ($locales as $locale) {
         /** @var array<string, string> $strings */
-        $strings = require base_path("Modules/Recurring/Resources/lang/{$locale}/review.php");
+        $strings = require base_path(sprintf('Modules/Recurring/Resources/lang/%s/review.php', $locale));
 
         foreach ($actions as $key) {
             if (! isset($strings[$key]) || ! str_contains($strings[$key], ':id')) {
-                $missing[] = "{$locale}.{$key}";
+                $missing[] = sprintf('%s.%s', $locale, $key);
             }
         }
     }

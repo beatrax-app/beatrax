@@ -47,7 +47,7 @@ $projectRoot = dirname(__DIR__);
 $configPath = $projectRoot.'/nativephp/electron/electron-builder.mjs';
 
 if (! is_file($configPath)) {
-    fwrite(STDERR, "nativephp_sign_every_pe_in_the_package: no electron-builder.mjs found at {$configPath} — has `php artisan native:install --publish` run?\n");
+    fwrite(STDERR, sprintf("nativephp_sign_every_pe_in_the_package: no electron-builder.mjs found at %s — has `php artisan native:install --publish` run?\n", $configPath));
 
     exit(1);
 }
@@ -55,7 +55,7 @@ if (! is_file($configPath)) {
 $source = file_get_contents($configPath);
 
 if ($source === false) {
-    fwrite(STDERR, "nativephp_sign_every_pe_in_the_package: could not read {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_sign_every_pe_in_the_package: could not read %s\n", $configPath));
 
     exit(1);
 }
@@ -80,14 +80,14 @@ $replacement = "$1\n"
 $patched = preg_replace($anchor, $replacement, $source, 1, $count);
 
 if ($patched === null || $count !== 1) {
-    fwrite(STDERR, "nativephp_sign_every_pe_in_the_package: could not locate the win block's executableName in {$configPath}.\n");
+    fwrite(STDERR, sprintf("nativephp_sign_every_pe_in_the_package: could not locate the win block's executableName in %s.\n", $configPath));
     fwrite(STDERR, "The generated config changed shape; confirm every bundled DLL is still signed before shipping to a store.\n");
 
     exit(1);
 }
 
 if (file_put_contents($configPath, $patched) === false) {
-    fwrite(STDERR, "nativephp_sign_every_pe_in_the_package: could not write {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_sign_every_pe_in_the_package: could not write %s\n", $configPath));
 
     exit(1);
 }

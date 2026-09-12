@@ -129,7 +129,7 @@ it('NativeZipReader: keeps every ZipExtractor guard when ext-zip is absent', fun
     $extractor = nativeZipReaderExtractorWithoutExtension($maxEntries, $maxBytes);
 
     expect(fn (): string => $extractor->extract($path))
-        ->toThrow(UnrecognizedMigrationFileException::class, '', "The {$case} guard did not fire on the built-in reader.");
+        ->toThrow(UnrecognizedMigrationFileException::class, '', sprintf('The %s guard did not fire on the built-in reader.', $case));
 
     $extractor->cleanup();
     @unlink($path);

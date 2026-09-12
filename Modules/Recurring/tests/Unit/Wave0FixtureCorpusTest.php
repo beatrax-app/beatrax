@@ -18,7 +18,7 @@ it('returns the expected top-level shape for each synthesised fixture', function
         $payload = require $path;
 
         expect($payload)->toBeArray();
-        expect($payload)->toHaveKeys(['transactions', 'expected'], "Fixture {$basename} missing top-level keys");
+        expect($payload)->toHaveKeys(['transactions', 'expected'], sprintf('Fixture %s missing top-level keys', $basename));
         expect($payload['transactions'])->toBeArray();
         expect($payload['expected'])->toBeArray();
     }
@@ -42,7 +42,7 @@ it('each transaction row carries the canonical detector key set', function (): v
         foreach ($payload['transactions'] as $index => $row) {
             foreach ($requiredKeys as $key) {
                 expect(array_key_exists($key, $row))->toBeTrue(
-                    "Fixture {$basename} row {$index} missing required key '{$key}'",
+                    sprintf("Fixture %s row %s missing required key '%s'", $basename, $index, $key),
                 );
             }
         }

@@ -120,7 +120,7 @@ it('paginates with a posted-at cursor across pages', function (): void {
     [$user, $query] = tokenUserAndQuery('token-cursor');
     foreach (range(1, 3) as $i) {
         test()->searchTestTransaction($user->id, [
-            'counterparty_name' => "Coffee {$i}",
+            'counterparty_name' => sprintf('Coffee %s', $i),
             'description' => 'coffee run',
             'posted_at' => sprintf('2026-01-%02d', $i),
             'booked_at' => sprintf('2026-01-%02d 00:00:00', $i),

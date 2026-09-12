@@ -55,7 +55,7 @@ it('names the control in every language the interface ships in', function (): vo
             $line = LangFacade::get($key, [], $code);
 
             if (! is_string($line) || $line === '' || $line === $key) {
-                $silent[] = "{$code}: {$key}";
+                $silent[] = sprintf('%s: %s', $code, $key);
             }
         }
     }

@@ -45,7 +45,7 @@ $targets = [
 $existing = array_values(array_filter($targets, 'is_file'));
 
 if ($existing === []) {
-    fwrite(STDERR, "nativephp_inject_explicit_consent_updates: no autoUpdater destructure target found under {$publishedDir} — has `php artisan native:install --publish` run?\n");
+    fwrite(STDERR, sprintf("nativephp_inject_explicit_consent_updates: no autoUpdater destructure target found under %s — has `php artisan native:install --publish` run?\n", $publishedDir));
 
     exit(1);
 }
@@ -58,13 +58,13 @@ foreach ($existing as $path) {
     $source = file_get_contents($path);
 
     if ($source === false) {
-        fwrite(STDERR, "nativephp_inject_explicit_consent_updates: could not read {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_explicit_consent_updates: could not read %s\n", $path));
 
         exit(1);
     }
 
     if (str_contains($source, 'autoUpdater.autoDownload')) {
-        fwrite(STDOUT, "nativephp_inject_explicit_consent_updates: already set in {$path}, leaving as-is.\n");
+        fwrite(STDOUT, sprintf("nativephp_inject_explicit_consent_updates: already set in %s, leaving as-is.\n", $path));
 
         continue;
     }
@@ -72,18 +72,18 @@ foreach ($existing as $path) {
     $patched = preg_replace($destructurePattern, '$1'.$injection, $source, 1, $count);
 
     if ($patched === null || $count !== 1) {
-        fwrite(STDERR, "nativephp_inject_explicit_consent_updates: could not locate `const { autoUpdater } = electronUpdater;` in {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_explicit_consent_updates: could not locate `const { autoUpdater } = electronUpdater;` in %s\n", $path));
 
         exit(1);
     }
 
     if (file_put_contents($path, $patched) === false) {
-        fwrite(STDERR, "nativephp_inject_explicit_consent_updates: could not write {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_explicit_consent_updates: could not write %s\n", $path));
 
         exit(1);
     }
 
-    fwrite(STDOUT, "nativephp_inject_explicit_consent_updates: set autoDownload=false + autoInstallOnAppQuit=false in {$path}\n");
+    fwrite(STDOUT, sprintf("nativephp_inject_explicit_consent_updates: set autoDownload=false + autoInstallOnAppQuit=false in %s\n", $path));
 }
 
 exit(0);

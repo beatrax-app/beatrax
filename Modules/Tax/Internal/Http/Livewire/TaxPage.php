@@ -60,14 +60,14 @@ final class TaxPage extends Component
         $user = $currentUser->user();
 
         if ($shareSheet->replacesWebViewDownload()) {
-            return $this->handOver($shareSheet, "beatrax-tax-{$year}.csv", $exporter->export($user, $year));
+            return $this->handOver($shareSheet, sprintf('beatrax-tax-%s.csv', $year), $exporter->export($user, $year));
         }
 
         return $responses->streamDownload(
             static function () use ($exporter, $user, $year): void {
                 echo $exporter->export($user, $year);
             },
-            "beatrax-tax-{$year}.csv",
+            sprintf('beatrax-tax-%s.csv', $year),
             ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
     }
@@ -89,14 +89,14 @@ final class TaxPage extends Component
         $user = $currentUser->user();
 
         if ($shareSheet->replacesWebViewDownload()) {
-            return $this->handOver($shareSheet, "beatrax-tax-{$year}.pdf", $renderer->render($user, $year));
+            return $this->handOver($shareSheet, sprintf('beatrax-tax-%s.pdf', $year), $renderer->render($user, $year));
         }
 
         return $responses->streamDownload(
             static function () use ($renderer, $user, $year): void {
                 echo $renderer->render($user, $year);
             },
-            "beatrax-tax-{$year}.pdf",
+            sprintf('beatrax-tax-%s.pdf', $year),
             ['Content-Type' => 'application/pdf'],
         );
     }

@@ -53,8 +53,8 @@ dataset('fingerprintParityPairs', [
 // A declared pair whose fixtures are absent is a contract that never runs, so
 // the absence fails here rather than skipping quietly.
 it('ships both fixtures for every declared parity pair', function (string $emlPath, string $csvPath, string $matcherKey): void {
-    expect(file_exists($emlPath))->toBeTrue("Missing receipt fixture for '{$matcherKey}': ".basename($emlPath));
-    expect(file_exists($csvPath))->toBeTrue("Missing twin-source fixture for '{$matcherKey}': ".basename($csvPath));
+    expect(file_exists($emlPath))->toBeTrue(sprintf("Missing receipt fixture for '%s': ", $matcherKey).basename($emlPath));
+    expect(file_exists($csvPath))->toBeTrue(sprintf("Missing twin-source fixture for '%s': ", $matcherKey).basename($csvPath));
 })->with('fingerprintParityPairs');
 
 // Google Play issues receipts and no statement export, so there is no second

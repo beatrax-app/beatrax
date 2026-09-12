@@ -26,7 +26,7 @@ abstract class ScenarioMutationPayload extends Data
         $code = strtoupper(trim($raw));
         if (Money::tryOfMinor(0, $code) === null) {
             throw new InvalidArgumentException(
-                static::class."::\$currency must be an ISO-4217 code; got '{$raw}'."
+                static::class.sprintf("::\$currency must be an ISO-4217 code; got '%s'.", $raw)
             );
         }
 
@@ -41,7 +41,7 @@ abstract class ScenarioMutationPayload extends Data
     {
         if (SafeDate::dayOrNull($raw) === null) {
             throw new InvalidArgumentException(
-                static::class."::\${$field} must be a real calendar date in ".SafeDate::DAY_FORMAT." form; got '{$raw}'."
+                static::class.sprintf('::$%s must be a real calendar date in ', $field).SafeDate::DAY_FORMAT.sprintf(" form; got '%s'.", $raw)
             );
         }
 

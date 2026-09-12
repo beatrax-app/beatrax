@@ -63,7 +63,7 @@ function counterpartyWordMerchantTerms(): array
     $terms = [];
     foreach (counterpartyWordLocales() as $locale) {
         $merchant = counterpartyWordStrings(
-            base_path("Modules/Counterparties/Resources/lang/{$locale}/triage.php")
+            base_path(sprintf('Modules/Counterparties/Resources/lang/%s/triage.php', $locale))
         )['type_merchant'] ?? null;
 
         if (is_string($merchant) && $merchant !== '') {
@@ -93,14 +93,14 @@ it('never answers an English counterparty with the locale word for a merchant', 
             }
 
             $translated = counterpartyWordStrings(
-                base_path("Modules/{$module}/Resources/lang/{$locale}/{$basename}")
+                base_path(sprintf('Modules/%s/Resources/lang/%s/%s', $module, $locale, $basename))
             );
 
             foreach (array_keys($keys) as $key) {
                 $value = $translated[$key] ?? null;
 
                 if (is_string($value) && str_contains(mb_strtolower($value), $merchant)) {
-                    $offenders[] = "{$locale} {$file} {$key} = \"{$value}\"";
+                    $offenders[] = sprintf('%s %s %s = "%s"', $locale, $file, $key, $value);
                 }
             }
         }
@@ -151,7 +151,7 @@ it('gives one counterparty word per locale across the screens that sit together'
 
         foreach ($labels as $file => $keys) {
             $strings = counterpartyWordStrings(
-                base_path("Modules/Categorization/Resources/lang/{$locale}/{$file}")
+                base_path(sprintf('Modules/Categorization/Resources/lang/%s/%s', $locale, $file))
             );
 
             foreach ($keys as $key) {

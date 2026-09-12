@@ -160,7 +160,7 @@ function purposeStringScaffold(bool $synchronized = true): string
 
     file_put_contents(
         $root.'/nativephp/ios/NativePHP.xcodeproj/project.pbxproj',
-        "// !\$*UTF8*\$!\n{\n\t\tISA = {\n\t\t\tisa = {$group};\n\t\t\tpath = NativePHP;\n\t\t};\n}\n",
+        sprintf("// !\$*UTF8*\$!\n{\n\t\tISA = {\n\t\t\tisa = %s;\n\t\t\tpath = NativePHP;\n\t\t};\n}\n", $group),
     );
 
     return $root;

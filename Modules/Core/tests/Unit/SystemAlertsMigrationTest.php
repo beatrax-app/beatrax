@@ -34,7 +34,7 @@ it('creates the system_alerts table with every required column', function (): vo
 
     foreach ($columns as $column) {
         expect($schema->hasColumn('system_alerts', $column))->toBeTrue(
-            "Expected system_alerts column '{$column}' to exist",
+            sprintf("Expected system_alerts column '%s' to exist", $column),
         );
     }
 });

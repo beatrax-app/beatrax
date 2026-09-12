@@ -45,7 +45,7 @@ it('throws NetworkPolicyException::directoryNotCreatable when the policy directo
         $resolver = new NetworkPolicyResolver;
 
         expect(fn () => $resolver->setPauseOnCellular(true))
-            ->toThrow(NetworkPolicyException::class, "Cannot create network-policy directory: {$expectedDir}");
+            ->toThrow(NetworkPolicyException::class, sprintf('Cannot create network-policy directory: %s', $expectedDir));
     });
 });
 
@@ -61,6 +61,6 @@ it('throws NetworkPolicyException::notWritable when the policy file cannot be wr
         $resolver = new NetworkPolicyResolver;
 
         expect(fn () => $resolver->setPauseOnCellular(true))
-            ->toThrow(NetworkPolicyException::class, "Cannot write network policy to: {$path}");
+            ->toThrow(NetworkPolicyException::class, sprintf('Cannot write network policy to: %s', $path));
     });
 });

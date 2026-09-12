@@ -109,7 +109,7 @@ it('resolves every description exactly as a containsToken scan over the same row
 
     foreach ($descriptions as $description) {
         expect($corpus->lookupGeneralized($description))
-            ->toBe(scanRowsWithContainsToken($rows, $description), "description: {$description}");
+            ->toBe(scanRowsWithContainsToken($rows, $description), sprintf('description: %s', $description));
     }
 });
 

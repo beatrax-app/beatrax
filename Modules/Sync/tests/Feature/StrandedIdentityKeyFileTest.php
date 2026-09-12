@@ -37,7 +37,7 @@ function strandedIdentityUser(string $username): User
     // are reused across runs, so an earlier run's key-file — and any retired
     // sibling of it — can still be sitting there.
     foreach (['identity', 'gdk'] as $directory) {
-        foreach ((array) glob(UserDataPathService::appPath("sync/{$directory}/{$user->id}.enc*")) as $stale) {
+        foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/%s/%s.enc*', $directory, $user->id))) as $stale) {
             @unlink((string) $stale);
         }
     }
@@ -47,7 +47,7 @@ function strandedIdentityUser(string $username): User
 
 function strandedIdentityPath(User $user): string
 {
-    return UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    return UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
 }
 
 it('renders the settings section, and leaves the file alone, when the key-file does not open', function (): void {

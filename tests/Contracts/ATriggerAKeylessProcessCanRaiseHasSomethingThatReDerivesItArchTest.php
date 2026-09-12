@@ -32,7 +32,7 @@ function reDerivationByTrigger(): array
     foreach (DeferredNotificationPass::cases() as $pass) {
         foreach ($pass->reDerives() as $trigger) {
             expect(array_key_exists($trigger->value, $byTrigger))->toBeFalse(
-                "{$trigger->value} is re-derived by two passes; one keyed request would then run both.",
+                sprintf('%s is re-derived by two passes; one keyed request would then run both.', $trigger->value),
             );
             $byTrigger[$trigger->value] = $pass;
         }
@@ -62,7 +62,7 @@ it('has a re-derivation for every trigger a keyless process can raise', function
 
     foreach (triggersAKeylessProcessCanRaise() as $trigger) {
         expect(array_key_exists($trigger->value, $reDerived))->toBeTrue(
-            "{$trigger->value} can be raised where no key is held and no DeferredNotificationPass re-derives it, so a sealed ledger loses it permanently. Add it to a pass's reDerives() and to the arm that runs it.",
+            sprintf("%s can be raised where no key is held and no DeferredNotificationPass re-derives it, so a sealed ledger loses it permanently. Add it to a pass's reDerives() and to the arm that runs it.", $trigger->value),
         );
     }
 });
@@ -75,14 +75,14 @@ it('re-derives nothing that a keyed process is the only raiser of', function ():
         $trigger = NotificationTrigger::from($value);
 
         expect($trigger->reachableWithoutTheKey())->toBeTrue(
-            "{$pass->value} re-derives {$value}, which reachableWithoutTheKey() says only a keyed process raises.",
+            sprintf('%s re-derives %s, which reachableWithoutTheKey() says only a keyed process raises.', $pass->value, $value),
         );
     }
 });
 
 it('declares a non-empty re-derivation for every pass', function (): void {
     foreach (DeferredNotificationPass::cases() as $pass) {
-        expect($pass->reDerives())->not->toBeEmpty("{$pass->value} re-derives nothing, so running it can recover nothing.");
+        expect($pass->reDerives())->not->toBeEmpty(sprintf('%s re-derives nothing, so running it can recover nothing.', $pass->value));
     }
 });
 

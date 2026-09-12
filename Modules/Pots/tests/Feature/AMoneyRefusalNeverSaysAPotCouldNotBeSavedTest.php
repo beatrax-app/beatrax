@@ -59,8 +59,8 @@ function mnsCredit(int $userId, int $accountId, int $runId, int $amountMinor): v
         'currency' => 'EUR',
         'settled_amount_minor' => $amountMinor,
         'settled_currency' => 'EUR',
-        'counterparty_name' => "MNS{$i}",
-        'counterparty_normalized' => "mns{$i}",
+        'counterparty_name' => sprintf('MNS%s', $i),
+        'counterparty_normalized' => sprintf('mns%s', $i),
         'normalization_version' => 1,
         'category_id' => null,
         'source_format' => 'camt053',
@@ -96,7 +96,7 @@ function mnsMoneyHandlers(): array
 
     $bodies = [];
     foreach (['fundPot', 'withdrawPot', 'movePot'] as $handler) {
-        $start = strpos($source, "public function {$handler}(");
+        $start = strpos($source, sprintf('public function %s(', $handler));
         expect($start)->not->toBeFalse();
 
         $end = strpos($source, "\n    public function ", (int) $start + 1);

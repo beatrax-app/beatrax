@@ -68,7 +68,7 @@ if ($argc < 2) {
 $inputPath = $argv[1];
 
 if (! is_readable($inputPath)) {
-    fwrite(STDERR, "Input file is not readable: {$inputPath}\n");
+    fwrite(STDERR, sprintf("Input file is not readable: %s\n", $inputPath));
     exit(1);
 }
 
@@ -81,7 +81,7 @@ if (! is_readable($inputPath)) {
 $bom = "\xEF\xBB\xBF";
 $tmpIn = fopen($inputPath, 'r');
 if ($tmpIn === false) {
-    fwrite(STDERR, "Could not read input file: {$inputPath}\n");
+    fwrite(STDERR, sprintf("Could not read input file: %s\n", $inputPath));
     exit(1);
 }
 

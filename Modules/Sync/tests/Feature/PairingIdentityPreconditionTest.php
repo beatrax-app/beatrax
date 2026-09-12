@@ -59,7 +59,7 @@ it('keeps the key-file check independent of whether the app is unlocked', functi
 
     $gateway->enableSyncIdentityWithoutEpoch((int) $user->id, $session);
 
-    $path = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $path = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
     $before = (string) file_get_contents($path);
 
     // Losing the KEK is what a locked app looks like to the loader.
@@ -83,5 +83,5 @@ it('does not mint an identity as a side effect of asking whether one exists', fu
     $gateway->hasIdentityFile((int) $user->id);
     $gateway->hasUsableIdentity((int) $user->id, $session);
 
-    expect(file_exists(UserDataPathService::appPath("sync/identity/{$user->id}.enc")))->toBeFalse();
+    expect(file_exists(UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id))))->toBeFalse();
 });

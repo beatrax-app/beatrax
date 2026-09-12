@@ -39,7 +39,7 @@ function deviceStampUser(string $username): User
 
     // RefreshDatabase resets the database but not the filesystem, and user ids
     // are reused across runs, so an earlier run's key-file can still be there.
-    foreach ((array) glob(UserDataPathService::appPath("sync/identity/{$user->id}.enc*")) as $stale) {
+    foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/identity/%s.enc*', $user->id))) as $stale) {
         @unlink((string) $stale);
     }
 
@@ -93,7 +93,7 @@ function deviceStampLegacyKeyFile(int $userId, DeviceIdentityDto $identity, stri
     $payload = $identity->toArray();
     $payload['created_at'] = $createdAt;
 
-    $encPath = UserDataPathService::appPath("sync/identity/{$userId}.enc");
+    $encPath = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $userId));
     $plainPath = $encPath.'.legacy-plain';
 
     file_put_contents($plainPath, json_encode($payload, JSON_THROW_ON_ERROR));
