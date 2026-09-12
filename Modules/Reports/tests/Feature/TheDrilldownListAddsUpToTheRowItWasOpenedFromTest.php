@@ -5,10 +5,12 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Reports\Internal\Dto\ReportResultDto;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
 
 // A refund is positive and `spend` counts it, so the direction the builder used
@@ -355,4 +357,182 @@ it('adds up to the row when every leg of the split is in the row category', func
 
     expect($row?->amountMinor)->toBe(12_105)
         ->and(ddlListSum($params) * -1)->toBe($row?->amountMinor);
+});
+
+// The cases above settle in one currency, which is the one shape that cannot
+// fail the claim this file is named for. A report converts an amount bound into
+// EVERY settled currency and counts them all; the list it opens narrowed to the
+// reader's own, so an EUR reader filtering "≥ 20" over one EUR 30.00 and one USD
+// 30.00 charge read EUR 54.00 on the row and EUR 30.00 in the list beneath it.
+
+function ddxRate(string $quote, string $rate): void
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $db->connection()->table('exchange_rates')->where('source', BundledRates::SOURCE)->delete();
+
+    $db->connection()->table('exchange_rates')->insert([
+        'base_currency' => 'EUR',
+        'quote_currency' => $quote,
+        'rate_date' => '2026-01-02',
+        'rate' => $rate,
+        'source' => 'ecb',
+        'created_at' => '2026-01-02 00:00:00',
+        'updated_at' => '2026-01-02 00:00:00',
+    ]);
+}
+
+function ddxCharge(User $user, string $currency, int $minor, string $postedAt): void
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $suffix = bin2hex(random_bytes(8));
+
+    /** @var Account $account */
+    $account = Account::query()->firstOrCreate(
+        ['user_id' => $user->id, 'slug' => 'ddx-'.strtolower($currency).'-'.$user->id],
+        ['name' => 'ddx '.$currency, 'kind' => 'bank', 'iban' => 'NL00DDX'.strtoupper($currency).str_pad((string) $user->id, 8, '0', STR_PAD_LEFT), 'default_currency' => $currency],
+    );
+
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/ddx-'.$suffix.'.csv',
+        'sha256' => hash('sha256', 'ddx-'.$suffix),
+        'uploaded_at' => now(),
+        'status' => 'committed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $db->connection()->table('transactions')->insert([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'import_run_id' => $runId,
+        'type' => TransactionType::Expense->value,
+        'posted_at' => $postedAt,
+        'booked_at' => $postedAt.' 10:00:00',
+        'value_date' => $postedAt,
+        'amount_minor' => $minor,
+        'currency' => $currency,
+        'settled_amount_minor' => $minor,
+        'settled_currency' => $currency,
+        'counterparty_name' => 'DDX Electronics',
+        'counterparty_normalized' => 'ddx-electronics',
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint' => hash('sha256', 'ddx-tx-'.$suffix),
+        'fingerprint_version' => 3,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+/**
+ * @return array{total: int, excluded: list<string>, params: array<string, mixed>}
+ */
+function ddxReportRow(string $amountMin): array
+{
+    $page = Livewire::test(ReportBuilder::class)
+        ->set('metric', 'spend')
+        ->set('dimension', 'counterparty')
+        ->set('periodPreset', 'custom')
+        ->set('customFrom', '2026-01-01')
+        ->set('customTo', '2026-01-31')
+        ->set('filterAmountMin', $amountMin);
+
+    /** @var ReportResultDto $result */
+    $result = $page->viewData('result');
+    $urls = $page->viewData('drilldownUrls');
+
+    $query = parse_url(is_array($urls) ? (string) ($urls[0] ?? '') : '', PHP_URL_QUERY);
+    $params = [];
+    parse_str(is_string($query) ? $query : '', $params);
+
+    return [
+        'total' => $result->rows[0]->amountMinor,
+        'excluded' => $result->excludedCurrencies,
+        'params' => $params,
+    ];
+}
+
+/**
+ * @param  array<string, mixed>  $params
+ * @return array{rows: int, out: int, unconverted: string}
+ */
+function ddxListStrip(array $params): array
+{
+    $list = Livewire::withQueryParams($params)->test(TransactionsList::class);
+    $rows = $list->get('accumulatedRows');
+
+    return [
+        'rows' => is_array($rows) ? count($rows) : 0,
+        'out' => (int) $list->viewData('searchTotalOut'),
+        'unconverted' => (string) $list->viewData('searchUnconverted'),
+    ];
+}
+
+// EUR 1.00 buys USD 1.25, so USD 30.00 is EUR 24.00 and the reader's "≥ 20" is
+// "≥ USD 25.00" — a bound the dollar charge clears and the old list never asked
+// it to, because the row was not denominated in the reader's own money.
+it('opens a list covering every currency the row counted, and adding up to it', function (): void {
+    $user = ddlUser();
+    $this->actingAs($user);
+    ddxRate('USD', '1.25');
+
+    ddxCharge($user, 'EUR', -3_000, '2026-01-05');
+    ddxCharge($user, 'USD', -3_000, '2026-01-06');
+
+    $row = ddxReportRow('20');
+    $strip = ddxListStrip($row['params']);
+
+    // The row is the claim and the strip beneath it is the substantiation, so
+    // the assertion is the equality and not either figure on its own.
+    expect($row['total'])->toBe(5_400)
+        ->and($strip['rows'])->toBe(2)
+        ->and($strip['out'])->toBe(-5_400)
+        ->and($strip['out'])->toBe(-$row['total']);
+});
+
+// A charge the bound cannot be restated against is the one case the list must
+// NOT widen to: the report leaves that currency out of the figure and names it,
+// and a list that showed the row would be substantiating a number it is not in.
+it('leaves out and names the currency the row itself could not price', function (): void {
+    $user = ddlUser();
+    $this->actingAs($user);
+    ddxRate('USD', '1.25');
+
+    ddxCharge($user, 'EUR', -3_000, '2026-01-05');
+    ddxCharge($user, 'USD', -3_000, '2026-01-06');
+    ddxCharge($user, 'ARS', -57_500, '2026-01-07');
+
+    $row = ddxReportRow('20');
+    $strip = ddxListStrip($row['params']);
+
+    expect($row['total'])->toBe(5_400)
+        ->and($row['excluded'])->toBe(['ARS'])
+        ->and($strip['rows'])->toBe(2)
+        ->and($strip['out'])->toBe(-$row['total'])
+        ->and($strip['unconverted'])->toBe('ARS');
+});
+
+// With no bound to restate there is nothing per-currency to get wrong, and the
+// list still has to carry both charges — the widening must not have become a
+// condition of the amount filter being set.
+it('still opens a list covering both currencies when no bound was typed', function (): void {
+    $user = ddlUser();
+    $this->actingAs($user);
+    ddxRate('USD', '1.25');
+
+    ddxCharge($user, 'EUR', -3_000, '2026-01-05');
+    ddxCharge($user, 'USD', -3_000, '2026-01-06');
+
+    $row = ddxReportRow('');
+    $strip = ddxListStrip($row['params']);
+
+    expect($row['total'])->toBe(5_400)
+        ->and($strip['rows'])->toBe(2)
+        ->and($strip['out'])->toBe(-$row['total']);
 });

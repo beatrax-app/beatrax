@@ -462,6 +462,23 @@ module:
   problem: those columns are invariant across a split parent's legs, and
   every row of theirs has a key.
 
+  **The amount bound it emits is a figure, and the list has to price it
+  the way the report did.** `amount_min` / `amount_max` cross as the
+  string the reader typed, which is right — they are one amount of the
+  reader's own money — but the report had converted that figure into
+  every settled currency it counted, while `SearchQuery` narrowed the
+  list to the reader's own. An EUR reader filtering "≥ 20" over one
+  EUR 30.00 and one USD 30.00 charge on one counterparty read EUR 54.00
+  on the row and EUR 30.00 in the list beneath it, with nothing on the
+  page to say which figure was the wrong one. The list now restates the
+  bound per settled currency through the same `FX::CrossCurrencyBound`
+  `ReportAggregator` narrows the figure with, so the same rate prices
+  both ends; a currency no rate reaches states the bound in neither, and
+  is left out of the list and named in the search strip exactly as
+  `CurrencyModeApplier` leaves it out of the total and names it.
+  `TheDrilldownListAddsUpToTheRowItWasOpenedFromTest` pins the equality
+  of the row and the strip, not merely that both currencies appear.
+
   A caveat that remains, and is not a defect: for a parent split across
   SEVERAL categories the list shows the parent's whole amount, because a
   transaction list lists transactions. The row's figure and the list's
