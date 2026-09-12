@@ -234,7 +234,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             $app->make(LoggerInterface::class)->error(
                 'Mobile first-launch migrate-on-launch failed non-fatally.',
-                ['exception' => $e],
+                SafeExceptionContext::describe($e),
             );
         }
     })

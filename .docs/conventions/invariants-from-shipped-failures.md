@@ -665,11 +665,22 @@ And the `previous` chain reaches a `QueryException` that
 because that hook matches on the top-level type only — so a wrap-and-rethrow
 (`throw new InvalidArgumentException(…, 0, $e)`) carries the statement past it.
 
-Ten sites in the tree wrote that shape: both NativePHP boot providers, the two
-desktop child-process listeners, the mobile initial-sync re-projection, and the
-daily-notification trigger command. The re-projection one is the clearest: it
-writes decrypted peer rows into `transactions`, so a failure there is an insert
-naming the counterparty and the IBAN.
+Eleven sites in the tree wrote that shape: both NativePHP boot providers, the
+two desktop child-process listeners, the mobile initial-sync re-projection, the
+daily-notification trigger command, and `mobile-app/bootstrap/app.php`'s
+migrate-on-launch hook. The re-projection one is the clearest: it writes
+decrypted peer rows into `transactions`, so a failure there is an insert naming
+the counterparty and the IBAN. The mobile bootstrap is the second clearest —
+[the phone migrates on launch](../features/mobile/architecture.md#first-launch-and-route-gating), the
+desktop does not, so a data migration failing there is a statement over the
+reader's own rows.
+
+That eleventh one is worth its own line, because it is how a sweep miscounts.
+It sits in `mobile-app/`, the second Composer root, which
+`RepoTree::PRODUCTION_PHP` covers and an ad-hoc `Modules`-and-`app` walk does
+not. The rule found it; the manual sweep that preceded the rule reported ten.
+A count taken from anything narrower than the scope the rule itself uses is a
+count of what was looked at, not of what is there.
 
 It is closed in two places, because neither alone reaches the other's cases.
 `LoggedExceptionsDropThePayloadArchTest` grew a rule that reads the same three

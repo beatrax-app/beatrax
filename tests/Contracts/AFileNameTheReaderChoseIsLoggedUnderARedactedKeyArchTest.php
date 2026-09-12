@@ -159,7 +159,21 @@ function pathKeysIn(string $args): array
 it('writes a reader-chosen file name only under a key the shipped channel redacts', function (): void {
     $redacted = pathKeyRedactedKeys();
 
-    expect($redacted)->toContain('filename', 'the processor no longer redacts `filename`, which every upload path logs under.');
+    // The positive control, and the reason it is three assertions rather than
+    // one: this rule's whole verdict is "the key was on the processor's list",
+    // so a reflection that came back empty answers "no key is redacted" to
+    // every line below and reports a clean tree over an unread class.
+    expect($redacted)->toBeArray()->not->toBeEmpty();
+
+    expect(in_array('filename', $redacted, true))->toBeTrue(
+        'RedactSecretsProcessor no longer redacts `filename`, which every upload path logs under.'
+    );
+
+    // One from each of the two lists, so a constant renamed out from under the
+    // reflection fails here rather than downstream as a missing offender.
+    expect(in_array('authorization', $redacted, true))->toBeTrue(
+        'RedactSecretsProcessor::SECRET_KEYS did not reach the reflection, so only one of its two lists is being read.'
+    );
 
     $files = RepoTree::relativeFiles(RepoTree::PRODUCTION_PHP);
 
