@@ -1,0 +1,4 @@
+Datum,Tijd,Tijdzone,Omschrijving,Valuta,"Bruto ","Kosten ",Netto,Saldo,Transactiereferentie,"Van e-mailadres",Naam,"Naam bank",Bankrekening,Verzendkosten,Btw,Factuurreferentie,"Reference Txn ID"
+4/6/2026,09:14:02,Europe/Berlin,"Algemene kaartstorting",EUR,"50,00","","48,25","48,25",O-00000000000000311,,"",,,"0,00","0,00",718803381922610311,
+4/7/2026,11:56:08,Europe/Berlin,"Express Checkout-betaling",EUR,"-20,00","0,00","-20,60","27,65",O-00000000000000312,kaarthouder@example.test,"Spotify AB",,,"0,00","0,00",718803381922610312,
+4/8/2026,08:01:44,Europe/Berlin,"Express Checkout-betaling",EUR,"-10,00","0,00","-10,00","17,65",O-00000000000000313,kaarthouder@example.test,"Cloudflare Inc",,,"0,00","0,00",718803381922610313,

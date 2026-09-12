@@ -400,25 +400,21 @@ final class PaypalTransactionRollup
     private function buildFeeDto(array $parentRow, string $language, int $canonicalIndex, SourceTransactionDto $payment): ?SourceTransactionDto
     {
         $feeEventType = $this->columns->header('fee', $language);
-        $feeCell = $this->columns->value('fee', $language, $parentRow);
-
-        // An export without the column states no fee, which is not the same as
-        // the absent gross column above: there the figure the row is about is
-        // missing, here a figure the row may not have is.
-        if ($feeEventType === null || $feeCell === null || $feeCell === '') {
+        if ($feeEventType === null) {
             return null;
         }
 
-        // The denomination of the row the cell sits on, never the payment's own:
+        // The denomination of the row the cells sit on, never the payment's own:
         // a conversion fold can rewrite the payment's native leg to the currency
-        // it settled in, and PayPal states Kosten in neither — it states it in
-        // the Valuta beside it.
+        // it settled in, and PayPal states none of these three figures in it —
+        // it states them in the Valuta beside them.
         $feeCurrency = $this->parentCurrency($parentRow, $language);
-        $feeMinor = $this->amounts->parseMinor($feeCell, $feeCurrency);
+        $feeMinor = $this->feeMinor($parentRow, $language, $feeCurrency);
 
-        // Zero is what the column reads on every row of a wallet that only ever
-        // spends, and a movement of nothing is not a movement.
-        if ($feeMinor === 0) {
+        // Zero is what a wallet that only ever spends reads on every row, and a
+        // movement of nothing is not a movement. Null is a row that states no
+        // fee anywhere the parser can reach.
+        if ($feeMinor === null || $feeMinor === 0) {
             return null;
         }
 
@@ -450,6 +446,52 @@ final class PaypalTransactionRollup
             ],
             sourceRowIndex: $canonicalIndex,
         );
+    }
+
+    // What the row says the wallet moved by, less what it says the payment was.
+    // Netto is the figure Saldo steps by, so a pair anchored on it sums to the
+    // movement whatever the fee column says — or fails to say, the three ways
+    // it can: absent, blank, or reading zero beside a Netto that disagrees.
+    /**
+     * @param  array<string, string>  $parentRow
+     *
+     * @link ../../../../../.docs/features/ingestion/a-paypal-fee-is-a-row-of-its-own.md#the-fee-is-read-off-the-movement-not-off-the-fee-column
+     */
+    private function feeMinor(array $parentRow, string $language, string $currency): ?int
+    {
+        $net = $this->statedMinor('net', $parentRow, $language, $currency);
+        $gross = $this->statedMinor('gross', $parentRow, $language, $currency);
+
+        if ($net !== null && $gross !== null) {
+            return $net - $gross;
+        }
+
+        // Nothing readable states the movement, so the labelled figure is the
+        // only thing left to go on. An unreadable one still raises, because a
+        // fee the file states and the parser cannot read is not a fee of zero.
+        $fee = $this->columns->value('fee', $language, $parentRow);
+
+        return ($fee === null || $fee === '') ? null : $this->amounts->parseMinor($fee, $currency);
+    }
+
+    // Absent, blank and unreadable all answer "this row does not state it" so
+    // that an anchor the file spells wrongly falls back to the fee column
+    // instead of dropping a payment the column could still have booked.
+    /**
+     * @param  array<string, string>  $parentRow
+     */
+    private function statedMinor(string $canonical, array $parentRow, string $language, string $currency): ?int
+    {
+        $cell = $this->columns->value($canonical, $language, $parentRow);
+        if ($cell === null || $cell === '') {
+            return null;
+        }
+
+        try {
+            return $this->amounts->parseMinor($cell, $currency);
+        } catch (InvalidAmountException) {
+            return null;
+        }
     }
 
     /**
