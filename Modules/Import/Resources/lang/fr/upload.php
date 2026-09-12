@@ -27,7 +27,7 @@ return [
     'submit' => 'Importer le relevé',
 
     'formats' => [
-        'activity_download' => 'Activity Download (CSV)',
+        'activity_download' => 'Téléchargement d’activité (CSV)',
         'email_message' => 'Message e-mail (.eml)',
         'mailbox_archive' => 'Archive de boîte aux lettres (.mbox)',
     ],

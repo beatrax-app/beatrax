@@ -9,9 +9,9 @@ return [
     'running' => 'Çalışıyor…',
     'empty_html' => 'Henüz probe çıktısı alınmadı. :command komutunu çalıştırmak için :action düğmesine bas.',
     'latest_output' => 'Son probe çıktısı',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'başarılı',
     'aria_warning' => 'uyarı',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'başarısız',
     'aria_info' => 'info',
     'exit_code' => 'Çıkış kodu: :code',
 ];

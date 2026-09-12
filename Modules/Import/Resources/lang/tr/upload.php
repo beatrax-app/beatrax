@@ -27,7 +27,10 @@ return [
     'submit' => 'Hesap ekstresi yükle',
 
     'formats' => [
-        'activity_download' => 'Activity Download (CSV)',
+        // i18n-review: tr · activity_download — "işlem" is the noun the rest of
+        // this locale uses for a transaction, and PayPal's own Turkish page may
+        // name this export something else again.
+        'activity_download' => 'İşlem indirmesi (CSV)',
         'email_message' => 'E-posta iletisi (.eml)',
         'mailbox_archive' => 'Posta kutusu arşivi (.mbox)',
     ],

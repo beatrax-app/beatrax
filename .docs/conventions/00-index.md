@@ -97,6 +97,9 @@ pass for a clean one.
   value plus a suffix key writes English word order into every locale
 - [Translations awaiting a native reader](translations-awaiting-a-native-reader.md)
   — the `i18n-review:` marker, and the standing work-list of strings carrying it
+- [English a locale is allowed to keep](english-a-locale-is-allowed-to-keep.md)
+  — the line parity cannot see, the five reasons a value is right to match the
+  English, and the five false leads that look like evidence and are not
 - [Copy that follows the reader](../features/notifications/reader-language-copy.md)
   — the seam a stored line keeps its key through, for a column a screen reads
   back long after the language that wrote it

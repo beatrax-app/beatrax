@@ -27,7 +27,7 @@ return [
     'submit' => 'Carica estratto conto',
 
     'formats' => [
-        'activity_download' => 'Activity Download (CSV)',
+        'activity_download' => 'Download attività (CSV)',
         'email_message' => 'Messaggio email (.eml)',
         'mailbox_archive' => 'Archivio di casella (.mbox)',
     ],

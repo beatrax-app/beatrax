@@ -36,7 +36,7 @@ return [
     'cancel' => 'Cancelar',
     'rerun' => 'Repetir',
     'started' => 'Iniciado :when',
-    'exit' => 'exit',
+    'exit' => 'saída',
 
     'toast' => [
         'unknown_command' => 'Comando desconhecido: :command',

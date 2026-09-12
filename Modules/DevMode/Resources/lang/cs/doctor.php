@@ -9,9 +9,9 @@ return [
     'running' => 'Probíhá…',
     'empty_html' => 'Zatím nebyl zachycen žádný výstup sond. Stiskni :action pro spuštění :command.',
     'latest_output' => 'Poslední výstup sond',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'prošlo',
     'aria_warning' => 'varování',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'selhalo',
     'aria_info' => 'info',
     'exit_code' => 'Kód ukončení: :code',
 ];

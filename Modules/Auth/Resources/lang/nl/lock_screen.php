@@ -13,7 +13,7 @@ return [
     'digits_entered' => ':count cijfer ingevoerd|:count cijfers ingevoerd',
     'pad_label' => 'Pincode-toetsenblok',
     'digit_aria' => 'Cijfer :digit',
-    'backspace_aria' => 'Backspace',
+    'backspace_aria' => 'Wissen',
     'ok_aria' => 'OK — pincode bevestigen',
     'ok' => 'OK',
 

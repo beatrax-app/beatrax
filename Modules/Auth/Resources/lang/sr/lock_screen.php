@@ -13,7 +13,7 @@ return [
     'digits_entered' => '{1} unesena :count cifra|[2,4] unesene :count cifre|[5,*] uneseno :count cifara',
     'pad_label' => 'PIN tastatura',
     'digit_aria' => 'Cifra :digit',
-    'backspace_aria' => 'Backspace',
+    'backspace_aria' => 'Obriši znak',
     'ok_aria' => 'U redu — potvrdi PIN',
     'ok' => 'U redu',
 

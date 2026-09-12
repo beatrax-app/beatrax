@@ -36,7 +36,7 @@ return [
     'cancel' => 'Peruuta',
     'rerun' => 'Suorita uudelleen',
     'started' => 'Aloitettu :when',
-    'exit' => 'exit',
+    'exit' => 'paluukoodi',
 
     'toast' => [
         'unknown_command' => 'Tuntematon komento: :command',

@@ -9,9 +9,9 @@ return [
     'running' => 'Trwa…',
     'empty_html' => 'Nie przechwycono jeszcze wyniku sond. Naciśnij :action, aby wywołać :command.',
     'latest_output' => 'Najnowszy wynik sond',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'udane',
     'aria_warning' => 'ostrzeżenie',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'nieudane',
     'aria_info' => 'info',
     'exit_code' => 'Kod wyjścia: :code',
 ];

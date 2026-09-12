@@ -9,9 +9,9 @@ return [
     'running' => 'Läuft…',
     'empty_html' => 'Noch keine Prüfausgabe erfasst. Drücke :action zum Aufrufen von :command.',
     'latest_output' => 'Letzte Prüfausgabe',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'erfolgreich',
     'aria_warning' => 'Warnung',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'fehlgeschlagen',
     'aria_info' => 'info',
     'exit_code' => 'Exit-Code: :code',
 ];

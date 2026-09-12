@@ -9,9 +9,9 @@ return [
     'running' => 'Kör…',
     'empty_html' => 'Ingen probe-utdata har fångats ännu. Tryck på :action för att anropa :command.',
     'latest_output' => 'Senaste probe-utdata',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'lyckad',
     'aria_warning' => 'varning',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'misslyckad',
     'aria_info' => 'info',
     'exit_code' => 'Exitkod: :code',
 ];

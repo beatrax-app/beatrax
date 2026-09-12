@@ -9,9 +9,9 @@ return [
     'running' => 'Beží…',
     'empty_html' => 'Zatiaľ nie je zachytený žiadny výstup kontrol. Stlač :action a vyvolaj :command.',
     'latest_output' => 'Najnovší výstup kontrol',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'prešlo',
     'aria_warning' => 'varovanie',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'zlyhalo',
     'aria_info' => 'info',
     'exit_code' => 'Návratový kód: :code',
 ];

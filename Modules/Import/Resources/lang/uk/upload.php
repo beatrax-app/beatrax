@@ -27,7 +27,7 @@ return [
     'submit' => 'Завантажити виписку',
 
     'formats' => [
-        'activity_download' => 'Activity Download (CSV)',
+        'activity_download' => 'Завантаження активності (CSV)',
         'email_message' => 'Лист (.eml)',
         'mailbox_archive' => 'Архів поштової скриньки (.mbox)',
     ],

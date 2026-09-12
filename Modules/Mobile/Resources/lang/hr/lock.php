@@ -8,7 +8,7 @@ return [
     'digits_entered' => 'unesena :count znamenka|unesene :count znamenke|uneseno :count znamenki',
     'pin_pad' => 'PIN tipkovnica',
     'digit' => 'Znamenka :digit',
-    'backspace' => 'Backspace',
+    'backspace' => 'Obriši znak',
     'ok' => 'U redu',
     'ok_aria' => 'U redu — potvrdi PIN',
     'sign_out' => 'Odjavi se',
