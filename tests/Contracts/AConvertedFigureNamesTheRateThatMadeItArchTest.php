@@ -8,7 +8,7 @@ use Tests\Contracts\Support\BackendSourceFiles;
 use Tests\Contracts\Support\RepoTree;
 
 // A converted figure has two halves to disclose and the tree only ever wrote
-// one of them. Twenty-eight templates named the currencies they had LEFT OUT
+// one of them. Thirty-one renderings named the currencies they had LEFT OUT
 // and none named the rate they had converted the rest at, because
 // CrossCurrencyTotal::ratesTo() answered an array<string, string> and dropped
 // the source and the as-of date one call before any surface could read them.
@@ -202,7 +202,7 @@ it('cannot build a converted total that has no rates to disclose', function (): 
     expect($rates)->not->toBeNull('ConvertedTotal no longer carries the rates that built it, so no surface downstream can disclose them.');
     expect($rates->isOptional())->toBeFalse(
         'The rates ConvertedTotal was built from are optional again. A default makes "I converted, and I will not say at what" '
-        .'constructible, which is the state twenty-eight surfaces were in.'
+        .'constructible, which is the state every converting surface was in.'
     );
 });
 

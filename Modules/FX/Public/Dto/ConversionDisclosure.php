@@ -10,8 +10,8 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\FX\Public\Support\BundledRates;
 
 // What one figure has to say about its own conversion: the rates that built it
-// and the codes no rate reached. Twenty-eight surfaces rendered the second half
-// and none the first, because the first was thrown away one call earlier. The
+// and the codes no rate reached. Thirty-one renderings drew the second half and
+// none the first, because the first was thrown away one call earlier. The
 // oldest leg answers for the whole, as it does for any multi-leg conversion.
 /**
  * @link ../../../../.docs/features/fx/architecture.md#a-converted-figure-carries-the-rate-that-made-it

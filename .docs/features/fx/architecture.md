@@ -274,9 +274,10 @@ answer `array<string, string>` — code to rate — and that array is where
 every surface's disclosure went. The `ConversionResult` behind each
 entry already held the source, the as-of date and the staleness;
 `ratesTo()` read `->rate` off it and dropped the rest, one call before
-the surface that would have to render them. Twenty-eight templates
-rendered the "not converted" half and **none** rendered the rate,
-because none of them had it. Seven converting surfaces rendered neither.
+the surface that would have to render them. Thirty-one renderings
+across twenty-two templates drew the "not converted" half and **none**
+drew the rate, because none of them had it. Seven converting surfaces
+drew neither.
 
 The set carries a `RateUsed` per source currency — `from`, `to`, the
 exact decimal `rate`, `source`, `asOf`, `isStale` — and `withRates()`

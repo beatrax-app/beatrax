@@ -15,13 +15,13 @@
     built it, their source, the day they were published, and the codes no rate
     reached.
 
-    It exists once because it existed nowhere. Twenty-eight surfaces rendered
-    the "not converted" half and none of them the rate — a ¥480,000 expense
-    moved the dashboard Out tile by EUR 3,016.97 at a bundled rate published
-    ninety-nine days earlier, and the tile said only "€5,118.80". The cause was
-    structural rather than a missing label: the rate, its source and its date
-    were dropped one call before the surface, so no surface could have
-    disclosed them.
+    It exists once because it existed nowhere. Thirty-one renderings across
+    twenty-two templates drew the "not converted" half and not one of them a
+    rate — a ¥480,000 expense moved the dashboard Out tile by EUR 3,016.97 at a
+    bundled rate published ninety-nine days earlier, and the tile said only
+    "€5,118.79". The cause was structural rather than a missing label: the
+    rate, its source and its date were dropped one call before the surface, so
+    no surface could have disclosed them.
 
     A future converting surface therefore passes ONE prop, and null is a valid
     value: a figure that converted nothing renders nothing. The disclosure comes
