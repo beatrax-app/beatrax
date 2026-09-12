@@ -6,7 +6,7 @@ return [
     'title_default' => 'Dev Console — Beatrax',
     'sidebar_aria' => 'Dev Console',
     'heading' => 'Dev Console',
-    'on_chip' => 'ON',
+    'on_chip' => 'LIGADO',
     'on_chip_aria' => 'Modo de programador ativo',
     'back_to_app' => 'Voltar à aplicação',
 ];

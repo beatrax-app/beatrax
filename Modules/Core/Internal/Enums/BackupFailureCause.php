@@ -24,4 +24,16 @@ enum BackupFailureCause: string
     case WriteFailed = 'write_failed';
 
     case RestoreFailed = 'restore_failed';
+
+    // A later `db:backup` that verified its own copy answers the first three
+    // outright. A failed restore is not a claim about backup health: it records
+    // that a swap aborted and names the snapshot holding the data it aborted
+    // over, which no backup run afterwards speaks to either way.
+    /**
+     * @return list<string> the causes a verified backup makes no claim about
+     */
+    public static function unansweredByAVerifiedBackup(): array
+    {
+        return [self::RestoreFailed->value];
+    }
 }

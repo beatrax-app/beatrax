@@ -17,7 +17,16 @@
         <div class="space-y-6">
             <flux:heading size="lg">{{ Lang::get('import::rename.heading') }}</flux:heading>
 
-            <form wire:submit="save" class="space-y-5">
+            {{-- Focus is taken on the event that opens the dialog: open() sets
+                 the fields and dispatches modal-show on the same round-trip, so
+                 the name match is deterministic. This form is in the document
+                 from the first paint and has no moment of its own. --}}
+            <form
+                wire:submit="save"
+                class="space-y-5"
+                x-data
+                x-on:modal-show.document="$event.detail && $event.detail.name === 'rename-counterparty' && $nextTick(() => $refs.friendly.focus())"
+            >
                 <div class="space-y-1">
                     <label for="rename-popover-raw" class="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('import::rename.raw_label') }}</label>
                     <input
@@ -35,7 +44,7 @@
                     :label="Lang::get('import::rename.friendly_label')"
                     wire:model.live="friendly"
                     :placeholder="Lang::get('import::rename.friendly_placeholder')"
-                    autofocus
+                    x-ref="friendly"
                 />
 
                 <div class="space-y-2">

@@ -36,6 +36,11 @@ directory the file sits in, or when a key named is no longer in that file. A
 first line that does not reach its `—` is not read at all, so the whole address
 belongs on that line and the prose starts after the dash.
 
+A line left *in English* is the other half of the same discipline and is
+recorded elsewhere — see
+[English a locale is allowed to keep](english-a-locale-is-allowed-to-keep.md),
+which holds the reasons a value is right to match the source locale.
+
 **Clearing one** means deleting the comment, not editing it. A marker that a
 reviewer has answered and left in place is worse than no marker: the next
 reader treats an already-checked string as still open.

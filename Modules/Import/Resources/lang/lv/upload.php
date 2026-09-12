@@ -27,7 +27,7 @@ return [
     'submit' => 'Augšupielādēt konta izrakstu',
 
     'formats' => [
-        'activity_download' => 'Activity Download (CSV)',
+        'activity_download' => 'Aktivitātes lejupielāde (CSV)',
         'email_message' => 'E-pasta ziņojums (.eml)',
         'mailbox_archive' => 'Pastkastes arhīvs (.mbox)',
     ],

@@ -14,7 +14,6 @@
                 :label="Lang::get('auth::reset_password.username')"
                 wire:model="username"
                 autocomplete="username"
-                autofocus
             />
 
             <x-core::form-field

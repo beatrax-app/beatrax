@@ -19,7 +19,6 @@
                 :label="Lang::get('auth::change_password.current_password')"
                 wire:model="currentPassword"
                 autocomplete="current-password"
-                autofocus
             />
 
             <x-core::form-field

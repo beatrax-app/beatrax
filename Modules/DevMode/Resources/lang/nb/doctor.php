@@ -9,9 +9,9 @@ return [
     'running' => 'Kjører…',
     'empty_html' => 'Ingen probe-utdata er fanget opp ennå. Trykk på :action for å kalle :command.',
     'latest_output' => 'Siste probe-utdata',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'vellykket',
     'aria_warning' => 'varsel',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'feilet',
     'aria_info' => 'info',
     'exit_code' => 'Exitkode: :code',
 ];

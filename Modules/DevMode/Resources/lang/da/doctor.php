@@ -9,9 +9,9 @@ return [
     'running' => 'Kører…',
     'empty_html' => 'Der er endnu ikke opsamlet noget probe-output. Tryk på :action for at kalde :command.',
     'latest_output' => 'Seneste probe-output',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'vellykket',
     'aria_warning' => 'advarsel',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'mislykket',
     'aria_info' => 'info',
     'exit_code' => 'Exitkode: :code',
 ];
