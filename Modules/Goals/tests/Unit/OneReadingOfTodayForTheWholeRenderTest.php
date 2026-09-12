@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Services\GoalProjectionService;
+use Modules\FX\Public\Dto\RateSet;
 
 // The service read CarbonImmutable::today() in four places and the query in a
 // fifth, so a render that straddled midnight measured one goal's observation
@@ -53,7 +54,7 @@ it('measures the observation window against the day it was handed, not the clock
         10000,
         null,
         $this->attributed,
-        [],
+        RateSet::empty('EUR'),
         CarbonImmutable::parse('2026-06-15'),
     );
 
@@ -69,7 +70,7 @@ it('dates the finish from the day it was handed', function (): void {
         10000,
         null,
         $this->attributed,
-        [],
+        RateSet::empty('EUR'),
         CarbonImmutable::parse('2026-06-17'),
     );
 
@@ -78,7 +79,7 @@ it('dates the finish from the day it was handed', function (): void {
         10000,
         null,
         $this->attributed,
-        [],
+        RateSet::empty('EUR'),
         CarbonImmutable::parse('2026-06-16'),
     );
 

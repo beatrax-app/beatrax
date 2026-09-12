@@ -2,7 +2,7 @@
     'disclosure',      // Required. The figure's Modules\FX\Public\Dto\ConversionDisclosure, or null where it converted nothing.
     'id',              // Required. Unique on the page — it becomes the popover's id and its anchor name.
     'label' => null,   // The figure this is about, already localised, for the trigger's accessible name.
-    'online' => null,  // Whether online rate fetching is on, where the surface knows it; null leaves the note neutral.
+    'onlineRates' => null,  // Whether online rate fetching is on, where the surface knows it; null leaves the note neutral.
     'flat' => false,   // A print target: the lines render inline instead of behind a popover.
 ])
 
@@ -91,7 +91,7 @@
     </span>
 
     @if ($disclosure->hasRates())
-        @php($fxStaleNote = $disclosure->staleNote($online))
+        @php($fxStaleNote = $disclosure->staleNote($onlineRates))
         @if ($flat)
             <div data-fx-rates-detail>
                 @include('core::components.partials.fx-rate-lines', ['disclosure' => $disclosure, 'fxDated' => $fxDated, 'fxStaleNote' => $fxStaleNote])

@@ -53,7 +53,7 @@
                         :disclosure="$netWorth->conversion"
                         id="net-worth"
                         :label="Lang::get('core::net_worth.heading')"
-                        :online="(bool) $fxOnlineEnabled"
+                        :online-rates="(bool) $fxOnlineEnabled"
                         class="mt-0.5 block text-xs"
                         style="color: var(--color-text-faint);"
                     />
@@ -89,7 +89,7 @@
                                             :disclosure="$account->disclosure($baseCurrency)"
                                             id="account-{{ $lineKey }}"
                                             :label="$account->name"
-                                            :online="(bool) $fxOnlineEnabled"
+                                            :online-rates="(bool) $fxOnlineEnabled"
                                         />
                                     </span>
                                 @elseif ($account->hasNoRate($baseCurrency))

@@ -328,40 +328,56 @@ final readonly class ForecastChartView
         // read EUR2,000.00 for EUR1,000.00 next to USD1,000.00.
         $rates = $this->fx->ratesTo($this->currenciesIn($byDateCurrency), $baseCurrency);
 
-        // A currency no rate reaches is left out of the total, and the caption
-        // above the chart said "across every account" regardless. Every other
-        // money surface here carries the codes through to core::money.not_converted.
-        $aggregatePoints = [];
-        $converted = [];
-        foreach ($byDateCurrency as $date => $byCurrency) {
-            $total = $this->fx->withRates($byCurrency, $baseCurrency, $rates);
-            foreach ($total->unconverted as $code) {
-                $unconverted[$code] = true;
-            }
-            foreach ($total->rates->codes() as $code) {
-                $converted[$code] = true;
-            }
-            $aggregatePoints[] = ['date' => $date, 'point_minor' => $total->minor];
-        }
+        ['points' => $aggregatePoints, 'rates' => $used] = $this->foldToOneCurrency($byDateCurrency, $baseCurrency, $rates, $unconverted);
 
         $bufferTotal = $this->bufferFloorTotal($user, $baseCurrency);
         foreach ($bufferTotal->unconverted as $code) {
             $unconverted[$code] = true;
         }
 
-        $codes = array_keys($unconverted);
-        sort($codes);
-
         // The floor is drawn on the curve's own axis and converted through its
         // own batch, so its rates belong to the same figure; neither set is a
         // subset of the other — an account can hold a currency it sets no
         // buffer in, and set one in a currency the curve never reaches.
-        $used = $rates->only(array_keys($converted));
         foreach ($bufferTotal->rates->all() as $rate) {
             $used = $used->with($rate);
         }
 
+        $codes = array_keys($unconverted);
+        sort($codes);
+
         return [$aggregatePoints, $bufferTotal->minor, $runFailed, $codes, $isComputing, ConversionDisclosure::of($used, $codes)];
+    }
+
+    // A currency no rate reaches is left out of the total, and the caption
+    // above the chart said "across every account" regardless. $unconverted is
+    // taken by reference because the accounts' own curves have already put
+    // codes in it and the two sets are one caption.
+    /**
+     * @param  array<string, array<string, int>>  $byDateCurrency
+     * @param  array<string, true>  $unconverted
+     * @return array{points: list<array{date: string, point_minor: int}>, rates: RateSet}
+     */
+    private function foldToOneCurrency(array $byDateCurrency, string $baseCurrency, RateSet $rates, array &$unconverted): array
+    {
+        $points = [];
+        $converted = [];
+
+        foreach ($byDateCurrency as $date => $byCurrency) {
+            $total = $this->fx->withRates($byCurrency, $baseCurrency, $rates);
+
+            foreach ($total->unconverted as $code) {
+                $unconverted[$code] = true;
+            }
+
+            foreach ($total->rates->codes() as $code) {
+                $converted[$code] = true;
+            }
+
+            $points[] = ['date' => $date, 'point_minor' => $total->minor];
+        }
+
+        return ['points' => $points, 'rates' => $rates->only(array_keys($converted))];
     }
 
     // The floor is judged against the curve above, so it is summed over the

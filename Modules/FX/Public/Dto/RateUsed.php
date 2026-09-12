@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\FX\Public\Dto;
 
-use Brick\Math\BigNumber;
-use Brick\Math\Exception\MathException;
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
@@ -29,19 +27,13 @@ final readonly class RateUsed
         public bool $isStale,
     ) {}
 
-    // Three decimals, or as many as it takes to keep three significant digits
-    // of a smaller rate: euro-per-yen is 0.00628536, and four fixed places
-    // wrote 0.0063. Through BigNumber because a cross-rate arrives as the
-    // exact rational brick/money derived it from — "25/27", not a decimal.
+    // The column's own eight places, not the three significant digits a rate
+    // reads at beside a figure: a reader cannot reproduce EUR 3,016.97 from
+    // 0.00629, and reproducing it is what the disclosure is for. Rate::parse
+    // also reads the exact rational a cross-rate arrives as.
     public function rateForDisplay(): string
     {
-        try {
-            $exact = Rate::fromNumber(BigNumber::of($this->rate));
-        } catch (MathException) {
-            $exact = null;
-        }
-
-        return Fmt::decimalString($exact?->forDisplay() ?? $this->rate);
+        return Fmt::decimalString(Rate::parse($this->rate)?->exact() ?? $this->rate);
     }
 
     // The institution, not the column value. Several locales abbreviate the

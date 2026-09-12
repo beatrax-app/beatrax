@@ -58,16 +58,7 @@ final class RecurringSeriesDtoMapper
             ? null
             : $fx->convert($latestAmount, $baseCurrency, $rates);
 
-        // This row's own leg, not the page's: $rates is batched across every
-        // series on screen, and a row disclosing all of them would name rates
-        // its own shadow never went through.
-        $rowCurrency = $latestAmount->currency();
-        $conversion = $rowCurrency === '' || $rowCurrency === $baseCurrency
-            ? null
-            : ConversionDisclosure::of(
-                $rates->only([$rowCurrency]),
-                $rates->has($rowCurrency) ? [] : [$rowCurrency],
-            );
+        $conversion = self::rowConversion($latestAmount->currency(), $baseCurrency, $rates);
 
         $nextExpectedAt = null;
         $rawNext = $row->next_expected_at ?? null;
@@ -117,4 +108,19 @@ final class RecurringSeriesDtoMapper
             conversion: $conversion,
         );
     }
+    // This row's own leg, not the page's: $rates is batched across every series
+    // on screen, and a row disclosing all of them would name rates its own
+    // shadow never went through.
+    private static function rowConversion(string $rowCurrency, string $baseCurrency, RateSet $rates): ?ConversionDisclosure
+    {
+        if ($rowCurrency === '' || $rowCurrency === $baseCurrency) {
+            return null;
+        }
+
+        return ConversionDisclosure::of(
+            $rates->only([$rowCurrency]),
+            $rates->has($rowCurrency) ? [] : [$rowCurrency],
+        );
+    }
+
 }

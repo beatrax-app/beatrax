@@ -109,7 +109,10 @@ function fxUnconvertedCarriers(): array
 it('renders the not-converted half through the one component that renders the other half too', function (): void {
     $blades = fxDisclosureBlades();
 
-    expect($blades)->toHaveKey(FX_DISCLOSURE_COMPONENT, 'The shared disclosure component is not in the walk, so nothing below measured anything.');
+    // toHaveKey's second argument is the expected VALUE, not a message, so the
+    // presence of the component is asserted on its own.
+    expect(array_key_exists(FX_DISCLOSURE_COMPONENT, $blades))
+        ->toBeTrue('The shared disclosure component is not in the walk, so nothing below measured anything.');
 
     $offenders = [];
 

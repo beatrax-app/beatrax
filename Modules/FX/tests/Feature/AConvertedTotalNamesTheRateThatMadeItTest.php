@@ -125,15 +125,17 @@ it('says nothing at all about a figure that converted nothing', function (): voi
         ->and(ConversionDisclosure::none()->isEmpty())->toBeTrue();
 });
 
+// AED and not ZAR: the bundled snapshot quotes thirty currencies and the rand
+// is one of them, so a rand bucket converts and names nothing.
 it('still names what it left out when no rate reached a bucket', function (): void {
     $total = app(CrossCurrencyTotal::class)->of(
-        [Currency::Eur->value => 210_182, 'ZAR' => 111_100],
+        [Currency::Eur->value => 210_182, 'AED' => 111_100],
         Currency::Eur->value,
     );
 
     $disclosure = $total->disclosure();
 
-    expect($disclosure->unconverted)->toBe(['ZAR'])
+    expect($disclosure->unconverted)->toBe(['AED'])
         ->and($disclosure->isPartial())->toBeTrue()
         ->and($disclosure->hasRates())->toBeFalse()
         ->and($disclosure->isEmpty())->toBeFalse();
