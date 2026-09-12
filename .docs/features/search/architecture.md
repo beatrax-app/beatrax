@@ -32,6 +32,26 @@ What the module explicitly does NOT do:
   the same figure as twenty yen. Pinned from both sides, by
   `AnAmountBoundIsReadAtTheReadersOwnScaleTest` here and by
   `ADrilldownCarriesTheFiltersTheFigureWasNarrowedByTest` in `Reports`.
++ It never tests a bound against rows denominated in another money, and
+  never answers one by narrowing to the reader's own currency either.
+  `AmountBoundResolver` restates the pair once per search, in every
+  currency the reader's ledger settles in, through the same
+  `FX::CrossCurrencyBound` the report figure was narrowed by;
+  `AmountBoundRestriction` applies it as one OR branch per currency,
+  each testing that currency's own rows against that currency's own
+  bound. Narrowing kept the comparison well formed and made the list
+  unable to account for the row above it: an EUR reader filtering "≥ 20"
+  over one EUR 30.00 and one USD 30.00 charge read EUR 54.00 on the
+  report row and EUR 30.00 in the list it opened. A currency no rate
+  reaches cannot state the bound at all, so its rows are left out and
+  the code is named in `unconvertedCurrencies` — the same answer
+  `CurrencyModeApplier` gives it in `excludedCurrencies`, rather than a
+  third one. `AnAmountBoundMeansOneAmountOfMoneyTest` pins the rows and
+  the disclosure; `TheDrilldownListAddsUpToTheRowItWasOpenedFromTest` in
+  `Reports` pins the equality of the two figures. The bare-number branch
+  is deliberately untouched: "show me the transaction that IS this
+  figure" is a different question from a bound, and it still reads the
+  reader's own money only.
 + It never writes its own shape check for a money string. Three regexes
   used to gate a typed figure on `\d{1,2}` before the parser saw it —
   one in `QueryParser` for the `amount:` token, two in `SearchQuery` —
@@ -94,6 +114,16 @@ What the module explicitly does NOT do:
   to ids (`NO_SUCH_ID` when a token matches nothing, so an unresolvable
   token narrows the search rather than widening it to the whole history),
   and an `amount:` token to its min/max pair at the reader's own scale.
++ **Internal/Services/AmountBoundResolver** — reads the distinct
+  `settled_currency` values the reader's ledger holds and restates the
+  typed bound into each, answering an `AmountBoundRestriction` carrying
+  the bound per currency plus the codes no rate could state it in. The
+  restatement itself is `FX::CrossCurrencyBound`, shared with the report
+  figure the list is opened from, so the two cannot price one bound two
+  ways. Resolved once per `search()` rather than inside `applyFilters()`,
+  which runs twice — the FTS candidate pass and the row query — and a
+  bound priced differently between those two passes would be the same
+  disagreement one level down.
 + **Internal/Services/EntityNameSearch** — name-only search across
   counterparties, categories, goals, pots, and recurring series for
   the palette's entity section. Goals, pots and series are `LIKE`-

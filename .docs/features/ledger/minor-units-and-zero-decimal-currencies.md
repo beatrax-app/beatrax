@@ -82,10 +82,28 @@ different money:
 
 Two rules follow, and both are already how the rest of the app behaves:
 
-1. **A bound can only test rows in the currency it was written in.** Scope
-   the query to that currency rather than converting per row — the same
-   choice `CrossCurrencyTotal` makes when it leaves out a currency the
-   rate table cannot reach instead of counting it one to one.
+1. **A bound can only test rows in the currency it was written in.** Two
+   ways satisfy that, and which one is right depends on whether the rows
+   in the other currencies are supposed to be in the answer. Scoping the
+   query to the bound's own currency is the cheaper one and is what a
+   single-currency question wants. Restating the bound — converting the
+   threshold once per currency and testing each currency's rows against
+   its own restatement — is what a question whose answer spans currencies
+   wants, and `FX::CrossCurrencyBound` is the one place that conversion
+   is written. Either way a currency the rate table cannot reach states
+   the bound in neither, and is left out and named rather than counted at
+   one to one, the same choice `CrossCurrencyTotal` makes for a bucket.
+
+   Scoping where restating was needed is its own defect, and a quiet one:
+   the report figure and the transaction list it drills into ran the two
+   different rules, so a row reading EUR 54.00 over one EUR 30.00 and one
+   USD 30.00 charge opened a list showing EUR 30.00. Both surfaces were
+   internally consistent and the reader had no way to tell which number
+   to believe. `ReportAggregator` and `SearchQuery` now restate through
+   the same collaborator. A categorisation rule's amount condition still
+   scopes — see [the rule condition](#the-rule-condition-which-reads-as-an-exception-and-is-not-one)
+   below — because it asks whether one row matches a threshold the reader
+   writes in one money, not for a set that spans several.
 2. **A ranking has to be converted first.** Where the sort has to stay in
    SQL, each currency carries a multiplier into the reader's money: the
    rate, times the ratio of the two minor-unit scales. Bind the comparison

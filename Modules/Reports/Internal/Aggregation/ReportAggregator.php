@@ -6,10 +6,9 @@ namespace Modules\Reports\Internal\Aggregation;
 
 use InvalidArgumentException;
 use Modules\Core\Models\User;
-use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\FX\Public\Services\CrossCurrencyBound;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use Modules\Reports\Internal\Dto\ReportDefinition;
@@ -33,7 +32,7 @@ final readonly class ReportAggregator
         private OtherMovementQuery $otherMovementQuery,
         private PeriodComparison $periodComparison,
         private BaseCurrency $baseCurrency,
-        private CrossCurrencyTotal $fx,
+        private CrossCurrencyBound $bound,
     ) {}
 
     public function run(User $user, ReportDefinition $definition): ReportResultDto
@@ -128,10 +127,10 @@ final readonly class ReportAggregator
         );
     }
 
-    // One typed figure means one amount of money, so it is converted into the
+    // One typed figure means one amount of money, so it is restated in the
     // currency each dimension query is scoped to rather than applied raw to all
-    // of them at once -- which made "at least 20" mean EUR 20, USD 20 and 20 yen
-    // simultaneously. Null where no rate reaches that currency: never a 1:1.
+    // of them at once. The restatement is the collaborator's and not this
+    // class's, because the list a row opens has to price the bound identically.
     private function filtersInCurrency(User $user, SpendQueryFilters $filters, string $currency): ?SpendQueryFilters
     {
         $readerCurrency = $this->baseCurrency->forUser($user);
@@ -140,33 +139,9 @@ final readonly class ReportAggregator
             return $filters;
         }
 
-        $rates = $this->fx->ratesTo([$readerCurrency], $currency);
+        $restated = $this->bound->restate($filters->amountMinMinor, $filters->amountMaxMinor, $readerCurrency, $currency);
 
-        $minMinor = $filters->amountMinMinor === null
-            ? null
-            : $this->boundInCurrency($filters->amountMinMinor, $readerCurrency, $currency, $rates);
-
-        $maxMinor = $filters->amountMaxMinor === null
-            ? null
-            : $this->boundInCurrency($filters->amountMaxMinor, $readerCurrency, $currency, $rates);
-
-        // A bound that had a value and lost it in conversion leaves the filter
-        // unanswerable. Reporting on the surviving side alone would silently
-        // widen the window the reader asked for.
-        $lost = ($filters->amountMinMinor !== null && $minMinor === null)
-            || ($filters->amountMaxMinor !== null && $maxMinor === null);
-
-        return $lost ? null : $filters->withAmountBounds($minMinor, $maxMinor);
-    }
-
-    /**
-     * @param  array<string, string>  $rates
-     */
-    private function boundInCurrency(int $minor, string $from, string $to, array $rates): ?int
-    {
-        $money = Money::tryOfMinor($minor, $from);
-
-        return $money === null ? null : $this->fx->convert($money, $to, $rates)?->toMinor();
+        return $restated === null ? null : $filters->withAmountBounds($restated['min'], $restated['max']);
     }
 
     /**
