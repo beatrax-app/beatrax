@@ -13,7 +13,6 @@ use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\SafeExceptionContext;
-use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
 use Modules\Forecasting\Public\Enums\ShortfallRisk;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
@@ -140,28 +139,12 @@ final readonly class PersistPositionDigest
             'amount' => CopyParam::money($netWorth->totalMinor, $netWorth->currency),
         ])];
 
-        $unconverted = self::unconvertedCurrencies($netWorth);
+        $unconverted = $netWorth->excludedAccountNames();
         if ($unconverted !== []) {
             $lines[] = CopyLine::of('core::money.not_converted', ['list' => implode(', ', $unconverted)]);
         }
 
         return $lines;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function unconvertedCurrencies(NetWorth $netWorth): array
-    {
-        $currencies = [];
-        foreach ($netWorth->accounts as $line) {
-            /** @var AccountBalanceLine $line */
-            if ($line->baseEquivalentMinor === null && $line->currency !== $netWorth->currency) {
-                $currencies[$line->currency] = true;
-            }
-        }
-
-        return array_keys($currencies);
     }
 
     // Envelopes carry the currency they were typed in, so one period can hold a
