@@ -7426,8 +7426,63 @@ screen from a timer that outlived it.
 The rule reads Blade through `MarkupSource`, never a pattern shaped like a tag —
 `x-data='{ init() { a.map(x => x.y) } }'` carries a `>` inside its own value, and
 a reader that stops at the first one cuts the attribute holding the answer in
-half. A factory in `resources/js` registered through `Alpine.data()` is **not**
-walked, so the same shape there is on the author.
+half.
+
+### `window` is not inside the element either
+
+The starter list began as the calls that hand back a handle — an interval, a
+stream, the three observers. A listener is the same shape wearing a different
+name, and only when its target outlives the element: `this.$el.addEventListener`
+is collected with the node, `window.addEventListener` is not.
+
+The standing install hint bound `beforeinstallprompt` from inside its own
+`x-data` and took it back off nowhere. Two guards each read past it. The rule
+here did not carry `addEventListener` as a starter; the window-binding rule
+beside it reads `<script>` tags and an `x-data` attribute is not one. Between
+them the binding sat in a seam neither opened.
+
+It costs two things. Every element Alpine initialises adds one more live
+listener on the window, and none of them is ever removed — the accumulation that
+rule is named for. And the event itself is dispatched **once per document**, so
+an element initialised on a `wire:navigate` arrival is binding for something
+that has already happened: the install button is gated on
+`x-show="installable"`, and a flag nothing can set leaves the reader the desktop
+"open it on your phone" line on a phone that was offering to install it.
+
+That second half is latent rather than shipped, and the distinction is the same
+one the close-window glue carries below. Nothing on the dashboard links away
+with `wire:navigate` today — the sidebar, the drawer and the palette all move
+the document — so the one live listener has always heard the one event. It was
+one attribute away. The fix does not rest on that: `resources/js/app.js` catches
+the offer at module scope, before any component exists, and the component reads
+the stash as well as binding its own listener, so neither order loses it.
+
+### The factory modules are held to the same rule
+
+An Alpine factory under `resources/js` is an element-scoped component written in
+JavaScript instead of in an attribute, and Alpine tears it down through the same
+`destroy()`. The second half of the test resolves the modules `app.js` imports a
+factory from — through the `Alpine.data(name, imported)` call, so the list cannot
+drift from what is actually registered — and asks the whole-file question of
+each.
+
+`app.js` itself is out of scope and has to be. It carries the page's own
+machinery beside the two factories declared in it — the submit delegate, the
+theme watcher, the wizard's back gesture, the install-offer capture above — all
+of which bind to the document deliberately and have no element to be stopped
+with.
+
+Two modules were found. The palette held a 200ms debounce on `this` that fired
+into a destroyed scope after a navigation and asked a `wire:id` the new page does
+not answer to. The press-and-hold tip held both of its timers the same way, and
+the 450ms one goes on to call `place()` — which re-queues itself through
+`requestAnimationFrame` for as long as the tip measures zero. A detached node
+measures zero for as long as the tab is open, so that retry had no reachable
+exit; it now stops unless the tip is still connected.
+
+`setTimeout` and `requestAnimationFrame` are on the factory list and not on the
+Blade one, deliberately. Single-shot in a start tag, they are not resources. Held
+on `this` and re-armed, they are a timer under another name.
 
 ## A provider registered from an event that has already fired
 

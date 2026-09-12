@@ -99,6 +99,16 @@ export const palette = (registry, recent, arms) => ({
         this._resolveSearchEndpoint();
     },
 
+    // The debounce outlives the element unless something stops it: a query
+    // typed and then navigated away from left a 200ms timer that fired into a
+    // destroyed scope and asked a wire:id the new page no longer answers to.
+    destroy() {
+        if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+            this._debounceTimer = null;
+        }
+    },
+
     _resolveSearchEndpoint() {
         // Resolve the mounted PaletteSearchEndpoint component by its
         // data-testid attribute. The component renders a hidden root
