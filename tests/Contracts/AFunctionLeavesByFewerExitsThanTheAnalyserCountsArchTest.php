@@ -113,8 +113,14 @@ it('leaves no function with more returns than the analyser counts to', function 
         'Anything failing here fails the hosted analysis on merge.',
         '',
         'There is no pinned list to add to. The default branch carries no body',
-        'above the ceiling — 686 sit exactly on it — so every entry above is',
-        'something this branch introduced.',
+        'above the ceiling, so every entry above is something this branch',
+        'introduced.',
+        '',
+        // The walk already had this number to assert its floor on; the
+        // sentence restated it by hand and drifted from it.
+        $onTheCeiling.' of the '.$inspected.' bodies read here leave by exactly '.SONAR_RETURN_CEILING.'.',
+        'A body already on the ceiling has no exit to spare, so returning a',
+        'value where a body used to fall off its end is a fourth way out.',
     ]));
 });
 

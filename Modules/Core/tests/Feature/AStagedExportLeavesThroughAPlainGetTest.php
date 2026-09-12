@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Session\ArraySessionHandler;
+use Illuminate\Session\Store;
+use Illuminate\Support\Str;
 use Modules\Core\Internal\Backup\StagedExportHandover;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 
 uses(RefreshDatabase::class);
@@ -148,4 +153,41 @@ it('sweeps every abandoned staging file, not only the archives it hands over', f
     }
 
     expect(is_file($fresh))->toBeTrue('the sweep took a file staged moments ago');
+});
+
+function stagedExportHandoverOn(Store $session): StagedExportHandover
+{
+    return new StagedExportHandover($session, app(Clock::class), app(CurrentUser::class));
+}
+
+// Nothing blocks two requests on one session, so both load the claims before
+// either writes them back and each unsets a token the other is still holding.
+// The archive is one account's whole database, so the second grant is not a
+// duplicate download — it is a second copy of everything, off one link.
+it('grants the archive to exactly one of two requests that loaded the same claim', function (): void {
+    $this->actingAs(stagedExportUser());
+
+    $handler = new ArraySessionHandler(120);
+    $sessionId = Str::random(40);
+
+    $staging = new Store('beatrax-staged-export', $handler, $sessionId);
+    $staging->start();
+
+    $path = stagedExportArchive('the-one-archive');
+    $token = stagedExportHandoverOn($staging)->stage($path, 'beatrax-export-2026-09-12.zip');
+    $staging->save();
+
+    $requestA = new Store('beatrax-staged-export', $handler, $sessionId);
+    $requestA->start();
+    $requestB = new Store('beatrax-staged-export', $handler, $sessionId);
+    $requestB->start();
+
+    $grantedA = stagedExportHandoverOn($requestA)->claim($token);
+    $grantedB = stagedExportHandoverOn($requestB)->claim($token);
+
+    expect($grantedA)->toBe(['path' => $path, 'name' => 'beatrax-export-2026-09-12.zip'])
+        ->and($grantedB)->toBeNull()
+        ->and($requestA->get('beatrax.staged_exports'))->toBe([]);
+
+    @unlink($path);
 });

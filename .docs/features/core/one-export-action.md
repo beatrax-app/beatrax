@@ -193,7 +193,12 @@ put in a URL:
   write.
 - **Single-use, but only on success.** The token is unset when the download is
   granted, never when it is refused — otherwise a partner's probe would burn
-  the owner's one download.
+  the owner's one download. The unset is the tidy-up and not the guard: nothing
+  blocks two requests on one session, so both load the claims before either
+  writes them back, and each unsets a token the other is still holding. The
+  spend is an atomic lock on the token, taken only once the claim is granted,
+  and never released — acquiring it *is* spending it. It is held for the hour
+  the staging sweep leaves the file on disk.
 - **Self-pruning.** Staging drops every `beatrax-*` file in the directory older
   than an hour before it adds a claim. Not just the `.zip` it hands over: an
   abandoned `.sqlite.enc` is the same whole database, and a plaintext `.sqlite`

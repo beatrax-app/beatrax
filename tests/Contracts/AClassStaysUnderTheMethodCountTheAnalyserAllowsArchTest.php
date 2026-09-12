@@ -27,6 +27,7 @@ it('leaves no class with more methods than the analyser allows', function (): vo
     $offenders = [];
     $counted = 0;
     $largest = 0;
+    $onTheCeiling = 0;
 
     foreach ($files as $path) {
         $source = (string) file_get_contents($path);
@@ -48,6 +49,7 @@ it('leaves no class with more methods than the analyser allows', function (): vo
             $count = count($methods);
             $counted++;
             $largest = max($largest, $count);
+            $onTheCeiling += $count === SONAR_METHOD_CEILING ? 1 : 0;
 
             if ($count <= SONAR_METHOD_CEILING) {
                 continue;
@@ -109,8 +111,15 @@ it('leaves no class with more methods than the analyser allows', function (): vo
         'analysis on merge.',
         '',
         'There is no pinned list to add to. The default branch carries no',
-        'class over the ceiling — eight sit exactly on it — so every entry',
-        'above is something this branch introduced.',
+        'class over the ceiling, so every entry above is something this branch',
+        'introduced.',
+        '',
+        // Counted by this run. Written down by hand it said eight, which was
+        // less than half of what the walk finds, and a reader sizing up how
+        // tight this ceiling is would have been told the wrong thing.
+        $onTheCeiling.' of the '.$counted.' classes read here declare exactly '.SONAR_METHOD_CEILING.'. A class',
+        'already on the ceiling cannot take the extracted method that would',
+        'have relieved one of the other rules, so check this one before that.',
     ]));
 });
 

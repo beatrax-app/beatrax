@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\LockStore;
 
 /**
  * @link ../../../../.docs/features/core/one-export-action.md#how-the-archive-leaves-the-process
@@ -16,6 +17,8 @@ use Modules\Core\Public\Services\UserDataPathService;
 final readonly class StagedExportHandover
 {
     private const string CLAIMS_KEY = 'beatrax.staged_exports';
+
+    private const string SPENT_KEY_PREFIX = 'beatrax.staged_export.';
 
     public function __construct(
         private Session $session,
@@ -53,10 +56,29 @@ final readonly class StagedExportHandover
             return null;
         }
 
+        // The session is not what can make this single-use. Laravel serves
+        // concurrent requests on one session without blocking, so both read
+        // the claims before either writes them back and each unsets a token
+        // the other is still holding — one archive, handed over twice.
+        if (! $this->spend($token)) {
+            return null;
+        }
+
         unset($claims[$token]);
         $this->session->put(self::CLAIMS_KEY, $claims);
 
         return $granted;
+    }
+
+    // Taking the lock IS the spend, so it is never released: the loser of the
+    // race is refused rather than queued behind the winner. It outlives the
+    // claim on purpose — an hour is when the sweep drops the file a token
+    // could still name, so nothing survives the marker that guards it.
+    private function spend(string $token): bool
+    {
+        return LockStore::lockProvider()
+            ->lock(self::SPENT_KEY_PREFIX.$token, Duration::Hour->seconds())
+            ->get() === true;
     }
 
     // Every reason a claim may not be honoured, decided before anything is

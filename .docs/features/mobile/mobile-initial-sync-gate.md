@@ -207,6 +207,13 @@ A re-projection that throws is logged and leaves `reprojected_at` null.
 Completion stays gated on it, so the next tick retries rather than crashing
 the poll.
 
+A pass killed by memory exhaustion throws nothing catchable and writes no
+stamp, so `reproject_attempts` is the only record that one ever started. The
+count is claimed — read and raised inside one write-locked transaction —
+rather than taken from the cursor the tick loaded, because two overlapping
+ticks both read that cursor before either wrote: each recorded the other's
+pass as its own, and the number stood still while the passes multiplied.
+
 ## Reading a stall
 
 A blocking screen with nothing to say is indistinguishable from a hung one.
