@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'față de perioada anterioară',
     'view_transactions' => 'Vezi tranzacțiile',
 
-    'fx_excluded' => ':count cont neconvertit — niciun curs disponibil|:count conturi neconvertite — niciun curs disponibil|:count de conturi neconvertite — niciun curs disponibil',
-
     'group_header' => [
         'category' => 'Categorie',
         'counterparty' => 'Contraparte',

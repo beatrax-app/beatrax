@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategori',
     'th_amount' => 'Tutar',
     'uncategorized' => 'Kategorisiz',
+    'uncategorized_count' => ':count kategorisiz işlem',
 
     'jump_to_records' => [
         'body' => 'Bu dönem için burada bir şey yok. En son işlemleriniz hâlâ burada.',

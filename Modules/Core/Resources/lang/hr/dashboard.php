@@ -34,6 +34,7 @@ return [
     'th_category' => 'Kategorija',
     'th_amount' => 'Iznos',
     'uncategorized' => 'Bez kategorije',
+    'uncategorized_count' => ':count transakcija bez kategorije|:count transakcije bez kategorije|:count transakcija bez kategorije',
 
     'jump_to_records' => [
         'body' => 'Nema ničega za ovo razdoblje. Vaše najnovije transakcije i dalje su ovdje.',

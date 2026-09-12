@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'oproti predchádzajúcemu obdobiu',
     'view_transactions' => 'Zobraziť transakcie',
 
-    'fx_excluded' => ':count účet neprevedený — kurz nie je dostupný|:count účty neprevedené — kurz nie je dostupný|:count účtov neprevedených — kurz nie je dostupný',
-
     'group_header' => [
         'category' => 'Kategória',
         'counterparty' => 'Protistrana',

@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategorija',
     'th_amount' => 'Suma',
     'uncategorized' => 'Be kategorijos',
+    'uncategorized_count' => ':count operacija be kategorijos|:count operacijos be kategorijos|:count operacijų be kategorijos',
 
     'jump_to_records' => [
         'body' => 'Šiuo laikotarpiu nieko nėra. Naujausios operacijos vis dar čia.',

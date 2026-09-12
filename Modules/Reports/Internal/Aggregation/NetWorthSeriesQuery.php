@@ -54,20 +54,20 @@ final readonly class NetWorthSeriesQuery
             ->whereNotIn('kind', AccountKind::mirrorValues())
             ->when($filters->accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('id', $filters->accountIds))
             ->orderBy('id')
-            ->get(['id']);
+            ->get(['id', 'name']);
 
         $points = [];
         foreach ($buckets as $bucket) {
             $asOf = $bucket->endExclusive->subDay();
 
-            [$totalMinor, $excludedAccountIds] = $this->sampleAt($user, $accounts, $asOf, $baseCurrency);
+            [$totalMinor, $excludedAccounts] = $this->sampleAt($user, $accounts, $asOf, $baseCurrency);
 
             $points[] = new NetWorthSeriesPoint(
                 date: $asOf,
                 label: $bucket->label,
                 totalMinor: $totalMinor,
                 currency: $baseCurrency,
-                excludedAccountIds: $excludedAccountIds,
+                excludedAccounts: $excludedAccounts,
             );
         }
 
@@ -76,12 +76,12 @@ final readonly class NetWorthSeriesQuery
 
     /**
      * @param  Collection<int, stdClass>  $accounts
-     * @return array{0: int, 1: list<int>}
+     * @return array{0: int, 1: array<int, string>}
      */
     private function sampleAt(User $user, Collection $accounts, CarbonImmutable $asOf, string $baseCurrency): array
     {
         $total = 0;
-        /** @var array<int, true> $excluded */
+        /** @var array<int, string> $excluded */
         $excluded = [];
 
         foreach ($accounts as $account) {
@@ -99,9 +99,10 @@ final readonly class NetWorthSeriesQuery
                 // currency: a line already in the base currency is a Passthrough
                 // and still belongs in the total, so only NoRate is an exclusion.
                 if ($result->outcome === ConversionOutcome::NoRate) {
-                    // A set: an account holding two unconvertible currencies is
-                    // still one account the reader has to be told about.
-                    $excluded[$accountId] = true;
+                    // Keyed by account so an account holding two unconvertible
+                    // currencies is still one account the reader is told about,
+                    // and carrying the name because the reader is told WHICH.
+                    $excluded[$accountId] = self::toString($account->name);
 
                     continue;
                 }
@@ -110,6 +111,6 @@ final readonly class NetWorthSeriesQuery
             }
         }
 
-        return [$total, array_keys($excluded)];
+        return [$total, $excluded];
     }
 }

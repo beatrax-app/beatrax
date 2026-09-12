@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'pret iepriekšējo periodu',
     'view_transactions' => 'Skatīt darījumus',
 
-    'fx_excluded' => ':count kontu nav konvertēti — nav pieejams kurss|:count konts nav konvertēts — nav pieejams kurss|:count konti nav konvertēti — nav pieejams kurss',
-
     'group_header' => [
         'category' => 'Kategorija',
         'counterparty' => 'Darījuma partneris',

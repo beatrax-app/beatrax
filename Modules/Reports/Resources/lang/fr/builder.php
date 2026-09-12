@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'vs période précédente',
     'view_transactions' => 'Voir les transactions',
 
-    'fx_excluded' => ':count compte non converti — aucun taux disponible|:count comptes non convertis — aucun taux disponible',
-
     'group_header' => [
         'category' => 'Catégorie',
         'counterparty' => 'Tiers',

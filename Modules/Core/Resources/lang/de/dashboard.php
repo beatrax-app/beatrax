@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategorie',
     'th_amount' => 'Betrag',
     'uncategorized' => 'Nicht kategorisiert',
+    'uncategorized_count' => ':count Transaktion ohne Kategorie|:count Transaktionen ohne Kategorie',
 
     'jump_to_records' => [
         'body' => 'Nichts in diesem Zeitraum. Ihre neuesten Buchungen sind weiterhin da.',

@@ -113,8 +113,12 @@
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {{ Lang::choice('core::net_worth.across', $accountCount, ['count' => $accountCount]) }}
                         @if ($netWorth->balancesWithoutRate > 0)
-                            {{-- No-rate fallback (§7.4 UI-SPEC) — replaces old "excludes non-EUR balances" span --}}
-                            <span style="color: var(--color-amber);">{{ Lang::choice('core::net_worth.not_converted', $netWorth->balancesWithoutRate, ['count' => $netWorth->balancesWithoutRate]) }}</span>
+                            {{-- No-rate fallback (§7.4 UI-SPEC). The accounts by
+                                 name, not a tally of balances: the breakdown that
+                                 names them is behind a button, so a reader who
+                                 never pressed it was told a figure was short and
+                                 not which account was missing from it. --}}
+                            <span style="color: var(--color-amber);" data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => implode(', ', $netWorth->excludedAccountNames())]) }}</span>
                         @endif
                     </p>
 

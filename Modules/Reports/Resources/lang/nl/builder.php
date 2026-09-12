@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'vs. vorige periode',
     'view_transactions' => 'Transacties bekijken',
 
-    'fx_excluded' => ':count rekening niet omgerekend — geen koers beschikbaar|:count rekeningen niet omgerekend — geen koers beschikbaar',
-
     'group_header' => [
         'category' => 'Categorie',
         'counterparty' => 'Tegenpartij',

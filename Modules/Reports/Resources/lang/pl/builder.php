@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'vs. poprzedni okres',
     'view_transactions' => 'Zobacz transakcje',
 
-    'fx_excluded' => 'nie przeliczono :count konta — brak dostępnego kursu|nie przeliczono :count kont — brak dostępnego kursu|nie przeliczono :count kont — brak dostępnego kursu',
-
     'group_header' => [
         'category' => 'Kategoria',
         'counterparty' => 'Kontrahent',

@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'v primerjavi s prejšnjim obdobjem',
     'view_transactions' => 'Prikaži transakcije',
 
-    'fx_excluded' => ':count račun ni preračunan — tečaj ni na voljo|:count računa nista preračunana — tečaj ni na voljo|:count računi niso preračunani — tečaj ni na voljo|:count računov ni preračunanih — tečaj ni na voljo',
-
     'group_header' => [
         'category' => 'Kategorija',
         'counterparty' => 'Nasprotna stranka',

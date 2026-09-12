@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategori',
     'th_amount' => 'Belopp',
     'uncategorized' => 'Okategoriserat',
+    'uncategorized_count' => ':count transaktion utan kategori|:count transaktioner utan kategori',
 
     'jump_to_records' => [
         'body' => 'Inget för den här perioden. Dina senaste transaktioner finns kvar.',

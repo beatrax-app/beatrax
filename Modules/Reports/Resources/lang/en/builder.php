@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'vs. previous period',
     'view_transactions' => 'View transactions',
 
-    'fx_excluded' => ':count account not converted — no rate available|:count accounts not converted — no rate available',
-
     'group_header' => [
         'category' => 'Category',
         'counterparty' => 'Counterparty',

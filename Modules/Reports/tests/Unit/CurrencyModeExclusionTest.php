@@ -135,7 +135,7 @@ it('fx_exclusion_never_1to1_transactions: an unconvertible-currency row is exclu
     // The CURRENCY, named. A count alone read as a number of accounts on the
     // page that renders it, and it was never counting those.
     expect($spend->excludedCurrencies)->toBe(['JPY']);
-    expect($spend->excludedAccountIds)->toBe([]);
+    expect($spend->excludedAccounts)->toBe([]);
 
     $income = app(ReportAggregator::class)->run($user, cmeDefinition('income'));
     expect($income->totalMinor)->toBe(30_000);

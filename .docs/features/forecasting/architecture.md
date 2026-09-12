@@ -863,8 +863,17 @@ worth is simply the sum with no per-kind sign juggling. Non-base-currency
 accounts are converted via `ExchangeRateService`; each account line keeps
 its own original currency regardless. When no rate exists for a currency
 pair, that account is excluded from the total and flagged via
-`accountsWithoutRate`/`hasExcludedAccounts` (the no-rate fallback row still
-renders in the breakdown, just without a base equivalent).
+`balancesWithoutRate`/`hasExcludedAccounts` (the no-rate fallback row still
+renders in the breakdown, just without a base equivalent). The card's
+amber note **names** those accounts, through
+`NetWorth::excludedAccountNames()` and the shared
+`core::money.not_converted`: the breakdown that names them sits behind
+the Breakdown button, so a count was all a reader who never pressed it
+ever saw, and
+[C1-R15](https://github.com/beatrax-app/spec/blob/main/10-functional/features/c-insight/c1-dashboard.md)
+asks for the names. `balancesWithoutRate` stays the gate — it counts
+lines, and one account holding two unconvertible currencies is two lines
+and one name.
 Two kinds are left out of the roll-up entirely, and one deliberately is not.
 `paypal_funding` and `google_play` mirror a movement the paying account already
 carries, so counting either subtracts the same money twice; `ics_card` stays in,

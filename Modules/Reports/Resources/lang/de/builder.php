@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'vs. vorheriger Zeitraum',
     'view_transactions' => 'Transaktionen ansehen',
 
-    'fx_excluded' => ':count Konto nicht umgerechnet — kein Kurs verfügbar|:count Konten nicht umgerechnet — kein Kurs verfügbar',
-
     'group_header' => [
         'category' => 'Kategorie',
         'counterparty' => 'Zahlungspartner',

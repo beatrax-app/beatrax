@@ -11,7 +11,6 @@ return [
 
     'across' => 'na :count računu|na :count računa|na :count računa',
 
-    'not_converted' => '· :count račun nije preračunat — nema dostupnog tečaja|· :count računa nisu preračunata — nema dostupnog tečaja|· :count računa nije preračunato — nema dostupnog tečaja',
     'no_rate_available' => '· nema dostupnog tečaja',
 
     'toggle_hide' => 'Sakrij',

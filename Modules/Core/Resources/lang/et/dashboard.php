@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategooria',
     'th_amount' => 'Summa',
     'uncategorized' => 'Kategoriseerimata',
+    'uncategorized_count' => ':count tehing kategooriata|:count tehingut kategooriata',
 
     'jump_to_records' => [
         'body' => 'Sel perioodil pole siin midagi. Kõige uuemad tehingud on endiselt alles.',

@@ -35,6 +35,7 @@ return [
     'th_category' => 'Kategorija',
     'th_amount' => 'Summa',
     'uncategorized' => 'Bez kategorijas',
+    'uncategorized_count' => ':count darījumu bez kategorijas|:count darījums bez kategorijas|:count darījumi bez kategorijas',
 
     'jump_to_records' => [
         'body' => 'Šajā periodā nekā nav. Jūsu jaunākie darījumi joprojām ir šeit.',

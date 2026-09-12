@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategoria',
     'th_amount' => 'Summa',
     'uncategorized' => 'Luokittelematon',
+    'uncategorized_count' => ':count tapahtuma ilman luokkaa|:count tapahtumaa ilman luokkaa',
 
     'jump_to_records' => [
         'body' => 'Ei mitään tältä jaksolta. Uusimmat tapahtumasi ovat yhä tallessa.',

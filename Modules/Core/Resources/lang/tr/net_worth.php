@@ -11,7 +11,6 @@ return [
 
     'across' => ':count hesapta',
 
-    'not_converted' => '· :count hesap dönüştürülmedi — kur bulunamadı',
     'no_rate_available' => '· kur bulunamadı',
 
     'toggle_hide' => 'Gizle',

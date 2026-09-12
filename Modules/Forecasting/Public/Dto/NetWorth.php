@@ -38,4 +38,25 @@ final class NetWorth extends Data
     {
         return count(array_unique(array_column($this->accounts, 'accountId')));
     }
+
+    // The accounts the roll-up left out, by name: an account holding two
+    // unconvertible currencies is two lines and one name, and two accounts a
+    // reader gave the same name are one name to read.
+    /**
+     * @return list<string>
+     */
+    public function excludedAccountNames(): array
+    {
+        $names = [];
+        foreach ($this->accounts as $line) {
+            if ($line->hasNoRate($this->currency)) {
+                $names[$line->name] = true;
+            }
+        }
+
+        $named = array_keys($names);
+        sort($named);
+
+        return $named;
+    }
 }

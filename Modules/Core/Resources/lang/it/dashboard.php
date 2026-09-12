@@ -31,6 +31,7 @@ return [
     'th_category' => 'Categoria',
     'th_amount' => 'Importo',
     'uncategorized' => 'Senza categoria',
+    'uncategorized_count' => ':count transazione senza categoria|:count transazioni senza categoria',
 
     'jump_to_records' => [
         'body' => "Non c'è nulla per questo periodo. I movimenti più recenti sono ancora qui.",

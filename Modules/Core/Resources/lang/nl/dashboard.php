@@ -31,6 +31,7 @@ return [
     'th_category' => 'Categorie',
     'th_amount' => 'Bedrag',
     'uncategorized' => 'Niet gecategoriseerd',
+    'uncategorized_count' => ':count transactie zonder categorie|:count transacties zonder categorie',
 
     'jump_to_records' => [
         'body' => 'Niets in deze periode. Je recentste transacties staan er nog.',

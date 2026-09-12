@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'palyginti su ankstesniu laikotarpiu',
     'view_transactions' => 'Peržiūrėti operacijas',
 
-    'fx_excluded' => ':count sąskaita neperskaičiuota — nėra kurso|:count sąskaitos neperskaičiuotos — nėra kurso|:count sąskaitų neperskaičiuota — nėra kurso',
-
     'group_header' => [
         'category' => 'Kategorija',
         'counterparty' => 'Kita šalis',

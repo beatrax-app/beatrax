@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'vs. edellinen jakso',
     'view_transactions' => 'Näytä tapahtumat',
 
-    'fx_excluded' => ':count tili jäi muuntamatta — kurssia ei saatavilla|:count tiliä jäi muuntamatta — kurssia ei saatavilla',
-
     'group_header' => [
         'category' => 'Kategoria',
         'counterparty' => 'Vastapuoli',

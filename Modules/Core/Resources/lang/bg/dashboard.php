@@ -31,6 +31,7 @@ return [
     'th_category' => 'Категория',
     'th_amount' => 'Сума',
     'uncategorized' => 'Некатегоризирани',
+    'uncategorized_count' => ':count транзакция без категория|:count транзакции без категория',
 
     'jump_to_records' => [
         'body' => 'Няма нищо за този период. Най-новите ви трансакции са тук.',

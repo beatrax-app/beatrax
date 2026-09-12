@@ -31,6 +31,7 @@ return [
     'th_category' => 'Categorie',
     'th_amount' => 'Sumă',
     'uncategorized' => 'Necategorizat',
+    'uncategorized_count' => ':count tranzacție fără categorie|:count tranzacții fără categorie|:count de tranzacții fără categorie',
 
     'jump_to_records' => [
         'body' => 'Nimic pentru această perioadă. Cele mai recente tranzacții sunt încă aici.',
