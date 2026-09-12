@@ -26,21 +26,28 @@ function ctaDismissUser(string $suffix): User
 }
 
 // The other tab, committed at the instant the pre-read has just said "not
-// held". Where nothing reads before the write there is no window to inject
-// into, and a late fire lands on the row this call wrote and is ignored.
-function ctaDismissInjectAfterRead(int $userId, int $dismissalId, string $key): void
+// held".
+//
+// Armed for the call under test and disarmed again: dismiss() no longer reads
+// before it writes, so a listener left live would first fire on the assertions
+// below and stand in for a race nobody ran. insert-or-ignore as well as the
+// arming, because the capture path behind the event reads rows back — a fire
+// inside the window but after the write must land on the row this call wrote
+// and be ignored, never raise.
+function ctaDismissUnderRace(int $userId, int $dismissalId, string $key, Closure $act): void
 {
-    $done = false;
+    $armed = true;
+    $injected = false;
 
-    DB::listen(function ($query) use (&$done, $userId, $dismissalId, $key): void {
-        if ($done || ! str_contains($query->sql, 'savings_insight_dismissals')) {
+    DB::listen(function ($query) use (&$armed, &$injected, $userId, $dismissalId, $key): void {
+        if (! $armed || $injected || ! str_contains($query->sql, 'savings_insight_dismissals')) {
             return;
         }
         if (! str_starts_with(strtolower(ltrim($query->sql)), 'select')) {
             return;
         }
 
-        $done = true;
+        $injected = true;
         DB::table('savings_insight_dismissals')->insertOrIgnore([
             'id' => $dismissalId,
             'user_id' => $userId,
@@ -49,6 +56,12 @@ function ctaDismissInjectAfterRead(int $userId, int $dismissalId, string $key): 
             'updated_at' => '2020-01-01 00:00:00',
         ]);
     });
+
+    try {
+        $act();
+    } finally {
+        $armed = false;
+    }
 }
 
 /** @return ArrayObject<int, EntityMutated> */
@@ -84,9 +97,12 @@ afterEach(function (): void {
 it('announces a create describing the row that is actually stored', function (): void {
     $captured = ctaDismissRecord();
 
-    ctaDismissInjectAfterRead((int) $this->user->id, $this->dismissalId, $this->key);
-
-    app(SavingsInsightsQuery::class)->dismiss($this->user, $this->key);
+    ctaDismissUnderRace(
+        (int) $this->user->id,
+        $this->dismissalId,
+        $this->key,
+        fn () => app(SavingsInsightsQuery::class)->dismiss($this->user, $this->key),
+    );
 
     $stored = DB::table('savings_insight_dismissals')->where('id', $this->dismissalId)->first();
 
