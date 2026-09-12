@@ -45,6 +45,14 @@ function userIdExemptTables(): array
         'relay_mailbox' => 'zero-knowledge relay: device_id routing only, never a user',
         'dev_mode_audit' => 'records what this machine did, not what an account did',
 
+        // The one entry here whose column name is a decision rather than an
+        // absence. It names an account that is GONE -- the key material the
+        // deletion transaction committed and had not unlinked yet -- and
+        // UserScopedDataPurge discovers what it sweeps by `user_id`, so that
+        // spelling would delete, inside the very transaction that writes it,
+        // the row recording what that transaction still owes.
+        'account_key_purge_state' => 'holds account_id, deliberately not user_id: the account it names is already deleted, and the purge sweeps by user_id',
+
         // The seven `migration_staging_*` tables were listed here too, excused
         // as per-run scratch space. Every one of them has carried a nullable
         // user_id since the day it was created — six through `scopeColumns()`

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
+use Modules\Auth\Internal\Account\OwedKeyMaterial;
 use Modules\Auth\Internal\Account\UserScopedFilePurge;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Core\Models\User;
@@ -23,6 +24,9 @@ use Throwable;
 // Deleting the administrator while a partner remains would leave a device
 // nobody can administer behind a closed signup route, so the oldest survivor
 // is promoted in the same transaction.
+/**
+ * @link ../../../../.docs/features/auth/user-scoped-purge.md#the-two-file-tiers-and-why-neither-is-inside-the-transaction
+ */
 final readonly class DeleteAccountAction
 {
     public function __construct(
@@ -30,6 +34,7 @@ final readonly class DeleteAccountAction
         private Hasher $hasher,
         private PurgeUserDataAction $purgeData,
         private UserScopedFilePurge $purgeFiles,
+        private OwedKeyMaterial $owedKeyMaterial,
         private ColdStartVault $coldStartVault,
         private LogoutAction $logout,
         private LoggerInterface $log,
@@ -64,40 +69,34 @@ final readonly class DeleteAccountAction
                 $connection->table('users')->where('id', $successorId)->update(['is_developer' => true]);
             }
 
-            // Before the rows: forgetting an enrolment writes the flag back
-            // through the lock gateway, which would resurrect a deleted row.
-            // Inside the transaction, though the keychain clear cannot be.
+            // Before the rows, and it has to be inside: forgetting an enrolment
+            // writes the flag back through the lock gateway, which would
+            // resurrect a deleted row. A rollback cannot put the OS entry back
+            // either, but a PIN-only unlock is not an unreadable ledger.
             $vaultKeptTheKey = ! $this->coldStartVault->forget($userId);
 
             ($this->purgeData)($connection, $userId);
 
-            // Beside the keychain clear, and irreversible on the same terms.
-            // A peer holds the history; what stops it putting the account back
-            // is that this device no longer holds the identity or the keyring,
-            // so a deletion reported over surviving key material is the defect.
-            $this->purgeFiles->keyedToTheAccount($userId);
+            // The three unlinks are past the commit, and what commits here is
+            // the debt for them. A rollback takes the debt with the rows, so
+            // the account comes back whole rather than back over keys the
+            // transaction had already destroyed; a crash leaves the sweep this.
+            $this->owedKeyMaterial->claim($connection, $userId);
 
             return $connection->table('users')->count() === 0;
         });
 
-        // Past the commit, so it describes a deletion that stands. It does not
-        // roll one back: what the promise turns on is that no peer can put the
-        // account back, and a wrap of a key whose rows are gone cannot.
-        if ($vaultKeptTheKey) {
-            $this->log->warning('DeleteAccountAction: the OS vault kept its wrapped copy of the data key, which now outlives the account it belonged to.', [
-                'user_id' => $userId,
-            ]);
-        }
-
-        $this->settleAfterPurge($connection, $userId, $lastAccountOnDevice);
+        $this->settleAfterPurge($connection, $userId, $lastAccountOnDevice, $vaultKeptTheKey);
     }
 
-    // Past the commit, where no failure can bring the account back, and only
-    // for what a peer cannot rebuild the account from: bulk mail, and the
-    // device-wide trees. Logged rather than thrown, because a caller reading a
-    // post-commit throw as "rolled back" told the user nothing had changed.
-    private function settleAfterPurge(Connection $connection, int $userId, bool $lastAccountOnDevice): void
+    // Past the commit, where no failure can bring the account back. Everything
+    // here is logged rather than thrown, because a caller reading a post-commit
+    // throw as "rolled back" told the user nothing had changed -- which is the
+    // sentence the file unlinks moved out of the transaction to stop telling.
+    private function settleAfterPurge(Connection $connection, int $userId, bool $lastAccountOnDevice, bool $vaultKeptTheKey): void
     {
+        $this->reportKeyMaterialThatOutlivedTheAccount($connection, $userId, $vaultKeptTheKey);
+
         try {
             $this->rebuildSearchIndex($connection);
         } catch (Throwable $e) {
@@ -110,6 +109,34 @@ final readonly class DeleteAccountAction
             ($this->logout)();
         } catch (Throwable $e) {
             $this->log->error('DeleteAccountAction: logout failed after the purge committed.', SafeExceptionContext::describe($e));
+        }
+    }
+
+    // Both halves of one fact: what a paired peer could still put this account
+    // back through. The paths are owed until the sweep clears them, and are
+    // named rather than counted; the vault's refusal is the arm nothing can
+    // retry, which is why it is a warning beside an error.
+    private function reportKeyMaterialThatOutlivedTheAccount(Connection $connection, int $userId, bool $vaultKeptTheKey): void
+    {
+        if ($vaultKeptTheKey) {
+            $this->log->warning('DeleteAccountAction: the OS vault kept its wrapped copy of the data key, which now outlives the account it belonged to.', [
+                'user_id' => $userId,
+            ]);
+        }
+
+        try {
+            $survivors = $this->owedKeyMaterial->settle($connection, $userId);
+        } catch (Throwable $e) {
+            $this->log->error('DeleteAccountAction: the key material purge failed after the deletion committed.', SafeExceptionContext::describe($e));
+
+            return;
+        }
+
+        if ($survivors !== []) {
+            $this->log->error('DeleteAccountAction: key material outlived the deletion and is owed until the sweep clears it.', [
+                'user_id' => $userId,
+                'paths' => $survivors,
+            ]);
         }
     }
 

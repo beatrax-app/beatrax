@@ -13,6 +13,7 @@ use Livewire\LivewireManager;
 use Modules\Auth\Internal\Console\GrantDevCommand;
 use Modules\Auth\Internal\Console\RegenerateRecoveryCodesCommand;
 use Modules\Auth\Internal\Console\ResetPasswordCommand;
+use Modules\Auth\Internal\Console\SweepOwedKeyMaterialCommand;
 use Modules\Auth\Internal\Fortify\FortifyServiceProvider;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
@@ -50,10 +51,12 @@ use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Core\Public\Support\RegistersScheduledCommands;
 
 final class AuthServiceProvider extends ServiceProvider
 {
     use LoadsModuleResources;
+    use RegistersScheduledCommands;
 
     public function register(): void
     {
@@ -88,6 +91,8 @@ final class AuthServiceProvider extends ServiceProvider
     {
         $this->loadModuleResources('auth');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
+
+        $this->registerScheduledCommands([SweepOwedKeyMaterialCommand::class]);
 
         if ($this->app->runningInConsole()) {
             $this->commands([

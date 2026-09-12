@@ -49,6 +49,10 @@ final class MobileBackgroundSchedule
             'drift-alerts.revive-snoozes' => 'drift-alerts:revive-snoozes',
             'anomaly.revive-snoozes' => 'anomaly:revive-snoozes',
             'anomaly.safety-net-sweep' => 'anomaly:safety-net-sweep',
+            // The files are on THIS device's disk, so no peer can finish what a
+            // deletion here left behind -- and the phone can be the only device
+            // the household owns.
+            'auth.sweep-owed-key-material' => 'auth:sweep-owed-key-material',
             'open-banking.daily-sync' => 'open-banking:sync-due',
             // Not "no other device to fall back on" but "the phone offers
             // the switch". Auto-import can be turned off on a device, and a

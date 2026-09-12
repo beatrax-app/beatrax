@@ -58,23 +58,75 @@ Each is swept explicitly, and each is a table where ownership is not a column:
   `UserScopedFilePurge` and `ColdStartVault::forget()` around the row purge.
   The reset does neither, because the demo seeders write neither.
 
-## The two file tiers, and why one is inside the transaction
+## The two file tiers, and why neither is inside the transaction
 
 `UserScopedFilePurge` splits the account's files by what a paired peer could put
 the account back through.
 
 `keyedToTheAccount()` is the sync identity, the group keyring and the
-open-banking connector secret — three unlinks, run *inside* the deletion
-transaction beside `ColdStartVault::forget()` and irreversible on the same
-terms. Each path is read back after the removal, because
+open-banking connector secret — three unlinks without which the deletion is not
+finished. Each path is read back after the removal, because
 `Illuminate\Filesystem\Filesystem::delete()` reports a refused unlink by
 returning `false` and never by throwing: the return value was ignored, so the
 ordinary failure was not merely swallowed, it was never noticed. A survivor
-throws, the transaction rolls back, and the screen's "Nothing was changed" is
-true — which is the state the requirement is about, because a device that still
-holds the identity is a device a peer can restore the account onto.
+comes back **by name**.
 
 `residue()` is the downloaded mail and, for the last account on the device, the
 device-wide trees. Those are bulk deletes whose survival is disclosure rather
-than a way back in, so they run after the commit, each path independent of the
-others, and a survivor is logged **by name** rather than as a count.
+than a way back in, so each path is independent of the others and a survivor is
+logged by name rather than as a count.
+
+Both tiers run **after** the commit. The keyed tier used to run inside the
+deletion transaction, beside `ColdStartVault::forget()` and described as
+irreversible on the same terms, so that a refused unlink threw and the screen's
+"Nothing was changed" was true. It bought one failure at the cost of a worse
+one: the unlinks happen before the throw, so **every rollback past that point
+restored the account's rows with its keys already destroyed** — an account the
+reader did not finish deleting, surviving as sealed columns nobody can read,
+with no tombstone and nothing raised. Three things could take that rollback: the
+tier's own throw on a refused unlink, a failure of the commit itself, and the
+one row count taken after it.
+
+The keychain clear stays inside, and no longer claims to be on the same terms:
+`forget()` writes the enrolment flag back through the lock gateway, so running
+it after the row purge would resurrect a deleted row. A rollback cannot put the
+operating system's entry back either — but a reader left on PIN-only unlock is
+not a reader left with an unreadable ledger, which is why one of the two moved
+and the other did not. Both are reported past the commit, in one place, as what
+they are: key material that outlived the account.
+
+## The debt a committed deletion leaves
+
+Moving the unlink past the commit opens the opposite window — rows gone, key
+material still on the disk — and that window is what `account_key_purge_state`
+closes. It is the shape `sync_backfill_state`, `ledger_backfill_state` and
+`anomaly_backfill_state` already use, for the reason written up as
+[a claim is not a completion](../../conventions/a-check-another-writer-can-invalidate.md#a-claim-is-not-a-completion):
+one fact is true before the work and another after it, and a single column asked
+to carry both answers the first question by lying about the second.
+
+- **The claim** is written inside the deletion transaction, so it commits
+  exactly when the rows go and rolls back exactly when they stay. A rollback
+  therefore leaves no debt, because there is no deletion to finish.
+- **The completion** is stamped only once all three paths are confirmed gone.
+
+`auth:sweep-owed-key-material` runs hourly and settles whatever is still
+outstanding. It is not a retry of something that cannot work: the refusal this
+tier meets in practice is a held handle — the shape a file lock takes on
+Windows — and the next hour is usually past it. The command is in
+`MobileBackgroundSchedule::requiredOnDevice()` because the files are on *this*
+device's disk and no peer can reach them, and a phone can be the only device a
+household owns.
+
+The column is `account_id` and not `user_id`, which is load-bearing rather than
+stylistic: `UserScopedDataPurge` discovers the tables it sweeps by that column
+name, so the other spelling would delete, inside the very transaction that
+writes it, the row recording what that transaction still owes. The sweep also
+skips any id the schema has since handed out again — a live account's key
+material is its own, and unlinking it would be this defect pointed the other
+way.
+
+What the reader is told changes with the ordering. A refused unlink no longer
+reports "Your account was not deleted", because the rows are gone and that
+sentence would be false; the deletion is reported as the deletion it is, and the
+surviving paths are logged by name for the sweep to clear.

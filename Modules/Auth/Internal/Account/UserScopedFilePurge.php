@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Account;
 
 use Illuminate\Filesystem\Filesystem;
-use Modules\Auth\Internal\Exceptions\AccountPurgeException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
@@ -18,8 +17,8 @@ use Throwable;
 // when the account being deleted is the last one on it.
 
 // Split a second way, by what a peer could put the account back from. The
-// keyed set is three unlinks and is what the deletion may not be reported
-// without; the rest is bulk whose survival is residue, not a way back in.
+// keyed set is three unlinks a deletion is not finished without; the rest is
+// bulk whose survival is disclosure rather than a way back in.
 final readonly class UserScopedFilePurge
 {
     private const array KEYED_TO_THE_ACCOUNT = [
@@ -49,10 +48,12 @@ final readonly class UserScopedFilePurge
         private UserDataPathService $paths,
     ) {}
 
-    /**
-     * @throws AccountPurgeException when any of them is still on disk afterwards
-     */
-    public function keyedToTheAccount(int $userId): void
+    // Named rather than thrown, and that is the whole difference between the
+    // two tiers now: both run past the commit, where there is no transaction
+    // left for a throw to roll back. What the caller does with a name it did
+    // not want to see is the caller's, and it is not "nothing was changed".
+    /** @return list<string> the app-relative paths still on disk afterwards */
+    public function keyedToTheAccount(int $userId): array
     {
         $survivors = [];
 
@@ -64,9 +65,7 @@ final readonly class UserScopedFilePurge
             }
         }
 
-        if ($survivors !== []) {
-            throw AccountPurgeException::keyMaterialSurvived($survivors, $userId);
-        }
+        return $survivors;
     }
 
     /** @return list<string> the app-relative paths still on disk afterwards */
