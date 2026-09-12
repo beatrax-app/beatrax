@@ -129,6 +129,16 @@ final class BackupDatabaseCommand extends Command
             $this->files->delete($partial);
         }
 
+        // assertIntegrity() above is the only `PRAGMA integrity_check` in the
+        // tree run against a produced backup, so this is the one pass that can
+        // answer a banner claiming the backups cannot be relied on. Outside the
+        // branch: the skip arm verified a copy too, it just kept an older file.
+        $this->alerts->withdrawSystemWide(
+            BackupAlertKind::Corrupt->value,
+            $startedAt,
+            BackupFailureCause::unansweredByAVerifiedBackup(),
+        );
+
         // Retention is a policy over the folder, not a consequence of writing
         // to it. Pruning only on the branch that kept a copy meant the promise
         // held on the scheduled --force run and on no hand-run at all, so a
