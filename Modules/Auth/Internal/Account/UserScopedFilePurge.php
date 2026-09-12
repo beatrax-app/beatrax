@@ -5,47 +5,29 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Account;
 
 use Illuminate\Filesystem\Filesystem;
-use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Services\UserDataPurgePlan;
 use Throwable;
 
 // The parts of an account that never lived in the database: the sync identity
-// and group keyring, the connector secret, and the raw mail this device
-// downloaded.
+// and group keyring, the connector secret, the raw mail this device downloaded
+// and the statements the reader imported.
 
 // Two tiers, because a household shares one device. What is named for the
 // account goes with it; what the device holds once for everyone goes only
 // when the account being deleted is the last one on it.
 
-// Split a second way, by what a peer could put the account back from. The
-// keyed set is three unlinks a deletion is not finished without; the rest is
-// bulk whose survival is disclosure rather than a way back in.
+// Split a second way, by what a peer could put the account back from. The keyed
+// set is the unlinks a deletion is not finished without; the rest is bulk whose
+// survival is disclosure rather than a way back in. Both splits are read off
+// Core's inventory rather than listed a second time here.
+/**
+ * @link ../../../../.docs/features/core/one-export-action.md#the-boundary-is-a-list-not-a-sweep
+ */
 final readonly class UserScopedFilePurge
 {
-    private const array KEYED_TO_THE_ACCOUNT = [
-        'sync/identity/%d.enc',
-        'sync/gdk/%d.enc',
-        'secrets/open-banking/%d.json',
-    ];
-
-    private const array MAIL = [
-        'inbox/%d',
-        'inbox-drop/%d',
-    ];
-
-    private const array DEVICE_WIDE = [
-        'secrets',
-        'backups',
-        'tmp-backups',
-        'sync',
-        'open-banking-tls',
-        'migration-extracts',
-        'inbox',
-        'inbox-drop',
-    ];
-
     public function __construct(
         private Filesystem $files,
-        private UserDataPathService $paths,
+        private UserDataPurgePlan $plan,
     ) {}
 
     // Named rather than thrown, and that is the whole difference between the
@@ -55,35 +37,54 @@ final readonly class UserScopedFilePurge
     /** @return list<string> the app-relative paths still on disk afterwards */
     public function keyedToTheAccount(int $userId): array
     {
-        $survivors = [];
-
-        foreach (self::KEYED_TO_THE_ACCOUNT as $pattern) {
-            $relative = sprintf($pattern, $userId);
-
-            if (! $this->remove($this->paths->appRelative($relative))) {
-                $survivors[] = $relative;
-            }
-        }
-
-        return $survivors;
+        return $this->removeAll($this->scoped($userId, keyMaterial: true));
     }
 
     /** @return list<string> the app-relative paths still on disk afterwards */
     public function residue(int $userId, bool $lastAccountOnDevice): array
     {
-        $patterns = self::MAIL;
+        $paths = $this->scoped($userId, keyMaterial: false);
 
         if ($lastAccountOnDevice) {
-            $patterns = array_merge($patterns, self::DEVICE_WIDE);
+            foreach ($this->plan->deviceWide() as $locationPaths) {
+                $paths = [...$paths, ...$locationPaths];
+            }
         }
 
+        return $this->removeAll($paths);
+    }
+
+    // The account's own paths, split on whether the location holds material no
+    // peer can reproduce. A location in neither tier reaches no deletion at
+    // all, which is what a guard over the inventory is there to catch.
+    /**
+     * @return list<string>
+     */
+    private function scoped(int $userId, bool $keyMaterial): array
+    {
+        $keyed = $this->plan->keyMaterialLocations();
+        $paths = [];
+
+        foreach ($this->plan->forAccount($userId) as $location => $locationPaths) {
+            if (in_array($location, $keyed, true) === $keyMaterial) {
+                $paths = [...$paths, ...$locationPaths];
+            }
+        }
+
+        return $paths;
+    }
+
+    /**
+     * @param  list<string>  $paths
+     * @return list<string> the paths still on disk afterwards
+     */
+    private function removeAll(array $paths): array
+    {
         $survivors = [];
 
-        foreach ($patterns as $pattern) {
-            $relative = str_contains($pattern, '%d') ? sprintf($pattern, $userId) : $pattern;
-
-            if (! $this->remove($this->paths->appRelative($relative))) {
-                $survivors[] = $relative;
+        foreach ($paths as $path) {
+            if (! $this->remove($path)) {
+                $survivors[] = $path;
             }
         }
 

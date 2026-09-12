@@ -64,15 +64,21 @@ Each is swept explicitly, and each is a table where ownership is not a column:
 the account back through.
 
 `keyedToTheAccount()` is the sync identity, the group keyring and the
-open-banking connector secret — three unlinks without which the deletion is not
-finished. Each path is read back after the removal, because
+open-banking connector secret — the unlinks without which the deletion is not
+finished. Which locations those are is Core's answer, not a list kept here:
+the purge reads `Core\Public\Services\UserDataPurgePlan`, and the locations
+it names as key material are the ones that land in this tier. A second copy of
+that list is what left every statement a reader had imported on disk after
+their account was deleted — see
+[the third reader, which was not one](../core/one-export-action.md#the-third-reader-which-was-not-one).
+Each path is read back after the removal, because
 `Illuminate\Filesystem\Filesystem::delete()` reports a refused unlink by
 returning `false` and never by throwing: the return value was ignored, so the
 ordinary failure was not merely swallowed, it was never noticed. A survivor
 comes back **by name**.
 
-`residue()` is the downloaded mail and, for the last account on the device, the
-device-wide trees. Those are bulk deletes whose survival is disclosure rather
+`residue()` is the downloaded mail, the statements the reader imported and, for
+the last account on the device, the device-wide trees. Those are bulk deletes whose survival is disclosure rather
 than a way back in, so each path is independent of the others and a survivor is
 logged by name rather than as a count.
 
