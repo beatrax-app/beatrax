@@ -8,6 +8,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Instant;
 
+/**
+ * @link ../../../../.docs/conventions/a-check-another-writer-can-invalidate.md
+ */
 final readonly class MobileImportIntentGate
 {
     public function __construct(
@@ -15,20 +18,13 @@ final readonly class MobileImportIntentGate
         private Clock $clock,
     ) {}
 
-    // Idempotent - a second call for the same user is a no-op, never a
-    // duplicate row.
+    // Idempotent on unique(user_id), not on a read before the write: the phone
+    // marks the intent from the scan and from the resumed ceremony, and the
+    // second of two overlapping calls used to raise rather than no-op. The
+    // stamp kept is the first one, which is when the import really began.
     public function markImporting(int $userId): void
     {
-        $exists = $this->db->connection()
-            ->table('mobile_import_intent')
-            ->where('user_id', $userId)
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        $this->db->connection()->table('mobile_import_intent')->insert([
+        $this->db->connection()->table('mobile_import_intent')->insertOrIgnore([
             'user_id' => $userId,
             'created_at' => Instant::zulu($this->clock->now()),
         ]);

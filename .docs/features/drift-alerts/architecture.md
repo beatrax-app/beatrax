@@ -207,6 +207,14 @@ doesn't re-run the resolution fan-out on every render; the cache is
 invalidated on `dismiss()` and also expires within the TTL so new
 subscriptions/drift surface without a manual refresh.
 
+`dismiss()` writes with `insertOrIgnore` under a derived id, and announces the
+`EntityMutated` create only when that call reports a row inserted. The count is
+the point: it is taken under the same lock as the write, where the existence
+test it replaced was taken before it — two taps on one card both read "not
+held" and both announced a create for the single row one of them wrote. See
+[a check another writer can
+invalidate](../../conventions/a-check-another-writer-can-invalidate.md).
+
 **`SubscriptionDriftWatchQuery`** builds the Subscription Drift Watch
 overview: every approved recurring EXPENSE series with at least two
 observed amounts *whose first and last clear the same `AmountMovement`

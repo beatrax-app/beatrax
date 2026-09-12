@@ -131,6 +131,10 @@ pass for a clean one.
   supplies a URL this codebase did not write, why `target="_blank"` here opens
   another window of the application rather than a browser tab, the six refusals
   in the order they are asked, and the two sites that deliberately admit `http://`
+- [A check another writer can invalidate](a-check-another-writer-can-invalidate.md)
+  — why a read-then-insert is a statement about the past, what the connection's
+  `IMMEDIATE` transaction mode already gives you, and which of the three fixes
+  belongs at which site
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

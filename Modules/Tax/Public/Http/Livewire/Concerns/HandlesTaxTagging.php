@@ -209,9 +209,9 @@ trait HandlesTaxTagging
             // has the field it is about still under it.
             $this->toast($duplicate->getMessage());
         } catch (\RuntimeException) {
-            // Its sibling, and not a name clash at all: the row went in and its
-            // id could not be read back. Saying "already exists" here would name
-            // a cause that had been ruled out.
+            // Not a name clash at all — that one is caught above, including
+            // where the unique index rather than the check settled it. Saying
+            // "already exists" here would name a cause that had been ruled out.
             $this->toast(Lang::get('tax::messages.errors.category_not_saved'));
         }
     }

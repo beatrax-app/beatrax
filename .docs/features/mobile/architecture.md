@@ -1209,6 +1209,14 @@ material and is never read by any crypto/admission code path — a plain
 marker consumed only to pick between otherwise-ambiguous UI/completion
 states.
 
+Both callers being idempotent is `unique(user_id)` on the table, not a read
+before the write: `markImporting()` is an `insertOrIgnore`, so two overlapping
+calls leave one row carrying the first call's stamp, which is when the import
+really began. It used to test for the row and then insert, which returns the
+same answer in a quiet moment and raises when provisioning and the screen mount
+land together. See [a check another writer can
+invalidate](../../conventions/a-check-another-writer-can-invalidate.md).
+
 ## Blocking resumable initial sync
 
 `SetupProgressScreen` is the post-pairing landing page: genuinely

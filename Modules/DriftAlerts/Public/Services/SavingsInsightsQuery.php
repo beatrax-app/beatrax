@@ -27,6 +27,9 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Modules\Sync\Public\Events\EntityMutated;
 
+/**
+ * @link ../../../../.docs/conventions/a-check-another-writer-can-invalidate.md
+ */
 final readonly class SavingsInsightsQuery
 {
     // An amount of money, not a count of minor units. 500 is EUR 5.00 and also
@@ -235,15 +238,16 @@ final readonly class SavingsInsightsQuery
             'updated_at' => $now,
         ];
 
-        $held = $this->db->connection()->table('savings_insight_dismissals')->where('id', $dismissalId)->exists();
-
-        $this->db->connection()->table('savings_insight_dismissals')->insertOrIgnore(['id' => $dismissalId] + $row);
+        $inserted = $this->db->connection()
+            ->table('savings_insight_dismissals')
+            ->insertOrIgnore(['id' => $dismissalId] + $row);
 
         $this->cache->forget($this->cacheKey($user));
 
-        // Asked before the write: insertOrIgnore reports nothing, and a second
-        // create op for a dismissal this device already holds is noise.
-        if ($held) {
+        // The write's own count, not a read taken before it: two taps on one
+        // card both read "not held" and both announced a create for the single
+        // row one of them wrote. insert-or-ignore counts what it inserted.
+        if ($inserted === 0) {
             return;
         }
 

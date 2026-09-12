@@ -6,6 +6,7 @@ namespace Modules\Chains\Internal;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Chains\Internal\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\DeviceMintedRowId;
@@ -17,6 +18,8 @@ use Modules\Sync\Public\Events\EntityMutated;
 // `chain_links_pair_uq` states that tuple where the database can enforce it.
 /**
  * @internal Resolvers only.
+ *
+ * @link ../../../.docs/conventions/a-check-another-writer-can-invalidate.md
  */
 final readonly class ChainLinkInsertHelper
 {
@@ -76,7 +79,14 @@ final readonly class ChainLinkInsertHelper
 
         $id = DeviceMintedRowId::mint();
 
-        $connection->table('chain_links')->insert(['id' => $id] + $columns);
+        try {
+            $connection->table('chain_links')->insert(['id' => $id] + $columns);
+        } catch (UniqueConstraintViolationException) {
+            // chain_links_pair_uq is what actually decides the tuple, and it
+            // decides it after the SELECT above: the resolver pass beside this
+            // one wrote the pair, so this is the same answer as finding it.
+            return false;
+        }
 
         $this->capture($id, $userId, $columns);
 
