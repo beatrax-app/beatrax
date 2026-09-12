@@ -36,6 +36,8 @@ Modules/Ingestion/
 │   │   ├── Banking/                         # generic bank-statement parsers
 │   │   │   ├── Camt053Adapter.php
 │   │   │   ├── Camt053XmlReader.php          # both readings, one XXE guard
+│   │   │   ├── Camt053Entries.php            # which entries and which details are the money
+│   │   │   ├── StatementSelfCheck.php        # opening + entries against closing
 │   │   │   ├── Mt940Adapter.php
 │   │   │   ├── BankAmountParser.php
 │   │   │   ├── Camt053HeaderProfile.php

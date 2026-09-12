@@ -15,6 +15,9 @@ versio = "versio"
 ITMS = "ITMS"
 # Dutch statement vocabulary that appears verbatim in parser examples.
 Betaalautomaat = "Betaalautomaat"
+# ING's transaction-code column, where "BA" abbreviates the Betaalautomaat
+# named in the same row.
+BA = "BA"
 Geldautomaat = "Geldautomaat"
 Bankstorting = "Bankstorting"
 Incasso = "Incasso"

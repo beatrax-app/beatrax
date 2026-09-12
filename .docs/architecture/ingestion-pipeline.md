@@ -763,6 +763,15 @@ net-worth point, forecast anchor and reconcile target and says so
 nowhere. The `multiStatement` extras flag records that the file held
 more statements than the one summary describes.
 
+A statement that carries both an opening and a closing balance is checked
+against its own entries as it is parsed, and a non-zero
+`closing - (opening + every entry)` rides on the summary as
+`extras.statementDifferenceMinor`. It is recorded, never corrected: the
+rows stay as the file wrote them and both balances stay as the file
+stated them. No screen reads the key yet. See [a statement that did not
+check its own
+arithmetic](../features/ingestion/a-statement-that-did-not-check-its-own-arithmetic.md).
+
 CSV adapters return `null` from `statementMetadata()` (CSV carries no
 period boundary). Receipt-path formats (`.eml`, `.mbox`) are excluded
 from the writer call because each receipt is its own logical record

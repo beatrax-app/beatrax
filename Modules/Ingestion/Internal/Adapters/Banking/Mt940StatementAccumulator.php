@@ -31,6 +31,14 @@ final class Mt940StatementAccumulator
 
     public ?string $rowCurrency = null;
 
+    // The account and currency the line held BACK on the :61: that was read,
+    // which is not the pair in force when it is finally written out: a line
+    // whose :86: never came is flushed by the next statement's first :61:,
+    // under a :25: and a :60F: that have already moved on.
+    public string $pendingOwnIban = '';
+
+    public string $pendingCurrency = '';
+
     // A balance tag arrived, whether or not it parsed. Without it a :61: with
     // no currency can only be reported as a tag that never came.
     public bool $balanceTagSeen = false;
@@ -48,6 +56,8 @@ final class Mt940StatementAccumulator
 
     public int $entryCount = 0;
 
+    public int $rowSumMinor = 0;
+
     public int $rowIndex = 0;
 
     public ?Mt940StatementLine $pendingTag61 = null;
@@ -64,6 +74,17 @@ final class Mt940StatementAccumulator
         }
         if ($this->closingBalanceUnreadable) {
             $extras[StatementExtraKey::ClosingBalanceUnreadable->value] = true;
+        }
+
+        $difference = StatementSelfCheck::differenceMinor(
+            $this->openingBalance?->minor,
+            $this->openingBalance?->currency,
+            $this->closingBalance?->minor,
+            $this->closingBalance?->currency,
+            $this->rowSumMinor,
+        );
+        if ($difference !== null) {
+            $extras[StatementExtraKey::StatementDifference->value] = $difference;
         }
 
         return new StatementSummaryData(

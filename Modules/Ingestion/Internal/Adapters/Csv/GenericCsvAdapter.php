@@ -69,6 +69,8 @@ final readonly class GenericCsvAdapter implements SourceAdapter
 
             $dateCell = trim($this->cell($record, $normMap, $this->preset->dateHeader));
             if ($dateCell === '') {
+                $this->refuseAnUndatedRowThatCarriesData($record, $index);
+
                 continue;
             }
 
@@ -127,6 +129,26 @@ final readonly class GenericCsvAdapter implements SourceAdapter
     private function normalise(string $header): string
     {
         return CsvPreset::normaliseHeader($header);
+    }
+
+    // The sibling positional reader refuses an undated row through parseDate(),
+    // and this one skipped it -- so an ING row carrying an amount, a
+    // counterparty and a description but no date left the import with nothing
+    // said, and the rows after it renumbered over the gap.
+    /**
+     * @param  array<string, string|null>  $record
+     */
+    private function refuseAnUndatedRowThatCarriesData(array $record, int $index): void
+    {
+        foreach ($record as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                throw new InvalidAmountException(sprintf(
+                    "Row %d: the '%s' column is empty, and the row is not.",
+                    $index,
+                    $this->preset->dateHeader,
+                ));
+            }
+        }
     }
 
     /**
