@@ -25,7 +25,7 @@ final class ShiftSeriesDatePayload extends ScenarioMutationPayload
         // collapses to shifting the first occurrence alone.
         if (ShiftScope::tryFrom($scope) === null) {
             throw new InvalidArgumentException(
-                'ShiftSeriesDatePayload.scope must be one of: '.implode(' | ', array_map(static fn (ShiftScope $c): string => "'".$c->value."'", ShiftScope::cases()))."; got '{$scope}'."
+                'ShiftSeriesDatePayload.scope must be one of: '.implode(' | ', array_map(static fn (ShiftScope $c): string => "'".$c->value."'", ShiftScope::cases())).sprintf("; got '%s'.", $scope)
             );
         }
     }

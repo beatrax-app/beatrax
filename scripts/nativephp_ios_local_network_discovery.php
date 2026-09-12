@@ -71,7 +71,7 @@ if ($compiler === null) {
     } else {
         foreach ($compilerPatches as $needle => $replacement) {
             if (! str_contains($source, $needle)) {
-                fwrite(STDERR, "nativephp_ios_local_network_discovery: anchor not found in IOSPluginCompiler.php:\n{$needle}\n");
+                fwrite(STDERR, sprintf("nativephp_ios_local_network_discovery: anchor not found in IOSPluginCompiler.php:\n%s\n", $needle));
                 exit(1);
             }
 
@@ -79,7 +79,7 @@ if ($compiler === null) {
         }
 
         if (file_put_contents($compiler, $source) === false) {
-            fwrite(STDERR, "nativephp_ios_local_network_discovery: could not write {$compiler}.\n");
+            fwrite(STDERR, sprintf("nativephp_ios_local_network_discovery: could not write %s.\n", $compiler));
             exit(1);
         }
 
@@ -103,12 +103,12 @@ if (str_contains($infoXml, 'NSBonjourServices')) {
     $patchedInfo = preg_replace('#(<dict>\s*)#', "<dict>\n".$entry, $infoXml, 1);
 
     if (! is_string($patchedInfo) || ! str_contains($patchedInfo, 'NSBonjourServices')) {
-        fwrite(STDERR, "nativephp_ios_local_network_discovery: no <dict> to extend in {$infoPlist}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_local_network_discovery: no <dict> to extend in %s.\n", $infoPlist));
         exit(1);
     }
 
     if (file_put_contents($infoPlist, $patchedInfo) === false) {
-        fwrite(STDERR, "nativephp_ios_local_network_discovery: could not write {$infoPlist}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_local_network_discovery: could not write %s.\n", $infoPlist));
         exit(1);
     }
 
@@ -118,7 +118,7 @@ if (str_contains($infoXml, 'NSBonjourServices')) {
 // Proof, not assumption: a malformed plist fails much later inside Xcode with
 // an error nobody reads back to this script.
 if (@simplexml_load_file($infoPlist) === false) {
-    fwrite(STDERR, "nativephp_ios_local_network_discovery: {$infoPlist} is no longer well-formed XML.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_local_network_discovery: %s is no longer well-formed XML.\n", $infoPlist));
 
     foreach (libxml_get_errors() as $error) {
         fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");

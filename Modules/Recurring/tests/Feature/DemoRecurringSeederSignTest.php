@@ -31,9 +31,9 @@ it('seeds every demo expense series with the signed amount the detector writes',
         }
 
         expect($dto->latestAmount->toMinor())
-            ->toBeLessThan(0, "{$dto->detectedName} stores an unsigned expense amount");
+            ->toBeLessThan(0, sprintf('%s stores an unsigned expense amount', $dto->detectedName));
         expect($dto->monthlyEquivalent->toMinor())
-            ->toBeLessThan(0, "{$dto->detectedName} stores an unsigned monthly equivalent");
+            ->toBeLessThan(0, sprintf('%s stores an unsigned monthly equivalent', $dto->detectedName));
     }
 });
 

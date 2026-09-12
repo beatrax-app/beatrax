@@ -26,7 +26,7 @@ it('creates the anomaly_alert_transitions table with every audit column', functi
 
     foreach ($columns as $column) {
         expect($schema->hasColumn('anomaly_alert_transitions', $column))->toBeTrue(
-            "Expected anomaly_alert_transitions column '{$column}' to exist",
+            sprintf("Expected anomaly_alert_transitions column '%s' to exist", $column),
         );
     }
 });

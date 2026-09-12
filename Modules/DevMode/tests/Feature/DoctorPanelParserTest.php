@@ -158,7 +158,7 @@ it('parses a row whose label fills or overflows the label column', function (): 
         $label = str_repeat('L', $length);
         $rows = (new ProbeOutputParser)->parse(doctorRow($label, 'ok', 'fine'));
 
-        expect($rows)->toHaveCount(1, "a {$length}-character label should still produce one row");
+        expect($rows)->toHaveCount(1, sprintf('a %s-character label should still produce one row', $length));
         expect($rows[0]['label'])->toBe($label);
         expect($rows[0]['detail'])->toBe('fine');
     }

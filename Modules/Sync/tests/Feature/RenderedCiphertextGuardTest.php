@@ -502,7 +502,7 @@ function rcgUnreadableCensus(int $userId): array
                 if (! is_string($value) || $value === '') {
                     continue;
                 }
-                $census["{$table}.{$column}#{$index}"] = $value;
+                $census[sprintf('%s.%s#%s', $table, $column, $index)] = $value;
             }
         }
     }
@@ -539,7 +539,7 @@ function rcgLeaks(string $html, array $census): array
     $leaked = [];
     foreach ($census as $label => $stored) {
         if (str_contains($body, $stored)) {
-            $leaked[] = "{$label}: the whole stored value";
+            $leaked[] = sprintf('%s: the whole stored value', $label);
 
             continue;
         }
@@ -547,7 +547,7 @@ function rcgLeaks(string $html, array $census): array
         for ($offset = 0; $offset + RCG_FRAGMENT_LENGTH <= $length; $offset++) {
             $fragment = substr($stored, $offset, RCG_FRAGMENT_LENGTH);
             if (str_contains($body, $fragment)) {
-                $leaked[] = "{$label}: a {$length}-character stored value, truncated to '{$fragment}…'";
+                $leaked[] = sprintf("%s: a %s-character stored value, truncated to '%s…'", $label, $length, $fragment);
 
                 break;
             }
@@ -608,7 +608,7 @@ function rcgExpectReadable(string $screen, string $html, array $census, array $m
     $machinery = rcgMachineryLeaks($html, rcgMachineryMarkers());
 
     expect($machinery)->toBe([], implode("\n", [
-        "{$screen} printed the crypto layer's own vocabulary to the reader:",
+        sprintf("%s printed the crypto layer's own vocabulary to the reader:", $screen),
         ...$machinery,
         '',
         'This is what a caught exception message looks like once it is treated as',
@@ -621,7 +621,7 @@ function rcgExpectReadable(string $screen, string $html, array $census, array $m
     $leaked = rcgLeaks($html, $census);
 
     expect($leaked)->toBe([], implode("\n", [
-        "{$screen} rendered a value as it is stored, not as the reader needs it:",
+        sprintf('%s rendered a value as it is stored, not as the reader needs it:', $screen),
         ...$leaked,
         '',
         'Those columns hold XChaCha20-Poly1305 ciphertext, or a keyed HMAC in the',
@@ -634,7 +634,7 @@ function rcgExpectReadable(string $screen, string $html, array $census, array $m
     $missing = rcgMissing($html, $mustBeVisible);
 
     expect($missing)->toBe([], implode("\n", [
-        "{$screen} did not show the plaintext it exists to show:",
+        sprintf('%s did not show the plaintext it exists to show:', $screen),
         ...$missing,
         '',
         'The likely cause is the same defect the assertion above looks for, in the',
@@ -694,7 +694,7 @@ it('actually holds ciphertext and keyed digests at rest before a single screen i
                 }
                 $result = $codec->decryptValue($table, $column, $value, (int) $this->rcgUser->id, $this->rcgSession);
                 if (! $result['decrypted']) {
-                    $notCiphertext[] = "{$table}.{$column}#{$index}";
+                    $notCiphertext[] = sprintf('%s.%s#%s', $table, $column, $index);
                 }
             }
         }
@@ -714,7 +714,7 @@ it('actually holds ciphertext and keyed digests at rest before a single screen i
                     continue;
                 }
                 if (! BlindIndexCodec::looksDerived($value) && $value !== SensitiveFieldRegistry::blindIndexSentinel()) {
-                    $notDerived[] = "{$table}.{$column}#{$index} = {$value}";
+                    $notDerived[] = sprintf('%s.%s#%s = %s', $table, $column, $index, $value);
                 }
             }
         }
@@ -758,7 +758,7 @@ it('never renders a stored sensitive value on a transaction detail page', functi
         ->table('transactions')->where('user_id', $this->rcgUser->id)
         ->where('source_row_index', 1)->value('id');
 
-    $response = $this->get("/transactions/{$transactionId}");
+    $response = $this->get(sprintf('/transactions/%s', $transactionId));
     $response->assertOk();
 
     rcgExpectReadable('/transactions/{id}', $response->getContent(), $this->rcgCensus, [
@@ -863,7 +863,7 @@ it('never renders a stored sensitive value on a recurring series detail page', f
         ->table('recurring_series')->where('user_id', $this->rcgUser->id)
         ->where('detected_name', RCG_SERIES_NAME)->value('id');
 
-    $response = $this->get("/recurring/series/{$seriesId}");
+    $response = $this->get(sprintf('/recurring/series/%s', $seriesId));
     $response->assertOk();
 
     rcgExpectReadable('/recurring/series/{id}', $response->getContent(), $this->rcgCensus, [
@@ -1044,7 +1044,7 @@ it('never prints the crypto layer\'s vocabulary on the import preview', function
     // seed, not as a defect. The crossing is pinned in BoundaryArchTest.
     $this->app->make(PreviewCache::class)->put($importRunId, $preview, []);
 
-    $response = $this->get("/imports/{$importRunId}/preview");
+    $response = $this->get(sprintf('/imports/%s/preview', $importRunId));
     $response->assertOk();
 
     rcgExpectReadable('/imports/{id}/preview', $response->getContent(), $this->rcgCensus, [
@@ -1058,7 +1058,7 @@ it('never prints the crypto layer\'s vocabulary on the import preview', function
 it('goes RED on a whole stored value printed into a body (negative probe, in-memory)', function (): void {
     $stored = $this->rcgCensus['counterparties.iban#0'];
 
-    expect(rcgLeaks("<span class=\"triage-iban\">{$stored}</span>", $this->rcgCensus))
+    expect(rcgLeaks(sprintf('<span class="triage-iban">%s</span>', $stored), $this->rcgCensus))
         ->toContain('counterparties.iban#0: the whole stored value');
 });
 
@@ -1066,7 +1066,7 @@ it('goes RED on a stored value truncated before it is printed (negative probe, i
     $stored = $this->rcgCensus['transactions.description#0'];
     $truncated = substr($stored, 0, 24).'…';
 
-    $leaks = rcgLeaks("<p class=\"primary\">{$truncated}</p>", $this->rcgCensus);
+    $leaks = rcgLeaks(sprintf('<p class="primary">%s</p>', $truncated), $this->rcgCensus);
 
     expect($leaks)->not->toBe([]);
     expect(implode("\n", $leaks))->toContain('transactions.description#0');
@@ -1088,7 +1088,7 @@ it('keeps the blind-index columns out of the AEAD list, and seeds a row for each
     foreach (rcgBlindIndexColumns() as $table => $columns) {
         foreach ($columns as $column) {
             expect($registry[$table] ?? [])->not->toContain($column);
-            expect($this->rcgCensus)->toHaveKey("{$table}.{$column}#0");
+            expect($this->rcgCensus)->toHaveKey(sprintf('%s.%s#0', $table, $column));
         }
     }
 });
@@ -1096,7 +1096,7 @@ it('keeps the blind-index columns out of the AEAD list, and seeds a row for each
 it('goes RED on a crypto exception message printed as copy (negative probe, in-memory)', function (): void {
     $message = BlindIndexKeyUnavailableException::forUser(3, 'counterparty-normalized')->getMessage();
 
-    expect(rcgMachineryLeaks("<span title=\"{$message}\">Fout</span>", rcgMachineryMarkers()))
+    expect(rcgMachineryLeaks(sprintf('<span title="%s">Fout</span>', $message), rcgMachineryMarkers()))
         ->toContain('BlindIndexCodec');
 });
 
@@ -1105,7 +1105,7 @@ it('goes RED on the _no_counterparty sentinel reaching a body (negative probe, i
 
     expect($sentinelKey)->not->toBeFalse();
     expect(rcgLeaks('<span class="primary">'.SensitiveFieldRegistry::blindIndexSentinel().'</span>', $this->rcgCensus))
-        ->toContain("{$sentinelKey}: the whole stored value");
+        ->toContain(sprintf('%s: the whole stored value', $sentinelKey));
 });
 
 // Every case above renders UNLOCKED, which is right for the question they ask
@@ -1131,9 +1131,9 @@ function rcgStrandedRoutes(int $userId): array
 
     return [
         '/counterparties/triage', '/counterparties', '/counterparties/rcg-sentinel-unknown',
-        '/community/mystery-merchants', '/transactions', "/transactions/{$transactionId}",
+        '/community/mystery-merchants', '/transactions', sprintf('/transactions/%s', $transactionId),
         '/uncategorized', '/notifications', '/recurring', '/recurring/review',
-        "/recurring/series/{$seriesId}", '/tax', '/reports', '/cash', '/calendar',
+        sprintf('/recurring/series/%s', $seriesId), '/tax', '/reports', '/cash', '/calendar',
     ];
 }
 
@@ -1149,12 +1149,12 @@ it('still answers on every screen when the keyring no longer opens under the hel
     foreach (rcgStrandedRoutes((int) $this->rcgUser->id) as $route) {
         $response = $this->get($route);
         if ($response->getStatusCode() !== 200) {
-            $broken[] = "{$route}: {$response->getStatusCode()}";
+            $broken[] = sprintf('%s: %s', $route, $response->getStatusCode());
 
             continue;
         }
         foreach (rcgLeaks(rcgSearchableBody($response->getContent()), $this->rcgCensus) as $leak) {
-            $leaked[] = "{$route} -> {$leak}";
+            $leaked[] = sprintf('%s -> %s', $route, $leak);
         }
     }
 

@@ -14,31 +14,31 @@ final class FileDropBlobWriteException extends RuntimeException
 {
     public static function chmodDirectoryFailed(string $directory): self
     {
-        return new self("FileDropEmlBlobStore: failed to chmod 0700 on newly-created directory {$directory}.");
+        return new self(sprintf('FileDropEmlBlobStore: failed to chmod 0700 on newly-created directory %s.', $directory));
     }
 
     public static function couldNotOpenTempFile(string $tmp): self
     {
-        return new self("FileDropEmlBlobStore: could not open temp file at {$tmp}.");
+        return new self(sprintf('FileDropEmlBlobStore: could not open temp file at %s.', $tmp));
     }
 
     public static function shortWrite(string $tmp): self
     {
-        return new self("FileDropEmlBlobStore: short write to temp file at {$tmp}.");
+        return new self(sprintf('FileDropEmlBlobStore: short write to temp file at %s.', $tmp));
     }
 
     public static function chmodTempFileFailed(string $tmp): self
     {
-        return new self("FileDropEmlBlobStore: failed to chmod temp file at {$tmp}.");
+        return new self(sprintf('FileDropEmlBlobStore: failed to chmod temp file at %s.', $tmp));
     }
 
     public static function atomicRenameFailed(string $tmp, string $absolutePath): self
     {
-        return new self("FileDropEmlBlobStore: atomic rename failed from {$tmp} to {$absolutePath}.");
+        return new self(sprintf('FileDropEmlBlobStore: atomic rename failed from %s to %s.', $tmp, $absolutePath));
     }
 
     public static function unexpectedFailure(string $absolutePath): self
     {
-        return new self("FileDropEmlBlobStore: unexpected failure writing {$absolutePath}.");
+        return new self(sprintf('FileDropEmlBlobStore: unexpected failure writing %s.', $absolutePath));
     }
 }

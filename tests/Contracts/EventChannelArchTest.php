@@ -477,7 +477,7 @@ function eventChannelOrphans(array $from, array $to, string $half): array
             continue;
         }
 
-        $orphans[] = "'{$name}' at ".implode(', ', array_slice($places, 0, 3));
+        $orphans[] = sprintf("'%s' at ", $name).implode(', ', array_slice($places, 0, 3));
     }
 
     sort($orphans);
@@ -570,9 +570,9 @@ it('carries no pin for an event that has both halves again', function (): void {
         $other = $half === 'dispatch' ? $listeners : $dispatches;
 
         if (! isset($present[$name])) {
-            $stale[] = "'{$name}' is pinned as {$half}-only, but nothing has that half now";
+            $stale[] = sprintf("'%s' is pinned as %s-only, but nothing has that half now", $name, $half);
         } elseif (isset($other[$name])) {
-            $stale[] = "'{$name}' is pinned as {$half}-only, but this repo now has both halves";
+            $stale[] = sprintf("'%s' is pinned as %s-only, but this repo now has both halves", $name, $half);
         }
     }
 

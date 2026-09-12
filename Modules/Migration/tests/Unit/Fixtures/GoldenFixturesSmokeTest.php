@@ -12,8 +12,8 @@ function migrationFixturesRoot(): string
 
 it('Fixture: the ynab4 v1/v2 golden fixtures ship both Register.csv and Budget.csv', function (): void {
     foreach (['v1', 'v2'] as $version) {
-        $dir = migrationFixturesRoot()."/ynab4/{$version}";
-        $files = glob("{$dir}/*.csv");
+        $dir = migrationFixturesRoot().sprintf('/ynab4/%s', $version);
+        $files = glob(sprintf('%s/*.csv', $dir));
 
         expect($files)->not->toBeFalse();
         /** @var list<string> $files */
@@ -34,7 +34,7 @@ it('Fixture: the ynab4 v1/v2 golden fixtures ship both Register.csv and Budget.c
 
 it('Fixture: the ynab4 v1 Register.csv carries a plain expense, income, split pair, and transfer pair', function (): void {
     $dir = migrationFixturesRoot().'/ynab4/v1';
-    $files = glob("{$dir}/*Register.csv");
+    $files = glob(sprintf('%s/*Register.csv', $dir));
     expect($files)->not->toBeFalse();
     /** @var list<string> $files */
     $rows = array_map('str_getcsv', file($files[0]));
@@ -68,11 +68,11 @@ it('Fixture: the ynab4 Budget.csv v2 changes exactly the Jan Groceries + Jan Hou
     // Column indices: Month(0), Category Group(1), Category(2), Budgeted(3).
     $v1Budgeted = [];
     foreach ($v1 as $row) {
-        $v1Budgeted["{$row[0]}|{$row[2]}"] = $row[3];
+        $v1Budgeted[sprintf('%s|%s', $row[0], $row[2])] = $row[3];
     }
     $v2Budgeted = [];
     foreach ($v2 as $row) {
-        $v2Budgeted["{$row[0]}|{$row[2]}"] = $row[3];
+        $v2Budgeted[sprintf('%s|%s', $row[0], $row[2])] = $row[3];
     }
 
     expect($v1Budgeted['2026-01|Groceries'])->toBe('200.00');
@@ -85,7 +85,7 @@ it('Fixture: the ynab4 Budget.csv v2 changes exactly the Jan Groceries + Jan Hou
 
 it('Fixture: the nynab v1/v2 exports are real ZIPs containing exactly the two CSV entries with the combined category column', function (): void {
     foreach (['v1/nynab-export.zip', 'v2/nynab-export-v2.zip'] as $relative) {
-        $zipPath = migrationFixturesRoot()."/nynab/{$relative}";
+        $zipPath = migrationFixturesRoot().sprintf('/nynab/%s', $relative);
         expect(is_file($zipPath))->toBeTrue();
 
         $zip = new ZipArchive;
@@ -185,7 +185,7 @@ it('Fixture: ActualFixtureBuilder output opens read-only and v_transactions retu
         $zip->extractTo($extractDir);
         $zip->close();
 
-        $dbPath = "{$extractDir}/db.sqlite";
+        $dbPath = sprintf('%s/db.sqlite', $extractDir);
         expect(is_file($dbPath))->toBeTrue();
 
         $readOnly = new Sqlite(
@@ -207,12 +207,12 @@ it('Fixture: ActualFixtureBuilder output opens read-only and v_transactions retu
         }
         expect($threwOnWrite)->toBeTrue('A read-only Pdo\Sqlite connection must reject a write attempt');
 
-        $metadata = json_decode((string) file_get_contents("{$extractDir}/metadata.json"), true, flags: JSON_THROW_ON_ERROR);
+        $metadata = json_decode((string) file_get_contents(sprintf('%s/metadata.json', $extractDir)), true, flags: JSON_THROW_ON_ERROR);
         expect($metadata)->toHaveKey('budgetName');
     } finally {
         @unlink($zipPath);
-        @unlink("{$extractDir}/db.sqlite");
-        @unlink("{$extractDir}/metadata.json");
+        @unlink(sprintf('%s/db.sqlite', $extractDir));
+        @unlink(sprintf('%s/metadata.json', $extractDir));
         @rmdir($extractDir);
     }
 });
@@ -257,8 +257,8 @@ it('Fixture: ActualFixtureBuilder carries exactly one FLAT goal_def, one NON-FLA
         expect($currency)->not->toBe('EUR');
     } finally {
         @unlink($zipPath);
-        @unlink("{$extractDir}/db.sqlite");
-        @unlink("{$extractDir}/metadata.json");
+        @unlink(sprintf('%s/db.sqlite', $extractDir));
+        @unlink(sprintf('%s/metadata.json', $extractDir));
         @rmdir($extractDir);
     }
 });

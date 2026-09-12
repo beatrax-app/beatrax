@@ -383,7 +383,7 @@ it('defers every self-referential foreign key the schema declares', function ():
 
         // A self-referential FK nobody defers fails the insert outright and
         // rolls the whole replay back, which is how this class came to exist.
-        expect($covered)->toBe($columns, "{$table} declares a self-referential foreign key the deferral does not cover");
+        expect($covered)->toBe($columns, sprintf('%s declares a self-referential foreign key the deferral does not cover', $table));
     }
 });
 

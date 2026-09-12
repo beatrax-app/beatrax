@@ -149,11 +149,11 @@ it('asserts the expected expense + income series counts for each synthesised fix
 
     expect($actualExpense)->toBe(
         $expectedExpenseSeriesCount,
-        "{$fixtureName}: the expense detector clustered {$actualExpense} series where this fixture is built to yield {$expectedExpenseSeriesCount}. Too few and a subscription the reader pays every month stops being watched for drift; too many and one payment is announced as several.",
+        sprintf('%s: the expense detector clustered %s series where this fixture is built to yield %s. Too few and a subscription the reader pays every month stops being watched for drift; too many and one payment is announced as several.', $fixtureName, $actualExpense, $expectedExpenseSeriesCount),
     );
     expect($actualIncome)->toBe(
         $expectedIncomeSeriesCount,
-        "{$fixtureName}: the income detector clustered {$actualIncome} series where this fixture is built to yield {$expectedIncomeSeriesCount}. A salary read as two series doubles every forecast that reaches for it.",
+        sprintf('%s: the income detector clustered %s series where this fixture is built to yield %s. A salary read as two series doubles every forecast that reaches for it.', $fixtureName, $actualIncome, $expectedIncomeSeriesCount),
     );
 
     CarbonImmutable::setTestNow();
@@ -226,7 +226,7 @@ it('produces no duplicate series rows when the full fixture corpus runs twice th
     // a re-run collapses onto the same rows.
     expect($afterSecondRun)->toBe(
         $afterFirstRun,
-        "A second detection run over the same ledger left {$afterSecondRun} series where the first left {$afterFirstRun}. Detection runs on every import, so a run that adds rows duplicates every series the reader already approved.",
+        sprintf('A second detection run over the same ledger left %s series where the first left %s. Detection runs on every import, so a run that adds rows duplicates every series the reader already approved.', $afterSecondRun, $afterFirstRun),
     );
 
     // No exact count: merging every fixture into one user namespace legitimately

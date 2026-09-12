@@ -41,7 +41,7 @@ final class AnomalyAlertDtoMapper
         if (! is_string($rawDetected) || $rawDetected === '') {
             $rowId = isset($row->id) && is_numeric($row->id) ? (string) $row->id : '?';
             throw new InvalidArgumentException(
-                "AnomalyAlertDtoMapper: anomaly_alerts row {$rowId} has missing or non-string detected_at.",
+                sprintf('AnomalyAlertDtoMapper: anomaly_alerts row %s has missing or non-string detected_at.', $rowId),
             );
         }
         $detectedAt = CarbonImmutable::parse($rawDetected);

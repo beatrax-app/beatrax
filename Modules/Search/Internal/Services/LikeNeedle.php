@@ -65,7 +65,7 @@ final class LikeNeedle
             'detected_name' => 'detected_name',
             'display_name_override' => 'display_name_override',
             'transaction_search_docs.search_body' => 'transaction_search_docs.search_body',
-            default => throw new InvalidArgumentException("Unknown LIKE column: {$column}"),
+            default => throw new InvalidArgumentException(sprintf('Unknown LIKE column: %s', $column)),
         };
     }
 

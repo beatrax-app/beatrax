@@ -136,7 +136,7 @@ it('hands every testsuite to exactly one shard', function (): void {
 
         expect($process->getExitCode())->toBe(
             0,
-            "the pipeline resolves shard {$shard}/{$shards} with this script and it did not succeed: ".$process->getErrorOutput(),
+            sprintf('the pipeline resolves shard %s/%s with this script and it did not succeed: ', $shard, $shards).$process->getErrorOutput(),
         );
 
         foreach (explode(',', $output) as $suite) {

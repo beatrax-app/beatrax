@@ -25,9 +25,9 @@ const MINOR_UNIT_HUNDREDTH_STEMS = '/c[eéê]n[tț]|sent|λεπτ|цент/iu';
 function minorUnitScaleCopy(string $locale): array
 {
     return [
-        "Modules/Anomaly/Resources/lang/{$locale}/settings.php" => ['min_amount_label', 'min_amount_help'],
-        "Modules/Core/Resources/lang/{$locale}/settings.php" => ['recurring.income_label', 'recurring.income_help'],
-        "Modules/Onboarding/Resources/lang/{$locale}/starting_balance.php" => ['minor_units'],
+        sprintf('Modules/Anomaly/Resources/lang/%s/settings.php', $locale) => ['min_amount_label', 'min_amount_help'],
+        sprintf('Modules/Core/Resources/lang/%s/settings.php', $locale) => ['recurring.income_label', 'recurring.income_help'],
+        sprintf('Modules/Onboarding/Resources/lang/%s/starting_balance.php', $locale) => ['minor_units'],
     ];
 }
 
@@ -64,7 +64,7 @@ it('names no hundredth of a unit in copy describing a stored minor-unit figure',
                 expect($line)->not->toBe('', $file.' ['.$path.'] is gone, so this rule is reading nothing where it stands.');
 
                 if (preg_match(MINOR_UNIT_HUNDREDTH_STEMS, $line) === 1) {
-                    $claims[] = $file." [{$path}]: ".$line;
+                    $claims[] = $file.sprintf(' [%s]: ', $path).$line;
                 }
             }
         }

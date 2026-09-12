@@ -178,14 +178,14 @@ final readonly class NotificationPreferenceQuery
     {
         if ($prefs->reminderLeadDays < 1 || $prefs->reminderLeadDays > 30) {
             throw new InvalidArgumentException(
-                "Reminder lead days {$prefs->reminderLeadDays} out of range (1..30).",
+                sprintf('Reminder lead days %s out of range (1..30).', $prefs->reminderLeadDays),
             );
         }
 
         foreach ([$prefs->quietHoursFrom, $prefs->quietHoursTo] as $time) {
             if ($time !== null && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time) !== 1) {
                 throw new InvalidArgumentException(
-                    "Invalid quiet-hours time '{$time}' (expected HH:MM).",
+                    sprintf("Invalid quiet-hours time '%s' (expected HH:MM).", $time),
                 );
             }
         }

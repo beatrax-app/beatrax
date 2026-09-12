@@ -19,7 +19,7 @@ final readonly class DeviceIdentityFile
 
     public static function path(int $userId): string
     {
-        return UserDataPathService::appPath(self::DIRECTORY."/{$userId}.enc");
+        return UserDataPathService::appPath(self::DIRECTORY.sprintf('/%s.enc', $userId));
     }
 
     public static function exists(int $userId): bool

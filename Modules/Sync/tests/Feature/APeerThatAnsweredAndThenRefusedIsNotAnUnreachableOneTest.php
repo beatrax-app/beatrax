@@ -81,7 +81,7 @@ function refuseAfterUpgrading($client, string &$buffer, bool &$upgraded): bool
     $key = preg_match('/Sec-WebSocket-Key:\s*(\S+)/i', $buffer, $found) === 1 ? $found[1] : '';
     $accept = base64_encode(sha1($key.'258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
 
-    @fwrite($client, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {$accept}\r\n\r\n");
+    @fwrite($client, sprintf("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", $accept));
 
     $upgraded = true;
     $buffer = '';

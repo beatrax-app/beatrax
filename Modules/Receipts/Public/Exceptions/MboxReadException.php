@@ -14,7 +14,7 @@ final class MboxReadException extends RuntimeException
 {
     public static function couldNotOpen(string $path): self
     {
-        return new self("MboxIterator: cannot open mbox at {$path}.");
+        return new self(sprintf('MboxIterator: cannot open mbox at %s.', $path));
     }
 
     // Raised only for a caller that gave the iterator nowhere to record a
@@ -23,6 +23,6 @@ final class MboxReadException extends RuntimeException
     // report a skip must not be handed a quietly shorter archive.
     public static function messageTooLarge(string $path): self
     {
-        return new self("MboxIterator: a single message in {$path} exceeds the size cap.");
+        return new self(sprintf('MboxIterator: a single message in %s exceeds the size cap.', $path));
     }
 }

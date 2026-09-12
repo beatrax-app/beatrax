@@ -14,7 +14,7 @@ final class RelayRefusedException extends RuntimeException
 {
     public static function blobTooLarge(int $bytes, int $maximum): self
     {
-        return new self("Relay blob too large ({$bytes} bytes). Maximum is {$maximum} bytes.");
+        return new self(sprintf('Relay blob too large (%s bytes). Maximum is %s bytes.', $bytes, $maximum));
     }
 
     public static function notConfigured(): self
@@ -33,7 +33,7 @@ final class RelayRefusedException extends RuntimeException
     {
         return new self(
             'The relay endpoint is pinned, but this runtime cannot verify certificate pins '
-            ."(TLS backend: {$sslBackend}). Refusing to connect without verifying the relay's identity.",
+            .sprintf("(TLS backend: %s). Refusing to connect without verifying the relay's identity.", $sslBackend),
         );
     }
 

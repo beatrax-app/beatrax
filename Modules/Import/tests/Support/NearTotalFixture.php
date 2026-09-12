@@ -43,7 +43,7 @@ final class NearTotalFixture
     public static function receiptCanonical(User $user, int $accountId, string $fixture): CanonicalTransaction
     {
         $outcome = app(RecordReceipt::class)((string) file_get_contents(self::path($fixture)), $user, $fixture);
-        $parsed = $outcome->parsed ?? throw new RuntimeException("No matcher claimed {$fixture}.");
+        $parsed = $outcome->parsed ?? throw new RuntimeException(sprintf('No matcher claimed %s.', $fixture));
 
         return self::normalize(
             (new ReceiptSourceAdapter)->toSourceDto($parsed, sourceRowIndex: 0),

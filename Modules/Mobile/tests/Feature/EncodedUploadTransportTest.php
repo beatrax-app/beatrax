@@ -221,8 +221,8 @@ it('states the same upload maximum as the client and both native shells', functi
     foreach ($declared as $file => $pattern) {
         $found = PatternScan::first($pattern, (string) file_get_contents($repoRoot($file)));
 
-        expect($found)->not->toBe([], "{$file} must still declare the upload maximum in whole megabytes");
-        expect((int) $found[1])->toBe($advertised, "{$file} states a different maximum than the transport enforces");
+        expect($found)->not->toBe([], sprintf('%s must still declare the upload maximum in whole megabytes', $file));
+        expect((int) $found[1])->toBe($advertised, sprintf('%s states a different maximum than the transport enforces', $file));
     }
 });
 

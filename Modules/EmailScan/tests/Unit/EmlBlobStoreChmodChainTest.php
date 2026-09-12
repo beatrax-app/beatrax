@@ -37,10 +37,10 @@ it('chmods every directory level under storage/app/inbox to 0700, not just the l
         storage_path('app/inbox/42/99/2026/05'),
     ];
     foreach ($levels as $dir) {
-        expect(is_dir($dir))->toBeTrue("missing dir {$dir}");
+        expect(is_dir($dir))->toBeTrue(sprintf('missing dir %s', $dir));
         $mode = stat($dir)['mode'] & 0o777;
         if ($mode === 0o755) {
-            expect($mode)->toBe(0o700, "WR-05 regression: directory {$dir} still at 0755 — the chmod walk is broken.");
+            expect($mode)->toBe(0o700, sprintf('WR-05 regression: directory %s still at 0755 — the chmod walk is broken.', $dir));
         }
         if ($mode === 0o700) {
             expect($mode)->toBe(0o700);

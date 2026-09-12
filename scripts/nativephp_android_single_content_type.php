@@ -251,13 +251,13 @@ foreach ($replacements as [$what, $anchor, $patched]) {
 }
 
 if ($missing !== []) {
-    fwrite(STDERR, "nativephp_android_single_content_type: anchor missing in {$target} for:\n  ".implode("\n  ", $missing)."\n");
+    fwrite(STDERR, sprintf("nativephp_android_single_content_type: anchor missing in %s for:\n  ", $target).implode("\n  ", $missing)."\n");
     fwrite(STDERR, "The generated WebView client changed shape; re-check how it builds a WebResourceResponse before shipping.\n");
     exit(1);
 }
 
 if (file_put_contents($target, $source) === false) {
-    fwrite(STDERR, "nativephp_android_single_content_type: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_android_single_content_type: could not write %s.\n", $target));
     exit(1);
 }
 

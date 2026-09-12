@@ -51,7 +51,7 @@ it('MigrationWizard: preview renders the 5 mapped counts + a grouped unmapped su
         'Beatrax Test Budget.zip',
     );
 
-    $response = $this->actingAs($this->user)->get("/migrations/{$run->id}/preview");
+    $response = $this->actingAs($this->user)->get(sprintf('/migrations/%s/preview', $run->id));
 
     $response->assertOk();
     $response->assertSee('Categories', false);
@@ -101,7 +101,7 @@ it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s mi
         'Beatrax Test Budget.zip',
     );
 
-    $response = $this->actingAs($partner)->get("/migrations/{$ownerRun->id}/preview");
+    $response = $this->actingAs($partner)->get(sprintf('/migrations/%s/preview', $ownerRun->id));
 
     expect($response->status())->toBe(404);
     expect($response->status())->not->toBe(403);
@@ -117,7 +117,7 @@ it('MigrationWizard: partner receives 404 (never 403) requesting the owner\'s mi
         'Beatrax Test Budget.zip',
     );
 
-    $response = $this->actingAs($partner)->get("/migrations/{$ownerRun->id}/results");
+    $response = $this->actingAs($partner)->get(sprintf('/migrations/%s/results', $ownerRun->id));
 
     expect($response->status())->toBe(404);
     expect($response->status())->not->toBe(403);

@@ -23,7 +23,7 @@ beforeEach(function (): void {
     // it is still there afterwards is the only thing that answers the question.
     $this->shippedKey = 'base64:'.base64_encode(random_bytes(32));
     $this->envFile = $this->tempRoot.DIRECTORY_SEPARATOR.'.env';
-    file_put_contents($this->envFile, "APP_NAME=Beatrax\nAPP_KEY={$this->shippedKey}\n");
+    file_put_contents($this->envFile, sprintf("APP_NAME=Beatrax\nAPP_KEY=%s\n", $this->shippedKey));
 
     $this->app->useEnvironmentPath($this->tempRoot);
     $this->app->loadEnvironmentFrom('.env');

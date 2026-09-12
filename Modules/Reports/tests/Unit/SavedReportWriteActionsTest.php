@@ -161,7 +161,7 @@ it('deleting a pinned report compacts the remaining pin_order values to a dense 
 
     $reports = [];
     for ($i = 1; $i <= 3; $i++) {
-        $reports[] = app(SaveReport::class)->save($user, srwaDefinition(), "Report {$i}");
+        $reports[] = app(SaveReport::class)->save($user, srwaDefinition(), sprintf('Report %s', $i));
         app(TogglePin::class)->toggle($user, $reports[$i - 1]->id);
     }
 

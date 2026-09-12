@@ -222,7 +222,7 @@ $patched = str_replace(IOS_SHELL_HANDLER_ANCHOR, IOS_SHELL_HANDLER_ANCHOR.$handl
 $patched = str_replace(IOS_SHELL_TYPES_ANCHOR, $types.IOS_SHELL_TYPES_ANCHOR, $patched);
 
 if (file_put_contents($target, $patched) === false) {
-    fwrite(STDERR, "nativephp_ios_theme_native_shell: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_theme_native_shell: could not write %s.\n", $target));
     exit(1);
 }
 

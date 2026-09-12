@@ -28,7 +28,7 @@ function descriptions(int $count): array
 {
     $descriptions = [];
     for ($i = 0; $i < $count; $i++) {
-        $descriptions[] = "CARD PAYMENT MERCHANT {$i} AMSTERDAM";
+        $descriptions[] = sprintf('CARD PAYMENT MERCHANT %s AMSTERDAM', $i);
     }
 
     return $descriptions;

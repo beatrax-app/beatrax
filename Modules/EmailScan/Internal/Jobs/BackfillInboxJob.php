@@ -144,7 +144,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             default => $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                "Unknown provider '{$provider}' — backfill cannot proceed.",
+                sprintf("Unknown provider '%s' — backfill cannot proceed.", $provider),
             ),
         };
     }
@@ -488,7 +488,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             $e instanceof RateLimitedException => $context->sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::RateLimited->value,
-                "Retry after {$e->retryAfterSeconds}s.",
+                sprintf('Retry after %ss.', $e->retryAfterSeconds),
             ),
             $e instanceof InvalidGrantException,
             $e instanceof ReconsentRequiredException => $context->sm->applyStatus(

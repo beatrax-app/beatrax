@@ -33,7 +33,7 @@ trait NormalisesRuleInput
     {
         if (RuleCombinator::tryFrom($input->combinator) === null) {
             throw new InvalidArgumentException(
-                "Categorization rule: invalid combinator '{$input->combinator}'."
+                sprintf("Categorization rule: invalid combinator '%s'.", $input->combinator)
             );
         }
 
@@ -71,7 +71,7 @@ trait NormalisesRuleInput
         $valueType = ConditionValueType::tryFrom($valueTypeRaw);
         if ($valueType === null) {
             throw new InvalidArgumentException(
-                "Categorization rule: invalid value_type '{$valueTypeRaw}'."
+                sprintf("Categorization rule: invalid value_type '%s'.", $valueTypeRaw)
             );
         }
 
@@ -79,7 +79,7 @@ trait NormalisesRuleInput
         $op = ConditionOperator::tryFrom($opRaw);
         if ($op === null || ! in_array($op, $valueType->operators(), true)) {
             throw new InvalidArgumentException(
-                "Categorization rule: op '{$opRaw}' is not valid for value_type '{$valueTypeRaw}'."
+                sprintf("Categorization rule: op '%s' is not valid for value_type '%s'.", $opRaw, $valueTypeRaw)
             );
         }
 
@@ -104,7 +104,7 @@ trait NormalisesRuleInput
         $field = self::stringOrDefault($condition, 'field', 'merchant');
         if (! in_array($field, self::VALID_CONDITION_FIELDS, true)) {
             throw new InvalidArgumentException(
-                "Categorization rule: invalid field '{$field}'."
+                sprintf("Categorization rule: invalid field '%s'.", $field)
             );
         }
 
@@ -161,12 +161,12 @@ trait NormalisesRuleInput
     {
         if (preg_match(self::AMOUNT_VALUE_PATTERN, $value) !== 1) {
             throw new InvalidArgumentException(
-                "Categorization rule: amount condition value '{$value}' must be an integer minor-unit string."
+                sprintf("Categorization rule: amount condition value '%s' must be an integer minor-unit string.", $value)
             );
         }
         if ($value2 !== null && preg_match(self::AMOUNT_VALUE_PATTERN, $value2) !== 1) {
             throw new InvalidArgumentException(
-                "Categorization rule: amount condition value2 '{$value2}' must be an integer minor-unit string."
+                sprintf("Categorization rule: amount condition value2 '%s' must be an integer minor-unit string.", $value2)
             );
         }
     }
@@ -181,7 +181,7 @@ trait NormalisesRuleInput
         $type = ActionType::tryFrom($typeRaw);
         if ($type === null) {
             throw new InvalidArgumentException(
-                "Categorization rule: invalid action type '{$typeRaw}'."
+                sprintf("Categorization rule: invalid action type '%s'.", $typeRaw)
             );
         }
 
@@ -331,7 +331,7 @@ trait NormalisesRuleInput
             ->exists();
         if (! $exists) {
             throw new InvalidArgumentException(
-                "Categorization rule: referent {$id} in {$table} is not visible to user {$userId}."
+                sprintf('Categorization rule: referent %s in %s is not visible to user %s.', $id, $table, $userId)
             );
         }
     }

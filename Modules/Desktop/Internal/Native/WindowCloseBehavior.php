@@ -40,7 +40,7 @@ final readonly class WindowCloseBehavior
     {
         if (! in_array($choice, self::ALLOWED_CHOICES, true)) {
             throw new InvalidArgumentException(
-                "Invalid close_behavior value [{$choice}]. Expected 'quit' or 'tray'."
+                sprintf("Invalid close_behavior value [%s]. Expected 'quit' or 'tray'.", $choice)
             );
         }
 

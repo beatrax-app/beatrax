@@ -18,7 +18,7 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function currencyEml(string $sender, string $body): string
 {
-    return "From: $sender\r\n"
+    return sprintf("From: %s\r\n", $sender)
         ."To: kaarthouder@example.test\r\n"
         ."Subject: Receipt\r\n"
         ."Date: Sun, 17 May 2026 09:42:13 +0200\r\n"

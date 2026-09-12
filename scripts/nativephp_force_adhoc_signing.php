@@ -63,7 +63,7 @@ if (! is_file($configPath)) {
     // Neither the published nor the vendored electron-builder.mjs exists.
     // The build cannot run without it, so fail loudly rather than letting
     // an unsigned/mis-signed bundle slip through.
-    fwrite(STDERR, "nativephp_force_adhoc_signing: no electron-builder.mjs found at {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_force_adhoc_signing: no electron-builder.mjs found at %s\n", $configPath));
 
     exit(1);
 }
@@ -71,7 +71,7 @@ if (! is_file($configPath)) {
 $source = file_get_contents($configPath);
 
 if ($source === false) {
-    fwrite(STDERR, "nativephp_force_adhoc_signing: could not read {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_force_adhoc_signing: could not read %s\n", $configPath));
 
     exit(1);
 }
@@ -101,13 +101,13 @@ $patched = preg_replace(
 );
 
 if ($patched === null || $count !== 1) {
-    fwrite(STDERR, "nativephp_force_adhoc_signing: could not locate a `mac: {` block in {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_force_adhoc_signing: could not locate a `mac: {` block in %s\n", $configPath));
 
     exit(1);
 }
 
 if (file_put_contents($configPath, $patched) === false) {
-    fwrite(STDERR, "nativephp_force_adhoc_signing: could not write {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_force_adhoc_signing: could not write %s\n", $configPath));
 
     exit(1);
 }

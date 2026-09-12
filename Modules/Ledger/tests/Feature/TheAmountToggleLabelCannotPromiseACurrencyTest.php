@@ -25,7 +25,7 @@ function amountToggleLabel(string $html, string $value): string
 {
     $match = PatternScan::first('/<ui-radio\b[^>]*\bvalue="'.preg_quote($value, '/').'"[^>]*>(.*?)<\/ui-radio>/s', $html);
 
-    expect($match)->not->toBe([], "No segmented option rendered for value=\"{$value}\".");
+    expect($match)->not->toBe([], sprintf('No segmented option rendered for value="%s".', $value));
 
     return trim(strip_tags($match[1]));
 }
@@ -127,7 +127,7 @@ it('names no currency the rows can contradict when an account is denominated out
 
     foreach ($labels as $where => $label) {
         expect($label)->not->toBe('');
-        expect(amountToggleCurrencyClaims($label))->toBe([], "{$where} reads \"{$label}\", a currency the visible rows do not keep.");
+        expect(amountToggleCurrencyClaims($label))->toBe([], sprintf('%s reads "%s", a currency the visible rows do not keep.', $where, $label));
     }
 });
 
@@ -142,7 +142,7 @@ it('introduces the group as the same subject both of its options name', function
     $original = amountToggleLabel($html, CurrencyView::Original->value);
 
     expect(amountToggleNamesOneSubject($name, $baseOnly, $original))
-        ->toBeTrue("\"{$name}\" shares no word with both \"{$baseOnly}\" and \"{$original}\".");
+        ->toBeTrue(sprintf('"%s" shares no word with both "%s" and "%s".', $name, $baseOnly, $original));
 });
 
 it('ships labels that claim no currency in any locale', function (): void {
@@ -153,10 +153,10 @@ it('ships labels that claim no currency in any locale', function (): void {
         app()->setLocale($locale);
 
         foreach (['currency_aria', 'currency_eur', 'currency_original'] as $key) {
-            $label = Lang::get("ledger::list.{$key}");
+            $label = Lang::get(sprintf('ledger::list.%s', $key));
 
             if (amountToggleCurrencyClaims($label) !== []) {
-                $offenders[] = "{$locale}.{$key}: {$label}";
+                $offenders[] = sprintf('%s.%s: %s', $locale, $key, $label);
             }
         }
     }
@@ -176,7 +176,7 @@ it('keeps the group and its options on one subject in every locale', function ()
         $original = Lang::get('ledger::list.currency_original');
 
         if (! amountToggleNamesOneSubject($name, $baseOnly, $original)) {
-            $offenders[] = "{$locale}: \"{$name}\" vs \"{$baseOnly}\" / \"{$original}\"";
+            $offenders[] = sprintf('%s: "%s" vs "%s" / "%s"', $locale, $name, $baseOnly, $original);
         }
     }
 

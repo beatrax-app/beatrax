@@ -62,7 +62,7 @@ it('creates the drift_alerts table with every required column', function (): voi
 
     foreach ($columns as $column) {
         expect($schema->hasColumn('drift_alerts', $column))->toBeTrue(
-            "Expected drift_alerts column '{$column}' to exist",
+            sprintf("Expected drift_alerts column '%s' to exist", $column),
         );
     }
 });

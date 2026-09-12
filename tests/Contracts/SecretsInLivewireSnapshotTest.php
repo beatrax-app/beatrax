@@ -145,7 +145,7 @@ it('does not allow production Livewire components to expose registry columns via
                     if (in_array($name, $allowedForThisClass, true)) {
                         break;
                     }
-                    $hits[] = "{$fqcn}::\${$name} (matches column form '{$form}')";
+                    $hits[] = sprintf("%s::\$%s (matches column form '%s')", $fqcn, $name, $form);
                     break;
                 }
             }
@@ -180,7 +180,7 @@ it('does not allow production Livewire components to expose registry columns via
                     if (in_array($entry, $allowedForThisClass, true)) {
                         continue;
                     }
-                    $hits[] = "{$fqcn}::\${$surface} contains registry entry '{$entry}'";
+                    $hits[] = sprintf("%s::\$%s contains registry entry '%s'", $fqcn, $surface, $entry);
                 }
             }
         }

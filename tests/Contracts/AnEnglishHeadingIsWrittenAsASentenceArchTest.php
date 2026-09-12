@@ -82,7 +82,7 @@ function englishHeadingScan(): array
             }
 
             foreach ($read['titled'] as $word) {
-                $titled[] = str_replace(base_path().'/', '', $file)." [{$key}] \"{$value}\" capitalises \"{$word}\"";
+                $titled[] = str_replace(base_path().'/', '', $file).sprintf(' [%s] "%s" capitalises "%s"', $key, $value, $word);
             }
         }
     }

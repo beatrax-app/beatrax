@@ -121,7 +121,7 @@ if ($source === null) {
 $localised = purposeStringsByLocale($source);
 
 if ($localised === []) {
-    fwrite(STDERR, "nativephp_ios_purpose_string_localisations: {$source} holds no locale at all.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: %s holds no locale at all.\n", $source));
     exit(1);
 }
 
@@ -140,7 +140,7 @@ if (! str_contains($pbxproj, 'isa = PBXFileSystemSynchronizedRootGroup;')
 $group = dirname($ios, 2).'/NativePHP';
 
 if (! is_dir($group)) {
-    fwrite(STDERR, "nativephp_ios_purpose_string_localisations: {$group} does not exist.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: %s does not exist.\n", $group));
     exit(1);
 }
 
@@ -150,7 +150,7 @@ foreach ($localised as $locale => $strings) {
     $directory = $group.'/'.$locale.'.lproj';
 
     if (! is_dir($directory) && ! mkdir($directory, 0o755, true) && ! is_dir($directory)) {
-        fwrite(STDERR, "nativephp_ios_purpose_string_localisations: could not create {$directory}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: could not create %s.\n", $directory));
         exit(1);
     }
 
@@ -162,7 +162,7 @@ foreach ($localised as $locale => $strings) {
     }
 
     if (file_put_contents($target, $contents) === false) {
-        fwrite(STDERR, "nativephp_ios_purpose_string_localisations: could not write {$target}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: could not write %s.\n", $target));
         exit(1);
     }
 
@@ -174,7 +174,7 @@ foreach ($localised as $locale => $strings) {
 $base = $group.'/'.PURPOSE_STRING_BASE_LOCALE.'.lproj/InfoPlist.strings';
 
 if (! is_file($base)) {
-    fwrite(STDERR, "nativephp_ios_purpose_string_localisations: {$base} was not written.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: %s was not written.\n", $base));
     exit(1);
 }
 
@@ -192,6 +192,6 @@ if ($landed !== count($localised)) {
 
 fwrite(STDOUT, $written === 0
     ? "nativephp_ios_purpose_string_localisations: already applied.\n"
-    : "nativephp_ios_purpose_string_localisations: wrote purpose strings for {$written} locale(s).\n");
+    : sprintf("nativephp_ios_purpose_string_localisations: wrote purpose strings for %s locale(s).\n", $written));
 
 exit(0);

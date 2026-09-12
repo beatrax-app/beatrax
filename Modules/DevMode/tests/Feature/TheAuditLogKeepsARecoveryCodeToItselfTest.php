@@ -43,7 +43,7 @@ function tenFreshRecoveryCodes(): array
 
 function recoveryCommandStdout(string $username, array $codes): string
 {
-    return "Regenerated {$username} recovery codes. Record them now — they will not be shown again:\n".implode("\n", $codes)."\n";
+    return sprintf("Regenerated %s recovery codes. Record them now — they will not be shown again:\n", $username).implode("\n", $codes)."\n";
 }
 
 // beatrax:regenerate-recovery-codes is a registered destructive Dev Console

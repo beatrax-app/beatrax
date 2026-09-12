@@ -87,7 +87,7 @@ function memoSeedRealisticAliases(int $userId): array
         ['AMAZON.', 'amazon.', 'Amazon'],
     ];
     for ($i = 0; $i < 30; $i++) {
-        $aliases[] = ["FIXTURE MERCHANT {$i} *00{$i}", "fixture merchant {$i}", "Fixture Merchant {$i}"];
+        $aliases[] = [sprintf('FIXTURE MERCHANT %s *00%s', $i, $i), sprintf('fixture merchant %s', $i), sprintf('Fixture Merchant %s', $i)];
     }
 
     foreach ($aliases as [$pattern, $generalized, $friendly]) {
@@ -117,7 +117,7 @@ it('reads the alias table once for a whole statement instead of twice per row', 
 
     $queries = memoAliasQueryCount(function () use ($resolver, $user): void {
         for ($row = 0; $row < 50; $row++) {
-            $resolver->resolve("ALBERT HEIJN 1042 ROW {$row}", $user->id);
+            $resolver->resolve(sprintf('ALBERT HEIJN 1042 ROW %s', $row), $user->id);
         }
     });
 
@@ -182,7 +182,7 @@ it('still matches an alias past the generalized scan cap on its exact pattern', 
     $user = memoUser('memo-scan-cap');
 
     for ($i = 0; $i < 500; $i++) {
-        memoAlias($user->id, "FILLER {$i}", "filler {$i}", "Filler {$i}");
+        memoAlias($user->id, sprintf('FILLER %s', $i), sprintf('filler %s', $i), sprintf('Filler %s', $i));
     }
     memoAlias($user->id, 'PAST THE CAP *9999', 'past the cap', 'Past The Cap');
 

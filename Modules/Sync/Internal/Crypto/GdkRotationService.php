@@ -120,7 +120,7 @@ final readonly class GdkRotationService
         // than skipping the rename in silence and leaving a stranded epoch.
         if ($stage === null) {
             throw new \LogicException(
-                "GdkRotationService::rotateAndRevoke — the rotation for user {$userId} committed with no staged keyring.",
+                sprintf('GdkRotationService::rotateAndRevoke — the rotation for user %s committed with no staged keyring.', $userId),
             );
         }
 
@@ -428,7 +428,7 @@ final readonly class GdkRotationService
         $identity = $this->identityLoader->load($userId, $session);
         if ($identity === null) {
             throw new \LogicException(
-                "GdkRotationService — no local device identity for user {$userId}; cannot sign epoch wraps.",
+                sprintf('GdkRotationService — no local device identity for user %s; cannot sign epoch wraps.', $userId),
             );
         }
 

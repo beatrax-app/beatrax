@@ -72,7 +72,7 @@ it('never stages the decrypted plaintext in sys_get_temp_dir(), and cleans it up
     $after = (array) glob(sys_get_temp_dir().'/beatrax_identity_*');
     expect($after)->toBe($before, 'No beatrax_identity_* files should ever appear in sys_get_temp_dir().');
 
-    $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $encPath = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
     $identityDir = dirname($encPath);
     $leftoverTmp = (array) glob($identityDir.'/*.tmp');
     expect($leftoverTmp)->toBe([], 'The identity directory must not retain any staged .tmp file after load().');
@@ -83,7 +83,7 @@ it('returns null when sync was never enabled for the user (no key-file)', functi
 
     // RefreshDatabase resets the database but not on-disk files, and user ids
     // are reused across runs, so an earlier run's key-file can still be there.
-    @unlink(UserDataPathService::appPath("sync/identity/{$user->id}.enc"));
+    @unlink(UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id)));
 
     /** @var DeviceIdentityLoader $loader */
     $loader = $this->app->make(DeviceIdentityLoader::class);

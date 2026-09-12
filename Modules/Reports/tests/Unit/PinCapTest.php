@@ -43,7 +43,7 @@ it('pin_cap_enforced: pinning the 1st through 3rd reports all succeed', function
 
     $reports = [];
     for ($i = 1; $i <= 3; $i++) {
-        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), "Report {$i}");
+        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), sprintf('Report %s', $i));
     }
 
     foreach ($reports as $index => $report) {
@@ -61,7 +61,7 @@ it('pin_cap_enforced: pinning a 4th report throws InvalidArgumentException with 
 
     $reports = [];
     for ($i = 1; $i <= 4; $i++) {
-        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), "Report {$i}");
+        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), sprintf('Report %s', $i));
     }
 
     foreach (array_slice($reports, 0, 3) as $report) {
@@ -84,7 +84,7 @@ it('pin_cap_enforced: unpinning one of 3 pinned reports frees a slot for a 4th',
 
     $reports = [];
     for ($i = 1; $i <= 4; $i++) {
-        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), "Report {$i}");
+        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), sprintf('Report %s', $i));
     }
 
     foreach (array_slice($reports, 0, 3) as $report) {
@@ -136,7 +136,7 @@ it('pin_cap_enforced: unpinning compacts the remaining pin_order values to a den
 
     $reports = [];
     for ($i = 1; $i <= 3; $i++) {
-        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), "Report {$i}");
+        $reports[] = app(SaveReport::class)->save($user, pctPinDefinition(), sprintf('Report %s', $i));
         app(TogglePin::class)->toggle($user, $reports[$i - 1]->id);
     }
 

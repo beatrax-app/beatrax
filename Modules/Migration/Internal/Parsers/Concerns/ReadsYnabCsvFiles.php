@@ -70,7 +70,7 @@ trait ReadsYnabCsvFiles
 
             return $reader;
         } catch (Throwable $e) {
-            throw new UnrecognizedMigrationFileException("could not open {$fileLabel}: ".$e->getMessage());
+            throw new UnrecognizedMigrationFileException(sprintf('could not open %s: ', $fileLabel).$e->getMessage());
         }
     }
 
@@ -83,7 +83,7 @@ trait ReadsYnabCsvFiles
         try {
             return $reader->getHeader();
         } catch (Throwable $e) {
-            throw new UnrecognizedMigrationFileException("could not read {$fileLabel} header: ".$e->getMessage());
+            throw new UnrecognizedMigrationFileException(sprintf('could not read %s header: ', $fileLabel).$e->getMessage());
         }
     }
 

@@ -41,7 +41,7 @@ final readonly class EditScenarioMutation
         $existingKind = isset($row->kind) && is_string($row->kind) ? $row->kind : '';
         if ($newPayload->kind() !== $existingKind) {
             throw new InvalidArgumentException(
-                "EditScenarioMutation: payload kind '{$newPayload->kind()}' cannot replace existing kind '{$existingKind}'. Remove + re-add to change kind.",
+                sprintf("EditScenarioMutation: payload kind '%s' cannot replace existing kind '%s'. Remove + re-add to change kind.", $newPayload->kind(), $existingKind),
             );
         }
         $scenarioId = isset($row->forecast_scenario_id) && is_numeric($row->forecast_scenario_id)

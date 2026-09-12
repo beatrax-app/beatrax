@@ -107,7 +107,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
         } catch (GoogleServiceException $e) {
             if ($e->getCode() === Response::HTTP_NOT_FOUND) {
                 throw new MessageUnavailableException(
-                    "GmailApiClient: message {$providerMessageId} is no longer available on inbox {$inboxId}.",
+                    sprintf('GmailApiClient: message %s is no longer available on inbox %s.', $providerMessageId, $inboxId),
                     previous: $e,
                 );
             }

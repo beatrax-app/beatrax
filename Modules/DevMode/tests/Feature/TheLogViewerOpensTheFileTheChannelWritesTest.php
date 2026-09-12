@@ -61,7 +61,7 @@ $shapes = [
 ];
 
 foreach ($shapes as $label => [$default, $stack]) {
-    it("opens the file the {$label} channel just wrote to", function () use ($default, $stack): void {
+    it(sprintf('opens the file the %s channel just wrote to', $label), function () use ($default, $stack): void {
         $dir = logViewerChannel($default, $stack);
         logViewerWrite('canary-from-the-configured-channel');
 
@@ -74,7 +74,7 @@ foreach ($shapes as $label => [$default, $stack]) {
         expect(app(ActiveLogFile::class)->path())->toBe($written[0]);
     });
 
-    it("reports the {$label} channel's lines on the logs stats endpoint", function () use ($default, $stack): void {
+    it(sprintf("reports the %s channel's lines on the logs stats endpoint", $label), function () use ($default, $stack): void {
         $user = logViewerUser('log-viewer-stats-'.bin2hex(random_bytes(4)));
         logViewerChannel($default, $stack);
         logViewerWrite('canary-from-the-configured-channel');
@@ -87,7 +87,7 @@ foreach ($shapes as $label => [$default, $stack]) {
         expect($response->json('allFiles.count'))->toBe(1);
     });
 
-    it("streams the {$label} channel's lines to the logs poll endpoint", function () use ($default, $stack): void {
+    it(sprintf("streams the %s channel's lines to the logs poll endpoint", $label), function () use ($default, $stack): void {
         $user = logViewerUser('log-viewer-poll-'.bin2hex(random_bytes(4)));
         logViewerChannel($default, $stack);
         logViewerWrite('canary-from-the-configured-channel');

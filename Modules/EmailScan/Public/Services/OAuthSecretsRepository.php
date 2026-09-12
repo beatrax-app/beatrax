@@ -151,7 +151,7 @@ class OAuthSecretsRepository
         }
 
         throw new ScanStateNotFoundException(
-            "OAuthSecretsRepository::rotateRefreshToken inbox id {$inboxId} not found."
+            sprintf('OAuthSecretsRepository::rotateRefreshToken inbox id %s not found.', $inboxId)
         );
     }
 
@@ -177,7 +177,7 @@ class OAuthSecretsRepository
             $row->save();
         } catch (Throwable $e) {
             throw new SecretsWriteFailed(
-                "OAuthSecretsRepository: failed to persist the {$row->provider} credential row ({$e->getMessage()}).",
+                sprintf('OAuthSecretsRepository: failed to persist the %s credential row (%s).', $row->provider, $e->getMessage()),
                 previous: $e,
             );
         }
@@ -282,7 +282,7 @@ class OAuthSecretsRepository
     {
         if (MailProvider::tryFrom($provider) === null) {
             throw new InvalidArgumentException(
-                "OAuthSecretsRepository: provider must be 'gmail' or 'microsoft', got '{$provider}'."
+                sprintf("OAuthSecretsRepository: provider must be 'gmail' or 'microsoft', got '%s'.", $provider)
             );
         }
     }

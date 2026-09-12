@@ -48,7 +48,7 @@ final readonly class CurrencyModeApplier
         return match ($currencyMode) {
             ReportCurrencyMode::Base->value => $this->applyBase($user, $currencies, $queryForCurrency, $otherMovements),
             ReportCurrencyMode::Original->value => $this->applyOriginal($user, $currencies, $queryForCurrency, $otherMovements),
-            default => throw new InvalidArgumentException("Unknown currency mode: {$currencyMode}"),
+            default => throw new InvalidArgumentException(sprintf('Unknown currency mode: %s', $currencyMode)),
         };
     }
 

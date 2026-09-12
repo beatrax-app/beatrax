@@ -92,7 +92,7 @@ it('resolves the current epoch without decrypting the keyring file again', funct
 
     // With the file gone, only the memo can answer. The real caller never sees
     // this state; it is how the test tells a memo read from a file read.
-    unlink(UserDataPathService::appPath("sync/gdk/{$userId}.enc"));
+    unlink(UserDataPathService::appPath(sprintf('sync/gdk/%s.enc', $userId)));
 
     $epoch = $keyringService->currentEpoch($userId, $session);
 

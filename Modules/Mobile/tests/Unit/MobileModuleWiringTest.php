@@ -28,7 +28,7 @@ it('creates the mobile_sync_progress durable-cursor table with the expected colu
         'records_applied', 'last_hlc_l', 'last_hlc_c', 'phase',
         'created_at', 'updated_at',
     ] as $expectedColumn) {
-        expect($columns->has($expectedColumn))->toBeTrue("Missing column: {$expectedColumn}");
+        expect($columns->has($expectedColumn))->toBeTrue(sprintf('Missing column: %s', $expectedColumn));
     }
 
     expect($columns['user_id']['nullable'])->toBeFalse();

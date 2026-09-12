@@ -88,7 +88,7 @@ class OpenBankingSecretsFile
         if (! $this->performRename($tmp, $absolute)) {
             @unlink($tmp);
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsFile: atomic rename failed from {$tmp} to {$absolute}."
+                sprintf('OpenBankingSecretsFile: atomic rename failed from %s to %s.', $tmp, $absolute)
             );
         }
     }
@@ -129,12 +129,12 @@ class OpenBankingSecretsFile
         }
         if (! @mkdir($dir, SecretFileMode::DIRECTORY, recursive: true) && ! is_dir($dir)) {
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsFile: could not create parent directory {$dir}."
+                sprintf('OpenBankingSecretsFile: could not create parent directory %s.', $dir)
             );
         }
         if (! @chmod($dir, SecretFileMode::DIRECTORY)) {
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsFile: failed to chmod 0700 on newly-created secrets directory {$dir}."
+                sprintf('OpenBankingSecretsFile: failed to chmod 0700 on newly-created secrets directory %s.', $dir)
             );
         }
     }
@@ -151,7 +151,7 @@ class OpenBankingSecretsFile
             );
         } catch (JsonException $e) {
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsFile: failed to encode payload for {$absolute} ({$e->getMessage()}).",
+                sprintf('OpenBankingSecretsFile: failed to encode payload for %s (%s).', $absolute, $e->getMessage()),
                 previous: $e,
             );
         }
@@ -167,7 +167,7 @@ class OpenBankingSecretsFile
         if ($fp === false) {
             umask($prevUmask);
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsFile: could not open temp file at {$tmp}."
+                sprintf('OpenBankingSecretsFile: could not open temp file at %s.', $tmp)
             );
         }
 
@@ -176,7 +176,7 @@ class OpenBankingSecretsFile
             $written = @fwrite($fp, $bytes);
             if ($written === false || $written !== strlen($bytes)) {
                 throw new SecretsWriteFailed(
-                    "OpenBankingSecretsFile: short write to temp file at {$tmp}."
+                    sprintf('OpenBankingSecretsFile: short write to temp file at %s.', $tmp)
                 );
             }
             @fflush($fp);
@@ -189,7 +189,7 @@ class OpenBankingSecretsFile
 
             if (! @chmod($tmp, SecretFileMode::FILE)) {
                 throw new SecretsWriteFailed(
-                    "OpenBankingSecretsFile: failed to chmod temp file at {$tmp}."
+                    sprintf('OpenBankingSecretsFile: failed to chmod temp file at %s.', $tmp)
                 );
             }
         } catch (Throwable $e) {
@@ -202,7 +202,7 @@ class OpenBankingSecretsFile
                 throw $e;
             }
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsFile: unexpected failure writing {$tmp}.",
+                sprintf('OpenBankingSecretsFile: unexpected failure writing %s.', $tmp),
                 previous: $e,
             );
         } finally {

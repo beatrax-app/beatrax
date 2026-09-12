@@ -93,13 +93,13 @@ if (str_contains($source, 'post_max_size')) {
 }
 
 if (! str_contains($source, $anchor)) {
-    fwrite(STDERR, "nativephp_android_upload_limits: php.ini anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_android_upload_limits: php.ini anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated shell changed how it writes php.ini; re-check the upload ceiling before shipping a build.\n");
     exit(1);
 }
 
 if (file_put_contents($target, str_replace($anchor, $replacement, $source)) === false) {
-    fwrite(STDERR, "nativephp_android_upload_limits: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_android_upload_limits: could not write %s.\n", $target));
     exit(1);
 }
 

@@ -56,7 +56,7 @@ final readonly class ForecastRunStateMachine
 
             if ($row === null) {
                 throw new ForecastRunNotFoundException(
-                    "ForecastRunStateMachine: forecast_runs row {$runId} not found.",
+                    sprintf('ForecastRunStateMachine: forecast_runs row %s not found.', $runId),
                 );
             }
 

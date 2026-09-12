@@ -110,7 +110,7 @@ final readonly class TagTransaction
 
         if ($taxYearOverride !== null && ! TaxYearBounds::contains($taxYearOverride, $this->clock->now()->year)) {
             throw new \InvalidArgumentException(
-                "tax_year_override {$taxYearOverride} is outside the allowed range (current year ±".TaxYearBounds::SPAN_YEARS.').',
+                sprintf('tax_year_override %s is outside the allowed range (current year ±', $taxYearOverride).TaxYearBounds::SPAN_YEARS.').',
             );
         }
 

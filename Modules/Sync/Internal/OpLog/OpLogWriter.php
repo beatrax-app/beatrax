@@ -113,7 +113,7 @@ final readonly class OpLogWriter implements OpCaptureSink
         // goes on the wire, is merged away, and the count silently stops.
         if ($delta < 1) {
             throw new LogicException(
-                "OpLogWriter: a g_counter increment must be positive, got {$delta} for {$table}.{$field}."
+                sprintf('OpLogWriter: a g_counter increment must be positive, got %s for %s.%s.', $delta, $table, $field)
             );
         }
 

@@ -47,7 +47,7 @@ it('registers no separate reminders, digest or savings-prompts entry any more', 
 
     foreach (['notifications.reminders', 'notifications.digest', 'notifications.savings-prompts'] as $retired) {
         expect(swtFindEvent($schedule, $retired))->toBeNull(
-            "{$retired} is dispatched by notifications:daily-triggers now; a second entry would emit it twice.",
+            sprintf('%s is dispatched by notifications:daily-triggers now; a second entry would emit it twice.', $retired),
         );
     }
 });
@@ -118,6 +118,6 @@ it('registers exactly one entry per surviving name', function (): void {
             static fn (ScheduledEvent $event): bool => $event->description === $name,
         );
 
-        expect($matches)->toHaveCount(1, "Expected exactly one registered schedule entry named \"{$name}\".");
+        expect($matches)->toHaveCount(1, sprintf('Expected exactly one registered schedule entry named "%s".', $name));
     }
 });

@@ -71,7 +71,7 @@ abstract class TestCase extends BaseTestCase
         // worker, whose repeating staging paths overwrote each other mid-read.
         foreach (['local' => 'app/private', 'public' => 'app/public'] as $disk => $sub) {
             $this->app['config']->set(
-                "filesystems.disks.{$disk}.root",
+                sprintf('filesystems.disks.%s.root', $disk),
                 $this->isolatedStorageRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $sub),
             );
         }

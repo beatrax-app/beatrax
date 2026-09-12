@@ -137,7 +137,7 @@ it('forbids facade imports inside the state machine + exception', function (): v
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
         expect($stripped)->not->toContain(
             'use Illuminate\\Support\\Facades\\',
-            "{$file} must not import any facade.",
+            sprintf('%s must not import any facade.', $file),
         );
     }
 });

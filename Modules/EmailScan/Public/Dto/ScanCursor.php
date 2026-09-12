@@ -17,7 +17,7 @@ final class ScanCursor extends Data
     ) {
         if ($provider !== MailProvider::Gmail->value && $provider !== MailProvider::Microsoft->value) {
             throw new InvalidArgumentException(
-                "ScanCursor provider must be 'gmail' or 'microsoft', got '{$provider}'."
+                sprintf("ScanCursor provider must be 'gmail' or 'microsoft', got '%s'.", $provider)
             );
         }
     }

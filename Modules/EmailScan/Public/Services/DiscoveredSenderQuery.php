@@ -38,7 +38,7 @@ final readonly class DiscoveredSenderQuery
         int $minOccurrences = self::MIN_OCCURRENCES,
         int $withinDays = self::WITHIN_DAYS,
     ): array {
-        $threshold = $this->clock->now()->modify("-{$withinDays} days")->toDateTimeString();
+        $threshold = $this->clock->now()->modify(sprintf('-%s days', $withinDays))->toDateTimeString();
 
         // Joined on inbox_id AND user_id, so a candidate whose denormalised
         // user_id disagrees with its parent inbox is dropped in SQL rather

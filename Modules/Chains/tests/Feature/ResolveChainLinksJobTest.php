@@ -29,14 +29,14 @@ use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 function seedJobUserAndFixtures(int $userIndex = 1): array
 {
     $user = User::query()->create([
-        'username' => "job-user-{$userIndex}",
+        'username' => sprintf('job-user-%s', $userIndex),
         'password' => 'fixture-password',
         'period_start_day' => 1,
     ]);
     $icsAccount = Account::query()->create([
         'user_id' => $user->id,
-        'name' => "ICS job fixture {$userIndex}",
-        'slug' => "ics-job-{$userIndex}",
+        'name' => sprintf('ICS job fixture %s', $userIndex),
+        'slug' => sprintf('ics-job-%s', $userIndex),
         'kind' => 'ics_card',
         'iban' => 'ICS-CARD',
         'default_currency' => 'EUR',
@@ -44,7 +44,7 @@ function seedJobUserAndFixtures(int $userIndex = 1): array
     $run = ImportRun::query()->create([
         'user_id' => $user->id,
         'source_format' => 'ics-pdf',
-        'raw_file_path' => "/tmp/job-{$userIndex}.pdf",
+        'raw_file_path' => sprintf('/tmp/job-%s.pdf', $userIndex),
         'sha256' => str_repeat((string) $userIndex, 64),
         'uploaded_at' => CarbonImmutable::now(),
         'status' => 'previewed',

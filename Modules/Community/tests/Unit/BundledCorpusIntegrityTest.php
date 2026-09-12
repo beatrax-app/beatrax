@@ -29,11 +29,11 @@ function bundledMerchantEntries(): array
     $entries = [];
     foreach ($files as $file) {
         $parsed = Yaml::parseFile($file, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-        expect($parsed)->toBeArray("{$file} must parse to a mapping");
-        expect($parsed['entries'] ?? null)->toBeArray("{$file} must carry an `entries:` list");
+        expect($parsed)->toBeArray(sprintf('%s must parse to a mapping', $file));
+        expect($parsed['entries'] ?? null)->toBeArray(sprintf('%s must carry an `entries:` list', $file));
 
         foreach ($parsed['entries'] as $index => $raw) {
-            expect($raw)->toBeArray("{$file} entry #{$index} must be a mapping");
+            expect($raw)->toBeArray(sprintf('%s entry #%s must be a mapping', $file, $index));
             $entries[] = ['file' => basename($file), 'index' => $index, 'raw' => $raw];
         }
     }
@@ -83,7 +83,7 @@ it('keeps every merchant pattern unique across the whole corpus', function (): v
             continue;
         }
         if (isset($seen[$pattern])) {
-            $duplicates[] = "{$pattern} ({$seen[$pattern]} and {$entry['file']})";
+            $duplicates[] = sprintf('%s (%s and %s)', $pattern, $seen[$pattern], $entry['file']);
 
             continue;
         }
@@ -128,20 +128,20 @@ it('gives every classification rule a compiling pattern', function (string $type
     // Government and bank-fee rules are matched against every user's descriptions
     // regardless of country, so one that fails to compile silently loses a whole
     // country's classification.
-    $found = glob(base_path("resources/corpus/{$type}/*.yaml"));
+    $found = glob(base_path(sprintf('resources/corpus/%s/*.yaml', $type)));
     $files = $found !== false ? $found : [];
     sort($files);
-    expect($files)->not->toBe([], "the {$type} corpus must not be empty");
+    expect($files)->not->toBe([], sprintf('the %s corpus must not be empty', $type));
 
     $offenders = [];
     foreach ($files as $file) {
         $parsed = Yaml::parseFile($file, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-        expect($parsed['entries'] ?? null)->toBeArray("{$file} must carry an `entries:` list");
+        expect($parsed['entries'] ?? null)->toBeArray(sprintf('%s must carry an `entries:` list', $file));
 
         foreach ($parsed['entries'] as $index => $raw) {
             $pattern = is_array($raw) && is_string($raw['pattern'] ?? null) ? trim($raw['pattern']) : '';
             if ($pattern === '') {
-                $offenders[] = basename($file)." #{$index}: missing pattern";
+                $offenders[] = basename($file).sprintf(' #%s: missing pattern', $index);
 
                 continue;
             }
@@ -155,14 +155,14 @@ it('gives every classification rule a compiling pattern', function (string $type
         }
     }
 
-    expect($offenders)->toBe([], "Every {$type} rule must carry a compiling pattern. Offenders:\n  ".implode("\n  ", $offenders));
+    expect($offenders)->toBe([], sprintf("Every %s rule must carry a compiling pattern. Offenders:\n  ", $type).implode("\n  ", $offenders));
 })->with(['government', 'bank-fees']);
 
 it('keeps every regex classification rule ASCII-only', function (string $type): void {
     // CorpusPatternMatcher delimits a regex body as `#...#i` with no /u flag, so
     // case folding and \b are ASCII-only there; a Greek or Cyrillic term belongs
     // in the literal path, where mb_stripos folds multibyte correctly.
-    $found = glob(base_path("resources/corpus/{$type}/*.yaml"));
+    $found = glob(base_path(sprintf('resources/corpus/%s/*.yaml', $type)));
 
     $offenders = [];
     foreach ($found !== false ? $found : [] as $file) {
@@ -214,19 +214,19 @@ it('leaves every bundled support entry reachable in its own country', function (
     foreach ($files as $file) {
         $country = basename($file, '.yaml');
         $parsed = Yaml::parseFile($file, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-        expect($parsed['entries'] ?? null)->toBeArray("{$file} must carry an `entries:` list");
+        expect($parsed['entries'] ?? null)->toBeArray(sprintf('%s must carry an `entries:` list', $file));
 
         foreach ($parsed['entries'] as $index => $raw) {
             $name = is_array($raw) && is_string($raw['name'] ?? null) ? trim($raw['name']) : '';
             $type = is_array($raw) && is_string($raw['type'] ?? null) ? trim($raw['type']) : '';
             if ($name === '' || $type === '') {
-                $unreachable[] = "{$country} #{$index}: entry needs a name and a type";
+                $unreachable[] = sprintf('%s #%s: entry needs a name and a type', $country, $index);
 
                 continue;
             }
             $resolved = $provider->forCounterparty($name, $type, $country);
             if ($resolved?->name !== $name) {
-                $unreachable[] = "{$country} #{$index}: {$name} ({$type}) resolves to ".($resolved?->name ?? 'nothing');
+                $unreachable[] = sprintf('%s #%s: %s (%s) resolves to ', $country, $index, $name, $type).($resolved?->name ?? 'nothing');
             }
         }
     }
@@ -258,7 +258,7 @@ it('files every support entry under a key no sibling in its country takes', func
                 continue;
             }
             if (isset($seen[$key])) {
-                $collisions[] = "{$country} #{$index}: {$name} ({$type}) shares its key with {$seen[$key]}";
+                $collisions[] = sprintf('%s #%s: %s (%s) shares its key with %s', $country, $index, $name, $type, $seen[$key]);
 
                 continue;
             }
@@ -282,14 +282,14 @@ it('ships no corpus link the one external-URL gate would refuse', function (): v
     $refused = [];
     $judged = 0;
     foreach ($tiers as $dir => $keys) {
-        $found = glob(base_path("resources/corpus/{$dir}/*.yaml"));
+        $found = glob(base_path(sprintf('resources/corpus/%s/*.yaml', $dir)));
         $files = $found !== false ? $found : [];
         sort($files);
-        expect($files)->not->toBe([], "the bundled {$dir} corpus must not be empty");
+        expect($files)->not->toBe([], sprintf('the bundled %s corpus must not be empty', $dir));
 
         foreach ($files as $file) {
             $parsed = Yaml::parseFile($file, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-            expect($parsed['entries'] ?? null)->toBeArray("{$file} must carry an `entries:` list");
+            expect($parsed['entries'] ?? null)->toBeArray(sprintf('%s must carry an `entries:` list', $file));
 
             foreach ($parsed['entries'] as $index => $raw) {
                 foreach ($keys as $key) {
@@ -300,7 +300,7 @@ it('ships no corpus link the one external-URL gate would refuse', function (): v
                     $judged++;
                     $refusal = ExternalUrl::refusalFor($value);
                     if ($refusal !== null) {
-                        $refused[] = basename($file)." #{$index} {$key}: {$value} — {$refusal->value}";
+                        $refused[] = basename($file).sprintf(' #%s %s: %s — %s', $index, $key, $value, $refusal->value);
                     }
                 }
             }

@@ -24,7 +24,7 @@ it('covers only tables that exist, with columns that exist', function (): void {
 
     foreach ((new MergeRulesRegistry)->rules() as $table => $rule) {
         if (! $schema->hasTable($table)) {
-            $problems[] = "{$table}: table does not exist";
+            $problems[] = sprintf('%s: table does not exist', $table);
 
             continue;
         }
@@ -38,7 +38,7 @@ it('covers only tables that exist, with columns that exist', function (): void {
             }
 
             if (! in_array((string) $field, $columns, true)) {
-                $problems[] = "{$table}.{$field}: mergeable field is not a column";
+                $problems[] = sprintf('%s.%s: mergeable field is not a column', $table, $field);
             }
         }
 
@@ -46,7 +46,7 @@ it('covers only tables that exist, with columns that exist', function (): void {
 
         foreach (is_array($required) ? $required : [] as $column) {
             if (! in_array((string) $column, $columns, true)) {
-                $problems[] = "{$table}.{$column}: _create_required names a missing column";
+                $problems[] = sprintf('%s.%s: _create_required names a missing column', $table, $column);
             }
         }
     }
@@ -109,7 +109,7 @@ it('covers every table a covered table points at', function (): void {
             continue;
         }
 
-        foreach ($connection->select("PRAGMA foreign_key_list({$table})") as $fk) {
+        foreach ($connection->select(sprintf('PRAGMA foreign_key_list(%s)', $table)) as $fk) {
             $target = is_string($fk->table) ? $fk->table : '';
 
             if ($target === '' || $target === $table) {
@@ -120,7 +120,7 @@ it('covers every table a covered table points at', function (): void {
                 continue;
             }
 
-            $dangling[] = "{$table}.{$fk->from} -> {$target}";
+            $dangling[] = sprintf('%s.%s -> %s', $table, $fk->from, $target);
         }
     }
 
@@ -157,7 +157,7 @@ it('orders covered tables parents before children', function (): void {
             // A child written before its parent is rejected outright, and the
             // rejection aborts the entire catch-up around it.
             if ($position[$parent] > $position[$table]) {
-                $violations[] = "{$table} is written before its parent {$parent}";
+                $violations[] = sprintf('%s is written before its parent %s', $table, $parent);
             }
         }
     }

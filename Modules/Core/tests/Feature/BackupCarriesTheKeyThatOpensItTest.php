@@ -56,7 +56,7 @@ function bkmSealedLedgerAt(string $path, int $userId, int $epoch): void
 {
     $pdo = new PDO('sqlite:'.$path, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $pdo->exec('CREATE TABLE sync_encryption_state (user_id INTEGER, current_epoch INTEGER)');
-    $pdo->exec("INSERT INTO sync_encryption_state (user_id, current_epoch) VALUES ({$userId}, {$epoch})");
+    $pdo->exec(sprintf('INSERT INTO sync_encryption_state (user_id, current_epoch) VALUES (%s, %s)', $userId, $epoch));
 }
 
 function bkmPointLiveAt(string $path): void

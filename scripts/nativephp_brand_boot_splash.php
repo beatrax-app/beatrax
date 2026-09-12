@@ -38,7 +38,7 @@ $androidRoot = beatraxScaffoldPath('android/app/src/main') ?? '';
 $target = $androidRoot.'/java/com/nativephp/mobile/ui/MainActivity.kt';
 
 if (! is_file($target)) {
-    fwrite(STDERR, "MainActivity.kt not found: {$target}\n");
+    fwrite(STDERR, sprintf("MainActivity.kt not found: %s\n", $target));
 
     exit(1);
 }
@@ -62,7 +62,7 @@ $drawables = [
 
 foreach ($drawables as $directory => $source) {
     if (! is_file($source)) {
-        fwrite(STDERR, "Splash source missing: {$source} (run generate_mobile_splash.php)\n");
+        fwrite(STDERR, sprintf("Splash source missing: %s (run generate_mobile_splash.php)\n", $source));
 
         exit(1);
     }
@@ -70,7 +70,7 @@ foreach ($drawables as $directory => $source) {
     $destinationDir = $androidRoot.'/res/'.$directory;
 
     if (! is_dir($destinationDir) && ! mkdir($destinationDir, 0755, true) && ! is_dir($destinationDir)) {
-        fwrite(STDERR, "Could not create {$destinationDir}\n");
+        fwrite(STDERR, sprintf("Could not create %s\n", $destinationDir));
 
         exit(1);
     }

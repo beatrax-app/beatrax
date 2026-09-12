@@ -62,8 +62,8 @@ class EncryptionMigrationService
                     $support = $this->container->make(EncryptionMigrationSupport::class);
                     if (! $support->hasUsableCurrentEpoch($userId, $session)) {
                         throw new StrandedEncryptionEpochException(
-                            "Encryption is recorded as enabled for user {$userId} "
-                            ."(current_epoch={$currentEpochId}) but the GDK keyring holds no key "
+                            sprintf('Encryption is recorded as enabled for user %s ', $userId)
+                            .sprintf('(current_epoch=%s) but the GDK keyring holds no key ', $currentEpochId)
                             .'for that epoch — a stranded post-commit finalize state. The '
                             .'keyring file must be finalized/restored before sensitive writes resume.',
                         );
@@ -171,7 +171,7 @@ class EncryptionMigrationService
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, JobProgressCache::ttlSeconds());
 
             throw new StrandedEncryptionEpochException(
-                "Keyring finalize failed after commit for user {$userId}: `current_epoch` is "
+                sprintf('Keyring finalize failed after commit for user %s: `current_epoch` is ', $userId)
                 .'committed but the keyring file is not yet in place. The staged key file was '
                 .'preserved for retry — re-run migrate() to reconcile. Plaintext was NOT restored '
                 .'(that would corrupt the committed epoch).',

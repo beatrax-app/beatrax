@@ -18,7 +18,7 @@ final class CascadeRemovalFailedException extends RuntimeException
 
     public static function stillCascading(int $tables): self
     {
-        return new self("Removing the cascade clauses left {$tables} table(s) still cascading.");
+        return new self(sprintf('Removing the cascade clauses left %s table(s) still cascading.', $tables));
     }
 
     public static function foreignKeysUnenforced(): self

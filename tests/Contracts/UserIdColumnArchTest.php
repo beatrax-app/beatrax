@@ -152,7 +152,7 @@ it('keeps user_id nullable on the tables written before an owner is known', func
     foreach (userIdMustStayNullable() as $table) {
         $userId = collect($schema->getColumns($table))->firstWhere('name', 'user_id');
 
-        expect($userId)->not->toBeNull("Table {$table} is missing user_id column");
+        expect($userId)->not->toBeNull(sprintf('Table %s is missing user_id column', $table));
 
         if ($userId['nullable'] !== true) {
             $notNullable[] = $table;

@@ -55,7 +55,7 @@ function quietChannelFeed(array $versionsByManifestName, string $secretKey): voi
             continue;
         }
 
-        $body = "version: {$version}\nsha512: ".base64_encode(str_repeat("\x07", 64))."\nreleaseDate: '2026-09-01T00:00:00.000Z'\n";
+        $body = sprintf("version: %s\nsha512: ", $version).base64_encode(str_repeat("\x07", 64))."\nreleaseDate: '2026-09-01T00:00:00.000Z'\n";
 
         $fakes[QUIET_CHANNEL_FEED.'/'.$name] = Http::response($body, 200);
         $fakes[QUIET_CHANNEL_FEED.'/'.$name.'.sig'] = Http::response(

@@ -40,7 +40,7 @@ $projectRoot = dirname(__DIR__);
 $interpreter = $projectRoot.'/vendor/nativephp/desktop/resources/build/php/php';
 
 if (! is_file($interpreter)) {
-    fwrite(STDERR, "measure_sandboxed_interpreter: no bundled interpreter at {$interpreter}.\n");
+    fwrite(STDERR, sprintf("measure_sandboxed_interpreter: no bundled interpreter at %s.\n", $interpreter));
     fwrite(STDERR, "Run `composer install` in the repo root first; the desktop package stages it there.\n");
 
     exit(1);
@@ -57,7 +57,7 @@ $bundle = $out.'/SandboxProbe.app';
 
 foreach ([$bundle.'/Contents/MacOS', $bundle.'/Contents/Resources'] as $directory) {
     if (! is_dir($directory) && ! mkdir($directory, 0o700, true) && ! is_dir($directory)) {
-        fwrite(STDERR, "measure_sandboxed_interpreter: could not create {$directory}.\n");
+        fwrite(STDERR, sprintf("measure_sandboxed_interpreter: could not create %s.\n", $directory));
 
         exit(1);
     }

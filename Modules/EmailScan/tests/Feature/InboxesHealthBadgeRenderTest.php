@@ -122,7 +122,7 @@ it('renders the rose Needs reauth badge + Reconnect link when status=needs_reaut
     $response->assertStatus(200);
     $response->assertSee('Needs reauth', false);
     $response->assertSee('Reconnect', false);
-    $response->assertSee("/oauth/connect/microsoft?inbox_id={$inboxId}", false);
+    $response->assertSee(sprintf('/oauth/connect/microsoft?inbox_id=%s', $inboxId), false);
 });
 
 it('renders the Error badge + describedby tooltip when status=error', function (): void {
@@ -133,7 +133,7 @@ it('renders the Error badge + describedby tooltip when status=error', function (
     $response = $this->get(route('inboxes.index'));
     $response->assertStatus(200);
     $response->assertSee('Error', false);
-    $response->assertSee("aria-describedby=\"inbox-error-{$inboxId}\"", false);
+    $response->assertSee(sprintf('aria-describedby="inbox-error-%s"', $inboxId), false);
     $response->assertSee("The last scan didn't finish");
 });
 

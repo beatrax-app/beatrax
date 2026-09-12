@@ -71,8 +71,8 @@ final readonly class SavedReportsQuery
         $metricKey = ReportMetricSelection::tryFrom($metric)->value ?? 'fallback';
         $periodKey = ReportPeriodPreset::tryFrom($period)->value ?? ReportPeriodPreset::Custom->value;
 
-        $metricLabel = Lang::get("reports::index.summary.metric.{$metricKey}");
-        $periodLabel = Lang::get("reports::index.summary.period.{$periodKey}");
+        $metricLabel = Lang::get(sprintf('reports::index.summary.metric.%s', $metricKey));
+        $periodLabel = Lang::get(sprintf('reports::index.summary.period.%s', $periodKey));
 
         // The builder hides group-by for net worth, so the summary drops the
         // "by {dimension}" segment to match.
@@ -84,7 +84,7 @@ final readonly class SavedReportsQuery
         }
 
         $dimensionKey = ReportDimension::tryFrom($dimension)->value ?? 'fallback';
-        $dimensionLabel = Lang::get("reports::index.summary.dimension.{$dimensionKey}");
+        $dimensionLabel = Lang::get(sprintf('reports::index.summary.dimension.%s', $dimensionKey));
 
         return Lang::get('reports::index.summary.with_dimension', [
             'metric' => $metricLabel,

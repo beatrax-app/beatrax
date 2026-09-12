@@ -66,7 +66,7 @@ it('treats an answer that names no language as no answer', function (): void {
         ] as $shape => $answer) {
             $bridge->respondTo('Device.GetInfo', $answer);
 
-            expect((new NativeSystemLanguage)->tag())->toBeNull("{$shape} became a language");
+            expect((new NativeSystemLanguage)->tag())->toBeNull(sprintf('%s became a language', $shape));
         }
     } finally {
         FakeBridge::disable();

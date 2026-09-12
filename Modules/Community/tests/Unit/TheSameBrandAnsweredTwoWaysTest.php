@@ -30,7 +30,7 @@ function disputedSupportCorpus(array $byCountry): SupportResourceProvider
 
                 YAML;
         }
-        file_put_contents($root."/support/{$code}.yaml", "entries:\n".$entries);
+        file_put_contents($root.sprintf('/support/%s.yaml', $code), "entries:\n".$entries);
     }
 
     app(Repository::class)->set('community.corpus.root', $root);

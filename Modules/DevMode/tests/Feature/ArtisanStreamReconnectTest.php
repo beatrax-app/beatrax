@@ -246,7 +246,7 @@ it('honors ?from= for page-refresh-reconnect — second handle observes only lat
         // Timing-tolerant: only assert on a line the cut actually contained.
         if (str_contains($firstHandleBytes, $alreadySeen.\PHP_EOL)) {
             expect($lines)->not->toContain($alreadySeen,
-                "Reconnect must not replay {$alreadySeen} (line was present in the first handle's snapshot at offset {$cutOffset})");
+                sprintf("Reconnect must not replay %s (line was present in the first handle's snapshot at offset %s)", $alreadySeen, $cutOffset));
         }
     }
 });
@@ -279,7 +279,7 @@ it('rejects cross-user inspection on /dev/artisan/stream/{run_id} with 403', fun
     // The intruder is a developer and clears EnsureDeveloperMode; the
     // per-run owner check is the only thing stopping them.
     $response = $this->actingAs($intruder)
-        ->get("/dev/artisan/stream/{$runId}");
+        ->get(sprintf('/dev/artisan/stream/%s', $runId));
 
     $response->assertStatus(403);
 });

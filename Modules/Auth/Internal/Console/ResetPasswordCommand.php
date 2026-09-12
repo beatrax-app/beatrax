@@ -79,7 +79,7 @@ class ResetPasswordCommand extends Command
         // reach, so whatever still holds it goes with the old password.
         $this->sessions->revokeAllFor($user->id);
 
-        $this->info("Password updated for {$user->username}.");
+        $this->info(sprintf('Password updated for %s.', $user->username));
 
         return self::SUCCESS;
     }

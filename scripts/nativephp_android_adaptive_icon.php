@@ -25,7 +25,7 @@ $source = $root.'/public/icon.png';
 $res = beatraxScaffoldPath('android/app/src/main/res') ?? '';
 
 if (! is_file($source)) {
-    fwrite(STDERR, "adaptive-icon: source {$source} not found\n");
+    fwrite(STDERR, sprintf("adaptive-icon: source %s not found\n", $source));
 
     exit(0);
 }

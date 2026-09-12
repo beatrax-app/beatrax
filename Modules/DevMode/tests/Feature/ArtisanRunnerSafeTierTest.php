@@ -80,7 +80,7 @@ it('exposes SAFE-tier commands ONLY in the fallback modal (DESTRUCTIVE never app
         'db:backup',
     ];
     foreach ($safeNames as $name) {
-        expect(str_contains($html, $name))->toBeTrue("Expected SAFE command {$name} in fallback modal");
+        expect(str_contains($html, $name))->toBeTrue(sprintf('Expected SAFE command %s in fallback modal', $name));
     }
 
     // The empty timeline is what makes the whole-page search sound: with runs
@@ -93,7 +93,7 @@ it('exposes SAFE-tier commands ONLY in the fallback modal (DESTRUCTIVE never app
         'beatrax:install',
     ];
     foreach ($destructiveNames as $name) {
-        expect(str_contains($html, $name))->toBeFalse("DESTRUCTIVE command {$name} must NOT appear in the runner page when no runs exist");
+        expect(str_contains($html, $name))->toBeFalse(sprintf('DESTRUCTIVE command %s must NOT appear in the runner page when no runs exist', $name));
     }
 });
 
@@ -323,7 +323,7 @@ it('enables the Artisan + Audit sidebar nav items (drops nav-disabled when dev.a
         $label = $matches[2][$i];
         $classes = $matches[1][$i];
         if (in_array($label, ['Artisan', 'Audit'], true)) {
-            expect($classes)->not->toContain('nav-disabled', "Sidebar entry '{$label}' should NOT have nav-disabled when its route is registered");
+            expect($classes)->not->toContain('nav-disabled', sprintf("Sidebar entry '%s' should NOT have nav-disabled when its route is registered", $label));
         }
     }
 });

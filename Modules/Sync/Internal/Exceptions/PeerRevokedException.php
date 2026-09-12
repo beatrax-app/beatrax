@@ -14,6 +14,6 @@ final class PeerRevokedException extends RuntimeException
 {
     public static function toldByPeer(string $peerDeviceId): self
     {
-        return new self("Sync peer {$peerDeviceId} no longer confirms this device.");
+        return new self(sprintf('Sync peer %s no longer confirms this device.', $peerDeviceId));
     }
 }

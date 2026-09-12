@@ -64,7 +64,7 @@ final readonly class CommandRegistry implements DevCommandRegistry
         }
 
         throw new InvalidArgumentException(
-            "Unknown Dev Console command: `{$name}`. The command is either NEVER-EXPOSED or not registered in the SAFE / DESTRUCTIVE allow-list.",
+            sprintf('Unknown Dev Console command: `%s`. The command is either NEVER-EXPOSED or not registered in the SAFE / DESTRUCTIVE allow-list.', $name),
         );
     }
 }

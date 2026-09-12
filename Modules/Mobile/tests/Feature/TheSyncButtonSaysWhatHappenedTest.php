@@ -97,7 +97,7 @@ it('has copy for every outcome the service can report, in both languages', funct
             $key = 'mobile::sync.result.'.$outcome->value;
 
             if (Lang::get($key) === $key) {
-                $missing[] = "{$locale}: {$outcome->value}";
+                $missing[] = sprintf('%s: %s', $locale, $outcome->value);
             }
         }
     }

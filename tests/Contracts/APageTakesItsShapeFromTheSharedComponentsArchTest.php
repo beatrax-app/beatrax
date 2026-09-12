@@ -230,7 +230,7 @@ it('gives every page container the same vertical rhythm', function (): void {
             $columns++;
 
             if ($step !== pageRhythmStep()) {
-                $offenders[] = str_replace(base_path().'/', '', $path)." carries py-{$step}";
+                $offenders[] = str_replace(base_path().'/', '', $path).sprintf(' carries py-%s', $step);
             }
         }
     }
@@ -270,7 +270,7 @@ it('reads the rhythm off a page root that is not the column', function (): void 
 
         foreach ($root['steps'] as $step) {
             if ($step !== pageRhythmStep()) {
-                $offenders[] = str_replace(base_path().'/', '', $path)." opens <{$root['tag']}> carrying py-{$step}";
+                $offenders[] = str_replace(base_path().'/', '', $path).sprintf(' opens <%s> carrying py-%s', $root['tag'], $step);
             }
         }
     }

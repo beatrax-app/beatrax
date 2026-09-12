@@ -38,7 +38,7 @@ it('creates the anomaly_alerts table with every required column', function (): v
 
     foreach ($columns as $column) {
         expect($schema->hasColumn('anomaly_alerts', $column))->toBeTrue(
-            "Expected anomaly_alerts column '{$column}' to exist",
+            sprintf("Expected anomaly_alerts column '%s' to exist", $column),
         );
     }
 });

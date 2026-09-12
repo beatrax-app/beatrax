@@ -55,7 +55,7 @@ it('gives every approved demo series its own observed occurrence', function (): 
             ->where('recurring_series_id', $seriesId)
             ->count();
 
-        expect($observed)->toBeGreaterThan(0, "{$name} was seeded with no occurrence history");
+        expect($observed)->toBeGreaterThan(0, sprintf('%s was seeded with no occurrence history', $name));
     }
 });
 

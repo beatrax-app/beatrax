@@ -299,7 +299,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
             'googleplay' => $emlRoot.'/googleplay/sample-purchase.eml',
         ];
         if (! array_key_exists($slug, $map)) {
-            throw new FixtureUnusableException("Fake Graph fixture has no .eml for slug `{$slug}`.");
+            throw new FixtureUnusableException(sprintf('Fake Graph fixture has no .eml for slug `%s`.', $slug));
         }
 
         return $map[$slug];

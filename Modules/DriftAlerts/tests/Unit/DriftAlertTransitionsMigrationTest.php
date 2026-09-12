@@ -26,7 +26,7 @@ it('creates the drift_alert_transitions table with every audit column', function
 
     foreach ($columns as $column) {
         expect($schema->hasColumn('drift_alert_transitions', $column))->toBeTrue(
-            "Expected drift_alert_transitions column '{$column}' to exist",
+            sprintf("Expected drift_alert_transitions column '%s' to exist", $column),
         );
     }
 });

@@ -181,7 +181,7 @@ it('renders identically with and without ICU in all twenty-six languages', funct
                 $money = Money::ofMinor($minor, $currency);
 
                 if ($money->formatWithoutIcu() !== $money->format()) {
-                    $mismatches[] = $locale->value." {$minor} {$currency}: "
+                    $mismatches[] = $locale->value.sprintf(' %s %s: ', $minor, $currency)
                         .$money->format().' vs '.$money->formatWithoutIcu();
                 }
             }

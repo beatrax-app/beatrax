@@ -16,7 +16,7 @@ $fixtureTinyPdfs = [
 it('the redacted ICS text fixture contains zero 12-digit-or-longer runs', function () use ($fixtureTxt): void {
     $contents = file_get_contents($fixtureTxt);
     if ($contents === false) {
-        throw new RuntimeException("Could not read ICS text fixture at {$fixtureTxt}");
+        throw new RuntimeException(sprintf('Could not read ICS text fixture at %s', $fixtureTxt));
     }
 
     $hits = PatternScan::count('/[0-9]{12,}/', $contents);
@@ -30,7 +30,7 @@ it('the redacted ICS text fixture contains zero 12-digit-or-longer runs', functi
 it('the redacted ICS text fixture contains zero IBAN-shaped tokens other than the deterministic placeholder', function () use ($fixtureTxt): void {
     $contents = file_get_contents($fixtureTxt);
     if ($contents === false) {
-        throw new RuntimeException("Could not read ICS text fixture at {$fixtureTxt}");
+        throw new RuntimeException(sprintf('Could not read ICS text fixture at %s', $fixtureTxt));
     }
 
     $hits = PatternScan::all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $contents);
@@ -46,7 +46,7 @@ it('the redacted ICS text fixture contains zero IBAN-shaped tokens other than th
 it('the redacted ICS text fixture contains the KAARTHOUDER placeholder', function () use ($fixtureTxt): void {
     $contents = file_get_contents($fixtureTxt);
     if ($contents === false) {
-        throw new RuntimeException("Could not read ICS text fixture at {$fixtureTxt}");
+        throw new RuntimeException(sprintf('Could not read ICS text fixture at %s', $fixtureTxt));
     }
 
     expect(str_contains($contents, 'KAARTHOUDER'))->toBeTrue(
@@ -59,7 +59,7 @@ it('the redacted ICS text fixture contains the KAARTHOUDER placeholder', functio
 it('the redacted ICS text fixture contains a card-number placeholder', function () use ($fixtureTxt): void {
     $contents = file_get_contents($fixtureTxt);
     if ($contents === false) {
-        throw new RuntimeException("Could not read ICS text fixture at {$fixtureTxt}");
+        throw new RuntimeException(sprintf('Could not read ICS text fixture at %s', $fixtureTxt));
     }
 
     expect(PatternScan::matches('/\*\*\*\*-\*\*\*\*-\*\*\*\*-/', $contents))->toBeTrue(

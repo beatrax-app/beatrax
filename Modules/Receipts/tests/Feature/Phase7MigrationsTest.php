@@ -29,7 +29,7 @@ it('creates the file_imports table with the expected columns + indexes', functio
         'updated_at',
     ];
     foreach ($expected as $column) {
-        expect($schema->hasColumn('file_imports', $column))->toBeTrue("file_imports.{$column} missing");
+        expect($schema->hasColumn('file_imports', $column))->toBeTrue(sprintf('file_imports.%s missing', $column));
     }
 });
 

@@ -77,7 +77,7 @@ function denomSnapshot(string $pageHtml, string $component): string
         }
     }
 
-    throw new RuntimeException("No wire:snapshot for [{$component}] on the rendered page.");
+    throw new RuntimeException(sprintf('No wire:snapshot for [%s] on the rendered page.', $component));
 }
 
 /**

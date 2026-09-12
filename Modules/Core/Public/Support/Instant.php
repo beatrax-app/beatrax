@@ -36,7 +36,7 @@ final class Instant
 
         if (preg_match(self::ZULU_PATTERN, $stamp) !== 1) {
             throw new LogicException(
-                "Instant::zulu: '{$stamp}' is not zero-padded UTC Zulu ISO8601. "
+                sprintf("Instant::zulu: '%s' is not zero-padded UTC Zulu ISO8601. ", $stamp)
                 .'A lexical expires_at comparison requires the Zulu form.'
             );
         }
@@ -53,7 +53,7 @@ final class Instant
 
         if (preg_match(self::STORED_PATTERN, $stamp) !== 1) {
             throw new LogicException(
-                "Instant::appLocal: '{$stamp}' is not a zero-padded Y-m-d H:i:s stamp. "
+                sprintf("Instant::appLocal: '%s' is not a zero-padded Y-m-d H:i:s stamp. ", $stamp)
                 .'A DATETIME column is read back with CarbonImmutable::parse, which requires that shape.'
             );
         }

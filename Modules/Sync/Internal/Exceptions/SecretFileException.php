@@ -14,43 +14,43 @@ final class SecretFileException extends RuntimeException
 {
     public static function couldNotStage(string $path): self
     {
-        return new self("Failed to stage secret material at: {$path}");
+        return new self(sprintf('Failed to stage secret material at: %s', $path));
     }
 
     public static function couldNotLockDown(string $path): self
     {
-        return new self("Cannot chmod secret material to 0600 (would be left readable): {$path}");
+        return new self(sprintf('Cannot chmod secret material to 0600 (would be left readable): %s', $path));
     }
 
     public static function couldNotFinalizeKeyring(int $userId): self
     {
-        return new self("Could not finalize the GDK keyring file for user {$userId}.");
+        return new self(sprintf('Could not finalize the GDK keyring file for user %s.', $userId));
     }
 
     // The staged copy is unlinked before this is raised, so the live path is
     // whatever it already was — nothing here half-wrote it.
     public static function couldNotFinalizeSealedFile(string $path): self
     {
-        return new self("Could not move the sealed secret into place at: {$path}");
+        return new self(sprintf('Could not move the sealed secret into place at: %s', $path));
     }
 
     public static function couldNotReadStagedPlaintext(string $path): self
     {
-        return new self("Failed to read the decrypted secret staged at: {$path}");
+        return new self(sprintf('Failed to read the decrypted secret staged at: %s', $path));
     }
 
     public static function couldNotCreateSecretsDirectory(string $directory): self
     {
-        return new self("Cannot create secrets directory: {$directory}");
+        return new self(sprintf('Cannot create secrets directory: %s', $directory));
     }
 
     public static function couldNotWriteDrainTokens(string $path): self
     {
-        return new self("Cannot write relay drain tokens to: {$path}");
+        return new self(sprintf('Cannot write relay drain tokens to: %s', $path));
     }
 
     public static function couldNotWriteDrainRegistry(string $path): self
     {
-        return new self("Cannot write relay drain registry to: {$path}");
+        return new self(sprintf('Cannot write relay drain registry to: %s', $path));
     }
 }

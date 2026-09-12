@@ -69,7 +69,7 @@ final class EncryptedBackupDownload extends Component
             // Consistent snapshot — VACUUM INTO must not run in a transaction
             // and refuses an existing target, so the unique temp path is fresh.
             $escaped = str_replace("'", "''", $plainPath);
-            $db->connection()->statement("VACUUM INTO '{$escaped}'");
+            $db->connection()->statement(sprintf("VACUUM INTO '%s'", $escaped));
             if (! is_file($plainPath)) {
                 throw new BackupIoException('The database snapshot was not produced.');
             }

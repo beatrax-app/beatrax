@@ -44,6 +44,6 @@ trait SummarizesRuleConditions
         $value = $condition['value'] ?? '?';
         $valueStr = is_scalar($value) ? (string) $value : '?';
 
-        return "{$field} {$op} {$valueStr}";
+        return sprintf('%s %s %s', $field, $op, $valueStr);
     }
 }

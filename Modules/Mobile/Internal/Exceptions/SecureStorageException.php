@@ -14,6 +14,6 @@ final class SecureStorageException extends RuntimeException
 {
     public static function nativeSetFailed(string $slot): self
     {
-        return new self("SecureStorageKeyCustodian: native secure-storage set() failed for slot '{$slot}'; refusing to hold the raw key in-session.");
+        return new self(sprintf("SecureStorageKeyCustodian: native secure-storage set() failed for slot '%s'; refusing to hold the raw key in-session.", $slot));
     }
 }

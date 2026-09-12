@@ -82,7 +82,7 @@ foreach ($targets as $what => $target) {
     if (! is_file($file)) {
         // The native scaffold is generated on demand and is absent from a
         // fresh checkout; there is nothing to patch until native:install ran.
-        fwrite(STDOUT, "nativephp_ios_host_timezone: no {$what} in the scaffold yet — skipping.\n");
+        fwrite(STDOUT, sprintf("nativephp_ios_host_timezone: no %s in the scaffold yet — skipping.\n", $what));
         exit(0);
     }
 

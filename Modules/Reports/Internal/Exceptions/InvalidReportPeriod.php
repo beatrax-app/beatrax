@@ -25,7 +25,7 @@ final class InvalidReportPeriod extends InvalidArgumentException
 
     public static function malformed(string $field, string $value): self
     {
-        return new self(PeriodProblem::Malformed, "The \"{$field}\" date must be a valid \"Y-m-d\" date string, got: \"{$value}\".");
+        return new self(PeriodProblem::Malformed, sprintf('The "%s" date must be a valid "Y-m-d" date string, got: "%s".', $field, $value));
     }
 
     public static function inverted(): self

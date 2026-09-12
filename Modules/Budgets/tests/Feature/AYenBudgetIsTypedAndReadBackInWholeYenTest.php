@@ -45,7 +45,7 @@ beforeEach(function (): void {
 
 it('writes a typed yen budget as whole yen', function (): void {
     Livewire::test(BudgetsPage::class)
-        ->set("assignedInputs.{$this->groceries->id}", '50000')
+        ->set(sprintf('assignedInputs.%s', $this->groceries->id), '50000')
         ->call('setAssigned', $this->groceries->id);
 
     $stored = DB::table('envelope_assignments')
@@ -66,7 +66,7 @@ it('reads a stored yen budget back into the box as whole yen', function (): void
     );
 
     Livewire::test(BudgetsPage::class)
-        ->assertSet("assignedInputs.{$this->groceries->id}", '50,000');
+        ->assertSet(sprintf('assignedInputs.%s', $this->groceries->id), '50,000');
 });
 
 it('moves whole yen between two yen envelopes', function (): void {

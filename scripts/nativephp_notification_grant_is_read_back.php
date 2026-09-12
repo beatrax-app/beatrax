@@ -95,7 +95,7 @@ if (! str_contains($manifest, 'LocalNotification.CheckPermission')) {
     $decoded = json_decode($manifest, true);
 
     if (! is_array($decoded)) {
-        fwrite(STDERR, "nativephp_notification_grant_is_read_back: {$manifestPath} is no longer valid JSON after patching.\n");
+        fwrite(STDERR, sprintf("nativephp_notification_grant_is_read_back: %s is no longer valid JSON after patching.\n", $manifestPath));
         exit(1);
     }
 

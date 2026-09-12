@@ -14,6 +14,6 @@ final class RelayUnavailableException extends RuntimeException
 {
     public static function requestFailed(string $operation, int $status, string $endpoint): self
     {
-        return new self("Relay {$operation} failed: HTTP {$status} from {$endpoint}");
+        return new self(sprintf('Relay %s failed: HTTP %s from %s', $operation, $status, $endpoint));
     }
 }

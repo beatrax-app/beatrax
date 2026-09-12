@@ -46,7 +46,7 @@ it('prints the grid under the sign of the currency the reader chose', function (
 
     $html = Livewire::actingAs($user)
         ->test(BudgetsPage::class)
-        ->set("assignedInputs.{$category->id}", '50.00')
+        ->set(sprintf('assignedInputs.%s', $category->id), '50.00')
         ->call('setAssigned', $category->id)
         ->html();
 
@@ -61,7 +61,7 @@ it('keeps printing euro for the reader who chose euro', function (): void {
 
     $html = Livewire::actingAs($user)
         ->test(BudgetsPage::class)
-        ->set("assignedInputs.{$category->id}", '50.00')
+        ->set(sprintf('assignedInputs.%s', $category->id), '50.00')
         ->call('setAssigned', $category->id)
         ->html();
 
@@ -78,7 +78,7 @@ it('prints the install default for a reader whose row predates the setting', fun
 
     $html = Livewire::actingAs($user)
         ->test(BudgetsPage::class)
-        ->set("assignedInputs.{$category->id}", '50.00')
+        ->set(sprintf('assignedInputs.%s', $category->id), '50.00')
         ->call('setAssigned', $category->id)
         ->html();
 

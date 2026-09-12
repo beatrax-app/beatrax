@@ -73,10 +73,10 @@ beforeEach(function () use (&$recordedBatches, &$recordedRows): void {
                 'userId' => $this->user->id,
                 'accountId' => $this->account->id,
                 'importRunId' => $this->importRun->id,
-                'bookedAt' => CarbonImmutable::parse("2026-02-10 09:{$minute}:{$second}"),
-                'counterpartyNormalized' => "batch merchant {$idx}",
+                'bookedAt' => CarbonImmutable::parse(sprintf('2026-02-10 09:%s:%s', $minute, $second)),
+                'counterpartyNormalized' => sprintf('batch merchant %s', $idx),
                 'sourceRowIndex' => $idx,
-                'sourceRef' => "BATCH-REF-{$idx}",
+                'sourceRef' => sprintf('BATCH-REF-%s', $idx),
                 'sourceFormat' => $sourceFormat,
             ]);
         }

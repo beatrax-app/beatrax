@@ -210,7 +210,7 @@ final readonly class ReportAggregator
             ReportDimension::Counterparty->value => $this->counterpartySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
             ReportDimension::Account->value => $this->accountSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
             ReportDimension::TimeBucket->value => $this->timeBucketSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $definition->granularity ?? ReportGranularity::default(), $filters),
-            default => throw new InvalidArgumentException("Unknown report dimension: {$definition->dimension}"),
+            default => throw new InvalidArgumentException(sprintf('Unknown report dimension: %s', $definition->dimension)),
         };
     }
 

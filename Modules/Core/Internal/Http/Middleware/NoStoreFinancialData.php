@@ -166,10 +166,10 @@ final readonly class NoStoreFinancialData
         // 'unsafe-inline' is deliberately absent (a nonce disables it anyway).
         $nonce = $this->vite->cspNonce();
 
-        $scriptSrc = self::ORIGIN." 'nonce-{$nonce}' 'unsafe-eval'";
+        $scriptSrc = self::ORIGIN.sprintf(" 'nonce-%s' 'unsafe-eval'", $nonce);
         $bridgeHash = $this->nativeBridgeScriptHash();
         if ($bridgeHash !== null) {
-            $scriptSrc .= " '{$bridgeHash}'";
+            $scriptSrc .= sprintf(" '%s'", $bridgeHash);
         }
 
         return [

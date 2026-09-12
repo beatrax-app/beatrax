@@ -63,7 +63,7 @@ it('leaves every seeded series in the state its newest transition landed on', fu
             ->value('to_state');
 
         if ($newest !== null && $newest !== $states[$seriesId]) {
-            $disagreements[] = "series {$seriesId}: transitioned to {$newest}, sits at {$states[$seriesId]}";
+            $disagreements[] = sprintf('series %s: transitioned to %s, sits at %s', $seriesId, $newest, $states[$seriesId]);
         }
     }
 
@@ -89,6 +89,6 @@ it('gives the pending series the occurrence history the detector would have watc
             ->where('recurring_series_id', $seriesId)
             ->count();
 
-        expect($observed)->toBeGreaterThan(0, "{$name} was seeded with no occurrence history");
+        expect($observed)->toBeGreaterThan(0, sprintf('%s was seeded with no occurrence history', $name));
     }
 });

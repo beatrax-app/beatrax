@@ -167,6 +167,13 @@ function translatedLineReferencesIn(string $source): array
         $prefixes[$key] = true;
     }
 
+    // The same reference written the way this tree builds strings: a literal a
+    // format specifier completes reaches the subtree under it without spelling
+    // a leaf, exactly as the interpolation above did.
+    foreach (PatternScan::all('/[\'"]('.TRANSLATED_LINE_KEY.')%[sd]/', $source)[1] as $key) {
+        $prefixes[$key] = true;
+    }
+
     // A group named without any key under it is read whole, by Lang::group
     // or by a helper that appends: labelKey('recurring::review').
     foreach (PatternScan::all('/[\'"]('.TRANSLATED_LINE_GROUP.')[\'"]/', $source)[1] as $group) {

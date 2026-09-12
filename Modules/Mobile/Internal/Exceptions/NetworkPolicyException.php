@@ -14,11 +14,11 @@ final class NetworkPolicyException extends RuntimeException
 {
     public static function directoryNotCreatable(string $dir): self
     {
-        return new self("Cannot create network-policy directory: {$dir}");
+        return new self(sprintf('Cannot create network-policy directory: %s', $dir));
     }
 
     public static function notWritable(string $path): self
     {
-        return new self("Cannot write network policy to: {$path}");
+        return new self(sprintf('Cannot write network policy to: %s', $path));
     }
 }

@@ -24,7 +24,7 @@ final class ZipArchiveReader implements ArchiveReader
         $opened = $zip->open($path);
         if ($opened !== true) {
             throw new UnrecognizedMigrationFileException(
-                "could not open zip archive at '{$path}' (code {$opened})",
+                sprintf("could not open zip archive at '%s' (code %s)", $path, $opened),
             );
         }
 
@@ -47,7 +47,7 @@ final class ZipArchiveReader implements ArchiveReader
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $stat = $zip->statIndex($i);
             if ($stat === false) {
-                throw new UnrecognizedMigrationFileException("could not read zip entry metadata at index {$i}");
+                throw new UnrecognizedMigrationFileException(sprintf('could not read zip entry metadata at index %s', $i));
             }
 
             $entries[] = new ArchiveEntry(

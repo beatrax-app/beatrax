@@ -15,7 +15,7 @@
     $label = $tier === CommandTier::Destructive ? Lang::get('dev::common.tier.destructive') : Lang::get('dev::common.tier.safe');
 @endphp
 <span {{ $attributes->merge([
-    'class' => "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wider {$variantClasses}",
+    'class' => sprintf('inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wider %s', $variantClasses),
 ]) }}>
     {{ $label }}
 </span>

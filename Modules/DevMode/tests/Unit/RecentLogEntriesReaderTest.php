@@ -63,7 +63,7 @@ it('uppercases the severity even when the source line uses mixed case', function
 it('caps the returned list at the requested limit, returning the most recent entries', function (): void {
     $lines = '';
     for ($i = 1; $i <= 10; $i++) {
-        $lines .= "[2026-05-24 12:00:0{$i}] local.INFO: line {$i}".PHP_EOL;
+        $lines .= sprintf('[2026-05-24 12:00:0%s] local.INFO: line %s', $i, $i).PHP_EOL;
     }
     $reader = readerWithLogFixture($lines);
 

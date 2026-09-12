@@ -24,7 +24,7 @@ use Psr\Log\NullLogger;
  */
 function consentGateSignedManifest(string $version, string $sha512Hex, string $secretKey): array
 {
-    $body = "version: {$version}\nsha512: normalised-elsewhere\nreleaseDate: '2026-08-16T00:00:00.000Z'\n";
+    $body = sprintf("version: %s\nsha512: normalised-elsewhere\nreleaseDate: '2026-08-16T00:00:00.000Z'\n", $version);
 
     return [
         'body' => $body,

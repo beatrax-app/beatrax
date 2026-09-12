@@ -30,7 +30,7 @@ function paypalEmlWithBody(string $messageId, string $amountLine): string
         ."To: reader@example.test\r\n"
         ."Subject: Receipt\r\n"
         ."Date: Sun, 17 May 2026 09:42:13 +0200\r\n"
-        ."Message-ID: <$messageId@example.test>\r\n"
+        .sprintf("Message-ID: <%s@example.test>\r\n", $messageId)
         ."MIME-Version: 1.0\r\n"
         ."Content-Type: text/plain; charset=UTF-8\r\n"
         ."Content-Transfer-Encoding: 8bit\r\n"

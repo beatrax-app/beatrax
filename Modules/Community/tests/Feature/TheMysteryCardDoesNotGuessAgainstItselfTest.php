@@ -76,7 +76,7 @@ it('leaves no locale carrying the sentence nothing reads any more', function ():
     $stale = [];
     foreach ($locales as $locale) {
         /** @var array<string, mixed> $strings */
-        $strings = require base_path("Modules/Community/Resources/lang/{$locale}/mystery.php");
+        $strings = require base_path(sprintf('Modules/Community/Resources/lang/%s/mystery.php', $locale));
         if (isset($strings['card']['likely'])) {
             $stale[] = $locale;
         }

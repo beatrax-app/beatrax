@@ -99,7 +99,7 @@ final readonly class GmailInboxResources
         $creds = $this->secrets->loadInbox($inboxId);
         if ($creds === null) {
             throw new InboxNotConfiguredException(
-                "GmailApiClient: no OAuth credentials persisted for inbox {$inboxId}.",
+                sprintf('GmailApiClient: no OAuth credentials persisted for inbox %s.', $inboxId),
             );
         }
 

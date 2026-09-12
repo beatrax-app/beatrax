@@ -59,7 +59,7 @@ it('returns 204 idempotently when the process has already exited', function (): 
         outPath: $outPath,
     ));
 
-    $response = $this->actingAs($user)->postJson("/dev/artisan/cancel/{$runId}");
+    $response = $this->actingAs($user)->postJson(sprintf('/dev/artisan/cancel/%s', $runId));
 
     $response->assertStatus(204);
     $record = $registry->find($runId);
@@ -96,7 +96,7 @@ it('cancels a real long-running child via SIGTERM within the 3s grace', function
         outPath: $outPath,
     ));
 
-    $response = $this->actingAs($user)->postJson("/dev/artisan/cancel/{$runId}");
+    $response = $this->actingAs($user)->postJson(sprintf('/dev/artisan/cancel/%s', $runId));
     $response->assertStatus(204);
 
     $deadline = microtime(true) + 5.0;
@@ -132,7 +132,7 @@ it('rejects cross-user cancel with 403', function (): void {
         outPath: $outPath,
     ));
 
-    $response = $this->actingAs($intruder)->postJson("/dev/artisan/cancel/{$runId}");
+    $response = $this->actingAs($intruder)->postJson(sprintf('/dev/artisan/cancel/%s', $runId));
     $response->assertStatus(403);
 
     $record = $registry->find($runId);

@@ -117,11 +117,11 @@ it('keeps the predicate on every index a migration declared as partial', functio
             [$name],
         );
 
-        expect($row)->not->toBeNull("{$name} is declared in a migration and absent from the built schema");
+        expect($row)->not->toBeNull(sprintf('%s is declared in a migration and absent from the built schema', $name));
 
         $sql = is_object($row) && isset($row->sql) ? (string) $row->sql : '';
         expect(str_contains(strtoupper($sql), 'WHERE'))->toBeTrue(
-            "{$name} was declared partial on `{$predicate}`; the built schema has it without a predicate"
+            sprintf('%s was declared partial on `%s`; the built schema has it without a predicate', $name, $predicate)
         );
     }
 });

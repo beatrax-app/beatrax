@@ -34,24 +34,24 @@ it('every drift-corpus fixture returns the documented shape', function (string $
     /** @var array<string, mixed> $fixture */
     $fixture = require $path;
 
-    assertIsArray($fixture, "Fixture {$name} must return an associative array.");
-    assertArrayHasKey('transactions', $fixture, "Fixture {$name} must declare a 'transactions' key.");
-    assertArrayHasKey('expected', $fixture, "Fixture {$name} must declare an 'expected' key.");
+    assertIsArray($fixture, sprintf('Fixture %s must return an associative array.', $name));
+    assertArrayHasKey('transactions', $fixture, sprintf("Fixture %s must declare a 'transactions' key.", $name));
+    assertArrayHasKey('expected', $fixture, sprintf("Fixture %s must declare an 'expected' key.", $name));
 
     /** @var mixed $transactions */
     $transactions = $fixture['transactions'];
-    assertIsArray($transactions, "Fixture {$name}: 'transactions' must be a list.");
-    assertIsList($transactions, "Fixture {$name}: 'transactions' must be a 0-indexed list.");
+    assertIsArray($transactions, sprintf("Fixture %s: 'transactions' must be a list.", $name));
+    assertIsList($transactions, sprintf("Fixture %s: 'transactions' must be a 0-indexed list.", $name));
 
     /** @var mixed $expected */
     $expected = $fixture['expected'];
-    assertIsArray($expected, "Fixture {$name}: 'expected' must be an associative array.");
-    assertArrayHasKey('alerts', $expected, "Fixture {$name}: 'expected' must declare an 'alerts' key.");
+    assertIsArray($expected, sprintf("Fixture %s: 'expected' must be an associative array.", $name));
+    assertArrayHasKey('alerts', $expected, sprintf("Fixture %s: 'expected' must declare an 'alerts' key.", $name));
 
     /** @var mixed $alerts */
     $alerts = $expected['alerts'];
-    assertIsArray($alerts, "Fixture {$name}: 'expected.alerts' must be a list (may be empty).");
-    assertIsList($alerts, "Fixture {$name}: 'expected.alerts' must be a 0-indexed list.");
+    assertIsArray($alerts, sprintf("Fixture %s: 'expected.alerts' must be a list (may be empty).", $name));
+    assertIsList($alerts, sprintf("Fixture %s: 'expected.alerts' must be a 0-indexed list.", $name));
 
     $allowedExpectedKeys = [
         'alerts', 'transitions', 'series_state', 'series_cadence', 'series_currency',
@@ -61,7 +61,7 @@ it('every drift-corpus fixture returns the documented shape', function (string $
         assertContains(
             $key,
             $allowedExpectedKeys,
-            "Fixture {$name}: 'expected' has unrecognised key '{$key}'."
+            sprintf("Fixture %s: 'expected' has unrecognised key '%s'.", $name, $key)
         );
     }
 
@@ -75,13 +75,13 @@ it('every drift-corpus fixture returns the documented shape', function (string $
     $allowedThresholdSources = ['default', 'global', 'series_override'];
 
     foreach ($alerts as $index => $alert) {
-        assertIsArray($alert, "Fixture {$name}: alert #{$index} must be an associative array.");
+        assertIsArray($alert, sprintf('Fixture %s: alert #%s must be an associative array.', $name, $index));
 
         foreach (array_keys($alert) as $key) {
             assertContains(
                 $key,
                 $allowedAlertKeys,
-                "Fixture {$name}: alert #{$index} has unrecognised key '{$key}'."
+                sprintf("Fixture %s: alert #%s has unrecognised key '%s'.", $name, $index, $key)
             );
         }
 
@@ -89,7 +89,7 @@ it('every drift-corpus fixture returns the documented shape', function (string $
             assertContains(
                 $alert['direction'],
                 $allowedDirections,
-                "Fixture {$name}: alert #{$index}.direction is not one of expense/income."
+                sprintf('Fixture %s: alert #%s.direction is not one of expense/income.', $name, $index)
             );
         }
 
@@ -97,7 +97,7 @@ it('every drift-corpus fixture returns the documented shape', function (string $
             assertContains(
                 $alert['state'],
                 $allowedStates,
-                "Fixture {$name}: alert #{$index}.state is not a recognised state."
+                sprintf('Fixture %s: alert #%s.state is not a recognised state.', $name, $index)
             );
         }
 
@@ -105,7 +105,7 @@ it('every drift-corpus fixture returns the documented shape', function (string $
             assertContains(
                 $alert['threshold_source'],
                 $allowedThresholdSources,
-                "Fixture {$name}: alert #{$index}.threshold_source must be default, global, or series_override."
+                sprintf('Fixture %s: alert #%s.threshold_source must be default, global, or series_override.', $name, $index)
             );
         }
     }

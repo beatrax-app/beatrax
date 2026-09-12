@@ -99,7 +99,7 @@ final readonly class NativeAppServiceProvider implements ProvidesPhpIni
             $work();
         } catch (Throwable $e) {
             $this->logger->error(
-                "NativePHP boot: {$step} failed; the window still opens so the setup screen can recover.",
+                sprintf('NativePHP boot: %s failed; the window still opens so the setup screen can recover.', $step),
                 SafeExceptionContext::describe($e),
             );
         }
@@ -117,7 +117,7 @@ final readonly class NativeAppServiceProvider implements ProvidesPhpIni
                 return;
             } catch (Throwable $e) {
                 $this->logger->warning(
-                    "NativePHP boot: view:cache attempt {$attempt} failed",
+                    sprintf('NativePHP boot: view:cache attempt %s failed', $attempt),
                     SafeExceptionContext::describe($e),
                 );
             }

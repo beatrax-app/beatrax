@@ -31,7 +31,7 @@ final class DetectDriftAlertsJob implements ShouldBeUniqueUntilProcessing, Shoul
 
     public function uniqueId(): string
     {
-        return "{$this->userId}:{$this->recurringSeriesId}";
+        return sprintf('%s:%s', $this->userId, $this->recurringSeriesId);
     }
 
     public function uniqueFor(): int

@@ -79,7 +79,7 @@ enum MoneyFlow: string
             '' => ['type', "COALESCE(payment_type, '')", 'settled_amount_minor', 'pair_transaction_id'],
             't.' => ['t.type', "COALESCE(t.payment_type, '')", 't.settled_amount_minor', 't.pair_transaction_id'],
             'transactions.' => ['transactions.type', "COALESCE(transactions.payment_type, '')", 'transactions.settled_amount_minor', 'transactions.pair_transaction_id'],
-            default => throw new InvalidArgumentException("Unknown column prefix: {$prefix}"),
+            default => throw new InvalidArgumentException(sprintf('Unknown column prefix: %s', $prefix)),
         };
     }
 }

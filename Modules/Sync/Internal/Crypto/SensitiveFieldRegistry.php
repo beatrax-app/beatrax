@@ -156,6 +156,6 @@ final class SensitiveFieldRegistry
     // method rather than the static accessor directly.
     public function isSensitive(string $table, string $field): bool
     {
-        return in_array("{$table}.{$field}", self::columns(), true);
+        return in_array(sprintf('%s.%s', $table, $field), self::columns(), true);
     }
 }

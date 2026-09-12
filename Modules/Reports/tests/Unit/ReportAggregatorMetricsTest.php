@@ -235,7 +235,7 @@ it('cross_dimension_total_consistency: holds through the aggregator when an amou
 
             expect($other->totalMinor)->toBe(
                 $byCategory->totalMinor,
-                "category vs {$dimension} diverged for amount_min={$min} amount_max={$max}",
+                sprintf('category vs %s diverged for amount_min=%s amount_max=%s', $dimension, $min, $max),
             );
         }
     }

@@ -50,17 +50,17 @@ it('streams a synthetic 50 MB mbox under 64 MB peak memory', function (): void {
     // clear the 50 MB threshold the assertion below depends on.
     $fh = fopen($tmpPath, 'wb');
     if ($fh === false) {
-        throw new RuntimeException("Could not open temp mbox at {$tmpPath}.");
+        throw new RuntimeException(sprintf('Could not open temp mbox at %s.', $tmpPath));
     }
     $body = str_repeat("Body line padding to inflate the message size.\n", 170);
     $messageCount = 6400;
     for ($i = 0; $i < $messageCount; $i++) {
-        $headers = "From sender{$i}@example.test Thu Jan  1 00:00:00 2026\n"
-            ."From: sender{$i}@example.test\n"
+        $headers = sprintf("From sender%s@example.test Thu Jan  1 00:00:00 2026\n", $i)
+            .sprintf("From: sender%s@example.test\n", $i)
             ."To: kaarthouder@example.test\n"
-            ."Subject: Bulk synthetic message {$i}\n"
+            .sprintf("Subject: Bulk synthetic message %s\n", $i)
             ."Date: Thu, 01 Jan 2026 00:00:00 +0000\n"
-            ."Message-ID: <bulk-{$i}@example.test>\n\n";
+            .sprintf("Message-ID: <bulk-%s@example.test>\n\n", $i);
         fwrite($fh, $headers.$body."\n");
     }
     fclose($fh);

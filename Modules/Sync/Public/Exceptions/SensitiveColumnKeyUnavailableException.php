@@ -21,7 +21,7 @@ final class SensitiveColumnKeyUnavailableException extends RuntimeException
     public static function forColumns(int $userId, string $table, array $fields): self
     {
         return new self(
-            "SensitiveColumnCodec: encryption is enabled for user {$userId} but no epoch key is held, so "
+            sprintf('SensitiveColumnCodec: encryption is enabled for user %s but no epoch key is held, so ', $userId)
             .$table.'.{'.implode(',', $fields).'} cannot be sealed. Refusing to write it in the clear.',
         );
     }
@@ -33,7 +33,7 @@ final class SensitiveColumnKeyUnavailableException extends RuntimeException
     public static function forTheRecoveryPass(int $userId): self
     {
         return new self(
-            "HistoryReprojector: encryption is enabled for user {$userId} but no epoch key is held, so the "
+            sprintf('HistoryReprojector: encryption is enabled for user %s but no epoch key is held, so the ', $userId)
             .'quarantined history cannot be re-projected. Refusing to replay it without one.',
         );
     }

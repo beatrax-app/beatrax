@@ -95,7 +95,7 @@ foreach ($plists as $plist) {
         $anchor = "</dict>\n</plist>";
 
         if (substr_count($source, $anchor) !== 1) {
-            fwrite(STDERR, "nativephp_ios_export_compliance: root </dict> anchor not found in {$plist}.\n");
+            fwrite(STDERR, sprintf("nativephp_ios_export_compliance: root </dict> anchor not found in %s.\n", $plist));
             fwrite(STDERR, 'The generated plist changed shape; add '.COMPLIANCE_KEY." by hand before uploading.\n");
             exit(1);
         }
@@ -104,7 +104,7 @@ foreach ($plists as $plist) {
     $entry = '    <key>'.COMPLIANCE_KEY."</key>\n    <true/>\n";
 
     if (file_put_contents($plist, str_replace($anchor, "\n".$entry.ltrim($anchor, "\n"), $source)) === false) {
-        fwrite(STDERR, "nativephp_ios_export_compliance: could not write {$plist}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_export_compliance: could not write %s.\n", $plist));
         exit(1);
     }
 
@@ -117,7 +117,7 @@ foreach ($plists as $plist) {
     $reparsed = @simplexml_load_file($plist);
 
     if ($reparsed === false) {
-        fwrite(STDERR, "nativephp_ios_export_compliance: {$plist} is no longer well-formed XML after patching.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_export_compliance: %s is no longer well-formed XML after patching.\n", $plist));
 
         foreach (libxml_get_errors() as $error) {
             fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
@@ -131,13 +131,13 @@ foreach ($plists as $plist) {
     $value = $reparsed->xpath('/plist/dict/key[text()="'.COMPLIANCE_KEY.'"]/following-sibling::*[1]');
 
     if (! is_array($value) || $value === [] || $value[0]->getName() !== 'true') {
-        fwrite(STDERR, 'nativephp_ios_export_compliance: '.COMPLIANCE_KEY." is not a top-level true in {$plist}.\n");
+        fwrite(STDERR, 'nativephp_ios_export_compliance: '.COMPLIANCE_KEY.sprintf(" is not a top-level true in %s.\n", $plist));
         exit(1);
     }
 }
 
 fwrite(STDOUT, $written === 0
     ? "nativephp_ios_export_compliance: already applied.\n"
-    : "nativephp_ios_export_compliance: declared non-exempt encryption in {$written} plist(s).\n");
+    : sprintf("nativephp_ios_export_compliance: declared non-exempt encryption in %s plist(s).\n", $written));
 
 exit(0);

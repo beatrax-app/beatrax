@@ -33,7 +33,7 @@ final class OpenBankingCredentialsException extends RuntimeException
     public static function bankNotLinked(string $institutionId): self
     {
         return new self(
-            "No Enable Banking consent is stored for institution {$institutionId}.",
+            sprintf('No Enable Banking consent is stored for institution %s.', $institutionId),
             ['openbanking::messages.errors.bank_not_linked'],
         );
     }
@@ -44,7 +44,7 @@ final class OpenBankingCredentialsException extends RuntimeException
     public static function unreadable(string $path, Throwable $previous): self
     {
         return new self(
-            "Failed to parse the Enable Banking secrets file at {$path}.",
+            sprintf('Failed to parse the Enable Banking secrets file at %s.', $path),
             [
                 'openbanking::messages.page.credentials_unreadable',
                 'openbanking::messages.page.credentials_unreadable_next',

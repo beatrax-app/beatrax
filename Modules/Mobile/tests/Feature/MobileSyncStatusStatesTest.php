@@ -223,7 +223,7 @@ it('shows what the setup poll is waiting on, and a way out when it cannot resolv
     // Every reason the puller can report must have copy to render.
     foreach (SyncBlockedReason::cases() as $reason) {
         expect(Lang::get('mobile::setup.blocked.'.$reason->value))
-            ->not->toBe('mobile::setup.blocked.'.$reason->value, "no copy for {$reason->value}");
+            ->not->toBe('mobile::setup.blocked.'.$reason->value, sprintf('no copy for %s', $reason->value));
     }
 });
 

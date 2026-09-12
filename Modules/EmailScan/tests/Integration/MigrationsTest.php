@@ -14,42 +14,42 @@ beforeEach(function (): void {
 it('creates the inboxes, inbox_scan_state, inbox_messages, known_senders and discovered_senders tables on a fresh migrate', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['inboxes', 'inbox_scan_state', 'inbox_messages', 'known_senders', 'discovered_senders'] as $table) {
-        expect($schema->hasTable($table))->toBeTrue("table {$table} missing");
+        expect($schema->hasTable($table))->toBeTrue(sprintf('table %s missing', $table));
     }
 });
 
 it('inboxes has the expected columns', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['id', 'user_id', 'provider', 'email', 'backfill_window_months', 'backfill_progress', 'created_at', 'updated_at'] as $col) {
-        expect($schema->hasColumn('inboxes', $col))->toBeTrue("inboxes.{$col} missing");
+        expect($schema->hasColumn('inboxes', $col))->toBeTrue(sprintf('inboxes.%s missing', $col));
     }
 });
 
 it('inbox_scan_state has the expected columns', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['id', 'user_id', 'inbox_id', 'folder', 'last_history_id', 'last_delta_link', 'backfill_resume_point', 'last_scan_at', 'status', 'error_message', 'retry_attempts'] as $col) {
-        expect($schema->hasColumn('inbox_scan_state', $col))->toBeTrue("inbox_scan_state.{$col} missing");
+        expect($schema->hasColumn('inbox_scan_state', $col))->toBeTrue(sprintf('inbox_scan_state.%s missing', $col));
     }
 });
 
 it('inbox_messages has the expected columns', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['id', 'user_id', 'inbox_id', 'provider_message_id', 'internal_date', 'sender_email', 'sender_name', 'subject', 'status', 'fetched_at'] as $col) {
-        expect($schema->hasColumn('inbox_messages', $col))->toBeTrue("inbox_messages.{$col} missing");
+        expect($schema->hasColumn('inbox_messages', $col))->toBeTrue(sprintf('inbox_messages.%s missing', $col));
     }
 });
 
 it('known_senders has the expected columns', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['id', 'user_id', 'email_pattern', 'label', 'source', 'added_at'] as $col) {
-        expect($schema->hasColumn('known_senders', $col))->toBeTrue("known_senders.{$col} missing");
+        expect($schema->hasColumn('known_senders', $col))->toBeTrue(sprintf('known_senders.%s missing', $col));
     }
 });
 
 it('discovered_senders has the expected columns', function (): void {
     $schema = $this->db->getSchemaBuilder();
     foreach (['id', 'user_id', 'inbox_id', 'sender_email', 'sender_name', 'occurrence_count', 'last_seen_at', 'state'] as $col) {
-        expect($schema->hasColumn('discovered_senders', $col))->toBeTrue("discovered_senders.{$col} missing");
+        expect($schema->hasColumn('discovered_senders', $col))->toBeTrue(sprintf('discovered_senders.%s missing', $col));
     }
 });
 

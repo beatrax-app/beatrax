@@ -273,14 +273,14 @@ final class ReindexSearchCommand extends Command
     {
         if ($indexed !== $total) {
             $this->warn(
-                "FTS reindex incomplete: indexed {$indexed} of {$total} transactions. ".
+                sprintf('FTS reindex incomplete: indexed %s of %s transactions. ', $indexed, $total).
                 'The index may be partial — re-run search:reindex.',
             );
 
             return self::FAILURE;
         }
 
-        $this->info("FTS index rebuilt. {$indexed} transactions indexed.");
+        $this->info(sprintf('FTS index rebuilt. %s transactions indexed.', $indexed));
 
         return $blocked === [] ? self::SUCCESS : self::FAILURE;
     }

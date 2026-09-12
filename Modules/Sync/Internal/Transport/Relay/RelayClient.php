@@ -48,7 +48,7 @@ final readonly class RelayClient
             ->createPendingRequest()
             ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
-            ->post("{$endpoint}/relay/deliver", [
+            ->post(sprintf('%s/relay/deliver', $endpoint), [
                 'sender_did' => $senderDid,
                 'recipient_did' => $recipientDid,
                 'blob' => base64_encode($blob),
@@ -78,7 +78,7 @@ final readonly class RelayClient
             ->withToken($drainToken)
             ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
-            ->get("{$endpoint}/relay/drain", ['did' => $deviceId]);
+            ->get(sprintf('%s/relay/drain', $endpoint), ['did' => $deviceId]);
 
         if (! $response->successful()) {
             throw RelayUnavailableException::requestFailed('drain', $response->status(), $endpoint);
@@ -113,7 +113,7 @@ final readonly class RelayClient
             ->withToken($drainToken)
             ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
-            ->delete("{$endpoint}/relay/drain/{$id}");
+            ->delete(sprintf('%s/relay/drain/%s', $endpoint, $id));
 
         if (! $response->successful()) {
             throw RelayUnavailableException::requestFailed('confirm', $response->status(), $endpoint);

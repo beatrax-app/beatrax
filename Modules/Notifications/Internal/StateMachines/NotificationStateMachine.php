@@ -32,7 +32,7 @@ final readonly class NotificationStateMachine
 
             if ($row === null) {
                 throw new NotificationNotFoundException(
-                    "NotificationStateMachine: notifications row {$notificationId} not found for user {$userId}.",
+                    sprintf('NotificationStateMachine: notifications row %s not found for user %s.', $notificationId, $userId),
                 );
             }
 

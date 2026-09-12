@@ -37,7 +37,7 @@ it('leaves no locale carrying the label nothing reads any more', function (): vo
     $stale = [];
     foreach ($locales as $locale) {
         /** @var array<string, mixed> $strings */
-        $strings = require base_path("Modules/Recurring/Resources/lang/{$locale}/review.php");
+        $strings = require base_path(sprintf('Modules/Recurring/Resources/lang/%s/review.php', $locale));
         if (isset($strings['select_aria'])) {
             $stale[] = $locale;
         }

@@ -27,7 +27,7 @@ it('matches a substring row that sits far beyond the old scan cap', function ():
     $db = app(DatabaseManager::class);
 
     for ($i = 0; $i < 1200; $i++) {
-        seedCorpusRow($db, $i, "FILLER{$i}", "filler{$i}", "Filler {$i}");
+        seedCorpusRow($db, $i, sprintf('FILLER%s', $i), sprintf('filler%s', $i), sprintf('Filler %s', $i));
     }
 
     // Row 1201: past the old LIMIT 1000 and therefore previously invisible.
@@ -43,7 +43,7 @@ it('matches a regex row that sits far beyond the old regex cap', function (): vo
     $db = app(DatabaseManager::class);
 
     for ($i = 0; $i < 600; $i++) {
-        seedCorpusRow($db, $i, 'regex:FILLERPATTERN'.$i, '', "Filler {$i}");
+        seedCorpusRow($db, $i, 'regex:FILLERPATTERN'.$i, '', sprintf('Filler %s', $i));
     }
 
     seedCorpusRow($db, 600, 'regex:^AMZN MKTP', '', 'Amazon');

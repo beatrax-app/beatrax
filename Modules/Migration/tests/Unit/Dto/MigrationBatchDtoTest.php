@@ -38,19 +38,19 @@ it('Dto: every one of the ten IR Dtos is final, strict-typed, and extends spatie
     foreach (migrationDtoClasses() as $class) {
         $reflection = new ReflectionClass($class);
 
-        expect($reflection->isFinal())->toBeTrue("{$class} must be final");
-        expect($reflection->isSubclassOf(Data::class))->toBeTrue("{$class} must extend Spatie\\LaravelData\\Data");
+        expect($reflection->isFinal())->toBeTrue(sprintf('%s must be final', $class));
+        expect($reflection->isSubclassOf(Data::class))->toBeTrue(sprintf('%s must extend Spatie\\LaravelData\\Data', $class));
 
         $constructor = $reflection->getConstructor();
         expect($constructor)->not->toBeNull();
 
         foreach ($constructor->getParameters() as $parameter) {
             $promoted = $parameter->isPromoted();
-            expect($promoted)->toBeTrue("{$class}::\${$parameter->getName()} must be constructor-promoted");
+            expect($promoted)->toBeTrue(sprintf('%s::$%s must be constructor-promoted', $class, $parameter->getName()));
 
             $property = $reflection->getProperty($parameter->getName());
-            expect($property->isReadOnly())->toBeTrue("{$class}::\${$parameter->getName()} must be readonly");
-            expect($property->isPublic())->toBeTrue("{$class}::\${$parameter->getName()} must be public");
+            expect($property->isReadOnly())->toBeTrue(sprintf('%s::$%s must be readonly', $class, $parameter->getName()));
+            expect($property->isPublic())->toBeTrue(sprintf('%s::$%s must be public', $class, $parameter->getName()));
         }
     }
 });
@@ -73,12 +73,12 @@ it('Dto: every money-bearing Dto field is typed Modules\Ledger\Public\ValueObjec
         }
 
         foreach ($fields as $field) {
-            expect(array_key_exists($field, $paramsByName))->toBeTrue("{$class} is missing expected money field \${$field}");
+            expect(array_key_exists($field, $paramsByName))->toBeTrue(sprintf('%s is missing expected money field $%s', $class, $field));
 
             $type = $paramsByName[$field]->getType();
             expect($type)->toBeInstanceOf(ReflectionNamedType::class);
             /** @var ReflectionNamedType $type */
-            expect($type->getName())->toBe(Money::class, "{$class}::\${$field} must be typed Money, found {$type->getName()}");
+            expect($type->getName())->toBe(Money::class, sprintf('%s::$%s must be typed Money, found %s', $class, $field, $type->getName()));
         }
     }
 });
@@ -94,7 +94,7 @@ it('Dto: reflection sweep confirms NO bare int/float field is used for money any
         foreach ($constructor->getParameters() as $parameter) {
             $normalized = strtolower($parameter->getName());
             expect(in_array($normalized, $suspectNames, true))->toBeFalse(
-                "{$class}::\${$parameter->getName()} looks like a bare-minor money field; use Money instead",
+                sprintf('%s::$%s looks like a bare-minor money field; use Money instead', $class, $parameter->getName()),
             );
         }
     }

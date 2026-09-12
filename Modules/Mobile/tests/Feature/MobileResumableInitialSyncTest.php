@@ -591,7 +591,7 @@ it('hydrates every stored phase string, and falls back to pending on one no case
             'updated_at' => '2026-07-10 00:05:00',
         ]);
 
-        expect($puller->progress($userId)['phase'])->toBe($expected, "a stored '{$column}' must hydrate to its own case");
+        expect($puller->progress($userId)['phase'])->toBe($expected, sprintf("a stored '%s' must hydrate to its own case", $column));
     }
 });
 

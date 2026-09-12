@@ -160,7 +160,7 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
     $invoke = $callPath['invoke'];
     $mockBody = $callPath['mockBody'];
 
-    it("{$name}() refuses an attacker-controlled host before any bearer token is attached", function () use ($invoke): void {
+    it(sprintf('%s() refuses an attacker-controlled host before any bearer token is attached', $name), function () use ($invoke): void {
         $client = egressGuardRejectionClient('https://attacker.example.com/');
 
         expect(fn () => $invoke($client, egressGuardRejectionCredentials()))->toThrow(
@@ -169,7 +169,7 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
         );
     });
 
-    it("{$name}() refuses a look-alike host before any bearer token is attached", function () use ($invoke): void {
+    it(sprintf('%s() refuses a look-alike host before any bearer token is attached', $name), function () use ($invoke): void {
         $client = egressGuardRejectionClient('https://api.enablebanking.com.evil.example/');
 
         expect(fn () => $invoke($client, egressGuardRejectionCredentials()))->toThrow(
@@ -178,7 +178,7 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
         );
     });
 
-    it("{$name}() refuses a non-HTTPS scheme even against the real Enable Banking host", function () use ($invoke): void {
+    it(sprintf('%s() refuses a non-HTTPS scheme even against the real Enable Banking host', $name), function () use ($invoke): void {
         $client = egressGuardRejectionClient('http://api.enablebanking.com/');
 
         expect(fn () => $invoke($client, egressGuardRejectionCredentials()))->toThrow(
@@ -187,7 +187,7 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
         );
     });
 
-    it("{$name}() succeeds against the real Enable Banking host once mocked at the transport layer", function () use ($invoke, $mockBody): void {
+    it(sprintf('%s() succeeds against the real Enable Banking host once mocked at the transport layer', $name), function () use ($invoke, $mockBody): void {
         $mock = new MockHandler([
             new Response(200, ['Content-Type' => 'application/json'], json_encode($mockBody, JSON_THROW_ON_ERROR)),
         ]);

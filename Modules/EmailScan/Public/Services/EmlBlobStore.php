@@ -86,7 +86,7 @@ final readonly class EmlBlobStore
         if ($fp === false) {
             umask($prevUmask);
             throw new EmlBlobWriteException(
-                "EmlBlobStore: could not open temp file at {$tmp}.",
+                sprintf('EmlBlobStore: could not open temp file at %s.', $tmp),
             );
         }
 
@@ -95,7 +95,7 @@ final readonly class EmlBlobStore
             $written = @fwrite($fp, $rawMime);
             if ($written === false || $written !== strlen($rawMime)) {
                 throw new EmlBlobWriteException(
-                    "EmlBlobStore: short write to temp file at {$tmp}.",
+                    sprintf('EmlBlobStore: short write to temp file at %s.', $tmp),
                 );
             }
             @fflush($fp);
@@ -108,13 +108,13 @@ final readonly class EmlBlobStore
 
             if (! @chmod($tmp, SecretFileMode::FILE)) {
                 throw new EmlBlobWriteException(
-                    "EmlBlobStore: failed to chmod temp file at {$tmp}.",
+                    sprintf('EmlBlobStore: failed to chmod temp file at %s.', $tmp),
                 );
             }
 
             if (! @rename($tmp, $absolutePath)) {
                 throw new EmlBlobWriteException(
-                    "EmlBlobStore: atomic rename failed from {$tmp} to {$absolutePath}.",
+                    sprintf('EmlBlobStore: atomic rename failed from %s to %s.', $tmp, $absolutePath),
                 );
             }
         } catch (Throwable $e) {
@@ -127,7 +127,7 @@ final readonly class EmlBlobStore
                 throw $e;
             }
             throw new EmlBlobWriteException(
-                "EmlBlobStore: unexpected failure writing {$absolutePath}.",
+                sprintf('EmlBlobStore: unexpected failure writing %s.', $absolutePath),
                 previous: $e,
             );
         } finally {

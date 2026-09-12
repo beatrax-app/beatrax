@@ -134,14 +134,14 @@ $failed = false;
 foreach ($candidates as $path) {
     $source = file_get_contents($path);
     if ($source === false) {
-        fwrite(STDERR, "nativephp_fix_php_binary_extraction: could not read {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_fix_php_binary_extraction: could not read %s\n", $path));
         $failed = true;
 
         continue;
     }
 
     if (str_contains($source, 'execFileSync')) {
-        fwrite(STDOUT, "nativephp_fix_php_binary_extraction: already patched — {$path}\n");
+        fwrite(STDOUT, sprintf("nativephp_fix_php_binary_extraction: already patched — %s\n", $path));
 
         continue;
     }
@@ -149,19 +149,19 @@ foreach ($candidates as $path) {
     // Only rewrite a php.js that still uses the corrupting yauzl extraction,
     // so an unrelated future NativePHP php.js is never silently clobbered.
     if (! str_contains($source, 'yauzl')) {
-        fwrite(STDOUT, "nativephp_fix_php_binary_extraction: unexpected php.js shape (no yauzl) — leaving {$path} untouched.\n");
+        fwrite(STDOUT, sprintf("nativephp_fix_php_binary_extraction: unexpected php.js shape (no yauzl) — leaving %s untouched.\n", $path));
 
         continue;
     }
 
     if (file_put_contents($path, $corrected) === false) {
-        fwrite(STDERR, "nativephp_fix_php_binary_extraction: could not write {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_fix_php_binary_extraction: could not write %s\n", $path));
         $failed = true;
 
         continue;
     }
 
-    fwrite(STDOUT, "nativephp_fix_php_binary_extraction: patched extraction to ditto/unzip — {$path}\n");
+    fwrite(STDOUT, sprintf("nativephp_fix_php_binary_extraction: patched extraction to ditto/unzip — %s\n", $path));
 }
 
 exit($failed ? 1 : 0);

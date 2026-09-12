@@ -157,7 +157,7 @@ it('keeps the seam those templates depend on', function (): void {
     $missing = [];
 
     foreach (['top', 'bottom', 'left', 'right'] as $edge) {
-        $rule = "--safe-{$edge}: max(env(safe-area-inset-{$edge}, 0px), var(--inset-{$edge}, 0px))";
+        $rule = sprintf('--safe-%s: max(env(safe-area-inset-%s, 0px), var(--inset-%s, 0px))', $edge, $edge, $edge);
 
         if (! str_contains($collapsed, PatternScan::replace('/\s+/', '', $rule))) {
             $missing[] = $rule;

@@ -127,7 +127,7 @@ it('reconnect redirects to /oauth/connect/{provider}?inbox_id={id}', function ()
 
     Livewire::test(InboxesPage::class)
         ->call('reconnect', $inboxId)
-        ->assertRedirect("/oauth/connect/microsoft?inbox_id={$inboxId}");
+        ->assertRedirect(sprintf('/oauth/connect/microsoft?inbox_id=%s', $inboxId));
 });
 
 it('reconnect cross-user refusal: another user\'s inbox does not redirect and answers with a toast', function (): void {

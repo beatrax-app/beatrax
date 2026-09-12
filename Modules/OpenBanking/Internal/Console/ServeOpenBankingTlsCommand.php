@@ -74,7 +74,7 @@ final class ServeOpenBankingTlsCommand extends Command
             return null;
         }
         if ($frontPort === $backendPort) {
-            $this->error("The HTTPS port ({$frontPort}) and the backend port ({$backendPort}) must differ.");
+            $this->error(sprintf('The HTTPS port (%s) and the backend port (%s) must differ.', $frontPort, $backendPort));
 
             return null;
         }
@@ -120,7 +120,7 @@ final class ServeOpenBankingTlsCommand extends Command
             if ($this->backendReachable($backendPort)) {
                 return null;
             }
-            $this->error("No backend is reachable on 127.0.0.1:{$backendPort} (and --no-backend was given).");
+            $this->error(sprintf('No backend is reachable on 127.0.0.1:%s (and --no-backend was given).', $backendPort));
 
             return false;
         }
@@ -140,7 +140,7 @@ final class ServeOpenBankingTlsCommand extends Command
     private function announceReady(int $frontPort, int $backendPort, bool $noBackend): void
     {
         $this->newLine();
-        $this->info("HTTPS loopback listener ready → https://127.0.0.1:{$frontPort}");
+        $this->info(sprintf('HTTPS loopback listener ready → https://127.0.0.1:%s', $frontPort));
         $this->line('  OAuth redirect URI: <comment>'.$this->redirectUri->forProvider('open-banking', scheme: 'https').'</comment>');
         $this->line('  Tunnelling to plain HTTP backend on 127.0.0.1:'.$backendPort.($noBackend ? ' (external)' : ''));
         $this->line('  Your browser will warn about the self-signed certificate — accept it (or trust the cert above) once.');
@@ -190,7 +190,7 @@ final class ServeOpenBankingTlsCommand extends Command
         );
 
         if ($server === false) {
-            $this->error("Could not bind the HTTPS listener on 127.0.0.1:{$port}: {$errstr} (errno {$errno}).");
+            $this->error(sprintf('Could not bind the HTTPS listener on 127.0.0.1:%s: %s (errno %s).', $port, $errstr, $errno));
             $this->line('  Is another process already using that port?');
 
             return null;
@@ -223,14 +223,14 @@ final class ServeOpenBankingTlsCommand extends Command
                 return null;
             }
             if ($this->backendReachable($backendPort)) {
-                $this->line("<info>Backend:</info> php artisan serve on 127.0.0.1:{$backendPort}");
+                $this->line(sprintf('<info>Backend:</info> php artisan serve on 127.0.0.1:%s', $backendPort));
 
                 return $process;
             }
             usleep(100000);
         }
 
-        $this->error("The backend did not become reachable on 127.0.0.1:{$backendPort} within 10s.");
+        $this->error(sprintf('The backend did not become reachable on 127.0.0.1:%s within 10s.', $backendPort));
         $this->stopBackend($process);
 
         return null;

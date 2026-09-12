@@ -60,7 +60,7 @@ function tnbcSeedDiscoveredCandidates(User $owner, int $inboxId, int $count): vo
         $rows[] = [
             'user_id' => $owner->id,
             'inbox_id' => $inboxId,
-            'sender_email' => "candidate{$i}@example.com",
+            'sender_email' => sprintf('candidate%s@example.com', $i),
             'sender_name' => null,
             // At the threshold, not below it: the badge applies the panel's
             // own 2-occurrences-in-90-days rule.

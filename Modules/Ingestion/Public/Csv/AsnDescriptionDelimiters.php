@@ -71,7 +71,7 @@ final class AsnDescriptionDelimiters
         $delimiter = preg_quote(self::DELIMITER, '~');
 
         $parts = preg_split(
-            "~{$separator}(?={$delimiter})|(?<={$delimiter}){$separator}~",
+            sprintf('~%s(?=%s)|(?<=%s)%s~', $separator, $delimiter, $delimiter, $separator),
             $stored,
         );
 

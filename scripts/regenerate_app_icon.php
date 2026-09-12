@@ -40,7 +40,7 @@ $iconset = $projectRoot.'/.icon-build.iconset';
 $icnsTarget = $projectRoot.'/public/icon.icns';
 
 if (! is_file($source)) {
-    fwrite(STDERR, "regenerate_app_icon: source {$source} not found\n");
+    fwrite(STDERR, sprintf("regenerate_app_icon: source %s not found\n", $source));
 
     exit(1);
 }
@@ -53,7 +53,7 @@ if (! function_exists('imagecreatefrompng')) {
 
 $src = imagecreatefrompng($source);
 if ($src === false) {
-    fwrite(STDERR, "regenerate_app_icon: could not decode {$source}\n");
+    fwrite(STDERR, sprintf("regenerate_app_icon: could not decode %s\n", $source));
 
     exit(1);
 }
@@ -61,7 +61,7 @@ if ($src === false) {
 $w = imagesx($src);
 $h = imagesy($src);
 if ($w !== $h) {
-    fwrite(STDERR, "regenerate_app_icon: icon must be square, got {$w}x{$h}\n");
+    fwrite(STDERR, sprintf("regenerate_app_icon: icon must be square, got %sx%s\n", $w, $h));
 
     exit(1);
 }
@@ -152,13 +152,13 @@ imagedestroy($src);
 imagedestroy($scaled);
 
 if (! imagepng($out, $source)) {
-    fwrite(STDERR, "regenerate_app_icon: could not write masked {$source}\n");
+    fwrite(STDERR, sprintf("regenerate_app_icon: could not write masked %s\n", $source));
 
     exit(1);
 }
 imagedestroy($out);
 
-fwrite(STDOUT, "regenerate_app_icon: applied squircle mask to icon.png ({$w}x{$h})\n");
+fwrite(STDOUT, sprintf("regenerate_app_icon: applied squircle mask to icon.png (%sx%s)\n", $w, $h));
 
 /*
  * Build the iconset directory then pack it into a .icns. macOS Finder
@@ -167,7 +167,7 @@ fwrite(STDOUT, "regenerate_app_icon: applied squircle mask to icon.png ({$w}x{$h
  * downscales each tier.
  */
 if (! is_dir($iconset) && ! mkdir($iconset, 0755, true) && ! is_dir($iconset)) {
-    fwrite(STDERR, "regenerate_app_icon: could not create {$iconset}\n");
+    fwrite(STDERR, sprintf("regenerate_app_icon: could not create %s\n", $iconset));
 
     exit(2);
 }
@@ -192,7 +192,7 @@ foreach (ICONSET_SIZES as $size) {
         );
         exec($cmd, $out, $status);
         if ($status !== 0) {
-            fwrite(STDERR, "regenerate_app_icon: sips failed for {$target} — ".implode("\n", $out)."\n");
+            fwrite(STDERR, sprintf('regenerate_app_icon: sips failed for %s — ', $target).implode("\n", $out)."\n");
 
             exit(2);
         }

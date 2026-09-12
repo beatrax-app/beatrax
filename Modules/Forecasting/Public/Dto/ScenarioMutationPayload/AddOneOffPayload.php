@@ -30,7 +30,7 @@ final class AddOneOffPayload extends ScenarioMutationPayload
         // so a corrupted row has to raise here rather than change the sign.
         if (Direction::tryFrom($direction) === null) {
             throw new InvalidArgumentException(
-                'AddOneOffPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases()))."; got '{$direction}'."
+                'AddOneOffPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases())).sprintf("; got '%s'.", $direction)
             );
         }
     }

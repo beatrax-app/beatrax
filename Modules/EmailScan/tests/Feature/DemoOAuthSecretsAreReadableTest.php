@@ -37,7 +37,7 @@ it('seeds oauth credentials the repository can read back for every demo inbox', 
     foreach ($inboxes as $inbox) {
         $credentials = $secrets->loadInbox($inbox->id);
 
-        expect($credentials)->not->toBeNull("No credentials readable for inbox {$inbox->id}");
+        expect($credentials)->not->toBeNull(sprintf('No credentials readable for inbox %s', $inbox->id));
         expect($credentials->provider)->toBe($inbox->provider);
         expect($credentials->refreshToken)->not->toBe('');
         expect($credentials->accessToken)->not->toBeNull();

@@ -53,5 +53,5 @@
     };
 @endphp
 <span {{ $attributes->merge([
-    'class' => "inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium {$toneClasses}",
+    'class' => sprintf('inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium %s', $toneClasses),
 ]) }}>{{ $slot }}</span>

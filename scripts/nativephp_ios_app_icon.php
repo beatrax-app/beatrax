@@ -23,7 +23,7 @@ $root = dirname(__DIR__);
 $source = $root.'/public/icon.png';
 
 if (! is_file($source)) {
-    fwrite(STDERR, "ios-app-icon: source {$source} not found\n");
+    fwrite(STDERR, sprintf("ios-app-icon: source %s not found\n", $source));
 
     exit(0);
 }
@@ -86,7 +86,7 @@ function inkBounds(GdImage $image): array
 $src = imagecreatefrompng($source);
 
 if ($src === false) {
-    fwrite(STDERR, "ios-app-icon: could not read {$source}\n");
+    fwrite(STDERR, sprintf("ios-app-icon: could not read %s\n", $source));
 
     exit(1);
 }

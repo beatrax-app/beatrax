@@ -79,7 +79,7 @@ final class RelayServeCommand extends Command
         $requested = $this->option('port');
         $port = is_string($requested) && $requested !== '' ? (int) $requested : $ports->relay();
         if ($port <= 0 || $port > 65535) {
-            $this->error("relay:serve: invalid port {$port}.");
+            $this->error(sprintf('relay:serve: invalid port %s.', $port));
 
             return self::FAILURE;
         }
@@ -93,7 +93,7 @@ final class RelayServeCommand extends Command
             // there is no CA for a LAN address — so peers trust it by pinning
             // the key from the QR rather than by name validation.
             $bindContext = $this->tlsBindContext();
-            $httpServer->expose("0.0.0.0:{$port}", $bindContext);
+            $httpServer->expose(sprintf('0.0.0.0:%s', $port), $bindContext);
 
             $requestHandler = new ClosureRequestHandler(
                 fn (Request $request): Response => $this->route($request),
@@ -103,7 +103,7 @@ final class RelayServeCommand extends Command
 
             $this->logger->info('relay:serve: endpoint started.', ['port' => $port]);
             $stopHint = $this->canTrapSignals() ? 'SIGTERM/SIGINT to stop' : 'no signal handling on this runtime';
-            $this->info("relay:serve: ZK relay listening on 0.0.0.0:{$port} ({$stopHint}).");
+            $this->info(sprintf('relay:serve: ZK relay listening on 0.0.0.0:%s (%s).', $port, $stopHint));
 
             // Identical wait to sync:serve's: a signal where ext-pcntl
             // exists, plus the host's stdin pipe closing — the only notice a

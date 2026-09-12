@@ -1000,7 +1000,7 @@ it('does not bleed the owner account into the partner reconcile account picker',
 it('returns 404 (never 403) when the partner requests the owner migration preview', function (): void {
     $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
 
-    $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/preview");
+    $response = $this->actingAs($this->partner)->get(sprintf('/migrations/%s/preview', $runId));
 
     expect($response->status())->toBe(404);
     expect($response->status())->not->toBe(403);
@@ -1009,7 +1009,7 @@ it('returns 404 (never 403) when the partner requests the owner migration previe
 it('returns 404 (never 403) when the partner requests the owner migration results', function (): void {
     $runId = xuiMigrationRun($this->db, $this->owner->id, 'Owner Migration Export.zip');
 
-    $response = $this->actingAs($this->partner)->get("/migrations/{$runId}/results");
+    $response = $this->actingAs($this->partner)->get(sprintf('/migrations/%s/results', $runId));
 
     expect($response->status())->toBe(404);
     expect($response->status())->not->toBe(403);
@@ -1316,9 +1316,9 @@ it('returns 404 (never 403) when the partner requests the owner import results',
     // The owner's own 200 is the control group: without it a 404 could as
     // easily mean the run does not render at all, and the probe would pass
     // against an app that leaks.
-    $this->actingAs($this->owner)->get("/imports/{$runId}")->assertOk();
+    $this->actingAs($this->owner)->get(sprintf('/imports/%s', $runId))->assertOk();
 
-    $response = $this->actingAs($this->partner)->get("/imports/{$runId}");
+    $response = $this->actingAs($this->partner)->get(sprintf('/imports/%s', $runId));
 
     expect($response->status())->toBe(404);
     expect($response->status())->not->toBe(403);
@@ -1327,7 +1327,7 @@ it('returns 404 (never 403) when the partner requests the owner import results',
 it('returns 404 (never 403) when the partner requests the owner import preview', function (): void {
     $runId = xuiImportRun($this->db, $this->owner->id, 'owner-statement.csv');
 
-    $response = $this->actingAs($this->partner)->get("/imports/{$runId}/preview");
+    $response = $this->actingAs($this->partner)->get(sprintf('/imports/%s/preview', $runId));
 
     expect($response->status())->toBe(404);
     expect($response->status())->not->toBe(403);
@@ -1611,8 +1611,24 @@ function xuiCallPath(array $tokens, int $start, int $total): ?string
         }
 
         if ($token[0] === T_CONSTANT_ENCAPSED_STRING) {
-            $path .= substr($token[1], 1, -1);
-            $dynamic = false;
+            $literal = substr($token[1], 1, -1);
+
+            // A path built with sprintf carries its dynamic segments as format
+            // specifiers inside the literal, where an interpolated one carries
+            // them as variables between literals. Collapsing a specifier to
+            // the same "1" puts the placeholder in the slot it belongs to;
+            // leaving it would append the id after the whole path instead.
+            $formatted = (string) preg_replace_callback(
+                '/%%|%[sd]/',
+                static fn (array $match): string => $match[0] === '%%' ? '%' : '1',
+                $literal,
+            );
+
+            $path .= $formatted;
+
+            // The arguments beside a format have already been placed, so the
+            // variables that follow must not each append a second segment.
+            $dynamic = $formatted !== $literal;
 
             continue;
         }

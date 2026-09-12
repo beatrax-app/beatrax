@@ -170,7 +170,7 @@ final readonly class BlindIndexCodec
     public static function requireKnownDomain(string $domain): void
     {
         if (! in_array($domain, SensitiveFieldRegistry::blindIndexDomains(), true)) {
-            throw new LogicException("BlindIndexCodec: '{$domain}' is not a declared blind-index domain.");
+            throw new LogicException(sprintf("BlindIndexCodec: '%s' is not a declared blind-index domain.", $domain));
         }
     }
 

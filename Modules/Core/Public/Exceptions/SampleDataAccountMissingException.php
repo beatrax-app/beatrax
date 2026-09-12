@@ -13,6 +13,6 @@ final class SampleDataAccountMissingException extends RuntimeException
 {
     public static function forUser(int $userId): self
     {
-        return new self("Cannot load sample data for user {$userId}: no such account.");
+        return new self(sprintf('Cannot load sample data for user %s: no such account.', $userId));
     }
 }

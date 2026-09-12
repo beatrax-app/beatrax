@@ -32,8 +32,12 @@ function accessibilityReflowClassAttributes(string $source): array
 {
     $attributes = PatternScan::all('/class="([^"]*)"/', $source);
     $merged = PatternScan::all('/\'class\'\s*=>\s*"([^"]*)"/', $source);
+    // A merged list a variant completes is built with sprintf here, so the
+    // format string is the class list and %s marks where the variant lands.
+    // The tokens this rule reads sit in the format either way.
+    $formatted = PatternScan::all('/\'class\'\s*=>\s*sprintf\(\'([^\']*)\'/', $source);
 
-    return array_merge($attributes[1], $merged[1]);
+    return array_merge($attributes[1], $merged[1], $formatted[1]);
 }
 
 function accessibilityReflowHasWrappingRow(string $relativePath, string ...$tokens): bool
@@ -93,10 +97,10 @@ it('lets an amount and a date break, which the prose rule never reached', functi
 // deep on /community it left the innermost box a content width of zero.
 it('measures a gutter in the px the spacing tokens are written in', function (): void {
     foreach (['3', '4', '6', '8'] as $step) {
-        $rule = UnlayeredCss::ruleAt("    .p-{$step},\n    .px-{$step} {");
+        $rule = UnlayeredCss::ruleAt(sprintf("    .p-%s,\n    .px-%s {", $step, $step));
 
-        expect($rule)->not->toBeNull("No coarse-pointer inline-padding cap for p-{$step}/px-{$step}.")
-            ->and((string) $rule)->toContain("padding-inline: var(--space-{$step})");
+        expect($rule)->not->toBeNull(sprintf('No coarse-pointer inline-padding cap for p-%s/px-%s.', $step, $step))
+            ->and((string) $rule)->toContain(sprintf('padding-inline: var(--space-%s)', $step));
     }
 });
 

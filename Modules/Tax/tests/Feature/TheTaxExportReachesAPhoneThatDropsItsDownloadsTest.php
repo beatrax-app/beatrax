@@ -37,9 +37,9 @@ it('hands both tax exports to the share sheet on a shell that drops downloads', 
     $page->call('exportCsv')->assertSet('flashMessage', FileExportOutcome::Shared->message());
     $page->call('exportPdf')->assertSet('flashMessage', FileExportOutcome::Shared->message());
 
-    expect(array_keys($sheet->handed))->toBe(["beatrax-tax-{$year}.csv", "beatrax-tax-{$year}.pdf"])
-        ->and($sheet->handed["beatrax-tax-{$year}.csv"])->not->toBe('')
-        ->and($sheet->handed["beatrax-tax-{$year}.pdf"])->not->toBe('');
+    expect(array_keys($sheet->handed))->toBe([sprintf('beatrax-tax-%s.csv', $year), sprintf('beatrax-tax-%s.pdf', $year)])
+        ->and($sheet->handed[sprintf('beatrax-tax-%s.csv', $year)])->not->toBe('')
+        ->and($sheet->handed[sprintf('beatrax-tax-%s.pdf', $year)])->not->toBe('');
 });
 
 it('leaves the download alone where the WebView saves it', function (): void {

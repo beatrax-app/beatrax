@@ -112,7 +112,7 @@ dataset('period_sweep', function () {
 
     foreach ($startDays as $sd) {
         foreach ($instants as $i) {
-            yield "sd={$sd}, instant={$i}" => [$sd, $i];
+            yield sprintf('sd=%s, instant=%s', $sd, $i) => [$sd, $i];
         }
     }
 });

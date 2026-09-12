@@ -60,24 +60,24 @@ it('resolves every class constant both bootstrap roots name through an imported 
     // One reference stands in each file today. A run that resolved none read a
     // broken scan rather than a bootstrap that names no constant.
     expect($references)->not->toBeEmpty(
-        "{$root} named no class constant at all, so the verdict below is about a file nobody parsed.",
+        sprintf('%s named no class constant at all, so the verdict below is about a file nobody parsed.', $root),
     );
 
     $unresolved = [];
     foreach ($references as [$short, $constant, $fqcn]) {
         if (! class_exists($fqcn) && ! interface_exists($fqcn) && ! enum_exists($fqcn)) {
-            $unresolved[] = "{$short}::{$constant} — class {$fqcn} does not exist";
+            $unresolved[] = sprintf('%s::%s — class %s does not exist', $short, $constant, $fqcn);
 
             continue;
         }
         if (! defined($fqcn.'::'.$constant)) {
-            $unresolved[] = "{$short}::{$constant} — {$fqcn} has no such constant";
+            $unresolved[] = sprintf('%s::%s — %s has no such constant', $short, $constant, $fqcn);
         }
     }
 
     expect($unresolved)->toBe(
         [],
-        "{$root} names class constants that do not exist:\n  ".
+        sprintf("%s names class constants that do not exist:\n  ", $root).
         implode("\n  ", $unresolved)."\n".
         'Every request through this file dies with "Undefined constant", and the reader sees a blank page.',
     );

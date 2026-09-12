@@ -104,7 +104,7 @@ it('never lands a credential-shaped column in the live open_banking_connections 
         // schema. The table is created by this module's own migration, so its
         // absence means the schema was never built and the rule never ran.
         expect(Schema::hasTable($table))->toBeTrue(
-            "Req 10 is asserted against the LIVE schema, and `{$table}` is not in it. The rule below would "
+            sprintf('Req 10 is asserted against the LIVE schema, and `%s` is not in it. The rule below would ', $table)
             .'have passed over a table nobody created.'
         );
 
@@ -120,7 +120,7 @@ it('never lands a credential-shaped column in the live open_banking_connections 
 
         expect($hits)->toBe(
             [],
-            "Req 10: table `{$table}` has a credential-shaped column in its LIVE schema "
+            sprintf('Req 10: table `%s` has a credential-shaped column in its LIVE schema ', $table)
             .'(not just the migration source) — credentials must live only in the chmod-600 '
             ."secrets file. Offending columns:\n  ".implode("\n  ", $hits),
         );

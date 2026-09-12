@@ -58,7 +58,7 @@ it('orders a list exactly as the pairwise comparator does, in every shipped loca
         usort($pairwise, static fn (string $a, string $b): int => LocaleCollator::compare($a, $b));
 
         expect(LocaleCollator::sorted(collationSample(), static fn (string $n): string => $n))
-            ->toBe($pairwise, "order differs under {$locale->value}");
+            ->toBe($pairwise, sprintf('order differs under %s', $locale->value));
     }
 
     $translator->setLocale($previous);

@@ -32,7 +32,7 @@ function interruptedIdentityUser(string $username): User
     ]);
 
     // RefreshDatabase resets rows, not files, and ids are reused across runs.
-    foreach ((array) glob(UserDataPathService::appPath("sync/identity/{$user->id}.enc*")) as $stale) {
+    foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/identity/%s.enc*', $user->id))) as $stale) {
         @unlink((string) $stale);
     }
 
@@ -41,7 +41,7 @@ function interruptedIdentityUser(string $username): User
 
 function interruptedIdentityPath(User $user): string
 {
-    return UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    return UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
 }
 
 // Writes a plausible prefix and then dies, which is what a killed process or a

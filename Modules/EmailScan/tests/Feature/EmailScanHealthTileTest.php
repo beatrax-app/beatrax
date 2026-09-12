@@ -200,7 +200,7 @@ it('caps the tile at three lines and reports the overflow count', function (): v
         ehtSeedInbox(
             owner: $user,
             provider: 'gmail',
-            email: "user{$i}@example.com",
+            email: sprintf('user%s@example.com', $i),
             status: 'idle',
             lastScanAt: CarbonImmutable::now()->subHours(2)->toDateTimeString(),
             createdAt: CarbonImmutable::now()->subDays(10 - $i),

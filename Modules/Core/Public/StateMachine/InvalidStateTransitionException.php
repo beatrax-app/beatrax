@@ -13,6 +13,6 @@ final class InvalidStateTransitionException extends RuntimeException
 {
     public static function forTransition(string $subject, int|string $id, string $from, string $to): self
     {
-        return new self("Illegal {$subject} transition for id={$id}: {$from} -> {$to}");
+        return new self(sprintf('Illegal %s transition for id=%s: %s -> %s', $subject, $id, $from, $to));
     }
 }

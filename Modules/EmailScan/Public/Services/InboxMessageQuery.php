@@ -28,7 +28,7 @@ readonly class InboxMessageQuery
     {
         if (InboxMessageStatus::tryFrom($status) === null) {
             throw new InvalidArgumentException(
-                'InboxMessageQuery::forStatus expected one of: '.implode(', ', array_column(InboxMessageStatus::cases(), 'value')).", got '{$status}'."
+                'InboxMessageQuery::forStatus expected one of: '.implode(', ', array_column(InboxMessageStatus::cases(), 'value')).sprintf(", got '%s'.", $status)
             );
         }
 

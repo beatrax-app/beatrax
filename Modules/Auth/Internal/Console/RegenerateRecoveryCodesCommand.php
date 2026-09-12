@@ -43,7 +43,7 @@ class RegenerateRecoveryCodesCommand extends Command
         /** @var User|null $user */
         $user = User::query()->where('username', $username)->first();
         if (! $user instanceof User) {
-            $this->error("User not found: {$username}");
+            $this->error(sprintf('User not found: %s', $username));
 
             return self::FAILURE;
         }
@@ -62,7 +62,7 @@ class RegenerateRecoveryCodesCommand extends Command
             return $this->recoveryCodes->issueFor($user->id);
         });
 
-        $this->info("Regenerated {$user->username} recovery codes. Record them now — they will not be shown again:");
+        $this->info(sprintf('Regenerated %s recovery codes. Record them now — they will not be shown again:', $user->username));
         foreach ($codesPlain as $code) {
             $this->line($code);
         }

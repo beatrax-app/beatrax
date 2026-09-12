@@ -55,7 +55,7 @@ if ($lock === null) {
 $contents = file_get_contents($lock);
 
 if ($contents === false) {
-    fwrite(STDERR, "nativephp_require_icu_runtime: {$lock} could not be read.\n");
+    fwrite(STDERR, sprintf("nativephp_require_icu_runtime: %s could not be read.\n", $lock));
 
     exit(1);
 }
@@ -63,7 +63,7 @@ if ($contents === false) {
 try {
     $decoded = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
 } catch (JsonException $e) {
-    fwrite(STDERR, "nativephp_require_icu_runtime: {$lock} is not valid JSON: ".$e->getMessage()."\n");
+    fwrite(STDERR, sprintf('nativephp_require_icu_runtime: %s is not valid JSON: ', $lock).$e->getMessage()."\n");
 
     exit(1);
 }
@@ -72,7 +72,7 @@ $php = is_array($decoded) && isset($decoded['php']) && is_array($decoded['php'])
 $version = isset($php['version']) && is_string($php['version']) ? $php['version'] : 'unknown';
 
 if (($php['icu'] ?? null) === true) {
-    echo "nativephp_require_icu_runtime: bundled PHP {$version} carries ICU.\n";
+    echo sprintf("nativephp_require_icu_runtime: bundled PHP %s carries ICU.\n", $version);
 
     exit(0);
 }

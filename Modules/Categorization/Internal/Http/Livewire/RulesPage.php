@@ -139,13 +139,13 @@ final class RulesPage extends Component
             if ($condition->op === ConditionOperator::Between->value && $condition->value2 !== null) {
                 $upper = self::readableValue($condition->valueType, $condition->value2);
 
-                return "{$displayField} {$opLabel} {$value} {$and} {$upper}";
+                return sprintf('%s %s %s %s %s', $displayField, $opLabel, $value, $and, $upper);
             }
 
-            return "{$displayField} {$opLabel} {$value}";
+            return sprintf('%s %s %s', $displayField, $opLabel, $value);
         }
 
-        return "{$displayField} {$opLabel} \"{$condition->value}\"";
+        return sprintf('%s %s "%s"', $displayField, $opLabel, $condition->value);
     }
 
     // Amount conditions are stored in minor units, and the list printed them

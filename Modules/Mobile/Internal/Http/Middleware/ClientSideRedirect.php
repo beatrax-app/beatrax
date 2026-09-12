@@ -140,9 +140,9 @@ final readonly class ClientSideRedirect
         // does not, which is the lesser problem by a long way.
         if ($nonce === null || $encoded === '' || $encoded === 'false') {
             return '<!doctype html><html><head><meta charset="utf-8">'
-                ."<meta http-equiv=\"refresh\" content=\"0;url={$href}\">"
+                .sprintf('<meta http-equiv="refresh" content="0;url=%s">', $href)
                 .'<title>Beatrax</title></head><body>'
-                ."<a href=\"{$href}\">{$href}</a>"
+                .sprintf('<a href="%s">%s</a>', $href, $href)
                 .'</body></html>';
         }
 
@@ -150,9 +150,9 @@ final readonly class ClientSideRedirect
 
         return '<!doctype html><html><head><meta charset="utf-8">'
             .'<title>Beatrax</title>'
-            ."<script{$nonceAttribute}>window.location.replace({$encoded});</script>"
+            .sprintf('<script%s>window.location.replace(%s);</script>', $nonceAttribute, $encoded)
             .'</head><body>'
-            ."<noscript><a href=\"{$href}\">{$href}</a></noscript>"
+            .sprintf('<noscript><a href="%s">%s</a></noscript>', $href, $href)
             .'</body></html>';
     }
 }

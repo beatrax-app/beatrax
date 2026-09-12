@@ -29,7 +29,7 @@ enum ReportMetric: string
 
     public static function fromMetric(string $metric): self
     {
-        return self::tryFrom($metric) ?? throw new InvalidArgumentException("Unknown report metric: {$metric}");
+        return self::tryFrom($metric) ?? throw new InvalidArgumentException(sprintf('Unknown report metric: %s', $metric));
     }
 
     // Which types each metric counts is MoneyFlow's, not this enum's: the
@@ -94,7 +94,7 @@ enum ReportMetric: string
             // so what one transaction contributes is whichever of the two the
             // split-aware join left standing.
             CategoryAttribution::LEG_OR_PARENT => CategoryAttribution::LEG_OR_PARENT_MINOR,
-            default => throw new InvalidArgumentException("Unknown amount source: {$source}"),
+            default => throw new InvalidArgumentException(sprintf('Unknown amount source: %s', $source)),
         };
 
         return match ($this) {

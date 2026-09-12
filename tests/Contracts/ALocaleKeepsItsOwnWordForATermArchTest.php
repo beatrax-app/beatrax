@@ -72,7 +72,7 @@ it('does not fall back to the English word for a term the locale already transla
     $read = 0;
 
     foreach (settledTerms() as $locale => $terms) {
-        foreach (glob(base_path("Modules/*/Resources/lang/{$locale}/*.php")) ?: [] as $file) {
+        foreach (glob(base_path(sprintf('Modules/*/Resources/lang/%s/*.php', $locale))) ?: [] as $file) {
             foreach (flattenedStrings($file) as $key => $value) {
                 $read++;
 
@@ -81,8 +81,8 @@ it('does not fall back to the English word for a term the locale already transla
                         continue;
                     }
 
-                    $leaks[] = str_replace(base_path().'/', '', $file)." [{$key}] "
-                        ."said \"{$english}\" where {$locale} says \"{$native}\": {$value}";
+                    $leaks[] = str_replace(base_path().'/', '', $file).sprintf(' [%s] ', $key)
+                        .sprintf('said "%s" where %s says "%s": %s', $english, $locale, $native, $value);
                 }
             }
         }
@@ -116,7 +116,7 @@ it('answers an English term with the one word the locale settled on, not a secon
 
     foreach (settledTerms() as $locale => $terms) {
         foreach (glob(base_path('Modules/*/Resources/lang/en/*.php')) ?: [] as $source) {
-            $translated = str_replace('/lang/en/', "/lang/{$locale}/", $source);
+            $translated = str_replace('/lang/en/', sprintf('/lang/%s/', $locale), $source);
 
             if (! is_file($translated)) {
                 continue;
@@ -142,8 +142,8 @@ it('answers an English term with the one word the locale settled on, not a secon
                         continue;
                     }
 
-                    $offenders[] = str_replace(base_path().'/', '', $translated)." [{$key}] "
-                        ."answers \"{$term}\" without saying \"{$native}\": {$value}";
+                    $offenders[] = str_replace(base_path().'/', '', $translated).sprintf(' [%s] ', $key)
+                        .sprintf('answers "%s" without saying "%s": %s', $term, $native, $value);
                 }
             }
         }

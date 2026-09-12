@@ -78,7 +78,7 @@ if ($isDirectlyInvoked) {
     $indexJsPath = $projectRoot.'/nativephp/electron/src/main/index.js';
 
     if (! is_file($indexJsPath)) {
-        fwrite(STDERR, "nativephp_inject_persistent_tray: {$indexJsPath} not found — run `php artisan native:install --publish` first.\n");
+        fwrite(STDERR, sprintf("nativephp_inject_persistent_tray: %s not found — run `php artisan native:install --publish` first.\n", $indexJsPath));
 
         exit(1);
     }
@@ -86,7 +86,7 @@ if ($isDirectlyInvoked) {
     $source = file_get_contents($indexJsPath);
 
     if ($source === false) {
-        fwrite(STDERR, "nativephp_inject_persistent_tray: could not read {$indexJsPath}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_persistent_tray: could not read %s\n", $indexJsPath));
 
         exit(1);
     }
@@ -94,7 +94,7 @@ if ($isDirectlyInvoked) {
     [$patched, $reason] = injectPersistentTray($source);
 
     if ($patched === null) {
-        fwrite(STDERR, "nativephp_inject_persistent_tray: {$reason}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_persistent_tray: %s\n", $reason));
 
         exit(1);
     }
@@ -106,12 +106,12 @@ if ($isDirectlyInvoked) {
     }
 
     if (file_put_contents($indexJsPath, $patched) === false) {
-        fwrite(STDERR, "nativephp_inject_persistent_tray: could not write {$indexJsPath}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_persistent_tray: could not write %s\n", $indexJsPath));
 
         exit(1);
     }
 
-    fwrite(STDOUT, "nativephp_inject_persistent_tray: wired persistent Electron Tray into {$indexJsPath}.\n");
+    fwrite(STDOUT, sprintf("nativephp_inject_persistent_tray: wired persistent Electron Tray into %s.\n", $indexJsPath));
 
     exit(0);
 }

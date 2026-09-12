@@ -73,7 +73,7 @@ it('replays each corpus fixture through the real evaluator and gets the rows the
         /** @var stdClass $row */
         $row = $actual[$index];
         foreach ($expectedAlert as $column => $value) {
-            expect($row->{$column})->toBe($value, "{$name}: alert #{$index}.{$column}");
+            expect($row->{$column})->toBe($value, sprintf('%s: alert #%s.%s', $name, $index, $column));
         }
     }
 })->with(driftCorpusNames());

@@ -71,7 +71,7 @@ final readonly class LanSyncClient
         Session $session,
         string $peerStaticHex,
     ): LanDialOutcome {
-        $uri = "ws://{$host}:{$port}/";
+        $uri = sprintf('ws://%s:%s/', $host, $port);
         $connection = null;
 
         try {

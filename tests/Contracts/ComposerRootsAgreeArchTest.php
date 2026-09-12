@@ -96,7 +96,7 @@ function composerRootExceptionBlock(string $relativePath): string
 
     $open = strpos($source, 'withExceptions(');
 
-    expect($open)->not->toBeFalse("{$relativePath} configures no exception handler at all.");
+    expect($open)->not->toBeFalse(sprintf('%s configures no exception handler at all.', $relativePath));
 
     $depth = 0;
     $start = (int) $open + strlen('withExceptions');
@@ -107,7 +107,7 @@ function composerRootExceptionBlock(string $relativePath): string
         }
     }
 
-    throw new RuntimeException("Unbalanced withExceptions() block in {$relativePath}.");
+    throw new RuntimeException(sprintf('Unbalanced withExceptions() block in %s.', $relativePath));
 }
 
 /** @return array{methods: list<string>, types: list<string>} */
@@ -153,15 +153,15 @@ it('configures the same exception handler in both Composer roots', function (): 
     expect($mobile['methods'])->toBe(
         $root['methods'],
         "The two roots register different \$exceptions-> callbacks. A handler present on one bundle and absent on the other is two answers to one fault.\n".
-        "  {$rootPath}: ".implode(', ', $root['methods'])."\n".
-        "  {$mobilePath}: ".implode(', ', $mobile['methods']),
+        sprintf('  %s: ', $rootPath).implode(', ', $root['methods'])."\n".
+        sprintf('  %s: ', $mobilePath).implode(', ', $mobile['methods']),
     );
 
     expect($mobile['types'])->toBe(
         $root['types'],
         "The two roots' exception handlers name different exception types.\n".
-        "  {$rootPath}: ".implode(', ', $root['types'])."\n".
-        "  {$mobilePath}: ".implode(', ', $mobile['types']),
+        sprintf('  %s: ', $rootPath).implode(', ', $root['types'])."\n".
+        sprintf('  %s: ', $mobilePath).implode(', ', $mobile['types']),
     );
 });
 
@@ -174,7 +174,7 @@ it('creates the SQLite file owner-only from both Composer roots', function (): v
         $source = (string) file_get_contents(base_path($path));
 
         expect(str_contains($source, 'EnsurePrivateDatabaseFile::class'))->toBeTrue(
-            "{$path} brings the database file into existence without EnsurePrivateDatabaseFile, so nothing verifies that the umask did not leave the ledger readable.",
+            sprintf('%s brings the database file into existence without EnsurePrivateDatabaseFile, so nothing verifies that the umask did not leave the ledger readable.', $path),
         );
     }
 });

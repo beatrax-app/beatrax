@@ -22,7 +22,7 @@ final class ActualFixtureBuilder
     public static function build(string $zipPath, string $variant = 'v1'): void
     {
         if (! in_array($variant, ['v1', 'v2', self::NO_BUDGET_TYPE], true)) {
-            throw new RuntimeException("Unknown ActualFixtureBuilder variant: {$variant}");
+            throw new RuntimeException(sprintf('Unknown ActualFixtureBuilder variant: %s', $variant));
         }
 
         $workDir = sys_get_temp_dir().'/actual-fixture-build-'.uniqid('', true);
@@ -45,7 +45,7 @@ final class ActualFixtureBuilder
 
             $zip = new ZipArchive;
             if ($zip->open($zipPath, ZipArchive::CREATE) !== true) {
-                throw new RuntimeException("Could not create zip at {$zipPath}");
+                throw new RuntimeException(sprintf('Could not create zip at %s', $zipPath));
             }
             $zip->addFile($dbPath, 'db.sqlite');
             $zip->addFile($metadataPath, 'metadata.json');

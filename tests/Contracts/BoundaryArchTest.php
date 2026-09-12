@@ -1953,7 +1953,7 @@ it('evaluates notification-delivery suppression (quiet hours + per-trigger toggl
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
         foreach ($bannedLiterals as $literal) {
             if (preg_match('/'.preg_quote($literal, '/').'/', $stripped) === 1) {
-                $literalHits[] = str_replace(base_path().'/', '', $path)." references '{$literal}' directly instead of going through SuppressionEvaluator";
+                $literalHits[] = str_replace(base_path().'/', '', $path).sprintf(" references '%s' directly instead of going through SuppressionEvaluator", $literal);
             }
         }
     }
@@ -2211,7 +2211,7 @@ function boundaryCrossModuleTableWrites(array $owner): array
     // can both land on one line, so the line is what de-duplicates them.
     $byKey = [];
     foreach ($hits as [$path, $line, $table]) {
-        $key = "{$path} {$table}";
+        $key = sprintf('%s %s', $path, $table);
         if (! in_array($line, $byKey[$key] ?? [], true)) {
             $byKey[$key][] = $line;
         }
@@ -2363,7 +2363,7 @@ it('pins every cross-module schema alteration to the allow-list (crossModuleSche
         foreach ($modules as $module) {
             $owner = $ownership['owner'][$table] ?? $module;
             if ($owner !== $module) {
-                $actual[] = "{$module} -> {$table} (owner: {$owner})";
+                $actual[] = sprintf('%s -> %s (owner: %s)', $module, $table, $owner);
             }
         }
     }

@@ -13,6 +13,6 @@ final class MigrationRunNotParsedException extends RuntimeException
 {
     public function __construct(int $migrationRunId)
     {
-        parent::__construct("Migration run {$migrationRunId} was discarded, so its staged rows were truncated and there is nothing left to summarise.");
+        parent::__construct(sprintf('Migration run %s was discarded, so its staged rows were truncated and there is nothing left to summarise.', $migrationRunId));
     }
 }

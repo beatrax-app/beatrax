@@ -150,7 +150,7 @@ it('orders a reader\'s own words the way ICU orders them, in every shipped langu
 
         foreach ($withIcu as $position => $word) {
             if (($withoutIcu[$position] ?? null) !== $word) {
-                $divergent[] = $locale->value." #{$position}: icu={$word} phone=".($withoutIcu[$position] ?? '-');
+                $divergent[] = $locale->value.sprintf(' #%s: icu=%s phone=', $position, $word).($withoutIcu[$position] ?? '-');
 
                 break;
             }

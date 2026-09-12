@@ -165,7 +165,7 @@ if ($existing === $manifest) {
 }
 
 if (file_put_contents($target, $manifest) === false) {
-    fwrite(STDERR, "nativephp_ios_privacy_manifest: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_privacy_manifest: could not write %s.\n", $target));
     exit(1);
 }
 
@@ -174,7 +174,7 @@ if (file_put_contents($target, $manifest) === false) {
 $reparsed = @simplexml_load_file($target);
 
 if ($reparsed === false) {
-    fwrite(STDERR, "nativephp_ios_privacy_manifest: {$target} is not well-formed XML.\n");
+    fwrite(STDERR, sprintf("nativephp_ios_privacy_manifest: %s is not well-formed XML.\n", $target));
 
     foreach (libxml_get_errors() as $error) {
         fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");

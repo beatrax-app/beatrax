@@ -108,8 +108,8 @@ beforeEach(function (): void {
 
         // transactions carries a natural-key unique index, so a clone has to
         // differ on it or the insert the applier makes would be refused.
-        $row['counterparty_name'] = "Peer merchant {$id}";
-        $row['counterparty_normalized'] = "peer merchant {$id}";
+        $row['counterparty_name'] = sprintf('Peer merchant %s', $id);
+        $row['counterparty_normalized'] = sprintf('peer merchant %s', $id);
         $row['amount_minor'] = -$id;
         $row['settled_amount_minor'] = -$id;
 

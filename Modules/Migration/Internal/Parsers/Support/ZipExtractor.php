@@ -93,13 +93,13 @@ final class ZipExtractor
 
             if ($this->escapesExtractionScope($entry->name)) {
                 throw new UnrecognizedMigrationFileException(
-                    "archive entry '{$entry->name}' resolves outside the extraction directory (zip-slip guard)",
+                    sprintf("archive entry '%s' resolves outside the extraction directory (zip-slip guard)", $entry->name),
                 );
             }
 
             if ($entry->isSymlink) {
                 throw new UnrecognizedMigrationFileException(
-                    "archive entry '{$entry->name}' is a symlink, which is not permitted (zip-slip guard)",
+                    sprintf("archive entry '%s' is a symlink, which is not permitted (zip-slip guard)", $entry->name),
                 );
             }
         }

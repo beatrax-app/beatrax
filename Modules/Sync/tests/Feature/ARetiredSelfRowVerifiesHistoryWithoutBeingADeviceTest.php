@@ -33,7 +33,7 @@ function aRetiredRowUser(string $username): User
     ]);
 
     foreach (['identity', 'gdk'] as $directory) {
-        foreach ((array) glob(UserDataPathService::appPath("sync/{$directory}/{$user->id}.enc*")) as $stale) {
+        foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/%s/%s.enc*', $directory, $user->id))) as $stale) {
             @unlink((string) $stale);
         }
     }
@@ -51,7 +51,7 @@ function aRepairedRestoredDevice(DatabaseManager $db, User $user, Session $sessi
 
     $restoredDeviceId = $identityService->generateAndPersist((int) $user->id, $session)->deviceId;
 
-    @unlink(UserDataPathService::appPath("sync/identity/{$user->id}.enc"));
+    @unlink(UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id)));
 
     $db->connection()->table('user_app_lock_configs')->insert([
         'user_id' => $user->id,

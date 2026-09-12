@@ -46,7 +46,7 @@ it('routes the durable roots into the persisted store when the mobile signal arr
 
             expect(UserDataPathService::isMobileRuntime())->toBeTrue()
                 ->and(UserDataPathService::appPath())->toBe($persistedApp)
-                ->and(UserDataPathService::appPath("sync/identity/{$superglobal}.enc"))
+                ->and(UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $superglobal)))
                 ->not->toStartWith($sandbox);
 
             unset($GLOBALS[$superglobal]['NATIVEPHP_PLATFORM']);

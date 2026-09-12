@@ -14,7 +14,7 @@ it('RedactSecretsProcessor replaces Authorization: Bearer + standalone JWT in th
     // Each JWT segment is >=20 chars to match the strict JWT regex.
     $bearer = 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0AAA.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
     $standaloneJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5OTk5OTk5OTk5In0BBB.aaaaaaaaaaaaaaaaaaaaaaaaa';
-    $message = "got token: {$bearer} and standalone: {$standaloneJwt}";
+    $message = sprintf('got token: %s and standalone: %s', $bearer, $standaloneJwt);
 
     $record = new LogRecord(
         datetime: new DateTimeImmutable,

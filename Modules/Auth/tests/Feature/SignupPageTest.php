@@ -151,7 +151,7 @@ it('draws the checklist against the same minimum the signup gate enforces', func
 
     $this->get('/signup')
         ->assertOk()
-        ->assertSee("passwordStrength({$minimum}, 'password', 'passwordConfirmation')", escape: false);
+        ->assertSee(sprintf("passwordStrength(%s, 'password', 'passwordConfirmation')", $minimum), escape: false);
 
     Livewire::test(SignupPage::class)
         ->set('username', 'alice')

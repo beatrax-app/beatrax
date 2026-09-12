@@ -116,7 +116,7 @@ function pullDispatch(PairingFramePullHandler $handler, string $query): array
     $client->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress('198.51.100.7', 45123));
 
     $response = $handler->handleRequest(
-        new AmpRequest($client, 'GET', HttpUri::new("http://192.0.2.10:51337/pair/frames{$query}")),
+        new AmpRequest($client, 'GET', HttpUri::new(sprintf('http://192.0.2.10:51337/pair/frames%s', $query))),
     );
 
     $decoded = json_decode(buffer($response->getBody()), true);

@@ -40,7 +40,7 @@ it('names no merge strategy the enum does not have', function (): void {
 
     foreach (declaredMergeStrategies() as $entry) {
         if (MergeStrategy::tryFrom($entry['strategy']) === null) {
-            $unresolved[] = "{$entry['table']}.{$entry['field']} names '{$entry['strategy']}', which is not a MergeStrategy — strategyFor() merges it as last-writer-wins.";
+            $unresolved[] = sprintf("%s.%s names '%s', which is not a MergeStrategy — strategyFor() merges it as last-writer-wins.", $entry['table'], $entry['field'], $entry['strategy']);
         }
     }
 

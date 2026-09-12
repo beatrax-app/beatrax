@@ -14,12 +14,12 @@ final class RelayConfigWriteException extends RuntimeException
 {
     public static function couldNotCreateDirectory(string $directory): self
     {
-        return new self("Cannot create relay config directory: {$directory}");
+        return new self(sprintf('Cannot create relay config directory: %s', $directory));
     }
 
     public static function couldNotWrite(string $path): self
     {
-        return new self("Cannot write relay config to: {$path}");
+        return new self(sprintf('Cannot write relay config to: %s', $path));
     }
 
     // Refused rather than written over: both setters rewrite the whole file, so
@@ -27,6 +27,6 @@ final class RelayConfigWriteException extends RuntimeException
     // to replace with a blank.
     public static function couldNotReadBeforeWriting(string $path): self
     {
-        return new self("Cannot read the relay config already at {$path} — refusing to overwrite it with a blank field.");
+        return new self(sprintf('Cannot read the relay config already at %s — refusing to overwrite it with a blank field.', $path));
     }
 }

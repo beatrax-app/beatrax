@@ -57,7 +57,7 @@ final class EnableBankingFixtures
     {
         $contents = file_get_contents($path);
         if ($contents === false) {
-            throw new RuntimeException("Could not read fixture: {$path}");
+            throw new RuntimeException(sprintf('Could not read fixture: %s', $path));
         }
 
         /** @var array<string, mixed> $decoded */

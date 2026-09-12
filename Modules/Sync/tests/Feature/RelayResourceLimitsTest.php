@@ -36,7 +36,7 @@ function buildRelayLimitsRequest(string $method, string $path, string $body = ''
     $client = Mockery::mock(AmpClient::class);
     // Deliver reads the source IP for its per-IP rate-limit bucket.
     $client->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress($clientIp, 12345));
-    $uri = HttpUri::new("https://relay.test{$path}");
+    $uri = HttpUri::new(sprintf('https://relay.test%s', $path));
 
     return new AmpRequest($client, $method, $uri, $headers, $body);
 }
@@ -244,7 +244,7 @@ it('drain caps at the page size and a subsequent drain returns the remainder', f
 
     $firstPage = dispatchRelayLimitsRequest(
         $this->command,
-        buildRelayLimitsRequest('GET', "/relay/drain?did={$recipientDid}", '', ['authorization' => "Bearer {$token}"]),
+        buildRelayLimitsRequest('GET', sprintf('/relay/drain?did=%s', $recipientDid), '', ['authorization' => sprintf('Bearer %s', $token)]),
     );
 
     expect($firstPage['status'])->toBe(200);
@@ -255,14 +255,14 @@ it('drain caps at the page size and a subsequent drain returns the remainder', f
     foreach ($firstPage['body']['blobs'] as $row) {
         $confirmResult = dispatchRelayLimitsRequest(
             $this->command,
-            buildRelayLimitsRequest('DELETE', "/relay/drain/{$row['id']}", '', ['authorization' => "Bearer {$token}"]),
+            buildRelayLimitsRequest('DELETE', sprintf('/relay/drain/%s', $row['id']), '', ['authorization' => sprintf('Bearer %s', $token)]),
         );
         expect($confirmResult['status'])->toBe(200);
     }
 
     $secondPage = dispatchRelayLimitsRequest(
         $this->command,
-        buildRelayLimitsRequest('GET', "/relay/drain?did={$recipientDid}", '', ['authorization' => "Bearer {$token}"]),
+        buildRelayLimitsRequest('GET', sprintf('/relay/drain?did=%s', $recipientDid), '', ['authorization' => sprintf('Bearer %s', $token)]),
     );
 
     expect($secondPage['status'])->toBe(200);
@@ -291,7 +291,7 @@ it('happy path: a normal blob with valid dids still delivers and drains', functi
     $token = $this->relayConfig->deviceDrainToken($recipientDid);
     $drainResult = dispatchRelayLimitsRequest(
         $this->command,
-        buildRelayLimitsRequest('GET', "/relay/drain?did={$recipientDid}", '', ['authorization' => "Bearer {$token}"]),
+        buildRelayLimitsRequest('GET', sprintf('/relay/drain?did=%s', $recipientDid), '', ['authorization' => sprintf('Bearer %s', $token)]),
     );
 
     expect($drainResult['status'])->toBe(200);

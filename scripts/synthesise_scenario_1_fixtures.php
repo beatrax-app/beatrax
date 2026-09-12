@@ -50,7 +50,7 @@ $repoRoot = dirname(__DIR__);
 $fixtureDir = $repoRoot.'/Modules/Chains/tests/fixtures/scenario-1';
 if (! is_dir($fixtureDir)) {
     if (! mkdir($fixtureDir, 0o755, true) && ! is_dir($fixtureDir)) {
-        fwrite(STDERR, "Failed to create fixture dir: {$fixtureDir}\n");
+        fwrite(STDERR, sprintf("Failed to create fixture dir: %s\n", $fixtureDir));
         exit(1);
     }
 }
@@ -227,7 +227,7 @@ file_put_contents(
 
 fwrite(
     STDERR,
-    "Wrote 6 fixture files to {$fixtureDir}\n"
+    sprintf("Wrote 6 fixture files to %s\n", $fixtureDir)
 );
 exit(0);
 
@@ -422,7 +422,7 @@ function makeIcsPdf(array $icsTransactions, int $totalCents): string
         2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
         3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 1008] '
             .'/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
-        4 => "<< /Length {$contentLen} >>\nstream\n{$content}\nendstream",
+        4 => sprintf("<< /Length %s >>\nstream\n%s\nendstream", $contentLen, $content),
         5 => '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
     ];
 
@@ -430,7 +430,7 @@ function makeIcsPdf(array $icsTransactions, int $totalCents): string
     $offsets = [];
     foreach ($objects as $n => $obj) {
         $offsets[$n] = strlen($pdf);
-        $pdf .= "{$n} 0 obj\n{$obj}\nendobj\n";
+        $pdf .= sprintf("%s 0 obj\n%s\nendobj\n", $n, $obj);
     }
     $xrefOffset = strlen($pdf);
     $pdf .= "xref\n0 ".(count($objects) + 1)."\n";

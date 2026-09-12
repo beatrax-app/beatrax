@@ -974,7 +974,7 @@ it('has no // block over 4 lines (M2)', function (): void {
         foreach (commentPolicyLineCommentBlocks($path) as $block) {
             $n = count($block);
             if ($n > 4) {
-                $hits[] = $path.':'.$block[0]." ({$n}-line // block > 4)";
+                $hits[] = $path.':'.$block[0].sprintf(' (%s-line // block > 4)', $n);
             }
         }
     }

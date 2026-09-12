@@ -53,7 +53,7 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
             ? (string) $this->scenarioId
             : 'baseline';
 
-        return "{$this->userId}:{$scenarioKey}:{$this->horizonDays}";
+        return sprintf('%s:%s:%s', $this->userId, $scenarioKey, $this->horizonDays);
     }
 
     public function uniqueFor(): int

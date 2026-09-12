@@ -66,10 +66,10 @@ beforeEach(function () use (&$recorded): void {
                 'userId' => $this->user->id,
                 'accountId' => $this->account->id,
                 'importRunId' => $this->importRun->id,
-                'bookedAt' => CarbonImmutable::parse("2026-01-15 10:{$minute}:{$second}"),
-                'counterpartyNormalized' => "merchant {$i}",
+                'bookedAt' => CarbonImmutable::parse(sprintf('2026-01-15 10:%s:%s', $minute, $second)),
+                'counterpartyNormalized' => sprintf('merchant %s', $i),
                 'sourceRowIndex' => $i,
-                'sourceRef' => "ASN-REF-{$i}",
+                'sourceRef' => sprintf('ASN-REF-%s', $i),
             ]);
         }
 

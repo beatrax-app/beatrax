@@ -15,6 +15,8 @@ final readonly class RateProviderRegistry
 {
     use CoercesScalars;
 
+    private const string FAILURE_COUNT_KEY = 'fx.circuit.%s.failures';
+
     private const int CIRCUIT_OPEN_THRESHOLD = 3;
 
     private const int CIRCUIT_OPEN_TTL_HOURS = 6;
@@ -70,14 +72,14 @@ final readonly class RateProviderRegistry
 
     private function isCircuitOpen(string $providerKey): bool
     {
-        $raw = $this->cache->get("fx.circuit.{$providerKey}.failures", 0);
+        $raw = $this->cache->get(sprintf(self::FAILURE_COUNT_KEY, $providerKey), 0);
 
         return self::toInt($raw) >= self::CIRCUIT_OPEN_THRESHOLD;
     }
 
     private function recordFailure(string $providerKey): void
     {
-        $cacheKey = "fx.circuit.{$providerKey}.failures";
+        $cacheKey = sprintf(self::FAILURE_COUNT_KEY, $providerKey);
 
         // The key is provider-global, so two users' refresh jobs failing the
         // same provider both read 0 and both wrote 1: one failure of the three
@@ -101,6 +103,6 @@ final readonly class RateProviderRegistry
 
     private function resetCircuit(string $providerKey): void
     {
-        $this->cache->forget("fx.circuit.{$providerKey}.failures");
+        $this->cache->forget(sprintf(self::FAILURE_COUNT_KEY, $providerKey));
     }
 }

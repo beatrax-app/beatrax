@@ -22,7 +22,7 @@ final readonly class ArtisanCancelController
     {
         $record = $this->registry->find($runId);
         if ($record === null) {
-            throw new NotFoundHttpException("Unknown run: {$runId}");
+            throw new NotFoundHttpException(sprintf('Unknown run: %s', $runId));
         }
 
         if ($record->callerUserId !== $user->id()) {

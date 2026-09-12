@@ -29,7 +29,7 @@ final readonly class ActualSqliteReader
     public function __construct(string $dbPath)
     {
         if (! is_file($dbPath)) {
-            throw new ActualSqliteReadException("Actual SQLite file not found at '{$dbPath}'");
+            throw new ActualSqliteReadException(sprintf("Actual SQLite file not found at '%s'", $dbPath));
         }
 
         $this->pdo = new PdoSqlite(
@@ -178,7 +178,7 @@ final readonly class ActualSqliteReader
         }
 
         return ActualBudgetType::fromPreference($value)
-            ?? throw new UnrecognizedActualBudgetTypeException("unrecognized Actual preferences.budgetType value '{$value}'");
+            ?? throw new UnrecognizedActualBudgetTypeException(sprintf("unrecognized Actual preferences.budgetType value '%s'", $value));
     }
 
     public function budgetType(): ActualBudgetType
@@ -199,9 +199,9 @@ final readonly class ActualSqliteReader
             return [];
         }
 
-        $stmt = $this->pdo->query("SELECT category, month, amount FROM {$table}");
+        $stmt = $this->pdo->query(sprintf('SELECT category, month, amount FROM %s', $table));
         if ($stmt === false) {
-            throw new ActualSqliteReadException("could not query {$table}");
+            throw new ActualSqliteReadException(sprintf('could not query %s', $table));
         }
 
         $rows = [];

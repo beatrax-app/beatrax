@@ -13,16 +13,16 @@ final class BoundedReadException extends RuntimeException
 {
     public static function tooLarge(string $subject, int $bytes, int $maxBytes): self
     {
-        return new self("Refusing to read {$subject} whole: {$bytes} bytes is past the {$maxBytes}-byte ceiling.");
+        return new self(sprintf('Refusing to read %s whole: %s bytes is past the %s-byte ceiling.', $subject, $bytes, $maxBytes));
     }
 
     public static function unmeasurable(string $subject): self
     {
-        return new self("Refusing to read {$subject} whole: its size could not be determined.");
+        return new self(sprintf('Refusing to read %s whole: its size could not be determined.', $subject));
     }
 
     public static function unreadable(string $subject): self
     {
-        return new self("Refusing to read {$subject} whole: the bytes could not be read back.");
+        return new self(sprintf('Refusing to read %s whole: the bytes could not be read back.', $subject));
     }
 }

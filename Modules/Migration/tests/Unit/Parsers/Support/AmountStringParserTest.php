@@ -24,7 +24,7 @@ it('AmountStringParser: matches EnvelopeWriter::parseAmount() on the shared Dutc
     ];
 
     foreach ($samples as $sample) {
-        expect($parser->parse($sample))->toBe($envelopeWriter->parseAmount($sample), "mismatch for input '{$sample}'");
+        expect($parser->parse($sample))->toBe($envelopeWriter->parseAmount($sample), sprintf("mismatch for input '%s'", $sample));
     }
 });
 

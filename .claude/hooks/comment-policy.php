@@ -79,7 +79,7 @@ foreach (token_get_all((string) file_get_contents($path)) as $token) {
     }
 
     if ($token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '/*')) {
-        $hits[] = "{$path}:{$token[2]} M3: informative /* */ block — use /** */ PHPDoc.";
+        $hits[] = sprintf("%s:%s M3: informative /* */ block — use /** */ PHPDoc.", $path, $token[2]);
     }
 
     if ($token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '//') && ! $isDirective($token[1])) {
@@ -102,13 +102,13 @@ foreach (token_get_all((string) file_get_contents($path)) as $token) {
             if (str_starts_with($line, '@')) {
                 $seenTag = true;
             } elseif (! $seenTag) {
-                $hits[] = "{$path}:{$token[2]} M4: docblock carries prose — @-tags only, move the why to a // block above.";
+                $hits[] = sprintf("%s:%s M4: docblock carries prose — @-tags only, move the why to a // block above.", $path, $token[2]);
                 break;
             }
         }
 
         if ($hasContent && ! $seenTag) {
-            $hits[] = "{$path}:{$token[2]} M4: docblock with no @-tags at all — delete it or make it a // block.";
+            $hits[] = sprintf("%s:%s M4: docblock with no @-tags at all — delete it or make it a // block.", $path, $token[2]);
         }
     }
 }
@@ -134,7 +134,7 @@ foreach ($blocks as $lines) {
     $n = count($lines);
 
     if ($n > 4) {
-        $hits[] = "{$path}:{$lines[0]} M2: {$n}-line // block, max is 4. Cut it to 4 lines or fewer.";
+        $hits[] = sprintf("%s:%s M2: %s-line // block, max is 4. Cut it to 4 lines or fewer.", $path, $lines[0], $n);
     }
 }
 }

@@ -12,6 +12,6 @@ final class SpawnedRunVanishedException extends RuntimeException
 {
     public static function immediatelyAfterSpawn(string $runId): self
     {
-        return new self("SpawnDevCommand: RunRegistry lost record for run {$runId} immediately after spawn.");
+        return new self(sprintf('SpawnDevCommand: RunRegistry lost record for run %s immediately after spawn.', $runId));
     }
 }

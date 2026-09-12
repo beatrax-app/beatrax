@@ -92,7 +92,7 @@ it('resolves the button label into the setup screen copy in every language', fun
 
         foreach ($lines as $key => $line) {
             if (! str_contains($line, $control)) {
-                $silent[] = "{$locale}: {$key}";
+                $silent[] = sprintf('%s: %s', $locale, $key);
             }
         }
     }

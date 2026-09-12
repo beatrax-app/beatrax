@@ -183,7 +183,7 @@ it('captures the plaintext of an encrypted column, not a second layer of ciphert
     $once = $crypto->decrypt(
         (string) $entry->value,
         $epochKey,
-        "counterparties:{$cpId}:display_name:{$epoch->epochId}",
+        sprintf('counterparties:%s:display_name:%s', $cpId, $epoch->epochId),
     );
 
     // ONE unwrap must land on the name. Before the fix this yielded the

@@ -13,7 +13,7 @@ function runShellIniPatch(string $script, string $root): array
 {
     $path = dirname(__DIR__, 4).'/scripts/'.$script;
 
-    expect(is_file($path))->toBeTrue("The patch script is not at {$path}.");
+    expect(is_file($path))->toBeTrue(sprintf('The patch script is not at %s.', $path));
 
     $process = proc_open(
         ['php', $path],

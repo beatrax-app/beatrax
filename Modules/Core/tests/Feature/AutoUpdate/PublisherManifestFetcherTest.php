@@ -41,7 +41,7 @@ function makeManifestFetcher(
 
 function manifestYaml(string $version, string $sha512Base64): string
 {
-    return "version: {$version}\nsha512: {$sha512Base64}\nreleaseDate: '2026-08-16T00:00:00.000Z'\n";
+    return sprintf("version: %s\nsha512: %s\nreleaseDate: '2026-08-16T00:00:00.000Z'\n", $version, $sha512Base64);
 }
 
 it('parses a manifest and normalises the base64 sha512 to hex', function (): void {

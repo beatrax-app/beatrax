@@ -78,7 +78,7 @@ it('never asks a reader to look for a Dutch report name in a wizard line without
                     continue;
                 }
 
-                $offenders[] = str_replace(base_path().'/', '', $file)." [{$key}] names \"{$name}\" untagged";
+                $offenders[] = str_replace(base_path().'/', '', $file).sprintf(' [%s] names "%s" untagged', $key, $name);
             }
         }
     }

@@ -52,7 +52,7 @@ final readonly class ActualParser implements ParsesMigrationSource
 
         if (! is_file($dbPath) || ! is_file($metadataPath)) {
             throw new UnrecognizedMigrationFileException(
-                "expected 'db.sqlite' and 'metadata.json' in '{$extractedPath}' — not a recognized Actual export",
+                sprintf("expected 'db.sqlite' and 'metadata.json' in '%s' — not a recognized Actual export", $extractedPath),
             );
         }
 

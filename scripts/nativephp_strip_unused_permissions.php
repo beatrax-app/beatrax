@@ -154,7 +154,7 @@ $manifest = $main.'/AndroidManifest.xml';
 $source = (string) file_get_contents($manifest);
 
 if (! str_contains($source, TOOLS_NAMESPACE)) {
-    fwrite(STDERR, "nativephp_strip_unused_permissions: the tools namespace is not declared in {$manifest}.\n");
+    fwrite(STDERR, sprintf("nativephp_strip_unused_permissions: the tools namespace is not declared in %s.\n", $manifest));
     fwrite(STDERR, "tools:node=\"remove\" is inert without it; confirm the manifest shape before shipping.\n");
     exit(1);
 }
@@ -164,7 +164,7 @@ if (! str_contains($source, TOOLS_NAMESPACE)) {
 $anchor = '<uses-permission android:name="android.permission.INTERNET" />';
 
 if (! str_contains($source, $anchor)) {
-    fwrite(STDERR, "nativephp_strip_unused_permissions: INTERNET anchor not found in {$manifest}.\n");
+    fwrite(STDERR, sprintf("nativephp_strip_unused_permissions: INTERNET anchor not found in %s.\n", $manifest));
     fwrite(STDERR, "The generated manifest changed shape; confirm the permission set by hand before shipping.\n");
     exit(1);
 }
@@ -233,7 +233,7 @@ foreach (array_merge(REMOVE_FROM_SOURCE, REMOVE_FROM_MERGE) as $permission) {
 $rewritten = str_replace($anchor, $anchor."\n\n".rtrim($block, "\n"), $rewritten);
 
 if ($rewritten !== $source && file_put_contents($manifest, $rewritten) === false) {
-    fwrite(STDERR, "nativephp_strip_unused_permissions: could not write {$manifest}.\n");
+    fwrite(STDERR, sprintf("nativephp_strip_unused_permissions: could not write %s.\n", $manifest));
     exit(1);
 }
 
@@ -242,7 +242,7 @@ if ($rewritten !== $source && file_put_contents($manifest, $rewritten) === false
 $reparsed = @simplexml_load_file($manifest);
 
 if ($reparsed === false) {
-    fwrite(STDERR, "nativephp_strip_unused_permissions: {$manifest} is no longer well-formed XML after patching.\n");
+    fwrite(STDERR, sprintf("nativephp_strip_unused_permissions: %s is no longer well-formed XML after patching.\n", $manifest));
 
     foreach (libxml_get_errors() as $error) {
         fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
@@ -265,14 +265,14 @@ foreach (array_merge(REMOVE_FROM_SOURCE, REMOVE_FROM_MERGE) as $permission) {
     $pattern = '#<uses-permission\s+android:name="'.preg_quote($permission, '#').'"(?![^>]*tools:node="remove")#';
 
     if (preg_match($pattern, $verified) === 1) {
-        fwrite(STDERR, "nativephp_strip_unused_permissions: {$permission} still declared without tools:node=\"remove\".\n");
+        fwrite(STDERR, sprintf("nativephp_strip_unused_permissions: %s still declared without tools:node=\"remove\".\n", $permission));
         exit(1);
     }
 }
 
 foreach (KEEP_IN_SOURCE as $keep) {
     if (! str_contains($verified, 'android:name="'.$keep.'" />')) {
-        fwrite(STDERR, "nativephp_strip_unused_permissions: {$keep} is used and no longer declared in {$manifest}.\n");
+        fwrite(STDERR, sprintf("nativephp_strip_unused_permissions: %s is used and no longer declared in %s.\n", $keep, $manifest));
         exit(1);
     }
 }
@@ -284,7 +284,7 @@ foreach (KEEP_THROUGH_MERGE as $keep) {
     $pattern = '#<uses-permission\s(?=[^>]*android:name="'.preg_quote($keep, '#').'")[^>]*tools:node="remove"[^>]*/>#';
 
     if (preg_match($pattern, $verified) === 1) {
-        fwrite(STDERR, "nativephp_strip_unused_permissions: {$keep} is pinned out in {$manifest}.\n");
+        fwrite(STDERR, sprintf("nativephp_strip_unused_permissions: %s is pinned out in %s.\n", $keep, $manifest));
         fwrite(STDERR, "It is contributed by a plugin manifest, and tools:node=\"remove\" deletes that contribution at merge.\n");
         exit(1);
     }
@@ -294,6 +294,6 @@ $pinned = count(REMOVE_FROM_SOURCE) + count(REMOVE_FROM_MERGE);
 
 fwrite(STDOUT, $rewritten === $source
     ? "nativephp_strip_unused_permissions: already applied.\n"
-    : "nativephp_strip_unused_permissions: pinned out {$pinned} unused permissions.\n");
+    : sprintf("nativephp_strip_unused_permissions: pinned out %s unused permissions.\n", $pinned));
 
 exit(0);

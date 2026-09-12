@@ -97,7 +97,7 @@ it('composer.lock contains no webklex/php-imap, webklex/laravel-imap, or ddeboer
 
     $hits = [];
     foreach ($banned as $package) {
-        if (str_contains($contents, "\"{$package}\"")) {
+        if (str_contains($contents, sprintf('"%s"', $package))) {
             $hits[] = $package;
         }
     }

@@ -89,7 +89,7 @@ it('creates the anomaly_suppression_rules table with every required column', fun
 
     foreach ($columns as $column) {
         expect($schema->hasColumn('anomaly_suppression_rules', $column))->toBeTrue(
-            "Expected anomaly_suppression_rules column '{$column}' to exist",
+            sprintf("Expected anomaly_suppression_rules column '%s' to exist", $column),
         );
     }
 });

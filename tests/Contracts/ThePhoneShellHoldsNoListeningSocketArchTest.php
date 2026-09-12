@@ -150,7 +150,7 @@ it('ships no phone-side code that binds a socket or outlives the request that st
 
     foreach (PHONE_SHELL_WITNESSES as $witness) {
         expect(array_filter($files, static fn (string $path): bool => str_ends_with($path, $witness)))
-            ->not->toBe([], "the walk never reached {$witness}, so a clean answer here is a walk that read nothing");
+            ->not->toBe([], sprintf('the walk never reached %s, so a clean answer here is a walk that read nothing', $witness));
     }
 
     $offenders = phoneListenerOffenders($files);

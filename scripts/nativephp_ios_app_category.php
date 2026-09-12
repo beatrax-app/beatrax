@@ -63,7 +63,7 @@ if ($blank === false || $set === false) {
 }
 
 if ($blank === 0 && $set === 0) {
-    fwrite(STDERR, 'nativephp_ios_app_category: '.BUILD_SETTING." is not declared in {$pbxproj}.\n");
+    fwrite(STDERR, 'nativephp_ios_app_category: '.BUILD_SETTING.sprintf(" is not declared in %s.\n", $pbxproj));
     fwrite(STDERR, "The generated project changed shape; set the primary category by hand before submitting.\n");
     exit(1);
 }
@@ -72,7 +72,7 @@ if ($blank > 0) {
     $rewritten = preg_replace($empty, BUILD_SETTING.' = "'.APP_CATEGORY.'";', $source);
 
     if (! is_string($rewritten) || file_put_contents($pbxproj, $rewritten) === false) {
-        fwrite(STDERR, "nativephp_ios_app_category: could not write {$pbxproj}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_app_category: could not write %s.\n", $pbxproj));
         exit(1);
     }
 }
@@ -83,17 +83,17 @@ if ($blank > 0) {
 $verified = (string) file_get_contents($pbxproj);
 
 if (preg_match($empty, $verified) === 1) {
-    fwrite(STDERR, 'nativephp_ios_app_category: '.BUILD_SETTING." is still empty in {$pbxproj}.\n");
+    fwrite(STDERR, 'nativephp_ios_app_category: '.BUILD_SETTING.sprintf(" is still empty in %s.\n", $pbxproj));
     exit(1);
 }
 
 if (preg_match($already, $verified) !== 1) {
-    fwrite(STDERR, 'nativephp_ios_app_category: '.BUILD_SETTING.' does not carry '.APP_CATEGORY." in {$pbxproj}.\n");
+    fwrite(STDERR, 'nativephp_ios_app_category: '.BUILD_SETTING.' does not carry '.APP_CATEGORY.sprintf(" in %s.\n", $pbxproj));
     exit(1);
 }
 
 fwrite(STDOUT, $blank === 0
     ? "nativephp_ios_app_category: already applied.\n"
-    : "nativephp_ios_app_category: set the App Store category in {$blank} build configuration(s).\n");
+    : sprintf("nativephp_ios_app_category: set the App Store category in %s build configuration(s).\n", $blank));
 
 exit(0);

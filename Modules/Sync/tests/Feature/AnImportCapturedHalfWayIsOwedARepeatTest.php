@@ -49,7 +49,7 @@ function halfCaptureBindWriter(int $userId): void
 // whose registry says it is a peer owes one whether or not it can sign yet.
 function halfCaptureIdentityPath(int $userId): string
 {
-    return UserDataPathService::appPath("sync/identity/{$userId}.enc");
+    return UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $userId));
 }
 
 // The half a restored database brings, and the half it cannot: the old

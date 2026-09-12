@@ -291,10 +291,10 @@ it('sees a write verb it has never been told the name of', function (string $cal
 it('reads a write to its closing bracket rather than to a character budget', function (): void {
     $filler = '';
     for ($i = 0; $i < 40; $i++) {
-        $filler .= "'padding_column_{$i}' => \$value{$i}, ";
+        $filler .= sprintf("'padding_column_%s' => \$value%s, ", $i, $i);
     }
 
-    $call = "<?php\nDB::table('transactions')->insert([{$filler}'note' => \$plaintext]);";
+    $call = sprintf("<?php\nDB::table('transactions')->insert([%s'note' => \$plaintext]);", $filler);
 
     expect(strlen($call))->toBeGreaterThan(600)
         ->and(sensitiveColumnGuardProbe($call))->toBe(['Probe.php::note::write']);
@@ -331,7 +331,7 @@ it('grants an exemption only in a unit a reader can check', function (): void {
         $parts = explode('::', $signature);
 
         if (count($parts) !== 3) {
-            $malformed[] = "{$signature} is not path::column::kind";
+            $malformed[] = sprintf('%s is not path::column::kind', $signature);
 
             continue;
         }
@@ -339,13 +339,13 @@ it('grants an exemption only in a unit a reader can check', function (): void {
         [$path, $column, $kind] = $parts;
 
         if (! is_file($root.$path)) {
-            $malformed[] = "{$signature} names a file that is not in the tree";
+            $malformed[] = sprintf('%s names a file that is not in the tree', $signature);
         }
         if (! in_array($column, $columns, true)) {
-            $malformed[] = "{$signature} names {$column}, which SensitiveFieldRegistry does not seal in any table";
+            $malformed[] = sprintf('%s names %s, which SensitiveFieldRegistry does not seal in any table', $signature, $column);
         }
         if (! in_array($kind, $kinds, true)) {
-            $malformed[] = "{$signature} names the kind {$kind}, which this scanner never reports";
+            $malformed[] = sprintf('%s names the kind %s, which this scanner never reports', $signature, $kind);
         }
     }
 
@@ -385,7 +385,7 @@ it('does not exempt any site whose reason says it is broken', function (): void 
     foreach (sensitiveColumnGuardAllowlist() as $signature => $reason) {
         foreach ($banned as $token) {
             if (stripos($reason, $token) !== false) {
-                $offenders[] = "{$signature} => {$reason}";
+                $offenders[] = sprintf('%s => %s', $signature, $reason);
             }
         }
     }
@@ -401,9 +401,9 @@ it('rests an exemption only on a column whose plaintext status is a recorded dec
     foreach (sensitiveColumnGuardAllowlist() as $signature => $reason) {
         foreach (SensitiveColumnScan::citedColumns($reason) as $cited) {
             if (in_array($cited, $sealed, true)) {
-                $offenders[] = "{$signature} rests on {$cited} being plaintext, and SensitiveFieldRegistry now seals it";
+                $offenders[] = sprintf('%s rests on %s being plaintext, and SensitiveFieldRegistry now seals it', $signature, $cited);
             } elseif (! in_array($cited, $decided, true)) {
-                $offenders[] = "{$signature} rests on {$cited}, which SensitiveFieldRegistry::knowinglyPlaintext() does not record";
+                $offenders[] = sprintf('%s rests on %s, which SensitiveFieldRegistry::knowinglyPlaintext() does not record', $signature, $cited);
             }
         }
     }

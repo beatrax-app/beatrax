@@ -158,7 +158,7 @@ final readonly class RuleEngine
     private static function conditionDay(string $value): CarbonImmutable
     {
         return SafeDate::dayOrNull($value)
-            ?? throw new InvalidFormatException("Rule condition value is not a calendar date: '{$value}'.");
+            ?? throw new InvalidFormatException(sprintf("Rule condition value is not a calendar date: '%s'.", $value));
     }
 
     private static function withinInclusiveRange(CarbonImmutable $target, CarbonImmutable $bound1, CarbonImmutable $bound2): bool

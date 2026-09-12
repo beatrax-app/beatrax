@@ -70,7 +70,7 @@ it('reads a console route file at both Composer roots, so finding nothing cannot
         $schedules = str_contains((string) file_get_contents($path), 'Schedule::command(');
 
         expect($schedules)->toBeTrue(
-            "{$path} schedules nothing at all, so scanning it for one command proves nothing.",
+            sprintf('%s schedules nothing at all, so scanning it for one command proves nothing.', $path),
         );
     }
 });
@@ -137,5 +137,5 @@ it('reports a scheduled prune, so the scan above can fail', function (): void {
     $command = 'Schedule::command'."('beatrax:failed-jobs prune --older-than=30d')";
     $planted = "<?php\n".$command."\n    ->name('core.failed-jobs-prune')\n    ->daily();";
 
-    expect(failedJobsScheduleLinesIn($planted))->toBe(["2: {$command}"]);
+    expect(failedJobsScheduleLinesIn($planted))->toBe([sprintf('2: %s', $command)]);
 });

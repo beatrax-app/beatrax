@@ -16,7 +16,7 @@ final class OrphanedPaypalChildRowException extends RuntimeException implements 
     public function __construct(public readonly string $eventType)
     {
         parent::__construct(
-            "This '{$eventType}' row belongs to a PayPal transaction that is not in this file. Import the statement that contains it as well — the two statements are read together."
+            sprintf("This '%s' row belongs to a PayPal transaction that is not in this file. Import the statement that contains it as well — the two statements are read together.", $eventType)
         );
     }
 }

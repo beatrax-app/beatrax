@@ -43,7 +43,7 @@ final class ScenarioMutationPayloadCast implements CastsAttributes
 
         $resolved = ScenarioMutationKind::tryFrom($kind);
         if ($resolved === null) {
-            throw new InvalidArgumentException("Unknown scenario mutation kind: {$kind}");
+            throw new InvalidArgumentException(sprintf('Unknown scenario mutation kind: %s', $kind));
         }
 
         return $resolved->payloadClass()::from($decoded);
@@ -72,7 +72,7 @@ final class ScenarioMutationPayloadCast implements CastsAttributes
 
         if ($value->kind() !== $kind) {
             throw new InvalidArgumentException(
-                "ScenarioMutationPayloadCast: payload kind '{$value->kind()}' does not match row kind '{$kind}'.",
+                sprintf("ScenarioMutationPayloadCast: payload kind '%s' does not match row kind '%s'.", $value->kind(), $kind),
             );
         }
 

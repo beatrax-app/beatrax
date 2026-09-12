@@ -44,7 +44,7 @@ it('holds an arbitrarily long range inside the point cap whatever granularity it
             $buckets = $generator->generate(bucketRange($from, $to), $granularity);
 
             expect(count($buckets))
-                ->toBeLessThanOrEqual(TimeBucketGenerator::MAX_BUCKET_POINTS, "{$granularity->value} {$from}..{$to}");
+                ->toBeLessThanOrEqual(TimeBucketGenerator::MAX_BUCKET_POINTS, sprintf('%s %s..%s', $granularity->value, $from, $to));
             expect(array_unique(array_map(static fn (Period $p): string => $p->label, $buckets)))
                 ->toHaveCount(count($buckets));
         }

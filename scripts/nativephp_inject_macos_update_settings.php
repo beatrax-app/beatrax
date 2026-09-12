@@ -63,7 +63,7 @@ $targets = [
 $existing = array_values(array_filter($targets, 'is_file'));
 
 if ($existing === []) {
-    fwrite(STDERR, "nativephp_inject_macos_update_settings: no autoUpdater destructure target found under {$publishedDir} — has `php artisan native:install --publish` run?\n");
+    fwrite(STDERR, sprintf("nativephp_inject_macos_update_settings: no autoUpdater destructure target found under %s — has `php artisan native:install --publish` run?\n", $publishedDir));
 
     exit(1);
 }
@@ -75,13 +75,13 @@ foreach ($existing as $path) {
     $source = file_get_contents($path);
 
     if ($source === false) {
-        fwrite(STDERR, "nativephp_inject_macos_update_settings: could not read {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_macos_update_settings: could not read %s\n", $path));
 
         exit(1);
     }
 
     if (str_contains($source, 'autoUpdater.disableDifferentialDownload')) {
-        fwrite(STDOUT, "nativephp_inject_macos_update_settings: already set in {$path}, leaving as-is.\n");
+        fwrite(STDOUT, sprintf("nativephp_inject_macos_update_settings: already set in %s, leaving as-is.\n", $path));
 
         continue;
     }
@@ -89,18 +89,18 @@ foreach ($existing as $path) {
     $patched = preg_replace($destructurePattern, '$1'.$injection, $source, 1, $count);
 
     if ($patched === null || $count !== 1) {
-        fwrite(STDERR, "nativephp_inject_macos_update_settings: could not locate `const { autoUpdater } = electronUpdater;` in {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_macos_update_settings: could not locate `const { autoUpdater } = electronUpdater;` in %s\n", $path));
 
         exit(1);
     }
 
     if (file_put_contents($path, $patched) === false) {
-        fwrite(STDERR, "nativephp_inject_macos_update_settings: could not write {$path}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_macos_update_settings: could not write %s\n", $path));
 
         exit(1);
     }
 
-    fwrite(STDOUT, "nativephp_inject_macos_update_settings: set autoUpdater.disableDifferentialDownload = true in {$path}\n");
+    fwrite(STDOUT, sprintf("nativephp_inject_macos_update_settings: set autoUpdater.disableDifferentialDownload = true in %s\n", $path));
 }
 
 exit(0);

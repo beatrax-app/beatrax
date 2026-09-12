@@ -55,20 +55,20 @@ it('every anomaly-corpus fixture returns the documented shape', function (string
     /** @var array<string, mixed> $fixture */
     $fixture = require $path;
 
-    assertIsArray($fixture, "Fixture {$name} must return an associative array.");
-    assertArrayHasKey('settings', $fixture, "Fixture {$name} must declare a 'settings' key.");
+    assertIsArray($fixture, sprintf('Fixture %s must return an associative array.', $name));
+    assertArrayHasKey('settings', $fixture, sprintf("Fixture %s must declare a 'settings' key.", $name));
     assertTrue(
         array_key_exists('history', $fixture) || array_key_exists('history_after', $fixture),
-        "Fixture {$name} must declare a 'history' or 'history_after' key.",
+        sprintf("Fixture %s must declare a 'history' or 'history_after' key.", $name),
     );
-    assertArrayHasKey('transaction', $fixture, "Fixture {$name} must declare a 'transaction' key.");
-    assertArrayHasKey('expected', $fixture, "Fixture {$name} must declare an 'expected' key.");
+    assertArrayHasKey('transaction', $fixture, sprintf("Fixture %s must declare a 'transaction' key.", $name));
+    assertArrayHasKey('expected', $fixture, sprintf("Fixture %s must declare an 'expected' key.", $name));
 
     /** @var mixed $settings */
     $settings = $fixture['settings'];
-    assertIsArray($settings, "Fixture {$name}: 'settings' must be an associative array.");
-    assertArrayHasKey('anomaly_sensitivity_percent', $settings, "Fixture {$name}: settings must carry anomaly_sensitivity_percent.");
-    assertArrayHasKey('anomaly_min_amount_minor', $settings, "Fixture {$name}: settings must carry anomaly_min_amount_minor.");
+    assertIsArray($settings, sprintf("Fixture %s: 'settings' must be an associative array.", $name));
+    assertArrayHasKey('anomaly_sensitivity_percent', $settings, sprintf('Fixture %s: settings must carry anomaly_sensitivity_percent.', $name));
+    assertArrayHasKey('anomaly_min_amount_minor', $settings, sprintf('Fixture %s: settings must carry anomaly_min_amount_minor.', $name));
 
     foreach (['history', 'history_after'] as $key) {
         if (! array_key_exists($key, $fixture)) {
@@ -76,34 +76,34 @@ it('every anomaly-corpus fixture returns the documented shape', function (string
         }
         /** @var mixed $rows */
         $rows = $fixture[$key];
-        assertIsArray($rows, "Fixture {$name}: '{$key}' must be a list.");
-        assertIsList($rows, "Fixture {$name}: '{$key}' must be a 0-indexed list.");
+        assertIsArray($rows, sprintf("Fixture %s: '%s' must be a list.", $name, $key));
+        assertIsList($rows, sprintf("Fixture %s: '%s' must be a 0-indexed list.", $name, $key));
     }
 
     /** @var mixed $transaction */
     $transaction = $fixture['transaction'];
-    assertIsArray($transaction, "Fixture {$name}: 'transaction' must be an associative array.");
-    assertArrayHasKey('counterparty', $transaction, "Fixture {$name}: transaction must carry a counterparty.");
-    assertArrayHasKey('amount_minor', $transaction, "Fixture {$name}: transaction must carry an amount_minor.");
-    assertArrayHasKey('direction', $transaction, "Fixture {$name}: transaction must carry a direction.");
+    assertIsArray($transaction, sprintf("Fixture %s: 'transaction' must be an associative array.", $name));
+    assertArrayHasKey('counterparty', $transaction, sprintf('Fixture %s: transaction must carry a counterparty.', $name));
+    assertArrayHasKey('amount_minor', $transaction, sprintf('Fixture %s: transaction must carry an amount_minor.', $name));
+    assertArrayHasKey('direction', $transaction, sprintf('Fixture %s: transaction must carry a direction.', $name));
 
     /** @var mixed $direction */
     $direction = $transaction['direction'];
-    assertContains($direction, ['expense', 'income'], "Fixture {$name}: transaction.direction must be expense or income.");
+    assertContains($direction, ['expense', 'income'], sprintf('Fixture %s: transaction.direction must be expense or income.', $name));
 
     /** @var mixed $expected */
     $expected = $fixture['expected'];
-    assertIsArray($expected, "Fixture {$name}: 'expected' must be an associative array.");
-    assertArrayHasKey('reasons', $expected, "Fixture {$name}: 'expected' must declare a 'reasons' key.");
+    assertIsArray($expected, sprintf("Fixture %s: 'expected' must be an associative array.", $name));
+    assertArrayHasKey('reasons', $expected, sprintf("Fixture %s: 'expected' must declare a 'reasons' key.", $name));
 
     /** @var mixed $reasons */
     $reasons = $expected['reasons'];
-    assertIsArray($reasons, "Fixture {$name}: 'expected.reasons' must be a list (may be empty).");
-    assertIsList($reasons, "Fixture {$name}: 'expected.reasons' must be a 0-indexed list.");
+    assertIsArray($reasons, sprintf("Fixture %s: 'expected.reasons' must be a list (may be empty).", $name));
+    assertIsList($reasons, sprintf("Fixture %s: 'expected.reasons' must be a 0-indexed list.", $name));
 
     $allowedReasons = AnomalyDetector::values();
     foreach ($reasons as $reason) {
-        assertContains($reason, $allowedReasons, "Fixture {$name}: '{$reason}' is not a recognised detector reason.");
+        assertContains($reason, $allowedReasons, sprintf("Fixture %s: '%s' is not a recognised detector reason.", $name, $reason));
     }
 })->with(anomalyCorpusFixtures());
 

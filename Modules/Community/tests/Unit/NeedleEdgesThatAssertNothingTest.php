@@ -26,8 +26,8 @@ it('still matches a needle whose edges are punctuation but whose body is not', f
 it('asserts a trailing boundary after a needle that ends in a combining mark', function (): void {
     $composed = "cafe\u{0301}";
 
-    expect(CorpusPatternMatcher::containsToken("betaling {$composed}teria centraal", $composed))->toBeFalse()
-        ->and(CorpusPatternMatcher::containsToken("betaling {$composed} centraal", $composed))->toBeTrue();
+    expect(CorpusPatternMatcher::containsToken(sprintf('betaling %steria centraal', $composed), $composed))->toBeFalse()
+        ->and(CorpusPatternMatcher::containsToken(sprintf('betaling %s centraal', $composed), $composed))->toBeTrue();
 });
 
 // `-a-` is three characters, so MerchantAliasPattern's floor lets it be saved,

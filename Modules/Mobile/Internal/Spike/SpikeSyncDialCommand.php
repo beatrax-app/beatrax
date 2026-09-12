@@ -30,13 +30,13 @@ final class SpikeSyncDialCommand extends Command
         $port = is_string($requested) && $requested !== '' ? (int) $requested : $ports->lan();
 
         if ($port <= 0 || $port > 65535) {
-            $this->error("mobile:spike-dial: invalid port {$port}.");
+            $this->error(sprintf('mobile:spike-dial: invalid port %s.', $port));
 
             return self::FAILURE;
         }
 
-        $uri = "ws://{$host}:{$port}/";
-        $this->info("mobile:spike-dial: dialing {$uri} (5s connect budget, bounded burst)…");
+        $uri = sprintf('ws://%s:%s/', $host, $port);
+        $this->info(sprintf('mobile:spike-dial: dialing %s (5s connect budget, bounded burst)…', $uri));
 
         try {
             $frameSeen = $this->dialOnce($uri);

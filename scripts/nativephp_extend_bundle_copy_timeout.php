@@ -52,7 +52,7 @@ $changed = 0;
 
 foreach ($patches as $target => $replacements) {
     if (! is_file($target)) {
-        fwrite(STDERR, "Target not found: {$target}\n");
+        fwrite(STDERR, sprintf("Target not found: %s\n", $target));
 
         exit(1);
     }
@@ -65,7 +65,7 @@ foreach ($patches as $target => $replacements) {
         }
 
         if (! str_contains($contents, $needle)) {
-            fwrite(STDERR, 'Anchor not found in '.basename($target).": {$needle}\n");
+            fwrite(STDERR, 'Anchor not found in '.basename($target).sprintf(": %s\n", $needle));
 
             exit(1);
         }
@@ -79,4 +79,4 @@ foreach ($patches as $target => $replacements) {
 
 echo $changed === 0
     ? "Build timeouts already extended; nothing to do.\n"
-    : 'Extended build step timeouts to '.COPY_TIMEOUT_SECONDS."s ({$changed} call sites).\n";
+    : 'Extended build step timeouts to '.COPY_TIMEOUT_SECONDS.sprintf("s (%s call sites).\n", $changed);

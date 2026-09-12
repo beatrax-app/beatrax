@@ -20,7 +20,7 @@ final class MigrationFixturePaths
     // the directory itself is the $extractedPath parse() expects.
     public static function ynab4Dir(string $version): string
     {
-        return self::root()."/ynab4/{$version}";
+        return self::root().sprintf('/ynab4/%s', $version);
     }
 
     public static function nynabZip(string $version): string
@@ -39,12 +39,12 @@ final class MigrationFixturePaths
     {
         $dir = sys_get_temp_dir().'/migration-fixture-extract-'.uniqid('', true);
         if (! mkdir($dir, 0755, true) && ! is_dir($dir)) {
-            throw new RuntimeException("Could not create extraction dir {$dir}");
+            throw new RuntimeException(sprintf('Could not create extraction dir %s', $dir));
         }
 
         $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
-            throw new RuntimeException("Could not open zip {$zipPath}");
+            throw new RuntimeException(sprintf('Could not open zip %s', $zipPath));
         }
         $zip->extractTo($dir);
         $zip->close();

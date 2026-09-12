@@ -20,7 +20,7 @@ function carriedCurrencyMt940Body(string $yenOpening): string
         .":61:2604010401C100,00NTRFA-1\n:86:100?32X\n"
         .":61:2604020402D50,00NTRFA-2\n:86:100?32Y\n"
         .":62F:C260430EUR1050,00\n-\n"
-        .":20:CARRIED-JPY\n:25:NL91ABNA0417164300\n:60F:{$yenOpening}\n"
+        .sprintf(":20:CARRIED-JPY\n:25:NL91ABNA0417164300\n:60F:%s\n", $yenOpening)
         .":61:2604030403D1000,NTRFB-1\n:86:100?32Z\n"
         .":62F:C260430JPY499000,\n-\n";
 }

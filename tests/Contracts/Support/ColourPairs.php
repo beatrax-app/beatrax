@@ -133,7 +133,7 @@ final class ColourPairs
                 $colours = array_intersect_key($properties, array_flip(['background', 'background-color', 'color']));
 
                 if ($properties === [] || implode('', $colours) !== str_replace(self::UNKNOWABLE, '', implode('', $colours))) {
-                    $opaque[] = "{$path}:{$attribute['line']}  ".PatternScan::replace('/\s+/', ' ', trim($attribute['style']));
+                    $opaque[] = sprintf('%s:%s  ', $path, $attribute['line']).PatternScan::replace('/\s+/', ' ', trim($attribute['style']));
                 }
             }
         }
@@ -150,12 +150,12 @@ final class ColourPairs
         $report = ['failing' => [], 'unreadable' => [], 'transparent' => [], 'measured' => 0];
 
         foreach ($pairs as $pair) {
-            $where = "{$pair['file']}:{$pair['line']}";
+            $where = sprintf('%s:%s', $pair['file'], $pair['line']);
             $worst = null;
 
             foreach ($pair['themes'] as $theme) {
                 if (in_array(strtolower(trim($pair['background'])), ['transparent', 'none'], true)) {
-                    $report['transparent'][] = "{$where}  color: {$pair['color']};";
+                    $report['transparent'][] = sprintf('%s  color: %s;', $where, $pair['color']);
 
                     continue 2;
                 }
@@ -164,13 +164,13 @@ final class ColourPairs
                 $text = self::colour($pair['color'], $theme);
 
                 if ($backgrounds === null || $text === null) {
-                    $report['unreadable'][] = "{$where}  background: {$pair['background']}; color: {$pair['color']};";
+                    $report['unreadable'][] = sprintf('%s  background: %s; color: %s;', $where, $pair['background'], $pair['color']);
 
                     continue 2;
                 }
 
                 if (count($backgrounds) === 1 && $backgrounds[0][3] === 0.0) {
-                    $report['transparent'][] = "{$where}  color: {$pair['color']};";
+                    $report['transparent'][] = sprintf('%s  color: %s;', $where, $pair['color']);
 
                     continue 2;
                 }

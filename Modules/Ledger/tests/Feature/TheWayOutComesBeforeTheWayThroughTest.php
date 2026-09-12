@@ -34,7 +34,7 @@ function answerOrderOffset(string $html, string $call): int
     $needle = 'wire:click="'.$call.'"';
     $at = strpos($html, $needle);
 
-    expect($at)->not->toBeFalse("the page never drew {$needle}");
+    expect($at)->not->toBeFalse(sprintf('the page never drew %s', $needle));
 
     return (int) $at;
 }

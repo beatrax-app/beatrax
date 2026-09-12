@@ -401,7 +401,7 @@ it('ALLOWED_TRANSITIONS map permits every transition BackfillInboxJob currently 
         try {
             ($this->makeMachine)()->applyStatus($inboxId, $to);
         } catch (InvalidStateTransitionException $e) {
-            test()->fail("Transition {$from} → {$to} should be permitted but raised: ".$e->getMessage());
+            test()->fail(sprintf('Transition %s → %s should be permitted but raised: ', $from, $to).$e->getMessage());
         }
         expect(($this->readState)($inboxId)->status)->toBe($to);
     }

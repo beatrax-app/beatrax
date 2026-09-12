@@ -96,11 +96,11 @@ final class MdnsAdvertiser
             return [
                 '/usr/bin/dns-sd',
                 '-R',
-                "Beatrax-{$deviceId}",
+                sprintf('Beatrax-%s', $deviceId),
                 self::SERVICE_TYPE,
                 'local',
                 (string) $port,
-                "did={$deviceId}",
+                sprintf('did=%s', $deviceId),
             ];
         }
 
@@ -108,10 +108,10 @@ final class MdnsAdvertiser
         if ($avahiPublish !== null) {
             return [
                 $avahiPublish,
-                "Beatrax-{$deviceId}",
+                sprintf('Beatrax-%s', $deviceId),
                 self::SERVICE_TYPE,
                 (string) $port,
-                "did={$deviceId}",
+                sprintf('did=%s', $deviceId),
             ];
         }
 

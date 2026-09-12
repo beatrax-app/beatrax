@@ -33,7 +33,7 @@ const MERGE_MONEY_RENDERING_PATTERN = '/->format\(\s*\)|\bnumber_format\s*\(|\bF
 function mergeMoneyStrippedSource(string $relativePath): string
 {
     $absolute = base_path($relativePath);
-    expect(is_file($absolute))->toBeTrue("Expected {$relativePath} to exist.");
+    expect(is_file($absolute))->toBeTrue(sprintf('Expected %s to exist.', $relativePath));
 
     return preg_replace('#/\*.*?\*/|//[^\n]*#s', '', (string) file_get_contents($absolute))
         ?? (string) file_get_contents($absolute);

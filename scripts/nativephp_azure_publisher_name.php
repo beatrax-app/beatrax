@@ -49,7 +49,7 @@ $projectRoot = dirname(__DIR__);
 $configPath = $projectRoot.'/nativephp/electron/electron-builder.mjs';
 
 if (! is_file($configPath)) {
-    fwrite(STDERR, "nativephp_azure_publisher_name: no electron-builder.mjs found at {$configPath} — has `php artisan native:install --publish` run?\n");
+    fwrite(STDERR, sprintf("nativephp_azure_publisher_name: no electron-builder.mjs found at %s — has `php artisan native:install --publish` run?\n", $configPath));
 
     exit(1);
 }
@@ -57,7 +57,7 @@ if (! is_file($configPath)) {
 $source = file_get_contents($configPath);
 
 if ($source === false) {
-    fwrite(STDERR, "nativephp_azure_publisher_name: could not read {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_azure_publisher_name: could not read %s\n", $configPath));
 
     exit(1);
 }
@@ -87,14 +87,14 @@ foreach ($replacements as $label => [$pattern, $replacement]) {
     $source = preg_replace($pattern, $replacement, $source, 1, $count);
 
     if ($source === null || $count !== 1) {
-        fwrite(STDERR, "nativephp_azure_publisher_name: could not locate {$label} in {$configPath}\n");
+        fwrite(STDERR, sprintf("nativephp_azure_publisher_name: could not locate %s in %s\n", $label, $configPath));
 
         exit(1);
     }
 }
 
 if (file_put_contents($configPath, $source) === false) {
-    fwrite(STDERR, "nativephp_azure_publisher_name: could not write {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_azure_publisher_name: could not write %s\n", $configPath));
 
     exit(1);
 }

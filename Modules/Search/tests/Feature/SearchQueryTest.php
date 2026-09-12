@@ -571,7 +571,7 @@ it('breaks did-you-mean ties by corpus frequency', function (): void {
         $this->searchTestTransaction($this->userAId, [
             'counterparty_name' => 'Kruidvat',
             'counterparty_normalized' => 'kruidvat',
-            'description' => "drogist bezoek {$i}",
+            'description' => sprintf('drogist bezoek %s', $i),
         ]);
     }
     $this->searchTestTransaction($this->userAId, [

@@ -125,7 +125,7 @@ it('a genuine forced failure mid-pass (real KEK, real data) leaves zero half-enc
     // RefreshDatabase resets the DB's autoincrement but not the filesystem, so
     // a keyring left by an earlier run against the same reused user id would
     // make the file_exists() assertions below pass for the wrong reason.
-    $keyringPath = UserDataPathService::appPath("sync/gdk/{$this->user->id}.enc");
+    $keyringPath = UserDataPathService::appPath(sprintf('sync/gdk/%s.enc', $this->user->id));
     @unlink($keyringPath);
     @unlink($keyringPath.'.tmp');
 

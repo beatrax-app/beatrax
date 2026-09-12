@@ -52,7 +52,7 @@ it('orders every covered child ahead of the parent it references', function (): 
             }
 
             if ($position[$table] > $position[$parent]) {
-                $violations[] = "{$table}.{$fk->from} -> {$parent}";
+                $violations[] = sprintf('%s.%s -> %s', $table, $fk->from, $parent);
             }
         }
     }

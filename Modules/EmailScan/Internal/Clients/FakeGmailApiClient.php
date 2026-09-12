@@ -108,7 +108,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
 
         if (in_array($providerMessageId, $this->unavailableMessageIds, strict: true)) {
             throw new MessageUnavailableException(
-                "FakeGmailApiClient: message {$providerMessageId} is no longer available on inbox {$inboxId}.",
+                sprintf('FakeGmailApiClient: message %s is no longer available on inbox %s.', $providerMessageId, $inboxId),
             );
         }
 
@@ -124,7 +124,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
         $raw = is_string($payload['raw'] ?? null) ? $payload['raw'] : null;
         if ($raw === null) {
             throw new FixtureUnusableException(
-                "Fake Gmail fixture {$fixture} has no `raw` field for message {$providerMessageId}.",
+                sprintf('Fake Gmail fixture %s has no `raw` field for message %s.', $fixture, $providerMessageId),
             );
         }
 

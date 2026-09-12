@@ -35,9 +35,9 @@ it('never labels the results payee stat with the bare noun the preview uses', fu
 
     foreach ($locales as $locale) {
         /** @var array<string, mixed> $results */
-        $results = require base_path("Modules/Migration/Resources/lang/{$locale}/results.php");
+        $results = require base_path(sprintf('Modules/Migration/Resources/lang/%s/results.php', $locale));
         /** @var array<string, mixed> $preview */
-        $preview = require base_path("Modules/Migration/Resources/lang/{$locale}/preview.php");
+        $preview = require base_path(sprintf('Modules/Migration/Resources/lang/%s/preview.php', $locale));
 
         $onResults = $results['stats']['payee'];
         $onPreview = $preview['stats']['payee'];

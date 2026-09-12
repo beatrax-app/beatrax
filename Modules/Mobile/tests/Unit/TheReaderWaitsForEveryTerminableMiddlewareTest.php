@@ -104,10 +104,10 @@ it('has no byte of the response to hand the webview until the tail is done', fun
         $eval = strpos($bridge, 'zend_eval_string(eval_code, NULL, "persistent_dispatch")');
         $collect = $eval === false ? false : strpos($bridge, 'get_collected_output()', $eval);
 
-        expect($dispatch)->toBeInt("{$platform} no longer dispatches through the persistent runtime")
-            ->and($send)->toBeInt("{$platform} no longer writes the response from the dispatch body")
-            ->and($eval)->toBeInt("{$platform} no longer evaluates the dispatch body in one call")
-            ->and($collect)->toBeInt("{$platform} no longer collects its output after the eval")
+        expect($dispatch)->toBeInt(sprintf('%s no longer dispatches through the persistent runtime', $platform))
+            ->and($send)->toBeInt(sprintf('%s no longer writes the response from the dispatch body', $platform))
+            ->and($eval)->toBeInt(sprintf('%s no longer evaluates the dispatch body in one call', $platform))
+            ->and($collect)->toBeInt(sprintf('%s no longer collects its output after the eval', $platform))
             ->and($dispatch)->toBeLessThan($send)
             ->and($eval)->toBeLessThan($collect);
     }

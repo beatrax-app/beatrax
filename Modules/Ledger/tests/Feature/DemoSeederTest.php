@@ -299,7 +299,7 @@ it('produces the documented dataset shape after a single seed run', function ():
 
     foreach (['merchant', 'personal', 'bank', 'government', 'self_account'] as $type) {
         expect((int) ($countByType[$type] ?? 0))
-            ->toBeGreaterThanOrEqual(2, "Counterparty type {$type} should carry ≥2 rows");
+            ->toBeGreaterThanOrEqual(2, sprintf('Counterparty type %s should carry ≥2 rows', $type));
     }
 
     $countByTxType = Transaction::query()
@@ -310,7 +310,7 @@ it('produces the documented dataset shape after a single seed run', function ():
         ->all();
     foreach (['expense', 'income', 'transfer_out', 'transfer_in', 'fee', 'refund', 'adjustment'] as $type) {
         expect((int) ($countByTxType[$type] ?? 0))
-            ->toBeGreaterThanOrEqual(2, "Transaction TYPES value {$type} should carry ≥2 rows");
+            ->toBeGreaterThanOrEqual(2, sprintf('Transaction TYPES value %s should carry ≥2 rows', $type));
     }
 
     $countByPaymentType = Transaction::query()
@@ -321,7 +321,7 @@ it('produces the documented dataset shape after a single seed run', function ():
         ->all();
     foreach (['pin', 'online', 'transfer', 'direct_debit', 'cash', 'fee', 'refund', 'unknown'] as $value) {
         expect((int) ($countByPaymentType[$value] ?? 0))
-            ->toBeGreaterThanOrEqual(2, "PaymentType value {$value} should carry ≥2 rows");
+            ->toBeGreaterThanOrEqual(2, sprintf('PaymentType value %s should carry ≥2 rows', $value));
     }
 
     // The full set of kinds the chain-link trigger pair admits.
@@ -346,7 +346,7 @@ it('produces the documented dataset shape after a single seed run', function ():
     // the page it tells you to visit opened empty.
     foreach (['pending', 'approved', 'cadence_changed', 'snoozed', 'rejected'] as $state) {
         expect((int) ($countByRecState[$state] ?? 0))
-            ->toBeGreaterThanOrEqual(1, "RecurringSeries state {$state} should carry ≥1 row");
+            ->toBeGreaterThanOrEqual(1, sprintf('RecurringSeries state %s should carry ≥1 row', $state));
     }
 
     $countByDriftState = DriftAlert::query()
@@ -357,7 +357,7 @@ it('produces the documented dataset shape after a single seed run', function ():
         ->all();
     foreach (['open', 'acknowledged', 'dismissed_cancelled'] as $state) {
         expect((int) ($countByDriftState[$state] ?? 0))
-            ->toBeGreaterThanOrEqual(1, "DriftAlert state {$state} should carry ≥1 row");
+            ->toBeGreaterThanOrEqual(1, sprintf('DriftAlert state %s should carry ≥1 row', $state));
     }
 
     // System-wide rows included: the machine-local kinds carry no user_id, so
@@ -387,7 +387,7 @@ it('produces the documented dataset shape after a single seed run', function ():
         ->all();
     foreach (['pending', 'in_progress', 'done', 'skipped'] as $status) {
         expect((int) ($countByWizardStatus[$status] ?? 0))
-            ->toBeGreaterThanOrEqual(1, "WizardProgress status {$status} should carry ≥1 row");
+            ->toBeGreaterThanOrEqual(1, sprintf('WizardProgress status %s should carry ≥1 row', $status));
     }
 
     $inboxProviders = Inbox::query()

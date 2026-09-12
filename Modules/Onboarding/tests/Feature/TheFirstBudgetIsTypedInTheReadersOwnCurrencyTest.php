@@ -29,7 +29,7 @@ beforeEach(function (): void {
 
 it('stores a first yen budget as whole yen', function (): void {
     Livewire::test(BudgetsStep::class)
-        ->set("amounts.{$this->groceries->id}", '50000')
+        ->set(sprintf('amounts.%s', $this->groceries->id), '50000')
         ->call('continue')
         ->assertDispatched('wizard.step.completed');
 

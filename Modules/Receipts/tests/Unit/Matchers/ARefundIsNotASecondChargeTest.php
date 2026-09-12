@@ -24,9 +24,9 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function directionEml(string $sender, string $subject, string $body): string
 {
-    return "From: {$sender}\r\n"
+    return sprintf("From: %s\r\n", $sender)
         ."To: kaarthouder@example.test\r\n"
-        ."Subject: {$subject}\r\n"
+        .sprintf("Subject: %s\r\n", $subject)
         ."Date: Sun, 12 Apr 2026 10:15:00 +0200\r\n"
         ."Message-ID: <direction@example.test>\r\n"
         ."MIME-Version: 1.0\r\n"
