@@ -47,18 +47,7 @@ final readonly class GdkRotationService
         $connection = $this->db->connection();
         $now = Instant::zulu($this->clock->now());
 
-        // Livewire actions are client-invokable, so a crafted
-        // removeDevice(selfRowId) is refused authoritatively here rather than
-        // merely hidden in the blade.
-        $targetIsSelf = $connection->table('device_registry')
-            ->where('id', $deviceRegistryId)
-            ->where('user_id', $userId)
-            ->value('is_self');
-        if ((bool) $targetIsSelf) {
-            throw new InvalidArgumentException(
-                "GdkRotationService::rotateAndRevoke — refusing to revoke the acting device (is_self) for user {$userId}.",
-            );
-        }
+        $this->refuseAnIdNoListOffers($userId, $deviceRegistryId);
 
         // Throws on an unavailable KEK BEFORE device_registry is mutated, so a
         // locked-app removal can never commit revoked-but-not-rotated. An empty
@@ -349,10 +338,10 @@ final readonly class GdkRotationService
         }
     }
 
-    // Only a confirmed, non-self device carrying both a device_id and an
-    // X25519 public key is an eligible fan-out target. Never wrapping to an
-    // unconfirmed device is threat-model defense-in-depth; the self-exclusion
-    // mirrors rotateAndRevoke() — the acting device already holds every epoch.
+    // Only a confirmed, non-self, still-a-device row carrying both a device_id
+    // and an X25519 public key is an eligible fan-out target. Unconfirmed is
+    // defense-in-depth, self already holds every epoch, and a retired row is a
+    // mailbox nothing will ever drain.
     /**
      * @return array{deviceId: string, pubHex: string}|null
      */
@@ -361,7 +350,7 @@ final readonly class GdkRotationService
         $recipient = $this->db->connection()->table('device_registry')
             ->where('id', $newDeviceRegistryId)
             ->where('user_id', $userId)
-            ->first(['device_id', 'x25519_public_key_hex', 'is_self', 'confirmed_at']);
+            ->first(['device_id', 'x25519_public_key_hex', 'is_self', 'confirmed_at', 'self_retired_at']);
 
         if ($recipient === null) {
             return null;
@@ -371,6 +360,7 @@ final readonly class GdkRotationService
         $pubHex = is_string($recipient->x25519_public_key_hex) ? $recipient->x25519_public_key_hex : null;
 
         if ($recipient->confirmed_at === null
+            || $recipient->self_retired_at !== null
             || (bool) $recipient->is_self
             || $deviceId === null
             || $pubHex === null
@@ -379,6 +369,44 @@ final readonly class GdkRotationService
         }
 
         return ['deviceId' => $deviceId, 'pubHex' => $pubHex];
+    }
+
+    // Livewire actions are client-invokable, so a crafted removeDevice(id) is
+    // refused authoritatively rather than merely hidden in the blade. Two ids
+    // no list offers: the acting device, and the row a restore's repair
+    // retired, whose confirmation is what verifies the restored history.
+    /**
+     * @link ../../../../.docs/features/sync/device-identity-key-files.md#the-row-is-also-not-removable
+     *
+     * @throws InvalidArgumentException when the target is this device or a retired row.
+     */
+    private function refuseAnIdNoListOffers(int $userId, int $deviceRegistryId): void
+    {
+        $target = $this->db->connection()->table('device_registry')
+            ->where('id', $deviceRegistryId)
+            ->where('user_id', $userId)
+            ->first(['is_self', 'self_retired_at']);
+
+        if ($target === null) {
+            return;
+        }
+
+        if ((bool) $target->is_self) {
+            throw new InvalidArgumentException(sprintf(
+                'GdkRotationService::rotateAndRevoke — refusing to revoke the acting device (is_self) for user %d.',
+                $userId,
+            ));
+        }
+
+        // Removal's whole mechanism is clearing confirmed_at, and there is no
+        // device here to take trust away from: the machine is gone, and the
+        // write would quarantine every op it ever signed.
+        if ($target->self_retired_at !== null) {
+            throw new InvalidArgumentException(sprintf(
+                'GdkRotationService::rotateAndRevoke — refusing to revoke a retired self row, which verifies restored history, for user %d.',
+                $userId,
+            ));
+        }
     }
 
     private function selfDeviceId(int $userId): ?string

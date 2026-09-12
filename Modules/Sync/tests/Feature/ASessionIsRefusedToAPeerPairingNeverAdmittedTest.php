@@ -166,3 +166,44 @@ it('refuses a peer whose confirmation was withdrawn, on the next session it open
     );
     expect($syncSession->status())->toBe(SyncSessionStatus::Failed);
 });
+
+// The row a restore carried and the repair retired keeps its confirmation on
+// purpose: it is what a rebuild verifies the restored op log against. Confirmed
+// was all the admission map asked for, so the machine the database came FROM
+// could open a session on it. The test above is the control — same handshake,
+// same row, and the stamp is the only thing that differs between them.
+it('refuses the machine a database was restored from, whose row the repair retired', function (): void {
+    $user = admissionUser();
+    [$noiseSession, $peerKeyHex] = admissionHandshakeAgainstAStranger();
+
+    $deviceId = admissionConfirmPeer($user, $peerKeyHex);
+
+    DB::table('device_registry')
+        ->where('user_id', $user->id)
+        ->where('device_id', $deviceId)
+        ->update(['self_retired_at' => '2026-09-12T09:00:00Z']);
+
+    $syncSession = admissionSyncSession();
+
+    expect($syncSession->authenticate($noiseSession, (int) $user->id, 'admission-local-device'))->toBeFalse(
+        'a machine that is gone holds a Noise static key this registry still remembers, and remembering it is '
+        .'what verifies the history it wrote — never what opens a session to it',
+    );
+    expect($syncSession->status())->toBe(SyncSessionStatus::Failed);
+    expect($syncSession->peerDeviceId())->toBeNull();
+
+    /** @var DeviceRegistryService $registry */
+    $registry = app(DeviceRegistryService::class);
+
+    // The half that must not move. A refusal bought by clearing confirmed_at
+    // would quarantine every op the restored machine ever signed.
+    expect(DB::table('device_registry')->where('user_id', $user->id)->where('device_id', $deviceId)->value('confirmed_at'))
+        ->not->toBeNull('the confirmation is what a rebuild reads, and the refusal above may not be paid for with it');
+
+    expect(array_keys($registry->signatureVerificationKeys((int) $user->id)))
+        ->toContain($deviceId);
+    expect(array_keys($registry->retainedDeviceKeys((int) $user->id)))
+        ->toContain($deviceId);
+    expect(array_keys($registry->deviceX25519Keys((int) $user->id)))
+        ->not->toContain($deviceId);
+});

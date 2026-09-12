@@ -30,6 +30,28 @@ and purges any previous binding for each:
 uniqueness and lookup behaviour match production rather than a simplified test
 table.
 
+### The schema is mirrored, and a guard says so
+
+`pairing_tokens`, `device_registry`, `sync_encryption_state` and the relay's
+`relay_mailbox` are built column for column from the migrations. `transactions`,
+`merchants`, `recurring_series` and `op_log_entries` are declared subsets, each
+standing in for one question the fan-out asks — whether this device already
+holds rows keyed under its own blind-index key, and whether an entry was signed
+here or replayed in.
+
+"Mirrors the production schema" was a claim nothing re-checked, and it stopped
+being true: `device_registry` fell three columns behind and
+`sync_encryption_state` four. Nothing said so, because a fixture missing a
+column is invisible until something reads it — and then it surfaces as
+`no such column` in whichever test happens to reach the query, blaming the
+change that added the reader rather than the fixture that never gained the
+column.
+
+`AHandBuiltPeerDatabaseMatchesTheMigratedOneTest` holds both claims to the
+migrations: the mirrored four by column-set equality, the narrowed four by
+subset, so a migration adding a ledger column is nothing to do with them while a
+column name the real table does not have still fails.
+
 `peer` exists because the connection name is what a later reader takes the
 fixture to mean. A desktop-to-desktop typed-code test written over `phone`
 would put the one platform that cannot play the initiator role

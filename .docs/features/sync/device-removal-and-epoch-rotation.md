@@ -24,12 +24,22 @@ guard is_self  →  load the keyring (proves the KEK)  →  mint the new epoch i
       →  rename the staged keyring into place
 ```
 
-**1. Refuse to revoke the acting device.** `is_self = 1` can never be the target. Livewire
-actions are invoked by the client, so a crafted `removeDevice(<self row id>)` reaches the
-server as an ordinary request. Hiding the button in the Blade template is not a control;
-the refusal has to be authoritative here. Revoking self clears this device's own
-`confirmed_at`, which drops the user out of their own trusted-device set — the device stops
-being able to hand its own entries to anybody, including a future replacement device.
+**1. Refuse the two ids no list offers.** Livewire actions are invoked by the client, so a
+crafted `removeDevice(<id>)` reaches the server as an ordinary request. Hiding the button in
+the Blade template is not a control; the refusal has to be authoritative, and
+`refuseAnIdNoListOffers()` is where it is.
+
+`is_self = 1` is the first. Revoking self clears this device's own `confirmed_at`, which drops
+the user out of their own trusted-device set — the device stops being able to hand its own
+entries to anybody, including a future replacement device.
+
+A row carrying `self_retired_at` is the second. That is the self row a restore carried, demoted
+by the repair and kept confirmed on purpose, because `confirmed_at` is what a rebuild verifies
+the restored op log against. There is no device there to take trust away from — the machine is
+gone — and the one write a removal performs would quarantine everything it ever signed.
+`DeviceRegistryService::purge()` refuses it on the same reading: its lookup resolves no device
+id, so the whole sweep is a no-op. See
+[device identity and its key file](device-identity-key-files.md#the-row-is-also-not-removable).
 
 **2. Load the keyring before touching `device_registry`.** `GdkKeyringService::loadKeyring()`
 throws when the app-lock KEK is unavailable. If that throw happened *after* the revoke write,
@@ -177,9 +187,10 @@ third device, and neither is addressed to one.
 Being told is terminal on the receiving side, by design: the drop is monotonic, and the only
 way back is the whole pairing ceremony again. That is what makes the *trigger* load-bearing.
 
-`SyncSession::authenticate()` refuses a device whose X25519 static key is not in the confirmed
-map, and it refuses two very different devices on that one branch: the one this household
-removed, and the one it has never admitted. A phone that has confirmed while this desktop's own
+`SyncSession::authenticate()` refuses a device whose X25519 static key is not in the admitted
+map, and it refuses three very different devices on that one branch: the one this household
+removed, the one it has never admitted, and the machine a database on this one was restored
+from, whose row is confirmed and is not a device. A phone that has confirmed while this desktop's own
 confirm is still in flight — held over the relay, or deferred behind a lock — is the second
 kind, and telling it that it was removed turned a ceremony minutes from finishing into a
 pairing that could not resume. So `tellPeerItIsRevoked()` now asks

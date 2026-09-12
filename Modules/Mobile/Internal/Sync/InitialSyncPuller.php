@@ -354,9 +354,12 @@ final readonly class InitialSyncPuller
             ->exists();
     }
 
+    // The one peer this pull is aimed at, asked of the same map the handshake
+    // admits on rather than of the wider signing map: a device this import is
+    // about to dial has to be one a session can be opened to.
     private function resolvePeerDeviceId(int $userId, string $localDeviceId): ?string
     {
-        $confirmed = $this->registryService->deviceKeys($userId);
+        $confirmed = $this->registryService->deviceX25519Keys($userId);
         unset($confirmed[$localDeviceId]);
 
         $deviceIds = array_keys($confirmed);

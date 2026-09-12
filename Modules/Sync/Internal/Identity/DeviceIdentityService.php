@@ -60,6 +60,11 @@ final readonly class DeviceIdentityService
             'x25519_public_key_hex' => $identity->x25519PublicKeyHex,
             'safety_number_words' => '',
             'is_self' => 1,
+            // The one undemotion there is. The retirement only ever ran where
+            // no key-file answered for this row, so a key-file that does is the
+            // machine itself back — and a self row still stamped would be this
+            // device hidden from its own list of devices.
+            'self_retired_at' => null,
             'paired_at' => $mintedAt,
             'confirmed_at' => $mintedAt,
             'updated_at' => $now,

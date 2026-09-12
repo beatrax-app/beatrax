@@ -127,12 +127,13 @@ final readonly class DeviceRegistryService
             return false;
         }
 
-        return $this->db->connection()
-            ->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('device_id', $deviceId)
-            ->whereNotNull('confirmed_at')
-            ->exists();
+        return $this->stillADevice(
+            $this->db->connection()
+                ->table('device_registry')
+                ->where('user_id', $userId)
+                ->where('device_id', $deviceId)
+                ->whereNotNull('confirmed_at')
+        )->exists();
     }
 
     // Whether a removal is something this registry can report about the device
@@ -158,38 +159,45 @@ final readonly class DeviceRegistryService
     }
 
     // Drops this side's confirmation of a peer that has said it no longer
-    // confirms us. Never the self row: a device answering for itself here
-    // would revoke the only identity this install has.
+    // confirms us. Never the self row, which is the only identity this install
+    // has, and never a retired row, whose confirmation is what a rebuild
+    // verifies the restored history against.
     public function forgetPeerConfirmation(int $userId, string $deviceId): void
     {
         if ($deviceId === '') {
             return;
         }
 
-        $this->db->connection()
-            ->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('device_id', $deviceId)
-            ->where('is_self', 0)
-            ->update(['confirmed_at' => null]);
+        $this->stillADevice(
+            $this->db->connection()
+                ->table('device_registry')
+                ->where('user_id', $userId)
+                ->where('device_id', $deviceId)
+                ->where('is_self', 0)
+        )->update(['confirmed_at' => null]);
     }
 
     // Every REACHABLE trace of a device, AFTER its trust is revoked and the
     // keyring rotated. The device_registry row itself stays: already revoked,
     // so every confirmed-only query steps over it, and its public key is the
     // only thing that can still verify the history the device wrote.
+
+    // A retired row resolves to no device id, so the sweep is a no-op on it:
+    // the clearing below is the write that would take a restored history down.
     /**
      * @link ../../../../.docs/features/sync/device-removal-and-epoch-rotation.md
+     * @link ../../../../.docs/features/sync/device-identity-key-files.md#the-row-is-also-not-removable
      */
     public function purge(int $userId, int $deviceRegistryId): void
     {
         $connection = $this->db->connection();
 
-        $deviceId = $connection->table('device_registry')
-            ->where('id', $deviceRegistryId)
-            ->where('user_id', $userId)
-            ->where('is_self', 0)
-            ->value('device_id');
+        $deviceId = $this->stillADevice(
+            $connection->table('device_registry')
+                ->where('id', $deviceRegistryId)
+                ->where('user_id', $userId)
+                ->where('is_self', 0)
+        )->value('device_id');
 
         if (! is_string($deviceId) || $deviceId === '') {
             return;
@@ -247,8 +255,8 @@ final readonly class DeviceRegistryService
 
     // A row retired out of the self role is kept confirmed on purpose, because
     // that is what a rebuild verifies the history it signed against — so every
-    // reader asking "who are my devices" has to say so itself. The three that
-    // do are the three the demotion put it in front of.
+    // reader asking "who are my devices" has to say so itself, and every reader
+    // asking "whose signature is this" has to leave it alone.
     /**
      * @link ../../../../.docs/features/sync/device-identity-key-files.md#what-the-repair-retires-and-what-it-must-not
      */
@@ -260,16 +268,24 @@ final readonly class DeviceRegistryService
     // Used by the Noise handshake authenticator: the Noise static key is the
     // X25519 keypair, NOT the Ed25519 signing key. Same confirmed-only trust
     // anchor as deviceKeys() — an unconfirmed key can never reach handshake.
+
+    // Narrower than deviceKeys() by the retired row, and that disagreement is
+    // deliberate: this map admits a LIVE peer, and the machine a database was
+    // restored from is gone.
     /**
+     * @link ../../../../.docs/features/sync/device-identity-key-files.md#the-transport-the-demotion-did-not-reach
+     *
      * @return array<string, string> device_id => hex X25519 public key.
      */
     public function deviceX25519Keys(int $userId): array
     {
         /** @var array<string, string> $keys */
-        $keys = $this->db->connection()
-            ->table('device_registry')
-            ->where('user_id', $userId)
-            ->whereNotNull('confirmed_at')
+        $keys = $this->stillADevice(
+            $this->db->connection()
+                ->table('device_registry')
+                ->where('user_id', $userId)
+                ->whereNotNull('confirmed_at')
+        )
             ->pluck('x25519_public_key_hex', 'device_id')
             ->all();
 
