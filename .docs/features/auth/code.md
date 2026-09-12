@@ -44,8 +44,10 @@ Modules/Auth/
 │   ├── Console/
 │   │   ├── ResetPasswordCommand.php
 │   │   ├── GrantDevCommand.php
+│   │   ├── SweepOwedKeyMaterialCommand.php
 │   │   └── RegenerateRecoveryCodesCommand.php
 │   ├── Account/
+│   │   ├── OwedKeyMaterial.php
 │   │   ├── UserScopedDataPurge.php
 │   │   └── UserScopedFilePurge.php
 │   ├── Services/
@@ -100,7 +102,10 @@ domain model uses.
     their own; the owner regenerates a partner's.
   - `DeleteAccountAction` — the account leaves this device. Re-checks the
     password, promotes the oldest survivor if the last administrator is the
-    one leaving, then purges rows, files, keyring and session.
+    one leaving, then purges rows, files, keyring and session. The rows go
+    inside a transaction and the files go after it commits, because a
+    rollback cannot put a file back — see
+    [the user-scoped purge](user-scoped-purge.md#the-two-file-tiers-and-why-neither-is-inside-the-transaction).
   - `PurgeUserDataAction` — the same row purge without the password check,
     for a caller that has no credential to check. `app/Console/Commands/
     DemoSeedCommand.php` uses it for `demo:seed --reset`; before the seam
@@ -182,6 +187,13 @@ the cross-module "a user just appeared" surface.
 - `Internal/Console/ResetPasswordCommand` — the `beatrax:reset-password`
   CLI escape hatch. The user's last-resort recovery path when every
   recovery code is lost. See [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
+- `Internal/Console/SweepOwedKeyMaterialCommand` — the `auth:sweep-owed-key-material`
+  hourly pass. Finishes the unlinks an account deletion committed but could
+  not complete, reading `account_key_purge_state`; see
+  [the debt a committed deletion leaves](user-scoped-purge.md#the-debt-a-committed-deletion-leaves).
+- `Internal/Account/OwedKeyMaterial` — writes that debt inside the deletion
+  transaction and settles it past the commit. Both the action and the sweep
+  reach the three unlinks through it.
 - `Internal/Services/AccountOwner` — answers "is this the owner", by
   lowest `users.id`. `is_developer` cannot stand in: `/settings` lets any
   user set that flag on themselves.

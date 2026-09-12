@@ -232,6 +232,19 @@ Schedule::command('anomaly:safety-net-sweep')
     ->hourly()
     ->withoutOverlapping(30);
 
+// The unlinks that end an account run past the commit that removes its rows,
+// because a rollback cannot put a file back and an account restored over
+// destroyed keys is a ledger nobody can read. This closes the window that
+// leaves: rows gone, key material still on the disk, and a debt row saying so.
+//
+// Hourly rather than daily because the row stands for a paired peer's way back
+// into an account the reader has been told is gone. The cost is one indexed
+// read of a table that is empty on every device where nothing went wrong.
+Schedule::command('auth:sweep-owed-key-material')
+    ->name('auth.sweep-owed-key-material')
+    ->hourly()
+    ->withoutOverlapping(30);
+
 // Daily forecast projection sweep: baseline plus every saved scenario, at
 // every horizon, per user. The job's ShouldBeUniqueUntilProcessing lock keyed
 // on (userId, 'baseline', horizonDays) collapses any same-day duplicate.
