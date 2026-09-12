@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Kivonategyenleg (:symbol)',
     'balance_help' => 'Ha van rá adat, a legutóbb importált számlakivonatból előre kitöltve — tartozás esetén negatív, mindkét esetben szerkeszthető.',
 
+    'prefill_difference' => 'Az alábbi kivonategyenleg abból a kivonatból lett előre kitöltve. Ez továbbra is csak kiindulópont, ezért az egyeztetés lezárása előtt ellenőrizd az összeget a bankodnál.',
+
     'cleared_balance' => 'Elszámolt egyenleg',
     'statement_target' => 'Kivonat szerinti célérték',
     'difference' => 'Különbség',

@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Rādīt kļūdas (:count)',
     'errors_help' => 'Kļūdas ir rindas, kuras neizdevās nolasīt; tās netika pievienotas jūsu virsgrāmatai.',
 
+    'statement_difference' => 'Rindas un abi atlikumi tika reģistrēti tieši tā, kā tos deva fails, un nekas netika labots. Pārbaudiet šo konta izrakstu bankā: kāda rinda var būt nolasīta nepareizi.',
+
     'upload_another' => 'Augšupielādēt citu konta izrakstu',
 
     'chain' => [

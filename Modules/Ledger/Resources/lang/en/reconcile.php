@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Statement balance (:symbol)',
     'balance_help' => 'Pre-filled from your latest imported statement when available — negative for money owed, editable either way.',
 
+    'prefill_difference' => 'The statement balance below was pre-filled from that statement. It is still a starting point, but check the figure against your bank before completing this reconcile.',
+
     'cleared_balance' => 'Cleared balance',
     'statement_target' => 'Statement target',
     'difference' => 'Difference',

@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Forhåndsvisningen er utløpt. <a href="/imports/new" class="underline">Last opp filen på nytt</a> for å prøve igjen.',
     'unreadable_html' => 'Forhåndsvisningen kan ikke leses. <a href="/imports/new" class="underline">Last opp filen på nytt</a> for å prøve igjen.',
 
+    'statement_difference' => 'Ingenting er ennå skrevet blant transaksjonene dine. Sjekk denne filen mot banken din før du bekrefter — en kontoutskrift som ikke stemmer med seg selv, betyr som regel at en rad er blitt lest feil.',
+
     'save_name' => 'Lagre navnet',
     'account_name_label' => 'Kontonavn',
     'account_placeholder' => 'f.eks. Sparekonto',

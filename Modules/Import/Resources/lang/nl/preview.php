@@ -16,6 +16,8 @@ return [
     'expired_html' => 'De voorvertoning is verlopen. <a href="/imports/new" class="underline">Upload het bestand opnieuw</a> om het nog eens te proberen.',
     'unreadable_html' => 'De voorvertoning kan niet worden gelezen. <a href="/imports/new" class="underline">Upload het bestand opnieuw</a> om het nog eens te proberen.',
 
+    'statement_difference' => 'Er is nog niets in je grootboek geschreven. Controleer dit bestand bij je bank voordat je bevestigt — een afschrift dat niet met zichzelf klopt, betekent meestal dat een regel verkeerd is gelezen.',
+
     'save_name' => 'Naam opslaan',
     'account_name_label' => 'Rekeningnaam',
     'account_placeholder' => 'bijv. Spaarrekening',

@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Arată erorile (:count)',
     'errors_help' => 'Erorile sunt rânduri care nu au putut fi analizate; nu au fost adăugate în registrul tău.',
 
+    'statement_difference' => 'Rândurile și ambele solduri au fost înregistrate exact așa cum le-a dat fișierul și nimic nu a fost corectat. Verifică acest extras la banca ta: este posibil ca un rând să fi fost citit greșit.',
+
     'upload_another' => 'Încarcă alt extras de cont',
 
     'chain' => [

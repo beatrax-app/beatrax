@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Anteprima scaduta. <a href="/imports/new" class="underline">Ricarica il file</a> per riprovare.',
     'unreadable_html' => 'Non è possibile leggere l\'anteprima. <a href="/imports/new" class="underline">Ricarica il file</a> per riprovare.',
 
+    'statement_difference' => 'Nel tuo registro non è stato ancora scritto nulla. Controlla questo file con la tua banca prima di confermare — un estratto conto che non torna con sé stesso di solito significa che una riga è stata letta male.',
+
     'save_name' => 'Salva il nome',
     'account_name_label' => 'Nome del conto',
     'account_placeholder' => 'es. Conto di risparmio principale',

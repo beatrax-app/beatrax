@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Fouten tonen (:count)',
     'errors_help' => 'Fouten zijn regels die niet konden worden ingelezen; ze zijn niet aan je grootboek toegevoegd.',
 
+    'statement_difference' => 'De regels en beide saldi zijn precies zo vastgelegd als het bestand ze gaf, en er is niets gecorrigeerd. Controleer dit afschrift bij je bank: mogelijk is een regel verkeerd gelezen.',
+
     'upload_another' => 'Nog een afschrift uploaden',
 
     'chain' => [

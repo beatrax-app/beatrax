@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Hataları göster (:count)',
     'errors_help' => 'Hatalar ayrıştırılamayan satırlardır; defterine eklenmediler.',
 
+    'statement_difference' => 'Satırlar ve iki bakiye de dosyanın verdiği biçimde birebir kaydedildi, hiçbir şey düzeltilmedi. Bu ekstreyi bankandaki kayıtlarla karşılaştır: bir satır yanlış okunmuş olabilir.',
+
     'upload_another' => 'Başka bir hesap ekstresi yükle',
 
     'chain' => [

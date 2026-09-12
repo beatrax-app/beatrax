@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Stanje z izpiska (:symbol)',
     'balance_help' => 'Vnaprej izpolnjeno iz tvojega zadnjega uvoženega izpiska, kadar je na voljo — negativno za dolgovani znesek, v obeh primerih uredljivo.',
 
+    'prefill_difference' => 'Spodnje stanje z izpiska je bilo vnaprej izpolnjeno iz tega izpiska. Še vedno je le izhodišče, zato pred dokončanjem te uskladitve preveri znesek pri svoji banki.',
+
     'cleared_balance' => 'Knjiženo stanje',
     'statement_target' => 'Cilj z izpiska',
     'difference' => 'Razlika',

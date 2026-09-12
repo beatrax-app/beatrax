@@ -370,6 +370,19 @@ Chains itself still promotes the discarded summary into `card_statements`,
 where `IcsSettlementResolver` can match a real bank settlement against it —
 that is a Chains defect, not a reconcile one, and it is open.
 
+**A statement that failed its own arithmetic still fills the box, and says so
+above it.** The statement-summary branch reads `extras` alongside the closing
+balance and keeps the self-check answer on `prefillDifferenceMinor`, so the
+caveat is about the figure that was actually placed in the field rather than
+about whatever the newest summary says on a later round trip. The figure is
+offered either way: a flagged starting point the reader can see and question
+beats an empty box, and withholding the prefill would take the caveat's own
+subject off the screen. The notice sits *above* the field, because a reader
+trusts the number the moment they read it and a flag met afterwards has already
+been overtaken. `Public/Support/StatementDifference` is the shared reader — see
+[a statement that did not check its own
+arithmetic](../ingestion/a-statement-that-did-not-check-its-own-arithmetic.md#where-a-reader-meets-it).
+
 IDOR: `$accountId` is a client-controllable, URL-bound property. Every
 read re-validates account ownership by `user_id` before touching
 `statement_summaries` / `card_statements` / `AccountBalanceQuery`, and
