@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'Yedek klasöründe doğrulanmış bir yedek bulunamadı. Beatrax bu yedeği, uygulama açıkken günde bir kez kendisi alır — elle çalıştırılacak bir şey yok.',
         'wal_mode_missing' => 'Veritabanı WAL modunda değil (şu anda :mode), bu yüzden bir arka plan görevi çalışırken kaydetme duraklayabilir. Beatrax her açılışta WAL\'ı ayarlar, bu yüzden yeniden başlatmak genelde bunu giderir.',
         'synchronous_misconfigured' => 'Veritabanının dayanıklılık düzeyi beklenen NORMAL yerine :level. Beatrax bunu her açılışta ayarlar, bu yüzden yeniden başlatmak genelde giderir.',
+        'schema_shape_drifted' => 'Beatrax uygulamasının veritabanına yerleştirdiği korumaların bir kısmı bu cihazda eksik; bu yüzden bir silme işlemi bağlantılı kayıtları sessizce beraberinde götürebilir ve bir ayar, Beatrax uygulamasının geri okuyamayacağı bir biçimde kaydedilebilir. Girdiğiniz hiçbir şey kaybolmadı. Beatrax her açılışta onarabildiğini onarır, bu nedenle yeniden başlatmak bunu genellikle giderir.',
         'oauth_scrub_set_failed' => 'OAuth gizli anahtarlarının maskelenmesi çalışmıyor. Günlükler ve denetim alıntıları, bir sonraki başarılı yüklemeye kadar maskelenmemiş belirteçler içerebilir.',
         'oauth_reauth_required' => 'OAuth gizli anahtarları kullanıcı başına depolamaya taşındı. E-posta taramasını sürdürmek için Gmail ve Microsoft yetkilendirmesini yenileyin. Eski gizli anahtar dosyası, geri alma için :file olarak yeniden adlandırıldı.',
         'oauth_reconsent' => ':provider hesabınızı yeniden bağlayın',

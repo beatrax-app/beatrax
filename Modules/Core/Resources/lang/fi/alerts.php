@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'Varmuuskopiokansiosta ei löytynyt yhtään varmennettua varmuuskopiota. Beatrax tekee tämän varmuuskopion itse, kerran päivässä, kun sovellus on auki — käsin ei ole mitään suoritettavaa.',
         'wal_mode_missing' => 'Tietokanta ei ole WAL-tilassa (nyt :mode), joten tallennus voi pysähtyä taustatehtävän ajaksi. Beatrax asettaa WAL-tilan joka käynnistyksellä, joten uudelleenkäynnistys yleensä korjaa tämän.',
         'synchronous_misconfigured' => 'Tietokannan kestävyystaso on :level odotetun NORMAL-tason sijaan. Beatrax asettaa sen joka käynnistyksellä, joten uudelleenkäynnistys yleensä korjaa sen.',
+        'schema_shape_drifted' => 'Osa suojauksista, jotka Beatrax rakentaa tietokantaan, puuttuu tältä laitteelta, joten poisto voi viedä mukanaan liitettyjä tietueita ilmoittamatta ja asetus voi tallentua muodossa, jota Beatrax ei osaa lukea takaisin. Mitään syöttämääsi ei ole kadonnut. Beatrax korjaa jokaisella käynnistyksellä sen, minkä voi, joten uudelleenkäynnistys yleensä korjaa tämän.',
         'oauth_scrub_set_failed' => 'OAuth-salaisuuksien peittäminen ei ole käytössä. Lokit ja auditointiotteet voivat sisältää peittämättömiä valtuustietoja seuraavaan onnistuneeseen lataukseen asti.',
         'oauth_reauth_required' => 'OAuth-salaisuudet siirrettiin käyttäjäkohtaiseen tallennukseen. Valtuuta Gmail ja Microsoft uudelleen, jotta sähköpostien skannaus jatkuu. Vanha salaisuustiedosto nimettiin palautusta varten muotoon :file.',
         'oauth_reconsent' => 'Yhdistä :provider uudelleen',

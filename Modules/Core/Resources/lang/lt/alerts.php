@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'Atsarginių kopijų aplanke nerasta nė vienos patikrintos kopijos. Beatrax šią kopiją daro pati, kartą per dieną, kol programėlė atidaryta — ranka nieko paleisti nereikia.',
         'wal_mode_missing' => 'Duomenų bazė neveikia WAL režimu (šiuo metu :mode), todėl išsaugojimas gali sustoti, kol vykdoma fono užduotis. Beatrax nustato WAL kiekvieno paleidimo metu, todėl paleidimas iš naujo tai paprastai išsprendžia.',
         'synchronous_misconfigured' => 'Duomenų bazės patvarumo lygis yra :level vietoj laukiamo NORMAL. Beatrax jį nustato kiekvieno paleidimo metu, todėl paleidimas iš naujo tai paprastai išsprendžia.',
+        'schema_shape_drifted' => 'Šiame įrenginyje trūksta dalies apsaugų, kurias Beatrax įdiegia duomenų bazėje, todėl ištrynimas gali tyliai pasiimti susijusius įrašus, o nustatymas gali būti išsaugotas tokiu pavidalu, kurio Beatrax negali perskaityti atgal. Niekas iš to, ką įvedėte, nedingo. Beatrax kiekvieno paleidimo metu pataiso tai, ką gali, todėl paleidimas iš naujo paprastai tai išsprendžia.',
         'oauth_scrub_set_failed' => 'OAuth paslapčių slėpimas neveikia. Žurnaluose ir audito ištraukose iki kito sėkmingo įkėlimo gali būti nepaslėptų prieigos raktų.',
         'oauth_reauth_required' => 'OAuth paslaptys perkeltos į atskiro naudotojo saugyklą. Iš naujo autorizuokite „Gmail“ ir „Microsoft“, kad būtų tęsiamas el. laiškų nuskaitymas. Senas paslapčių failas pervadintas į :file, kad būtų galima grįžti atgal.',
         'oauth_reconsent' => 'Iš naujo prijunkite savo :provider',

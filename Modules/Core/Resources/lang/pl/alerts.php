@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'W folderze kopii zapasowych nie znaleziono żadnej zweryfikowanej kopii. Beatrax robi tę kopię sam, raz dziennie, gdy aplikacja jest otwarta — nie ma nic do uruchomienia ręcznie.',
         'wal_mode_missing' => 'Baza danych nie działa w trybie WAL (obecnie :mode), więc zapisywanie może się zatrzymać, gdy działa zadanie w tle. Beatrax ustawia WAL przy każdym starcie, więc ponowne uruchomienie zwykle to naprawia.',
         'synchronous_misconfigured' => 'Poziom trwałości bazy danych to :level zamiast oczekiwanego NORMAL. Beatrax ustawia go przy każdym starcie, więc ponowne uruchomienie zwykle to naprawia.',
+        'schema_shape_drifted' => 'Na tym urządzeniu brakuje części zabezpieczeń, które Beatrax wbudowuje w bazę danych, więc usunięcie czegoś może po cichu zabrać powiązane wpisy, a ustawienie może zostać zapisane w formie, której Beatrax nie odczyta z powrotem. Nic z tego, co wprowadzono, nie zostało utracone. Beatrax naprawia przy każdym uruchomieniu to, co może, więc ponowne uruchomienie zwykle to rozwiązuje.',
         'oauth_scrub_set_failed' => 'Maskowanie sekretów OAuth nie działa. Dzienniki i fragmenty audytu mogą zawierać niezamaskowane tokeny do następnego udanego wczytania.',
         'oauth_reauth_required' => 'Sekrety OAuth przeniesiono do magazynu przypisanego do użytkownika. Autoryzuj ponownie Gmail i Microsoft, aby wznowić skanowanie poczty. Stary plik sekretów zmieniono na :file, aby umożliwić wycofanie zmian.',
         'oauth_reconsent' => 'Połącz ponownie swoje konto :provider',
