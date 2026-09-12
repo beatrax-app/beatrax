@@ -25,6 +25,12 @@ Practical recipes for exercising the `Core` module in isolation.
   - The first-launch APP_KEY regeneration + sentinel
     (`Bootstrap/AppKeyRegenerationTest`).
   - The boot-probe report (`AppBootHealthCheckTest`).
+  - Schema drift: that a database built from the migrations alone
+    satisfies the invariants the check reads, that a drifted one is
+    named and repaired, and that the banner is raised and withdrawn
+    (`ASchemaTheMigrationsTableVouchedForTest`,
+    `ADriftedSchemaRaisesABannerNoMigrationRowCouldTest`) —
+    [why](a-schema-the-migrations-table-vouched-for.md).
   - The auto-update channel: Ed25519 manifest verification, SHA-512
     binary verification, the stale-banner threshold, the skip-version
     persistence (`AutoUpdate/Ed25519ManifestVerificationTest`,

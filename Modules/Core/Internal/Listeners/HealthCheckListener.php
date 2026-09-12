@@ -11,6 +11,7 @@ use Modules\Core\Internal\Backup\BackupFreshness;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Services\SchemaShapeHealthCheck;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\Instant;
@@ -27,6 +28,8 @@ final readonly class HealthCheckListener
 
     private const string SYNCHRONOUS_ALERT_KIND = 'synchronous_misconfigured';
 
+    private const string SCHEMA_ALERT_KIND = 'schema_shape_drifted';
+
     public function __construct(
         private BootProbeState $state,
         private Clock $clock,
@@ -34,6 +37,7 @@ final readonly class HealthCheckListener
         private DatabaseManager $db,
         private SystemAlertWriter $alerts,
         private BackupFreshness $freshness,
+        private SchemaShapeHealthCheck $schema,
     ) {}
 
     public function __invoke(ConnectionEstablished $event): void
@@ -99,9 +103,54 @@ final readonly class HealthCheckListener
             $this->withdrawDriftAlert(self::SYNCHRONOUS_ALERT_KIND);
         }
 
+        $this->raiseSchemaShapeAlert($cutoff, $hour);
+
         $this->raiseOverdueBackupAlert();
 
         $this->state->booted = true;
+    }
+
+    // A schema is not what its `migrations` rows say it is. Nothing else ever
+    // compares the two, so a drifted install runs indefinitely with no signal --
+    // and the faults it carries are both silent by construction, which is why
+    // boot is the only place a reader could hear about them.
+    /**
+     * @link ../../../../.docs/features/core/a-schema-the-migrations-table-vouched-for.md
+     */
+    private function raiseSchemaShapeAlert(string $cutoff, int $hour): void
+    {
+        try {
+            $drift = $this->schema->drift();
+        } catch (Throwable $e) {
+            $this->logger->warning(
+                'HealthCheckListener: sqlite_master unreadable; skipping the schema-shape check.',
+                SafeExceptionContext::describe($e),
+            );
+
+            return;
+        }
+
+        $cascading = count($drift['cascading']);
+        $triggers = count($drift['triggers']);
+
+        if ($cascading === 0 && $triggers === 0) {
+            $this->withdrawDriftAlert(self::SCHEMA_ALERT_KIND);
+
+            return;
+        }
+
+        $this->recordDriftAlert(
+            kind: self::SCHEMA_ALERT_KIND,
+            line: CopyLine::of('core::alerts.messages.schema_shape_drifted'),
+            logMessage: sprintf(
+                '%d table(s) still cascade on delete and %d enum guard trigger(s) are absent.',
+                $cascading,
+                $triggers,
+            ),
+            metadata: ['cascading_tables' => $cascading, 'missing_triggers' => $triggers],
+            cutoff: $cutoff,
+            hour: $hour,
+        );
     }
 
     // The daily run writes the backup; only `beatrax:doctor` ever said it had

@@ -41,13 +41,15 @@ Modules/Core/
 │   │   ├── CurrentUserService.php
 │   │   ├── DevConsoleBuildGate.php
 │   │   ├── ElectronUpdateChannel.php
+│   │   ├── SchemaShapeHealthCheck.php
 │   │   ├── SecretsColumnRegistry.php
 │   │   ├── SystemAlertQuery.php
 │   │   ├── SystemClock.php
 │   │   └── UserDataPathService.php
 │   └── Support/
 │       ├── LockStore.php
-│       └── SafeTrace.php
+│       ├── SafeTrace.php
+│       └── SchemaShape.php
 ├── Internal/
 │   ├── Providers/
 │   │   ├── HealthCheckServiceProvider.php
@@ -195,6 +197,15 @@ Modules/Core/
 - `Internal/Console/InstallCommand` — `beatrax:install`. Creates the
   user (or confirms an existing one), dispatches `UserInstalled` so
   listeners re-seed reference data, prints the recovery codes once.
+- `Public/Support/SchemaShape` — the two sqlite_master reads that say
+  whether the installed schema still carries what the migrations
+  declare: no foreign key cascading on delete, and both `users`
+  receipt-conflict enum guards. It also holds the trigger definitions,
+  so whatever notices can put them back
+  ([why](a-schema-the-migrations-table-vouched-for.md)).
+- `Public/Services/SchemaShapeHealthCheck` — turns that into the
+  `label()` / `severity()` / `message()` triple `DoctorCommand` prints
+  and `HealthCheckListener` raises a banner from.
 - `Internal/Console/DoctorCommand` — `beatrax:doctor`. Runs every
   probe (PHP / Composer / Node / SQLite CLI / external tools / backup
   freshness / WAL / synchronous mode) and prints a coloured pass /
@@ -294,7 +305,8 @@ Modules/Core/
   Renders the export-everything action surfaced by [`DevMode`](../dev-mode/architecture.md).
 - `Internal/Listeners/HealthCheckListener` — runs probes during the
   install ceremony so a fresh user sees pass / warn / fail before any
-  data is imported.
+  data is imported. It also raises and withdraws the three boot drift
+  banners: journal mode, durability level, and schema shape.
 
 ## Models + migrations
 

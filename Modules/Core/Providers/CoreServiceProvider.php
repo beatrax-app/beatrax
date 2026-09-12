@@ -57,6 +57,7 @@ use Modules\Core\Public\Services\CurrentUserService;
 use Modules\Core\Public\Services\NavCountsService;
 use Modules\Core\Public\Services\PassthroughSecretShield;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
+use Modules\Core\Public\Services\SchemaShapeHealthCheck;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
@@ -103,6 +104,10 @@ final class CoreServiceProvider extends ServiceProvider
         // the contract lives; the implementation reaches thirty seeders across
         // a dozen modules, which is why it does not.
         $this->app->singleton(SampleDataLoader::class, SampleDatasetSeeder::class);
+
+        // Two sqlite_master reads and no state, so one instance serves the boot
+        // listener and the doctor alike.
+        $this->app->singleton(SchemaShapeHealthCheck::class);
 
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(UserCountry::class);

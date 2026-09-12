@@ -19,6 +19,7 @@ use Modules\Core\Internal\Console\Probes\ProbeSeverity;
 use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
+use Modules\Core\Public\Services\SchemaShapeHealthCheck;
 use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Ledger\Public\Services\SplitSumHealthCheck;
 use Modules\Search\Public\Services\FtsHealthCheck;
@@ -45,6 +46,7 @@ final class DoctorCommand extends Command
         private readonly NetworkBoundaryProbe $networkBoundaryProbe,
         private readonly HostTimezoneProbe $hostTimezoneProbe,
         private readonly OwnerBoundaryProbe $ownerBoundaryProbe,
+        private readonly SchemaShapeHealthCheck $schemaShapeHealth,
         private readonly ?FtsHealthCheck $ftsHealth = null,
         private readonly ?FingerprintHealthCheck $fingerprintHealth = null,
         private readonly ?SplitSumHealthCheck $splitSumHealth = null,
@@ -84,37 +86,16 @@ final class DoctorCommand extends Command
             $this->reportProbe($probe, $result, $blockers, $warnings);
         }
 
-        // FtsHealthCheck is optional (null when the Search module is absent
-        // or the class_exists() guard has not yet activated it). It lives in
-        // Search Public, so DoctorCommand (Core Internal) can import it; the
-        // ProbeResult is built here so FtsHealthCheck stays boundary-clean.
-        if ($this->ftsHealth !== null) {
-            $ftsResult = new ProbeResult($this->ftsHealth->severity(), $this->ftsHealth->message());
-            $this->line(sprintf(self::ROW_FORMAT, $this->ftsHealth->label(), $ftsResult->severity, $ftsResult->message));
-            if ($ftsResult->severity === ProbeSeverity::Critical->value) {
-                $blockers[] = $this->ftsHealth->label();
-            } elseif ($ftsResult->severity === ProbeSeverity::Warning->value) {
-                $warnings[] = $this->ftsHealth->label();
+        // A health check is not a Probe: each lives in the Public surface of the
+        // module that owns the question, so none may return a Core Internal
+        // ProbeResult. The row is built here from the plain values they answer
+        // in, and the optional ones are null where their module is absent.
+        foreach ([$this->schemaShapeHealth, $this->ftsHealth, $this->fingerprintHealth, $this->splitSumHealth] as $health) {
+            if ($health === null) {
+                continue;
             }
-        }
 
-        // The same shape, for the other derived thing a row carries: optional
-        // because Ledger can be absent, and its ProbeResult is built here so
-        // the check itself stays boundary-clean.
-        if ($this->fingerprintHealth !== null) {
-            $fingerprintResult = new ProbeResult($this->fingerprintHealth->severity(), $this->fingerprintHealth->message());
-            $this->line(sprintf(self::ROW_FORMAT, $this->fingerprintHealth->label(), $fingerprintResult->severity, $fingerprintResult->message));
-            if ($fingerprintResult->severity === ProbeSeverity::Warning->value) {
-                $warnings[] = $this->fingerprintHealth->label();
-            }
-        }
-
-        if ($this->splitSumHealth !== null) {
-            $splitSumResult = new ProbeResult($this->splitSumHealth->severity(), $this->splitSumHealth->message());
-            $this->line(sprintf(self::ROW_FORMAT, $this->splitSumHealth->label(), $splitSumResult->severity, $splitSumResult->message));
-            if ($splitSumResult->severity === ProbeSeverity::Warning->value) {
-                $warnings[] = $this->splitSumHealth->label();
-            }
+            $this->reportHealthCheck($health->label(), $health->severity(), $health->message(), $blockers, $warnings);
         }
 
         // ext-imap is reported separately as informational-only — the
@@ -146,6 +127,30 @@ final class DoctorCommand extends Command
         $this->info('All checks passed.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  list<string>  $blockers
+     * @param  list<string>  $warnings
+     */
+    private function reportHealthCheck(
+        string $label,
+        string $severity,
+        string $message,
+        array &$blockers,
+        array &$warnings,
+    ): void {
+        $this->line(sprintf(self::ROW_FORMAT, $label, $severity, $message));
+
+        if ($severity === ProbeSeverity::Critical->value) {
+            $blockers[] = $label;
+
+            return;
+        }
+
+        if ($severity === ProbeSeverity::Warning->value) {
+            $warnings[] = $label;
+        }
     }
 
     /**

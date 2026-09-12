@@ -595,6 +595,27 @@ awkwardly into the severity bucket model. Exit codes: `0` every probe
 `ok` (or `info` for ext-imap), `1` one or more `warning` probes, `2`
 at least one `critical` probe.
 
+Beside the probes, `DoctorCommand` prints one row per *health check* —
+`SchemaShapeHealthCheck` (Core), `FtsHealthCheck` (Search),
+`FingerprintHealthCheck` and `SplitSumHealthCheck` (Ledger). A health
+check is not a `Probe`: each lives in the `Public/` surface of the
+module that owns the question, so none of them may return a Core
+Internal `ProbeResult`. Each answers in three plain values —
+`label()`, `severity()`, `message()` — and the command builds the row
+and the severity bucket itself. The Search and Ledger ones are
+optional, and are null where their module is absent from the build.
+
+`SchemaShapeHealthCheck` asks whether the installed schema still
+carries what the migrations declare: no foreign key cascading on
+delete, and both `users` receipt-conflict enum-guard triggers present.
+It is also read at boot by `HealthCheckListener`, which raises a
+system-wide `schema_shape_drifted` row through the same
+`recordDriftAlert` path as the two pragma checks, and withdraws it on
+the start that put the schema back. A `migrations` row is not evidence
+the schema still holds what the statement wrote, and one install was
+found where it did not — see
+[a schema the migrations table vouched for](a-schema-the-migrations-table-vouched-for.md).
+
 The `Probe` contract: each probe is a small testable unit reading one
 operational signal and returning a `ProbeResult` at severity
 `ok`/`warning`/`critical`. Probes MUST NOT throw — every IO/SQL

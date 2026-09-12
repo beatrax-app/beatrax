@@ -13,6 +13,7 @@ use Modules\Core\Internal\Listeners\HealthCheckListener;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
+use Modules\Core\Public\Services\SchemaShapeHealthCheck;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Psr\Log\LoggerInterface;
 use Tests\Helpers\LiveSqliteConnection;
@@ -65,6 +66,7 @@ function bnrBoot(): void
         $db,
         app(SystemAlertWriter::class),
         app(BackupFreshness::class),
+        app(SchemaShapeHealthCheck::class),
     );
 
     $listener(new ConnectionEstablished($db->connection()));

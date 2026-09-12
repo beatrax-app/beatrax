@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'Det ble ikke funnet noen verifisert sikkerhetskopi i sikkerhetskopimappen. Beatrax lager denne sikkerhetskopien selv, én gang om dagen, mens appen er åpen — det er ingenting å kjøre for hånd.',
         'wal_mode_missing' => 'Databasen er ikke i WAL-modus (nå :mode), så lagring kan stoppe opp mens en bakgrunnsoppgave kjører. Beatrax setter WAL ved hver oppstart, så en omstart løser det som regel.',
         'synchronous_misconfigured' => 'Databasens holdbarhetsnivå er :level i stedet for forventet NORMAL. Beatrax setter det ved hver oppstart, så en omstart løser det som regel.',
+        'schema_shape_drifted' => 'Noen av beskyttelsene Beatrax bygger inn i databasen mangler på denne enheten, så en sletting kan ta med seg tilknyttede oppføringer uten å si fra, og en innstilling kan bli lagret i en form Beatrax ikke kan lese tilbake. Ingenting av det du har lagt inn har gått tapt. Beatrax reparerer det den kan hver gang den starter, så en omstart løser dette som regel.',
         'oauth_scrub_set_failed' => 'Sladding av OAuth-hemmeligheter er ute av drift. Logger og revisjonsutdrag kan inneholde usladdede tokener fram til neste vellykkede innlasting.',
         'oauth_reauth_required' => 'OAuth-hemmeligheter er flyttet til lagring per bruker. Godkjenn Gmail og Microsoft på nytt for å gjenoppta e-postskanning. Den gamle hemmelighetsfilen ble omdøpt til :file for tilbakerulling.',
         'oauth_reconsent' => 'Koble til :provider på nytt',

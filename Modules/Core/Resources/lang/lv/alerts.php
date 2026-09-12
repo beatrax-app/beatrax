@@ -40,6 +40,7 @@ return [
         'backup_none_found' => 'Dublējumu mapē netika atrasts neviens pārbaudīts dublējums. Beatrax šo dublējumu izveido pati, reizi dienā, kamēr lietotne ir atvērta — ar roku nekas nav jāpalaiž.',
         'wal_mode_missing' => 'Datubāze nav WAL režīmā (pašlaik :mode), tāpēc saglabāšana var apstāties, kamēr darbojas fona uzdevums. Beatrax iestata WAL katrā palaišanas reizē, tāpēc restartēšana to parasti atrisina.',
         'synchronous_misconfigured' => 'Datubāzes noturības līmenis ir :level, nevis gaidītais NORMAL. Beatrax to iestata katrā palaišanas reizē, tāpēc restartēšana to parasti atrisina.',
+        'schema_shape_drifted' => 'Šajā ierīcē trūkst daļas aizsardzības mehānismu, ko Beatrax iebūvē datubāzē, tāpēc dzēšana var klusi paņemt līdzi saistītos ierakstus, bet iestatījums var tikt saglabāts formā, ko Beatrax nevar nolasīt atpakaļ. Nekas no ievadītā nav zudis. Beatrax katrā palaišanas reizē izlabo to, ko var, tāpēc restartēšana to parasti atrisina.',
         'oauth_scrub_set_failed' => 'OAuth noslēpumu maskēšana nedarbojas. Žurnālos un audita izrakstos līdz nākamajai veiksmīgajai ielādei var būt nemaskētas pilnvaras.',
         'oauth_reauth_required' => 'OAuth noslēpumi ir pārvietoti uz katra lietotāja krātuvi. Atkārtoti autorizējiet Gmail un Microsoft, lai atsāktu e-pasta skenēšanu. Vecais noslēpumu fails atgriešanai tika pārdēvēts par :file.',
         'oauth_reconsent' => 'Atkārtoti savienojiet savu :provider',
