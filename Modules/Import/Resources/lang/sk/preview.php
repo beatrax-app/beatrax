@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Náhľad expiroval. <a href="/imports/new" class="underline">Nahraj súbor znova</a> a skús to ešte raz.',
     'unreadable_html' => 'Náhľad sa nedá prečítať. <a href="/imports/new" class="underline">Nahraj súbor znova</a> a skús to ešte raz.',
 
+    'statement_difference' => 'Do tvojej knihy sa zatiaľ nič nezapísalo. Než to potvrdíš, skontroluj tento súbor oproti banke — výpis, ktorý nesúhlasí sám so sebou, obvykle znamená, že sa nejaký riadok načítal nesprávne.',
+
     'save_name' => 'Uložiť názov',
     'account_name_label' => 'Názov účtu',
     'account_placeholder' => 'napr. Hlavný sporiaci účet',

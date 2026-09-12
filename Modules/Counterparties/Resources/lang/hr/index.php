@@ -9,8 +9,6 @@ return [
     'entities' => ':count subjekt|:count subjekta|:count subjekata',
     'need_identification' => 'Za identifikaciju: :count',
 
-    'search_placeholder' => 'Pretraži po nazivu, aliasu ili IBAN-u…',
-    'search_aria' => 'Pretraži protustranke',
     'sort' => 'Sortiranje: ukupno 12 mj. ↓',
 
     'view_mode' => 'Način prikaza',

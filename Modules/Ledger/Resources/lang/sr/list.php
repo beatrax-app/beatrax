@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Prikaži samo nedavne',
     'show_full' => 'Prikaži celu istoriju',
 
-    'empty_period' => 'Nema ničega za ovaj period.',
-
     'empty_recent_has_older' => 'Ništa u poslednjih 90 dana. Tvoje starije transakcije su i dalje ovde.',
 
     'empty_history' => 'Još nema transakcija.',

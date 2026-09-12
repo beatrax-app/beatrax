@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Internal\Support\RateFreshness;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Enums\ConversionOutcome;
 use Modules\FX\Public\Support\BundledRates;
@@ -22,8 +23,6 @@ use Modules\Ledger\Public\ValueObjects\RateTable;
  */
 final class ExchangeRateService
 {
-    public const int STALE_DAYS_THRESHOLD = 3;
-
     private const string BASE_CURRENCY = Currency::Eur->value;
 
     // The rate in effect on a date is the newest one published on or before it,
@@ -196,7 +195,7 @@ final class ExchangeRateService
         // Absolute, because RATE_DATE_IN_EFFECT falls FORWARD when it holds
         // nothing on or before the day: a rate published a month after the
         // figure it prices is as far from it as one published a month before.
-        $isStale = $asOf !== null && abs($asOf->diffInDays($pricedFor)) > self::STALE_DAYS_THRESHOLD;
+        $isStale = RateFreshness::isStale($asOf, $pricedFor);
 
         return new ConversionResult(
             original: $money,

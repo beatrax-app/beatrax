@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kursai :date duomenimis iš :source',
+    'rates_not_recorded' => 'kursai neįrašyti — šis rezultatas išsaugotas be jų',
 
     // i18n-review: lt · stale_bundled, stale_old, stale_offline — the arms follow the
     // genitive the existing line already used after "senesnis nei", giving "dienos"

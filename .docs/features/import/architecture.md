@@ -397,6 +397,29 @@ read this row", under a heading saying the whole file could not be read.
 `ImportPipeline::fileDetail()` and `::safeDetail()` are the two call
 sites; nothing else picks between them.
 
+### A statement that did not add up
+
+The row issues above are what the run recorded about its own rows. A bank
+statement also states an opening and a closing balance, and the parser checks
+those against the rows it yielded — a non-zero answer rides on
+`statement_summaries.extras` and survives the confirm, so this screen reads it
+live rather than needing a copy on the run.
+`Internal/Services/StatementDifferenceForRun` is the query both import screens
+use: the table is unique on `(user_id, import_run_id)`, so there is one row to
+ask, and a summary exists from the moment a file is *previewed*, which is what
+lets the preview say it before the write. Neither screen narrows by
+`StatementDenomination` — the question is whether the **file** added up, which
+it answers in its own denomination whether or not that is the account's. The
+sentence, and which of the two directions the sign means, come from
+`Ledger\Public\Support\StatementDifference`; see [a statement that did not
+check its own
+arithmetic](../ingestion/a-statement-that-did-not-check-its-own-arithmetic.md#where-a-reader-meets-it).
+
+On the preview it is its own `@if`, deliberately not a branch of the chain
+carrying the expired, unreadable and account-naming arms: an account still
+waiting to be named and a file that does not add up are two facts about one
+upload, and a chain shows whichever comes first.
+
 ### The three PDF refusals
 
 `ImportFailureReason` keeps `PdfReaderUnavailable`, `PdfHasNoTextLayer`

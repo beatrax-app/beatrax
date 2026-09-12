@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Priekšskatījuma termiņš ir beidzies. <a href="/imports/new" class="underline">Augšupielādējiet failu vēlreiz</a>, lai mēģinātu no jauna.',
     'unreadable_html' => 'Priekšskatījumu nevar nolasīt. <a href="/imports/new" class="underline">Augšupielādējiet failu vēlreiz</a>, lai mēģinātu no jauna.',
 
+    'statement_difference' => 'Jūsu virsgrāmatā vēl nekas nav ierakstīts. Pirms apstiprināšanas pārbaudiet šo failu bankā — konta izraksts, kas nesakrīt pats ar sevi, parasti nozīmē, ka kāda rinda ir nolasīta nepareizi.',
+
     'save_name' => 'Saglabāt nosaukumu',
     'account_name_label' => 'Konta nosaukums',
     'account_placeholder' => 'piem. Galvenais krājkonts',

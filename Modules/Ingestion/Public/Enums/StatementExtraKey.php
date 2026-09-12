@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\Ingestion\Internal\Enums;
+namespace Modules\Ingestion\Public\Enums;
 
 // The keys the statement parsers write into StatementSummaryData::$extras.
 // MT940 and CAMT.053 both answer the multi-statement question, and spelling

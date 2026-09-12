@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Solde du relevé (:symbol)',
     'balance_help' => 'Prérempli à partir de ton dernier relevé importé quand c\'est possible — négatif pour un montant dû, modifiable dans les deux cas.',
 
+    'prefill_difference' => 'Le solde du relevé ci-dessous a été prérempli à partir de ce relevé. Cela reste un point de départ, mais vérifie le chiffre auprès de ta banque avant de terminer ce rapprochement.',
+
     'cleared_balance' => 'Solde compensé',
     'statement_target' => 'Cible du relevé',
     'difference' => 'Écart',

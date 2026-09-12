@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'koersen per :date van :source',
+    'rates_not_recorded' => 'koersen niet vastgelegd — dit resultaat is zonder koersen opgeslagen',
 
     'stale_bundled' => 'Er wordt een meegeleverde koers gebruikt van meer dan :count dag oud. Schakel online vernieuwen in bij Instellingen voor actuele koersen.|Er wordt een meegeleverde koers gebruikt van meer dan :count dagen oud. Schakel online vernieuwen in bij Instellingen voor actuele koersen.',
     'stale_old' => 'Deze koers is meer dan :count dag oud. De volgende online vernieuwing werkt hem bij.|Deze koers is meer dan :count dagen oud. De volgende online vernieuwing werkt hem bij.',

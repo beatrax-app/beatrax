@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Die Vorschau ist abgelaufen. <a href="/imports/new" class="underline">Lade die Datei erneut hoch</a>, um es noch einmal zu versuchen.',
     'unreadable_html' => 'Die Vorschau kann nicht gelesen werden. <a href="/imports/new" class="underline">Lade die Datei erneut hoch</a>, um es noch einmal zu versuchen.',
 
+    'statement_difference' => 'In dein Hauptbuch wurde noch nichts geschrieben. Prüfe diese Datei bei deiner Bank, bevor du bestätigst — ein Kontoauszug, der nicht zu sich selbst passt, heißt meist, dass eine Zeile falsch gelesen wurde.',
+
     'save_name' => 'Namen speichern',
     'account_name_label' => 'Kontoname',
     'account_placeholder' => 'z. B. Hauptsparkonto',

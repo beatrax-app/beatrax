@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Yalnızca son işlemleri göster',
     'show_full' => 'Tüm geçmişi göster',
 
-    'empty_period' => 'Bu dönem için burada bir şey yok.',
-
     'empty_recent_has_older' => 'Son 90 günde bir şey yok. Daha eski işlemleriniz hâlâ burada.',
 
     'empty_history' => 'Henüz işlem yok.',

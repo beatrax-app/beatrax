@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Zobrazit chyby (:count)',
     'errors_help' => 'Chyby jsou řádky, které se nepodařilo zpracovat; do knihy se nepřidaly.',
 
+    'statement_difference' => 'Řádky i oba zůstatky byly zaznamenány přesně tak, jak je dal soubor, a nic se neopravovalo. Zkontroluj tento výpis proti bance: některý řádek se mohl načíst špatně.',
+
     'upload_another' => 'Nahrát další výpis z účtu',
 
     'chain' => [

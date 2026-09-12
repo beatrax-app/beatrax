@@ -16,6 +16,8 @@ return [
     'expired_html' => 'A pré-visualização expirou. <a href="/imports/new" class="underline">Volta a carregar o ficheiro</a> para tentares de novo.',
     'unreadable_html' => 'Não é possível ler a pré-visualização. <a href="/imports/new" class="underline">Volta a carregar o ficheiro</a> para tentares de novo.',
 
+    'statement_difference' => 'Ainda não foi escrito nada no teu livro-razão. Confere este ficheiro com o teu banco antes de confirmar — um extrato que não bate consigo próprio significa quase sempre que uma linha foi mal lida.',
+
     'save_name' => 'Guardar o nome',
     'account_name_label' => 'Nome da conta',
     'account_placeholder' => 'ex.: Conta poupança principal',

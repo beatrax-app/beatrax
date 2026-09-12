@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'tipos a fecha de :date, fuente: :source',
+    'rates_not_recorded' => 'tipos no registrados — este resultado se guardó sin ellos',
 
     'stale_bundled' => 'Se está usando un tipo de cambio incluido en la app con más de :count día. Activa la actualización en línea en Ajustes para tener tipos actuales.|Se está usando un tipo de cambio incluido en la app con más de :count días. Activa la actualización en línea en Ajustes para tener tipos actuales.',
     'stale_old' => 'Este tipo de cambio tiene más de :count día. La próxima actualización en línea lo renovará.|Este tipo de cambio tiene más de :count días. La próxima actualización en línea lo renovará.',

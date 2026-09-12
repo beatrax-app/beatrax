@@ -187,13 +187,11 @@ final readonly class ForecastChartView
             'shortfallWindows' => $shortfallWindows,
             'baselineRunFailed' => $baseline->runFailed,
             'scenarioRunFailed' => $scenario->runFailed ?? false,
-            // Half a disclosure, because half is all the run kept: result_json
-            // records the codes the fold could not price and not the rates it
-            // priced the rest at, so this curve can name what it left out and
-            // nothing more until the pipeline stores them.
-            'baselineConversion' => $baseline->unconvertedCurrencies === []
-                ? null
-                : ConversionDisclosure::of(RateSet::empty($baseline->defaultCurrency), $baseline->unconvertedCurrencies),
+            // Whole, now that result_json carries the rates the fold priced with
+            // beside the codes it could not price. The mapper decides which of
+            // the three states the stored run is in; there is nothing left for
+            // the surface to reconstruct.
+            'baselineConversion' => $baseline->conversion,
         ];
     }
 

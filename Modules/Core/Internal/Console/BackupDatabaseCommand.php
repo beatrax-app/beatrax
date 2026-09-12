@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Internal\Enums\BackupAlertKind;
@@ -65,6 +66,7 @@ final class BackupDatabaseCommand extends Command
         private readonly UserDataPathService $paths,
         private readonly LoggerInterface $logger,
         private readonly SystemAlertWriter $alerts,
+        private readonly BackupKeyMaterial $keyMaterial,
     ) {
         parent::__construct();
     }
@@ -108,6 +110,7 @@ final class BackupDatabaseCommand extends Command
         $this->vacuumInto($partial, $destination);
         $this->assertOutputExists($partial, $destination);
         $this->hardenBackupFile($partial, $destination);
+        $this->packKeyMaterial($partial, $destination);
         $this->assertIntegrity($partial, $destination);
 
         // Decided on the finished copy rather than on the live file: VACUUM
@@ -200,6 +203,31 @@ final class BackupDatabaseCommand extends Command
             $this->failCorrupt($reportAs, null, BackupFailureCause::WriteFailed, [
                 'phase' => 'chmod',
                 'reason' => 'chmod 0600 failed on freshly-written backup file',
+            ], self::BACKUP_WRITE_FAILED_MESSAGE);
+        }
+    }
+
+    // A copy of a sealed database alone restores as a ledger nothing can read,
+    // silently. After the chmod, so key material is never written into a file
+    // at the process umask, and before the integrity check and the digest, so
+    // both answer for the finished copy.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#five-producers-and-the-three-that-were-not-asked
+     */
+    private function packKeyMaterial(string $destination, string $reportAs): void
+    {
+        try {
+            $this->keyMaterial->packInto($destination);
+        } catch (Throwable $e) {
+            $this->files->delete($destination);
+            // packInto can throw a PDOException, whose message is the
+            // statement and its bindings; the alert metadata is read back on
+            // the banner and in the dev console. Ours name a path.
+            $this->failCorrupt($reportAs, null, BackupFailureCause::WriteFailed, [
+                'phase' => 'pack_key_material',
+                'reason' => $e instanceof BackupIoException
+                    ? $e->getMessage()
+                    : SafeExceptionContext::shortName($e),
             ], self::BACKUP_WRITE_FAILED_MESSAGE);
         }
     }

@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kurser per :date från :source',
+    'rates_not_recorded' => 'kurser har inte sparats — det här resultatet lagrades utan dem',
 
     'stale_bundled' => 'En medföljande ögonblickskurs som är mer än :count dag gammal används. Slå på hämtning online i Inställningar för aktuella kurser.|En medföljande ögonblickskurs som är mer än :count dagar gammal används. Slå på hämtning online i Inställningar för aktuella kurser.',
     'stale_old' => 'Den här kursen är mer än :count dag gammal. Nästa hämtning online uppdaterar den.|Den här kursen är mer än :count dagar gammal. Nästa hämtning online uppdaterar den.',

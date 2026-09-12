@@ -40,7 +40,11 @@ Practical recipes for exercising the `Core` module in isolation.
   - The backup + restore commands' happy + corruption paths
     (`BackupDatabaseCommandTest`, `BackupCorruptionPathTest`,
     `BackupScheduleTest`, `RestoreDatabaseCommandTest`,
-    `RestoreSuccessPathTest`).
+    `RestoreSuccessPathTest`), and the keyring they carry across a
+    machine that does not have one
+    (`TheSupportedBackupDidNotCarryTheKeyThatOpensItTest` — its
+    no-keyring case is the control, because an install with nothing to
+    carry must keep the copy the smart skip has always hashed).
   - The doctor command + failed-jobs command
     (`DoctorCommandTest`, `FailedJobsCommandTest`).
   - The install command happy + re-run paths (`InstallCommandTest`).
