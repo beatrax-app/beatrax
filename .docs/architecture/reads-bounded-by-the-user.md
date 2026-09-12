@@ -26,6 +26,15 @@ A five-year ledger, file-backed, with the real schema, indexes and triggers:
 Timings taken **outside** the test suite. Any bulk figure taken inside it is
 wrong in a specific direction — see [measuring write cost](measuring-write-cost.md).
 
+The ratio in the second row is named deliberately, and it is the row to copy. A
+fixture built for the encryption pass held **25** op-log rows per transaction
+instead, and every figure taken from it was too kind by about the same factor:
+it put that pass's 30-second lock budget at 95,000 transactions when the real
+number is nearer 31,000. A fixture modelling half a ledger does not report half
+the cost — it reports a different curve, and the shortfall is invisible, because
+nothing in the output says which ratio it ran at. Check the ratio against the
+live database **before** trusting a bulk figure rather than after.
+
 ## Ranked by measurement
 
 | # | Read | Measured | Fixed |
@@ -38,6 +47,7 @@ wrong in a specific direction — see [measuring write cost](measuring-write-cos
 | 6 | `CommunityCorpusQuery::lookupGeneralized()` for a reader who named no country | **143.5 ms per unresolved row**, 6,750 patterns scanned past PHP's 4,096-entry PCRE cache | **Yes** |
 | 7 | `CounterpartyDisplayName::forUser()` | 109.7 ms and 2.05 MB for 2,000 counterparties, on every transaction-detail render | **Yes** |
 | 8 | `EntityNameSearch` counterparty scan | the whole merchant list materialised per palette keystroke, 1.14 MB, to return three names | **Yes** |
+| 9 | `EncryptionMigrationService::migrate()` | **116.9 s of held writer lock** at 95,000 transactions, and a queue tick that exhausted its 30-second timeout and raised `database is locked` | **Yes** |
 
 ### 2 — the rule book, re-read once per transaction
 
@@ -223,6 +233,65 @@ Both lists were proved unchanged rather than assumed: 2,000 names and nineteen
 palette needles, rendered under all twenty-six shipped locales and diffed
 against the same code path with the fix removed — byte-identical everywhere.
 
+### 9 — the pass that sorted every table it swept
+
+`EncryptionMigrationService::migrate()` runs once, when the reader turns on
+at-rest encryption, and rewrites the op log and five projection tables inside
+**one writer transaction**. Every second of it is a second nothing else on the
+device can write, which makes this the one entry here whose cost is paid by code
+that has nothing to do with the read.
+
+It was never on this page — it was recorded in
+[sensitive-columns-at-rest](../features/sync/sensitive-columns-at-rest.md#what-the-transaction-still-is-and-the-headroom-it-has-left)
+as *linear past its index, roughly 95,000 transactions before a 30-second pass
+returns*, and left. Neither half of that held, and the read that was ranked by
+its answer rather than its plan is the shape this page exists to catch, so it
+is ranked here now.
+
+| transactions | op-log entries | writer lock held, before | after |
+| --- | --- | --- | --- |
+| 25,000 | 1,225,000 | 23.3 s | **14.9 s** |
+| 50,000 | 2,450,000 | 53.2 s | **32.1 s** |
+| 95,000 | 4,655,000 | 116.9 s | **64.6 s** |
+
+The 30-second budget was reached at about **31,000** transactions, not 95,000 —
+3.9x optimistic, for the fixture reason the section above now names. And the
+pass was never linear: fitted across that range the exponent was **1.21**, and
+is now 1.10.
+
+Two layers, and the earlier pass had found only one. Eight further tables
+planned `USE TEMP B-TREE FOR ORDER BY` on the same
+`where user_id = ? and id > ? order by id`, four of them inside
+`CounterpartyKeyBackfill`, which runs in the same transaction — and one of those
+measured an exponent of **2.02**, because it rewrites a column of the very index
+its own walk was reading. The batched `CASE` write was capped by *bindings*
+rather than by cost: SQLite re-reads the whole `when` chain for every row a
+statement updates, so 180 rows per statement cost 12.19 s where 20 cost 4.58 s.
+[The eight other tables](../features/sync/sensitive-columns-at-rest.md#the-eight-other-tables-the-pass-walks)
+and [what a `case` over ids charges per row](../features/sync/sensitive-columns-at-rest.md#what-a-case-over-ids-charges-per-row)
+carry the full tables, the index shape, and the candidates that were rejected.
+
+What it costs the reader is not a slowdown. A second process running
+`DatabaseQueue::pop()`'s read-then-write shape against the same file, arriving
+as the lock is taken at 40,000 transactions, **exhausted the 30-second
+`busy_timeout` and raised `database is locked`** after 31.9 s. It reserves after
+16.2 s now.
+
+#### The candidate that answered nothing and reported success
+
+`+user_id = ?` is the other way to make that sort go away, and it needs no index
+at all: the unary plus strips the column's affinity, every index becomes
+ineligible, and the planner walks the primary key in the order the page already
+wanted. It was rejected twice over. It is slower — 72.5 s against 64.6 s for the
+whole pass at 95,000, because it reads every other user's rows to do it. And
+stripping the affinity strips the **conversion** that goes with it, so the same
+predicate bound as a string matches nothing at all: the first run of it
+encrypted zero rows and reported success.
+
+A pass that does nothing and says it worked is a worse failure than a slow one,
+and this is the shape that makes it: the trick reads as a free win, and goes
+silent the day the binding arrives as a string.
+
 ## Priced by a predicate no index leads with
 
 Every index on these three tables leads with `user_id`, and all three of these
@@ -238,6 +307,12 @@ nothing in the app runs one:
 | `ReviveExpiredAnomalySnoozesJob` | 20,000 alerts | 60 | `SCAN anomaly_alerts` — 1.396 ms | `SEARCH … USING INDEX anomaly_alerts_state_idx (state=?)` — 0.023 ms |
 | `RevivedExpiredDriftSnoozesJob` | 5,000 alerts | 40 | `SCAN drift_alerts` — 0.206 ms | `SEARCH … USING INDEX drift_alerts_state_idx (state=?)` — 0.014 ms |
 | `InboxMessageQuery::forStatus()` | 40,000 messages | 50 | `SCAN inbox_messages` — 2.985 ms | `SEARCH … USING INDEX inbox_messages_status_idx (status=?)` — 0.057 ms |
+
+There is a third way to make a planner stop sorting, and it is a trap rather
+than a tool: a unary `+` on the predicate column strips the affinity, makes
+every index ineligible, and leaves the walk on the primary key. It is measured
+and rejected under 9 above — it strips the type conversion with the affinity, so
+the same predicate bound as a string silently matches nothing.
 
 `id` is the rowid on all three tables, so an index on the predicate column alone
 already carries the id ordering the walks page by: `(status)` and `(status, id)`
