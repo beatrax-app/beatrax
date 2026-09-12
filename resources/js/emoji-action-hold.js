@@ -124,9 +124,9 @@ export const emojiActionHold = () => {
         },
 
         // Alpine removes the element; nothing removes a pending timeout. A row
-        // that leaves its list mid-hold — a morph, a wire:navigate swap — used
-        // to leave both of these running against a scope nobody can see, and
-        // the 450ms one goes on to call place() on a detached tip.
+        // that leaves its list mid-hold — a morph, a wire:navigate swap — left
+        // both of these running against a scope that is already gone, and the
+        // 450ms one goes on to call place() on a detached tip.
         destroy() {
             this.disarm();
             this.clearFade();

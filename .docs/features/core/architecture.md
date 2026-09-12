@@ -815,11 +815,10 @@ install button — gated on `installable` — is then a control nobody can reach
 and holds it on `window.beatraxInstallPrompt`; the card reads that stash in
 `init()` as well as binding its own listener, and takes the listener back off
 the window in `destroy()`. A listener on the window is not collected with the
-element, so one left behind is one more per navigation, each holding a scope
-nobody can see.
+element, so one left behind is one more per navigation, each closed over a
+scope that is already gone.
 
-The
-component's own docblock, and a comment on the dashboard, both used to promise
+The component's own docblock, and a comment on the dashboard, both used to promise
 an iOS Safari "Tap Share, then Add to Home Screen" branch; no such branch and
 no copy for one has ever existed. Adding it is a copy job first: both strings
 the card renders are written in the desktop voice ("… on your phone"), so an

@@ -57,7 +57,7 @@
         },
         // window outlives this element, so the listener has to come back off
         // it: a morph or a navigation leaves every one that does not behind,
-        // each holding a scope nobody can see.
+        // each closed over a scope that is already gone.
         destroy() {
             if (this.offer) {
                 window.removeEventListener('beforeinstallprompt', this.offer);

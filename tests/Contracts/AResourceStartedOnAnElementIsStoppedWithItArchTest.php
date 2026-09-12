@@ -252,10 +252,10 @@ it('stops what an Alpine factory started, in the modules the entry script regist
         "This factory starts something its element does not own and declares no\n".
         "destroy(). Alpine calls destroy() when the element goes and nothing else\n".
         "does: a wire:navigate swap destroys the whole body, and a morph takes a\n".
-        "row out of a list mid-gesture. What is left runs against a scope nobody\n".
-        "can see — a debounce asking a wire:id the new page does not answer to, a\n".
-        "hold timer measuring a detached node, a window listener holding an offer\n".
-        "for a component that is gone.\n".
+        "row out of a list mid-gesture. What is left runs against a scope that is\n".
+        "already gone: a debounce asking a wire:id the new page does not answer\n".
+        "to, a hold timer measuring a detached node, a window listener holding an\n".
+        "offer for a component that is no longer there.\n".
         "Offenders:\n  ".implode("\n  ", $offenders),
     );
 });
