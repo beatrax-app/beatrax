@@ -341,6 +341,15 @@ the first page's values, and the entry count covers every page. Source-format in
 `:60F:`/`:60M:` (currency-bearing opening balance) must precede the
 first `:61:`, or the file is rejected as malformed — this prevents an
 empty IBAN or silent-default-EUR currency reaching the import pipeline.
+A `:60F:` that is *present and unreadable* is the same refusal, not a
+gap the statement above it fills: it opens a statement, so the currency
+in force ended with the one it closed, and the `:61:` beneath it is
+refused naming the balance tag that could not be read. Holding the
+previous currency there read `:61:2604030403D1000,` under a malformed
+yen header as −100000 EUR where the file says JPY 1000 — a hundred
+times the figure, in a denomination the statement never named. A
+`:60M:` is the other case: it reopens a statement its own `:60F:`
+already denominated, so an unreadable one erases nothing.
 
 `Mt940Lexer` is a defensive, bounded tokenizer: total line count is
 capped at `MAX_LINE_COUNT` (100,000) and each tag buffer at
