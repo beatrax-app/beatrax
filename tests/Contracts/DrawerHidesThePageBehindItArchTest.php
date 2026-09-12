@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\MarkupSource;
+use Tests\Contracts\Support\MarkupAttribute;
 
 // The navigation drawer and the command palette are both role="dialog"
 // aria-modal="true", and nothing made the page behind them unreachable. Read
@@ -65,7 +66,7 @@ it('leaves the top bar reachable under the drawer, but not under the palette', f
     // bindings sit either side of it and name inert.
     $tag = substr($layout, (int) $topBar, (int) strpos($layout, '>', (int) $topBar) - (int) $topBar);
 
-    expect(str_contains($tag, "x-bind:inert=\"\$store.overlay.has('palette') || null\""))->toBeTrue(
+    expect(MarkupAttribute::carries($tag, 'x-bind:inert', "\$store.overlay.has('palette') || null"))->toBeTrue(
         'The top bar is inerted for the wrong set of overlays. Under the drawer it has to stay reachable — the '.
         'scrim is aria-hidden and the hamburger is the only way back out — and under the palette it must not be.'
     );
