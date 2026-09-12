@@ -662,6 +662,14 @@ happened since the last backup. Mechanics worth calling out:
   writes the destination via SQLite's `open(2)`, bypassing PHP's
   umask — the command immediately calls `Filesystem::chmod(0o600)` on
   the output to recover the secret-file convention.
+- The GDK keyring is packed into the copy after that chmod and before
+  the integrity check, so the file the check and the digest answer for
+  is the finished one. A copy of a sealed database alone restores
+  anywhere else as a ledger nothing can read, silently — and this is
+  the copy the schedule writes and the freshness banner counts. An
+  install with no keyring on disk has nothing to carry and the copy
+  stays byte-identical to the plain `VACUUM INTO`
+  ([three producers](../sync/sensitive-columns-at-rest.md#three-producers-and-the-one-that-was-not-asked)).
 - The post-VACUUM integrity check uses a SECOND fresh PDO against the
   destination file so the result is not muddied by the Laravel-pool
   connection cache.
@@ -1230,6 +1238,15 @@ drops every connection naming the live file and then copies the source's
 pages INTO it via SQLite's backup API rather than over its file. A copy
 landed beside a surviving `-wal` is recovered away by the next reader,
 which is a restore that reports success and restores nothing.
+
+Both also install the keyring the snapshot carries before that swap.
+`db:restore` lifts it out of a **copy** staged through
+`RestoreStagingArea`: `BackupKeyMaterial::unpackFrom()` drops the carrier
+table, so lifting in place would edit the operator's backup into one that
+restores the ledger once and the keys never again. That class owns the
+0700 staging directory both paths use, and its `discard()` is what takes
+the `-wal` and `-shm` with the file — a staged database is three files,
+and the two sidecars hold pages of the same plaintext ledger.
 
 `HelpDataLocations` (`/help/data-locations`) makes the local-only
 privacy promise tangible by surfacing the three load-bearing on-disk

@@ -9,7 +9,9 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
+use Modules\Core\Internal\Backup\RestoreStagingArea;
 use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Internal\Enums\BackupFailureCause;
 use Modules\Core\Models\SystemAlert;
@@ -21,6 +23,8 @@ use Modules\Core\Public\Exceptions\RestoreFailedException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\CopyLine;
 use Modules\Core\Public\Support\CopyParam;
+use Modules\Core\Public\Support\OwnerOnlyPath;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Core\Public\Support\SqliteDatabase;
 use Modules\Core\Public\Support\StoredCopy;
 use PDO;
@@ -44,6 +48,9 @@ final class RestoreDatabaseCommand extends Command
         private readonly Clock $clock,
         private readonly UserDataPathService $paths,
         private readonly LiveDatabaseTransplant $transplant,
+        private readonly BackupKeyMaterial $keyMaterial,
+        private readonly RestoreStagingArea $staging,
+        private readonly OwnerOnlyPath $ownerOnly,
     ) {
         parent::__construct();
     }
@@ -153,12 +160,17 @@ final class RestoreDatabaseCommand extends Command
         }
         $this->info('Pre-restore snapshot: '.$preRestorePath);
 
+        // Before the swap, so a keyring that will not decode leaves the live
+        // database untouched. Restoring the rows without it hands the reader a
+        // ledger of ciphertext and calls the restore a success.
+        $staged = $this->keyMaterialLifted($sourcePath);
+
         // Writes the source's pages INTO the live database rather than over
         // its file, and drops every connection naming it first. `php artisan
         // down` closes nothing, so a copy landed beside a live `-wal` that the
         // next reader replayed straight back over the restored pages.
         try {
-            ($this->transplant)($sourcePath, $livePath, $preRestorePath);
+            ($this->transplant)($staged ?? $sourcePath, $livePath, $preRestorePath);
         } catch (BackupIoException $e) {
             $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
                 'phase' => 'copy',
@@ -167,6 +179,10 @@ final class RestoreDatabaseCommand extends Command
             $this->error('Restore failed mid-swap. Pre-restore snapshot at '.$preRestorePath.'.');
 
             throw new RestoreFailedException(leaveDown: true);
+        } finally {
+            if ($staged !== null) {
+                $this->staging->discard($staged);
+            }
         }
 
         // Framework connection, NOT a fresh PDO, so SqliteOptimizationsProvider's
@@ -184,6 +200,59 @@ final class RestoreDatabaseCommand extends Command
 
             throw new RestoreFailedException(leaveDown: true);
         }
+    }
+
+    // Lifted out of a COPY, never out of the file the operator named:
+    // unpackFrom drops the carrier table, so lifting in place would edit their
+    // backup into one that restores the ledger once and the keys never again.
+    // A file carrying none is passed straight through.
+    /**
+     * @return string|null the staged copy the swap must read, or null to read the source itself
+     *
+     * @throws RestoreFailedException when the copy cannot be staged, or the keyring will not decode
+     */
+    private function keyMaterialLifted(string $sourcePath): ?string
+    {
+        try {
+            if (! $this->keyMaterial->carriedBy($sourcePath)) {
+                return null;
+            }
+
+            $staged = $this->staging->path('source');
+            if (! $this->ownerOnly->file($staged)) {
+                throw new BackupIoException('The staged backup could not be made owner-only: '.$staged);
+            }
+        } catch (Throwable $e) {
+            $this->refuseLift($e);
+        }
+
+        try {
+            // Owner-only first, so the copy is written into a file already at
+            // 0600 rather than one born at the process umask.
+            if ($this->files->copy($sourcePath, $staged) === false) {
+                throw new BackupIoException('The backup could not be staged for the swap: '.$staged);
+            }
+
+            $this->keyMaterial->unpackFrom($staged);
+        } catch (Throwable $e) {
+            $this->staging->discard($staged);
+            $this->refuseLift($e);
+        }
+
+        return $staged;
+    }
+
+    // Both arms above can receive a PDOException as well as one of ours, and
+    // that message is the statement and its bindings on a console anyone
+    // watching the restore can read. Ours name a path and a phase and are the
+    // whole of the advice; anything else is named by class.
+    private function refuseLift(Throwable $e): never
+    {
+        $this->error('Restore refused: '.($e instanceof BackupIoException
+            ? $e->getMessage()
+            : SafeExceptionContext::shortName($e)));
+
+        throw new RestoreFailedException(leaveDown: false);
     }
 
     /**

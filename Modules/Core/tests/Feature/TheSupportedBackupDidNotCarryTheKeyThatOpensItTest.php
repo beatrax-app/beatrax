@@ -1,0 +1,226 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Public\Services\PortableKeyMaterial;
+use Tests\Helpers\LiveSqliteConnection;
+use Tests\Helpers\RealSqliteFixture;
+
+// `db:backup` is the backup path the operator runbook calls supported, and the
+// one the daily schedule runs. For a reader with encryption at rest the keys
+// that open their notes, descriptions, counterparty names and IBANs are a file
+// BESIDE the database, so a VACUUM INTO copy restored anywhere that file is not
+// is a ledger of ciphertext — and the restore reports success. The encrypted
+// download and the export archive both carry the keyring inside the snapshot;
+// these two commands are the producer and the consumer that did not.
+
+beforeEach(function (): void {
+    $this->livePath = RealSqliteFixture::create('keyring-backup-live', [
+        ...RealSqliteFixture::DEFAULT_SCHEMAS,
+        'CREATE TABLE sync_encryption_state (user_id INTEGER PRIMARY KEY, current_epoch INTEGER)',
+        'INSERT INTO sync_encryption_state (user_id, current_epoch) VALUES (1, 771122)',
+    ]);
+
+    LiveSqliteConnection::pointAt($this->app, $this->livePath);
+
+    $this->storageRoot = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-keyring-'.bin2hex(random_bytes(8)).DIRECTORY_SEPARATOR.'storage';
+    $this->backupsDir = $this->storageRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups';
+    putenv('NATIVEPHP_STORAGE_PATH='.$this->storageRoot);
+
+    $this->keyring = (new PortableKeyMaterial)->keyringPath(1);
+    @mkdir(dirname($this->keyring), 0o700, true);
+    file_put_contents($this->keyring, supportedBackupKeyringBytes());
+
+    // db:restore reads the maintenance marker through UserDataPathService, so
+    // the file is written where that answers rather than through `artisan down`.
+    /** @var Filesystem $files */
+    $files = $this->app->make(Filesystem::class);
+    $this->downMarker = (new UserDataPathService)->framework('down');
+    $files->ensureDirectoryExists(dirname($this->downMarker));
+    $files->put($this->downMarker, '');
+});
+
+afterEach(function (): void {
+    LiveSqliteConnection::restore($this->app);
+
+    /** @var string $livePath */
+    $livePath = $this->livePath;
+    RealSqliteFixture::cleanup($livePath);
+
+    /** @var string $storageRoot */
+    $storageRoot = $this->storageRoot;
+    if (is_dir($storageRoot)) {
+        $entries = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($storageRoot, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
+        );
+        foreach ($entries as $entry) {
+            /** @var SplFileInfo $entry */
+            $entry->isDir() ? @rmdir($entry->getPathname()) : @unlink($entry->getPathname());
+        }
+        @rmdir($storageRoot);
+        @rmdir(dirname($storageRoot));
+    }
+
+    putenv('NATIVEPHP_STORAGE_PATH');
+});
+
+function supportedBackupKeyringBytes(): string
+{
+    return 'the-only-copy-of-epoch-771122';
+}
+
+/** @return list<string> */
+function supportedBackupTablesIn(string $path): array
+{
+    /** @var list<string> $tables */
+    $tables = (new PDO('sqlite:'.$path, options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]))
+        ->query("SELECT name FROM sqlite_master WHERE type = 'table'")
+        ->fetchAll(PDO::FETCH_COLUMN);
+
+    return $tables;
+}
+
+it('writes a backup that carries the key that opens it', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite');
+
+    expect($produced)->toHaveCount(1);
+
+    $carried = (new PDO('sqlite:'.(string) $produced[0], options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]))
+        ->query('SELECT user_id, keyring FROM '.BackupKeyMaterial::TABLE)
+        ->fetchAll(PDO::FETCH_ASSOC);
+
+    expect($carried)->toHaveCount(1)
+        ->and((int) $carried[0]['user_id'])->toBe(1)
+        ->and(base64_decode((string) $carried[0]['keyring'], true))->toBe(supportedBackupKeyringBytes());
+});
+
+it('puts the key back on a machine that does not have it, and leaves none in the ledger', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    // The machine the restore lands on is not the one that made the backup: its
+    // keyring directory is empty, which is every fresh install by definition.
+    /** @var string $keyring */
+    $keyring = $this->keyring;
+    unlink($keyring);
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
+
+    /** @var string $livePath */
+    $livePath = $this->livePath;
+
+    expect(is_file($keyring))->toBeTrue('The restore left the ledger sealed and the key behind.')
+        ->and(file_get_contents($keyring))->toBe(supportedBackupKeyringBytes())
+        ->and(fileperms($keyring) & 0o077)->toBe(0)
+        ->and(supportedBackupTablesIn($livePath))->not->toContain(BackupKeyMaterial::TABLE)
+        ->and(supportedBackupTablesIn($livePath))->toContain('sync_encryption_state');
+});
+
+// The operator's backup is evidence, and lifting the keys out of a file edits
+// it. A restore that consumed its own source would leave a file that restores
+// the ledger once and the keys never again.
+it('does not edit the backup file it restored', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+    $before = (string) hash_file('sha256', $produced);
+
+    /** @var string $keyring */
+    $keyring = $this->keyring;
+    unlink($keyring);
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
+
+    expect(hash_file('sha256', $produced))->toBe($before)
+        ->and(supportedBackupTablesIn($produced))->toContain(BackupKeyMaterial::TABLE);
+});
+
+// A file written before the keyring travelled inside it still restores.
+// Refusing one would strand every backup an operator already holds.
+it('restores a backup file that carries no keyring at all', function (): void {
+    $legacy = RealSqliteFixture::create('keyring-legacy-source', [
+        'CREATE TABLE sync_encryption_state (user_id INTEGER PRIMARY KEY, current_epoch INTEGER)',
+        'INSERT INTO sync_encryption_state (user_id, current_epoch) VALUES (1, 4242)',
+    ]);
+
+    $this->artisan('db:restore', ['path' => $legacy, '--confirm' => true])->assertSuccessful();
+
+    /** @var string $livePath */
+    $livePath = $this->livePath;
+    $restored = (new PDO('sqlite:'.$livePath))->query('SELECT current_epoch FROM sync_encryption_state')->fetchColumn();
+
+    expect((int) $restored)->toBe(4242);
+
+    RealSqliteFixture::cleanup($legacy);
+});
+
+// The smart skip hashes the finished copy. Key material that is the same on
+// two runs has to leave the digest the same, or a quiet day writes a second
+// copy and the retention window is spent on duplicates.
+it('still skips a run whose contents have not changed', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+    $this->artisan('db:backup')
+        ->expectsOutputToContain('Skipped')
+        ->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+
+    expect((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))->toHaveCount(1);
+});
+
+// The install with no sealed columns is the majority, and it pays for none of
+// this: no carrier table, so the finished copy is the plain VACUUM INTO the
+// smart skip has always hashed, and the swap reads the operator's file rather
+// than a staged copy of it.
+it('carries nothing, and changes nothing, for an install with no keyring', function (): void {
+    /** @var string $keyring */
+    $keyring = $this->keyring;
+    unlink($keyring);
+
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    expect(supportedBackupTablesIn($produced))->not->toContain(BackupKeyMaterial::TABLE);
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
+
+    /** @var string $livePath */
+    $livePath = $this->livePath;
+
+    expect(is_file($keyring))->toBeFalse()
+        ->and(supportedBackupTablesIn($livePath))->toContain('sync_encryption_state');
+});
+
+// The staged copy is the whole ledger in clear, and a staged database is three
+// files: unlinking the one that is named leaves its `-wal` and `-shm` holding
+// the newest of it in the staging directory.
+it('leaves nothing of the ledger in the staging directory', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
+
+    $staged = (array) glob(UserDataPathService::appPath('tmp-restore').DIRECTORY_SEPARATOR.'*');
+
+    expect($staged)->toBe([]);
+});
