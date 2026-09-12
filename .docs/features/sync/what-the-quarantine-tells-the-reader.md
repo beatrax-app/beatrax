@@ -155,6 +155,15 @@ withheld copy is written under and for a sharper reason — see the next section
 
 ### Nothing retried a hold whose blocker was data
 
+`clearSettled()` asks whether the held row is here, and the answer it acts on is
+an exact match: a create refusal is retired on `true`, a delete refusal on
+`false`. The probe behind it caught a query failure and returned `false`, which
+is the same word as "gone" — so one locked read retired the delete refusals that
+are the only record a peer's delete was ever turned away, and nothing would look
+at them again. It answers `null` for "could not ask", which matches neither
+verdict, so an unanswerable question retires nothing and the next pass asks
+again.
+
 `QuarantineReason::recoverable()` claims a retry for `missing_reference`, and
 until the next section there was none. `withinPassWindow()` reopened on two
 events: key material moving, or `HistoryReprojector::PASS_REACH` being bumped.

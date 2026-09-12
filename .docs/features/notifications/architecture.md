@@ -272,6 +272,19 @@ merge registry, which only settles a tombstone against a create, so
 without one the peer's own history of the row is the last word on whether
 a retired notification comes back.
 
+The announcement goes out **before** the delete, which is the reverse of
+every other writer in the product and is the point of it. The query that
+drives the sweep is what finds a row to announce, so a worker killed
+between the two has to leave the row standing rather than the tombstone
+owed: announced-then-deleted costs a tombstone naming a row still here,
+which the next daily run settles; deleted-then-announced costs a row gone
+here with nothing anywhere saying so, and the next run's query finds
+nothing left to announce it from. The second is permanent. The pair is
+not wrapped in a transaction either — a dispatch inside the transaction
+that caused it is the thing
+`tests/Contracts/DispatchAfterCommitArchTest.php` exists to forbid, and
+ordering answers this without an exemption to it.
+
 ## Demo seeding
 
 `DemoNotificationsSeeder` never writes a `notifications` row directly and

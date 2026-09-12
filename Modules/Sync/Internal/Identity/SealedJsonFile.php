@@ -10,6 +10,7 @@ use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
+use Throwable;
 
 // A whole-file secret encrypted at rest, read and written through one staging
 // recipe. Every step is load-bearing — stage inside the sanctioned 0700
@@ -62,12 +63,31 @@ final readonly class SealedJsonFile
         }
     }
 
+    // Staged and renamed, never sealed straight onto the live path: the
+    // encryptor opens its destination 'wb', so a write interrupted part-way
+    // left a truncated key-file — which reads back as an identity that will not
+    // open, and the mint path refuses to overwrite one of those.
     /**
-     * @throws SecretFileException when the plaintext cannot be staged or locked down.
+     * @throws SecretFileException when the plaintext cannot be staged, locked down or renamed.
      */
     public function writeSealed(string $sealedPath, string $plaintext, string $kek, string $tmpPrefix): void
     {
-        $this->sealTo($sealedPath, $sealedPath, $plaintext, $kek, $tmpPrefix);
+        $sealedTmpPath = $this->sealedStagingPath($sealedPath);
+
+        try {
+            $this->sealTo($sealedPath, $sealedTmpPath, $plaintext, $kek, $tmpPrefix);
+
+            if (! @rename($sealedTmpPath, $sealedPath)) {
+                throw SecretFileException::couldNotFinalizeSealedFile($sealedPath);
+            }
+        } catch (Throwable $e) {
+            // Unlike the keyring's deferred finalize, nothing here is the only
+            // copy of anything: the caller has the plaintext and will mint
+            // again, so debris beside the live path is pure exposure.
+            @unlink($sealedTmpPath);
+
+            throw $e;
+        }
     }
 
     // Seals to a randomized `.tmp` sibling WITHOUT renaming it into place, for
@@ -80,11 +100,16 @@ final readonly class SealedJsonFile
      */
     public function stageSealed(string $sealedPath, string $plaintext, string $kek, string $tmpPrefix): string
     {
-        $sealedTmpPath = $sealedPath.'.'.bin2hex(random_bytes(8)).'.tmp';
+        $sealedTmpPath = $this->sealedStagingPath($sealedPath);
 
         $this->sealTo($sealedPath, $sealedTmpPath, $plaintext, $kek, $tmpPrefix);
 
         return $sealedTmpPath;
+    }
+
+    private function sealedStagingPath(string $sealedPath): string
+    {
+        return $sealedPath.'.'.bin2hex(random_bytes(8)).'.tmp';
     }
 
     private function sealTo(

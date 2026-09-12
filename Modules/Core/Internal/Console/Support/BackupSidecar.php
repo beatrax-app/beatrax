@@ -14,6 +14,18 @@ final class BackupSidecar
 {
     public const string SUFFIX = '.meta.json';
 
+    // A sidecar is a claim about the file beside it, never evidence on its own.
+    // Every reader of one has to ask this before believing it, or a claim left
+    // standing over a backup that is gone reads as a backup that is there.
+    public static function describesAPresentBackup(string $sidecarPath): bool
+    {
+        if (! str_ends_with($sidecarPath, self::SUFFIX)) {
+            return false;
+        }
+
+        return is_file(substr($sidecarPath, 0, -strlen(self::SUFFIX)));
+    }
+
     // Missing or unreadable sidecars must fall through to "not skippable":
     // a wrong skip silently writes no backup at all.
     public function recordsDigest(string $backupsDir, string $digest): bool
@@ -78,6 +90,9 @@ final class BackupSidecar
     // Sorts basenames, not full paths, so a directory-shape change cannot flip
     // the winner: the fixed `beatrax-` + zero-padded timestamp + suffix makes
     // strcmp DESC equal newest-first.
+
+    // Walks past a sidecar naming a backup that is not there: an older one
+    // whose copy survives still answers this, and the orphan answers nothing.
     private function newestPath(string $backupsDir): ?string
     {
         $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'.self::SUFFIX);
@@ -86,8 +101,13 @@ final class BackupSidecar
         }
 
         usort($candidates, static fn (string $a, string $b): int => strcmp(basename($b), basename($a)));
-        $newest = $candidates[0];
 
-        return is_file($newest) ? $newest : null;
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate) && self::describesAPresentBackup($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 }

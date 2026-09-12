@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Public\Contracts\Clock;
 
 it('reports installed versions and probe rows on a healthy environment', function (): void {
@@ -17,8 +18,12 @@ it('reports installed versions and probe rows on a healthy environment', functio
     /** @var Clock $clock */
     $clock = $this->app->make(Clock::class);
     $tenMinutesAgo = $clock->now()->subMinutes(10);
+    $backup = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite';
+    // Both halves: a sidecar with no copy beside it is read as no backup at
+    // all, which is the state the test below this one arranges on purpose.
+    $files->put($backup, 'the copy this sidecar names');
     $files->put(
-        $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json',
+        $backup.BackupSidecar::SUFFIX,
         (string) json_encode([
             'data_version' => 1,
             'started_at' => $tenMinutesAgo->subSecond()->toIso8601String(),
@@ -58,8 +63,12 @@ it('prints lines for each probe (WAL / synchronous / backup freshness)', functio
     /** @var Clock $clock */
     $clock = $this->app->make(Clock::class);
     $tenMinutesAgo = $clock->now()->subMinutes(10);
+    $backup = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite';
+    // Both halves: a sidecar with no copy beside it is read as no backup at
+    // all, which is the state the test below this one arranges on purpose.
+    $files->put($backup, 'the copy this sidecar names');
     $files->put(
-        $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json',
+        $backup.BackupSidecar::SUFFIX,
         (string) json_encode([
             'data_version' => 1,
             'started_at' => $tenMinutesAgo->subSecond()->toIso8601String(),

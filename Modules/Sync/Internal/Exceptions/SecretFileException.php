@@ -27,6 +27,13 @@ final class SecretFileException extends RuntimeException
         return new self("Could not finalize the GDK keyring file for user {$userId}.");
     }
 
+    // The staged copy is unlinked before this is raised, so the live path is
+    // whatever it already was — nothing here half-wrote it.
+    public static function couldNotFinalizeSealedFile(string $path): self
+    {
+        return new self("Could not move the sealed secret into place at: {$path}");
+    }
+
     public static function couldNotReadStagedPlaintext(string $path): self
     {
         return new self("Failed to read the decrypted secret staged at: {$path}");

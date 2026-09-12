@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Backup;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
@@ -41,9 +42,10 @@ final readonly class BackupFreshness
         private SystemAlertWriter $alerts,
     ) {}
 
-    // Null if the directory is missing, empty, or every sidecar is unreadable
-    // or malformed. The caller decides what that means: to the doctor it is the
-    // same warning as a stale one, and at boot it is a fresh install.
+    // Null if the directory is missing, empty, or every sidecar is unreadable,
+    // malformed, or names a copy that is gone. The caller decides what that
+    // means: to the doctor it is the same warning as a stale one, and at boot
+    // it is a fresh install.
     public function newestVerifiedAt(): ?CarbonImmutable
     {
         $backupsPath = $this->paths->backups();
@@ -128,7 +130,14 @@ final readonly class BackupFreshness
     // unreadable or malformed, or carries no parseable date.
     private function sidecarCompletedAt(SplFileInfo $entry): ?CarbonImmutable
     {
-        if (! str_ends_with($entry->getBasename(), '.meta.json')) {
+        if (! str_ends_with($entry->getBasename(), BackupSidecar::SUFFIX)) {
+            return null;
+        }
+
+        // A date off a sidecar whose copy is gone is the freshness of nothing,
+        // and it is exactly what keeps the overdue banner down on a device
+        // whose backups folder holds no backup at all.
+        if (! BackupSidecar::describesAPresentBackup($entry->getPathname())) {
             return null;
         }
 

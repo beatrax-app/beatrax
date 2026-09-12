@@ -16,12 +16,22 @@ use Modules\Core\Internal\Console\Probes\ProbeResult;
 use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
+use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SystemAlertWriter;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Tests\Helpers\RealSqliteFixture;
+
+// A sidecar is a claim about the copy beside it, and one standing alone is what
+// a half-finished retention sweep leaves rather than what a backup looks like.
+// Every fixture below that stands in for a real backup writes both.
+function probeSidecarNaming(Filesystem $files, string $sidecarPath, string $payload): void
+{
+    $files->put(substr($sidecarPath, 0, -strlen(BackupSidecar::SUFFIX)), 'the copy this sidecar names');
+    $files->put($sidecarPath, $payload);
+}
 
 beforeEach(function (): void {
     // On-disk fixture: the :memory: sqlite_testing connection cannot express WAL,
@@ -203,7 +213,7 @@ it('BackupFreshnessProbe returns ok and does NOT write an alert when a fresh sid
 
     $tenMinutesAgo = $clock->now()->subMinutes(10);
     $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$tenMinutesAgo->format('Y-m-d-His').'.sqlite.meta.json';
-    $files->put($sidecar, (string) json_encode([
+    probeSidecarNaming($files, $sidecar, (string) json_encode([
         'data_version' => 1,
         'started_at' => $tenMinutesAgo->subSecond()->toIso8601String(),
         'completed_at' => $tenMinutesAgo->toIso8601String(),
@@ -236,7 +246,7 @@ it('BackupFreshnessProbe never reads a blank completed_at as a backup finished r
     $files->makeDirectory($backupsDir, 0o755, recursive: true, force: true);
 
     $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-blank.sqlite.meta.json';
-    $files->put($sidecar, (string) json_encode([
+    probeSidecarNaming($files, $sidecar, (string) json_encode([
         'data_version' => 1,
         'started_at' => $clock->now()->subHour()->toIso8601String(),
         'completed_at' => '   ',
@@ -265,7 +275,7 @@ it('BackupFreshnessProbe returns warning AND writes an alert when newest sidecar
 
     $sixtyHoursAgo = $clock->now()->subHours(60);
     $sidecar = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$sixtyHoursAgo->format('Y-m-d-His').'.sqlite.meta.json';
-    $files->put($sidecar, (string) json_encode([
+    probeSidecarNaming($files, $sidecar, (string) json_encode([
         'data_version' => 1,
         'started_at' => $sixtyHoursAgo->subSecond()->toIso8601String(),
         'completed_at' => $sixtyHoursAgo->toIso8601String(),

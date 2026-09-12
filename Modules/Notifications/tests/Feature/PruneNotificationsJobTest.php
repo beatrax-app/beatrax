@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,6 +15,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Notifications\Internal\Jobs\PruneNotificationsJob;
+use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
 use Psr\Log\LoggerInterface;
 
@@ -237,4 +239,86 @@ it('runs with every dependency resolved from the container', function (): void {
 
     expect(pnjExists($oldId))->toBeFalse()
         ->and(pnjExists($recentId))->toBeTrue();
+});
+
+// Retiring a notification is the deletion AND the tombstone that retires it on
+// the peer: `notifications` carries `_delete_wins`, which settles a tombstone
+// against a create, so without one the peer's own history of the row has the
+// last word and a swept notification comes back. The announce ran after the
+// delete, and the next run's query finds nothing left to announce them from.
+
+/**
+ * @param  list<string>  $seen  filled as the sweep announces, so the caller reads it after the run
+ */
+function pnjRecordAnnouncements(EventDispatcher $events, array &$seen): void
+{
+    $events->listen(NotificationMutated::class, static function (NotificationMutated $event) use (&$seen): void {
+        if ($event->mutationType === 'delete') {
+            $seen[] = $event->notificationId;
+        }
+    });
+}
+
+// The positive control this file never had: a sweep that deletes and announces
+// nothing is indistinguishable from one that deleted and announced everything.
+it('announces a delete for every row it retires', function (): void {
+    $user = pnjUser('pnj-announced');
+
+    $oldIds = [];
+    foreach (range(1, 3) as $i) {
+        $oldIds[] = pnjNotification($user->id, 400 + $i);
+    }
+    $recentId = pnjNotification($user->id, 10);
+
+    /** @var EventDispatcher $events */
+    $events = $this->app->make(EventDispatcher::class);
+
+    /** @var list<string> $announced */
+    $announced = [];
+    pnjRecordAnnouncements($events, $announced);
+
+    $job = new PruneNotificationsJob($user->id);
+    $job->handle(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
+        events: $events,
+    );
+
+    sort($oldIds);
+    sort($announced);
+
+    expect($announced)->toBe($oldIds)
+        ->and(pnjExists($recentId))->toBeTrue();
+});
+
+it('keeps the rows it could not announce, so the next run can announce them', function (): void {
+    $user = pnjUser('pnj-announce-failed');
+
+    $oldIds = [];
+    foreach (range(1, 3) as $i) {
+        $oldIds[] = pnjNotification($user->id, 400 + $i);
+    }
+
+    /** @var EventDispatcher $events */
+    $events = $this->app->make(EventDispatcher::class);
+
+    // Aborts the announce part-way through the chunk, which is the shape a
+    // worker killed on the seam between the two writes leaves behind.
+    $events->listen(NotificationMutated::class, static function (): void {
+        throw new RuntimeException('the worker was killed before the announce finished');
+    });
+
+    $job = new PruneNotificationsJob($user->id);
+
+    expect(fn () => $job->handle(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
+        events: $events,
+    ))->toThrow(RuntimeException::class);
+
+    // Gone here with nothing to say so on the peer is the one outcome that has
+    // no repair: the rows are still here, and the sweep runs again tomorrow.
+    foreach ($oldIds as $id) {
+        expect(pnjExists($id))->toBeTrue();
+    }
 });

@@ -574,8 +574,11 @@ composer.json/CI-matrix minimum; `ComposerVersionProbe` /
 runtime-fatal for the dashboard — they matter for dev workflows);
 `WalModeProbe` / `SynchronousModeProbe` / `BackupFreshnessProbe` are
 the SQLite-substrate probes. `BackupFreshnessProbe` reads the newest
-`*.meta.json` sidecar under the backups directory and compares its
-`completed_at` to the clock; if none exists or the newest is older
+`*.meta.json` sidecar **whose `.sqlite` is still beside it** under the
+backups directory and compares its `completed_at` to the clock; a
+sidecar naming a copy that is gone is not a backup and is skipped, so a
+folder the retention sweep emptied reports no backup rather than a fresh
+one. If none exists or the newest is older
 than 48h it returns `warning` AND writes a system-wide
 `system_alerts(kind=backup_overdue)` row, gated by a 1-hour recency
 check (mirrors `HealthCheckListener::recordDriftAlert` — 100
@@ -705,14 +708,20 @@ omitted from the return value for the caller to delete. The class is
 intentionally pure (no `Filesystem`, no I/O, no globbing) — the
 consuming `BackupDatabaseCommand` reads the directory listing, hands
 the basenames in, then deletes the omitted entries, keeping the policy
-fully unit-testable and the command's I/O surface narrow.
+fully unit-testable and the command's I/O surface narrow. The command
+unlinks each omitted entry's sidecar BEFORE the copy it names: a sweep
+interrupted between the two has to leave a backup nothing vouches for —
+the next run remakes it — rather than a voucher for nothing, which reads
+as a backup that is there and licenses a skip.
 
 `BackupSidecar` is its sibling for the `.meta.json` file itself:
 `write()` does the umask + tmp + rename + chmod dance with every return
 checked, and `recordsDigest()` answers the smart-skip question by
-reading the newest sidecar in the directory. It is one class rather
-than three command methods because a missing, unparseable or
-unreadable sidecar has to mean "write another backup" on every one of
+reading the newest sidecar in the directory that still has its `.sqlite`
+beside it — `describesAPresentBackup()` is that question, stated once and
+asked by the freshness probe too. It is one class rather
+than three command methods because a missing, unparseable, unreadable or
+orphaned sidecar has to mean "write another backup" on every one of
 those paths — a wrong skip writes no backup at all — and that rule is
 easier to hold in one place than to re-derive at three call sites.
 
