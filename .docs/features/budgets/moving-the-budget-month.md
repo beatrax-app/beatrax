@@ -71,8 +71,22 @@ one-off repair. The stored key and the activation anchor always sat in
 the same old period, so the two new windows they fall in are at most one
 period apart: the damage could only ever strand a plan **exactly one
 period** below genesis. The migration lifts assignment and move rows in
-that one window onto genesis, summing an assignment into the genesis row
+that one window onto genesis, merging an assignment into the genesis row
 it would otherwise collide with, and leaves anything further down alone.
+That merge is the rekeyer's merge: the currency rule above governs it too,
+because the two rows it joins are the same two rows, written under whatever
+base currency the reader held each month. It read `assigned_minor` alone and
+added the minor units, so USD 100.00 merged into EUR 100.00 came out one
+EUR 200.00 envelope — the exact arithmetic the paragraph above exists to
+refuse.
+
+An install that already ran the migration cannot be repaired. The merge
+deleted the stranded row and wrote a plain sum, so nothing on disk says
+which rows were merged or what the two halves were; the surviving row is
+indistinguishable from one the reader assigned by hand, and there is no
+predicate to name it and nothing to recompute from. The fix protects an
+install upgrading from before 2026-08-28 and nobody else, which is the
+same forward-only limit `down()` states for its own reason.
 
 What it cannot restore is the *month attribution* of a multi-month plan.
 The day the rows were written under was never recorded anywhere, so a

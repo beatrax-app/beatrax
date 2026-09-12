@@ -301,7 +301,17 @@ EUR 150.00 · Spent EUR 0.00 · Available EUR 425.00`, and nothing on the
 page said where the other EUR 275.00 had come from. The phone card prints
 the two middle terms only when they carry something, since a row where
 both are nought has nothing to explain. Each history line carries the
-move's note as well, which the modal has always asked for and stored. A line
+move's note as well, which the modal has always asked for and stored.
+
+A history line prints the move's **sign**, never its magnitude. The `Moved`
+term on the row directly above the list is `SUM(amount_minor)` over exactly
+these rows, so an outgoing move reads `-EUR 50.00` and the disclosure adds
+up to the figure it is the working for; `abs()` there printed `EUR 50.00`
+against a column that had counted `-5000`, and the same row already read
+`-EUR 50.00` whenever its `kind` was one this build could not name. Only an
+incoming line takes a leading `+`, and the direction is read off the amount
+rather than off the kind — the rule the pots movement history applies to
+its own list. A line
 whose `kind` this build has no case for keeps its date, note, counterpart and
 signed amount and says so instead of picking a direction —
 `envelope_moves.kind` has no CHECK and a peer on a newer version writes its

@@ -258,6 +258,13 @@
                                 <div id="envelope-history-{{ $row->categoryId }}" x-show="open" x-collapse class="mt-2 border-t border-slate-100 dark:border-slate-800">
                                     <ul>
                                         @foreach ($recentMoves[$row->categoryId] as $move)
+                                            @php
+                                                // Direction off the amount, as the pots history reads it: the
+                                                // "Moved" figure on the row above this list is the signed sum of
+                                                // these very rows, so a line that dropped its sign stopped adding
+                                                // up to the total it is the working for.
+                                                $isIncoming = $move->kind !== null && $move->amountMinor > 0;
+                                            @endphp
                                             <li class="flex items-center justify-between gap-4 py-2 text-sm">
                                                 <div class="min-w-0">
                                                     <span class="text-xs text-slate-600 dark:text-slate-400 tabular-nums">{{ substr($move->createdAt, 0, 10) }}</span>
@@ -270,10 +277,10 @@
                                                     @endif
                                                 </div>
                                                 <div class="flex shrink-0 items-center gap-3">
-                                                    <span class="text-sm tabular-nums {{ $move->kind?->isIncoming() ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
+                                                    <span class="text-sm tabular-nums {{ $isIncoming ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400' }}">
                                                         {{-- The stored figure carries its own sign, which is the one
                                                              fact about direction this build still has. --}}
-                                                        {{ $move->kind === null ? $fmt($move->amountMinor, $move->currency) : ($move->kind->isIncoming() ? '+' : '').$fmt(abs($move->amountMinor), $move->currency) }}
+                                                        {{ $isIncoming ? '+' : '' }}{{ $fmt($move->amountMinor, $move->currency) }}
                                                     </span>
                                                     <button
                                                         type="button"
