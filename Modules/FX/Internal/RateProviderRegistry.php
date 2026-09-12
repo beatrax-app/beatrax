@@ -78,11 +78,18 @@ final readonly class RateProviderRegistry
     private function recordFailure(string $providerKey): void
     {
         $cacheKey = "fx.circuit.{$providerKey}.failures";
-        $current = self::toInt($this->cache->get($cacheKey, 0));
 
-        if ($current === 0) {
-            $this->cache->put($cacheKey, 1, CarbonImmutable::now()->addHours(self::CIRCUIT_OPEN_TTL_HOURS));
+        // The key is provider-global, so two users' refresh jobs failing the
+        // same provider both read 0 and both wrote 1: one failure of the three
+        // vanished and the circuit opened a failure late. add() is the same
+        // "create it at 1", asked as one operation nothing can interleave.
+        $opened = $this->cache->add(
+            $cacheKey,
+            1,
+            CarbonImmutable::now()->addHours(self::CIRCUIT_OPEN_TTL_HOURS),
+        );
 
+        if ($opened) {
             return;
         }
 

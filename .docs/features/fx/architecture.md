@@ -26,7 +26,16 @@ window anchors the six-hour TTL, and subsequent failures within that
 window increment the counter without resetting the TTL — otherwise a
 provider that fails more often than once per six hours would slide its
 window forever and the circuit would never auto-heal once the outage
-ends. A success resets the counter. When every provider in the chain
+ends. A success resets the counter.
+
+The key is provider-global while the jobs that write it are per user, so the
+create is an atomic `add()` rather than a read followed by a write: two
+readers' refresh jobs failing the same provider both saw no counter and both
+wrote a 1, which lost one of the three failures and left the circuit open a
+failure late. `add()` decides the create once; whichever caller it answers
+`false` increments instead. The desktop's cache store is the file one and the
+phone's is the database one, and `add()` is atomic in both — `flock` on one
+side, an `insertOrIgnore` against the primary key on the other. When every provider in the chain
 fails or is circuit-open, `RateProviderRegistry::fetchCurrentRates()`
 throws `AllProvidersFailed`. `FetchFxRatesJob` catches it, records the
 attempt through `FxRefreshStatus` and rethrows so the retry profile still

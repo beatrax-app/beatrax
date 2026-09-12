@@ -70,7 +70,7 @@ describe('RateProviderRegistry', function (): void {
         $cache = Mockery::mock(CacheRepository::class);
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
         $cache->shouldReceive('get')->with('fx.circuit.frankfurter.failures', 0)->andReturn(0);
-        $cache->shouldReceive('put')->with('fx.circuit.ecb.failures', 1, Mockery::any());
+        $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->andReturn(true);
         $cache->shouldReceive('forget')->with('fx.circuit.frankfurter.failures');
 
         $registry = new RateProviderRegistry([$ecb, $frankfurter, $bundled], $cache);
@@ -89,8 +89,8 @@ describe('RateProviderRegistry', function (): void {
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
         $cache->shouldReceive('get')->with('fx.circuit.frankfurter.failures', 0)->andReturn(0);
         $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
-        $cache->shouldReceive('put')->with('fx.circuit.ecb.failures', 1, Mockery::any());
-        $cache->shouldReceive('put')->with('fx.circuit.frankfurter.failures', 1, Mockery::any());
+        $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->andReturn(true);
+        $cache->shouldReceive('add')->with('fx.circuit.frankfurter.failures', 1, Mockery::any())->andReturn(true);
         $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
 
         $registry = new RateProviderRegistry([$ecb, $frankfurter, $bundled], $cache);
@@ -109,9 +109,9 @@ describe('RateProviderRegistry', function (): void {
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
         $cache->shouldReceive('get')->with('fx.circuit.frankfurter.failures', 0)->andReturn(0);
         $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
-        $cache->shouldReceive('put')->with('fx.circuit.ecb.failures', 1, Mockery::any());
-        $cache->shouldReceive('put')->with('fx.circuit.frankfurter.failures', 1, Mockery::any());
-        $cache->shouldReceive('put')->with('fx.circuit.bundled.failures', 1, Mockery::any());
+        $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->andReturn(true);
+        $cache->shouldReceive('add')->with('fx.circuit.frankfurter.failures', 1, Mockery::any())->andReturn(true);
+        $cache->shouldReceive('add')->with('fx.circuit.bundled.failures', 1, Mockery::any())->andReturn(true);
 
         $registry = new RateProviderRegistry([$ecb, $frankfurter, $bundled], $cache);
 
@@ -144,6 +144,45 @@ describe('RateProviderRegistry', function (): void {
         $registry = new RateProviderRegistry([$ecb], $cache);
 
         $registry->fetchCurrentRates();
+    });
+
+    // The failure key is provider-global: two users' refresh jobs failing the
+    // same provider both read 0 and both wrote 1, losing a failure and opening
+    // the circuit a failure late. add() decides the create; the loser counts.
+    it('counts a failure onto a count a rival already opened, rather than resetting it to one', function (): void {
+        $ecb = makeFakeProvider('ecb', 200, throws: true);
+        $bundled = makeFakeProvider('bundled', 0, ['date' => '2026-06-01', 'rates' => ['USD' => '1.1000']]);
+
+        $cache = Mockery::mock(CacheRepository::class);
+        $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
+        $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
+        $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
+        $cache->shouldNotReceive('put');
+        $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->once()->andReturn(false);
+        $cache->shouldReceive('increment')->with('fx.circuit.ecb.failures')->once();
+
+        $registry = new RateProviderRegistry([$ecb, $bundled], $cache);
+
+        expect($registry->fetchCurrentRates()['provider'])->toBe('bundled');
+    });
+
+    // The reader whose job gets there first must not have its own failure
+    // dropped either: add() answering true is the whole record of that one.
+    it('opens the count with add rather than a write that could overwrite a rival', function (): void {
+        $ecb = makeFakeProvider('ecb', 200, throws: true);
+        $bundled = makeFakeProvider('bundled', 0, ['date' => '2026-06-01', 'rates' => ['USD' => '1.1000']]);
+
+        $cache = Mockery::mock(CacheRepository::class);
+        $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
+        $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
+        $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
+        $cache->shouldNotReceive('put');
+        $cache->shouldNotReceive('increment');
+        $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->once()->andReturn(true);
+
+        $registry = new RateProviderRegistry([$ecb, $bundled], $cache);
+
+        expect($registry->fetchCurrentRates()['provider'])->toBe('bundled');
     });
 
     it('returns supportedKeys() listing all provider keys', function (): void {
