@@ -34,21 +34,24 @@ return new class extends ModuleMigration
 
             // The claim, and only the claim. It is a lease rather than a stamp:
             // the walk refreshes it each chunk, so one that stopped refreshing
-            // it is a dead walk and the next attempt may take it over.
-            $table->string('claimed_at');
+            // it is a dead walk and the next attempt may take it over. DATETIME
+            // and not TEXT, so it is compared in the frame the app clock writes
+            // — the same frame as the `users` column beside it and as the
+            // `transactions.created_at` the sibling sweep ranges on.
+            $table->timestamp('claimed_at');
 
             // Which runner holds the lease. A retry of the same queued job
             // carries the uuid its killed attempt claimed under, so it resumes
             // without waiting the lease out; anybody else waits.
             $table->string('claimed_by');
 
-            $table->string('started_at');
+            $table->timestamp('started_at');
 
             // The completion, written only where the walk ran out of history.
             // `users.anomaly_backfilled_at` is stamped in the same transaction,
             // and that column is what the settings screen reads.
-            $table->string('completed_at')->nullable();
-            $table->string('updated_at');
+            $table->timestamp('completed_at')->nullable();
+            $table->timestamp('updated_at');
         });
     }
 
