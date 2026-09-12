@@ -365,7 +365,7 @@ final readonly class IcsSettlementResolver
         // candidate — the chain_links NULL-endpoint trigger rejects every other.
         $confidence = $this->computeExceededConfidence($delta, $statementTotal);
 
-        return $this->inserter->insertIfNotExists([
+        return (int) $this->inserter->insertIfNotExists([
             'from_transaction_id' => $transferId,
             'to_transaction_id' => null,
             'kind' => ChainLinkKind::IcsBulkSettle->value,
@@ -380,7 +380,7 @@ final readonly class IcsSettlementResolver
                 'credits_applied_minor' => $priorCredits,
                 'signature_hash' => $signatureHash,
             ],
-        ], $user->id) ? 1 : 0;
+        ], $user->id);
     }
 
     /**

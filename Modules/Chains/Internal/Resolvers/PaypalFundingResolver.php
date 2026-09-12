@@ -130,27 +130,29 @@ final readonly class PaypalFundingResolver
 
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $link = $this->deterministicMatch($row, $user);
-            if ($link !== null) {
-                $inserted += $this->inserter->insertIfNotExists($link, $user->id) ? 1 : 0;
+            $link = $this->firstMatchingArm($row, $aliasSet, $user);
 
-                continue;
-            }
-
-            $link = $this->asnDirectMatch($row, $aliasSet, $user);
-            if ($link !== null) {
-                $inserted += $this->inserter->insertIfNotExists($link, $user->id) ? 1 : 0;
-
-                continue;
-            }
-
-            $link = $this->fuzzyMatch($row, $user);
-            if ($link !== null) {
-                $inserted += $this->inserter->insertIfNotExists($link, $user->id) ? 1 : 0;
+            if ($link !== null && $this->inserter->insertIfNotExists($link, $user->id)) {
+                $inserted++;
             }
         }
 
         return $inserted;
+    }
+
+    // The three arms in their fixed order, first match winning. `??` stops at
+    // the first non-null, so a payment the deterministic arm answers never
+    // pays for the two searches below it — which is what the three-way
+    // if/continue chain this replaces was doing by hand, one level deeper.
+    /**
+     * @param  array<string, bool>  $aliasSet
+     * @return ?array<string, mixed>
+     */
+    private function firstMatchingArm(stdClass $row, array $aliasSet, User $user): ?array
+    {
+        return $this->deterministicMatch($row, $user)
+            ?? $this->asnDirectMatch($row, $aliasSet, $user)
+            ?? $this->fuzzyMatch($row, $user);
     }
 
     /**
