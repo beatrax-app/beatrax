@@ -84,7 +84,7 @@ it('no conflict: empty conflictingFields path proceeds with pure source_ref enri
 
     Event::fake([ReceiptConflictDetected::class]);
 
-    $count = (resolveApplier())([
+    $applied = (resolveApplier())([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'TX-12345',
@@ -93,7 +93,7 @@ it('no conflict: empty conflictingFields path proceeds with pure source_ref enri
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('TX-12345');
     Event::assertNotDispatched(ReceiptConflictDetected::class);
@@ -106,7 +106,7 @@ it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dis
 
     Event::fake([ReceiptConflictDetected::class]);
 
-    $count = (resolveApplier())([
+    $applied = (resolveApplier())([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
@@ -118,7 +118,7 @@ it('unset policy + receipt conflict: holds in pending_enrichment_conflicts + dis
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
 
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('RECEIPT-77');
@@ -157,7 +157,7 @@ it('prefer_receipt policy: applies the incoming value AND records the disagreeme
 
     Event::fake([ReceiptConflictDetected::class]);
 
-    $count = (resolveApplier())([
+    $applied = (resolveApplier())([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
@@ -169,7 +169,7 @@ it('prefer_receipt policy: applies the incoming value AND records the disagreeme
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
 
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('RECEIPT-77');
@@ -197,7 +197,7 @@ it('prefer_first_write policy: keeps the stored value AND records the disagreeme
 
     Event::fake([ReceiptConflictDetected::class]);
 
-    $count = (resolveApplier())([
+    $applied = (resolveApplier())([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'RECEIPT-77',
@@ -209,7 +209,7 @@ it('prefer_first_write policy: keeps the stored value AND records the disagreeme
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
 
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('RECEIPT-77');
@@ -291,7 +291,7 @@ it('unset policy + a statement enriching a receipt-written row: keeps the stored
 
     Event::fake([ReceiptConflictDetected::class]);
 
-    $count = (resolveApplier())([
+    $applied = (resolveApplier())([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'STRONGER-REF',
@@ -304,7 +304,7 @@ it('unset policy + a statement enriching a receipt-written row: keeps the stored
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
 
     $row = DB::table('transactions')->where('id', $tx->id)->first();
     expect($row->source_ref)->toBe('STRONGER-REF');

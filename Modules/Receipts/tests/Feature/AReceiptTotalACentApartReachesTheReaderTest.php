@@ -55,7 +55,7 @@ function nearTotalConflictApply(User $user, CanonicalTransaction $receipt): int
             sourceFormat: SourceFormat::Eml->value,
             conflictingFields: $disposition->conflictingFields,
         ),
-    ], $user);
+    ], $user)->count;
 }
 
 it('records the disagreement instead of writing a second transaction', function (): void {

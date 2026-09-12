@@ -213,7 +213,7 @@ it('leaves a reconciled row\'s amount alone when a later file carries a stronger
         ],
     );
 
-    expect(($this->app->make(AppliesEnrichments::class))([$enrichment], $this->fixtureUser))->toBe(0)
+    expect(($this->app->make(AppliesEnrichments::class))([$enrichment], $this->fixtureUser)->count)->toBe(0)
         ->and(Transaction::query()->findOrFail($tx->id)->amount_minor)->toBe(-2500)
         ->and(Transaction::query()->findOrFail($tx->id)->source_ref)->toBe($tx->source_ref);
 
@@ -221,6 +221,6 @@ it('leaves a reconciled row\'s amount alone when a later file carries a stronger
     // nothing about the lock.
     app(TransactionStatusWriter::class)->unreconcile($this->fixtureUser, $tx->id);
 
-    expect(($this->app->make(AppliesEnrichments::class))([$enrichment], $this->fixtureUser))->toBe(1)
+    expect(($this->app->make(AppliesEnrichments::class))([$enrichment], $this->fixtureUser)->count)->toBe(1)
         ->and(Transaction::query()->findOrFail($tx->id)->amount_minor)->toBe(-2750);
 });

@@ -110,12 +110,20 @@ final readonly class ConfirmImport implements ConfirmsImports
             $errorCount,
             $rowIssues,
         ): ImportConfirmResult {
-            $enrichedCount = ($this->applyEnrichments)($enrichments, $user);
+            $applied = ($this->applyEnrichments)($enrichments, $user);
+
+            // Registered inside the transaction and run on its commit, which
+            // is the only site that has both halves: a confirm that rolls back
+            // takes the announcement with it, and one that commits cannot
+            // return without having made it.
+            $this->db->connection()->afterCommit(function () use ($applied, $user): void {
+                $this->syncCapture->captureAdoptedBookings($applied->adopted, $user);
+            });
 
             $importRun->update([
                 'inserted_count' => $recorderResult->inserted,
                 'duplicate_count' => $totalDuplicates,
-                'enriched_count' => $enrichedCount,
+                'enriched_count' => $applied->count,
                 'error_count' => $errorCount,
                 'row_issues' => $rowIssues,
                 'confirmed_at' => $this->clock->now(),
@@ -126,7 +134,7 @@ final readonly class ConfirmImport implements ConfirmsImports
                 importRunId: $importRun->id,
                 inserted: $recorderResult->inserted,
                 duplicates: $totalDuplicates,
-                enriched: $enrichedCount,
+                enriched: $applied->count,
                 errors: $errorCount,
             );
         });

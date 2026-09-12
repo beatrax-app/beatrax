@@ -430,17 +430,39 @@ so it is wrapped in the `UniqueConstraintViolationException` catch
 stored row stands, the confirm carries on, and the collision is logged —
 letting it out would roll back the whole import's enrichment phase.
 
-**What this does not do: announce.** `ApplyEnrichments` has never
-announced any of its writes to `Sync`, and the four booking columns have
-no per-column rule in `MergeRulesRegistry` — they appear only under
-`_create_required`, so they travel in a whole-row create and there is no
-`Set` op the merge layer would accept for them. Announcing them here would
-store an undeclared last-write-wins nobody chose, which is worse than the
-silence. A peer that received the row from the original import keeps the
-hold's dates until the same statement is imported there too, at which
-point it performs the same restatement and converges. Closing that gap
-means declaring the columns and giving the whole enrichment path an
-announcement, which is its own change and not this one.
+**What this does not do: announce — `ApplyEnrichments` reports.** The
+action writes inside `ConfirmImport`'s transaction and cannot see whether
+the run it is part of commits, so an op written from in there outlives an
+import that rolls back. Each adopted `TransactionBooking` is carried back
+on `AppliedEnrichments::$adopted` instead, and `ConfirmImport` registers
+the announcement with `afterCommit()` from inside that same transaction:
+discarded on a rollback, run on the commit, and never a line the action
+can reach the end of without having made.
+
+`ImportSyncCapture::captureAdoptedBookings()` announces it, as four `Set`
+ops in one transaction — four or none, because the terms are the terms of
+one dedup tuple and a peer that took three of them seats the row on a day
+and an occurrence no statement ever stated together. Not as a create:
+`captureRowsById()` beside it announces whole-row creates, and
+`AlreadyPresentCreate` discards a create naming a row the peer already
+holds, so routing a restatement through it would announce the enrichment
+and change nothing.
+
+The four columns carry their own rule in `MergeRulesRegistry`, and the
+order was forced: `RegisteredColumns` answers off the LIVE SCHEMA, so a
+column that is real but undeclared does not quarantine when announced —
+it applies as a last-write-wins nobody chose, with nothing failing.
+Declare first, announce second. Each is `Lww` because a source *states* a
+booking term: there is nothing to combine, and the later statement is the
+one that describes the row. `occurrence_ordinal` is the one that invites a
+counter and must not have one — it is which occurrence of a tuple the row
+is within its own file, so two devices reading one statement compute the
+same ordinal, and a `g_counter` would sum them.
+
+A peer only ever holds the digest its own merged row composes to:
+`RederiveFingerprintOnMergedRows` recomposes it after the Sets land, which
+is why three of the four move the row's identity and none of them carries
+`fingerprint` on the wire.
 
 A hit is ENRICHED, never a fourth verdict, and the disagreement rides on
 `EnrichedDisposition::$conflictingFields` exactly as the receipt band's

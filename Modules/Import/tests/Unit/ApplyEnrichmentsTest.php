@@ -79,13 +79,13 @@ beforeEach(function (): void {
 });
 
 it('returns 0 on an empty enrichments list', function (): void {
-    expect(($this->applier)([], $this->fixtureUser))->toBe(0);
+    expect(($this->applier)([], $this->fixtureUser)->count)->toBe(0);
 })->group('phase-2');
 
 it('updates source_ref and appends a provenance entry to enriched_from', function (): void {
     $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'asn-csv', null, $this->composer);
 
-    $count = ($this->applier)([
+    $applied = ($this->applier)([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-XYZ',
@@ -94,7 +94,7 @@ it('updates source_ref and appends a provenance entry to enriched_from', functio
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
 
     /** @var Transaction $fresh */
     $fresh = Transaction::query()->findOrFail($tx->id);
@@ -121,7 +121,7 @@ it('appends to an existing enriched_from array on a subsequent enrichment', func
     ]];
     $tx->save();
 
-    $count = ($this->applier)([
+    $applied = ($this->applier)([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-STRONG',
@@ -130,7 +130,7 @@ it('appends to an existing enriched_from array on a subsequent enrichment', func
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
 
     /** @var Transaction $fresh */
     $fresh = Transaction::query()->findOrFail($tx->id);
@@ -149,7 +149,7 @@ it('race-condition no-op: if existing source_ref already equals incoming, no UPD
     $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'camt053', 'EREF-X', $this->composer);
     $originalUpdatedAt = $tx->updated_at?->toIso8601String();
 
-    $count = ($this->applier)([
+    $applied = ($this->applier)([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-X',
@@ -158,7 +158,7 @@ it('race-condition no-op: if existing source_ref already equals incoming, no UPD
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(0);
+    expect($applied->count)->toBe(0);
 
     /** @var Transaction $fresh */
     $fresh = Transaction::query()->findOrFail($tx->id);
@@ -185,7 +185,7 @@ it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', f
     ]);
     $otherTx = seedExistingTransaction($other, $otherAccount->id, 'asn-csv', null, $this->composer);
 
-    $count = ($this->applier)([
+    $applied = ($this->applier)([
         new PendingEnrichment(
             existingTransactionId: $otherTx->id,
             newSourceRef: 'EREF-Y',
@@ -194,7 +194,7 @@ it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', f
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(0);
+    expect($applied->count)->toBe(0);
 
     /** @var Transaction $fresh */
     $fresh = Transaction::query()->findOrFail($otherTx->id);
@@ -211,7 +211,7 @@ it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-sto
     $tx->source_ref = 'EREF-PARALLEL';
     $tx->save();
 
-    $count = ($this->applier)([
+    $applied = ($this->applier)([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'MT940-WEAK',
@@ -220,7 +220,7 @@ it('rank no-op: a cached weaker PendingEnrichment never overwrites a freshly-sto
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(0);
+    expect($applied->count)->toBe(0);
 
     /** @var Transaction $fresh */
     $fresh = Transaction::query()->findOrFail($tx->id);
@@ -234,7 +234,7 @@ it('rank no-op: an equal-rank cached enrichment does not overwrite an equally-st
     // equality short-circuit is not what is being exercised here.
     $tx = seedExistingTransaction($this->fixtureUser, $this->account->id, 'camt053', 'EREF-OLD', $this->composer);
 
-    $count = ($this->applier)([
+    $applied = ($this->applier)([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'EREF-NEW',
@@ -243,7 +243,7 @@ it('rank no-op: an equal-rank cached enrichment does not overwrite an equally-st
         ),
     ], $this->fixtureUser);
 
-    expect($count)->toBe(0);
+    expect($applied->count)->toBe(0);
 
     /** @var Transaction $fresh */
     $fresh = Transaction::query()->findOrFail($tx->id);
