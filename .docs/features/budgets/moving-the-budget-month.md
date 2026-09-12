@@ -99,6 +99,45 @@ Each device runs the migration against its own copy of the same synced
 rows and derives the same answer, so no op-log traffic is needed to make
 the repair converge.
 
+### The key is inside the id, so the id has to move with it
+
+`EnvelopeMoveId::for()` folds `(move_group_id, kind, period_start)` into
+an `envelope_moves` primary key, so `period_start` is not an ordinary
+column on that table — it is a third of the row's identity. The first
+version of the lift moved it with a bare `UPDATE`, and every move row it
+touched came out of the upgrade under an id its own columns no longer
+derive. That is the worse half of both kinds of id: it looks stable and
+reproducible, and it is a number a second device folding the same three
+values does not arrive at.
+
+The lift now re-derives the id in the statement that moves the key, and
+`2026_09_12_000002_give_a_lifted_move_back_the_id_its_own_columns_derive`
+repairs an install that already ran the earlier version. That repair is
+possible where the assignment merge above is not: the move row still
+carries all three inputs, so the right id is a pure function of columns
+still on it, and the rows to fix are named by evidence rather than
+guessed at — a row sitting on genesis whose stored id is the derivation
+at a key inside the window the lift emptied was put there by that
+`UPDATE` and by nothing else.
+
+Two kinds of row are deliberately left alone. A move written before the
+id was derived from the move at all carries whatever the table's sequence
+handed it; nothing in the tree has ever re-derived those, and one with no
+`move_group_id` has no identity to fold. And a row whose corrected id is
+already taken keeps its stale one: two rows folding onto a single id are
+one `(move_group_id, kind, period_start)` carrying two amounts, which is
+a worse problem than a stale id and not one a migration may pick a loser
+in.
+
+Neither the lift nor the repair emits an op, and neither needs to.
+`envelope_moves` is captured from `EnvelopeMoveMutated`, which a
+query-builder write does not raise, and `period_start` carries no
+last-writer-wins rule in `MergeRulesRegistry` — it travels as
+delete-and-create or not at all, which is why `EnvelopePeriodRekeyer`
+re-creates a row rather than updating it. Convergence rests on every
+device running the same arithmetic over the same synced rows, and the id
+is part of that arithmetic.
+
 ## Related pages
 
 - [`Budgets` architecture](architecture.md) — the fold the keys are read by.

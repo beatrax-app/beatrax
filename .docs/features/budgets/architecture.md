@@ -191,6 +191,15 @@ the action then matches no row —
 Rows written before this keep the small ids they were given; nothing is
 rewritten, and the two kinds of id sit side by side.
 
+Because `period_start` is inside the tuple, any write that moves it is a
+re-key of the row and not an edit to a column: the id has to be re-derived in
+the same breath, or the row is left under a number its own columns no longer
+produce. `EnvelopePeriodRekeyer` does this by deleting and re-creating, which
+is also what sync requires — `period_start` has no last-writer-wins rule and
+travels only as delete-and-create. The one-off lift that repairs a plan
+stranded below genesis re-derives it in place instead, for the reasons set out
+in [moving the budget month](moving-the-budget-month.md#the-key-is-inside-the-id-so-the-id-has-to-move-with-it).
+
 `copyFromPeriod()` ("Copy last month") applies every row of the source
 period inside **one** transaction and dispatches its collected events
 after that single commit, rather than opening a transaction and an event

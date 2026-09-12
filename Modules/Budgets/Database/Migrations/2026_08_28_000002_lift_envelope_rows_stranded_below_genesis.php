@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Container\Container;
 use Illuminate\Database\Connection;
+use Modules\Budgets\Internal\Support\EnvelopeMoveId;
 use Modules\Core\Database\Support\ModuleMigration;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
@@ -57,11 +58,7 @@ return new class extends ModuleMigration
 
             $this->liftAssignments($connection, $userId, $floor, $genesisKey, $reportingCurrency);
 
-            $connection->table('envelope_moves')
-                ->where('user_id', $userId)
-                ->where('period_start', '>=', $floor)
-                ->where('period_start', '<', $genesisKey)
-                ->update(['period_start' => $genesisKey]);
+            $this->liftMoves($connection, $userId, $floor, $genesisKey);
         }
     }
 
@@ -69,6 +66,66 @@ return new class extends ModuleMigration
     {
         // Forward-only: the day the rows were stranded under was never recorded,
         // so there is nothing to put them back to.
+    }
+
+    // period_start is one of the three values EnvelopeMoveId::for() folds into
+    // the row's primary key, so moving it with an UPDATE leaves the row under
+    // an id its own columns no longer derive -- reproducible in name only, and
+    // a second device deriving it from those columns lands somewhere else.
+    private function liftMoves(Connection $connection, int $userId, string $floor, string $genesisKey): void
+    {
+        $stranded = $connection->table('envelope_moves')
+            ->where('user_id', $userId)
+            ->where('period_start', '>=', $floor)
+            ->where('period_start', '<', $genesisKey)
+            ->get(['id', 'period_start', 'kind', 'move_group_id']);
+
+        foreach ($stranded as $row) {
+            $connection->table('envelope_moves')
+                ->where('id', $row->id)
+                ->update($this->liftedMove($connection, $row, $genesisKey));
+        }
+    }
+
+    // The id moves only for a row that is already carrying its own derivation.
+    // A move written before the id was derived at all keeps the autoincrement
+    // it has always had: nothing in the tree re-derived those, and one with no
+    // group id would fold onto every other group-less row of its kind.
+    /**
+     * @return array{period_start: string, id?: int}
+     *
+     * @link ../../../../.docs/features/budgets/moving-the-budget-month.md#the-key-is-inside-the-id-so-the-id-has-to-move-with-it
+     */
+    private function liftedMove(Connection $connection, stdClass $row, string $genesisKey): array
+    {
+        $storedKey = is_string($row->period_start) ? $row->period_start : '';
+        $derivedHere = self::derivedMoveId($row, $storedKey);
+
+        if ($derivedHere === null || $derivedHere !== (int) $row->id) {
+            return ['period_start' => $genesisKey];
+        }
+
+        // Two rows folding onto one id are one (move_group_id, kind, period)
+        // and so one logical move carrying two amounts, which is a worse
+        // problem than a stale id and not one a migration may pick a loser in.
+        $lifted = self::derivedMoveId($row, $genesisKey);
+        if ($lifted === null || $connection->table('envelope_moves')->where('id', $lifted)->exists()) {
+            return ['period_start' => $genesisKey];
+        }
+
+        return ['period_start' => $genesisKey, 'id' => $lifted];
+    }
+
+    // Null where the tuple cannot be formed: move_group_id is nullable because
+    // rows predating it exist, and a null there is not an identity.
+    private static function derivedMoveId(stdClass $row, string $periodStart): ?int
+    {
+        $groupId = is_string($row->move_group_id) ? $row->move_group_id : '';
+        $kind = is_string($row->kind) ? $row->kind : '';
+
+        return $groupId === '' || $kind === '' || $periodStart === ''
+            ? null
+            : EnvelopeMoveId::for($groupId, $kind, $periodStart);
     }
 
     // (user_id, category_id, period_start) is UNIQUE, so a stranded row whose
