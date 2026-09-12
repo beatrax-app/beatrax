@@ -26,9 +26,12 @@ use Modules\Sync\Internal\Exceptions\DeviceIdentityUnreadableException;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesDeviceRenaming;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesManualPeerAddress;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
+use Modules\Sync\Internal\Http\Livewire\Concerns\RepairsARestoredSyncIdentity;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceIdentityState;
+use Modules\Sync\Internal\Identity\DeviceSyncStanding;
+use Modules\Sync\Internal\Identity\DeviceSyncStandingReader;
 use Modules\Sync\Internal\OpLog\SyncBacklogState;
 use Modules\Sync\Internal\Support\DevicesScreenOpening;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
@@ -44,6 +47,7 @@ final class DevicesAndSyncSettingsSection extends Component
     use ManagesDeviceRenaming;
     use ManagesManualPeerAddress;
     use ReadsDeviceState;
+    use RepairsARestoredSyncIdentity;
 
     public bool $syncEnabled = false;
 
@@ -135,6 +139,7 @@ final class DevicesAndSyncSettingsSection extends Component
         PeerLanAddressBook $addresses,
         PairingGateway $pairing,
         DeviceIdentityLoader $identityLoader,
+        DeviceSyncStandingReader $standing,
         Session $session,
         DevicesScreenOpening $opening,
     ): void {
@@ -147,7 +152,13 @@ final class DevicesAndSyncSettingsSection extends Component
         // query user_app_lock_configs from the Sync module — cross-module boundary).
         $this->appLockConfigured = $lockConfig->idleTimeoutMs($userId) !== null;
 
-        $this->syncEnabled = $this->selfRowExists($db, $userId);
+        // Both halves, because either alone lies. A key-file with no self row
+        // is the row this device can put back; a self row with no key-file is
+        // a restored database, and reading it as sync being on is what left
+        // every write of one dropped and logged at debug.
+        $thisDevice = $standing->forUser($userId);
+        $this->syncEnabled = $thisDevice->presentsAsEnabled();
+        $this->registeredWithoutIdentity = $thisDevice === DeviceSyncStanding::IdentityMissing;
         $this->devices = $this->loadDevices($registry, $userId);
 
         $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
@@ -199,7 +210,10 @@ final class DevicesAndSyncSettingsSection extends Component
         EncryptionMigrationService $migrationService,
         LoggerInterface $logger,
     ): void {
-        if ($this->syncEnabled) {
+        // The second arm is not a duplicate of the first: a restored self row
+        // means the ordinary enable would mint beside it and leave two rows
+        // claiming is_self. repairRestoredSyncIdentity() is the way through.
+        if ($this->syncEnabled || $this->registeredWithoutIdentity) {
             return;
         }
 
@@ -573,6 +587,10 @@ final class DevicesAndSyncSettingsSection extends Component
         return $views->make('sync::livewire.devices-and-sync-settings-section', [
             'encryptionModalStep' => $this->currentEncryptionStep(),
             'backlogState' => SyncBacklogState::tryFrom($this->syncBacklog) ?? SyncBacklogState::None,
+            // The wiring, the disabled state and the announced one all read
+            // this, so the disjunction is resolved once here rather than
+            // re-spelled three times in the template.
+            'enableSyncUnavailable' => $this->syncEnabled || $this->registeredWithoutIdentity || ! $this->appLockConfigured,
         ]);
     }
 }

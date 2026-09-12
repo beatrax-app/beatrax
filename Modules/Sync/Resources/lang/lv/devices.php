@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Vari arī sākt no jauna: ierīce saņem jaunu identitāti, vecā paliek neizmantota, un iepriekš savienotās ierīces būs jāsavieno pārī atkārtoti.',
     'identity_unreadable_replace' => 'Izveidot šai ierīcei jaunu identitāti',
 
+    'registered_without_identity' => 'Šīs ierīces dati tika atjaunoti no rezerves kopijas, taču atslēgu, kas paraksta tās izmaiņas, nevar nokopēt — tā palika ierīcē, kurā kopija tika izveidota. Šeit veiktās izmaiņas tiek aizturētas: nekas nezūd un nekas nenonāk citās tavās ierīcēs, kamēr šajā ierīcē nav iestatīta sinhronizācija.',
+    'registered_without_identity_repair_help' => 'Pabeidzot šī ierīce iegūst savu sinhronizācijas identitāti un nosūta visu, ko tā ir aizturējusi. Ierīce, no kuras ir kopija, paliek tavā sarakstā bez iespējas savienoties, lai tās parakstītie dati būtu joprojām lasāmi — un iepriekš sapārotās ierīces būs jāsapāro vēlreiz.',
+    'registered_without_identity_repair' => 'Pabeigt sinhronizācijas iestatīšanu šajā ierīcē',
+
     'encrypted_at_rest' => 'Dati šifrēti glabāšanā',
     'encrypted_at_rest_scope' => 'Piezīmes, darījumu apraksti un maksājumu saņēmēju vārdi un IBAN ir šifrēti virsgrāmatā ar tavu lietotnes bloķēšanas paroles frāzi. Summas, datumi un tava paša konta nosaukums un IBAN nav šifrēti. Meklēšanas indekss glabā savu lasāmu kopiju no tā, kam tu maksā, no taviem darījumu aprakstiem, no piezīmēm, ko raksti darījumam, no piezīmēm, ko raksti sadalījuma kategorijai, un no tavām nodokļu piezīmēm, un daži tirgotāju nosaukumi ir lasāmi citviet datubāzes failā.',
     'on' => 'Ieslēgts',

@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Můžeš také začít znovu: zařízení dostane novou identitu, stará zůstane nepoužitá stranou a dříve spárovaná zařízení bude potřeba spárovat znovu.',
     'identity_unreadable_replace' => 'Vytvořit pro toto zařízení novou identitu',
 
+    'registered_without_identity' => 'Data tohoto zařízení byla obnovena ze zálohy, ale klíč, který podepisuje jeho změny, nelze zkopírovat — zůstal na zařízení, na kterém záloha vznikla. Změny, které tady děláš, se zadržují: nic se neztrácí a nic se nedostane na tvá ostatní zařízení, dokud na tomto zařízení nenastavíš synchronizaci.',
+    'registered_without_identity_repair_help' => 'Dokončení dá tomuto zařízení vlastní identitu pro synchronizaci a odešle všechno, co zadrželo. Zařízení, ze kterého záloha pochází, zůstane v seznamu bez možnosti se připojit, takže data, která podepsalo, zůstanou čitelná — a zařízení, která jsi dříve spároval, budeš muset spárovat znovu.',
+    'registered_without_identity_repair' => 'Dokončit nastavení synchronizace na tomto zařízení',
+
     'encrypted_at_rest' => 'Data šifrovaná v úložišti',
     'encrypted_at_rest_scope' => 'Poznámky, popisy transakcí a jména a IBAN příjemců jsou v účetní knize šifrovány přístupovou frází zámku aplikace. Částky, data a název a IBAN tvého vlastního účtu nikoli. Index vyhledávání si drží vlastní čitelnou kopii toho, komu platíš, popisů tvých transakcí, poznámek, které píšeš k transakci, poznámek, které píšeš ke kategorii v rozděleném záznamu, a tvých daňových poznámek, a některá jména obchodníků zůstávají čitelná jinde v souboru databáze.',
     'on' => 'Zapnuto',

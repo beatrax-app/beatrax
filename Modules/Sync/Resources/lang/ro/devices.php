@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Poți și să iei totul de la capăt: dispozitivul primește o identitate nouă, cea veche rămâne pusă deoparte nefolosită, iar dispozitivele asociate anterior trebuie asociate din nou.',
     'identity_unreadable_replace' => 'Creează o identitate nouă pentru acest dispozitiv',
 
+    'registered_without_identity' => 'Datele acestui dispozitiv au fost restaurate dintr-o copie de rezervă, dar cheia care semnează modificările lui nu poate fi copiată — a rămas pe dispozitivul pe care a fost făcută copia. Modificările pe care le faci aici sunt reținute: nimic nu se pierde și nimic nu ajunge pe celelalte dispozitive ale tale până când sincronizarea nu este configurată pe acest dispozitiv.',
+    'registered_without_identity_repair_help' => 'La finalizare, acest dispozitiv primește propria identitate de sincronizare și trimite tot ce a reținut. Dispozitivul de pe care provine copia rămâne în lista ta fără a se putea conecta, astfel încât datele semnate de el să rămână lizibile — iar dispozitivele împerecheate anterior trebuie împerecheate din nou.',
+    'registered_without_identity_repair' => 'Finalizează configurarea sincronizării pe acest dispozitiv',
+
     'encrypted_at_rest' => 'Date criptate în repaus',
     'encrypted_at_rest_scope' => 'Notele, descrierile tranzacțiilor și numele și IBAN-urile celor cărora le plătești sunt criptate în registru cu parola de blocare a aplicației. Sumele, datele și numele și IBAN-ul propriului tău cont nu sunt. Indexul de căutare păstrează propria copie lizibilă a celor cărora le plătești, a descrierilor tranzacțiilor tale, a notelor pe care le scrii pe o tranzacție, a notelor pe care le scrii pe o categorie dintr-o împărțire și a notelor tale fiscale, iar unele nume de comercianți rămân în text clar în alte locuri din fișierul bazei de date.',
     'on' => 'Activat',

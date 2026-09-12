@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Lahko tudi začneš znova: naprava dobi novo identiteto, stara ostane neuporabljena ob strani, prej seznanjene naprave pa je treba seznaniti znova.',
     'identity_unreadable_replace' => 'Ustvari novo identiteto za to napravo',
 
+    'registered_without_identity' => 'Podatki te naprave so bili obnovljeni iz varnostne kopije, vendar ključa, ki podpisuje njene spremembe, ni mogoče kopirati — ostal je na napravi, na kateri je bila kopija ustvarjena. Spremembe, ki jih narediš tukaj, se zadržujejo: nič se ne izgubi in nič ne pride do tvojih drugih naprav, dokler na tej napravi ni nastavljena sinhronizacija.',
+    'registered_without_identity_repair_help' => 'Ko to dokončaš, ta naprava dobi svojo identiteto za sinhronizacijo in pošlje vse, kar je zadržala. Naprava, s katere je kopija, ostane na tvojem seznamu brez možnosti povezave, da podatki, ki jih je podpisala, ostanejo berljivi — prej seznanjene naprave pa je treba seznaniti znova.',
+    'registered_without_identity_repair' => 'Dokončaj nastavitev sinhronizacije na tej napravi',
+
     'encrypted_at_rest' => 'Podatki šifrirani v mirovanju',
     'encrypted_at_rest_scope' => 'Zapiski, opisi transakcij ter imena in IBAN tistih, ki jim plačuješ, so v knjigi šifrirani z geslom za zaklep aplikacije. Zneski, datumi ter ime in IBAN tvojega računa niso. Iskalni indeks hrani svojo berljivo kopijo tega, komu plačuješ, opisov tvojih transakcij, zapiskov, ki jih pišeš k transakciji, zapiskov, ki jih pišeš h kategoriji v razdelitvi, in tvojih davčnih zapiskov, nekatera imena trgovcev pa ostajajo berljiva drugje v datoteki baze podatkov.',
     'on' => 'Vklopljeno',

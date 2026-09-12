@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Du kan också börja om: enheten får en ny identitet, den gamla sparas oanvänd, och enheter du parkopplat tidigare måste parkopplas igen.',
     'identity_unreadable_replace' => 'Starta en ny identitet för den här enheten',
 
+    'registered_without_identity' => 'Data på den här enheten återställdes från en säkerhetskopia, men nyckeln som signerar dess ändringar kan inte kopieras — den stannade på enheten där säkerhetskopian gjordes. Ändringarna du gör här hålls kvar: ingenting går förlorat, och ingenting når dina andra enheter förrän synkronisering är inställd på den här enheten.',
+    'registered_without_identity_repair_help' => 'När du gör det färdigt får den här enheten sin egen synkroniseringsidentitet och skickar allt den har hållit kvar. Enheten som säkerhetskopian kom från stannar i din lista utan att kunna ansluta, så att data den signerade fortsatt går att läsa — och enheter du parkopplat tidigare måste parkopplas igen.',
+    'registered_without_identity_repair' => 'Gör klart inställningen av synkronisering på den här enheten',
+
     'encrypted_at_rest' => 'Data krypterade i vila',
     'encrypted_at_rest_scope' => 'Anteckningar, transaktionsbeskrivningar och namn och IBAN för dem du betalar krypteras i bokföringen med din applåslösenfras. Belopp, datum och ditt eget kontonamn och IBAN gör det inte. Sökindexet behåller en egen läsbar kopia av vem du betalar, dina transaktionsbeskrivningar, anteckningarna du skriver på en transaktion, anteckningarna du skriver på en kategori i en uppdelning och dina skatteanteckningar, och vissa handlarnamn står i klartext på andra ställen i databasfilen.',
     'on' => 'På',

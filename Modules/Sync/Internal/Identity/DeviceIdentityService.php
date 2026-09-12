@@ -124,6 +124,30 @@ final readonly class DeviceIdentityService
         return true;
     }
 
+    // The registry half of the same consented retirement, for a restored
+    // database whose self row names a key-file that never travelled. is_self
+    // goes, confirmed_at stays: a rebuild verifies the restored history
+    // against signatureVerificationKeys(), which is confirmed-only.
+    /**
+     * @return bool whether a self registration was actually retired
+     *
+     * @link ../../../../.docs/features/sync/device-identity-key-files.md#a-self-row-and-no-key-file-is-a-restored-database
+     */
+    public function retireSelfRegistration(int $userId): bool
+    {
+        // Never on a device that can sign. A demotion here is irreversible
+        // without the old device_id, and the one state it is for is the one
+        // where no key-file exists to answer for that row at all.
+        if ($this->loader->exists($userId)) {
+            return false;
+        }
+
+        return $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->update(['is_self' => 0]) > 0;
+    }
+
     // Generates the device identity, encrypts the key-file, and persists the
     // device_registry self-row. Returns the in-memory identity DTO (which
     // carries secret-key hex — never persist the DTO).

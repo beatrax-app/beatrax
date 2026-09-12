@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Puoi anche ricominciare: questo dispositivo riceve una nuova identità, quella vecchia resta da parte inutilizzata e i dispositivi già associati vanno associati di nuovo.',
     'identity_unreadable_replace' => 'Crea una nuova identità per questo dispositivo',
 
+    'registered_without_identity' => 'I dati di questo dispositivo sono stati ripristinati da un backup, ma la chiave che firma le sue modifiche non può essere copiata: è rimasta sul dispositivo dove il backup è stato creato. Le modifiche che fai qui vengono trattenute: non si perde nulla e nulla raggiunge i tuoi altri dispositivi finché la sincronizzazione non è configurata su questo dispositivo.',
+    'registered_without_identity_repair_help' => 'Completando, questo dispositivo riceve la propria identità di sincronizzazione e invia tutto ciò che ha trattenuto. Il dispositivo da cui viene il backup resta nel tuo elenco senza potersi connettere, così i dati che ha firmato restano leggibili, e i dispositivi che hai abbinato prima dovrai abbinarli di nuovo.',
+    'registered_without_identity_repair' => 'Completa la configurazione della sincronizzazione su questo dispositivo',
+
     'encrypted_at_rest' => 'Dati crittografati a riposo',
     'encrypted_at_rest_scope' => 'Le note, le descrizioni delle transazioni e i nomi e gli IBAN di chi paghi sono cifrati nel registro con la passphrase del blocco app. Gli importi, le date e il nome e l\'IBAN del tuo conto no. L\'indice di ricerca conserva una propria copia leggibile di chi paghi, delle descrizioni delle tue transazioni, delle note che scrivi su una transazione, delle note che scrivi su una categoria di una suddivisione e delle tue note fiscali, e alcuni nomi di esercenti restano in chiaro altrove nel file di database.',
     'on' => 'Attivo',

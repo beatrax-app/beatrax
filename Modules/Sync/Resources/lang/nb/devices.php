@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Du kan også begynne på nytt: enheten får en ny identitet, den gamle blir liggende ubrukt, og enheter du har paret før må pares på nytt.',
     'identity_unreadable_replace' => 'Start en ny identitet for denne enheten',
 
+    'registered_without_identity' => 'Dataene på denne enheten ble gjenopprettet fra en sikkerhetskopi, men nøkkelen som signerer endringene dens kan ikke kopieres — den ble igjen på enheten sikkerhetskopien ble laget på. Endringene du gjør her holdes tilbake: ingenting går tapt, og ingenting når de andre enhetene dine før synkronisering er satt opp på denne enheten.',
+    'registered_without_identity_repair_help' => 'Når du gjør det ferdig, får denne enheten sin egen synkroniseringsidentitet og sender alt den har holdt tilbake. Enheten sikkerhetskopien kom fra blir stående i listen din uten å kunne koble til, slik at dataene den signerte fortsatt kan leses — og enheter du har paret før må pares på nytt.',
+    'registered_without_identity_repair' => 'Gjør oppsettet av synkronisering ferdig på denne enheten',
+
     'encrypted_at_rest' => 'Data kryptert i hvile',
     'encrypted_at_rest_scope' => 'Notater, transaksjonsbeskrivelser og navn og IBAN til dem du betaler, er kryptert i regnskapet med applåspassordet ditt. Beløp, datoer og ditt eget kontonavn og IBAN er ikke det. Søkeindeksen beholder sin egen lesbare kopi av hvem du betaler, transaksjonsbeskrivelsene dine, notatene du skriver på en transaksjon, notatene du skriver på en kategori i en fordeling og skattenotatene dine, og enkelte butikknavn står i klartekst andre steder i databasefilen.',
     'on' => 'På',

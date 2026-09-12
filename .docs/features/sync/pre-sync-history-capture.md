@@ -205,6 +205,20 @@ drain announces it as a `Set` rather than as a second create. That is the same
 column a tail-fill would have reached, and a `Set` merges through the field
 strategy instead of depending on the receiver's row still being blank.
 
+## A walk is not a repair for a device a peer already knows
+
+"Switching sync on backfills the whole database anyway" is why `SyncOffOpSink`
+is allowed to drop a mutation, and it holds for the device that sentence is
+about: a peer holding none of these rows takes every create the walk writes.
+
+It does not hold for a device whose peer already holds them. A create naming a
+row the receiver has is answered by `SplitCreateTail`, which fills only the
+columns that row never received — so a walk cannot carry an edit, and it has no
+way at all to carry a delete. That is why a [restored
+database](device-identity-key-files.md#a-self-row-and-no-key-file-is-a-restored-database)
+defers its writes instead of leaning on the walk: what it owes is the changes
+made since the backup, and the walk announces the rows, not the changes.
+
 ## Rows the walk does not take
 
 - **Device-local tables** (`categorization_rules`, `rule_conditions`, `rule_actions`) are never

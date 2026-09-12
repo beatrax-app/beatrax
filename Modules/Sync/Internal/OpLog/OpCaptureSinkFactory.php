@@ -6,7 +6,7 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
-use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Identity\DeviceSyncStandingReader;
 use Psr\Log\LoggerInterface;
 
 // The single place that decides what an unavailable signing key costs. Every
@@ -26,9 +26,9 @@ final readonly class OpCaptureSinkFactory
         private LoggerInterface $log,
     ) {}
 
-    // A device holding an identity it cannot currently open is the deferring
-    // case, and that covers all three of them: a console with no session, an
-    // engaged app-lock, and a key-file no key in this database opens.
+    // Four states cannot sign and all four defer: a console with no session,
+    // an engaged app-lock, a key-file no key in this database opens, and a
+    // restored database whose self row names a key-file that never travelled.
     public function forUser(int $userId): OpCaptureSink
     {
         try {
@@ -38,9 +38,15 @@ final readonly class OpCaptureSinkFactory
         }
     }
 
+    // The question is whether this device owes a peer, never whether it holds
+    // a key-file: a restored database brings the old machine's self row and
+    // never its key-file, and a device registered as a peer owes every write
+    // it makes whether or not it can sign one yet.
     private function withoutASigningKey(int $userId): OpCaptureSink
     {
-        if (! $this->container->make(DeviceIdentityLoader::class)->exists($userId)) {
+        $standing = $this->container->make(DeviceSyncStandingReader::class)->forUser($userId);
+
+        if (! $standing->owesAPeerItsWrites()) {
             return new SyncOffOpSink($this->log);
         }
 

@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Możesz też zacząć od nowa: urządzenie dostanie nową tożsamość, stara zostanie odłożona bez użycia, a wcześniej sparowane urządzenia trzeba będzie sparować ponownie.',
     'identity_unreadable_replace' => 'Utwórz nową tożsamość tego urządzenia',
 
+    'registered_without_identity' => 'Dane tego urządzenia zostały przywrócone z kopii zapasowej, ale klucz, który podpisuje jego zmiany, nie może zostać skopiowany — został na urządzeniu, na którym powstała kopia. Zmiany, które tu wprowadzasz, są wstrzymywane: nic nie ginie i nic nie dotrze do twoich innych urządzeń, dopóki na tym urządzeniu nie skonfigurujesz synchronizacji.',
+    'registered_without_identity_repair_help' => 'Po zakończeniu to urządzenie dostaje własną tożsamość synchronizacji i wysyła wszystko, co wstrzymało. Urządzenie, z którego pochodzi kopia, zostaje na twojej liście bez możliwości połączenia, żeby podpisane przez nie dane pozostały czytelne — a urządzenia sparowane wcześniej trzeba sparować ponownie.',
+    'registered_without_identity_repair' => 'Zakończ konfigurację synchronizacji na tym urządzeniu',
+
     'encrypted_at_rest' => 'Dane szyfrowane w spoczynku',
     'encrypted_at_rest_scope' => 'Notatki, opisy transakcji oraz nazwy i numery IBAN odbiorców są szyfrowane w księdze hasłem blokady aplikacji. Kwoty, daty oraz nazwa i IBAN Twojego własnego konta nie są. Indeks wyszukiwania przechowuje własną czytelną kopię tego, komu płacisz, opisów Twoich transakcji, notatek, które piszesz przy transakcji, notatek, które piszesz przy kategorii w podziale, i Twoich notatek podatkowych, a niektóre nazwy sprzedawców występują jawnie w innych miejscach pliku bazy danych.',
     'on' => 'Wł.',

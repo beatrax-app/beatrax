@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Võid ka otsast alustada: seade saab uue identiteedi, vana jääb kasutamata alles ja varem seotud seadmed tuleb uuesti siduda.',
     'identity_unreadable_replace' => 'Loo sellele seadmele uus identiteet',
 
+    'registered_without_identity' => 'Selle seadme andmed taastati varukoopiast, kuid võtit, mis selle muudatusi allkirjastab, ei saa kopeerida — see jäi seadmele, millel varukoopia tehti. Siin tehtud muudatusi hoitakse kinni: midagi ei kao ja miski ei jõua teistele seadmetele enne, kui sünkroonimine on sellel seadmel seadistatud.',
+    'registered_without_identity_repair_help' => 'Lõpetamine annab sellele seadmele oma sünkroonimisidentiteedi ja saadab ära kõik, mida ta on kinni hoidnud. Seade, kust varukoopia pärineb, jääb sinu loendisse ilma ühendumisvõimaluseta, nii et selle allkirjastatud andmed jäävad loetavaks — ja varem seotud seadmed tuleb uuesti siduda.',
+    'registered_without_identity_repair' => 'Lõpeta sünkroonimise seadistamine sellel seadmel',
+
     'encrypted_at_rest' => 'Andmed on kettal krüpteeritud',
     'encrypted_at_rest_scope' => 'Märkmed, tehingute kirjeldused ning saajate nimed ja IBAN-id on pearaamatus krüpteeritud sinu rakenduseluku paroolifraasiga. Summad, kuupäevad ning sinu enda konto nimi ja IBAN ei ole. Otsinguindeks hoiab omaenda loetavat koopiat sellest, kellele sa maksad, sinu tehingute kirjeldustest, märkmetest, mille kirjutad tehingule, märkmetest, mille kirjutad jaotuse kategooriale, ja sinu maksumärkmetest, ning mõned kaupmeeste nimed on loetavad andmebaasifaili teistes kohtades.',
     'on' => 'Sees',

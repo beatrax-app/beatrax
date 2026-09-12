@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Gali ir pradėti iš naujo: įrenginys gaus naują tapatybę, senoji liks nenaudojama, o anksčiau susietus įrenginius reikės susieti iš naujo.',
     'identity_unreadable_replace' => 'Sukurti šiam įrenginiui naują tapatybę',
 
+    'registered_without_identity' => 'Šio įrenginio duomenys buvo atkurti iš atsarginės kopijos, bet raktas, kuris pasirašo jo pakeitimus, negali būti nukopijuotas — jis liko įrenginyje, kuriame buvo sukurta kopija. Čia atliekami pakeitimai sulaikomi: niekas nepasimeta ir niekas nepatenka į kitus tavo įrenginius, kol šiame įrenginyje nebus nustatytas sinchronizavimas.',
+    'registered_without_identity_repair_help' => 'Užbaigus šis įrenginys gauna savo sinchronizavimo tapatybę ir išsiunčia viską, ką buvo sulaikęs. Įrenginys, iš kurio yra kopija, lieka tavo sąraše be galimybės prisijungti, kad jo pasirašyti duomenys liktų perskaitomi — o anksčiau susietus įrenginius reikės susieti iš naujo.',
+    'registered_without_identity_repair' => 'Užbaigti sinchronizavimo nustatymą šiame įrenginyje',
+
     'encrypted_at_rest' => 'Duomenys šifruojami saugykloje',
     'encrypted_at_rest_scope' => 'Užrašai, operacijų aprašymai ir gavėjų vardai bei IBAN yra užšifruoti apskaitos knygoje tavo programėlės užrakto slaptafraze. Sumos, datos ir tavo paties sąskaitos pavadinimas bei IBAN – ne. Paieškos indeksas saugo savo įskaitomą kopiją to, kam moki, tavo operacijų aprašymų, užrašų, kuriuos rašai prie operacijos, užrašų, kuriuos rašai prie skaidymo kategorijos, ir tavo mokestinių užrašų, o kai kurie prekybininkų pavadinimai matomi atviru tekstu kitose duomenų bazės failo vietose.',
     'on' => 'Įjungta',

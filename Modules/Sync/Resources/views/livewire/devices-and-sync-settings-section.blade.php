@@ -60,10 +60,10 @@
         <x-core::switch
             :on="$syncEnabled"
             :label="Lang::get('sync::devices.enable_sync')"
-            wire:click="{{ $syncEnabled || ! $appLockConfigured ? '' : 'enableSync' }}"
+            wire:click="{{ $enableSyncUnavailable ? '' : 'enableSync' }}"
             class="disabled:cursor-not-allowed disabled:opacity-50"
-            :disabled="$syncEnabled || ! $appLockConfigured"
-            :aria-disabled="$syncEnabled || ! $appLockConfigured ? 'true' : 'false'"
+            :disabled="$enableSyncUnavailable"
+            :aria-disabled="$enableSyncUnavailable ? 'true' : 'false'"
         />
     </x-core::setting-row>
 
@@ -100,6 +100,24 @@
                     {{ Lang::get('sync::devices.identity_unreadable_replace') }}
                 </x-core::neutral-button>
             @endif
+        </x-core::alert>
+    @endif
+
+    {{-- A self row this database carried and a key-file it could not. The
+         ordinary off-state beside it read as "sync was never turned on" while
+         every write was being held, and the toggle next to it would have minted
+         a second row claiming to be this device. --}}
+    @if ($registeredWithoutIdentity)
+        <x-core::alert tone="warning" role="alert" data-testid="registered-without-identity-notice">
+            <p>{{ Lang::get('sync::devices.registered_without_identity') }}</p>
+            <p class="mt-2">{{ Lang::get('sync::devices.registered_without_identity_repair_help') }}</p>
+            <x-core::neutral-button
+                class="mt-3 min-h-[44px]"
+                wire:click="repairRestoredSyncIdentity"
+                data-testid="repair-restored-sync-identity"
+            >
+                {{ Lang::get('sync::devices.registered_without_identity_repair') }}
+            </x-core::neutral-button>
         </x-core::alert>
     @endif
 

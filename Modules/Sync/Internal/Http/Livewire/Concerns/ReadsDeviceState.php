@@ -9,18 +9,10 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 
 trait ReadsDeviceState
 {
-    private function selfRowExists(DatabaseManager $db, int $userId): bool
-    {
-        return $db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 1)
-            ->exists();
-    }
-
     // sync_encryption_state is device-local and never synced, so a raw
-    // scoped read here mirrors selfRowExists()'s own precedent rather than
-    // reaching into EncryptionMigrationService::isEnabled() for a value this
-    // component can read in one query already.
+    // scoped read here rather than reaching into
+    // EncryptionMigrationService::isEnabled() for a value this component can
+    // read in one query already.
     private function encryptionEnabled(DatabaseManager $db, int $userId): bool
     {
         $value = $db->connection()->table('sync_encryption_state')
