@@ -133,6 +133,7 @@ function derivedFromSyncedInputTables(): array
         'transaction_search_docs' => 'The search index over transactions; rebuilt locally, never a source of truth.',
         'search_index_repairs' => 'The transactions whose index body a keyless process here could not build. A peer that could read them has nothing to repair, and the coordinate is spent the moment this device rebuilds one.',
         'ledger_backfill_state' => 'How far this device has got through its own backfill.',
+        'anomaly_backfill_state' => 'How far this device has got through its own first-activation walk, and which of its runners holds the claim. A peer walks its own copy of the same history.',
     ];
 }
 
