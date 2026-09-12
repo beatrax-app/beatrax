@@ -18,5 +18,10 @@ return [
         'body' => ':heading (“:receipt”) kuin tiliotteessa (“:statement”). Suositaanko jatkossa kuittia, kun tiedot ovat ristiriidassa?',
         'use_receipt' => 'Käytä kuittia',
         'keep_statement' => 'Säilytä tiliote',
+        'heading_restated' => 'Myöhemmässä tiliotteessa on eri :field',
+        'restated_title' => 'Pankki korjasi tämän tapahtuman.',
+        'restated_body' => ':heading (“:incoming”) kuin jo tallennetulla rivillä (“:stored”). Suositaanko jatkossa uutta arvoa, kun tiedot ovat ristiriidassa?',
+        'use_restated' => 'Käytä uutta arvoa',
+        'keep_stored' => 'Säilytä tallennettu arvo',
     ],
 ];

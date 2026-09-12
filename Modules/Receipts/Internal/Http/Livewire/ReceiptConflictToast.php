@@ -43,6 +43,11 @@ final class ReceiptConflictToast extends Component
 
     public string $receiptCurrency = '';
 
+    // Which of the two questions the copy asks. A statement-incoming
+    // disagreement only ever reaches this component as a restatement: every
+    // other one is settled by the stored policy before the query sees it.
+    public bool $restated = false;
+
     public function mount(CurrentUser $currentUser, ReceiptConflictQuery $query): void
     {
         $this->showLatest($currentUser, $query);
@@ -88,6 +93,7 @@ final class ReceiptConflictToast extends Component
             $this->csvValue = null;
             $this->storedCurrency = '';
             $this->receiptCurrency = '';
+            $this->restated = false;
 
             return;
         }
@@ -100,6 +106,7 @@ final class ReceiptConflictToast extends Component
         $this->csvValue = $latest['storedValue'];
         $this->storedCurrency = $latest['storedCurrency'];
         $this->receiptCurrency = $latest['incomingCurrency'];
+        $this->restated = ! $latest['incomingIsReceipt'];
     }
 
     public function render(ViewFactory $views): View

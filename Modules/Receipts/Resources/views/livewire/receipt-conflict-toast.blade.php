@@ -16,9 +16,26 @@
                 'counterparty_name' => Lang::get('receipts::messages.conflict.field.counterparty_name'),
                 default => Lang::get('receipts::messages.conflict.field.default'),
             };
-            $heading = $field === 'counterparty_name'
-                ? Lang::get('receipts::messages.conflict.heading_cleaner', ['field' => $fieldLabel])
-                : Lang::get('receipts::messages.conflict.heading_different', ['field' => $fieldLabel]);
+            // A restatement has a statement on both sides, so the receipt copy
+            // would name a receipt nobody sent and ask about a preference for
+            // receipts the reader is not being offered.
+            $heading = match (true) {
+                $restated => Lang::get('receipts::messages.conflict.heading_restated', ['field' => $fieldLabel]),
+                $field === 'counterparty_name' => Lang::get('receipts::messages.conflict.heading_cleaner', ['field' => $fieldLabel]),
+                default => Lang::get('receipts::messages.conflict.heading_different', ['field' => $fieldLabel]),
+            };
+            $title = $restated
+                ? Lang::get('receipts::messages.conflict.restated_title')
+                : Lang::get('receipts::messages.conflict.title');
+            $sentence = $restated
+                ? Lang::get('receipts::messages.conflict.restated_body', ['heading' => $heading, 'incoming' => $quotedReceipt ?? '', 'stored' => $quotedStatement ?? ''])
+                : Lang::get('receipts::messages.conflict.body', ['heading' => $heading, 'receipt' => $quotedReceipt ?? '', 'statement' => $quotedStatement ?? '']);
+            $takeIncoming = $restated
+                ? Lang::get('receipts::messages.conflict.use_restated')
+                : Lang::get('receipts::messages.conflict.use_receipt');
+            $keepStored = $restated
+                ? Lang::get('receipts::messages.conflict.keep_stored')
+                : Lang::get('receipts::messages.conflict.keep_statement');
         @endphp
         <div
             role="alert"
@@ -26,10 +43,10 @@
             class="order-1 pointer-events-auto w-full rounded-lg border border-slate-200 bg-white shadow-lg p-md dark:bg-slate-950 dark:border-slate-700"
         >
             <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {{ Lang::get('receipts::messages.conflict.title') }}
+                {{ $title }}
             </div>
             <p class="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                {{ Lang::get('receipts::messages.conflict.body', ['heading' => $heading, 'receipt' => $quotedReceipt ?? '', 'statement' => $quotedStatement ?? '']) }}
+                {{ $sentence }}
             </p>
             <div class="mt-md flex items-center gap-sm">
                 <button
@@ -37,14 +54,14 @@
                     wire:click="useReceipt"
                     class="text-sm font-medium text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded-md dark:text-emerald-200 dark:hover:bg-emerald-950"
                 >
-                    {{ Lang::get('receipts::messages.conflict.use_receipt') }}
+                    {{ $takeIncoming }}
                 </button>
                 <button
                     type="button"
                     wire:click="keepStatement"
                     class="text-sm font-medium text-slate-700 hover:bg-slate-50 px-2 py-1 rounded-md dark:text-slate-300 dark:hover:bg-slate-900"
                 >
-                    {{ Lang::get('receipts::messages.conflict.keep_statement') }}
+                    {{ $keepStored }}
                 </button>
             </div>
         </div>

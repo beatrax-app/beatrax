@@ -55,7 +55,7 @@ it('coerces a JSON-encoded numeric stored value to its string form', function ()
         'field_name' => 'amount_minor',
         'stored_value' => json_encode(1299),
         'incoming_value' => json_encode('2000'),
-        'incoming_source_format' => 'paypal-receipt',
+        'incoming_source_format' => 'eml',
         'import_run_id' => $run->id,
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
@@ -70,5 +70,5 @@ it('coerces a JSON-encoded numeric stored value to its string form', function ()
     expect($result['field'])->toBe('amount_minor');
     expect($result['storedValue'])->toBe('1299');
     expect($result['incomingValue'])->toBe('2000');
-    expect($result['sourceFormat'])->toBe('paypal-receipt');
+    expect($result['sourceFormat'])->toBe('eml');
 });

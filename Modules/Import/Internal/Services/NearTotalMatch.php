@@ -25,9 +25,11 @@ final readonly class NearTotalMatch
     // for a tip is wide enough to merge two lunches.
     public const int BAND_PERCENT = 1;
 
-    // One more than one is the whole answer: a second row inside the band makes
-    // the receipt ambiguous and a third cannot make it more so.
-    private const int CANDIDATE_LIMIT = 2;
+    // One more than one is the whole answer: a second candidate makes the
+    // incoming row ambiguous and a third cannot make it more so. Shared with
+    // the restatement lookup, which answers "none" past one for the same
+    // reason: the candidate not chosen keeps the other's disagreement.
+    public const int CANDIDATE_LIMIT = 2;
 
     // The row shape FingerprintStage::detectConflicts() reads. Both its lookups
     // select this one list, so the near-total arm cannot hand the stage a row

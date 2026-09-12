@@ -81,7 +81,7 @@ beforeEach(function (): void {
         'field_name' => 'amount_minor',
         'stored_value' => json_encode($stored),
         'incoming_value' => json_encode($incoming),
-        'incoming_source_format' => 'paypal-receipt',
+        'incoming_source_format' => 'eml',
         'import_run_id' => null,
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
