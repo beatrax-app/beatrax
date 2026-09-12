@@ -92,11 +92,16 @@ it('costs the same reads on the hundredth row as on the fiftieth', function () u
 
     $hundredth = $rcrStatementsForOne($resolver, ($this->rcrTransaction)(99), $this->user);
 
-    // Nine, not seven: the shared-list opt-out is read per row deliberately,
+    // Ten, not seven. The shared-list opt-out is read per row deliberately,
     // because a privacy gate answered from a memo no second process can drop
-    // keeps sharing after the reader switched it off, and every row here mints a
-    // counterparty, which reads its own id back instead of taking lastInsertId().
-    expect($fiftieth)->toBe(9)
+    // keeps sharing after the reader switched it off. Every row here mints a
+    // counterparty, which reads its own id back instead of taking
+    // lastInsertId(). And the tenth is the capture sink asking whether this
+    // device owes a peer what it just wrote: a device holding no identity
+    // key-file used to be read as one that had never synced, and a restored
+    // database is not — the half that separates them is in device_registry.
+    // What this guard is for is the flatness below, which is unchanged.
+    expect($fiftieth)->toBe(10)
         ->and($hundredth)->toBe($fiftieth);
 });
 
