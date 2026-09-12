@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Dto;
 
 use Modules\Import\Public\Enums\PreviewRowStatus;
+use Modules\Ledger\Public\Dto\TransactionBooking;
 use Spatie\LaravelData\Data;
 
 /**
@@ -25,13 +26,14 @@ abstract class FingerprintDisposition extends Data
     /**
      * @param  array<array-key, array{stored: mixed, incoming: mixed}>  $conflictingFields
      */
-    public static function enriched(int $existingId, ?string $fromSourceRef, string $toSourceRef, array $conflictingFields = []): EnrichedDisposition
+    public static function enriched(int $existingId, ?string $fromSourceRef, string $toSourceRef, array $conflictingFields = [], ?TransactionBooking $restates = null): EnrichedDisposition
     {
         return new EnrichedDisposition(
             existingTransactionId: $existingId,
             fromSourceRef: $fromSourceRef,
             toSourceRef: $toSourceRef,
             conflictingFields: $conflictingFields,
+            restates: $restates,
         );
     }
 

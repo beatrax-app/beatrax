@@ -11,10 +11,11 @@ use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
 use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
-// One card payment at Café Plein: the bank filed €12.99, the price the terminal
-// held, and restated the same row at €14.99 once the tip settled — both under
-// its own sequence number 4471902. The amount is hashed into the fingerprint
-// and the reference is not, so February read €27.98 for one €14.99 coffee.
+// One card payment at Café Plein: the bank filed €12.99 on the 17th, the price
+// the terminal held, and restated the same row at €14.99 on the 19th once the
+// tip settled — both under its own sequence number 4471902. The amount and the
+// day are both hashed into the fingerprint and the reference is not, so
+// February read €27.98 for one €14.99 coffee.
 beforeEach(function (): void {
     $this->freezeClockOnTheStatementFixtureWindow();
     $this->seedFixtureUserAndAccount();
@@ -100,6 +101,32 @@ it('keeps the stored figure standing until the reader answers', function (): voi
     expect($stored->settled_amount_minor)->toBe(-1299);
     expect($stored->source_ref)->toBe('4471902');
     expect($stored->enriched_from)->toContain('asn-csv');
+});
+
+// Which day the bank filed it on is the bank's to state, and the row the reader
+// reconciles against its statement has to carry the day that statement prints.
+it('moves the row onto the day the bank booked it, without asking', function (): void {
+    ($this->importFile)($this->restatedFile);
+
+    $stored = DB::table('transactions')->where('id', $this->storedId)->first();
+
+    expect($stored->posted_at)->toBe('2026-02-19');
+    expect($stored->booked_at)->toBe('2026-02-19 00:00:00');
+    expect($stored->value_date)->toBe('2026-02-19');
+    expect($stored->enriched_from)->toContain('posted_at');
+});
+
+// The dates are taken; only the money is a question. A date the reader is asked
+// to adjudicate is a question they have no ground to answer.
+it('asks the reader about the money and nothing else', function (): void {
+    ($this->importFile)($this->restatedFile);
+
+    $fields = DB::table('pending_enrichment_conflicts')
+        ->where('user_id', $this->fixtureUser->id)
+        ->pluck('field_name')
+        ->all();
+
+    expect($fields)->toBe([EnrichmentConflictField::AmountMinor->value]);
 });
 
 // The overlapping period every reader downloads eventually: the restated row on

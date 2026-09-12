@@ -15,6 +15,7 @@ use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Dto\TransactionBooking;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -61,9 +62,12 @@ final readonly class FingerprintStage
 
         $restated = $this->restatements->matching($tx, $user);
 
+        // The restating row's own booking terms ride along. The source owns
+        // which day it filed a transaction on, so the applier takes them
+        // rather than asking a reader who has no ground to choose.
         return $restated === null
             ? $this->nearTotalDisposition($tx, $reference, $user)
-            : $this->enrichedAgainst($restated, $tx, $reference, $user);
+            : $this->enrichedAgainst($restated, $tx, $reference, $user, TransactionBooking::of($tx));
     }
 
     private function exactMatch(CanonicalTransaction $tx, User $user): ?stdClass
@@ -98,13 +102,14 @@ final readonly class FingerprintStage
     // One construction for all three arms, so the near-total and restatement
     // lookups cannot hand the applier a disposition shaped unlike the exact
     // arm's.
-    private function enrichedAgainst(stdClass $existing, CanonicalTransaction $tx, string $incomingRef, User $user): EnrichedDisposition
+    private function enrichedAgainst(stdClass $existing, CanonicalTransaction $tx, string $incomingRef, User $user, ?TransactionBooking $restates = null): EnrichedDisposition
     {
         return FingerprintDisposition::enriched(
             existingId: self::toInt($existing->id),
             fromSourceRef: self::storedRefOf($existing),
             toSourceRef: $incomingRef,
             conflictingFields: $this->detectConflicts($existing, $tx, $user),
+            restates: $restates,
         );
     }
 
