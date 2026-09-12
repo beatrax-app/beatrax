@@ -6,6 +6,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\RowChunk;
@@ -89,6 +90,12 @@ it('plans every ordered op-log page the enable-time pass issues against an index
     $migration = $this->app->make(EncryptionMigrationService::class);
     $migration->migrate($user, $session);
 
+    // Asserted before the count, because the count has a second way of being
+    // wrong: `migrate()` returns before it touches a row when no key is
+    // reachable, and the module's TestCase is what primes one. A failure here
+    // names the precondition instead of leaving zero pages to read as a plan.
+    expect($migration->isEnabled((int) $user->id))->toBeTrue();
+
     // The snapshot walks the log and so does the sweep, each in pages of
     // RowChunk::DEFAULT_SIZE, so three chunks' worth of rows is at least six.
     $walked = count($pages);
@@ -116,6 +123,39 @@ it('plans every ordered op-log page the enable-time pass issues against an index
 
     expect($sorted)->toBe([]);
     expect($indexed)->toBe($walked);
+});
+
+// The positive control for the case above: `>= 6` is only evidence if this pass
+// can be made to produce fewer, and it can produce none. `migrate()` returns
+// before it touches a row when the app lock is withholding the key, which is
+// the shape an unlocked session that stopped being primed would take.
+it('walks no page at all when the app lock is withholding the key', function (): void {
+    $user = opLogPagingUser();
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $connection = $db->connection();
+
+    // Seeded, so that walking nothing is a decision and not an empty table.
+    opLogPagingSeed($db, (int) $user->id);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    AppLockTestHarness::lock($session);
+
+    $pages = [];
+    $connection->listen(function (QueryExecuted $query) use (&$pages): void {
+        if (str_contains($query->sql, 'from "op_log_entries"') && str_contains($query->sql, 'order by "id"')) {
+            $pages[] = $query->sql;
+        }
+    });
+
+    /** @var EncryptionMigrationService $migration */
+    $migration = $this->app->make(EncryptionMigrationService::class);
+    $migration->migrate($user, $session);
+
+    expect($pages)->toBe([])
+        ->and($migration->isEnabled((int) $user->id))->toBeFalse();
 });
 
 it('carries an index on user_id alone, which is what answers the filter and the id order together', function (): void {
