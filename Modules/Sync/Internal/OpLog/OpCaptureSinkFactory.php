@@ -10,6 +10,7 @@ use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\DeviceSyncStandingReader;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 // The single place that decides what an unavailable signing key costs. Every
 // capture handler asks here, so "the writer could not be built" is answered
@@ -20,6 +21,20 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class OpCaptureSinkFactory
 {
+    /**
+     * What a device answers for rather than propagates. BindingResolutionException
+     * is the writer having no credentials to build from; the other two are
+     * DeviceIdentityLoader::load() declining to turn a genuine I/O fault into a
+     * state, which is correct of it and is why they arrive here.
+     *
+     * @var list<class-string<Throwable>>
+     */
+    private const array DEFERRABLE = [
+        BindingResolutionException::class,
+        SecretFileException::class,
+        BackupIoException::class,
+    ];
+
     // Resolved on demand, never injected: this factory is reached on every
     // mutation the app makes, and the identity loader and the queue reach a
     // file seal and a database that the signing path does not need at all.
@@ -44,8 +59,20 @@ final readonly class OpCaptureSinkFactory
     {
         try {
             return $this->container->make(OpLogWriter::class);
-        } catch (BindingResolutionException|SecretFileException|BackupIoException) {
-            return $this->withoutASigningKey($userId);
+        } catch (Throwable $e) {
+            // Tested against the list rather than caught by type, because the
+            // container is where the real throw surface stops being visible:
+            // make() declares BindingResolutionException alone, so a typed
+            // multi-catch here reads as dead to the analyser even though the
+            // binding runs a closure that raises all three. Anything not on
+            // the list still leaves by the same door it always did.
+            foreach (self::DEFERRABLE as $deferrable) {
+                if ($e instanceof $deferrable) {
+                    return $this->withoutASigningKey($userId);
+                }
+            }
+
+            throw $e;
         }
     }
 
