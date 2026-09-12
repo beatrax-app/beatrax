@@ -7512,6 +7512,30 @@ measured by position: a registration written before the script first mentions
 there, and keep the listener as the fallback for the page that loads before
 Alpine exists.
 
+### The same shape in the file the rule never opened
+
+For as long as the rule above existed it read Blade templates and nothing else,
+while `resources/js/lock.js` registered the `beatraxLock` store from an
+`alpine:init` listener and from no other path. It was forbidden and unseen at
+the same time, which is the only kind of gap a guard cannot report on itself.
+
+It never bit, and the reason is an ordering nothing in this repository enforces.
+`@vite` is emitted from `<x-core::head-assets>` as the last thing in `<head>`,
+and Laravel renders a JS entry as `<script type="module">`, which defers. Livewire
+emits `<script src=".../livewire.js">` into `<body>` with no `defer`, no `async`
+and no `type`, so it is parser-blocking: it publishes `window.Alpine` while the
+document is still being parsed and calls `Livewire.start()` — and through it
+`Alpine.start()`, which dispatches `alpine:init` — from a `DOMContentLoaded`
+listener. A deferred module runs after parsing and before that event, so the
+listener was always added in time. Move the bundle into the body, load it
+dynamically, or start Alpine any earlier, and the store is simply never
+registered: no error, no veil, no idle tracker, no grace window.
+
+The store is registered eagerly now, with the listener as the fallback, exactly
+as `app.js` does it. The rule reads `resources/js` beside the templates, and
+proves it saw both kinds of file before it reports a clean answer — one set
+going empty is how a widened rule quietly narrows again.
+
 ## A template names a store the script never registered
 
 `tests/Contracts/AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest.php`
