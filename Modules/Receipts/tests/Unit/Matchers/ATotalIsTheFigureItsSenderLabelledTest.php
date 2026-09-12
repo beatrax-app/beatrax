@@ -108,7 +108,7 @@ it('books the ICS charge and not the spending limit printed above it', function 
     $outcome = labelledTotalIcs()->match(labelledTotalEml('noreply@ics.nl', 'text/plain', implode("\n", [
         'Uw bestedingslimiet is EUR 2.500,00',
         'Verkoper: AMAZON.COM',
-        'Bedrag: EUR 46,20',
+        'Bedrag: EUR 46,20 Af',
         'Referentienummer: XYZ123',
     ])));
 
@@ -120,7 +120,7 @@ it('books the ICS charge and not the spending limit printed above it', function 
 it('reads an ICS table whose cells carry no whitespace between them', function (): void {
     $html = '<html><body><table>'
         .'<tr><td>Verkoper:</td><td>AMAZON.COM</td></tr>'
-        .'<tr><td>Bedrag:</td><td>&euro; 46,20</td></tr>'
+        .'<tr><td>Bedrag:</td><td>&euro; 46,20 Af</td></tr>'
         .'<tr><td>Referentienummer:</td><td>XYZ123</td></tr>'
         .'</table></body></html>';
 

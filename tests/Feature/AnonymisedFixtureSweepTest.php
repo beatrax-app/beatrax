@@ -8,7 +8,10 @@ use Modules\Ingestion\Internal\Adapters\Ics\PdfTextExtractor;
 // The `integration` case shells out to the real pdftotext; a host without
 // poppler runs the rest via `vendor/bin/pest --exclude-group=integration`.
 $fixtureTxt = __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt';
-$fixtureTinyPdf = __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf';
+$fixtureTinyPdfs = [
+    __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf',
+    __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny-foreign.pdf',
+];
 
 it('the redacted ICS text fixture contains zero 12-digit-or-longer runs', function () use ($fixtureTxt): void {
     $contents = file_get_contents($fixtureTxt);
@@ -65,25 +68,28 @@ it('the redacted ICS text fixture contains a card-number placeholder', function 
     );
 })->group('phase-3');
 
-it('the tiny synthetic ICS PDF, after pdftotext extraction, contains zero PII-shaped strings', function () use ($fixtureTinyPdf): void {
-    // Round-trip the fixture through the project's PdfTextExtractor so
+it('the tiny synthetic ICS PDFs, after pdftotext extraction, contain zero PII-shaped strings', function () use ($fixtureTinyPdfs): void {
+    // Round-trip the fixtures through the project's PdfTextExtractor so
     // the assertion exercises the exact flag set the ingestion path
     // uses — any future change to those flags is automatically reflected
     // here without a manual sync.
     $extractor = new PdfTextExtractor;
-    $extracted = $extractor->extract($fixtureTinyPdf);
 
-    expect(PatternScan::count('/[0-9]{12,}/', $extracted))->toBe(0,
-        'pdftotext output for the tiny synthetic PDF must contain zero '
-        .'12+ contiguous digit runs.'
-    );
+    foreach ($fixtureTinyPdfs as $fixture) {
+        $extracted = $extractor->extract($fixture);
 
-    $hits = PatternScan::all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $extracted);
-    foreach ($hits[0] as $match) {
-        expect($match)->toBe('NL95BANK0000000000',
-            'pdftotext output for the tiny synthetic PDF must only contain the '
-            .'deterministic NL95BANK0000000000 placeholder, never a real IBAN-'
-            .'shaped token.'
+        expect(PatternScan::count('/[0-9]{12,}/', $extracted))->toBe(0,
+            'pdftotext output for '.basename($fixture).' must contain zero '
+            .'12+ contiguous digit runs.'
         );
+
+        $hits = PatternScan::all('/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{10,}\b/', $extracted);
+        foreach ($hits[0] as $match) {
+            expect($match)->toBe('NL95BANK0000000000',
+                'pdftotext output for '.basename($fixture).' must only contain the '
+                .'deterministic NL95BANK0000000000 placeholder, never a real IBAN-'
+                .'shaped token.'
+            );
+        }
     }
 })->group('phase-3')->group('integration');

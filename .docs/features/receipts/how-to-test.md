@@ -140,8 +140,33 @@ and the assertion — see
   `class_exists()` gate skips gracefully if the class is
   missing.
 - **`ChainHintDetected` fires once per extracted hint.** A
-  PayPal receipt with both a funding-card hint AND a
-  refund-of hint produces two events.
+  receipt with both a funding-card hint AND a refund-of hint
+  produces two events. `ARefundIsNotASecondChargeTest` is where the
+  refund-of half is produced: an ICS credit naming
+  `Oorspronkelijke transactie`.
+- **A receipt is booked in the direction it states, and withheld
+  where it states none.** `ARefundIsNotASecondChargeTest` holds both
+  halves: an ICS `Bij` figure books as money coming back (`+4620`
+  where `main` booked `-4620`), a message stating a credit in words
+  with no marker beside its figure is
+  `unmatched('ics_direction_unstated')`, and any refund or reversal
+  vocabulary in a PayPal subject or body is
+  `unmatched('paypal_direction_unstated')`. The controls sit in the
+  same file: an ICS purchase and an ordinary PayPal payment still
+  book negative, and `Bedrag: EUR 12,00 bij Albert Heijn` is not read
+  as a credit marker. See
+  [a direction nothing states is not a charge](architecture.md#a-direction-nothing-states-is-not-a-charge).
+- **A foreign ICS charge settles in euros on both sources or on
+  neither.** `TheSettledLegIsTheColumnTheCardBillsInTest` reads the
+  mail's own euro label (`-5000 USD / -4371 EUR`, where `main`
+  answered `-5000 USD / -5000 USD`) and withholds
+  `ics_euro_leg_unstated` where the message states no euro figure.
+  `Contracts/FingerprintParityTest` is what stops the two sources
+  drifting again: its `ics foreign` pair runs
+  `fixtures/ics/foreign-currency-receipt.eml` against
+  `Ingestion`'s `ics-sample-tiny-foreign.pdf` and compares the
+  settled leg as well as the native one. Until it existed the only
+  ICS pair was a EUR row, where both legs are the same figure.
 - **The `DispatchChainHintsFromReceipt` listener runs AFTER
   the canonical transaction is persisted.** It subscribes to
   `Import::TransactionImported`, which is raised by
@@ -191,6 +216,15 @@ and the assertion — see
 - **A receipt whose extracted total disagrees with the
   matched transaction's amount by more than threshold** —
   pending conflict row written; user resolves via the toast.
+- **An ICS notification that names neither `Af`, `Bij`, nor a
+  purchase** — `unmatched('ics_direction_unstated')`. The statement
+  PDF is the source that does state a direction, and it imports the
+  same charge correctly.
+- **A PayPal notification carrying refund or chargeback vocabulary**
+  — `unmatched('paypal_direction_unstated')`, in either language and
+  from either the subject or the body. A refund the reader received
+  and one they issued move money opposite ways and PayPal publishes
+  no wording that separates them.
 - **A `.eml` dropped before login** —
   `Desktop::PendingFileIntent` persists; after login the user
   lands on `/desktop/file-staging`; clicking Start import

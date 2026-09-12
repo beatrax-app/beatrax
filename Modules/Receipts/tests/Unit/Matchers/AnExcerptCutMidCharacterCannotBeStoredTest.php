@@ -35,7 +35,7 @@ function excerptEml(int $pad): string
         ."<p>{$lead}{$accented}</p>\r\n"
         ."<table>\r\n"
         ."  <tr><td>Verkoper:</td><td>SYNTHETIC ICS TINY</td></tr>\r\n"
-        ."  <tr><td>Bedrag:</td><td>&euro; 1,00 EUR</td></tr>\r\n"
+        ."  <tr><td>Bedrag:</td><td>&euro; 1,00 EUR Af</td></tr>\r\n"
         ."  <tr><td>Kaart eindigend op 1234</td></tr>\r\n"
         ."  <tr><td>Referentienummer:</td><td>XYZ123</td></tr>\r\n"
         ."</table>\r\n"

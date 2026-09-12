@@ -20,7 +20,9 @@ php scripts/generate_tiny_ics_pdf.php
 
 The script is committed alongside the fixture and is idempotent:
 re-running overwrites the fixture byte-identically (no entropy in the
-generator). Open the script for the full hand-crafted PDF byte
+generator). It writes a second fixture in the same run —
+[`ics-sample-tiny-foreign.pdf`](ics-sample-tiny-foreign.md), the
+foreign-currency row — so the two stay in one byte sequence. Open the script for the full hand-crafted PDF byte
 sequence; the only "magic" is the line offsets table the `xref`
 section needs.
 
