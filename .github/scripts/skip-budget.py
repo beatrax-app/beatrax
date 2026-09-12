@@ -15,6 +15,13 @@ verifies the claim in that job -- the file has to be collected there, and it has
 to skip nothing there. A pin that says "the mobile-app root runs it" and is
 wrong is a red build in the mobile-app job, not a sentence in a JSON file.
 
+One entry shape is not a job: `runs_in: null` with a `runs_nowhere` block. It
+says a gate is answered in NO job here -- something a native build generates,
+which nothing in this pipeline runs. It is worse than a pinned skip and better
+than what it replaced, which was `expect(true)->toBeTrue()` reporting a PASS in
+every job. The counts are still verified in every job the file is collected in,
+and this script prints the list on every run so it cannot go quiet.
+
 Three ways to fail, and the middle one is the reason for the whole exercise:
 
   * a file skipped tests here and the budget does not mention it -- somebody
@@ -171,6 +178,17 @@ def main() -> None:
     if args.job not in budget["jobs"]:
         sys.exit(f"::error::{args.job} is not a job the budget knows: {', '.join(sorted(budget['jobs']))}")
 
+    nowhere = sorted(path for path, pinned in budget["files"].items() if pinned.get("runs_in") is None)
+
+    if nowhere:
+        print("\nRUNS NOWHERE -- pinned as answered by no job in this pipeline:")
+        for path in nowhere:
+            block = budget["files"][path].get("runs_nowhere", {})
+            print(f"  {path}")
+            print(f"      missing: {block.get('artefact', '?')}")
+            print(f"      answered by: {block.get('answered_by', '?')}")
+        print("  These enforce nothing until a job can produce what they read.")
+
     problems = failures(budget, args.job, collected, skipped, names)
 
     if problems:
@@ -179,7 +197,7 @@ def main() -> None:
             print(f"::error::{problem}")
         sys.exit(1)
 
-    print("\nthe skips this job reported are the ones the budget pins, and each names a job that runs them.")
+    print("\nthe skips this job reported are the ones the budget pins, and each names a job that runs them or says why none can.")
 
 
 if __name__ == "__main__":

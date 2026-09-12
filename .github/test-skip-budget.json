@@ -2,7 +2,8 @@
   "why": [
     "A skipped test is counted in the same line as a passing one, in a colour nobody reads. A test that skips in EVERY job of the pipeline therefore looks, in every report, exactly like a test that holds — and it holds nothing. This file is the decision about which skips are real capability gates and which job supplies the capability.",
     "`runs_in` is the load-bearing field, and there is no value for it meaning 'nowhere'. Naming a job is a claim, and .github/scripts/skip-budget.py verifies the claim IN that job: the file has to be collected there and skip nothing there. A gate that no job can answer is not pinnable, so it has to be fixed.",
-    "`markers` counts the `markTestSkipped(` and `->skip(` call sites in the file and is held by tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php. `skipped` counts the TESTS a job reports skipped, which differs: one marker in a beforeEach retires a whole file, and one marker on a datasetted test retires a case per row."
+    "`markers` counts the `markTestSkipped(` and `->skip(` call sites in the file and is held by tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php. `skipped` counts the TESTS a job reports skipped, which differs: one marker in a beforeEach retires a whole file, and one marker on a datasetted test retires a case per row.",
+    "`runs_in` may be null, and only with a `runs_nowhere` block naming the artefact that is missing and what would produce it. That is the ONE case a job list cannot answer: a gate on something a native build generates, which no job here runs. The earlier rule was that such a gate is not pinnable and has to be fixed, and the two entries below sat as `expect(true)->toBeTrue()` instead — a PASS for a rule that read nothing, in every job, for as long as nobody looked. Recording that they run nowhere is worse-looking and better: the skip is visible in every report, the counts below are still verified in both jobs, and the entry says what would make it answerable."
   ],
   "jobs": {
     "quality shard": "ci.yml `quality shard N (PHP 8.5)` — repo-root Composer root, ubuntu-latest, every testsuite in phpunit.xml split across three runners.",
@@ -270,6 +271,19 @@
       "runs_in": "mobile-app quality",
       "why": "Reads the packager's own source out of nativephp/mobile's vendor tree."
     },
+    "Modules/Mobile/tests/Unit/TheAnswerToTheNotificationDialogIsNotDroppedTest.php": {
+      "markers": 1,
+      "skipped": {
+        "quality shard": 1,
+        "mobile-app quality": 1
+      },
+      "runs_in": null,
+      "runs_nowhere": {
+        "artefact": "vendor/nativephp/mobile/resources/androidstudio/…/the notification activity",
+        "answered_by": "Present in neither Composer root's vendor tree as shipped; it arrives with the Android Studio scaffold a native build unpacks."
+      },
+      "why": "Ties the hand-written notification-activity fixture to the activity the build generates. The patch and fixture tests above it run in both jobs; this arm alone reaches for the upstream file."
+    },
     "Modules/Mobile/tests/Unit/TheBackgroundManifestCarriesEveryTaskThePhoneMustRunTest.php": {
       "markers": 2,
       "skipped": {
@@ -278,6 +292,19 @@
       },
       "runs_in": "mobile-app quality",
       "why": "Gated on SchedulerManifestGenerator, which nativephp/mobile ships and both pipeline roots resolve."
+    },
+    "Modules/Mobile/tests/Unit/TheZoneAnIPhoneCouldNotReadTest.php": {
+      "markers": 1,
+      "skipped": {
+        "quality shard": 1,
+        "mobile-app quality": 1
+      },
+      "runs_in": null,
+      "runs_nowhere": {
+        "artefact": "mobile-app/nativephp/ios/NativePHP/NativePHPApp.swift",
+        "answered_by": "A native iOS build materialises the project tree; no job in ci.yml runs one."
+      },
+      "why": "Ties the hand-written iOS timezone fixture to the shell the build actually compiles. The fixture tests above it DO run everywhere — this is the one arm that reaches for the generated project, and it is kept because the anchor it encodes is what stops the fixture drifting from the real file once a job can produce one."
     },
     "Modules/Receipts/tests/Feature/ScanInboxDropFolderJobTest.php": {
       "markers": 1,
