@@ -212,6 +212,32 @@ brick/money — rate values are never represented as float anywhere in
 this module, since floating-point representation silently corrupts FX
 conversion precision.
 
+### Which row wins, and how it is found
+
+Both reads answer the same shape: one row per currency pair, for the day
+in effect. `fetchLatestRates()` takes each pair's newest row;
+`fetchRatesForDate()` takes the newest on or before the day asked for and
+falls forward to the oldest held when there is nothing before it. Each
+resolves that date in one grouped pass over
+`exchange_rates_latest_lookup` and joins it back, rather than re-running
+the aggregate once per row of the table — which is what they used to do,
+and which priced a read that returns twenty rows at the size of the whole
+rate history ([reads bounded by the user](../../architecture/reads-bounded-by-the-user.md)).
+
+The rows come back **ordered**, and the order decides two things rather
+than one. `convertWithRows()` folds them into a `RateTable` last-write-
+wins per pair and fills its metadata map the same way, so the order picks
+both the rate the conversion uses and the source and as-of date the
+figure reports about itself. The unique index is keyed by
+(`base_currency`, `quote_currency`, `rate_date`, `source`), so one pair
+on one day can hold a row per provider — the registry falls through to
+the next provider when one fails, and two runs on one day can each leave
+a row. Bundled-last is therefore not enough to settle it, and the second
+key is the row's own `id`: among live providers the most recently written
+row wins, which is the freshest thing the device knows. The snapshot
+never wins that comparison however late it was written, because the
+source class is compared first.
+
 ## Roll-ups that span currencies
 
 `CrossCurrencyTotal` is the one collaborator every roll-up that adds

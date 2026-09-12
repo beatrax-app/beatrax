@@ -37,9 +37,9 @@ predicate — an `orWhere` chained at the top level would return other
 users' rows. This path never writes.
 
 **The write path** is `RevivedExpiredDriftSnoozesJob`, an hourly
-scheduled sweep. It selects candidate ids
-(`state = 'snoozed' AND snoozed_until <= now`), then for each one
-re-reads the alert and calls
+scheduled sweep. It walks candidate ids
+(`state = 'snoozed' AND snoozed_until <= now`) a keyset page at a time,
+then for each one re-reads the alert and calls
 `DriftAlertStateMachine::transition($alert, 'open',
 'detector_revived_snooze', 'detector', null, ['snoozed_until' => null])`.
 That is what actually flips the stored state, clears `snoozed_until`,
@@ -56,6 +56,19 @@ continues, so one mid-sweep user action cannot fail the whole job. The
 same race is also caught earlier and more cheaply by the re-read guard
 (`$alert->state !== 'snoozed'` → skip), which handles the common case
 without paying for a failed transaction.
+
+The walk is a keyset page rather than one collection of every candidate, and
+the predicate has an index that leads with `state`. Neither was true of the
+first version, and both are the same defect: the sweep is global by design —
+every index on `drift_alerts` leads with `user_id`, and the audit row takes
+its owner from the alert — so the hourly pass scanned the whole alert history
+to find the handful whose snooze had expired, then held every id it found at
+once. Nothing closes a drift alert on its own, so that history only grows.
+`drift_alerts_state_idx` turns the scan into a seek, and `lazyById` turns the
+collection into a page; a revived row leaves the set before the page after it
+is asked for, which is what makes the walk safe to page at all. The anomaly
+sweep next door has the same two halves
+([reads bounded by the user](../../architecture/reads-bounded-by-the-user.md)).
 
 ## Setting a snooze
 

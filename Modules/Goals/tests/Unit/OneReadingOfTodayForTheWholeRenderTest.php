@@ -51,7 +51,6 @@ it('measures the observation window against the day it was handed, not the clock
     $projection = app(GoalProjectionService::class)->project(
         $this->goal,
         10000,
-        $this->user,
         null,
         $this->attributed,
         [],
@@ -68,7 +67,6 @@ it('dates the finish from the day it was handed', function (): void {
     $projection = app(GoalProjectionService::class)->project(
         $this->goal,
         10000,
-        $this->user,
         null,
         $this->attributed,
         [],
@@ -78,7 +76,6 @@ it('dates the finish from the day it was handed', function (): void {
     $fromAmbient = app(GoalProjectionService::class)->project(
         $this->goal,
         10000,
-        $this->user,
         null,
         $this->attributed,
         [],

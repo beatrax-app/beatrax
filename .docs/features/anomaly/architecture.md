@@ -217,7 +217,13 @@ All four jobs route through the shared `AnomalyEvaluator::evaluate()` path
   only transactions with no existing `anomaly_alerts` row within a recency
   window.
 - **`ReviveExpiredAnomalySnoozesJob`** — flips `snoozed` rows back to
-  `open` once `snoozed_until` passes.
+  `open` once `snoozed_until` passes. Unscoped by user, deliberately —
+  revival is a pure timer transition and the audit row takes its owner
+  from the alert — so it seeks `anomaly_alerts_state_idx` rather than
+  either `user_id`-leading index, and walks `->lazyById()`. Nothing
+  closes an alert on its own, so the table it reads only grows while the
+  set it is looking for does not
+  ([reads bounded by the user](../../architecture/reads-bounded-by-the-user.md)).
 
 ## The id is minted, and the charge is what two devices meet on
 
