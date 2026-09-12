@@ -127,4 +127,60 @@ if leftover="$(find "${OUT}" -type l -print -quit 2>/dev/null)" && [[ -n "${left
     exit 3
 fi
 
+# --- Guard: the output must carry the front end a device serves. -------------
+# public/ is one of the dereferenced links, so the built bundle arrives here as
+# a copy — and a copy of nothing is silent. Bifrost builds what this tree
+# carries and runs no Vite step, so a tree published without public/build
+# serves a device no script at all, and one published with a bundle older than
+# the sources serves a script missing every Alpine provider registered since.
+# RefuseToShipAStaleFrontEnd raises that refusal ahead of the artisan commands
+# that ship the bundle; CommandStarting never reaches a bash script, which is
+# why the same question is asked again here.
+#
+# COMPILED_FROM is Modules/Core/Internal/Build/BuiltFrontEnd::COMPILED_FROM.
+# AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest fails if they drift.
+COMPILED_FROM=(
+    vite.config.js
+    package.json
+    package-lock.json
+    resources/js
+    resources/css
+    resources/brand
+    resources/views
+    'Modules/*/Resources/views'
+)
+
+BUILT="${OUT}/public/build"
+MANIFEST="${BUILT}/manifest.json"
+
+if [[ ! -f "${MANIFEST}" ]] || ! compgen -G "${BUILT}/assets/app-*.js" > /dev/null; then
+    echo "::error:: no built front end in the materialized tree: ${BUILT} carries no manifest.json beside an assets/app-*.js." >&2
+    echo "::error:: Run \`npm ci && npm run build\` at ${REPO_ROOT} before materializing." >&2
+    exit 5
+fi
+
+# Asked of the sources rather than of the copy: public/ is reached by symlink
+# from this root, so the bundle was compiled from the tree at REPO_ROOT — which
+# is the same resolution BuiltFrontEnd::beside() makes from the mobile root.
+newer=''
+for pattern in "${COMPILED_FROM[@]}"; do
+    for source in "${REPO_ROOT}/"${pattern}; do
+        if [[ ! -e "${source}" ]]; then
+            continue
+        fi
+
+        newer="$(find "${source}" -newer "${MANIFEST}" -type f -print -quit)"
+
+        if [[ -n "${newer}" ]]; then
+            break 2
+        fi
+    done
+done
+
+if [[ -n "${newer}" ]]; then
+    echo "::error:: the built front end is older than the sources it was compiled from: ${newer#"${REPO_ROOT}"/} is newer than public/build/manifest.json." >&2
+    echo "::error:: Run \`npm run build\` at ${REPO_ROOT} and materialize again." >&2
+    exit 6
+fi
+
 echo "materialize: OK — self-contained tree at ${OUT}"

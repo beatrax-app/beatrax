@@ -200,6 +200,30 @@ means there is genuinely no scaffold, not that the script was looking in the
 wrong place. `ScaffoldPatchesFindEitherRootTest` fails if one is pinned back to
 a literal path, and exercises the materialized shape against a temporary tree.
 
+## The built front end in a Bifrost tree
+
+`materialize.sh` refuses to produce a tree that carries no built front end, or
+one older than the sources it was compiled from — exit `5` and exit `6`, each
+naming the file that settled it.
+
+This is not the same check `RefuseToShipAStaleFrontEnd` makes. That one fires on
+`CommandStarting` ahead of `native:build`, `native:package`, `native:run` and
+`mobile:package-android`; nothing dispatches that event for a bash script, and
+this is the one path where `public/build` is *copied* rather than read where it
+lies. A copy of nothing publishes cleanly: Bifrost builds what the build repo
+carries and runs no Vite step, so the APK serves pages with no script at all.
+
+Hand-running the publish therefore means building first:
+
+```sh
+npm ci && npm run build
+mobile-app/scripts/materialize.sh /tmp/mobile-build
+```
+
+`mobile-bifrost-publish.yml` already does both in that order. The guard's point
+is that dropping its build step fails the job instead of mirroring a
+frontendless tree into `BIFROST_BUILD_REPO`.
+
 ## Export compliance and the French declaration
 
 `nativephp_ios_export_compliance.php` writes `ITSAppUsesNonExemptEncryption`
