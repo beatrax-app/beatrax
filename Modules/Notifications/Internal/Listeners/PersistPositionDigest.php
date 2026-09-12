@@ -124,6 +124,7 @@ final readonly class PersistPositionDigest
         return match ($risk) {
             ShortfallRisk::Ahead => CopyLine::of('notifications::copy.digest.shortfall'),
             ShortfallRisk::NotYetComputed => CopyLine::of('notifications::copy.digest.forecast_not_run'),
+            ShortfallRisk::Computing => CopyLine::of('notifications::copy.digest.forecast_running'),
             ShortfallRisk::None => null,
         };
     }

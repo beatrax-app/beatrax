@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Κανόνας που ενεργοποιήθηκε',
+    'diverges_from_rule' => 'Η συναλλαγή βρίσκεται στο :chosen, αλλά ο κανόνας είναι ακόμη ενεργός και καταχωρίζει τις αντιστοιχίες του στο :rule.',
     'remove_confirm' => 'Αφαίρεση;',
     'remove_yes' => 'Ναι, αφαίρεσέ τον',
     'cancel' => 'Άκυρο',

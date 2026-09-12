@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count pagamento in scadenza in questo periodo.|:count pagamenti in scadenza in questo periodo.',
         'shortfall' => 'Si prospetta uno scoperto di cassa.',
         'forecast_not_run' => 'Non è ancora stata calcolata una previsione di cassa.',
+        'forecast_running' => 'È in corso il calcolo di una previsione di cassa.',
     ],
 ];

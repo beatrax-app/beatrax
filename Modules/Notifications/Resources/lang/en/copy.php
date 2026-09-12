@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count payment due this period.|:count payments due this period.',
         'shortfall' => 'A cash-flow shortfall is ahead.',
         'forecast_not_run' => 'No cash-flow forecast has run yet.',
+        'forecast_running' => 'A cash-flow forecast is running now.',
     ],
 ];

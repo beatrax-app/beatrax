@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Pravidlo, které se uplatnilo',
+    'diverges_from_rule' => 'Transakce je v :chosen, ale pravidlo je stále aktivní a své shody řadí do :rule.',
     'remove_confirm' => 'Odebrat?',
     'remove_yes' => 'Ano, odebrat',
     'cancel' => 'Zrušit',

@@ -477,6 +477,19 @@ condition and the category it chose, and offers **Update rule** (which
 opens `RuleFormModal` on that rule) or **Remove rule**. Keeping the
 rule as it stands is the default, so it needs no control.
 
+Those three lines are the same three lines whether the reader kept the
+rule's category or replaced it, so the panel also carries
+`divergedFromRuleInto`: the reader's own category, non-empty only when
+it differs from the one the provenance payload records AND the rule
+can still fire. It renders one amber line naming both sides. Both
+conditions matter. A rule whose `active` flag is off cannot misfile the
+next match, so it is not a contradiction to raise — `findForUser()`
+answers for an inactive rule and the flag it carries was previously
+read and dropped. And a divergence from **memory** raises nothing at
+all, because memory relearns from the correction on its own; the memory
+card says where the category came from and offers Override, which is
+provenance, not a conflict.
+
 The question is attached to the transaction rather than to the moment
 of the correction, so it survives the reader closing the page and is
 still there on the next visit. A correction made from the transactions

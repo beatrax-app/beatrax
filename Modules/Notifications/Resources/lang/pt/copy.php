@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count pagamento vence neste período.|:count pagamentos vencem neste período.',
         'shortfall' => 'Aproxima-se um défice de tesouraria.',
         'forecast_not_run' => 'Ainda não foi executada nenhuma previsão de tesouraria.',
+        'forecast_running' => 'Está a ser executada uma previsão de tesouraria.',
     ],
 ];

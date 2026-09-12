@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count betaling deze periode.|:count betalingen deze periode.',
         'shortfall' => 'Er komt een kastekort aan.',
         'forecast_not_run' => 'Er is nog geen kasstroomprognose gedraaid.',
+        'forecast_running' => 'Er draait nu een kasstroomprognose.',
     ],
 ];

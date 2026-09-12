@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count plaćanje dospeva u ovom periodu.|:count plaćanja dospevaju u ovom periodu.|:count plaćanja dospeva u ovom periodu.',
         'shortfall' => 'Sledi manjak sredstava.',
         'forecast_not_run' => 'Prognoza novčanog toka još nije pokrenuta.',
+        'forecast_running' => 'Prognoza novčanog toka trenutno je u toku.',
     ],
 ];

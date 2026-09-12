@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'A lefutott szabály',
+    'diverges_from_rule' => 'A tranzakció a(z) :chosen alatt van, a szabály viszont még aktív, és a találatait a(z) :rule alá sorolja.',
     'remove_confirm' => 'Eltávolítod?',
     'remove_yes' => 'Igen, eltávolítom',
     'cancel' => 'Mégse',

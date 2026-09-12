@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Regula care s-a declanșat',
+    'diverges_from_rule' => 'Tranzacția este la :chosen, dar regula este încă activă și își încadrează potrivirile la :rule.',
     'remove_confirm' => 'Elimini?',
     'remove_yes' => 'Da, elimină',
     'cancel' => 'Anulează',

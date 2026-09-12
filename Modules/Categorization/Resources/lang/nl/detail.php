@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'rule_that_fired' => 'Toegepaste regel',
+    'diverges_from_rule' => 'Deze transactie staat onder :chosen, maar de regel is nog actief en zet zijn overeenkomsten onder :rule.',
     'remove_confirm' => 'Verwijderen?',
     'remove_yes' => 'Ja, verwijderen',
     'cancel' => 'Annuleren',

@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count płatność w tym okresie.|:count płatności w tym okresie.|:count płatności w tym okresie.',
         'shortfall' => 'Zbliża się niedobór środków.',
         'forecast_not_run' => 'Prognoza przepływów pieniężnych jeszcze nie została wykonana.',
+        'forecast_running' => 'Prognoza przepływów pieniężnych jest właśnie wykonywana.',
     ],
 ];

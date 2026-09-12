@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Angewendete Regel',
+    'diverges_from_rule' => 'Die Transaktion liegt unter :chosen, die Regel ist aber noch aktiv und ordnet ihre Treffer :rule zu.',
     'remove_confirm' => 'Entfernen?',
     'remove_yes' => 'Ja, entfernen',
     'cancel' => 'Abbrechen',

@@ -55,14 +55,32 @@ final readonly class ForecastHighlightsQuery
     // tell those two apart before it reports either as safety.
     public function shortfallRiskForUser(User $user): ShortfallRisk
     {
-        // The window is asked about first: it is itself proof that a run
-        // reached this horizon, so a shortfall still answers Ahead in the
-        // moment between the windows landing and the run row closing.
+        // The run in flight is asked about first. Every arm below it answers
+        // off the run this one supersedes — the windows it left, the
+        // result_json it wrote — and the arm that reported a stale None as
+        // safety is the one this displaces.
         return match (true) {
+            $this->tileRunInFlight($user) => ShortfallRisk::Computing,
             $this->activeShortfallCountForUser($user) > 0 => ShortfallRisk::Ahead,
             $this->hasCompletedTileRun($user) => ShortfallRisk::None,
             default => ShortfallRisk::NotYetComputed,
         };
+    }
+
+    // The NEWEST row, not "any unfinished row": a run that failed and was
+    // re-queued leaves both behind, and `exists()` over the unfinished set
+    // would hold the tile on "updating" for as long as the older one sat
+    // there. ForecastQuery reads the same seam the same way.
+    private function tileRunInFlight(User $user): bool
+    {
+        $status = $this->db->connection()->table('forecast_runs')
+            ->where('user_id', $user->id)
+            ->whereNull('scenario_id')
+            ->where('horizon_days', self::TILE_HORIZON)
+            ->orderByDesc('id')
+            ->value('status');
+
+        return is_string($status) && in_array($status, JobRunStatus::unfinishedValues(), true);
     }
 
     private function hasCompletedTileRun(User $user): bool
@@ -82,6 +100,10 @@ final readonly class ForecastHighlightsQuery
         $nextIcsSettlement = $this->cardStatementQuery->nextSettlementForUser($user);
 
         return new ForecastHighlightsDto(
+            // Every forecast-derived member below was read off the run that
+            // this one supersedes, so the tile is told to say it is working
+            // rather than to print them.
+            isComputing: $this->tileRunInFlight($user),
             userId: $user->id,
             lowestProjectedBalanceMinor: $lowest['balanceMinor'] ?? null,
             lowestProjectedBalanceCurrency: $lowest['currency'] ?? null,

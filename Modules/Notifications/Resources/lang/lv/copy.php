@@ -48,5 +48,6 @@ return [
         'payments_due' => 'Šajā periodā :count maksājumu.|Šajā periodā :count maksājums.|Šajā periodā :count maksājumi.',
         'shortfall' => 'Priekšā naudas plūsmas iztrūkums.',
         'forecast_not_run' => 'Naudas plūsmas prognoze vēl nav veikta.',
+        'forecast_running' => 'Pašlaik tiek veikta naudas plūsmas prognoze.',
     ],
 ];

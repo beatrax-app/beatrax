@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Правило, яке спрацювало',
+    'diverges_from_rule' => 'Транзакція перебуває в :chosen, але правило досі активне й відносить свої збіги до :rule.',
     'remove_confirm' => 'Видалити?',
     'remove_yes' => 'Так, видалити',
     'cancel' => 'Скасувати',

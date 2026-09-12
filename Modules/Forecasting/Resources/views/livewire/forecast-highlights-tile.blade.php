@@ -54,11 +54,19 @@
         <a
             href="{{ Destination::Forecasts->url() }}"
             class="block rounded-lg border border-slate-200 bg-white p-6 transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700"
-            aria-label="{{ Lang::get('forecasting::forecast.highlights_title') }}{{ $dto->activeShortfallCount > 0 ? '; ' . Lang::choice('forecasting::forecast.highlights_shortfall_aria', $dto->activeShortfallCount, ['count' => $dto->activeShortfallCount, 'days' => ForecastHighlightsQuery::TILE_HORIZON]) : '' }}"
+            aria-label="{{ Lang::get('forecasting::forecast.highlights_title') }}{{ ! $dto->isComputing && $dto->activeShortfallCount > 0 ? '; ' . Lang::choice('forecasting::forecast.highlights_shortfall_aria', $dto->activeShortfallCount, ['count' => $dto->activeShortfallCount, 'days' => ForecastHighlightsQuery::TILE_HORIZON]) : '' }}"
         >
             <p class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.highlights_title') }}</p>
 
-            @if ($dto->lowestProjectedBalanceMinor !== null)
+            @if ($dto->isComputing)
+                {{-- The figure, its date, its account and the shortfall count
+                     all come out of the run this one supersedes. The chart on
+                     the forecast page already says "Updating" here; this tile
+                     printed the old numbers instead and read as current.
+                     The poll element is conditional so it unmounts itself the
+                     moment the run lands, as the chart's does. --}}
+                <p wire:poll.2s.keep-alive="$refresh" class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::forecast.updating') }}&hellip;</p>
+            @elseif ($dto->lowestProjectedBalanceMinor !== null)
                 {{-- Figure alone, the shape the net-worth card beside it uses.
                      The whole sentence at this size wrapped to five lines and
                      200px on a 375pt phone, one word of the label per line. --}}

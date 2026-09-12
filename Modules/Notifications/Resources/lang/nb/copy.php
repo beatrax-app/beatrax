@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count betaling forfaller denne perioden.|:count betalinger forfaller denne perioden.',
         'shortfall' => 'Det venter et underskudd i kontantstrømmen.',
         'forecast_not_run' => 'Ingen kontantstrømprognose har kjørt ennå.',
+        'forecast_running' => 'En kontantstrømprognose kjører nå.',
     ],
 ];

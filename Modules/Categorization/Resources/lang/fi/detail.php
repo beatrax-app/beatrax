@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Laukennut sääntö',
+    'diverges_from_rule' => 'Tapahtuma on kohteessa :chosen, mutta sääntö on yhä käytössä ja kirjaa osumansa kohteeseen :rule.',
     'remove_confirm' => 'Poistetaanko?',
     'remove_yes' => 'Kyllä, poista',
     'cancel' => 'Peruuta',

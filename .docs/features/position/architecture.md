@@ -30,7 +30,11 @@ four other modules' Public seams, and every one of them is asked about the
   `nextExpectedAt` (irregular cadence, no anchor) are excluded since there
   is no well-defined "upcoming" date for them.
 - `Modules\Forecasting\Public\Services\ForecastHighlightsQuery` — the
-  shortfall signal (`activeShortfallCountForUser()` > 0).
+  shortfall signal, via `shortfallRiskForUser()`. Four answers, not a
+  boolean: `Ahead`, `None`, `NotYetComputed`, and `Computing` while a
+  projection for the tile horizon is pending or running. Without the last
+  one a re-projection reported the superseded run's `None` as this
+  moment's safety, and the digest's shortfall line said nothing about it.
 
 `summary` is byte-for-byte the same `DashboardSummary` value the dashboard's
 own composer would return for the same `(user, period)` — the equality

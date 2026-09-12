@@ -205,6 +205,8 @@ final readonly class ForecastChartView
             'aggregateRunFailed' => false,
             'aggregateScenarioRunFailed' => false,
             'aggregateUnconverted' => [],
+            'aggregateIsComputing' => false,
+            'aggregateScenarioIsComputing' => false,
         ];
     }
 
@@ -220,7 +222,7 @@ final readonly class ForecastChartView
         ?int $scenarioId = null,
         bool $viewByFunder = false,
     ): array {
-        [$aggregatePoints, $aggregateBufferFloor, $aggregateRunFailed, $unconverted] = $this->computeAllAccountsAggregate(
+        [$aggregatePoints, $aggregateBufferFloor, $aggregateRunFailed, $unconverted, $isComputing] = $this->computeAllAccountsAggregate(
             accountList: $accountList,
             horizon: $horizon,
             user: $user,
@@ -234,8 +236,9 @@ final readonly class ForecastChartView
         // roll-up of the baseline against itself says nothing.
         $scenarioPoints = [];
         $scenarioRunFailed = false;
+        $scenarioIsComputing = false;
         if ($scenarioId !== null) {
-            [$scenarioPoints, , $scenarioRunFailed] = $this->computeAllAccountsAggregate(
+            [$scenarioPoints, , $scenarioRunFailed, , $scenarioIsComputing] = $this->computeAllAccountsAggregate(
                 accountList: $accountList,
                 horizon: $horizon,
                 user: $user,
@@ -257,12 +260,14 @@ final readonly class ForecastChartView
             'aggregateRunFailed' => $aggregateRunFailed,
             'aggregateScenarioRunFailed' => $scenarioRunFailed,
             'aggregateUnconverted' => $unconverted,
+            'aggregateIsComputing' => $isComputing,
+            'aggregateScenarioIsComputing' => $scenarioIsComputing,
         ];
     }
 
     /**
      * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
-     * @return array{0: list<array{date: string, point_minor: int}>, 1: int, 2: bool, 3: list<string>}
+     * @return array{0: list<array{date: string, point_minor: int}>, 1: int, 2: bool, 3: list<string>, 4: bool}
      */
     private function computeAllAccountsAggregate(
         array $accountList,
@@ -275,6 +280,10 @@ final readonly class ForecastChartView
         /** @var array<string, array<string, int>> $byDateCurrency */
         $byDateCurrency = [];
         $runFailed = false;
+        // A computing account contributes no points at all, so the roll-up
+        // silently loses its whole balance and the curve sits lower than the
+        // reader's money. It inherits runFailed for the same reason.
+        $isComputing = false;
         /** @var array<string, true> $unconverted */
         $unconverted = [];
         foreach ($accountList as $account) {
@@ -288,6 +297,7 @@ final readonly class ForecastChartView
 
             $dto = $this->forecastQuery->forUser($account['id'], $horizon, $scenarioId, $user, $viewByFunder);
             $runFailed = $runFailed || $dto->runFailed;
+            $isComputing = $isComputing || $dto->isComputing;
             // A series the fold could not price is already missing from this
             // account's own curve, so the roll-up inherits the hole and has to
             // inherit the caption with it.
@@ -326,7 +336,7 @@ final readonly class ForecastChartView
         $codes = array_keys($unconverted);
         sort($codes);
 
-        return [$aggregatePoints, $bufferTotal->minor, $runFailed, $codes];
+        return [$aggregatePoints, $bufferTotal->minor, $runFailed, $codes, $isComputing];
     }
 
     // The floor is judged against the curve above, so it is summed over the

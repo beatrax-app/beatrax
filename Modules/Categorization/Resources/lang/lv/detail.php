@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Noteikums, kas nostrādāja',
+    'diverges_from_rule' => 'Darījums ir kategorijā :chosen, taču noteikums joprojām ir aktīvs un savas sakritības iekļauj kategorijā :rule.',
     'remove_confirm' => 'Noņemt?',
     'remove_yes' => 'Jā, noņemt',
     'cancel' => 'Atcelt',

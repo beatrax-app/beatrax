@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Regola applicata',
+    'diverges_from_rule' => 'La transazione è in :chosen, ma la regola è ancora attiva e archivia le sue corrispondenze in :rule.',
     'remove_confirm' => 'Rimuovere?',
     'remove_yes' => 'Sì, rimuovi',
     'cancel' => 'Annulla',
