@@ -22,11 +22,11 @@
 --}}
 
 {{-- ─── Account chip ───────────────────────────────────────────────────── --}}
-@if (! empty($availableAccounts ?? []))
+@if (($availableAccounts ?? []) !== [])
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <span class="srch-chip {{ ! empty($filterAccounts ?? []) ? 'srch-chip--active' : '' }}">
+        <span class="srch-chip {{ ($filterAccounts ?? []) !== [] ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
-                @if (! empty($filterAccounts ?? []))
+                @if (($filterAccounts ?? []) !== [])
                     @php
                         $acctCount = count($filterAccounts);
                         $acctCounted = Lang::choice('reports::builder.filter.account_count', $acctCount, ['count' => $acctCount]);
@@ -39,7 +39,7 @@
                     {{ Lang::get('reports::builder.filter.account') }} &#9662;
                 @endif
             </button>
-            @if (! empty($filterAccounts ?? []))
+            @if (($filterAccounts ?? []) !== [])
                 <button
                     type="button"
                     wire:click.stop="$set('filterAccounts', [])"
@@ -63,11 +63,11 @@
 @endif
 
 {{-- ─── Category chip ──────────────────────────────────────────────────── --}}
-@if (($showTransactionFilters ?? true) && ! empty($availableCategories ?? []))
+@if (($showTransactionFilters ?? true) && ($availableCategories ?? []) !== [])
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <span class="srch-chip {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}">
+        <span class="srch-chip {{ ($filterCategories ?? []) !== [] ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
-                @if (! empty($filterCategories ?? []))
+                @if (($filterCategories ?? []) !== [])
                     @php
                         $catCount = count($filterCategories);
                         $catCounted = Lang::choice('reports::builder.filter.category_count', $catCount, ['count' => $catCount]);
@@ -80,7 +80,7 @@
                     {{ Lang::get('reports::builder.filter.category') }} &#9662;
                 @endif
             </button>
-            @if (! empty($filterCategories ?? []))
+            @if (($filterCategories ?? []) !== [])
                 <button
                     type="button"
                     wire:click.stop="$set('filterCategories', [])"
@@ -103,11 +103,11 @@
 @endif
 
 {{-- ─── Counterparty chip (999.6-02 — new dimension, no prior UI precedent) ── --}}
-@if (($showTransactionFilters ?? true) && ! empty($availableCounterparties ?? []))
+@if (($showTransactionFilters ?? true) && ($availableCounterparties ?? []) !== [])
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <span class="srch-chip {{ ! empty($filterCounterparties ?? []) ? 'srch-chip--active' : '' }}">
+        <span class="srch-chip {{ ($filterCounterparties ?? []) !== [] ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
-                @if (! empty($filterCounterparties ?? []))
+                @if (($filterCounterparties ?? []) !== [])
                     @php
                         $cpCount = count($filterCounterparties);
                         $cpCounted = Lang::choice('reports::builder.filter.counterparty_count', $cpCount, ['count' => $cpCount]);
@@ -120,7 +120,7 @@
                     {{ Lang::get('reports::builder.filter.counterparty') }} &#9662;
                 @endif
             </button>
-            @if (! empty($filterCounterparties ?? []))
+            @if (($filterCounterparties ?? []) !== [])
                 <button
                     type="button"
                     wire:click.stop="$set('filterCounterparties', [])"

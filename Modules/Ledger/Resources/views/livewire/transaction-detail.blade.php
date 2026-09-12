@@ -601,7 +601,7 @@
                         >
                             <option value="" @selected($transaction->counterparty_id === null)>{{ Lang::get('ledger::detail.reassign.choose_option') }}</option>
                             @foreach ($counterparties as $cp)
-                                <option value="{{ $cp->id }}" @selected($transaction->counterparty_id == $cp->id)>{{ $cp->display_name }}</option>
+                                <option value="{{ $cp->id }}" @selected($transaction->counterparty_id === $cp->id)>{{ $cp->display_name }}</option>
                             @endforeach
                         </select>
 
@@ -622,7 +622,7 @@
                  one place a transaction is assigned to anything, so goal
                  attribution sits alongside the category, split and
                  counterparty pickers rather than on the goals page. --}}
-            @if (! empty($goalOptions) || ! empty($attributedGoals))
+            @if ($goalOptions !== [] || $attributedGoals !== [])
                 <section
                     aria-labelledby="goal-attribution-heading"
                     class="border-t border-slate-200 pt-6 space-y-3 dark:border-slate-700"
@@ -638,7 +638,7 @@
                         </p>
                     </div>
 
-                    @if (! empty($attributedGoals))
+                    @if ($attributedGoals !== [])
                         <ul class="flex flex-wrap gap-2" data-testid="goal-attribution-list">
                             @foreach ($attributedGoals as $attributed)
                                 <li class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -657,7 +657,7 @@
                         </ul>
                     @endif
 
-                    @if (! empty($goalOptions))
+                    @if ($goalOptions !== [])
                         <div class="flex items-center gap-3">
                             <label class="sr-only" for="goal-attribution-select">{{ Lang::get('ledger::detail.goal.choose_aria') }}</label>
                             <select

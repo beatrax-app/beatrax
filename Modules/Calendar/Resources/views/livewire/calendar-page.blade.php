@@ -116,7 +116,7 @@
                 role="dialog"
                 aria-label="{{ Lang::get('calendar::messages.toolbar.popover_aria') }}"
             >
-                @if (empty($accountRoster))
+                @if ($accountRoster === [])
                     <p class="px-4 py-2 text-sm" style="color: var(--color-text-faint);">{{ Lang::get('calendar::messages.toolbar.no_accounts') }}</p>
                 @else
                     <div class="px-3 pb-1 pt-2">
