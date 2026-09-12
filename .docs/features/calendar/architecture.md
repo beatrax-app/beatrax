@@ -390,7 +390,9 @@ line through `calendar::messages.balance.not_counted`, and rolled up once above
 the month grid by `CalendarPage::uncountedAcross()`. It is the same disclosure
 `unconvertedCurrencies` makes for a currency with no rate, and it is placed the
 same way: per day in the panel, once above the grid, because an account outside
-the balance set is outside it on every cell it appears on.
+the balance set is outside it on every cell it appears on. The currency half of
+that disclosure goes through `x-core::fx-disclosure`, which renders the rate
+each day's figures were converted at alongside the codes none reached.
 
 A day whose balance is unknown — computing, or with no balance source at all —
 names nothing. It has stated no figure, so there is no arithmetic to disown, and

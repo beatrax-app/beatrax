@@ -57,8 +57,13 @@ The move is invisible from outside the module, and deliberately so:
   prefix on purpose; `pinnedCrossModuleLivewireMounts` resolves ownership from
   the registering provider, never from the prefix.
 - **Translation keys** — `core::dashboard.*`, `core::sidebar.*`,
-  `core::settings.*`, `core::net_worth.*` and `core::spending_trend.*` stay in
-  `Core`. `core::settings.*` is shared with `Core`'s own locale switcher and
+  `core::settings.*`, `core::net_worth.*`, `core::fx.*` and
+  `core::spending_trend.*` stay in `Core`. `core::fx.*` is the FX-disclosure
+  vocabulary — the provider labels, the rate line, the as-of line and the three
+  stale sentences — and it sits in `Core` beside
+  `x-core::fx-disclosure`, which is the only template that reads it. It was
+  inside `core::net_worth.*`, where it read as net-worth copy while thirty other
+  surfaces needed the same words. `core::settings.*` is shared with `Core`'s own locale switcher and
   auto-import section, with `Auth`'s app-lock section, with `Onboarding`'s
   country step — through `x-core::country-options`, which names the empty
   option once for all four country pickers — and with `Mobile`'s sync

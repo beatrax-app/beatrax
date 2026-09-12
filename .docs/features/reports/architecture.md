@@ -179,10 +179,15 @@ module:
   union correct: the previous window's counters used to be ADDED to the
   current window's, so a currency unconvertible in both periods counted
   as two. The transaction path renders through
-  `core::money.not_converted`, which names the currency, the sentence
-  the dashboard already uses; the balance path keeps
-  `reports::builder.fx_excluded`, which counts accounts and is right
-  there. The
+  `x-core::fx-disclosure`, which names the currency in the sentence the
+  dashboard already uses and the rate the rest of the report converted
+  at; the balance path keeps `reports::builder.fx_excluded`, which counts
+  accounts and is right there. `'original'` mode discloses no rate,
+  because it converts nothing — its disclosure carries an empty rate set
+  and the exclusion list only. The net-worth metric discloses no rate
+  either, and for a different reason: `NetWorthSeriesQuery` converts each
+  account line at each bucket's own historical rate, so a sixty-bucket
+  series has sixty rate sets and no single one answers for the headline. The
   rate for every discovered currency, fees included, is fetched once
   per report: each dimension query returns rows already scoped to the
   one currency it was asked for, so converting per row read the whole

@@ -160,7 +160,7 @@ Modules/Forecasting/
   $contributions, $asOf, $horizonDays, $defaultCurrency, $rates):
   DailyFoldResult` — collapses contributions into a daily curve with
   P10/P50/P90 bands, converting each non-matching currency through
-  `$rates` (a `CrossCurrencyTotal::ratesTo()` map the pipeline fetches
+  `$rates` (the `CrossCurrencyTotal::ratesTo()` `RateSet` the pipeline fetches
   once per target currency). `DailyFoldResult` carries the day map and
   the currency codes no rate reached.
 - `Internal/Pipeline/CadenceJitter::apply($contributions,

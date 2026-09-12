@@ -53,10 +53,11 @@ cannot reach is left out of the figure rather than added at one to one. A goal
 funded only in a currency with no rate therefore reads 0 contributed and is
 never marked reached on minor units that are not its own.
 
-What was left out is **named**, not merely dropped. `GoalProgressRow` carries
-the `unconverted` codes straight off the `ConvertedTotal`, and both goal lists
-render `core::money.not_converted` beside the money line when
-`isPartial()`. Goals and Pots were the only money surfaces in the app that
+What was left out is **named**, not merely dropped, and so is the rate the
+rest was converted at. `GoalProgressRow` carries the `unconverted` codes
+straight off the `ConvertedTotal` and its `conversion` disclosure beside them,
+and every goal list renders both through `x-core::fx-disclosure`
+([the FX seam](../fx/architecture.md#a-converted-figure-carries-the-rate-that-made-it)). Goals and Pots were the only money surfaces in the app that
 dropped an unpriceable currency in silence; `ThisPeriodAtAGlanceQuery`, both Tax
 queries and `CounterpartyIndexRow` had carried the codes through to that same
 line all along.

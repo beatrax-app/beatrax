@@ -250,12 +250,13 @@ surface that did it printed the sum under one symbol.
 
 The collaborator takes buckets keyed by currency, converts each at its
 own rate, and returns a `ConvertedTotal` carrying the figure, the
-currency it is denominated in, and the codes it could not reach. A
-currency with no rate is **left out and named**, never added at one to
-one — the rule `NetWorthQuery` already applies to a balance line it has
-no rate for. `ConvertedTotal::isPartial()` is what a renderer gates the
-"not converted" line on, so a reader can tell a partial total from a
-whole one.
+currency it is denominated in, the rates that brought the other
+currencies into it, and the codes it could not reach. A currency with no
+rate is **left out and named**, never added at one to one — the rule
+`NetWorthQuery` already applies to a balance line it has no rate for.
+`ConvertedTotal::isPartial()` is what a renderer gates the "not
+converted" line on, so a reader can tell a partial total from a whole
+one.
 
 `ratesTo()` fetches one rate per currency for the whole render rather
 than one per bucket: `convertToBase()` reads the entire `exchange_rates`
@@ -265,6 +266,47 @@ The rate is probed with a zero amount, because the rate a zero converts
 at is the rate any amount converts at. Callers holding many buckets call
 `ratesTo()` once and then `withRates()` per bucket group; callers with a
 single group call `of()`, which does both.
+
+### A converted figure carries the rate that made it
+
+`ratesTo()` answers a `RateSet`, not a map of decimals. It used to
+answer `array<string, string>` — code to rate — and that array is where
+every surface's disclosure went. The `ConversionResult` behind each
+entry already held the source, the as-of date and the staleness;
+`ratesTo()` read `->rate` off it and dropped the rest, one call before
+the surface that would have to render them. Twenty-eight templates
+rendered the "not converted" half and **none** rendered the rate,
+because none of them had it. Seven converting surfaces rendered neither.
+
+The set carries a `RateUsed` per source currency — `from`, `to`, the
+exact decimal `rate`, `source`, `asOf`, `isStale` — and `withRates()`
+narrows it with `only()` to the buckets the figure was actually built
+from, so six cards sharing one batched lookup do not each disclose the
+other five's pairs.
+
+`ConvertedTotal::disclosure()` projects that into a
+`ConversionDisclosure`: the rates plus the codes no rate reached, with
+the **oldest** leg answering for the whole — the same rule a multi-leg
+conversion follows, for the same reason. `RateSet` is required by the
+`ConvertedTotal` constructor rather than defaulted, so "I converted, and
+I will not say at what" is not a state the type can hold.
+
+One Blade component renders it everywhere:
+`x-core::fx-disclosure`, in Core beside the copy it reads
+(`core::fx.*`, which is where the provider labels and the three stale
+sentences live). It takes the disclosure and an `id` — null renders
+nothing, which is the passthrough path — and draws the rates line, a
+native `[popover]` holding a line per pair, and the `core::money.not_converted`
+clause. A surface that names what it left out without naming what it
+converted at fails `AConvertedFigureNamesTheRateThatMadeItArchTest`.
+
+The age a reader sees is Carbon's own relative phrase rather than a
+sentence of ours: it is translated in all twenty-six languages with no
+plural rule per language, and "3 days ago" against "3 months ago" is the
+whole reason to show it. A bundled snapshot is what a fresh install
+converts at for as long as online fetching stays off, which is the
+default, so a ninety-nine-day-old rate is the ordinary case and not an
+edge one.
 
 `convert()` is the same rule for one amount rather than a bucket map:
 a `Money` in, the amount in the target currency or `null` out. It is
@@ -300,15 +342,25 @@ buckets two ways — it just moves rather than resolves.
 
 `NetWorthQuery` converts per balance line and stays on
 `ExchangeRateService` on purpose. It needs the whole `ConversionResult`
-per line — the rate, its source, its as-of date and its staleness are
-rendered beside the line and rolled into the DTO's `ratesSource`,
-`ratesAsOf` and `hasStaleRates` — and `ConvertedTotal` carries none of
-them. It also has to keep a rate-less line **visible** in the breakdown,
-listed at its native amount with a null base equivalent, which is the
-opposite of leaving a bucket out; and its `balancesWithoutRate` counts
-*lines*, where `ConvertedTotal::unconverted` counts distinct currency
-codes. Routing it through the seam would quietly change all three. Its
-cost is one rate read per non-base line, bounded by the account count.
+per line, because the rate, its source, its as-of date and its staleness
+are rendered beside each line and not only for the total. It also has to
+keep a rate-less line **visible** in the breakdown, listed at its native
+amount with a null base equivalent, which is the opposite of leaving a
+bucket out; and its `balancesWithoutRate` counts *lines*, where
+`ConvertedTotal::unconverted` counts distinct currency codes. Routing it
+through the seam would quietly change both. Its cost is one rate read
+per non-base line, bounded by the account count.
+
+It does fold those per-line results into a `RateSet` of its own, so the
+card's total discloses through the same component as everything else and
+`NetWorth::$ratesSource` / `$ratesAsOf` / `$hasStaleRates` are derived
+from it. They used to be folded newest-first, which meant one freshly
+refreshed pair dated the whole card and named its source while a stale
+leg was reported under that fresh date. The disclosure it hands the
+component carries **no** unconverted codes: the card counts the lines it
+left out, which is a different number from the distinct currencies, and
+both sentences would otherwise be on screen saying it differently.
+`AccountBalanceLine::disclosure()` is the per-line half, one rate each.
 
 `CurrencyModeApplier`'s `'original'` mode converts nothing at all — it
 is the mode that exists to leave every figure in the currency it was
