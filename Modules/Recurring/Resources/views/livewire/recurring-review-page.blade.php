@@ -161,7 +161,7 @@
                                 >{{ Lang::get('recurring::review.reject') }}</button>
                                 @endif
                                 @if ($row->allows(RecurringSeriesState::Snoozed))
-                                <div x-data="{ open: false }" class="sm:relative">
+                                <div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="sm:relative">
                                     <button
                                         type="button"
                                         x-on:click="open = ! open"
@@ -188,7 +188,7 @@
                                     </div>
                                 </div>
                                 @endif
-                                <div x-data="{ editing: false, newName: @js($row->displayName()) }" class="sm:relative">
+                                <div x-data="{ editing: false, newName: @js($row->displayName()) }" x-on:keydown.escape.window="editing = false" class="sm:relative">
                                     <button
                                         type="button"
                                         x-on:click="editing = ! editing"
