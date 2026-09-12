@@ -531,8 +531,11 @@ the row was rewound the next edit loses too. Nothing reports it; the reader
 sees their change reappear as the peer's older one.
 
 The whole allocate-sign-store sequence therefore runs inside the transaction
-that stores the entry, and `RemoteClockAdvance::absorb()` reads, compares and
-writes inside one transaction of its own. `transaction_mode` is `IMMEDIATE`
+that stores the entry — `nextStamp()` is the first statement in it, and what it
+returns is an `HlcStamp`, the clock's reading at the moment of allocation.
+Neither half of that pair means anything alone, which is why it has a name
+rather than travelling as two loose integers. `RemoteClockAdvance::absorb()`
+reads, compares and writes inside one transaction of its own. `transaction_mode` is `IMMEDIATE`
 ([sqlite-write-locks](../../architecture/sqlite-write-locks.md)), so the write
 lock is taken at `BEGIN` and neither process can land a write inside the
 other's read-modify-write.

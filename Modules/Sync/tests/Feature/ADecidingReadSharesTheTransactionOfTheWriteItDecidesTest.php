@@ -119,9 +119,10 @@ it('allocates an op stamp from hlc_clock_state inside the transaction that inser
     $read = positionOfStatement($statements, 'select', ['hlc_clock_state']);
     $insert = positionOfStatement($statements, 'insert', ['op_log_entries']);
 
-    // Read BEFORE the op is stored, not only at the same depth as it: the
-    // upsert that follows the insert reads the same table, so a depth on its
-    // own passes for a writer that never allocated its stamp from the row.
+    // Depth first: a stamp allocated before the transaction opens and passed
+    // in satisfies every other shape this file could check, and reports the
+    // read at the baseline. Then position, because the upsert that follows the
+    // insert reads the same table and would answer the depth question for it.
     expect($read)->toBeGreaterThanOrEqual(0)
         ->and($insert)->toBeGreaterThan($read)
         ->and(depthOfStatement($statements, 'select', ['hlc_clock_state']))->toBeGreaterThan(0)
