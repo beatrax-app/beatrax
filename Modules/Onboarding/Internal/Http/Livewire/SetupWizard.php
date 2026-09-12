@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Onboarding\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -20,6 +21,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Core\Public\Support\ProjectLinks;
 use Modules\Onboarding\Internal\Enums\WizardStepStatus;
+use Modules\Onboarding\Internal\Events\WizardCompleted;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Internal\Services\WizardProgressQuery;
@@ -173,8 +175,26 @@ final class SetupWizard extends Component
         WizardProgressQuery $query,
         Clock $clock,
         ResumeStepResolver $resume,
+        Dispatcher $events,
     ): void {
+        // Asked before the write, because after it every row is finished either
+        // way: this is what tells the first Finish from a later one, and the
+        // completion event is owed once.
+        $wasAlreadyComplete = $resume->resolve($currentUser->id()) === '';
+
         $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Done->value);
+
+        if (! $this->allComplete) {
+            return;
+        }
+
+        if (! $wasAlreadyComplete) {
+            $events->dispatch(new WizardCompleted($currentUser->id()));
+        }
+
+        // The wizard's one exit that means "finished", and the reason `done` is
+        // the step skip refuses. An action may navigate where mount() may not.
+        $this->redirect('/');
     }
 
     // The view hides skip on non-skippable steps; this guard is the
