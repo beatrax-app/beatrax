@@ -67,11 +67,11 @@ final class Camt053Entries
     // their own books the whole entry once per child.
     /**
      * @param  array<int, string>  $directions
-     * @return array<int, EntryTransactionDetail>
+     * @return list<EntryTransactionDetail>
      */
     public function detailsToBook(Entry $entry, array $directions): array
     {
-        $details = $entry->getTransactionDetails();
+        $details = array_values($entry->getTransactionDetails());
         if (count($details) < 2) {
             return $details;
         }
@@ -94,7 +94,7 @@ final class Camt053Entries
     }
 
     /**
-     * @param  array<int, EntryTransactionDetail>  $details
+     * @param  list<EntryTransactionDetail>  $details
      * @param  array<int, string>  $directions
      */
     private function netOfDetails(array $details, array $directions, string $currency): ?int
