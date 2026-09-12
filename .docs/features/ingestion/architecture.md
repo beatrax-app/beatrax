@@ -695,6 +695,17 @@ backfill. `Fee` is the only preset column of its kind; N26 and ING NL
 export none. `raw_payload` keeps the source row, fee cell included,
 untouched.
 
+An undated row is refused, not skipped. A CSV carries no opening or
+closing balance, so nothing downstream can work out that a row went
+missing — and this reader used to drop any row whose date cell was empty,
+amount and counterparty and all, renumbering the rows after it over the
+gap. It now skips only a row with nothing in any cell, which is the blank
+line an export ends on, and raises for anything else, naming the column.
+`PositionalCsvAdapter` beside it has always refused one, through the date
+parser it has no way around. See [a statement that did not check its own
+arithmetic](a-statement-that-did-not-check-its-own-arithmetic.md) for the
+formats that can notice a gap and did not.
+
 ### HeaderSniffer
 
 Validates a local file matches its declared source format *before* any

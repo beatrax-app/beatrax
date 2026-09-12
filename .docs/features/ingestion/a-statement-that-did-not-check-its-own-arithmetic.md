@@ -77,6 +77,17 @@ the one it was read in, not the one it is flushed in.
 `Mt940StatementAccumulator` carries `pendingOwnIban` and `pendingCurrency`
 beside `pendingTag61`, set together and read together.
 
+## The format that cannot check itself at all
+
+A CSV carries no opening or closing balance, so no sum can tell it a row is
+missing. `GenericCsvAdapter` dropped any row whose date cell was empty — an ING
+row carrying an amount, a counterparty and a description left the import with
+nothing said, and the rows after it renumbered over the gap, so even the row
+index trail closed behind it. It now skips only a row with nothing in any cell,
+which is the blank line an export ends on, and raises for anything else, naming
+the column. `PositionalCsvAdapter` beside it has always refused an undated row,
+through `parseDate()` — the two readers answered the same question differently.
+
 ## What the check says, and what it does not do
 
 `StatementSelfCheck::differenceMinor()` answers `closing - (opening + net)` in
