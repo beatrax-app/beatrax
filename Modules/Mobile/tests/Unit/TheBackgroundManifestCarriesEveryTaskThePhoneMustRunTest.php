@@ -140,9 +140,7 @@ it('schedules every phone task on an expression the runner has a repeat interval
 
 it('agrees with the manifest nativephp/mobile-background-tasks actually builds', function (): void {
     if (! class_exists(SchedulerManifestGenerator::class)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('SchedulerManifestGenerator ships with nativephp/mobile, which is installed only under the mobile Composer root.');
     }
 
     $vendor = array_values(array_unique(array_column((new SchedulerManifestGenerator)->generate(), 'command')));
@@ -159,9 +157,7 @@ it('agrees with the manifest nativephp/mobile-background-tasks actually builds',
 
 it('pins the expressions the vendor generator has an interval for', function (): void {
     if (! class_exists(SchedulerManifestGenerator::class)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('SchedulerManifestGenerator ships with nativephp/mobile, which is installed only under the mobile Composer root.');
     }
 
     $method = (new ReflectionClass(SchedulerManifestGenerator::class))->getMethod('cronToIntervalMinutes');
