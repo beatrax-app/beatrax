@@ -46,6 +46,14 @@ const LEDGER_DAY_CARRIER_PINS = [
             "/'booked_at' => \\\$this->bookedAt->toDateTimeString\\(\\),/",
         ],
     ],
+    'Modules/Ledger/Public/Dto/TransactionBooking.php' => [
+        'reason' => 'The four columns a restatement takes from the row restating it, on their way into an UPDATE. booked_at is one of them and the fingerprint is composed over it, so the type that answers with the columns names it. Nothing renders this type as a row.',
+        'sites' => 1,
+        'proves' => [
+            '/public readonly string \$bookedAt,/',
+            "/'booked_at' => \\\$this->bookedAt,/",
+        ],
+    ],
     'Modules/Receipts/Public/Dto/ParsedReceiptDto.php' => [
         'reason' => 'A receipt names one day and has no booked-versus-posted lag at all; the adapter below maps that single day onto all three canonical fields. Nothing renders this type as a row.',
         'sites' => 1,

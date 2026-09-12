@@ -7,6 +7,7 @@ namespace Modules\Import\Public\Actions;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -16,6 +17,7 @@ use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Ledger\Public\Dto\FingerprintTuple;
+use Modules\Ledger\Public\Dto\TransactionBooking;
 use Modules\Ledger\Public\Services\CounterpartyKey;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
@@ -112,9 +114,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
                 return false;
             }
 
-            $this->writeEnrichment($row, $enrichment, $user, $userChoice);
-
-            return true;
+            return $this->writeEnrichment($row, $enrichment, $user, $userChoice);
         });
 
         return $applied === true;
@@ -201,7 +201,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         return is_string($row->source_ref) ? $row->source_ref : null;
     }
 
-    private function writeEnrichment(stdClass $row, PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): void
+    private function writeEnrichment(stdClass $row, PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): bool
     {
         $plainUpdates = $this->resolveFieldConflicts($row, $enrichment, $user, $userChoice);
 
@@ -210,10 +210,16 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         // settled figure while the fingerprint was composed over the new one.
         $amount = self::resolvedAmount($row, $plainUpdates);
 
+        // Which day the source filed the transaction on is not a disagreement
+        // two records have; it is what the later record says, and a reader
+        // handed two dates has no ground to choose between them. Taken whole
+        // or the row keeps a day its own restatement no longer matches.
+        $booking = $enrichment->restates;
+
         // Derived from the plaintext, before encryptAttrs seals the name: the
         // counterparty key is a digest of the normalised name, and AEAD
         // ciphertext differs on every write of the same value.
-        $rederived = $this->rederivedFingerprint($row, $plainUpdates, $amount, $user);
+        $rederived = $this->rederivedFingerprint($row, $plainUpdates, $amount, $booking, $user);
         $extraUpdates = $this->codec->encryptAttrs('transactions', $plainUpdates, $user->id, ($this->session)());
 
         $sourceRef = $this->strongerRef($row, $enrichment);
@@ -224,17 +230,34 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             'format' => $enrichment->sourceFormat,
             'ran_at' => $this->clock->now()->toIso8601String(),
             'import_run_id' => $enrichment->importRunId,
-            'added' => array_merge($sourceRef === null ? [] : ['source_ref'], array_keys($plainUpdates)),
+            'added' => array_merge(
+                $sourceRef === null ? [] : ['source_ref'],
+                $booking === null ? [] : array_keys($booking->toColumns()),
+                array_keys($plainUpdates),
+            ),
         ];
 
-        $this->db->connection()
-            ->table('transactions')
-            ->where('id', $enrichment->existingTransactionId)
-            ->where('user_id', $user->id)
-            ->update(($amount?->toColumns() ?? []) + $extraUpdates + $rederived + ($sourceRef === null ? [] : ['source_ref' => $sourceRef]) + [
-                'enriched_from' => json_encode($provenance, JSON_THROW_ON_ERROR),
-                'updated_at' => $this->clock->now()->toDateTimeString(),
+        try {
+            $this->db->connection()
+                ->table('transactions')
+                ->where('id', $enrichment->existingTransactionId)
+                ->where('user_id', $user->id)
+                ->update(($amount?->toColumns() ?? []) + ($booking?->toColumns() ?? []) + $extraUpdates + $rederived + ($sourceRef === null ? [] : ['source_ref' => $sourceRef]) + [
+                    'enriched_from' => json_encode($provenance, JSON_THROW_ON_ERROR),
+                    'updated_at' => $this->clock->now()->toDateTimeString(),
+                ]);
+        } catch (UniqueConstraintViolationException) {
+            // Moved onto a row the ledger already holds, which is an answer and
+            // not a failure: the restating row describes that transaction. The
+            // stored row stands and the confirm carries on, where letting this
+            // out would roll the whole import's enrichment phase back.
+            $this->logger->warning('Enrichment moved a row onto one the ledger already holds; the stored row stands', [
+                'transaction_id' => $enrichment->existingTransactionId,
+                'incoming_format' => $enrichment->sourceFormat,
             ]);
+
+            return false;
+        }
 
         // Inside the same transaction as the UPDATE, so a rollback takes the
         // document with it. Without this the receipt renamed the row and the
@@ -243,6 +266,8 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         if (SearchedColumns::touchedBy(SearchedColumns::TRANSACTIONS, array_keys($plainUpdates))) {
             $this->searchIndex->upsertForTransaction($enrichment->existingTransactionId, $user->id);
         }
+
+        return true;
     }
 
     // Null where the resolution touches neither leg's amount nor its currency,
@@ -282,7 +307,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
      * @param  array<string, mixed>  $plainUpdates
      * @return array<string, mixed>
      */
-    private function rederivedFingerprint(stdClass $row, array $plainUpdates, ?TransactionAmount $amount, User $user): array
+    private function rederivedFingerprint(stdClass $row, array $plainUpdates, ?TransactionAmount $amount, ?TransactionBooking $booking, User $user): array
     {
         $touched = array_filter(
             $plainUpdates,
@@ -290,7 +315,10 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             ARRAY_FILTER_USE_KEY,
         );
 
-        if ($touched === []) {
+        // An adopted booking moves three terms of the tuple on its own, so a
+        // restatement recomposes even where the reader's policy left every
+        // field alone.
+        if ($touched === [] && $booking === null) {
             return [];
         }
 
@@ -303,15 +331,18 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             $rederived['normalization_version'] = $this->fingerprints->version();
         }
 
+        // Read off the booking where one was adopted and off the stored row
+        // otherwise: composing over columns the same statement is rewriting
+        // would store a digest that stops describing the row it sits on.
         $rederived['fingerprint'] = $this->fingerprints->composeTuple(new FingerprintTuple(
             $user->id,
             self::toInt($row->account_id),
-            CarbonImmutable::parse(self::toString($row->posted_at))->toDateString(),
-            CarbonImmutable::parse(self::toString($row->booked_at))->toDateTimeString(),
+            $booking->postedAt ?? CarbonImmutable::parse(self::toString($row->posted_at))->toDateString(),
+            $booking->bookedAt ?? CarbonImmutable::parse(self::toString($row->booked_at))->toDateTimeString(),
             $amount->amountMinor ?? self::toInt($row->amount_minor),
             $amount->currency ?? self::toString($row->currency),
             $normalized,
-            self::toInt($row->occurrence_ordinal),
+            $booking->occurrenceOrdinal ?? self::toInt($row->occurrence_ordinal),
         ));
         $rederived['fingerprint_version'] = $this->fingerprints->version();
 

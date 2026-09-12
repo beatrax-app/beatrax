@@ -165,6 +165,7 @@ final readonly class ImportPipeline
                         importRunId: $run->importRunId,
                         sourceFormat: $run->sourceFormat,
                         conflictingFields: $disposition->conflictingFields,
+                        restates: $disposition->restates,
                     ));
                 }
             }
