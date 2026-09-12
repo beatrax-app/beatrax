@@ -14,6 +14,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
+use Modules\Core\Public\Support\RowChunk;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
@@ -27,16 +28,23 @@ final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
     use SerializesModels;
     use TunedQueueJob;
 
+    private const int CHUNK = RowChunk::DEFAULT_SIZE;
+
     public function handle(DatabaseManager $db, DriftAlertStateMachine $stateMachine, Clock $clock): void
     {
         $now = $clock->now()->toDateTimeString();
 
+        // A keyset walk, not one collection of every candidate id: the set has
+        // no bound but the hours it accumulated over, and a revived row leaves
+        // the set before the page after it is asked for.
         $rows = $db->connection()->table('drift_alerts')
             ->where('state', DriftAlertState::Snoozed->value)
             ->where(static function (Builder $expiry) use ($now): void {
                 $expiry->whereNull('snoozed_until')->orWhere('snoozed_until', '<=', $now);
             })
-            ->get(['id']);
+            ->orderBy('id')
+            ->select('id')
+            ->lazyById(self::CHUNK);
 
         foreach ($rows as $row) {
             /** @var stdClass $row */
