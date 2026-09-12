@@ -18,7 +18,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('boot-time receive() from hlc_clock_state prevents clock rewind after restart', function (): void {
+it('receives hlc_clock_state before the first tick, so the clock cannot rewind after a restart', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 

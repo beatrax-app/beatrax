@@ -89,6 +89,28 @@ final readonly class OpLogEntry
         return [$this->signingPayload(), $this->legacySigningPayload()];
     }
 
+    // The stub that was signed, carrying the signature taken over it. Built
+    // here rather than at the writer so the field list lives beside the two
+    // copies below: one written out there dropped originUserId, which the v1
+    // payload reads when an old local signature is re-checked.
+    public function withSignature(string $signature): self
+    {
+        return new self(
+            table: $this->table,
+            pk: $this->pk,
+            field: $this->field,
+            value: $this->value,
+            hlcL: $this->hlcL,
+            hlcC: $this->hlcC,
+            deviceId: $this->deviceId,
+            opType: $this->opType,
+            signature: $signature,
+            userId: $this->userId,
+            gdkEpoch: $this->gdkEpoch,
+            originUserId: $this->originUserId,
+        );
+    }
+
     // The same entry with its GDK ciphertext replaced by the plaintext a merge
     // strategy can read. $gdkEpoch is deliberately kept: the projection
     // write-back needs to know the source was encrypted.

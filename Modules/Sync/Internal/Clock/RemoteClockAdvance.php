@@ -16,9 +16,9 @@ final readonly class RemoteClockAdvance
 {
     public function __construct(private DatabaseManager $db) {}
 
-    // Persisted rather than pushed into a live clock: OpLogWriter is bound
-    // transient and restores from hlc_clock_state on every resolve, so the
-    // next write this device makes starts from what it has just heard.
+    // Persisted rather than pushed into a live clock: OpLogWriter allocates
+    // every stamp from hlc_clock_state, so the next write this device makes
+    // starts from what it has just heard.
     /**
      * @param  list<OpLogEntry>  $accepted  Entries that passed verification.
      * @param  string  $now  The replay's own wall-clock stamp, so the row this
@@ -39,22 +39,29 @@ final readonly class RemoteClockAdvance
         }
 
         [$msgL, $msgC] = $highest;
-        [$lastL, $lastC] = $this->persistedState($userId, $localDeviceId);
 
-        // Already dominated — writing anyway would tick the counter on every
-        // rebuild and every re-delivery of history this device has long held.
-        if (HybridLogicalClock::compare($msgL, $msgC, '', $lastL, $lastC, '') <= 0) {
-            return;
-        }
+        // Read, compared and written in one IMMEDIATE transaction. This runs in
+        // the sync daemon and OpLogWriter writes the same row from the app
+        // server: split across the two, the comparison was made against a value
+        // the other process had already replaced.
+        $this->db->connection()->transaction(function () use ($userId, $localDeviceId, $msgL, $msgC, $now): void {
+            [$lastL, $lastC] = $this->persistedState($userId, $localDeviceId);
 
-        $clock = new HybridLogicalClock;
-        $clock->receive($lastL, $lastC);
-        [$newL, $newC] = $clock->receive($msgL, $msgC);
+            // Already dominated — writing anyway would tick the counter on every
+            // rebuild and every re-delivery of history this device has long held.
+            if (HybridLogicalClock::compare($msgL, $msgC, '', $lastL, $lastC, '') <= 0) {
+                return;
+            }
 
-        $this->db->connection()->table('hlc_clock_state')->updateOrInsert(
-            ['user_id' => $userId, 'device_id' => $localDeviceId],
-            ['last_l' => $newL, 'last_c' => $newC, 'updated_at' => $now],
-        );
+            $clock = new HybridLogicalClock;
+            $clock->receive($lastL, $lastC);
+            [$newL, $newC] = $clock->receive($msgL, $msgC);
+
+            $this->db->connection()->table('hlc_clock_state')->updateOrInsert(
+                ['user_id' => $userId, 'device_id' => $localDeviceId],
+                ['last_l' => $newL, 'last_c' => $newC, 'updated_at' => $now],
+            );
+        });
     }
 
     // This device's own entries carry no causality to absorb, and a cascade op

@@ -485,13 +485,17 @@ signature. `OpType` enumerates `Set`/`DeleteTombstone`/`CreateRow`; never
 pass a free-form `op_type` string to the replayer — add a case here first.
 
 `OpLogWriter` persists entries to `op_log_entries`: always-JSON-encodes the
-raw PHP value, signs each entry via `DeviceKeySigner`, ticks the HLC and
-persists the updated clock state in the same DB transaction, and restores
-the HLC high-water mark from `hlc_clock_state` on construction so a restart
-or wall-clock rewind cannot lower the logical clock. The RECEIVE half lives in
+raw PHP value, restores the HLC high-water mark from `hlc_clock_state`, ticks
+the HLC, signs the entry via `DeviceKeySigner`, and stores the entry and the
+updated clock state — **all four inside one DB transaction**, for the reason
+in [Allocating the stamp under a second
+process](#allocating-the-stamp-under-a-second-process) below. Restoring the
+mark is what keeps a restart or a wall-clock rewind from lowering the logical
+clock. The RECEIVE half lives in
 `Internal\Clock\RemoteClockAdvance`, which `OpLogReplayer::replay()` calls with
 every verified entry: it runs `HybridLogicalClock::receive()` against the
-highest remote HLC in the batch and persists the result to `hlc_clock_state`.
+highest remote HLC in the batch and persists the result to `hlc_clock_state`,
+reading and writing that row inside one transaction of its own.
 `OpLogWriter` is bound transient, so the next write this device makes starts
 from what it has just heard. Without it `receive()` was fed only this device's
 own persisted state and was dead as a causality mechanism — a peer an hour ahead
@@ -501,6 +505,58 @@ field's value reaches `op_log_entries` (and therefore the wire — this is the
 CURRENT GDK epoch and tagged with `gdk_epoch`; when GDK encryption is not
 yet enabled or the app-lock is locked, the write falls back to plaintext
 with a null `gdk_epoch`.
+
+#### Allocating the stamp under a second process
+
+`hlc_clock_state` has two writers: `OpLogWriter`, in whichever process made the
+mutation, and `RemoteClockAdvance`, in the process running the merge. On the
+desktop those are usually different processes — the app server and `sync:serve`
+— against one SQLite file.
+
+The writer used to read the row in its constructor and write its stamp back
+when the entry landed. Everything the daemon absorbed between those two moments
+was overwritten by a stamp derived from the older value:
+
+1. A request resolves an `OpLogWriter`, which reads `hlc_clock_state` at
+   `(1000, 3)`.
+2. `sync:serve` applies a frame from a peer whose wall clock runs an hour fast.
+   `RemoteClockAdvance` absorbs it and writes `(3601000, 1)`.
+3. The request writes its op. The stamp comes from the value read at step 1, so
+   the entry carries `(1000, 4)` — **below** the peer — and the upsert puts
+   `hlc_clock_state` back to `(1000, 4)`.
+
+Step 3 is the defect `RemoteClockAdvance` exists to prevent, reinstated: this
+device's edit loses the LWW merge to the value it was replacing, and because
+the row was rewound the next edit loses too. Nothing reports it; the reader
+sees their change reappear as the peer's older one.
+
+The whole allocate-sign-store sequence therefore runs inside the transaction
+that stores the entry — `nextStamp()` is the first statement in it, and what it
+returns is an `HlcStamp`, the clock's reading at the moment of allocation.
+Neither half of that pair means anything alone, which is why it has a name
+rather than travelling as two loose integers. `RemoteClockAdvance::absorb()`
+reads, compares and writes inside one transaction of its own. `transaction_mode` is `IMMEDIATE`
+([sqlite-write-locks](../../architecture/sqlite-write-locks.md)), so the write
+lock is taken at `BEGIN` and neither process can land a write inside the
+other's read-modify-write.
+
+Two further reads of the same shape are closed the same way:
+
+- `OpLogWriter::writeIncrement()` reads the newest g_counter total **this**
+  device has published and writes that total plus the delta. Read outside the
+  transaction, two processes both saw the same total and both published it plus
+  one; `GCounterStrategy` resolves a device's contribution as its MAXIMUM, so
+  the two ops merged to one increment and the other delta was gone for good.
+- `PeerCatchUpWatermarks::advance()` claims to move a per-author cursor
+  "only ever forwards". That was decided in PHP against a row read earlier, so
+  a relay drain and a LAN session delivering at once each wrote what its own
+  stale read allowed, and the later, lower write won — costing a redelivery of
+  everything between the two.
+
+`ADecidingReadSharesTheTransactionOfTheWriteItDecidesTest` pins all four, and
+`AStampIsAllocatedWhereTheEntryIsStoredTest` pins the interleaving above
+end-to-end: absorb a fast peer after the writer is built, and the local edit
+must still win the merge.
 
 `OpLogRebuilder` is the trigger-safe deterministic full-rebuild path
 (device onboarding / disaster recovery): drop covered-table triggers,
@@ -1254,13 +1310,20 @@ Routes each module's `*Mutated` events to the `OpLogWriter`. Wired in
 `events->listen()` call.
 
 **Emit-after-commit contract:** `OpLogWriter::writeEntry()` opens its OWN DB
-transaction (op insert + HLC clock-state upsert). Emit sites MUST dispatch a
-mutation event only AFTER the originating write transaction has COMMITTED —
-never from inside an open transaction. If a mutation event were dispatched
-mid-transaction, the writer's transaction would degrade into a savepoint of
-the outer one: an outer rollback would then discard the op insert while the
-in-memory HLC tick had already advanced, breaking the op's
-atomicity-vs-outer-rollback guarantee.
+transaction — stamp allocation, signature, op insert and HLC clock-state upsert
+together. Emit sites MUST dispatch a mutation event only AFTER the originating
+write transaction has COMMITTED — never from inside an open transaction.
+Dispatched mid-transaction, the writer's transaction degrades into a savepoint
+of the outer one, and every other synchronous listener on the same event is
+then acting on a row an outer rollback can still take away — the reason
+`RecordTransactions` dispatches after its chunk commits and not inside it.
+
+The in-memory HLC tick is no longer part of that argument. It used to be: the
+stamp was taken before the transaction opened, so an outer rollback discarded
+the op insert while the clock had already moved. The stamp is now allocated
+from `hlc_clock_state` inside the same transaction, so a rollback takes the op
+and the clock row together and the next write re-derives the stamp from the
+row. A discarded tick leaves a gap in the counter and nothing else.
 
 **Never-throw contract:** the entire handler body is wrapped in
 `try/catch(\Throwable)`. A capture failure is logged but NEVER propagated —
