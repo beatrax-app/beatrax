@@ -172,7 +172,7 @@ the other is only worth updating Beatrax for:
 | Raised | Reader is told | Count beside it |
 |---|---|---|
 | `BackupFromANewerBuildException` | update Beatrax, then restore it again | migrations this build has never seen |
-| `BackupCouldNotBeBroughtUpToDateException` | try again; the log records which step stopped it | migrations left unrun |
+| `BackupCouldNotBeBroughtUpToDateException` | try again; the log records which step stopped it | how many migrations the run was closing |
 
 It also closes a hole on the path it replaces. The pre-restore snapshot path is
 the reader's only record of their undo, it is flashed to the session, and

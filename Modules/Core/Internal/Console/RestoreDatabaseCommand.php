@@ -350,8 +350,8 @@ final class RestoreDatabaseCommand extends Command
 
     // A schema refusal is the one an operator acts on rather than
     // investigates, so it is spelled the way the screens spell it. The counts
-    // beside it are the operator's half, and they count different things:
-    // migrations this build never had, against migrations left unrun.
+    // beside it are the operator's half, and count different things: schema
+    // changes this build never had, against the size of the gap it was closing.
     private function because(Throwable $e): string
     {
         if ($e instanceof BackupFromANewerBuildException) {
