@@ -251,7 +251,17 @@ candidates for one column. Its `<CdtDbtInd>` signs it, which costs a
 second pass over the XML because `genkgo/camt` hands every child the
 entry's indicator and never reads the child's — see [a batch child read
 off its entry](a-batch-child-read-off-its-entry.md) for the pass and the
-three ordinals it is keyed on. `Camt053HeaderProfile::XML_NAMESPACE_REGEX` anchors on the
+three ordinals it is keyed on. The children are read *as* the entry only
+where they add up to it: `Camt053Entries::detailsToBook()` sums them under
+each child's own direction against `Ntry/Amt`, and where they disagree —
+a batch split across two `<NtryDtls>` blocks, of which the decoder reads
+only the first, or children that state no `<Amt>` of their own and so each
+fell through to the entry's — the entry is booked whole and once, the way
+an entry with no `<TxDtls>` at all already was. Entry status is read too:
+`PDNG` and `INFO` entries are not in the closing balance and are not
+booked, exactly as the Revolut CSV preset skips a row that is not
+`COMPLETED`. Both are [a statement that did not check its own
+arithmetic](a-statement-that-did-not-check-its-own-arithmetic.md). `Camt053HeaderProfile::XML_NAMESPACE_REGEX` anchors on the
 CAMT.053 family, not a specific sub-version — any
 `urn:iso:std:iso:20022:tech:xsd:camt.053.001.NN` URI passes the sniffer;
 unknown sub-versions fail at parse time instead, so a future bank
@@ -302,6 +312,16 @@ first. Both parsers write the flag through
 `Modules\Ingestion\Internal\Enums\StatementExtraKey`, so the key cannot
 drift apart again the way the behaviour did.
 
+Statement self-check: both bank parsers work out `closing - (opening +
+every entry)` at parse time and publish a non-zero answer as
+`extras.statementDifferenceMinor`. The key is absent where the file
+states no opening or closing balance, where the two are in different
+currencies, or where an entry is denominated in something they are not —
+so on a summary carrying both balances an absent key means the statement
+added up. Nothing is corrected on a difference. See [a statement that
+did not check its own
+arithmetic](a-statement-that-did-not-check-its-own-arithmetic.md).
+
 ### MT940
 
 Source-reference policy: when the `:86:` GVC narrative carries a
@@ -337,7 +357,13 @@ the same question the same way — see the section above. A statement PAGED
 across several messages is not that: `:62M:` and `:60M:` are the
 intermediate close and open that hand one statement from one page to
 the next, so only `:62F:` closes the statement, the header fields keep
-the first page's values, and the entry count covers every page. Source-format integrity: `:25:` (own IBAN) and
+the first page's values, and the entry count covers every page. A row's
+own `:25:` and `:60F:` are captured when its `:61:` is READ, not when it
+is written out: `:86:` is optional, so a line that never gets one is held
+until the next `:61:` — which in a bulk delivery is the following
+statement's first, under a `:25:` and a `:60F:` that have already moved
+on. `Mt940StatementAccumulator` holds `pendingOwnIban` and
+`pendingCurrency` beside `pendingTag61` for that reason. Source-format integrity: `:25:` (own IBAN) and
 `:60F:`/`:60M:` (currency-bearing opening balance) must precede the
 first `:61:`, or the file is rejected as malformed — this prevents an
 empty IBAN or silent-default-EUR currency reaching the import pipeline.
