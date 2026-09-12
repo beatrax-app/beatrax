@@ -19,10 +19,10 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-// The enable-time sweep and the rollback restore both run inside one
-// transaction, so a statement per ledger row holds the single SQLite writer
-// lock for the whole pass and a whole-table read holds the ledger twice over.
-// These fixtures are sized past one CHUNK_SIZE so the batching is observable.
+// The enable-time sweep and the rollback restore both write in batches and
+// read in chunks, so neither a statement per ledger row nor a whole-table read
+// holds the ledger for the length of the pass. These fixtures are sized past
+// one CHUNK_SIZE so both the chunking and the batching are observable.
 const BATCHED_TRANSACTIONS = 520;
 
 const BATCHED_COUNTERPARTIES = 210;
@@ -30,6 +30,32 @@ const BATCHED_COUNTERPARTIES = 210;
 const BATCHED_NOTIFICATIONS = 260;
 
 const BATCHED_OP_LOG = 240;
+
+// SQLite re-reads the whole `when` chain for every row a statement updates, so
+// this is the number the cost of one row is multiplied by. It is not a
+// correctness bound — any value writes the same rows — which is why nothing
+// but a measurement decides it.
+const BATCHED_ROWS_PER_STATEMENT = 20;
+
+/**
+ * @param  list<string>  $statements
+ * @return int the most rows any one batched statement folded into its `case`
+ */
+function batchedWidestCase(array $statements): int
+{
+    $widest = 0;
+
+    foreach ($statements as $sql) {
+        $columns = substr_count($sql, ' = case "id" when ');
+        if ($columns === 0) {
+            continue;
+        }
+
+        $widest = max($widest, intdiv(substr_count($sql, ' when ? then ?'), $columns));
+    }
+
+    return $widest;
+}
 
 function batchedUser(string $tag): User
 {
@@ -317,14 +343,17 @@ it('sweeps a chunk in a handful of batched statements rather than one per row, a
         static fn (string $sql): bool => str_starts_with($sql, "update \"{$table}\" set") && str_contains($sql, "\"{$column}\" ="),
     ));
 
-    // Without the batching each of these equals the row count of its table.
-    expect($sweepWrites('transactions', 'description'))->toBeLessThan(20)->toBeGreaterThan(0);
-    expect($sweepWrites('counterparties', 'display_name'))->toBeLessThan(10)->toBeGreaterThan(0);
-    expect($sweepWrites('notifications', 'title'))->toBeLessThan(10)->toBeGreaterThan(0);
-    expect($sweepWrites('op_log_entries', 'gdk_epoch'))->toBeLessThan(10)->toBeGreaterThan(0);
+    // Without the batching each of these equals the row count of its table. A
+    // share of the rows rather than a fixed count, because how many rows one
+    // statement may hold is a cost decision the test below owns.
+    expect($sweepWrites('transactions', 'description'))->toBeLessThan(intdiv(BATCHED_TRANSACTIONS, 10))->toBeGreaterThan(0);
+    expect($sweepWrites('counterparties', 'display_name'))->toBeLessThan(intdiv(BATCHED_COUNTERPARTIES, 10))->toBeGreaterThan(0);
+    expect($sweepWrites('notifications', 'title'))->toBeLessThan(intdiv(BATCHED_NOTIFICATIONS, 10))->toBeGreaterThan(0);
+    expect($sweepWrites('op_log_entries', 'gdk_epoch'))->toBeLessThan(intdiv(BATCHED_OP_LOG, 10))->toBeGreaterThan(0);
 
     $batched = array_filter($statements, static fn (string $sql): bool => str_contains($sql, 'case "id" when'));
     expect($batched)->not->toBeEmpty();
+    expect(batchedWidestCase($statements))->toBeGreaterThan(1)->toBeLessThanOrEqual(BATCHED_ROWS_PER_STATEMENT);
 
     /** @var SensitiveColumnCodec $codec */
     $codec = $this->app->make(SensitiveColumnCodec::class);
@@ -580,7 +609,7 @@ it('restores every snapshotted column to exactly its snapshotted value in batche
         $statements,
         static fn (string $sql): bool => str_starts_with($sql, 'update "transactions" set'),
     ));
-    expect($restoreWrites)->toBeLessThan(20)->toBeGreaterThan(0);
+    expect($restoreWrites)->toBeLessThan(intdiv(BATCHED_TRANSACTIONS, 10))->toBeGreaterThan(0);
     expect(array_filter($statements, static fn (string $sql): bool => str_contains($sql, 'case "id" when')))->not->toBeEmpty();
 
     $after = batchedColumnMap($db, 'transactions', $user->id, array_merge($snapshotColumns, ['source_ref', 'status', 'amount_minor']));
@@ -636,4 +665,154 @@ it('narrows the restored snapshot plaintext to 0600 before a byte of it is read'
     $snapshot->restoreFromSnapshot($path, str_repeat("\x2a", 32), $connection);
 
     expect($stagedMode)->toBe(0600, 'a decrypted snapshot readable by any local account is the leak the whole store exists to prevent');
+});
+
+// A `case <id> when ? then ? ... end` is re-read in full for every row the
+// statement updates, so a batch of n rows costs n comparisons per row. The
+// binding ceiling alone let a narrow row reach 180 per statement, which is
+// the wrong side of the measured knee.
+it('folds only a short run of rows into one case statement, whatever the binding ceiling would allow', function (): void {
+    $user = batchedUser('case-width');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $connection = $db->connection();
+
+    $seeded = [];
+    for ($i = 0; $i < 500; $i++) {
+        $seeded[] = [
+            'user_id' => $user->id,
+            'device_id' => 'device-case-width',
+            'table_name' => 'transactions',
+            'pk' => (string) ($i + 1),
+            'field' => 'description',
+            'op_type' => 'set',
+            'value' => json_encode("voor {$i}", JSON_THROW_ON_ERROR),
+            'hlc_l' => 1_900_000_000_000 + $i,
+            'hlc_c' => 0,
+            'signature' => "signature-case-width-{$i}",
+            'recorded_at' => now(),
+        ];
+    }
+    $connection->table('op_log_entries')->insert($seeded);
+
+    $writes = [];
+    foreach ($connection->table('op_log_entries')->where('user_id', $user->id)->orderBy('id')->get(['id']) as $row) {
+        $writes[] = ['id' => $row->id, 'value' => "na {$row->id}", 'gdk_epoch' => 1];
+    }
+
+    $statements = [];
+    $connection->listen(function (QueryExecuted $query) use (&$statements): void {
+        $statements[] = $query->sql;
+    });
+
+    PreMigrationSnapshot::writeRowsById($connection, 'op_log_entries', $writes);
+
+    $batched = array_values(array_filter(
+        $statements,
+        static fn (string $sql): bool => str_contains($sql, 'case "id" when'),
+    ));
+
+    // Two bounds, not one: the widest alone would pass on a run that wrote a
+    // statement per row, which is the other end of the same cost.
+    expect(batchedWidestCase($batched))->toBe(BATCHED_ROWS_PER_STATEMENT);
+    expect($batched)->toHaveCount(intdiv(count($writes), BATCHED_ROWS_PER_STATEMENT));
+
+    // The narrower batch is a cost change and nothing else: every row it was
+    // handed still carries exactly the value it was handed.
+    $written = $connection->table('op_log_entries')->where('user_id', $user->id)->orderBy('id')->get(['id', 'value', 'gdk_epoch']);
+    expect($written)->toHaveCount(count($writes));
+
+    foreach ($written as $row) {
+        expect($row->value)->toBe("na {$row->id}");
+        expect((int) $row->gdk_epoch)->toBe(1);
+    }
+});
+
+// Every table the pass touches it pages with `where user_id = ? and id > ?
+// order by id`, and on each of them every index led with user_id and then the
+// posted date, the state or the HLC. None of those yields id order, so the
+// planner sorted the user's whole table to find the next page — once per page.
+const SWEPT_TABLES_PAGED_IN_ID_ORDER = [
+    'op_log_entries',
+    'transactions',
+    'transaction_splits',
+    'counterparties',
+    'tax_transaction_tags',
+    'notifications',
+    'chain_links',
+    'merchants',
+    'recurring_series',
+];
+
+it('plans every ordered page the enable-time pass issues against an index, on each of the nine tables it walks', function (): void {
+    $user = batchedUser('paging');
+    [$account, $importRun] = batchedLedgerScaffold($user, 'paging');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $connection = $db->connection();
+    batchedSeedLedger($db, $user, $account, $importRun);
+
+    $pages = [];
+    // The EXPLAIN below re-enters this listener on the very SQL it is
+    // explaining, so the prefix is excluded rather than the list re-read.
+    $connection->listen(function (QueryExecuted $query) use (&$pages): void {
+        if (str_starts_with($query->sql, 'EXPLAIN') || ! str_contains($query->sql, 'order by "id" asc')) {
+            return;
+        }
+
+        foreach (SWEPT_TABLES_PAGED_IN_ID_ORDER as $table) {
+            if (str_contains($query->sql, 'from "'.$table.'"')) {
+                $pages[$table][] = [$query->sql, $query->bindings];
+            }
+        }
+    });
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat("\x2a", 32));
+
+    batchedMigrationService($db, batchedRecordingCache())->migrate($user, $session);
+
+    // A table missing from the capture is a walk this guard never read, which
+    // is indistinguishable from a walk that no longer sorts.
+    expect(array_keys($pages))->toEqualCanonicalizing(SWEPT_TABLES_PAGED_IN_ID_ORDER);
+
+    // The snapshot walks the ledger and so does the sweep, each in pages of
+    // RowChunk::DEFAULT_SIZE, so the fixture's 525 rows is at least four.
+    expect(count($pages['transactions']))->toBeGreaterThanOrEqual(4);
+
+    $sorted = [];
+    foreach ($pages as $table => $issued) {
+        foreach ($issued as [$sql, $bindings]) {
+            $plan = implode(' || ', array_map(
+                static fn (stdClass $step): string => (string) $step->detail,
+                $connection->select('EXPLAIN QUERY PLAN '.$sql, $bindings),
+            ));
+
+            if (str_contains($plan, 'TEMP B-TREE')) {
+                $sorted[] = $table.': '.$plan;
+            }
+        }
+    }
+
+    expect($sorted)->toBe([]);
+});
+
+it('keys the index each of those walks reads on user_id and the id it orders by, in that order', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+
+    // `notifications.id` is a varchar primary key rather than the rowid, so the
+    // rowid SQLite appends to every index entry orders that table by something
+    // the walk never asked for. Naming `id` is what covers both kinds.
+    foreach (array_diff(SWEPT_TABLES_PAGED_IN_ID_ORDER, ['op_log_entries']) as $table) {
+        $columns = array_map(
+            static fn (stdClass $column): string => (string) $column->name,
+            $db->connection()->select('PRAGMA index_info("'.$table.'_user_id_id_index")'),
+        );
+
+        expect($columns)->toBe(['user_id', 'id'], $table.' pages in id order off an index that does not carry id');
+    }
 });
