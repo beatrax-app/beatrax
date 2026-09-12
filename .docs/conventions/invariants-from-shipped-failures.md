@@ -694,6 +694,35 @@ reaches the `emergency` channel, which
 every frame path. The processor is the first caller that can be constructed
 without one.
 
+## A file name the reader chose
+
+`tests/Contracts/AFileNameTheReaderChoseIsLoggedUnderARedactedKeyArchTest.php`
+
+`RedactSecretsProcessor` holds two key lists and the second one says why:
+"an uploaded statement is named by the bank for the account it covers, so the
+filename routinely spells an IBAN, a card number or the holder's name." It
+redacts `filename`, `file_name`, `original_filename` and `source_filename` —
+and it redacts them **by key name**, because a file name has no shape a pattern
+can match.
+
+Which means the same bytes under a different key walk straight past it.
+`ScanInboxDropFolderJob` logged `'path' => $path` on every per-file failure, and
+`$path` is `inbox-drop/{userId}/` plus whatever the reader dropped there — the
+one surface in the product where the reader supplies the name themselves rather
+than a wizard sanitising it. The comment directly above that call already said
+the strip beside it was about the 0644 daily log.
+
+The fix is the key, not the value: `basename($path)` under `filename`, which the
+processor replaces, with `user_id` beside it already naming the folder. The rule
+reads the processor's own constants by reflection rather than restating them, so
+a key dropped from those lists fails here instead of quietly ceasing to redact.
+
+A path the *application* composed is a different thing and stays readable — a
+bundled corpus file, the installer electron-updater downloaded, this install's
+own secrets file. Those six files are pinned in `PATH_KEY_APPLICATION_OWNED`
+with the reason each can hold no reader's name; redacting them would cost the
+only diagnostic those lines carry.
+
 ## A view name nothing answers to
 
 `tests/Contracts/ViewReferencesResolveArchTest.php`
