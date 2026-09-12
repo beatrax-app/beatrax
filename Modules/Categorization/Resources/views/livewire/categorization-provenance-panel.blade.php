@@ -35,6 +35,16 @@
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {{ $conditionSummary }} → {{ $categoryPath }}
             </p>
+            @if ($divergedFromRuleInto !== '')
+                {{-- The card above is the same card on agreement and on
+                     disagreement, so the reader who overruled a live rule was
+                     shown what the reader who accepted it was shown. Only a
+                     rule that can still fire says this: a disabled one cannot
+                     misfile the next match, and memory relearns on its own. --}}
+                <p class="mt-2 text-xs text-amber-700 dark:text-amber-500" role="status">
+                    {{ Lang::get('categorization::detail.diverges_from_rule', ['chosen' => $divergedFromRuleInto, 'rule' => $categoryPath]) }}
+                </p>
+            @endif
             @if ($confirmingRemove)
                 <x-core::confirm-strip
                     class="mt-3"

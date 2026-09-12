@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count Zahlung in diesem Zeitraum fällig.|:count Zahlungen in diesem Zeitraum fällig.',
         'shortfall' => 'Ein Liquiditätsengpass steht bevor.',
         'forecast_not_run' => 'Es wurde noch keine Liquiditätsprognose berechnet.',
+        'forecast_running' => 'Eine Liquiditätsprognose wird gerade berechnet.',
     ],
 ];

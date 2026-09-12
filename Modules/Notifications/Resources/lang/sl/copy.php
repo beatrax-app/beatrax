@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count plačilo zapade v tem obdobju.|:count plačili zapadeta v tem obdobju.|:count plačila zapadejo v tem obdobju.|:count plačil zapade v tem obdobju.',
         'shortfall' => 'Pred tabo je primanjkljaj sredstev.',
         'forecast_not_run' => 'Napoved denarnega toka še ni bila izvedena.',
+        'forecast_running' => 'Napoved denarnega toka trenutno poteka.',
     ],
 ];

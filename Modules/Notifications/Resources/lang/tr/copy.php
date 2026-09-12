@@ -48,5 +48,6 @@ return [
         'payments_due' => 'Bu dönemde :count ödeme var.',
         'shortfall' => 'Yaklaşan bir nakit akışı açığı var.',
         'forecast_not_run' => 'Henüz bir nakit akışı tahmini çalıştırılmadı.',
+        'forecast_running' => 'Şu anda bir nakit akışı tahmini çalışıyor.',
     ],
 ];

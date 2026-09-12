@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Çalışan kural',
+    'diverges_from_rule' => 'İşlem :chosen altında, ancak kural hâlâ etkin ve eşleşmelerini :rule altına koyuyor.',
     'remove_confirm' => 'Kaldırılsın mı?',
     'remove_yes' => 'Evet, kaldır',
     'cancel' => 'İptal',

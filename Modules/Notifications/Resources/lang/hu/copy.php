@@ -48,5 +48,6 @@ return [
         'payments_due' => 'Ebben az időszakban :count fizetés esedékes.|Ebben az időszakban :count fizetés esedékes.',
         'shortfall' => 'Pénzforgalmi hiány várható.',
         'forecast_not_run' => 'Még nem futott pénzforgalmi előrejelzés.',
+        'forecast_running' => 'Éppen fut egy pénzforgalmi előrejelzés.',
     ],
 ];
