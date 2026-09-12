@@ -40,17 +40,7 @@
 
             <x-core::checkbox-field :label="$checkboxRemember" wire:model="rememberChoice" />
 
-            {{--
-                Focus is taken on the event that opens the dialog, because this
-                row is in the document from the first paint and so has no moment
-                of its own to focus itself at. mount() dispatches modal-show,
-                Flux's dialog answers the same event by calling showModal().
-            --}}
-            <div
-                class="flex flex-col gap-2 sm:flex-row sm:justify-end"
-                x-data
-                x-on:modal-show.document="$event.detail && $event.detail.name === @js($modalName) && $nextTick(() => $refs.keepInTray.focus())"
-            >
+            <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 {{--
                     "Quit Beatrax" — destructive, rose-styled, NOT
                     default-focused (UI-SPEC). The heavier choice
@@ -71,11 +61,18 @@
                     emerald-600, and the one the dialog opens onto. Keeps
                     the worker + scheduler alive so the
                     partner's background work continues uninterrupted.
+
+                    It focuses itself on the event that opens the dialog rather
+                    than from an x-init, because it is in the document from the
+                    first paint and focusing a button inside a closed <dialog>
+                    does nothing. mount() dispatches modal-show and Flux's
+                    dialog answers that same event with showModal().
                 --}}
                 <button
                     type="button"
                     wire:click="chooseKeepInTray"
-                    x-ref="keepInTray"
+                    x-data
+                    x-on:modal-show.document="$event.detail && $event.detail.name === @js($modalName) && $nextTick(() => $el.focus())"
                     class="h-12 rounded-md bg-emerald-700 px-5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >
                     {{ $buttonKeepInTray }}

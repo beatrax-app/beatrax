@@ -43,7 +43,7 @@ may or may not be read when that moment comes.
 | Auth — sign-in, sign-up, reset, forced change, add user | load-time focus on the first field | nothing takes focus |
 | Mobile — import bootstrap | load-time focus on the username | nothing takes focus |
 | Reports — the report-name box | an attribute that never fired | `x-init` when the box is revealed |
-| Desktop — the close prompt | dialog focusing steps | focus on the event that opens the dialog |
+| Desktop — the close prompt | dialog focusing steps | the button focuses itself on the event that opens the dialog |
 | Import — the rename popover | dialog focusing steps | focus on the event that opens the dialog |
 | Open banking — disconnect confirm, warning acknowledgement | dialog focusing steps | `x-init` when the modal is inserted |
 | Core — the help tip | popover focusing steps | unchanged |
@@ -83,24 +83,36 @@ runs, and focusing an element the browser has not laid out yet does nothing.
 **The element is in the document from the first paint.** A Flux modal that is
 always rendered and opened by an event has no moment of its own, and `x-init`
 would fire at load — on an element inside a closed `<dialog>`, where `focus()`
-is a silent no-op. Take the event that opens it:
+is a silent no-op. Take the event that opens it, on the element that takes the
+focus, so `$el` is the answer and nothing has to be named twice:
 
 ```blade
-<form
+<button
     x-data
-    x-on:modal-show.document="$event.detail && $event.detail.name === 'rename-counterparty'
-        && $nextTick(() => $refs.friendly.focus())"
+    x-on:modal-show.document="$event.detail && $event.detail.name === @js($modalName)
+        && $nextTick(() => $el.focus())"
 >
 ```
 
 The name match is deterministic rather than racy because the component sets its
-fields and dispatches `modal-show` on one round-trip, and Flux's own dialog
+state and dispatches `modal-show` on one round-trip, and Flux's own dialog
 answers the same event by calling `showModal()`. Its listener is registered
-first — Alpine initialises the `<dialog>` before the element inside it — so the
+first — Alpine initialises the `<dialog>` before anything inside it — so the
 dialog is open by the time this one runs.
 
-Both spellings ride to the control through `x-core::form-field` and
-`x-core::checkbox-field` like any other attribute; neither is a prop.
+Bind it on an ancestor and reach down with `x-ref` **only** where the control
+is rendered by a component rather than written out. `x-core::form-field`
+forwards `x-init` and `x-ref` like any other attribute, but nothing in this
+tree forwards an `x-on:` through a component tag, so the rename popover binds
+the listener on its `<form>` and names `$refs.friendly`. That is the one site
+that pays for the indirection, and it pays because of where the control comes
+from rather than by preference.
+
+The trap on the way back out: **Flux's `<dialog>` binds this same event itself**,
+to open the modal. A test — or a reader — that walks up for the nearest element
+carrying `x-on:modal-show.document` gets Flux's `handleShow($event)` and not
+this. Read it off the element that was written, not off the nearest one that
+matches.
 
 ## The one that stays
 

@@ -120,23 +120,20 @@ it('rejects an invalid close_behavior value (validation guard)', function (): vo
 
 it('takes focus on the event that opens the dialog rather than on the load behind it', function (): void {
     // The prompt is the whole window and the dialog is opened from mount(), so
-    // the row is in the document before the dialog is: an x-init here would
-    // reach a button inside a closed <dialog>, where focus() does nothing.
-    $html = Livewire::test(CloseWindowPrompt::class)->html();
-    $markup = RenderedMarkup::of($html);
+    // the button is in the document before the dialog is: an x-init here would
+    // reach it inside a closed <dialog>, where focus() does nothing.
+    $keepInTray = RenderedMarkup::of(Livewire::test(CloseWindowPrompt::class)->html())
+        ->firstOrFail('[wire\:click="chooseKeepInTray"]');
 
-    $keepInTray = $markup->firstOrFail('[x-ref="keepInTray"]');
+    expect($keepInTray->attribute('autofocus'))->toBeNull(
+        'autofocus reads as focus on document load, which is what it is everywhere but a dialog and a popover'
+    );
 
-    expect($keepInTray->attribute('wire:click'))->toBe('chooseKeepInTray')
-        ->and($keepInTray->attribute('autofocus'))->toBeNull(
-            'autofocus reads as focus on document load, which is what it is everywhere but a dialog and a popover'
-        );
+    // Read off the button itself and not off an ancestor: Flux's own <dialog>
+    // binds this same event to open the modal, so the nearest element up the
+    // tree carrying it answers for Flux rather than for this.
+    $onOpen = (string) $keepInTray->attribute('x-on:modal-show.document');
 
-    $onOpen = (string) $markup->firstOrFail('[x-on\:modal-show\.document]')
-        ->attribute('x-on:modal-show.document');
-
-    // The ref the listener reaches for and the ref the button registers are two
-    // strings that have to be the same one, and nothing else checks that.
-    expect($onOpen)->toContain('$refs.keepInTray.focus()')
+    expect($onOpen)->toContain('$el.focus()')
         ->and($onOpen)->toContain(CloseWindowPrompt::MODAL_NAME);
 });

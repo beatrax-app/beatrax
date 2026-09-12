@@ -383,14 +383,18 @@ it('focuses the report-name box when the click reveals it, which autofocus never
 
     $builder = Livewire::test(ReportBuilder::class);
 
-    expect(RenderedMarkup::of($builder->html())->has('.srch-amount-input'))->toBeFalse(
-        'the box is behind showSaveForm, so it is not in the document the autofocus pass read'
+    // Asked by the binding and not by the .srch-amount-input class: the amount
+    // filters in the popover partial wear that class too and are in the first
+    // render, so the class answers about them rather than about this box.
+    expect(RenderedMarkup::of($builder->html())->has('[wire\:model="saveName"]'))->toBeFalse(
+        'the box is behind showSaveForm, so it was never in the document the autofocus pass read'
     );
 
     // A document stops accepting autofocus candidates once focus has left its
     // body, and the click that reveals this box is what moves it. The attribute
     // that used to sit here had therefore never fired.
-    $box = RenderedMarkup::of($builder->call('openSaveForm')->html())->firstOrFail('.srch-amount-input');
+    $box = RenderedMarkup::of($builder->call('openSaveForm')->html())
+        ->firstOrFail('[wire\:model="saveName"]');
 
     expect($box->attribute('x-init'))->toBe('$nextTick(() => $el.focus())')
         ->and($box->attribute('autofocus'))->toBeNull();
