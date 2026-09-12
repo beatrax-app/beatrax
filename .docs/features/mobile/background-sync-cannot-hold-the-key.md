@@ -226,9 +226,9 @@ like a bug in Notifications. Nor is this only the phone's problem: `sync:serve`
 and the queue worker are consoles on the desktop too, and the desktop's own
 scheduler tick is a third. It is only on the phone that no other process exists.
 
-### Which of the thirteen are actually affected
+### Which of the fourteen are actually affected
 
-`MobileBackgroundSchedule::requiredOnDevice()` names thirteen commands.
+`MobileBackgroundSchedule::requiredOnDevice()` names fourteen commands.
 Following each one's call chain to a `SensitiveColumnCodec` write gives **six**,
 not the seven a first reading suggests:
 
@@ -246,7 +246,7 @@ closure no device manifest carried until the settings screen was found promising
 a five-minute scan on a phone. Like `open-banking:sync-due` it only dispatches,
 so which worker drains the job is what decides whether a key is in reach.
 
-And five that a reading of the registry would wrongly convict:
+And six that a reading of the registry would wrongly convict:
 `drift-alerts:revive-snoozes` and `anomaly:revive-snoozes` transition a row and
 dispatch `EntityMutated` only — `DriftAlertOpened` comes from `DriftEvaluator`
 and never from the state machine; `anomaly:safety-net-sweep` writes
@@ -255,6 +255,9 @@ the tree; `notifications:prune` keys solely on the always-plaintext `created_at`
 `migration:sweep-abandoned` only deletes, and `migration_runs` and its per-run
 staging tables are registered in no merge rule, so the cascade emits no
 `EntityMutated` for them and nothing has to be sealed or captured.
+`auth:sweep-owed-key-material` unlinks three files and stamps
+`account_key_purge_state`, which carries no `user_id` and is in no merge rule,
+so nothing there is sealed or captured either.
 `db:backup`, `fx:refresh-rates` and `forecasting`'s own projection rows
 touch no registered column at all.
 

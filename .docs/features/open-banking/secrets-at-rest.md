@@ -242,9 +242,12 @@ Deleting an account takes its file with it:
 `secrets/open-banking/%d.json` is in `UserScopedFilePurge::KEYED_TO_THE_ACCOUNT`,
 not only in the device-wide sweep that runs for the last account on the device.
 SQLite reuses row ids, so a file left behind is a file a future account would
-inherit. That tier is removed *inside* the deletion transaction and read back
-afterwards, so a refused unlink rolls the deletion back rather than reporting a
-deleted account over a live connector credential.
+inherit. That tier is removed *after* the deletion commits and each path is read
+back, because a rollback cannot put a file back: unlinking inside the
+transaction meant that a refusal restored the account's rows over key material
+that was already destroyed. A refused unlink now leaves a row in
+`account_key_purge_state` and an hourly sweep finishes it — see
+[the debt a committed deletion leaves](../auth/user-scoped-purge.md#the-debt-a-committed-deletion-leaves).
 
 ## See also
 

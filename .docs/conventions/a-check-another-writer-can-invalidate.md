@@ -110,6 +110,13 @@ And the work in between wants a cursor, or resuming has nothing to resume from.
 the same shape for that reason: where the walk got to, separately from whether
 it finished.
 
+The cursor is the part that is optional. `account_key_purge_state` splits a
+claim from a completion over three unlinks rather than a walk, so there is
+nothing in between to resume from — and the split still earns its place, because
+the claim is what commits with an account deletion's rows and the completion is
+what says its key material is actually off the disk. See
+[the user-scoped purge](../features/auth/user-scoped-purge.md#the-debt-a-committed-deletion-leaves).
+
 The display half of a progress record is a third fact again, and sharing a
 column with the cursor makes the two die together. `InboxScanStateMachine` nulls
 `inboxes.backfill_progress` on every transition out of flight, so a dead

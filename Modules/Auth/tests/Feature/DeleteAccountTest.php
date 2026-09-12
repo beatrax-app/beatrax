@@ -393,18 +393,17 @@ function deleteAccountRefuseTreeDeletes(UserDataPathService $paths, string $rela
     return $blocked;
 }
 
-// The requirement is that a peer cannot put the account back, and the identity
-// is what a peer would put it back through. A refused unlink that commits the
-// deletion anyway reaches exactly the state the requirement forbids -- and
-// reached it through a false return nothing read.
-it('refuses the deletion when the sync identity it must remove survives', function (): void {
+// The identity is what a peer would put the account back through, and the
+// refusal arrives as a false return nothing used to read. It used to roll the
+// deletion back, which meant restoring the rows over the two paths already
+// unlinked ahead of this one; now the deletion stands and the path is owed.
+it('records what it owes when the sync identity it must remove survives', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountUser('partner', administrator: false);
     deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
-
-    $before = deleteAccountOwnedRowCount($db, $owner->id);
 
     $this->actingAs($owner);
     $blocked = deleteAccountRefuseFileDeletes(
@@ -412,19 +411,26 @@ it('refuses the deletion when the sync identity it must remove survives', functi
         sprintf('sync/identity/%d.enc', $owner->id),
     );
 
-    expect(fn () => app(DeleteAccountAction::class)($owner, 'owner-password-12'))
-        ->toThrow(RuntimeException::class);
+    app(DeleteAccountAction::class)($owner, 'owner-password-12');
 
-    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue()
-        ->and(deleteAccountOwnedRowCount($db, $owner->id))->toBe($before)
+    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse()
+        ->and(deleteAccountOwnedRowCount($db, $owner->id))->toBe(0)
         ->and($blocked)->toBeFile();
+
+    expect($db->connection()->table('account_key_purge_state')
+        ->where('account_id', $owner->id)->whereNull('completed_at')->count())
+        ->toBe(1, 'the identity is still on this disk, so the deletion is owed the rest of itself');
 });
 
-it('rolls back rather than commit over a group keyring that would not go', function (): void {
+// `Filesystem::delete()` reports an ordinary refusal by returning false, but a
+// path can also throw. Both are one answer here -- the file is still there --
+// and neither is a reason to hand the reader back an account that is gone.
+it('reads a throwing unlink as a keyring that would not go, not as a failed deletion', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountUser('partner', administrator: false);
     deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
 
     $this->actingAs($owner);
@@ -434,17 +440,24 @@ it('rolls back rather than commit over a group keyring that would not go', funct
         throwing: true,
     );
 
-    expect(fn () => app(DeleteAccountAction::class)($owner, 'owner-password-12'))
-        ->toThrow(RuntimeException::class);
+    app(DeleteAccountAction::class)($owner, 'owner-password-12');
 
-    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue();
+    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse();
+
+    expect($db->connection()->table('account_key_purge_state')
+        ->where('account_id', $owner->id)->whereNull('completed_at')->count())
+        ->toBe(1);
 });
 
-it('tells the reader nothing changed, and nothing has', function (): void {
+// "Your account was not deleted" was true while the unlink ran inside the
+// transaction. Past the commit the rows are gone, so the sentence would send a
+// reader back to a settings screen for an account that no longer exists.
+it('tells the reader the account is gone, because it is', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
 
     $owner = deleteAccountUser('owner', administrator: true);
+    deleteAccountUser('partner', administrator: false);
     deleteAccountSeedOwnedRows($db, $owner, 'owner-marker');
 
     $this->actingAs($owner);
@@ -456,10 +469,10 @@ it('tells the reader nothing changed, and nothing has', function (): void {
     Livewire::test(DeleteAccountSection::class)
         ->set('password', 'owner-password-12')
         ->call('deleteAccount')
-        ->assertNoRedirect()
-        ->assertSee('Your account was not deleted');
+        ->assertSet('failure', null)
+        ->assertRedirect('/');
 
-    expect(User::query()->where('id', $owner->id)->exists())->toBeTrue();
+    expect(User::query()->where('id', $owner->id)->exists())->toBeFalse();
 });
 
 // Downloaded mail is the account's data and goes with it, but it is not what a
