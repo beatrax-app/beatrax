@@ -225,6 +225,18 @@ price, which the card renders through `core::money.not_converted` —
 `pot_movements` sum, which `balanceForPot()` delegates to, so the pot cards
 and the guard `PotWriter` checks against cannot drift apart.
 
+That sum comes in two shapes, on one bound. `balanceForPot()` answers for a
+single pot and is what `PotWriter` asks inside its own write transaction;
+`balancesForPots()` answers for a list in one `GROUP BY pot_id` statement and
+is what every surface iterating pots asks. Both carry the same
+`pot_movements.currency = pots.currency` join, so a movement in a denomination
+the pot does not hold is left out of either one, and a pot with no movement in
+its own currency is simply absent from the batch — which is the nought the
+single-pot sum returns. Asked one card at a time, the goals page and the pots
+page each cost a statement per pot: twelve linked pots were fourteen
+statements where three answer, and the count was the reader's pot count rather
+than a property of the page.
+
 Those buckets come from Ledger's own
 [`SpendByCategoryQuery`](../ledger/architecture.md#spendbycategoryquery--the-split-aware-spend-read-model),
 read once for every category on the page rather than once per pot. The line
