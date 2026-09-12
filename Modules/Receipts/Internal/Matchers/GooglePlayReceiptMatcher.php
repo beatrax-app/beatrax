@@ -26,7 +26,14 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
 
     private const string ORDER_ID_REGEX = '/GPA\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}/';
 
-    private const string USD_AMOUNT_REGEX = '/\$\s*([0-9.,]+)\s*USD/i';
+    private const string USD_FIGURE = '\$\s*([0-9.,]+)\s*USD';
+
+    // The order's total, and only then the line a receipt with no total states
+    // instead. Tried in this order because a receipt carries both plus a tax
+    // line, and the first denominated figure in the body was whichever of the
+    // three the store printed highest.
+    /** @var list<string> */
+    private const array TOTAL_LABELS = ['Order total|Total', 'Price|Amount'];
 
     private const string ITEM_REGEX = '/Item(?:\s*Name)?:\s*(.+)/i';
 
@@ -39,18 +46,21 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
         private ReceiptBodyText $text,
     ) {}
 
-    // Parenthesised, Dutch comma decimal — matches both `(€12,07 EUR)` and
-    // `(€ 12,07 EUR)`. The settled leg is whatever code the parentheses carry:
-    // a store billing in yen writes `(¥1,250 JPY)`, and the euro this pattern
-    // used to spell twice left that leg unread and the charge settled in USD.
-    private static function settledRegex(): string
+    // The charge and its conversion come off ONE labelled line, so the settled
+    // leg cannot be read from a bracket belonging to another figure: a receipt
+    // stating `Price: $11.99 USD (€11,14 EUR)` above `Total: $12.99 USD
+    // (€12,07 EUR)` settled the total at the price's euros.
+    private static function chargeRegex(string $labels): string
     {
         $markers = ReceiptBodyText::currencyMarkers();
 
-        // Closed to the marks this app names, never a bare [A-Z]{3}: an item
-        // line reading `(30 day)` is the same shape as a denominated figure,
-        // and it overrode the settled leg stated further down the same mail.
-        return '/\((?:'.$markers.')?\s*([0-9]+(?:[.,][0-9]+)*)\s*('.$markers.')\)/i';
+        // Parenthesised, Dutch comma decimal — matches both `(€12,07 EUR)` and
+        // `(€ 12,07 EUR)`, closed to the marks this app names on both ends: an
+        // item line reading `(30 day)` is the same shape as a denominated
+        // figure, and a bare [A-Z]{3} read it as one.
+        $settled = '(?:\s*\((?:'.$markers.')?\s*([0-9]+(?:[.,][0-9]+)*)\s*('.$markers.')\))?';
+
+        return '/'.ReceiptBodyText::underLabel($labels, self::USD_FIGURE.$settled).'/i';
     }
 
     public function key(): string
@@ -136,13 +146,13 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
      */
     private function extractCharge(string $body): ?array
     {
-        if (
-            preg_match(self::ORDER_ID_REGEX, $body, $orderMatches) !== 1
-            || preg_match(self::USD_AMOUNT_REGEX, $body, $usdMatches) !== 1
-        ) {
+        $chargeLine = $this->chargeLine($body);
+        if (preg_match(self::ORDER_ID_REGEX, $body, $orderMatches) !== 1 || $chargeLine === null) {
             return null;
         }
-        $nativeMinor = $this->text->amountMinor($usdMatches[1], Currency::Usd->value);
+        [$nativeRaw, $settledRaw, $settledMark] = $chargeLine;
+
+        $nativeMinor = $this->text->amountMinor($nativeRaw, Currency::Usd->value);
         if ($nativeMinor === null) {
             return null;
         }
@@ -150,9 +160,9 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
 
         $settledMinor = $nativeMinor;
         $settledCurrency = Currency::Usd->value;
-        if (preg_match(self::settledRegex(), $body, $settledMatches) === 1) {
-            $marked = $this->text->currencyMarked($settledMatches[2], Currency::Usd->value);
-            $settledValue = $this->text->amountMinor($settledMatches[1], $marked);
+        if ($settledRaw !== '') {
+            $marked = $this->text->currencyMarked($settledMark, Currency::Usd->value);
+            $settledValue = $this->text->amountMinor($settledRaw, $marked);
             if ($settledValue !== null) {
                 $settledMinor = -$settledValue;
                 $settledCurrency = $marked;
@@ -160,6 +170,24 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
         }
 
         return [$orderMatches[0], $nativeMinor, $settledMinor, $settledCurrency, $this->extractMerchant($body)];
+    }
+
+    // The native figure, plus the conversion off that same line where the
+    // receipt states one. Empty strings where it does not: the parentheses are
+    // an optional group, so preg_match leaves their slots short rather than
+    // blank.
+    /**
+     * @return array{string, string, string}|null
+     */
+    private function chargeLine(string $body): ?array
+    {
+        foreach (self::TOTAL_LABELS as $labels) {
+            if (preg_match(self::chargeRegex($labels), $body, $matches) === 1) {
+                return [$matches[1], $matches[2] ?? '', $matches[3] ?? ''];
+            }
+        }
+
+        return null;
     }
 
     // Preference order: the Item: line, then the subscription anchor,

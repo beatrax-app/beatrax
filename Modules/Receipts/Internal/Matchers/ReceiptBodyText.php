@@ -14,10 +14,17 @@ use Modules\Ledger\Public\ValueObjects\MoneyInput;
 // dependencies are read from outside its class body.
 final class ReceiptBodyText
 {
+    // Every block and cell boundary becomes a break before the tags go:
+    // strip_tags() joins what the markup kept apart, and a minified receipt
+    // table read back as "AMAZON.COMBedrag:€ 46,20Referentienummer:XYZ123" —
+    // one line, so no label is in front of the figure it names any more.
+    private const string BLOCK_BOUNDARY_REGEX = '/<br\s*\/?>|<\/(?:p|div|td|th|tr|table|tbody|thead|li|ul|ol|h[1-6]|blockquote)\s*>/i';
+
     public function plainText(string $html): string
     {
         $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
-        $stripped = strip_tags($decoded);
+        $broken = PatternScan::replace(self::BLOCK_BOUNDARY_REGEX, "\n", $decoded);
+        $stripped = strip_tags($broken);
         $collapsed = PatternScan::replace('/[ \t]+/', ' ', $stripped);
 
         return trim($collapsed);
@@ -52,6 +59,22 @@ final class ReceiptBodyText
     public static function markedAmount(): string
     {
         return '(?<![0-9A-Za-z])('.self::currencyMarkers().')\s*([0-9][0-9.,]*)';
+    }
+
+    // A figure is the receipt's total only where its sender labelled it one.
+    // Matched against a whole body, every anchor took the first denominated
+    // figure in it, so a subtotal, a tax line, a card limit or a wallet balance
+    // standing above the total was the figure booked.
+    /**
+     * @link ../../../../.docs/features/receipts/architecture.md#a-total-is-the-figure-its-sender-labelled
+     */
+    public static function underLabel(string $labels, string $figure): string
+    {
+        // The lookbehind is the label's own: "Subtotaal" is not "Totaal" and
+        // "Subtotal" is not "Total", and booking either charges the reader the
+        // pre-tax figure. A longer label a sender does spell — PayPal's
+        // "Transactiebedrag" — is listed rather than reached by substring.
+        return '(?<![A-Za-z])(?:'.$labels.')\s*:\s*'.$figure;
     }
 
     // What currencyMarkers() captured, back as an ISO code. A figure the

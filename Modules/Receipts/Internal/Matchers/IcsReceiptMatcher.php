@@ -34,6 +34,11 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
 
     private const string REFERENCE_REGEX = '/(?:Referentienummer|Autorisatiecode):\s*([A-Z0-9]+)/i';
 
+    // The labels ICS prints in front of the figure the card was charged. A
+    // notification states the reader's spending limit too, and that figure is
+    // denominated exactly like the charge.
+    private const string TOTAL_LABELS = 'Bedrag|Amount';
+
     public function __construct(
         private EmlMimeReader $reader,
         private ReceiptBodyText $text,
@@ -45,7 +50,7 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
     // a yen line read as a hundredth of itself.
     private static function amountRegex(): string
     {
-        return '/'.ReceiptBodyText::markedAmount().'/i';
+        return '/'.ReceiptBodyText::underLabel(self::TOTAL_LABELS, ReceiptBodyText::markedAmount()).'/i';
     }
 
     public function key(): string
