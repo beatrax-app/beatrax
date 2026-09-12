@@ -72,6 +72,19 @@ function killedWalkClaim(int $userId, array $overrides = []): void
     ]);
 }
 
+// The number itself, against the ceiling it was chosen above. A lease shorter
+// than the worker that could be killed holding it lets a second dispatch take
+// the claim off a walk that is still running, which is the concurrency this
+// row exists to prevent.
+it('holds the claim longer than the worker that could be killed holding it', function (): void {
+    /** @var array<string, mixed> $worker */
+    $worker = (array) config('nativephp.queue_workers.default');
+    $ceiling = is_numeric($worker['timeout'] ?? null) ? (int) $worker['timeout'] : 0;
+
+    expect($ceiling)->toBeGreaterThan(0, 'The worker timeout is what the lease is measured against.')
+        ->and(app(BackfillAnomaliesJob::class, ['userId' => 1])->uniqueFor())->toBeGreaterThan($ceiling);
+});
+
 it('does not write the completion until the walk has run out of history', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);

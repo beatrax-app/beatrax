@@ -61,10 +61,12 @@ is strictly worse than reading the return value.
   `max(sort_order)` and an existence test both feed one insert.
   `IcsSettlementResolver` already wraps its links, statement move and credits
   together for the same reason.
-- **A conditional-update mutex** — `BackfillAnomaliesJob`, which claims the
-  walk with a conditional update on `anomaly_backfill_state` and returns when
-  the update affects no rows. What it claims is deliberately not what it
-  completes — see [a claim is not a completion](#a-claim-is-not-a-completion).
+- **A conditional-update mutex** — `BackfillAnomaliesJob`, which takes over a
+  lapsed claim on `anomaly_backfill_state` with a conditional update and returns
+  when it affects no rows. The FIRST claim on that row is the entry below
+  instead — an `insertOrIgnore` against the unique `user_id`, read by its own
+  report. What either one claims is deliberately not what completes the walk —
+  see [a claim is not a completion](#a-claim-is-not-a-completion).
 - **The write's own report** — `MobileImportIntentGate::markImporting()` and
   `SavingsInsightsQuery::dismiss()`. `ReceiptLedgerBridge` reads the same report
   for a harder question: a refused insert there is ambiguous, so it recounts and

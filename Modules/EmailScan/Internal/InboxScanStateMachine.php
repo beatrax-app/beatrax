@@ -229,17 +229,17 @@ final readonly class InboxScanStateMachine
             // not clear. Above it is what the strip draws, and a dead backfill
             // must stop drawing it; this is where the retry resumes from, and
             // only the walk itself may say it is finished with it.
+            $resumePoint = $progress === null ? null : json_encode([
+                'fetched_count' => $progress['fetched_count'],
+                'page_cursor' => $progress['page_cursor'] ?? null,
+                'window_months' => $progress['window_months'] ?? null,
+            ], JSON_THROW_ON_ERROR);
+
             $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
                 ->where('folder', 'INBOX')
                 ->update([
-                    'backfill_resume_point' => $progress === null
-                        ? null
-                        : json_encode([
-                            'fetched_count' => $progress['fetched_count'],
-                            'page_cursor' => $progress['page_cursor'] ?? null,
-                            'window_months' => $progress['window_months'] ?? null,
-                        ], JSON_THROW_ON_ERROR),
+                    'backfill_resume_point' => $resumePoint,
                     'updated_at' => $now,
                 ]);
         });
