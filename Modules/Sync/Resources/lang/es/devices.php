@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'También puedes empezar de cero: este dispositivo recibe una identidad nueva, la antigua se guarda sin usar y los dispositivos que emparejaste antes tendrás que emparejarlos otra vez.',
     'identity_unreadable_replace' => 'Crear una identidad nueva para este dispositivo',
 
+    'registered_without_identity' => 'Los datos de este dispositivo se restauraron desde una copia de seguridad, pero la clave que firma sus cambios no se puede copiar: se quedó en el dispositivo donde se hizo la copia. Los cambios que haces aquí se están reteniendo: no se pierde nada, y nada llega a tus otros dispositivos hasta que la sincronización esté configurada en este dispositivo.',
+    'registered_without_identity_repair_help' => 'Al terminar, este dispositivo obtiene su propia identidad de sincronización y envía todo lo que ha estado reteniendo. El dispositivo del que viene la copia se queda en tu lista sin poder conectarse, para que los datos que firmó sigan siendo legibles, y los dispositivos que emparejaste antes tendrás que emparejarlos otra vez.',
+    'registered_without_identity_repair' => 'Terminar de configurar la sincronización en este dispositivo',
+
     'encrypted_at_rest' => 'Datos cifrados en reposo',
     'encrypted_at_rest_scope' => 'Las notas, las descripciones de las transacciones y los nombres e IBAN de a quién pagas están cifrados en el libro de cuentas con la contraseña de bloqueo de la app. Los importes, las fechas y el nombre e IBAN de tu propia cuenta no lo están. El índice de búsqueda guarda su propia copia legible de a quién pagas, de las descripciones de tus transacciones, de las notas que escribes en una transacción, de las notas que escribes en una categoría de un desglose y de tus notas fiscales, y algunos nombres de comercios aparecen en texto claro en otras partes del archivo de base de datos.',
     'on' => 'Activado',

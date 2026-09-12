@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Voit myös aloittaa alusta: laite saa uuden identiteetin, vanha jää käyttämättömänä talteen, ja aiemmin pariksi liitetyt laitteet on liitettävä uudelleen.',
     'identity_unreadable_replace' => 'Luo laitteelle uusi identiteetti',
 
+    'registered_without_identity' => 'Tämän laitteen tiedot palautettiin varmuuskopiosta, mutta avainta, joka allekirjoittaa sen muutokset, ei voi kopioida — se jäi laitteelle, jolla varmuuskopio tehtiin. Täällä tekemiäsi muutoksia pidetään odottamassa: mitään ei katoa, eikä mikään päädy muille laitteillesi ennen kuin synkronointi on määritetty tälle laitteelle.',
+    'registered_without_identity_repair_help' => 'Kun viimeistelet tämän, laite saa oman synkronointi-identiteettinsä ja lähettää kaiken, mitä se on pitänyt odottamassa. Laite, jolta varmuuskopio on, jää luetteloosi ilman yhteysmahdollisuutta, jotta sen allekirjoittamat tiedot pysyvät luettavina — ja aiemmin paritetut laitteet on paritettava uudelleen.',
+    'registered_without_identity_repair' => 'Viimeistele synkronoinnin määritys tällä laitteella',
+
     'encrypted_at_rest' => 'Tiedot salattu levylle',
     'encrypted_at_rest_scope' => 'Muistiinpanot, tapahtumakuvaukset sekä maksunsaajien nimet ja IBAN-tilinumerot salataan kirjanpidossa sovelluslukituksen tunnuslauseella. Summia, päivämääriä eikä oman tilisi nimeä ja IBANia ei salata. Hakemisto säilyttää oman luettavan kopionsa siitä, kenelle maksat, tapahtumakuvauksistasi, tapahtumalle kirjoittamistasi muistiinpanoista, jaon kategorialle kirjoittamistasi muistiinpanoista ja veromuistiinpanoistasi, ja jotkin kauppiaiden nimet näkyvät selkokielisenä muualla tietokantatiedostossa.',
     'on' => 'Päällä',

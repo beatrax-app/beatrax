@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Kezdheted elölről is: az eszköz új azonosítót kap, a régi használatlanul félretéve marad, a korábban párosított eszközöket pedig újra párosítanod kell.',
     'identity_unreadable_replace' => 'Új azonosító létrehozása ehhez az eszközhöz',
 
+    'registered_without_identity' => 'Ennek az eszköznek az adatai biztonsági mentésből lettek visszaállítva, de a kulcs, amely a változásait aláírja, nem másolható — az azon az eszközön maradt, amelyen a mentés készült. Az itt végzett módosítások visszatartva várnak: semmi nem veszik el, és semmi nem jut el a többi eszközödre addig, amíg ezen az eszközön nincs beállítva a szinkronizálás.',
+    'registered_without_identity_repair_help' => 'A befejezéssel ez az eszköz saját szinkronizálási azonosítót kap, és elküld mindent, amit visszatartott. Az az eszköz, amelyről a mentés származik, a listádon marad kapcsolódási lehetőség nélkül, hogy az általa aláírt adatok továbbra is olvashatók legyenek — a korábban párosított eszközöket pedig újra párosítani kell.',
+    'registered_without_identity_repair' => 'A szinkronizálás beállításának befejezése ezen az eszközön',
+
     'encrypted_at_rest' => 'Az adatok nyugalmi állapotban titkosítva',
     'encrypted_at_rest_scope' => 'A jegyzetek, a tranzakciók leírásai, valamint a kedvezményezettek nevei és IBAN-jai a főkönyvben az alkalmazászár jelmondatával titkosítva vannak. Az összegek, a dátumok, valamint a saját számlád neve és IBAN-ja nincsenek. A keresési index saját olvasható másolatot őriz arról, kinek fizetsz, a tranzakcióid leírásairól, a tranzakcióhoz írt jegyzeteidről, a felosztás egyik kategóriájához írt jegyzeteidről és az adójegyzeteidről, és egyes kereskedőnevek olvashatóan szerepelnek az adatbázisfájl más részein.',
     'on' => 'Be',

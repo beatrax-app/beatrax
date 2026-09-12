@@ -2,24 +2,37 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 
 uses(RefreshDatabase::class);
 
 function devicesSyncSettingsUser(string $username = 'devices-settings-user'): User
 {
-    return User::query()->create([
+    $user = User::query()->create([
         'username' => $username,
         'password' => bcrypt('devices-pass'),
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
     ]);
+
+    // RefreshDatabase resets the database and not the filesystem, and user ids
+    // are reused between tests, so a key-file minted by an earlier one would
+    // answer for this user and put the section in a state it never asked for.
+    foreach (['identity', 'gdk'] as $directory) {
+        foreach ((array) glob(UserDataPathService::appPath("sync/{$directory}/{$user->id}.enc*")) as $stale) {
+            @unlink((string) $stale);
+        }
+    }
+
+    return $user;
 }
 
 it('mounts with a 200 status for an authenticated user', function (): void {
@@ -180,7 +193,7 @@ it('stops presenting the sync track as flippable once there is no way back', fun
         ->and($offTrack)->toContain('disabled')
         ->and($offTrack)->toContain('aria-disabled="true"');
 
-    seedSelfDeviceRow($user->id);
+    anEnabledSyncIdentity((int) $user->id);
 
     $on = Livewire::test(DevicesAndSyncSettingsSection::class)
         ->assertSet('syncEnabled', true)
@@ -221,23 +234,13 @@ function syncSwitchMarkup(string $html): string
     return substr($html, $start, $end - $start + 1);
 }
 
-function seedSelfDeviceRow(int $userId): void
+// The real mint, not a seeded row: a self row with no key-file beside it is a
+// restored database, which reads as sync being off here and names itself, and
+// pinning the enabled track against it pinned the defect.
+function anEnabledSyncIdentity(int $userId): void
 {
-    /** @var DatabaseManager $db */
-    $db = app(DatabaseManager::class);
+    /** @var Session $session */
+    $session = app(Session::class);
 
-    $db->connection()->table('device_registry')->insert([
-        'user_id' => $userId,
-        'device_id' => 'devices-switch-self',
-        'name' => 'This device',
-        'ed25519_public_key_hex' => str_repeat('ab', 32),
-        'x25519_public_key_hex' => str_repeat('cd', 32),
-        'safety_number_words' => '',
-        'is_self' => 1,
-        'paired_at' => '2026-08-01T10:00:00Z',
-        'confirmed_at' => '2026-08-01T10:00:00Z',
-        'last_seen_at' => '2026-08-01T10:00:00Z',
-        'created_at' => '2026-08-01T10:00:00Z',
-        'updated_at' => '2026-08-01T10:00:00Z',
-    ]);
+    app(DeviceIdentityService::class)->generateAndPersist($userId, $session);
 }

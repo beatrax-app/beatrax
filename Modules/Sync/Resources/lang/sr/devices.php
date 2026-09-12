@@ -15,6 +15,10 @@ return [
     'identity_unreadable_replace_help' => 'Možeš i da počneš iz početka: uređaj dobija novi identitet, stari ostaje neiskorišćen sa strane, a ranije uparene uređaje treba upariti ponovo.',
     'identity_unreadable_replace' => 'Napravi novi identitet za ovaj uređaj',
 
+    'registered_without_identity' => 'Podaci ovog uređaja obnovljeni su iz rezervne kopije, ali ključ koji potpisuje njegove promene ne može da se kopira — ostao je na uređaju na kojem je kopija napravljena. Promene koje praviš ovde se zadržavaju: ništa se ne gubi i ništa ne dolazi na tvoje druge uređaje dok sinhronizacija ne bude postavljena na ovom uređaju.',
+    'registered_without_identity_repair_help' => 'Kada to dovršiš, ovaj uređaj dobija sopstveni identitet za sinhronizaciju i šalje sve što je zadržao. Uređaj sa kojeg je kopija ostaje na tvojoj listi bez mogućnosti povezivanja, pa podaci koje je potpisao ostaju čitljivi — a prethodno upareni uređaji moraju da se upare ponovo.',
+    'registered_without_identity_repair' => 'Dovrši postavljanje sinhronizacije na ovom uređaju',
+
     'encrypted_at_rest' => 'Podaci šifrovani u mirovanju',
     'encrypted_at_rest_scope' => 'Beleške, opisi transakcija i imena i IBAN onih kojima plaćaš šifruju se u knjizi lozinkom za zaključavanje aplikacije. Iznosi, datumi i naziv i IBAN tvog sopstvenog računa nisu šifrovani. Indeks pretrage čuva sopstvenu čitljivu kopiju toga kome plaćaš, opisa tvojih transakcija, beleški koje pišeš uz transakciju, beleški koje pišeš uz kategoriju u podeli i tvojih poreskih beleški, a neka imena trgovaca stoje u čitljivom obliku na drugim mestima u datoteci baze podataka.',
     'on' => 'Uključeno',
