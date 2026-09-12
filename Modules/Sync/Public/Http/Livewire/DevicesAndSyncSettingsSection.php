@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -342,19 +343,37 @@ final class DevicesAndSyncSettingsSection extends Component
         CurrentUser $currentUser,
         Session $session,
         DatabaseManager $db,
+        LoggerInterface $logger,
     ): void {
         $this->encryptionStep = EncryptionSetupStep::Progress->value;
+        $userId = $currentUser->user()->id;
 
         try {
             $migrationService->migrate($currentUser->user(), $session);
-            $userId = $currentUser->user()->id;
             $this->encryptionOn = $this->encryptionEnabled($db, $userId);
             $this->encryptionProgress = $migrationService->progress($userId);
             $this->encryptionStep = EncryptionSetupStep::Done->value;
-        } catch (\Throwable) {
-            // migrate() already rolled back to zero half-encrypted rows and
-            // restored the pre-migration snapshot on any throw — the error
-            // copy reflects that guarantee.
+        } catch (StrandedEncryptionEpochException $e) {
+            // Separated from the rollback below because migrate() says it is:
+            // past the commit it deliberately does NOT restore plaintext, so
+            // `current_epoch` stands over sealed rows with its keyring not yet
+            // in place. Nothing else records that here, and re-running
+            // migrate() is what reconciles it. The pairing path keeps the two
+            // apart for the same reason.
+            $logger->warning(
+                'DevicesAndSyncSettingsSection: at-rest encryption stranded — the epoch is committed but its keyring is not in place, and migrate() must be re-run to reconcile.',
+                ['user_id' => $userId, ...SafeExceptionContext::describe($e)],
+            );
+
+            $this->encryptionStep = EncryptionSetupStep::Error->value;
+        } catch (\Throwable $e) {
+            // A genuine rollback: every DB write reverted, `current_epoch`
+            // included, and the pre-migration snapshot restored.
+            $logger->warning(
+                'DevicesAndSyncSettingsSection: at-rest encryption failed and rolled back.',
+                ['user_id' => $userId, ...SafeExceptionContext::describe($e)],
+            );
+
             $this->encryptionStep = EncryptionSetupStep::Error->value;
         }
     }
