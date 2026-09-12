@@ -230,8 +230,11 @@ it('can fold its zero-decimal spend into the reader base currency the envelope g
         ->values()
         ->all();
 
+    $sorted = $categorised;
+    sort($sorted);
+
     expect($categorised)->not->toBeEmpty();
-    expect(array_keys($fx->ratesTo($categorised, $base)))->toBe($categorised);
+    expect($fx->ratesTo($categorised, $base)->codes())->toBe($sorted);
 });
 
 // The sum-to-parent rule is where a wrong scale shows first: a leg read at a
