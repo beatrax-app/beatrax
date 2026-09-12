@@ -6,16 +6,19 @@ namespace Modules\Tax\Internal\Actions;
 
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Modules\Tax\Internal\Enums\TaxCategoryStatus;
-use Modules\Tax\Internal\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Internal\Exceptions\DuplicateTaxCategoryNameException;
 use Modules\Tax\Internal\Support\TaxCorpusWording;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+/**
+ * @link ../../../../.docs/conventions/a-check-another-writer-can-invalidate.md
+ */
 final readonly class TaxCategoryStore
 {
     public function __construct(
@@ -36,19 +39,37 @@ final readonly class TaxCategoryStore
         $connection = $this->db->connection();
         $now = Carbon::now()->toDateTimeString();
 
+        // The whole seed under one write lock, which the connection takes at
+        // BEGIN: the base below is read once and handed out across the loop, so
+        // a second country seeding beside it would otherwise reuse it.
+        return $connection->transaction(
+            fn (): int => $this->seedEntries($connection, $user->id, $countryCode, $entries, $now),
+        );
+    }
+
+    /**
+     * @param  list<array<int|string, mixed>>  $entries
+     * @return int Number of rows actually inserted.
+     */
+    private function seedEntries(
+        ConnectionInterface $connection,
+        int $userId,
+        string $countryCode,
+        array $entries,
+        string $now,
+    ): int {
         // Continuing past the user's existing categories keeps a second country's
         // block together instead of interleaving it with the first country's.
         $maxOrder = $connection->table('tax_deduction_categories')
-            ->where('user_id', $user->id)
+            ->where('user_id', $userId)
             ->max('sort_order');
         $sortBase = is_numeric($maxOrder) ? (int) $maxOrder + 1 : 0;
 
         $inserted = 0;
         foreach ($entries as $entry) {
-            /** @var array<int|string, mixed> $entry */
             $didInsert = $this->seedEntry(
                 $connection,
-                $user->id,
+                $userId,
                 $countryCode,
                 $entry,
                 $now,
@@ -155,8 +176,29 @@ final readonly class TaxCategoryStore
         }
 
         $connection = $this->db->connection();
-        $now = Carbon::now()->toDateTimeString();
 
+        try {
+            return $connection->transaction(
+                fn (): int => $this->insertCategory($connection, $userId, $name, $shortName, $hint),
+            );
+        } catch (UniqueConstraintViolationException) {
+            // unique(user_id, name) settles this, and it settles it after the
+            // read below: on a double-submit both requests read "free" and the
+            // loser arrived at the arm that says the save failed instead.
+            throw new DuplicateTaxCategoryNameException(Lang::get('tax::messages.errors.name_duplicate'));
+        }
+    }
+
+    /**
+     * @throws DuplicateTaxCategoryNameException When a category with the same name already exists for the user.
+     */
+    private function insertCategory(
+        ConnectionInterface $connection,
+        int $userId,
+        string $name,
+        ?string $shortName,
+        ?string $hint,
+    ): int {
         $exists = $connection->table('tax_deduction_categories')
             ->where('user_id', $userId)
             ->where('name', $name)
@@ -170,9 +212,12 @@ final readonly class TaxCategoryStore
             ->where('user_id', $userId)
             ->max('sort_order');
 
-        $sortOrder = is_numeric($maxOrder) ? (int) $maxOrder + 1 : 0;
+        $now = Carbon::now()->toDateTimeString();
 
-        $connection->table('tax_deduction_categories')->insert([
+        // The id the insert itself reports, not a second read by name: that
+        // read trusted the name to still name one row, and it is the column a
+        // competing request writes.
+        return $connection->table('tax_deduction_categories')->insertGetId([
             'user_id' => $userId,
             'name' => $name,
             'short_name' => $shortName,
@@ -181,22 +226,10 @@ final readonly class TaxCategoryStore
             'country_code' => null,
             'name_is_default' => false,
             'status' => TaxCategoryStatus::Active->value,
-            'sort_order' => $sortOrder,
+            'sort_order' => is_numeric($maxOrder) ? (int) $maxOrder + 1 : 0,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
-
-        /** @var int|null $id */
-        $id = $connection->table('tax_deduction_categories')
-            ->where('user_id', $userId)
-            ->where('name', $name)
-            ->value('id');
-
-        if (! is_int($id)) {
-            throw new CategoryPersistenceException('Failed to retrieve new category id.');
-        }
-
-        return $id;
     }
 
     /**
@@ -232,14 +265,21 @@ final readonly class TaxCategoryStore
             throw new DuplicateTaxCategoryNameException(Lang::get('tax::messages.errors.name_duplicate'));
         }
 
-        $connection->table('tax_deduction_categories')
-            ->where('id', $categoryId)
-            ->where('user_id', $userId)
-            ->update([
-                'name' => $name,
-                'name_is_default' => false,
-                'updated_at' => Carbon::now()->toDateTimeString(),
-            ]);
+        try {
+            $connection->table('tax_deduction_categories')
+                ->where('id', $categoryId)
+                ->where('user_id', $userId)
+                ->update([
+                    'name' => $name,
+                    'name_is_default' => false,
+                    'updated_at' => Carbon::now()->toDateTimeString(),
+                ]);
+        } catch (UniqueConstraintViolationException) {
+            // The same index that answers add(), reached the same way: the name
+            // was free when it was asked for and taken by the time it was
+            // written. The reader is told the clash, not that the save failed.
+            throw new DuplicateTaxCategoryNameException(Lang::get('tax::messages.errors.name_duplicate'));
+        }
     }
 
     /**

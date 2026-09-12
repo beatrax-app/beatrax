@@ -24,6 +24,14 @@ surviving row is refreshed rather than duplicated. It sets `confirmed_at`, becau
 `deviceKeys()` hands peers only confirmed devices — an unconfirmed self row would hide this
 device's own entries from the very peers it is trying to sync with.
 
+"Refreshed rather than duplicated" is `device_registry_user_device_idx`, not the existence
+test in front of it. Where two restores overlap the loser catches the constraint violation
+and applies its update instead of inserting: it names the same device and carries the same
+public halves, so converging on the winner's row is the whole intent, and an insert that
+succeeded would be a second self row — which is a second identity to every peer reading
+`deviceKeys()`. See [a check another writer can
+invalidate](../../conventions/a-check-another-writer-can-invalidate.md).
+
 ## Separate keypairs, not derived ones
 
 The X25519 pair is generated independently with `crypto_kx_keypair()`, never derived from the
