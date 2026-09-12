@@ -35,7 +35,40 @@ wrote a 1, which lost one of the three failures and left the circuit open a
 failure late. `add()` decides the create once; whichever caller it answers
 `false` increments instead. The desktop's cache store is the file one and the
 phone's is the database one, and `add()` is atomic in both — `flock` on one
-side, an `insertOrIgnore` against the primary key on the other. When every provider in the chain
+side, an `insertOrIgnore` against the primary key on the other.
+
+### The step from one to two is still raced on the desktop, deliberately
+
+`add()` closes the create. The increments after it are not equally safe, and
+that is an accepted cost rather than an oversight.
+
+`CACHE_STORE` is `file` on the desktop and `database` on the phone (the
+`.env.example` each build copies). `DatabaseStore::increment()` wraps its read
+and write in a transaction with `lockForUpdate()`, so the phone is safe
+throughout. `FileStore::increment()` is a plain `getPayload()` followed by
+`put()` with no lock at all, so on the desktop two jobs failing the same
+provider in the same instant can both read 1 and both write 2. The circuit then
+opens one step late.
+
+What that costs is one extra request to a provider that is already failing, and
+it is self-correcting: the next failure lands on the higher count, and a success
+clears the counter outright. Set against that, both ways of closing it are worse
+or wider than the defect:
+
+- **Take a lock around `recordFailure()`.** `LockStore::lockProvider()` is the
+  repo's cross-process primitive, but `->get()` returning false would *drop* a
+  failure — the very thing this rule exists to count — and `->block()` throws
+  `LockTimeoutException`, which would escape the `catch (RateFetchException)`
+  in the provider loop and abort the whole chain, turning a slow feed into a
+  failed refresh.
+- **Move the counter to the `database` store.** Correct, and it relocates FX
+  circuit state for every install to make one step of one counter atomic on one
+  platform. That is a change to where this module keeps its state, and it
+  deserves to be decided as one rather than arriving as a side effect.
+
+So the circuit is exactly-once on its first failure and best-effort on the two
+after it. Anyone revisiting this should know the race is known and priced, not
+missed. When every provider in the chain
 fails or is circuit-open, `RateProviderRegistry::fetchCurrentRates()`
 throws `AllProvidersFailed`. `FetchFxRatesJob` catches it, records the
 attempt through `FxRefreshStatus` and rethrows so the retry profile still
