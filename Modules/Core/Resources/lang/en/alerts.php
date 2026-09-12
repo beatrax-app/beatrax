@@ -50,6 +50,11 @@ return [
         'open_banking_nothing_imported' => 'Your bank sent transactions, but Beatrax could not file any of them, so nothing reached your ledger. Open the Open banking settings to see why.',
         'auth_lock_corrupted_key' => 'Your PIN cannot open the app lock on this device: the stored key is unreadable. Sign in with your account password to set a new PIN.',
         'sync_gdk_rewrap_failed' => 'GDK keyring re-wrap failed after an app-lock passphrase change — encrypted data may be unrecoverable until the keyring is re-wrapped.',
+
+        // Both halves of the last sentence carry weight. A device rebuilt and then
+        // left to import before it pairs mints its own key, keys rows under it, and
+        // lands back in the standoff this alert reports — so trimmed to "set one
+        // device up again" it stops naming a recovery and names a way to repeat it.
         'sync_blind_index_diverged' => 'Two of your devices switched on at-rest encryption separately, before you paired them, so each one recognises shops under its own key. Everything still syncs, but a shop one device knows is a stranger to the other: merchants show up twice, and a repeating payment can be found twice over. Beatrax will not merge the two keys, because whichever it dropped would take that device\'s own matching history with it. Setting one device up again from scratch, and letting it take its copy from the other, is what puts them back together.',
         'worker_crashed' => 'Beatrax\'s background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.',
         'auth_lock_key_material_stranded' => 'At-rest encryption is active for this account but no app-lock wrap still holds the data key, so every encrypted note, description and counterparty detail reads as empty. Restore an encrypted backup made while the key still worked, or set this account up again on a device that still holds it.',
