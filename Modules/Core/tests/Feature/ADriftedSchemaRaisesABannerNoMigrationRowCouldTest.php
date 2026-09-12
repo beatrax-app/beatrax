@@ -82,7 +82,7 @@ afterEach(function (): void {
 // this connection first, firing the event at the app's own listener against the
 // schema as it was BEFORE -- and the one-shot probe is then already spent.
 /**
- * @link ../../../../.docs/features/core/a-schema-the-migrations-table-vouched-for.md
+ * @link ../../../../.docs/conventions/test-harness-isolation.md#a-boot-probe-the-harness-spent-before-the-test-arranged-anything
  */
 function schemaDriftBoot(): void
 {

@@ -123,4 +123,6 @@ than off a list written beside them:
 holds the banner: raised for either fault alone, withdrawn by the start that put
 the schema back, and silent on a schema that is the shape the migrations
 declare — that last one is the positive control, without which "no row" would
-mean "nothing was looked at".
+mean "nothing was looked at". Its boot helper owns the whole listener order for
+a reason that is not about schemas at all:
+[a boot probe the harness spent](../../conventions/test-harness-isolation.md#a-boot-probe-the-harness-spent-before-the-test-arranged-anything).
