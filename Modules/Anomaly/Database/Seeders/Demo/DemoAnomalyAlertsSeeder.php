@@ -32,11 +32,18 @@ final class DemoAnomalyAlertsSeeder
 
         foreach ($users as $user) {
             // The job no-ops once anomaly_backfilled_at is stamped, so a
-            // re-seed has to clear it to walk the new transactions.
+            // re-seed has to clear it to walk the new transactions — and the
+            // claim beside it, which is a separate row saying a walk already
+            // finished and refuses the one this clear is trying to allow.
             $this->db->connection()
                 ->table('users')
                 ->where('id', $user->id)
                 ->update(['anomaly_backfilled_at' => null]);
+
+            $this->db->connection()
+                ->table('anomaly_backfill_state')
+                ->where('user_id', $user->id)
+                ->delete();
 
             $this->bus->dispatchSync(new BackfillAnomaliesJob($user->id));
         }

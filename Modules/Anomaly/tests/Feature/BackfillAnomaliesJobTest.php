@@ -121,15 +121,15 @@ it('is idempotent — re-running without resetting the guard never duplicates al
     expect(AnomalyAlert::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 
-it('claims the backfill before the walk so a racing run that already claimed never re-walks', function (): void {
+it('never walks a history a completed backfill already covered', function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = AnomalyCorpusSeeder::makeUser();
     AnomalyCorpusSeeder::seed($db, $user, AnomalyCorpusSeeder::load('large-above'));
 
-    // Stamping the guard by hand simulates worker A having claimed the
-    // backfill but not yet finished walking; the conditional whereNull claim
-    // is the mutex worker B must lose.
+    // This column is the completion and nothing else. A walk claimed and not
+    // finished is the other half of the same question, and it is pinned in
+    // AKilledBackfillIsOwedTheRestOfItsHistoryTest, against the claim row.
     $db->connection()->table('users')
         ->where('id', $user->id)
         ->update(['anomaly_backfilled_at' => '2026-06-13 00:00:00']);

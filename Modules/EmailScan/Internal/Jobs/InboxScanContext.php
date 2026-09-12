@@ -51,14 +51,19 @@ final readonly class InboxScanContext
         return $this->userId;
     }
 
-    // The walk's own resume point, read back through the same row the state
-    // machine writes it to.
+    // The walk's own resume point, off the row the display clear does not
+    // reach: the count beside it on `inboxes` is nulled the moment the backfill
+    // leaves flight, and a walk that read its cursor from there resumed at page
+    // one on every retry.
     /**
      * @return array<string, mixed>|null
      */
-    public function backfillProgress(): ?array
+    public function backfillResumePoint(): ?array
     {
-        $raw = $this->connection->table('inboxes')->where('id', $this->inboxId)->value('backfill_progress');
+        $raw = $this->connection->table('inbox_scan_state')
+            ->where('inbox_id', $this->inboxId)
+            ->where('folder', 'INBOX')
+            ->value('backfill_resume_point');
         if (! is_string($raw) || $raw === '') {
             return null;
         }

@@ -74,8 +74,8 @@ final readonly class InboxScanStateMachine
 
             // Only these two statuses mean a backfill is still in flight. Every
             // other exit left backfill_progress set, so a dead one kept feeding
-            // the inboxes strip a count that would never move again — including
-            // needs_reauth, where the same row also says it cannot scan at all.
+            // the inboxes strip a count that would never move again. This is
+            // the display half only; the resume point outlives an error on it.
             if (! in_array($newStatus, [
                 InboxScanStatus::Backfilling->value,
                 InboxScanStatus::RateLimited->value,
@@ -216,11 +216,31 @@ final readonly class InboxScanStateMachine
                 ? null
                 : json_encode($progress, JSON_THROW_ON_ERROR);
 
+            $now = $this->clock->now()->toDateTimeString();
+
             $connection->table('inboxes')
                 ->where('id', $inboxId)
                 ->update([
                     'backfill_progress' => $encoded,
-                    'updated_at' => $this->clock->now()->toDateTimeString(),
+                    'updated_at' => $now,
+                ]);
+
+            // The same payload's walk half, kept on the row applyStatus does
+            // not clear. Above it is what the strip draws, and a dead backfill
+            // must stop drawing it; this is where the retry resumes from, and
+            // only the walk itself may say it is finished with it.
+            $connection->table('inbox_scan_state')
+                ->where('inbox_id', $inboxId)
+                ->where('folder', 'INBOX')
+                ->update([
+                    'backfill_resume_point' => $progress === null
+                        ? null
+                        : json_encode([
+                            'fetched_count' => $progress['fetched_count'],
+                            'page_cursor' => $progress['page_cursor'] ?? null,
+                            'window_months' => $progress['window_months'] ?? null,
+                        ], JSON_THROW_ON_ERROR),
+                    'updated_at' => $now,
                 ]);
         });
     }

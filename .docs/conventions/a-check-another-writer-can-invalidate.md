@@ -62,13 +62,59 @@ is strictly worse than reading the return value.
   `IcsSettlementResolver` already wraps its links, statement move and credits
   together for the same reason.
 - **A conditional-update mutex** — `BackfillAnomaliesJob`, which claims the
-  backfill with `whereNull('anomaly_backfilled_at')->update([...])` and returns
-  when the update affects no rows.
+  walk with a conditional update on `anomaly_backfill_state` and returns when
+  the update affects no rows. What it claims is deliberately not what it
+  completes — see [a claim is not a completion](#a-claim-is-not-a-completion).
 - **The write's own report** — `MobileImportIntentGate::markImporting()` and
   `SavingsInsightsQuery::dismiss()`. `ReceiptLedgerBridge` reads the same report
   for a harder question: a refused insert there is ambiguous, so it recounts and
   retries only while the recount moved — see
   [a refused receipt insert](../architecture/ingestion-pipeline.md#a-refused-receipt-insert).
+
+## A claim is not a completion
+
+A conditional-update mutex has a second half nothing about the pattern forces
+you to get right. The mutex answers "may I start"; it says nothing about
+whether the work finished, and a single nullable timestamp asked to carry both
+answers the first question by lying about the second.
+
+`BackfillAnomaliesJob` stamped `users.anomaly_backfilled_at` before walking a
+user's whole transaction history, with the right reason written above it:
+`ShouldBeUniqueUntilProcessing` releases its lock the instant `handle()` begins,
+so two close dispatches would otherwise both walk. The stamp bought that and
+gave away the rest. A walk killed at the 300 s worker timeout or the 128 MB
+memory ceiling left it behind, every later attempt returned at the
+already-backfilled guard, the job **reported success**, and the history past the
+kill was never evaluated — with nothing in `failed_jobs` and a settings screen
+that gates re-dispatch on the same column.
+
+The two facts want two columns, and they fail in opposite directions, which is
+why one column cannot serve both:
+
+| Fact | Written | What a wrong answer costs |
+|---|---|---|
+| The claim | Before the work | Too sticky and the work never runs again; too loose and two runners do it twice |
+| The completion | After the work | Too early and the work is skipped for good; too late and it is redone |
+
+A claim is therefore a **lease**, not a stamp: the runner holding it refreshes
+it as it goes, and a claim that stopped being refreshed is a dead runner's. A
+lease also needs an owner, or a retry meets the claim its own killed attempt
+took and reads it as a rival's — a queued job's uuid survives its own retries,
+which is exactly the identity that distinguishes "me again" from "somebody
+else".
+
+And the work in between wants a cursor, or resuming has nothing to resume from.
+`anomaly_backfill_state`, `sync_backfill_state` and `ledger_backfill_state` are
+the same shape for that reason: where the walk got to, separately from whether
+it finished.
+
+The display half of a progress record is a third fact again, and sharing a
+column with the cursor makes the two die together. `InboxScanStateMachine` nulls
+`inboxes.backfill_progress` on every transition out of flight, so a dead
+backfill stops advertising a count that will never move — and while the walk's
+page cursor lived in that same column, every retry after an error restarted at
+page one. The cursor now sits on `inbox_scan_state` beside the provider cursors,
+where the display clear cannot reach it.
 
 ## The sibling nothing refuses
 

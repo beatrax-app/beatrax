@@ -18,6 +18,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property string $folder
  * @property string|null $last_history_id
  * @property string|null $last_delta_link
+ * @property string|null $backfill_resume_point
  * @property CarbonImmutable|null $last_scan_at
  * @property string $status
  * @property string|null $error_message
