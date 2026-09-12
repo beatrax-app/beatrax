@@ -16,6 +16,10 @@ dataset('idempotent_adapters', [
     'mt940' => ['adapterFormat' => 'mt940', 'fixture' => __DIR__.'/../fixtures/asn-mt940-sample-1.sta'],
     'ics-pdf' => ['adapterFormat' => 'ics-pdf', 'fixture' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf'],
     'paypal-csv' => ['adapterFormat' => 'paypal-csv', 'fixture' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv'],
+    // The row above carries "Kosten 0,00" on all 86 of its rows, so it imports
+    // no fee rows at all and cannot say whether a derived row dedupes. This one
+    // charges five fees, two of them identical on one day.
+    'paypal-csv-with-fees' => ['adapterFormat' => 'paypal-csv', 'fixture' => __DIR__.'/../../Modules/Ingestion/tests/fixtures/paypal/paypal-fee-wallet.csv'],
     // The receipt path dedupes on the file_imports UNIQUE over
     // (user_id, provider_message_id) rather than on the fingerprint alone.
     'paypal-receipt-eml' => ['adapterFormat' => 'eml', 'fixture' => __DIR__.'/../../Modules/Receipts/tests/fixtures/paypal/current-receipt.eml'],

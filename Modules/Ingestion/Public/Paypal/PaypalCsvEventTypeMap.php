@@ -23,6 +23,12 @@ final class PaypalCsvEventTypeMap
             'Express Checkout-betaling' => PaypalEventAction::Parent,
             'Algemene valutaomrekening' => PaypalEventAction::ChildFx,
 
+            // PayPal states its own fee as a column on the payment row rather
+            // than as a row, so the rollup derives one and names it after that
+            // column. A parent because it moves the wallet; the file itself
+            // never carries this string as an event type.
+            'Kosten' => PaypalEventAction::Parent,
+
             // Per-purchase funding legs: the reader's own money entering PayPal
             // to settle the parent row. Folding them into the parent as
             // children discarded them, and the bank-side debit then stood
@@ -56,6 +62,12 @@ final class PaypalCsvEventTypeMap
             // rather than owning a canonical type of its own.
             'Vooraf goedgekeurde betaling – rekening betaald door gebruiker' => TransactionType::Expense,
             'Express Checkout-betaling' => TransactionType::Expense,
+
+            // The derived fee row. Fee rather than Expense so the reports that
+            // total what PayPal charged can ask for it by type, and because
+            // ClassifyTransactionType treats Fee as terminal — the sign of a
+            // returned fee cannot re-type it to income.
+            'Kosten' => TransactionType::Fee,
 
             // TransferIn so PairTransferCandidates can match the PayPal side of
             // a funding leg or top-up against the bank-side transfer_out.

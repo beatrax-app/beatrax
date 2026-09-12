@@ -39,6 +39,12 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
         'service fee' => ['type' => PaymentType::Fee, 'confidence' => 95],
         'paypal fee' => ['type' => PaymentType::Fee, 'confidence' => 95],
 
+        // Not an event type any file ships: the NL fee column's own header,
+        // which is what PaypalTransactionRollup names the row it derives from
+        // that column. Without it the chip falls to the description keywords,
+        // where the Dutch for a fee is also the Dutch for a cost of any kind.
+        'kosten' => ['type' => PaymentType::Fee, 'confidence' => 95],
+
         'user initiated withdrawal' => ['type' => PaymentType::Transfer, 'confidence' => 85],
         'general withdrawal' => ['type' => PaymentType::Transfer, 'confidence' => 85],
         'bank deposit to pp account' => ['type' => PaymentType::Transfer, 'confidence' => 85],

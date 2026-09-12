@@ -38,6 +38,12 @@ isolation.
   - The PayPal funding-leg typing
     (`PaypalFundingLegTypingTest`) — confirms the parent-child
     rollup produces the correct payment-type hints.
+  - The fee a PayPal payment row states beside its gross
+    (`TheFeePaypalTookWasNeverARowOfItsOwnTest`) — the only two
+    PayPal fixtures with a non-zero `Kosten` column, which is what
+    lets a reader of `Bruto` fail where every other fixture cannot
+    tell one from a reader of `Netto`. See [a PayPal fee is a row of
+    its own](a-paypal-fee-is-a-row-of-its-own.md).
 
 ## Integration tests
 
