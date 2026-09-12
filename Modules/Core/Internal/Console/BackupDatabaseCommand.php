@@ -348,12 +348,16 @@ final class BackupDatabaseCommand extends Command
             if (isset($keeperSet[$name])) {
                 continue;
             }
-            $this->files->delete($backupsDir.DIRECTORY_SEPARATOR.$name);
-
+            // The claim before the copy it names. A sweep that stops between
+            // the two unlinks has to leave a backup nothing vouches for — the
+            // next run remakes it — rather than a voucher for nothing, which
+            // licenses a skip and takes the only copy with it.
             $sidecar = $backupsDir.DIRECTORY_SEPARATOR.$name.BackupSidecar::SUFFIX;
             if ($this->files->exists($sidecar)) {
                 $this->files->delete($sidecar);
             }
+
+            $this->files->delete($backupsDir.DIRECTORY_SEPARATOR.$name);
         }
     }
 
