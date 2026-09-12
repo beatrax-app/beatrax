@@ -219,7 +219,18 @@ stays rejected because the guard refuses to write a fresh candidate
 for the same pair.
 
 That same tuple is now `chain_links_pair_uq`, so the guard is stated where the
-database can enforce it rather than only in this class. It was briefly the row's
+database can enforce it rather than only in this class — and the SELECT is no
+longer the last word. `insertIfNotExists()` catches the constraint violation and
+returns `false`, the same answer as finding the row, because two resolver passes
+can be in flight at once: `ResolveChainLinksJob` is
+`ShouldBeUniqueUntilProcessing`, which releases its lock the moment `handle()`
+begins, so a second dispatch for the same user starts while the first is still
+walking. The loser emits no `EntityMutated` create, since it wrote nothing.
+`insertMissing()` needs no catch of its own: both of its call sites already hold
+the write lock, because `IcsSettlementResolver` wraps the links, the statement
+move and the credits in one transaction and the connection begins `IMMEDIATE`.
+See [a check another writer can
+invalidate](../../conventions/a-check-another-writer-can-invalidate.md). It was briefly the row's
 primary key instead, folded through `DerivedRowId::for('chain_links', ...)` —
 but two of its four columns are transaction ids each device counts for itself,
 so the number named a different pair of charges on the peer. The id is minted
