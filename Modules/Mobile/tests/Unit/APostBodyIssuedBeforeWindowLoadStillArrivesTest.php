@@ -274,9 +274,7 @@ it('anchors on text the shipped WebView manager really carries', function (): vo
     $upstream = postBodyUpstreamClient();
 
     if ($upstream === null) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('nativephp/mobile is installed only under the mobile Composer root, so the shipped WebView client is not here to read.');
     }
 
     $wrong = [];

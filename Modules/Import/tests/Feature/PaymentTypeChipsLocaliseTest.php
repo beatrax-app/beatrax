@@ -45,17 +45,36 @@ it('keeps the glyph in front of every label', function (): void {
     }
 });
 
+// Read out of each locale's own array rather than asked of the translator.
+// A namespaced key missing in one locale falls back to `en`, so the label came
+// back as fluent English and never as the key: the only way this arm could go
+// red was the key being absent from all twenty-six at once, which is the case
+// the parity test already covers. Dropping `direct_debit` from `de` alone left
+// it green while the German pill read "Direct debit".
 it('resolves a real translation in every shipped locale', function (): void {
     $missing = [];
-    foreach (glob(base_path('Modules/Import/Resources/lang/*/payment_type.php')) ?: [] as $file) {
+    $files = glob(base_path('Modules/Import/Resources/lang/*/payment_type.php')) ?: [];
+
+    expect($files)->not->toBe([], 'No payment_type translation file was found, so this rule judges nothing.');
+
+    foreach ($files as $file) {
         $locale = basename(dirname($file));
-        App::setLocale($locale);
+
+        /** @var array<string, mixed> $strings */
+        $strings = require $file;
+
         foreach (PaymentType::cases() as $type) {
-            if (str_contains($type->chipLabel(), 'import::payment_type')) {
+            $line = $strings[$type->value] ?? null;
+
+            if (! is_string($line) || trim($line) === '') {
                 $missing[] = $locale.'/'.$type->value;
             }
         }
     }
 
-    expect($missing)->toBe([]);
+    expect($missing)->toBe([], implode("\n  ", [
+        'These locales carry no line of their own for a payment-type chip, so the reader is shown '
+        .'the English one:',
+        ...$missing,
+    ]));
 });

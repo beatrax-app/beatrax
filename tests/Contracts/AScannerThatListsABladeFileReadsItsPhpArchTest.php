@@ -34,7 +34,11 @@ const BLADE_SCANNER_WALKS_NO_TEMPLATE = [
     ],
     'tests/Contracts/AGuardThatReadsMarkupParsesItArchTest.php' => [
         'reason' => 'reads the guard tree, which holds no template',
-        'proves' => '#/Contracts/\*\.php#',
+        'proves' => '#GuardFiles::all\(\)#',
+    ],
+    'tests/Contracts/AnAttributeAGuardReadsIsReadInBothSpellingsArchTest.php' => [
+        'reason' => 'reads the guard tree through the same walk, which holds no template',
+        'proves' => '#GuardFiles::all\(\)#',
     ],
     'tests/Contracts/AScannerAccountsForTheWholeTreeArchTest.php' => [
         'reason' => 'reads the scanner-support classes to find the root names they write out; that directory holds no template, and the Blade roots it asks RepoTree about are names rather than files it opens',

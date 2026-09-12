@@ -6,6 +6,7 @@ use Modules\Core\Public\Exceptions\MarkupParseFailedException;
 use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\RenderedMarkup;
+use Tests\Contracts\Support\GuardFiles;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-guard-that-reads-html-with-a-regex
@@ -35,36 +36,10 @@ const MARKUP_PATTERNS_KEPT = [
     'tests/Contracts/CommentPolicyArchTest.php' => ['/@php\b(?<body>.*?)@endphp|<\?php(?<php>.*?)\?>|<script\b[^>]*>(?<js>.*?)<\/script>/si'],
 ];
 
-// The rule is about guards, and a guard is not only a file under
-// tests/Contracts: the shared scanners sit a directory down, thirteen more live
-// beside the module they read, and tests/Helpers is where two CSS guards get
-// their reading. All four were outside the walk, so a tag-shaped pattern in any
-// of them was excused by nobody having looked.
 /** @return list<string> every file a guard in this repository is written in */
 function markupGuardFiles(): array
 {
-    $paths = [];
-
-    $walk = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(base_path('tests/Contracts'), FilesystemIterator::SKIP_DOTS),
-    );
-
-    /** @var SplFileInfo $file */
-    foreach ($walk as $file) {
-        if ($file->isFile() && str_ends_with($file->getPathname(), '.php')) {
-            $paths[] = $file->getPathname();
-        }
-    }
-
-    foreach (['Modules/*/tests/Arch/*.php', 'Modules/*/tests/Contracts/*.php', 'tests/Helpers/*.php'] as $pattern) {
-        foreach ((array) glob(base_path($pattern)) as $path) {
-            $paths[] = (string) $path;
-        }
-    }
-
-    sort($paths);
-
-    return $paths;
+    return GuardFiles::all();
 }
 
 /**

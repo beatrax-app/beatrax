@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\MarkupAttribute;
 use Tests\Contracts\Support\UnlayeredCss;
 
 // Measured on an SM-S928B at the two largest settings its own sliders offer —
@@ -73,7 +74,7 @@ it('still has a control the rules can select', function (): void {
 
     $segmented = array_values(array_filter(
         $views,
-        static fn (string $view): bool => str_contains((string) file_get_contents($view), 'variant="segmented"'),
+        static fn (string $view): bool => MarkupAttribute::countIn((string) file_get_contents($view), 'variant', 'segmented') > 0,
     ));
 
     expect($segmented)->not->toBe([], 'Nothing renders a segmented group any more; the rules guard nothing.');

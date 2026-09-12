@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\MarkupAttribute;
 use Tests\Contracts\Support\UnlayeredCss;
 
 // The three routes still over 320px once long runs could break were all the
@@ -70,8 +71,8 @@ it('still has strips that answer to every selector the wrap rule names', functio
     $toolbars = 0;
     foreach ($views as $view) {
         $source = (string) file_get_contents($view);
-        $tablists += substr_count($source, 'role="tablist"');
-        $radiogroups += substr_count($source, 'role="radiogroup"');
+        $tablists += MarkupAttribute::countIn($source, 'role', 'tablist');
+        $radiogroups += MarkupAttribute::countIn($source, 'role', 'radiogroup');
         $toolbars += substr_count($source, 'cal-toolbar');
     }
 

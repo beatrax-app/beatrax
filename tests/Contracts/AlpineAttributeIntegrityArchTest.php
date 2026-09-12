@@ -49,32 +49,40 @@ function alpineAttributeBladeFiles(): array
 // than a class list or a URL.
 const ALPINE_SCRIPTING_ATTRIBUTES = ['x-data', 'x-init', 'x-effect'];
 
+// Both delimiters HTML accepts. The rule is the same either way — the value
+// ends at the next character matching the one that opened it — and reading only
+// the double-quoted spelling left `x-data='…'` unscanned, which is the form an
+// author reaches for precisely when the expression already holds double quotes.
+const ALPINE_ATTRIBUTE_DELIMITERS = ['"', "'"];
+
 /** @return list<string> every scripting attribute in one template that HTML does not deliver whole */
 function alpineAttributeFaults(string $where, string $source): array
 {
     $faults = [];
 
     foreach (ALPINE_SCRIPTING_ATTRIBUTES as $attribute) {
-        $offset = 0;
+        foreach (ALPINE_ATTRIBUTE_DELIMITERS as $delimiter) {
+            $offset = 0;
 
-        while (($start = strpos($source, $attribute.'="', $offset)) !== false) {
-            $valueStart = $start + strlen($attribute) + 2;
-            $valueEnd = strpos($source, '"', $valueStart);
-            $offset = $valueEnd === false ? $valueStart : $valueEnd + 1;
+            while (($start = strpos($source, $attribute.'='.$delimiter, $offset)) !== false) {
+                $valueStart = $start + strlen($attribute) + 2;
+                $valueEnd = strpos($source, $delimiter, $valueStart);
+                $offset = $valueEnd === false ? $valueStart : $valueEnd + 1;
 
-            if ($valueEnd === false) {
-                $faults[] = $where.':'.alpineAttributeLine($source, $start).' — '.$attribute.' is never closed';
+                if ($valueEnd === false) {
+                    $faults[] = $where.':'.alpineAttributeLine($source, $start).' — '.$attribute.' is never closed';
 
-                continue;
-            }
+                    continue;
+                }
 
-            // The value HTML actually delivers, which is the only thing Alpine
-            // gets to parse.
-            $value = substr($source, $valueStart, $valueEnd - $valueStart);
+                // The value HTML actually delivers, which is the only thing Alpine
+                // gets to parse.
+                $value = substr($source, $valueStart, $valueEnd - $valueStart);
 
-            if (alpineBraceBalance($value) !== 0) {
-                $faults[] = $where.':'.alpineAttributeLine($source, $start)
-                    .' — '.$attribute.' is cut short by a quote inside it, so HTML ends the attribute mid-expression';
+                if (alpineBraceBalance($value) !== 0) {
+                    $faults[] = $where.':'.alpineAttributeLine($source, $start)
+                        .' — '.$attribute.' is cut short by a quote inside it, so HTML ends the attribute mid-expression';
+                }
             }
         }
     }
@@ -125,13 +133,29 @@ function alpineAttributeLine(string $source, int $offset): int
 // A rule that finds nothing because its scan is broken looks exactly like a
 // clean tree.
 it('scans the Alpine attributes it claims to scan', function (): void {
-    $seen = 0;
+    $byDelimiter = array_fill_keys(ALPINE_ATTRIBUTE_DELIMITERS, 0);
 
     foreach (alpineAttributeBladeFiles() as $path) {
-        $seen += substr_count((string) file_get_contents($path), 'x-data="');
+        $source = (string) file_get_contents($path);
+
+        foreach (ALPINE_ATTRIBUTE_DELIMITERS as $delimiter) {
+            $byDelimiter[$delimiter] += substr_count($source, 'x-data='.$delimiter);
+        }
     }
 
+    $seen = array_sum($byDelimiter);
+
     expect($seen)->toBeGreaterThan(50, 'Read '.$seen.' x-data attributes, too few to have covered the product.');
+
+    // Counted per delimiter rather than in one total: the single-quoted
+    // spelling is a handful of templates against a hundred, so a reader that
+    // stopped seeing it entirely would still clear a floor drawn over the sum.
+    foreach ($byDelimiter as $delimiter => $count) {
+        expect($count)->toBeGreaterThan(
+            0,
+            sprintf('No x-data written with %s was read, so the rule below says nothing about that spelling.', $delimiter),
+        );
+    }
 });
 
 it('reads an attribute a quote cuts short, and leaves a whole one alone', function (): void {
@@ -145,6 +169,17 @@ it('reads an attribute a quote cuts short, and leaves a whole one alone', functi
 
     $unclosed = '<div x-data="{ open: false }>';
 
+    // The same defect in the other delimiter. A template reaches for single
+    // quotes when the expression already holds double ones, so the apostrophe
+    // that cuts it short is the likelier of the two accidents, not the rarer.
+    $cutInSingleQuotes = <<<'HTML'
+        <div x-data='{ open: false, label: "a 'quoted' phrase" }'></div>
+        HTML;
+
+    $wholeInSingleQuotes = <<<'HTML'
+        <div x-data='{ open: false, label: "a quoted phrase" }'></div>
+        HTML;
+
     expect(alpineAttributeFaults('a.blade.php', $cut))
         ->toHaveCount(1, 'a double quote inside the value ends the attribute, and the rest spills into the page as text');
 
@@ -153,4 +188,10 @@ it('reads an attribute a quote cuts short, and leaves a whole one alone', functi
 
     expect(alpineAttributeFaults('a.blade.php', $unclosed))
         ->toHaveCount(1, 'an attribute with no closing quote at all is the same defect one step further on');
+
+    expect(alpineAttributeFaults('a.blade.php', $cutInSingleQuotes))
+        ->toHaveCount(1, 'a single quote inside a single-quoted value ends it exactly as a double quote ends a double-quoted one');
+
+    expect(alpineAttributeFaults('a.blade.php', $wholeInSingleQuotes))
+        ->toBe([], 'double quotes inside a single-quoted value are delivered whole, which is why a template chooses that spelling');
 });

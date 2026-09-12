@@ -49,18 +49,55 @@ it('offers the Dutch amount shape to a Dutch reader on reconcile', function (): 
     expect($html)->toContain('placeholder="0,00"');
 });
 
-it('never hard-codes an amount placeholder in a Ledger template', function (): void {
-    $offenders = [];
-    foreach (glob(base_path('Modules/Ledger/Resources/views/livewire/**/*.blade.php')) ?: [] as $path) {
-        if (str_contains((string) file_get_contents($path), 'placeholder="0,00"')) {
-            $offenders[] = str_replace(base_path().'/', '', $path);
+// Walked rather than globbed, and over the whole view tree rather than the
+// livewire/ subtree. `**` is not recursive in a glob pattern — it matches ONE
+// directory, so the two patterns together covered exactly two levels and only
+// because that is how deep the tree happens to be today. The templates beside
+// livewire/ were never opened at all: a hard-coded placeholder in
+// components/secondary-amount.blade.php passed.
+//
+// Both marks, too. A reader on an English locale is offered "0.00", so the
+// point form is the same defect for them that the comma form is for a Dutch
+// reader, and only one of the two was being looked for.
+/** @return list<string> */
+function ledgerViewTemplates(): array
+{
+    $paths = [];
+
+    $walk = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(base_path('Modules/Ledger/Resources/views'), FilesystemIterator::SKIP_DOTS),
+    );
+
+    /** @var SplFileInfo $file */
+    foreach ($walk as $file) {
+        if ($file->isFile() && str_ends_with($file->getPathname(), '.blade.php')) {
+            $paths[] = $file->getPathname();
         }
     }
-    foreach (glob(base_path('Modules/Ledger/Resources/views/livewire/*.blade.php')) ?: [] as $path) {
-        if (str_contains((string) file_get_contents($path), 'placeholder="0,00"')) {
+
+    sort($paths);
+
+    return $paths;
+}
+
+it('never hard-codes an amount placeholder in a Ledger template', function (): void {
+    $offenders = [];
+    $templates = ledgerViewTemplates();
+
+    foreach ($templates as $path) {
+        if (preg_match('/placeholder\s*=\s*"0[.,]00"/', (string) file_get_contents($path)) === 1) {
             $offenders[] = str_replace(base_path().'/', '', $path);
         }
     }
 
-    expect(array_values(array_unique($offenders)))->toBe([]);
+    expect(count($templates))->toBeGreaterThan(
+        5,
+        'The walk opened '.count($templates).' Ledger templates, too few for a clean answer to mean anything.',
+    );
+
+    expect(array_values(array_unique($offenders)))->toBe([], implode("\n  ", [
+        'These write an amount placeholder into the template, so it stays in one locale\'s marks '
+        .'whoever is reading:',
+        ...$offenders,
+    ]));
 });

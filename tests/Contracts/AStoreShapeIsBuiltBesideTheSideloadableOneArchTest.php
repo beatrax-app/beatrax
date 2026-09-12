@@ -39,9 +39,7 @@ it('builds the store shape in every workflow that builds the sideloadable one', 
     // Both Composer roots run this file, and only one of them has the
     // workflows beside it. Nothing found is that root, not a tree that obeys.
     if ($workflows === []) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('Both Composer roots run this file and only one has the workflows beside it.');
     }
 
     $missing = [];

@@ -103,6 +103,8 @@ function deviceLocalByDesignTables(): array
 function deviceLocalWriterWaivers(): array
 {
     return [
+        'inboxes @ Modules/EmailScan/Internal/Actions/ConnectInboxFromGrant.php' => 'Creates the row for a mailbox THIS device just obtained a token for; the token is a file on this disk, so the peer has no connection to describe.',
+        'inbox_scan_state @ Modules/EmailScan/Internal/Actions/ConnectInboxFromGrant.php' => 'Opens the provider cursor for the connection made on the line above; a peer\'s history id means nothing against a token it does not hold.',
         'inboxes @ Modules/EmailScan/Internal/Http/Livewire/BackfillWindowModal.php' => 'How far back to fetch, for the mailbox this device holds a token for.',
         'inboxes @ Modules/EmailScan/Public/Actions/DisconnectInbox.php' => 'Disconnecting drops this device\'s token and its row; the peer keeps its own connection and its own token.',
         'file_imports @ Modules/Receipts/Public/Actions/RecordReceipt.php' => 'Records a file this device just staged, keyed by a path only this device has.',
@@ -278,7 +280,12 @@ function syncCoverageUserFacingWritersOf(string $table): array
             continue;
         }
 
-        if (preg_match('#/(Public/Actions|Internal/Http/Livewire)/#', $path) !== 1) {
+        // Four directories, not two. `Public/Http/Livewire` holds 42 screens
+        // across 18 modules and `Internal/Actions` another 27, both of them
+        // reader-reachable, and both were outside this walk — so a screen
+        // editing a device-local table from either one needed no waiver and
+        // raised nothing.
+        if (preg_match('#/(Public/Actions|Internal/Actions|Public/Http/Livewire|Internal/Http/Livewire)/#', $path) !== 1) {
             continue;
         }
 
