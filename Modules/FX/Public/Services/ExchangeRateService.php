@@ -95,6 +95,7 @@ final class ExchangeRateService
     // same aggregate re-run per row of the table: the answer was always one row
     // per pair, but the read that produced it grew with the whole rate history.
     /**
+     * @param  literal-string  $selection
      * @param  list<string>  $bindings
      */
     private function perPairDate(string $selection, array $bindings = []): Builder
