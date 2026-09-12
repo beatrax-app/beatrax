@@ -208,6 +208,17 @@ the walk — so a keyless import now opens a backfill rather than queueing
 coordinates. Its old comment said the rows "travel on the next backfill"; there
 was no next backfill, because one is only opened at sync-enable and at pairing.
 
+The same debt is owed by its other arm, and for a while only one of the two
+paid it. `captureInOrder()` stops at the first table that throws — the order is
+a dependency order, and children announced after their parent failed name rows
+the peer's foreign keys drop — so a failure part-way leaves the parents
+announced and the transactions not. That arm wrote a warning and nothing else,
+which is not a channel any peer reads: an import that committed here reached a
+peer never. It opens a backfill too now. `oweABackfill()` swallows its own
+failure for the same reason every capture does — the reader's import is already
+committed and confirmed, and a throw on the tail of that would fail a write that
+landed — but it says so at error rather than passing in silence.
+
 A coordinate whose replay keeps failing — a sealed column no epoch in this
 keyring opens — is left standing rather than retired, and retried on each drain.
 The rest of the batch still drains around it, so the queue shrinks to the poison
