@@ -232,7 +232,7 @@
                                             class="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                             data-testid="split-leg-category-{{ $index }}"
                                         >
-                                            <option value="">{{ Lang::get('ledger::detail.split.choose_category') }}</option>
+                                            <option value="" @selected(($leg['categoryId'] ?? null) === null)>{{ Lang::get('ledger::detail.split.choose_category') }}</option>
                                             @foreach ($splitCategories as $cat)
                                                 <option value="{{ $cat->id }}" @selected(($leg['categoryId'] ?? null) !== null && (int) $leg['categoryId'] === $cat->id)>{{ $cat->path }}</option>
                                             @endforeach
@@ -483,10 +483,10 @@
                         id="reclassify-type"
                         class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                     >
-                        <option value="">{{ Lang::get('ledger::detail.reclassify.choose_option') }}</option>
+                        <option value="" @selected(strlen($reclassifyType) === 0)>{{ Lang::get('ledger::detail.reclassify.choose_option') }}</option>
                         @foreach (\Modules\Ledger\Public\Enums\TransactionType::cases() as $type)
                             @if ($type->value !== $transaction->type)
-                                <option value="{{ $type->value }}">{{ Lang::get('ledger::detail.type_label.'.$type->value) }}</option>
+                                <option value="{{ $type->value }}" @selected($reclassifyType === $type->value)>{{ Lang::get('ledger::detail.type_label.'.$type->value) }}</option>
                             @endif
                         @endforeach
                     </select>

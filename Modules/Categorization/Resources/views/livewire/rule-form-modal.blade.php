@@ -76,7 +76,7 @@
                                          field cannot be named one thing on the
                                          form and another in the sentence. --}}
                                     @foreach (\Modules\Categorization\Internal\Http\Livewire\RuleFormModal::fieldOptions() as $fieldValue => $fieldLabel)
-                                        <option value="{{ $fieldValue }}">{{ $fieldLabel }}</option>
+                                        <option value="{{ $fieldValue }}" @selected($condition['field'] === $fieldValue)>{{ $fieldLabel }}</option>
                                     @endforeach
                                 </select>
 
@@ -86,7 +86,7 @@
                                     class="inline-flex rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 >
                                     @foreach ($opOptions as $opValue => $opLabel)
-                                        <option value="{{ $opValue }}">{{ $opLabel }}</option>
+                                        <option value="{{ $opValue }}" @selected($condition['op'] === $opValue)>{{ $opLabel }}</option>
                                     @endforeach
                                 </select>
 
@@ -170,10 +170,10 @@
                                     aria-label="{{ Lang::get('categorization::rule_form.action_type_aria', ['number' => $i + 1]) }}"
                                     class="inline-flex rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 >
-                                    <option value="{{ ActionType::Category->value }}" @disabled($action['type'] !== ActionType::Category->value && in_array(ActionType::Category->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_category') }}</option>
-                                    <option value="{{ ActionType::Counterparty->value }}" @disabled($action['type'] !== ActionType::Counterparty->value && in_array(ActionType::Counterparty->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_counterparty') }}</option>
-                                    <option value="{{ ActionType::Note->value }}" @disabled($action['type'] !== ActionType::Note->value && in_array(ActionType::Note->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_note') }}</option>
-                                    <option value="{{ ActionType::TaxTag->value }}" @disabled($action['type'] !== ActionType::TaxTag->value && in_array(ActionType::TaxTag->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_tax_tag') }}</option>
+                                    <option value="{{ ActionType::Category->value }}" @selected($action['type'] === ActionType::Category->value) @disabled($action['type'] !== ActionType::Category->value && in_array(ActionType::Category->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_category') }}</option>
+                                    <option value="{{ ActionType::Counterparty->value }}" @selected($action['type'] === ActionType::Counterparty->value) @disabled($action['type'] !== ActionType::Counterparty->value && in_array(ActionType::Counterparty->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_counterparty') }}</option>
+                                    <option value="{{ ActionType::Note->value }}" @selected($action['type'] === ActionType::Note->value) @disabled($action['type'] !== ActionType::Note->value && in_array(ActionType::Note->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_note') }}</option>
+                                    <option value="{{ ActionType::TaxTag->value }}" @selected($action['type'] === ActionType::TaxTag->value) @disabled($action['type'] !== ActionType::TaxTag->value && in_array(ActionType::TaxTag->value, $usedActionTypes, true))>{{ Lang::get('categorization::rule_form.action_tax_tag') }}</option>
                                 </select>
 
                                 @if ($action['type'] === ActionType::Category->value)
@@ -182,9 +182,9 @@
                                         aria-label="{{ Lang::get('categorization::rule_form.assign_category_aria', ['number' => $i + 1]) }}"
                                         class="min-w-40 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >
-                                        <option value="">—</option>
+                                        <option value="" @selected(($action['category_id'] ?? null) === null || strlen((string) $action['category_id']) === 0)>—</option>
                                         @foreach ($categories as $category)
-                                            <option value="{{ $category->id }}">{{ $category->path }}</option>
+                                            <option value="{{ $category->id }}" @selected((string) ($action['category_id'] ?? '') === (string) $category->id)>{{ $category->path }}</option>
                                         @endforeach
                                     </select>
                                 @elseif ($action['type'] === ActionType::Counterparty->value)
@@ -193,9 +193,9 @@
                                         aria-label="{{ Lang::get('categorization::rule_form.reassign_counterparty_aria', ['number' => $i + 1]) }}"
                                         class="min-w-40 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >
-                                        <option value="">—</option>
+                                        <option value="" @selected(($action['counterparty_id'] ?? null) === null || strlen((string) $action['counterparty_id']) === 0)>—</option>
                                         @foreach ($counterparties as $counterparty)
-                                            <option value="{{ $counterparty->id }}">{{ $counterparty->display_name }}</option>
+                                            <option value="{{ $counterparty->id }}" @selected((string) ($action['counterparty_id'] ?? '') === (string) $counterparty->id)>{{ $counterparty->display_name }}</option>
                                         @endforeach
                                     </select>
                                 @elseif ($action['type'] === ActionType::Note->value)
@@ -224,9 +224,9 @@
                                         aria-label="{{ Lang::get('categorization::rule_form.deduction_category_aria', ['number' => $i + 1]) }}"
                                         class="min-w-40 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >
-                                        <option value="">—</option>
+                                        <option value="" @selected(($action['deduction_category_id'] ?? null) === null || strlen((string) $action['deduction_category_id']) === 0)>—</option>
                                         @foreach ($deductionCategories as $deductionCategory)
-                                            <option value="{{ $deductionCategory->id }}">{{ $deductionCategory->name }}</option>
+                                            <option value="{{ $deductionCategory->id }}" @selected((string) ($action['deduction_category_id'] ?? '') === (string) $deductionCategory->id)>{{ $deductionCategory->name }}</option>
                                         @endforeach
                                     </select>
                                 @endif

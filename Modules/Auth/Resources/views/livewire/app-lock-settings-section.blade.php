@@ -399,7 +399,7 @@
                    dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
         >
             @foreach (IdleTimeoutOptions::LABEL_KEYS as $minutes => $labelKey)
-                <option value="{{ $minutes }}">{{ Lang::get($labelKey) }}</option>
+                <option value="{{ $minutes }}" @selected($idleTimeoutMinutes === $minutes)>{{ Lang::get($labelKey) }}</option>
             @endforeach
         </select>
     </div>

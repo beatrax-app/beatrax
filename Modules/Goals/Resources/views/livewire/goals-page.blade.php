@@ -418,9 +418,9 @@
                     wire:model="linkedPotId"
                     class="disabled:opacity-50"
                 >
-                    <option value="">{{ Lang::get('goals::messages.form.no_pot') }}</option>
+                    <option value="" @selected(strlen($linkedPotId) === 0)>{{ Lang::get('goals::messages.form.no_pot') }}</option>
                     @foreach ($pots as $pot)
-                        <option value="{{ $pot->id }}">{{ $pot->name }}</option>
+                        <option value="{{ $pot->id }}" @selected($linkedPotId === (string) $pot->id)>{{ $pot->name }}</option>
                     @endforeach
                 </x-core::form-field>
                 @if ($errorLinkedPot !== '')
@@ -545,9 +545,9 @@
                         wire:model="linkedPotId"
                         class="disabled:opacity-50"
                     >
-                        <option value="">{{ Lang::get('goals::messages.form.no_pot') }}</option>
+                        <option value="" @selected(strlen($linkedPotId) === 0)>{{ Lang::get('goals::messages.form.no_pot') }}</option>
                         @foreach ($pots as $pot)
-                            <option value="{{ $pot->id }}">{{ $pot->name }}</option>
+                            <option value="{{ $pot->id }}" @selected($linkedPotId === (string) $pot->id)>{{ $pot->name }}</option>
                         @endforeach
                     </x-core::form-field>
                     @if ($errorLinkedPot !== '')

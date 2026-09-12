@@ -414,9 +414,9 @@
                     type="select"
                     wire:model="moveToCategoryId"
                 >
-                    <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
+                    <option value="" @selected(strlen($moveToCategoryId) === 0)>{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
                     @foreach ($moveDestinations as $dest)
-                        <option value="{{ $dest->categoryId }}">{{ $dest->categoryPath }}</option>
+                        <option value="{{ $dest->categoryId }}" @selected($moveToCategoryId === (string) $dest->categoryId)>{{ $dest->categoryPath }}</option>
                     @endforeach
                 </x-core::form-field>
                 <div>
@@ -481,9 +481,9 @@
                 wire:model="moveToCategoryId"
                 style="font-size: 16px;"
             >
-                <option value="">{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
+                <option value="" @selected(strlen($moveToCategoryId) === 0)>{{ count($moveDestinations) === 0 ? Lang::get('budgets::messages.modal.no_other') : Lang::get('budgets::messages.modal.select') }}</option>
                 @foreach ($moveDestinations as $dest)
-                    <option value="{{ $dest->categoryId }}">{{ $dest->categoryPath }}</option>
+                    <option value="{{ $dest->categoryId }}" @selected($moveToCategoryId === (string) $dest->categoryId)>{{ $dest->categoryPath }}</option>
                 @endforeach
             </x-core::form-field>
             <div>

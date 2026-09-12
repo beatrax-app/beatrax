@@ -207,8 +207,8 @@
                                                 wire:model="conflictResolutions.{{ $conflict['entry']['pattern'] }}"
                                                 class="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700"
                                             >
-                                                <option value="keep">{{ Lang::get('import::aliases.keep_yours') }}</option>
-                                                <option value="replace">{{ Lang::get('import::aliases.replace') }}</option>
+                                                <option value="keep" @selected(($conflictResolutions[$conflict['entry']['pattern']] ?? 'keep') === 'keep')>{{ Lang::get('import::aliases.keep_yours') }}</option>
+                                                <option value="replace" @selected(($conflictResolutions[$conflict['entry']['pattern']] ?? 'keep') === 'replace')>{{ Lang::get('import::aliases.replace') }}</option>
                                             </select>
                                         </div>
                                     @endforeach

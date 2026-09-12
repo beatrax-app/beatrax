@@ -7969,6 +7969,60 @@ The consolidation cost nothing here: all five of the originals wore
 `.safe-lift`, and the region wears it on behalf of all of them, so every
 occupant clears the bar through one class instead of five.
 
+## A bound select that marks none of its options
+
+`tests/Contracts/AnOptionSaysWhetherItIsTheSelectedOneArchTest.php`
+
+A browser selects a `select`'s first option unless the markup marks one, and
+nothing in Livewire marks one for it. The value lives in server state; the
+rendered option list is the only place the client ever learns which option that
+value belongs to. So a select bound with `wire:model` whose options carry no
+selection renders the first of them, whatever the component holds — and the
+page reads as a setting the install does not have.
+
+Three of them were reachable on a brand-new install, before the reader had
+configured anything:
+
+| Screen | The select read | The install held |
+|---|---|---|
+| Settings → App lock, auto-lock window | 1 minute | 5 minutes |
+| Settings → Notifications, digest cadence | Daily | Weekly |
+| Settings → Drift alerts, threshold | 1% | 5% |
+
+The second half is worse than the display. Choosing the option already on
+screen fires no `change` event, so none of those three settings could be *set*
+to the value the screen claimed for it: a reader who wanted a one-minute lock
+had to pick another window and come back. On a financial app the auto-lock
+window is the one that matters.
+
+The same shape reached an editor every time it opened on stored state: a goal
+with a linked pot drew "No pot" and could not be unlinked; a pot's account and
+goal pickers drew their placeholders; a rule's condition field, operator and
+every id-valued action drew the first entry of their lists; a counterparty
+already typed "Bank" drew "Merchant"; an account correctly denominated in the
+statement's own currency drew the first code in the currency table. The import
+wizard's format sniffer is the clearest case: it *sets* `sourceFormat` from the
+uploaded file and writes a notice beside the select saying so, while the select
+went on drawing the first preset.
+
+Nothing caught any of it. The markup is valid, the round trip is clean, the
+property is right, and a `assertSet(...)` on the component passes — the
+property *is* the value. Only the rendered option list disagrees, so the
+assertion has to be made against the HTML.
+
+### What the rule refuses
+
+Every `<option>` written in the Blade tree must state whether it is the
+selected one, through `@selected(...)` or a literal `selected` attribute. The
+placeholder is included: an option list is re-rendered whenever the server
+changes the value, and an unmarked list leaves the browser holding whatever it
+had. Comparisons against the empty string are written `strlen($x) === 0`, for
+the reason `x-core::country-options` gives.
+
+`x-core::country-options` was the first fix of this shape and is the model: the
+empty option is first, both arms are marked, and four surfaces share it rather
+than each writing their own list.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

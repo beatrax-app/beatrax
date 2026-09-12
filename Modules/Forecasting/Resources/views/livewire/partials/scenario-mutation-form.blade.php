@@ -32,9 +32,9 @@
         @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::CancelSeries->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.series_to_cancel') }}
                 <select wire:model.live="form.seriesId" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-                    <option value="">{{ Lang::get('forecasting::scenario.form.pick_series') }}</option>
+                    <option value="" @selected(strlen((string) ($form['seriesId'] ?? '')) === 0)>{{ Lang::get('forecasting::scenario.form.pick_series') }}</option>
                     @foreach ($availableSeries as $opt)
-                        <option value="{{ $opt['id'] }}">{{ $opt['name'] }}</option>
+                        <option value="{{ $opt['id'] }}" @selected((string) ($form['seriesId'] ?? '') === (string) $opt['id'])>{{ $opt['name'] }}</option>
                     @endforeach
                 </select>
             </label>
@@ -50,14 +50,14 @@
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.currency') }}
                 <select wire:model.live="form.currency" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
                     @foreach ($currencyOptions as $code)
-                        <option value="{{ $code }}">{{ $code }}</option>
+                        <option value="{{ $code }}" @selected($formCurrency === $code)>{{ $code }}</option>
                     @endforeach
                 </select>
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.direction') }}
                 <select wire:model.live="form.direction" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-                    <option value="expense">{{ Lang::get('forecasting::scenario.form.expense_long') }}</option>
-                    <option value="income">{{ Lang::get('forecasting::scenario.form.income_long') }}</option>
+                    <option value="expense" @selected(($form['direction'] ?? '') === 'expense')>{{ Lang::get('forecasting::scenario.form.expense_long') }}</option>
+                    <option value="income" @selected(($form['direction'] ?? '') === 'income')>{{ Lang::get('forecasting::scenario.form.income_long') }}</option>
                 </select>
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.note') }}
@@ -75,22 +75,22 @@
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.currency') }}
                 <select wire:model.live="form.currency" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
                     @foreach ($currencyOptions as $code)
-                        <option value="{{ $code }}">{{ $code }}</option>
+                        <option value="{{ $code }}" @selected($formCurrency === $code)>{{ $code }}</option>
                     @endforeach
                 </select>
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.direction') }}
                 <select wire:model.live="form.direction" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-                    <option value="expense">{{ Lang::get('forecasting::scenario.form.expense') }}</option>
-                    <option value="income">{{ Lang::get('forecasting::scenario.form.income') }}</option>
+                    <option value="expense" @selected(($form['direction'] ?? '') === 'expense')>{{ Lang::get('forecasting::scenario.form.expense') }}</option>
+                    <option value="income" @selected(($form['direction'] ?? '') === 'income')>{{ Lang::get('forecasting::scenario.form.income') }}</option>
                 </select>
             </label>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.cadence') }}
                 <select wire:model.live="form.cadence" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-                    <option value="weekly">{{ Lang::get('forecasting::scenario.form.cadence_weekly') }}</option>
-                    <option value="monthly">{{ Lang::get('forecasting::scenario.form.cadence_monthly') }}</option>
-                    <option value="quarterly">{{ Lang::get('forecasting::scenario.form.cadence_quarterly') }}</option>
-                    <option value="yearly">{{ Lang::get('forecasting::scenario.form.cadence_yearly') }}</option>
+                    <option value="weekly" @selected(($form['cadence'] ?? '') === 'weekly')>{{ Lang::get('forecasting::scenario.form.cadence_weekly') }}</option>
+                    <option value="monthly" @selected(($form['cadence'] ?? '') === 'monthly')>{{ Lang::get('forecasting::scenario.form.cadence_monthly') }}</option>
+                    <option value="quarterly" @selected(($form['cadence'] ?? '') === 'quarterly')>{{ Lang::get('forecasting::scenario.form.cadence_quarterly') }}</option>
+                    <option value="yearly" @selected(($form['cadence'] ?? '') === 'yearly')>{{ Lang::get('forecasting::scenario.form.cadence_yearly') }}</option>
                 </select>
             </label>
             @break
@@ -98,9 +98,9 @@
         @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::ChangeSeriesAmount->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.series') }}
                 <select wire:model.live="form.seriesId" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-                    <option value="">{{ Lang::get('forecasting::scenario.form.pick_series') }}</option>
+                    <option value="" @selected(strlen((string) ($form['seriesId'] ?? '')) === 0)>{{ Lang::get('forecasting::scenario.form.pick_series') }}</option>
                     @foreach ($availableSeries as $opt)
-                        <option value="{{ $opt['id'] }}">{{ $opt['name'] }}</option>
+                        <option value="{{ $opt['id'] }}" @selected((string) ($form['seriesId'] ?? '') === (string) $opt['id'])>{{ $opt['name'] }}</option>
                     @endforeach
                 </select>
             </label>
@@ -112,9 +112,9 @@
         @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::ShiftSeriesDate->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.series') }}
                 <select wire:model.live="form.seriesId" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-                    <option value="">{{ Lang::get('forecasting::scenario.form.pick_series') }}</option>
+                    <option value="" @selected(strlen((string) ($form['seriesId'] ?? '')) === 0)>{{ Lang::get('forecasting::scenario.form.pick_series') }}</option>
                     @foreach ($availableSeries as $opt)
-                        <option value="{{ $opt['id'] }}">{{ $opt['name'] }}</option>
+                        <option value="{{ $opt['id'] }}" @selected((string) ($form['seriesId'] ?? '') === (string) $opt['id'])>{{ $opt['name'] }}</option>
                     @endforeach
                 </select>
             </label>

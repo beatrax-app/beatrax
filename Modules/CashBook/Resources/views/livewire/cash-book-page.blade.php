@@ -74,9 +74,9 @@
                 :label="Lang::get('cashbook::cash-book.category').' '.Lang::get('cashbook::cash-book.optional')"
                 wire:model="categoryId"
             >
-                <option value="">{{ Lang::get('cashbook::cash-book.uncategorized') }}</option>
+                <option value="" @selected($categoryId === null)>{{ Lang::get('cashbook::cash-book.uncategorized') }}</option>
                 @foreach ($categories as $category)
-                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                    <option value="{{ $category->id }}" @selected($categoryId === (int) $category->id)>{{ $category->name }}</option>
                 @endforeach
             </x-core::form-field>
         </div>
