@@ -122,6 +122,11 @@ What the module explicitly does NOT do:
   `Ledger::RecordsTransactions`, stamping the occurrence ordinal off
   the ledger on the way (see
   [the occurrence ordinal](../../architecture/ingestion-pipeline.md#the-occurrence-ordinal)).
+  The count is taken outside the recorder's transaction, so a refused
+  insert is recounted and retried only while the recount moved — see
+  [a refused receipt insert](../../architecture/ingestion-pipeline.md#a-refused-receipt-insert),
+  which also says why a blind `ordinal + 1` would write the purchase
+  twice.
   The two stages between the
   normaliser and the recorder are the ones a wizard upload gets from
   `ImportPipeline`: without them the same message arrived

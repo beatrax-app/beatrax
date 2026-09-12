@@ -65,7 +65,10 @@ is strictly worse than reading the return value.
   backfill with `whereNull('anomaly_backfilled_at')->update([...])` and returns
   when the update affects no rows.
 - **The write's own report** — `MobileImportIntentGate::markImporting()` and
-  `SavingsInsightsQuery::dismiss()`.
+  `SavingsInsightsQuery::dismiss()`. `ReceiptLedgerBridge` reads the same report
+  for a harder question: a refused insert there is ambiguous, so it recounts and
+  retries only while the recount moved — see
+  [a refused receipt insert](../architecture/ingestion-pipeline.md#a-refused-receipt-insert).
 
 ## The tell when reading a diff
 
