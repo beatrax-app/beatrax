@@ -70,6 +70,44 @@ is strictly worse than reading the return value.
   retries only while the recount moved — see
   [a refused receipt insert](../architecture/ingestion-pipeline.md#a-refused-receipt-insert).
 
+## The sibling nothing refuses
+
+Everything above turns on an index that says no. Its sibling is a read that
+decides an **update** rather than an insert, and there the shape is worse in the
+one way that matters: nothing refuses the second write. A value read, computed
+on, and written back has no arbiter, so the loser does not raise — it wins, and
+the winner's work disappears. The insert race is loud and lands in error
+handling; this one is silent and lands in the data.
+
+```php
+$attempts = $cursor->reproject_attempts;          // another process reads the same
+$cursor->update(['reproject_attempts' => $attempts + 1]);
+```
+
+Four of these were live in the tree at once, and none of them announced itself:
+`ResolveChainLinksJob` took a count before and after and wrote the delta, so a
+concurrent pass, the sync applier and a cascade delete all landed inside someone
+else's arithmetic — measured at `-5`. `InitialSyncPuller` under-counted
+`reproject_attempts`, which is the only record a killed re-projection leaves,
+because an OOM raises a fatal rather than a `Throwable` and no `catch` runs.
+`RateProviderRegistry` had two callers both read `0` and both write `1`, opening
+the circuit a failure late. `StagedExportHandover` let a one-shot export token be
+claimed twice.
+
+The same three patterns apply, read for an update instead of an insert, and the
+fourth observation generalises further than it first appears:
+
+| Pattern | Reads as |
+|---|---|
+| **A transaction** | Claim the value inside the transaction that writes it — the deciding read and the write share one lock |
+| **An atomic primitive** | `Cache::add()` then `increment()` where a lock would be too heavy; an atomic lock where the claim *is* the spend |
+| **A conditional-update mutex** | Unchanged — it was always a read-then-update pattern |
+| **The write's own report** | Sum what each write seam reported inserting, rather than counting the table before and after. A delta between two counts is a measurement of the whole table; a returned count is a measurement of this pass |
+
+That last row is the one worth carrying. `ResolveChainLinksJob`'s seams already
+returned their counts and the resolvers discarded them, so the honest number was
+one line away at each seam while the code was measuring the table instead.
+
 ## The tell when reading a diff
 
 A comment promising idempotence directly above a read-then-write is the reliable
