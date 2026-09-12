@@ -87,6 +87,45 @@ in `Modules/Onboarding/Internal`, which Ledger cannot import. The value here has
 a different provenance: it is read by our own statement parser and written by a
 user-scoped query builder.
 
+## A summed balance is not a balance anyone read
+
+A statement summary is written by two kinds of adapter. CAMT.053, MT940 and the
+ICS card PDF **read** their opening balance off the source: the file states what
+the account held before its first row, and that figure is the anchor the account
+was missing. The PayPal adapter **derives** its figures instead — a PayPal
+Activity export carries no balance rows at all, so the adapter sums the rows it
+just yielded and publishes the total as the closing balance.
+
+Its opening balance is then zero, and that zero is not a measurement. It is what
+"nothing precedes the first row in this file" spells as an integer. The wallet
+held whatever it held on that day; the export does not say.
+
+`PaypalCsvStartingBalanceDetector::detect()` has always refused to offer that
+figure, and its comment gives the reason: the reader would confirm it and lose
+their real balance. The anchoring path reached the same zero by a different
+door — it does not offer anything, it writes — so the refusal the detector
+makes on the reader's behalf was bypassed by the one writer that never asks.
+
+**What distinguishes the two is a property of the summary, not of the format.**
+Filtering the candidate query on `import_runs.source_format` would have worked
+today and rotted the moment a second adapter summed its own figures, because
+nothing would have made anyone add it to the list.
+`statement_summaries.balances_derived_from_rows` records the fact itself: the
+adapter that built the summary says which kind it built, the writer persists it
+beside the figures it qualifies, and the candidate query takes only the
+summaries that read theirs off the source.
+
+The column defaults to false, which is the right answer for every row written
+before it existed bar one, and the migration that adds it labels the existing
+PayPal-sourced rows from the run that wrote them — PayPal being the only adapter
+deriving anything on the day the column arrived. Every later format answers for
+itself at the adapter.
+
+`AWalletAnchoredAtZeroNobodyWasAskedAboutTest` pins both directions: a
+single-currency, fully readable PayPal import leaves the wallet unanchored while
+still recording the summary it declines to anchor on, and CAMT.053 and MT940
+imports still anchor the figures their files stated.
+
 ## Two clocks: the period start is not the earliest row
 
 A statement's period start and its rows' transaction dates can be different

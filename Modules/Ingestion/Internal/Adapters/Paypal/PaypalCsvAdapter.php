@@ -184,6 +184,7 @@ final class PaypalCsvAdapter implements NamesRowsItCouldNotRead, SourceAdapter
             closingBalanceDate: $periodEnd,
             entryCount: $entryCount,
             extras: $extras,
+            balancesDerivedFromRows: true,
         );
     }
 }
