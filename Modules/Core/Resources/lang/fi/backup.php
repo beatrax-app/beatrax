@@ -18,6 +18,7 @@ return [
         'heading' => 'Palauta varmuuskopiosta',
 
         'intro_html' => 'Korvaa nykyinen tietokantasi salatulla varmuuskopiolla. Tiedosto puretaan ja tarkistetaan ennen kuin mikään muuttuu, ja nykyisistä tiedoistasi tallennetaan ensin tilannevedos — mutta tämä silti <strong class="text-slate-700 dark:text-slate-200">korvaa kaiken</strong>, joten toiminto on suojattu. Sinut kirjataan ulos, sillä myös kirjautumisesi on tietokannassa.',
+        'updates_an_older_backup' => 'Vanhemmalla Beatrax-versiolla tehty varmuuskopio päivitetään tähän versioon palautuksen yhteydessä, joten palautus muuttaa tietojen rakenteen lisäksi sisällön. Se tehdään ensin kopiolle — jos jokin vaihe epäonnistuu, mitään ei palauteta eikä muuteta.',
         'restored' => 'Varmuuskopio palautettiin. Kirjaudu sisään käyttäjätunnuksella ja salasanalla, jotka olivat käytössä sitä tehtäessä.',
         'snapshot_saved_prefix' => 'Tilannevedos aiemmista tiedoistasi tallennettiin polkuun',
         'file_label' => 'Varmuuskopiotiedosto (.enc) tai vientiarkisto (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Varmuuskopiotiedostoa ei voitu lukea, joten palautusta ei suoritettu eikä mitään ole muutettu. Tarkista, että laitteessa on vapaata tilaa, ja yritä uudelleen.',
         'restore_not_supported' => 'Palautus toimii versiossa, joka pitää tietonsa yhdessä tiedostossa, eikä tämä ole sellainen, joten mitään ei ole muutettu. Palvelintietokannassa käytä sen omia palautustyökaluja.',
         'restore_from_a_newer_build' => 'Tämä varmuuskopio on tehty uudemmalla Beatrax-versiolla kuin tässä käytössä oleva, joten sitä ei palautettu eikä mitään muutettu. Päivitä Beatrax ja palauta se sitten uudelleen.',
-        'restore_from_an_older_build' => 'Tämä varmuuskopio on tehty vanhemmalla Beatrax-versiolla kuin tässä käytössä oleva, joten sitä ei palautettu eikä mitään muutettu. Palauta varmuuskopiosta, jonka tämä versio on tehnyt.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax ei voinut päivittää tätä varmuuskopiota täällä käytössä olevaan versioon, joten mitään ei palautettu eikä muutettu. Yritä uudelleen — jos se jatkuu, palauta uudempi varmuuskopio; sovelluslokiin kirjataan, mikä vaihe pysäytti sen.',
         'restore_failed' => 'Palautusta ei suoritettu eikä mitään ole muutettu. Yritä uudelleen — jos se epäonnistuu toistuvasti, sovelluksen loki kertoo, mikä sen pysäytti.',
     ],
 ];

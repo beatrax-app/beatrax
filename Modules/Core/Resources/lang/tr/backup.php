@@ -18,6 +18,7 @@ return [
         'heading' => 'Yedekten geri yükle',
 
         'intro_html' => 'Mevcut veritabanının yerine şifreli bir yedek koy. Dosya, hiçbir şey değişmeden önce çözülür ve denetlenir; ayrıca geri yüklemeden önce mevcut verilerinin anlık görüntüsü kaydedilir — ancak bu işlem yine de <strong class="text-slate-700 dark:text-slate-200">her şeyin üzerine yazar</strong>, bu yüzden korumalıdır. Oturumun kapatılacak, çünkü girişin de veritabanında tutuluyor.',
+        'updates_an_older_backup' => 'Beatrax\'in eski bir sürümüyle oluşturulan yedek, geri yükleme sırasında bu sürüme güncellenir; dolayısıyla geri yükleme verinin içeriğini olduğu kadar yapısını da değiştirir. Bu önce bir kopya üzerinde olur — bir adım başarısız olursa hiçbir şey geri yüklenmez ve değişmez.',
         'restored' => 'Yedeğiniz geri yüklendi. Oluşturulduğunda geçerli olan kullanıcı adı ve parolayla oturum açın.',
         'snapshot_saved_prefix' => 'Önceki verilerinin anlık görüntüsü şuraya kaydedildi:',
         'file_label' => 'Yedek dosyası (.enc) veya dışa aktarma arşivi (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Yedek dosyası okunamadı, bu yüzden geri yükleme çalışmadı ve hiçbir şey değişmedi. Bu cihazda boş alan olduğunu kontrol et ve tekrar dene.',
         'restore_not_supported' => 'Geri yükleme, verisini tek bir dosyada tutan sürümde çalışır; bu o sürüm değil, dolayısıyla hiçbir şey değişmedi. Sunucu veritabanında o veritabanının kendi geri yükleme araçlarını kullan.',
         'restore_from_a_newer_build' => 'Bu yedek, burada çalışandan daha yeni bir Beatrax sürümüyle oluşturuldu; bu nedenle geri yüklenmedi ve hiçbir şey değişmedi. Beatrax\'i güncelleyin, sonra yeniden geri yükleyin.',
-        'restore_from_an_older_build' => 'Bu yedek, burada çalışandan daha eski bir Beatrax sürümüyle oluşturuldu; bu nedenle geri yüklenmedi ve hiçbir şey değişmedi. Bu sürümün oluşturduğu bir yedekten geri yükleyin.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax bu yedeği burada çalışan sürüme güncelleyemedi; bu nedenle hiçbir şey geri yüklenmedi ve hiçbir şey değişmedi. Yeniden deneyin — sürerse daha yeni bir yedekten geri yükleyin; uygulama günlüğü hangi adımın durdurduğunu kaydeder.',
         'restore_failed' => 'Geri yükleme çalışmadı ve hiçbir şey değişmedi. Tekrar dene — hata sürerse uygulama günlüğü onu neyin durdurduğunu kaydeder.',
     ],
 ];

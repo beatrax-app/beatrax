@@ -18,6 +18,7 @@ return [
         'heading' => 'Obnovitev iz varnostne kopije',
 
         'intro_html' => 'Zamenjaj trenutno bazo podatkov s šifrirano varnostno kopijo. Datoteka se pred kakršno koli spremembo dešifrira in preveri, posnetek trenutnih podatkov pa se shrani vnaprej — a to kljub temu <strong class="text-slate-700 dark:text-slate-200">prepiše vse</strong>, zato je dodatno zaščiteno. Odjavljen boš, saj je tudi tvoja prijava v zbirki podatkov.',
+        'updates_an_older_backup' => 'Varnostna kopija, ustvarjena s starejšo različico Beatraxa, se med obnovo posodobi na to, zato obnova spremeni tudi obliko podatkov, ne le vsebine. To se najprej zgodi na kopiji — če kateri koli korak spodleti, se nič ne obnovi in nič ne spremeni.',
         'restored' => 'Varnostna kopija je obnovljena. Prijavite se z uporabniškim imenom in geslom, ki sta veljala ob njeni izdelavi.',
         'snapshot_saved_prefix' => 'Posnetek tvojih prejšnjih podatkov je shranjen v',
         'file_label' => 'Datoteka varnostne kopije (.enc) ali arhiv izvoza (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Datoteke varnostne kopije ni bilo mogoče prebrati, zato obnovitev ni tekla in nič ni bilo spremenjeno. Preveri, ali ima naprava prosti prostor, in poskusi znova.',
         'restore_not_supported' => 'Obnovitev deluje v izdaji, ki hrani podatke v eni sami datoteki, ta pa to ni, zato nič ni bilo spremenjeno. Pri strežniški zbirki podatkov uporabi njena lastna orodja za obnovitev.',
         'restore_from_a_newer_build' => 'To varnostno kopijo je ustvarila novejša različica Beatraxa, kot je ta, ki teče tukaj, zato ni bila obnovljena in nič ni bilo spremenjeno. Posodobi Beatrax in jo nato obnovi znova.',
-        'restore_from_an_older_build' => 'To varnostno kopijo je ustvarila starejša različica Beatraxa, kot je ta, ki teče tukaj, zato ni bila obnovljena in nič ni bilo spremenjeno. Obnovi iz varnostne kopije, ki jo je ustvarila ta različica.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax te varnostne kopije ni mogel posodobiti na različico, ki teče tukaj, zato ni bilo nič obnovljeno in nič spremenjeno. Poskusi znova — če se ponavlja, obnovi novejšo kopijo; dnevnik aplikacije zabeleži, kateri korak jo je ustavil.',
         'restore_failed' => 'Obnovitev ni tekla in nič ni bilo spremenjeno. Poskusi znova — če še naprej spodleti, dnevnik aplikacije zabeleži, kaj jo je ustavilo.',
     ],
 ];

@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Backup;
 
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
+use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Public\Exceptions\BackupIoException;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\SqliteDatabase;
 use PDO;
 use PDOException;
 use Throwable;
@@ -20,35 +25,143 @@ use Throwable;
  */
 final readonly class BackupSchemaGeneration
 {
-    public function __construct(private Migrator $migrator) {}
+    private const string CONNECTION = '_restore_forward';
 
+    public function __construct(
+        private Migrator $migrator,
+        private Repository $config,
+        private DatabaseManager $db,
+        private MigrationWindow $window,
+    ) {}
+
+    // Takes a STAGED copy to this build's schema, never the live database: a
+    // migration that fails part way is permanent on this store, so the file
+    // this runs against has to be one a refusal can throw away.
     /**
-     * @throws BackupFromAnotherBuildException when the build cannot read this backup's schema
+     * @return int how many migrations it had to run
+     *
+     * @throws BackupFromANewerBuildException when the backup is ahead of this build
+     * @throws BackupCouldNotBeBroughtUpToDateException when a migration fails
      * @throws BackupIoException when the file cannot be opened as a database
      */
-    public function assertThisBuildCanRead(string $snapshotPath): void
+    public function bringUpToDate(string $stagedPath): int
     {
-        $carried = $this->recordedIn($snapshotPath);
+        $carried = $this->recordedIn($stagedPath);
 
         // A file recording none makes no claim to check. That is a fixture, a
         // hand-built database and every backup written before migrations were
-        // tracked; refusing them would strand a file over a question it never
+        // tracked; judging them would strand a file over a question it never
         // answered.
         if ($carried === []) {
-            return;
+            return 0;
         }
 
         $here = $this->recordedHere();
 
+        // Migrations only move forward, so a backup naming one this build does
+        // not have has no path to a shape this build reads. There is nothing
+        // to run and nothing to offer.
         $ahead = array_values(array_diff($carried, $here));
         if ($ahead !== []) {
-            throw BackupFromAnotherBuildException::newer($ahead);
+            throw new BackupFromANewerBuildException(
+                'The backup was taken on a build carrying '.count($ahead).' schema changes this one does not have.',
+                $ahead,
+            );
         }
 
         $behind = array_values(array_diff($here, $carried));
-        if ($behind !== []) {
-            throw BackupFromAnotherBuildException::older($behind);
+
+        return $behind === [] ? 0 : $this->runForward($stagedPath, $behind);
+    }
+
+    /**
+     * @param  list<string>  $behind
+     *
+     * @throws BackupCouldNotBeBroughtUpToDateException
+     */
+    private function runForward(string $stagedPath, array $behind): int
+    {
+        // The live connection's own settings with the path swapped, so the
+        // migrations meet the foreign-key, journal and locking behaviour they
+        // would meet on a real run rather than a laxer copy of it.
+        $this->config->set('database.connections.'.self::CONNECTION, [
+            ...$this->liveSettings(),
+            'database' => $stagedPath,
+        ]);
+        $this->db->purge(self::CONNECTION);
+
+        try {
+            $this->migrator->usingConnection(self::CONNECTION, function (): void {
+                $this->migrator->run($this->paths());
+            });
+        } catch (Throwable $e) {
+            throw new BackupCouldNotBeBroughtUpToDateException(
+                'The backup could not be brought to this build\'s schema: '.$e::class,
+                count($behind),
+                $e,
+            );
+        } finally {
+            $this->settle($stagedPath);
         }
+
+        return count($behind);
+    }
+
+    // A WAL beside the staged file is pages the swap would not read, and the
+    // swap opens it read-only. Checkpointed and the sidecars dropped while a
+    // connection still exists to do it.
+    private function settle(string $stagedPath): void
+    {
+        // Migrator fires MigrationsEnded only where the loop finished, so a
+        // run that threw leaves the window open on a request that carries on
+        // serving — and the listener it gates stops invalidating on writes.
+        $this->window->close();
+
+        try {
+            $this->db->connection(self::CONNECTION)->statement('PRAGMA journal_mode = DELETE');
+        } catch (Throwable) {
+            // A staged file the forward run has already abandoned. The caller
+            // is about to discard it either way.
+        } finally {
+            $this->db->purge(self::CONNECTION);
+            $this->config->set('database.connections.'.self::CONNECTION, null);
+        }
+
+        clearstatcache(true, $stagedPath);
+    }
+
+    // Refused rather than defaulted. A bare `['driver' => 'sqlite']` is the
+    // laxer copy this exists to avoid: no foreign keys, no busy timeout, a
+    // different locking mode — a run whose result nobody measured.
+    /**
+     * @return array<mixed> whatever the live connection is configured with
+     *
+     * @throws BackupNotSupportedException when it is configured with nothing
+     */
+    private function liveSettings(): array
+    {
+        $name = SqliteDatabase::connectionName($this->config);
+        $live = $this->config->get('database.connections.'.$name);
+
+        if (! is_array($live)) {
+            throw new BackupNotSupportedException('There is no database connection called '.$name.' to bring a backup forward against.');
+        }
+
+        return $live;
+    }
+
+    // The same set the phone's first launch replays, spelled the same way:
+    // every path a module registered, plus the shared root the framework only
+    // adds inside its own migrate command.
+    /**
+     * @return list<string>
+     */
+    private function paths(): array
+    {
+        return array_values(array_unique([
+            ...$this->migrator->paths(),
+            UserDataPathService::migrationsPath(),
+        ]));
     }
 
     // Every migration this build ships, by the same name the runner records:
@@ -59,10 +172,8 @@ final readonly class BackupSchemaGeneration
      */
     private function recordedHere(): array
     {
-        $paths = [...$this->migrator->paths(), UserDataPathService::migrationsPath()];
-
         /** @var list<string> $names */
-        $names = array_keys($this->migrator->getMigrationFiles($paths));
+        $names = array_keys($this->migrator->getMigrationFiles($this->paths()));
 
         return $names;
     }

@@ -18,6 +18,7 @@ return [
         'heading' => 'Återställ från en säkerhetskopia',
 
         'intro_html' => 'Ersätt din nuvarande databas med en krypterad säkerhetskopia. Filen dekrypteras och kontrolleras innan något ändras, och en ögonblicksbild av dina nuvarande data sparas först — men detta <strong class="text-slate-700 dark:text-slate-200">skriver över allt</strong>, så det är spärrat. Du loggas ut, eftersom din inloggning också ligger i databasen.',
+        'updates_an_older_backup' => 'En säkerhetskopia från en äldre version av Beatrax uppdateras till den här som en del av återställningen, så återställning ändrar även datans struktur och inte bara innehållet. Det sker först på en kopia — misslyckas ett steg återställs inget och inget ändras.',
         'restored' => 'Din säkerhetskopia har återställts. Logga in med det användarnamn och lösenord som gällde när den skapades.',
         'snapshot_saved_prefix' => 'En ögonblicksbild av dina tidigare data sparades i',
         'file_label' => 'Säkerhetskopia (.enc) eller exportarkiv (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Säkerhetskopian gick inte att läsa, så återställningen kördes inte och inget har ändrats. Kontrollera att enheten har ledigt utrymme och försök igen.',
         'restore_not_supported' => 'Återställning fungerar i den version som håller sina data i en enda fil, vilket den här inte är, så inget har ändrats. Använd databasens egna återställningsverktyg för en serverdatabas.',
         'restore_from_a_newer_build' => 'Den här säkerhetskopian skapades av en nyare version av Beatrax än den som körs här, så den återställdes inte och inget har ändrats. Uppdatera Beatrax och återställ den sedan igen.',
-        'restore_from_an_older_build' => 'Den här säkerhetskopian skapades av en äldre version av Beatrax än den som körs här, så den återställdes inte och inget har ändrats. Återställ från en säkerhetskopia som den här versionen skapade.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax kunde inte uppdatera den här säkerhetskopian till versionen som körs här, så inget återställdes och inget har ändrats. Försök igen — fortsätter det att misslyckas, återställ en nyare säkerhetskopia; apploggen noterar vilket steg som stoppade den.',
         'restore_failed' => 'Återställningen kördes inte, och inget har ändrats. Försök igen — om det fortsätter att misslyckas noterar appens logg vad som stoppade den.',
     ],
 ];

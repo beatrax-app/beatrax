@@ -18,6 +18,7 @@ return [
         'heading' => 'Atjaunot no dublējuma',
 
         'intro_html' => 'Aizstājiet pašreizējo datubāzi ar šifrētu dublējumu. Fails tiek atšifrēts un pārbaudīts, pirms kaut kas mainās, un vispirms tiek saglabāts pašreizējo datu momentuzņēmums — tomēr tas joprojām <strong class="text-slate-700 dark:text-slate-200">pārraksta visu</strong>, tāpēc darbība ir ierobežota. Tu tiksi izrakstīts, jo arī tava pieteikšanās ir datubāzē.',
+        'updates_an_older_backup' => 'Ar vecāku Beatrax versiju izveidota dublējumkopija atjaunošanas laikā tiek atjaunināta uz šo, tāpēc atjaunošana maina arī datu struktūru, ne tikai saturu. Tas vispirms notiek ar kopiju — ja kāds solis neizdodas, nekas netiek atjaunots un nekas netiek mainīts.',
         'restored' => 'Dublējums tika atjaunots. Piesakieties ar lietotājvārdu un paroli, kas bija spēkā tā izveides brīdī.',
         'snapshot_saved_prefix' => 'Jūsu iepriekšējo datu momentuzņēmums tika saglabāts šeit:',
         'file_label' => 'Dublējuma fails (.enc) vai eksporta arhīvs (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Dublējuma failu neizdevās nolasīt, tāpēc atjaunošana nenotika un nekas netika mainīts. Pārbaudiet, vai ierīcē ir brīva vieta, un mēģiniet vēlreiz.',
         'restore_not_supported' => 'Atjaunošana darbojas laidienā, kas glabā datus vienā failā, un šis tāds nav, tāpēc nekas netika mainīts. Servera datubāzei izmantojiet tās pašas atjaunošanas rīkus.',
         'restore_from_a_newer_build' => 'Šī dublējumkopija izveidota ar jaunāku Beatrax versiju nekā šeit darbojošos, tāpēc tā netika atjaunota un nekas netika mainīts. Atjaunini Beatrax un pēc tam atjauno to vēlreiz.',
-        'restore_from_an_older_build' => 'Šī dublējumkopija izveidota ar vecāku Beatrax versiju nekā šeit darbojošos, tāpēc tā netika atjaunota un nekas netika mainīts. Atjauno no dublējumkopijas, ko izveidojusi šī versija.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax nespēja atjaunināt šo dublējumkopiju uz šeit darbojošos versiju, tāpēc nekas netika atjaunots un nekas netika mainīts. Mēģini vēlreiz — ja neizdodas, atjauno jaunāku kopiju; lietotnes žurnāls pieraksta, kurš solis to apturēja.',
         'restore_failed' => 'Atjaunošana nenotika, un nekas netika mainīts. Mēģiniet vēlreiz — ja tas joprojām neizdodas, lietotnes žurnālā ir pierakstīts, kas to apturēja.',
     ],
 ];

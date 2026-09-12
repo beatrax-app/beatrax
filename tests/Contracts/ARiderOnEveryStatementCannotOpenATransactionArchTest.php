@@ -181,6 +181,10 @@ function pathRelativeToRepoRoot(string $path): string
  * @var array<string, array{argument: string, reason: string}>
  */
 const A_PURGE_NOTHING_WAS_BUILT_OVER = [
+    'Modules/Core/Internal/Backup/BackupSchemaGeneration.php' => [
+        'argument' => 'self::CONNECTION',
+        'reason' => 'a private `_restore_forward` name, configured over a staged copy and purged inside the method that made it, so no migration run outlives its connection; no cache store, session or queue driver is ever resolved over it',
+    ],
     'Modules/Core/Public/Services/RestoreEncryptedBackup.php' => [
         'argument' => '$connectionName',
         'reason' => 'a private `_restore_verify` name, configured and purged inside assertIntegrity() to run one PRAGMA against a candidate file; no cache store, session or queue driver is ever resolved over it',

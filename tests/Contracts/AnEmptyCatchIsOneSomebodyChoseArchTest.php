@@ -40,6 +40,10 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'count' => 1,
             'why' => 'The caller carries the verdict — a probe line, or a boot that must not halt; the alert write is the second channel and must not take the first one down with it.',
         ],
+        'Modules/Core/Internal/Backup/BackupSchemaGeneration.php' => [
+            'count' => 1,
+            'why' => 'It settles the journal on a staged copy the forward run has already abandoned, inside the finally that runs after a refusal; the caller discards the file either way, so there is nothing left for a report to change.',
+        ],
         'Modules/Core/Public/Http/Livewire/SystemAlertsBanner.php' => [
             'count' => 1,
             'why' => 'The banner is mounted on every page, so two tabs dismiss one alert and the second click names a row already retired.',
