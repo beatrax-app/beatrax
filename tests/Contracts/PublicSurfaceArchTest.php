@@ -174,6 +174,13 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/EmailScan/Public/Services/OAuthSecretsRepository.php',
         'Modules/EmailScan/Public/Services/SecretsWriteFailed.php',
         'Modules/FX/Public/Contracts/RateProvider.php',
+        // The declared return type of ExchangeRateService::convertToBase() and
+        // ::convertAtDate(), which are FX's cross-module entry point. Five
+        // files outside FX call them and read ->outcome, ->converted and
+        // ->rate off the answer without ever naming its type; the last one
+        // that did was NetWorthQuery, before the passthrough check it was
+        // unpacking by hand moved onto RateSet::withConversion().
+        'Modules/FX/Public/Dto/ConversionResult.php',
         // Returned by FxRefreshStatus::lastFailure(), which Shell's settings
         // page calls to say why a refresh gave up.
         'Modules/FX/Public/Dto/FxRefreshFailure.php',

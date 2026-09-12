@@ -32,21 +32,31 @@ final readonly class DailyFold
         /** @var array<string, true> $unconverted */
         $unconverted = [];
 
+        // The currencies this fold priced, as opposed to the ones the run's
+        // single batched lookup read: an account converting only dollars must
+        // not disclose the yen pair a sibling account needed.
+        /** @var array<string, true> $converted */
+        $converted = [];
+
         // Day 0 is the anchor: an observed position four other surfaces already
         // agree on, not a projected one. A jitter replica clamped down onto it
         // moved today's figure EUR25.71 under the header printing it.
         $firstProjectedDay = $asOf->startOfDay()->addDay();
 
         foreach ($contributions as $contribution) {
-            $converted = $this->convertTriple($contribution, $defaultCurrency, $rates);
+            $triple = $this->convertTriple($contribution, $defaultCurrency, $rates);
 
-            if ($converted === null) {
+            if ($triple === null) {
                 $unconverted[$contribution->currency] = true;
 
                 continue;
             }
 
-            [$convertedPoint, $convertedLow, $convertedHigh] = $converted;
+            [$convertedPoint, $convertedLow, $convertedHigh] = $triple;
+
+            if ($contribution->currency !== $defaultCurrency) {
+                $converted[$contribution->currency] = true;
+            }
 
             // Half the (low, high) span, taken absolute because the bounds
             // are signed and an expense inverts their order.
@@ -95,7 +105,7 @@ final readonly class DailyFold
         $codes = array_keys($unconverted);
         sort($codes);
 
-        return new DailyFoldResult($result, $codes);
+        return new DailyFoldResult($result, $codes, $rates->only(array_keys($converted)));
     }
 
     // Money is moved rather than dropped: the fold never reads a bucket before

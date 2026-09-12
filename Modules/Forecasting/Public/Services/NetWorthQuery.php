@@ -12,9 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
 use Modules\FX\Public\Dto\ConversionDisclosure;
-use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Dto\RateSet;
-use Modules\FX\Public\Dto\RateUsed;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
@@ -150,7 +148,9 @@ final readonly class NetWorthQuery
             }
 
             $total += $result->converted->toMinor();
-            $rates = self::withRateUsed($rates, $baseCurrency, $currency, $result);
+            // Two accounts holding one currency converted at one rate, so the
+            // set collapses them.
+            $rates = $rates->withConversion($result);
         }
 
         return ['lines' => $lines, 'total' => $total, 'withoutRate' => $withoutRate];
@@ -167,24 +167,5 @@ final readonly class NetWorthQuery
         $lines = $balance->lines();
 
         return $lines === [] ? [$defaultCurrency => 0] : $lines;
-    }
-
-    // A passthrough line was already in the base currency, so it converted at
-    // no rate and has nothing to disclose. Two accounts holding one currency
-    // converted at one rate, so the set collapses them.
-    private static function withRateUsed(RateSet $rates, string $baseCurrency, string $currency, ConversionResult $result): RateSet
-    {
-        if ($result->isPassthrough || $result->rate === null) {
-            return $rates;
-        }
-
-        return $rates->with(new RateUsed(
-            from: $currency,
-            to: $baseCurrency,
-            rate: $result->rate,
-            source: $result->source,
-            asOf: $result->asOf,
-            isStale: $result->isStale,
-        ));
     }
 }

@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kursid seisuga :date allikast :source',
+    'rates_not_recorded' => 'kursse ei salvestatud — see tulemus salvestati ilma nendeta',
 
     'stale_bundled' => 'Kasutusel on kaasas olev hetktõmmise kurss, mis on üle :count päeva vana. Ajakohaste kursside jaoks lülita seadetes sisse veebist värskendamine.|Kasutusel on kaasas olev hetktõmmise kurss, mis on üle :count päeva vana. Ajakohaste kursside jaoks lülita seadetes sisse veebist värskendamine.',
     'stale_old' => 'See kurss on üle :count päeva vana. Järgmine veebivärskendus uuendab selle.|See kurss on üle :count päeva vana. Järgmine veebivärskendus uuendab selle.',

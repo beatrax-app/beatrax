@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'taux au :date issus de :source',
+    'rates_not_recorded' => 'taux non enregistrés — ce résultat a été stocké sans eux',
 
     'stale_bundled' => 'Beatrax utilise un taux de l’instantané intégré, vieux de plus de :count jour. Active l’actualisation en ligne dans les Paramètres pour des taux à jour.|Beatrax utilise un taux de l’instantané intégré, vieux de plus de :count jours. Active l’actualisation en ligne dans les Paramètres pour des taux à jour.',
     'stale_old' => 'Ce taux date de plus de :count jour. La prochaine actualisation en ligne le mettra à jour.|Ce taux date de plus de :count jours. La prochaine actualisation en ligne le mettra à jour.',

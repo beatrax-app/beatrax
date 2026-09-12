@@ -39,8 +39,11 @@ module:
 - **Internal/Dto/** — `ReportDefinition` (the full user-composed recipe, the
   exact shape persisted as `saved_reports.definition` JSON), `ReportResultDto`
   (the aggregator's output contract: rows, total, currency, the two
-  FX-exclusion SETS, optional comparison rows), `ReportResultRow`
-  (one grouped total), `SavedReportIndexRow` (a `/reports/library` row
+  FX-exclusion SETS, the headline's `ConversionDisclosure`, optional
+  comparison rows), `ReportResultRow` (one grouped total, plus the
+  `ConversionDisclosure` for rows that are figures of their own rather than
+  slices of the headline's conversion — net-worth buckets, and nothing else),
+  `SavedReportIndexRow` (a `/reports/library` row
   with a pre-rendered summary line).
 - **Internal/Actions/** — `SaveReport`, `UpdateReport`, `DeleteReport`,
   `TogglePin` — the write surface for saved/pinned reports.
@@ -195,15 +198,44 @@ module:
 
   `'original'` mode discloses no rate, because it converts nothing — its
   disclosure carries an empty rate set and the exclusion list only. The
-  net-worth metric discloses no rate either, and for a different reason:
-  `NetWorthSeriesQuery` converts each account line at each bucket's own
-  historical rate, so a sixty-bucket series has sixty rate sets and no
-  single one answers for the headline. The
   rate for every discovered currency, fees included, is fetched once
   per report: each dimension query returns rows already scoped to the
   one currency it was asked for, so converting per row read the whole
   `exchange_rates` table once per row for a rate that could not have
   changed between them.
+
+  **The net-worth metric discloses per bucket, because it converted per
+  bucket.** `NetWorthSeriesQuery` prices each account line at the rate in
+  effect on its own bucket's day, so a sixty-bucket series holds sixty rate
+  sets. Each `NetWorthSeriesPoint` carries the `RateSet` its own bucket was
+  priced at — required by the constructor, not defaulted, so a bucket that
+  converted and will not say at what is not a state the type can hold — and
+  every table row renders it through `ReportResultRow::$conversion`. That
+  field is null on every dimension row: a category total is converted at the
+  one rate set the headline already names, and a copy per row would be the
+  same sentence written once per group. The layout is the calendar's —
+  [per bucket, plus one line above them](../calendar/architecture.md) — rather
+  than a second rule.
+
+  **The headline names its own bucket's legs, not the series'.** The headline
+  total is the most recent point and nothing else — net worth is a balance, so
+  it is not summed — which makes its legs exactly that bucket's. Folding the
+  oldest leg of the whole series onto it instead was tried and rejected: it
+  quotes a rate that cannot rebuild the figure printed above it. On the fixture
+  in `EveryNetWorthBucketNamesTheRateThatPricedItTest` that mis-prices the
+  headline by EUR 6,858.56, which is the same failure as quoting a
+  display-rounded rate, only larger.
+  [B10-R15](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md)
+  is satisfied within that one figure, where it applies: a bucket holding a
+  fresh dollar leg and a three-month-old yen leg is dated by the yen. Sixty
+  buckets are sixty conversions, not one conversion with sixty legs.
+
+  A bucket whose balances were all already in the reader's currency converted
+  at no rate and discloses nothing, so an all-passthrough series is silent —
+  and a rate no bucket was priced at reaches no figure on the page. The
+  headline delta under `compare` is the one converted figure here with no
+  disclosure of its own: it is a difference across two windows priced on two
+  different days, and one line cannot answer for the total and the delta both.
 
   **The total is converted from the currency's own subtotal, never summed
   from separately-rounded rows.** Rounding each grouped row's conversion on
@@ -282,7 +314,9 @@ module:
   report the whole portfolio as though the filter had been honoured. The
   exclusion metadata is a **set of account ids** unioned across the series:
   adding each point's count up told a reader with five accounts that 4108
-  of them were not converted. Every point repeats
+  of them were not converted. The rates are NOT unioned the same way, and
+  cannot be: a code set is an omission from the whole series, and a rate set
+  answers for one figure. Every point repeats
   Forecasting's `NetWorthQuery::forUser()` exclude+count algorithm once
   per `TimeBucketGenerator` sample date instead of once for "today".
   The account set is the same one and asked the same way: both call
@@ -624,7 +658,8 @@ ReportBuilder (Livewire, every control is a #[Url]-bound property)
                base/original mode
        -> compare=true? PeriodComparison::compare() joins the previous
           period's ReportResultDto by (group, currency)
-  -> ReportResultDto (rows, total, currency, FX-exclusion metadata)
+  -> ReportResultDto (rows, total, currency, FX-exclusion metadata,
+       the headline's disclosure; net-worth rows carry their bucket's)
   -> table/chart partials render; DrilldownUrlBuilder maps each row to
      a /transactions filter URL
 ```

@@ -50,15 +50,10 @@ const FX_DISCLOSURE_EXEMPT = [
         'file' => 'Modules/FX/Public/Dto/ConvertedTotal.php',
         'proves' => '/public RateSet \$rates/',
     ],
-    'Modules/Forecasting/Public/Dto/ForecastDto.php' => [
-        'reason' => 'read back out of a stored projection run, whose result_json records the codes the fold could not price and not the rates it priced the rest at; the curve can disclose a rate once that format carries one',
-        'file' => 'Modules/Forecasting/Internal/Mapping/ForecastDtoMapper.php',
-        'proves' => '/unconverted_currencies.{0,4}\?\?/',
-    ],
     'Modules/Forecasting/Internal/Pipeline/DailyFoldResult.php' => [
-        'reason' => 'the fold holds the rate set, but the only reader of this result writes it to result_json, and what that format does not carry cannot come back out of it',
-        'file' => 'Modules/Forecasting/Internal/Pipeline/ProjectionPipeline.php',
-        'proves' => '/unconverted_currencies.{0,6}=>/',
+        'reason' => 'holds the RateSet the fold priced with, which the pipeline writes into result_json beside the codes it could not price; the disclosure is projected where the run is read back, so this is a source of an entry above rather than a holder of one',
+        'file' => 'Modules/Forecasting/Internal/Pipeline/DailyFoldResult.php',
+        'proves' => '/public RateSet \$rates/',
     ],
 ];
 

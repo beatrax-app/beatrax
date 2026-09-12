@@ -6,7 +6,7 @@ namespace Modules\FX\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\Lang;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Internal\Support\RateFreshness;
 use Modules\FX\Public\Support\BundledRates;
 
 // What one figure has to say about its own conversion: the rates that built it
@@ -21,11 +21,13 @@ final readonly class ConversionDisclosure
     /**
      * @param  list<RateUsed>  $rates
      * @param  list<string>  $unconverted  currency codes left out for want of a rate
+     * @param  bool  $ratesUnrecorded  the figure was rebuilt from a stored result that kept no rates, so no rate here is evidence of none having been used
      */
     private function __construct(
         public string $currency,
         public array $rates,
         public array $unconverted,
+        public bool $ratesUnrecorded = false,
     ) {}
 
     public static function none(): self
@@ -43,12 +45,27 @@ final readonly class ConversionDisclosure
         return new self($rates->targetCurrency, $rates->all(), $unconverted);
     }
 
+    // A figure rebuilt from a stored result whose format kept no rates. An
+    // empty set renders as silence, and silence here means "converted
+    // nothing" -- a claim no old record supports either way.
+    /**
+     * @link ../../../../.docs/features/fx/architecture.md#a-converted-figure-carries-the-rate-that-made-it
+     *
+     * @param  list<string>  $unconverted
+     */
+    public static function unrecorded(string $currency, array $unconverted = []): self
+    {
+        sort($unconverted);
+
+        return new self($currency, [], $unconverted, ratesUnrecorded: true);
+    }
+
     // Nothing to render rather than an empty line: a figure whose buckets were
     // all already in the reader's currency converted nothing and has nothing to
     // disclose, which is the passthrough B10 gives a zero-cost path.
     public function isEmpty(): bool
     {
-        return $this->rates === [] && $this->unconverted === [];
+        return $this->rates === [] && $this->unconverted === [] && ! $this->ratesUnrecorded;
     }
 
     public function hasRates(): bool
@@ -114,7 +131,7 @@ final readonly class ConversionDisclosure
             default => 'core::fx.stale_old',
         };
 
-        return Lang::choice($key, ExchangeRateService::STALE_DAYS_THRESHOLD);
+        return Lang::choice($key, RateFreshness::STALE_DAYS_THRESHOLD);
     }
 
     public function isStale(): bool

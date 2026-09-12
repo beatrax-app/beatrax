@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kurzy k :date zo zdroja :source',
+    'rates_not_recorded' => 'kurzy nie sú zaznamenané — tento výsledok bol uložený bez nich',
 
     'stale_bundled' => 'Používa sa priložený kurz zo snímky starší než :count deň. Pre aktuálne kurzy zapni v Nastaveniach online obnovovanie.|Používa sa priložený kurz zo snímky starší než :count dni. Pre aktuálne kurzy zapni v Nastaveniach online obnovovanie.|Používa sa priložený kurz zo snímky starší než :count dní. Pre aktuálne kurzy zapni v Nastaveniach online obnovovanie.',
     'stale_old' => 'Tento kurz je starší než :count deň. Najbližšie online obnovenie ho aktualizuje.|Tento kurz je starší než :count dni. Najbližšie online obnovenie ho aktualizuje.|Tento kurz je starší než :count dní. Najbližšie online obnovenie ho aktualizuje.',

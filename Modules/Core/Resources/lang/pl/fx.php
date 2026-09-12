@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kursy na dzień :date, źródło: :source',
+    'rates_not_recorded' => 'kursy nie zostały zapisane — ten wynik zapisano bez nich',
 
     'stale_bundled' => 'Używany jest kurs z dołączonej migawki, mający ponad :count dzień. Włącz odświeżanie online w Ustawieniach, aby mieć aktualne kursy.|Używany jest kurs z dołączonej migawki, mający ponad :count dni. Włącz odświeżanie online w Ustawieniach, aby mieć aktualne kursy.|Używany jest kurs z dołączonej migawki, mający ponad :count dni. Włącz odświeżanie online w Ustawieniach, aby mieć aktualne kursy.',
     'stale_old' => 'Ten kurs ma ponad :count dzień. Najbliższe odświeżenie online go zaktualizuje.|Ten kurs ma ponad :count dni. Najbliższe odświeżenie online go zaktualizuje.|Ten kurs ma ponad :count dni. Najbliższe odświeżenie online go zaktualizuje.',
