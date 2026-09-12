@@ -53,6 +53,35 @@ An IMAP library is not a shortcut here; it is a specification violation.
 4. The module's implementation map in [`.docs/features/<module>/`](.docs/features/) — where the code actually lives.
 5. **Find the requirement your change serves before editing. Cite it.**
 
+## Working in a worktree
+
+```sh
+bin/worktree.sh <name>            # -> ../wt-<name>, bootstrapped, control run
+```
+
+Use it. A fresh worktree is missing three gitignored things, and each absence
+looks like a real test failure rather than like missing setup — `vendor/`
+(no `vendor/bin/pest`), `public/build/` (22 tests fail with
+`ViteManifestNotFoundException`), and `.env` (`key:generate` throws on a file
+that is not there).
+
+Both directories are **hardlinked, never symlinked**. A symlinked `vendor/`
+makes Pest resolve the project root to the main checkout, so every test in the
+worktree loses its `TestCase` binding and fails with `$this->app` null — dozens
+of failures that look exactly like broken code. The script refuses to finish if
+it finds one, and ends by running a known-green file so that "the suite is
+broken" and "this worktree is not set up" are told apart before any real work
+starts.
+
+Two things are shared between worktrees and will bite you:
+
+- **`git stash` is per-repository.** Concurrent worktrees share one stack, so
+  `git stash pop` can restore somebody else's work into yours. To set a file
+  aside — which is mostly done to plant and unplant a defect — copy it
+  somewhere and copy it back.
+- **`git checkout -- <file>` reverts to the index**, so it destroys uncommitted
+  work rather than undoing only the thing you planted.
+
 ## Code standards (enforced)
 
 - **The gate is four checks, all blocking:** `vendor/bin/pint --test`,
