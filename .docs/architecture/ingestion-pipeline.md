@@ -644,6 +644,57 @@ mailbox still derive it alike, because `InboxMessageQuery` walks
 `inbox_messages` does not sync — nothing stronger than that is claimed. The
 alternative is the collapse this replaces, which loses a purchase outright.
 
+### A refused receipt insert
+
+The ordinal is read off the ledger, and `RecordTransactions` opens its own
+transaction to write the row — so the count and the write are not one atomic
+step. Another writer can take the counted ordinal in the gap, and the digest
+around it lands inside `transactions_fingerprint_sha_uq`: `insertOrIgnore`
+refuses, the recorder reports a duplicate, and the receipt is gone. The row it
+collided with is a *different* purchase, which makes this exactly the loss the
+ordinal was introduced to prevent.
+
+The second writer is not a second bridge. The desktop starts one queue worker —
+`config/nativephp.php` declares a single `queue_workers` entry and NativePHP's
+`fireUpQueueWorkers()` starts one process per entry — and both callers of the
+bridge, `ProcessFetchedInboxMessagesJob` and `ScanInboxDropFolderJob`, are
+queued, so two bridges never overlap. It is `sync:serve`, started as a
+ChildProcess by `Desktop\Internal\Native\SyncListenerProcess`: a separate OS
+process, on its own connection, whose `OpLogEntryApplier` inserts `transactions`
+rows a peer sent. Two devices scanning one mailbox — the case the section above
+already describes — is the case that collides.
+
+`RecordManualTransaction` answers a refusal by retrying at `ordinal + 1`, and
+copying that shape here would be wrong. The receipt ordinal counts over receipt
+formats alone, precisely so a receipt whose purchase a statement already booked
+stays at 0 and dedupes into that booking. A blind `+1` steps past the statement
+row and writes the purchase a second time: a silent duplicate in place of a
+silent loss, which is not an improvement.
+
+`ReceiptLedgerBridge::recordAtItsOwnOccurrence()` therefore recounts after a
+refused insert and retries only while the recount is **strictly higher** than
+the ordinal just attempted. A recount that did not move says the row standing
+there is a statement booking of this purchase. A recount answering null says the
+message's own reference is now in the ledger, which is the same message read
+twice — including a peer's copy of it arriving mid-flight. Either way nothing is
+written. Only a recount that moved says a *receipt* took the ordinal, and only
+then is this purchase the next occurrence.
+
+It terminates because every retry needs a strictly higher recount, and the
+recount only rises when a row actually sits at the ordinal that was refused: the
+sequence is bounded by the rows stored in the group, and each step past one of
+them is witnessed by a row that is already there.
+
+This is the write's-own-report answer from
+[a check another writer can invalidate](../conventions/a-check-another-writer-can-invalidate.md):
+`insertOrIgnore()` already reports what it did under the same lock as the write,
+and `RecordResult::$inserted` carries that count out. The transaction answer
+does not apply here — `RecordTransactions` opens its own transaction per chunk
+and dispatches `TransactionImported` only after it commits, precisely so the
+synchronous listeners under it never act on rows a rollback removes, and an
+outer transaction spanning the count and the write would put them back inside
+one.
+
 ## Per-row error handling
 
 Per-row exceptions inside the try-catch around stages 4-8 produce

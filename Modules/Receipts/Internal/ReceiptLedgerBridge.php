@@ -66,14 +66,38 @@ final readonly class ReceiptLedgerBridge
         $canonical = $this->autoCategory->apply($canonical, $user)->canonical;
         $canonical = $this->resolveCounterparty->run($canonical, $user);
 
-        $ordinal = $this->occurrenceOrdinalFor($canonical, $user);
-        if ($ordinal === null) {
-            return $importRunId;
-        }
-
-        ($this->recorder)([$canonical->withOccurrenceOrdinal($ordinal)], $user);
+        $this->recordAtItsOwnOccurrence($canonical, $user);
 
         return $importRunId;
+    }
+
+    // The ordinal is counted outside the recorder's transaction, so a second
+    // writer can take it in between. A refused insert is re-read rather than
+    // trusted: only a recount strictly above the ordinal just attempted means a
+    // receipt took it, and only then is this purchase the next occurrence.
+    /**
+     * @link ../../../.docs/architecture/ingestion-pipeline.md#a-refused-receipt-insert
+     */
+    private function recordAtItsOwnOccurrence(CanonicalTransaction $tx, User $user): void
+    {
+        $ordinal = $this->occurrenceOrdinalFor($tx, $user);
+
+        while ($ordinal !== null) {
+            if (($this->recorder)([$tx->withOccurrenceOrdinal($ordinal)], $user)->inserted > 0) {
+                return;
+            }
+
+            $recount = $this->occurrenceOrdinalFor($tx, $user);
+
+            // Not strictly higher means the row standing at that ordinal IS
+            // this purchase — a statement that already booked it, or this very
+            // message. Stepping past it would write the purchase a second time.
+            if ($recount === null || $recount <= $ordinal) {
+                return;
+            }
+
+            $ordinal = $recount;
+        }
     }
 
     // A receipt is its own document, so there is no file to count occurrences
