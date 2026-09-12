@@ -134,7 +134,7 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
     // Stops at the first failure rather than carrying on: the order is a
     // dependency order, and children emitted after their parent failed name
     // rows the peer never received, so its foreign keys drop them. Never
-    // throws out — a capture failure costs the peer this write, not the data.
+    // throws out — the reader's import is committed and is not in question.
     /**
      * @param  array<string, list<int|string>>  $ids
      * @param  array<string, mixed>  $context
@@ -145,7 +145,13 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
             try {
                 $this->backfiller->captureRowsById($table, $ids[$table], $userId, $writer);
             } catch (Throwable $e) {
-                $this->log->warning('ImportSyncCapture: capture failed; stopped before emitting any child rows.', [
+                // The same debt the no-writer arm below owes, for the same
+                // reason: the parents are announced and their children are
+                // not, and nothing opens a second pass over this run. A
+                // warning is not a channel any peer reads.
+                $this->oweABackfill($userId);
+
+                $this->log->warning('ImportSyncCapture: capture failed part-way; a backfill is owed for the rows it stopped before.', [
                     'table' => $table,
                     'userId' => $userId,
                     'exception' => $e::class,
@@ -181,10 +187,22 @@ final readonly class ImportSyncCapture implements CapturesImportForSync, Capture
     // captures rows by id in a dependency order and re-deriving that later is
     // the walk. A device that never enabled sync is left alone: it owes no
     // peer anything, and enabling sync captures everything it holds.
+
+    // Both callers reach this from inside a catch, on the tail of a commit the
+    // reader has already been told about, so a throw here would fail an import
+    // that landed. The line is what is left when even the debt cannot be filed.
     private function oweABackfill(int $userId): void
     {
-        if ($this->container->make(DeviceIdentityLoader::class)->exists($userId)) {
-            $this->progress->open($userId);
+        try {
+            if ($this->container->make(DeviceIdentityLoader::class)->exists($userId)) {
+                $this->progress->open($userId);
+            }
+        } catch (Throwable $e) {
+            $this->log->error('ImportSyncCapture: the backfill this capture owes could not be opened, so no pass will carry these rows to a peer.', [
+                'userId' => $userId,
+                'exception' => $e::class,
+                ...SafeExceptionContext::describe($e),
+            ]);
         }
     }
 

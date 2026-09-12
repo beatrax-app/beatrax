@@ -8,6 +8,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Internal\Backup\BackupFreshness;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
+use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Internal\Enums\BackupAlertKind;
 use Modules\Core\Internal\Listeners\HealthCheckListener;
 use Modules\Core\Models\SystemAlert;
@@ -42,8 +43,15 @@ function bnrSidecar(Filesystem $files, int $hoursAgo): void
     $at = $clock->now()->subHours($hoursAgo);
 
     $files->makeDirectory(bnrBackupsDir(), 0o755, recursive: true, force: true);
+
+    // The copy the sidecar vouches for. A sidecar standing alone is what a
+    // half-finished retention sweep leaves behind, and that is read as no
+    // backup at all -- so a fixture standing in for one writes both.
+    $backup = bnrBackupsDir().DIRECTORY_SEPARATOR.'beatrax-'.$at->format('Y-m-d-His').'.sqlite';
+    $files->put($backup, 'the copy this sidecar names');
+
     $files->put(
-        bnrBackupsDir().DIRECTORY_SEPARATOR.'beatrax-'.$at->format('Y-m-d-His').'.sqlite.meta.json',
+        $backup.BackupSidecar::SUFFIX,
         (string) json_encode([
             'data_version' => 1,
             'started_at' => $at->subSecond()->toIso8601String(),

@@ -237,10 +237,15 @@ final readonly class HistoryReprojector
 
     // Here under the id the peer used, or under the one this device minted for
     // the same row. Both mean the refusal is spent.
+
+    // Null is "could not ask", and it is deliberately neither answer: the
+    // caller retires a hold on an exact match, so a lock answered `false`
+    // retired the delete-refusals whose only record that is. The next pass
+    // asks again, which is what a transient failure is owed.
     /**
      * @param  array{table: string, pk: string}  $row
      */
-    private function rowIsHere(array $row, int $userId): bool
+    private function rowIsHere(array $row, int $userId): ?bool
     {
         try {
             $connection = $this->db->connection();
@@ -257,7 +262,7 @@ final readonly class HistoryReprojector
 
             return is_string($local) && $connection->table($row['table'])->where('id', $local)->exists();
         } catch (Throwable) {
-            return false;
+            return null;
         }
     }
 

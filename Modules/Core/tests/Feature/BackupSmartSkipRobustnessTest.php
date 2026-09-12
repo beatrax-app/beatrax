@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
+use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
 
@@ -64,11 +65,15 @@ it('does not skip when there is nothing to compare against', function (): void {
 it('does not skip when the newest sidecar is not a file', function (): void {
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
+    // The copy is there, so the only thing wrong is the sidecar's shape.
+    file_put_contents($backupsDir.DIRECTORY_SEPARATOR.'beatrax-2026-01-01-000000.sqlite', 'seeded');
     mkdir($backupsDir.DIRECTORY_SEPARATOR.'beatrax-2026-01-01-000000.sqlite.meta.json');
 
     $this->artisan('db:backup')->assertExitCode(0);
 
-    expect(skipProducedBackups($backupsDir))->toHaveCount(1);
+    // The seeded copy and the fresh one: the run wrote a backup rather than
+    // believing a sidecar it could not read.
+    expect(skipProducedBackups($backupsDir))->toHaveCount(2);
 
     @rmdir($backupsDir.DIRECTORY_SEPARATOR.'beatrax-2026-01-01-000000.sqlite.meta.json');
 });
@@ -76,6 +81,8 @@ it('does not skip when the newest sidecar is not a file', function (): void {
 it('does not skip when the newest sidecar does not hold an object', function (): void {
     /** @var string $backupsDir */
     $backupsDir = $this->backupsDir;
+    // The copy is there, so the only thing wrong is what the sidecar holds.
+    file_put_contents($backupsDir.DIRECTORY_SEPARATOR.'beatrax-2026-01-01-000000.sqlite', 'seeded');
     file_put_contents(
         $backupsDir.DIRECTORY_SEPARATOR.'beatrax-2026-01-01-000000.sqlite.meta.json',
         '"a bare string, not the object this expects"',
@@ -83,7 +90,7 @@ it('does not skip when the newest sidecar does not hold an object', function ():
 
     $this->artisan('db:backup')->assertExitCode(0);
 
-    expect(skipProducedBackups($backupsDir))->toHaveCount(1);
+    expect(skipProducedBackups($backupsDir))->toHaveCount(2);
 });
 
 it('does not skip a second invocation once rows have been committed since the last backup', function (): void {
@@ -111,4 +118,48 @@ it('does not skip a second invocation once rows have been committed since the la
     $this->artisan('db:backup')->assertExitCode(0);
 
     expect(skipProducedBackups($backupsDir))->toHaveCount(2);
+});
+
+// The one way the read can go wrong that this file did not cover: the sidecar
+// parses perfectly and the copy it vouches for is not there. The retention
+// sweep unlinks the copy before the sidecar, so an interrupted run leaves
+// exactly this, and believing it deletes the verified copy just made.
+it('does not skip when the newest sidecar names a backup that is gone', function (): void {
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+
+    $this->artisan('db:backup')->assertExitCode(0);
+    $first = skipProducedBackups($backupsDir);
+    expect($first)->toHaveCount(1);
+
+    // The copy alone, as a sweep that stopped between the two unlinks leaves
+    // it. Its sidecar carries the digest of a database nothing has written to
+    // since, so the next run's own digest matches it exactly.
+    unlink($first[0]);
+    expect(skipProducedBackups($backupsDir))->toBe([]);
+
+    $this->artisan('db:backup')->assertExitCode(0);
+
+    expect(skipProducedBackups($backupsDir))->toHaveCount(1);
+});
+
+// The positive control for the walk: an orphan must not turn every later run
+// into a forced backup, only stop the orphan itself from answering.
+it('still skips on an older sidecar whose copy survived the sweep', function (): void {
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+
+    $this->artisan('db:backup')->assertExitCode(0);
+    $first = skipProducedBackups($backupsDir);
+    expect($first)->toHaveCount(1);
+
+    $survivor = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-2026-04-22-030000.sqlite';
+    copy($first[0], $survivor);
+    copy($first[0].BackupSidecar::SUFFIX, $survivor.BackupSidecar::SUFFIX);
+
+    unlink($first[0]);
+
+    $this->artisan('db:backup')->assertExitCode(0);
+
+    expect(skipProducedBackups($backupsDir))->toBe([$survivor]);
 });

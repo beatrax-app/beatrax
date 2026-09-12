@@ -122,6 +122,18 @@ of the copies was found to be missing the lock-down entirely.
   failure raises `E_WARNING`, which Laravel's error handler converts to an `ErrorException`
   before the comparison runs — so the guard never fired and the caller saw a type it was not
   looking for.
+- The **sealed** destination is staged too, not just the plaintext. `writeSealed()` encrypts to
+  a randomized `.tmp` sibling and renames it over the live path, exactly as
+  `GdkKeyringService::writeKeyringFile()` does. `BackupEncryptor::encryptWithKey()` opens its
+  destination `'wb'`, so sealing straight onto `<id>.enc` truncated the live file first: a write
+  cut short left a key-file that decrypts to nothing, which reads back as
+  `DeviceIdentityState::Unreadable` — and `generateAndPersist()` refuses to overwrite one of
+  those, deliberately, so a device interrupted on its first run could never mint an identity
+  again without the reader finding the retire action in settings.
+- On any failure the staged sibling is unlinked before the exception leaves. That is the
+  opposite of the keyring's deferred finalize, which keeps its `.tmp` on a rename failure
+  because it is the only copy of a key: here the caller still holds the plaintext and will mint
+  again, so debris beside the live path is exposure and nothing else.
 
 ## Why the KEK is not passphrase-hardened
 

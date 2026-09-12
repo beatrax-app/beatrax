@@ -99,12 +99,16 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
                 break;
             }
 
+            // Announced BEFORE the delete, which is the reverse of every other
+            // writer here and is the point: the query above is what finds a row
+            // to announce, so a worker killed between the two has to leave the
+            // row standing rather than the tombstone owed.
+            $this->announce($ids, $events);
+
             $connection->table('notifications')
                 ->where('user_id', $this->userId)
                 ->whereIn('id', $ids)
                 ->delete();
-
-            $this->announce($ids, $events);
         } while (count($ids) === self::CHUNK_SIZE);
     }
 
@@ -114,6 +118,8 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
     // peer's own history the last word on whether they came back.
     /**
      * @param  list<string>  $ids
+     *
+     * @link ../../../../.docs/features/notifications/architecture.md#retention
      */
     private function announce(array $ids, ?Dispatcher $events): void
     {
