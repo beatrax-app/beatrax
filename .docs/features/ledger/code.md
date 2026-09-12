@@ -190,6 +190,14 @@ Migrations, the load-bearing ones summarised by purpose:
   [`Transfers`](../transfers/architecture.md)).
 - `2026_05_17_020001_recreate_transactions_type_triggers.php`
   — the type-enum trigger refresh.
+- `2026_05_26_000001_say_whether_a_summarys_balances_were_read_or_summed.php`
+  — `statement_summaries.balances_derived_from_rows`, the column the
+  starting-balance anchor narrows on
+  ([a summed balance is not a balance anyone read](reconcile-needs-an-anchor.md#a-summed-balance-is-not-a-balance-anyone-read)).
+  Dated a day before the backfill below rather than on the day it was
+  written: that one-shot calls the anchoring service, which reads this
+  column, and a phone replays every migration in order without a schema
+  dump.
 - `2026_05_27_000001_add_starting_balance_to_accounts_table.php`
   and
   `2026_05_27_000002_backfill_starting_balance_from_statement_summaries.php`

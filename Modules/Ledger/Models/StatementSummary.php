@@ -27,6 +27,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
  * @property string|null $closing_balance_currency
  * @property CarbonImmutable|null $closing_balance_date
  * @property CarbonImmutable|null $payment_due_date
+ * @property bool $balances_derived_from_rows
  * @property int $entry_count
  * @property array<string, mixed>|null $extras
  */
@@ -50,6 +51,7 @@ final class StatementSummary extends Model
         'closing_balance_currency',
         'closing_balance_date',
         'payment_due_date',
+        'balances_derived_from_rows',
         'entry_count',
         'extras',
     ];
@@ -63,6 +65,7 @@ final class StatementSummary extends Model
             'opening_balance_date' => 'immutable_datetime',
             'closing_balance_date' => 'immutable_datetime',
             'payment_due_date' => 'immutable_datetime',
+            'balances_derived_from_rows' => 'boolean',
             'opening_balance_minor' => 'integer',
             'closing_balance_minor' => 'integer',
             'entry_count' => 'integer',
