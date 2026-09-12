@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Public\Services\PortableKeyMaterial;
 use Tests\Helpers\LiveSqliteConnection;
@@ -223,4 +225,60 @@ it('leaves nothing of the ledger in the staging directory', function (): void {
     $staged = (array) glob(UserDataPathService::appPath('tmp-restore').DIRECTORY_SEPARATOR.'*');
 
     expect($staged)->toBe([]);
+});
+
+// The pre-restore snapshot is the documented undo, and a restore replaces the
+// keyring on its way past. An undo that puts the rows back under a keyring
+// that is no longer the active one restores a ledger nothing can read — so the
+// snapshot carries the keys it is an undo of.
+it('makes the pre-restore snapshot an undo of the keyring too', function (): void {
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    // An epoch is appended after the backup was taken, so the machine's
+    // keyring is no longer the one the backup carries.
+    /** @var string $keyring */
+    $keyring = $this->keyring;
+    file_put_contents($keyring, 'the-keyring-with-the-epoch-added-later');
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
+
+    expect(file_get_contents($keyring))->toBe(supportedBackupKeyringBytes());
+
+    $snapshots = (array) glob($backupsDir.DIRECTORY_SEPARATOR.'pre-restore-*.sqlite');
+
+    expect($snapshots)->toHaveCount(1);
+
+    $this->artisan('db:restore', ['path' => (string) $snapshots[0], '--confirm' => true])->assertSuccessful();
+
+    expect(file_get_contents($keyring))->toBe('the-keyring-with-the-epoch-added-later');
+});
+
+// The snapshot name is second-resolution and VACUUM INTO refuses an existing
+// target. The documented undo is to restore the snapshot a failed restore just
+// named, so two runs inside one second is the ordinary case — and it threw a
+// raw query exception off the safety rail itself, after maintenance mode was
+// taken.
+it('takes a second pre-restore snapshot inside the same second', function (): void {
+    app()->instance(Clock::class, new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse('2026-09-12 12:00:00');
+        }
+    });
+
+    $this->artisan('db:backup', ['--force' => true])->assertSuccessful();
+
+    /** @var string $backupsDir */
+    $backupsDir = $this->backupsDir;
+    $produced = (string) ((array) glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite'))[0];
+
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
+    $this->artisan('db:restore', ['path' => $produced, '--confirm' => true])->assertSuccessful();
+
+    expect((array) glob($backupsDir.DIRECTORY_SEPARATOR.'pre-restore-*.sqlite'))->toHaveCount(2);
 });

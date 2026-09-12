@@ -148,7 +148,12 @@ final class RestoreDatabaseCommand extends Command
         }
 
         $livePath = $this->resolveLivePath();
-        $preRestorePath = $this->backupsDirectory().DIRECTORY_SEPARATOR.'pre-restore-'.$this->clock->now()->format('Y-m-d-His').'.sqlite';
+        // Eight random hex characters, because VACUUM INTO refuses an existing
+        // target and the stamp is second-resolution: the documented undo is to
+        // restore the snapshot a failed restore just named, and two runs inside
+        // one second threw a raw query exception off the safety rail itself.
+        $preRestorePath = $this->backupsDirectory().DIRECTORY_SEPARATOR
+            .'pre-restore-'.$this->clock->now()->format('Y-m-d-His').'-'.bin2hex(random_bytes(4)).'.sqlite';
         $escaped = str_replace("'", "''", $preRestorePath);
         // VACUUM INTO must not run inside a transaction; this call stands alone
         // on the named `sqlite` connection, which opens none.
@@ -158,6 +163,17 @@ final class RestoreDatabaseCommand extends Command
 
             throw new RestoreFailedException(leaveDown: false);
         }
+
+        // The snapshot is an undo of the keyring as well as of the rows: the
+        // lift below replaces the one on this machine, and rows put back under
+        // a keyring that is no longer the active one are unreadable. Packed
+        // while the machine still holds the keyring this snapshot belongs to.
+        try {
+            $this->keyMaterial->packInto($preRestorePath);
+        } catch (Throwable $e) {
+            $this->refuse($e);
+        }
+
         $this->info('Pre-restore snapshot: '.$preRestorePath);
 
         // Before the swap, so a keyring that will not decode leaves the live
@@ -223,7 +239,7 @@ final class RestoreDatabaseCommand extends Command
                 throw new BackupIoException('The staged backup could not be made owner-only: '.$staged);
             }
         } catch (Throwable $e) {
-            $this->refuseLift($e);
+            $this->refuse($e);
         }
 
         try {
@@ -236,17 +252,17 @@ final class RestoreDatabaseCommand extends Command
             $this->keyMaterial->unpackFrom($staged);
         } catch (Throwable $e) {
             $this->staging->discard($staged);
-            $this->refuseLift($e);
+            $this->refuse($e);
         }
 
         return $staged;
     }
 
-    // Both arms above can receive a PDOException as well as one of ours, and
-    // that message is the statement and its bindings on a console anyone
-    // watching the restore can read. Ours name a path and a phase and are the
-    // whole of the advice; anything else is named by class.
-    private function refuseLift(Throwable $e): never
+    // Every caller can receive a PDOException as well as one of ours, and that
+    // message is the statement and its bindings on a console anyone watching
+    // the restore can read. Ours name a path and a phase and are the whole of
+    // the advice; anything else is named by class.
+    private function refuse(Throwable $e): never
     {
         $this->error('Restore refused: '.($e instanceof BackupIoException
             ? $e->getMessage()

@@ -1852,23 +1852,38 @@ material a query could read. A keyring already on the restoring machine is renam
 database does not name, and a restore is not the moment to find that out. A file written
 before the table existed simply carries none, and still restores.
 
-### Three producers, and the one that was not asked
+### Five producers, and the three that were not asked
 
-The reasoning above is a property of `VACUUM INTO`, not of any one screen, and for a while
-it was applied as if it were a property of the encrypted archive. Three things in this tree
-produce a `VACUUM INTO` snapshot a restore can read back:
+The reasoning above is a property of `VACUUM INTO`, not of any one screen, and for a while it
+was applied as if it were a property of the encrypted archive. Five things in this tree take
+a `VACUUM INTO` snapshot a restore can read back:
 
-| Producer | Consumer |
-|---|---|
-| `EncryptedBackupDownload` — Settings → Data & backup | `RestoreEncryptedBackup` |
-| `ExportEverythingArchive` — the one-click export | `RestoreEncryptedBackup` |
-| `BackupDatabaseCommand` — `db:backup`, the daily schedule and the [operator runbook](../../runbooks/operator-recovery.md) | `RestoreDatabaseCommand` — `db:restore` |
+| Producer | What it is | Consumer |
+|---|---|---|
+| `EncryptedBackupDownload` | Settings → Data & backup | `RestoreEncryptedBackup` |
+| `ExportEverythingArchive` | the one-click export | `RestoreEncryptedBackup` |
+| `BackupDatabaseCommand` | `db:backup` — the daily schedule and the [operator runbook](../../runbooks/operator-recovery.md) | `RestoreDatabaseCommand` — `db:restore` |
+| `RestoreEncryptedBackup::snapshotCurrent()` | the pre-restore snapshot | either restore |
+| `RestoreDatabaseCommand` | the pre-restore snapshot | either restore |
 
-The third pair is the one the class was never wired into. It is also the only pair that runs
-without a reader present: `db:backup` is what the schedule runs every day, what the freshness
-banner counts, and what the runbook calls the supported backup path — so the artefact the app
-itself vouches for was the one that could not open a sealed ledger anywhere but the machine
-that wrote it. All three pack now, and both consumers lift.
+The first two were wired into this class. The other three were not, and they are the three
+that run with no reader watching.
+
+**`db:backup`** is what the schedule runs every day, what the freshness banner counts, and
+what the runbook calls the supported backup path — so the artefact the app itself vouches for
+was the one that could not open a sealed ledger anywhere but the machine that wrote it.
+
+**The pre-restore snapshot** is the documented undo, and a restore replaces the keyring on
+its way past: the incoming one is installed and the machine's is renamed aside. So an undo
+carrying no keys put the rows back under a keyring that was no longer the active one — the
+same unreadable ledger, reached by undoing the thing that caused it. It is packed while the
+machine still holds the keyring that snapshot belongs to, which is before the lift.
+
+All five pack now, and `EveryDatabaseSnapshotCarriesTheKeysThatOpenItArchTest` is what keeps
+it that way. It counts the producers as its positive control: a walk that stopped reading, or
+a spelling of the statement it cannot see, would otherwise leave an empty set that reads
+exactly like a tree where every producer packs. A sixth producer is free to be a deliberate
+exception — it has to be argued in that guard rather than shipped by omission.
 
 `db:restore` lifts out of a **copy**, not out of the file it was given. `unpackFrom()` drops
 the carrier table, so lifting in place would edit the operator's backup into one that
@@ -1880,6 +1895,18 @@ into, and discarded in a `finally`.
 columns has nothing to carry, and an empty carrier table would make its backup differ byte
 for byte from the plain `VACUUM INTO` it used to be — which the smart skip hashes, and which
 decides whether `db:restore` needs to stage a copy at all.
+
+### The snapshot name a second could not tell apart
+
+Both pre-restore paths built `pre-restore-<Y-m-d-His>.sqlite`, and `VACUUM INTO` refuses an
+existing target — so two restores inside one second met a raw query exception thrown off the
+safety rail itself, after maintenance mode had been taken. One second apart is the ordinary
+case rather than a contrived one: the documented undo is to restore the snapshot a failed
+restore has just named. Both names now carry eight random hex characters, the way the export
+and download staging paths already did. `db:backup`'s own name deliberately does not —
+`BackupRetentionPolicy` parses it, and its same-second collision is caught and kept as
+`.suspect`.
+
 
 `Modules\Sync\Public\Services\PortableKeyMaterial` is the one spelling of that path.
 Three copies of `sync/gdk/{userId}.enc` existed as string literals before it, and a keyring

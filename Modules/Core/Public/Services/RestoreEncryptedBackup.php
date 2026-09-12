@@ -127,7 +127,10 @@ final readonly class RestoreEncryptedBackup
             throw new BackupIoException('The backups directory could not be made owner-only: '.$dir);
         }
 
-        $stamp = $this->clock->now()->format('Y-m-d-His');
+        // Eight random hex characters: VACUUM INTO refuses an existing target
+        // and the stamp is second-resolution, so two restores inside one second
+        // threw a raw query exception off the safety rail itself.
+        $stamp = $this->clock->now()->format('Y-m-d-His').'-'.bin2hex(random_bytes(4));
         $snapshotPath = $dir.'/pre-restore-'.$stamp.'.sqlite';
         $escaped = str_replace("'", "''", $snapshotPath);
 
@@ -141,6 +144,11 @@ final readonly class RestoreEncryptedBackup
         if (! $this->ownerOnly->file($snapshotPath)) {
             throw new BackupIoException('The pre-restore snapshot could not be made owner-only: '.$snapshotPath);
         }
+
+        // An undo of the keyring as well as of the rows: step 4 replaces the
+        // one on this machine, and rows put back under a keyring that is no
+        // longer the active one are unreadable.
+        $this->keyMaterial->packInto($snapshotPath);
 
         return $snapshotPath;
     }

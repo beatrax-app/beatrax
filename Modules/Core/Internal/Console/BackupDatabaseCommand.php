@@ -212,7 +212,7 @@ final class BackupDatabaseCommand extends Command
     // at the process umask, and before the integrity check and the digest, so
     // both answer for the finished copy.
     /**
-     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#three-producers-and-the-one-that-was-not-asked
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#five-producers-and-the-three-that-were-not-asked
      */
     private function packKeyMaterial(string $destination, string $reportAs): void
     {

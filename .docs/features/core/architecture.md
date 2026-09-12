@@ -669,7 +669,7 @@ happened since the last backup. Mechanics worth calling out:
   the copy the schedule writes and the freshness banner counts. An
   install with no keyring on disk has nothing to carry and the copy
   stays byte-identical to the plain `VACUUM INTO`
-  ([three producers](../sync/sensitive-columns-at-rest.md#three-producers-and-the-one-that-was-not-asked)).
+  ([three producers](../sync/sensitive-columns-at-rest.md#five-producers-and-the-three-that-were-not-asked)).
 - The post-VACUUM integrity check uses a SECOND fresh PDO against the
   destination file so the result is not muddied by the Laravel-pool
   connection cache.
@@ -1238,6 +1238,12 @@ drops every connection naming the live file and then copies the source's
 pages INTO it via SQLite's backup API rather than over its file. A copy
 landed beside a surviving `-wal` is recovered away by the next reader,
 which is a restore that reports success and restores nothing.
+
+The pre-restore snapshot both take first is a `VACUUM INTO` like any other,
+so it packs the keyring too — the swap replaces the one on the machine, and an
+undo that put the rows back under a keyring no longer active would restore the
+same unreadable ledger. Its name carries eight random hex characters because
+`VACUUM INTO` refuses an existing target and the stamp is second-resolution.
 
 Both also install the keyring the snapshot carries before that swap.
 `db:restore` lifts it out of a **copy** staged through

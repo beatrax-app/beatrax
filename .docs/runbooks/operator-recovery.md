@@ -88,7 +88,9 @@ After every successful run the command prunes
   deletes manually);
 - every `pre-restore-*.sqlite` snapshot (written by `db:restore`
   before swapping; never pruned automatically — the operator deletes
-  once confident in the restore).
+  once confident in the restore). The name carries eight random hex
+  characters after the timestamp, so two restores inside one second do
+  not collide on a target `VACUUM INTO` refuses to overwrite.
 
 Steady-state disk usage on a sub-100MB DB is bounded at roughly
 `(7 + 4)` daily-sized files plus any `.suspect` or `pre-restore-*`
@@ -196,8 +198,10 @@ php artisan down
 
 # 2) Restore. The command takes a pre-restore snapshot of the CURRENT
 #    live DB BEFORE the swap, writing it to
-#    storage/app/backups/pre-restore-YYYY-MM-DD-HHMMSS.sqlite at 0600.
-#    If anything goes wrong, that snapshot is your undo button.
+#    storage/app/backups/pre-restore-YYYY-MM-DD-HHMMSS-XXXXXXXX.sqlite at
+#    0600, where the last eight characters are random. If anything goes
+#    wrong, that snapshot is your undo button — and it carries the keyring
+#    as well as the rows, because the swap replaces the one on the machine.
 php artisan db:restore --confirm storage/app/backups/beatrax-2026-05-20-030000.sqlite
 
 # 3) Confirm the restored DB's PRAGMAs match config.
