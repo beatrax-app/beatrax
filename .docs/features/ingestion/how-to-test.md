@@ -44,6 +44,12 @@ isolation.
     lets a reader of `Bruto` fail where every other fixture cannot
     tell one from a reader of `Netto`. See [a PayPal fee is a row of
     its own](a-paypal-fee-is-a-row-of-its-own.md).
+  - The three ways the fee column says nothing
+    (`AFeeColumnThatSaysNothingStillBooksTheFeeTest`) — absent from
+    the export, blank, or `0,00` beside a `Netto` that disagrees.
+    Its last case is the general claim: over every PayPal fixture
+    with no conversion legs, the rows emitted sum to the `Netto`
+    column, read from the file rather than written into the test.
 
 ## Integration tests
 

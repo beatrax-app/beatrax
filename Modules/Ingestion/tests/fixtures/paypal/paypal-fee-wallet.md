@@ -1,17 +1,20 @@
 # PayPal CSV — the fee fixtures
 
-`paypal-fee-wallet.csv` and `paypal-fee-on-a-converted-payment.csv` are
-**constructed**, not redacted from a real export. Every empirically redacted
-PayPal fixture in this directory — `paypal-sample-1.csv` and the three files
-derived from its shapes — carries `"0,00"` in the `Kosten` column on every one
-of its rows, which is exactly why a wallet booking `Bruto` passed for four
-months. A file whose fee is always nothing cannot tell a reader of `Bruto` from
-a reader of `Netto`.
+The four `paypal-fee-*.csv` files are **constructed**, not redacted from a real
+export. Every empirically redacted PayPal fixture in this directory —
+`paypal-sample-1.csv` and the three files derived from its shapes — carries
+`"0,00"` in the `Kosten` column on every one of its rows, and `Bruto + Kosten`
+equals `Netto` on all 122 rows of all eight, measured. That is exactly why a
+wallet booking `Bruto` passed for four months: a file whose fee is always
+nothing cannot tell a reader of `Bruto` from a reader of `Netto`, and one whose
+columns always agree cannot tell a reader of `Kosten` from a reader of
+`Netto - Bruto`.
 
 The column layout, the header spellings (including the trailing space inside
 `"Bruto "` and `"Kosten "`), the `M/D/YYYY` dates, the NL event-type strings and
 the `O-<17-digit>` reference shape are all copied verbatim from
-`paypal-sample-1.csv`; only the amounts are authored. See
+`paypal-sample-1.csv`; only the amounts are authored, and in
+`paypal-fee-column-absent.csv` the `Kosten` header is dropped. See
 [`paypal-sample-1.md`](paypal-sample-1.md) for the empirical record those
 shapes come from.
 
@@ -35,6 +38,36 @@ balance. Before the fee became a row it emitted six and published `15,00`.
 
 No row carries a `Reference Txn ID`, so nothing in this file is a child and the
 rollup's parent/child walk is deliberately not what is under test here.
+
+## `paypal-fee-column-absent.csv`
+
+The same NL export shape with the `Kosten` column **removed from the header
+altogether** — everything else verbatim. PayPal's own arithmetic still states
+the fee, because `Netto` is there and differs from `Bruto`.
+
+| Ref | Bruto | Netto | Saldo | Fee stated by the gap | What it covers |
+|---|---:|---:|---:|---:|---|
+| `O-…301` | `100,00` | `96,51` | `96,51` | `-3,49` | A fee no cell names. |
+| `O-…302` | `-25,00` | `-25,00` | `71,51` | — | A row PayPal charged nothing on, in a file with no fee column: it must stay one row, and the file must still import. |
+| `O-…303` | `-40,00` | `-38,75` | `32,76` | `+1,25` | A returned fee, where the subtraction has to come out positive against a negative payment. |
+
+Totals: `Bruto` `35,00`, `Netto` `32,76`. The adapter emits **5** DTOs and
+closes at `32,76`; reading the fee column alone it emitted 3 and closed at
+`35,00`.
+
+## `paypal-fee-column-says-nothing.csv`
+
+The column is present on every row and states nothing useful on two of them.
+This is the half a header-signature check cannot reach.
+
+| Ref | Bruto | Kosten | Netto | Saldo | What it covers |
+|---|---:|---:|---:|---:|---|
+| `O-…311` | `50,00` | *(blank)* | `48,25` | `48,25` | An empty cell. `-1,75`. |
+| `O-…312` | `-20,00` | `0,00` | `-20,60` | `27,65` | A cell that denies a fee the row beside it states. `-0,60`. |
+| `O-…313` | `-10,00` | `0,00` | `-10,00` | `17,65` | An honest zero — no fee row. |
+
+Totals: `Bruto` `20,00`, `Netto` `17,65`. **5** DTOs closing at `17,65`,
+against 3 closing at `20,00` before.
 
 ## `paypal-fee-on-a-converted-payment.csv`
 

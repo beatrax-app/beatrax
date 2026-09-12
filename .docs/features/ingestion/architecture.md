@@ -506,15 +506,18 @@ that the neighbouring statement holds its parent. Pass 3 folds each parent + its
 `settledAmountMinor`/`settledCurrency` the leg the wallet's own balance
 moved by (else null).
 
-A parent whose `Kosten` cell is not zero emits a **second** DTO beside it,
-booking that cell, so the pair sums to the `Netto` the wallet's `Saldo`
-stepped by. The payment keeps `Bruto`; booking `Netto` and the fee would
-take the fee twice. The fee row carries the payment's `source_ref`, its
-counterparty and its day, is typed from the fee column's own header, and
-is described in [a PayPal fee is a row of its
-own](a-paypal-fee-is-a-row-of-its-own.md) — including why the sign and the
-currency are read rather than derived, why zero emits nothing, and what a
-converted payment's fee costs the statement's closing balance.
+A parent PayPal charged a fee on emits a **second** DTO beside it, so the
+pair sums to the `Netto` the wallet's `Saldo` stepped by. The payment keeps
+`Bruto`; booking `Netto` and the fee would take the fee twice. The fee is
+`Netto - Bruto`, not the `Kosten` cell: the cell says nothing three ways —
+absent from the export, blank, or reading `0,00` beside a `Netto` that
+disagrees — and each of those booked the gross and reported a clean import.
+`Kosten` is the fallback for a row stating no readable `Netto`. The fee row
+carries the payment's `source_ref`, its counterparty and its day, and is
+typed from the fee column's own header. See [a PayPal fee is a row of its
+own](a-paypal-fee-is-a-row-of-its-own.md) for the sign and currency rules,
+why a header-signature gate was measured and rejected, and what a converted
+payment's fee costs the statement's closing balance.
 
 **Which leg is which comes from the file, not from a currency literal.**
 A `child-fx` pair restates one payment in two denominations, so the leg
