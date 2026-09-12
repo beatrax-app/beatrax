@@ -42,7 +42,7 @@ $projectRoot = dirname(__DIR__);
 $configPath = $projectRoot.'/nativephp/electron/electron-builder.mjs';
 
 if (! is_file($configPath)) {
-    fwrite(STDERR, "nativephp_mac_app_store_lane: no electron-builder.mjs found at {$configPath} — has `php artisan native:install --publish` run?\n");
+    fwrite(STDERR, sprintf("nativephp_mac_app_store_lane: no electron-builder.mjs found at %s — has `php artisan native:install --publish` run?\n", $configPath));
 
     exit(1);
 }
@@ -50,7 +50,7 @@ if (! is_file($configPath)) {
 $source = file_get_contents($configPath);
 
 if ($source === false) {
-    fwrite(STDERR, "nativephp_mac_app_store_lane: could not read {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_mac_app_store_lane: could not read %s\n", $configPath));
 
     exit(1);
 }
@@ -90,14 +90,14 @@ JS;
 $patched = beatraxInsertAfterMacBlock($source, $masBlock);
 
 if ($patched === null) {
-    fwrite(STDERR, "nativephp_mac_app_store_lane: could not find where the mac block ends in {$configPath}.\n");
+    fwrite(STDERR, sprintf("nativephp_mac_app_store_lane: could not find where the mac block ends in %s.\n", $configPath));
     fwrite(STDERR, "The generated config changed shape; confirm the store lane still has its own entitlements before submitting.\n");
 
     exit(1);
 }
 
 if (file_put_contents($configPath, $patched) === false) {
-    fwrite(STDERR, "nativephp_mac_app_store_lane: could not write {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_mac_app_store_lane: could not write %s\n", $configPath));
 
     exit(1);
 }

@@ -15,7 +15,7 @@ final class UnreadableColumnException extends RuntimeException
     public static function duringBackfill(string $table, string $field, int $userId): self
     {
         return new self(
-            "OpLogBackfiller: cannot read {$table}.{$field} for user {$userId} — refusing to capture an unreadable value.",
+            sprintf('OpLogBackfiller: cannot read %s.%s for user %s — refusing to capture an unreadable value.', $table, $field, $userId),
         );
     }
 }

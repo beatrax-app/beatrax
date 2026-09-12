@@ -373,7 +373,7 @@ final readonly class PreMigrationSnapshot
         foreach ($cases as $column => $columnBindings) {
             $wrapped = $grammar->wrap($column);
             $whens = str_repeat(' when ? then ?', intdiv(count($columnBindings), 2));
-            $assignments[] = "{$wrapped} = case {$wrappedId}{$whens} else {$wrapped} end";
+            $assignments[] = sprintf('%s = case %s%s else %s end', $wrapped, $wrappedId, $whens, $wrapped);
 
             foreach ($columnBindings as $binding) {
                 $updateBindings[] = $binding;

@@ -613,7 +613,7 @@ it('ThreeWayMerge: the conflict row renders formatted currency and a human label
         MigrationFixturePaths::ynab4Dir('v2'),
     );
 
-    $response = $this->actingAs($this->user)->get("/migrations/{$reconciliationRun->id}/preview");
+    $response = $this->actingAs($this->user)->get(sprintf('/migrations/%s/preview', $reconciliationRun->id));
 
     $response->assertOk();
     // Formatted currency, e.g. "€ 300,00" — never a raw minor-unit integer.

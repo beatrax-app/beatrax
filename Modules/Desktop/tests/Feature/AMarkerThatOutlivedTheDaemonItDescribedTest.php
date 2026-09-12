@@ -216,7 +216,7 @@ function aSyncPortThisTestOwns(): int
     $probe = @stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
 
     if ($probe === false) {
-        throw new RuntimeException("no loopback port could be reserved: {$error}");
+        throw new RuntimeException(sprintf('no loopback port could be reserved: %s', $error));
     }
 
     $name = (string) stream_socket_get_name($probe, false);
@@ -235,7 +235,7 @@ function aDaemonHoldingTheSyncPort(int $port)
     $held = @stream_socket_server('tcp://127.0.0.1:'.$port, $errno, $error);
 
     if ($held === false) {
-        throw new RuntimeException("the reserved port {$port} could not be held: {$error}");
+        throw new RuntimeException(sprintf('the reserved port %s could not be held: %s', $port, $error));
     }
 
     return $held;

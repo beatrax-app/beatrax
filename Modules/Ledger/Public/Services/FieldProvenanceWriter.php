@@ -35,7 +35,7 @@ final readonly class FieldProvenanceWriter
         $bindings = [];
 
         foreach ($fieldToSource as $field => $source) {
-            $expression = "json_set({$expression}, ?, ?)";
+            $expression = sprintf('json_set(%s, ?, ?)', $expression);
             $bindings[] = '$.'.$field;
             $bindings[] = $source;
         }
@@ -46,7 +46,7 @@ final readonly class FieldProvenanceWriter
         $before = $this->provenanceFor($userId, $transactionId);
 
         $affected = $this->db->connection()->update(
-            "update transactions set field_provenance = {$expression} where id = ? and user_id = ?",
+            sprintf('update transactions set field_provenance = %s where id = ? and user_id = ?', $expression),
             $bindings,
         );
 

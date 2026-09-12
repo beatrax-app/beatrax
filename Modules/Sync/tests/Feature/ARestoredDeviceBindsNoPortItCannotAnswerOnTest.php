@@ -29,7 +29,7 @@ function aBootGateUser(string $username): User
     ]);
 
     foreach (['identity', 'gdk'] as $directory) {
-        foreach ((array) glob(UserDataPathService::appPath("sync/{$directory}/{$user->id}.enc*")) as $stale) {
+        foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/%s/%s.enc*', $directory, $user->id))) as $stale) {
             @unlink((string) $stale);
         }
     }

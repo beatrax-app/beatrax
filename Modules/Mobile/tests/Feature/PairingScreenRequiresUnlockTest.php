@@ -46,7 +46,7 @@ function pairingUnlockLockRow(int $userId, bool $enabled): void
 // sealed identity is one the loader can see and cannot open.
 function pairingUnlockSealedIdentity(int $userId): void
 {
-    $path = UserDataPathService::appPath("sync/identity/{$userId}.enc");
+    $path = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $userId));
     @mkdir(dirname($path), 0775, true);
     file_put_contents($path, 'sealed');
 }

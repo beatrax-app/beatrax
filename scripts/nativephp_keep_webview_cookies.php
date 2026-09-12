@@ -47,13 +47,13 @@ if (str_contains($source, 'nativephp_keep_webview_cookies.php')) {
 $anchor = "    private fun initializeEnvironment() {\n        clearAllCookies()";
 
 if (! str_contains($source, $anchor)) {
-    fwrite(STDERR, "nativephp_keep_webview_cookies: initializeEnvironment anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_keep_webview_cookies: initializeEnvironment anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated shell changed shape; re-check the cold-start cookie handling before shipping.\n");
     exit(1);
 }
 
 if (file_put_contents($target, str_replace($anchor, $patched, $source)) === false) {
-    fwrite(STDERR, "nativephp_keep_webview_cookies: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_keep_webview_cookies: could not write %s.\n", $target));
     exit(1);
 }
 

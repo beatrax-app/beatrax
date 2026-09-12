@@ -33,118 +33,118 @@ it('every forecast-corpus fixture returns the documented shape', function (strin
     /** @var array<string, mixed> $fixture */
     $fixture = require $path;
 
-    assertIsArray($fixture, "Fixture {$name} must return an associative array.");
-    assertArrayHasKey('accounts', $fixture, "Fixture {$name} must declare an 'accounts' key.");
-    assertArrayHasKey('series', $fixture, "Fixture {$name} must declare a 'series' key.");
-    assertArrayHasKey('expected', $fixture, "Fixture {$name} must declare an 'expected' key.");
+    assertIsArray($fixture, sprintf('Fixture %s must return an associative array.', $name));
+    assertArrayHasKey('accounts', $fixture, sprintf("Fixture %s must declare an 'accounts' key.", $name));
+    assertArrayHasKey('series', $fixture, sprintf("Fixture %s must declare a 'series' key.", $name));
+    assertArrayHasKey('expected', $fixture, sprintf("Fixture %s must declare an 'expected' key.", $name));
 
     /** @var mixed $accounts */
     $accounts = $fixture['accounts'];
-    assertIsArray($accounts, "Fixture {$name}: 'accounts' must be a list.");
-    assertIsList($accounts, "Fixture {$name}: 'accounts' must be a 0-indexed list.");
-    assertGreaterThan(0, count($accounts), "Fixture {$name}: 'accounts' must be non-empty.");
+    assertIsArray($accounts, sprintf("Fixture %s: 'accounts' must be a list.", $name));
+    assertIsList($accounts, sprintf("Fixture %s: 'accounts' must be a 0-indexed list.", $name));
+    assertGreaterThan(0, count($accounts), sprintf("Fixture %s: 'accounts' must be non-empty.", $name));
 
     $allowedKinds = ['bank', 'ics_card', 'paypal'];
     foreach ($accounts as $index => $account) {
-        assertIsArray($account, "Fixture {$name}: account #{$index} must be an associative array.");
+        assertIsArray($account, sprintf('Fixture %s: account #%s must be an associative array.', $name, $index));
         foreach (['id', 'user_id', 'name', 'kind', 'default_currency'] as $required) {
             assertArrayHasKey(
                 $required,
                 $account,
-                "Fixture {$name}: account #{$index} missing required key '{$required}'.",
+                sprintf("Fixture %s: account #%s missing required key '%s'.", $name, $index, $required),
             );
         }
         assertContains(
             $account['kind'],
             $allowedKinds,
-            "Fixture {$name}: account #{$index}.kind is not one of asn/ics_card/paypal.",
+            sprintf('Fixture %s: account #%s.kind is not one of asn/ics_card/paypal.', $name, $index),
         );
     }
 
     /** @var mixed $series */
     $series = $fixture['series'];
-    assertIsArray($series, "Fixture {$name}: 'series' must be a list.");
-    assertIsList($series, "Fixture {$name}: 'series' must be a 0-indexed list.");
+    assertIsArray($series, sprintf("Fixture %s: 'series' must be a list.", $name));
+    assertIsList($series, sprintf("Fixture %s: 'series' must be a 0-indexed list.", $name));
 
     $allowedDirections = ['expense', 'income'];
     $allowedStates = ['approved', 'pending', 'rejected', 'irregular'];
     $allowedCadences = ['monthly', 'weekly', 'quarterly', 'yearly'];
     foreach ($series as $index => $row) {
-        assertIsArray($row, "Fixture {$name}: series #{$index} must be an associative array.");
+        assertIsArray($row, sprintf('Fixture %s: series #%s must be an associative array.', $name, $index));
         foreach (['id', 'user_id', 'name', 'cadence', 'direction', 'account_id', 'latest_amount_minor', 'latest_currency', 'variance_tolerance_percent', 'state', 'next_expected_date'] as $required) {
             assertArrayHasKey(
                 $required,
                 $row,
-                "Fixture {$name}: series #{$index} missing required key '{$required}'.",
+                sprintf("Fixture %s: series #%s missing required key '%s'.", $name, $index, $required),
             );
         }
         assertContains(
             $row['direction'],
             $allowedDirections,
-            "Fixture {$name}: series #{$index}.direction is not one of expense/income.",
+            sprintf('Fixture %s: series #%s.direction is not one of expense/income.', $name, $index),
         );
         assertContains(
             $row['state'],
             $allowedStates,
-            "Fixture {$name}: series #{$index}.state is not a recognised state.",
+            sprintf('Fixture %s: series #%s.state is not a recognised state.', $name, $index),
         );
         assertContains(
             $row['cadence'],
             $allowedCadences,
-            "Fixture {$name}: series #{$index}.cadence is not one of monthly/weekly/quarterly/yearly.",
+            sprintf('Fixture %s: series #%s.cadence is not one of monthly/weekly/quarterly/yearly.', $name, $index),
         );
     }
 
     /** @var mixed $expected */
     $expected = $fixture['expected'];
-    assertIsArray($expected, "Fixture {$name}: 'expected' must be an associative array.");
-    assertArrayHasKey('projection', $expected, "Fixture {$name}: 'expected' must declare 'projection'.");
-    assertArrayHasKey('shortfalls', $expected, "Fixture {$name}: 'expected' must declare 'shortfalls'.");
+    assertIsArray($expected, sprintf("Fixture %s: 'expected' must be an associative array.", $name));
+    assertArrayHasKey('projection', $expected, sprintf("Fixture %s: 'expected' must declare 'projection'.", $name));
+    assertArrayHasKey('shortfalls', $expected, sprintf("Fixture %s: 'expected' must declare 'shortfalls'.", $name));
 
     /** @var mixed $projection */
     $projection = $expected['projection'];
-    assertIsArray($projection, "Fixture {$name}: 'expected.projection' must be a list.");
-    assertIsList($projection, "Fixture {$name}: 'expected.projection' must be a 0-indexed list.");
+    assertIsArray($projection, sprintf("Fixture %s: 'expected.projection' must be a list.", $name));
+    assertIsList($projection, sprintf("Fixture %s: 'expected.projection' must be a 0-indexed list.", $name));
 
     $allowedHorizons = [30, 60, 90];
     foreach ($projection as $index => $point) {
-        assertIsArray($point, "Fixture {$name}: projection #{$index} must be an associative array.");
+        assertIsArray($point, sprintf('Fixture %s: projection #%s must be an associative array.', $name, $index));
         foreach (['horizon_days', 'account_id', 'date', 'low_minor', 'point_minor', 'high_minor', 'currency'] as $required) {
             assertArrayHasKey(
                 $required,
                 $point,
-                "Fixture {$name}: projection #{$index} missing required key '{$required}'.",
+                sprintf("Fixture %s: projection #%s missing required key '%s'.", $name, $index, $required),
             );
         }
         assertContains(
             $point['horizon_days'],
             $allowedHorizons,
-            "Fixture {$name}: projection #{$index}.horizon_days must be 30, 60, or 90.",
+            sprintf('Fixture %s: projection #%s.horizon_days must be 30, 60, or 90.', $name, $index),
         );
         assertLessThanOrEqual(
             $point['point_minor'],
             $point['low_minor'],
-            "Fixture {$name}: projection #{$index} low_minor must be <= point_minor.",
+            sprintf('Fixture %s: projection #%s low_minor must be <= point_minor.', $name, $index),
         );
         assertLessThanOrEqual(
             $point['high_minor'],
             $point['point_minor'],
-            "Fixture {$name}: projection #{$index} point_minor must be <= high_minor.",
+            sprintf('Fixture %s: projection #%s point_minor must be <= high_minor.', $name, $index),
         );
     }
 
     /** @var mixed $shortfalls */
     $shortfalls = $expected['shortfalls'];
-    assertIsArray($shortfalls, "Fixture {$name}: 'expected.shortfalls' must be a list.");
-    assertIsList($shortfalls, "Fixture {$name}: 'expected.shortfalls' must be a 0-indexed list.");
+    assertIsArray($shortfalls, sprintf("Fixture %s: 'expected.shortfalls' must be a list.", $name));
+    assertIsList($shortfalls, sprintf("Fixture %s: 'expected.shortfalls' must be a 0-indexed list.", $name));
 
     foreach ($shortfalls as $index => $shortfall) {
-        assertIsArray($shortfall, "Fixture {$name}: shortfall #{$index} must be an associative array.");
+        assertIsArray($shortfall, sprintf('Fixture %s: shortfall #%s must be an associative array.', $name, $index));
         foreach (['account_id', 'starts_at', 'ends_at', 'lowest_balance_minor', 'currency', 'buffer_used_minor'] as $required) {
             assertArrayHasKey(
                 $required,
                 $shortfall,
-                "Fixture {$name}: shortfall #{$index} missing required key '{$required}'.",
+                sprintf("Fixture %s: shortfall #%s missing required key '%s'.", $name, $index, $required),
             );
         }
     }
@@ -162,7 +162,7 @@ it('dates every occurrence before the clock and every booked row after it', func
         foreach ($occurrences as $occurrence) {
             $date = (string) $occurrence['date'];
             if (! CarbonImmutable::parse($date)->lessThan($clock)) {
-                $misdated[] = "series #{$index} occurrence {$date}";
+                $misdated[] = sprintf('series #%s occurrence %s', $index, $date);
             }
         }
     }
@@ -171,13 +171,13 @@ it('dates every occurrence before the clock and every booked row after it', func
     foreach ($bookedRows as $index => $bookedRow) {
         $date = (string) (is_array($bookedRow) ? ($bookedRow['date'] ?? '') : '');
         if (! CarbonImmutable::parse($date)->greaterThan($clock)) {
-            $misdated[] = "booked row #{$index} dated {$date}";
+            $misdated[] = sprintf('booked row #%s dated %s', $index, $date);
         }
     }
 
     expect($misdated)->toBe(
         [],
-        "Fixture {$name} is dated against the wrong side of ".ForecastCorpus::TODAY.': '
+        sprintf('Fixture %s is dated against the wrong side of ', $name).ForecastCorpus::TODAY.': '
         .implode(', ', $misdated)
         .'. An occurrence is observed history and belongs before the clock; a row dated ahead of it is a booked row, which the projection reads as a certainty.',
     );

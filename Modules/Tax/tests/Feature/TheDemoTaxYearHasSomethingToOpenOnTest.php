@@ -30,7 +30,7 @@ it('opens on a year with items whenever the reader is in filing season', functio
     $year = FilingSeason::defaultYear(app(Clock::class)->now());
 
     expect(app(TaxYearQuery::class)->forUser($user->id, $year)->itemCount)
-        ->toBeGreaterThan(0, "/tax opens on {$year} with nothing to show");
+        ->toBeGreaterThan(0, sprintf('/tax opens on %s with nothing to show', $year));
 })->with([
     '2027-01-14 09:00:00',
     '2027-02-14 09:00:00',

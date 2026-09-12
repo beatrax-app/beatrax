@@ -14,6 +14,6 @@ final class SessionNotAuthenticatedException extends RuntimeException
 {
     public static function forOperation(string $operation): self
     {
-        return new self("SyncSession::{$operation} — session not authenticated yet.");
+        return new self(sprintf('SyncSession::%s — session not authenticated yet.', $operation));
     }
 }

@@ -20,7 +20,7 @@ function icsEml(string $contentType, string $body): string
         ."Date: Sun, 12 Apr 2026 10:15:00 +0200\r\n"
         ."Message-ID: <ics-fail-1@ics.nl>\r\n"
         ."MIME-Version: 1.0\r\n"
-        ."Content-Type: {$contentType}; charset=UTF-8\r\n"
+        .sprintf("Content-Type: %s; charset=UTF-8\r\n", $contentType)
         ."Content-Transfer-Encoding: 7bit\r\n"
         ."\r\n"
         .$body;

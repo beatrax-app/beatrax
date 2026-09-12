@@ -577,7 +577,7 @@ it('18. ScenarioApplier source file does NOT contain JOINs onto transaction-subs
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
 
     foreach (['transactions', 'recurring_series_occurrences', 'chain_links', 'card_statements'] as $table) {
-        expect(preg_match("/->(join|leftJoin|rightJoin|crossJoin)\\(\\s*['\"]{$table}['\"]/", $stripped) === 1)->toBeFalse();
+        expect(preg_match(sprintf("/->(join|leftJoin|rightJoin|crossJoin)\\(\\s*['\"]%s['\"]/", $table), $stripped) === 1)->toBeFalse();
     }
     expect(preg_match("/->table\\(['\"](transactions|recurring_series|card_statements|chain_links|drift_alerts)['\"]\\)[^;]*->(update|insert|delete|truncate)\\s*\\(/", $stripped) === 1)->toBeFalse();
 });

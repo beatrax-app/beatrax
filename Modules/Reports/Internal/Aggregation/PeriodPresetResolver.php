@@ -31,7 +31,7 @@ final readonly class PeriodPresetResolver
             ReportPeriodPreset::Ytd->value => $this->yearToDate(),
             ReportPeriodPreset::ThisYear->value => CalendarSpan::year($this->clock->now()),
             ReportPeriodPreset::Custom->value => $this->custom($customFrom, $customTo),
-            default => throw new InvalidArgumentException("Unknown period preset: {$preset}"),
+            default => throw new InvalidArgumentException(sprintf('Unknown period preset: %s', $preset)),
         };
     }
 
@@ -49,7 +49,7 @@ final readonly class PeriodPresetResolver
         return new Period(
             start: $earliest->start,
             endExclusive: $current->endExclusive,
-            label: "Last {$months} months",
+            label: sprintf('Last %s months', $months),
         );
     }
 

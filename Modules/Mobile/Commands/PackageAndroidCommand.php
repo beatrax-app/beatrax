@@ -106,7 +106,7 @@ final class PackageAndroidCommand extends Command
 
             if (! $this->files->isFile($artifact) || $this->files->size($artifact) === 0) {
                 return $this->refuse(
-                    "native:package android --build-type={$buildType} produced nothing at {$artifact}, "
+                    sprintf('native:package android --build-type=%s produced nothing at %s, ', $buildType, $artifact)
                     .'and neither did running Gradle directly. Its output is above.',
                 );
             }
@@ -125,7 +125,7 @@ final class PackageAndroidCommand extends Command
             return $this->refuse($identityFailure);
         }
 
-        $this->components->info("Packaged {$artifact} as {$appId}");
+        $this->components->info(sprintf('Packaged %s as %s', $artifact, $appId));
 
         return self::SUCCESS;
     }
@@ -141,7 +141,7 @@ final class PackageAndroidCommand extends Command
 
         if (! $this->files->isFile($wrapper)) {
             $this->components->warn(
-                "No {$wrapper}, so Gradle cannot be asked what went wrong. Most often that means "
+                sprintf('No %s, so Gradle cannot be asked what went wrong. Most often that means ', $wrapper)
                 .'native:install never produced a project at all.',
             );
 
@@ -180,10 +180,10 @@ final class PackageAndroidCommand extends Command
             return null;
         }
 
-        return "No usable NATIVEPHP_APP_ID in {$envPath}. native:install reads that file rather than "
+        return sprintf('No usable NATIVEPHP_APP_ID in %s. native:install reads that file rather than ', $envPath)
             .'config(), and neither a commented nor a blank key satisfies it: it invents '
             .'com.<user>.<random words>, writes that back, and the build ships under it. Add the line '
-            ."NATIVEPHP_APP_ID={$appId}.";
+            .sprintf('NATIVEPHP_APP_ID=%s.', $appId);
     }
 
     // The release workflow rewrites these two keys before it calls this command,
@@ -212,7 +212,7 @@ final class PackageAndroidCommand extends Command
                 : $key.' is '.$actual.', which a shipped bundle may not carry';
         }
 
-        return "{$envPath} does not resolve to a shipped environment: ".implode('; ', $carried)
+        return sprintf('%s does not resolve to a shipped environment: ', $envPath).implode('; ', $carried)
             .'. This .env is copied into the bundle, so the phone runs what it says: a build that '
             .'resolves to a development environment reaches the developer console, and on a phone '
             .'the first account is the only account.';
@@ -243,7 +243,7 @@ final class PackageAndroidCommand extends Command
             return null;
         }
 
-        return "native:install android did not create {$project}. That command also returns success "
+        return sprintf('native:install android did not create %s. That command also returns success ', $project)
             .'on every failure path, so its output above is the only account of the cause.';
     }
 
@@ -292,14 +292,14 @@ final class PackageAndroidCommand extends Command
         $derived = AndroidVersionCode::fromVersion($version);
 
         if ($derived === null) {
-            return "No usable NATIVEPHP_APP_VERSION_CODE, and none can be derived from version {$version}: "
+            return sprintf('No usable NATIVEPHP_APP_VERSION_CODE, and none can be derived from version %s: ', $version)
                 .'it is not a plain major.minor.patch with both lower parts under 100. Set the code '
                 .'explicitly, or tag a version that can carry one.';
         }
 
         $this->config->set('nativephp.version_code', $derived);
 
-        $this->components->info("Derived versionCode {$derived} from version {$version}.");
+        $this->components->info(sprintf('Derived versionCode %s from version %s.', $derived, $version));
 
         return null;
     }
@@ -309,7 +309,7 @@ final class PackageAndroidCommand extends Command
         $gradlePath = $this->laravel->basePath(self::GRADLE);
 
         if (! $this->files->isFile($gradlePath)) {
-            return "No {$gradlePath}, so the version code the APK carries cannot be read back.";
+            return sprintf('No %s, so the version code the APK carries cannot be read back.', $gradlePath);
         }
 
         $expected = $this->configuredVersionCode();
@@ -336,7 +336,7 @@ final class PackageAndroidCommand extends Command
         $gradlePath = $this->laravel->basePath(self::GRADLE);
 
         if (! $this->files->isFile($gradlePath)) {
-            return "No {$gradlePath}, so the API levels the APK carries cannot be read back.";
+            return sprintf('No %s, so the API levels the APK carries cannot be read back.', $gradlePath);
         }
 
         $disagreement = AndroidApiLevels::shippedDisagreement($this->config, $this->files->get($gradlePath));
@@ -352,7 +352,7 @@ final class PackageAndroidCommand extends Command
         $gradlePath = $this->laravel->basePath(self::GRADLE);
 
         if (! $this->files->isFile($gradlePath)) {
-            return "No {$gradlePath}, so the identity the APK carries cannot be read back.";
+            return sprintf('No %s, so the identity the APK carries cannot be read back.', $gradlePath);
         }
 
         $actual = PinnedAppId::inGradle($this->files->get($gradlePath));
@@ -382,7 +382,7 @@ final class PackageAndroidCommand extends Command
             $base = $this->laravel->basePath();
 
             $this->components->warn(
-                "No patch scripts in {$base}/scripts or its parent's. This build ships without the "
+                sprintf("No patch scripts in %s/scripts or its parent's. This build ships without the ", $base)
                 .'camera permission, the file chooser, cookie persistence, shell theming, the boot '
                 .'splash and the app icons. A materialized tree needs them copied in beside the app root.',
             );

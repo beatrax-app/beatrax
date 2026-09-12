@@ -43,7 +43,7 @@ function stepChangeNamesByAnotherSpelling(array $paths): array
 
             $name = trim($token[1], "'\"");
             if (stepChangeMeansTheSameThing($name)) {
-                $hits[] = "{$path}:{$token[2]} spells it '{$name}'";
+                $hits[] = sprintf("%s:%s spells it '%s'", $path, $token[2], $name);
             }
         }
     }
@@ -63,7 +63,7 @@ function stepChangeNamesInMarkup(string $path): array
 
     foreach (array_unique($matches[1]) as $name) {
         if (stepChangeMeansTheSameThing($name)) {
-            $hits[] = "{$path} spells it '{$name}'";
+            $hits[] = sprintf("%s spells it '%s'", $path, $name);
         }
     }
 

@@ -13,8 +13,8 @@ it('it_returns_top_five_transaction_hits', function (): void {
     // Seven matches, so the five-hit cap is observable rather than incidental.
     for ($i = 1; $i <= 7; $i++) {
         $this->searchTestTransaction($user->id, [
-            'counterparty_name' => "Heijn Supermarkt {$i}",
-            'description' => "Weekly shop number {$i}",
+            'counterparty_name' => sprintf('Heijn Supermarkt %s', $i),
+            'description' => sprintf('Weekly shop number %s', $i),
         ]);
     }
 

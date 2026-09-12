@@ -63,7 +63,7 @@ it('backs every offered country with a corpus file that actually loads', functio
     // jurisdiction in the picker: selectable, then nothing to tag.
     $empty = [];
     foreach (array_keys(app(UserCountry::class)->options()) as $code) {
-        if (! is_file(base_path("resources/corpus/tax/{$code}.yaml"))) {
+        if (! is_file(base_path(sprintf('resources/corpus/tax/%s.yaml', $code)))) {
             $empty[] = $code;
         }
     }

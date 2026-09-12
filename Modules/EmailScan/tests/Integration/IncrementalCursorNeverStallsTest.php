@@ -157,7 +157,7 @@ it('leaves an inbox with no persisted OAuth credentials in needs_reauth instead 
         private function unconfigured(int $inboxId): InboxNotConfiguredException
         {
             return new InboxNotConfiguredException(
-                "GmailApiClient: no OAuth credentials persisted for inbox {$inboxId}.",
+                sprintf('GmailApiClient: no OAuth credentials persisted for inbox %s.', $inboxId),
             );
         }
     };

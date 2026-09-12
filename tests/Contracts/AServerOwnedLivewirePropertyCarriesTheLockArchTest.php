@@ -404,7 +404,7 @@ it('gives every exemption a reason a reader can weigh', function (): void {
     expect(serverOwnedPropertyExemptions())->not->toBe([], 'The exemption map is empty, so this rule proves nothing about it.');
 
     foreach (serverOwnedPropertyExemptions() as $entry => $reason) {
-        expect(strlen($reason))->toBeGreaterThan(20, "{$entry} is exempt without saying why the client's value is harmless.");
+        expect(strlen($reason))->toBeGreaterThan(20, sprintf("%s is exempt without saying why the client's value is harmless.", $entry));
     }
 });
 

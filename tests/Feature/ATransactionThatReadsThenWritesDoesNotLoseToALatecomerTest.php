@@ -40,8 +40,8 @@ function lockProbeConnections(string $file, string $transactionMode): array
     $first = 'lock_probe_first_'.bin2hex(random_bytes(4));
     $second = 'lock_probe_second_'.bin2hex(random_bytes(4));
 
-    config(["database.connections.{$first}" => $shared]);
-    config(["database.connections.{$second}" => $shared]);
+    config([sprintf('database.connections.%s', $first) => $shared]);
+    config([sprintf('database.connections.%s', $second) => $shared]);
 
     return [$first, $second];
 }

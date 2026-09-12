@@ -85,7 +85,7 @@ it('reaches a class the phone build does not carry only through its capability s
                 continue;
             }
 
-            $offenders[] = "{$relative} names {$class}";
+            $offenders[] = sprintf('%s names %s', $relative, $class);
         }
     }
 

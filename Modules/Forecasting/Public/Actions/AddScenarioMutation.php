@@ -32,7 +32,7 @@ final readonly class AddScenarioMutation
     {
         if ($payload->kind() !== $kind) {
             throw new InvalidArgumentException(
-                "AddScenarioMutation: payload kind '{$payload->kind()}' does not match kind argument '{$kind}'.",
+                sprintf("AddScenarioMutation: payload kind '%s' does not match kind argument '%s'.", $payload->kind(), $kind),
             );
         }
 

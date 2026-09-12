@@ -41,7 +41,7 @@ final readonly class StartMigrationRun
     {
         $parser = $this->parsers[$sourceProduct] ?? null;
         if ($parser === null) {
-            throw new InvalidArgumentException("Unknown migration source format: '{$sourceProduct}'.");
+            throw new InvalidArgumentException(sprintf("Unknown migration source format: '%s'.", $sourceProduct));
         }
 
         $run = MigrationRun::create([

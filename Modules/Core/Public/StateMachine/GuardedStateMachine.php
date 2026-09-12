@@ -73,7 +73,7 @@ abstract class GuardedStateMachine
     ): void {
         if (TransitionActor::tryFrom($actor) === null) {
             throw new InvalidArgumentException(
-                $this->label().": unknown actor '{$actor}'; expected one of: ".implode(', ', array_column(TransitionActor::cases(), 'value')).'.',
+                $this->label().sprintf(": unknown actor '%s'; expected one of: ", $actor).implode(', ', array_column(TransitionActor::cases(), 'value')).'.',
             );
         }
 

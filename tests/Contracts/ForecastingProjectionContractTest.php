@@ -291,7 +291,7 @@ function fpctProject(string $fixtureName): void
 
         $dto = $forecastQuery->forUser($dbAccountId, $horizonDays, null, $user);
         expect($dto->isComputing)->toBeFalse(
-            "fixture '{$fixtureName}' horizon {$horizonDays}: the projection is still computing, so the points below are not the ones the job wrote",
+            sprintf("fixture '%s' horizon %s: the projection is still computing, so the points below are not the ones the job wrote", $fixtureName, $horizonDays),
         );
 
         $matchDate = (string) ($expected['date'] ?? '');
@@ -307,7 +307,7 @@ function fpctProject(string $fixtureName): void
             }
         }
         expect($matched)->not->toBeNull(
-            "fixture '{$fixtureName}' horizon {$horizonDays}: missing day {$matchDate} in projection",
+            sprintf("fixture '%s' horizon %s: missing day %s in projection", $fixtureName, $horizonDays, $matchDate),
         );
         if ($matched === null) {
             continue;
@@ -317,15 +317,15 @@ function fpctProject(string $fixtureName): void
 
         expect(abs($matched->lowMinor - $expectedLow))->toBeLessThanOrEqual(
             FPCT_TOLERANCE_MINOR,
-            "fixture '{$fixtureName}' day {$matchDate}: low {$matched->lowMinor} vs expected {$expectedLow}",
+            sprintf("fixture '%s' day %s: low %s vs expected %s", $fixtureName, $matchDate, $matched->lowMinor, $expectedLow),
         );
         expect(abs($matched->pointMinor - $expectedPoint))->toBeLessThanOrEqual(
             FPCT_TOLERANCE_MINOR,
-            "fixture '{$fixtureName}' day {$matchDate}: point {$matched->pointMinor} vs expected {$expectedPoint}",
+            sprintf("fixture '%s' day %s: point %s vs expected %s", $fixtureName, $matchDate, $matched->pointMinor, $expectedPoint),
         );
         expect(abs($matched->highMinor - $expectedHigh))->toBeLessThanOrEqual(
             FPCT_TOLERANCE_MINOR,
-            "fixture '{$fixtureName}' day {$matchDate}: high {$matched->highMinor} vs expected {$expectedHigh}",
+            sprintf("fixture '%s' day %s: high %s vs expected %s", $fixtureName, $matchDate, $matched->highMinor, $expectedHigh),
         );
     }
 
@@ -336,7 +336,7 @@ function fpctProject(string $fixtureName): void
     // nothing at all about the pipeline it exists to run.
     expect($compared)->toBeGreaterThan(
         0,
-        "fixture '{$fixtureName}': not one expected projection triple was compared. The fixture declares ".
+        sprintf("fixture '%s': not one expected projection triple was compared. The fixture declares ", $fixtureName).
         count($expectedProjection).' rows, and every one of them was skipped, so this run proved nothing.',
     );
 
@@ -361,7 +361,7 @@ function fpctProject(string $fixtureName): void
             ->orderByDesc('id')
             ->first();
         expect($row)->not->toBeNull(
-            "fixture '{$fixtureName}' expected at least one forecast_shortfall_windows row with buffer={$expectedSf['buffer_used_minor']}",
+            sprintf("fixture '%s' expected at least one forecast_shortfall_windows row with buffer=%s", $fixtureName, $expectedSf['buffer_used_minor']),
         );
     }
 }

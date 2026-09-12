@@ -57,7 +57,7 @@ final class AndroidApiLevels
         $target = $configured['target_sdk'];
 
         if ($target < self::PLAY_TARGET_SDK) {
-            return "The pinned targetSdk is {$target}, below the API level ".self::PLAY_TARGET_SDK
+            return sprintf('The pinned targetSdk is %s, below the API level ', $target).self::PLAY_TARGET_SDK
                 .' Google Play requires of a new submission or update. Play refuses the upload, so '
                 .'this is a refusal here rather than a rejected release.';
         }

@@ -111,7 +111,7 @@ it('does not regenerate the identity of a phone that already has one', function 
     AppLockTestHarness::unlock($session, str_repeat('k', 32));
 
     $original = app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, $session);
-    $path = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $path = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
     $before = (string) file_get_contents($path);
 
     $qr = mpwiDesktopQr(fn (string $d, Closure $fn) => $this->asDevice($d, $fn), $session);

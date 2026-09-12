@@ -93,7 +93,7 @@ it('applies a keyless arrival once the epoch lands, through the pass the phone r
     ]);
 
     $rawEpochKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
-    $ad = "counterparties:{$cpId}:display_name:".TARGETED_EPOCH;
+    $ad = sprintf('counterparties:%s:display_name:', $cpId).TARGETED_EPOCH;
     $ciphertext = app(OpLogFieldCrypto::class)->encrypt(
         json_encode('Albert Heijn Import', JSON_THROW_ON_ERROR),
         $rawEpochKey,

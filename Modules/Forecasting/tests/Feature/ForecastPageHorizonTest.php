@@ -77,7 +77,7 @@ it('renders every ForecastHorizon option in the segmented control', function ():
     $component = Livewire::actingAs($user)->test(ForecastPage::class);
 
     foreach (ForecastHorizon::days() as $days) {
-        $component->assertSee("setHorizon({$days})", false);
+        $component->assertSee(sprintf('setHorizon(%s)', $days), false);
     }
 });
 

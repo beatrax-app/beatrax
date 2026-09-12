@@ -64,7 +64,7 @@ function relayZeroKnowledgeViolations(array $paths): array
             // A literal reaches sodium through call_user_func just as well as a
             // direct call does.
             if ($token[0] === T_CONSTANT_ENCAPSED_STRING && stripos($token[1], 'sodium_') !== false) {
-                $hits[] = "{$path}:{$token[2]} names sodium_ in a string literal";
+                $hits[] = sprintf('%s:%s names sodium_ in a string literal', $path, $token[2]);
 
                 continue;
             }
@@ -74,7 +74,7 @@ function relayZeroKnowledgeViolations(array $paths): array
             }
 
             if (str_starts_with(strtolower($token[1]), 'sodium_')) {
-                $hits[] = "{$path}:{$token[2]} calls {$token[1]}()";
+                $hits[] = sprintf('%s:%s calls %s()', $path, $token[2], $token[1]);
 
                 continue;
             }
@@ -84,7 +84,7 @@ function relayZeroKnowledgeViolations(array $paths): array
             // looking inside the ciphertext.
             if (strtolower($token[1]) === 'json_decode'
                 && preg_match('/blob/i', relayZeroKnowledgeCallArgs($tokens, $index)) === 1) {
-                $hits[] = "{$path}:{$token[2]} json_decode()s a blob";
+                $hits[] = sprintf('%s:%s json_decode()s a blob', $path, $token[2]);
             }
         }
     }
@@ -214,7 +214,7 @@ it('writes only routing metadata when the mailbox itself stores a blob', functio
     // operator can query. Everything but the blob is routing metadata.
     unset($row['blob']);
     foreach ($row as $column => $value) {
-        expect((string) $value)->not->toContain('secret-note', "relay_mailbox.{$column} leaks blob content");
+        expect((string) $value)->not->toContain('secret-note', sprintf('relay_mailbox.%s leaks blob content', $column));
     }
 });
 

@@ -79,7 +79,7 @@ it('falls back to Bearer + JWT only when OAuthScrubSet is empty', function (): v
     $processor = new RedactSecretsProcessor(new FixedOAuthScrubSetStub([]));
 
     $jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0AAA.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-    $out = $processor(newProcessorRecord("auth Authorization: Bearer foo and {$jwt}"));
+    $out = $processor(newProcessorRecord(sprintf('auth Authorization: Bearer foo and %s', $jwt)));
 
     expect($out->message)->toContain('Authorization: Bearer [REDACTED]');
     expect($out->message)->toContain('[JWT_REDACTED]');

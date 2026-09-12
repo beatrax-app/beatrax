@@ -24,7 +24,7 @@ function amountPreferenceOption(string $html, string $value): string
         $html,
     );
 
-    expect($match)->toHaveCount(2, "No amount-preference option rendered for value=\"{$value}\".");
+    expect($match)->toHaveCount(2, sprintf('No amount-preference option rendered for value="%s".', $value));
 
     return trim(html_entity_decode(strip_tags($match[1]), ENT_QUOTES));
 }
@@ -66,11 +66,11 @@ it('reads the same as the transactions list in every locale', function (): void 
         App::setLocale($locale->value);
 
         foreach ($pairs as $settingsKey => $listKey) {
-            $settings = Lang::get("core::settings.currency_display.{$settingsKey}");
-            $list = Lang::get("ledger::list.{$listKey}");
+            $settings = Lang::get(sprintf('core::settings.currency_display.%s', $settingsKey));
+            $list = Lang::get(sprintf('ledger::list.%s', $listKey));
 
             if ($settings !== $list) {
-                $offenders[] = "{$locale->value}.{$settingsKey}: \"{$settings}\" vs \"{$list}\"";
+                $offenders[] = sprintf('%s.%s: "%s" vs "%s"', $locale->value, $settingsKey, $settings, $list);
             }
         }
     }
@@ -86,7 +86,7 @@ it('leaves no locale a currency code to fill in', function (): void {
 
         foreach (Lang::group('core::settings.currency_display') as $key => $line) {
             if (str_contains($line, ':code')) {
-                $offenders[] = "{$locale->value}.{$key}: {$line}";
+                $offenders[] = sprintf('%s.%s: %s', $locale->value, $key, $line);
             }
         }
     }

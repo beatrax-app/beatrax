@@ -38,7 +38,7 @@ it('names the buckets on a pinned series card', function (string $viz): void {
     $labelsShown = ($options['dataLabels']['enabled'] ?? false) === true;
 
     expect($axisNamed || $labelsShown)->toBeTrue(
-        "the {$viz} card names none of its buckets: x-axis labels off and dataLabels off",
+        sprintf('the %s card names none of its buckets: x-axis labels off and dataLabels off', $viz),
     );
 })->with([ReportViz::Bar->value, ReportViz::Line->value]);
 

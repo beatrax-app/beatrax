@@ -51,7 +51,7 @@ if ($shellAlreadyPatched) {
 
 $anchor = "return object : WebChromeClient() {\n";
 if ($shellPresent && ! str_contains($source, $anchor)) {
-    fwrite(STDERR, "nativephp_grant_webview_camera: WebChromeClient anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_grant_webview_camera: WebChromeClient anchor not found in %s.\n", $target));
     fwrite(STDERR, "The generated shell changed shape; re-check the override before shipping a build.\n");
     exit(1);
 }
@@ -152,7 +152,7 @@ if ($shellPresent && ! $shellAlreadyPatched) {
     $patched = str_replace($anchor, $override, $source);
 
     if (file_put_contents($target, $patched) === false) {
-        fwrite(STDERR, "nativephp_grant_webview_camera: could not write {$target}.\n");
+        fwrite(STDERR, sprintf("nativephp_grant_webview_camera: could not write %s.\n", $target));
         exit(1);
     }
 
@@ -230,7 +230,7 @@ KOTLIN;
         $edgePatched = str_replace($edgeAnchor, $edgeOverride, $edgeSource);
 
         if (file_put_contents($edgeTarget, $edgePatched) === false) {
-            fwrite(STDERR, "nativephp_grant_webview_camera: could not write {$edgeTarget}.\n");
+            fwrite(STDERR, sprintf("nativephp_grant_webview_camera: could not write %s.\n", $edgeTarget));
             exit(1);
         }
 

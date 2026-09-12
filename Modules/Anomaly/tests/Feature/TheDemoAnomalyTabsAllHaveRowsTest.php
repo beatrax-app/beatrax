@@ -45,6 +45,6 @@ it('records a transition for every alert the seed actioned', function (): void {
             ->where('anomaly_alert_id', $alert->anomalyAlertId)
             ->count();
 
-        expect($transitions)->toBeGreaterThan(0, "alert {$alert->anomalyAlertId} changed state without a transition");
+        expect($transitions)->toBeGreaterThan(0, sprintf('alert %s changed state without a transition', $alert->anomalyAlertId));
     }
 });

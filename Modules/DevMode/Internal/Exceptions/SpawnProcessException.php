@@ -17,11 +17,11 @@ final class SpawnProcessException extends RuntimeException
 
     public static function pidUncapturable(string $got): self
     {
-        return new self("CommandSpawner: failed to capture child PID from bash wrapper. Got: `{$got}`");
+        return new self(sprintf('CommandSpawner: failed to capture child PID from bash wrapper. Got: `%s`', $got));
     }
 
     public static function runsDirectoryUnwritable(string $path): self
     {
-        return new self("CommandSpawner: failed to create runs directory at `{$path}`.");
+        return new self(sprintf('CommandSpawner: failed to create runs directory at `%s`.', $path));
     }
 }

@@ -27,10 +27,10 @@ function importMonthHalves(User $user): void
 
     foreach (['april', 'may'] as $half) {
         $importer->runAndConfirm(
-            base_path("Modules/Ingestion/tests/fixtures/paypal/paypal-month-boundary-{$half}.csv"),
+            base_path(sprintf('Modules/Ingestion/tests/fixtures/paypal/paypal-month-boundary-%s.csv', $half)),
             'paypal-csv',
             $user,
-            "paypal-month-boundary-{$half}.csv",
+            sprintf('paypal-month-boundary-%s.csv', $half),
         );
     }
 }
@@ -82,7 +82,7 @@ it('never stores a row issue without a detail', function (): void {
             if ($issue->reason === null) {
                 continue;
             }
-            expect($issue->detail)->not->toBeNull("Row {$issue->rowIndex} failed as '{$issue->reason->value}' with no detail.");
+            expect($issue->detail)->not->toBeNull(sprintf("Row %s failed as '%s' with no detail.", $issue->rowIndex, $issue->reason->value));
         }
     }
 });

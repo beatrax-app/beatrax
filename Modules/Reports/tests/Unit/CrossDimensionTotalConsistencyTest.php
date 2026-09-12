@@ -167,9 +167,9 @@ it('produces the identical spend/income/net grand total across category/counterp
         $accountTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $accountQuery->forUserAndPeriod($user, $period, $metric, 'EUR')));
         $timeBucketTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $timeBucketQuery->forUserAndPeriod($user, $period, $metric, 'EUR', ReportGranularity::Monthly)));
 
-        expect($counterpartyTotal)->toBe($categoryTotal, "counterparty vs category mismatch for metric={$metric}");
-        expect($accountTotal)->toBe($categoryTotal, "account vs category mismatch for metric={$metric}");
-        expect($timeBucketTotal)->toBe($categoryTotal, "time_bucket vs category mismatch for metric={$metric}");
+        expect($counterpartyTotal)->toBe($categoryTotal, sprintf('counterparty vs category mismatch for metric=%s', $metric));
+        expect($accountTotal)->toBe($categoryTotal, sprintf('account vs category mismatch for metric=%s', $metric));
+        expect($timeBucketTotal)->toBe($categoryTotal, sprintf('time_bucket vs category mismatch for metric=%s', $metric));
     }
 
     $spendTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user, $period, 'spend', 'EUR')));

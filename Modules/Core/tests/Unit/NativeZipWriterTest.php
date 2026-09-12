@@ -66,7 +66,7 @@ it('NativeZipWriter: writes an archive ext-zip opens, entry for entry', function
     expect(nativeZipWriterNamesIn($zip))->toBe(array_keys($entries));
 
     foreach ($entries as $name => $contents) {
-        expect($zip->getFromName($name))->toBe($contents, "entry {$name} did not come back byte-for-byte");
+        expect($zip->getFromName($name))->toBe($contents, sprintf('entry %s did not come back byte-for-byte', $name));
     }
 
     $zip->close();

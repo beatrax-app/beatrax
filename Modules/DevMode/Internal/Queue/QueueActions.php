@@ -216,7 +216,7 @@ final readonly class QueueActions
             // BatchRepository::delete() reports nothing, so the row is looked
             // up first rather than assumed to have been there.
             'batches' => $this->deleteOneBatch($id),
-            default => throw new InvalidArgumentException("Unknown bulk-delete kind '{$kind}'."),
+            default => throw new InvalidArgumentException(sprintf("Unknown bulk-delete kind '%s'.", $kind)),
         };
     }
 

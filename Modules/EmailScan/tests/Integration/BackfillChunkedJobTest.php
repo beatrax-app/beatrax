@@ -77,7 +77,7 @@ it('walks pages, persists .eml + inbox_messages rows, and flips status to idle',
         ] as [$messageId, $internalDate]
     ) {
         $path = $store->pathFor($user->id, $inboxId, $internalDate, $messageId);
-        expect($store->exists($path))->toBeTrue("Expected blob for {$messageId} at {$path}");
+        expect($store->exists($path))->toBeTrue(sprintf('Expected blob for %s at %s', $messageId, $path));
     }
 
     $rows = $db->connection()

@@ -94,7 +94,7 @@ it('never leaves a click inside a line named for touch', function (): void {
             $checked++;
 
             if (PatternScan::matches('/'.$stem.'/iu', $value)) {
-                $offenders[] = str_replace(base_path().'/', '', $file)." [{$key}] ".$value;
+                $offenders[] = str_replace(base_path().'/', '', $file).sprintf(' [%s] ', $key).$value;
             }
         }
     }

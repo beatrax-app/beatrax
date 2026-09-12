@@ -192,14 +192,14 @@ $webViewSource = (string) file_get_contents($webViewTarget);
 if (str_contains($webViewSource, 'widenAcceptedMimeTypes')) {
     fwrite(STDOUT, "nativephp_android_file_chooser: WebViewManager already patched.\n");
 } elseif (str_contains($webViewSource, 'onShowFileChooser')) {
-    fwrite(STDERR, "nativephp_android_file_chooser: {$webViewTarget} carries an OLDER version of this override.\n");
+    fwrite(STDERR, sprintf("nativephp_android_file_chooser: %s carries an OLDER version of this override.\n", $webViewTarget));
     fwrite(STDERR, "Regenerate the scaffold (php artisan native:install) so the current one is applied.\n");
     exit(1);
 } else {
     $anchor = "return object : WebChromeClient() {\n";
 
     if (! str_contains($webViewSource, $anchor)) {
-        fwrite(STDERR, "nativephp_android_file_chooser: WebChromeClient anchor not found in {$webViewTarget}.\n");
+        fwrite(STDERR, sprintf("nativephp_android_file_chooser: WebChromeClient anchor not found in %s.\n", $webViewTarget));
         fwrite(STDERR, "The generated shell changed shape; re-check the override before shipping a build.\n");
         exit(1);
     }
@@ -211,7 +211,7 @@ if (str_contains($webViewSource, 'widenAcceptedMimeTypes')) {
     }
 
     if (file_put_contents($webViewTarget, $patched) === false) {
-        fwrite(STDERR, "nativephp_android_file_chooser: could not write {$webViewTarget}.\n");
+        fwrite(STDERR, sprintf("nativephp_android_file_chooser: could not write %s.\n", $webViewTarget));
         exit(1);
     }
 
@@ -224,7 +224,7 @@ if (str_contains($webViewSource, 'widenAcceptedMimeTypes')) {
  * result to the existing handlers.
  */
 if (! is_file($activityTarget)) {
-    fwrite(STDERR, "nativephp_android_file_chooser: {$activityTarget} not found.\n");
+    fwrite(STDERR, sprintf("nativephp_android_file_chooser: %s not found.\n", $activityTarget));
     fwrite(STDERR, "The chooser opens but its result cannot be delivered; the file input would hang.\n");
     exit(1);
 }
@@ -239,7 +239,7 @@ if (str_contains($activitySource, 'BeatraxFileChooser.deliver')) {
 $activityAnchor = "    override fun onRequestPermissionsResult(\n";
 
 if (! str_contains($activitySource, $activityAnchor)) {
-    fwrite(STDERR, "nativephp_android_file_chooser: onRequestPermissionsResult anchor not found in {$activityTarget}.\n");
+    fwrite(STDERR, sprintf("nativephp_android_file_chooser: onRequestPermissionsResult anchor not found in %s.\n", $activityTarget));
     fwrite(STDERR, "The generated activity changed shape; re-check the override before shipping a build.\n");
     exit(1);
 }
@@ -260,7 +260,7 @@ KOTLIN;
 $activityPatched = str_replace($activityAnchor, $activityOverride.$activityAnchor, $activitySource);
 
 if (file_put_contents($activityTarget, $activityPatched) === false) {
-    fwrite(STDERR, "nativephp_android_file_chooser: could not write {$activityTarget}.\n");
+    fwrite(STDERR, sprintf("nativephp_android_file_chooser: could not write %s.\n", $activityTarget));
     exit(1);
 }
 

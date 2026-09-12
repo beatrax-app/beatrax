@@ -67,7 +67,7 @@ if (! is_file($manifest)) {
     $anchor = 'android:allowBackup="true"';
 
     if (! $androidDone && ! str_contains($source, $anchor)) {
-        fwrite(STDERR, "nativephp_exclude_data_from_backup: allowBackup anchor not found in {$manifest}.\n");
+        fwrite(STDERR, sprintf("nativephp_exclude_data_from_backup: allowBackup anchor not found in %s.\n", $manifest));
         fwrite(STDERR, "The generated manifest changed shape; confirm the data directory is still excluded before shipping.\n");
         exit(1);
     }
@@ -88,7 +88,7 @@ if (! is_file($manifest)) {
         );
 
         if (file_put_contents($manifest, $rewritten) === false) {
-            fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$manifest}.\n");
+            fwrite(STDERR, sprintf("nativephp_exclude_data_from_backup: could not write %s.\n", $manifest));
             exit(1);
         }
     }
@@ -100,7 +100,7 @@ if (! is_file($manifest)) {
     $reparsed = @simplexml_load_file($manifest);
 
     if ($reparsed === false) {
-        fwrite(STDERR, "nativephp_exclude_data_from_backup: {$manifest} is no longer well-formed XML after patching.\n");
+        fwrite(STDERR, sprintf("nativephp_exclude_data_from_backup: %s is no longer well-formed XML after patching.\n", $manifest));
 
         foreach (libxml_get_errors() as $error) {
             fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
@@ -148,7 +148,7 @@ if (! is_file($manifest)) {
         }
 
         if (file_put_contents($path, $contents."\n") === false) {
-            fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$path}.\n");
+            fwrite(STDERR, sprintf("nativephp_exclude_data_from_backup: could not write %s.\n", $path));
             exit(1);
         }
     }
@@ -311,7 +311,7 @@ foreach ($patches as $where => [$sentinel, $anchor, $patched]) {
     $applied++;
 
     if (! str_contains($swift, $anchor)) {
-        fwrite(STDERR, "nativephp_exclude_data_from_backup: {$where} anchor not found in {$app}.\n");
+        fwrite(STDERR, sprintf("nativephp_exclude_data_from_backup: %s anchor not found in %s.\n", $where, $app));
         fwrite(STDERR, "The generated shell changed shape; confirm the data directory is still excluded from iCloud before shipping.\n");
         exit(1);
     }
@@ -343,7 +343,7 @@ $carriedTheSilentForm = str_contains($original, 'values.isExcludedFromBackup = t
 $swift = str_replace($staleNote, $freshNote, $swift);
 
 if ($swift !== $original && file_put_contents($app, $swift) === false) {
-    fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$app}.\n");
+    fwrite(STDERR, sprintf("nativephp_exclude_data_from_backup: could not write %s.\n", $app));
     exit(1);
 }
 
@@ -359,7 +359,7 @@ foreach ([$supportSentinel, $storeSentinel, $derivesFromBundleParent, '"'.$direc
         continue;
     }
 
-    fwrite(STDERR, "nativephp_exclude_data_from_backup: {$app} does not carry '{$needle}' after patching.\n");
+    fwrite(STDERR, sprintf("nativephp_exclude_data_from_backup: %s does not carry '%s' after patching.\n", $app, $needle));
     exit(1);
 }
 
@@ -378,5 +378,5 @@ if ($carriedTheSilentForm) {
     fwrite(STDOUT, "nativephp_exclude_data_from_backup: upgraded a shell that set the flag without reading it back.\n");
 }
 
-fwrite(STDOUT, "nativephp_exclude_data_from_backup: iOS Documents/{$directory} is out of iCloud backup.\n");
+fwrite(STDOUT, sprintf("nativephp_exclude_data_from_backup: iOS Documents/%s is out of iCloud backup.\n", $directory));
 exit(0);

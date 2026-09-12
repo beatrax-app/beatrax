@@ -239,7 +239,7 @@ final class OpLogRebuilder
     {
         foreach ($triggerSnapshots as $trigger) {
             $this->db->connection()->statement(
-                "DROP TRIGGER IF EXISTS {$trigger['name']}",
+                sprintf('DROP TRIGGER IF EXISTS %s', $trigger['name']),
             );
         }
     }
@@ -470,7 +470,7 @@ final class OpLogRebuilder
         $inClause = implode(',', $escapedTables);
 
         $rows = $this->db->connection()->select(
-            "SELECT name, sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name IN ({$inClause})",
+            sprintf("SELECT name, sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name IN (%s)", $inClause),
         );
 
         /** @var list<array{name: string, sql: string|null}> $snapshots */

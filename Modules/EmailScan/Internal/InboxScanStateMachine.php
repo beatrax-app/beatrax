@@ -22,6 +22,8 @@ final readonly class InboxScanStateMachine
     /** @var list<int> */
     private const array BACKOFF_SCHEDULE = [60, 300, 900, 3600];
 
+    private const string NO_STATE_ROW = 'InboxScanStateMachine: inbox_scan_state for inbox %s folder INBOX not found.';
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -43,7 +45,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
@@ -101,7 +103,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
@@ -117,7 +119,7 @@ final readonly class InboxScanStateMachine
                 ->update([
                     'status' => InboxScanStatus::RateLimited->value,
                     'retry_attempts' => $newAttempts,
-                    'error_message' => "Retry after {$retryAfterSeconds}s.",
+                    'error_message' => sprintf('Retry after %ss.', $retryAfterSeconds),
                     'updated_at' => $now,
                 ]);
         });
@@ -136,7 +138,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
@@ -175,7 +177,7 @@ final readonly class InboxScanStateMachine
 
             if ($row === null) {
                 throw new ScanStateNotFoundException(
-                    "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
+                    sprintf(self::NO_STATE_ROW, $inboxId),
                 );
             }
 
@@ -186,7 +188,7 @@ final readonly class InboxScanStateMachine
             );
             if ($cursor->provider !== $inboxProvider) {
                 throw new InvalidArgumentException(
-                    "InboxScanStateMachine: cursor provider '{$cursor->provider}' does not match inbox {$inboxId} provider '{$inboxProvider}'.",
+                    sprintf("InboxScanStateMachine: cursor provider '%s' does not match inbox %s provider '%s'.", $cursor->provider, $inboxId, $inboxProvider),
                 );
             }
 
@@ -253,7 +255,7 @@ final readonly class InboxScanStateMachine
             : array_map(static fn (InboxScanStatus $s): string => $s->value, $current->allowedNext());
         if (! in_array($newStatus, $allowed, strict: true)) {
             throw new InvalidStateTransitionException(
-                "InboxScanStateMachine: inbox {$inboxId} transition '{$currentStatus}' → '{$newStatus}' is not allowed.",
+                sprintf("InboxScanStateMachine: inbox %s transition '%s' → '%s' is not allowed.", $inboxId, $currentStatus, $newStatus),
             );
         }
     }

@@ -107,7 +107,7 @@ it('reads a middleware onto the stack only where one is registered', function ()
     // Modules\<X>\Internal\ reference as a boundary crossing nobody pinned --
     // a nowdoc body included, because the scan reads text and not syntax.
     $private = 'Internal';
-    $import = static fn (string $module, string $class): string => "use Modules\\{$module}\\{$private}\\Http\\Middleware\\{$class};";
+    $import = static fn (string $module, string $class): string => sprintf('use Modules\\%s\\%s\\Http\\Middleware\\%s;', $module, $private, $class);
 
     $source = implode("\n", [
         '<?php',

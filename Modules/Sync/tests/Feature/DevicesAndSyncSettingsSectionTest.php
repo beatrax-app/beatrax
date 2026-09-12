@@ -27,7 +27,7 @@ function devicesSyncSettingsUser(string $username = 'devices-settings-user'): Us
     // are reused between tests, so a key-file minted by an earlier one would
     // answer for this user and put the section in a state it never asked for.
     foreach (['identity', 'gdk'] as $directory) {
-        foreach ((array) glob(UserDataPathService::appPath("sync/{$directory}/{$user->id}.enc*")) as $stale) {
+        foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/%s/%s.enc*', $directory, $user->id))) as $stale) {
             @unlink((string) $stale);
         }
     }

@@ -46,9 +46,9 @@ function makeMysteryTx(User $user, Account $account, ImportRun $run, string $des
         'user_id' => $user->id,
         'account_id' => $account->id,
         'type' => 'expense',
-        'posted_at' => "2026-05-{$dayPart}",
-        'booked_at' => "2026-05-{$dayPart} 12:00:00",
-        'value_date' => "2026-05-{$dayPart}",
+        'posted_at' => sprintf('2026-05-%s', $dayPart),
+        'booked_at' => sprintf('2026-05-%s 12:00:00', $dayPart),
+        'value_date' => sprintf('2026-05-%s', $dayPart),
         'amount_minor' => -1000 - $rowIndex,
         'currency' => 'EUR',
         'settled_amount_minor' => -1000 - $rowIndex,
@@ -171,7 +171,7 @@ it('counts every row behind a mystery card, not just the newest window', functio
 // percentage the unreadable branch beside it was written to stop.
 it('does not count a blank description as auto-named', function (): void {
     foreach (range(1, 6) as $i) {
-        makeMysteryTx($this->user, $this->account, $this->run, "REAL MYSTERY {$i}", $i);
+        makeMysteryTx($this->user, $this->account, $this->run, sprintf('REAL MYSTERY %s', $i), $i);
     }
     foreach (range(7, 10) as $i) {
         makeMysteryTx($this->user, $this->account, $this->run, '', $i);

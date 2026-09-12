@@ -19,16 +19,16 @@ final class KeyringStateException extends RuntimeException
 
     public static function noCurrentEpoch(int $userId): self
     {
-        return new self(KeyringState::NoCurrentEpoch, "No current GDK epoch recorded for user {$userId}.");
+        return new self(KeyringState::NoCurrentEpoch, sprintf('No current GDK epoch recorded for user %s.', $userId));
     }
 
     public static function missingKeyForEpoch(int $userId, int $epochId): self
     {
-        return new self(KeyringState::MissingKeyForEpoch, "GDK keyring for user {$userId} has no key for current epoch {$epochId}.");
+        return new self(KeyringState::MissingKeyForEpoch, sprintf('GDK keyring for user %s has no key for current epoch %s.', $userId, $epochId));
     }
 
     public static function corruptPayload(int $userId): self
     {
-        return new self(KeyringState::CorruptPayload, "Corrupt GDK keyring payload for user {$userId}.");
+        return new self(KeyringState::CorruptPayload, sprintf('Corrupt GDK keyring payload for user %s.', $userId));
     }
 }

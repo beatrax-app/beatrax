@@ -97,14 +97,14 @@ $replacement = <<<'PHP'
 PHP;
 
 if (! str_contains($source, $anchor)) {
-    fwrite(STDERR, "nativephp_dedupe_background_task_identifiers: manifest-building anchor not found in {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_dedupe_background_task_identifiers: manifest-building anchor not found in %s.\n", $target));
     fwrite(STDERR, "The package changed how it builds the task list; re-check that it cannot emit one identifier twice before shipping an iOS build.\n");
 
     exit(1);
 }
 
 if (file_put_contents($target, str_replace($anchor, $replacement, $source)) === false) {
-    fwrite(STDERR, "nativephp_dedupe_background_task_identifiers: could not write {$target}.\n");
+    fwrite(STDERR, sprintf("nativephp_dedupe_background_task_identifiers: could not write %s.\n", $target));
 
     exit(1);
 }

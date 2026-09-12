@@ -34,7 +34,7 @@ $projectRoot = dirname(__DIR__);
 $pkgPath = $projectRoot.'/nativephp/electron/package.json';
 
 if (! is_file($pkgPath)) {
-    fwrite(STDERR, "nativephp_patch_electron_imports: {$pkgPath} not found — run `php artisan native:install --publish` first.\n");
+    fwrite(STDERR, sprintf("nativephp_patch_electron_imports: %s not found — run `php artisan native:install --publish` first.\n", $pkgPath));
 
     exit(1);
 }
@@ -43,7 +43,7 @@ $raw = file_get_contents($pkgPath);
 $pkg = json_decode($raw, true);
 
 if (! is_array($pkg)) {
-    fwrite(STDERR, "nativephp_patch_electron_imports: could not parse {$pkgPath} as JSON.\n");
+    fwrite(STDERR, sprintf("nativephp_patch_electron_imports: could not parse %s as JSON.\n", $pkgPath));
 
     exit(1);
 }
@@ -74,11 +74,11 @@ if ($encoded === false) {
 }
 
 if (file_put_contents($pkgPath, $encoded."\n") === false) {
-    fwrite(STDERR, "nativephp_patch_electron_imports: failed to write {$pkgPath}\n");
+    fwrite(STDERR, sprintf("nativephp_patch_electron_imports: failed to write %s\n", $pkgPath));
 
     exit(1);
 }
 
-fwrite(STDOUT, "nativephp_patch_electron_imports: added #plugin/* → {$desired} to imports map.\n");
+fwrite(STDOUT, sprintf("nativephp_patch_electron_imports: added #plugin/* → %s to imports map.\n", $desired));
 
 exit(0);

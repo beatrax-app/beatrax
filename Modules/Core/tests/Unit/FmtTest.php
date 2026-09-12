@@ -76,7 +76,7 @@ it('reads the same with and without ICU in all twenty-six languages', function (
                 $withoutIcu = Fmt::numberWithoutIcu($value, $decimals);
 
                 if ($icu !== $withoutIcu) {
-                    $mismatches[] = $locale->value." {$value}/{$decimals}: {$icu} vs {$withoutIcu}";
+                    $mismatches[] = $locale->value.sprintf(' %s/%s: %s vs %s', $value, $decimals, $icu, $withoutIcu);
                 }
             }
         }

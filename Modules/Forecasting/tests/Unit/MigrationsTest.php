@@ -30,7 +30,7 @@ it('creates the forecast_scenarios table with every required column', function (
     $columns = ['id', 'user_id', 'name', 'description', 'created_at', 'updated_at'];
     foreach ($columns as $column) {
         expect($schema->hasColumn('forecast_scenarios', $column))->toBeTrue(
-            "Expected forecast_scenarios column '{$column}' to exist",
+            sprintf("Expected forecast_scenarios column '%s' to exist", $column),
         );
     }
 });
@@ -68,7 +68,7 @@ it('creates the forecast_scenario_mutations table with every required column', f
     ];
     foreach ($columns as $column) {
         expect($schema->hasColumn('forecast_scenario_mutations', $column))->toBeTrue(
-            "Expected forecast_scenario_mutations column '{$column}' to exist",
+            sprintf("Expected forecast_scenario_mutations column '%s' to exist", $column),
         );
     }
 });
@@ -85,7 +85,7 @@ it('creates the forecast_shortfall_windows table with every required column', fu
     ];
     foreach ($columns as $column) {
         expect($schema->hasColumn('forecast_shortfall_windows', $column))->toBeTrue(
-            "Expected forecast_shortfall_windows column '{$column}' to exist",
+            sprintf("Expected forecast_shortfall_windows column '%s' to exist", $column),
         );
     }
 });
@@ -134,7 +134,7 @@ it('creates the forecast_runs table with every required column', function (): vo
     ];
     foreach ($columns as $column) {
         expect($schema->hasColumn('forecast_runs', $column))->toBeTrue(
-            "Expected forecast_runs column '{$column}' to exist",
+            sprintf("Expected forecast_runs column '%s' to exist", $column),
         );
     }
 });
@@ -368,7 +368,7 @@ it('forbids facade imports inside every Forecasting migration', function (): voi
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
         expect($stripped)->not->toContain(
             'use Illuminate\\Support\\Facades\\',
-            "Migration {$file} must not import any facade.",
+            sprintf('Migration %s must not import any facade.', $file),
         );
     }
 });

@@ -12,6 +12,6 @@ final class UnresolvedStagedAccountException extends RuntimeException
 {
     public function __construct(string $accountExternalId)
     {
-        parent::__construct("Migration promote: no resolved account for staged transaction account '{$accountExternalId}'.");
+        parent::__construct(sprintf("Migration promote: no resolved account for staged transaction account '%s'.", $accountExternalId));
     }
 }

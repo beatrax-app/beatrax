@@ -66,7 +66,7 @@ it('throws InvalidArgumentException when find() resolves a NEVER-EXPOSED command
     foreach (['migrate', 'migrate:fresh', 'migrate:rollback', 'db:wipe', 'db:seed', 'beatrax:reset-password'] as $name) {
         try {
             $registry->find($name);
-            $this->fail("Expected InvalidArgumentException for NEVER-EXPOSED command `{$name}`, none thrown.");
+            $this->fail(sprintf('Expected InvalidArgumentException for NEVER-EXPOSED command `%s`, none thrown.', $name));
         } catch (InvalidArgumentException $e) {
             expect($e->getMessage())->toContain($name);
         }

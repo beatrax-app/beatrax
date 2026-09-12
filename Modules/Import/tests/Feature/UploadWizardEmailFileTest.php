@@ -140,7 +140,7 @@ it('keeps every wizard ceiling under the upload_max_filesize the desktop runtime
             }
         }
 
-        expect($max)->not->toBeNull("No max: rule for {$format}");
-        expect($max)->toBeLessThanOrEqual(20 * 1024, "The {$format} ceiling is above upload_max_filesize.");
+        expect($max)->not->toBeNull(sprintf('No max: rule for %s', $format));
+        expect($max)->toBeLessThanOrEqual(20 * 1024, sprintf('The %s ceiling is above upload_max_filesize.', $format));
     }
 });

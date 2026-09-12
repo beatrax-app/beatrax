@@ -12,7 +12,7 @@ use Modules\Migration\Internal\Http\Livewire\NewMigration;
 function offeredUploadExtensions(string $bladePath): array
 {
     $found = PatternScan::first('/accept="([^"]+)"/', (string) file_get_contents(base_path($bladePath)));
-    expect($found)->not->toBe([], "No accept attribute in {$bladePath}.");
+    expect($found)->not->toBe([], sprintf('No accept attribute in %s.', $bladePath));
 
     return array_values(array_map(
         static fn (string $extension): string => ltrim(trim($extension), '.'),

@@ -149,7 +149,7 @@ it('sweeps every abandoned staging file, not only the archives it hands over', f
     $handover->stage($fresh, 'beatrax-export-2026-09-08.zip');
 
     foreach ($abandoned as $extension => $path) {
-        expect(is_file($path))->toBeFalse("an hours-old .{$extension} survived the sweep");
+        expect(is_file($path))->toBeFalse(sprintf('an hours-old .%s survived the sweep', $extension));
     }
 
     expect(is_file($fresh))->toBeTrue('the sweep took a file staged moments ago');

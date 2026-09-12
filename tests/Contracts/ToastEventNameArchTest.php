@@ -40,7 +40,7 @@ function toastDispatchesByAnotherName(array $paths): array
                 continue;
             }
 
-            $hits[] = "{$path}:{$token[2]} dispatches '{$name}'";
+            $hits[] = sprintf("%s:%s dispatches '%s'", $path, $token[2], $name);
         }
     }
 
@@ -58,7 +58,7 @@ function toastDispatchesInMarkup(string $path): array
     $matches = PatternScan::all('/dispatch\(\s*[\'"]('.TOAST_EVENT.'[A-Za-z0-9_.:-]+)[\'"]/', $contents);
 
     foreach ($matches[1] as $name) {
-        $hits[] = "{$path} dispatches '{$name}'";
+        $hits[] = sprintf("%s dispatches '%s'", $path, $name);
     }
 
     return $hits;
@@ -111,7 +111,7 @@ function toastSeamMethodsRedeclared(array $paths): array
 
             $name = $tokens[$index + 2] ?? null;
             if (is_array($name) && in_array($name[1], ['toast', 'toastWithUndo'], true)) {
-                $hits[] = "{$path}:{$name[2]} redeclares {$name[1]}()";
+                $hits[] = sprintf('%s:%s redeclares %s()', $path, $name[2], $name[1]);
             }
         }
     }
