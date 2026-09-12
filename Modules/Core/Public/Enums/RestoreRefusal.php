@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Enums;
 
 use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
+use Modules\Core\Internal\Backup\BackupCouldNotBeBroughtUpToDateException;
 use Modules\Core\Internal\Backup\BackupFromANewerBuildException;
-use Modules\Core\Internal\Backup\BackupFromAnOlderBuildException;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
@@ -32,7 +32,7 @@ enum RestoreRefusal: string
 
     case FromANewerBuild = 'restore_from_a_newer_build';
 
-    case FromAnOlderBuild = 'restore_from_an_older_build';
+    case CouldNotBeBroughtUpToDate = 'restore_could_not_be_brought_up_to_date';
 
     case Unknown = 'restore_failed';
 
@@ -41,7 +41,7 @@ enum RestoreRefusal: string
         return match (true) {
             $e instanceof BackupDecryptionException => self::WrongPassphrase,
             $e instanceof BackupFromANewerBuildException => self::FromANewerBuild,
-            $e instanceof BackupFromAnOlderBuildException => self::FromAnOlderBuild,
+            $e instanceof BackupCouldNotBeBroughtUpToDateException => self::CouldNotBeBroughtUpToDate,
             $e instanceof BackupContentsUnreadableException => self::ContentsUnreadable,
             $e instanceof BackupFormatException => self::NotABackup,
             $e instanceof BackupIoException => self::CouldNotRead,

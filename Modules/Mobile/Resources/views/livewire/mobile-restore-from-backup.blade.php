@@ -8,6 +8,12 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 {{ Lang::get('mobile::restore.intro') }}
             </p>
+            {{-- The phone reaches this from a fresh install, which is whatever
+                 version the store is serving — so an older backup being
+                 brought forward is the common case here, not the corner. --}}
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                {{ Lang::get('core::backup.restore.updates_an_older_backup') }}
+            </p>
         </header>
 
         @if ($error !== '')

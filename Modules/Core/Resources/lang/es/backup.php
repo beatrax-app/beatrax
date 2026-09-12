@@ -18,6 +18,7 @@ return [
         'heading' => 'Restaurar desde una copia de seguridad',
 
         'intro_html' => 'Sustituye tu base de datos actual por una copia de seguridad cifrada. El archivo se descifra y se comprueba antes de cambiar nada, y primero se guarda una instantánea de tus datos actuales — pero aun así esto <strong class="text-slate-700 dark:text-slate-200">lo sobrescribe todo</strong>, así que está protegido. Se cerrará tu sesión, porque tu inicio de sesión también está en la base de datos.',
+        'updates_an_older_backup' => 'Una copia de seguridad creada con una versión anterior de Beatrax se actualiza a esta al restaurarla, así que restaurar cambia también la estructura de los datos, no solo su contenido. Eso ocurre primero sobre una copia: si algún paso falla, no se restaura ni se cambia nada.',
         'restored' => 'Tu copia de seguridad se restauró. Inicia sesión con el nombre de usuario y la contraseña vigentes cuando se creó.',
         'snapshot_saved_prefix' => 'Se ha guardado una instantánea de tus datos anteriores en',
         'file_label' => 'Archivo de copia de seguridad (.enc) o archivo de exportación (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'No se ha podido leer el archivo de copia de seguridad, así que la restauración no se ha ejecutado y no se ha cambiado nada. Comprueba que este dispositivo tiene espacio libre e inténtalo otra vez.',
         'restore_not_supported' => 'La restauración funciona en la versión que guarda sus datos en un solo archivo, y esta no lo es, así que no se ha cambiado nada. En una base de datos de servidor, usa las herramientas de restauración de esa base de datos.',
         'restore_from_a_newer_build' => 'Esta copia de seguridad se creó con una versión de Beatrax más reciente que la que se ejecuta aquí, por lo que no se restauró y no se ha cambiado nada. Actualiza Beatrax y vuelve a restaurarla.',
-        'restore_from_an_older_build' => 'Esta copia de seguridad se creó con una versión de Beatrax anterior a la que se ejecuta aquí, por lo que no se restauró y no se ha cambiado nada. Restaura una copia creada por esta versión.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax no pudo actualizar esta copia de seguridad a la versión que se ejecuta aquí, por lo que no se restauró nada y no se ha cambiado nada. Inténtalo de nuevo: si sigue fallando, restaura una copia más reciente; el registro de la app anota qué paso lo detuvo.',
         'restore_failed' => 'La restauración no se ha ejecutado y no se ha cambiado nada. Inténtalo otra vez; si sigue fallando, el registro de la app anota qué la detuvo.',
     ],
 ];

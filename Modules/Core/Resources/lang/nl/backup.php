@@ -17,6 +17,7 @@ return [
     'restore' => [
         'heading' => 'Herstellen vanaf een back-up',
         'intro_html' => 'Vervang je huidige database door een versleutelde back-up. Het bestand wordt ontsleuteld en gecontroleerd voordat er iets verandert, en er wordt eerst een momentopname van je huidige gegevens opgeslagen — maar dit <strong class="text-slate-700 dark:text-slate-200">overschrijft alles</strong>, dus het is beveiligd. Je wordt afgemeld, want je aanmelding staat ook in de database.',
+        'updates_an_older_backup' => 'Een back-up van een oudere versie van Beatrax wordt tijdens het terugzetten bijgewerkt naar deze versie, dus terugzetten verandert ook de structuur van de gegevens en niet alleen de inhoud. Dat gebeurt eerst op een kopie — mislukt een stap, dan wordt er niets teruggezet en niets gewijzigd.',
         'restored' => 'Je back-up is hersteld. Meld je aan met de gebruikersnaam en het wachtwoord die golden toen die werd gemaakt.',
         'snapshot_saved_prefix' => 'Er is een momentopname van je vorige gegevens opgeslagen in',
         'file_label' => 'Back-upbestand (.enc) of exportarchief (.zip)',
@@ -44,7 +45,7 @@ return [
         'restore_could_not_read' => 'Het back-upbestand kon niet worden gelezen, dus het terugzetten is niet uitgevoerd en er is niets gewijzigd. Controleer of dit apparaat vrije ruimte heeft en probeer het opnieuw.',
         'restore_not_supported' => 'Terugzetten werkt op de versie die haar gegevens in één bestand bewaart, en dat is deze niet, dus er is niets gewijzigd. Gebruik bij een serverdatabase het herstelgereedschap van die database zelf.',
         'restore_from_a_newer_build' => 'Deze back-up is gemaakt met een nieuwere versie van Beatrax dan die hier draait, dus is er niets teruggezet en niets gewijzigd. Werk Beatrax bij en zet de back-up daarna opnieuw terug.',
-        'restore_from_an_older_build' => 'Deze back-up is gemaakt met een oudere versie van Beatrax dan die hier draait, dus is er niets teruggezet en niets gewijzigd. Zet een back-up terug die met deze versie is gemaakt.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax kon deze back-up niet bijwerken naar de versie die hier draait, dus er is niets teruggezet en niets gewijzigd. Probeer het opnieuw — blijft het misgaan, zet dan een recentere back-up terug; het app-logboek noteert welke stap het tegenhield.',
         'restore_failed' => 'Het terugzetten is niet uitgevoerd en er is niets gewijzigd. Probeer het opnieuw — blijft het misgaan, dan staat in het app-logboek wat het tegenhield.',
     ],
 ];

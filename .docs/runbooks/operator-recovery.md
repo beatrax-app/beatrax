@@ -190,14 +190,24 @@ live DB. Three safety rails are mandatory:
 3. The operator must confirm — either by passing `--confirm` (for
    scripted use) or by answering `y` to the TTY prompt.
 
+**A backup from an older build is migrated forward before it is swapped
+in**, so restoring one changes the schema as well as the rows. The run
+happens on the staged copy, never on the live database and never on the
+file you named; if any migration fails, the command refuses, the live
+database is left unopened and no pre-restore snapshot is written. A backup
+from a *newer* build is refused outright — migrations only move forward.
+Both refusals print a sentence and a count
+([why](../features/core/a-backup-from-another-build.md)).
+
 The recipe:
 
 ```sh
 # 1) Bring the app down. Skip if you are using --force-maintenance.
 php artisan down
 
-# 2) Restore. The command takes a pre-restore snapshot of the CURRENT
-#    live DB BEFORE the swap, writing it to
+# 2) Restore. An older backup is brought to this build's schema first, on
+#    the staged copy. The command then takes a pre-restore snapshot of the
+#    CURRENT live DB BEFORE the swap, writing it to
 #    storage/app/backups/pre-restore-YYYY-MM-DD-HHMMSS-XXXXXXXX.sqlite at
 #    0600, where the last eight characters are random. If anything goes
 #    wrong, that snapshot is your undo button — and it carries the keyring
@@ -239,9 +249,13 @@ the keys out of a file drops the table that carried them, so doing it in
 place would turn your backup into one that restores the ledger once and the
 keys never again. The file you pass on the command line is not modified.
 
-A file carrying no keyring — every copy written before this travelled, and
-every install with no sealed columns — is passed straight through to the
-swap, and nothing is staged.
+Every restore stages that copy, whether or not the file carries a keyring
+and whether or not anything needs migrating. The two things a restore does
+to a backup — lifting the keyring out, and bringing an older schema forward
+— both rewrite it, and staging only the files that need it would make "your
+backup is not modified" conditional on a check agreeing with the code it
+guards. Budget for it: a restore writes three full-sized files, the staged
+copy, the pre-restore snapshot and the live database itself.
 
 #### Why the swap is not a file copy
 

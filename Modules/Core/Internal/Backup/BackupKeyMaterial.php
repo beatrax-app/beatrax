@@ -39,9 +39,8 @@ final readonly class BackupKeyMaterial
         $keyrings = $this->keyMaterial->keyrings();
 
         // Nothing to carry. An empty carrier table would still make the file
-        // differ from the plain VACUUM INTO it used to be, and two things read
-        // that: the smart skip hashes the finished copy, and a restore stages a
-        // copy only for a file that carries keys.
+        // differ from the plain VACUUM INTO it used to be, and the smart skip
+        // decides whether to write a backup at all by hashing the finished copy.
         if ($keyrings === []) {
             return;
         }
@@ -111,17 +110,6 @@ final readonly class BackupKeyMaterial
         $pdo->exec('DROP TABLE '.self::TABLE);
 
         return $installed;
-    }
-
-    // Asked of a file rather than an open handle: the caller is deciding
-    // whether to copy the file at all, because lifting the keys out of one
-    // edits it and a restore must not consume the operator's only backup.
-    /**
-     * @throws BackupIoException when the file cannot be opened as a database
-     */
-    public function carriedBy(string $snapshotPath): bool
-    {
-        return $this->carriesKeyring($this->open($snapshotPath, 'see whether it carries a keyring'));
     }
 
     private function carriesKeyring(PDO $pdo): bool

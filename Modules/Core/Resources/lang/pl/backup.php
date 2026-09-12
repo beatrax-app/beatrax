@@ -18,6 +18,7 @@ return [
         'heading' => 'Przywróć z kopii zapasowej',
 
         'intro_html' => 'Zastąp obecną bazę danych zaszyfrowaną kopią zapasową. Plik jest odszyfrowywany i sprawdzany, zanim cokolwiek się zmieni, a migawka obecnych danych zapisywana jest jeszcze przed przywracaniem — ale to nadal <strong class="text-slate-700 dark:text-slate-200">nadpisuje wszystko</strong>, więc jest dodatkowo zabezpieczone. Zostaniesz wylogowany, bo Twoje logowanie też jest w bazie danych.',
+        'updates_an_older_backup' => 'Kopia zapasowa utworzona przez starszą wersję Beatrax jest w trakcie przywracania aktualizowana do tej wersji, więc przywracanie zmienia także strukturę danych, nie tylko ich treść. Dzieje się to najpierw na kopii — jeśli któryś krok się nie powiedzie, nic nie zostaje przywrócone ani zmienione.',
         'restored' => 'Kopia zapasowa została przywrócona. Zaloguj się nazwą użytkownika i hasłem obowiązującymi w chwili jej utworzenia.',
         'snapshot_saved_prefix' => 'Migawka poprzednich danych została zapisana w',
         'file_label' => 'Plik kopii zapasowej (.enc) lub archiwum eksportu (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Nie udało się odczytać pliku kopii zapasowej, więc przywracanie nie zostało wykonane i nic nie zostało zmienione. Sprawdź, czy na urządzeniu jest wolne miejsce, i spróbuj ponownie.',
         'restore_not_supported' => 'Przywracanie działa w wersji trzymającej dane w jednym pliku, a ta nią nie jest, więc nic nie zostało zmienione. Przy bazie serwerowej użyj narzędzi przywracania tej bazy.',
         'restore_from_a_newer_build' => 'Ta kopia zapasowa została utworzona przez nowszą wersję Beatrax niż uruchomiona tutaj, więc nie została przywrócona i nic nie zostało zmienione. Zaktualizuj Beatrax, a następnie przywróć ją ponownie.',
-        'restore_from_an_older_build' => 'Ta kopia zapasowa została utworzona przez starszą wersję Beatrax niż uruchomiona tutaj, więc nie została przywrócona i nic nie zostało zmienione. Przywróć kopię utworzoną przez tę wersję.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax nie mógł zaktualizować tej kopii zapasowej do wersji uruchomionej tutaj, więc nic nie zostało przywrócone ani zmienione. Spróbuj ponownie — jeśli nadal się nie udaje, przywróć nowszą kopię; dziennik aplikacji zapisuje, który krok to zatrzymał.',
         'restore_failed' => 'Przywracanie nie zostało wykonane i nic nie zostało zmienione. Spróbuj ponownie — jeśli nadal się nie udaje, dziennik aplikacji zapisuje, co je zatrzymało.',
     ],
 ];

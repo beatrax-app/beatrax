@@ -18,6 +18,7 @@ return [
         'heading' => 'Taasta varukoopiast',
 
         'intro_html' => 'Asenda praegune andmebaas krüpteeritud varukoopiaga. Fail dekrüpteeritakse ja kontrollitakse enne mis tahes muudatust ning praegustest andmetest salvestatakse esmalt taastamiseelne hetktõmmis — aga see <strong class="text-slate-700 dark:text-slate-200">kirjutab kõik üle</strong>, seega on see samm kaitstud. Sind logitakse välja, sest ka sinu sisselogimine on andmebaasis.',
+        'updates_an_older_backup' => 'Vanema Beatraxi versiooniga tehtud varukoopia uuendatakse taastamise käigus sellele versioonile, seega taastamine muudab ka andmete kuju, mitte ainult sisu. See toimub esmalt koopial — kui mõni samm ebaõnnestub, ei taastata ega muudeta midagi.',
         'restored' => 'Varukoopia taastati. Logige sisse kasutajanime ja parooliga, mis kehtisid selle tegemise ajal.',
         'snapshot_saved_prefix' => 'Sinu varasemate andmete hetktõmmis salvestati asukohta',
         'file_label' => 'Varukoopiafail (.enc) või ekspordiarhiiv (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Varukoopia faili ei õnnestunud lugeda, seega taastamist ei tehtud ja midagi ei muudetud. Kontrolli, kas seadmes on vaba ruumi, ja proovi uuesti.',
         'restore_not_supported' => 'Taastamine töötab versioonis, mis hoiab oma andmeid ühes failis, ja see ei ole see, seega midagi ei muudetud. Serveri andmebaasi puhul kasuta selle andmebaasi enda taastamistööriistu.',
         'restore_from_a_newer_build' => 'See varukoopia on tehtud uuema Beatraxi versiooniga kui siin töötav, seega seda ei taastatud ja midagi ei muudetud. Uuenda Beatraxi ja taasta see seejärel uuesti.',
-        'restore_from_an_older_build' => 'See varukoopia on tehtud vanema Beatraxi versiooniga kui siin töötav, seega seda ei taastatud ja midagi ei muudetud. Taasta varukoopiast, mille tegi see versioon.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax ei suutnud seda varukoopiat siin töötavale versioonile uuendada, seega ei taastatud ega muudetud midagi. Proovi uuesti — kui see kordub, taasta uuem varukoopia; rakenduse logi märgib, milline samm selle peatas.',
         'restore_failed' => 'Taastamist ei tehtud ja midagi ei muudetud. Proovi uuesti — kui see ikka ebaõnnestub, kirjutab rakenduse logi üles, mis selle peatas.',
     ],
 ];

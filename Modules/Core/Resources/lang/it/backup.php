@@ -18,6 +18,7 @@ return [
         'heading' => 'Ripristina da un backup',
 
         'intro_html' => 'Sostituisci il database attuale con un backup crittografato. Il file viene decrittato e verificato prima che qualcosa cambi, e prima del ripristino viene salvato uno snapshot dei dati attuali — ma questa operazione <strong class="text-slate-700 dark:text-slate-200">sovrascrive tutto</strong>, quindi è protetta. Verrai disconnesso, perché anche il tuo accesso si trova nel database.',
+        'updates_an_older_backup' => 'Un backup creato da una versione precedente di Beatrax viene aggiornato a questa durante il ripristino, quindi ripristinare cambia anche la struttura dei dati, non solo il contenuto. Avviene prima su una copia: se un passaggio fallisce, non viene ripristinato né modificato nulla.',
         'restored' => 'Il backup è stato ripristinato. Accedi con il nome utente e la password in uso quando è stato creato.',
         'snapshot_saved_prefix' => 'Uno snapshot dei tuoi dati precedenti è stato salvato in',
         'file_label' => 'File di backup (.enc) o archivio di esportazione (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Non è stato possibile leggere il file di backup, quindi il ripristino non è stato eseguito e non è stato modificato nulla. Verifica che il dispositivo abbia spazio libero e riprova.',
         'restore_not_supported' => 'Il ripristino funziona sulla versione che tiene i dati in un unico file, e questa non lo è, quindi non è stato modificato nulla. Su un database server, usa gli strumenti di ripristino di quel database.',
         'restore_from_a_newer_build' => 'Questo backup è stato creato da una versione di Beatrax più recente di quella in esecuzione qui, quindi non è stato ripristinato e nulla è stato modificato. Aggiorna Beatrax, poi ripristinalo di nuovo.',
-        'restore_from_an_older_build' => 'Questo backup è stato creato da una versione di Beatrax più vecchia di quella in esecuzione qui, quindi non è stato ripristinato e nulla è stato modificato. Ripristina un backup creato da questa versione.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax non è riuscito ad aggiornare questo backup alla versione in esecuzione qui, quindi non è stato ripristinato nulla e nulla è stato modificato. Riprova — se continua a fallire, ripristina un backup più recente; il registro dell\'app annota quale passaggio lo ha bloccato.',
         'restore_failed' => "Il ripristino non è stato eseguito e non è stato modificato nulla. Riprova — se continua a fallire, il log dell'app registra che cosa lo ha bloccato.",
     ],
 ];

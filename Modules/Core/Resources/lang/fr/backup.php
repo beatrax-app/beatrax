@@ -18,6 +18,7 @@ return [
         'heading' => 'Restaurer depuis une sauvegarde',
 
         'intro_html' => 'Remplace ta base de données actuelle par une sauvegarde chiffrée. Le fichier est déchiffré et vérifié avant tout changement, et un instantané de tes données actuelles est enregistré au préalable — mais cela <strong class="text-slate-700 dark:text-slate-200">écrase tout</strong>, d\'où le verrou. Tu seras déconnecté, car ta session est elle aussi dans la base de données.',
+        'updates_an_older_backup' => 'Une sauvegarde créée par une version plus ancienne de Beatrax est mise à jour vers celle-ci pendant la restauration : restaurer modifie donc la structure des données autant que leur contenu. Cela se fait d\'abord sur une copie — si une étape échoue, rien n\'est restauré et rien n\'est modifié.',
         'restored' => 'Votre sauvegarde a été restaurée. Connectez-vous avec le nom d’utilisateur et le mot de passe en vigueur lors de sa création.',
         'snapshot_saved_prefix' => 'Un instantané de tes données précédentes a été enregistré dans',
         'file_label' => "Fichier de sauvegarde (.enc) ou archive d'export (.zip)",
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => "Le fichier de sauvegarde n'a pas pu être lu, la restauration n'a donc pas eu lieu et rien n'a été modifié. Vérifie qu'il reste de l'espace libre sur cet appareil, puis réessaie.",
         'restore_not_supported' => "La restauration fonctionne sur la version qui garde ses données dans un seul fichier, ce qui n'est pas le cas ici, et rien n'a été modifié. Sur une base de données serveur, utilise les outils de restauration de cette base.",
         'restore_from_a_newer_build' => 'Cette sauvegarde a été créée par une version de Beatrax plus récente que celle exécutée ici : elle n\'a pas été restaurée et rien n\'a été modifié. Mettez Beatrax à jour, puis restaurez-la de nouveau.',
-        'restore_from_an_older_build' => 'Cette sauvegarde a été créée par une version de Beatrax plus ancienne que celle exécutée ici : elle n\'a pas été restaurée et rien n\'a été modifié. Restaurez une sauvegarde créée par cette version.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax n\'a pas pu mettre cette sauvegarde à jour vers la version exécutée ici : rien n\'a été restauré et rien n\'a été modifié. Réessayez — si l\'échec persiste, restaurez une sauvegarde plus récente ; le journal de l\'application indique quelle étape a échoué.',
         'restore_failed' => "La restauration n'a pas eu lieu et rien n'a été modifié. Réessaie — si l'échec persiste, le journal de l'app note ce qui l'a arrêtée.",
     ],
 ];

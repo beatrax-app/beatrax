@@ -36,6 +36,16 @@ it('shows the screen on a fresh install, where there is no account to sign in wi
         ->assertNoRedirect();
 });
 
+// The phone reaches this from a fresh install, which is whatever version the
+// store is serving — so an older backup being migrated forward is the common
+// case here, not the corner, and it is said before the button rather than
+// after, when the restore has signed the reader out.
+it('says on a fresh install that restoring updates an older backup', function (): void {
+    Livewire::test(MobileRestoreFromBackup::class)
+        ->assertOk()
+        ->assertSee(Lang::get('core::backup.restore.updates_an_older_backup'));
+});
+
 it('turns a set-up device away rather than offering to replace its data', function (): void {
     restoreScreenUser('restore-screen-occupied');
 

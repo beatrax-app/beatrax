@@ -18,6 +18,7 @@ return [
         'heading' => 'Aus einem Backup wiederherstellen',
 
         'intro_html' => 'Ersetze deine aktuelle Datenbank durch ein verschlüsseltes Backup. Die Datei wird entschlüsselt und geprüft, bevor sich etwas ändert, und zuerst wird eine Momentaufnahme deiner aktuellen Daten gesichert — trotzdem <strong class="text-slate-700 dark:text-slate-200">überschreibt das alles</strong>, deshalb ist es abgesichert. Du wirst abgemeldet, denn deine Anmeldung liegt ebenfalls in der Datenbank.',
+        'updates_an_older_backup' => 'Eine Sicherung aus einer älteren Beatrax-Version wird beim Einspielen auf diese aktualisiert; Einspielen ändert also auch die Struktur der Daten, nicht nur ihren Inhalt. Das geschieht zuerst an einer Kopie — scheitert ein Schritt, wird nichts eingespielt und nichts geändert.',
         'restored' => 'Ihre Sicherung wurde wiederhergestellt. Melden Sie sich mit dem Benutzernamen und Passwort an, die bei ihrer Erstellung galten.',
         'snapshot_saved_prefix' => 'Eine Momentaufnahme deiner bisherigen Daten wurde gespeichert unter',
         'file_label' => 'Backup-Datei (.enc) oder Export-Archiv (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Die Backup-Datei konnte nicht gelesen werden, die Wiederherstellung lief daher nicht, und nichts wurde geändert. Prüfe, ob dieses Gerät freien Speicher hat, und versuche es erneut.',
         'restore_not_supported' => 'Wiederherstellen funktioniert auf der Variante, die ihre Daten in einer einzigen Datei hält — diese ist es nicht, und nichts wurde geändert. Nutze bei einer Serverdatenbank deren eigene Wiederherstellungswerkzeuge.',
         'restore_from_a_newer_build' => 'Diese Sicherung stammt aus einer neueren Beatrax-Version als der hier laufenden, deshalb wurde sie nicht eingespielt und nichts geändert. Aktualisiere Beatrax und spiele sie danach erneut ein.',
-        'restore_from_an_older_build' => 'Diese Sicherung stammt aus einer älteren Beatrax-Version als der hier laufenden, deshalb wurde sie nicht eingespielt und nichts geändert. Spiele eine Sicherung ein, die diese Version erstellt hat.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax konnte diese Sicherung nicht auf die hier laufende Version aktualisieren, deshalb wurde nichts eingespielt und nichts geändert. Versuche es erneut — schlägt es weiter fehl, spiele eine neuere Sicherung ein; das App-Protokoll hält fest, welcher Schritt es gestoppt hat.',
         'restore_failed' => 'Die Wiederherstellung lief nicht, und nichts wurde geändert. Versuche es erneut — schlägt es weiter fehl, hält das App-Protokoll fest, was sie gestoppt hat.',
     ],
 ];

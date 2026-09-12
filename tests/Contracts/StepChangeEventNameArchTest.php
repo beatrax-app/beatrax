@@ -81,6 +81,14 @@ function stepChangeMeansTheSameThing(string $name): bool
         return false;
     }
 
+    // An event name is one token, and the markup half already reads only that
+    // shape. The backend half read every string literal, so reader-facing copy
+    // pairing "step" with "change" — an ordinary English sentence — was a step
+    // change announced under another name.
+    if (PatternScan::matches('/[^A-Za-z0-9_.:-]/', $name)) {
+        return false;
+    }
+
     return preg_match('/step/i', $name) === 1 && preg_match('/chang/i', $name) === 1;
 }
 
@@ -181,6 +189,7 @@ it('sees a step change announced under a near-miss name', function (): void {
                 $this->dispatch('wizard-step-changed');
                 $this->dispatch('wizard.step.completed');
                 $this->dispatch('theme-changed');
+                $this->tell('If any step of the update fails, nothing is changed.');
             }
         }
         PHP);

@@ -18,6 +18,7 @@ return [
         'heading' => 'Restore from a backup',
 
         'intro_html' => 'Replace your current database with an encrypted backup. The file is decrypted and checked before anything changes, and a pre-restore snapshot of your current data is saved first — but this still <strong class="text-slate-700 dark:text-slate-200">overwrites everything</strong>, so it is gated. You will be signed out, because your sign-in lives in the database too.',
+        'updates_an_older_backup' => 'A backup made by an older version of Beatrax is updated to this one as part of restoring, so restoring changes the shape of the data as well as its contents. That happens on a copy first — if any step of the update fails, nothing is restored and nothing is changed.',
         'restored' => 'Your backup was restored. Sign in with the username and password that were in use when it was made.',
         'snapshot_saved_prefix' => 'A snapshot of your previous data was saved to',
         'file_label' => 'Backup file (.enc) or export archive (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'The backup file could not be read, so the restore did not run and nothing has been changed. Check that this device has free space, then try again.',
         'restore_not_supported' => "Restoring works on the build that keeps its data in a single file, which this one is not, so nothing has been changed. On a server database, use that database's own restore tooling.",
         'restore_from_a_newer_build' => 'This backup was made by a newer version of Beatrax than the one running here, so it was not restored and nothing has been changed. Update Beatrax, then restore it again.',
-        'restore_from_an_older_build' => 'This backup was made by an older version of Beatrax than the one running here, so it was not restored and nothing has been changed. Restore from a backup this version made.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax could not update this backup to the version running here, so nothing was restored and nothing has been changed. Try again — if it keeps failing, restore from a more recent backup, and the app log records which step stopped it.',
         'restore_failed' => 'The restore did not run, and nothing has been changed. Try again — if it keeps failing, the app log records what stopped it.',
     ],
 ];

@@ -33,3 +33,15 @@ it('says before the button that restoring signs you out', function (): void {
 
     expect(Lang::get('core::backup.restore.intro_html'))->toContain('signed out');
 });
+
+// Restoring an older backup migrates it, so it changes the shape of the data
+// and not only its contents. Before the button for the same reason the line
+// above is: afterwards the reader is signed out on /login with nothing to read.
+it('says before the button that restoring updates an older backup', function (): void {
+    Livewire::test(EncryptedBackupRestore::class)
+        ->assertSee(Lang::get('core::backup.restore.updates_an_older_backup'));
+
+    expect(Lang::get('core::backup.restore.updates_an_older_backup'))
+        ->toContain('older version')
+        ->toContain('shape of the data');
+});

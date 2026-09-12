@@ -18,6 +18,7 @@ return [
         'heading' => 'Visszaállítás biztonsági mentésből',
 
         'intro_html' => 'Cseréld le a jelenlegi adatbázisodat egy titkosított biztonsági mentésre. A fájl visszafejtése és ellenőrzése megtörténik, mielőtt bármi megváltozna, és előbb pillanatkép készül a jelenlegi adataidról — ez azonban akkor is <strong class="text-slate-700 dark:text-slate-200">mindent felülír</strong>, ezért védett művelet. Ki fogsz jelentkezni, mert a bejelentkezésed is az adatbázisban van.',
+        'updates_an_older_backup' => 'A Beatrax régebbi verziójával készült mentés a visszaállítás során erre a verzióra frissül, így a visszaállítás az adatok szerkezetét is megváltoztatja, nem csak a tartalmát. Ez először egy másolaton történik — ha bármelyik lépés meghiúsul, semmi nem áll vissza és semmi nem változik.',
         'restored' => 'A biztonsági mentés visszaállt. Jelentkezzen be azzal a felhasználónévvel és jelszóval, amely a készítésekor érvényes volt.',
         'snapshot_saved_prefix' => 'A korábbi adataidról készült pillanatkép ide mentve',
         'file_label' => 'Mentésfájl (.enc) vagy exportarchívum (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'A mentésfájlt nem sikerült beolvasni, így a visszaállítás nem futott le, és semmi sem változott. Ellenőrizd, van-e szabad hely az eszközön, és próbáld újra.',
         'restore_not_supported' => 'A visszaállítás abban a kiadásban működik, amely egyetlen fájlban tartja az adatait, és ez nem olyan, így semmi sem változott. Kiszolgálói adatbázisnál használd annak saját visszaállító eszközeit.',
         'restore_from_a_newer_build' => 'Ezt a biztonsági mentést a Beatrax újabb verziója készítette, mint amelyik itt fut, ezért nem lett visszaállítva, és semmi nem változott. Frissítsd a Beatraxot, majd állítsd vissza újra.',
-        'restore_from_an_older_build' => 'Ezt a biztonsági mentést a Beatrax régebbi verziója készítette, mint amelyik itt fut, ezért nem lett visszaállítva, és semmi nem változott. Állíts vissza olyan mentésből, amelyet ez a verzió készített.',
+        'restore_could_not_be_brought_up_to_date' => 'A Beatrax nem tudta frissíteni ezt a biztonsági mentést az itt futó verzióra, ezért semmi nem lett visszaállítva és semmi nem változott. Próbáld újra — ha továbbra sem sikerül, állíts vissza újabb mentést; az alkalmazásnapló rögzíti, melyik lépés állította meg.',
         'restore_failed' => 'A visszaállítás nem futott le, és semmi sem változott. Próbáld újra — ha továbbra is hibázik, az alkalmazás naplója rögzíti, mi állította meg.',
     ],
 ];

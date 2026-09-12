@@ -6,6 +6,12 @@
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {!! Lang::get('core::backup.restore.intro_html') !!}
             </p>
+            {{-- A restore is a schema-changing operation for a backup made by
+                 an older build. Said before the reader starts one, because
+                 afterwards they are signed out on /login. --}}
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                {{ Lang::get('core::backup.restore.updates_an_older_backup') }}
+            </p>
 
             {{-- No success branch: a completed restore signs the reader out and
                  lands on /login, which is where the confirmation is shown. --}}

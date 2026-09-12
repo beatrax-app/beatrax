@@ -18,6 +18,7 @@ return [
         'heading' => 'Restaurează dintr-o copie de rezervă',
 
         'intro_html' => 'Înlocuiește baza de date actuală cu o copie de rezervă criptată. Fișierul este decriptat și verificat înainte să se schimbe ceva, iar un instantaneu al datelor tale actuale este salvat mai întâi — dar tot <strong class="text-slate-700 dark:text-slate-200">suprascrie totul</strong>, așa că acțiunea este protejată. Vei fi deconectat, deoarece și autentificarea ta se află în baza de date.',
+        'updates_an_older_backup' => 'O copie de rezervă creată de o versiune Beatrax mai veche este actualizată la aceasta în timpul restaurării, deci restaurarea schimbă și structura datelor, nu doar conținutul. Se întâmplă mai întâi pe o copie — dacă un pas eșuează, nu se restaurează și nu se modifică nimic.',
         'restored' => 'Copia de rezervă a fost restaurată. Autentifică-te cu numele de utilizator și parola valabile când a fost creată.',
         'snapshot_saved_prefix' => 'Un instantaneu al datelor tale anterioare a fost salvat în',
         'file_label' => 'Fișier de copie de rezervă (.enc) sau arhivă de export (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Fișierul copiei de siguranță nu a putut fi citit, așa că restaurarea nu a rulat și nu s-a schimbat nimic. Verifică dacă dispozitivul are spațiu liber și încearcă din nou.',
         'restore_not_supported' => 'Restaurarea funcționează în versiunea care își ține datele într-un singur fișier, iar aceasta nu este așa, deci nu s-a schimbat nimic. La o bază de date pe server, folosește uneltele proprii de restaurare ale acesteia.',
         'restore_from_a_newer_build' => 'Această copie de rezervă a fost creată de o versiune Beatrax mai nouă decât cea care rulează aici, așa că nu a fost restaurată și nimic nu a fost modificat. Actualizează Beatrax, apoi restaureaz-o din nou.',
-        'restore_from_an_older_build' => 'Această copie de rezervă a fost creată de o versiune Beatrax mai veche decât cea care rulează aici, așa că nu a fost restaurată și nimic nu a fost modificat. Restaurează dintr-o copie creată de această versiune.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax nu a putut actualiza această copie de rezervă la versiunea care rulează aici, așa că nimic nu a fost restaurat și nimic modificat. Încearcă din nou — dacă eșuează în continuare, restaurează o copie mai recentă; jurnalul aplicației notează ce pas a oprit-o.',
         'restore_failed' => 'Restaurarea nu a rulat și nu s-a schimbat nimic. Încearcă din nou — dacă tot eșuează, jurnalul aplicației notează ce a oprit-o.',
     ],
 ];

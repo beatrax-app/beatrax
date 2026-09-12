@@ -18,6 +18,7 @@ return [
         'heading' => 'Vraćanje iz sigurnosne kopije',
 
         'intro_html' => 'Zamijeni trenutnu bazu podataka šifriranom sigurnosnom kopijom. Datoteka se dešifrira i provjerava prije bilo kakve promjene, a snimka trenutnih podataka sprema se prije toga — no ovo i dalje <strong class="text-slate-700 dark:text-slate-200">prebrisuje sve</strong>, pa je dodatno zaštićeno. Bit ćeš odjavljen jer je i tvoja prijava u bazi podataka.',
+        'updates_an_older_backup' => 'Sigurnosna kopija izrađena starijom verzijom Beatraxa tijekom vraćanja se ažurira na ovu, pa vraćanje mijenja i strukturu podataka, ne samo sadržaj. To se prvo događa na kopiji — ako neki korak ne uspije, ništa se ne vraća i ništa ne mijenja.',
         'restored' => 'Sigurnosna kopija je vraćena. Prijavite se korisničkim imenom i lozinkom koji su vrijedili kad je izrađena.',
         'snapshot_saved_prefix' => 'Snimka tvojih prethodnih podataka spremljena je u',
         'file_label' => 'Datoteka sigurnosne kopije (.enc) ili arhiva izvoza (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Datoteku sigurnosne kopije nije bilo moguće pročitati, pa vraćanje nije izvršeno i ništa nije promijenjeno. Provjeri ima li uređaj slobodnog prostora i pokušaj ponovno.',
         'restore_not_supported' => 'Vraćanje radi u izdanju koje drži podatke u jednoj datoteci, a ovo nije takvo, pa ništa nije promijenjeno. Kod poslužiteljske baze upotrijebi njezine vlastite alate za vraćanje.',
         'restore_from_a_newer_build' => 'Ova sigurnosna kopija izrađena je novijom verzijom Beatraxa od one koja se ovdje izvodi, pa nije vraćena i ništa nije promijenjeno. Ažuriraj Beatrax pa je zatim vrati ponovno.',
-        'restore_from_an_older_build' => 'Ova sigurnosna kopija izrađena je starijom verzijom Beatraxa od one koja se ovdje izvodi, pa nije vraćena i ništa nije promijenjeno. Vrati iz sigurnosne kopije koju je izradila ova verzija.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax nije mogao ažurirati ovu sigurnosnu kopiju na verziju koja se ovdje izvodi, pa ništa nije vraćeno ni promijenjeno. Pokušaj ponovno — ako se nastavi, vrati noviju kopiju; zapisnik aplikacije bilježi koji ju je korak zaustavio.',
         'restore_failed' => 'Vraćanje nije izvršeno i ništa nije promijenjeno. Pokušaj ponovno — ako i dalje ne uspijeva, zapisnik aplikacije bilježi što ga je zaustavilo.',
     ],
 ];

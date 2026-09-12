@@ -18,6 +18,7 @@ return [
         'heading' => 'Gjenopprett fra en sikkerhetskopi',
 
         'intro_html' => 'Erstatt den nåværende databasen din med en kryptert sikkerhetskopi. Filen dekrypteres og kontrolleres før noe endres, og et øyeblikksbilde av dagens data lagres først — men dette <strong class="text-slate-700 dark:text-slate-200">overskriver alt</strong>, så det er sperret. Du blir logget ut, for innloggingen din ligger også i databasen.',
+        'updates_an_older_backup' => 'En sikkerhetskopi fra en eldre versjon av Beatrax oppdateres til denne som del av gjenopprettingen, så gjenoppretting endrer også dataenes struktur og ikke bare innholdet. Det skjer først på en kopi — feiler et steg, gjenopprettes ingenting og ingenting endres.',
         'restored' => 'Sikkerhetskopien er gjenopprettet. Logg inn med brukernavnet og passordet som gjaldt da den ble laget.',
         'snapshot_saved_prefix' => 'Et øyeblikksbilde av de tidligere dataene dine ble lagret i',
         'file_label' => 'Sikkerhetskopi (.enc) eller eksportarkiv (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Sikkerhetskopifilen kunne ikke leses, så gjenopprettingen ble ikke kjørt, og ingenting er endret. Sjekk at enheten har ledig plass, og prøv igjen.',
         'restore_not_supported' => 'Gjenoppretting virker i utgaven som holder dataene sine i én fil, og det er ikke denne, så ingenting er endret. Bruk databasens egne gjenopprettingsverktøy ved en serverdatabase.',
         'restore_from_a_newer_build' => 'Denne sikkerhetskopien ble laget av en nyere versjon av Beatrax enn den som kjører her, så den ble ikke gjenopprettet og ingenting er endret. Oppdater Beatrax, og gjenopprett den så på nytt.',
-        'restore_from_an_older_build' => 'Denne sikkerhetskopien ble laget av en eldre versjon av Beatrax enn den som kjører her, så den ble ikke gjenopprettet og ingenting er endret. Gjenopprett fra en sikkerhetskopi denne versjonen laget.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax kunne ikke oppdatere denne sikkerhetskopien til versjonen som kjører her, så ingenting ble gjenopprettet og ingenting er endret. Prøv igjen — fortsetter det å feile, gjenopprett en nyere sikkerhetskopi; apploggen noterer hvilket steg som stoppet den.',
         'restore_failed' => 'Gjenopprettingen ble ikke kjørt, og ingenting er endret. Prøv igjen — fortsetter den å feile, noterer apploggen hva som stoppet den.',
     ],
 ];

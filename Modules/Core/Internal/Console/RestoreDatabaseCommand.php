@@ -10,7 +10,8 @@ use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
-use Modules\Core\Internal\Backup\BackupFromAnotherBuildException;
+use Modules\Core\Internal\Backup\BackupCouldNotBeBroughtUpToDateException;
+use Modules\Core\Internal\Backup\BackupFromANewerBuildException;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\BackupSchemaGeneration;
 use Modules\Core\Internal\Backup\LiveDatabaseTransplant;
@@ -134,7 +135,13 @@ final class RestoreDatabaseCommand extends Command
             return false;
         }
 
-        $accepted = $this->confirm(sprintf('Restore %s over current DB? A pre-restore snapshot will be saved. [y/N]', $sourcePath), false);
+        // A backup from an older build is migrated forward before it is
+        // swapped in, so a restore changes the shape of the database as well
+        // as its rows. An operator agreeing to this is agreeing to that.
+        $accepted = $this->confirm(sprintf(
+            'Restore %s over current DB? A backup from an older build is brought to this build\'s schema first. A pre-restore snapshot will be saved. [y/N]',
+            $sourcePath
+        ), false);
         if (! $accepted) {
             $this->info('Restore cancelled.');
         }
@@ -154,16 +161,127 @@ final class RestoreDatabaseCommand extends Command
             throw new RestoreFailedException(leaveDown: false);
         }
 
-        // Refused while nothing has been touched. Migrations only move
-        // forward, so a backup from a newer build has no path to a shape this
-        // one reads, and a pending-migration check cannot see it.
+        $livePath = $this->resolveLivePath();
+
+        // Everything past here reads a COPY, never the file the operator
+        // named: lifting the keyring out of a backup and bringing an older
+        // schema forward both rewrite it. Staged unconditionally, so the
+        // guarantee does not rest on a predicate agreeing with its guard.
+        $staged = $this->stagedCopyOf($sourcePath);
+
         try {
-            $this->schema->assertThisBuildCanRead($sourcePath);
+            $this->swapIn($sourcePath, $staged, $livePath);
+        } finally {
+            $this->staging->discard($staged);
+        }
+    }
+
+    /**
+     * @throws RestoreFailedException when the copy cannot be staged
+     */
+    private function stagedCopyOf(string $sourcePath): string
+    {
+        try {
+            $staged = $this->staging->path('source');
+
+            // Owner-only first, so the copy is written into a file already at
+            // 0600 rather than one born at the process umask.
+            if (! $this->ownerOnly->file($staged)) {
+                throw new BackupIoException('The staged backup could not be made owner-only: '.$staged);
+            }
         } catch (Throwable $e) {
             $this->refuse($e);
         }
 
-        $livePath = $this->resolveLivePath();
+        try {
+            // The main file alone: the integrity check above opened the
+            // source and let go of it, and SQLite folds a WAL back in when the
+            // last connection to it closes.
+            if ($this->files->copy($sourcePath, $staged) === false) {
+                throw new BackupIoException('The backup could not be staged for the swap: '.$staged);
+            }
+        } catch (Throwable $e) {
+            $this->staging->discard($staged);
+            $this->refuse($e);
+        }
+
+        return $staged;
+    }
+
+    /**
+     * @throws RestoreFailedException on every refusal, and on a failure mid-swap
+     */
+    private function swapIn(string $sourcePath, string $staged, string $livePath): void
+    {
+        // Ahead of the snapshot and on the copy. SQLite runs no schema
+        // transaction, so a run that fails part way leaves what it applied,
+        // and the only undo is discarding the file it ran against. Refused
+        // here, nothing has been opened and no snapshot has been written.
+        $this->bringUpToDate($staged);
+
+        $preRestorePath = $this->snapshotCurrent();
+
+        // Before the swap, so a keyring that will not decode leaves the live
+        // database untouched. Restoring the rows without it hands the reader a
+        // ledger of ciphertext and calls the restore a success.
+        try {
+            $this->keyMaterial->unpackFrom($staged);
+        } catch (Throwable $e) {
+            $this->refuse($e);
+        }
+
+        // Writes the source's pages INTO the live database rather than over
+        // its file, and drops every connection naming it first. `php artisan
+        // down` closes nothing, so a copy landed beside a live `-wal` that the
+        // next reader replayed straight back over the restored pages.
+        try {
+            ($this->transplant)($staged, $livePath, $preRestorePath);
+        } catch (BackupIoException $e) {
+            $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
+                'phase' => 'copy',
+                'reason' => $e->getMessage(),
+            ]);
+            $this->error('Restore failed mid-swap. Pre-restore snapshot at '.$preRestorePath.'.');
+
+            throw new RestoreFailedException(leaveDown: true);
+        }
+
+        $this->verifySwap($sourcePath, $livePath, $preRestorePath);
+
+        // Past the verification, so a listener reads a database this command
+        // has already vouched for. The rows are in by now, so a repair that
+        // throws is reported rather than turned into a failed restore.
+        try {
+            $this->events->dispatch(new DatabaseRestored($preRestorePath));
+        } catch (Throwable $e) {
+            $this->warn('The restore completed; a repair after it did not: '.SafeExceptionContext::shortName($e));
+        }
+    }
+
+    /**
+     * @throws RestoreFailedException when the backup is ahead of this build, or a
+     *                                migration bringing it forward fails
+     */
+    private function bringUpToDate(string $staged): void
+    {
+        try {
+            $ran = $this->schema->bringUpToDate($staged);
+        } catch (Throwable $e) {
+            $this->refuse($e);
+        }
+
+        if ($ran > 0) {
+            $this->info('Brought the backup forward to this build. Migrations run: '.$ran);
+        }
+    }
+
+    /**
+     * @return string the absolute path of the pre-restore snapshot
+     *
+     * @throws RestoreFailedException when it cannot be written, or cannot carry the keyring
+     */
+    private function snapshotCurrent(): string
+    {
         // Eight random hex characters, because VACUUM INTO refuses an existing
         // target and the stamp is second-resolution: the documented undo is to
         // restore the snapshot a failed restore just named, and two runs inside
@@ -192,95 +310,31 @@ final class RestoreDatabaseCommand extends Command
 
         $this->info('Pre-restore snapshot: '.$preRestorePath);
 
-        // Before the swap, so a keyring that will not decode leaves the live
-        // database untouched. Restoring the rows without it hands the reader a
-        // ledger of ciphertext and calls the restore a success.
-        $staged = $this->keyMaterialLifted($sourcePath);
-
-        // Writes the source's pages INTO the live database rather than over
-        // its file, and drops every connection naming it first. `php artisan
-        // down` closes nothing, so a copy landed beside a live `-wal` that the
-        // next reader replayed straight back over the restored pages.
-        try {
-            ($this->transplant)($staged ?? $sourcePath, $livePath, $preRestorePath);
-        } catch (BackupIoException $e) {
-            $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
-                'phase' => 'copy',
-                'reason' => $e->getMessage(),
-            ]);
-            $this->error('Restore failed mid-swap. Pre-restore snapshot at '.$preRestorePath.'.');
-
-            throw new RestoreFailedException(leaveDown: true);
-        } finally {
-            if ($staged !== null) {
-                $this->staging->discard($staged);
-            }
-        }
-
-        // Framework connection, NOT a fresh PDO, so SqliteOptimizationsProvider's
-        // ConnectionEstablished listener re-applies WAL + synchronous on the
-        // swapped-in file.
-        $rawIntegrity = $this->db->connection(SqliteDatabase::connectionName($this->config))->scalar('PRAGMA integrity_check');
-        if ((is_string($rawIntegrity) ? $rawIntegrity : '') !== 'ok') {
-            // Maintenance mode stays ON so the operator notices and restores
-            // from the pre-restore snapshot.
-            $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
-                'phase' => 'post_swap',
-                'integrity_check' => is_string($rawIntegrity) ? $rawIntegrity : '',
-            ]);
-            $this->error('Post-swap integrity check failed. Maintenance mode left ON; pre-restore snapshot at '.$preRestorePath.'.');
-
-            throw new RestoreFailedException(leaveDown: true);
-        }
-
-        // Past the verification, so a listener reads a database this command
-        // has already vouched for. The rows are in by now, so a repair that
-        // throws is reported rather than turned into a failed restore.
-        try {
-            $this->events->dispatch(new DatabaseRestored($preRestorePath));
-        } catch (Throwable $e) {
-            $this->warn('The restore completed; a repair after it did not: '.SafeExceptionContext::shortName($e));
-        }
+        return $preRestorePath;
     }
 
-    // Lifted out of a COPY, never out of the file the operator named:
-    // unpackFrom drops the carrier table, so lifting in place would edit their
-    // backup into one that restores the ledger once and the keys never again.
-    // A file carrying none is passed straight through.
+    // Framework connection, NOT a fresh PDO, so SqliteOptimizationsProvider's
+    // ConnectionEstablished listener re-applies WAL + synchronous on the
+    // swapped-in file.
     /**
-     * @return string|null the staged copy the swap must read, or null to read the source itself
-     *
-     * @throws RestoreFailedException when the copy cannot be staged, or the keyring will not decode
+     * @throws RestoreFailedException when the swapped-in database does not check out
      */
-    private function keyMaterialLifted(string $sourcePath): ?string
+    private function verifySwap(string $sourcePath, string $livePath, string $preRestorePath): void
     {
-        try {
-            if (! $this->keyMaterial->carriedBy($sourcePath)) {
-                return null;
-            }
-
-            $staged = $this->staging->path('source');
-            if (! $this->ownerOnly->file($staged)) {
-                throw new BackupIoException('The staged backup could not be made owner-only: '.$staged);
-            }
-        } catch (Throwable $e) {
-            $this->refuse($e);
+        $rawIntegrity = $this->db->connection(SqliteDatabase::connectionName($this->config))->scalar('PRAGMA integrity_check');
+        if ((is_string($rawIntegrity) ? $rawIntegrity : '') === 'ok') {
+            return;
         }
 
-        try {
-            // Owner-only first, so the copy is written into a file already at
-            // 0600 rather than one born at the process umask.
-            if ($this->files->copy($sourcePath, $staged) === false) {
-                throw new BackupIoException('The backup could not be staged for the swap: '.$staged);
-            }
+        // Maintenance mode stays ON so the operator notices and restores
+        // from the pre-restore snapshot.
+        $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
+            'phase' => 'post_swap',
+            'integrity_check' => is_string($rawIntegrity) ? $rawIntegrity : '',
+        ]);
+        $this->error('Post-swap integrity check failed. Maintenance mode left ON; pre-restore snapshot at '.$preRestorePath.'.');
 
-            $this->keyMaterial->unpackFrom($staged);
-        } catch (Throwable $e) {
-            $this->staging->discard($staged);
-            $this->refuse($e);
-        }
-
-        return $staged;
+        throw new RestoreFailedException(leaveDown: true);
     }
 
     // Every caller can receive a PDOException as well as one of ours, and that
@@ -294,13 +348,18 @@ final class RestoreDatabaseCommand extends Command
         throw new RestoreFailedException(leaveDown: false);
     }
 
-    // A schema mismatch is the one refusal an operator acts on rather than
-    // investigates, so it is spelled the way the screens spell it. The count of
-    // unmatched migrations goes beside it, which is the operator's half.
+    // A schema refusal is the one an operator acts on rather than
+    // investigates, so it is spelled the way the screens spell it. The counts
+    // beside it are the operator's half, and count different things: schema
+    // changes this build never had, against the size of the gap it was closing.
     private function because(Throwable $e): string
     {
-        if ($e instanceof BackupFromAnotherBuildException) {
+        if ($e instanceof BackupFromANewerBuildException) {
             return RestoreRefusal::forThrowable($e)->sentence().' ('.count($e->unmatched).' unmatched)';
+        }
+
+        if ($e instanceof BackupCouldNotBeBroughtUpToDateException) {
+            return RestoreRefusal::forThrowable($e)->sentence().' ('.$e->pending.' pending)';
         }
 
         return $e instanceof BackupIoException

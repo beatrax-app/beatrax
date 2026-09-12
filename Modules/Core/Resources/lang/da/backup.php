@@ -18,6 +18,7 @@ return [
         'heading' => 'Gendan fra en sikkerhedskopi',
 
         'intro_html' => 'Erstat din nuværende database med en krypteret sikkerhedskopi. Filen dekrypteres og kontrolleres, før noget ændres, og et øjebliksbillede af dine nuværende data gemmes først — men det <strong class="text-slate-700 dark:text-slate-200">overskriver alt</strong>, så det er spærret. Du bliver logget ud, for din indlogning ligger også i databasen.',
+        'updates_an_older_backup' => 'En sikkerhedskopi fra en ældre version af Beatrax opdateres til denne som en del af gendannelsen, så gendannelse ændrer også datas struktur og ikke kun indhold. Det sker først på en kopi — fejler et trin, gendannes intet, og intet ændres.',
         'restored' => 'Din sikkerhedskopi er gendannet. Log ind med det brugernavn og den adgangskode, der var i brug, da den blev lavet.',
         'snapshot_saved_prefix' => 'Et øjebliksbillede af dine tidligere data blev gemt i',
         'file_label' => 'Sikkerhedskopi (.enc) eller eksportarkiv (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Sikkerhedskopifilen kunne ikke læses, så gendannelsen blev ikke kørt, og intet er ændret. Tjek at enheden har ledig plads, og prøv igen.',
         'restore_not_supported' => 'Gendannelse virker i den udgave, der holder sine data i én fil, og det er denne ikke, så intet er ændret. Brug databasens egne gendannelsesværktøjer ved en serverdatabase.',
         'restore_from_a_newer_build' => 'Denne sikkerhedskopi er lavet af en nyere version af Beatrax end den, der kører her, så den blev ikke gendannet, og intet er ændret. Opdatér Beatrax, og gendan den derefter igen.',
-        'restore_from_an_older_build' => 'Denne sikkerhedskopi er lavet af en ældre version af Beatrax end den, der kører her, så den blev ikke gendannet, og intet er ændret. Gendan fra en sikkerhedskopi, som denne version har lavet.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax kunne ikke opdatere denne sikkerhedskopi til den version, der kører her, så intet blev gendannet, og intet er ændret. Prøv igen — bliver det ved, så gendan en nyere sikkerhedskopi; app-loggen noterer, hvilket trin der stoppede den.',
         'restore_failed' => 'Gendannelsen blev ikke kørt, og intet er ændret. Prøv igen — bliver den ved med at fejle, noterer appens log, hvad der stoppede den.',
     ],
 ];
