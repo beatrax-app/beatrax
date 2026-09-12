@@ -155,6 +155,11 @@ final readonly class PairedDeviceAdmitter
                     // stamped from the previous pairing, this row would read as
                     // already-delivered and nothing would ever send them.
                     'epochs_delivered_at' => null,
+                    // A two-party ceremony that named the machine a restore was
+                    // taken from says it is here and answering. Left stamped,
+                    // it would be a peer the reader just paired with that no
+                    // list shows and no epoch reaches.
+                    'self_retired_at' => null,
                     // Conditional: a re-admit over the relay carries no
                     // address, and writing null would throw away the one the
                     // LAN pairing already recorded.

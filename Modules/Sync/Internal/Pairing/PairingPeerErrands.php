@@ -105,6 +105,10 @@ final readonly class PairingPeerErrands
             ->where('user_id', $userId)
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
+            // A retired row is confirmed so a rebuild can verify what it
+            // signed, and a wrap addressed to it sits in a mailbox the machine
+            // it names will never open.
+            ->whereNull('self_retired_at')
             ->pluck('id');
 
         if ($recipients->isEmpty()) {
