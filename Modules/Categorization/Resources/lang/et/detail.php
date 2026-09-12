@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Rakendunud reegel',
+    'diverges_from_rule' => 'Tehing on kategoorias :chosen, kuid reegel on endiselt aktiivne ja paigutab oma vasted kategooriasse :rule.',
     'remove_confirm' => 'Kas eemaldada?',
     'remove_yes' => 'Jah, eemalda',
     'cancel' => 'Tühista',

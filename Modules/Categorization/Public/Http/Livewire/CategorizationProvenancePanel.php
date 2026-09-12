@@ -12,9 +12,11 @@ use Livewire\Component;
 use Modules\Categorization\Internal\Actions\AssignCategory;
 use Modules\Categorization\Internal\Http\Livewire\RulesPage;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
+use Modules\Categorization\Public\Dto\CategoryOption;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
+use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Support\Lang;
@@ -45,14 +47,26 @@ final class CategorizationProvenancePanel extends Component
 
     public ?int $overrideCategoryId = null;
 
+    // The category the reader put the row in, when it is not the one the rule
+    // named and the rule is still active. Empty otherwise: the card renders
+    // identically on agreement and on divergence without it, so the reader who
+    // overruled a live rule was shown exactly what the reader who agreed was.
+    public string $divergedFromRuleInto = '';
+
+    // Hydration-scoped, not Livewire state: findForUser() answers for a rule
+    // whether or not it can still fire, and the flag it carries was read and
+    // dropped. A disabled rule is not a contradiction to raise.
+    private bool $ruleCanStillFire = false;
+
     public function mount(
         int $transactionId,
         DatabaseManager $db,
         CurrentUser $currentUser,
         CategorizationRuleQuery $rules,
+        CategoryOptionsQuery $categories,
     ): void {
         $this->transactionId = $transactionId;
-        $this->hydrateFromProvenance($db, $currentUser, $rules);
+        $this->hydrateFromProvenance($db, $currentUser, $rules, $categories);
     }
 
     public function updateRule(): void
@@ -78,6 +92,7 @@ final class CategorizationProvenancePanel extends Component
         DeleteCategorizationRule $delete,
         DatabaseManager $db,
         CategorizationRuleQuery $rules,
+        CategoryOptionsQuery $categories,
     ): void {
         if ($this->ruleId === null) {
             return;
@@ -90,14 +105,14 @@ final class CategorizationProvenancePanel extends Component
         } catch (NotFoundHttpException) {
             $this->flashMessage = Lang::get('categorization::detail.flash_rule_gone');
             $this->confirmingRemove = false;
-            $this->hydrateFromProvenance($db, $currentUser, $rules);
+            $this->hydrateFromProvenance($db, $currentUser, $rules, $categories);
 
             return;
         }
 
         $this->confirmingRemove = false;
 
-        $this->hydrateFromProvenance($db, $currentUser, $rules);
+        $this->hydrateFromProvenance($db, $currentUser, $rules, $categories);
     }
 
     // Reveals the picker in place rather than announcing it. This used to
@@ -127,6 +142,7 @@ final class CategorizationProvenancePanel extends Component
             'confirmingRemove' => $this->confirmingRemove,
             'overriding' => $this->overriding,
             'overrideCategoryId' => $this->overrideCategoryId,
+            'divergedFromRuleInto' => $this->divergedFromRuleInto,
             'flashMessage' => $this->flashMessage,
         ]);
     }
@@ -135,6 +151,7 @@ final class CategorizationProvenancePanel extends Component
         DatabaseManager $db,
         CurrentUser $currentUser,
         CategorizationRuleQuery $rules,
+        CategoryOptionsQuery $categories,
     ): void {
         // readPriorProvenance returns null for a missing, empty, or corrupt
         // payload, so a poisoned column renders 'none' instead of throwing.
@@ -147,6 +164,8 @@ final class CategorizationProvenancePanel extends Component
 
         $source = $decoded['source'] ?? null;
         if ($source === 'rule' && $this->hydrateRuleVariant($decoded, $currentUser, $rules)) {
+            $this->divergedFromRuleInto = $this->divergenceLabel($decoded, $db, $currentUser, $categories);
+
             return;
         }
 
@@ -176,12 +195,58 @@ final class CategorizationProvenancePanel extends Component
 
         $this->variant = 'rule';
         $this->ruleId = $dto->id;
+        $this->ruleCanStillFire = $dto->active;
         $this->conditionSummary = $dto->conditions === []
             ? ''
             : RulesPage::conditionFragment($dto->conditions[0]);
         $this->categoryPath = self::categoryPathOf($dto->actions);
 
         return true;
+    }
+
+    // The rule's own answer against the row's, and only while the rule can
+    // still fire: a rule the reader disabled is not a contradiction, and
+    // memory divergence is silent by design because memory relearns. Returns
+    // the reader's category so the sentence can name both sides.
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function divergenceLabel(
+        array $decoded,
+        DatabaseManager $db,
+        CurrentUser $currentUser,
+        CategoryOptionsQuery $categories,
+    ): string {
+        $user = $currentUser->user();
+        $ruleCategoryRaw = $decoded['category_id'] ?? null;
+        $ruleCategoryId = is_numeric($ruleCategoryRaw) ? (int) $ruleCategoryRaw : null;
+
+        $chosenRaw = $db->connection()
+            ->table('transactions')
+            ->where('id', $this->transactionId)
+            ->where('user_id', $user->id)
+            ->value('category_id');
+        $chosenId = is_numeric($chosenRaw) ? (int) $chosenRaw : null;
+
+        if (! $this->ruleCanStillFire || $ruleCategoryId === null || $chosenId === null || $chosenId === $ruleCategoryId) {
+            return '';
+        }
+
+        return self::pathOf($categories->for($user), $chosenId);
+    }
+
+    /**
+     * @param  list<CategoryOption>  $options
+     */
+    private static function pathOf(array $options, int $categoryId): string
+    {
+        foreach ($options as $option) {
+            if ($option->id === $categoryId) {
+                return $option->path;
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -202,5 +267,7 @@ final class CategorizationProvenancePanel extends Component
     {
         $this->variant = $variant;
         $this->ruleId = null;
+        $this->ruleCanStillFire = false;
+        $this->divergedFromRuleInto = '';
     }
 }

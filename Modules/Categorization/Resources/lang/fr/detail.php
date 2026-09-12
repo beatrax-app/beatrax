@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'rule_that_fired' => 'Règle appliquée',
+    'diverges_from_rule' => 'La transaction est classée dans :chosen, mais la règle est toujours active et classe ses correspondances dans :rule.',
     'remove_confirm' => 'Supprimer ?',
     'remove_yes' => 'Oui, supprimer',
     'cancel' => 'Annuler',

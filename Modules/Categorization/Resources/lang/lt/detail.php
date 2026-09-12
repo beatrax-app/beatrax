@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Suveikusi taisyklė',
+    'diverges_from_rule' => 'Operacija yra kategorijoje :chosen, bet taisyklė vis dar aktyvi ir savo atitikmenis priskiria kategorijai :rule.',
     'remove_confirm' => 'Pašalinti?',
     'remove_yes' => 'Taip, pašalinti',
     'cancel' => 'Atšaukti',
