@@ -161,20 +161,17 @@ final readonly class FixedPaymentsViewQuery
         );
     }
 
-    // Derived here exactly as RecurringSeriesDtoMapper derives it for the rows
-    // this total sits above: the stored copy, the amount and the cadence merge
-    // as three independent fields, so summing the copy printed a header the
-    // rows beneath it disagreed with. It stays an index hint, not a figure.
+    // Through the seam RecurringSeriesDtoMapper reads for the rows this total
+    // sits above, fallback included: the stored copy, the amount and the
+    // cadence merge as three independent fields, so summing the copy printed a
+    // header the rows beneath it disagreed with.
     private static function monthlyMinor(stdClass $row): int
     {
-        $stored = isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0;
-        $cadence = SeriesCadence::tryFrom(self::toString($row->cadence));
-
-        if ($cadence === null) {
-            return $stored;
-        }
-
-        return MonthlyEquivalent::forCadence(self::toInt($row->latest_amount_minor), $cadence) ?? $stored;
+        return MonthlyEquivalent::orStored(
+            self::toInt($row->latest_amount_minor),
+            SeriesCadence::tryFrom(self::toString($row->cadence)),
+            isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0,
+        );
     }
 
     /**

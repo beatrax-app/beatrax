@@ -25,4 +25,12 @@ final class MonthlyEquivalent
             SeriesCadence::Irregular => null,
         };
     }
+
+    // The fallback every reader of a stored row makes: an irregular series has
+    // no monthly figure to derive, and a cadence spelled by a newer peer has no
+    // case here, so both keep whatever the detector last wrote in the column.
+    public static function orStored(int $latestAmountMinor, ?SeriesCadence $cadence, int $storedMinor): int
+    {
+        return ($cadence === null ? null : self::forCadence($latestAmountMinor, $cadence)) ?? $storedMinor;
+    }
 }
