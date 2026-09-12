@@ -33,4 +33,29 @@ final class MonthlyEquivalent
     {
         return ($cadence === null ? null : self::forCadence($latestAmountMinor, $cadence)) ?? $storedMinor;
     }
+
+    // The same derivation asked of SQL, for an ORDER BY and a keyset cursor
+    // that have to rank rows on the figure those rows print. The divisors are
+    // floats so the quotient is not an integer division, and SQLite's ROUND()
+    // rounds half away from zero exactly as PHP's round() does.
+    /**
+     * @return array{literal-string, list<string>} expression over `recurring_series`, and its cadence bindings
+     */
+    public static function sqlMinor(): array
+    {
+        return [
+            'CASE cadence'
+                .' WHEN ? THEN CAST(ROUND(latest_amount_minor * 52.0 / 12.0) AS INTEGER)'
+                .' WHEN ? THEN latest_amount_minor'
+                .' WHEN ? THEN CAST(ROUND(latest_amount_minor / 3.0) AS INTEGER)'
+                .' WHEN ? THEN CAST(ROUND(latest_amount_minor / 12.0) AS INTEGER)'
+                .' ELSE COALESCE(monthly_equivalent_minor, 0) END',
+            [
+                SeriesCadence::Weekly->value,
+                SeriesCadence::Monthly->value,
+                SeriesCadence::Quarterly->value,
+                SeriesCadence::Yearly->value,
+            ],
+        ];
+    }
 }

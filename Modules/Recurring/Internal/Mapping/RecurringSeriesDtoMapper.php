@@ -46,7 +46,7 @@ final class RecurringSeriesDtoMapper
         // boundary can carry a monthly figure its own amount disagrees with.
         $stored = isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0;
         $monthlyEquivalent = Money::ofMinor(
-            MonthlyEquivalent::forCadence($latestAmount->toMinor(), $cadence) ?? $stored,
+            MonthlyEquivalent::orStored($latestAmount->toMinor(), $cadence, $stored),
             $latestCurrency !== '' ? $latestCurrency : $baseCurrency,
         );
 

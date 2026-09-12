@@ -12,7 +12,9 @@ use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\CurrencyScale;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
+use Modules\Recurring\Internal\Support\MonthlyEquivalent;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
 final readonly class RecurringSeriesProjector
@@ -75,19 +77,31 @@ final readonly class RecurringSeriesProjector
             return;
         }
 
-        $cursorRow = $this->cursorRow($user, $cursorId, 'monthly_equivalent_minor', 'latest_currency');
+        $cursorRow = $this->cursorRow(
+            $user,
+            $cursorId,
+            'monthly_equivalent_minor',
+            'latest_amount_minor',
+            'cadence',
+            'latest_currency',
+        );
         if ($cursorRow === null) {
             return;
         }
 
         // The cursor carries the sort value as well as the id: on an id alone,
         // rows tying on that value skip or repeat across the page boundary. The
-        // value is the ordering expression's, not the raw column's, or the page
-        // boundary lands in a different place from the sort.
+        // value is the ordering expression's, derived the same way, or the page
+        // boundary lands somewhere the sort never put a row.
         $multipliers = $this->multipliers($user);
         [$worth, $bindings] = self::worthInBase($multipliers);
         $cursorCurrency = self::toString($cursorRow->latest_currency ?? null);
-        $cursorWorth = (int) (abs(self::toInt($cursorRow->monthly_equivalent_minor)) * ($multipliers[$cursorCurrency] ?? 1.0));
+        $cursorMonthly = MonthlyEquivalent::orStored(
+            self::toInt($cursorRow->latest_amount_minor),
+            SeriesCadence::tryFrom(self::toString($cursorRow->cadence ?? null)),
+            self::toInt($cursorRow->monthly_equivalent_minor),
+        );
+        $cursorWorth = (int) (abs($cursorMonthly) * ($multipliers[$cursorCurrency] ?? 1.0));
 
         $query->where(function (Builder $q) use ($worth, $bindings, $cursorWorth, $cursorId): void {
             $q->whereRaw($worth.' < ?', [...$bindings, $cursorWorth])
@@ -135,14 +149,18 @@ final readonly class RecurringSeriesProjector
      */
     private static function worthInBase(array $multipliers): array
     {
-        $magnitude = 'ABS(COALESCE(monthly_equivalent_minor, 0))';
+        // Derived rather than read: every row on the page prints what
+        // RecurringSeriesDtoMapper derives, so a list headed "biggest first"
+        // that ranked on the stored copy put a row printing 10.99 above one
+        // printing 14.99 the moment per-field merge parted the two.
+        [$derived, $bindings] = MonthlyEquivalent::sqlMinor();
+        $magnitude = 'ABS('.$derived.')';
 
         if ($multipliers === []) {
-            return [$magnitude, []];
+            return [$magnitude, $bindings];
         }
 
         $cases = '';
-        $bindings = [];
         foreach ($multipliers as $currency => $multiplier) {
             $cases .= ' WHEN ? THEN ?';
             $bindings[] = $currency;

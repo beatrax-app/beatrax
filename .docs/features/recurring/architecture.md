@@ -220,11 +220,25 @@ Action layer's responsibility (mirrors the Chains precedent: query services
 stay silent so caller policy stays caller-side).
 
 Cursor pagination on `id` matches the chains-side review queue.
-`approvedForUser` orders by `monthly_equivalent_minor DESC` then `id DESC`
-so the dashboard tile and fixed-payments view consume a stable,
-"largest first" projection; its cursor is a composite of the cursor row's
-`(monthly_equivalent_minor, id)` so subsequent pages follow the primary
-sort instead of an id-only window.
+`approvedForUser` orders by the magnitude of the monthly figure, taken into
+the reader's base currency, `DESC` then `id DESC`, so the dashboard tile and
+fixed-payments view consume a stable "largest first" projection.
+
+That figure is **derived in SQL** from `latest_amount_minor` and `cadence`,
+by the same rule `MonthlyEquivalent` applies in PHP for the row itself —
+`MonthlyEquivalent::sqlMinor()` is the one expression both the `ORDER BY`
+and the cursor compose, and it falls back to `monthly_equivalent_minor`
+only where the mapper does: an irregular cadence, and a spelling this build
+has no case for. Ordering on the stored column instead ranked the page on
+the one number a row carries that a sync can part from what the row prints,
+so a list headed "biggest first" could put 10.99 above 14.99 — see
+[a derived column is not a mergeable one](../sync/merge-registry-authoring.md#a-derived-column-is-not-a-mergeable-one).
+
+The cursor is a composite of the cursor row's `(derived monthly magnitude,
+id)`, so subsequent pages follow the primary sort instead of an id-only
+window. Both halves derive or neither does: a cursor read from the stored
+column while the `ORDER BY` derives puts the page boundary where the sort
+never placed a row, and the next page then skips or repeats.
 
 ## `FixedPaymentsViewQuery` read contract
 
