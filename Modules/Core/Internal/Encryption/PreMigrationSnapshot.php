@@ -44,6 +44,14 @@ final readonly class PreMigrationSnapshot
     // number and remains one statement on every build.
     private const int MAX_BINDINGS_PER_STATEMENT = 900;
 
+    // The binding ceiling alone let a narrow row reach 180 per statement, and
+    // every row in a batch is compared against every `when` in it, so the cost
+    // of a row grows with the batch it rides in.
+    /**
+     * @link ../../../../.docs/features/sync/sensitive-columns-at-rest.md#what-a-case-over-ids-charges-per-row
+     */
+    private const int MAX_ROWS_PER_STATEMENT = 20;
+
     public function __construct(
         private FileEncryptor $backupEncryptor,
         private Clock $clock,
@@ -289,10 +297,10 @@ final readonly class PreMigrationSnapshot
             : (self::PROJECTION_COLUMNS[$table] ?? []);
     }
 
-    // One statement per batch of rows rather than one per row: both this
-    // restore and the enable-time sweep write inside a single transaction, and
-    // a statement per ledger line holds the one SQLite writer lock for the
-    // whole pass.
+    // A batch of rows per statement rather than one row per statement, and a
+    // short batch rather than as many as the bindings allow: the `case` below
+    // re-reads every `when` in the batch for every row it updates, so past
+    // about twenty rows the batch costs more than the statements it saves.
     /**
      * @param  list<array<string, mixed>>  $rows  each carrying an `id` alongside the columns to write
      */
@@ -313,7 +321,10 @@ final readonly class PreMigrationSnapshot
             }
 
             $cost = 2 * (count($row) - 1) + 1;
-            if ($batch !== [] && $bindings + $cost > self::MAX_BINDINGS_PER_STATEMENT) {
+            $full = count($batch) >= self::MAX_ROWS_PER_STATEMENT
+                || $bindings + $cost > self::MAX_BINDINGS_PER_STATEMENT;
+
+            if ($batch !== [] && $full) {
                 self::writeBatch($connection, $grammar, $table, $batch);
                 $batch = [];
                 $bindings = 0;

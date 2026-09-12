@@ -772,10 +772,13 @@ written BEFORE encryption was ever turned on.
   `migration_in_progress`), automatically and atomically. Rows still
   process in bounded `CHUNK_SIZE` batches (via `chunkById`) so memory
   stays bounded even though the SQL transaction spans the whole pass.
-  Each chunk's writes leave as ONE statement per batch, not one per row:
-  `PreMigrationSnapshot::writeRowsById()` folds the chunk into a
-  `CASE id WHEN … ELSE <column> END` update, so a column a row does not
-  carry falls through untouched. `upsert()` is not usable here — SQLite
+  Each chunk's writes leave in batched statements rather than one per
+  row: `PreMigrationSnapshot::writeRowsById()` folds a short run of rows
+  into a `CASE id WHEN … ELSE <column> END` update, so a column a row
+  does not carry falls through untouched. A run, not the whole chunk —
+  SQLite re-reads the whole `WHEN` chain per row, so the batch is capped
+  at twenty rows as well as at 900 bindings
+  ([why](../sync/sensitive-columns-at-rest.md#what-a-case-over-ids-charges-per-row)). `upsert()` is not usable here — SQLite
   and Postgres both check `NOT NULL` on the proposed row before the
   conflict resolves, so every non-defaulted column would have to be
   rewritten to update one. Progress is likewise reported once per chunk
