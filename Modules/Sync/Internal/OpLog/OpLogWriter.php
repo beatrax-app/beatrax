@@ -47,9 +47,7 @@ final readonly class OpLogWriter implements OpCaptureSink
         private MergeRulesRegistry $rules,
         private DeferredOpCaptures $deferred,
         private LoggerInterface $log,
-    ) {
-        $this->restoreClockState();
-    }
+    ) {}
 
     // Callers (e.g. OpLogReplayer factory code) use this to build the
     // device-key map required for signature verification.
@@ -118,7 +116,13 @@ final readonly class OpLogWriter implements OpCaptureSink
             );
         }
 
-        $this->writeSet($table, $pk, $field, $this->ownRunningTotal($table, $pk, $field) + $delta);
+        // The total and the op that raises it are one read-modify-write, and
+        // the read used to sit outside the transaction the op is inserted in.
+        // Two processes both read the same total and both published it plus
+        // one; MAX-per-device kept one of them and the other delta was gone.
+        $this->db->connection()->transaction(function () use ($table, $pk, $field, $delta): void {
+            $this->writeSet($table, $pk, $field, $this->ownRunningTotal($table, $pk, $field) + $delta);
+        });
     }
 
     // The highest total this device has published for the field. Reading every
@@ -300,9 +304,16 @@ final readonly class OpLogWriter implements OpCaptureSink
         $this->writeEntry($table, $pk, self::TOMBSTONE_FIELD, null, OpType::DeleteTombstone);
     }
 
-    // Called once in __construct. Prevents clock rewind on restart: the next
-    // tick() starts from max(wall_ms, last_l), never below last_l.
-    private function restoreClockState(): void
+    // The stamp this entry will carry, taken from the persisted high-water
+    // mark rather than from memory alone. Read in __construct it was a value
+    // the sync daemon could move before the write landed, and the write-back
+    // below then put it back — see the section this links.
+    /**
+     * @return array{int, int}
+     *
+     * @link ../../../../.docs/features/sync/architecture.md#allocating-the-stamp-under-a-second-process
+     */
+    private function nextStamp(): array
     {
         $state = $this->db->connection()
             ->table('hlc_clock_state')
@@ -315,6 +326,8 @@ final readonly class OpLogWriter implements OpCaptureSink
             $lastC = is_numeric($state->last_c) ? (int) $state->last_c : 0;
             $this->clock->receive($lastL, $lastC);
         }
+
+        return $this->clock->tick();
     }
 
     private function writeEntry(
@@ -325,41 +338,17 @@ final readonly class OpLogWriter implements OpCaptureSink
         OpType $opType,
         ?int $gdkEpoch = null,
     ): void {
-        [$hlcL, $hlcC] = $this->clock->tick();
-
-        $stub = new OpLogEntry(
-            table: $table,
-            pk: $pk,
-            field: $field,
-            value: $jsonValue,
-            hlcL: $hlcL,
-            hlcC: $hlcC,
-            deviceId: $this->deviceId,
-            opType: $opType,
-            signature: '',
-            userId: $this->userId,
-            gdkEpoch: $gdkEpoch,
-        );
-
-        $signature = $this->signer->sign($stub->signingPayload(), $this->secretKey);
-
-        $entry = new OpLogEntry(
-            table: $table,
-            pk: $pk,
-            field: $field,
-            value: $jsonValue,
-            hlcL: $hlcL,
-            hlcC: $hlcC,
-            deviceId: $this->deviceId,
-            opType: $opType,
-            signature: $signature,
-            userId: $this->userId,
-            gdkEpoch: $gdkEpoch,
-        );
-
         $now = $this->wallClock->now()->toDateTimeString();
 
-        $this->db->connection()->transaction(function () use ($entry, $hlcL, $hlcC, $now): void {
+        // The whole allocate-sign-store sequence, because the stamp is read
+        // from a row the daemon also writes. transaction_mode is IMMEDIATE, so
+        // the write lock is held from BEGIN and nothing lands between the read
+        // and the write-back.
+        $this->db->connection()->transaction(function () use ($table, $pk, $field, $jsonValue, $opType, $gdkEpoch, $now): void {
+            [$hlcL, $hlcC] = $this->nextStamp();
+
+            $entry = $this->signed($table, $pk, $field, $jsonValue, $opType, $gdkEpoch, $hlcL, $hlcC);
+
             $this->db->connection()->table('op_log_entries')->insert([
                 'user_id' => $entry->userId,
                 'device_id' => $entry->deviceId,
@@ -390,5 +379,46 @@ final readonly class OpLogWriter implements OpCaptureSink
                 ],
             );
         });
+    }
+
+    // Signed over the stamp it will be stored with, so the payload cannot be
+    // built from one stamp and the row written with another.
+    private function signed(
+        string $table,
+        int|string $pk,
+        string $field,
+        ?string $jsonValue,
+        OpType $opType,
+        ?int $gdkEpoch,
+        int $hlcL,
+        int $hlcC,
+    ): OpLogEntry {
+        $stub = new OpLogEntry(
+            table: $table,
+            pk: $pk,
+            field: $field,
+            value: $jsonValue,
+            hlcL: $hlcL,
+            hlcC: $hlcC,
+            deviceId: $this->deviceId,
+            opType: $opType,
+            signature: '',
+            userId: $this->userId,
+            gdkEpoch: $gdkEpoch,
+        );
+
+        return new OpLogEntry(
+            table: $table,
+            pk: $pk,
+            field: $field,
+            value: $jsonValue,
+            hlcL: $hlcL,
+            hlcC: $hlcC,
+            deviceId: $this->deviceId,
+            opType: $opType,
+            signature: $this->signer->sign($stub->signingPayload(), $this->secretKey),
+            userId: $this->userId,
+            gdkEpoch: $gdkEpoch,
+        );
     }
 }
