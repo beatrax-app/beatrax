@@ -28,4 +28,18 @@ final class SourceTransactionDto extends Data
         public readonly ?int $settledAmountMinor = null,
         public readonly ?string $settledCurrency = null,
     ) {}
+
+    // What the account itself moved by, which is the settled leg wherever the
+    // bank converted and the row's own figure wherever it did not. Adding the
+    // native leg instead puts a dollar figure into a euro total, and that total
+    // is what a statement's closing balance is checked against.
+    public function accountSideMinor(): int
+    {
+        return $this->settledAmountMinor ?? $this->amountMinor;
+    }
+
+    public function accountSideCurrency(): string
+    {
+        return $this->settledCurrency ?? $this->currency;
+    }
 }

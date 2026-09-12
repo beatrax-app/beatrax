@@ -68,7 +68,7 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         if ($state->pendingTag61 !== null) {
-            yield $this->buildDto($state->pendingTag61, null, (string) $state->rowOwnIban, (string) $state->rowCurrency, $state->rowIndex);
+            yield $this->buildDto($state->pendingTag61, null, $state->pendingOwnIban, $state->pendingCurrency, $state->rowIndex);
         }
 
         $this->lastStatementMetadata = $state->toMetadata();
@@ -179,12 +179,14 @@ final class Mt940Adapter implements SourceAdapter
      */
     private function handleEntryLine(Mt940StatementAccumulator $state, string $content): Generator
     {
-        if ($state->rowOwnIban === null) {
+        $ownIban = $state->rowOwnIban;
+        if ($ownIban === null) {
             throw new InvalidAmountException(
                 'MT940 :61: encountered before :25:; file is malformed.',
             );
         }
-        if ($state->rowCurrency === null) {
+        $currency = $state->rowCurrency;
+        if ($currency === null) {
             // Never "no balance tag" when one was read and refused: the reader
             // then hunts for a tag that is present, in a file that has one.
             throw new InvalidAmountException($state->balanceTagSeen
@@ -193,13 +195,17 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         if ($state->pendingTag61 !== null) {
-            yield $this->buildDto($state->pendingTag61, null, $state->rowOwnIban, $state->rowCurrency, $state->rowIndex);
+            yield $this->buildDto($state->pendingTag61, null, $state->pendingOwnIban, $state->pendingCurrency, $state->rowIndex);
             $state->rowIndex++;
         }
 
-        $state->pendingTag61 = $this->tag61->parse($content, $state->rowCurrency);
+        $line = $this->tag61->parse($content, $currency);
+        $state->pendingTag61 = $line;
+        $state->pendingOwnIban = $ownIban;
+        $state->pendingCurrency = $currency;
         if (! $state->firstStatementFrozen) {
             $state->entryCount++;
+            $state->rowSumMinor += $line->amountMinor;
         }
     }
 
@@ -213,9 +219,7 @@ final class Mt940Adapter implements SourceAdapter
         }
 
         $narrative = $this->tag86->parse($content);
-        // The :61: branch is the only path that populates $pendingTag61, and it
-        // has already proved the pair non-null.
-        yield $this->buildDto($state->pendingTag61, $narrative, (string) $state->rowOwnIban, (string) $state->rowCurrency, $state->rowIndex);
+        yield $this->buildDto($state->pendingTag61, $narrative, $state->pendingOwnIban, $state->pendingCurrency, $state->rowIndex);
         $state->rowIndex++;
         $state->pendingTag61 = null;
     }

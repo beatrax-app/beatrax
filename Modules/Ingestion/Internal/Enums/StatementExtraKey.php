@@ -16,4 +16,10 @@ enum StatementExtraKey: string
     case ClosingBalanceUnreadable = 'closingBalanceUnreadable';
 
     case CreatedOn = 'createdOn';
+
+    // Present only on a statement whose own figures do not add up, and never
+    // on one that was never checkable: opening and closing are both on the
+    // summary, so an absent key beside two present balances is a statement
+    // that balanced.
+    case StatementDifference = 'statementDifferenceMinor';
 }

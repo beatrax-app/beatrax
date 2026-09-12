@@ -42,7 +42,11 @@ them obvious:
 - Only the first `<NtryDtls>` of an entry contributes details, because the
   decoder reaches them through `$xmlEntry->NtryDtls->TxDtls`. A second
   `<NtryDtls>` — which ISO 20022 permits — contributes none, so this pass must
-  skip it too or every ordinal after it is off by the children it added.
+  skip it too or every ordinal after it is off by the children it added. What
+  it costs in *money* is [a statement that did not check its own
+  arithmetic](a-statement-that-did-not-check-its-own-arithmetic.md): the
+  children that do arrive no longer add up to their entry, and the entry is
+  booked whole instead of the part of it they describe.
 
 The second pass runs **once per file, and only for a file that holds a batch** —
 the already-decoded message answers that before any XML is touched. It builds a
