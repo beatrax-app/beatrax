@@ -348,7 +348,7 @@ final readonly class OpLogWriter implements OpCaptureSink
         $this->db->connection()->transaction(function () use ($table, $pk, $field, $jsonValue, $opType, $gdkEpoch, $now): void {
             $stamp = $this->nextStamp();
 
-            $entry = $this->signed(new OpLogEntry(
+            $unsigned = new OpLogEntry(
                 table: $table,
                 pk: $pk,
                 field: $field,
@@ -360,7 +360,13 @@ final readonly class OpLogWriter implements OpCaptureSink
                 signature: '',
                 userId: $this->userId,
                 gdkEpoch: $gdkEpoch,
-            ));
+            );
+
+            // Signed over the stamp it will be stored with, so the payload
+            // cannot be built from one stamp and the row written with another.
+            $entry = $unsigned->withSignature(
+                $this->signer->sign($unsigned->signingPayload(), $this->secretKey),
+            );
 
             $this->db->connection()->table('op_log_entries')->insert([
                 'user_id' => $entry->userId,
@@ -392,24 +398,5 @@ final readonly class OpLogWriter implements OpCaptureSink
                 ],
             );
         });
-    }
-
-    // Signed over the stamp it will be stored with, so the payload cannot be
-    // built from one stamp and the row written with another.
-    private function signed(OpLogEntry $unsigned): OpLogEntry
-    {
-        return new OpLogEntry(
-            table: $unsigned->table,
-            pk: $unsigned->pk,
-            field: $unsigned->field,
-            value: $unsigned->value,
-            hlcL: $unsigned->hlcL,
-            hlcC: $unsigned->hlcC,
-            deviceId: $unsigned->deviceId,
-            opType: $unsigned->opType,
-            signature: $this->signer->sign($unsigned->signingPayload(), $this->secretKey),
-            userId: $unsigned->userId,
-            gdkEpoch: $unsigned->gdkEpoch,
-        );
     }
 }
