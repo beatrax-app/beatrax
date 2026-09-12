@@ -205,7 +205,11 @@ table — otherwise a stale non-EUR leg could be mis-reported as fresh
 just because some other pair refreshed recently. The staleness threshold
 is three calendar days, calibrated to the ECB weekend gap: Friday to
 Monday is three days, so Monday morning still shows non-stale rates
-fetched on Friday.
+fetched on Friday. It lives on `Internal/Support/RateFreshness`, which is
+also where the comparison is made: it was spelled twice — once in the
+service against the day being priced, once for a rate read back out of a
+stored result against the day of the READ — and one threshold read two
+ways is a threshold that can come to differ.
 
 All DECIMAL reads from PDO are cast to `(string)` before being handed to
 brick/money — rate values are never represented as float anywhere in

@@ -6,7 +6,7 @@ namespace Modules\FX\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\Lang;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Internal\Support\RateFreshness;
 use Modules\FX\Public\Support\BundledRates;
 
 // What one figure has to say about its own conversion: the rates that built it
@@ -131,7 +131,7 @@ final readonly class ConversionDisclosure
             default => 'core::fx.stale_old',
         };
 
-        return Lang::choice($key, ExchangeRateService::STALE_DAYS_THRESHOLD);
+        return Lang::choice($key, RateFreshness::STALE_DAYS_THRESHOLD);
     }
 
     public function isStale(): bool

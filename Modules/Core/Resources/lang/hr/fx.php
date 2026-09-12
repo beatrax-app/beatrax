@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'tečajevi na dan :date iz izvora :source',
+    'rates_not_recorded' => 'tečajevi nisu zabilježeni — ovaj je rezultat pohranjen bez njih',
 
     'stale_bundled' => 'Koristi se tečaj iz ugrađene snimke, stariji od :count dana. Uključi mrežno osvježavanje u Postavkama za aktualne tečajeve.|Koristi se tečaj iz ugrađene snimke, stariji od :count dana. Uključi mrežno osvježavanje u Postavkama za aktualne tečajeve.|Koristi se tečaj iz ugrađene snimke, stariji od :count dana. Uključi mrežno osvježavanje u Postavkama za aktualne tečajeve.',
     'stale_old' => 'Ovaj je tečaj stariji od :count dana. Sljedeće mrežno osvježavanje ažurirat će ga.|Ovaj je tečaj stariji od :count dana. Sljedeće mrežno osvježavanje ažurirat će ga.|Ovaj je tečaj stariji od :count dana. Sljedeće mrežno osvježavanje ažurirat će ga.',

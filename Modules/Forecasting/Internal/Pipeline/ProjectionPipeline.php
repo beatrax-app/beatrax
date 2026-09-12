@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Internal\Enums\ForecastPointSet;
 use Modules\Forecasting\Internal\Exceptions\ForecastResultEncodingException;
+use Modules\Forecasting\Internal\Mapping\StoredRateSet;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Internal\Support\BufferFloor;
 use Modules\Forecasting\Models\ForecastRun;
@@ -108,7 +109,7 @@ final readonly class ProjectionPipeline
     }
 
     /**
-     * @return array{as_of: string, horizon_days: int, accounts: array<int, array{account_id: int, account_name: string, default_currency: string, today_balance_minor: int, anchor_source: string, unconverted_currencies: list<string>, points: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>, points_by_funder: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>}>}
+     * @return array{as_of: string, horizon_days: int, accounts: array<int, array{account_id: int, account_name: string, default_currency: string, today_balance_minor: int, anchor_source: string, unconverted_currencies: list<string>, rates: list<array{from: string, to: string, rate: string, source: ?string, as_of: ?string}>, points: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>, points_by_funder: list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>}>}
      */
     private function computeResult(User $user, ?int $scenarioId, CarbonImmutable $asOf, int $horizonDays): array
     {
@@ -256,6 +257,10 @@ final readonly class ProjectionPipeline
                 'today_balance_minor' => $anchor->openingBalanceMinor,
                 'anchor_source' => $anchor->source,
                 'unconverted_currencies' => $fold->unconvertedCurrencies,
+                // The rates behind the curve, so the run discloses what
+                // priced it and not only what it could not. The per-series
+                // fold's, as the codes beside them already are.
+                StoredRateSet::KEY => StoredRateSet::encode($fold->rates),
                 ForecastPointSet::PerSeries->value => $points,
                 ForecastPointSet::ByFunder->value => array_values($funderFold->points),
             ];

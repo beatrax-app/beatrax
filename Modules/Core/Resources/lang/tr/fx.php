@@ -11,6 +11,7 @@ return [
     'as_of_age' => ':date (:ago)',
     'rate_line' => '1 :from = :rate :to',
     'global_rates' => 'kurlar :date tarihli, kaynak :source',
+    'rates_not_recorded' => 'kurlar kayıtlı değil — bu sonuç kurlar olmadan kaydedildi',
 
     'stale_bundled' => 'Uygulamayla birlikte gelen, :count günden eski anlık kur kullanılıyor. Güncel kurlar için Ayarlar bölümünden çevrimiçi yenilemeyi aç.',
     'stale_old' => 'Bu kur :count günden eski. Bir sonraki çevrimiçi yenileme onu güncelleyecek.',

@@ -7,7 +7,7 @@ namespace Modules\FX\Public\Dto;
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Core\Public\Support\Lang;
-use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\FX\Internal\Support\RateFreshness;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\ValueObjects\Rate;
 
@@ -65,8 +65,7 @@ final readonly class RateUsed
             rate: $rate,
             source: $source,
             asOf: $asOf,
-            isStale: $asOf !== null
-                && abs($asOf->startOfDay()->diffInDays($readOn->startOfDay())) > ExchangeRateService::STALE_DAYS_THRESHOLD,
+            isStale: RateFreshness::isStale($asOf, $readOn),
         );
     }
 
