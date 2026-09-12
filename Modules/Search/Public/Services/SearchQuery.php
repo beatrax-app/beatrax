@@ -18,6 +18,8 @@ use Modules\Ledger\Public\Services\TransactionCursor;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
+use Modules\Search\Internal\Services\AmountBoundResolver;
+use Modules\Search\Internal\Services\AmountBoundRestriction;
 use Modules\Search\Internal\Services\CandidateRestriction;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\FtsCandidateResolver;
@@ -54,6 +56,7 @@ final readonly class SearchQuery
         private SearchTokenFilters $tokenFilters,
         private BaseCurrency $baseCurrency,
         private CrossCurrencyTotal $fx,
+        private AmountBoundResolver $amountBounds,
     ) {}
 
     public function search(
@@ -76,6 +79,12 @@ final readonly class SearchQuery
 
         $filters = $this->tokenFilters->merge($user, $filters, $parsedFilters, $base);
 
+        // Restated once, then applied by both passes below: the report row this
+        // list opens from counted the reader's bound in every currency the
+        // ledger settles in, and a list narrowed to one of them cannot add up
+        // to the figure the reader clicked.
+        $amountBounds = $this->amountBounds->forUser($user, $filters, $base);
+
         // Null means "no text query" (filters-only mode), and the base query is
         // then scoped by user_id and the filters alone. Anything else narrows
         // to the text match, which the resolver hands over as a subquery rather
@@ -83,8 +92,8 @@ final readonly class SearchQuery
         $candidates = $this->ftsResolver->resolve(
             $user,
             $textQuery,
-            function (Builder $candidateQuery) use ($user, $filters, $base): void {
-                $this->applyFilters($candidateQuery, $user, $filters, $base);
+            function (Builder $candidateQuery) use ($user, $filters, $amountBounds): void {
+                $this->applyFilters($candidateQuery, $user, $filters, $amountBounds);
             },
         );
 
@@ -114,7 +123,7 @@ final readonly class SearchQuery
 
         $query = $this->buildBaseQuery($user, $candidates);
 
-        $this->applyFilters($query, $user, $filters, $base);
+        $this->applyFilters($query, $user, $filters, $amountBounds);
 
         // Bucketed by the currency each row settled in and converted from there
         // — counting only the rows already in the reader's own reporting
@@ -150,7 +159,7 @@ final readonly class SearchQuery
             nextCursorId: $hasMore ? $lastId : null,
             nextCursorPostedAt: $hasMore ? $lastPostedAt : null,
             didYouMean: $didYouMean,
-            unconvertedCurrencies: $unconverted,
+            unconvertedCurrencies: $amountBounds->alsoUnpriced($unconverted),
         );
     }
 
@@ -211,7 +220,7 @@ final readonly class SearchQuery
             ]);
     }
 
-    private function applyFilters(Builder $query, User $user, SearchFilters $filters, string $readerCurrency): void
+    private function applyFilters(Builder $query, User $user, SearchFilters $filters, AmountBoundRestriction $amountBounds): void
     {
         $this->applyDateFilters($query, $filters);
 
@@ -228,7 +237,7 @@ final readonly class SearchQuery
             $this->applyOwnershipFilter($query, $user, 'counterparties', 'transactions.counterparty_id', $filters->counterparties, false);
         }
 
-        $this->applyAmountFilters($query, $filters, $readerCurrency);
+        $this->applyAmountFilters($query, $filters, $amountBounds);
     }
 
     // Split-aware, because splitting a transaction is precisely how part of it
@@ -350,29 +359,12 @@ final readonly class SearchQuery
             ->all());
     }
 
-    // Scaled at the READER's currency, never at a hard two decimals: a yen has
-    // no minor unit, so "20" became 2 000 of them and dropped every charge the
-    // report figure this list opens from had already counted.
-    private function applyAmountFilters(Builder $query, SearchFilters $filters, string $readerCurrency): void
+    // The bound arrives already scaled at the reader's currency and restated in
+    // each currency it will be tested against; what is left here is the
+    // narrowing that carries no denomination at all.
+    private function applyAmountFilters(Builder $query, SearchFilters $filters, AmountBoundRestriction $amountBounds): void
     {
-        // A filter that will not parse is dropped rather than widened to zero:
-        // "> €0" is every row, which is not what the typist asked for.
-        $minMinor = $filters->amountMin === null ? null : MoneyInput::tryToMinor($filters->amountMin, $readerCurrency);
-        $maxMinor = $filters->amountMax === null ? null : MoneyInput::tryToMinor($filters->amountMax, $readerCurrency);
-
-        // Once for both bounds: applied per bound, a min-and-max search emitted
-        // the same settled_currency predicate twice.
-        if ($minMinor !== null || $maxMinor !== null) {
-            $this->inReadersCurrency($query, $readerCurrency);
-        }
-
-        if ($minMinor !== null) {
-            $query->whereRaw('ABS(transactions.settled_amount_minor) >= ?', [$minMinor]);
-        }
-
-        if ($maxMinor !== null) {
-            $query->whereRaw('ABS(transactions.settled_amount_minor) <= ?', [$maxMinor]);
-        }
+        $amountBounds->applyTo($query);
 
         if ($filters->amountDirection === AmountDirection::In->value) {
             $query->where('transactions.amount_minor', '>', 0);
@@ -385,17 +377,6 @@ final readonly class SearchQuery
         if ($filters->types !== []) {
             $query->whereIn('transactions.type', $filters->types);
         }
-    }
-
-    // The bound is one number in one money, so it can only test rows in that
-    // money: ¥13,840 is about €87, and as raw minor units it cleared a bound
-    // the chip beside the list rendered as "> €100.00".
-    /**
-     * @link ../../../../.docs/features/ledger/minor-units-and-zero-decimal-currencies.md#the-other-half-comparing-two-denominations-as-bare-integers
-     */
-    private function inReadersCurrency(Builder $query, string $readerCurrency): Builder
-    {
-        return $query->where('transactions.settled_currency', $readerCurrency);
     }
 
     // Bucketed by the currency each row settled in, then converted — counting

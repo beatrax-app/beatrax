@@ -207,6 +207,27 @@ candidate out of the race, which is the ranking equivalent of leaving a
 bucket out of a sum: a JPY minor unit is not a euro cent, and on raw
 minor units the cheaper subscription won.
 
+### A bound met in more than one currency
+
+`CrossCurrencyBound` is the same rule for a *threshold* rather than a
+figure. The min/max pair a reader types is one amount of money, and a
+query that tests rows in several currencies has to restate it in each of
+them: the service answers the pair as it reads in the target currency,
+or `null` where no rate reaches that currency — the bound's version of
+leaving a bucket out of a sum, and never a silent one-to-one. A bound
+that had a value and lost it in conversion makes the whole filter
+unanswerable there, because honouring the surviving half alone would
+widen the window the reader asked for.
+
+Both callers of it are two ends of one screen. `ReportAggregator` scopes
+each dimension query to one settled currency and restates the bound into
+it; `SearchQuery` restates the same bound across the currencies the
+ledger settles in so the transaction list a report row drills into
+carries the rows that row counted. They read the conversion from here
+rather than each doing its own, because a figure and the list beneath it
+priced two ways is the same disagreement as two surfaces adding the same
+buckets two ways — it just moves rather than resolves.
+
 ### What deliberately does not go through it
 
 `NetWorthQuery` converts per balance line and stays on
