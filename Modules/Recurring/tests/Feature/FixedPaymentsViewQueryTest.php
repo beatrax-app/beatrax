@@ -148,13 +148,21 @@ it('keeps a cadence-changed series on /recurring instead of dropping it out from
     expect($query->viewForUser($this->user)['expenses'])->toHaveCount(1);
 });
 
+// The two series carried stored copies of -1099 and -2500 over a shared default
+// latest_amount_minor of -1099, so the -3599 asserted below was the sum of the
+// stored column and the rows on the page printed -1099 twice. The header now
+// derives, as every row already did, and the fixture states the amount each
+// series is worth rather than leaving one row's contribution to a copy nothing
+// reads. -3599 is what it always meant; it is now what the rows add up to.
 it('counts a cadence-changed series in the monthly totals Forecasting already projects', function (): void {
     fpvSeries($this->user, 'expense', 'approved-thing', [
+        'latest_amount_minor' => -1099,
         'monthly_equivalent_minor' => -1099,
         'cluster_key' => 'expense::approved-thing::eur::monthly',
     ]);
     fpvSeries($this->user, 'expense', 'flipped-thing', [
         'state' => 'cadence_changed',
+        'latest_amount_minor' => -2500,
         'monthly_equivalent_minor' => -2500,
         'cluster_key' => 'expense::flipped-thing::eur::monthly',
     ]);
@@ -162,6 +170,11 @@ it('counts a cadence-changed series in the monthly totals Forecasting already pr
     /** @var FixedPaymentsViewQuery $query */
     $query = $this->app->make(FixedPaymentsViewQuery::class);
 
+    // Both halves of the claim: the rows the header sits above, and the header.
+    $rows = $query->viewForUser($this->user)['expenses'];
+    expect(array_map(static fn ($row): int => $row->monthlyEquivalent->toMinor(), $rows))->toBe([-2500, -1099]);
+
+    // -1099 without the cadence-changed series, which is the drop this pins.
     expect($query->monthlyEquivalentTotals($this->user)->expense->toMinor())->toBe(-3599);
 });
 
@@ -187,10 +200,11 @@ it('runs viewForUser in ≤ 3 queries for N=12 series (N+1 budget)', function ()
     expect(count($log))->toBeLessThanOrEqual(3);
 })->group('n-plus-one-budget');
 
-it('sums monthly_equivalent_minor by direction in monthlyEquivalentTotals', function (): void {
-    // The query sums monthly_equivalent_minor as the detector wrote it; the
-    // cadence multiplier is applied at write time (weekly × 52/12, monthly × 1,
-    // quarterly ÷ 3, yearly ÷ 12).
+it('applies the cadence multiplier by direction in monthlyEquivalentTotals', function (): void {
+    // The multiplier is applied at read time now, not taken from the column the
+    // detector wrote: weekly × 52/12, monthly × 1, quarterly ÷ 3, yearly ÷ 12.
+    // Every row here stores the figure its own amount and cadence derive, so
+    // the two answers coincide and the totals are the multiplier's evidence.
     fpvSeries($this->user, 'expense', 'weekly-thing', [
         'cadence' => 'weekly',
         'monthly_equivalent_minor' => -4333,

@@ -14,9 +14,11 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
+use Modules\Recurring\Internal\Support\MonthlyEquivalent;
 use Modules\Recurring\Public\Dto\MonthlyEquivalentTotals;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Support\SeriesDueWindow;
 use stdClass;
 
@@ -114,18 +116,17 @@ final readonly class FixedPaymentsViewQuery
         return array_slice($combined, 0, $limit);
     }
 
-    // Grouped by latest_currency rather than added straight across it: a dollar
-    // series' monthly_equivalent_minor is dollar cents. Each bucket goes through
-    // its own rate before the two sides meet.
+    // Bucketed by latest_currency rather than added straight across it: a dollar
+    // series' monthly figure is dollar cents. Each bucket goes through its own
+    // rate before the two sides meet. One query still, so the summary stays
+    // bounded however many series the reader has.
     public function monthlyEquivalentTotals(User $user): MonthlyEquivalentTotals
     {
         $rows = $this->db->connection()
             ->table('recurring_series')
             ->where('user_id', $user->id)
             ->whereIn('state', RecurringSeriesState::projectableValues())
-            ->groupBy('direction', 'latest_currency')
-            ->selectRaw('direction, latest_currency, COALESCE(SUM(monthly_equivalent_minor), 0) AS bucket_minor')
-            ->get();
+            ->get(['direction', 'latest_currency', 'latest_amount_minor', 'cadence', 'monthly_equivalent_minor']);
 
         /** @var array<string, array<string, int>> $byDirection */
         $byDirection = [Direction::Expense->value => [], Direction::Income->value => []];
@@ -137,7 +138,7 @@ final readonly class FixedPaymentsViewQuery
                 continue;
             }
 
-            $byDirection[$direction][$currency] = ($byDirection[$direction][$currency] ?? 0) + self::toInt($row->bucket_minor);
+            $byDirection[$direction][$currency] = ($byDirection[$direction][$currency] ?? 0) + self::monthlyMinor($row);
         }
 
         $baseCurrency = $this->baseCurrency->forUser($user);
@@ -157,6 +158,19 @@ final readonly class FixedPaymentsViewQuery
             income: $income->money(),
             net: $income->money()->plus($expense->money()),
             unconverted: $unconverted,
+        );
+    }
+
+    // Through the seam RecurringSeriesDtoMapper reads for the rows this total
+    // sits above, fallback included: the stored copy, the amount and the
+    // cadence merge as three independent fields, so summing the copy printed a
+    // header the rows beneath it disagreed with.
+    private static function monthlyMinor(stdClass $row): int
+    {
+        return MonthlyEquivalent::orStored(
+            self::toInt($row->latest_amount_minor),
+            SeriesCadence::tryFrom(self::toString($row->cadence)),
+            isset($row->monthly_equivalent_minor) ? self::toInt($row->monthly_equivalent_minor) : 0,
         );
     }
 
