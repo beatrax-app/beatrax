@@ -363,6 +363,10 @@ final readonly class DeviceRegistryService
      */
     public function otherDeviceNames(int $userId): array
     {
+        // Two callers take the FIRST entry as "the peer" — PeerLanAddress
+        // dials it, ManagesManualPeerAddress offers a reader an address for it
+        // — so an unordered read lets the phone dial one desktop, remember its
+        // address, then clear that address on behalf of the other.
         /** @var array<string, string> $names */
         $names = $this->stillADevice(
             $this->db->connection()
@@ -370,6 +374,8 @@ final readonly class DeviceRegistryService
                 ->where('user_id', $userId)
                 ->whereNotNull('confirmed_at')
                 ->where('is_self', 0)
+                ->orderBy('confirmed_at')
+                ->orderBy('device_id')
         )
             ->pluck('name', 'device_id')
             ->all();

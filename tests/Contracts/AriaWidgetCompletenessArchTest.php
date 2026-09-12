@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\MarkupElement;
 use Modules\Core\Public\Support\MarkupSource;
+use Tests\Contracts\Support\MarkupAttribute;
 
 // A control that takes an ARIA role has to carry the state the native element
 // would have supplied for free: a <progress> reports its value unasked, a div
@@ -151,11 +152,11 @@ it('draws no roled radio or option in a template that names no container role', 
         $source = (string) file_get_contents($path);
 
         foreach ($containers as $child => $container) {
-            if (! str_contains($source, 'role="'.$child.'"')) {
+            if (MarkupAttribute::countIn($source, 'role', $child) === 0) {
                 continue;
             }
 
-            if (! str_contains($source, 'role="'.$container.'"')) {
+            if (MarkupAttribute::countIn($source, 'role', $container) === 0) {
                 $offenders[] = sprintf('%s — has role="%s" but no role="%s" around it', $path, $child, $container);
             }
         }

@@ -253,9 +253,45 @@ it('decrypts the same entry when the peer spells the pk as a string instead of a
     expect($decrypted['note'])->toBe('another private note');
 });
 
+// The AD is four fields joined by colons, and PHP writes that three ways. The
+// rule used to read only the first: a double-quoted interpolation. Byte-identical
+// AD built by concatenation or by sprintf was invisible — and a re-spelling is
+// exactly how the divergence this file exists to prevent would arrive, since
+// the canonical builder is itself a double-quoted interpolation that any
+// string-style sweep would rewrite.
+const OP_LOG_AD_BUILDERS = [
+    'interpolated' => '/"\{?\$[A-Za-z_][^}":]*\}?:\{?\$[A-Za-z_][^}":]*\}?:\{?\$[A-Za-z_][^}":]*\}?:\{?\$[A-Za-z_][^}":]*\}?"/',
+    'concatenated' => '/\$[A-Za-z_]\w*\s*\.\s*[\'"]:[\'"]\s*\.\s*\$[A-Za-z_]\w*\s*\.\s*[\'"]:[\'"]\s*\.\s*\$[A-Za-z_]\w*\s*\.\s*[\'"]:[\'"]\s*\.\s*\$[A-Za-z_]\w*/',
+    'formatted' => '/[\'"]%[sd]:%[sd]:%[sd]:%[sd][\'"]/',
+];
+
+function opLogAdBuildersIn(string $source): array
+{
+    $found = [];
+
+    foreach (OP_LOG_AD_BUILDERS as $how => $pattern) {
+        if (preg_match($pattern, $source) === 1) {
+            $found[] = $how;
+        }
+    }
+
+    return $found;
+}
+
+it('reads a four-part colon join however it is written', function (): void {
+    expect(opLogAdBuildersIn('<?php return "{$table}:{$pk}:{$field}:{$epochId}";'))->toBe(['interpolated'])
+        ->and(opLogAdBuildersIn('<?php return $table.\':\'.$pk.\':\'.$field.\':\'.$epochId;'))->toBe(['concatenated'])
+        ->and(opLogAdBuildersIn('<?php return sprintf(\'%s:%s:%s:%d\', $table, $pk, $field, $epochId);'))->toBe(['formatted'])
+        // The three-part AD beside it, which is a different shape and not this one.
+        ->and(opLogAdBuildersIn('<?php return "{$table}:{$field}:{$epochId}";'))->toBe([]);
+});
+
 it('has exactly one place that builds the op-log AD', function (): void {
     $root = dirname(__DIR__, 4);
+    $canonical = 'Sync/Public/Services/SensitiveColumnCodec.php';
     $hits = [];
+    $walked = 0;
+    $sawCanonical = false;
 
     foreach (['Modules', 'app'] as $tree) {
         $files = new RecursiveIteratorIterator(
@@ -269,15 +305,35 @@ it('has exactly one place that builds the op-log AD', function (): void {
                 continue;
             }
 
-            if (preg_match('/"\{\$[^}"]+\}:\{\$[^}"]+\}:\{\$[^}"]+\}:\{\$[^}"]+\}"/', (string) file_get_contents($path)) !== 1) {
+            $walked++;
+
+            if (opLogAdBuildersIn((string) file_get_contents($path)) === []) {
                 continue;
             }
 
-            if (! str_ends_with($path, 'Sync/Public/Services/SensitiveColumnCodec.php')) {
-                $hits[] = substr($path, strlen($root) + 1);
+            if (str_ends_with($path, $canonical)) {
+                $sawCanonical = true;
+
+                continue;
             }
+
+            $hits[] = substr($path, strlen($root) + 1);
         }
     }
 
-    expect($hits)->toBe([]);
+    expect($walked)->toBeGreaterThan(3_000, 'The walk opened '.$walked.' files, too few to be this tree.');
+
+    // The positive control, and the reason this rule cannot go quietly right:
+    // an empty offender list means "nobody else builds it" only while the one
+    // place that does is still recognised.
+    expect($sawCanonical)->toBeTrue(
+        'The one file that builds the op-log AD was not recognised as building it, so the empty list below says nothing. '
+        .'Re-spelling '.$canonical.' retires this rule unless the reader above learns the new form.',
+    );
+
+    expect($hits)->toBe([], implode("\n  ", [
+        'These build the op-log AD themselves instead of asking SensitiveColumnCodec::opLogAssociatedData(). '
+        .'One byte apart and decrypt() returns false, which quarantines the entry with nothing a reader ever sees:',
+        ...$hits,
+    ]));
 });

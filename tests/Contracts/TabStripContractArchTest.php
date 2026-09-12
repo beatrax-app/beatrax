@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\MarkupAttribute;
 
 // A tab strip is four separate promises, and three of them were kept: the roles
 // were there, the selection was announced, and nothing said which region a tab
@@ -88,13 +89,13 @@ function tabStripDenominators(): array
         foreach (tabStripOpenTags((string) file_get_contents($path)) as [$tag, $attributes, $_]) {
             $seen['tags']++;
 
-            if (str_contains($attributes, 'role="tablist"')) {
+            if (MarkupAttribute::carries($attributes, 'role', 'tablist')) {
                 $seen['tablists']++;
             }
-            if ($tag === 'x-core::tab' || str_contains($attributes, 'role="tab"')) {
+            if ($tag === 'x-core::tab' || MarkupAttribute::carries($attributes, 'role', 'tab')) {
                 $seen['tabs']++;
             }
-            if (str_contains($attributes, 'role="tabpanel"')) {
+            if (MarkupAttribute::carries($attributes, 'role', 'tabpanel')) {
                 $seen['panels']++;
             }
         }
@@ -129,8 +130,8 @@ it('reads a tag past an angle bracket in a directive and in a quoted value', fun
     $tags = tabStripOpenTags($source);
 
     expect(array_column($tags, 0))->toBe(['div', 'x-core::tab'])
-        ->and(str_contains($tags[0][1], 'x-data="tabStrip()"'))->toBeTrue('the ">" inside the Blade condition closed the tag early, so everything after it was lost')
-        ->and(str_contains($tags[1][1], 'aria-controls="p"'))->toBeTrue('the tag was read whole past the ">" in the quoted Alpine expression');
+        ->and(MarkupAttribute::carries($tags[0][1], 'x-data', 'tabStrip()'))->toBeTrue('the ">" inside the Blade condition closed the tag early, so everything after it was lost')
+        ->and(MarkupAttribute::carries($tags[1][1], 'aria-controls', 'p'))->toBeTrue('the tag was read whole past the ">" in the quoted Alpine expression');
 });
 
 // The strip is the only thing that knows how many tabs there are, so the arrow
@@ -143,7 +144,7 @@ it('gives every tab strip the arrow-key handler its roving tabindex depends on',
         $source = (string) file_get_contents($path);
 
         foreach (tabStripOpenTags($source) as [$_, $attributes, $offset]) {
-            if (! str_contains($attributes, 'role="tablist"')) {
+            if (! MarkupAttribute::carries($attributes, 'role', 'tablist')) {
                 continue;
             }
 
@@ -151,10 +152,10 @@ it('gives every tab strip the arrow-key handler its roving tabindex depends on',
             if (! str_contains($attributes, 'aria-label')) {
                 $missing[] = 'an accessible name';
             }
-            if (! str_contains($attributes, 'x-data="tabStrip()"')) {
+            if (! MarkupAttribute::carries($attributes, 'x-data', 'tabStrip()')) {
                 $missing[] = 'x-data="tabStrip()"';
             }
-            if (! str_contains($attributes, 'x-on:keydown="onKey($event)"')) {
+            if (! MarkupAttribute::carries($attributes, 'x-on:keydown', 'onKey($event)')) {
                 $missing[] = 'x-on:keydown="onKey($event)"';
             }
 
@@ -192,7 +193,7 @@ it('points every tab at the panel it governs and keeps exactly one of them tabba
 
         foreach (tabStripOpenTags($source) as [$tag, $attributes, $offset]) {
             $isCallSite = $tag === 'x-core::tab';
-            $isRawTab = str_contains($attributes, 'role="tab"') && $path !== $sharedTabComponent;
+            $isRawTab = MarkupAttribute::carries($attributes, 'role', 'tab') && $path !== $sharedTabComponent;
 
             if (! $isCallSite && ! $isRawTab) {
                 continue;
@@ -239,26 +240,28 @@ it('backs every aria-controls on a tab with a named tabpanel in the same templat
         $relative = str_replace(base_path().'/', '', $path);
 
         foreach (tabStripOpenTags($source) as [$tag, $attributes, $offset]) {
-            if ($tag !== 'x-core::tab' && ! str_contains($attributes, 'role="tab"')) {
+            if ($tag !== 'x-core::tab' && ! MarkupAttribute::carries($attributes, 'role', 'tab')) {
                 continue;
             }
-            if (preg_match('~\baria-controls="([^"]+)"~', $attributes, $controls) !== 1) {
+            $controls = MarkupAttribute::valueOf($attributes, 'aria-controls');
+
+            if ($controls === null || $controls === '') {
                 continue;
             }
 
             $panel = null;
             foreach (tabStripOpenTags($source) as [$_, $panelAttributes, $__]) {
-                if (str_contains($panelAttributes, 'role="tabpanel"')
-                    && str_contains($panelAttributes, 'id="'.$controls[1].'"')) {
+                if (MarkupAttribute::carries($panelAttributes, 'role', 'tabpanel')
+                    && MarkupAttribute::carries($panelAttributes, 'id', $controls)) {
                     $panel = $panelAttributes;
                     break;
                 }
             }
 
             if ($panel === null) {
-                $offenders[] = sprintf('%s:%d — aria-controls="%s" names no role="tabpanel"', $relative, tabStripLineOf($source, $offset), $controls[1]);
-            } elseif (! str_contains($panel, 'aria-labelledby')) {
-                $offenders[] = sprintf('%s — the "%s" tabpanel has no aria-labelledby', $relative, $controls[1]);
+                $offenders[] = sprintf('%s:%d — aria-controls="%s" names no role="tabpanel"', $relative, tabStripLineOf($source, $offset), $controls);
+            } elseif (! MarkupAttribute::present($panel, 'aria-labelledby')) {
+                $offenders[] = sprintf('%s — the "%s" tabpanel has no aria-labelledby', $relative, $controls);
             }
         }
     }

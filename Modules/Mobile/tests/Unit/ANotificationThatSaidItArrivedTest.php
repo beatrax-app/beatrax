@@ -149,9 +149,7 @@ it('anchors on text the shipped plugin really carries', function (): void {
     }
 
     if ($upstream === null) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('nativephp/mobile is installed only under the mobile Composer root, so the shipped WebView client is not here to read.');
     }
 
     expect(substr_count($upstream, DELIVERY_IMPORT_ANCHOR))->toBe(1)

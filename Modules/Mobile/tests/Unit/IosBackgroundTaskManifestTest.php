@@ -112,9 +112,7 @@ it('generates each iOS background-task identifier exactly once', function (): vo
     $root = mobileBackgroundTaskRoot();
 
     if ($root === null) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The iOS project and SchedulerManifestGenerator are reachable only from the mobile Composer root.');
     }
 
     $result = mobileBackgroundTaskIdentifiersAtBuildTime($root);
@@ -143,9 +141,7 @@ it('has every mobile-root entry in the background-task manifest before any provi
     $root = mobileBackgroundTaskRoot();
 
     if ($root === null) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The iOS project and SchedulerManifestGenerator are reachable only from the mobile Composer root.');
     }
 
     $result = mobileBackgroundTaskManifestAtBootBoundary($root);
@@ -189,9 +185,7 @@ function scheduledCommandNames(): array
 
 it('pins every named schedule the iOS background-task manifest cannot carry', function (): void {
     if (! class_exists(SchedulerManifestGenerator::class)) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped('The iOS project and SchedulerManifestGenerator are reachable only from the mobile Composer root.');
     }
 
     $carried = array_column((new SchedulerManifestGenerator)->generate(), 'command');

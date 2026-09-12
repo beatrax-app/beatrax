@@ -36,6 +36,15 @@ it('has the three tax surfaces reading the boundary from FilingSeason', function
     }
 });
 
+// A month comparison against a boundary and a year stepped back by one. The
+// boundary may be a literal or a named constant: the home file writes the
+// constant, so a pattern demanding a digit cannot see the very thing it guards.
+function filingSeasonRuleSpeltOutIn(string $source): bool
+{
+    return preg_match('/->month\s*<=?\s*(\d|self::|static::|[A-Z][A-Za-z0-9_]*::)/', $source) === 1
+        && preg_match('/->year\s*-\s*1/', $source) === 1;
+}
+
 it('is the only place the seasonal rule is written down', function (): void {
     $repoRoot = dirname(__DIR__, 4);
     $home = 'Modules/Tax/Internal/Support/FilingSeason.php';
@@ -60,12 +69,21 @@ it('is the only place the seasonal rule is written down', function (): void {
 
             $source = (string) file_get_contents($file->getPathname());
 
-            if (preg_match('/->month\s*<=?\s*\d/', $source) === 1 && preg_match('/->year\s*-\s*1/', $source) === 1) {
+            if (filingSeasonRuleSpeltOutIn($source)) {
                 $offenders[] = $relative;
             }
         }
     }
     sort($offenders);
+
+    // The positive control. The reader used to demand a literal digit after the
+    // month comparison, which the home file does not write — it names a
+    // constant — so a straight copy of the canonical implementation, the likeliest
+    // duplication there is, was invisible, and the pattern matched nothing at
+    // all in 7,102 files.
+    expect(filingSeasonRuleSpeltOutIn((string) file_get_contents($repoRoot.'/'.$home)))->toBeTrue(
+        $home.' no longer reads as spelling the rule out, so an empty offender list below says nothing.',
+    );
 
     expect($offenders)->toBe(
         [],

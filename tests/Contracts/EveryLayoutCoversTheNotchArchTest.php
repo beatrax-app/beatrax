@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\MarkupAttribute;
 use Tests\Contracts\Support\RepoTree;
 
 // Without viewport-fit=cover iOS reports every safe-area inset as 0, so a
@@ -24,8 +25,12 @@ function notchViewportBlades(): array
     foreach (RepoTree::files(RepoTree::EVERY_BLADE_VIEW) as $path) {
         $source = (string) file_get_contents($path);
 
-        if (str_contains($source, '<meta name="viewport"')) {
-            $documents[str_replace(RepoTree::root().'/', '', $path)] = $source;
+        foreach (MarkupAttribute::spellings('name', 'viewport') as $spelling) {
+            if (str_contains($source, '<meta '.$spelling)) {
+                $documents[str_replace(RepoTree::root().'/', '', $path)] = $source;
+
+                break;
+            }
         }
     }
 
