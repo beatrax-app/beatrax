@@ -94,7 +94,7 @@ it('encrypts the incoming counterparty_name/description before the prefer_receip
     aeeSetPolicy($user, 'prefer_receipt');
 
     $applier = app(AppliesEnrichments::class);
-    $count = $applier([
+    $applied = $applier([
         new PendingEnrichment(
             existingTransactionId: $tx->id,
             newSourceRef: 'PAYID-CANONICAL',
@@ -107,7 +107,7 @@ it('encrypts the incoming counterparty_name/description before the prefer_receip
         ),
     ], $user);
 
-    expect($count)->toBe(1);
+    expect($applied->count)->toBe(1);
 
     $row = app(DatabaseManager::class)->connection()->table('transactions')->where('id', $tx->id)->first();
 

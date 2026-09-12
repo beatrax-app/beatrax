@@ -1088,10 +1088,14 @@ ground to choose between them. The UPDATE carries a
 `UniqueConstraintViolationException` catch for the case where the move
 lands on a tuple the ledger already holds: the stored row stands, the
 confirm carries on, and `applyOne()` reports the row as not enriched.
-Neither the booking nor anything else this action writes is announced to
-`Sync` — see [the pipeline
+The four booking columns are the only thing this action writes that a peer
+hears about, and it does not announce them itself: `applyOne()` reports
+each adopted booking on `AppliedEnrichments::$adopted`, and `ConfirmImport`
+registers the announcement with `afterCommit()` from inside its own
+transaction — see [the pipeline
 page](../../architecture/ingestion-pipeline.md#a-reference-the-ledger-already-holds)
-for why announcing an undeclared column would be worse than the silence.
+for why the declaration had to land before the announcement, and what the
+rest of this action's columns still owe a peer.
 
 Two encryption guarantees hold regardless of policy: `FingerprintStage`
 decrypts the stored value before ever populating `conflictingFields`, so

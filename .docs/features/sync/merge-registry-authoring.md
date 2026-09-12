@@ -333,6 +333,29 @@ early in a paged catch-up, and refusing it would break ordinary sync. Where the
 answer is "early", what the invariant wants is a detector that reports after a
 sync completes, not a refusal.
 
+## A payload a DTO assembles is still a write
+
+The three column-level capture guards all root their scan at a column
+**literal** inside an `->update()`. A payload a DTO hands over names none of
+its columns in the statement:
+
+```php
+->update($booking->toColumns() + ['updated_at' => $now]);
+```
+
+`ApplyEnrichments` wrote `transactions.posted_at`, `.booked_at`,
+`.value_date` and `.occurrence_ordinal` that way on every restatement, and
+no guard could ask who had told a peer — the same shape as the `self::TABLE`
+blind spot one level up, one level down. `SyncedColumnWrites::stripped()`
+now expands `->toColumns()` into the columns of every column-set DTO the
+file names before any pattern runs, so the existing patterns keep working
+and the existing pin list keeps answering for the exemptions.
+
+The expansion takes the UNION of those DTOs, because which one a variable
+holds is a type a regex cannot read. Widening is the safe direction: a
+column it widens onto is reported only once the registry declares it, and
+then somebody has to answer for it.
+
 ## A few table facts worth not rediscovering
 
 The registry names real columns, and several of them are not the columns you
@@ -362,6 +385,16 @@ would guess:
   `SuppressionEvaluator`, not in the registry.
 - `system_alerts` rows with a NULL `user_id` are system-wide and belong to no
   one; the backfill scopes on `user_id` and never captures them, deliberately.
+- `transactions.posted_at`, `.booked_at`, `.value_date` and
+  `.occurrence_ordinal` are the terms of the dedup tuple, and all four are
+  `lww`: a source *states* them, so there is nothing to combine and the
+  later statement is the one that describes the row. `occurrence_ordinal`
+  is the one that invites a `g_counter` and must not have one — it counts
+  occurrences *within one file*, so two devices reading that file compute
+  the same number and a sum would seat the row on an occurrence no file
+  describes. `value_date` is the only one of the four outside the
+  fingerprint, so a disagreement about it settles without moving the row's
+  identity.
 - `users` is the one covered table with no `user_id` column: its own primary
   key IS the owner. `RowOwnership` self-scopes it, the wire pk is ignored (two
   devices mint different autoincrements for one reader), and a create or a

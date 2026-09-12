@@ -13,6 +13,8 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
+use Modules\Import\Public\Dto\AdoptedBooking;
+use Modules\Import\Public\Dto\AppliedEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
@@ -76,10 +78,10 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         private SearchIndexWriterContract $searchIndex,
     ) {}
 
-    public function __invoke(array $enrichments, User $user): int
+    public function __invoke(array $enrichments, User $user): AppliedEnrichments
     {
         if ($enrichments === []) {
-            return 0;
+            return new AppliedEnrichments(0);
         }
 
         // Method-local, never on the instance: the action is a singleton and
@@ -87,13 +89,23 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
         $userChoice = $this->loadReceiptConflictChoice($user);
 
         $count = 0;
+        $adopted = [];
+
         foreach ($enrichments as $enrichment) {
-            if ($this->applyOne($enrichment, $user, $userChoice)) {
-                $count++;
+            if (! $this->applyOne($enrichment, $user, $userChoice)) {
+                continue;
+            }
+
+            $count++;
+
+            // Collected from the enrichment rather than from the row, because
+            // the row is what a later restatement in this same run moves next.
+            if ($enrichment->restates !== null) {
+                $adopted[] = new AdoptedBooking($enrichment->existingTransactionId, $enrichment->restates);
             }
         }
 
-        return $count;
+        return new AppliedEnrichments($count, $adopted);
     }
 
     private function applyOne(PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): bool

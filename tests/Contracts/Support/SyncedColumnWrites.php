@@ -65,13 +65,106 @@ final class SyncedColumnWrites
         return RepoTree::files(RepoTree::RUNTIME_DOMAIN_PHP);
     }
 
+    // Every column-set DTO in the tree, read once. Null until the first ask.
+    /** @var array<string, list<string>>|null */
+    private static ?array $columnSetDtos = null;
+
     // The codebase's own prose names both halves of the rule it describes, so
     // an unstripped file reports the comment that explains the exemption.
     public static function stripped(string $source): string
     {
-        return self::withTableConstantsResolved(
+        return self::withColumnSetsExpanded(self::withTableConstantsResolved(
             PatternScan::replace('#/\*.*?\*/|//[^\n]*#s', '', $source),
-        );
+        ));
+    }
+
+    // The other spelling every pattern below is blind to. A payload a DTO
+    // assembles -- `->update($booking->toColumns() + [...])` -- names not one
+    // of its columns in the statement, so four columns of `transactions` moved
+    // on every restatement with no guard able to ask who told a peer.
+    /**
+     * @link ../../../.docs/features/sync/merge-registry-authoring.md
+     */
+    public static function withColumnSetsExpanded(string $source): string
+    {
+        if (! str_contains($source, '->toColumns()')) {
+            return $source;
+        }
+
+        $columns = [];
+
+        foreach (self::columnSetDtos() as $class => $names) {
+            if (PatternScan::matches('/\b'.$class.'\b/', $source)) {
+                $columns = [...$columns, ...$names];
+            }
+        }
+
+        if ($columns === []) {
+            return $source;
+        }
+
+        // The union of every column-set DTO the file names, because which of
+        // them a variable holds is a type this scan cannot read. Widening is
+        // the safe direction: a column it widens onto is reported only once
+        // the registry declares it, and then somebody has to answer for it.
+        $spelled = implode('', array_map(
+            static fn (string $column): string => sprintf("'%s' => null,", $column),
+            array_values(array_unique($columns)),
+        ));
+
+        return str_replace('->toColumns()', sprintf('->toColumns([%s])', $spelled), $source);
+    }
+
+    // Derived from the tree rather than listed, for the reason modelsByTable()
+    // below is: a hand-kept list of four DTOs is the kind that rots without
+    // failing, and the fifth one would be invisible to every guard again.
+    /**
+     * @return array<string, list<string>>
+     */
+    private static function columnSetDtos(): array
+    {
+        if (self::$columnSetDtos !== null) {
+            return self::$columnSetDtos;
+        }
+
+        $dtos = [];
+
+        foreach (self::writerFiles() as $file) {
+            $source = (string) file_get_contents($file);
+
+            if (! str_contains($source, 'function toColumns(): array')) {
+                continue;
+            }
+
+            $names = self::columnsNamedBy($source);
+
+            if ($names !== []) {
+                $dtos[basename($file, '.php')] = $names;
+            }
+        }
+
+        return self::$columnSetDtos = $dtos;
+    }
+
+    // The keys of the map the method returns, comments stripped first so a
+    // reason quoted beside a column is not read as one.
+    /**
+     * @return list<string>
+     */
+    private static function columnsNamedBy(string $source): array
+    {
+        $body = PatternScan::first('/function toColumns\(\): array(.*?)\n    \}/s', $source)[1] ?? null;
+
+        if (! is_string($body)) {
+            return [];
+        }
+
+        $names = PatternScan::all(
+            "/'([a-z_][a-z0-9_]*)'\s*=>/",
+            PatternScan::replace('#/\*.*?\*/|//[^\n]*#s', '', $body),
+        )[1] ?? [];
+
+        return array_values(array_unique(array_filter($names, 'is_string')));
     }
 
     // Every pattern below is rooted at a table LITERAL, so a file reaching its
