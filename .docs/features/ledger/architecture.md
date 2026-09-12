@@ -1002,7 +1002,10 @@ purpose and both are read by `AccountStartingBalanceQuery`, which prefers
 the override: it is the only figure the reader entered deliberately, so a
 number they typed outranks one an import inferred. A third
 `opening_balance_minor` lives on `statement_summaries` and is the source
-the backfill reads, not a balance anyone displays.
+the backfill reads, not a balance anyone displays — and the backfill
+takes it only from a summary that read its figures off the source, never
+from one that summed them out of its own rows ([a summed balance is not
+a balance anyone read](reconcile-needs-an-anchor.md#a-summed-balance-is-not-a-balance-anyone-read)).
 
 `Public/Services/AccountStartingBalanceQuery` is the single reader. The
 rule it encodes is:

@@ -33,6 +33,11 @@ final class StatementSummaryData extends Data
         // CAMT.053 and every CSV print none, and their statements are dated
         // from the period they bill.
         public readonly ?CarbonImmutable $paymentDueDate = null,
+        // True where the figures were summed from the rows the adapter had just
+        // yielded rather than read off the source's own header. A summed
+        // opening balance is zero because nothing preceded the first row, which
+        // is not a statement about what the account held.
+        public readonly bool $balancesDerivedFromRows = false,
     ) {}
 
     public function withImportRunId(int $importRunId): self
@@ -53,6 +58,7 @@ final class StatementSummaryData extends Data
             entryCount: $this->entryCount,
             extras: $this->extras,
             paymentDueDate: $this->paymentDueDate,
+            balancesDerivedFromRows: $this->balancesDerivedFromRows,
         );
     }
 
@@ -74,6 +80,7 @@ final class StatementSummaryData extends Data
             entryCount: $this->entryCount,
             extras: $this->extras,
             paymentDueDate: $this->paymentDueDate,
+            balancesDerivedFromRows: $this->balancesDerivedFromRows,
         );
     }
 }

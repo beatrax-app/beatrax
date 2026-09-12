@@ -768,6 +768,18 @@ period boundary). Receipt-path formats (`.eml`, `.mbox`) are excluded
 from the writer call because each receipt is its own logical record
 with no opening/closing balance.
 
+A summary also declares **where its figures came from**. Most adapters
+read the opening and closing balance off the source: the file states
+both and the summary carries what it stated. The PayPal adapter has no
+such rows to read and sums the ones it just yielded instead, which makes
+its opening balance zero by construction — nothing precedes the first
+row of the file. `StatementSummaryData::$balancesDerivedFromRows` rides
+into `statement_summaries.balances_derived_from_rows` so a reader can
+tell the two apart, and `AnchorsStartingBalanceFromStatements` takes
+only the read ones: an account anchored at a summed zero is wrong on
+every balance it reports and nothing on the screen says so. See
+[Reconcile needs an anchor](../features/ledger/reconcile-needs-an-anchor.md#a-summed-balance-is-not-a-balance-anyone-read).
+
 ## What this pipeline does not do
 
 - **It does not detect transfers or recurring patterns.** Those are

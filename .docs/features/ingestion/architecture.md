@@ -556,6 +556,17 @@ so the adapter reports **none**: `/reconcile` filters on a non-null
 `closing_balance_minor`, so no target is right where a wrong one would
 be an instruction the reader cannot carry out.
 
+The opening balance it publishes alongside is **zero**, and that zero is
+not a figure read off anything: nothing precedes the first row of the
+file. The summary says so — `balancesDerivedFromRows: true` rides into
+`statement_summaries.balances_derived_from_rows` — and the account
+anchor skips every summary carrying it, because a wallet started at a
+zero nobody was asked about is wrong on every balance it goes on to
+report ([a summed balance is not a balance anyone
+read](../ledger/reconcile-needs-an-anchor.md#a-summed-balance-is-not-a-balance-anyone-read)).
+`PaypalCsvStartingBalanceDetector` declines the same figure on the
+offering side, and always has.
+
 `PaypalCsvEventTypeMap::MAP` classifies each event type as a
 `PaypalEventAction` — `Skip`, `Parent` or `ChildFx` —
 and `TRANSACTION_TYPE` maps every `Parent` event type to a
