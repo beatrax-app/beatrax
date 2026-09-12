@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ledger\Public\Enums\Currency;
+use Modules\Ledger\Public\Support\CurrencyNames;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // A currency code is data, not copy. "Settled EUR" over a column that prints
@@ -88,8 +89,12 @@ function copyCurrencyOffendersIn(array $flat, array $needles, bool $wholeWord): 
 
     foreach ($flat as $key => $value) {
         foreach ($needles as $needle) {
+            // A letter either side, not `\b`: `\w` is ASCII, so the boundary
+            // `\bSEK\b` finds falls between the É and the S of the Hungarian
+            // ELEMZÉSEK and reports a heading as a Swedish krona. Every locale
+            // but English writes letters `\w` does not know.
             $names = $wholeWord
-                ? preg_match('/\b'.preg_quote($needle, '/').'\b/', $value) === 1
+                ? preg_match('/(?<!\p{L})'.preg_quote($needle, '/').'(?!\p{L})/u', $value) === 1
                 : str_contains($value, $needle);
 
             if ($names) {
@@ -122,11 +127,27 @@ function copyCurrencyAssertTheWalkRead(): void
     );
 }
 
+// Every code the picker offers, not the four the enum declares: the install
+// ships thirty-one currencies and this rule knew four of them, so "Statement
+// balance (CHF)" was copy it could not read.
+//
+// One code is held out, with its reason. A code that is also an ordinary word
+// reports the word, and the offender list is then noise a reader learns to
+// scroll past — which is how a rule stops being read at all.
+/** @var array<string, string> code => why it cannot be searched for as a word */
+const COPY_CURRENCY_CODES_THAT_ARE_ALSO_WORDS = [
+    'PHP' => 'The Philippine peso shares its code with the language this application is written in, and fifty-two translated lines tell a contributor where the PHP files live. The peso has no symbol needle either, so it is the one currency this rule does not cover — name it with a placeholder like every other.',
+];
+
 it('never writes a currency code into a translated string', function (): void {
     copyCurrencyAssertTheWalkRead();
 
-    $codes = array_map(static fn (Currency $case): string => $case->value, Currency::cases());
-    expect($codes)->not->toBeEmpty('Currency declares no case, so this rule looked for nothing.');
+    $codes = array_values(array_diff(CurrencyNames::codes(), array_keys(COPY_CURRENCY_CODES_THAT_ARE_ALSO_WORDS)));
+
+    expect(count($codes))->toBeGreaterThan(
+        count(Currency::cases()),
+        'The needle set is no wider than the enum, so most of the currencies a reader can pick are unguarded.',
+    );
 
     $offenders = [];
     foreach (copyCurrencyCodeLines() as $path => $flat) {

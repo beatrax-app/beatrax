@@ -350,6 +350,38 @@ function loggedExceptionBlankNarrowedReads(string $source, array $aliases): stri
     );
 }
 
+// A message lifted out of the throwable before it is logged is the same
+// message: `$detail = $e->getMessage();` then `['d' => $detail]` puts exactly
+// the payload this rule exists to keep out of the log. The event-property arm
+// below already says so and watches its local; the catch and parameter arms
+// read only the sink's own arguments, so the lift walked past both.
+/**
+ * @return list<string> the locals $body assigns a getMessage() read to
+ */
+function loggedExceptionLiftedLocals(string $body): array
+{
+    return PatternScan::all('/\\$(\\w+)\\s*=\\s*[^;]*\\bgetMessage\\(\\)/', $body)[1] ?? [];
+}
+
+/**
+ * Whether $args reads the message, directly or through a local $body lifted it
+ * into first.
+ */
+function loggedExceptionArgsCarryTheMessage(string $args, string $body, string $read): bool
+{
+    if (PatternScan::matches($read, $args)) {
+        return true;
+    }
+
+    foreach (loggedExceptionLiftedLocals($body) as $local) {
+        if (PatternScan::matches('/\\$'.preg_quote($local, '/').'\\b/', $args)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * The catches, the sinks inside them and the offenders among those, read off
  * one pass so the walk's denominators come from the same reader the control
@@ -374,7 +406,11 @@ function loggedExceptionOffendersIn(string $source, bool $isCommand): array
         foreach (loggedExceptionSinks($catch['body'], $isCommand) as $sink) {
             $sinks++;
 
-            if (! str_contains(loggedExceptionWithoutNarrowedReads($sink['args'], $aliases), 'getMessage()')) {
+            if (! loggedExceptionArgsCarryTheMessage(
+                loggedExceptionWithoutNarrowedReads($sink['args'], $aliases),
+                loggedExceptionWithoutNarrowedReads($catch['body'], $aliases),
+                '/getMessage\\(\\)/',
+            )) {
                 continue;
             }
 
@@ -393,7 +429,11 @@ function loggedExceptionOffendersIn(string $source, bool $isCommand): array
 
             // Nullsafe counts: `failed(?Throwable $e)` reads `$e?->getMessage()`
             // and the message that returns is the same message.
-            if (PatternScan::first('/\\$'.$function['param'].'\\??->getMessage\\(\\)/', $args) === []) {
+            if (! loggedExceptionArgsCarryTheMessage(
+                $args,
+                loggedExceptionWithoutNarrowedReads($function['body'], $aliases),
+                '/\\$'.$function['param'].'\\??->getMessage\\(\\)/',
+            )) {
                 continue;
             }
 
