@@ -612,9 +612,9 @@
                 :class="$editPotId ? 'opacity-50 cursor-not-allowed' : ''"
                 style="font-size: 16px;"
             >
-                <option value="">{{ Lang::get('pots::messages.form.select_account') }}</option>
+                <option value="" @selected(strlen($accountId) === 0)>{{ Lang::get('pots::messages.form.select_account') }}</option>
                 @foreach ($accounts as $account)
-                    <option value="{{ $account->id }}">{{ $account->name }}</option>
+                    <option value="{{ $account->id }}" @selected($accountId === (string) $account->id)>{{ $account->name }}</option>
                 @endforeach
             </x-core::form-field>
             @if (! $editPotId)
@@ -662,9 +662,9 @@
                         class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-size: 16px;"
                     >
-                        <option value="">{{ Lang::get('pots::messages.form.select_goal') }}</option>
+                        <option value="" @selected(strlen($goalId) === 0)>{{ Lang::get('pots::messages.form.select_goal') }}</option>
                         @foreach ($goalsForPicker as $goal)
-                            <option value="{{ $goal->id }}">{{ $goal->name }}</option>
+                            <option value="{{ $goal->id }}" @selected($goalId === (string) $goal->id)>{{ $goal->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -798,9 +798,9 @@
                     :aria-describedby="$errorTarget !== '' ? 'move-to-sheet-error' : null"
                     style="font-size: 16px;"
                 >
-                    <option value="">{{ count($moveDestPotsSheet) === 0 ? Lang::get('pots::messages.move.no_others_short') : Lang::get('pots::messages.move.select_pot') }}</option>
+                    <option value="" @selected(strlen($transferTargetPotId) === 0)>{{ count($moveDestPotsSheet) === 0 ? Lang::get('pots::messages.move.no_others_short') : Lang::get('pots::messages.move.select_pot') }}</option>
                     @foreach ($moveDestPotsSheet as $destPot)
-                        <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
+                        <option value="{{ $destPot->id }}" @selected($transferTargetPotId === (string) $destPot->id)>{{ $destPot->name }}</option>
                     @endforeach
                 </x-core::form-field>
                 @if ($errorTarget !== '')
@@ -876,9 +876,9 @@
                     :disabled="$editPotId !== 0"
                     :class="$editPotId ? 'opacity-50 cursor-not-allowed' : ''"
                 >
-                    <option value="">{{ Lang::get('pots::messages.form.select_account') }}</option>
+                    <option value="" @selected(strlen($accountId) === 0)>{{ Lang::get('pots::messages.form.select_account') }}</option>
                     @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}">{{ $account->name }}</option>
+                        <option value="{{ $account->id }}" @selected($accountId === (string) $account->id)>{{ $account->name }}</option>
                     @endforeach
                 </x-core::form-field>
 
@@ -931,9 +931,9 @@
                             wire:model="goalId"
                             class="mt-2 block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         >
-                            <option value="">{{ Lang::get('pots::messages.form.select_goal') }}</option>
+                            <option value="" @selected(strlen($goalId) === 0)>{{ Lang::get('pots::messages.form.select_goal') }}</option>
                             @foreach ($goalsForPicker as $goal)
-                                <option value="{{ $goal->id }}">{{ $goal->name }}</option>
+                                <option value="{{ $goal->id }}" @selected($goalId === (string) $goal->id)>{{ $goal->name }}</option>
                             @endforeach
                         </select>
                     @endif
@@ -1042,9 +1042,9 @@
                         :aria-invalid="$errorTarget !== '' ? 'true' : null"
                         :aria-describedby="$errorTarget !== '' ? 'move-to-error' : null"
                     >
-                        <option value="">{{ count($moveDestPots) === 0 ? Lang::get('pots::messages.move.no_others') : Lang::get('pots::messages.move.select_pot') }}</option>
+                        <option value="" @selected(strlen($transferTargetPotId) === 0)>{{ count($moveDestPots) === 0 ? Lang::get('pots::messages.move.no_others') : Lang::get('pots::messages.move.select_pot') }}</option>
                         @foreach ($moveDestPots as $destPot)
-                            <option value="{{ $destPot->id }}">{{ $destPot->name }}</option>
+                            <option value="{{ $destPot->id }}" @selected($transferTargetPotId === (string) $destPot->id)>{{ $destPot->name }}</option>
                         @endforeach
                     </x-core::form-field>
                     @if ($errorTarget !== '')

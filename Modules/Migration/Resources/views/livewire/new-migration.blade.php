@@ -36,7 +36,7 @@
             class="disabled:cursor-not-allowed disabled:opacity-60"
         >
             @foreach (MigrationSourceProduct::cases() as $product)
-                <option value="{{ $product->value }}">{{ $product->label() }}</option>
+                <option value="{{ $product->value }}" @selected($sourceProduct === $product->value)>{{ $product->label() }}</option>
             @endforeach
         </x-core::form-field>
 

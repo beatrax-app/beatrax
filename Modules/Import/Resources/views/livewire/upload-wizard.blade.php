@@ -34,7 +34,7 @@
             wire:model.live="importType"
         >
             @foreach (ImportType::cases() as $type)
-                <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                <option value="{{ $type->value }}" @selected($importType === $type->value)>{{ $type->label() }}</option>
             @endforeach
         </x-core::form-field>
 
@@ -48,7 +48,7 @@
                 wire:model.live="sourceFormat"
             >
                 @foreach ($this->availableFormats() as $fmt)
-                    <option value="{{ $fmt['value'] }}">{{ $fmt['label'] }}</option>
+                    <option value="{{ $fmt['value'] }}" @selected($sourceFormat === $fmt['value'])>{{ $fmt['label'] }}</option>
                 @endforeach
             </x-core::form-field>
 

@@ -19,8 +19,8 @@
                 wire:change="choose"
                 class="max-w-xs"
             >
-                <option value="{{ UpdateChannel::Stable->value }}">{{ Lang::get('core::settings.about_updates.channel_stable') }}</option>
-                <option value="{{ UpdateChannel::Preview->value }}">{{ Lang::get('core::settings.about_updates.channel_preview') }}</option>
+                <option value="{{ UpdateChannel::Stable->value }}" @selected($channel === UpdateChannel::Stable->value)>{{ Lang::get('core::settings.about_updates.channel_stable') }}</option>
+                <option value="{{ UpdateChannel::Preview->value }}" @selected($channel === UpdateChannel::Preview->value)>{{ Lang::get('core::settings.about_updates.channel_preview') }}</option>
             </x-core::form-field>
 
             {{-- Only while preview is chosen: the warning is about what this

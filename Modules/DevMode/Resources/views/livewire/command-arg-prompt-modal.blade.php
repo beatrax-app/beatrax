@@ -91,12 +91,12 @@
                                     class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:ring-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     data-testid="arg-input-{{ $arg->name }}"
                                 >
-                                    <option value="">{{ Lang::get('dev::arg_prompt.select_placeholder') }}</option>
+                                    <option value="" @selected(strlen((string) ($values[$arg->name] ?? '')) === 0)>{{ Lang::get('dev::arg_prompt.select_placeholder') }}</option>
                                     {{-- ArgSpec::$options is a list of the literal tokens artisan
                                          accepts, so the VALUE is the element — keying the loop
                                          posted the array index and every choice failed its rule. --}}
                                     @foreach ($arg->options as $option)
-                                        <option value="{{ $option }}">{{ $option }}</option>
+                                        <option value="{{ $option }}" @selected((string) ($values[$arg->name] ?? '') === $option)>{{ $option }}</option>
                                     @endforeach
                                 </select>
                             @else

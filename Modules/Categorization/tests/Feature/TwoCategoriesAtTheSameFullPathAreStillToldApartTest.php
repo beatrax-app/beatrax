@@ -6,7 +6,7 @@ use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Support\PatternScan;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Ledger\Models\Category;
 
 // Qualifying a leaf with its group answers "Groceries" against
@@ -92,11 +92,15 @@ it('keeps the picker in the order the query asked for', function (): void {
 it('gives the rule builder no two options that read the same', function (): void {
     $html = Livewire::test(RuleFormModal::class)->assertOk()->html();
 
-    $matches = PatternScan::sets('/<option value="(\d+)">([^<]*)<\/option>/', $html);
-
+    // Through the parser, not a pattern: an option carries an attribute saying
+    // whether it is the selected one, and a tag-shaped needle matched none of
+    // them the moment that attribute landed.
     $labels = [];
-    foreach ($matches as $match) {
-        $labels[(int) $match[1]] = trim($match[2]);
+    foreach (RenderedMarkup::of($html)->all('option') as $option) {
+        $value = $option->attribute('value');
+        if ($value !== null && ctype_digit($value)) {
+            $labels[(int) $value] = $option->text();
+        }
     }
 
     expect($labels)->not->toBeEmpty()

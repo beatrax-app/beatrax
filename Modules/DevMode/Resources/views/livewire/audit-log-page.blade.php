@@ -37,9 +37,9 @@
                 wire:model.live="tierFilter"
                 class="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
             >
-                <option value="">{{ Lang::get('dev::audit.filter_all') }}</option>
-                <option value="{{ CommandTier::Safe->value }}">{{ Lang::get('dev::common.tier.safe') }}</option>
-                <option value="{{ CommandTier::Destructive->value }}">{{ Lang::get('dev::common.tier.destructive') }}</option>
+                <option value="" @selected(strlen($tierFilter) === 0)>{{ Lang::get('dev::audit.filter_all') }}</option>
+                <option value="{{ CommandTier::Safe->value }}" @selected($tierFilter === CommandTier::Safe->value)>{{ Lang::get('dev::common.tier.safe') }}</option>
+                <option value="{{ CommandTier::Destructive->value }}" @selected($tierFilter === CommandTier::Destructive->value)>{{ Lang::get('dev::common.tier.destructive') }}</option>
             </select>
         </div>
         <div class="flex items-center gap-2">

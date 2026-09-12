@@ -235,10 +235,10 @@
                         :label="Lang::get('counterparties::triage.type_label')"
                         wire:model="draftType"
                     >
-                        <option value="{{ CounterpartyType::Merchant->value }}">{{ Lang::get('counterparties::triage.type_merchant') }}</option>
-                        <option value="{{ CounterpartyType::Personal->value }}">{{ Lang::get('counterparties::triage.type_personal') }}</option>
-                        <option value="{{ CounterpartyType::Bank->value }}">{{ Lang::get('counterparties::triage.type_bank') }}</option>
-                        <option value="{{ CounterpartyType::Government->value }}">{{ Lang::get('counterparties::triage.type_government') }}</option>
+                        <option value="{{ CounterpartyType::Merchant->value }}" @selected($draftType === CounterpartyType::Merchant->value)>{{ Lang::get('counterparties::triage.type_merchant') }}</option>
+                        <option value="{{ CounterpartyType::Personal->value }}" @selected($draftType === CounterpartyType::Personal->value)>{{ Lang::get('counterparties::triage.type_personal') }}</option>
+                        <option value="{{ CounterpartyType::Bank->value }}" @selected($draftType === CounterpartyType::Bank->value)>{{ Lang::get('counterparties::triage.type_bank') }}</option>
+                        <option value="{{ CounterpartyType::Government->value }}" @selected($draftType === CounterpartyType::Government->value)>{{ Lang::get('counterparties::triage.type_government') }}</option>
                     </x-core::form-field>
 
                     @if ($suggesting)

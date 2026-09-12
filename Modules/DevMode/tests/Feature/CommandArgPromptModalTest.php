@@ -140,8 +140,11 @@ it('draws each select choice under the token artisan accepts, not its position i
     Livewire::actingAs($user)
         ->test(CommandArgPromptModal::class)
         ->dispatch('command-args:prompt', name: 'beatrax:failed-jobs', tier: 'safe', prefill: [])
-        ->assertSeeHtml('<option value="prune">prune</option>')
-        ->assertDontSeeHtml('<option value="0">');
+        // The opening tag only: the option now also states whether it is the
+        // selected one, and a needle carrying the closing bracket matched
+        // neither the offending value="0" nor the correct one.
+        ->assertSeeHtml('<option value="prune"')
+        ->assertDontSeeHtml('<option value="0"');
 });
 
 it('submit() rejects an arg value that violates its ArgSpec rules instead of spawning', function (): void {

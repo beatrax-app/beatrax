@@ -38,7 +38,7 @@
         data-testid="account-currency-select-{{ $accountId }}"
     >
         @foreach ($currencyOptions as $code => $currencyName)
-            <option value="{{ $code }}">{{ $code }} — {{ $currencyName }}</option>
+            <option value="{{ $code }}" @selected($currency === $code)>{{ $code }} — {{ $currencyName }}</option>
         @endforeach
     </x-core::form-field>
 

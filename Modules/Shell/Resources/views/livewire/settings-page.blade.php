@@ -187,8 +187,8 @@
                 wire:model="defaultCurrencyView"
                 class="max-w-xs"
             >
-                <option value="{{ CurrencyView::BaseOnly->value }}">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
-                <option value="{{ CurrencyView::Original->value }}">{{ Lang::get('core::settings.currency_display.original') }}</option>
+                <option value="{{ CurrencyView::BaseOnly->value }}" @selected($defaultCurrencyView === CurrencyView::BaseOnly->value)>{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
+                <option value="{{ CurrencyView::Original->value }}" @selected($defaultCurrencyView === CurrencyView::Original->value)>{{ Lang::get('core::settings.currency_display.original') }}</option>
             </x-core::form-field>
         </section>
 
@@ -206,7 +206,7 @@
                     class="max-w-xs"
                 >
                     @foreach ($currencyOptions as $code => $currencyName)
-                        <option value="{{ $code }}">{{ $code }} — {{ $currencyName }}</option>
+                        <option value="{{ $code }}" @selected($baseCurrency === $code)>{{ $code }} — {{ $currencyName }}</option>
                     @endforeach
                 </x-core::form-field>
             </div>
@@ -326,12 +326,12 @@
                     wire:model="driftAlertThresholdPercent"
                     class="max-w-xs"
                 >
-                    <option value="1">{{ Lang::get('core::settings.drift.options.1') }}</option>
-                    <option value="2">{{ Lang::get('core::settings.drift.options.2') }}</option>
-                    <option value="5">{{ Lang::get('core::settings.drift.options.5') }}</option>
-                    <option value="10">{{ Lang::get('core::settings.drift.options.10') }}</option>
-                    <option value="25">{{ Lang::get('core::settings.drift.options.25') }}</option>
-                    <option value="50">{{ Lang::get('core::settings.drift.options.50') }}</option>
+                    <option value="1" @selected($driftAlertThresholdPercent === 1)>{{ Lang::get('core::settings.drift.options.1') }}</option>
+                    <option value="2" @selected($driftAlertThresholdPercent === 2)>{{ Lang::get('core::settings.drift.options.2') }}</option>
+                    <option value="5" @selected($driftAlertThresholdPercent === 5)>{{ Lang::get('core::settings.drift.options.5') }}</option>
+                    <option value="10" @selected($driftAlertThresholdPercent === 10)>{{ Lang::get('core::settings.drift.options.10') }}</option>
+                    <option value="25" @selected($driftAlertThresholdPercent === 25)>{{ Lang::get('core::settings.drift.options.25') }}</option>
+                    <option value="50" @selected($driftAlertThresholdPercent === 50)>{{ Lang::get('core::settings.drift.options.50') }}</option>
                 </x-core::form-field>
             </div>
         </section>
