@@ -7,6 +7,7 @@ namespace Modules\Sync\Tests\Support;
 use Modules\Core\Public\Support\PatternScan;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use SplFileInfo;
 
 // Which tables something actually writes to the op log, read off the write
@@ -18,9 +19,22 @@ use SplFileInfo;
 final class CaptureSites
 {
     // The two producers that put a row on the wire: an EntityMutated dispatch,
-    // and a direct OpLogWriter call from a capture listener. Both name their
-    // table as the first named argument, so the match IS the write site.
-    public const string PATTERN = "/(?:new EntityMutated\(|->write[A-Za-z]+\()\s*table:\s*'([a-z_]+)'/";
+    // and a direct OpLogWriter call from a capture listener. Either names its
+    // table first, so the match IS the write site.
+    //
+    // The label is optional because the API does not require it: every
+    // OpLogWriter::write* method takes `string $table` positionally, and this
+    // read used to demand `table:`. A single positional writeSet() naming a
+    // table declared device-local leaked it to the op log with both Arch files
+    // that ask this question still green.
+    public const string PATTERN = "/(?:new EntityMutated\(|->write[A-Za-z]+\()\s*(?:table:\s*)?'([a-z_]+)'/";
+
+    // A scan that stops matching reports the same short list a tree with
+    // fewer captures does, and the dangerous direction here is the quiet one:
+    // "opens no new capture gap" goes loudly red on an empty set, while "never
+    // captures a device-local table" passes. Thirty-three tables are captured
+    // today.
+    private const int FEWEST_CAPTURED_TABLES = 25;
 
     /**
      * @return list<string>
@@ -87,6 +101,16 @@ final class CaptureSites
             }
         }
 
-        return array_keys($found);
+        $tables = array_keys($found);
+
+        if (count($tables) < self::FEWEST_CAPTURED_TABLES) {
+            throw new RuntimeException(
+                'CaptureSites read '.count($tables).' captured tables, under the '.self::FEWEST_CAPTURED_TABLES
+                .' this tree has. A reader that stopped recognising write sites lets a table reach the op log '
+                .'with every rule that asks this question still green.'
+            );
+        }
+
+        return $tables;
     }
 }
