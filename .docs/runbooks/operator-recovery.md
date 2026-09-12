@@ -212,7 +212,16 @@ the pages it had just replayed. Not one byte of the backup survived.
 A row of `kind=backup_corrupt` and `severity=critical` lands in the
 `system_alerts` table whenever a backup or restore run fails. The
 persistent banner on every authenticated page surfaces the row in rose
-until the operator acknowledges it.
+until the fault stops being true or the operator acknowledges it.
+
+A `db:backup` run that exits `SUCCESS` withdraws these rows itself: its
+copy passed `PRAGMA integrity_check`, which is the answer to a banner
+saying the backups cannot be relied on. Withdrawing stamps
+`acknowledged_at` — the row stays, the history keeps it. The one cause
+left standing is `restore_failed`, which is not a claim about backup
+health but a record that a swap aborted, and the only pointer the
+operator has to the pre-restore snapshot; take that one down by hand
+once the snapshot has been dealt with.
 
 One kind covers four different failures, so `metadata.cause` says which —
 `Modules\Core\Internal\Enums\BackupFailureCause`, and the banner picks

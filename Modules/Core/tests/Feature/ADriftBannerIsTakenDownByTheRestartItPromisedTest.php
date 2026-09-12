@@ -113,10 +113,10 @@ function driftBannerOpenCount(string $kind): int
     return SystemAlert::query()->where('kind', $kind)->whereNull('acknowledged_at')->count();
 }
 
-// A backup that failed its integrity check is the event itself, not a state to
-// re-read. It is raised alongside the drift so a withdrawal that swept the
-// table rather than the one kind it healed is caught by the same run that
-// proves the sweep happens at all.
+// A boot that read a PRAGMA back has observed nothing about the backups folder,
+// so it settles nothing there — `db:backup` does that, on a copy it verified.
+// Raised alongside the drift so a withdrawal that swept the table rather than
+// the one kind it healed is caught by the run that proves the sweep happens.
 function driftBannerLatchingAlert(): int
 {
     /** @var SystemAlert $alert */

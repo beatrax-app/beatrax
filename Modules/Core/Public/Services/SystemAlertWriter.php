@@ -127,23 +127,47 @@ final readonly class SystemAlertWriter
     // one has to name null too -- which is what acknowledgeForUser() reads it
     // as, and why its predicate had to say so.
     /**
+     * @param  list<string>  $latchingCauses  the `metadata.cause` values this pass makes no claim about
      * @return int the number of open rows of this kind that were closed
      */
-    public function withdrawSystemWide(string $kind, CarbonImmutable $withdrawnAt): int
+    public function withdrawSystemWide(string $kind, CarbonImmutable $withdrawnAt, array $latchingCauses = []): int
     {
-        $openIds = $this->db->connection()->table('system_alerts')
+        $open = $this->db->connection()->table('system_alerts')
             ->whereNull('user_id')
             ->where('kind', $kind)
             ->whereNull('acknowledged_at')
-            ->pluck('id');
+            ->pluck('metadata', 'id');
 
         $closed = 0;
 
-        foreach ($openIds as $id) {
+        foreach ($open as $id => $metadata) {
+            if (self::recordsLatchingCause($metadata, $latchingCauses)) {
+                continue;
+            }
+
             $closed += $this->acknowledgeForUser(self::toInt($id), null, $withdrawnAt) ? 1 : 0;
         }
 
         return $closed;
+    }
+
+    // Whether a row records one of the causes the withdrawing pass cannot
+    // speak to, for a kind several passes share. Read here rather than as a
+    // `whereNotIn` over the JSON path, where SQL's null-in-null-out spares
+    // every row that recorded no cause at all -- the opposite of the intent.
+    /**
+     * @param  list<string>  $latchingCauses
+     */
+    private static function recordsLatchingCause(mixed $metadata, array $latchingCauses): bool
+    {
+        if ($latchingCauses === []) {
+            return false;
+        }
+
+        $decoded = json_decode(self::toString($metadata), true);
+        $cause = is_array($decoded) ? ($decoded['cause'] ?? null) : null;
+
+        return is_string($cause) && in_array($cause, $latchingCauses, true);
     }
 
     // The one write of `acknowledged_at`, so the stamp and the op carrying it

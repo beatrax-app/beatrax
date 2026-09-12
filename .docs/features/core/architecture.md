@@ -644,6 +644,23 @@ happened since the last backup. Mechanics worth calling out:
   bridges to the same corrupt-path failure surface the integrity-check
   branch uses: write a critical `system_alerts(backup_corrupt)` row,
   leave any partial output under `.suspect`, return `FAILURE`.
+- A run that returns `SUCCESS` withdraws the open
+  `system_alerts(backup_corrupt)` rows on this machine. That
+  post-VACUUM `PRAGMA integrity_check` is the only one in the tree run
+  against a produced backup, so this command is the only pass that can
+  answer a banner saying the backups cannot be relied on — the
+  freshness probe reads sidecar dates and re-verifies nothing. The
+  withdrawal sits OUTSIDE the keep-a-copy branch that withdraws
+  `backup_overdue`: overdue counts sidecar dates and a skipped run
+  refreshes none, while the skip branch still verified a copy and only
+  then found an identical one already on disk. Rows whose
+  `metadata.cause` is `restore_failed` are left standing
+  (`BackupFailureCause::unansweredByAVerifiedBackup()`) — that one
+  records an aborted swap and names the pre-restore snapshot holding
+  the data it aborted over, which no later backup speaks to. A row
+  carrying no `cause` at all is withdrawn, because the banner reads it
+  as the source-integrity sentence, which is exactly what a verified
+  copy disproves.
 
 `RestoreDatabaseCommand` restores the live SQLite database from a
 backup file with three load-bearing safety rails:
@@ -1001,9 +1018,12 @@ table where a raw delete emits no tombstone and the peer resurrects the
 row. Because the withdrawal goes through `acknowledgeForUser()`, the
 `system_alerts_release_dedup_key` trigger fires and the kind can be
 raised again the moment the pragma drifts a second time. Only these two
-kinds are withdrawn here — `backup_corrupt` records an event rather than
-a state, and a corrupt-backup banner that cleared itself would be a
-worse defect than the one this fixed.
+kinds are withdrawn here, and the reason is that these are the two this
+pass raised: a boot that read a PRAGMA back has observed nothing about
+the backups folder, so a `backup_corrupt` row raised alongside a drift is
+asserted to survive this withdrawal. That kind is settled by the pass
+that can disprove it instead — a `db:backup` run whose copy passed its
+own integrity check, described under the backup commands above.
 
 Models (`SystemAlert`, `User`, `UserPreference`) and
 `AcknowledgeSystemAlert`:
