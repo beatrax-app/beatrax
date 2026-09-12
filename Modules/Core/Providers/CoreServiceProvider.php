@@ -208,12 +208,10 @@ final class CoreServiceProvider extends ServiceProvider
             $app->make(MigrationWindow::class)->close();
         });
 
-        // Migrator fires MigrationsEnded after its loop rather than from a
-        // finally, so a migration that throws never closes what the start
-        // event opened. Three callers drive the migrator and a shell that
-        // catches the throw goes on serving with the listener above disabled,
-        // so the window is bounded here by the lifetime that opened it rather
-        // than at each call site, where the next caller would forget again.
+        // Migrator fires MigrationsEnded after its loop, not from a finally, so
+        // a migration that throws never closes what the start event opened.
+        // Bounded by the lifetime that opened it rather than at each call site,
+        // where two of the three callers had already forgotten.
         $this->app->terminating(static function () use ($app): void {
             $app->make(MigrationWindow::class)->close();
         });
