@@ -206,11 +206,107 @@ columns are coupled — `fingerprint` is composed over `counterparty_normalized`
 swept half way re-imports as a second ledger — and the rollback restores the pre-migration
 snapshot as a whole.
 
-What the measurement leaves is a **bound, not a guarantee**. Past the index fix the pass is
-roughly linear at 0.012 ms per row touched, so the 30-second lock budget is reached somewhere
-around 95,000 transactions with a full op log behind them. `AUsersOpLogPagesInIdOrderWithoutSortingItTest`
-explains every ordered page the pass issues and fails on a `TEMP B-TREE`, which is the
-regression that would put the quadratic back; nothing yet watches the linear ceiling.
+What the measurement leaves is a **bound, not a guarantee**, and the two figures this
+paragraph used to carry were both too kind.
+
+The fixture behind the 95.6 s above holds 625,000 op-log entries against 25,000 transactions,
+which is 25 rows per transaction. The live desktop runs at
+[48.8](../../architecture/reads-bounded-by-the-user.md), so that fixture models half a ledger.
+Re-measured at the live ratio — 49 entries per transaction, the whole pass including the
+counterparty backfill, file-backed, outside the suite:
+
+| transactions | op-log entries | writer lock held, before | after |
+| --- | --- | --- | --- |
+| 25,000 | 1,225,000 | 23.3 s | 14.9 s |
+| 50,000 | 2,450,000 | 53.2 s | 32.1 s |
+| 95,000 | 4,655,000 | 116.9 s | 64.6 s |
+
+So the 30-second budget was reached around **31,000** transactions, not 95,000, and it is now
+reached around **47,000**. The pass is not linear either: fitted across that range the
+exponent was **1.21** and is now **1.10**, and what is left of the curve is the commit — the
+WAL grows to hold every rewritten row, because the shape is one transaction.
+
+`AUsersOpLogPagesInIdOrderWithoutSortingItTest` explains every ordered page the pass issues
+**over `op_log_entries`** and fails on a `TEMP B-TREE`. That was the whole of the guard and
+only a ninth of the pass; the nine tables and the batch shape below are the rest of it.
+`EncryptionMigrationBatchedWritesTest` now explains the pages of all nine and pins the batch.
+
+#### The eight other tables the pass walks
+
+`op_log_entries` was the largest of the walks and never the only one. The same
+`where user_id = ? and id > ? order by id` pages the projection sweep on all five
+`PROJECTION_COLUMNS` tables, and `CounterpartyKeyBackfill` — which runs inside this same
+transaction — pages `transactions`, `chain_links`, `merchants` and `recurring_series`. Every
+index those eight carried led with `user_id` and then the posted date, the state, the slug or
+the cluster key, so every one of them planned `USE TEMP B-TREE FOR ORDER BY` and sorted the
+user's whole table to find the next page.
+
+The two that carry ledger-sized row counts, at 95,000 transactions:
+
+| | before | after |
+| --- | --- | --- |
+| the projection sweep of `transactions` | 8.36 s | 5.02 s |
+| the counterparty key backfill | 18.04 s | 3.20 s |
+
+The backfill is the instructive one. Across 25,000 / 50,000 / 95,000 transactions it went
+1.22 s, 4.98 s, 18.04 s — an exponent of **2.02**, which is quadratic measured rather than
+quadratic inferred. It grew faster than the sweep beside it because it rewrites
+`counterparty_normalized`, a column of the very index its walk was reading.
+
+The index is `(user_id, id)` on all eight, and deliberately **not** the bare `user_id` that
+answers the same question on `op_log_entries`. Two reasons, both measured:
+
+- `notifications.id` is a varchar primary key rather than the rowid. The rowid SQLite appends
+  to every index entry orders that table by something the walk never asked for, so a bare
+  `user_id` index there leaves the `TEMP B-TREE` exactly where it was.
+- A one-column `user_id` index on `transactions` is narrow enough that the planner prefers it
+  to `transactions_uncategorized_idx`, and the triage count goes from 0.01 ms to **24.81 ms**
+  at 95,000 rows. That is
+  [the partial-index defect](../../architecture/a-rebuilt-table-loses-a-partial-index.md)
+  arriving by a different door — the predicate is still there, and nothing reads it. Naming
+  `id` makes the two indexes the same width and the partial one keeps its query.
+
+`+user_id = ?` was the other candidate and it needs no index at all: the unary plus strips the
+affinity that makes an index eligible, the planner falls back to
+`SEARCH transactions USING INTEGER PRIMARY KEY (rowid>?)`, and the sort is gone. It was
+rejected on both counts it was measured for. It is slower — 72.5 s against 64.6 s for the
+whole pass at 95,000, because it reads every other user's rows too — and stripping the
+affinity also strips the conversion that goes with it, so the same predicate bound as a string
+matches **nothing**, silently. A pass that encrypts no rows and reports success is a worse
+failure than a slow one.
+
+#### What a case over ids charges per row
+
+`writeRowsById()` folds a batch of rows into `set value = case id when ? then ? ... else value
+end`. SQLite re-reads that whole `when` chain for every row the statement updates, so a batch
+of n rows costs O(n) comparisons per row and O(n²) per statement. The only cap was on bindings
+— 900 of them, which for a two-column op-log row is 180 rows, far past the knee.
+
+The op-log arm's write phase over 1,225,000 entries, varying nothing but the rows per
+statement:
+
+| rows per statement | statements | write |
+| --- | --- | --- |
+| 1 | 1,225,000 | 7.30 s |
+| 5 | 245,000 | 4.55 s |
+| 10 | 122,500 | 4.53 s |
+| **20** | 61,250 | **4.58 s** |
+| 45 | 29,400 | 5.78 s |
+| 90 | 14,700 | 8.32 s |
+| 180, the binding ceiling | 7,350 | 12.19 s |
+| 360 | 4,900 | 19.31 s |
+
+Flat from 5 to 20, and linear in the batch above it — which is the per-row O(n) term becoming
+the whole cost. `MAX_ROWS_PER_STATEMENT` is 20. The binding ceiling stays beside it rather
+than being replaced, because a row with many columns reaches 900 bindings before it reaches
+twenty rows.
+
+A plain `where id = ?` per row is faster still — 3.81 s re-preparing per row the way
+`Connection::update()` does, 1.92 s reusing one prepared statement. It was not taken. That
+shape is 1,225,000 round trips through the query builder and one `QueryExecuted` event each,
+and the harness that produced every number on this page is raw PDO, so it does not model the
+framework layer at all. Twenty rows per statement takes most of the win at 61,250 statements,
+which is a count nothing above SQLite notices.
 
 ## Getting back inside the guarantee
 

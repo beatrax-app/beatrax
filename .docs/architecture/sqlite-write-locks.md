@@ -86,6 +86,8 @@ The enable-time encryption pass is the worked example. Measured on a file-backed
 these connection settings, it held one transaction for **95.6 seconds** at 25,000 transactions
 and 625,000 op-log entries, and a second process running `DatabaseQueue::pop()`'s read-then-write
 shape against the same file waited its full thirty seconds and then raised `database is locked`.
+That fixture holds 25 op-log entries per transaction and the live desktop runs at 48.8; at the
+live ratio the same 25,000-transaction ledger held the lock for 116.9 seconds.
 
 The instructive part is what the cause turned out to be. The obvious reading — one transaction
 spanning too much work — was wrong. Ninety-two of those seconds were **reads**: a `chunkById`
@@ -104,6 +106,17 @@ distinguished by measurement rather than by reading the code:
   `EXPLAIN QUERY PLAN` for the paging query before restructuring anything: a `USE TEMP B-TREE
   FOR ORDER BY` inside `chunkById` is quadratic in the table, and it reads from the outside
   exactly like a transaction that is doing too much.
+- **The statement shape charges per row for the batch it rides in.** This one does not show up
+  in a query plan at all. A batched `set col = case id when ? then ? ... end` is re-read in
+  full for every row it updates, so the per-row cost grows with the batch, and a batch sized
+  by a binding ceiling rather than by measurement sits on the wrong side of the knee.
+
+The pass above carried all three, and the first index fix found only the second of them — the
+op-log walk. Eight further tables were still sorting and the batched write was the largest
+single term left. **Price every layer before choosing one**, or the ceiling moves instead of
+going away: see
+[the eight other tables the pass walks](../features/sync/sensitive-columns-at-rest.md#the-eight-other-tables-the-pass-walks)
+and [what a case over ids charges per row](../features/sync/sensitive-columns-at-rest.md#what-a-case-over-ids-charges-per-row).
 
 ## How to tell if this regresses
 
