@@ -9,9 +9,9 @@ return [
     'running' => 'In esecuzione…',
     'empty_html' => 'Nessun output delle probe acquisito finora. Premi :action per richiamare :command.',
     'latest_output' => 'Ultimo output delle probe',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'riuscito',
     'aria_warning' => 'avviso',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'fallito',
     'aria_info' => 'info',
     'exit_code' => 'Codice di uscita: :code',
 ];

@@ -36,7 +36,7 @@ return [
     'cancel' => 'Zrušiť',
     'rerun' => 'Spustiť znova',
     'started' => 'Spustené :when',
-    'exit' => 'exit',
+    'exit' => 'kód ukončenia',
 
     'toast' => [
         'unknown_command' => 'Neznámy príkaz: :command',

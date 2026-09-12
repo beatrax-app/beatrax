@@ -9,9 +9,9 @@ return [
     'running' => 'Bezig…',
     'empty_html' => 'Nog geen probe-uitvoer vastgelegd. Druk op :action om :command aan te roepen.',
     'latest_output' => 'Laatste probe-uitvoer',
-    'aria_pass' => 'pass',
+    'aria_pass' => 'geslaagd',
     'aria_warning' => 'waarschuwing',
-    'aria_fail' => 'fail',
+    'aria_fail' => 'mislukt',
     'aria_info' => 'info',
     'exit_code' => 'Exitcode: :code',
 ];

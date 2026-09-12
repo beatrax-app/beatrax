@@ -13,7 +13,7 @@ return [
     'digits_entered' => '{1} unesena :count znamenka|[2,4] unesene :count znamenke|[5,*] uneseno :count znamenki',
     'pad_label' => 'PIN tipkovnica',
     'digit_aria' => 'Znamenka :digit',
-    'backspace_aria' => 'Backspace',
+    'backspace_aria' => 'Obriši znak',
     'ok_aria' => 'U redu — potvrdi PIN',
     'ok' => 'U redu',
 
