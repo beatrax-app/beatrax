@@ -157,6 +157,61 @@ rotated case, and it errs towards leaving a value alone: an unopenable ciphertex
 this device lacks) is skipped rather than wrapped again.
 `ResealSurvivesAnEpochRotationTest` pins both halves.
 
+### What the enable-time pass holds the write lock for
+
+The desktop runs four processes against one SQLite file and `config/database.php` sets
+`transaction_mode = IMMEDIATE`, so a transaction takes the single writer lock at `BEGIN` and
+holds it to `COMMIT`. `busy_timeout` is 30 seconds. A transaction that outlives that does not
+slow the other three down; it fails them with `database is locked`. See
+[SQLite write locks](../../architecture/sqlite-write-locks.md).
+
+The enable-time pass is one transaction over the whole conversion, and on a file-backed
+fixture with the real connection settings — 25,000 transactions and 625,000 op-log entries,
+about nine years of one busy account on a device that syncs — it held that lock for **95.6
+seconds**. A second process running `DatabaseQueue::pop()`'s shape against the same file waited
+out its full 30 seconds and then failed.
+
+The span was not the cause. Ninety-two of those seconds were the op-log arm, and almost all of
+that was **reading**, not writing.
+
+#### The page that sorted the whole log, once per page
+
+Every bulk walk of `op_log_entries` — the pre-migration snapshot, the sweep, and `chunkById`
+generally — pages with `where user_id = ? and id > ? order by id limit 500`. The table shipped
+with two indexes, `(user_id, hlc_l, hlc_c, device_id)` and
+`(user_id, table_name, pk, hlc_l, hlc_c)`. Both lead on `user_id`, so the planner took one for
+the filter; neither yields `id` order, so it added `USE TEMP B-TREE FOR ORDER BY` and sorted
+**every one of the user's entries** to find the next 500. Once per page, 1,250 pages: the cost
+per row grows with the log, and the pass is quadratic in it.
+
+A bare chunked walk of 625,000 entries, nothing but the reads:
+
+| | wall clock |
+| --- | --- |
+| with the two shipped indexes | 95.3 s |
+| with an index on `user_id` | 0.4 s |
+
+`op_log_entries_user_id_index` is declared on `user_id` **alone**. SQLite appends the rowid to
+every index entry, and `id` is the rowid here, so that one index answers `user_id = ?`,
+`id > ?` and `order by id` together; naming `id` a second time would only widen it.
+
+With the index in place, the same 25,000-transaction fixture converts in **6.5 seconds** — one
+transaction still, and the contending queue tick reserves its job after a 2.9-second wait
+instead of failing. At 60,000 transactions and 1.5M entries it is 18.9 seconds.
+
+#### What the transaction still is, and the headroom it has left
+
+One outer transaction over bounded batches, unchanged. That shape is not incidental: the
+columns are coupled — `fingerprint` is composed over `counterparty_normalized`, so a table
+swept half way re-imports as a second ledger — and the rollback restores the pre-migration
+snapshot as a whole.
+
+What the measurement leaves is a **bound, not a guarantee**. Past the index fix the pass is
+roughly linear at 0.012 ms per row touched, so the 30-second lock budget is reached somewhere
+around 95,000 transactions with a full op log behind them. `AUsersOpLogPagesInIdOrderWithoutSortingItTest`
+explains every ordered page the pass issues and fails on a `TEMP B-TREE`, which is the
+regression that would put the quadratic back; nothing yet watches the linear ceiling.
+
 ## Getting back inside the guarantee
 
 Two things end up outside the encryption guarantee, and they are the same shape: content that
