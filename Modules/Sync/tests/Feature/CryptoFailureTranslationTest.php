@@ -129,6 +129,28 @@ it('translates a libsodium failure while appending an epoch', function (): void 
         ->toThrow(CryptoOperationFailedException::class, 'GDK epoch append');
 });
 
+// The staged twin translates identically. A rotation calls it from inside an
+// SQL transaction, and a raw SodiumException escaping there would roll the
+// transaction back under a type no caller of rotateAndRevoke() catches.
+it('translates a libsodium failure while staging an appended epoch', function (): void {
+    $user = cryptoFailureUser('crypto-fail-stage-append');
+
+    /** @var GdkKeyringService $service */
+    $service = $this->app->make(GdkKeyringService::class);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $service->generateAndPersist((int) $user->id, $session);
+
+    $this->app->instance(FileEncryptor::class, failingEncryptor());
+    forgetCryptoSingletons($this->app);
+    /** @var GdkKeyringService $broken */
+    $broken = $this->app->make(GdkKeyringService::class);
+
+    expect(fn () => $broken->stageAppendedEpoch((int) $user->id, new GdkEpoch(epochId: 2, keyHex: str_repeat('ab', 32)), $session))
+        ->toThrow(CryptoOperationFailedException::class, 'GDK epoch append');
+});
+
 it('translates a libsodium failure while re-wrapping under a new KEK', function (): void {
     $user = cryptoFailureUser('crypto-fail-rewrap');
 

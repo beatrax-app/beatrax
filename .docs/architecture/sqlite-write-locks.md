@@ -75,6 +75,36 @@ The `readonly_select` connection sets `'transaction_mode' => 'DEFERRED'`
 explicitly. It runs with `PRAGMA query_only = 1` and can never write, so asking
 for the write lock would queue a read behind every writer for nothing.
 
+## The other half: how long a transaction runs
+
+`IMMEDIATE` turns an instant failure into a wait, and `busy_timeout` bounds the wait at thirty
+seconds. Past that the failure comes back — so the setting converts "any contention loses a
+job" into "contention *longer than thirty seconds* loses a job", and how long a transaction
+runs becomes a correctness property rather than a performance one.
+
+The enable-time encryption pass is the worked example. Measured on a file-backed fixture with
+these connection settings, it held one transaction for **95.6 seconds** at 25,000 transactions
+and 625,000 op-log entries, and a second process running `DatabaseQueue::pop()`'s read-then-write
+shape against the same file waited its full thirty seconds and then raised `database is locked`.
+
+The instructive part is what the cause turned out to be. The obvious reading — one transaction
+spanning too much work — was wrong. Ninety-two of those seconds were **reads**: a `chunkById`
+walk whose `order by id` no index could answer, so every page sorted the user's whole log into
+a temp b-tree. An index made the same transaction take 6.5 seconds with nothing about its span
+changed. See
+[what the enable-time pass holds the write lock for](../features/sync/sensitive-columns-at-rest.md#what-the-enable-time-pass-holds-the-write-lock-for).
+
+So a transaction over the busy_timeout is a symptom with at least two causes, and they are
+distinguished by measurement rather than by reading the code:
+
+- **The span really is wrong** when something that is not a database write is inside it — a
+  file rename, a `cache->put` on the `database` store, an HTTP call. Those cannot roll back
+  either, which is the stronger reason to move them out.
+- **The work is slower than it looks** when a bulk pass reads by a key nothing indexes. Check
+  `EXPLAIN QUERY PLAN` for the paging query before restructuring anything: a `USE TEMP B-TREE
+  FOR ORDER BY` inside `chunkById` is quadratic in the table, and it reads from the outside
+  exactly like a transaction that is doing too much.
+
 ## How to tell if this regresses
 
 `ATransactionThatReadsThenWritesDoesNotLoseToALatecomerTest` holds a transaction

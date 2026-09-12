@@ -75,12 +75,14 @@ final readonly class GdkRotationService
         $identity = $this->requireIdentity($userId, $session);
 
         $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+        $stage = null;
 
         try {
-            // Revoke + epoch append + fan-out in ONE SQL transaction, so a
-            // later failure can never commit the revoke-only state. Residual:
-            // appendEpoch() writes the keyring FILE, outside the transaction.
-            $connection->transaction(function () use ($connection, $userId, $deviceRegistryId, $now, $newEpochId, $rawGdkKey, $session, $identity): void {
+            // Revoke + epoch + fan-out in ONE SQL transaction, so a later
+            // failure can never commit the revoke-only state. The keyring FILE
+            // is only STAGED in here; the rename that cannot roll back happens
+            // after the commit, and a rollback discards the stage instead.
+            $connection->transaction(function () use ($connection, $userId, $deviceRegistryId, $now, $newEpochId, $rawGdkKey, $session, $identity, &$stage): void {
                 // confirmed_at is the exact column DeviceRegistryService's
                 // device-key queries filter on, so this one write closes the
                 // Ed25519 gate and removes the device from the fan-out below.
@@ -93,7 +95,7 @@ final readonly class GdkRotationService
                     ]);
 
                 $newEpoch = new GdkEpoch(epochId: $newEpochId, keyHex: $this->sodium->binToHex($rawGdkKey));
-                $this->keyringService->appendEpoch($userId, $newEpoch, $session);
+                $stage = $this->keyringService->stageAppendedEpoch($userId, $newEpoch, $session);
 
                 $selfDeviceId = $this->selfDeviceId($userId);
 
@@ -112,11 +114,32 @@ final readonly class GdkRotationService
                     );
                 }
             });
-        } catch (SodiumException $e) {
-            throw CryptoOperationFailedException::during('GDK rotation', $e);
+        } catch (\Throwable $e) {
+            // The staged keyring is the only thing the rollback did not undo.
+            if ($stage !== null) {
+                $this->keyringService->discardStagedEpoch($stage);
+            }
+
+            throw $e instanceof SodiumException
+                ? CryptoOperationFailedException::during('GDK rotation', $e)
+                : $e;
         } finally {
             sodium_memzero($rawGdkKey);
         }
+
+        // A committed transaction always ran the stage, so this says so rather
+        // than skipping the rename in silence and leaving a stranded epoch.
+        if ($stage === null) {
+            throw new \LogicException(
+                "GdkRotationService::rotateAndRevoke — the rotation for user {$userId} committed with no staged keyring.",
+            );
+        }
+
+        // Past the commit, and the last thing that happens: current_epoch now
+        // names this epoch, so until the rename lands the keyring cannot answer
+        // for it. A failure here throws SecretFileException and deliberately
+        // keeps the .tmp, which is the only copy of the key, for a retry.
+        $this->keyringService->finalizeStagedEpoch($stage);
     }
 
     // The seal gives confidentiality; the detached Ed25519 signature over the

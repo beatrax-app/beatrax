@@ -134,7 +134,8 @@ final class GdkKeyringService
 
     // Finalizes a previously-staged epoch — renames the .tmp encrypted
     // keyring file into place. Call ONLY after the ambient SQL transaction
-    // that wrote current_epoch in stageFirstEpoch() has committed.
+    // that wrote current_epoch alongside the stage has committed, whether
+    // that stage came from stageFirstEpoch() or stageAppendedEpoch().
     /**
      * @throws SecretFileException if the rename fails.
      */
@@ -184,7 +185,14 @@ final class GdkKeyringService
             // 164-row page paid 164 key derivations — minutes in libsodium,
             // blowing max_execution_time and wedging the single-threaded
             // desktop server for every other request.
-            $fingerprint = $this->keyringCacheKey($userId, $kek);
+
+            // Keyed by the KEK itself, never by user alone: a rotated or
+            // re-wrapped key yields a different entry rather than resolving to
+            // a stale keyring. Plain bin2hex, NOT the injectable
+            // SodiumPrimitives: this is an array key, not crypto.
+            $fingerprint = $userId.':'.bin2hex(
+                sodium_crypto_generichash($kek, '', self::CACHE_FINGERPRINT_BYTES),
+            );
 
             if (isset($this->keyringCache[$fingerprint])) {
                 return $this->keyringCache[$fingerprint];
@@ -223,23 +231,10 @@ final class GdkKeyringService
         }
     }
 
-    // Keyed by the KEK itself, never by user alone: a withheld key never
-    // reaches this method (release() returns null and the caller throws), and
-    // a rotated or re-wrapped key yields a different entry rather than
-    // resolving to a stale keyring.
-    private function keyringCacheKey(int $userId, string $kek): string
-    {
-        // Plain bin2hex, NOT the injectable SodiumPrimitives: this is an array
-        // key, not crypto, and routing it through the seam put a failure point
-        // ahead of the translation that turns libsodium errors into
-        // CryptoOperationFailedException.
-        return $userId.':'.bin2hex(
-            sodium_crypto_generichash($kek, '', self::CACHE_FINGERPRINT_BYTES),
-        );
-    }
-
     // Appends $epoch to the keyring WITHOUT discarding any prior epoch,
     // re-encrypts atomically, and advances current_epoch to $epoch->epochId.
+    // Renames the file itself, so a caller inside an SQL transaction wants
+    // stageAppendedEpoch() instead.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
      */
@@ -254,6 +249,35 @@ final class GdkKeyringService
             $keyring = $this->readKeyringFile($userId, $kek)->withEpoch($epoch);
             $this->writeKeyringFile($userId, $keyring, $kek);
             $this->setCurrentEpoch($userId, $epoch->epochId);
+        } catch (SodiumException $e) {
+            throw CryptoOperationFailedException::during('GDK epoch append', $e);
+        } finally {
+            sodium_memzero($kek);
+        }
+    }
+
+    // appendEpoch() for a caller that holds an SQL transaction: the keyring is
+    // STAGED to its .tmp sibling and current_epoch is written, so the rename
+    // the caller finalizes after the commit is all that ever reaches the real
+    // path. A rollback discards the stage and no file describes the epoch.
+    /**
+     * @link ../../../../.docs/features/sync/device-removal-and-epoch-rotation.md#the-one-residual
+     *
+     * @throws \LogicException when the app-lock KEK is unavailable.
+     */
+    public function stageAppendedEpoch(int $userId, GdkEpoch $epoch, Session $session): GdkKeyringStage
+    {
+        $kek = $this->appLockKeyService->release($session);
+        if ($kek === null) {
+            throw new \LogicException('Cannot append GDK epoch: app-lock not unlocked.');
+        }
+
+        try {
+            $keyring = $this->readKeyringFile($userId, $kek)->withEpoch($epoch);
+            $tmpEncPath = $this->stageKeyringFile($userId, $keyring, $kek);
+            $this->setCurrentEpoch($userId, $epoch->epochId);
+
+            return new GdkKeyringStage($userId, $epoch, $tmpEncPath, $keyring->blindIndexKeyHex());
         } catch (SodiumException $e) {
             throw CryptoOperationFailedException::during('GDK epoch append', $e);
         } finally {
@@ -398,9 +422,10 @@ final class GdkKeyringService
         $encPath = $this->keyringPath($userId);
         $tmpEncPath = $this->stageKeyringFile($userId, $keyring, $kek);
 
-        // Rename over the real path immediately — every OTHER caller of this
-        // method does not need the deferred-finalize seam: none of them run
-        // inside an ambient SQL transaction whose rollback could strand this file.
+        // Rename over the real path immediately. That is safe only because no
+        // caller of THIS method runs inside an ambient SQL transaction; the one
+        // that did, GdkRotationService, now goes through stageAppendedEpoch()
+        // rather than being an exception to a claim made here.
         if (! @rename($tmpEncPath, $encPath)) {
             @unlink($tmpEncPath);
 
