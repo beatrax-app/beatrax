@@ -7,6 +7,7 @@ namespace Modules\Core\Internal\Backup;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
+use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SqliteDatabase;
@@ -29,6 +30,7 @@ final readonly class BackupSchemaGeneration
         private Migrator $migrator,
         private Repository $config,
         private DatabaseManager $db,
+        private MigrationWindow $window,
     ) {}
 
     // Takes a STAGED copy to this build's schema, never the live database: a
@@ -109,6 +111,11 @@ final readonly class BackupSchemaGeneration
     // connection still exists to do it.
     private function settle(string $stagedPath): void
     {
+        // Migrator fires MigrationsEnded only where the loop finished, so a
+        // run that threw leaves the window open on a request that carries on
+        // serving — and the listener it gates stops invalidating on writes.
+        $this->window->close();
+
         try {
             $this->db->connection(self::CONNECTION)->statement('PRAGMA journal_mode = DELETE');
         } catch (Throwable) {

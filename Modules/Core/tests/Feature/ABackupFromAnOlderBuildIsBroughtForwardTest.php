@@ -6,10 +6,12 @@ use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Backup\BackupCouldNotBeBroughtUpToDateException;
 use Modules\Core\Internal\Backup\BackupFromANewerBuildException;
+use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Public\Enums\RestoreRefusal;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\PatternScan;
 use Tests\Helpers\CheapKdfCost;
 use Tests\Helpers\LiveSqliteConnection;
 use Tests\Helpers\RealSqliteFixture;
@@ -162,8 +164,7 @@ function generationTablesIn(string $path): array
 it('ships a file for every migration the squashed dump records', function (): void {
     $dump = (string) file_get_contents(base_path('database/schema/sqlite-schema.sql'));
 
-    preg_match_all("/INSERT INTO migrations VALUES\(\d+,'([^']+)'/", $dump, $matches);
-    $covered = $matches[1];
+    $covered = PatternScan::all("/INSERT INTO migrations VALUES\(\d+,'([^']+)'/", $dump)[1];
 
     expect(count($covered))->toBeGreaterThan(0, 'the dump records no migrations, so this proves nothing');
 
@@ -255,6 +256,11 @@ it('refuses when the forward run fails, leaving the live database and the backup
     // — and the half-built copy it ran against is not left in the clear.
     expect((array) glob($this->backupsDir.DIRECTORY_SEPARATOR.'pre-restore-*.sqlite'))->toBe([])
         ->and((array) glob($this->stagingDir.DIRECTORY_SEPARATOR.'*'))->toBe([]);
+
+    // The Migrator raises MigrationsEnded only where its loop finished, so
+    // the window that tells the nav-count listener to stand down is left open
+    // by a run that threw — on a request that goes on serving afterwards.
+    expect(app(MigrationWindow::class)->isOpen())->toBeFalse();
 });
 
 // The positive control. Without it, a comparison that refused everything would
