@@ -18,6 +18,7 @@ A topic in this subtree answers "how does X work across the codebase?" rather th
 | [Categorization](categorization.md) | The two-layer rule-and-memory categorizer, the priority fold in which the last matching rule wins, and the receipt-vs-statement enrichment conflict resolver |
 | [A read bounded by how much the user has](reads-bounded-by-the-user.md) | What a five-year ledger costs the reads that have no bound, which whole-table reads are correct as written, and the guard that keeps a new one from landing |
 | [Measuring write cost](measuring-write-cost.md) | Why any bulk-write timing taken inside the test suite looks quadratic, and how to take one that does not |
+| [A rebuilt table loses a partial index](a-rebuilt-table-loses-a-partial-index.md) | Why adding a foreign key silently strips a `WHERE` clause off an index, what it cost the uncategorised count, and the guard that reads the predicate rather than the name |
 | [The Argon2id cost](argon2id-cost.md) | The one work factor every passphrase-derived key is stretched at, how it is pinned, and why the suite is allowed to derive at libsodium's floor |
 | [Owner-only paths](owner-only-paths.md) | Why a discarded `chmod` is a mode nobody set, the one seam that settles and then verifies it, and what each caller does with a refusal |
 | [SQLite write locks](sqlite-write-locks.md) | Why `busy_timeout` cannot save a read-then-write transaction, and the `transaction_mode = IMMEDIATE` that decides who waits |

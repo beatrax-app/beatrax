@@ -56,6 +56,40 @@ final readonly class PotRowLoader
             ->sum('pot_movements.amount_minor');
     }
 
+    // balanceForPot()'s bound, grouped rather than asked per pot — the shape
+    // movementCounts() below already refuses. A pot with no movement in its
+    // own currency is absent, which is the 0 its caller defaults to.
+    /**
+     * @param  list<int>  $potIds
+     * @return array<int, int>
+     */
+    public function balancesForPots(array $potIds, User $user): array
+    {
+        if ($potIds === []) {
+            return [];
+        }
+
+        $connection = $this->db->connection();
+
+        $rows = $connection->table('pot_movements')
+            ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
+            ->where('pot_movements.user_id', $user->id)
+            ->whereIn('pot_movements.pot_id', $potIds)
+            ->whereColumn('pot_movements.currency', 'pots.currency')
+            ->groupBy('pot_movements.pot_id')
+            ->get([
+                'pot_movements.pot_id',
+                $connection->raw('SUM(pot_movements.amount_minor) as balance_minor'),
+            ]);
+
+        $balances = [];
+        foreach ($rows as $row) {
+            $balances[self::toInt($row->pot_id)] = self::toInt($row->balance_minor);
+        }
+
+        return $balances;
+    }
+
     /**
      * @return list<PotRow>
      */
@@ -100,15 +134,16 @@ final readonly class PotRowLoader
         $period = $this->periods->containingForUser($user, $this->clock->now());
         $spendByCategory = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
 
-        $movementCounts = $this->movementCounts(
-            $connection,
-            $user,
-            array_values(array_map(static fn (stdClass $pot): int => self::toInt($pot->id), $pots->all())),
-        );
+        $potIds = array_values(array_map(static fn (stdClass $pot): int => self::toInt($pot->id), $pots->all()));
+
+        $perPot = [
+            'counts' => $this->movementCounts($connection, $user, $potIds),
+            'balances' => $this->balancesForPots($potIds, $user),
+        ];
 
         $rows = [];
         foreach ($pots as $pot) {
-            $rows[] = $this->buildPotRow($pot, $user, $connection, $potNameById, $spendByCategory, $movementCounts);
+            $rows[] = $this->buildPotRow($pot, $user, $connection, $potNameById, $spendByCategory, $perPot);
         }
 
         return $rows;
@@ -143,9 +178,9 @@ final readonly class PotRowLoader
     /**
      * @param  array<int|string, mixed>  $potNameById
      * @param  array<string, int>  $spendByCategory
-     * @param  array<int, int>  $movementCounts
+     * @param  array{counts: array<int, int>, balances: array<int, int>}  $perPot
      */
-    private function buildPotRow(stdClass $pot, User $user, ConnectionInterface $connection, array $potNameById, array $spendByCategory, array $movementCounts): PotRow
+    private function buildPotRow(stdClass $pot, User $user, ConnectionInterface $connection, array $potNameById, array $spendByCategory, array $perPot): PotRow
     {
         $potId = self::toInt($pot->id);
 
@@ -173,7 +208,7 @@ final readonly class PotRowLoader
             name: self::toString($pot->name),
             accountId: self::toInt($pot->account_id),
             accountName: self::toString($pot->account_name),
-            balanceMinor: $this->balanceForPot($potId, $user),
+            balanceMinor: $perPot['balances'][$potId] ?? 0,
             currency: self::toString($pot->currency),
             status: self::toString($pot->status),
             goalId: $pot->goal_id !== null ? self::toInt($pot->goal_id) : null,
@@ -183,7 +218,7 @@ final readonly class PotRowLoader
             categorySpentMinor: $spent === null ? null : $spent['minor'],
             categorySpentUnconverted: $spent === null ? [] : $spent['unconverted'],
             recentMovements: $this->buildRecentMovements($movementRows, $potNameById),
-            movementCount: $movementCounts[$potId] ?? 0,
+            movementCount: $perPot['counts'][$potId] ?? 0,
         );
     }
 

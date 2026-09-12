@@ -305,6 +305,22 @@ module:
   that, so an arbitrarily long custom range never exceeds the cap
   regardless of starting granularity. The last bucket's `endExclusive`
   is always clamped to the overall range's `endExclusive`.
+- **The bucket list is a join, not a loop.** `TimeBucketSpendQuery` used
+  to run one aggregate per bucket, so the statement count was the
+  reader's choice of period and granularity: 53 statements for a weekly
+  year, up to 60 at the cap, and twice that with `compare` on. It now
+  emits the edges as a `union all` of literal rows, joins
+  `transactions` on `posted_at >= bucket_start AND posted_at <
+  bucket_end`, and groups by the bucket index — one statement whatever
+  the point count. Every predicate stays exactly where it was, in the
+  `WHERE`, so `SpendFilterApplier` and `CategoryAttribution` bind to the
+  unaliased `transactions` table as before. The buckets are half-open
+  and contiguous by construction, so no row lands in two of them, and a
+  bucket no row falls in has no group — which is the nought the
+  per-bucket aggregate returned for it. The union is written out rather
+  than composed from sub-builders: the union grammar wraps each arm in a
+  subquery of its own, and sixty nested co-routines cost more than the
+  round trips they save.
 - `PeriodPresetResolver::resolve()` — resolves a period-preset string
   into a concrete `Period`. `this_month`/`last_N_months` delegate to
   `PeriodQuery` (the user's `period_start_day`-anchored stepping) so a

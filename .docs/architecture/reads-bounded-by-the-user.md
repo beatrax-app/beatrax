@@ -264,10 +264,38 @@ correct as written, and converting them would be churn that makes the code worse
 - **~9 are bounded by a fixed date window** — one calendar grid, one statement
   period, one forecast horizon.
 
-`Modules/FX/Public/Services/ExchangeRateService` deserves a specific mention
-because it looks like a whole-table read and is not: both queries correlate on
-`MAX(rate_date)` per pair, so the answer is one row per currency pair whatever
-the rate history holds.
+`Modules/FX/Public/Services/ExchangeRateService` was listed here as a read that
+looks whole-table and is not, on the grounds that both queries correlate on
+`MAX(rate_date)` per pair and so answer one row per currency pair whatever the
+rate history holds. **The answer is bounded; the read is not, and this entry was
+reasoning from the result size rather than from the plan.**
+
+```
+EXPLAIN QUERY PLAN  -- fetchLatestRates()
+SCAN er
+CORRELATED SCALAR SUBQUERY 1
+  SEARCH i USING COVERING INDEX exchange_rates_latest_lookup (base_currency=? AND quote_currency=?)
+USE TEMP B-TREE FOR ORDER BY
+```
+
+The outer query carries no predicate at all, so it scans the table and runs the
+subquery once per row. Over three years of daily rates for ten pairs — 10,980
+rows — that is 10,980 subquery executions to return 20, measured at **5.007 ms
+per call**, linear in rate history. `fetchLatestRates()` is also the one read in
+that class with no memo: `ratesForDate()` directly below it caches per date and
+says why, while `convert()` calls `fetchLatestRates()` afresh every time.
+
+Joining a grouped `MAX(rate_date)` instead lets the same covering index answer
+it — `1.210 ms` for the identical set of rows, a 4× cut. It was not changed
+here, and the reason is not the query. `convertWithRows()` folds the rows into a
+`RateTable` with last-write-wins per pair, which is order-insensitive across
+pairs, but it also fills `$rateMeta` keyed by **quote currency alone**, so two
+rows with different bases, the same quote and the same date resolve the reported
+source and `asOf` by whichever arrives last. Neither query fixes that order —
+both end in `USE TEMP B-TREE FOR ORDER BY` over a non-total `ORDER BY` — so the
+metadata is already decided by a tie SQLite does not promise to break the same
+way twice. Making the read cheap and making that order total are one change, and
+it is a change to what a figure reports about itself.
 
 ### The pairs that make the case
 
