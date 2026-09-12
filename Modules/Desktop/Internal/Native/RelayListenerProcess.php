@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Native;
 
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\LocalRelayProvisioner;
 use Modules\Sync\Public\Services\SyncPorts;
@@ -73,7 +74,7 @@ final readonly class RelayListenerProcess
             );
         } catch (Throwable $e) {
             $this->logger->warning('relay listener: failed to start relay:serve child process.', [
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }
@@ -84,7 +85,7 @@ final readonly class RelayListenerProcess
             ChildProcess::stop(self::ALIAS);
         } catch (Throwable $e) {
             $this->logger->warning('relay listener: failed to stop the running relay:serve child process.', [
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
         }
 

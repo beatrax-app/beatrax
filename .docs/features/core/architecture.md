@@ -183,7 +183,10 @@ What the module explicitly does NOT do:
     now also set in `NativeAppServiceProvider::phpIni()`, in the two
     mobile shells' generated `php.ini`, and in `tools/test-php-ini`; the
     code holds without any of them, because desktop, mobile and CI do
-    not share one `php.ini`.
+    not share one `php.ini`. `$basePath` may be blank — the log
+    processor is constructed without one in tests — and blank means
+    strip nothing: `rtrim('', '/').'/'` is `'/'`, and replacing that
+    deletes the separator out of every frame path.
 - **Events/**
   - `UserInstalled` — dispatched by `Modules\Auth\Public\Actions\SignupAction`
     after a successful install AND by `beatrax:install` on every re-run,

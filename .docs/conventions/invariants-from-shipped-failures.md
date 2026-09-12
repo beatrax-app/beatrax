@@ -645,6 +645,55 @@ A daemon's stdout is a log too: `relay:serve` and `sync:serve` run under a
 supervisor that captures it to the same kind of file, so a `$this->error()`
 carrying the message in a console command is the same disclosure.
 
+### The fourth shape reads no message at all
+
+Every clause above watches a *read* — `getMessage()`, spelled out, on something
+the walk can name. `['exception' => $e]` contains neither word and publishes
+strictly more. Monolog's `LineFormatter` is what renders it, and the shipped
+channels build the one `LogManager::formatter()` returns:
+`new LineFormatter(null, $dateFormat, true, true, true)`. That last argument is
+`includeStacktraces`, so a throwable in the context writes its class, its
+`getMessage()`, its `getTraceAsString()`, and then the same three again for
+every `previous` beneath it.
+
+All three of those are things this repository already decided against. The
+message is the SQL with its bindings. `getTraceAsString()` is the fifteen
+characters of every string argument that
+[`SafeTrace`](#a-stack-trace-that-carries-the-data-it-failed-on) exists to drop.
+And the `previous` chain reaches a `QueryException` that
+`bootstrap/app.php`'s `reportable(QueryException::class)` hook never sees,
+because that hook matches on the top-level type only — so a wrap-and-rethrow
+(`throw new InvalidArgumentException(…, 0, $e)`) carries the statement past it.
+
+Ten sites in the tree wrote that shape: both NativePHP boot providers, the two
+desktop child-process listeners, the mobile initial-sync re-projection, and the
+daily-notification trigger command. The re-projection one is the clearest: it
+writes decrypted peer rows into `transactions`, so a failure there is an insert
+naming the counterparty and the IBAN.
+
+It is closed in two places, because neither alone reaches the other's cases.
+`LoggedExceptionsDropThePayloadArchTest` grew a rule that reads the same three
+regions and asks whether the throwable was *handed over* rather than read: a
+`$e` surviving at parenthesis depth zero in a sink's arguments, with `$e::class`,
+`$e->getCode()`, `$e instanceof X`, `$e === null` and any nested call
+(`SafeExceptionContext::describe($e)`, `QueryFailure::isUniqueViolation($e)`)
+all reading rather than publishing. And `RedactSecretsProcessor` now replaces a
+`Throwable` context value outright — `describe()`'s two keys, the file and line,
+`SafeExceptionContext::reason()` for the message, and `SafeTrace::cap()` for the
+frames — following `previous` three deep.
+
+The runtime half is not belt-and-braces duplication. The processor is the only
+one of the two that reaches the context Laravel's own exception handler builds,
+which appends `['exception' => $e]` to every exception it reports and is not
+first-party code a walk can read. The walk is the only one of the two that
+reaches the `emergency` channel, which
+[taps nothing](#redaction-that-was-a-property-of-three-channels) by construction.
+
+`SafeTrace::cap()` gained a guard with it: an empty `$basePath` made
+`rtrim('', '/').'/'` into `'/'`, and replacing that deleted the separator out of
+every frame path. The processor is the first caller that can be constructed
+without one.
+
 ## A view name nothing answers to
 
 `tests/Contracts/ViewReferencesResolveArchTest.php`

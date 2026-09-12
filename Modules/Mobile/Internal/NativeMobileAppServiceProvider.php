@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -25,7 +26,7 @@ final readonly class NativeMobileAppServiceProvider
             // the app from opening (mirrors the desktop analog's own
             // sync-listener try/catch discipline).
             $this->logger->warning('NativePHP mobile boot: dial-out hook failed non-fatally.', [
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
         }
 
@@ -35,7 +36,7 @@ final readonly class NativeMobileAppServiceProvider
             // Same non-fatal discipline as the dial-out hook above: a
             // failed listener registration must never crash mobile boot.
             $this->logger->warning('NativePHP mobile boot: notification listener wiring failed non-fatally.', [
-                'exception' => $e,
+                ...SafeExceptionContext::describe($e),
             ]);
         }
     }

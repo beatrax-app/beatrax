@@ -205,7 +205,16 @@ layout to render the ⌘K palette and the sidebar nav-list:
   but `ResetAdvancedToggleOnLogin`'s `forget()` fails open, so the
   key is a constant rather than a literal at each site.
 - **Internal/Logging/RedactSecretsProcessor** — Monolog tap that
-  scrubs every log line before it lands on disk.
+  scrubs every log line before it lands on disk. Three rules, not one:
+  a key-name denylist, a set of value patterns anchored on a
+  credential's prefix, and — because the first two only ever saw
+  strings and arrays — a replacement for a `Throwable` put into the
+  context. That last one is what stands between the framework's own
+  `['exception' => $e]` and the formatter, which renders the message,
+  `getTraceAsString()` and the whole `previous` chain; it is answered
+  with `SafeExceptionContext::describe()` plus `SafeTrace::cap()`,
+  three links deep
+  ([why](../../conventions/invariants-from-shipped-failures.md#the-fourth-shape-reads-no-message-at-all)).
 - **Internal/Services/OAuthScrubSet** — singleton holding the
   decrypted-on-demand OAuth secret literals. Busted by
   `BustOAuthScrubSetOnSecretChange` Eloquent observer on every
