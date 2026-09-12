@@ -31,11 +31,10 @@
     ])
 >{{ Lang::get('anomaly::alerts.chips.acknowledge') }}</button>
 
-<div x-data="{ open: false }" class="relative {{ $stacked ? 'w-full' : '' }}">
+<div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="relative {{ $stacked ? 'w-full' : '' }}">
     <button
         type="button"
         x-on:click="open = ! open"
-        x-on:keydown.escape="open = false"
         aria-label="{{ Lang::get('anomaly::alerts.chips.snooze_options') }}"
         class="{{ $base }} {{ $size }} bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
     >{{ Lang::get('anomaly::alerts.chips.snooze') }} <span aria-hidden="true">▾</span></button>

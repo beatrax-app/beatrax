@@ -111,7 +111,7 @@
                         'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' => ! $primaryAcknowledge,
                     ])
                 >{{ Lang::get('drift-alerts::alerts.row.acknowledge') }}</button>
-                <div x-data="{ open: false }" class="relative">
+                <div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="relative">
                     <button
                         type="button"
                         x-on:click="open = ! open"

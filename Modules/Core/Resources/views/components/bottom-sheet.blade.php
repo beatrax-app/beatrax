@@ -30,9 +30,16 @@
     crashed the WebView renderer outright on Android: the tap registered, the
     renderer died, and every subsequent interaction did nothing while the page
     still looked normal. Verified by removing it — the same tap then opens the
-    panel correctly. Escape and the scrim still dismiss, so the overlay is not
-    a keyboard dead end, but focus is no longer trapped inside it; restoring a
-    trap needs one that does not walk the document marking siblings inert.
+    panel correctly. The scrim still dismisses, and focus is no longer trapped
+    inside the panel; restoring a trap needs one that does not walk the
+    document marking siblings inert.
+
+    That untrapped focus is why Escape listens at the window. Every trigger
+    that dispatches open-sheet sits outside this component, keeps the focus it
+    had, and a keydown listener on the panel only ever hears what is typed
+    inside the panel — so the key that was supposed to be the way out reached
+    nothing at all. `open &&` keeps a shut sheet from answering a key that was
+    never meant for it: the pots page draws four, and all four hear the event.
 
     safe-area padding-bottom keeps content above the home indicator on iOS.
 --}}
@@ -94,7 +101,7 @@
         x-transition:leave="transition ease-[var(--ease-smooth)] duration-[200ms]"
         x-transition:leave-start="translate-y-0"
         x-transition:leave-end="translate-y-full"
-        @keydown.escape="open = false"
+        @keydown.escape.window="open && (open = false)"
         role="dialog"
         aria-modal="true"
         @if ($title)

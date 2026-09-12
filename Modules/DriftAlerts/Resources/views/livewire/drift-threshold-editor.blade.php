@@ -15,7 +15,7 @@
       - $options : list<int>  — [1, 2, 5, 10, 25, 50]
 --}}
 
-<div x-data="{ open: false }" class="relative inline-block">
+<div x-data="{ open: false }" x-on:keydown.escape.window="open = false" class="relative inline-block">
     <x-core::secondary-button
         size="sm"
         class="gap-1"
