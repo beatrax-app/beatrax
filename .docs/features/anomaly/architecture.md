@@ -204,18 +204,21 @@ All four jobs route through the shared `AnomalyEvaluator::evaluate()` path
   so a reactive-import + safety-net-sweep + backfill trigger trio collapses
   into a single queued run.
 - **`BackfillAnomaliesJob`** — dispatched once on first activation (the
-  settings toggle), gated by `users.anomaly_backfilled_at`: the timestamp
-  is claimed with a conditional `whereNull(...)->update(...)` before the
-  walk, an atomic mutex so two racing dispatches cannot both walk full
-  history. A worker crash mid-walk leaves the row stamped, so a retry
-  no-ops rather than resuming — the hourly safety-net sweep is the durable
-  backstop for anything a crashed backfill missed. History is enumerated
-  via `->lazyById()` so a multi-year history never loads into memory at
-  once. Backfilled alerts land in the normal Open queue with no special
-  muting.
+  settings toggle). The claim and the completion are two rows, not one
+  column: `anomaly_backfill_state` holds the claim and the cursor, and
+  `users.anomaly_backfilled_at` is stamped only where the walk ran out of
+  history — see [a claim is not a completion](../../conventions/a-check-another-writer-can-invalidate.md#a-claim-is-not-a-completion)
+  for why the one column could not be both. History is enumerated via
+  `->chunkById()`, which bounds memory the way `lazyById()` did and adds
+  the checkpoint boundary: each chunk writes the highest transaction id it
+  evaluated and refreshes the claim's lease. Backfilled alerts land in the
+  normal Open queue with no special muting.
 - **`SafetyNetAnomalySweepJob`** — hourly, per-user fan-out, re-evaluates
   only transactions with no existing `anomaly_alerts` row within a recency
-  window.
+  window of thirty days. That window is why it is no backstop for a
+  first-activation walk over years of history; `SweepAnomalySafetyNetCommand`
+  dispatches `BackfillAnomaliesJob` beside it for any user whose claim is
+  still open, and the walk resumes from its own cursor.
 - **`ReviveExpiredAnomalySnoozesJob`** — flips `snoozed` rows back to
   `open` once `snoozed_until` passes. Unscoped by user, deliberately —
   revival is a pure timer transition and the audit row takes its owner

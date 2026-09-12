@@ -262,6 +262,36 @@ it('recordBackfillProgress(null) clears the inboxes column so the strip hides', 
     expect($row->backfill_progress)->toBeNull();
 });
 
+// The strip and the walk read the same payload and stop needing it at
+// different moments. Nulling one column for the strip's sake took the page
+// cursor with it, and the error transition is the one a retry rides.
+it('keeps the walk half of the payload when a transition out of flight clears the strip', function (): void {
+    $inboxId = ($this->seedInbox)(status: 'backfilling');
+    $sm = ($this->makeMachine)();
+    $sm->recordBackfillProgress($inboxId, [
+        'fetched_count' => 9,
+        'total_estimated' => 30,
+        'last_message_date' => null,
+        'page_cursor' => 'skiptoken-p9',
+        'window_months' => 6,
+    ]);
+
+    $sm->applyStatus($inboxId, 'error', 'QueryException');
+
+    $inbox = app(DatabaseManager::class)
+        ->connection()
+        ->table('inboxes')
+        ->where('id', $inboxId)
+        ->first(['backfill_progress']);
+
+    expect($inbox?->backfill_progress)->toBeNull();
+    expect(json_decode((string) ($this->readState)($inboxId)->backfill_resume_point, true))->toBe([
+        'fetched_count' => 9,
+        'page_cursor' => 'skiptoken-p9',
+        'window_months' => 6,
+    ]);
+});
+
 it('applyStatus does NOT advance last_scan_at for rate_limited / needs_reauth / error transitions', function (): void {
     $inboxId = ($this->seedInbox)(status: 'idle');
     $sm = ($this->makeMachine)();

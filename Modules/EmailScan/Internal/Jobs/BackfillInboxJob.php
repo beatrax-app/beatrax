@@ -348,7 +348,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
      */
     private function resumePoint(InboxScanContext $context): array
     {
-        $raw = $context->backfillProgress();
+        $raw = $context->backfillResumePoint();
         if ($raw === null || ($raw['window_months'] ?? null) !== $this->windowMonths) {
             return [0, null];
         }
@@ -446,6 +446,12 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 InboxScanStatus::Error->value,
                 $reason,
             );
+
+            // The attempts are spent, so nothing is coming back for the page
+            // this walk stopped on. Only here: an error between attempts keeps
+            // the resume point, which is the whole reason it is not on the
+            // column applyStatus clears.
+            $sm->recordBackfillProgress($this->inboxId, null);
         } catch (Throwable $stateWriteFailure) {
             // An invalid transition here is fine, but a real write failure
             // (SQLITE_BUSY) strands the inbox with no UI signal.

@@ -461,9 +461,9 @@ real scan; it is only the absence of one that stops being a fault.
 ## `InboxScanStateMachine`
 
 The single legal mutator of `inbox_scan_state.status`,
-`inbox_scan_state.retry_attempts`, the provider cursor columns
-(`last_history_id`, `last_delta_link`), and the per-inbox
-`inboxes.backfill_progress` JSON column. `backfill_progress` lives on
+`inbox_scan_state.retry_attempts`, the three cursor columns
+(`last_history_id`, `last_delta_link`, `backfill_resume_point`), and the
+per-inbox `inboxes.backfill_progress` JSON column. `backfill_progress` lives on
 `inboxes` but is functionally a per-inbox lifecycle signal, so every
 per-inbox lifecycle write flows through this one class; a
 `BoundaryArchTest` invariant (`noOtherInboxScanStateMutator`) blocks
@@ -490,13 +490,18 @@ a real write, and a provider mismatch against the inbox row's own
 provider raises `InvalidArgumentException` so a Gmail cursor can never
 land on a Microsoft inbox row.
 
-`recordBackfillProgress()`'s payload carries `fetched_count`,
-`total_estimated` and `last_message_date` for the UI, plus
-`page_cursor` and `window_months` for the walk itself: they are what a
-retried `BackfillInboxJob` resumes from, and the window is part of the
-key so a fresh backfill over a different range never adopts the old
-range's cursor. `InboxQuery` reads only the first two and ignores the
-rest.
+`recordBackfillProgress()` writes one payload to two columns, because
+the two halves of it die at different times. `inboxes.backfill_progress`
+carries `fetched_count`, `total_estimated` and `last_message_date` for
+the UI, and `applyStatus()` nulls it on every transition out of flight so
+a dead backfill stops advertising a count that will never move.
+`inbox_scan_state.backfill_resume_point` carries `page_cursor`,
+`fetched_count` and `window_months` for the walk itself, and survives
+that clear — the error transition is the one a retry rides, and a resume
+point read off the display column was erased by the same statement that
+stopped the strip. The window is part of the key, so a fresh backfill
+over a different range never adopts the old range's cursor. `InboxQuery`
+reads the display column and nothing else.
 
 `ALLOWED_TRANSITIONS` has a few entries that look unusual at first
 glance: `idle → idle` is a re-entrant no-op so the backfill job's
@@ -585,9 +590,12 @@ page while still handing back a link to the next one, and treating the
 emptiness as "walk finished" silently dropped every message past it.
 The walk resumes rather than restarts — `page_cursor` and
 `fetched_count` are persisted through `recordBackfillProgress` on every
-page, and a retried attempt picks up from them when
-`window_months` matches, so a run interrupted at page nine does not
-re-walk pages one to eight. The count is of messages *indexed*, not
+page, onto `inbox_scan_state.backfill_resume_point`, and a retried
+attempt picks up from them when `window_months` matches, so a run
+interrupted at page nine does not re-walk pages one to eight. Two
+writers clear that point, and only those two: the walk itself once it
+runs out of pages, and `failed()` once the attempts are spent, because
+after that nothing is coming back for the page it stopped on. The count is of messages *indexed*, not
 rows inserted: a page a prior attempt already landed inserts nothing,
 and counting inserts made the progress bar run backwards on every
 retry. `MAX_WALK_PAGES` (200) is defence in depth against a provider

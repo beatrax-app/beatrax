@@ -27,7 +27,7 @@ it('inboxes has the expected columns', function (): void {
 
 it('inbox_scan_state has the expected columns', function (): void {
     $schema = $this->db->getSchemaBuilder();
-    foreach (['id', 'user_id', 'inbox_id', 'folder', 'last_history_id', 'last_delta_link', 'last_scan_at', 'status', 'error_message', 'retry_attempts'] as $col) {
+    foreach (['id', 'user_id', 'inbox_id', 'folder', 'last_history_id', 'last_delta_link', 'backfill_resume_point', 'last_scan_at', 'status', 'error_message', 'retry_attempts'] as $col) {
         expect($schema->hasColumn('inbox_scan_state', $col))->toBeTrue("inbox_scan_state.{$col} missing");
     }
 });
