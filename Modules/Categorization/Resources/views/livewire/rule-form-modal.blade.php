@@ -182,7 +182,7 @@
                                         aria-label="{{ Lang::get('categorization::rule_form.assign_category_aria', ['number' => $i + 1]) }}"
                                         class="min-w-40 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >
-                                        <option value="" @selected(($action['category_id'] ?? null) === null || strlen((string) $action['category_id']) === 0)>—</option>
+                                        <option value="" @selected(strlen((string) ($action['category_id'] ?? '')) === 0)>—</option>
                                         @foreach ($categories as $category)
                                             <option value="{{ $category->id }}" @selected((string) ($action['category_id'] ?? '') === (string) $category->id)>{{ $category->path }}</option>
                                         @endforeach
@@ -193,7 +193,7 @@
                                         aria-label="{{ Lang::get('categorization::rule_form.reassign_counterparty_aria', ['number' => $i + 1]) }}"
                                         class="min-w-40 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >
-                                        <option value="" @selected(($action['counterparty_id'] ?? null) === null || strlen((string) $action['counterparty_id']) === 0)>—</option>
+                                        <option value="" @selected(strlen((string) ($action['counterparty_id'] ?? '')) === 0)>—</option>
                                         @foreach ($counterparties as $counterparty)
                                             <option value="{{ $counterparty->id }}" @selected((string) ($action['counterparty_id'] ?? '') === (string) $counterparty->id)>{{ $counterparty->display_name }}</option>
                                         @endforeach
@@ -224,7 +224,7 @@
                                         aria-label="{{ Lang::get('categorization::rule_form.deduction_category_aria', ['number' => $i + 1]) }}"
                                         class="min-w-40 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >
-                                        <option value="" @selected(($action['deduction_category_id'] ?? null) === null || strlen((string) $action['deduction_category_id']) === 0)>—</option>
+                                        <option value="" @selected(strlen((string) ($action['deduction_category_id'] ?? '')) === 0)>—</option>
                                         @foreach ($deductionCategories as $deductionCategory)
                                             <option value="{{ $deductionCategory->id }}" @selected((string) ($action['deduction_category_id'] ?? '') === (string) $deductionCategory->id)>{{ $deductionCategory->name }}</option>
                                         @endforeach
