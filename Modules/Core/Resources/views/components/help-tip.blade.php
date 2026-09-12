@@ -44,7 +44,15 @@
 
 {{-- autofocus on the panel itself, not on a control inside it: a reader who
      opens help wants the help read out, and landing on Close announces the
-     way out of a panel whose content was never spoken. --}}
+     way out of a panel whose content was never spoken.
+
+     It is the only autofocus left in the product, and the only one that was
+     never document-load focus: a closed popover is not focusable, so the
+     load-time pass skips it, and the attribute is read a second time by the
+     popover focusing steps when the button above is pressed. Converting it
+     would put JavaScript into a path whose whole point is having none.
+     `.docs/conventions/focus-that-moves-before-the-reader-asked.md` carries
+     that decision and the eleven sites that went the other way. --}}
 <div
     popover
     id="{{ $helpTipPanelId }}"

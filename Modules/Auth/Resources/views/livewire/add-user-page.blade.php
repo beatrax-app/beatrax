@@ -11,7 +11,6 @@
             :label="Lang::get('auth::add_user.username')"
             wire:model="username"
             autocomplete="off"
-            autofocus
         />
 
         <x-core::form-field

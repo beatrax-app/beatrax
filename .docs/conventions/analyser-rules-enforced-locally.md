@@ -198,8 +198,20 @@ handled instead by rules like
 [`OneHomePerRepeatedShapeArchTest`](../../tests/Contracts/OneHomePerRepeatedShapeArchTest.php),
 which name one repeated shape and one home for it.
 
+**Focus on page load** is guarded the same way and not from here. It is an
+accessibility rule over markup rather than a code smell over PHP, so it shares
+none of the machinery above: no tokeniser, a different analyser, and a scope
+that is every Blade view rather than `sonar.sources`. It also differs in kind —
+the four rules above ask whether code is maintainable, and that one asks what a
+reader is shown.
+[Focus that moves before the reader asked](focus-that-moves-before-the-reader-asked.md)
+carries it, along with the per-site decisions a threshold does not need.
+
 ## Related
 
+- [Focus that moves before the reader asked](focus-that-moves-before-the-reader-asked.md)
+  — the fifth hosted rule enforced locally, why it lives on its own page, and
+  the two directions its guard is deliberately wider in
 - [Invariants written after a shipped failure](invariants-from-shipped-failures.md)
   — the field history behind the rest of `tests/Contracts/`
 - [Writing an arch invariant](arch-invariants.md) — the mechanics, and why a

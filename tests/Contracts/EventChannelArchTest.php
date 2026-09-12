@@ -60,11 +60,6 @@ const EVENT_CHANNEL_BROWSER_EVENTS = [
 function eventChannelPinnedOneSided(): array
 {
     return [
-        // Flux's own JS opens the modal, and the handler is in
-        // vendor/livewire/flux, which this scan does not read. `modal-close`
-        // needs no pin: a bottom sheet in this repo binds that one too.
-        'modal-show' => 'dispatch',
-
         // The mirror of open-sheet, kept as the bottom sheet's public way to be
         // closed from outside. BottomSheetClosesOnSaveTest pins the same
         // listener from the other direction.

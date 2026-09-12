@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
 use Modules\OpenBanking\Public\Http\Livewire\OpenBankingStatusRow;
 use Modules\OpenBanking\Tests\Support\OpenBankingSecretsFixture;
@@ -480,4 +481,20 @@ it('Surface A status row renders the correct one-line status for each state', fu
     Livewire::test(OpenBankingStatusRow::class)
         ->assertSet('expired', true)
         ->assertSee('Consent expired — reconnect needed.');
+});
+
+it('focuses the acknowledgement box when the warning opens, through the shared checkbox component', function (): void {
+    $user = owgUser('owg-warning-focus');
+    $this->actingAs($user);
+
+    // The modal is rendered by the flag, so the box arrives at the moment the
+    // reader asks for it and x-init is that moment. It reaches the input the
+    // same way every other non-class attribute on the component does.
+    $box = RenderedMarkup::of(
+        Livewire::test(OpenBankingSettingsPage::class)->call('requestEnable')->html()
+    )->firstOrFail('[data-testid="ob-warning-checkbox"]');
+
+    expect($box->attribute('x-init'))->toBe('$nextTick(() => $el.focus())')
+        ->and($box->attribute('autofocus'))->toBeNull()
+        ->and($box->tag())->toBe('input');
 });

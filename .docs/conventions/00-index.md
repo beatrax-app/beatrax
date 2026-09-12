@@ -124,6 +124,10 @@ pass for a clean one.
   four hosted-analysis rules that now fail on the commit rather than on the
   dashboard, why each one reports far less than its name suggests, and how each
   guard was checked against the published figures before it was written
+- [Focus that moves before the reader asked](focus-that-moves-before-the-reader-asked.md)
+  — the three different things twelve templates meant by one attribute, why a
+  dialog and a popover are not the rule's subject, the five sign-in screens
+  decided in one paragraph, and the two spellings of focus a reader asked for
 - [A controller hands the work to an action](a-controller-hands-the-work-to-an-action.md)
   — the four things a controller is measured on, and the five kinds of code that
   look like violations, are not, and would be made worse by moving

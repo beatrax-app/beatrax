@@ -27,7 +27,8 @@
              gets its own card and each help line says what the OTHER one does
              not do. Below the submit button they came last in the tab order,
              after the control that leaves the screen, which is not what "asked
-             at signup" means. Autofocus still lands in the username box.
+             at signup" means. Nothing takes focus on load, so this card is
+             where the first tab lands and the account form follows it.
 
              Outside the <form> on purpose: the country select is a deferred
              wire:model rather than a form field, so it ships from here just as
@@ -65,7 +66,6 @@
                 :hint="Lang::get('auth::signup.username_hint')"
                 wire:model.live.blur="username"
                 autocomplete="username"
-                autofocus
             />
 
             {{-- The live checklist below describes this field better than the

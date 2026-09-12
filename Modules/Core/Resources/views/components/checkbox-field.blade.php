@@ -44,10 +44,15 @@
     wire:model, .live and .live.debounce.300ms are all in use here and a
     swallowed modifier changes when the component updates without changing what
     renders. Write the real directive on the tag. Every non-class attribute —
-    wire:*, x-*, autofocus, aria-label, data-testid — is forwarded to the input,
-    because the input is the control. `class` is the exception and merges onto
-    the LABEL, which is this component's root and the only part a call site
-    still has a say in: text-left inside a centred modal, padding above the row.
+    wire:*, x-*, aria-label, data-testid — is forwarded to the input, because
+    the input is the control. That rule is how the `x-init` focusing a box on
+    the modal that reveals it gets there; `autofocus` is not passed by any call
+    site and is not the way to say that
+    (`.docs/conventions/focus-that-moves-before-the-reader-asked.md`).
+
+    `class` is the exception and merges onto the LABEL, which is this
+    component's root and the only part a call site still has a say in:
+    text-left inside a centred modal, padding above the row.
 
     `hint` stays INSIDE the label rather than becoming an aria-describedby, so
     the second line is part of the accessible name and part of the click

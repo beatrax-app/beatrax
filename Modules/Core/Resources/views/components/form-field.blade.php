@@ -28,8 +28,11 @@
     would on a bare control — wire:model.live.debounce.300ms="query" — and
     every wire:* attribute is forwarded verbatim to the control below,
     modifier and all. Everything else in the bag — placeholder, autocomplete,
-    inputmode, step, min, max, required, disabled, autofocus, x-on:*, style,
-    data-* — rides along the same way.
+    inputmode, step, min, max, required, disabled, x-init, x-ref, x-on:*,
+    style, data-* — rides along the same way. `autofocus` does not, because no
+    call site passes it: a field that takes focus takes it at the moment it
+    appears, which is what the x-init and x-ref above are doing here
+    (`.docs/conventions/focus-that-moves-before-the-reader-asked.md`).
 
     `name` is explicit rather than parsed back out of the wire:model
     expression: parsing would have to strip modifiers off the attribute name

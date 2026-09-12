@@ -58,14 +58,21 @@
 
                 {{--
                     "Keep running in the tray" — primary action,
-                    emerald-600, default-focused (autofocus). Keeps
+                    emerald-600, and the one the dialog opens onto. Keeps
                     the worker + scheduler alive so the
                     partner's background work continues uninterrupted.
+
+                    It focuses itself on the event that opens the dialog rather
+                    than from an x-init, because it is in the document from the
+                    first paint and focusing a button inside a closed <dialog>
+                    does nothing. mount() dispatches modal-show and Flux's
+                    dialog answers that same event with showModal().
                 --}}
                 <button
                     type="button"
                     wire:click="chooseKeepInTray"
-                    autofocus
+                    x-data
+                    x-on:modal-show.document="$event.detail && $event.detail.name === @js($modalName) && $nextTick(() => $el.focus())"
                     class="h-12 rounded-md bg-emerald-700 px-5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >
                     {{ $buttonKeepInTray }}
