@@ -223,6 +223,79 @@ Both lists were proved unchanged rather than assumed: 2,000 names and nineteen
 palette needles, rendered under all twenty-six shipped locales and diffed
 against the same code path with the fix removed — byte-identical everywhere.
 
+## Priced by a predicate no index leads with
+
+Every index on these three tables leads with `user_id`, and all three of these
+reads are deliberately **not** scoped by user: two are timer sweeps whose audit
+row takes its owner from the row itself, and the third is a user-agnostic query
+whose consumer enforces the scope. So the planner had nothing to seek on and
+read the whole table to find a set that shrinks as the table grows. Measured on
+a file-backed fixture built from the real schema, with no `ANALYZE` because
+nothing in the app runs one:
+
+| Read | Rows | Looking for | Before | After |
+| --- | --- | --- | --- | --- |
+| `ReviveExpiredAnomalySnoozesJob` | 20,000 alerts | 60 | `SCAN anomaly_alerts` — 1.396 ms | `SEARCH … USING INDEX anomaly_alerts_state_idx (state=?)` — 0.023 ms |
+| `RevivedExpiredDriftSnoozesJob` | 5,000 alerts | 40 | `SCAN drift_alerts` — 0.206 ms | `SEARCH … USING INDEX drift_alerts_state_idx (state=?)` — 0.014 ms |
+| `InboxMessageQuery::forStatus()` | 40,000 messages | 50 | `SCAN inbox_messages` — 2.985 ms | `SEARCH … USING INDEX inbox_messages_status_idx (status=?)` — 0.057 ms |
+
+`id` is the rowid on all three tables, so an index on the predicate column alone
+already carries the id ordering the walks page by: `(status)` and `(status, id)`
+produce byte-identical plans and timings. A partial index — `(id) WHERE state =
+'snoozed'` — is smaller still and was rejected: the planner reports it as
+`SCAN … USING INDEX`, and a plan that reads `SCAN` is one the next pass has to
+re-derive from scratch to know it is fine.
+
+The drift sweep had a **second** unbounded layer under the first, and the anomaly
+sweep next door did not: it collected every candidate id with `->get(['id'])`
+where anomaly already walked `lazyById`. Nothing closes a drift alert on its own,
+so that set is bounded only by the hours it accumulated over. It is a keyset walk
+now, which is also what makes the new index safe to walk under: a revived row
+leaves the set before the page after it is asked for.
+
+## The goals page, priced by the reader's goal count
+
+Each goal bar carries a run-rate projection, and the projection measures the
+funding pot's trailing window — one `SUM` per card, on top of the balance
+[`balancesForPots()` already batches](../features/pots/architecture.md). Twenty
+funded goals were twenty aggregates.
+
+The obvious fix was blocked, and the block is worth recording because it is the
+sort that sends a pass looking for a workaround.
+`GoalProjectionService::project()` already counted **exactly seven** parameters,
+which is the analyser's ceiling, so there was nowhere to pass the pre-read
+movements in. Checking all four analyser axes first is what found the way
+through: the seventh parameter was `User`, and it was there for one reason —
+so the projection could issue that read. Pre-reading it does not need an eighth
+parameter, it removes the need for the seventh. `project()` now takes six, and
+`GoalProjectionService` no longer depends on `PotBalanceQuery` at all.
+
+`PotBalanceQuery::dailyNetMovementForPotsSince()` is the one statement: the same
+join and the same `pot_movements.currency = pots.currency` bound, grouped by pot
+and by `date(created_at)` over `trailingWindowStart()` — the widest window any
+goal on the page can use. Each goal's own `effectiveStart` is then a filter over
+the days it was handed, and a date bucket compares against a date bound exactly
+as it did in SQL.
+
+| 20 funded goals, 4,020 movements | statements | rows handed to PHP |
+| --- | --- | --- |
+| Before | 20 | 20 aggregates |
+| After | **1** | 220, bounded by 90 days × pots |
+
+Proved equivalent rather than assumed: twenty goals whose start dates are spread
+so that each one's `effectiveStart` differs, plus a movement in a currency the
+pot is not denominated in — every window sum identical to the per-pot aggregate
+it replaces.
+
+What did **not** move: the sums themselves still walk each pot's whole movement
+history, because `pot_movements` carries no index on `created_at` and the seek
+is `(user_id, pot_id)`. Adding `(user_id, pot_id, created_at)` measures 0.518 ms
+against 0.167 ms on that fixture. It was left alone because `balancesForPots()`
+beside it sums every movement a pot ever had by definition — 0.497 ms on the
+same fixture — so the page's floor does not move, and a third index on a table
+written on every deposit is not paid for by a read that is already the cheaper
+of the two.
+
 ## Found and measured, deliberately not fixed
 
 - **The anomaly backfill is quadratic in history.** `BackfillAnomaliesJob` walks
@@ -268,7 +341,9 @@ correct as written, and converting them would be churn that makes the code worse
 looks whole-table and is not, on the grounds that both queries correlate on
 `MAX(rate_date)` per pair and so answer one row per currency pair whatever the
 rate history holds. **The answer is bounded; the read is not, and this entry was
-reasoning from the result size rather than from the plan.**
+reasoning from the result size rather than from the plan.** It has since been
+fixed. The entry stays where it is, because the mistake it records — grading a
+read by the size of its answer — is the one this page exists to stop.
 
 ```
 EXPLAIN QUERY PLAN  -- fetchLatestRates()
@@ -286,16 +361,49 @@ that class with no memo: `ratesForDate()` directly below it caches per date and
 says why, while `convert()` calls `fetchLatestRates()` afresh every time.
 
 Joining a grouped `MAX(rate_date)` instead lets the same covering index answer
-it — `1.210 ms` for the identical set of rows, a 4× cut. It was not changed
-here, and the reason is not the query. `convertWithRows()` folds the rows into a
-`RateTable` with last-write-wins per pair, which is order-insensitive across
-pairs, but it also fills `$rateMeta` keyed by **quote currency alone**, so two
-rows with different bases, the same quote and the same date resolve the reported
-source and `asOf` by whichever arrives last. Neither query fixes that order —
-both end in `USE TEMP B-TREE FOR ORDER BY` over a non-total `ORDER BY` — so the
-metadata is already decided by a tie SQLite does not promise to break the same
-way twice. Making the read cheap and making that order total are one change, and
-it is a change to what a figure reports about itself.
+it. Both queries in the class now do:
+
+```
+EXPLAIN QUERY PLAN  -- fetchLatestRates(), after
+CO-ROUTINE in_effect
+  SCAN exchange_rates USING COVERING INDEX exchange_rates_latest_lookup
+SCAN in_effect
+SEARCH er USING INDEX exchange_rates_latest_lookup (base_currency=? AND quote_currency=? AND rate_date=?)
+USE TEMP B-TREE FOR ORDER BY
+```
+
+The `SCAN` that is left is one pass over the covering index to compute one row
+per pair, not a pass over the table with an aggregate re-run per row, and the
+two `SCAN`s over `in_effect` are over that result — twenty rows, or thirty.
+
+| exchange_rates | `fetchLatestRates()` | `fetchRatesForDate()` |
+| --- | --- | --- |
+| 7,850 rows (3y × 10 pairs) | 3.962 → **0.924 ms** | — |
+| 39,180 rows (5y × 30 pairs) | 23.786 → **4.456 ms** | 30.732 → **11.959 ms** |
+
+Identical row sets before and after, checked across four probe dates including
+the two the fall-forward exists for: a Saturday, and a day older than every row
+held. `fetchRatesForDate()` gains most on the oldest date — 48.886 → 7.720 ms —
+because that is the case where both correlated subqueries ran.
+
+**Making the read cheap and making the order total is one change, and this is
+the half that was worth pausing over.** `convertWithRows()` folds the rows into
+a `RateTable` with last-write-wins per pair and fills its metadata map the same
+way, so the order decides both the rate a figure is converted at and the source
+and as-of date it reports about itself
+([B10](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md)).
+The unique index is keyed by
+(`base_currency`, `quote_currency`, `rate_date`, `source`), so one pair on one
+day can hold a row per provider: the registry falls through to the next provider
+when one fails, and two runs on one day can each leave a row. The `ORDER BY`
+sorted bundled-last and nothing else, so among live providers the winner was a
+tie SQLite does not promise to break the same way twice. It now ends in the
+row's own `id` — the most recently written row wins, which is the freshest thing
+the device knows, and the snapshot still never wins that comparison however late
+it was written because the source class is compared first.
+
+The original entry was not wrong about the row count. It was reasoning from the
+result size rather than from the plan.
 
 ### The pairs that make the case
 
