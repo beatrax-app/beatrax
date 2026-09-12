@@ -31,6 +31,7 @@ return [
     'th_category' => 'Catégorie',
     'th_amount' => 'Montant',
     'uncategorized' => 'Non catégorisé',
+    'uncategorized_count' => ':count transaction sans catégorie|:count transactions sans catégorie',
 
     'jump_to_records' => [
         'body' => 'Rien pour cette période. Vos opérations les plus récentes sont toujours là.',
