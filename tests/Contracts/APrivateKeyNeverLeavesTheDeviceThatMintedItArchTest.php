@@ -127,6 +127,56 @@ function privateKeyCode(string $path): string
     return PatternScan::replace('#/\*.*?\*/|//[^\n]*#s', '', (string) file_get_contents($path));
 }
 
+// The DTO carries both secret halves and its toArray() emits them under the
+// same names the rule above hunts for — so a caller that hands the WHOLE object
+// to a serialiser ships the key while naming no field at all, and the pattern
+// above reads the file as clean. One site does it, sealing the key-file to disk.
+/** @var array<string, string> path => why it may serialise the identity whole */
+const PRIVATE_KEY_SERIALISERS = [
+    'Modules/Sync/Internal/Identity/DeviceIdentityService.php' => 'Seals the key-file this device keeps: the array is encrypted under the app-lock KEK on the next line and never leaves the disk it is written to.',
+];
+
+const PRIVATE_KEY_WHOLE_IDENTITY = '/(?:json_encode|serialize|var_export|http_build_query|->toJson)\s*\([^;]*\$\w*(?:identity|dto)\w*\b|\$\w*(?:identity|dto)\w*->toArray\s*\(/i';
+
+it('hands no serialiser a device identity whole', function (): void {
+    $offenders = [];
+    $seen = 0;
+
+    foreach (privateKeyScannedSources() as $path) {
+        $code = privateKeyCode($path);
+
+        if (! str_contains($code, 'DeviceIdentityDto')) {
+            continue;
+        }
+
+        $seen++;
+
+        if (! PatternScan::matches(PRIVATE_KEY_WHOLE_IDENTITY, $code)) {
+            continue;
+        }
+
+        $relative = privateKeyRelative($path);
+
+        if (! array_key_exists($relative, PRIVATE_KEY_SERIALISERS)) {
+            $offenders[] = $relative;
+        }
+    }
+
+    // The denominator: a reader that stopped recognising the DTO would report
+    // no serialiser in a tree that has one.
+    expect($seen)->toBeGreaterThan(
+        4,
+        'Only '.$seen.' files were read as naming DeviceIdentityDto, so a clean answer below is the reader and not the tree.',
+    );
+
+    expect($offenders)->toBe([], implode("\n  ", [
+        'These hand a device identity to a serialiser whole. toArray() emits both secret',
+        'halves, so the key travels without the file ever naming a secret field — which is',
+        'the one shape the rule below cannot see. Take the public half, or pin it above.',
+        'The tree reads: '.implode(', ', $offenders),
+    ]));
+});
+
 it('keeps the private half of a device identity to the files that spend it here', function (): void {
     $sources = privateKeyScannedSources();
 

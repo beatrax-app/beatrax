@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Tests\Contracts\Support\BackendSourceFiles;
 
@@ -40,6 +41,8 @@ const SPREAD_CONTEXT_SITE_FLOOR = 20;
 
 // Named after the spread it reads: an aliased import, or a describe() held in a
 // variable first, is a shape this scan cannot see and the wording does not claim.
+const SPREAD_CONTEXT_DESCRIBE = '/\.\.\.\s*(?:\\\\?[A-Za-z_][A-Za-z0-9_]*\\\\)*SafeExceptionContext::describe\s*\(/';
+
 it('never sets a key it then spreads SafeExceptionContext::describe() over', function (): void {
     $keys = describedContextKeys();
 
@@ -54,20 +57,25 @@ it('never sets a key it then spreads SafeExceptionContext::describe() over', fun
 
     foreach ($files as $path) {
         $source = (string) file_get_contents($path);
-        $offset = 0;
 
-        while (($at = strpos($source, '...SafeExceptionContext::describe(', $offset)) !== false) {
+        // The spread is matched through an optional namespace prefix, and the
+        // key through either quote and any spacing. Pint normalises the
+        // spacing and the quotes, so those two were only ever cosmetic — but
+        // it leaves a fully-qualified name alone, so
+        // `...\Modules\Core\Public\Support\SafeExceptionContext::describe($e)`
+        // was a spread this reader did not see at all.
+        foreach (PatternScan::allWithOffsets(SPREAD_CONTEXT_DESCRIBE, $source)[0] ?? [] as $hit) {
+            $at = (int) $hit[1];
             $sites++;
             $literal = contextLiteralAround($source, $at);
 
             foreach ($keys as $key) {
-                if (str_contains($literal, sprintf("'%s' =>", $key))) {
+                if (PatternScan::matches('/[\'"]'.preg_quote($key, '/').'[\'"]\s*=>/', $literal)) {
                     $line = substr_count(substr($source, 0, $at), "\n") + 1;
                     $clobbered[] = str_replace(base_path().'/', '', $path).sprintf(":%s sets '%s'", $line, $key);
                 }
             }
 
-            $offset = $at + 1;
         }
     }
 
