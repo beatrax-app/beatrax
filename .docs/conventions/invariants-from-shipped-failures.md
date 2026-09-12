@@ -7455,6 +7455,32 @@ already there: `AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest` and
 What the suite pins here is the guard itself —
 `Modules/Core/tests/Unit/ABuildRefusesAFrontEndOlderThanItsSourcesTest.php`.
 
+### The one path that copies the bundle instead of reading it
+
+Every path above reads `public/build` where it lies. The phone's does not:
+`mobile-app/scripts/materialize.sh` dereferences the mobile root's
+`public -> ../public` link into a real directory, and *that copy* is what is
+pushed to the Bifrost build repo and built into an APK. A copy of nothing is
+silent — the tree publishes, the build is green, and the device loads no script
+at all, so every `x-data` binds an empty scope and every `$store` read comes
+back `undefined`.
+
+`CommandStarting` never fires for a bash script, so the listener above cannot
+cover it. The script asks the same question itself, over the same
+`BuiltFrontEnd::COMPILED_FROM` list, and refuses: exit `5` where the output
+carries no `manifest.json` beside an `assets/app-*.js`, exit `6` where any of
+those sources is newer than the manifest it copied. `mobile-bifrost-publish.yml`
+runs `npm ci && npm run build` immediately before materializing, so in CI the
+guard is trivially satisfied — its value is that removing that step fails the
+publish rather than mirroring a frontendless tree into the build repo.
+
+Both halves are pinned in
+`tests/Contracts/AnAlpineProviderIsRegisteredByTheScriptThatShipsArchTest.php`,
+which runs the real script against a fabricated repository: one arm per pattern
+in the list, so a guard that stopped reading one of them is a named failure
+rather than a silence, and a rule comparing the shell list against the PHP
+constant so the two refusals cannot drift into watching different trees.
+
 ## A node a script draws into that the morph is allowed to empty
 
 `tests/Contracts/AnElementAScriptDrawsIntoSurvivesTheMorphArchTest.php`

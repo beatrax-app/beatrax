@@ -1891,6 +1891,25 @@ from a hardcoded list, so a newly shared directory is picked up
 automatically, and it hard-fails if any symlink survives the copy — a
 non-self-contained tree can never reach Bifrost.
 
+It hard-fails on a second reading too: **the output must carry a built front
+end, no older than the sources it was compiled from.** `public/` is one of the
+dereferenced links, so the bundle arrives here as a *copy* rather than being
+read where it lies — and a copy of nothing is silent. Bifrost builds what the
+build repo carries and runs no Vite step, so a tree published without
+`public/build/` produces an APK whose every page loads no script at all: each
+`x-data` binds an empty scope, each `$store` read is `undefined`, and the build
+log is green from end to end. A tree published with a bundle older than the
+sources ships the narrower version of the same thing — the providers registered
+since that build are simply absent.
+
+`RefuseToShipAStaleFrontEnd` cannot reach this path: it fires on
+`CommandStarting`, and nothing dispatches that for a bash script. The script
+therefore asks the question itself, over the same source list
+(`BuiltFrontEnd::COMPILED_FROM`), and exits `5` for an absent bundle and `6` for
+a stale one. In CI the build step immediately before satisfies it; what the
+guard buys is that *dropping* that step fails the publish instead of quietly
+mirroring a frontendless tree into the build repo.
+
 The materialized tree is published to a dedicated, fully-generated build
 repo that Bifrost is pointed at (at its root — no experimental monorepo /
 subfolder support required). That repo is derived output with a single

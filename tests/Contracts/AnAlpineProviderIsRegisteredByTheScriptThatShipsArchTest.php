@@ -536,3 +536,260 @@ it('asks the registry a template reads, not merely whether the name is written s
     expect(alpineRegistersInScript('plural', "Alpine.magic('plural', () => 1);", 'magic'))->toBeTrue();
     expect(alpineRegistersInScript('plural', "Alpine.store('plural', {});", 'magic'))->toBeFalse('a store of that name is not reachable as $plural()');
 });
+
+// The rules above read `public/build` where it lies, which is how the desktop
+// shells and a browser reach it. The phone does not: `materialize.sh`
+// dereferences the mobile root's `public -> ../public` link into a copy, and
+// that copy is what is pushed to the Bifrost build repo and built into an APK.
+// A copy of nothing is silent — the tree publishes, the build is green, and
+// every provider is absent because no script shipped at all.
+/**
+ * @link ../../.docs/runbooks/mobile-release.md#the-built-front-end-in-a-bifrost-tree
+ */
+const MATERIALIZE_SCRIPT = 'mobile-app/scripts/materialize.sh';
+
+const BUILT_FRONT_END_CLASS = 'Modules/Core/Internal/Build/BuiltFrontEnd.php';
+
+/**
+ * One file under each pattern materialize.sh watches, derived from the list the
+ * script itself carries rather than written out again: a pattern added there
+ * and not here would be compared by the rule at the foot of this file and left
+ * unexercised by the one above it, which is the silence both exist to close.
+ *
+ * @return array<string, string> pattern => the file standing in for it
+ */
+function compiledFromFixtureFiles(): array
+{
+    $files = [];
+
+    foreach (materializeGuardPatterns() as $pattern) {
+        $files[$pattern] = str_contains($pattern, '/')
+            ? str_replace('*', 'Core', $pattern).'/probe'
+            : $pattern;
+    }
+
+    return $files;
+}
+
+/**
+ * @return list<string>
+ */
+function materializeGuardPatterns(): array
+{
+    return compiledFromPatterns(
+        (string) file_get_contents(RepoTree::root().'/'.MATERIALIZE_SCRIPT),
+        "COMPILED_FROM=(\n",
+        "\n)",
+    );
+}
+
+/**
+ * @return list<string>
+ */
+function builtFrontEndPatterns(): array
+{
+    return compiledFromPatterns(
+        (string) file_get_contents(RepoTree::root().'/'.BUILT_FRONT_END_CLASS),
+        "COMPILED_FROM = [\n",
+        "\n    ];",
+    );
+}
+
+/**
+ * A repository shaped the way materialize.sh expects: the mobile root reaching
+ * the shared source by symlink, the patch scripts beside it, and a front end
+ * built under public/. Small enough to stand in a temp directory, real enough
+ * that the script under test runs against it unmodified.
+ */
+function materializedTreeFixture(): string
+{
+    $root = sys_get_temp_dir().'/beatrax-materialize-'.bin2hex(random_bytes(6));
+
+    // The whole fixture is written within one second, so a build and a source
+    // can share an mtime -- and "not older" is what the guard asks. Dated apart
+    // deliberately, or the fresh arm passes on a tie rather than on freshness.
+    $built = time();
+
+    foreach (['mobile-app/scripts', 'scripts', 'public/build/assets'] as $directory) {
+        mkdir($root.'/'.$directory, 0o755, true);
+    }
+
+    foreach (compiledFromFixtureFiles() as $file) {
+        if (! is_dir($root.'/'.dirname($file))) {
+            mkdir($root.'/'.dirname($file), 0o755, true);
+        }
+
+        file_put_contents($root.'/'.$file, "probe\n");
+        touch($root.'/'.$file, $built - 60);
+    }
+
+    copy(RepoTree::root().'/'.MATERIALIZE_SCRIPT, $root.'/'.MATERIALIZE_SCRIPT);
+    chmod($root.'/'.MATERIALIZE_SCRIPT, 0o755);
+
+    file_put_contents($root.'/scripts/nativephp_probe.php', "<?php\n");
+    file_put_contents($root.'/mobile-app/composer.json', "{}\n");
+    file_put_contents($root.'/public/build/manifest.json', "{}\n");
+    file_put_contents($root.'/public/build/assets/app-probe.js', "Alpine.data('probe', () => ({}));\n");
+
+    symlink('../public', $root.'/mobile-app/public');
+
+    touch($root.'/public/build/manifest.json', $built);
+    touch($root.'/public/build/assets/app-probe.js', $built);
+
+    return $root;
+}
+
+/**
+ * @return array{status: int, output: string}
+ */
+function materializeFixtureRun(string $root): array
+{
+    exec(escapeshellarg($root.'/'.MATERIALIZE_SCRIPT).' '.escapeshellarg($root.'/out').' 2>&1', $output, $status);
+
+    return ['status' => $status, 'output' => implode("\n", $output)];
+}
+
+function forgetMaterializedTreePath(string $path): void
+{
+    // Named rather than trusted: this deletes recursively, so it refuses any
+    // path outside a tree this fixture minted.
+    if (! str_starts_with($path, sys_get_temp_dir().'/beatrax-materialize-')) {
+        throw new RuntimeException('refusing to remove a path this fixture did not create: '.$path);
+    }
+
+    exec('rm -rf '.escapeshellarg($path));
+}
+
+/**
+ * The patterns a list of shell words or PHP string literals names, whichever
+ * the file spells it in.
+ *
+ * @return list<string>
+ */
+function compiledFromPatterns(string $source, string $opening, string $closing): array
+{
+    $start = strpos($source, $opening);
+
+    if ($start === false) {
+        return [];
+    }
+
+    $body = substr($source, $start + strlen($opening));
+    $end = strpos($body, $closing);
+
+    if ($end === false) {
+        return [];
+    }
+
+    $patterns = [];
+
+    foreach (explode("\n", substr($body, 0, $end)) as $line) {
+        $word = trim($line, " \t,");
+
+        if ($word !== '') {
+            $patterns[] = trim($word, "'\"");
+        }
+    }
+
+    sort($patterns);
+
+    return $patterns;
+}
+
+it('publishes a mobile tree that carries the built script, as a file and not a link', function (): void {
+    $root = materializedTreeFixture();
+
+    try {
+        $run = materializeFixtureRun($root);
+
+        expect($run['status'])->toBe(0, 'A tree with a front end newer than its sources is the case the guard must let through:'."\n".$run['output']);
+
+        // Asked of the copy rather than of the source: a link that survived
+        // would resolve here and dangle in the build container.
+        expect(is_file($root.'/out/public/build/assets/app-probe.js'))->toBeTrue('the built script did not reach the materialized tree')
+            ->and(is_link($root.'/out/public/build/assets/app-probe.js'))->toBeFalse('the built script arrived as a link, which dangles once Bifrost pulls the tree alone')
+            ->and(is_file($root.'/out/public/build/manifest.json'))->toBeTrue('no manifest, so every view renders a ViteManifestNotFoundException');
+    } finally {
+        forgetMaterializedTreePath($root);
+    }
+});
+
+it('refuses to publish a mobile tree carrying no built front end', function (): void {
+    $root = materializedTreeFixture();
+
+    try {
+        forgetMaterializedTreePath($root.'/public/build');
+
+        $run = materializeFixtureRun($root);
+
+        expect($run['status'])->not->toBe(0, implode("\n", [
+            'materialize.sh published a tree with no public/build in it. Bifrost builds what the build repo',
+            'carries and runs no Vite step, so that APK serves a page with no script at all: every x-data',
+            'binds an empty scope, every $store read is undefined, and the build log is green throughout.',
+        ]));
+
+        expect($run['output'])->toContain('no built front end');
+    } finally {
+        forgetMaterializedTreePath($root);
+    }
+});
+
+it('refuses to publish a mobile tree whose built front end is older than its sources', function (): void {
+    $arms = compiledFromFixtureFiles();
+
+    // Counted first: the arms are derived from the script, so a reader that
+    // came back empty would report every source watched having touched none.
+    expect(count($arms))->toBe(
+        count(builtFrontEndPatterns()),
+        'Read '.count($arms).' patterns out of materialize.sh against '.count(builtFrontEndPatterns())
+        .' out of BuiltFrontEnd, so the cases below are not one per source.',
+    )->and(count($arms))->toBeGreaterThan(4);
+
+    $unwatched = [];
+
+    foreach ($arms as $pattern => $file) {
+        $root = materializedTreeFixture();
+
+        try {
+            touch($root.'/'.$file, time() + 60);
+
+            $run = materializeFixtureRun($root);
+
+            if ($run['status'] === 0 || ! str_contains($run['output'], 'older than the sources')) {
+                $unwatched[] = $pattern.' (touched '.$file.', exit '.$run['status'].')';
+            }
+        } finally {
+            forgetMaterializedTreePath($root);
+        }
+    }
+
+    expect($unwatched)->toBe([], implode("\n", [
+        'materialize.sh published a tree whose bundle predates one of the sources it was compiled from.',
+        'That is the shape the phone shipped: beatraxNotificationPermission was registered in',
+        'resources/js/app.js and absent from the script the device downloaded, so the OS dialog could not',
+        'be raised. RefuseToShipAStaleFrontEnd asks the same question ahead of every artisan command that',
+        'ships the bundle, and CommandStarting never reaches a bash script.',
+        '',
+        'These sources went unread:',
+        ...$unwatched,
+    ]));
+});
+
+// Two lists of the same claim in two languages, and the bash one is the only
+// thing standing between a hand-run materialize and a frontendless build repo.
+it('asks the materialize guard about the same sources the build refusal asks about', function (): void {
+    $shell = materializeGuardPatterns();
+    $php = builtFrontEndPatterns();
+
+    expect(count($php))->toBeGreaterThan(4, 'Only '.count($php).' patterns were read out of BuiltFrontEnd, so the comparison below is between two things nobody parsed.');
+
+    expect($shell)->toBe($php, implode("\n", [
+        'materialize.sh and BuiltFrontEnd disagree about what the front end is compiled from, so one of the',
+        'two refusals is blind to a source the other watches. A template directory missing from the shell',
+        'list is a Tailwind rebuild the Bifrost tree ships without; one missing from the PHP list is the',
+        'same gap on every desktop build.',
+        '',
+        '  materialize.sh: '.implode(', ', $shell),
+        '  BuiltFrontEnd:  '.implode(', ', $php),
+    ]));
+});
