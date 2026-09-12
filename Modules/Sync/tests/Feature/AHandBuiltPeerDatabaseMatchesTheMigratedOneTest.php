@@ -39,6 +39,12 @@ const HARNESS_TABLES_ANSWERING_ONE_QUESTION = [
     'op_log_entries' => 'whether an entry was signed here or replayed in, which is the other half of that question',
 ];
 
+// The setup writes relay artefacts to disk, so a later test would start with a
+// relay already configured had this been left out.
+afterEach(function (): void {
+    $this->crossDevicePairingTearDown();
+});
+
 /** @return list<string> the column names of $table on $connection, sorted */
 function harnessColumnsOf(DatabaseManager $db, string $connection, string $table): array
 {
