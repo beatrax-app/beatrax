@@ -1078,6 +1078,21 @@ ranking at all: `strengthens()` is false, so `disagreesAboutTheTotal()`
 is the only reason `shouldEnrich()` returns true, and `strongerRef()`
 writes the stored reference back unchanged.
 
+**A restatement also carries `PendingEnrichment::$restates`** — a
+`TransactionBooking` holding the restating row's `posted_at`,
+`booked_at`, `value_date` and occurrence ordinal. `writeEnrichment()`
+writes those four columns unasked and `rederivedFingerprint()` composes
+the tuple over them, because which day a source filed a transaction on is
+not a disagreement two records have and a reader handed two dates has no
+ground to choose between them. The UPDATE carries a
+`UniqueConstraintViolationException` catch for the case where the move
+lands on a tuple the ledger already holds: the stored row stands, the
+confirm carries on, and `applyOne()` reports the row as not enriched.
+Neither the booking nor anything else this action writes is announced to
+`Sync` — see [the pipeline
+page](../../architecture/ingestion-pipeline.md#a-reference-the-ledger-already-holds)
+for why announcing an undeclared column would be worse than the silence.
+
 Two encryption guarantees hold regardless of policy: `FingerprintStage`
 decrypts the stored value before ever populating `conflictingFields`, so
 `stored_value`/`csvValue` are always plaintext (never ciphertext)

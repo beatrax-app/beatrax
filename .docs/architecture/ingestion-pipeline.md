@@ -357,11 +357,12 @@ meant to answer.
 
 A bank that files a card payment at the price the terminal held and
 restates the same row at the price it settled for sends both rows under
-one reference. The amount is hashed into the fingerprint and the
-reference deliberately is not, so the restating row hashed to nothing
-stored, classified NEW, and landed beside the row it was restating: one
-€14.99 coffee read as €27.98 of spending, with nothing on any screen
-saying the two rows were one payment.
+one reference, and usually a day or three apart. The amount and the day
+are both hashed into the fingerprint and the reference deliberately is
+not, so the restating row hashed to nothing stored, classified NEW, and
+landed beside the row it was restating: one €14.99 coffee read as €27.98
+of spending, with nothing on any screen saying the two rows were one
+payment.
 
 `RestatedRowMatch` is the third question `classify()` asks when the exact
 lookup misses, and it is asked before the receipt band's approximate one:
@@ -372,18 +373,20 @@ arm — a **different** `amount_minor`.
 
 Four rules bound it:
 
-- **Every other term the fingerprint hashes still has to be equal** —
-  `posted_at`, `booked_at`, `counterparty_normalized` and the occurrence
-  ordinal, with the currency equal case-normalised. The reference widens
-  the total and nothing else, for the same reason [the band widens no
-  date](#a-total-inside-the-band). It also keeps the resolved row findable:
-  taking the restated figure makes the stored row identical to the
-  restating one, so the next overlapping statement reads it as a plain
-  DUPLICATE instead of writing it again.
+- **The day may move, strictly inside a week.** A hold books one to three
+  days after the purchase, so demanding the same day caught only the rare
+  same-day correction and missed the ordinary case. The bound is
+  `WeekStart::DAYS_IN_WEEK`, exclusive and symmetric — symmetric because
+  files arrive in whatever order the reader downloads them. It is derived
+  rather than chosen: a week is the shortest cadence
+  `Recurring`'s closed vocabulary admits, so a pair closer together than
+  one cannot be a repeat the product could ever recognise. Everything else
+  the fingerprint hashes — `counterparty_normalized`, the occurrence
+  ordinal, the currency case-normalised — still has to be equal.
 - **A row stating the same total is not a candidate.** The exact lookup
-  missed it over some other term, and no amount has been restated. A
-  fixed-amount direct debit whose bank reuses one mandate reference every
-  month therefore stays a row of its own.
+  missed it over some other term, and no amount has been restated. This is
+  what keeps a bank's genuine double charge on consecutive days visible
+  rather than collapsed into the row before it.
 - **Two stored rows under one reference restate neither.** A reference two
   rows share is a constant the bank fills in rather than a name for either
   of them, and matching one of two leaves the other holding the
@@ -394,6 +397,50 @@ Four rules bound it:
   field 7 with `NONREF` the way SEPA fills an end-to-end field with
   `NOTPROVIDED`; `Mt940Adapter` drops both, because stored as a reference
   either becomes a lookup key every such row of the account shares.
+
+#### The source owns *when*; the reader owns *how much*
+
+A restatement carries `TransactionBooking::of($tx)` on its disposition —
+the restating row's `posted_at`, `booked_at`, `value_date` and occurrence
+ordinal, the four columns that say when a source filed a transaction and
+which occurrence of its own file the row is. `ApplyEnrichments` writes
+them **without asking**, in the same statement as everything else, and
+`rederivedFingerprint()` composes the tuple over them rather than over the
+columns it is in the middle of rewriting.
+
+Putting the dates to the reader instead was the alternative, and it is the
+wrong shape twice over. A reader handed "the stored row says the 17th, the
+import says the 19th" has no ground to choose — which day a bank booked a
+transaction is not a matter of opinion — and the conflict mechanism
+resolves one field at a time, so a restatement would have raised up to six
+separate questions and left the row half-moved between the answers, with a
+dedup key composed over the mixture.
+
+Taking the terms is also what keeps a resolved restatement settled. Once
+the reader accepts the restated figure the stored row is identical to the
+restating one, so the next overlapping statement reads it as a plain
+DUPLICATE. A row left holding the hold's dates would be restated again by
+every statement covering that period for the life of the account — which
+is the defect the reproduction caught in the first design of this arm, and
+why the terms are adopted rather than merely compared.
+
+The UPDATE can now move a row onto a tuple another row already occupies,
+so it is wrapped in the `UniqueConstraintViolationException` catch
+`ApplyReceiptConflictResolution` already carries for the same reason. The
+stored row stands, the confirm carries on, and the collision is logged —
+letting it out would roll back the whole import's enrichment phase.
+
+**What this does not do: announce.** `ApplyEnrichments` has never
+announced any of its writes to `Sync`, and the four booking columns have
+no per-column rule in `MergeRulesRegistry` — they appear only under
+`_create_required`, so they travel in a whole-row create and there is no
+`Set` op the merge layer would accept for them. Announcing them here would
+store an undeclared last-write-wins nobody chose, which is worse than the
+silence. A peer that received the row from the original import keeps the
+hold's dates until the same statement is imported there too, at which
+point it performs the same restatement and converges. Closing that gap
+means declaring the columns and giving the whole enrichment path an
+announcement, which is its own change and not this one.
 
 A hit is ENRICHED, never a fourth verdict, and the disagreement rides on
 `EnrichedDisposition::$conflictingFields` exactly as the receipt band's
@@ -418,7 +465,7 @@ Re-importing is bounded in all three directions the reader can leave it:
 | The reader has | The next overlapping statement |
 |---|---|
 | not answered yet | restates again; the upsert on `UNIQUE (user_id, transaction_id, field_name)` keeps one outstanding question |
-| taken the new figure | matches the recomposed fingerprint exactly and drops as DUPLICATE |
+| taken the new figure | matches the recomposed fingerprint exactly — the booking terms were adopted at import — and drops as DUPLICATE |
 | kept the stored figure | restates again, and the stored policy settles it without asking a second time |
 
 ## Preview vs Confirm

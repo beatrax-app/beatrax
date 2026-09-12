@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\WeekStart;
 use Modules\Import\Internal\Pipeline\Stages\FingerprintStage;
 use Modules\Import\Public\Dto\EnrichedDisposition;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
@@ -147,12 +148,54 @@ it('writes a row carrying the reference on another account as new', function ():
     expect($this->stage->classify($incoming, $this->fixtureUser)->status())->toBe(PreviewRowStatus::NewRow);
 });
 
-// Widening the total and the day at once multiplies what a wrong match reaches,
-// so a row the bank filed on another day is a row of its own.
-it('writes a row carrying the reference on another day as new', function (): void {
-    $incoming = ($this->row)(-1499, 'E2E-COFFEE-4471902', 'EUR', '2026-03-05');
+// A hold books one to three days later, so the day has to be allowed to move or
+// the ordinary restatement is the one that goes uncaught.
+it('restates a row the bank filed two days after the one it restates', function (): void {
+    $disposition = $this->stage->classify(($this->row)(-1499, 'E2E-COFFEE-4471902', 'EUR', '2026-03-06'), $this->fixtureUser);
 
-    expect($this->stage->classify($incoming, $this->fixtureUser)->status())->toBe(PreviewRowStatus::NewRow);
+    expect($disposition->status())->toBe(PreviewRowStatus::Enriched);
+    /** @var EnrichedDisposition $disposition */
+    expect($disposition->existingTransactionId)->toBe($this->storedId);
+});
+
+// The bound is a week because a week is the shortest cadence the recurring
+// vocabulary admits: inside one, no repeat the product can recognise fits.
+it('restates a row one day short of a week away', function (): void {
+    $sixDays = CarbonImmutable::parse('2026-03-04')->addDays(WeekStart::DAYS_IN_WEEK - 1)->toDateString();
+
+    expect($this->stage->classify(($this->row)(-1499, 'E2E-COFFEE-4471902', 'EUR', $sixDays), $this->fixtureUser)->status())
+        ->toBe(PreviewRowStatus::Enriched);
+});
+
+it('writes a row a whole week away as new, in either direction', function (): void {
+    $day = CarbonImmutable::parse('2026-03-04');
+    $aWeekOn = $day->addDays(WeekStart::DAYS_IN_WEEK)->toDateString();
+    $aWeekBack = $day->subDays(WeekStart::DAYS_IN_WEEK)->toDateString();
+
+    expect($this->stage->classify(($this->row)(-1499, 'E2E-COFFEE-4471902', 'EUR', $aWeekOn), $this->fixtureUser)->status())
+        ->toBe(PreviewRowStatus::NewRow);
+    expect($this->stage->classify(($this->row)(-1499, 'E2E-COFFEE-4471902', 'EUR', $aWeekBack), $this->fixtureUser)->status())
+        ->toBe(PreviewRowStatus::NewRow);
+});
+
+// The control the window exists for. An energy bill drawn monthly under one
+// mandate varies in amount, and a bank that puts the mandate reference on every
+// draw hands the lookup two rows agreeing in everything but the total. February
+// is a payment the reader made, not January restated.
+it('writes next month draw of a varying direct debit as new', function (): void {
+    DB::table('transactions')->where('user_id', $this->fixtureUser->id)->delete();
+
+    ($this->store)(($this->row)(-12000, 'NL07ZZZ-MANDATE-4471902', 'EUR', '2026-01-24'));
+    $january = (int) DB::table('transactions')->where('user_id', $this->fixtureUser->id)->value('id');
+
+    $february = ($this->row)(-13500, 'NL07ZZZ-MANDATE-4471902', 'EUR', '2026-02-24');
+
+    expect($this->stage->classify($february, $this->fixtureUser)->status())->toBe(PreviewRowStatus::NewRow);
+
+    ($this->store)($february);
+
+    expect(DB::table('transactions')->where('user_id', $this->fixtureUser->id)->count())->toBe(2);
+    expect((int) DB::table('transactions')->where('id', $january)->value('amount_minor'))->toBe(-12000);
 });
 
 // Two rows disagreeing about the currency as well as the total are not one row
