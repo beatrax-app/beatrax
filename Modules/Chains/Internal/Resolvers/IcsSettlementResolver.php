@@ -288,99 +288,91 @@ final readonly class IcsSettlementResolver
 
         $signatureHash = self::signatureHash($ibans, $accountId, $periodEnd, $user);
 
-        if (abs($delta) <= $tolerance) {
-            $coveredCount = $expenses->count();
-            if ($coveredCount === 0) {
-                // With no expense to link, nothing records that this transfer
-                // settled this statement: candidateTransferIds() excludes only
-                // a transfer carrying a confirmed link, so applySettlement()
-                // would subtract the same amount again on every later pass.
-                return 0;
-            }
+        if (abs($delta) > $tolerance) {
+            // The NULL to_transaction_id is legal only for this
+            // exceeded-tolerance candidate — the chain_links NULL-endpoint
+            // trigger rejects every other.
+            $confidence = $this->computeExceededConfidence($delta, $statementTotal);
 
-            $toleranceUsed = abs($delta) <= SettlementTolerance::FLOOR_MINOR
-                ? SettlementToleranceUsed::AmountFloor
-                : SettlementToleranceUsed::Percent;
-            $evidenceBase = [
-                'statement_id' => $statementId,
-                'unaccounted_delta_minor' => $delta,
-                'tolerance_used' => $toleranceUsed->value,
-                'covered_count' => $coveredCount,
-                'credits_applied_minor' => $priorCredits,
-                'signature_hash' => $signatureHash,
-            ];
-
-            // Flushed here rather than at the end of the pass: pullExpenses()
-            // skips an expense that already carries a confirmed link, so the
-            // next transfer must see what this one just claimed.
-            $links = [];
-            foreach ($expenses as $expense) {
-                $links[] = [
-                    'from_transaction_id' => $transferId,
-                    'to_transaction_id' => self::toInt($expense->id ?? null),
-                    'kind' => ChainLinkKind::IcsBulkSettle->value,
-                    'state' => ChainLinkState::Confirmed->value,
-                    'confidence' => '1.000',
-                    'resolver' => ChainLinkResolver::Auto->value,
-                    'evidence' => $evidenceBase,
-                ];
-            }
-
-            // One transaction over all three writes: a crash after the links
-            // is unrecoverable, because candidateTransferIds() then drops the
-            // transfer for carrying a confirmed link and the statement it
-            // never settled stays open forever.
-            return $connection->transaction(function () use ($connection, $links, $statementId, $settled, $priorCredits, $statementCurrency, $transferId, $user): int {
-                $inserted = $this->inserter->insertMissing($links, $user->id);
-
-                $this->dismissStaleHint($transferId, $user);
-
-                // CardStatementStateMachine is the only sanctioned mutator of
-                // card_statements.state. It is told the credits too: the
-                // tolerance test above already spent them, so told the payment
-                // alone it left a paid-off statement reading half paid.
-                $settlement = $this->stateMachine->applySettlement($statementId, $settled + $priorCredits, $user);
-
-                if ($settlement->newState !== CardStatementState::Overpaid->value) {
-                    return $inserted;
-                }
-
-                $now = $this->clock->now()->toDateTimeString();
-                $connection->table('card_statement_credits')->insert([
-                    'user_id' => $user->id,
-                    'from_statement_id' => $statementId,
-                    'to_statement_id' => null,
-                    'amount_minor' => abs($settlement->newOpenMinor),
-                    'currency' => $statementCurrency,
-                    'reason' => CardStatementCreditReason::Overpayment->value,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-
-                return $inserted;
-            });
+            return (int) $this->inserter->insertIfNotExists([
+                'from_transaction_id' => $transferId,
+                'to_transaction_id' => null,
+                'kind' => ChainLinkKind::IcsBulkSettle->value,
+                'state' => ChainLinkState::Candidate->value,
+                'confidence' => ConfidenceScale::format($confidence),
+                'resolver' => ChainLinkResolver::Auto->value,
+                'evidence' => [
+                    'statement_id' => $statementId,
+                    'unaccounted_delta_minor' => $delta,
+                    'tolerance_used' => SettlementToleranceUsed::Exceeded->value,
+                    'covered_count' => $expenses->count(),
+                    'credits_applied_minor' => $priorCredits,
+                    'signature_hash' => $signatureHash,
+                ],
+            ], $user->id);
         }
 
-        // The NULL to_transaction_id is legal only for this exceeded-tolerance
-        // candidate — the chain_links NULL-endpoint trigger rejects every other.
-        $confidence = $this->computeExceededConfidence($delta, $statementTotal);
+        $toleranceUsed = abs($delta) <= SettlementTolerance::FLOOR_MINOR
+            ? SettlementToleranceUsed::AmountFloor
+            : SettlementToleranceUsed::Percent;
+        $evidenceBase = [
+            'statement_id' => $statementId,
+            'unaccounted_delta_minor' => $delta,
+            'tolerance_used' => $toleranceUsed->value,
+            'covered_count' => $expenses->count(),
+            'credits_applied_minor' => $priorCredits,
+            'signature_hash' => $signatureHash,
+        ];
 
-        return (int) $this->inserter->insertIfNotExists([
-            'from_transaction_id' => $transferId,
-            'to_transaction_id' => null,
-            'kind' => ChainLinkKind::IcsBulkSettle->value,
-            'state' => ChainLinkState::Candidate->value,
-            'confidence' => ConfidenceScale::format($confidence),
-            'resolver' => ChainLinkResolver::Auto->value,
-            'evidence' => [
-                'statement_id' => $statementId,
-                'unaccounted_delta_minor' => $delta,
-                'tolerance_used' => SettlementToleranceUsed::Exceeded->value,
-                'covered_count' => $expenses->count(),
-                'credits_applied_minor' => $priorCredits,
-                'signature_hash' => $signatureHash,
-            ],
-        ], $user->id);
+        // Flushed here rather than at the end of the pass: pullExpenses()
+        // skips an expense that already carries a confirmed link, so the
+        // next transfer must see what this one just claimed.
+        $links = [];
+        foreach ($expenses as $expense) {
+            $links[] = [
+                'from_transaction_id' => $transferId,
+                'to_transaction_id' => self::toInt($expense->id ?? null),
+                'kind' => ChainLinkKind::IcsBulkSettle->value,
+                'state' => ChainLinkState::Confirmed->value,
+                'confidence' => '1.000',
+                'resolver' => ChainLinkResolver::Auto->value,
+                'evidence' => $evidenceBase,
+            ];
+        }
+
+        // Nothing to link settles nothing at all, or applySettlement() would
+        // subtract this payment again on every later pass. The rest is one
+        // transaction because a crash after the links is unrecoverable: the
+        // transfer is dropped for carrying one and the statement stays open.
+        return $links === [] ? 0 : $connection->transaction(function () use ($connection, $links, $statementId, $settled, $priorCredits, $statementCurrency, $transferId, $user): int {
+            $inserted = $this->inserter->insertMissing($links, $user->id);
+
+            $this->dismissStaleHint($transferId, $user);
+
+            // CardStatementStateMachine is the only sanctioned mutator of
+            // card_statements.state. It is told the credits too: the
+            // tolerance test above already spent them, so told the payment
+            // alone it left a paid-off statement reading half paid.
+            $settlement = $this->stateMachine->applySettlement($statementId, $settled + $priorCredits, $user);
+
+            if ($settlement->newState !== CardStatementState::Overpaid->value) {
+                return $inserted;
+            }
+
+            $now = $this->clock->now()->toDateTimeString();
+            $connection->table('card_statement_credits')->insert([
+                'user_id' => $user->id,
+                'from_statement_id' => $statementId,
+                'to_statement_id' => null,
+                'amount_minor' => abs($settlement->newOpenMinor),
+                'currency' => $statementCurrency,
+                'reason' => CardStatementCreditReason::Overpayment->value,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            return $inserted;
+        });
     }
 
     /**
