@@ -139,7 +139,15 @@ it('refuses a backup missing a schema change this build has run', function (): v
 // The positive control. Without it, a comparison that refused everything would
 // read exactly like one that refuses the right two things.
 it('restores a backup whose schema changes match this build exactly', function (): void {
-    $source = generationSourceRecording(generationNamesThisBuildHas());
+    $names = generationNamesThisBuildHas();
+
+    // Without this the case passes on an empty set matching an empty set: a
+    // migrator that registered no paths would answer none, the comparison
+    // would find nothing to differ about, and a restore that checks nothing
+    // reads exactly like one that checked and agreed.
+    expect($names)->toHaveCount(count(glob(base_path('Modules/*/Database/Migrations/*.php')) ?: []) + count(glob(base_path('database/migrations/*.php')) ?: []));
+
+    $source = generationSourceRecording($names);
     $this->sources = [...$this->sources, $source];
 
     $this->artisan('db:restore', ['path' => $source, '--confirm' => true])
@@ -149,7 +157,7 @@ it('restores a backup whose schema changes match this build exactly', function (
         ->query('SELECT count(*) FROM migrations')
         ->fetchColumn();
 
-    expect((int) $restored)->toBe(count(generationNamesThisBuildHas()));
+    expect((int) $restored)->toBe(count($names));
 });
 
 // A file recording none makes no claim to check. That is every fixture, every
