@@ -352,3 +352,80 @@ it('excludes every top-level name its own ignore list says may appear', function
             $unhandled,
         )));
 });
+
+/**
+ * Why an entry belongs to one shell's exclusion list and not the other's.
+ * Anything not named here has to be in both, because a working artefact is a
+ * working artefact whichever root a build copies.
+ *
+ * @return array<string, array<string, string>> shell => entry => why only it excludes this
+ */
+function bundleExclusionsOnlyOneShellNeeds(): array
+{
+    return [
+        'desktop' => [
+            'build' => 'electron-builder writes here; the mobile build output lives under nativephp/',
+            'temp' => "the desktop packager's own scratch directory",
+            'content' => "the desktop packager's own staging directory",
+            'tests' => "the mobile packager's defaults already drop tests at any depth",
+            '*/tests' => "the mobile packager's defaults already drop tests at any depth",
+            '.phpunit.cache' => "the mobile packager's defaults already drop it at any depth",
+            'local' => 'a drop directory that exists at the repository root only',
+            'nativephp' => 'the previous build output here; under the mobile root it is the copy TARGET and excluding it would empty the bundle',
+            'mobile-app' => 'the second Composer root, which only the first root contains',
+        ],
+        'mobile' => [
+            'storage/framework/sessions' => 'a package default restated, because declaring the key replaces them wholesale',
+            'storage/framework/cache' => 'a package default restated, because declaring the key replaces them wholesale',
+            'storage/framework/testing' => 'a package default restated, because declaring the key replaces them wholesale',
+            'storage/logs/laravel.log' => 'a package default restated, because declaring the key replaces them wholesale',
+            'credentials' => 'release.yml decodes the Android signing keystore into this root only',
+            'build-secrets' => 'scripts/create-ios-signing.sh writes iOS signing artifacts into this root only',
+        ],
+    ];
+}
+
+// The two lists drifted to 13 shared against 19 desktop-only, and nothing
+// compared them. Every name desktop had learned to exclude — .git, .docs,
+// node_modules, and the .device-test / .playwright-mcp pair that held 1.6 GB of
+// screenshots of a real ledger — was missing from the mobile root, where the
+// scandir rule above could not see it because none of those paths existed there
+// yet. A rule that only fires once the artefact is on this disk is a rule that
+// fires after the bundle carrying it was built.
+it('gives both shells the same exclusions, or says which shell needs one alone', function (): void {
+    $configs = bundleConfigFiles();
+    $declared = bundleExclusionsOnlyOneShellNeeds();
+
+    expect($configs)->toHaveCount(2, 'One of the two shells was not found, so its list went unread.');
+
+    $lists = array_map(bundleExcludedPaths(...), $configs);
+
+    expect(count($lists['desktop']))->toBeGreaterThan(20, 'The desktop list read almost nothing.')
+        ->and(count($lists['mobile']))->toBeGreaterThan(20, 'The mobile list read almost nothing.');
+
+    $undeclared = [];
+
+    foreach (['desktop' => 'mobile', 'mobile' => 'desktop'] as $shell => $other) {
+        foreach (array_diff($lists[$shell], $lists[$other]) as $entry) {
+            if (! isset($declared[$shell][$entry])) {
+                $undeclared[] = $shell.' only: '.$entry;
+            }
+        }
+    }
+
+    // A reason that has outlived its entry is the other half of the same
+    // drift: it reads as settled while naming nothing.
+    foreach ($declared as $shell => $entries) {
+        foreach (array_keys($entries) as $entry) {
+            if (! in_array($entry, $lists[$shell], true)) {
+                $undeclared[] = $shell.' declares a reason for '.$entry.', which its list no longer carries';
+            }
+        }
+    }
+
+    expect($undeclared)->toBe([], implode("\n  ", array_merge(
+        ['An exclusion one shell has and the other does not, with nothing saying why:',
+            'Add it to the other shell, or give it a reason in bundleExclusionsOnlyOneShellNeeds().'],
+        $undeclared,
+    )));
+});
