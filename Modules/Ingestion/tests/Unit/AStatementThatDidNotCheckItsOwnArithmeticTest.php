@@ -82,6 +82,7 @@ function selfCheckMt940Meta(Mt940Adapter $adapter, AccountResolver $resolver, st
 }
 
 beforeEach(function (): void {
+    $this->freezeClockOnTheStatementFixtureWindow();
     $this->resolver = new class implements AccountResolver
     {
         public function resolve(string $iban): AccountResolution
