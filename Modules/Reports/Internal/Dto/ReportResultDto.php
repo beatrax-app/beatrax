@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Spatie\LaravelData\Data;
 
 final class ReportResultDto extends Data
@@ -27,6 +29,7 @@ final class ReportResultDto extends Data
         public readonly array $otherMovementsByCurrency = [],
         public readonly ?int $previousTotalMinor = null,
         public readonly ?string $previousCurrency = null,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function hasExclusions(): bool
@@ -45,5 +48,15 @@ final class ReportResultDto extends Data
         sort($names);
 
         return $names;
+    }
+
+    // The account line says the same sentence as the currency line and goes
+    // through the same component, with no rate set: an account is out because
+    // no rate reached its currency, so there is none to name beside it.
+    public function accountExclusion(): ?ConversionDisclosure
+    {
+        return $this->excludedAccounts === []
+            ? null
+            : ConversionDisclosure::of(RateSet::empty($this->currency), $this->excludedAccountNames());
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Pots\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 final class PotRow extends Data
@@ -26,6 +27,8 @@ final class PotRow extends Data
         public readonly int $movementCount = 0,
         /** @var list<string> codes left out of $categorySpentMinor for want of a rate */
         public readonly array $categorySpentUnconverted = [],
+        /** @var ?ConversionDisclosure the rates $categorySpentMinor was converted at, beside the codes it left out */
+        public readonly ?ConversionDisclosure $categorySpentConversion = null,
     ) {}
 
     // The card the reader acted on, picked out of the list a screen already

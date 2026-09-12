@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\InvalidGoalTargetDateException;
@@ -52,7 +53,7 @@ it('never answers a finish date earlier than today, however small the rate', fun
     ];
 
     $projection = app(GoalProjectionService::class)
-        ->project($goal, 0, null, $attributed, [], CarbonImmutable::today());
+        ->project($goal, 0, null, $attributed, RateSet::empty('EUR'), CarbonImmutable::today());
 
     expect($projection['stalled'])->toBeFalse();
     expect($projection['beyondHorizon'])->toBeTrue();
@@ -69,7 +70,7 @@ it('still dates a finish the calendar can actually hold', function (): void {
     ];
 
     $projection = app(GoalProjectionService::class)
-        ->project($goal, 0, null, $attributed, [], CarbonImmutable::today());
+        ->project($goal, 0, null, $attributed, RateSet::empty('EUR'), CarbonImmutable::today());
 
     expect($projection['date'])->not->toBeNull()
         ->and($projection['date'])->toBeGreaterThan(CarbonImmutable::today()->toDateString());

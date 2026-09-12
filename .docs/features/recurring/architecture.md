@@ -76,9 +76,10 @@ What the module explicitly does NOT do:
     per-series drift override; consumed by `DriftAlerts`.
 - **DTOs/** — `RecurringSeriesDto`, `RecurringOccurrenceDto`,
   `RecurringSeriesAmountTrendDto` and `MonthlyEquivalentTotals`,
-  the last carrying the expense / income / net `Money` triple plus
-  the currency codes left unconverted for want of a rate, so a
-  header that is missing one says so rather than under-reporting.
+  the last carrying the expense / income / net `Money` triple, the
+  currency codes left unconverted for want of a rate, and the rates the
+  rest converted at, so a header that is missing one says so rather than
+  under-reporting and names what priced the remainder.
   There is no next-expected-charge DTO: that date rides on
   `RecurringSeriesDto` with its own confidence flag.
 - **Events/**

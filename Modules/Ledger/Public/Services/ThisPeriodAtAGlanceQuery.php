@@ -122,6 +122,9 @@ final readonly class ThisPeriodAtAGlanceQuery
             uncategorizedCount: $uncategorized,
             isFirstRun: false,
             unconvertedCurrencies: $inflow->unconverted,
+            // One disclosure for the three tiles: they were built from one
+            // rate set, and three separately derived ones could disagree.
+            conversion: $inflow->disclosure(),
         );
     }
 

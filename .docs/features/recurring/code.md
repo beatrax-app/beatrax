@@ -114,7 +114,8 @@ Modules/Recurring/
   - `RecurringOccurrenceDto` — per-occurrence row.
   - `MonthlyEquivalentTotals` — the expense / income / net
     `Money` triple behind the `/recurring` header, plus the
-    currency codes left unconverted for want of a rate, so a
+    currency codes left unconverted for want of a rate and the
+    `conversion` disclosure naming the rates behind the rest, so a
     partial total says so rather than under-reporting.
   - `RecurringSeriesAmountTrendDto` — chart data for the
     series detail.

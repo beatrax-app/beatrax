@@ -339,12 +339,12 @@ that account's anchor balance from `BalanceAnchorResolver`.
 ### Currency conversion happens here and only here
 
 A contribution carries its native currency and no rate. `DailyFold` is
-handed a `CrossCurrencyTotal::ratesTo()` map into the account's own
-currency and converts each bound through `Money` on the way in:
+handed the `CrossCurrencyTotal::ratesTo()` `RateSet` into the account's
+own currency and converts each bound through `Money` on the way in:
 
 ```
-converted = Money(minor, currency) × rates[currency]   when currency != accountCurrency
-converted = minor                                      when they match
+converted = Money(minor, currency) × rates->rateFor(currency)   when currency != accountCurrency
+converted = minor                                               when they match
 ```
 
 The fold is where the rate belongs because it is the only stage that

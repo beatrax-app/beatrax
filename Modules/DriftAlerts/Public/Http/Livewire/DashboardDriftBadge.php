@@ -39,6 +39,7 @@ final class DashboardDriftBadge extends Component
             'totalFormatted' => Money::ofMinor($converted->minor, $reporting)->format(),
             'impactTrend' => AnnualImpactTrend::forMinor($converted->minor),
             'unconvertedCurrencies' => $converted->unconverted,
+            'conversion' => $converted->disclosure(),
         ]);
     }
 }

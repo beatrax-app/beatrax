@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
@@ -217,6 +218,7 @@ final readonly class PotRowLoader
             categoryName: CategoryPathName::fromRow($pot),
             categorySpentMinor: $spent === null ? null : $spent['minor'],
             categorySpentUnconverted: $spent === null ? [] : $spent['unconverted'],
+            categorySpentConversion: $spent === null ? null : $spent['conversion'],
             recentMovements: $this->buildRecentMovements($movementRows, $potNameById),
             movementCount: $perPot['counts'][$potId] ?? 0,
         );
@@ -268,7 +270,7 @@ final readonly class PotRowLoader
     // line and the budgets grid one screen away answer the same question.
     /**
      * @param  array<string, int>  $spendByCategory  "categoryId|currency" => spend minor
-     * @return array{minor: int, unconverted: list<string>}|null
+     * @return array{minor: int, unconverted: list<string>, conversion: ConversionDisclosure}|null
      */
     private function categorySpent(stdClass $pot, ?int $categoryId, array $spendByCategory): ?array
     {
@@ -287,6 +289,10 @@ final readonly class PotRowLoader
 
         $converted = $this->fx->of($byCurrency, self::toString($pot->currency));
 
-        return ['minor' => $converted->minor, 'unconverted' => $converted->unconverted];
+        return [
+            'minor' => $converted->minor,
+            'unconverted' => $converted->unconverted,
+            'conversion' => $converted->disclosure(),
+        ];
     }
 }

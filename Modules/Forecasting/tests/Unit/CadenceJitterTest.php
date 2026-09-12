@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Modules\Forecasting\Internal\Pipeline\CadenceJitter;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 
 /** @link ../../../../.docs/features/forecasting/projection-math.md#cadence-jitter */
@@ -187,7 +188,7 @@ it('keeps every minor unit of an occurrence dated on the first day the fold walk
         asOf: $asOf,
         horizonDays: 30,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     $lastDay = $folded[$asOf->addDays(30)->toDateString()];
@@ -208,7 +209,7 @@ it('keeps every minor unit of an occurrence dated on the last day the fold walks
         asOf: $asOf,
         horizonDays: 30,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     $lastDay = $folded[$horizonEnd->toDateString()];

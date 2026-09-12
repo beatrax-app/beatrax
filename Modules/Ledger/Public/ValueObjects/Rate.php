@@ -40,6 +40,18 @@ final readonly class Rate implements Stringable
         }
     }
 
+    // A rate held as text, in either shape the app stores one: the column's
+    // own decimal, or the exact rational brick/money derives a cross-rate as
+    // — "25/27", which of() refuses because BigDecimal cannot read it.
+    public static function parse(string $value): ?self
+    {
+        try {
+            return self::fromNumber(BigNumber::of($value));
+        } catch (MathException) {
+            return null;
+        }
+    }
+
     // A rate the library derived rather than stored, which arrives as an
     // exact rational: 25/27, not 0.925…. Rounding it here is the only place
     // the loss happens, and it happens at the column's own scale.
@@ -99,6 +111,17 @@ final readonly class Rate implements Stringable
             self::SCALE,
             max(self::DISPLAY_SCALE, $leadingZeros + self::DISPLAY_DIGITS),
         ));
+    }
+
+    // The rate at the column's own scale, trailing zeros trimmed: what a
+    // disclosure shows, because forDisplay() keeps three significant digits
+    // and a reader cannot reproduce a EUR 3,016.97 figure from 0.00629 when
+    // it was priced at 0.00628536.
+    public function exact(): string
+    {
+        $decimal = (string) $this->inner->toScale(self::SCALE, RoundingMode::HalfUp);
+
+        return str_contains($decimal, '.') ? rtrim(rtrim($decimal, '0'), '.') : $decimal;
     }
 
     // brick/math reads a negative scale as "round to tens, hundreds", which is

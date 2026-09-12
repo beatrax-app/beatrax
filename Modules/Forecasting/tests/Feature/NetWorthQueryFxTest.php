@@ -105,6 +105,46 @@ it('populates ratesSource and ratesAsOf from the conversion used', function (): 
     expect($netWorth->ratesAsOf->toDateString())->toBe('2026-06-05');
 });
 
+// The metadata used to be folded newest-first, so one freshly refreshed pair
+// dated the whole card while the other leg was months behind and was reported
+// under that fresh date — with the source taken from whichever line happened to
+// be read last, so the date and the source could name different rates.
+it('dates the card by its oldest leg, not by whichever pair refreshed last', function (): void {
+    $this->travelTo('2026-06-07');
+    nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwAccount($this->db, $this->user->id, 'GBP wallet', 'paypal', 10_000, 'GBP');
+    fxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
+    fxRate($this->db, 'GBP', '0.85', '2026-03-01', BundledRates::SOURCE);
+
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+
+    expect($netWorth->ratesAsOf?->toDateString())->toBe('2026-03-01')
+        ->and($netWorth->ratesSource)->toBe(BundledRates::SOURCE)
+        ->and($netWorth->hasStaleRates)->toBeTrue();
+});
+
+// The card counts the LINES it could not convert, which is not the same number
+// as the distinct currencies, so the disclosure it hands the shared component
+// carries the rates only and the card keeps its own sentence for the rest.
+it('hands the shared component the rates and not a second count of what it left out', function (): void {
+    $this->travelTo('2026-06-06');
+    nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
+    nwAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY');
+    nwAccount($this->db, $this->user->id, 'JPY savings', 'paypal', 1_000_000, 'JPY');
+    fxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
+
+    $netWorth = app(NetWorthQuery::class)->forUser($this->user);
+
+    expect($netWorth->balancesWithoutRate)->toBe(2)
+        ->and($netWorth->conversion)->not->toBeNull()
+        ->and($netWorth->conversion->unconverted)->toBe([])
+        ->and($netWorth->conversion->hasRates())->toBeTrue()
+        ->and(array_map(
+            static fn (object $used): string => $used->from,
+            $netWorth->conversion->rates,
+        ))->toBe(['USD']);
+});
+
 it('sets NetWorth.currency to the user base_currency', function (): void {
     nwAccount($this->db, $this->user->id, 'Checking', 'bank', 100_000, 'EUR');
 

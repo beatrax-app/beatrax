@@ -1452,8 +1452,13 @@ source) — do not add a second `WHERE type = 'income'` anywhere else.
 grouped by `settled_currency`, then convert each bucket through
 `CrossCurrencyTotal` — never summed across currencies, and never filtered
 down to one of them. A currency the rate table cannot reach is left out of
-the figure and named in `DashboardSummary::$unconvertedCurrencies`, which
-the Net tile renders beneath itself. `net` is subtracted after conversion
+the figure and named in `DashboardSummary::$unconvertedCurrencies`. The
+rates that priced the rest travel with it in
+`DashboardSummary::$conversion`, and all three tiles disclose from that one
+disclosure through `x-core::fx-disclosure` — one, because the three were
+built from one rate set and three separately derived ones could disagree.
+The Net tile alone used to render the exclusion, and none of the three ever
+named a rate. `net` is subtracted after conversion
 rather than converted itself, so it cannot miss the two tiles above it by
 a cent. Money is composed only at the DTO boundary (`Money::ofMinor`); the
 SQL layer stays integer-pure to keep the query under the 50ms budget on 1k

@@ -30,10 +30,8 @@ final readonly class TopCategoriesByPeriodQuery
         // The shared service returns an unordered map of signed net spend, so
         // the cutoff, the ordering, the limit and the share all come out of the
         // one narrowing rather than each being decided here.
-        $spend = OutwardSpend::from(
-            $this->convertedSpend->forUserAndPeriod($user->id, $period, $displayCurrency)->byCategoryId,
-            $limit,
-        );
+        $converted = $this->convertedSpend->forUserAndPeriod($user->id, $period, $displayCurrency);
+        $spend = OutwardSpend::from($converted->byCategoryId, $limit);
 
         $categoriesById = $this->ancestry->load(array_keys($spend->rankedMinor), $user->id);
 
@@ -56,6 +54,9 @@ final readonly class TopCategoriesByPeriodQuery
             rows: $rows,
             refunded: Money::ofMinor(abs($spend->inwardMinor), $displayCurrency),
             refundedCategoryCount: $spend->inwardCount,
+            // One read priced every category, so the ranking discloses the
+            // rates the whole list was built from rather than per row.
+            conversion: $converted->conversion,
         );
     }
 }

@@ -95,7 +95,11 @@ rate table's rate and folded into `spentMinor` like any other spend — a
 USD Google Play charge counts against its envelope. What does not fold in
 is spend in a currency the rate table cannot *reach* at all: those codes
 are listed in `EnvelopeRow::$unconvertedSpentCurrencies` so the grid can
-surface it rather than silently drop it or count it at one to one. It is
+surface it rather than silently drop it or count it at one to one. The rates
+the rest of the spend *was* converted at travel beside them in
+`EnvelopeRow::$spentConversion`, and the grid discloses both through
+`x-core::fx-disclosure`; the amber badge stays, because "spend not shown here"
+and "converted at this rate" are two different things to say. It is
 the codes and not their minor units because a signal that is a sum across
 currencies can cancel: a bucket of XPF 1,000 against a return of ARS 10.00
 added to nought, and the "there is spend not shown here" dot went out over

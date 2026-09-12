@@ -225,9 +225,7 @@
                 {{ $countLabel }} {{ Lang::get('ledger::list.search.matching_suffix') }}
                 &middot; {{ $flow }}
             @endif
-            @if ($searchUnconverted !== '')
-                <span data-not-converted="true">{{ Lang::get('core::money.not_converted', ['list' => $searchUnconverted]) }}</span>
-            @endif
+            <x-core::fx-disclosure :disclosure="$searchConversion" id="srch-totals" />
         </div>
     @endif
 </div>

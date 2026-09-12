@@ -336,7 +336,11 @@ on both figures by construction rather than by two queries happening to
 say the same thing. `TaxYearSummary::isPartial()`/`unconvertedList()` name
 the currencies left out of the figure for want of a rate, and the dashboard
 tile calls them: it stated a smaller total than `/tax` and, unlike `/tax`,
-did not say why.
+did not say why. `$conversion` carries the rates the rest was converted at, and
+both the tile and the cockpit render the pair through `x-core::fx-disclosure`.
+The PDF export renders the same disclosure `flat`: dompdf implements neither
+`[popover]` nor the rule that hides one, and a document a reader keeps has room
+for the rate lines themselves.
 
 ## Year cockpit (`/tax`)
 

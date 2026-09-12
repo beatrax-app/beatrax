@@ -6,6 +6,8 @@ namespace Modules\Recurring\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Support\MonthlyEquivalent;
@@ -27,15 +29,13 @@ final class RecurringSeriesDtoMapper
      *                                         occurrence-walk fallback.
      * @param  string  $baseCurrency  the reader's reporting currency, supplied by
      *                                the caller because a static mapper cannot inject it
-     * @param  array<string, string>  $rates  CrossCurrencyTotal::ratesTo() for the
-     *                                        currencies on the page, fetched once per render
      */
     public static function hydrate(
         stdClass $row,
         ?int $resolvedChainLinkId,
         string $baseCurrency,
         CrossCurrencyTotal $fx,
-        array $rates,
+        RateSet $rates,
     ): RecurringSeriesDto {
         $latestCurrency = self::toString($row->latest_currency);
         $latestAmount = Money::ofMinor(self::toInt($row->latest_amount_minor), $latestCurrency);
@@ -57,6 +57,8 @@ final class RecurringSeriesDtoMapper
         $baseEquivalent = $latestAmount->currency() === $baseCurrency
             ? null
             : $fx->convert($latestAmount, $baseCurrency, $rates);
+
+        $conversion = self::rowConversion($latestAmount->currency(), $baseCurrency, $rates);
 
         $nextExpectedAt = null;
         $rawNext = $row->next_expected_at ?? null;
@@ -103,6 +105,22 @@ final class RecurringSeriesDtoMapper
                 : $fx->convert($monthlyEquivalent, $baseCurrency, $rates),
             latestObservedAt: $latestObservedAt,
             billingDay: self::toPositiveIntOrNull($row->billing_day ?? null),
+            conversion: $conversion,
+        );
+    }
+
+    // This row's own leg, not the page's: $rates is batched across every series
+    // on screen, and a row disclosing all of them would name rates its own
+    // shadow never went through.
+    private static function rowConversion(string $rowCurrency, string $baseCurrency, RateSet $rates): ?ConversionDisclosure
+    {
+        if ($rowCurrency === '' || $rowCurrency === $baseCurrency) {
+            return null;
+        }
+
+        return ConversionDisclosure::of(
+            $rates->only([$rowCurrency]),
+            $rates->has($rowCurrency) ? [] : [$rowCurrency],
         );
     }
 }

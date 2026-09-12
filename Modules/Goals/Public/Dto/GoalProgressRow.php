@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Goals\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Ledger\Public\Support\OutwardSpend;
 use Spatie\LaravelData\Data;
@@ -17,6 +18,7 @@ final class GoalProgressRow extends Data
 
     /**
      * @param  list<string>  $unconverted  codes left out of $contributedMinor for want of a rate
+     * @param  ?ConversionDisclosure  $conversion  the rates $contributedMinor was converted at, beside the codes it left out
      */
     public function __construct(
         public readonly int $id,
@@ -33,6 +35,7 @@ final class GoalProgressRow extends Data
         public readonly bool $projectionStalled = false,
         public readonly bool $hasContributions = false,
         public readonly array $unconverted = [],
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     // Floored, not rounded, and floored as well as capped: rounding reached 100

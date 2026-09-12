@@ -5,12 +5,33 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Forecasting\Internal\Pipeline\DailyFold;
 use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
+use Modules\FX\Public\Dto\RateSet;
+use Modules\FX\Public\Dto\RateUsed;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 
 /** @link ../../../../.docs/features/forecasting/projection-math.md#per-day-aggregation-and-quadrature */
 function dfFold(): DailyFold
 {
     return new DailyFold(app(CrossCurrencyTotal::class));
+}
+
+/** @param array<string, string> $rates source currency => decimal rate into EUR */
+function dfRates(array $rates): RateSet
+{
+    $used = [];
+
+    foreach ($rates as $from => $rate) {
+        $used[$from] = new RateUsed(
+            from: $from,
+            to: 'EUR',
+            rate: $rate,
+            source: 'ecb',
+            asOf: CarbonImmutable::parse('2026-05-19'),
+            isStale: false,
+        );
+    }
+
+    return RateSet::of('EUR', $used);
 }
 
 it('emits horizonDays+1 days starting at asOf with no contributions and a flat band', function (): void {
@@ -21,7 +42,7 @@ it('emits horizonDays+1 days starting at asOf with no contributions and a flat b
         asOf: $asOf,
         horizonDays: 3,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     expect($points)->toHaveCount(4); // asOf + 3 days inclusive
@@ -67,7 +88,7 @@ it('combines spreads of two independent contributions via quadrature (sqrt(2)*10
         asOf: $asOf,
         horizonDays: 2,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     expect($points['2026-05-20']['point_minor'])->toBe(800);
@@ -101,7 +122,7 @@ it('carries the running balance forward on days with no contributions', function
         asOf: $asOf,
         horizonDays: 3,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     expect($points['2026-05-19']['point_minor'])->toBe(10000);
@@ -136,7 +157,7 @@ it('converts cross-currency contributions to the default currency at the supplie
         asOf: $asOf,
         horizonDays: 2,
         defaultCurrency: 'EUR',
-        rates: ['USD' => '0.9'],
+        rates: dfRates(['USD' => '0.9']),
     )->points;
 
     // point: 10000 + round(-5.99 × 0.9) = 10000 + (-539) = 9461.
@@ -169,7 +190,7 @@ it('names a currency it has no rate for instead of raising on it', function (): 
         asOf: $asOf,
         horizonDays: 2,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     );
 
     expect($folded->unconvertedCurrencies)->toBe(['USD'])
@@ -200,7 +221,7 @@ it('does NOT cumulate spread across days for one-contribution-per-day occurrence
         asOf: $asOf,
         horizonDays: 3,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(20); // 2 × 10
@@ -232,7 +253,7 @@ it('carries the latest-period spread forward on days without new contributions',
         asOf: $asOf,
         horizonDays: 3,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     expect($points['2026-05-19']['high_minor'] - $points['2026-05-19']['low_minor'])->toBe(0);
@@ -274,7 +295,7 @@ it('keeps the carried band when a later day carries only a zero-width contributi
         asOf: $asOf,
         horizonDays: 3,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     expect($points['2026-05-20']['high_minor'] - $points['2026-05-20']['low_minor'])->toBe(50)
@@ -307,7 +328,7 @@ it('leaves day 0 at the opening balance and folds an on-or-before contribution i
         asOf: $asOf,
         horizonDays: 3,
         defaultCurrency: 'EUR',
-        rates: [],
+        rates: RateSet::empty('EUR'),
     )->points;
 
     expect($points['2026-05-19']['point_minor'])->toBe(660464)
@@ -341,7 +362,7 @@ it('converts across a scale change rather than multiplying minor units by a majo
         asOf: $asOf,
         horizonDays: 2,
         defaultCurrency: 'EUR',
-        rates: ['JPY' => '0.006'],
+        rates: dfRates(['JPY' => '0.006']),
     )->points;
 
     // JPY 5,000 × 0.006 = EUR 30.00 = 3000 minor. A bare minor-unit product

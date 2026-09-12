@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\CurrencyScale;
@@ -135,9 +136,9 @@ final readonly class RecurringSeriesProjector
         ));
 
         $multipliers = [];
-        foreach ($this->fx->ratesTo($currencies, $baseCurrency) as $currency => $rate) {
-            $scale = CurrencyScale::minorUnitsPerMajor($currency);
-            $multipliers[$currency] = (float) $rate * $baseScale / $scale;
+        foreach ($this->fx->ratesTo($currencies, $baseCurrency)->all() as $used) {
+            $scale = CurrencyScale::minorUnitsPerMajor($used->from);
+            $multipliers[$used->from] = (float) $used->rate * $baseScale / $scale;
         }
 
         return $multipliers;
@@ -240,10 +241,7 @@ final readonly class RecurringSeriesProjector
         );
     }
 
-    /**
-     * @param  array<string, string>  $rates
-     */
-    private function hydrate(stdClass $row, string $baseCurrency, array $rates): RecurringSeriesDto
+    private function hydrate(stdClass $row, string $baseCurrency, RateSet $rates): RecurringSeriesDto
     {
         // The raw column only. The occurrence-walk fallback lives in
         // FixedPaymentsViewQuery, the one caller it is load-bearing for.

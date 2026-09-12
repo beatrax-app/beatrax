@@ -383,17 +383,27 @@
                          CURRENCIES out of the total and a balance leaves
                          ACCOUNTS out, and each names what it dropped. A count
                          told a reader which figure was short but not which
-                         account to go and look at. --}}
-                    @if ($result->excludedCurrencies !== [])
-                        <p class="text-xs" style="color: var(--color-amber);" data-not-converted="true">
-                            {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $result->excludedCurrencies)]) }}
-                        </p>
-                    @endif
-                    @if ($result->excludedAccounts !== [])
-                        <p class="text-xs" style="color: var(--color-amber);" data-not-converted="true">
-                            {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $result->excludedAccountNames())]) }}
-                        </p>
-                    @endif
+                         account to go and look at.
+
+                         Amber only where something WAS left out: a rate the
+                         reader does have is information, not a warning. The
+                         account line carries no rate set — an account is left
+                         out because no rate reached its currency, so there is
+                         none to name. --}}
+                    <x-core::fx-disclosure
+                        :disclosure="$result->conversion"
+                        id="report-total"
+                        :label="$metricLabel"
+                        class="block text-xs"
+                        style="color: var({{ $result->excludedCurrencies === [] ? '--color-text-muted' : '--color-amber' }});"
+                    />
+                    <x-core::fx-disclosure
+                        :disclosure="$result->accountExclusion()"
+                        id="report-accounts"
+                        :label="$metricLabel"
+                        class="block text-xs"
+                        style="color: var(--color-amber);"
+                    />
                 </div>
 
                 {{-- Always-on data table — same $displayRows as the chosen chart --}}

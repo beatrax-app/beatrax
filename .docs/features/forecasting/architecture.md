@@ -566,9 +566,9 @@ cycle), this under-estimates the combined spread. Every approved recurring
 series is treated as independent; the percentile tier sidesteps the
 assumption by reading the observed empirical distribution per series.
 Reference: Cornell 8.04 / MIT OCW 6.012. Cross-currency contributions are
-converted to the account's default currency at fold time, through a
-`CrossCurrencyTotal::ratesTo()` map `ProjectionPipeline` fetches once per
-target currency; a currency the rate table cannot reach is left out of the
+converted to the account's default currency at fold time, through the
+`CrossCurrencyTotal::ratesTo()` `RateSet` `ProjectionPipeline` fetches once
+per target currency; a currency the rate table cannot reach is left out of the
 curve and named in `DailyFoldResult::$unconvertedCurrencies`, rather than
 silently leaking a foreign-currency point into the running balance. It used
 to raise instead, and because nothing ever wrote
@@ -842,7 +842,10 @@ call, and a 365-day horizon would otherwise ask for the same pair 366
 times. A currency the rate table cannot reach is left out of the total
 rather than added at 1:1 — the same rule `NetWorthQuery` applies to a
 line it has no rate for — and the codes it left out are carried through to
-`core::money.not_converted` under the subtitle. "Combined balance across every
+`x-core::fx-disclosure` under the subtitle, beside the rates the aggregate
+converted at. The single-account curve discloses the codes only: it is read
+back out of `forecast_runs.result_json`, which records what the fold could not
+price and not what priced the rest. "Combined balance across every
 account" was a claim the figure could not keep while the excluded account's own
 tab sat two lines above it. The buffer floor is the sum of every account's
 `forecast_min_buffer_minor` (NULL treated as 0), bucketed and converted

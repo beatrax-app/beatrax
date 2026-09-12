@@ -9,6 +9,8 @@ use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\Direction;
@@ -158,6 +160,9 @@ final readonly class FixedPaymentsViewQuery
             income: $income->money(),
             net: $income->money()->plus($expense->money()),
             unconverted: $unconverted,
+            // One disclosure for the three figures: they were added out of the
+            // one rate set, and three derived separately could disagree.
+            conversion: ConversionDisclosure::of($rates, $unconverted),
         );
     }
 
@@ -295,9 +300,8 @@ final readonly class FixedPaymentsViewQuery
 
     /**
      * @param  array<int, int>  $fallbackMap
-     * @param  array<string, string>  $rates
      */
-    private function toDto(stdClass $row, array $fallbackMap, string $baseCurrency, array $rates): RecurringSeriesDto
+    private function toDto(stdClass $row, array $fallbackMap, string $baseCurrency, RateSet $rates): RecurringSeriesDto
     {
         // Falls back to walking the series' occurrences for the first usable
         // chain. RecurringSeriesQuery skips that walk; its callers don't need

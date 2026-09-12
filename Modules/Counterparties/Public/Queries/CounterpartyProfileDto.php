@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
+
 // Unlike CounterpartyIndexRow this does carry `iban` for personal rows,
 // so every rendering path must gate on the user's Show-IBAN opt-in.
 final readonly class CounterpartyProfileDto
@@ -30,6 +32,7 @@ final readonly class CounterpartyProfileDto
         public string $currency = '',
         public array $unconvertedCurrencies = [],
         public bool $isBankFee = false,
+        public ?ConversionDisclosure $conversion = null,
     ) {}
 
     public function isPartial(): bool

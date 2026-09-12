@@ -6,6 +6,8 @@ namespace Modules\Reports\Internal\Aggregation;
 
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyBound;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -58,18 +60,21 @@ final readonly class ReportAggregator
             self::joinFor($definition),
         );
 
+        // Unioned, never added: a currency with no rate in both windows is
+        // still one currency the reader is missing.
+        $excludedCurrencies = self::union($result->excludedCurrencies, $comparison['previousExcludedCurrencies']);
+
         return new ReportResultDto(
             rows: $result->rows,
             totalMinor: $result->totalMinor,
             currency: $result->currency,
-            // Unioned, never added: a currency with no rate in both windows is
-            // still one currency the reader is missing.
-            excludedCurrencies: self::union($result->excludedCurrencies, $comparison['previousExcludedCurrencies']),
+            excludedCurrencies: $excludedCurrencies,
             excludedAccounts: self::unionAccounts($result->excludedAccounts, $comparison['previousExcludedAccounts']),
             comparisonRows: $comparison['rows'],
             otherMovementsByCurrency: $result->otherMovementsByCurrency,
             previousTotalMinor: $comparison['previousTotalMinor'],
             previousCurrency: $comparison['previousCurrency'],
+            conversion: self::disclosureOver($result->conversion, $excludedCurrencies),
         );
     }
 
@@ -142,6 +147,27 @@ final readonly class ReportAggregator
         $restated = $this->bound->restate($filters->amountMinMinor, $filters->amountMaxMinor, $readerCurrency, $currency);
 
         return $restated === null ? null : $filters->withAmountBounds($restated['min'], $restated['max']);
+    }
+
+    // One rate priced both windows, because a pair's rate carries no period.
+    // Only one window may have held a currency no rate reaches, though, so the
+    // disclosure is restated over the union the field above it already carries
+    // -- the line the reader sees comes off this, not off that field.
+    /**
+     * @param  list<string>  $unconverted
+     */
+    private static function disclosureOver(?ConversionDisclosure $current, array $unconverted): ?ConversionDisclosure
+    {
+        if ($current === null) {
+            return null;
+        }
+
+        $used = [];
+        foreach ($current->rates as $rate) {
+            $used[$rate->from] = $rate;
+        }
+
+        return ConversionDisclosure::of(RateSet::of($current->currency, $used), $unconverted);
     }
 
     /**

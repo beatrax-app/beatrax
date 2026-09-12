@@ -80,6 +80,15 @@ different money:
   figure printed beside it. `Rate::forDisplay()` keeps three significant
   digits instead.
 
+  Three is right for a rate read *at a glance*, beside a figure it is
+  only meant to explain the size of. It is not enough where the reader
+  came to check the rate: 0.00629 does not reproduce the EUR 3,016.97
+  the figure was priced at. `Rate::exact()` answers that reading — the
+  column's own eight places with trailing zeros trimmed — and it is what
+  `x-core::fx-disclosure` prints. `Rate::parse()` is the reader of both
+  shapes a rate arrives in, the column's decimal and the exact rational
+  brick/money derives a cross-rate as.
+
 Two rules follow, and both are already how the rest of the app behaves:
 
 1. **A bound can only test rows in the currency it was written in.** Two

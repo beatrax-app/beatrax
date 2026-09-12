@@ -12,6 +12,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\FX\Public\Dto\ConvertedTotal;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Services\AccountStartingBalanceQuery;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -149,6 +150,7 @@ final readonly class DailyBalanceAggregator
             unconvertedCurrencies: $total->unconverted,
             isNegative: $total->minor < 0 || self::anyUnpricedOverdraft($byCurrency, $total->unconverted),
             hasFigure: $priced !== [],
+            conversion: $total->disclosure(),
         );
     }
 
@@ -205,10 +207,9 @@ final readonly class DailyBalanceAggregator
 
     /**
      * @param  array<string, array<string, int>>  $byDateCurrency
-     * @param  array<string, string>  $rates
      * @return array<string, DayBalanceDto>
      */
-    private function bucketsToBalanceMap(array $byDateCurrency, string $baseCurrency, array $rates, bool $isComputingAny): array
+    private function bucketsToBalanceMap(array $byDateCurrency, string $baseCurrency, RateSet $rates, bool $isComputingAny): array
     {
         $map = [];
         foreach ($byDateCurrency as $dateStr => $byCurrency) {
@@ -238,6 +239,7 @@ final readonly class DailyBalanceAggregator
                 unconvertedCurrencies: $known->unconvertedCurrencies ?? [],
                 isNegative: $known->isNegative ?? false,
                 hasFigure: $known->hasFigure ?? false,
+                conversion: $known->conversion ?? null,
             );
             $cur = $cur->addDay();
         }
@@ -276,10 +278,9 @@ final readonly class DailyBalanceAggregator
     /**
      * @param  array<string, DayBalanceDto>  $map
      * @param  array{cumByCurrency: array<string, int>, deltaByDateCurrency: array<string, array<string, int>>, gridStart: CarbonImmutable, pastEnd: CarbonImmutable}  $overlay
-     * @param  array<string, string>  $rates
      * @return array<string, DayBalanceDto>
      */
-    private function overlayActualBalances(array $map, array $overlay, string $baseCurrency, array $rates): array
+    private function overlayActualBalances(array $map, array $overlay, string $baseCurrency, RateSet $rates): array
     {
         // Runs last on purpose: actuals come from transactions, so they must
         // also overwrite the computing sentinel the previous step laid down.

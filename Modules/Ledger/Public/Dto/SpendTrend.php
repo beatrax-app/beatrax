@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Public\Dto;
 
+use Modules\FX\Public\Dto\ConversionDisclosure;
 use Spatie\LaravelData\Data;
 
 // All amounts are minor units of $currency, the reader's display currency;
@@ -25,6 +26,7 @@ final class SpendTrend extends Data
         public readonly array $movers,
         public readonly array $unconvertedCurrencies = [],
         public readonly bool $previousPeriodIsReachable = true,
+        public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 
     // Spend nothing but an unpriced currency and both totals are zero, which

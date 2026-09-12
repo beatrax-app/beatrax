@@ -165,12 +165,24 @@
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->inflow) }}
                 </p>
+                <x-core::fx-disclosure
+                    :disclosure="$summary->conversion"
+                    id="glance-in"
+                    :label="Lang::get('core::dashboard.in')"
+                    class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                />
             </x-core::card>
             <x-core::card>
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.out') }}</p>
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->outflow) }}
                 </p>
+                <x-core::fx-disclosure
+                    :disclosure="$summary->conversion"
+                    id="glance-out"
+                    :label="Lang::get('core::dashboard.out')"
+                    class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                />
             </x-core::card>
             <x-core::card>
                 <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
@@ -180,11 +192,12 @@
                 >
                     {{ $fmt($summary->net) }}
                 </p>
-                @if ($summary->unconvertedCurrencies !== [])
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" data-not-converted="true">
-                        {{ Lang::get('core::money.not_converted', ['list' => implode(', ', $summary->unconvertedCurrencies)]) }}
-                    </p>
-                @endif
+                <x-core::fx-disclosure
+                    :disclosure="$summary->conversion"
+                    id="glance-net"
+                    :label="Lang::get('core::dashboard.net')"
+                    class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                />
             </x-core::card>
         </section>
     @else
@@ -323,6 +336,12 @@
                             </li>
                         @endforeach
                     </ul>
+                    <x-core::fx-disclosure
+                        :disclosure="$summary->topCategories->conversion"
+                        id="top-spending"
+                        :label="Lang::get('core::dashboard.top_spending')"
+                        class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
+                    />
                 @endunless
 
                 {{-- The ranking is a narrowing, so what it left out is said here

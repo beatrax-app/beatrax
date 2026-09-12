@@ -26,6 +26,7 @@ final class EnvelopeGlanceCard extends Component
                 'collapse' => false,
                 'toBudgetMinor' => null,
                 'overspentCount' => 0,
+                'conversion' => null,
             ]);
         }
 
@@ -36,6 +37,7 @@ final class EnvelopeGlanceCard extends Component
                 'collapse' => true,
                 'toBudgetMinor' => null,
                 'overspentCount' => 0,
+                'conversion' => null,
             ]);
         }
 
@@ -45,6 +47,7 @@ final class EnvelopeGlanceCard extends Component
             'collapse' => false,
             'toBudgetMinor' => $fold['toBudgetMinor'],
             'overspentCount' => $fold['overspentCount'],
+            'conversion' => $fold['conversion'],
         ]);
     }
 }
