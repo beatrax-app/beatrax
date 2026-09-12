@@ -37,7 +37,7 @@ it('generates an Ed25519 + X25519 identity and writes an encrypted key-file unde
     expect($dto->x25519PublicKeyHex)->toHaveLength(64);
     expect($dto->userId)->toBe((int) $user->id);
 
-    $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $encPath = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
     expect(file_exists($encPath))->toBeTrue();
 
     $blob = (string) file_get_contents($encPath);
@@ -87,7 +87,7 @@ it('never stages the plaintext key-file in sys_get_temp_dir(), and cleans it up 
     $after = (array) glob(sys_get_temp_dir().'/beatrax_identity_*');
     expect($after)->toBe($before, 'No beatrax_identity_* files should ever appear in sys_get_temp_dir().');
 
-    $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $encPath = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
     $identityDir = dirname($encPath);
     $leftoverTmp = (array) glob($identityDir.'/*.tmp');
     expect($leftoverTmp)->toBe([], 'The identity directory must not retain any staged .tmp file after generateAndPersist().');
@@ -104,7 +104,7 @@ it('creates the identity directory at 0700 (not world-traversable)', function ()
 
     $service->generateAndPersist((int) $user->id, $session);
 
-    $encPath = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $encPath = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
     $identityDir = dirname($encPath);
 
     expect(fileperms($identityDir) & 0o777)->toBe(0o700, 'The sync/identity directory must be mode 0700.');

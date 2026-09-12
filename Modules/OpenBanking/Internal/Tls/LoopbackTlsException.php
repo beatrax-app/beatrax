@@ -12,12 +12,12 @@ final class LoopbackTlsException extends RuntimeException
 {
     public static function couldNotWriteCertificate(string $directory): self
     {
-        return new self("Unable to write the loopback TLS certificate to {$directory}.");
+        return new self(sprintf('Unable to write the loopback TLS certificate to %s.', $directory));
     }
 
     public static function couldNotCreateDirectory(string $directory): self
     {
-        return new self("Unable to create the loopback TLS directory at {$directory}.");
+        return new self(sprintf('Unable to create the loopback TLS directory at %s.', $directory));
     }
 
     public static function couldNotCreateConfig(): self
@@ -29,7 +29,7 @@ final class LoopbackTlsException extends RuntimeException
     // supplies the description, and the call sites differ only in which.
     public static function opensslFailed(string $operation, string $error): self
     {
-        return new self("{$operation} failed: {$error}");
+        return new self(sprintf('%s failed: %s', $operation, $error));
     }
 
     public static function exportProducedNonPem(): self

@@ -117,7 +117,7 @@ function summaryForgetSummaries(int ...$importRunIds): void
     /** @var Repository $backend */
     $backend = app(Repository::class);
     foreach ($importRunIds as $importRunId) {
-        $backend->forget("import.{$importRunId}.preview-summary");
+        $backend->forget(sprintf('import.%s.preview-summary', $importRunId));
     }
 }
 
@@ -246,7 +246,7 @@ it('reads a section without the run rows once the summary is written', function 
 
     /** @var Repository $backend */
     $backend = app(Repository::class);
-    $backend->forget("import.{$run}.preview");
+    $backend->forget(sprintf('import.%s.preview', $run));
 
     $batch = summaryBatchArray([$run], $this->user);
     $section = $batch['sections'][0];

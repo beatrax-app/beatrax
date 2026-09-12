@@ -62,11 +62,11 @@ function replicatedColumnOrphans(array $sources, array $rules): array
             $written = false;
 
             foreach ($sources as $source) {
-                if (str_contains($source, "'{$column}' =>")
-                    || str_contains($source, "\"{$column}\" =>")
-                    || str_contains($source, "->{$column} =")
-                    || str_contains($source, "['{$column}'] =")
-                    || str_contains($source, "set {$column} =")) {
+                if (str_contains($source, sprintf("'%s' =>", $column))
+                    || str_contains($source, sprintf('"%s" =>', $column))
+                    || str_contains($source, sprintf('->%s =', $column))
+                    || str_contains($source, sprintf("['%s'] =", $column))
+                    || str_contains($source, sprintf('set %s =', $column))) {
                     $written = true;
                     break;
                 }

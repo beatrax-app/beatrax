@@ -47,7 +47,7 @@ it('user_recovery_codes table has expected columns and no updated_at', function 
 
     foreach (['id', 'user_id', 'code_hash', 'used_at', 'created_at'] as $column) {
         expect($schema->hasColumn('user_recovery_codes', $column))->toBeTrue(
-            "Expected user_recovery_codes column '{$column}' to exist",
+            sprintf("Expected user_recovery_codes column '%s' to exist", $column),
         );
     }
 
@@ -66,7 +66,7 @@ it('oauth_secrets table has expected columns', function (): void {
 
     foreach ($columns as $column) {
         expect($schema->hasColumn('oauth_secrets', $column))->toBeTrue(
-            "Expected oauth_secrets column '{$column}' to exist",
+            sprintf("Expected oauth_secrets column '%s' to exist", $column),
         );
     }
 });

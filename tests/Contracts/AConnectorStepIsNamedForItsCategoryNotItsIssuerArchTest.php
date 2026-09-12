@@ -79,13 +79,13 @@ it('names the card step after the category, never after the one issuer it reads'
 
     foreach ($locales as $locale) {
         foreach (CONNECTOR_CATEGORY_HEADINGS as $group => $keys) {
-            $file = base_path("Modules/Onboarding/Resources/lang/{$locale}/{$group}.php");
+            $file = base_path(sprintf('Modules/Onboarding/Resources/lang/%s/%s.php', $locale, $group));
             $lines = connectorLinesIn($file);
             foreach ($keys as $key) {
                 // A key that has moved reads back as the empty string, which
                 // names no issuer and passes — so the absence is the offence.
                 if (! isset($lines[$key])) {
-                    $missing[] = "{$locale} {$group}.{$key}";
+                    $missing[] = sprintf('%s %s.%s', $locale, $group, $key);
 
                     continue;
                 }
@@ -94,7 +94,7 @@ it('names the card step after the category, never after the one issuer it reads'
                     continue;
                 }
 
-                $offenders[] = "{$locale} {$group}.{$key}: {$lines[$key]}";
+                $offenders[] = sprintf('%s %s.%s: %s', $locale, $group, $key, $lines[$key]);
             }
         }
     }
@@ -123,7 +123,7 @@ it('still tells the reader which issuer the card step can read', function (): vo
     );
 
     foreach ($locales as $locale) {
-        $body = implode(' ', connectorLinesIn(base_path("Modules/Onboarding/Resources/lang/{$locale}/connect_card.php")));
+        $body = implode(' ', connectorLinesIn(base_path(sprintf('Modules/Onboarding/Resources/lang/%s/connect_card.php', $locale))));
         if (str_contains($body, 'ICS')) {
             continue;
         }

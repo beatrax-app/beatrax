@@ -37,7 +37,7 @@ function aRestoredDeviceUser(string $username): User
     // are reused between runs, so an earlier run's key material can still be
     // sitting where this test is about to look for the absence of it.
     foreach (['identity', 'gdk'] as $directory) {
-        foreach ((array) glob(UserDataPathService::appPath("sync/{$directory}/{$user->id}.enc*")) as $stale) {
+        foreach ((array) glob(UserDataPathService::appPath(sprintf('sync/%s/%s.enc*', $directory, $user->id))) as $stale) {
             @unlink((string) $stale);
         }
     }
@@ -47,7 +47,7 @@ function aRestoredDeviceUser(string $username): User
 
 function restoredDeviceIdentityPath(int $userId): string
 {
-    return UserDataPathService::appPath("sync/identity/{$userId}.enc");
+    return UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $userId));
 }
 
 function aRestoredAppLock(DatabaseManager $db, int $userId, Session $session): void

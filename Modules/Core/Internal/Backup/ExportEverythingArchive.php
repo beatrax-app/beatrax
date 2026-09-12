@@ -79,7 +79,7 @@ final readonly class ExportEverythingArchive
 
         try {
             $escaped = str_replace("'", "''", $plain);
-            $this->db->connection()->statement("VACUUM INTO '{$escaped}'");
+            $this->db->connection()->statement(sprintf("VACUUM INTO '%s'", $escaped));
             if (! is_file($plain)) {
                 throw new BackupIoException('The database snapshot was not produced.');
             }

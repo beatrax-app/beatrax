@@ -166,7 +166,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
 
         if ($sum->toMinor() !== $parentMinor) {
             throw new SplitSumMismatchException(
-                "Leg totals ({$sum->toMinor()}) must match parent ({$parentMinor}) exactly.",
+                sprintf('Leg totals (%s) must match parent (%s) exactly.', $sum->toMinor(), $parentMinor),
             );
         }
     }

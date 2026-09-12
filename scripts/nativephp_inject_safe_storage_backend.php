@@ -86,7 +86,7 @@ if ($isDirectlyInvoked) {
     $target = dirname(__DIR__).'/nativephp/electron/electron-plugin/dist/server/api/system.js';
 
     if (! is_file($target)) {
-        fwrite(STDERR, "nativephp_inject_safe_storage_backend: {$target} not found — has `php artisan native:install --publish` run?\n");
+        fwrite(STDERR, sprintf("nativephp_inject_safe_storage_backend: %s not found — has `php artisan native:install --publish` run?\n", $target));
 
         exit(1);
     }
@@ -94,19 +94,19 @@ if ($isDirectlyInvoked) {
     [$patched, $status] = injectSafeStorageBackendRoute((string) file_get_contents($target));
 
     if ($status === 'anchor-missing') {
-        fwrite(STDERR, "nativephp_inject_safe_storage_backend: no `export default router;` in {$target}.\n");
+        fwrite(STDERR, sprintf("nativephp_inject_safe_storage_backend: no `export default router;` in %s.\n", $target));
         fwrite(STDERR, "The compiled plugin changed shape; safeStorage backend detection is NOT in this build and Linux will report protection it does not have.\n");
 
         exit(1);
     }
 
     if ($status === 'patched' && file_put_contents($target, $patched) === false) {
-        fwrite(STDERR, "nativephp_inject_safe_storage_backend: could not write {$target}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_safe_storage_backend: could not write %s\n", $target));
 
         exit(1);
     }
 
-    fwrite(STDOUT, "nativephp_inject_safe_storage_backend: {$status} in {$target}\n");
+    fwrite(STDOUT, sprintf("nativephp_inject_safe_storage_backend: %s in %s\n", $status, $target));
 
     exit(0);
 }

@@ -123,7 +123,7 @@ final readonly class OAuthStateRepository
     {
         if (MailProvider::tryFrom($provider) === null) {
             throw new InvalidArgumentException(
-                "OAuthStateRepository: provider must be 'gmail' or 'microsoft', got '{$provider}'.",
+                sprintf("OAuthStateRepository: provider must be 'gmail' or 'microsoft', got '%s'.", $provider),
             );
         }
     }

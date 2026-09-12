@@ -45,13 +45,13 @@ $inputPath = $argv[1];
 $outputPath = $argv[2];
 
 if (! is_readable($inputPath)) {
-    fwrite(STDERR, "Input file is not readable: $inputPath\n");
+    fwrite(STDERR, sprintf("Input file is not readable: %s\n", $inputPath));
     exit(1);
 }
 
 $contents = file_get_contents($inputPath);
 if ($contents === false) {
-    fwrite(STDERR, "Could not read input file: $inputPath\n");
+    fwrite(STDERR, sprintf("Could not read input file: %s\n", $inputPath));
     exit(1);
 }
 
@@ -187,7 +187,7 @@ $contents = preg_replace_callback(
 ) ?? $contents;
 
 if (file_put_contents($outputPath, $contents) === false) {
-    fwrite(STDERR, "Could not write output file: $outputPath\n");
+    fwrite(STDERR, sprintf("Could not write output file: %s\n", $outputPath));
     exit(1);
 }
 

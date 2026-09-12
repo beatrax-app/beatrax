@@ -31,7 +31,7 @@ it('has the three tax surfaces reading the boundary from FilingSeason', function
     foreach ($surfaces as $surface) {
         $path = dirname(__DIR__, 4).'/'.$surface;
 
-        expect(is_file($path))->toBeTrue("$surface has moved; point this test at its new path.")
+        expect(is_file($path))->toBeTrue(sprintf('%s has moved; point this test at its new path.', $surface))
             ->and((string) file_get_contents($path))->toContain('FilingSeason::defaultYear');
     }
 });

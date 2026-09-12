@@ -31,7 +31,7 @@ final class NullDevCommandRegistry implements DevCommandRegistry
     public function find(string $name): CommandSpec
     {
         throw new InvalidArgumentException(
-            "DevCommandRegistry has no commands registered (null shape). Requested: `{$name}`.",
+            sprintf('DevCommandRegistry has no commands registered (null shape). Requested: `%s`.', $name),
         );
     }
 }

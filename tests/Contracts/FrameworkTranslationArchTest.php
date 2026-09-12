@@ -74,10 +74,10 @@ it('ships the framework lang files in every supported locale', function (): void
 
         foreach (frameworkTranslationFiles() as $file) {
             $checked++;
-            $path = base_path("lang/{$case->value}/{$file}");
+            $path = base_path(sprintf('lang/%s/%s', $case->value, $file));
 
             if (! is_file($path)) {
-                $missing[] = "{$case->value}/{$file}";
+                $missing[] = sprintf('%s/%s', $case->value, $file);
             }
         }
     }

@@ -36,7 +36,7 @@ function makeFakeProvider(string $key, int $priority, ?array $result = null, boo
         public function fetch(): array
         {
             if ($this->throws) {
-                throw new RateFetchException("Provider {$this->k} failed.");
+                throw new RateFetchException(sprintf('Provider %s failed.', $this->k));
             }
 
             return $this->result ?? ['date' => '2026-06-05', 'rates' => ['USD' => '1.1359']];

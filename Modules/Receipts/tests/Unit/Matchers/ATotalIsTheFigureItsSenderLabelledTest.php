@@ -24,13 +24,13 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 
 function labelledTotalEml(string $sender, string $contentType, string $body): string
 {
-    return "From: {$sender}\r\n"
+    return sprintf("From: %s\r\n", $sender)
         ."To: kaarthouder@example.test\r\n"
         ."Subject: Receipt\r\n"
         ."Date: Sun, 17 May 2026 09:42:13 +0200\r\n"
         ."Message-ID: <labelled-total@example.test>\r\n"
         ."MIME-Version: 1.0\r\n"
-        ."Content-Type: {$contentType}; charset=UTF-8\r\n"
+        .sprintf("Content-Type: %s; charset=UTF-8\r\n", $contentType)
         ."Content-Transfer-Encoding: 8bit\r\n"
         ."\r\n"
         .$body;

@@ -55,7 +55,7 @@ it('renders dev-sidebar nav items with every non-Horizon entry visible (Doctor /
 
     foreach (['Overview', 'Artisan', 'Audit', 'Logs', 'Queue', 'Doctor', 'SQL', 'System'] as $label) {
         expect(str_contains($html, $label))
-            ->toBeTrue("Dev sidebar missing nav item: {$label}");
+            ->toBeTrue(sprintf('Dev sidebar missing nav item: %s', $label));
     }
 
     // The test env has neither app.dev_mode nor the Horizon package, so that
@@ -63,7 +63,7 @@ it('renders dev-sidebar nav items with every non-Horizon entry visible (Doctor /
     $disabledCount = substr_count($html, 'nav-disabled');
     expect($disabledCount)->toBe(
         0,
-        "Expected zero nav-disabled entries (every dev route is registered), saw {$disabledCount}.",
+        sprintf('Expected zero nav-disabled entries (every dev route is registered), saw %s.', $disabledCount),
     );
 
     expect(str_contains($html, '>Horizon<'))
@@ -325,7 +325,7 @@ it('renders the last 5 structured log entries in the console pane as clickable r
     }
     $lines = [];
     for ($i = 1; $i <= 7; $i++) {
-        $lines[] = "[2026-05-24 12:00:0{$i}] testing.INFO: line number {$i}";
+        $lines[] = sprintf('[2026-05-24 12:00:0%s] testing.INFO: line number %s', $i, $i);
     }
     // A real secret literal, so the assertions below can tell a scrubbed
     // render from an unscrubbed one.

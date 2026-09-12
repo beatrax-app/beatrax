@@ -44,7 +44,7 @@ it('reports the default threshold of 90 for an envelope with no explicit thresho
 
 it('persists a threshold saved through the component and reports it on the read seam', function (): void {
     Livewire::test(BudgetsPage::class)
-        ->set("thresholdInputs.{$this->groceries->id}", '75')
+        ->set(sprintf('thresholdInputs.%s', $this->groceries->id), '75')
         ->call('setNotifyThreshold', $this->groceries->id)
         ->assertHasNoErrors();
 
@@ -59,7 +59,7 @@ it('persists a threshold saved through the component and reports it on the read 
 
 it('rejects an out-of-range low value (0) and leaves the stored value unchanged', function (): void {
     $component = Livewire::test(BudgetsPage::class)
-        ->set("thresholdInputs.{$this->groceries->id}", '0')
+        ->set(sprintf('thresholdInputs.%s', $this->groceries->id), '0')
         ->call('setNotifyThreshold', $this->groceries->id);
 
     $this->assertDatabaseMissing('envelope_settings', [
@@ -72,12 +72,12 @@ it('rejects an out-of-range low value (0) and leaves the stored value unchanged'
 
 it('rejects an out-of-range high value (999) and leaves an existing stored value unchanged', function (): void {
     Livewire::test(BudgetsPage::class)
-        ->set("thresholdInputs.{$this->groceries->id}", '80')
+        ->set(sprintf('thresholdInputs.%s', $this->groceries->id), '80')
         ->call('setNotifyThreshold', $this->groceries->id)
         ->assertHasNoErrors();
 
     Livewire::test(BudgetsPage::class)
-        ->set("thresholdInputs.{$this->groceries->id}", '999')
+        ->set(sprintf('thresholdInputs.%s', $this->groceries->id), '999')
         ->call('setNotifyThreshold', $this->groceries->id);
 
     $this->assertDatabaseHas('envelope_settings', [
@@ -90,7 +90,7 @@ it('rejects an out-of-range high value (999) and leaves an existing stored value
 
 it('does not leak one user\'s threshold to another user', function (): void {
     Livewire::test(BudgetsPage::class)
-        ->set("thresholdInputs.{$this->groceries->id}", '60')
+        ->set(sprintf('thresholdInputs.%s', $this->groceries->id), '60')
         ->call('setNotifyThreshold', $this->groceries->id)
         ->assertHasNoErrors();
 

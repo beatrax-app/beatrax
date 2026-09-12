@@ -158,7 +158,7 @@ function eagerGraphRegistrationPoints(): array
     foreach ($kernel->all() as $name => $command) {
         $class = $command::class;
         if (str_starts_with($class, 'Modules\\') || str_starts_with($class, 'App\\')) {
-            $points[$class] = "artisan {$name}";
+            $points[$class] = sprintf('artisan %s', $name);
         }
     }
 
@@ -277,7 +277,7 @@ it('scans the registration points and the per-resolve bindings it claims to', fu
             static fn (string $entry): bool => class_basename(explode(' -> ', $entry)[0]) === $fixed,
         ));
 
-        expect($stillFrozen)->toBe([], "{$fixed} was fixed by resolving on demand and has gone back to injecting: "
+        expect($stillFrozen)->toBe([], sprintf('%s was fixed by resolving on demand and has gone back to injecting: ', $fixed)
             .implode(', ', $stillFrozen));
     }
 });

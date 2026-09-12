@@ -67,7 +67,7 @@ final readonly class LanPairingFrameCourier
      */
     public function deliverTo(DiscoveredPeer $peer, array $frame): bool
     {
-        $url = "http://{$peer->host}:{$peer->port}".PairingFrameRequestHandler::FRAME_PATH;
+        $url = sprintf('http://%s:%s', $peer->host, $peer->port).PairingFrameRequestHandler::FRAME_PATH;
 
         try {
             $response = $this->peers->peerRequest()

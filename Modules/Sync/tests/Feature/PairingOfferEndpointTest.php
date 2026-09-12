@@ -75,7 +75,7 @@ function pairingOfferRequest(string $method, string $path, string $clientIp = '1
     $client = Mockery::mock(AmpClient::class);
     $client->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress($clientIp, 45123));
 
-    return new AmpRequest($client, $method, HttpUri::new("http://192.0.2.10:51337{$path}"));
+    return new AmpRequest($client, $method, HttpUri::new(sprintf('http://192.0.2.10:51337%s', $path)));
 }
 
 /**
@@ -312,7 +312,7 @@ it('hands every other path to the websocket untouched', function (): void {
     foreach ([['GET', '/sync'], ['GET', '/'], ['POST', '/pair/offer']] as [$method, $path]) {
         $result = pairingOfferDispatch($handler, pairingOfferRequest($method, $path));
 
-        expect($result['status'])->toBe(101, "{$method} {$path} must reach the websocket");
+        expect($result['status'])->toBe(101, sprintf('%s %s must reach the websocket', $method, $path));
         expect($result['raw'])->toBe('delegated-to-websocket');
     }
 });

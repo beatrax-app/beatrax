@@ -18,7 +18,7 @@ function supportNotesFor(string $name, string $type, string $country): array
     $provider = app(SupportResourceProvider::class);
     $resource = $provider->forCounterparty($name, $type, $country);
 
-    expect($resource)->not->toBeNull("{$name} ({$type}) must resolve for {$country}");
+    expect($resource)->not->toBeNull(sprintf('%s (%s) must resolve for %s', $name, $type, $country));
 
     return [$resource->name, (string) $resource->notes];
 }

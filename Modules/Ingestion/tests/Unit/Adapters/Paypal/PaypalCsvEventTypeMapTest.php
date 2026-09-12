@@ -35,7 +35,7 @@ it('only includes parent-classified event types in TRANSACTION_TYPE', function (
     foreach ($transactionType as $language => $entries) {
         foreach ($entries as $eventType => $_canonicalType) {
             expect($map[$language][$eventType] ?? null)
-                ->toBe(PaypalEventAction::Parent, "Event type '{$eventType}' (language '{$language}') appears in TRANSACTION_TYPE but is not classified as Parent in MAP.");
+                ->toBe(PaypalEventAction::Parent, sprintf("Event type '%s' (language '%s') appears in TRANSACTION_TYPE but is not classified as Parent in MAP.", $eventType, $language));
         }
     }
 })->group('phase-4');
@@ -49,7 +49,7 @@ it('covers every parent-classified event type in TRANSACTION_TYPE', function ():
                 continue;
             }
             expect(isset($transactionType[$language][$eventType]))
-                ->toBeTrue("Event type '{$eventType}' (language '{$language}') is classified as Parent in MAP but has no TRANSACTION_TYPE entry.");
+                ->toBeTrue(sprintf("Event type '%s' (language '%s') is classified as Parent in MAP but has no TRANSACTION_TYPE entry.", $eventType, $language));
         }
     }
 })->group('phase-4');

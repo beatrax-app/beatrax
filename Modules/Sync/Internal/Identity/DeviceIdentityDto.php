@@ -44,7 +44,7 @@ final readonly class DeviceIdentityDto
     {
         $value = $data[$key] ?? null;
         if (! is_string($value)) {
-            throw new \InvalidArgumentException("DeviceIdentityDto: '{$key}' must be a string.");
+            throw new \InvalidArgumentException(sprintf("DeviceIdentityDto: '%s' must be a string.", $key));
         }
 
         return $value;
@@ -57,7 +57,7 @@ final readonly class DeviceIdentityDto
     {
         $value = $data[$key] ?? null;
         if (! is_int($value)) {
-            throw new \InvalidArgumentException("DeviceIdentityDto: '{$key}' must be an int.");
+            throw new \InvalidArgumentException(sprintf("DeviceIdentityDto: '%s' must be an int.", $key));
         }
 
         return $value;

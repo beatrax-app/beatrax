@@ -203,17 +203,17 @@ it('assembles a device identity only by minting one or by opening this install o
 it('keys that file to the account rather than to any peer', function (): void {
     $locator = privateKeyCode(base_path(PRIVATE_KEY_FILE_LOCATOR));
 
-    // The account id and nothing else. A path taking a peer device id would be
-    // a per-peer key store, which is the shape an escrow takes before anybody
-    // calls it one.
+    // One value in the path and nothing else. A path taking a peer device id
+    // would be a per-peer key store, which is the shape an escrow takes before
+    // anybody calls it one.
     expect($locator)->toMatch(
-        '#/\{\$userId\}\.enc#',
+        '#sprintf\(\x27/%s\.enc\x27, \$userId\)#',
         PRIVATE_KEY_FILE_LOCATOR.' no longer builds the sealed key file path from the account id alone. A path '
         .'taking a peer device id is a per-peer key store, which is an escrow before anybody calls it one.'
     );
 
-    // The interpolation could name anything; the signature is what fixes what
-    // it can name. Both entry points take an account id and no device.
+    // The format names anything, so it is the signature that fixes what it can
+    // name. Both entry points take an account id and no device.
     expect($locator)->toMatch('#function path\(int \$userId\)#')
         ->and($locator)->toMatch('#function exists\(int \$userId\)#');
 });

@@ -109,9 +109,9 @@ function batchedTransactionRow(User $user, Account $account, ImportRun $importRu
         'currency' => 'EUR',
         'settled_amount_minor' => -1000 - $index,
         'settled_currency' => 'EUR',
-        'description' => "Albert Heijn 1234 pinbetaling {$index}",
-        'note' => "handmatige notitie {$index}",
-        'counterparty_name' => "Albert Heijn Filiaal {$index}",
+        'description' => sprintf('Albert Heijn 1234 pinbetaling %s', $index),
+        'note' => sprintf('handmatige notitie %s', $index),
+        'counterparty_name' => sprintf('Albert Heijn Filiaal %s', $index),
         'counterparty_iban' => 'NL91ABNA'.str_pad((string) $index, 10, '0', STR_PAD_LEFT),
         'raw_payload' => $payload,
         'counterparty_normalized' => 'albert heijn '.$index,
@@ -119,8 +119,8 @@ function batchedTransactionRow(User $user, Account $account, ImportRun $importRu
         'source_format' => 'asn-csv',
         'import_run_id' => $importRun->id,
         'source_row_index' => $index,
-        'source_ref' => "unrelated-sentinel-{$index}",
-        'fingerprint' => hash('sha256', "seed-{$index}"),
+        'source_ref' => sprintf('unrelated-sentinel-%s', $index),
+        'fingerprint' => hash('sha256', sprintf('seed-%s', $index)),
         'fingerprint_version' => 1,
         'status' => 'cleared',
         'created_at' => now(),
@@ -160,11 +160,11 @@ function batchedSeedLedger(DatabaseManager $db, User $user, Account $account, Im
         $rows[] = [
             'user_id' => $user->id,
             'type' => 'merchant',
-            'slug' => "merchant-{$i}",
-            'display_name' => "Zilveren Kruis {$i}",
+            'slug' => sprintf('merchant-%s', $i),
+            'display_name' => sprintf('Zilveren Kruis %s', $i),
             'iban' => 'NL57ASNB'.str_pad((string) $i, 10, '0', STR_PAD_LEFT),
-            'merchant_name' => "ZILVEREN KRUIS ACHMEA {$i}",
-            'metadata' => json_encode(['sentinel' => "untouched-{$i}"], JSON_THROW_ON_ERROR),
+            'merchant_name' => sprintf('ZILVEREN KRUIS ACHMEA %s', $i),
+            'metadata' => json_encode(['sentinel' => sprintf('untouched-%s', $i)], JSON_THROW_ON_ERROR),
             'created_at' => now(),
             'updated_at' => now(),
         ];
@@ -178,12 +178,12 @@ function batchedSeedLedger(DatabaseManager $db, User $user, Account $account, Im
     $rows = [];
     for ($i = 0; $i < BATCHED_NOTIFICATIONS; $i++) {
         $rows[] = [
-            'id' => hash('sha256', "notification-{$user->id}-{$i}"),
+            'id' => hash('sha256', sprintf('notification-%s-%s', $user->id, $i)),
             'user_id' => $user->id,
             'state' => 'open',
-            'title' => "Zilveren Kruis premie {$i} staat klaar",
-            'body' => "Je zorgverzekeraar schrijft EUR 142,{$i} af op de 24e.",
-            'params' => json_encode(['merchant' => "Zilveren Kruis {$i}"], JSON_THROW_ON_ERROR),
+            'title' => sprintf('Zilveren Kruis premie %s staat klaar', $i),
+            'body' => sprintf('Je zorgverzekeraar schrijft EUR 142,%s af op de 24e.', $i),
+            'params' => json_encode(['merchant' => sprintf('Zilveren Kruis %s', $i)], JSON_THROW_ON_ERROR),
             'trigger_type' => 'bill_due',
             'created_at' => '2026-07-01 09:00:00',
             'updated_at' => '2026-07-01 09:00:00',
@@ -204,10 +204,10 @@ function batchedSeedLedger(DatabaseManager $db, User $user, Account $account, Im
             'pk' => (string) ($i + 1),
             'field' => 'description',
             'op_type' => 'set',
-            'value' => json_encode("Albert Heijn 1234 pinbetaling {$i}", JSON_THROW_ON_ERROR),
+            'value' => json_encode(sprintf('Albert Heijn 1234 pinbetaling %s', $i), JSON_THROW_ON_ERROR),
             'hlc_l' => 1_700_000_000_000 + $i,
             'hlc_c' => 0,
-            'signature' => "signature-sentinel-{$i}",
+            'signature' => sprintf('signature-sentinel-%s', $i),
             'recorded_at' => now(),
         ];
         if (count($rows) === 100) {
@@ -227,10 +227,10 @@ function batchedSeedLedger(DatabaseManager $db, User $user, Account $account, Im
             'pk' => (string) ($i + 1),
             'field' => 'name',
             'op_type' => 'set',
-            'value' => json_encode("ASN Betaalrekening {$i}", JSON_THROW_ON_ERROR),
+            'value' => json_encode(sprintf('ASN Betaalrekening %s', $i), JSON_THROW_ON_ERROR),
             'hlc_l' => 1_800_000_000_000 + $i,
             'hlc_c' => 0,
-            'signature' => "signature-insensitive-{$i}",
+            'signature' => sprintf('signature-insensitive-%s', $i),
             'recorded_at' => now(),
         ];
     }
@@ -340,7 +340,7 @@ it('sweeps a chunk in a handful of batched statements rather than one per row, a
 
     $sweepWrites = static fn (string $table, string $column): int => count(array_filter(
         $statements,
-        static fn (string $sql): bool => str_starts_with($sql, "update \"{$table}\" set") && str_contains($sql, "\"{$column}\" ="),
+        static fn (string $sql): bool => str_starts_with($sql, sprintf('update "%s" set', $table)) && str_contains($sql, sprintf('"%s" =', $column)),
     ));
 
     // Without the batching each of these equals the row count of its table. A
@@ -558,7 +558,7 @@ it('restores every snapshotted column to exactly its snapshotted value in batche
 
     $connection->table('transactions')->insert(batchedTransactionRow($other, $otherAccount, $otherImportRun, 99_001));
     $connection->table('notifications')->insert([
-        'id' => hash('sha256', "notification-{$other->id}-bystander"),
+        'id' => hash('sha256', sprintf('notification-%s-bystander', $other->id)),
         'user_id' => $other->id,
         'state' => 'open',
         'title' => 'bystander title',
@@ -687,10 +687,10 @@ it('folds only a short run of rows into one case statement, whatever the binding
             'pk' => (string) ($i + 1),
             'field' => 'description',
             'op_type' => 'set',
-            'value' => json_encode("voor {$i}", JSON_THROW_ON_ERROR),
+            'value' => json_encode(sprintf('voor %s', $i), JSON_THROW_ON_ERROR),
             'hlc_l' => 1_900_000_000_000 + $i,
             'hlc_c' => 0,
-            'signature' => "signature-case-width-{$i}",
+            'signature' => sprintf('signature-case-width-%s', $i),
             'recorded_at' => now(),
         ];
     }
@@ -698,7 +698,7 @@ it('folds only a short run of rows into one case statement, whatever the binding
 
     $writes = [];
     foreach ($connection->table('op_log_entries')->where('user_id', $user->id)->orderBy('id')->get(['id']) as $row) {
-        $writes[] = ['id' => $row->id, 'value' => "na {$row->id}", 'gdk_epoch' => 1];
+        $writes[] = ['id' => $row->id, 'value' => sprintf('na %s', $row->id), 'gdk_epoch' => 1];
     }
 
     $statements = [];
@@ -724,7 +724,7 @@ it('folds only a short run of rows into one case statement, whatever the binding
     expect($written)->toHaveCount(count($writes));
 
     foreach ($written as $row) {
-        expect($row->value)->toBe("na {$row->id}");
+        expect($row->value)->toBe(sprintf('na %s', $row->id));
         expect((int) $row->gdk_epoch)->toBe(1);
     }
 });

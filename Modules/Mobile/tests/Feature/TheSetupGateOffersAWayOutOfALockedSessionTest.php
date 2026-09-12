@@ -29,7 +29,7 @@ function lockedSetupUser(): User
         'period_start_day' => 1,
     ]);
 
-    $path = UserDataPathService::appPath("sync/identity/{$user->id}.enc");
+    $path = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $user->id));
     @mkdir(dirname($path), 0777, true);
     file_put_contents($path, 'sealed');
 

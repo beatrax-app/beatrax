@@ -119,7 +119,7 @@ final readonly class LanPairingFramePuller
      */
     private function askPeerForFrames(string $host, int $port, string $ownDeviceId, string $proof): ?array
     {
-        $url = "http://{$host}:{$port}".PairingFramePullHandler::PULL_PATH;
+        $url = sprintf('http://%s:%s', $host, $port).PairingFramePullHandler::PULL_PATH;
 
         try {
             $response = $this->peers->peerRequest()

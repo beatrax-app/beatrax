@@ -137,7 +137,7 @@ final class UserDataPathService
         $segments = preg_split('#[/\\\\]#', $normalised);
         if ($segments !== false && in_array('..', $segments, true)) {
             throw new InvalidArgumentException(
-                "Path-traversal segment '..' is not allowed in an appPath() argument: {$relative}",
+                sprintf("Path-traversal segment '..' is not allowed in an appPath() argument: %s", $relative),
             );
         }
 

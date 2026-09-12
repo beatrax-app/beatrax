@@ -43,7 +43,7 @@ beforeEach(function (): void {
             'internal_date' => $now,
             'sender_email' => 'sender@example.com',
             'sender_name' => 'Sender',
-            'subject' => "Subj {$i}",
+            'subject' => sprintf('Subj %s', $i),
             'status' => $status,
             'fetched_at' => $now,
             'created_at' => $now,

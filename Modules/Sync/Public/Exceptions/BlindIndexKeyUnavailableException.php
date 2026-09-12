@@ -18,8 +18,8 @@ final class BlindIndexKeyUnavailableException extends RuntimeException
     public static function forUser(int $userId, string $domain): self
     {
         return new self(
-            "BlindIndexCodec: encryption is enabled for user {$userId} but the app-lock key is not held, "
-            ."so the '{$domain}' blind index cannot be derived. Refusing to write a plaintext matching key.",
+            sprintf('BlindIndexCodec: encryption is enabled for user %s but the app-lock key is not held, ', $userId)
+            .sprintf("so the '%s' blind index cannot be derived. Refusing to write a plaintext matching key.", $domain),
         );
     }
 }

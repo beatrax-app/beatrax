@@ -33,7 +33,7 @@ class GrantDevCommand extends Command
         $user = User::query()->where('username', $username)->first();
 
         if (! $user instanceof User) {
-            $this->error("User not found: {$username}");
+            $this->error(sprintf('User not found: %s', $username));
 
             return self::FAILURE;
         }
@@ -44,14 +44,14 @@ class GrantDevCommand extends Command
     private function grant(User $user, string $username): int
     {
         if ($user->is_developer === true) {
-            $this->info("Already a developer: {$username}");
+            $this->info(sprintf('Already a developer: %s', $username));
 
             return self::SUCCESS;
         }
 
         $user->fill(['is_developer' => true])->save();
 
-        $this->info("Granted developer to {$username}");
+        $this->info(sprintf('Granted developer to %s', $username));
 
         return self::SUCCESS;
     }

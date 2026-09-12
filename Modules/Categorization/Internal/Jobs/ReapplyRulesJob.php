@@ -78,7 +78,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 
     public static function progressCacheKey(int $userId): string
     {
-        return "rule-reapply:{$userId}";
+        return sprintf('rule-reapply:%s', $userId);
     }
 
     public function handle(

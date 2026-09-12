@@ -63,13 +63,13 @@ it('reads every ordinary spelling of off as off', function (): void {
     // arrives as a non-empty string, and a truthiness test shipped a release
     // build stamped DEBUG for each of these.
     foreach (['off', 'no', 'OFF', 'No', '0', ''] as $spelling) {
-        expect(debugBundleConfigVersion($spelling))->toBe('9.9.9', "flag '{$spelling}' enabled the debug bundle");
+        expect(debugBundleConfigVersion($spelling))->toBe('9.9.9', sprintf("flag '%s' enabled the debug bundle", $spelling));
     }
 });
 
 it('reads every ordinary spelling of on as on', function (): void {
     foreach (['true', 'TRUE', '1', 'yes', 'on'] as $spelling) {
-        expect(debugBundleConfigVersion($spelling))->toBe('DEBUG', "flag '{$spelling}' did not enable the debug bundle");
+        expect(debugBundleConfigVersion($spelling))->toBe('DEBUG', sprintf("flag '%s' did not enable the debug bundle", $spelling));
     }
 });
 

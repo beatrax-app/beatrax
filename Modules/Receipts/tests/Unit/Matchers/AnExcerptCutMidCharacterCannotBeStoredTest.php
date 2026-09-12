@@ -26,13 +26,13 @@ function excerptEml(int $pad): string
         ."To: kaarthouder@example.test\r\n"
         ."Subject: Aankoopnotificatie\r\n"
         ."Date: Sun, 12 Apr 2026 10:15:00 +0200\r\n"
-        ."Message-ID: <ics-excerpt-{$pad}@ics.nl>\r\n"
+        .sprintf("Message-ID: <ics-excerpt-%s@ics.nl>\r\n", $pad)
         ."MIME-Version: 1.0\r\n"
         ."Content-Type: text/html; charset=UTF-8\r\n"
         ."Content-Transfer-Encoding: 8bit\r\n"
         ."\r\n"
         ."<html><body>\r\n"
-        ."<p>{$lead}{$accented}</p>\r\n"
+        .sprintf("<p>%s%s</p>\r\n", $lead, $accented)
         ."<table>\r\n"
         ."  <tr><td>Verkoper:</td><td>SYNTHETIC ICS TINY</td></tr>\r\n"
         ."  <tr><td>Bedrag:</td><td>&euro; 1,00 EUR Af</td></tr>\r\n"
@@ -57,7 +57,7 @@ it('never cuts the stored excerpt through the middle of a character', function (
 
         /** @var string $excerpt */
         expect(mb_check_encoding($excerpt, 'UTF-8'))
-            ->toBeTrue("pad {$pad} cut the excerpt mid-character");
+            ->toBeTrue(sprintf('pad %s cut the excerpt mid-character', $pad));
 
         $longest = max($longest, strlen($excerpt));
     }

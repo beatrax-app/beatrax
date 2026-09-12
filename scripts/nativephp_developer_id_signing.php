@@ -65,14 +65,14 @@ $configPath = is_file($publishedDir.'/package.json')
     : $vendorDir.'/electron-builder.mjs';
 
 if (! is_file($configPath)) {
-    fwrite(STDERR, "nativephp_developer_id_signing: no electron-builder.mjs found at {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_developer_id_signing: no electron-builder.mjs found at %s\n", $configPath));
 
     exit(1);
 }
 
 $source = file_get_contents($configPath);
 if ($source === false) {
-    fwrite(STDERR, "nativephp_developer_id_signing: could not read {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_developer_id_signing: could not read %s\n", $configPath));
 
     exit(1);
 }
@@ -90,7 +90,7 @@ if (preg_match('/\bmac\s*:\s*\{[^{}]*\bidentity\s*:\s*["\']/s', $source) === 1) 
     exit(0);
 }
 
-$signingBlock = "identity: {$identityLiteral}, // Developer ID signing — see scripts/nativephp_developer_id_signing.php\n"
+$signingBlock = sprintf("identity: %s, // Developer ID signing — see scripts/nativephp_developer_id_signing.php\n", $identityLiteral)
     ."        hardenedRuntime: true,\n"
     ."        gatekeeperAssess: false,\n"
     ."        entitlements: 'build/entitlements.mac.plist',";
@@ -113,17 +113,17 @@ if (preg_match('/\bmac\s*:\s*\{[^{}]*?\K[ \t]*identity\s*:\s*null\s*,[^\n]*/s', 
 }
 
 if ($patched === null || $count !== 1) {
-    fwrite(STDERR, "nativephp_developer_id_signing: could not locate a `mac: {` block in {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_developer_id_signing: could not locate a `mac: {` block in %s\n", $configPath));
 
     exit(1);
 }
 
 if (file_put_contents($configPath, $patched) === false) {
-    fwrite(STDERR, "nativephp_developer_id_signing: could not write {$configPath}\n");
+    fwrite(STDERR, sprintf("nativephp_developer_id_signing: could not write %s\n", $configPath));
 
     exit(1);
 }
 
-fwrite(STDOUT, "nativephp_developer_id_signing: pinned mac.identity to {$identity} + hardened runtime.\n");
+fwrite(STDOUT, sprintf("nativephp_developer_id_signing: pinned mac.identity to %s + hardened runtime.\n", $identity));
 
 exit(0);

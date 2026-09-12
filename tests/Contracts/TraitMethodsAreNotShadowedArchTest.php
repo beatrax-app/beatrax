@@ -42,7 +42,7 @@ function traitShadowScan(array $paths): array
                 // rather than skipped, because "no shadow found" and "nothing
                 // to compare against" are the same empty answer otherwise.
                 if (! trait_exists($trait)) {
-                    $unresolved[] = "{$path} uses {$trait}, which does not resolve";
+                    $unresolved[] = sprintf('%s uses %s, which does not resolve', $path, $trait);
 
                     continue;
                 }
@@ -52,7 +52,7 @@ function traitShadowScan(array $paths): array
                         continue;
                     }
 
-                    $hits[] = "{$path}:{$declaration['methods'][$method]} {$declaration['name']} redeclares {$trait}::{$method}()";
+                    $hits[] = sprintf('%s:%s %s redeclares %s::%s()', $path, $declaration['methods'][$method], $declaration['name'], $trait, $method);
                 }
             }
 

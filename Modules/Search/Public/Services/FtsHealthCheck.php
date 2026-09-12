@@ -63,12 +63,12 @@ final readonly class FtsHealthCheck
         }
 
         if ($owed > 0) {
-            $problems[] = "{$owed} awaiting a key to rebuild";
+            $problems[] = sprintf('%s awaiting a key to rebuild', $owed);
         }
 
         return $problems === []
-            ? ['severity' => 'ok', 'message' => "FTS index: {$indexCount} rows — in sync"]
-            : ['severity' => 'warning', 'message' => "FTS index: {$indexCount} rows — ".implode(', ', $problems)];
+            ? ['severity' => 'ok', 'message' => sprintf('FTS index: %s rows — in sync', $indexCount)]
+            : ['severity' => 'warning', 'message' => sprintf('FTS index: %s rows — ', $indexCount).implode(', ', $problems)];
     }
 
     // An index AHEAD of the table is the normal shape of the damage --

@@ -121,7 +121,7 @@ final readonly class LanPairingOfferFetcher
      */
     private function attempt(DiscoveredPeer $peer, string $tokenHex): array|PairingOfferLookup
     {
-        $url = "http://{$peer->host}:{$peer->port}".PairingOfferRequestHandler::OFFER_PATH;
+        $url = sprintf('http://%s:%s', $peer->host, $peer->port).PairingOfferRequestHandler::OFFER_PATH;
 
         try {
             $response = $this->peers->peerRequest()

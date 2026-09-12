@@ -15,6 +15,6 @@ final class CryptoOperationFailedException extends RuntimeException
 {
     public static function during(string $operation, ?Throwable $previous = null): self
     {
-        return new self("Sync crypto failed during {$operation}.", 0, $previous);
+        return new self(sprintf('Sync crypto failed during %s.', $operation), 0, $previous);
     }
 }

@@ -62,8 +62,8 @@ it('lets the public artefacts past the import gate while a setup is unfinished',
             },
         );
 
-        expect($reached)->toBeTrue("the import gate intercepted {$name}")
-            ->and($response->isRedirection())->toBeFalse("the import gate redirected {$name}");
+        expect($reached)->toBeTrue(sprintf('the import gate intercepted %s', $name))
+            ->and($response->isRedirection())->toBeFalse(sprintf('the import gate redirected %s', $name));
     }
 });
 
@@ -98,7 +98,7 @@ it('lets them past the database-ready gate too', function (): void {
             return new Response('PNG', 200, ['Content-Type' => 'image/png']);
         });
 
-        expect($reached)->toBeTrue("the database-ready gate intercepted {$name}");
+        expect($reached)->toBeTrue(sprintf('the database-ready gate intercepted %s', $name));
     }
 });
 

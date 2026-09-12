@@ -21,10 +21,10 @@ function mboxOfThreeWhoseMiddleMessageIsOversized(bool $oversize): string
     }
 
     foreach ([1, 2, 3] as $index) {
-        fwrite($handle, "From sender{$index}@example.test Sun May 17 09:4{$index}:00 2026\n");
-        fwrite($handle, "From: sender{$index}@example.test\n");
-        fwrite($handle, "Subject: Synthetic archive message {$index}\n\n");
-        fwrite($handle, "Body of message {$index}.\n");
+        fwrite($handle, sprintf("From sender%s@example.test Sun May 17 09:4%s:00 2026\n", $index, $index));
+        fwrite($handle, sprintf("From: sender%s@example.test\n", $index));
+        fwrite($handle, sprintf("Subject: Synthetic archive message %s\n\n", $index));
+        fwrite($handle, sprintf("Body of message %s.\n", $index));
 
         // 64 KB lines rather than short ones: the iterator reads line by line,
         // and the ceiling is measured in tens of megabytes.

@@ -13,6 +13,6 @@ final class CurrencyMismatchException extends RuntimeException
 {
     public static function between(string $left, string $right): self
     {
-        return new self("Cannot combine {$left} with {$right}: amounts must share a currency.");
+        return new self(sprintf('Cannot combine %s with %s: amounts must share a currency.', $left, $right));
     }
 }

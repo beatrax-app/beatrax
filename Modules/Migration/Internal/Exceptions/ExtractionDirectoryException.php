@@ -12,6 +12,6 @@ final class ExtractionDirectoryException extends RuntimeException
 {
     public function __construct(string $targetDir)
     {
-        parent::__construct("could not create scoped extraction directory '{$targetDir}'");
+        parent::__construct(sprintf("could not create scoped extraction directory '%s'", $targetDir));
     }
 }

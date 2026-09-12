@@ -52,8 +52,8 @@ it('paginates with cursors when there are more rows than the page limit', functi
         $day = sprintf('%02d', $i + 1);
         $this->makeTransaction($this->fixtureUser, $this->account, $this->run, [
             'amount_minor' => -1000 - $i,
-            'posted_at' => "2026-05-{$day}",
-            'booked_at' => "2026-05-{$day} 12:00:00",
+            'posted_at' => sprintf('2026-05-%s', $day),
+            'booked_at' => sprintf('2026-05-%s 12:00:00', $day),
         ]);
     }
 

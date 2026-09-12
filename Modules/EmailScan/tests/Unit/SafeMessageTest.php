@@ -48,7 +48,7 @@ it('never cuts a multibyte character in half, at any alignment', function (): vo
         $raw = str_repeat('a', $pad).str_repeat('é', 400);
         $out = SafeMessage::cap($raw);
 
-        expect(mb_check_encoding($out, 'UTF-8'))->toBeTrue("pad {$pad} cut a character in half");
+        expect(mb_check_encoding($out, 'UTF-8'))->toBeTrue(sprintf('pad %s cut a character in half', $pad));
         expect(strlen($out))->toBeLessThanOrEqual(300);
 
         if (strlen($out) < 300) {

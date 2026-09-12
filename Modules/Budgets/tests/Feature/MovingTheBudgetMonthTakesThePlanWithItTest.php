@@ -155,14 +155,14 @@ it('never keys a row below the genesis the fold starts at, whichever day the rea
         $earliest = (string) DB::table('envelope_assignments')->where('user_id', $this->user->id)->min('period_start');
         expect($earliest)->toBeGreaterThanOrEqual(
             $genesis->start->toDateString(),
-            "day {$oldDay} -> {$newDay} keyed a row below genesis {$genesis->start->toDateString()}",
+            sprintf('day %s -> %s keyed a row below genesis %s', $oldDay, $newDay, $genesis->start->toDateString()),
         );
 
         expect((int) DB::table('envelope_assignments')->where('user_id', $this->user->id)->sum('assigned_minor'))
-            ->toBe($totalBefore, "day {$oldDay} -> {$newDay} did not conserve the plan");
+            ->toBe($totalBefore, sprintf('day %s -> %s did not conserve the plan', $oldDay, $newDay));
 
         expect(assignedInTheMonthTheReaderIsLookingAt($this->user)[$this->groceries->id] ?? 0)
-            ->toBe(40000, "day {$oldDay} -> {$newDay} left the current month unbudgeted");
+            ->toBe(40000, sprintf('day %s -> %s left the current month unbudgeted', $oldDay, $newDay));
 
         DB::table('users')->where('id', $this->user->id)->update(['period_start_day' => $oldDay]);
         $this->user->refresh();

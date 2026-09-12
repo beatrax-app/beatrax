@@ -31,7 +31,7 @@ it('keeps keys, secrets and backups out of the wiped-on-update bundle', function
         ];
 
         foreach ($durable as $what => $path) {
-            expect($path)->not->toStartWith($sandbox.DIRECTORY_SEPARATOR, "{$what} must not live inside the bundle")
+            expect($path)->not->toStartWith($sandbox.DIRECTORY_SEPARATOR, sprintf('%s must not live inside the bundle', $what))
                 ->and($path)->toContain('persisted_data');
         }
     } finally {

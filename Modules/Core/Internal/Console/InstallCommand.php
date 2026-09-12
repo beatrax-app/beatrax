@@ -274,7 +274,7 @@ class InstallCommand extends Command
         foreach ($plistNames as $name) {
             $sourcePath = $this->app->basePath('deploy/launchd/com.beatrax.'.$name.'.plist');
             if (! $this->files->exists($sourcePath)) {
-                $this->error("Source plist not found: {$sourcePath}");
+                $this->error(sprintf('Source plist not found: %s', $sourcePath));
 
                 return self::FAILURE;
             }
@@ -282,13 +282,13 @@ class InstallCommand extends Command
             $rendered = strtr($this->files->get($sourcePath), $substitutions);
             $targetPath = $launchAgentsDir.'/com.beatrax.'.$name.'.plist';
             $this->files->put($targetPath, $rendered);
-            $this->info("Wrote {$targetPath}");
+            $this->info(sprintf('Wrote %s', $targetPath));
 
             $bootstrapExit = $this->bootstrapPlist($uid, $targetPath);
             if ($bootstrapExit === 0) {
-                $this->info("Loaded com.beatrax.{$name}");
+                $this->info(sprintf('Loaded com.beatrax.%s', $name));
             } else {
-                $this->warn("launchctl bootstrap exited {$bootstrapExit} for com.beatrax.{$name} (may already be loaded; check `launchctl list | grep beatrax`)");
+                $this->warn(sprintf('launchctl bootstrap exited %s for com.beatrax.%s (may already be loaded; check `launchctl list | grep beatrax`)', $bootstrapExit, $name));
             }
         }
 

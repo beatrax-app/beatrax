@@ -106,7 +106,7 @@ final class AnomalyAlertStateMachine extends GuardedStateMachine
     protected function notFound(int $id): Throwable
     {
         return new AnomalyAlertNotFoundException(
-            "AnomalyAlertStateMachine: anomaly_alerts row {$id} not found.",
+            sprintf('AnomalyAlertStateMachine: anomaly_alerts row %s not found.', $id),
         );
     }
 }

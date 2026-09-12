@@ -95,7 +95,7 @@ foreach ($targets as $relative) {
     $target = beatraxScaffoldPath($relative) ?? '';
 
     if (! is_file($target)) {
-        fwrite(STDOUT, "nativephp_ios_upload_limits: no iOS scaffold yet ({$relative}) — skipping.\n");
+        fwrite(STDOUT, sprintf("nativephp_ios_upload_limits: no iOS scaffold yet (%s) — skipping.\n", $relative));
 
         continue;
     }
@@ -103,24 +103,24 @@ foreach ($targets as $relative) {
     $source = (string) file_get_contents($target);
 
     if (str_contains($source, 'post_max_size')) {
-        fwrite(STDOUT, "nativephp_ios_upload_limits: already patched ({$relative}).\n");
+        fwrite(STDOUT, sprintf("nativephp_ios_upload_limits: already patched (%s).\n", $relative));
 
         continue;
     }
 
     if (! str_contains($source, $anchor)) {
-        fwrite(STDERR, "nativephp_ios_upload_limits: php.ini anchor not found in {$target}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_upload_limits: php.ini anchor not found in %s.\n", $target));
         fwrite(STDERR, "The generated shell changed how it writes php.ini; re-check the upload ceiling before shipping a build.\n");
         exit(1);
     }
 
     if (file_put_contents($target, str_replace($anchor, $replacement, $source)) === false) {
-        fwrite(STDERR, "nativephp_ios_upload_limits: could not write {$target}.\n");
+        fwrite(STDERR, sprintf("nativephp_ios_upload_limits: could not write %s.\n", $target));
         exit(1);
     }
 
     $patchedAny = true;
-    fwrite(STDOUT, "nativephp_ios_upload_limits: patched {$relative}.\n");
+    fwrite(STDOUT, sprintf("nativephp_ios_upload_limits: patched %s.\n", $relative));
 }
 
 if ($patchedAny) {

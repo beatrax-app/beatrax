@@ -37,7 +37,7 @@ it('pins all three Android levels as integers the environment cannot move', func
 
     foreach (['compile_sdk', 'min_sdk', 'target_sdk'] as $key) {
         expect($android[$key] ?? null)->toBeInt(
-            "config('nativephp.android.{$key}') is not an integer literal in the mobile root's own "
+            sprintf("config('nativephp.android.%s') is not an integer literal in the mobile root's own ", $key)
             .'config, so nativephp/mobile answers it from its package default and a .env nobody reviews.',
         );
     }

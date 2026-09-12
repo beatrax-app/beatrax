@@ -107,7 +107,7 @@ function everyCapturePath(): array
 // the filesystem alone, and every attempt to unseal it fails.
 function anIdentityThisDeviceCannotOpen(int $userId): string
 {
-    $path = UserDataPathService::appPath("sync/identity/{$userId}.enc");
+    $path = UserDataPathService::appPath(sprintf('sync/identity/%s.enc', $userId));
 
     if (! is_dir(dirname($path))) {
         mkdir(dirname($path), 0700, true);

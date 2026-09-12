@@ -82,7 +82,7 @@ it('writes the promoted ledger rows at the depth it was called at, not one insid
         $ambient,
         'Promotion writes a whole budget history and must not be wrapped in one transaction — '
         .'only the status change and the counts may be. Nothing was written at the depth '
-        ."promote() was called at ({$ambient}), so a transaction is open around all of it:\n  "
+        .sprintf("promote() was called at (%s), so a transaction is open around all of it:\n  ", $ambient)
         .implode("\n  ", $depths),
     );
 });

@@ -82,7 +82,7 @@ if (! function_exists('beatraxRewrite')) {
         $rewritten = preg_replace($pattern, $replacement, $subject);
 
         if ($rewritten === null || preg_last_error() !== PREG_NO_ERROR) {
-            fwrite(STDERR, "{$label}: the pattern {$pattern} stopped part-way (".preg_last_error_msg().'). '
+            fwrite(STDERR, sprintf('%s: the pattern %s stopped part-way (', $label, $pattern).preg_last_error_msg().'). '
                 ."Its subject would have been written back blank.\n");
             exit(1);
         }

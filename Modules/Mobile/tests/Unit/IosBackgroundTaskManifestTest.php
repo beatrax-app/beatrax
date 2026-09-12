@@ -157,8 +157,8 @@ it('has every mobile-root entry in the background-task manifest before any provi
     // application in the same process registers none of them.
     foreach (MobileBackgroundSchedule::mobileRootOnly() as $name => $command) {
         expect(str_contains($result['output'], $command))->toBeTrue(
-            "Nothing registered {$name} ({$command}) by the time BackgroundTasksServiceProvider::boot() "
-            ."reads the schedule, so the platform was asked to run it never. Saw: {$result['output']}",
+            sprintf('Nothing registered %s (%s) by the time BackgroundTasksServiceProvider::boot() ', $name, $command)
+            .sprintf('reads the schedule, so the platform was asked to run it never. Saw: %s', $result['output']),
         );
     }
 });

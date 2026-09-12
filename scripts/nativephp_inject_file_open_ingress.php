@@ -57,7 +57,7 @@ if ($isDirectlyInvoked) {
     $indexJsPath = dirname(__DIR__).'/nativephp/electron/src/main/index.js';
 
     if (! is_file($indexJsPath)) {
-        fwrite(STDERR, "nativephp_inject_file_open_ingress: {$indexJsPath} not found — run `php artisan native:install --publish` first.\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_open_ingress: %s not found — run `php artisan native:install --publish` first.\n", $indexJsPath));
 
         exit(1);
     }
@@ -65,7 +65,7 @@ if ($isDirectlyInvoked) {
     $source = file_get_contents($indexJsPath);
 
     if ($source === false) {
-        fwrite(STDERR, "nativephp_inject_file_open_ingress: could not read {$indexJsPath}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_open_ingress: could not read %s\n", $indexJsPath));
 
         exit(1);
     }
@@ -73,7 +73,7 @@ if ($isDirectlyInvoked) {
     [$patched, $reason] = injectFileOpenIngress($source);
 
     if ($patched === null) {
-        fwrite(STDERR, "nativephp_inject_file_open_ingress: {$reason}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_open_ingress: %s\n", $reason));
 
         exit(1);
     }
@@ -85,12 +85,12 @@ if ($isDirectlyInvoked) {
     }
 
     if (file_put_contents($indexJsPath, $patched) === false) {
-        fwrite(STDERR, "nativephp_inject_file_open_ingress: could not write {$indexJsPath}\n");
+        fwrite(STDERR, sprintf("nativephp_inject_file_open_ingress: could not write %s\n", $indexJsPath));
 
         exit(1);
     }
 
-    fwrite(STDOUT, "nativephp_inject_file_open_ingress: wired argv + second-instance file-open into {$indexJsPath}.\n");
+    fwrite(STDOUT, sprintf("nativephp_inject_file_open_ingress: wired argv + second-instance file-open into %s.\n", $indexJsPath));
 
     exit(0);
 }

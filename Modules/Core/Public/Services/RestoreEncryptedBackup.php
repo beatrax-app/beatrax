@@ -186,7 +186,7 @@ final readonly class RestoreEncryptedBackup
 
         // VACUUM INTO must not run inside a transaction — SQLite refuses it,
         // so this statement runs standalone, outside any DB transaction.
-        $this->db->connection($connection)->statement("VACUUM INTO '{$escaped}'");
+        $this->db->connection($connection)->statement(sprintf("VACUUM INTO '%s'", $escaped));
 
         // The whole database in clear, so a mode that will not settle is a
         // refused restore rather than a readable copy left in the backups

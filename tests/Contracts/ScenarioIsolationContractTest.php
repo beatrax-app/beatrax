@@ -215,7 +215,7 @@ function sisAssertCounts(DatabaseManager $db, int $userId, array $expected, stri
     foreach ($expected as $table => $count) {
         expect($actual[$table])->toBe(
             $count,
-            "Transaction-substrate row count for {$table} changed during {$context}: expected {$count}, got {$actual[$table]}",
+            sprintf('Transaction-substrate row count for %s changed during %s: expected %s, got %s', $table, $context, $count, $actual[$table]),
         );
     }
 }

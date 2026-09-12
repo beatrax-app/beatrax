@@ -31,7 +31,7 @@ final readonly class TaxCorpusLoader
             return [];
         }
 
-        $parsed = $this->readCorpusYaml(resource_path("corpus/tax/{$code}.yaml"));
+        $parsed = $this->readCorpusYaml(resource_path(sprintf('corpus/tax/%s.yaml', $code)));
 
         return $this->extractEntries($parsed);
     }

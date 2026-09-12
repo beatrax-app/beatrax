@@ -63,7 +63,7 @@ $projectRoot = dirname(__DIR__);
 $publishedDir = $projectRoot.'/nativephp/electron';
 
 if (! is_dir($publishedDir)) {
-    fwrite(STDERR, "nativephp_stage_build_resources: {$publishedDir} does not exist — run `php artisan native:install --publish` first.\n");
+    fwrite(STDERR, sprintf("nativephp_stage_build_resources: %s does not exist — run `php artisan native:install --publish` first.\n", $publishedDir));
 
     exit(1);
 }
@@ -75,7 +75,7 @@ $buildDirs = [
 
 foreach ($buildDirs as $buildDir) {
     if (! is_dir($buildDir) && ! mkdir($buildDir, 0755, true) && ! is_dir($buildDir)) {
-        fwrite(STDERR, "nativephp_stage_build_resources: could not create {$buildDir}\n");
+        fwrite(STDERR, sprintf("nativephp_stage_build_resources: could not create %s\n", $buildDir));
 
         exit(1);
     }
@@ -102,13 +102,13 @@ foreach ($sources as $from => $basename) {
 
 foreach ($copies as [$from, $to]) {
     if (! is_file($from)) {
-        fwrite(STDERR, "nativephp_stage_build_resources: skipping (missing) {$from}\n");
+        fwrite(STDERR, sprintf("nativephp_stage_build_resources: skipping (missing) %s\n", $from));
 
         continue;
     }
 
     if (! copy($from, $to)) {
-        fwrite(STDERR, "nativephp_stage_build_resources: failed copying {$from} → {$to}\n");
+        fwrite(STDERR, sprintf("nativephp_stage_build_resources: failed copying %s → %s\n", $from, $to));
 
         exit(1);
     }

@@ -12,20 +12,20 @@ final class OpenBankingConnectionException extends RuntimeException
 {
     public static function notFound(int $connectionId, int $userId): self
     {
-        return new self("No open_banking_connections row {$connectionId} for user {$userId}.");
+        return new self(sprintf('No open_banking_connections row %s for user %s.', $connectionId, $userId));
     }
 
     public static function notFetchable(int $connectionId): self
     {
         return new self(
-            "Connection {$connectionId} is not enabled or its consent has expired — refusing to fetch.",
+            sprintf('Connection %s is not enabled or its consent has expired — refusing to fetch.', $connectionId),
         );
     }
 
     public static function accountNotResolved(int $connectionId): self
     {
         return new self(
-            "Connection {$connectionId} has no resolved account_uid yet — the consent dance must "
+            sprintf('Connection %s has no resolved account_uid yet — the consent dance must ', $connectionId)
             .'capture accounts[].uid before a fetch can run.',
         );
     }

@@ -28,7 +28,7 @@ function shellProviderSources(): array
     $sources = [];
 
     foreach (['desktop' => 'Desktop', 'mobile' => 'Mobile'] as $shell => $module) {
-        $path = base_path("Modules/{$module}/Providers/{$module}ServiceProvider.php");
+        $path = base_path(sprintf('Modules/%s/Providers/%sServiceProvider.php', $module, $module));
 
         expect($path)->toBeReadableFile($module.'ServiceProvider.php is not readable, so the bindings this file asserts about were never opened.');
 
