@@ -151,6 +151,12 @@ it('hard-throws instead of writing a keyring when the app-lock KEK is null (weak
 
     expect(fn () => $service->generateAndPersist((int) $user->id, $session))
         ->toThrow(LogicException::class);
+
+    // The staged twin of appendEpoch() refuses on the same terms. It is the
+    // one a rotation calls from inside its SQL transaction, so a KEK it did
+    // not check would put a half-written keyring inside a rollback.
+    expect(fn () => $service->stageAppendedEpoch((int) $user->id, new GdkEpoch(epochId: 2, keyHex: str_repeat('ab', 32)), $session))
+        ->toThrow(LogicException::class, 'Cannot append GDK epoch: app-lock not unlocked.');
 });
 
 // The keyring and the current_epoch pointer live in two places, an encrypted

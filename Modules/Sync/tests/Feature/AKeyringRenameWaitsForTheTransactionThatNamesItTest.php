@@ -154,8 +154,10 @@ it('leaves no keyring file naming the new epoch when the rotation rolls back', f
 
     $removedId = keyringStageDevice($db, $userId, 'removed-device', keyringStageRealX25519());
 
-    // An unparseable public key makes the fan-out throw inside the
-    // transaction, which is the rollback this test is about.
+    // Ordered so the fan-out reaches a real recipient BEFORE it fails: a wrap
+    // is enqueued and then rolled back, which is the assertion below. An
+    // unparseable public key is what makes the loop throw.
+    keyringStageDevice($db, $userId, 'remaining-device', keyringStageRealX25519());
     keyringStageDevice($db, $userId, 'corrupt-device', 'not-hexadecimal-at-all');
 
     $keyring->loadKeyring($userId, $session);
@@ -186,4 +188,8 @@ it('leaves no keyring file naming the new epoch when the rotation rolls back', f
     expect($keyring->currentEpoch($userId, $session)->keyHex)->toBe($initial->keyHex);
     expect($keyring->keyringFingerprint($userId))->toBe($before);
     expect(keyringStageTmpFiles($userId))->toBe([]);
+
+    // And nothing was announced. A wrap surviving a rolled-back rotation would
+    // offer peers a key for an epoch this device no longer names.
+    expect((int) $db->connection()->table('relay_mailbox')->count())->toBe(0);
 });
