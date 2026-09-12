@@ -46,9 +46,10 @@ final class TaxSettingsSection extends Component
         } catch (DuplicateTaxCategoryNameException $duplicate) {
             $this->addError = $duplicate->getMessage();
         } catch (\RuntimeException) {
-            // Its sibling carries a developer's sentence in one language — the
-            // row went in and its id could not be read back — and printing that
-            // under the name box would also blame a name that is fine.
+            // The clash is caught above, whichever of the check and the unique
+            // index settled it, so what reaches here is a driver's sentence in
+            // one language — and printing that under the name box would also
+            // blame a name that is fine.
             $this->addError = Lang::get('tax::messages.errors.category_not_saved');
         }
     }
@@ -68,9 +69,9 @@ final class TaxSettingsSection extends Component
         } catch (DuplicateTaxCategoryNameException|\InvalidArgumentException $e) {
             $this->renameError = $e->getMessage();
         } catch (\RuntimeException) {
-            // The siblings of those two are a driver's sentence and a
-            // developer's, both in one language and one of them carrying the
-            // statement it failed on. Neither belongs under a name box.
+            // What is left after those two is a driver's sentence in one
+            // language, carrying the statement it failed on. That does not
+            // belong under a name box.
             $this->renameError = Lang::get('tax::messages.errors.category_not_saved');
         }
     }

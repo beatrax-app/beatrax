@@ -245,6 +245,17 @@ throws `NotFoundHttpException` (never a distinguishing error) on a
 cross-user category id, matching the same 404-not-403 posture used
 throughout the module.
 
+The whole seed runs inside one transaction. `max(sort_order)` is read once and
+the loop hands out that base plus the number inserted so far, which is what
+keeps a second country's block together instead of interleaved — a base read
+outside a transaction is a number another seed can already have spent, and the
+two countries then share sort positions. `UserCountry::store()` wraps the
+listener path in a transaction of its own; the console and abandoned-import
+paths (`beatrax:install`, `MobilePairingScan::abandonImport()`) reach
+`seedFromCorpus()` without one, which is why the guarantee lives here rather
+than in the caller. See [a check another writer can
+invalidate](../../conventions/a-check-another-writer-can-invalidate.md).
+
 ## Badge lookup: whole-transaction vs leg-aware
 
 `TaxTagQuery::forTransactionIds()` is whole-transaction only — it
@@ -274,15 +285,25 @@ category wording](deduction-category-wording.md).
 
 `TaxCategoryStore` refuses a new category for two unrelated reasons, and both
 arrive as a `RuntimeException`: `DuplicateTaxCategoryNameException` when the
-name is taken, `CategoryPersistenceException` when the row went in and its id
-could not be read back. Both call sites used to take the pair in one arm —
-Settings printed whichever message the throw site carried, so the second one
-reached the reader as *"Failed to retrieve new category id."* in English only,
-and the picker's quick-add swallowed both in silence, leaving the typed name in
-a box that said nothing. They are caught apart now: the clash says
-`errors.name_duplicate`, the persistence failure says
-`errors.category_not_saved`, and the quick-add raises the same sentence as a
-toast rather than nothing at all.
+name is taken, and any other database failure under it. Both call sites used to
+take the pair in one arm — Settings printed whichever message the throw site
+carried, so a developer's sentence reached the reader in English only, and the
+picker's quick-add swallowed both in silence, leaving the typed name in a box
+that said nothing. They are caught apart now: the clash says
+`errors.name_duplicate`, anything else says `errors.category_not_saved`, and
+the quick-add raises the same sentence as a toast rather than nothing at all.
+
+The second reason used to be an exception of its own, raised when the row went
+in and a follow-up `value('id')` scoped by name did not read an integer back.
+`add()` takes the id from `insertGetId()` now — the connection's own
+`lastInsertId`, which no competing writer can answer for — so there is no
+second name-scoped read to fail and no state left for that exception to
+describe. What replaces it matters more to the reader: `add()` runs in a
+transaction and `unique(user_id, name)` is caught and re-raised as the clash,
+so a double-submit whose loser used to land in the generic arm — *"This
+category could not be saved"* — now reads the name clash it actually was.
+`rename()` catches the same index for the same reason: the name it checked was
+free when it asked and taken by the time it wrote.
 
 The **per-category subtotal is the deductions subtotal**, not the sum of
 everything filed under the category. The picker lets any tagged row carry a
