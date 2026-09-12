@@ -64,7 +64,8 @@ it('reads an ICS figure at the currency the mail marks it with', function (): vo
 
     $outcome = $matcher->match(currencyEml('noreply@icscards.nl', implode("\n", [
         'Verkoper: NINTENDO',
-        'Bedrag: JPY 1250',
+        'Bedrag: JPY 1250 Af',
+        "Bedrag in euro's: EUR 7,50",
         'Referentienummer: ABC123',
     ])));
 

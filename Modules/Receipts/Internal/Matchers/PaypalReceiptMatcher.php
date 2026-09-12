@@ -18,6 +18,9 @@ use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 // suffix equality, not str_contains, defeats a spoofed look-alike
 // domain). Amounts are NEGATED (receipts confirm outgoing payments); a
 // sign-in-notification subject skips rather than treats it as a receipt.
+/**
+ * @link ../../../../.docs/features/receipts/architecture.md#a-direction-nothing-states-is-not-a-charge
+ */
 final readonly class PaypalReceiptMatcher implements SenderMatcher
 {
     private const string MATCHER_KEY = 'paypal-receipt';
@@ -27,6 +30,14 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
     private const string LOGIN_NOTIFICATION_SUBJECT_REGEX = '/(new (device )?sign-in|new login|inloggen op een nieuw apparaat)/i';
 
     private const string UNDENOMINATED_TOTAL_REASON = 'unmarked_total';
+
+    // Money coming back, in PayPal's own words for it. Read only to REFUSE: a
+    // refund the reader RECEIVED and one they ISSUED move money opposite ways,
+    // and nothing PayPal publishes separates the two, so every reading of such
+    // a message is invented and the negation below is a charge that never was.
+    private const string REVERSAL_VOCABULARY_REGEX = '/\b(?:terugbetaling|terugbetaald|terugbetalen|teruggestort|terugstorting|terugvordering|refund(?:ed|s)?|reversal|reversed|chargeback)\b/iu';
+
+    private const string REVERSAL_DIRECTION_REASON = 'paypal_direction_unstated';
 
     private const string TRANSACTION_ID_REGEX = '/Transaction ID:\s*([A-Z0-9]{17})/i';
 
@@ -110,11 +121,24 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
         }
 
         $subject = $parsed->headers['subject'] ?? '';
+
+        return $this->refusedByShape($subject, $body)
+            ?? $this->parseReceipt($parsed, $body, $subject);
+    }
+
+    // The two things this sender mails that are not a payment the reader made:
+    // a sign-in notice, and anything naming money coming back. Null where the
+    // message is neither, which is the only case the anchors below may read.
+    private function refusedByShape(string $subject, string $body): ?MatchOutcomeDto
+    {
         if ($subject !== '' && preg_match(self::LOGIN_NOTIFICATION_SUBJECT_REGEX, $subject) === 1) {
             return MatchOutcomeDto::skipped('paypal-login-notification');
         }
+        if (preg_match(self::REVERSAL_VOCABULARY_REGEX, $subject."\n".$body) === 1) {
+            return MatchOutcomeDto::unmatched(self::REVERSAL_DIRECTION_REASON);
+        }
 
-        return $this->parseReceipt($parsed, $body, $subject);
+        return null;
     }
 
     // An html-only body was handed to the anchors as MARKUP, the way its two

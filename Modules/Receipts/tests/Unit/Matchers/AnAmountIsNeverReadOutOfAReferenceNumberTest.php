@@ -62,7 +62,7 @@ it('reads the ICS figure the message marked, not the digits inside its reference
     $outcome = $matcher->match(referenceEml('noreply@icscards.nl', implode("\n", [
         'Verkoper: Albert Heijn',
         'Referentienummer: ABCEUR123456',
-        'Bedrag: EUR 42,50',
+        'Bedrag: EUR 42,50 Af',
     ])));
 
     expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed)

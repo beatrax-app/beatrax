@@ -183,9 +183,23 @@ Modules/Receipts/
   why the HTML half of that is true: it used to hand `htmlBody`
   to its anchors as markup, which its two siblings never did — see
   [a receipt whose only part is html](architecture.md#a-receipt-whose-only-part-is-html).
-- `Internal/Matchers/IcsReceiptMatcher` — parses ICS monthly
-  statement notification HTML; emits per-card-statement
-  summary + per-line items.
+  Any refund or reversal vocabulary in its subject or body is
+  `unmatched('paypal_direction_unstated')`: nothing PayPal publishes
+  separates a refund the reader received from one they issued, and
+  those move money opposite ways — see
+  [a direction nothing states is not a charge](architecture.md#a-direction-nothing-states-is-not-a-charge).
+- `Internal/Matchers/IcsReceiptMatcher` — parses ICS transaction
+  notification HTML; extracts the merchant, the total, the reference,
+  the funding-card hint. Reads the `Af` / `Bij` marker ICS prints
+  beside its figures, which is the same grammar `IcsPdfAdapter` reads
+  the statement with, so a `Bij` notification books as money coming
+  back and carries a `RefundOf` hint where it names the transaction it
+  reverses. A notification whose direction is stated nowhere is
+  `unmatched('ics_direction_unstated')`, and a foreign charge stating
+  no euro figure is `unmatched('ics_euro_leg_unstated')` — the card
+  bills in euros and that figure is the movement. See
+  [a direction nothing states is not a charge](architecture.md#a-direction-nothing-states-is-not-a-charge)
+  and [the euro column is the settled leg on both sides of one charge](architecture.md#the-euro-column-is-the-settled-leg-on-both-sides-of-one-charge).
 - `Internal/Matchers/GooglePlayReceiptMatcher` — parses Google
   Play purchase receipts; emits the per-item rollup
   (subscription rebill, in-app purchase, etc.). Its synthetic

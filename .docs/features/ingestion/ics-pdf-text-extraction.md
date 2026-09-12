@@ -196,6 +196,15 @@ new end-of-string:
    fails loudly rather than falling through a long inline alternation.
 5. **Description** — whatever is left.
 
+Step 3 is now load-bearing for a second source. The euro column is what the
+card moved by, and the ICS receipt-mail matcher used to store the foreign
+figure as both legs — so one charge was a different amount of money depending
+on which source imported it. This adapter is the source of truth for that leg
+and the matcher was corrected against it, which
+`Receipts/tests/Contracts/FingerprintParityTest`'s foreign pair now holds:
+see [the euro column is the settled leg on both sides of one
+charge](../receipts/architecture.md#the-euro-column-is-the-settled-leg-on-both-sides-of-one-charge).
+
 ## Deriving the year
 
 The transaction line's date columns carry no year. Both dates inherit
