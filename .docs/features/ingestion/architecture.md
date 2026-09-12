@@ -97,8 +97,8 @@ What the module explicitly does NOT do:
 
 - **Internal/Adapters/Banking/** — the generic bank-statement parsers:
   `Camt053Adapter`, `Mt940Adapter`, plus helpers (`BankAmountParser`,
-  per-format header profile classes, the MT940 lexer + Tag61 + Tag86
-  parsers + `Mt940CounterpartyCleaner`).
+  `Camt053XmlReader`, per-format header profile classes, the MT940 lexer
+  + Tag61 + Tag86 parsers + `Mt940CounterpartyCleaner`).
 - **Internal/Adapters/Csv/** — the two preset-driven CSV importers.
   `GenericCsvAdapter` + `GenericCsvAmountParser` address columns by
   header name (N26, Revolut, ING); `PositionalCsvAdapter` addresses
@@ -243,13 +243,15 @@ handling: `genkgo/camt` exposes amounts as `Money\Money`
 (moneyphp/money); the adapter converts to integer minor units at the
 boundary and never lets `Money\Money` escape into the Public DTO
 surface. A batch booking — one `<Ntry>` carrying several `<TxDtls>` —
-takes each child's own amount, and a child may spell it either way: as
-`<AmtDtls><TxAmt>` (the instructed figure, which a bank that converted
-nothing has no reason to write) or as the ordinary `<Amt>`. Reading only
-the first left a child that wrote the second on the entry TOTAL, so a
-three-child €150 collection was booked as €450. The child's own
-`<CdtDbtInd>` then re-signs it, because `genkgo/camt` signs both
-elements off the entry's. `Camt053HeaderProfile::XML_NAMESPACE_REGEX` anchors on the
+reads each child from the child, never from the entry above it: its
+`<Amt>` is the leg the account moved by, its `<AmtDtls><TxAmt>` the
+underlying transaction in the currency it was made in, and where both
+are present they are that row's settled and native pair rather than two
+candidates for one column. Its `<CdtDbtInd>` signs it, which costs a
+second pass over the XML because `genkgo/camt` hands every child the
+entry's indicator and never reads the child's — see [a batch child read
+off its entry](a-batch-child-read-off-its-entry.md) for the pass and the
+three ordinals it is keyed on. `Camt053HeaderProfile::XML_NAMESPACE_REGEX` anchors on the
 CAMT.053 family, not a specific sub-version — any
 `urn:iso:std:iso:20022:tech:xsd:camt.053.001.NN` URI passes the sniffer;
 unknown sub-versions fail at parse time instead, so a future bank

@@ -8,7 +8,6 @@ use Carbon\CarbonImmutable;
 use Error;
 use Generator;
 use Genkgo\Camt\Camt053\DTO\Statement;
-use Genkgo\Camt\Config;
 use Genkgo\Camt\DTO\Balance;
 use Genkgo\Camt\DTO\Creditor;
 use Genkgo\Camt\DTO\Debtor;
@@ -17,11 +16,9 @@ use Genkgo\Camt\DTO\DomainFamilyBankTransactionCode;
 use Genkgo\Camt\DTO\Entry;
 use Genkgo\Camt\DTO\EntryTransactionDetail;
 use Genkgo\Camt\DTO\IbanAccount;
-use Genkgo\Camt\DTO\Message;
 use Genkgo\Camt\DTO\RelatedParty;
 use Genkgo\Camt\DTO\UltimateCreditor;
 use Genkgo\Camt\DTO\UltimateDebtor;
-use Genkgo\Camt\Reader;
 use Modules\Core\Public\Support\Instant;
 use Modules\Ingestion\Internal\Enums\StatementExtraKey;
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
@@ -31,7 +28,6 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Money\Money;
-use Throwable;
 
 final class Camt053Adapter implements SourceAdapter
 {
@@ -39,6 +35,7 @@ final class Camt053Adapter implements SourceAdapter
 
     public function __construct(
         private readonly HeaderSniffer $sniffer,
+        private readonly Camt053XmlReader $xml,
     ) {}
 
     public function format(): string
@@ -65,9 +62,10 @@ final class Camt053Adapter implements SourceAdapter
 
         $this->sniffer->sniff($localPath, Camt053HeaderProfile::FORMAT);
 
-        $message = $this->readMessage($localPath);
+        $message = $this->xml->message($localPath);
         $msgId = $message->getGroupHeader()->getMessageId();
         $index = 0;
+        $childDirections = $this->xml->childDirections($localPath, $message);
 
         // The FIRST <Stmt>, and the flag beside it, because MT940 answers this
         // same question that way (Mt940Adapter::applyStatementId). Keeping the
@@ -83,7 +81,7 @@ final class Camt053Adapter implements SourceAdapter
                 continue;
             }
 
-            $statementCount++;
+            $statementOrdinal = $statementCount++;
             $ownIban = $this->extractOwnAccountIdentifier($record);
             // Per statement, because the metadata published describes ONE of
             // them: a message carrying April and May would otherwise report
@@ -94,7 +92,7 @@ final class Camt053Adapter implements SourceAdapter
                 $txDtlsList = $entry->getTransactionDetails();
 
                 if ($txDtlsList === []) {
-                    yield $this->buildDto($entry, null, $ownIban, $index, $msgId, isBatch: false);
+                    yield $this->buildDto($entry, null, $ownIban, $index, $msgId, isBatch: false, childDirection: null);
                     $index++;
                     $entryCount++;
 
@@ -102,8 +100,18 @@ final class Camt053Adapter implements SourceAdapter
                 }
 
                 $isBatch = count($txDtlsList) > 1;
-                foreach ($txDtlsList as $txDtls) {
-                    yield $this->buildDto($entry, $txDtls, $ownIban, $index, $msgId, isBatch: $isBatch);
+                $entryDirections = $childDirections[$statementOrdinal][$entry->getIndex()] ?? [];
+
+                foreach ($txDtlsList as $detailIndex => $txDtls) {
+                    yield $this->buildDto(
+                        $entry,
+                        $txDtls,
+                        $ownIban,
+                        $index,
+                        $msgId,
+                        isBatch: $isBatch,
+                        childDirection: $entryDirections[$detailIndex] ?? null,
+                    );
                     $index++;
                 }
                 $entryCount++;
@@ -172,38 +180,6 @@ final class Camt053Adapter implements SourceAdapter
         return null;
     }
 
-    private function readMessage(string $localPath): Message
-    {
-        // Denying every external entity closes XXE on untrusted statement XML;
-        // XSD validation is disabled below, so nothing legitimate needs to
-        // resolve. The finally clause puts the process-wide loader back.
-        libxml_set_external_entity_loader(
-            static fn (?string $publicId, ?string $systemId, array $context): ?string => null
-        );
-
-        $previousErrorState = libxml_use_internal_errors(true);
-        try {
-            // genkgo/camt's XSDs would reject unforeseen optional elements; the
-            // sniffer plus the IBAN/amount validators enforce structure instead.
-            $config = Config::getDefault();
-            $config->disableXsdValidation();
-            $reader = new Reader($config);
-
-            try {
-                return $reader->readFile($localPath);
-            } catch (Throwable $e) {
-                throw new InvalidAmountException(
-                    sprintf('Failed to parse CAMT.053 XML: %s', $e->getMessage()),
-                    0,
-                    $e,
-                );
-            }
-        } finally {
-            libxml_use_internal_errors($previousErrorState);
-            libxml_set_external_entity_loader(null);
-        }
-    }
-
     private function buildDto(
         Entry $entry,
         ?EntryTransactionDetail $txDtls,
@@ -211,24 +187,27 @@ final class Camt053Adapter implements SourceAdapter
         int $rowIndex,
         ?string $msgId,
         bool $isBatch,
+        ?string $childDirection,
     ): SourceTransactionDto {
-        // TxDtls/Amt is the ordinary spelling of a batch child's own amount and
-        // AmtDtls/TxAmt the instructed one. Reading only the second dropped a
-        // child that wrote the first onto the ENTRY total, which a three-child
-        // batch then booked three times over.
-        $childAmount = $isBatch ? ($txDtls?->getAmountDetails() ?? $txDtls?->getAmount()) : null;
-        $money = $childAmount ?? $entry->getAmount();
-        $signed = $this->moneyToMinor($money);
-        if ($childAmount !== null) {
-            // Applied by hand because genkgo signs both child elements off the
-            // ENTRY's indicator, so a child stating its own direction keeps the
-            // batch total's until it is asked.
-            $cdi = $txDtls?->getCreditDebitIndicator() ?? $entry->getCreditDebitIndicator();
-            $signed = $cdi === 'DBIT' ? -abs($signed) : abs($signed);
-        }
+        $cdi = $childDirection ?? $entry->getCreditDebitIndicator();
+
+        // A batch child states its amount twice where the bank converted:
+        // TxDtls/Amt is the figure the account moved by and AmtDtls/TxAmt the
+        // underlying transaction in the currency it was made in. That is one
+        // movement's settled and native leg, not two candidates for one column.
+        $booked = $isBatch ? $txDtls?->getAmount() : null;
+        $instructed = $isBatch ? $txDtls?->getAmountDetails() : null;
+        $money = $instructed ?? $booked ?? $entry->getAmount();
+
+        $signed = $this->directed($this->moneyToMinor($money), $cdi);
         $currency = $money->getCurrency()->getCode();
 
-        $cdi = $txDtls?->getCreditDebitIndicator() ?? $entry->getCreditDebitIndicator();
+        $settledMinor = null;
+        $settledCurrency = null;
+        if ($instructed !== null && $booked !== null) {
+            $settledMinor = $this->directed($this->moneyToMinor($booked), $cdi);
+            $settledCurrency = $booked->getCurrency()->getCode();
+        }
 
         $endToEndId = $txDtls?->getReference()?->getEndToEndId();
         $sourceRef = ($endToEndId !== null && $endToEndId !== '' && $endToEndId !== 'NOTPROVIDED')
@@ -263,14 +242,27 @@ final class Camt053Adapter implements SourceAdapter
             amountMinor: $signed,
             sourceRef: $sourceRef,
             description: $description,
-            rawPayload: $this->serialiseSepaFragment($entry, $txDtls, $msgId),
+            rawPayload: $this->serialiseSepaFragment($entry, $txDtls, $msgId, $childDirection),
             sourceRowIndex: $rowIndex,
+            settledAmountMinor: $settledMinor,
+            settledCurrency: $settledCurrency,
         );
     }
 
     private function moneyToMinor(Money $money): int
     {
         return (int) $money->getAmount();
+    }
+
+    // genkgo signs every figure under an entry off the ENTRY's indicator, so a
+    // leg re-read against the child's own direction has to be re-signed here.
+    private function directed(int $minor, ?string $cdi): int
+    {
+        return match ($cdi) {
+            'DBIT' => -abs($minor),
+            'CRDT' => abs($minor),
+            default => $minor,
+        };
     }
 
     private function extractOwnAccountIdentifier(Statement $stmt): string
@@ -409,7 +401,7 @@ final class Camt053Adapter implements SourceAdapter
     /**
      * @return array{sepa: array<string, mixed>}
      */
-    private function serialiseSepaFragment(Entry $entry, ?EntryTransactionDetail $txDtls, ?string $msgId): array
+    private function serialiseSepaFragment(Entry $entry, ?EntryTransactionDetail $txDtls, ?string $msgId, ?string $childDirection): array
     {
         $btc = $entry->getBankTransactionCode();
         $family = self::domainFamily($btc?->getDomain());
@@ -433,7 +425,7 @@ final class Camt053Adapter implements SourceAdapter
                 'txId' => $ref?->getTransactionId(),
                 'mandateId' => $ref?->getMandateId(),
                 'pmtInfId' => $ref?->getPaymentInformationId(),
-                'creditDebitIndicator' => $txDtls?->getCreditDebitIndicator(),
+                'creditDebitIndicator' => $childDirection ?? $txDtls?->getCreditDebitIndicator(),
                 'remittanceUnstructured' => $this->extractRemittance($txDtls),
                 'remittanceStructured' => $this->extractStructuredRemittance($txDtls),
                 'addtlTxInf' => $addtl === null ? null : (string) $addtl,
