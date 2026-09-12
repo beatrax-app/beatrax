@@ -7,8 +7,10 @@ Each matcher (PayPal, ICS, Google Play) extracts the per-line
 breakdown, the merchant memo, and any chain hints (this PayPal
 charge was funded by the user's ASN card; this ICS line is a
 refund of a prior charge), then enriches the matched
-`transactions` via `Import::ApplyEnrichments` and writes a
-`statement_summaries` row via `Ledger::RecordsStatementSummary`.
+`transactions` via `Import::ApplyEnrichments`. No statement
+summary is written anywhere on that path: a receipt is its own
+record, with no opening or closing balance and no statement
+period.
 
 ## What this module is for
 
@@ -35,14 +37,23 @@ What the module explicitly does NOT do:
   or an OAuth surface, and `noEmailFetchFromReceipts` fails the build
   on any file under `Modules/Receipts/` that imports one.
 - It never inserts a transaction, and rewrites one only where the reader
-  asked it to. Enrichments flow through `Import::ApplyEnrichments`;
-  statement summaries flow through `Ledger::RecordsStatementSummary`. The
+  asked it to. Enrichments flow through `Import::ApplyEnrichments`. The
   one exception is `ApplyReceiptConflictResolution`, which applies the
   answer a reader gave to a conflict `ApplyEnrichments` had already
   recorded — see [Resolving a conflict is a ledger
   write](#resolving-a-conflict-is-a-ledger-write). `crossModuleRawTableWrites`
   pins that file and that table by name, so a second writer fails the
   build rather than joining it.
+- It never records a statement summary, and cannot reach the writer
+  that would. `RecordsStatementSummary` has one injection site in the
+  tree — `ImportPipeline`'s constructor — and this module references
+  that pipeline nowhere. The pipeline's own
+  `persistStatementMetadata()` returns before it asks anything of a
+  format `SourceAdapterRegistry` does not hold, and no receipt format
+  is in it: `ParseStage` reads receipts on a separate arm, because a
+  receipt file carries no account. `statement_summaries` belongs to
+  Ledger and Receipts is not pinned for it, so a raw write from here
+  fails `crossModuleRawTableWrites` as well.
 - It never matches without a registered sender. The matcher
   registry is a tag-discovered list (PayPal / ICS / Google Play
   in v1.0.0); unknown senders are logged and skipped.
@@ -59,8 +70,9 @@ What the module explicitly does NOT do:
   - `RecordReceipt::__invoke($emlBytes, $user,
     $sourceFilename): MatchOutcomeDto` — the single entry
     point, taking the raw RFC 822 bytes. Dispatches the matcher;
-    on hit, calls `ApplyEnrichments` (Import) and
-    `RecordsStatementSummary` (Ledger).
+    on hit, the outcome reaches the ledger as an enrichment
+    through `ApplyEnrichments` (Import). No statement summary is
+    written.
   - `ApplyReceiptConflictResolution::__invoke($user,
     ReceiptConflictChoice $choice, int $conflictId)` — the
     first-conflict toast handler. It takes the user's chosen policy
@@ -188,9 +200,9 @@ What the module explicitly does NOT do:
      first matcher whose `canHandle($msg)` claims the message.
   2. Matcher emits `MatchOutcomeDto`.
   3. If matched: `ApplyEnrichments` (Import) strengthens
-     `source_ref` on the matched transactions;
-     `RecordsStatementSummary` (Ledger) writes the per-period
-     summary; per-hint, raise `ChainHintDetected`.
+     `source_ref` on the matched transactions; per-hint, raise
+     `ChainHintDetected`. No statement summary is written —
+     a receipt has no statement period to write one for.
   4. If no matcher claims it: `dispatch` returns
      `MatchOutcomeDto::unmatched()` and `RecordReceipt` stamps
      the `file_imports` row `status = unmatched`, leaving
@@ -220,7 +232,6 @@ EmailScan::IncrementalScanJob persists InboxMessage
        → matcher returns MatchOutcomeDto, stamped by the
          registry with the answering matcher's key()
        → ApplyEnrichments (Import)
-       → RecordsStatementSummary (Ledger)
        → per chain hint: dispatch ChainHintDetected
             → Chains::CreateChainLinkFromHint
                  → INSERT chain_links (hint variant)

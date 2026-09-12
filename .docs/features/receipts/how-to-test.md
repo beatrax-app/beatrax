@@ -20,9 +20,9 @@ isolation.
 - **What they test:**
   - The migration cleanliness (`Phase7MigrationsTest`).
   - `RecordReceipt` end-to-end for each matcher (assert
-    `ApplyEnrichments` called; assert
-    `RecordsStatementSummary` called; assert
-    `ChainHintDetected` raised for each hint).
+    `ApplyEnrichments` called; assert `ChainHintDetected` raised
+    for each hint). No statement-summary assertion, and nothing
+    to assert — see the arch invariants below.
   - The `ReceiptConflictToast` for a pending conflict.
   - The cross-user 404 posture on every action.
   - The chain-hint dispatcher (`DispatchChainHintsFromReceipt`)
@@ -157,10 +157,15 @@ and the assertion — see
   table itself is `ApplyReceiptConflictResolution`, resolving a
   conflict the reader answered; `crossModuleRawTableWrites` pins that
   file and table, so a second writer fails the build.
-- **Statement summaries are Ledger's.** `Ledger::RecordsStatementSummary`
-  is the contract that writes them, and Receipts names
-  `statement_summaries` nowhere — a raw write from this module would
-  fail `crossModuleRawTableWrites`.
+- **Receipts writes no statement summary at all**, and the shape of
+  the tree is what guarantees it rather than an assertion.
+  `Ledger::RecordsStatementSummary` is the contract that writes them
+  and it has one injection site — `ImportPipeline`'s constructor —
+  which this module references nowhere. The pipeline asks nothing of
+  a format `SourceAdapterRegistry` does not hold, and no receipt
+  format is in it. Receipts names `statement_summaries` nowhere
+  either, so a raw write from here fails
+  `crossModuleRawTableWrites`.
 - **The `pending_enrichment_conflicts` table is the conflict
   audit log.** `RecordReceipt` writes a pending conflict row
   when a parsed receipt disagrees with the existing
@@ -210,7 +215,9 @@ and the assertion — see
     `InboxMessage` + the `.eml` blob via `EmlBlobStore`.
   - [`Import`](../import/how-to-test.md) — calls
     `ApplyEnrichments`; reacts to `TransactionImported`.
-  - [`Ledger`](../ledger/how-to-test.md) — calls
+  - [`Ledger`](../ledger/how-to-test.md) — `RecordsTransactions`,
+    `CanonicalTransaction`, `Currency`, and the `Account` /
+    `ImportRun` models, through `ReceiptLedgerBridge`. Not
     `RecordsStatementSummary`.
   - [`Desktop`](../desktop/how-to-test.md) — `FileOpenedFromOs`
     event + `PendingFileIntent` store.
