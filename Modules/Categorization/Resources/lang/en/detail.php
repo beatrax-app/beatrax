@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Rule that fired',
+    'diverges_from_rule' => 'This transaction sits under :chosen, but the rule is still active and files its matches under :rule.',
     'remove_confirm' => 'Remove?',
     'remove_yes' => 'Yes, remove',
     'cancel' => 'Cancel',

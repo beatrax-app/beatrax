@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count plată scadentă în această perioadă.|:count plăți scadente în această perioadă.|:count de plăți scadente în această perioadă.',
         'shortfall' => 'Urmează un deficit de lichiditate.',
         'forecast_not_run' => 'Nu a rulat încă nicio prognoză de flux de numerar.',
+        'forecast_running' => 'O prognoză de flux de numerar rulează chiar acum.',
     ],
 ];

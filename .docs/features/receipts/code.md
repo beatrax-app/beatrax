@@ -179,7 +179,10 @@ Modules/Receipts/
   `MatcherRegistry::supportedKeys()` is the audit list.
 - `Internal/Matchers/PaypalReceiptMatcher` — parses PayPal
   receipt HTML / text; extracts the merchant, the per-line
-  items, the funding-card hint when present.
+  items, the funding-card hint when present. `resolveBody()` is
+  why the HTML half of that is true: it used to hand `htmlBody`
+  to its anchors as markup, which its two siblings never did — see
+  [a receipt whose only part is html](architecture.md#a-receipt-whose-only-part-is-html).
 - `Internal/Matchers/IcsReceiptMatcher` — parses ICS monthly
   statement notification HTML; emits per-card-statement
   summary + per-line items.
@@ -192,14 +195,19 @@ Modules/Receipts/
   parsed, stamped its audit row `parsed`, and reached the ledger
   on neither path.
 - `Internal/Matchers/ReceiptBodyText` — the injected collaborator
-  the three matchers share: `plainText()` (entity-decode, strip
-  tags, collapse whitespace), `amountMinor()` (a currency validity
+  the three matchers share: `plainText()` (entity-decode, break at
+  every block and cell boundary, strip tags, collapse whitespace),
+  `amountMinor()` (a currency validity
   gate over `MoneyInput::tryToMinor`, which is told no currency at
-  all), and the pair that keeps an anchor and its parse naming one
+  all), the pair that keeps an anchor and its parse naming one
   currency — `currencyMarkers()` (the regex alternation of every
   glyph `Money::SYMBOLS` writes plus every `Currency` case) and
-  `currencyMarked()` (that capture back as an ISO code). See
-  [reading a receipt at the currency it names](architecture.md#reading-a-receipt-at-the-currency-it-names).
+  `currencyMarked()` (that capture back as an ISO code) — and
+  `underLabel($labels, $figure)`, which is what makes an anchor find
+  the sender's TOTAL rather than the first readable figure in the
+  body. See
+  [reading a receipt at the currency it names](architecture.md#reading-a-receipt-at-the-currency-it-names)
+  and [a total is the figure its sender labelled](architecture.md#a-total-is-the-figure-its-sender-labelled).
   Deliberately an object, not a trait: a trait reading the using
   class's promoted private properties makes them read as unused to
   this repo's static analysis.

@@ -356,11 +356,70 @@ already reserves for a message nothing can read, which keeps the bytes on
 Play already worked this way: both require a mark before they will read a figure
 at all, and neither ever used the value handed to them. `SenderMatcher::match()`
 no longer takes one, so no matcher can reach for a reporting preference again.
+Requiring a mark is not the same as reading the total, though, and the next
+section is where that came apart.
 
 This is the same shape as [an account denominated by its
 reader](../import/an-account-is-denominated-by-its-statement.md), one layer
 earlier — and with nothing to fall back *to*, because a receipt's total is the
 receipt's own figure and the sender either printed its money or did not.
+
+### A total is the figure its sender labelled
+
+Requiring a mark before a figure is read says which figures are *readable*. It
+does not say which one is the **total**, and every one of the three anchors was
+matched against the whole body, so `preg_match` returned whichever readable
+figure the sender had printed highest. A receipt prints several. Measured, one
+line added to a shipped fixture's shape in each case:
+
+| Sender | Body | Booked | The charge |
+|---|---|---|---|
+| PayPal | `Subtotaal: EUR 10,74` above `Bedrag: EUR 12,99` | −€10,74 | −€12,99 |
+| PayPal | `Item price: $ 5.00 USD` above `Bedrag: EUR 12,99` | −$5.00 **USD** | −€12,99 |
+| PayPal | `Je PayPal-saldo: EUR 0,00` above `Bedrag: 1250` | −€0,00 | a miss |
+| ICS | `Uw bestedingslimiet is EUR 2.500,00` above `Bedrag: EUR 46,20` | −€2 500,00 | −€46,20 |
+| Google Play | `Tax: $1.00 USD` above `Total: $12.99 USD` | −$1.00 | −$12.99 |
+| Google Play | `Price: $11.99 USD (€11,14 EUR)` above `Total: $12.99 USD (€12,07 EUR)` | −$11.99 / €11,14 | −$12.99 / €12,07 |
+
+The third row is the section above being bypassed rather than a case of its own.
+`unmarked_total` is only reached where `extractCharge()` found nothing, so one
+denominated line anywhere in the body was enough to have a total the message
+marked with nothing replaced by a figure that is not it, at a currency it never
+named. The guard held only for a receipt printing exactly one figure.
+
+So the anchors are labelled. `ReceiptBodyText::underLabel($labels, $figure)`
+composes each sender's own total labels in front of the figure pattern it
+already had — PayPal `Transactiebedrag|Totaalbedrag|Bedrag|Totaal|Amount|Total`,
+ICS `Bedrag|Amount`, Google Play `Order total|Total` and then `Price|Amount` for
+a receipt stating no total. Its lookbehind is the label's own: **`Subtotaal` is
+not `Totaal` and `Subtotal` is not `Total`**, and reading either books the
+pre-tax figure. A longer label a sender does spell — PayPal's
+`Transactiebedrag` — is listed rather than reached by substring, because that is
+the only way to admit one and refuse the other.
+
+Google Play's conversion moved onto the anchor with it. The settled leg was a
+separate search for the first bracket in the body, which is how a total settled
+at the price line's euros; the two now come out of one match, so a leg can only
+belong to the figure it was printed beside.
+
+### A receipt whose only part is html
+
+ICS and Google Play resolve a body as `textBody` or else
+`ReceiptBodyText::plainText($htmlBody)`. PayPal took `textBody ?? htmlBody` and
+handed the **markup** to its anchors: `&euro;` is not the glyph
+`currencyMarkers()` holds, and a tag standing between a label and its value
+defeats `Transaction ID:`, `Aan:` and the total anchor alike. A receipt PayPal
+delivered as html only was therefore `unmatched` with **no reason recorded** —
+the charge reached no ledger and the `file_imports` row said nothing about why.
+It resolves its body the same way its two siblings do now.
+
+`plainText()` also breaks at every block and cell boundary before the tags go.
+`strip_tags()` joins what the markup kept apart, so a minified receipt table
+came back as one line — `AMAZON.COMBedrag:€ 46,20Referentienummer:XYZ123` — and
+that fused the merchant name with everything printed under it. It is also what a
+labelled anchor cannot survive: a label run together with the value above it is
+no longer in front of anything. Real receipt mail is minified, so the two halves
+of this are one fix.
 
 ## When a total is the thing that disagrees
 

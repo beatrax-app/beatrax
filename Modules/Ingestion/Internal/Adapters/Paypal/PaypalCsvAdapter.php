@@ -113,9 +113,8 @@ final class PaypalCsvAdapter implements NamesRowsItCouldNotRead, SourceAdapter
             // The settled leg, which is what the wallet moved by: a USD row's
             // native minor units added into a euro total is arithmetic across
             // two denominations, and it is the figure /reconcile targets.
-            $currency = $dto->settledCurrency ?? $dto->currency;
-            $netByCurrency[$currency] = ($netByCurrency[$currency] ?? 0)
-                + ($dto->settledAmountMinor ?? $dto->amountMinor);
+            $currency = $dto->accountSideCurrency();
+            $netByCurrency[$currency] = ($netByCurrency[$currency] ?? 0) + $dto->accountSideMinor();
             $count++;
         }
 
@@ -184,6 +183,7 @@ final class PaypalCsvAdapter implements NamesRowsItCouldNotRead, SourceAdapter
             closingBalanceDate: $periodEnd,
             entryCount: $entryCount,
             extras: $extras,
+            balancesDerivedFromRows: true,
         );
     }
 }

@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count paiement dû sur cette période.|:count paiements dus sur cette période.',
         'shortfall' => 'Un déficit de trésorerie approche.',
         'forecast_not_run' => 'Aucune prévision de trésorerie n\'a encore été calculée.',
+        'forecast_running' => 'Une prévision de trésorerie est en cours de calcul.',
     ],
 ];

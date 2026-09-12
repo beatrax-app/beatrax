@@ -48,5 +48,6 @@ return [
         'payments_due' => 'Sel perioodil tuleb tasuda :count makse.|Sel perioodil tuleb tasuda :count makset.',
         'shortfall' => 'Ees ootab rahavoo puudujääk.',
         'forecast_not_run' => 'Rahavoo prognoosi ei ole veel tehtud.',
+        'forecast_running' => 'Rahavoo prognoos on praegu käimas.',
     ],
 ];

@@ -67,6 +67,11 @@ final readonly class BackfillStartingBalanceFromStatementSummaries implements An
                 ->whereNotNull('statement_summaries.opening_balance_minor')
                 ->whereNotNull('statement_summaries.opening_balance_date')
                 ->whereNotNull('statement_summaries.user_id')
+                // A summary whose balances the adapter summed from its own rows
+                // opens at zero because nothing preceded the first row it read.
+                // The detector that would have offered that figure to the reader
+                // refuses it for exactly this reason; anchoring never asks at all.
+                ->where('statement_summaries.balances_derived_from_rows', false)
                 ->when($userId !== null, static fn (Builder $q): Builder => $q->where('statement_summaries.user_id', $userId))
                 ->orderBy('statement_summaries.account_id')
                 ->orderBy('statement_summaries.opening_balance_date')

@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count betalning förfaller den här perioden.|:count betalningar förfaller den här perioden.',
         'shortfall' => 'Ett underskott i kassaflödet väntar.',
         'forecast_not_run' => 'Ingen kassaflödesprognos har körts ännu.',
+        'forecast_running' => 'En kassaflödesprognos körs just nu.',
     ],
 ];

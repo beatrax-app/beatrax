@@ -763,10 +763,31 @@ net-worth point, forecast anchor and reconcile target and says so
 nowhere. The `multiStatement` extras flag records that the file held
 more statements than the one summary describes.
 
+A statement that carries both an opening and a closing balance is checked
+against its own entries as it is parsed, and a non-zero
+`closing - (opening + every entry)` rides on the summary as
+`extras.statementDifferenceMinor`. It is recorded, never corrected: the
+rows stay as the file wrote them and both balances stay as the file
+stated them. No screen reads the key yet. See [a statement that did not
+check its own
+arithmetic](../features/ingestion/a-statement-that-did-not-check-its-own-arithmetic.md).
+
 CSV adapters return `null` from `statementMetadata()` (CSV carries no
 period boundary). Receipt-path formats (`.eml`, `.mbox`) are excluded
 from the writer call because each receipt is its own logical record
 with no opening/closing balance.
+
+A summary also declares **where its figures came from**. Most adapters
+read the opening and closing balance off the source: the file states
+both and the summary carries what it stated. The PayPal adapter has no
+such rows to read and sums the ones it just yielded instead, which makes
+its opening balance zero by construction — nothing precedes the first
+row of the file. `StatementSummaryData::$balancesDerivedFromRows` rides
+into `statement_summaries.balances_derived_from_rows` so a reader can
+tell the two apart, and `AnchorsStartingBalanceFromStatements` takes
+only the read ones: an account anchored at a summed zero is wrong on
+every balance it reports and nothing on the screen says so. See
+[Reconcile needs an anchor](../features/ledger/reconcile-needs-an-anchor.md#a-summed-balance-is-not-a-balance-anyone-read).
 
 ## What this pipeline does not do
 

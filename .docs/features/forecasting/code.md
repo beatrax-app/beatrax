@@ -96,6 +96,14 @@ Modules/Forecasting/
     — the sidebar badge query (single COUNT).
   - `ForecastHighlightsQuery::forUser($user):
     ForecastHighlightsDto` — the dashboard tile read.
+  - `ForecastHighlightsQuery::shortfallRiskForUser($user):
+    ShortfallRisk` — the position summary's member. It reads the
+    NEWEST run row for `TILE_HORIZON` first and answers `Computing`
+    while that row is pending or running, because every other arm
+    answers off the run this one supersedes. `activeShortfallCount`,
+    `lowestProjectedBalance*` and the sidebar badge all still read the
+    newest COMPLETED run, which is why the DTO carries `isComputing`
+    for the tile to render instead of them.
 - **Actions/**
   - Scenario CRUD: `CreateScenario`, `RenameScenario`,
     `DeleteScenario`, `AddScenarioMutation`,
@@ -123,7 +131,12 @@ Modules/Forecasting/
   - `ScenarioMutationPayload/` — five payload variants
     (`AddOneOff`, `AddRecurring`, `CancelSeries`,
     `ChangeSeriesAmount`, `ShiftSeriesDate`).
-  - `ForecastHighlightsDto`, `ShortfallWindowDto`,
+  - `ForecastHighlightsDto` — `(userId, lowestProjectedBalance*,
+    activeShortfallCount, nextIcsSettlement, icsSettlementOverdue,
+    isComputing)`. `nextIcsSettlement` comes from the card statement
+    read rather than a forecast run, so it is the one member that
+    still renders while `isComputing` is true.
+  - `ShortfallWindowDto`,
     `BalanceAnchorDto`, `SeriesConfidenceDto` — the last carrying a
     `SeriesConfidence` enum and a `monthlyEquivalentMinor`, because the
     legend line is suffixed "/mo". The enum itself is

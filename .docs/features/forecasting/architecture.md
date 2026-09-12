@@ -785,7 +785,12 @@ lifecycle (`noSynchronousForecastingInRequestLifecycle` blocks importing the
 heavy `ProjectionPipeline` class at this surface). When the latest run for a
 (user, scenario, horizon) tuple is not yet `complete`, the DTO carries
 `isComputing=true` with empty `points` (the chart shows an "Updating…"
-caption). When the run is complete but the account has no series of its
+caption). Three other surfaces read the same result and had to be taught
+the same thing: the all-accounts aggregate curve (a computing account
+contributes no points, so the roll-up silently drew short of the reader's
+money — `aggregate()` now returns `aggregateIsComputing`), the dashboard
+highlights tile, and the position summary's `ShortfallRisk`, which gained a
+`Computing` case so a superseded run's `None` can no longer read as safety. When the run is complete but the account has no series of its
 own, the points array is hydrated to `horizonDays + 1` flat days at the
 account's anchor balance — the calm projection of "nothing changes between
 now and the horizon end". The per-series confidence legend buckets on

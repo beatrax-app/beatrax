@@ -246,6 +246,16 @@
                                 <p class="mb-2 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ Lang::get('forecasting::forecast.run_failed') }}</p>
                             @endif
 
+                            @if ($aggregateIsComputing)
+                                {{-- An account still computing contributes no
+                                     points, so this curve is drawn over the
+                                     accounts that answered and sits below the
+                                     reader's money. The per-account tabs say
+                                     "Updating"; this one drew a lower line and
+                                     said nothing. The poll unmounts itself. --}}
+                                <p wire:poll.2s.keep-alive="refreshProjectionStatus" class="mb-2 text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{{ Lang::get('forecasting::forecast.updating') }}&hellip;</p>
+                            @endif
+
                             @include('forecasting::livewire.partials.aggregate-line-chart', [
                                 'chartElementId' => $aggregateChartElementId,
                                 'aggregatePoints' => $aggregatePoints,
@@ -266,6 +276,10 @@
 
                                 @if ($aggregateScenarioRunFailed)
                                     <p class="mb-2 text-xs text-rose-700 dark:text-rose-500" role="alert">{{ Lang::get('forecasting::forecast.run_failed') }}</p>
+                                @endif
+
+                                @if ($aggregateScenarioIsComputing)
+                                    <p wire:poll.2s.keep-alive="refreshProjectionStatus" class="mb-2 text-xs text-slate-500 dark:text-slate-400" aria-live="polite">{{ Lang::get('forecasting::forecast.updating') }}&hellip;</p>
                                 @endif
 
                                 @include('forecasting::livewire.partials.aggregate-line-chart', [

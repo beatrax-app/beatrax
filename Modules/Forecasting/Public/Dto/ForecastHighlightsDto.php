@@ -24,6 +24,10 @@ final class ForecastHighlightsDto extends Data
         public readonly int $activeShortfallCount,
         public readonly ?NextSettlementDto $nextIcsSettlement,
         public readonly bool $icsSettlementOverdue = false,
+        // True while a projection run for the tile's horizon is pending or
+        // running. Every other forecast member here was read off the run that
+        // one supersedes, so the tile must not print them as current.
+        public readonly bool $isComputing = false,
         public readonly ?ConversionDisclosure $conversion = null,
     ) {}
 }

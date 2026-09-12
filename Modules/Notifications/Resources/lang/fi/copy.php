@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count maksu erääntyy tällä jaksolla.|:count maksua erääntyy tällä jaksolla.',
         'shortfall' => 'Edessä on kassavaje.',
         'forecast_not_run' => 'Kassavirtaennustetta ei ole vielä ajettu.',
+        'forecast_running' => 'Kassavirtaennustetta ajetaan parhaillaan.',
     ],
 ];

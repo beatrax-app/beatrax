@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Правилото, което се задейства',
+    'diverges_from_rule' => 'Транзакцията е в :chosen, но правилото е още активно и насочва съвпаденията си към :rule.',
     'remove_confirm' => 'Да се премахне ли?',
     'remove_yes' => 'Да, премахни',
     'cancel' => 'Отказ',

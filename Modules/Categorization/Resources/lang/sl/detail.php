@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
 
     'rule_that_fired' => 'Pravilo, ki se je sprožilo',
+    'diverges_from_rule' => 'Transakcija je v :chosen, vendar je pravilo še vedno aktivno in svoja ujemanja uvršča v :rule.',
     'remove_confirm' => 'Odstraniti?',
     'remove_yes' => 'Da, odstrani',
     'cancel' => 'Prekliči',

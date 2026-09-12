@@ -36,6 +36,7 @@ final class Camt053Adapter implements SourceAdapter
     public function __construct(
         private readonly HeaderSniffer $sniffer,
         private readonly Camt053XmlReader $xml,
+        private readonly Camt053Entries $entries,
     ) {}
 
     public function format(): string
@@ -88,8 +89,9 @@ final class Camt053Adapter implements SourceAdapter
             // April's period holding every entry in the file.
             $entryCount = 0;
 
-            foreach ($record->getEntries() as $entry) {
-                $txDtlsList = $entry->getTransactionDetails();
+            foreach ($this->entries->booked($record) as $entry) {
+                $entryDirections = $childDirections[$statementOrdinal][$entry->getIndex()] ?? [];
+                $txDtlsList = $this->entries->detailsToBook($entry, $entryDirections);
 
                 if ($txDtlsList === []) {
                     yield $this->buildDto($entry, null, $ownIban, $index, $msgId, isBatch: false, childDirection: null);
@@ -100,7 +102,6 @@ final class Camt053Adapter implements SourceAdapter
                 }
 
                 $isBatch = count($txDtlsList) > 1;
-                $entryDirections = $childDirections[$statementOrdinal][$entry->getIndex()] ?? [];
 
                 foreach ($txDtlsList as $detailIndex => $txDtls) {
                     yield $this->buildDto(
@@ -142,6 +143,9 @@ final class Camt053Adapter implements SourceAdapter
     ): StatementSummaryData {
         $opening = $this->findBalance($stmt, Balance::TYPE_OPENING);
         $closing = $this->findBalance($stmt, Balance::TYPE_CLOSING);
+        $openingMinor = $opening === null ? null : $this->moneyToMinor($opening->getAmount());
+        $openingCurrency = $opening?->getAmount()->getCurrency()->getCode();
+        $closingMinor = $closing === null ? null : $this->moneyToMinor($closing->getAmount());
 
         $extras = [
             StatementExtraKey::StatementId->value => $stmt->getId(),
@@ -151,6 +155,17 @@ final class Camt053Adapter implements SourceAdapter
             $extras[StatementExtraKey::MultiStatement->value] = true;
         }
 
+        $difference = StatementSelfCheck::differenceMinor(
+            $openingMinor,
+            $openingCurrency,
+            $closingMinor,
+            $closing?->getAmount()->getCurrency()->getCode(),
+            $this->entries->netMinor($stmt, $openingCurrency),
+        );
+        if ($difference !== null) {
+            $extras[StatementExtraKey::StatementDifference->value] = $difference;
+        }
+
         return new StatementSummaryData(
             importRunId: 0,
             accountId: 0,
@@ -158,10 +173,10 @@ final class Camt053Adapter implements SourceAdapter
             statementNumber: $stmt->getElectronicSequenceNumber() ?? $stmt->getLegalSequenceNumber(),
             periodStart: $stmt->getFromDate() === null ? null : CarbonImmutable::instance($stmt->getFromDate()),
             periodEnd: $stmt->getToDate() === null ? null : CarbonImmutable::instance($stmt->getToDate()),
-            openingBalanceMinor: $opening === null ? null : $this->moneyToMinor($opening->getAmount()),
-            openingBalanceCurrency: $opening?->getAmount()->getCurrency()->getCode(),
+            openingBalanceMinor: $openingMinor,
+            openingBalanceCurrency: $openingCurrency,
             openingBalanceDate: $opening === null ? null : CarbonImmutable::instance($opening->getDate()),
-            closingBalanceMinor: $closing === null ? null : $this->moneyToMinor($closing->getAmount()),
+            closingBalanceMinor: $closingMinor,
             closingBalanceCurrency: $closing?->getAmount()->getCurrency()->getCode(),
             closingBalanceDate: $closing === null ? null : CarbonImmutable::instance($closing->getDate()),
             entryCount: $entryCount,
@@ -199,13 +214,13 @@ final class Camt053Adapter implements SourceAdapter
         $instructed = $isBatch ? $txDtls?->getAmountDetails() : null;
         $money = $instructed ?? $booked ?? $entry->getAmount();
 
-        $signed = $this->directed($this->moneyToMinor($money), $cdi);
+        $signed = $this->entries->directed($this->moneyToMinor($money), $cdi);
         $currency = $money->getCurrency()->getCode();
 
         $settledMinor = null;
         $settledCurrency = null;
         if ($instructed !== null && $booked !== null) {
-            $settledMinor = $this->directed($this->moneyToMinor($booked), $cdi);
+            $settledMinor = $this->entries->directed($this->moneyToMinor($booked), $cdi);
             $settledCurrency = $booked->getCurrency()->getCode();
         }
 
@@ -252,17 +267,6 @@ final class Camt053Adapter implements SourceAdapter
     private function moneyToMinor(Money $money): int
     {
         return (int) $money->getAmount();
-    }
-
-    // genkgo signs every figure under an entry off the ENTRY's indicator, so a
-    // leg re-read against the child's own direction has to be re-signed here.
-    private function directed(int $minor, ?string $cdi): int
-    {
-        return match ($cdi) {
-            'DBIT' => -abs($minor),
-            'CRDT' => abs($minor),
-            default => $minor,
-        };
     }
 
     private function extractOwnAccountIdentifier(Statement $stmt): string

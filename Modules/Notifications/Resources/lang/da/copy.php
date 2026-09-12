@@ -48,5 +48,6 @@ return [
         'payments_due' => ':count betaling forfalder i denne periode.|:count betalinger forfalder i denne periode.',
         'shortfall' => 'Der venter et underskud i pengestrømmen.',
         'forecast_not_run' => 'Der er endnu ikke kørt en likviditetsprognose.',
+        'forecast_running' => 'En likviditetsprognose kører lige nu.',
     ],
 ];
