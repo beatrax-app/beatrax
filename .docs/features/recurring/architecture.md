@@ -247,8 +247,11 @@ page sections, the dashboard fixed-payments tile, and the net-flow header
 summary. Three top-level methods:
 
 - `viewForUser(User)` — full grouped payload (expenses + income +
-  transfers) for the `/recurring` page; each section sorted DESC by
-  absolute `monthly_equivalent_minor`.
+  transfers) for the `/recurring` page; each section sorted in PHP, DESC by
+  the absolute monthly figure **in the reader's base currency**
+  (`monthlyEquivalentInBase ?? monthlyEquivalent`), both of which the mapper
+  derives. The `ORDER BY rs.monthly_equivalent_minor` on the underlying scan
+  only decides ties the PHP sort leaves, since that sort is stable.
 - `topByMonthlyEquivalent(User, $limit = 6)` — dashboard tile payload.
 - `monthlyEquivalentTotals(User)` — one scan of the projectable series,
   bucketed by direction and `latest_currency` and folded in PHP, used by
