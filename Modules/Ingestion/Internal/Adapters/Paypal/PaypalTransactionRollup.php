@@ -59,13 +59,26 @@ final class PaypalTransactionRollup
             $parentTxnId = $this->columns->value('transactionId', $language, $parentRow) ?? '';
             $children = $childrenByParent[$parentTxnId] ?? [];
 
+            // Both built before either is kept, so an unreadable fee cell drops
+            // the payment it sits on instead of booking half a pair, and the
+            // group still spends exactly the one index the loss is reported at.
             try {
-                $rolledUp[] = $this->buildDto($parentRow, $children, $language, $canonicalIndex);
+                $payment = $this->buildDto($parentRow, $children, $language, $canonicalIndex);
+                $fee = $this->buildFeeDto($parentRow, $language, $canonicalIndex + 1, $payment);
             } catch (InvalidAmountException|InvalidDateException) {
                 $this->unreadableRowIndexes[] = $canonicalIndex;
+                $canonicalIndex++;
+
+                continue;
             }
 
+            $rolledUp[] = $payment;
             $canonicalIndex++;
+
+            if ($fee !== null) {
+                $rolledUp[] = $fee;
+                $canonicalIndex++;
+            }
         }
 
         // A dropped conversion leg is discovered inside a payment that goes on
@@ -326,9 +339,7 @@ final class PaypalTransactionRollup
             );
         }
 
-        $parentCurrency = $this->columns->value('currency', $language, $parentRow)
-            ?? $this->balanceCurrency
-            ?? Currency::Eur->value;
+        $parentCurrency = $this->parentCurrency($parentRow, $language);
 
         [$nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency] = $this->withFxLegApplied(
             $children,
@@ -375,6 +386,80 @@ final class PaypalTransactionRollup
             settledAmountMinor: $settledAmountMinor,
             settledCurrency: $settledCurrency,
         );
+    }
+
+    // PayPal's own arithmetic is Netto = Bruto + Kosten, and Netto is the step
+    // its Saldo column takes. The payment row keeps Bruto, so the fee needs a
+    // row of its own for the two to sum to what the wallet actually moved by —
+    // and a row is the only shape a reader can categorise a fee in.
+    /**
+     * @param  array<string, string>  $parentRow
+     *
+     * @link ../../../../../.docs/features/ingestion/a-paypal-fee-is-a-row-of-its-own.md
+     */
+    private function buildFeeDto(array $parentRow, string $language, int $canonicalIndex, SourceTransactionDto $payment): ?SourceTransactionDto
+    {
+        $feeEventType = $this->columns->header('fee', $language);
+        $feeCell = $this->columns->value('fee', $language, $parentRow);
+
+        // An export without the column states no fee, which is not the same as
+        // the absent gross column above: there the figure the row is about is
+        // missing, here a figure the row may not have is.
+        if ($feeEventType === null || $feeCell === null || $feeCell === '') {
+            return null;
+        }
+
+        // The denomination of the row the cell sits on, never the payment's own:
+        // a conversion fold can rewrite the payment's native leg to the currency
+        // it settled in, and PayPal states Kosten in neither — it states it in
+        // the Valuta beside it.
+        $feeCurrency = $this->parentCurrency($parentRow, $language);
+        $feeMinor = $this->amounts->parseMinor($feeCell, $feeCurrency);
+
+        // Zero is what the column reads on every row of a wallet that only ever
+        // spends, and a movement of nothing is not a movement.
+        if ($feeMinor === 0) {
+            return null;
+        }
+
+        return new SourceTransactionDto(
+            bookedAt: $payment->bookedAt,
+            postedAt: $payment->postedAt,
+            valueDate: $payment->valueDate,
+            ownIban: $payment->ownIban,
+            counterpartyIban: $payment->counterpartyIban,
+            counterpartyName: $payment->counterpartyName,
+            currency: $feeCurrency,
+            // Read signed and never derived: PayPal writes the fee negative
+            // when it takes one and positive when it gives one back, so a
+            // refunded sale keeps its fee pointing the way the file points it.
+            amountMinor: $feeMinor,
+            // The reference of the PayPal transaction both rows came out of.
+            // source_ref names a source event rather than a row — it is
+            // deliberately absent from the dedup tuple — so the fee and the
+            // payment it was charged on share one.
+            sourceRef: $payment->sourceRef,
+            description: $this->formatDescription($feeEventType, $payment->counterpartyName),
+            rawPayload: [
+                'format' => 'paypal-csv',
+                'language' => $language,
+                'events' => [['type' => $feeEventType, 'row' => $parentRow]],
+                // Survives an enrichment overwriting source_ref, which is the
+                // one thing that can break the link above.
+                'fee_of' => $payment->sourceRef,
+            ],
+            sourceRowIndex: $canonicalIndex,
+        );
+    }
+
+    /**
+     * @param  array<string, string>  $parentRow
+     */
+    private function parentCurrency(array $parentRow, string $language): string
+    {
+        return $this->columns->value('currency', $language, $parentRow)
+            ?? $this->balanceCurrency
+            ?? Currency::Eur->value;
     }
 
     private static function asParentDirected(int $parentAmountMinor, int $childAmountMinor): int

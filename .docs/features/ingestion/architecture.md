@@ -506,6 +506,16 @@ that the neighbouring statement holds its parent. Pass 3 folds each parent + its
 `settledAmountMinor`/`settledCurrency` the leg the wallet's own balance
 moved by (else null).
 
+A parent whose `Kosten` cell is not zero emits a **second** DTO beside it,
+booking that cell, so the pair sums to the `Netto` the wallet's `Saldo`
+stepped by. The payment keeps `Bruto`; booking `Netto` and the fee would
+take the fee twice. The fee row carries the payment's `source_ref`, its
+counterparty and its day, is typed from the fee column's own header, and
+is described in [a PayPal fee is a row of its
+own](a-paypal-fee-is-a-row-of-its-own.md) — including why the sign and the
+currency are read rather than derived, why zero emits nothing, and what a
+converted payment's fee costs the statement's closing balance.
+
 **Which leg is which comes from the file, not from a currency literal.**
 A `child-fx` pair restates one payment in two denominations, so the leg
 carrying the parent's own currency is the parent restated and the leg in
@@ -529,11 +539,11 @@ failure](../../conventions/invariants-from-shipped-failures.md).
 PayPal ships no opening/closing balance rows, so `PaypalCsvAdapter` is
 the only adapter here that *sums* its closing balance rather than
 reading it — ICS takes its balances off the document, CAMT.053 and
-MT940 off the file. It sums the **settled** leg of each rolled-up DTO
-(`settledAmountMinor ?? amountMinor`) and reports the currency those
-legs are in, rather than each row's native minor units under a
-hardcoded EUR label. That is already wallet-agnostic; what it depends on
-is the rollup having filled the settled leg in at all. Summing the native leg added the sample export's
+MT940 off the file. It sums the **settled** leg of every DTO the rollup
+emitted, fee rows included (`settledAmountMinor ?? amountMinor`), and
+reports the currency those legs are in, rather than each row's native
+minor units under a hardcoded EUR label. That is already wallet-agnostic;
+what it depends on is the rollup having filled the settled leg in at all. Summing the native leg added the sample export's
 two USD parents into a euro total: `statement_summaries` carried a
 figure the ledger's own rows never summed to, and
 `/reconcile` rendered "Difference — −€2.72" beside "Toggle cleared
@@ -558,6 +568,12 @@ Classifying the last two as children folded them into their purchase
 parent, where only `ChildFx` children change anything — the leg vanished,
 the bank debit was left unpaired, and net worth counted the same euros
 twice. See [PayPal funding legs](../import/paypal-funding-legs.md).
+
+The one entry in either table that no file carries is `Kosten`, the NL
+fee column's own header: the rollup names its derived fee row after that
+header and the table types it `fee`. `PaypalCsvColumnMap` owns the header
+and is `Internal`, so the two cannot import each other — a test in
+`TheFeePaypalTookWasNeverARowOfItsOwnTest` is what holds them in step.
 
 Only `ChildFx` remains a child: a conversion leg restates its parent's
 amount in a second denomination and owns no canonical type. Any event

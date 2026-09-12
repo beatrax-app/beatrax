@@ -32,6 +32,15 @@ final class PaypalCsvColumnMap
         ],
     ];
 
+    // The column's own name, for the one caller that needs it rather than a
+    // row's value in it: PayPal states its fee as a column on the payment row,
+    // and the row the rollup derives from that cell is described by the header
+    // the figure came out of, in whichever language the file is written in.
+    public function header(string $canonical, string $language): ?string
+    {
+        return self::COLUMNS[$language][$canonical] ?? null;
+    }
+
     /**
      * @param  array<string, string>  $row  league/csv associative record
      */
