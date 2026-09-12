@@ -121,7 +121,7 @@ pass for a clean one.
   order of preference (reversible over a prompt), the three shapes a question
   takes, and the judgment behind every action left bare
 - [Analyser rules enforced locally](analyser-rules-enforced-locally.md) — the
-  three hosted-analysis rules that now fail on the commit rather than on the
+  four hosted-analysis rules that now fail on the commit rather than on the
   dashboard, why each one reports far less than its name suggests, and how each
   guard was checked against the published figures before it was written
 - [A controller hands the work to an action](a-controller-hands-the-work-to-an-action.md)

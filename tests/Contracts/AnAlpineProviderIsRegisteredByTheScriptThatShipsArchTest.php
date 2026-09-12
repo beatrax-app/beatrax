@@ -174,12 +174,35 @@ function alpineRegistryNamesInTemplates(): array
 function alpineRegistrationsInFrontEndSource(): array
 {
     $registered = [];
+
+    foreach (alpineFrontEndScripts() as $where => $script) {
+        foreach (PatternScan::sets(ALPINE_REGISTRATION_PATTERN, $script) as $match) {
+            $registered[$match[1]] = $where;
+        }
+    }
+
+    ksort($registered);
+
+    return $registered;
+}
+
+/**
+ * The front-end modules as written, keyed by their path from the repository
+ * root. Read once and shared: the rule above asks WHICH names they register
+ * and the rule at the foot of this file asks WHEN, and a second walk that
+ * drifted from this one would leave a file guarded by one and not the other.
+ *
+ * @return array<string, string> path => source
+ */
+function alpineFrontEndScripts(): array
+{
     $root = RepoTree::root().'/resources/js';
 
     if (! is_dir($root)) {
-        return $registered;
+        return [];
     }
 
+    $scripts = [];
     $tree = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
 
     foreach ($tree as $file) {
@@ -187,14 +210,12 @@ function alpineRegistrationsInFrontEndSource(): array
             continue;
         }
 
-        foreach (PatternScan::sets(ALPINE_REGISTRATION_PATTERN, (string) file_get_contents($file->getPathname())) as $match) {
-            $registered[$match[1]] = str_replace(RepoTree::root().'/', '', $file->getPathname());
-        }
+        $scripts[str_replace(RepoTree::root().'/', '', $file->getPathname())] = (string) file_get_contents($file->getPathname());
     }
 
-    ksort($registered);
+    ksort($scripts);
 
-    return $registered;
+    return $scripts;
 }
 
 // The call, not the name: `Alpine.store('overlay')` with no second argument
@@ -245,9 +266,17 @@ function alpineRegistersOnlyOnInit(string $script): bool
 }
 
 /**
- * @return list<array{template: string, name: string, script: string}> every provider a template registers in a <script> of its own
+ * Every script in this repository that hands Alpine a provider, whatever kind
+ * of file it is: a `<script>` a template carries, and a module under
+ * resources/js. The timing question is the same in both and so is the silence
+ * when the answer is wrong — a store registered too late is not registered.
+ *
+ * The `kind` is carried so the rule reading this can prove it saw both, rather
+ * than passing because one of the two sets went empty.
+ *
+ * @return list<array{kind: string, where: string, name: string, script: string}>
  */
-function alpineProvidersRegisteredByTemplates(): array
+function alpineProviderRegistrationSites(): array
 {
     $registered = [];
 
@@ -259,11 +288,23 @@ function alpineProvidersRegisteredByTemplates(): array
 
             foreach (PatternScan::all(ALPINE_REGISTRATION_PATTERN, $body)[1] as $name) {
                 $registered[] = [
-                    'template' => str_replace(RepoTree::root().'/', '', $path),
+                    'kind' => 'template',
+                    'where' => str_replace(RepoTree::root().'/', '', $path),
                     'name' => $name,
                     'script' => $body,
                 ];
             }
+        }
+    }
+
+    foreach (alpineFrontEndScripts() as $where => $script) {
+        foreach (PatternScan::all(ALPINE_REGISTRATION_PATTERN, $script)[1] as $name) {
+            $registered[] = [
+                'kind' => 'module',
+                'where' => $where,
+                'name' => $name,
+                'script' => $script,
+            ];
         }
     }
 
@@ -382,25 +423,38 @@ it('has every registration in the front-end sources present in the script that s
     );
 });
 
-// The rule above accepts a registration in the template's own <script>, and it
-// asks only whether the name is there. This is the other half of that
-// acceptance: WHEN the script hands it over. A provider registered from an
-// event that has already fired is as absent as one nobody wrote.
-it('has every provider a template registers of its own reachable without a second alpine:init', function (): void {
-    $registered = alpineProvidersRegisteredByTemplates();
+// The rules above accept a registration wherever they find one, and ask only
+// whether the name is there. This is the other half of that acceptance: WHEN
+// the script hands it over. A provider registered from an event that has
+// already fired is as absent as one nobody wrote.
+//
+// Both kinds of script are read. The shape was forbidden in a template while
+// resources/js/lock.js registered the lock store from an `alpine:init`
+// listener and nowhere else — not because that was allowed, but because no
+// rule opened the file to ask.
+it('has every provider a script of its own registers reachable without a second alpine:init', function (): void {
+    $registered = alpineProviderRegistrationSites();
+    $kinds = array_count_values(array_column($registered, 'kind'));
 
-    expect($registered)->not->toBe(
-        [],
+    expect($kinds['template'] ?? 0)->toBeGreaterThan(
+        0,
         'No template registers an Alpine provider in a <script> of its own, so the rule above accepts a path '
         .'nothing takes and this one holds nothing to the clock. Either the reader stopped, or the acceptance '
         .'in the message above excuses a shape the tree no longer has.'
+    );
+
+    expect($kinds['module'] ?? 0)->toBeGreaterThan(
+        5,
+        'Only '.($kinds['module'] ?? 0).' registrations were read out of resources/js, which is fewer than app.js '
+        .'alone makes — so the front-end half of this rule is reading nothing and the file that shipped this '
+        .'defect would pass again.'
     );
 
     $late = [];
 
     foreach ($registered as $site) {
         if (alpineRegistersOnlyOnInit($site['script'])) {
-            $late[] = $site['template'].' → '.$site['name'].'()';
+            $late[] = $site['where'].' → '.$site['name'];
         }
     }
 
@@ -412,9 +466,21 @@ it('has every provider a template registers of its own reachable without a secon
         "once, from Alpine.start(); wire:navigate re-runs a page's body scripts on arrival and never restarts\n".
         "Alpine, so the first reader to reach the page through a navigate link registers a listener for\n".
         "something that has already happened. The x-data then binds an empty scope — one expression error, a\n".
-        "200, and every method absent. Register eagerly off `window.Alpine` and keep the listener as the\n".
-        "fallback for the page that loads before Alpine exists, the way resources/js/app.js does.\n  ".implode("\n  ", $late),
+        "200, and every method absent; a store binds nothing at all and every expression reading it is\n".
+        "undefined. Register eagerly off `window.Alpine` and keep the listener as the fallback for the page\n".
+        "that loads before Alpine exists, the way resources/js/app.js and resources/js/lock.js do.\n  ".implode("\n  ", $late),
     );
+});
+
+it('reads a front-end module and a template <script> as the same kind of registration site', function (): void {
+    $sites = alpineProviderRegistrationSites();
+    $named = static fn (string $where): array => array_values(array_unique(
+        array_column(array_filter($sites, static fn (array $site): bool => $site['where'] === $where), 'name')
+    ));
+
+    expect($named('resources/js/app.js'))->toContain('palette', 'overlay', 'plural');
+    expect($named('resources/js/lock.js'))->toBe(['beatraxLock'], 'the store this rule was widened for is one of the sites it now reads');
+    expect(array_column($sites, 'kind'))->toContain('template', 'module');
 });
 
 it('reads a registration made too late to happen, and leaves an eager one alone', function (): void {

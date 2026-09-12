@@ -114,12 +114,17 @@ document.addEventListener('livewire:init', () => {
     });
 });
 
-document.addEventListener('alpine:init', () => {
-    if (!window.Alpine) {
-        return;
-    }
-
-    window.Alpine.store('beatraxLock', {
+/**
+ * The lock store, and with it the only call that ever runs its `init()`:
+ * Alpine invokes that the moment a store is registered, and it is `init()`
+ * that arms the veil, the grace window, the idle tracker and the biometric
+ * listeners. No template names this store — registering it IS the feature.
+ *
+ * Alpine arrives as an argument rather than being read off `window` here, so
+ * where it comes from is decided once, below, instead of once per line.
+ */
+function beatraxRegisterLockStore(Alpine) {
+    Alpine.store('beatraxLock', {
         // -----------------------------------------------------------------------
         // Internal state
         // -----------------------------------------------------------------------
@@ -769,7 +774,30 @@ document.addEventListener('alpine:init', () => {
             });
         },
     });
-});
+}
+
+/**
+ * Register without waiting for `alpine:init`, the way `resources/js/app.js`
+ * does — this module is one of app.js's imports and runs in the same deferred
+ * pass, so the two answer the same question and must answer it alike.
+ *
+ * `livewire.js` is a classic script in <body>: it publishes `window.Alpine`
+ * while the document is still being parsed and starts Alpine on
+ * DOMContentLoaded. A deferred module runs between those two, so Alpine is
+ * already there and registering now puts the store in place before the event
+ * is dispatched at all.
+ *
+ * The listener is the other state, not a second attempt: Alpine not yet
+ * created. It matters beyond a page's first load — `wire:navigate` re-executes
+ * a body script on arrival and never restarts Alpine, so a listener added then
+ * waits for something that has already happened, and a veil that never
+ * registered hides nothing.
+ */
+if (window.Alpine) {
+    beatraxRegisterLockStore(window.Alpine);
+} else {
+    document.addEventListener('alpine:init', () => beatraxRegisterLockStore(window.Alpine), { once: true });
+}
 
 // ---------------------------------------------------------------------------
 // WebAuthn serialisation helpers
