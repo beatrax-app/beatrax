@@ -7,6 +7,8 @@ use Illuminate\Container\Container;
 use Illuminate\Database\Connection;
 use Modules\Core\Database\Support\ModuleMigration;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
 // The old re-key mapped a stored row by the old period's FIRST instant, which
@@ -22,11 +24,13 @@ return new class extends ModuleMigration
     {
         /** @var PeriodQuery $periods */
         $periods = Container::getInstance()->make(PeriodQuery::class);
+        /** @var BaseCurrency $baseCurrency */
+        $baseCurrency = Container::getInstance()->make(BaseCurrency::class);
         $connection = $this->db()->connection($this->getConnection());
 
         $users = $connection->table('users')
             ->whereNotNull('envelope_activated_at')
-            ->get(['id', 'period_start_day', 'envelope_activated_at']);
+            ->get(['id', 'period_start_day', 'envelope_activated_at', 'base_currency']);
 
         foreach ($users as $user) {
             $activatedAt = SafeDate::parseOrNull(is_string($user->envelope_activated_at) ? $user->envelope_activated_at : '');
@@ -44,7 +48,14 @@ return new class extends ModuleMigration
             $floor = $genesis->subMonthNoOverflow()->toDateString();
             $genesisKey = $genesis->toDateString();
 
-            $this->liftAssignments($connection, $userId, $floor, $genesisKey);
+            // forUser()'s own rule, off the raw row: a migration holds no
+            // reader, and the column was added nullable with no backfill.
+            $chosen = $user->base_currency;
+            $reportingCurrency = is_string($chosen) && $chosen !== ''
+                ? $chosen
+                : $baseCurrency->installDefault();
+
+            $this->liftAssignments($connection, $userId, $floor, $genesisKey, $reportingCurrency);
 
             $connection->table('envelope_moves')
                 ->where('user_id', $userId)
@@ -62,22 +73,28 @@ return new class extends ModuleMigration
 
     // (user_id, category_id, period_start) is UNIQUE, so a stranded row whose
     // envelope already has a genesis row merges into it rather than colliding.
-    private function liftAssignments(Connection $connection, int $userId, string $floor, string $genesisKey): void
-    {
+    private function liftAssignments(
+        Connection $connection,
+        int $userId,
+        string $floor,
+        string $genesisKey,
+        string $reportingCurrency,
+    ): void {
         $stranded = $connection->table('envelope_assignments')
             ->where('user_id', $userId)
             ->where('period_start', '>=', $floor)
             ->where('period_start', '<', $genesisKey)
-            ->get(['id', 'category_id', 'assigned_minor']);
+            ->get(['id', 'category_id', 'assigned_minor', 'currency']);
 
         foreach ($stranded as $row) {
-            $existingId = $connection->table('envelope_assignments')
+            /** @var stdClass|null $existing */
+            $existing = $connection->table('envelope_assignments')
                 ->where('user_id', $userId)
                 ->where('category_id', $row->category_id)
                 ->where('period_start', $genesisKey)
-                ->value('id');
+                ->first(['id', 'assigned_minor', 'currency']);
 
-            if ($existingId === null) {
+            if ($existing === null) {
                 $connection->table('envelope_assignments')
                     ->where('id', $row->id)
                     ->update(['period_start' => $genesisKey]);
@@ -86,9 +103,43 @@ return new class extends ModuleMigration
             }
 
             $connection->table('envelope_assignments')
-                ->where('id', $existingId)
-                ->update(['assigned_minor' => $connection->raw('assigned_minor + '.(int) $row->assigned_minor)]);
+                ->where('id', $existing->id)
+                ->update($this->merged($existing, $row, $reportingCurrency));
             $connection->table('envelope_assignments')->where('id', $row->id)->delete();
         }
+    }
+
+    // EnvelopeWriter stamps the reader's base currency at write time, so two
+    // months either side of a currency change hold different codes and adding
+    // their minor units invents the difference. EnvelopePeriodRekeyer::totalled()
+    // merges the same pair by the same rule, and this is the same merge.
+    /**
+     * @return array{assigned_minor: int, currency: string}
+     *
+     * @link ../../../../.docs/features/budgets/moving-the-budget-month.md#the-invariant-no-row-lands-below-genesis
+     */
+    private function merged(stdClass $existing, stdClass $stranded, string $reportingCurrency): array
+    {
+        $existingCurrency = is_string($existing->currency) ? $existing->currency : '';
+        $strandedCurrency = is_string($stranded->currency) ? $stranded->currency : '';
+        $summed = (int) $existing->assigned_minor + (int) $stranded->assigned_minor;
+
+        if ($existingCurrency === $strandedCurrency) {
+            return ['assigned_minor' => $summed, 'currency' => $existingCurrency];
+        }
+
+        /** @var CrossCurrencyTotal $fx */
+        $fx = Container::getInstance()->make(CrossCurrencyTotal::class);
+        $converted = $fx->of([
+            $existingCurrency => (int) $existing->assigned_minor,
+            $strandedCurrency => (int) $stranded->assigned_minor,
+        ], $reportingCurrency);
+
+        // A pair the rate table cannot price whole keeps the raw sum, as the
+        // rekeyer does: dropping the half with no rate would delete stored
+        // money that comes back the day a rate arrives.
+        return $converted->unconverted === []
+            ? ['assigned_minor' => $converted->minor, 'currency' => $reportingCurrency]
+            : ['assigned_minor' => $summed, 'currency' => $existingCurrency];
     }
 };

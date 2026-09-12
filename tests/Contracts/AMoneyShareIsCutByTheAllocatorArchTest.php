@@ -39,7 +39,7 @@ const MONEY_SHARE_PINS = [
         'proves' => '/public static function percent\(/',
     ],
     'Modules/Recurring/Internal/Queries/RecurringSeriesProjector.php' => [
-        'reason' => 'a float multiplier that only ever builds an ORDER BY key, so the ordering is what it decides and no figure is stored or shown from it',
+        'reason' => 'a float multiplier that only ever builds an ORDER BY key and its matching cursor, so the ordering is what it decides and no figure is stored or shown from it',
         'proves' => '/ORDER BY|orderBy/',
     ],
     'Modules/Recurring/Internal/Support/MonthlyEquivalent.php' => [
