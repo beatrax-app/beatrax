@@ -2,8 +2,9 @@
 {{--
     Done step — the wizard's final page. Renders the UI-SPEC §"Wizard
     final step" copy verbatim (eyebrow + H1 + lede + three next-step
-    rows + "Open dashboard →" primary CTA). Clicking the CTA fires the
-    WizardCompleted event and redirects the user to /.
+    rows + "Open dashboard →" primary CTA). Clicking the CTA bubbles
+    `wizard.step.completed`; the parent marks this step's row, raises
+    WizardCompleted once and redirects the user to /.
 
     The action row uses the `<x-onboarding::wiz-actions>` primitive so
     the right-aligned spacing matches every other wizard step.

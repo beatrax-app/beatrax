@@ -68,8 +68,8 @@ storage shape a published contract. If that need returns, it
 should arrive as a contract with a named consumer, not as a
 query left open in case someone wants it.
 
-`WizardCompleted` — `(userId)`, dispatched by `DoneStep` when
-the user lands on the final step — lives at
+`WizardCompleted` — `(userId)`, raised by `SetupWizard` the
+first time the terminal row is marked — lives at
 `Internal/Events/WizardCompleted` for the same reason. It has
 no listener; a subscriber outside this module would be the
 thing that forces the event onto a Public surface.
@@ -181,9 +181,15 @@ anonymous Blade components for the per-step UI shell.
   `pending` so a partially-seeded user still gets a coherent
   strip. Internal, and the one shape the jump gate and the
   resolver both read.
-- `WizardCompleted` event — carries the user id, dispatched by
-  `DoneStep::finish()` just before it redirects to `/`. Nothing
-  listens to it today; it is the seam, not a wiring.
+- `WizardCompleted` event — carries the user id, raised by
+  `SetupWizard::next()` on the one advance that leaves nothing
+  pending, and only when something was still pending going in.
+  `DoneStep::finish()` used to raise it and redirect itself,
+  which left the terminal row `pending` forever: the resolver
+  kept answering `done` as the first pending step, so every
+  later visit reopened the wizard there under the resume
+  banner, and a second press of Finish raised the event again.
+  Nothing listens to it today; it is the seam, not a wiring.
 
 ## wizard_progress cross-user posture
 
@@ -216,6 +222,14 @@ step, under a control whose aria-label says it "saves your progress".
 The per-step "Skip this step" control is the other exit, and that one
 does mark its own row `skipped` — through `SetupWizard::skip()`, gated
 on `WizardStepRegistry::isSkippable()`.
+
+Finish, on the terminal step, is the third and the only one that means
+the wizard is over. It goes through the same seam as every other step:
+`DoneStep::finish()` bubbles `wizard.step.completed` and the parent
+marks the row, which is what makes the all-done state below reachable
+at all — the step used to raise the completion event and redirect on
+its own, so nothing ever marked `done` and the wizard never recorded
+that it had been finished.
 
 Because "Resume later" writes nothing, the row that says where the reader
 was has to be written when they got there. Moving forward writes it:
@@ -312,7 +326,10 @@ FirstImportStep::render
        → mark the first-import step done
 
 DoneStep
-  → dispatch WizardCompleted
+  → finish() bubbles wizard.step.completed
+       → SetupWizard::next() marks the `done` row done
+       → nothing pending left → dispatch WizardCompleted (once)
+       → redirect to /
 ```
 
 ### Auto-create the account, then re-preview
