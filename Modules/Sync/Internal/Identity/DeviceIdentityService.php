@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
@@ -20,6 +21,9 @@ use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Ramsey\Uuid\Uuid;
 use SodiumException;
 
+/**
+ * @link ../../../../.docs/conventions/a-check-another-writer-can-invalidate.md
+ */
 final readonly class DeviceIdentityService
 {
     private const string STAGING_PREFIX = 'beatrax_identity_';
@@ -72,13 +76,21 @@ final readonly class DeviceIdentityService
             return;
         }
 
-        $this->db->connection()->table('device_registry')->insert([
-            ...$row,
-            'user_id' => $userId,
-            'device_id' => $identity->deviceId,
-            'last_seen_at' => null,
-            'created_at' => $mintedAt,
-        ]);
+        try {
+            $this->db->connection()->table('device_registry')->insert([
+                ...$row,
+                'user_id' => $userId,
+                'device_id' => $identity->deviceId,
+                'last_seen_at' => null,
+                'created_at' => $mintedAt,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            // The loser of this race must converge, never insert: the row that
+            // won names this same device and carries the same public halves,
+            // and a second self-row is a second identity to every peer reading
+            // deviceKeys(). device_registry_user_device_idx is what says so.
+            $existing->update($row);
+        }
     }
 
     // The one consented way past generateAndPersist()'s refusal below, for a
