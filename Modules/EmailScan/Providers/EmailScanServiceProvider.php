@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Events\DatabaseRestored;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\EmailScan\Database\Seeders\IcsStatementSenderSeeder;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
@@ -24,6 +25,7 @@ use Modules\EmailScan\Internal\Jobs\DetectIcsStatementReadyJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Internal\Jobs\ScanMessageMapper;
+use Modules\EmailScan\Internal\Listeners\ClearCredentialsNoKeyHereOpens;
 use Modules\EmailScan\Internal\Listeners\EmitOAuthReauthRequiredAlert;
 use Modules\EmailScan\Internal\Listeners\RaiseReconsentAlertOnTokenFailure;
 use Modules\EmailScan\Internal\MimeHeaderParser;
@@ -82,6 +84,11 @@ final class EmailScanServiceProvider extends ServiceProvider
         // Ends in a de-duped system_alerts row the SystemAlertsBanner renders
         // with a Reconnect link back through /inboxes?reconnect={id}.
         $events->listen(InboxTokenFailed::class, RaiseReconsentAlertOnTokenFailure::class);
+        // A restore lands credentials encrypted under another install's
+        // application key. Consent at the provider is untouched and the local
+        // copy of it is unreadable, so it is cleared into the same
+        // re-authorisation state a revoked grant reaches.
+        $events->listen(DatabaseRestored::class, ClearCredentialsNoKeyHereOpens::class);
 
         $this->loadModuleResources('email-scan');
 

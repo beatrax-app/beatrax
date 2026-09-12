@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Kopia zapasowa się otworzyła, ale baza danych w środku jest uszkodzona, więc nie została przywrócona i nic nie zostało zmienione. Przywróć ze starszej kopii.',
         'restore_could_not_read' => 'Nie udało się odczytać pliku kopii zapasowej, więc przywracanie nie zostało wykonane i nic nie zostało zmienione. Sprawdź, czy na urządzeniu jest wolne miejsce, i spróbuj ponownie.',
         'restore_not_supported' => 'Przywracanie działa w wersji trzymającej dane w jednym pliku, a ta nią nie jest, więc nic nie zostało zmienione. Przy bazie serwerowej użyj narzędzi przywracania tej bazy.',
+        'restore_from_a_newer_build' => 'Ta kopia zapasowa została utworzona przez nowszą wersję Beatrax niż uruchomiona tutaj, więc nie została przywrócona i nic nie zostało zmienione. Zaktualizuj Beatrax, a następnie przywróć ją ponownie.',
+        'restore_from_an_older_build' => 'Ta kopia zapasowa została utworzona przez starszą wersję Beatrax niż uruchomiona tutaj, więc nie została przywrócona i nic nie zostało zmienione. Przywróć kopię utworzoną przez tę wersję.',
         'restore_failed' => 'Przywracanie nie zostało wykonane i nic nie zostało zmienione. Spróbuj ponownie — jeśli nadal się nie udaje, dziennik aplikacji zapisuje, co je zatrzymało.',
     ],
 ];

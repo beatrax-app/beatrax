@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'A cópia de segurança abriu, mas a base de dados lá dentro está danificada, por isso não foi restaurada e nada foi alterado. Restaura uma cópia mais antiga.',
         'restore_could_not_read' => 'Não foi possível ler o ficheiro da cópia de segurança, por isso o restauro não correu e nada foi alterado. Verifica se este dispositivo tem espaço livre e tenta outra vez.',
         'restore_not_supported' => 'O restauro funciona na versão que guarda os dados num único ficheiro, e esta não é, por isso nada foi alterado. Numa base de dados em servidor, usa as ferramentas de restauro dessa base de dados.',
+        'restore_from_a_newer_build' => 'Esta cópia de segurança foi criada por uma versão do Beatrax mais recente do que a que está a correr aqui, por isso não foi restaurada e nada foi alterado. Atualize o Beatrax e restaure-a novamente.',
+        'restore_from_an_older_build' => 'Esta cópia de segurança foi criada por uma versão do Beatrax anterior à que está a correr aqui, por isso não foi restaurada e nada foi alterado. Restaure uma cópia criada por esta versão.',
         'restore_failed' => 'O restauro não correu e nada foi alterado. Tenta outra vez — se continuar a falhar, o registo da app guarda o que o impediu.',
     ],
 ];

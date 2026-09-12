@@ -292,6 +292,13 @@ it('does not let a console command or an event listener freeze a per-resolve ser
         // instance to be wrong about. Three now reach it through DemoPeriodWindow,
         // the one window the demo grid and the demo rows are cut from.
 
+        // The Migrator is frozen on purpose here. BackupSchemaGeneration asks
+        // it one question — which migration files this build ships — and the
+        // answer is a property of the bundle on disk, which nothing the
+        // restore does can change while the restore is running. Resolving it
+        // per call would re-register every module path to read the same list.
+        'Modules\\Core\\Internal\\Console\\RestoreDatabaseCommand -> Modules\\Core\\Internal\\Backup\\BackupSchemaGeneration -> Illuminate\\Database\\Migrations\\Migrator',
+
         // FingerprintRederiveService is per-resolve by habit rather than by
         // need: its whole graph is FingerprintComposer (a singleton) and the
         // database manager, and neither reads anything a later action writes.

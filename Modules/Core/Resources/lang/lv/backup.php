@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Dublējums atvērās, bet tajā esošā datubāze ir bojāta, tāpēc tā netika atjaunota un nekas netika mainīts. Atjaunojiet no vecāka dublējuma.',
         'restore_could_not_read' => 'Dublējuma failu neizdevās nolasīt, tāpēc atjaunošana nenotika un nekas netika mainīts. Pārbaudiet, vai ierīcē ir brīva vieta, un mēģiniet vēlreiz.',
         'restore_not_supported' => 'Atjaunošana darbojas laidienā, kas glabā datus vienā failā, un šis tāds nav, tāpēc nekas netika mainīts. Servera datubāzei izmantojiet tās pašas atjaunošanas rīkus.',
+        'restore_from_a_newer_build' => 'Šī dublējumkopija izveidota ar jaunāku Beatrax versiju nekā šeit darbojošos, tāpēc tā netika atjaunota un nekas netika mainīts. Atjaunini Beatrax un pēc tam atjauno to vēlreiz.',
+        'restore_from_an_older_build' => 'Šī dublējumkopija izveidota ar vecāku Beatrax versiju nekā šeit darbojošos, tāpēc tā netika atjaunota un nekas netika mainīts. Atjauno no dublējumkopijas, ko izveidojusi šī versija.',
         'restore_failed' => 'Atjaunošana nenotika, un nekas netika mainīts. Mēģiniet vēlreiz — ja tas joprojām neizdodas, lietotnes žurnālā ir pierakstīts, kas to apturēja.',
     ],
 ];

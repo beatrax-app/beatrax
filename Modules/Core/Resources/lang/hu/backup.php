@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'A biztonsági mentés megnyílt, de a benne lévő adatbázis sérült, ezért nem állt vissza, és semmi sem változott. Állíts vissza egy korábbi mentésből.',
         'restore_could_not_read' => 'A mentésfájlt nem sikerült beolvasni, így a visszaállítás nem futott le, és semmi sem változott. Ellenőrizd, van-e szabad hely az eszközön, és próbáld újra.',
         'restore_not_supported' => 'A visszaállítás abban a kiadásban működik, amely egyetlen fájlban tartja az adatait, és ez nem olyan, így semmi sem változott. Kiszolgálói adatbázisnál használd annak saját visszaállító eszközeit.',
+        'restore_from_a_newer_build' => 'Ezt a biztonsági mentést a Beatrax újabb verziója készítette, mint amelyik itt fut, ezért nem lett visszaállítva, és semmi nem változott. Frissítsd a Beatraxot, majd állítsd vissza újra.',
+        'restore_from_an_older_build' => 'Ezt a biztonsági mentést a Beatrax régebbi verziója készítette, mint amelyik itt fut, ezért nem lett visszaállítva, és semmi nem változott. Állíts vissza olyan mentésből, amelyet ez a verzió készített.',
         'restore_failed' => 'A visszaállítás nem futott le, és semmi sem változott. Próbáld újra — ha továbbra is hibázik, az alkalmazás naplója rögzíti, mi állította meg.',
     ],
 ];

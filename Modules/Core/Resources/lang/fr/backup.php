@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => "La sauvegarde s'est ouverte, mais la base de données qu'elle contient est endommagée : elle n'a pas été restaurée et rien n'a été modifié. Restaure une sauvegarde plus ancienne.",
         'restore_could_not_read' => "Le fichier de sauvegarde n'a pas pu être lu, la restauration n'a donc pas eu lieu et rien n'a été modifié. Vérifie qu'il reste de l'espace libre sur cet appareil, puis réessaie.",
         'restore_not_supported' => "La restauration fonctionne sur la version qui garde ses données dans un seul fichier, ce qui n'est pas le cas ici, et rien n'a été modifié. Sur une base de données serveur, utilise les outils de restauration de cette base.",
+        'restore_from_a_newer_build' => 'Cette sauvegarde a été créée par une version de Beatrax plus récente que celle exécutée ici : elle n\'a pas été restaurée et rien n\'a été modifié. Mettez Beatrax à jour, puis restaurez-la de nouveau.',
+        'restore_from_an_older_build' => 'Cette sauvegarde a été créée par une version de Beatrax plus ancienne que celle exécutée ici : elle n\'a pas été restaurée et rien n\'a été modifié. Restaurez une sauvegarde créée par cette version.',
         'restore_failed' => "La restauration n'a pas eu lieu et rien n'a été modifié. Réessaie — si l'échec persiste, le journal de l'app note ce qui l'a arrêtée.",
     ],
 ];

@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'The backup opened, but the database inside it is damaged, so it was not restored and nothing has been changed. Restore from an earlier backup.',
         'restore_could_not_read' => 'The backup file could not be read, so the restore did not run and nothing has been changed. Check that this device has free space, then try again.',
         'restore_not_supported' => "Restoring works on the build that keeps its data in a single file, which this one is not, so nothing has been changed. On a server database, use that database's own restore tooling.",
+        'restore_from_a_newer_build' => 'This backup was made by a newer version of Beatrax than the one running here, so it was not restored and nothing has been changed. Update Beatrax, then restore it again.',
+        'restore_from_an_older_build' => 'This backup was made by an older version of Beatrax than the one running here, so it was not restored and nothing has been changed. Restore from a backup this version made.',
         'restore_failed' => 'The restore did not run, and nothing has been changed. Try again — if it keeps failing, the app log records what stopped it.',
     ],
 ];

@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Das Backup ließ sich öffnen, aber die Datenbank darin ist beschädigt, wurde daher nicht wiederhergestellt, und nichts wurde geändert. Stelle aus einem älteren Backup wieder her.',
         'restore_could_not_read' => 'Die Backup-Datei konnte nicht gelesen werden, die Wiederherstellung lief daher nicht, und nichts wurde geändert. Prüfe, ob dieses Gerät freien Speicher hat, und versuche es erneut.',
         'restore_not_supported' => 'Wiederherstellen funktioniert auf der Variante, die ihre Daten in einer einzigen Datei hält — diese ist es nicht, und nichts wurde geändert. Nutze bei einer Serverdatenbank deren eigene Wiederherstellungswerkzeuge.',
+        'restore_from_a_newer_build' => 'Diese Sicherung stammt aus einer neueren Beatrax-Version als der hier laufenden, deshalb wurde sie nicht eingespielt und nichts geändert. Aktualisiere Beatrax und spiele sie danach erneut ein.',
+        'restore_from_an_older_build' => 'Diese Sicherung stammt aus einer älteren Beatrax-Version als der hier laufenden, deshalb wurde sie nicht eingespielt und nichts geändert. Spiele eine Sicherung ein, die diese Version erstellt hat.',
         'restore_failed' => 'Die Wiederherstellung lief nicht, und nichts wurde geändert. Versuche es erneut — schlägt es weiter fehl, hält das App-Protokoll fest, was sie gestoppt hat.',
     ],
 ];

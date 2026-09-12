@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Il backup si è aperto, ma il database al suo interno è danneggiato: non è stato ripristinato e non è stato modificato nulla. Ripristina un backup precedente.',
         'restore_could_not_read' => 'Non è stato possibile leggere il file di backup, quindi il ripristino non è stato eseguito e non è stato modificato nulla. Verifica che il dispositivo abbia spazio libero e riprova.',
         'restore_not_supported' => 'Il ripristino funziona sulla versione che tiene i dati in un unico file, e questa non lo è, quindi non è stato modificato nulla. Su un database server, usa gli strumenti di ripristino di quel database.',
+        'restore_from_a_newer_build' => 'Questo backup è stato creato da una versione di Beatrax più recente di quella in esecuzione qui, quindi non è stato ripristinato e nulla è stato modificato. Aggiorna Beatrax, poi ripristinalo di nuovo.',
+        'restore_from_an_older_build' => 'Questo backup è stato creato da una versione di Beatrax più vecchia di quella in esecuzione qui, quindi non è stato ripristinato e nulla è stato modificato. Ripristina un backup creato da questa versione.',
         'restore_failed' => "Il ripristino non è stato eseguito e non è stato modificato nulla. Riprova — se continua a fallire, il log dell'app registra che cosa lo ha bloccato.",
     ],
 ];

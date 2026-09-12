@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Varmuuskopio aukesi, mutta sen sisällä oleva tietokanta on vaurioitunut, joten sitä ei palautettu eikä mitään ole muutettu. Palauta vanhemmasta varmuuskopiosta.',
         'restore_could_not_read' => 'Varmuuskopiotiedostoa ei voitu lukea, joten palautusta ei suoritettu eikä mitään ole muutettu. Tarkista, että laitteessa on vapaata tilaa, ja yritä uudelleen.',
         'restore_not_supported' => 'Palautus toimii versiossa, joka pitää tietonsa yhdessä tiedostossa, eikä tämä ole sellainen, joten mitään ei ole muutettu. Palvelintietokannassa käytä sen omia palautustyökaluja.',
+        'restore_from_a_newer_build' => 'Tämä varmuuskopio on tehty uudemmalla Beatrax-versiolla kuin tässä käytössä oleva, joten sitä ei palautettu eikä mitään muutettu. Päivitä Beatrax ja palauta se sitten uudelleen.',
+        'restore_from_an_older_build' => 'Tämä varmuuskopio on tehty vanhemmalla Beatrax-versiolla kuin tässä käytössä oleva, joten sitä ei palautettu eikä mitään muutettu. Palauta varmuuskopiosta, jonka tämä versio on tehnyt.',
         'restore_failed' => 'Palautusta ei suoritettu eikä mitään ole muutettu. Yritä uudelleen — jos se epäonnistuu toistuvasti, sovelluksen loki kertoo, mikä sen pysäytti.',
     ],
 ];

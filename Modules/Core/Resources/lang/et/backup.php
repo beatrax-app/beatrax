@@ -44,6 +44,8 @@ return [
         'restore_contents_unreadable' => 'Varukoopia avanes, kuid selles olev andmebaas on kahjustatud, seega seda ei taastatud ja midagi ei muudetud. Taasta varasemast varukoopiast.',
         'restore_could_not_read' => 'Varukoopia faili ei õnnestunud lugeda, seega taastamist ei tehtud ja midagi ei muudetud. Kontrolli, kas seadmes on vaba ruumi, ja proovi uuesti.',
         'restore_not_supported' => 'Taastamine töötab versioonis, mis hoiab oma andmeid ühes failis, ja see ei ole see, seega midagi ei muudetud. Serveri andmebaasi puhul kasuta selle andmebaasi enda taastamistööriistu.',
+        'restore_from_a_newer_build' => 'See varukoopia on tehtud uuema Beatraxi versiooniga kui siin töötav, seega seda ei taastatud ja midagi ei muudetud. Uuenda Beatraxi ja taasta see seejärel uuesti.',
+        'restore_from_an_older_build' => 'See varukoopia on tehtud vanema Beatraxi versiooniga kui siin töötav, seega seda ei taastatud ja midagi ei muudetud. Taasta varukoopiast, mille tegi see versioon.',
         'restore_failed' => 'Taastamist ei tehtud ja midagi ei muudetud. Proovi uuesti — kui see ikka ebaõnnestub, kirjutab rakenduse logi üles, mis selle peatas.',
     ],
 ];
