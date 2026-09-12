@@ -8,6 +8,8 @@ use Illuminate\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Internal\Backup\BackupContentsUnreadableException;
+use Modules\Core\Internal\Backup\BackupCouldNotBeBroughtUpToDateException;
+use Modules\Core\Internal\Backup\BackupFromANewerBuildException;
 use Modules\Core\Internal\Backup\BackupKeyMaterial;
 use Modules\Core\Internal\Backup\BackupSchemaGeneration;
 use Modules\Core\Internal\Backup\ExportArchiveBackup;
@@ -50,6 +52,11 @@ final readonly class RestoreEncryptedBackup
      *                                           open as a database — the live DB is
      *                                           only swapped after it opens AND
      *                                           passes integrity_check
+     * @throws BackupFromANewerBuildException when the backup is ahead of this build
+     * @throws BackupCouldNotBeBroughtUpToDateException when bringing an older one
+     *                                                  forward fails — the live
+     *                                                  database is untouched and
+     *                                                  no snapshot was written
      */
     public function __invoke(string $encryptedPath, string $passphrase): string
     {
@@ -71,11 +78,11 @@ final readonly class RestoreEncryptedBackup
             //    integrity_check must return exactly ['ok'].
             $this->assertIntegrity($decryptedPath);
 
-            // 3. Refuse a schema this build does not read, in either
-            //    direction, while nothing has been touched. Migrations only
-            //    move forward, so a newer one has no path to a shape this
-            //    build reads and nothing detects it after the swap.
-            $this->schema->assertThisBuildCanRead($decryptedPath);
+            // 3. Bring an older schema forward on the decrypted COPY. SQLite
+            //    runs no schema transaction, so a failed run is permanent on
+            //    whatever it ran against. Ahead of the snapshot: a refusal
+            //    here has touched nothing and leaves nothing behind.
+            $this->broughtUpToDate($decryptedPath);
 
             // 4. Pre-restore snapshot of the CURRENT database, so the prior
             //    state is always recoverable if the swap goes wrong.
@@ -104,6 +111,18 @@ final readonly class RestoreEncryptedBackup
             if ($lifted !== null) {
                 $this->staging->discard($lifted);
             }
+        }
+    }
+
+    // The count is the reader's only record of it afterwards: the screen tells
+    // them a restore may update an older backup before they start it, and the
+    // restore itself signs them out onto /login with nothing left to read.
+    private function broughtUpToDate(string $decryptedPath): void
+    {
+        $ran = $this->schema->bringUpToDate($decryptedPath);
+
+        if ($ran > 0) {
+            $this->logger->info('A backup from an older build was brought up to date before restoring.', ['migrations' => $ran]);
         }
     }
 

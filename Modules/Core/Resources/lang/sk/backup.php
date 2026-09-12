@@ -18,6 +18,7 @@ return [
         'heading' => 'Obnovenie zo zálohy',
 
         'intro_html' => 'Nahradí tvoju súčasnú databázu šifrovanou zálohou. Súbor sa pred akoukoľvek zmenou dešifruje a skontroluje a najprv sa uloží snímka tvojich súčasných údajov — aj tak to však <strong class="text-slate-700 dark:text-slate-200">prepíše všetko</strong>, preto je tento krok zabezpečený. Budeš odhlásený, pretože aj tvoje prihlásenie je v databáze.',
+        'updates_an_older_backup' => 'Záloha vytvorená staršou verziou Beatraxu sa pri obnove aktualizuje na túto, takže obnova mení aj štruktúru údajov, nielen ich obsah. Deje sa to najprv na kópii — ak niektorý krok zlyhá, nič sa neobnoví a nič nezmení.',
         'restored' => 'Vaša záloha bola obnovená. Prihláste sa používateľským menom a heslom, ktoré platili v čase jej vytvorenia.',
         'snapshot_saved_prefix' => 'Snímka tvojich predchádzajúcich údajov bola uložená do',
         'file_label' => 'Súbor so zálohou (.enc) alebo archív exportu (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Súbor zálohy sa nepodarilo prečítať, takže obnova neprebehla a nič sa nezmenilo. Skontroluj, či má zariadenie voľné miesto, a skús to znova.',
         'restore_not_supported' => 'Obnova funguje vo verzii, ktorá drží dáta v jedinom súbore, a táto ňou nie je, takže sa nič nezmenilo. Pri serverovej databáze použi jej vlastné nástroje obnovy.',
         'restore_from_a_newer_build' => 'Táto záloha bola vytvorená novšou verziou Beatraxu, než je tá spustená tu, preto nebola obnovená a nič sa nezmenilo. Aktualizuj Beatrax a potom ju obnov znova.',
-        'restore_from_an_older_build' => 'Táto záloha bola vytvorená staršou verziou Beatraxu, než je tá spustená tu, preto nebola obnovená a nič sa nezmenilo. Obnov zo zálohy, ktorú vytvorila táto verzia.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax nedokázal túto zálohu aktualizovať na verziu spustenú tu, preto sa nič neobnovilo ani nezmenilo. Skús to znova — ak zlyháva ďalej, obnov novšiu zálohu; protokol aplikácie zaznamenáva, ktorý krok to zastavil.',
         'restore_failed' => 'Obnova neprebehla a nič sa nezmenilo. Skús to znova — ak zlyháva ďalej, protokol aplikácie zaznamenáva, čo ju zastavilo.',
     ],
 ];

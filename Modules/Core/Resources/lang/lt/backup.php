@@ -18,6 +18,7 @@ return [
         'heading' => 'Atkurti iš atsarginės kopijos',
 
         'intro_html' => 'Pakeisk dabartinę duomenų bazę šifruota atsargine kopija. Failas iššifruojamas ir patikrinamas prieš keičiant bet ką, o dabartinių duomenų momentinė kopija išsaugoma pirmiausia — bet tai vis tiek <strong class="text-slate-700 dark:text-slate-200">perrašo viską</strong>, todėl veiksmas yra apsaugotas. Būsi atjungtas, nes tavo prisijungimas taip pat yra duomenų bazėje.',
+        'updates_an_older_backup' => 'Senesne Beatrax versija sukurta atsarginė kopija atkūrimo metu atnaujinama iki šios, todėl atkūrimas keičia ne tik duomenų turinį, bet ir jų struktūrą. Tai pirmiausia atliekama su kopija — jei kuris nors žingsnis nepavyksta, niekas neatkuriama ir nekeičiama.',
         'restored' => 'Atsarginė kopija atkurta. Prisijunkite naudotojo vardu ir slaptažodžiu, galiojusiais ją kuriant.',
         'snapshot_saved_prefix' => 'Ankstesnių duomenų momentinė kopija išsaugota į',
         'file_label' => 'Atsarginės kopijos failas (.enc) arba eksporto archyvas (.zip)',
@@ -45,7 +46,7 @@ return [
         'restore_could_not_read' => 'Atsarginės kopijos failo nepavyko perskaityti, todėl atkūrimas nevyko ir niekas nebuvo pakeista. Patikrink, ar įrenginyje yra laisvos vietos, ir bandyk dar kartą.',
         'restore_not_supported' => 'Atkūrimas veikia leidime, kuris laiko duomenis viename faile, o šis toks nėra, todėl niekas nebuvo pakeista. Serverio duomenų bazėje naudok jos pačios atkūrimo įrankius.',
         'restore_from_a_newer_build' => 'Ši atsarginė kopija sukurta naujesne Beatrax versija nei ta, kuri veikia čia, todėl ji nebuvo atkurta ir niekas nepakeista. Atnaujink Beatrax ir tada atkurk ją iš naujo.',
-        'restore_from_an_older_build' => 'Ši atsarginė kopija sukurta senesne Beatrax versija nei ta, kuri veikia čia, todėl ji nebuvo atkurta ir niekas nepakeista. Atkurk iš atsarginės kopijos, kurią sukūrė ši versija.',
+        'restore_could_not_be_brought_up_to_date' => 'Beatrax negalėjo atnaujinti šios atsarginės kopijos iki čia veikiančios versijos, todėl niekas nebuvo atkurta ir nepakeista. Bandyk dar kartą — jei nepavyksta, atkurk naujesnę kopiją; programos žurnalas užrašo, kuris žingsnis ją sustabdė.',
         'restore_failed' => 'Atkūrimas nevyko ir niekas nebuvo pakeista. Bandyk dar kartą — jei vis nepavyksta, programos žurnale užrašyta, kas jį sustabdė.',
     ],
 ];
