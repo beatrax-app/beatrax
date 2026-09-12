@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Náhled vypršel. <a href="/imports/new" class="underline">Nahraj soubor znovu</a> a zkus to ještě jednou.',
     'unreadable_html' => 'Náhled nelze přečíst. <a href="/imports/new" class="underline">Nahraj soubor znovu</a> a zkus to ještě jednou.',
 
+    'statement_difference' => 'Do tvé knihy se zatím nic nezapsalo. Než to potvrdíš, zkontroluj tento soubor proti bance — výpis, který nesouhlasí sám se sebou, obvykle znamená, že se nějaký řádek načetl špatně.',
+
     'save_name' => 'Uložit název',
     'account_name_label' => 'Název účtu',
     'account_placeholder' => 'např. Hlavní spořicí účet',

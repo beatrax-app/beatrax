@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Predogled je potekel. <a href="/imports/new" class="underline">Znova naloži datoteko</a> in poskusi še enkrat.',
     'unreadable_html' => 'Predogleda ni mogoče prebrati. <a href="/imports/new" class="underline">Znova naloži datoteko</a> in poskusi še enkrat.',
 
+    'statement_difference' => 'V tvojo glavno knjigo še ni bilo nič zapisano. Preden potrdiš, preveri to datoteko pri svoji banki — izpisek, ki se ne izide sam s sabo, običajno pomeni, da je bila kakšna vrstica napačno prebrana.',
+
     'save_name' => 'Shrani ime',
     'account_name_label' => 'Ime računa',
     'account_placeholder' => 'npr. Glavni varčevalni račun',

@@ -17,8 +17,6 @@ return [
     'show_recent' => 'Pokaż tylko ostatnie',
     'show_full' => 'Pokaż pełną historię',
 
-    'empty_period' => 'Nic w tym okresie.',
-
     'empty_recent_has_older' => 'Nic z ostatnich 90 dni. Starsze transakcje nadal tu są.',
 
     'empty_history' => 'Nie ma jeszcze transakcji.',

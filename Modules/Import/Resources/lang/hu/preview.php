@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Az előnézet lejárt. <a href="/imports/new" class="underline">Töltsd fel újra a fájlt</a>, és próbáld meg ismét.',
     'unreadable_html' => 'Az előnézet nem olvasható. <a href="/imports/new" class="underline">Töltsd fel újra a fájlt</a>, és próbáld meg ismét.',
 
+    'statement_difference' => 'A főkönyvedbe még semmi nem került. Megerősítés előtt vesd össze ezt a fájlt a bankodnál lévő adatokkal — az a kivonat, amelyik nem jön ki önmagával, általában azt jelenti, hogy egy sort félreolvastunk.',
+
     'save_name' => 'Név mentése',
     'account_name_label' => 'Számla neve',
     'account_placeholder' => 'pl. Fő megtakarítási számla',

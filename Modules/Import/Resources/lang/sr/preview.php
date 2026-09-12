@@ -16,6 +16,8 @@ return [
     'expired_html' => 'Pregled je istekao. <a href="/imports/new" class="underline">Ponovo otpremi datoteku</a> za novi pokušaj.',
     'unreadable_html' => 'Pregled nije moguće pročitati. <a href="/imports/new" class="underline">Ponovo otpremi datoteku</a> za novi pokušaj.',
 
+    'statement_difference' => 'U tvoju glavnu knjigu još nije ništa upisano. Pre potvrde proveri ovu datoteku u svojoj banci — izvod koji se ne slaže sam sa sobom obično znači da je neki red pogrešno pročitan.',
+
     'save_name' => 'Sačuvaj naziv',
     'account_name_label' => 'Naziv računa',
     'account_placeholder' => 'npr. Glavni štedni račun',

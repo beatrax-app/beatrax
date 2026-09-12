@@ -107,6 +107,44 @@ time, not to make the file agree with itself. Both shipped bank fixtures —
 `tests/fixtures/asn-mt940-sample-1.sta` (12 entries, €1 000,00 → −€805,38) —
 reconcile exactly, and a test pins that they still do.
 
-**Still open:** a stated difference is recorded, not rendered. No screen reads
-`extras.statementDifferenceMinor` yet, and `/reconcile` will still prefill its
-target from a statement summary whose own arithmetic failed.
+## Where a reader meets it
+
+`Modules\Ledger\Public\Support\StatementDifference` is the one reader of the
+key, beside `StatementDenomination` in the same namespace and for the same
+reason: three screens render this figure, and each deciding for itself what an
+absent key means, which way the sign runs and whether a hundred is involved is
+how they would come to say three things. It answers null for everything that is
+not a difference a reader can act on — an absent key, a zero, a row whose
+currency column names no currency — and it picks the sentence, because the sign
+is the only thing telling the two directions apart.
+
+A **positive** difference is `closing - (opening + rows)` above zero: the two
+balances move further apart than the rows account for, so the opening balance
+plus the rows lands *below* the closing balance the file states. A negative one
+lands above it. "Off by €12.00" names neither, and the two send a reader to
+different rows, so there are two lines and no signed figure —
+`core::statement.falls_short_of_closing` and `core::statement.overshoots_closing`,
+in Core because all three screens name them.
+
+| Screen | Says | Why there |
+|---|---|---|
+| Import preview (`/imports/{id}/preview`) | the difference, and that nothing is written yet | the one screen where the reader can still act cheaply: discard the file and re-export it. Its own `@if`, never a branch of the account-naming chain beside it — an unnamed account and a file that does not add up are two facts about one upload |
+| Import results (`/imports/{id}`) | the difference, and that nothing was corrected | the record. A reader whose balance stops matching the bank comes back here to find which file did it |
+| `/reconcile` | the difference, above the statement-balance field | the prefilled target *is* the closing balance of that statement, and the reader drives a difference to zero against it |
+
+The reconcile prefill is **kept, not withheld**, and the caveat sits above the
+field rather than below it: a flagged figure the reader can see and question
+beats an empty box, and a flag met after the number has already been trusted
+has been overtaken. `ReconcilePage` holds the answer it read on the round trip
+that filled the box, so the caveat describes the figure actually on screen
+rather than whatever the newest summary says now.
+
+A difference is still never corrected, and **absence still reaches no screen**:
+a statement that added up and one there was nothing to check against are both
+silent, which is the contract above read the only way a surface can read it.
+
+**Not raised as a `system_alerts` row.** That table carries operational faults
+of the machine — a corrupt backup, a database out of WAL mode, a worker that
+died — which stand until somebody acts and have no screen of their own. A
+statement that disagrees with itself is a property of one document, and all
+three screens that can act on it already have it attached to its subject.

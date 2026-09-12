@@ -87,7 +87,7 @@ it('says the ledger is empty when it really is', function (): void {
     $this->actingAs($user);
 
     Livewire::test(TransactionsList::class)
-        ->assertSee(Lang::get('ledger::list.empty_period'))
+        ->assertSee(Lang::get('ledger::list.empty_history'))
         ->assertDontSee(Lang::get('ledger::list.empty_recent_has_older'));
 });
 

@@ -9,8 +9,6 @@ return [
     'entities' => ':count οντότητα|:count οντότητες',
     'need_identification' => ':count χρειάζονται αναγνώριση',
 
-    'search_placeholder' => 'Αναζήτηση με όνομα, ψευδώνυμο ή IBAN…',
-    'search_aria' => 'Αναζήτηση αντισυμβαλλόμενων',
     'sort' => 'Ταξινόμηση: Σύνολο 12 μηνών ↓',
 
     'view_mode' => 'Τρόπος προβολής',

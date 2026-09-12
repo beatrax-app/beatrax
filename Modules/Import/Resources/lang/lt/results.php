@@ -16,6 +16,8 @@ return [
     'show_errors' => 'Rodyti klaidas (:count)',
     'errors_help' => 'Klaidos — eilutės, kurių nepavyko nuskaityti; į didžiąją knygą jos neįtrauktos.',
 
+    'statement_difference' => 'Eilutės ir abu likučiai buvo įrašyti lygiai taip, kaip juos pateikė failas, ir nieko nebuvo taisoma. Patikrink šį išrašą banke: kuri nors eilutė galėjo būti nuskaityta neteisingai.',
+
     'upload_another' => 'Įkelti kitą išrašą',
 
     'chain' => [

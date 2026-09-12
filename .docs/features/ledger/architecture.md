@@ -303,7 +303,12 @@ keeps the row count deterministic on every run date.
 reconciliation surface (there is no account-detail page in the app, so
 this is its own top-level route rather than a tab on one). The user
 picks an account, confirms/edits a statement balance + date, and
-watches the cleared balance converge on that target. A non-zero
+watches the cleared balance converge on that target. An install with no
+account yet has nothing for any of those controls to act on, so the page
+renders `ledger::account_currency.no_accounts` in place of the whole
+form — it used to open on a select holding only its placeholder, a date
+picker and a balance field nobody could act on, and a Check button that
+reported a difference computed from nothing. A non-zero
 difference is flagged read-only — this flow never fabricates a
 balancing transaction. Confirming a matched reconcile calls
 `ReconciliationWriter::completeReconcile()`, which bulk-locks the
@@ -369,6 +374,19 @@ statement that outlived its run is history the ledger already holds.
 Chains itself still promotes the discarded summary into `card_statements`,
 where `IcsSettlementResolver` can match a real bank settlement against it —
 that is a Chains defect, not a reconcile one, and it is open.
+
+**A statement that failed its own arithmetic still fills the box, and says so
+above it.** The statement-summary branch reads `extras` alongside the closing
+balance and keeps the self-check answer on `prefillDifferenceMinor`, so the
+caveat is about the figure that was actually placed in the field rather than
+about whatever the newest summary says on a later round trip. The figure is
+offered either way: a flagged starting point the reader can see and question
+beats an empty box, and withholding the prefill would take the caveat's own
+subject off the screen. The notice sits *above* the field, because a reader
+trusts the number the moment they read it and a flag met afterwards has already
+been overtaken. `Public/Support/StatementDifference` is the shared reader — see
+[a statement that did not check its own
+arithmetic](../ingestion/a-statement-that-did-not-check-its-own-arithmetic.md#where-a-reader-meets-it).
 
 IDOR: `$accountId` is a client-controllable, URL-bound property. Every
 read re-validates account ownership by `user_id` before touching
@@ -554,6 +572,16 @@ value never silently drop between pages. `loadMore()` reads the next
 cursor from the server-side Livewire snapshot rather than accepting it
 as a browser-supplied parameter, since the snapshot is encrypted /
 HMAC-verified by Livewire and cannot be tampered with by the browser.
+
+An empty page has two cases, not three: the recent window came back
+empty while older rows exist (`empty_recent_has_older`, beside the
+toggle that widens the query), or the ledger holds nothing at all
+(`empty_history`). Neither a filter nor a query reaches this arm —
+`isSearchActive()` routes both to the search path and its own
+no-results state — so the third `empty_period` arm that used to sit
+here asked for `hasAnyTransaction && ! fullHistory`, which is exactly
+what the first arm asks, and no reader ever read it. A reader with
+nothing at all was shown "Nothing here for this period."
 
 `$currency` is URL-bound and falls back to the user's
 `default_currency_view` preference when no `?currency=` parameter is

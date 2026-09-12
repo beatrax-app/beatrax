@@ -13,6 +13,8 @@ return [
     'statement_balance' => 'Išrašo likutis (:symbol)',
     'balance_help' => 'Užpildoma iš naujausio importuoto išrašo, kai jis yra — neigiama reikšmė reiškia skolą, bet kuriuo atveju galima redaguoti.',
 
+    'prefill_difference' => 'Toliau nurodytas išrašo likutis buvo užpildytas iš to išrašo. Tai vis tiek tik pradinis taškas, todėl prieš užbaigdamas šį suderinimą patikrink skaičių banke.',
+
     'cleared_balance' => 'Įvykdytų operacijų likutis',
     'statement_target' => 'Išrašo tikslinis likutis',
     'difference' => 'Skirtumas',

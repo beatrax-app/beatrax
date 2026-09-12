@@ -45,7 +45,8 @@ Modules/Forecasting/
 │   │   └── ProjectForecastOnScenarioChange.php
 │   ├── Mapping/
 │   │   ├── ForecastDtoMapper.php
-│   │   └── ForecastWindow.php
+│   │   ├── ForecastWindow.php
+│   │   └── StoredRateSet.php
 │   ├── Casts/
 │   │   └── ScenarioMutationPayloadCast.php
 │   ├── Enums/
@@ -204,7 +205,11 @@ Modules/Forecasting/
 - `Internal/Listeners/ProjectForecastOnRecurringChange` /
   `OnDriftDismissed` / `OnScenarioChange` — re-project triggers.
 - `Internal/Mapping/ForecastDtoMapper` — `forecast_runs` row →
-  `ForecastDto`.
+  `ForecastDto`. Takes a `Clock`, because a stored rate's staleness is a fact
+  about the day it is read rather than the day it was written.
+- `Internal/Mapping/StoredRateSet` — both directions of the `result_json` rate
+  round trip, writer and reader alike, so a curve rehydrated from a shape the
+  writer no longer produces cannot disclose a rate nobody used.
 - `Internal/Mapping/ForecastWindow` — horizon, scenario and `asOf` as one
   value, so a mapped run, a flat-line fallback and a computing sentinel
   cannot be built from three different runs' worth of them.
