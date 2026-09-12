@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\InvalidGoalTargetDateException;
 use Modules\Goals\Public\Services\GoalProjectionService;
 use Modules\Goals\Public\Services\GoalWriter;
-use Modules\FX\Public\Dto\RateSet;
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-06-15 09:00:00');

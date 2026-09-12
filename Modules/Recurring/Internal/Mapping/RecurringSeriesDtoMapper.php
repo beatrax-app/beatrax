@@ -108,6 +108,7 @@ final class RecurringSeriesDtoMapper
             conversion: $conversion,
         );
     }
+
     // This row's own leg, not the page's: $rates is batched across every series
     // on screen, and a row disclosing all of them would name rates its own
     // shadow never went through.
@@ -122,5 +123,4 @@ final class RecurringSeriesDtoMapper
             $rates->has($rowCurrency) ? [] : [$rowCurrency],
         );
     }
-
 }

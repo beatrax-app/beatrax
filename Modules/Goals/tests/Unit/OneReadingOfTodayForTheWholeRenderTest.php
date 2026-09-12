@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\FX\Public\Dto\RateSet;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Services\GoalProjectionService;
-use Modules\FX\Public\Dto\RateSet;
 
 // The service read CarbonImmutable::today() in four places and the query in a
 // fifth, so a render that straddled midnight measured one goal's observation
