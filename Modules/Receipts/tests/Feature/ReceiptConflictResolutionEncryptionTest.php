@@ -92,7 +92,7 @@ function rcreSeed(User $user, Account $account, string $stored, string $incoming
         'field_name' => $field,
         'stored_value' => json_encode($stored, JSON_THROW_ON_ERROR),
         'incoming_value' => json_encode($incoming, JSON_THROW_ON_ERROR),
-        'incoming_source_format' => 'paypal-receipt',
+        'incoming_source_format' => 'eml',
         'import_run_id' => $run->id,
         'created_at' => now(),
         'updated_at' => now(),

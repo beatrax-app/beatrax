@@ -87,7 +87,7 @@ beforeEach(function (): void {
             'field_name' => $field,
             'stored_value' => json_encode($stored),
             'incoming_value' => json_encode($incoming),
-            'incoming_source_format' => 'paypal-receipt',
+            'incoming_source_format' => 'eml',
             'import_run_id' => $run->id,
             'created_at' => CarbonImmutable::now()->toDateTimeString(),
             'updated_at' => CarbonImmutable::now()->toDateTimeString(),

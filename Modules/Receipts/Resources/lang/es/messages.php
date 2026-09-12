@@ -18,5 +18,10 @@ return [
         'body' => ':heading (“:receipt”) que el extracto (“:statement”). ¿Quieres que Beatrax dé preferencia a los recibos en los próximos conflictos?',
         'use_receipt' => 'Usar el recibo',
         'keep_statement' => 'Mantener el extracto',
+        'heading_restated' => 'Un extracto posterior registra un valor distinto en el campo :field',
+        'restated_title' => 'El banco ha corregido este movimiento.',
+        'restated_body' => ':heading (“:incoming”) que la fila ya guardada (“:stored”). ¿Quieres que Beatrax dé preferencia al valor nuevo en las próximas discrepancias?',
+        'use_restated' => 'Usar el valor nuevo',
+        'keep_stored' => 'Mantener el valor guardado',
     ],
 ];

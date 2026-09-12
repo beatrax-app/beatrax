@@ -199,8 +199,17 @@ adapter's choices byte for byte:
 - Counterparty name/IBAN follow the same DBIT→creditor / CRDT→debtor
   direction rule the CAMT adapter applies.
 - Only `status === 'BOOK'` rows are consumed; PSD2 `'PDNG'` (pending) rows
-  are dropped before they ever reach the canonical DTO — there is no
-  concept of a pending transaction anywhere downstream.
+  are dropped before they ever reach the canonical DTO, so nothing
+  downstream carries a pending transaction. The reason recorded for that
+  drop — that a pending row later booking with different details would
+  create a duplicate the fingerprint cannot collapse — is no longer the
+  live one: [a reference the ledger already
+  holds](../../architecture/ingestion-pipeline.md#a-reference-the-ledger-already-holds)
+  collapses exactly that pair, and records the disagreement for the reader
+  instead of writing a second row. What stands is the narrower reason: the
+  EB adapter sets `sourceRef` to `null`, so a fetched row has no reference
+  to be found under, and a pending figure is not an authority on what
+  settled. Consuming `'PDNG'` is a decision for the spec, not a gap here.
 - A missing `booking_date`/`value_date` throws rather than falling through
   to `CarbonImmutable::parse('')`, which silently resolves to the wall
   clock — a fingerprinted date derived from fetch-time rather than the

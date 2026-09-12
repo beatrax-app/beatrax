@@ -67,7 +67,8 @@ What the module explicitly does NOT do:
   - `AppliesEnrichments` is invokable —
     `AppliesEnrichments::__invoke($enrichments, $user)` returns how
     many rows were actually enriched; re-imports that produce
-    stronger `source_ref` values.
+    stronger `source_ref` values, and rows that restate a stored one
+    under the reference it is already filed under.
   - `CapturesImportForSync::capture($importRun, $user)` — the
     post-commit hook `Sync` implements. An implementation must not
     throw into the import: a device that could not capture has still
@@ -1044,17 +1045,38 @@ the unit tests, which hand-built a `paypal-receipt` row nothing writes,
 stayed green. That is the drift a second copy of the list invites, and
 it is why there is now only one.
 
-**Receipt-conflict branch** (only when `conflictingFields` is non-empty
-AND the source format is a receipt format): the user's
-`receipt_conflict_resolution` policy decides the outcome —
+**Conflict branch** (whenever `conflictingFields` is non-empty): the
+user's `receipt_conflict_resolution` policy decides the outcome —
 
-- `unset` — INSERTs one `pending_enrichment_conflicts` row and
+- `unset` — upserts one `pending_enrichment_conflicts` row and
   dispatches `ReceiptConflictDetected` per conflicting field (the toast
   surfaces the choice); the per-field UPDATE is skipped.
-- `prefer_receipt` — the incoming (receipt-derived) values land
-  silently in the same UPDATE as the `source_ref` change.
+- `prefer_receipt` — the incoming values land silently in the same
+  UPDATE as the `source_ref` change.
 - `prefer_first_write` — the stored values are kept verbatim; only the
   `source_ref` enrichment proceeds.
+
+**Which disagreements reach the reader** is a second decision, taken in
+`resolutionFor()` and independent of the policy above. An `unset` policy
+resolves to `null` — the one state the toast reads — for two incoming
+shapes, and to `prefer_first_write` for everything else, because the
+toast's original copy asks whether to prefer RECEIPTS and only the
+receipt direction poses that:
+
+- a receipt format on the incoming side, and
+- a row **restating** the stored one: the two `source_ref` values are
+  equal and the totals are not. Its figure is written nowhere else, so
+  settling it unasked is discarding it. See [a reference the ledger
+  already
+  holds](../../architecture/ingestion-pipeline.md#a-reference-the-ledger-already-holds)
+  for the lookup that produces it, and [the toast asks two
+  questions](../receipts/architecture.md#the-toast-asks-two-questions-not-one)
+  for the copy it gets shown under.
+
+Equal references are also what admits such an enrichment past the
+ranking at all: `strengthens()` is false, so `disagreesAboutTheTotal()`
+is the only reason `shouldEnrich()` returns true, and `strongerRef()`
+writes the stored reference back unchanged.
 
 Two encryption guarantees hold regardless of policy: `FingerprintStage`
 decrypts the stored value before ever populating `conflictingFields`, so

@@ -203,7 +203,7 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
 
     private function writeEnrichment(stdClass $row, PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): void
     {
-        $plainUpdates = $this->resolveFieldConflicts($enrichment, $user, $userChoice);
+        $plainUpdates = $this->resolveFieldConflicts($row, $enrichment, $user, $userChoice);
 
         // The four amount columns and the rate are one value. Writing only the
         // native leg left every balance, budget and forecast summing the old
@@ -321,13 +321,13 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
     /**
      * @return array<string, mixed>
      */
-    private function resolveFieldConflicts(PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): array
+    private function resolveFieldConflicts(stdClass $row, PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): array
     {
         if ($enrichment->conflictingFields === []) {
             return [];
         }
 
-        $resolution = $this->resolutionFor($enrichment, $userChoice);
+        $resolution = $this->resolutionFor($row, $enrichment, $userChoice);
 
         // Written down before it is settled, and under every resolution: the
         // policy decides which of the two values stands, never whether the
@@ -339,17 +339,21 @@ final readonly class ApplyEnrichments implements AppliesEnrichments
             : [];
     }
 
-    // Null is the one outcome that reaches the reader, and what the toast asks
-    // is whether to prefer RECEIPTS — a question only the receipt-incoming
-    // direction poses. A statement enriching a receipt-written row settles on
-    // the stored value, which is prefer_first_write's outcome under any name.
-    private function resolutionFor(PendingEnrichment $enrichment, ?ReceiptConflictChoice $userChoice): ?ReceiptConflictChoice
+    // Null is the one outcome that reaches the reader. A row restating one the
+    // ledger already holds under the same reference poses that question as
+    // squarely as a receipt does: its figure is written nowhere else, so
+    // settling it unasked is discarding it.
+    private function resolutionFor(stdClass $row, PendingEnrichment $enrichment, ?ReceiptConflictChoice $userChoice): ?ReceiptConflictChoice
     {
         if ($userChoice !== null) {
             return $userChoice;
         }
 
-        return $this->ranker->isReceiptFormat($enrichment->sourceFormat)
+        $restatesStoredRow = self::storedRef($row) === $enrichment->newSourceRef;
+
+        // Any other statement enriching a receipt-written row settles on the
+        // stored value, which is prefer_first_write's outcome under any name.
+        return $this->ranker->isReceiptFormat($enrichment->sourceFormat) || $restatesStoredRow
             ? null
             : ReceiptConflictChoice::PreferFirstWrite;
     }

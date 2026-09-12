@@ -324,12 +324,22 @@ arithmetic](a-statement-that-did-not-check-its-own-arithmetic.md).
 
 ### MT940
 
-Source-reference policy: when the `:86:` GVC narrative carries a
-non-empty, non-`NOTPROVIDED` `EREF` keyword, that value becomes
-`sourceRef`; otherwise the `:61:` customer-reference (34-char extended
-variant) is used; otherwise `sourceRef` stays null — MT940's reference
-channel is intentionally weaker than CAMT.053's `EndToEndId`, and a
-CAMT enrichment pass may overwrite this value later in the pipeline.
+Source-reference policy: when the `:86:` GVC narrative carries a usable
+`EREF` keyword, that value becomes `sourceRef`; otherwise the `:61:`
+customer-reference (34-char extended variant) is used; otherwise
+`sourceRef` stays null — MT940's reference channel is intentionally
+weaker than CAMT.053's `EndToEndId`, and a CAMT enrichment pass may
+overwrite this value later in the pipeline.
+
+**Usable excludes the sentinels that mean "no reference".** SWIFT fills
+`:61:` field 7 with `NONREF` the way SEPA fills an end-to-end field with
+`NOTPROVIDED`, and `Mt940Adapter::NO_REFERENCE` drops both on either
+channel — the `EREF` arm screened only `NOTPROVIDED`, and the `:61:`
+fallback screened nothing at all. Stored as a reference, either sentinel
+is a lookup key every such row of the account shares, which is precisely
+what [the restatement
+lookup](../../architecture/ingestion-pipeline.md#a-reference-the-ledger-already-holds)
+must never be handed.
 A row is dated on the day the bank BOOKED it — `:61:`'s optional entry
 date (MMDD), falling back to the value date where the line states none —
 and the value date rides along in `value_date`, which is what CSV and
@@ -449,7 +459,8 @@ codes, leading 4-char transaction-type codes (`NTRF`/`NDDT`/`NMSC`/
 Source-reference policy: the empirical Mijn ICS statement carries no
 stable per-transaction identifier, so `sourceRef` is always `null` —
 the v3 `FingerprintComposer` tuple is the only dedup anchor, the same
-posture MT940 takes when `EREF` is absent. Currency policy: EUR-native
+posture MT940 takes when neither of its two reference channels carries
+one. Currency policy: EUR-native
 rows leave the settled pair `null` (NormalizeStage mirrors native into
 settled); foreign-currency rows populate the native pair *and* the
 settled-EUR pair via the trailing `Wisselkoers` line. The native amount

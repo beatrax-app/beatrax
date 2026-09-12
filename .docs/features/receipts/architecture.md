@@ -656,9 +656,53 @@ that, because the listener writes an op-log a rollback cannot reach.
   It is now caught at the UPDATE — the stored row stands, the conflict
   still clears, nothing is announced, and the collision is logged.
 
+## The toast asks two questions, not one
+
+Every conflict the toast has ever shown had a receipt on the incoming
+side: `ApplyEnrichments::resolutionFor()` settled a statement-incoming
+disagreement as `prefer_first_write` without asking. [A row restating one
+the ledger already
+holds](../../architecture/ingestion-pipeline.md#a-reference-the-ledger-already-holds)
+broke that assumption — its figure is written nowhere else, so it reaches
+the reader with `resolution` NULL and a statement on both sides.
+
+`ReceiptConflictQuery` answers which of the two it is, as
+`incomingIsReceipt`, from `SourceRefRanker::isReceiptFormat()` rather than
+re-deriving the split beside it: the copy has to name the same side of it
+that the write-time policy did. Note what that rules out — a CSV preset id
+such as `asn-csv` is not a `SourceFormat` case at all, so a predicate
+written as "is this one of the receipt cases" and a predicate written as
+"is this not a statement" disagree about it.
+
+`ReceiptConflictToast::$restated` is the negation, and the view picks
+between two key sets:
+
+| receipt incoming | restatement |
+|---|---|
+| `conflict.title` | `conflict.restated_title` |
+| `conflict.heading_different` / `heading_cleaner` | `conflict.heading_restated` |
+| `conflict.body` (`:receipt`, `:statement`) | `conflict.restated_body` (`:incoming`, `:stored`) |
+| `conflict.use_receipt` | `conflict.use_restated` |
+| `conflict.keep_statement` | `conflict.keep_stored` |
+
+Both sets drive the same two actions and therefore the same stored policy:
+`prefer_receipt` means "take the value the import brought" and
+`prefer_first_write` means "keep the value on record". The column is named
+for receipts because receipts were once the only source that disagreed;
+the restatement copy asks the question in those terms instead, and storing
+the answer is what stops the same restatement being offered on every later
+statement of that period.
+
+`pending_enrichment_conflicts.incoming_source_format` holds an import
+run's source format, never a matcher key — eleven fixture rows across ten
+test files had `paypal-receipt` in it, which is
+`PaypalReceiptMatcher::key()` and not a format any import writes. Harmless while nothing read the column; it
+chooses the reader's copy now.
+
 ## The conflict heading names a field the sentence never sees
 
-`conflict.heading_different` and `conflict.heading_cleaner` take the field name as
+`conflict.heading_different`, `conflict.heading_cleaner` and
+`conflict.heading_restated` take the field name as
 `:field` and put an adjective in front of it. That works in English, where the adjective
 does not inflect. It does not work in a language that agrees the adjective with the noun's
 gender, because the template cannot know which noun it will receive — `field.amount_minor`,

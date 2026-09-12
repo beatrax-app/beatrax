@@ -18,5 +18,10 @@ return [
         'body' => ':heading (“:receipt”) than the statement (“:statement”). Should Beatrax prefer receipts for future conflicts?',
         'use_receipt' => 'Use receipt',
         'keep_statement' => 'Keep statement',
+        'heading_restated' => 'A later statement records a different :field',
+        'restated_title' => 'Your bank restated this transaction.',
+        'restated_body' => ':heading (“:incoming”) than the row already stored (“:stored”). Should Beatrax prefer the incoming value for future disagreements?',
+        'use_restated' => 'Use the new value',
+        'keep_stored' => 'Keep the stored value',
     ],
 ];

@@ -20,6 +20,12 @@ use Throwable;
 
 final class Mt940Adapter implements SourceAdapter
 {
+    // SWIFT fills a reference field with one of these where the row carries no
+    // reference at all. Stored, the sentinel becomes a lookup key two unrelated
+    // rows share, and the second reads as a restatement of the first.
+    /** @var list<string> */
+    private const array NO_REFERENCE = ['NOTPROVIDED', 'NONREF'];
+
     private ?StatementSummaryData $lastStatementMetadata = null;
 
     public function __construct(
@@ -39,6 +45,15 @@ final class Mt940Adapter implements SourceAdapter
     public function statementMetadata(): ?StatementSummaryData
     {
         return $this->lastStatementMetadata;
+    }
+
+    private static function referenceOrNull(?string $candidate): ?string
+    {
+        $trimmed = trim($candidate ?? '');
+
+        return $trimmed === '' || in_array(mb_strtoupper($trimmed), self::NO_REFERENCE, true)
+            ? null
+            : $trimmed;
     }
 
     public function parse(string $localPath, AccountResolver $accounts): Generator
@@ -234,10 +249,8 @@ final class Mt940Adapter implements SourceAdapter
 
         $counterpartyIban = $narrative?->counterpartyIban;
 
-        $eref = $narrative?->gvcKeywords['EREF'] ?? null;
-        $sourceRef = ($eref !== null && $eref !== '' && $eref !== 'NOTPROVIDED')
-            ? $eref
-            : $line->customerReference;
+        $sourceRef = self::referenceOrNull($narrative?->gvcKeywords['EREF'] ?? null)
+            ?? self::referenceOrNull($line->customerReference);
 
         // SWIFT states the value date first and the booking (entry) date
         // second, and a row belongs to the day the bank BOOKED it — which is

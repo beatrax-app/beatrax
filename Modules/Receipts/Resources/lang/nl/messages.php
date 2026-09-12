@@ -17,5 +17,10 @@ return [
         'body' => ':heading (“:receipt”) dan het afschrift (“:statement”). Moet Beatrax bonnen voorrang geven bij toekomstige conflicten?',
         'use_receipt' => 'Bon gebruiken',
         'keep_statement' => 'Afschrift behouden',
+        'heading_restated' => 'Een later afschrift heeft bij :field een andere waarde',
+        'restated_title' => 'Je bank heeft deze transactie herzien.',
+        'restated_body' => ':heading (“:incoming”) dan de al opgeslagen regel (“:stored”). Moet Beatrax de nieuwe waarde voorrang geven bij toekomstige verschillen?',
+        'use_restated' => 'Nieuwe waarde gebruiken',
+        'keep_stored' => 'Opgeslagen waarde behouden',
     ],
 ];

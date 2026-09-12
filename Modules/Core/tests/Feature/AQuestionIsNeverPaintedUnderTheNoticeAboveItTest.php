@@ -119,7 +119,7 @@ function cornerNoticeDescriptionConflict(User $owner, Account $account, string $
         'field_name' => 'description',
         'stored_value' => json_encode($stored, JSON_THROW_ON_ERROR),
         'incoming_value' => json_encode($incoming, JSON_THROW_ON_ERROR),
-        'incoming_source_format' => 'paypal-receipt',
+        'incoming_source_format' => 'eml',
         'import_run_id' => $run->id,
         'created_at' => $now,
         'updated_at' => $now,

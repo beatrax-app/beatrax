@@ -18,5 +18,10 @@ return [
         'body' => ':heading („:receipt“) než výpis z účtu („:statement“). Má Beatrax u budoucích konfliktů upřednostňovat účtenky?',
         'use_receipt' => 'Použít účtenku',
         'keep_statement' => 'Ponechat výpis z účtu',
+        'heading_restated' => 'Pozdější výpis z účtu uvádí jinou hodnotu v poli „:field“',
+        'restated_title' => 'Banka tuto transakci opravila.',
+        'restated_body' => ':heading („:incoming“) než již uložený řádek („:stored“). Má Beatrax u budoucích rozdílů upřednostňovat novou hodnotu?',
+        'use_restated' => 'Použít novou hodnotu',
+        'keep_stored' => 'Ponechat uloženou hodnotu',
     ],
 ];

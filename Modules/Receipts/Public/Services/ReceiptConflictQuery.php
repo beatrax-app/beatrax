@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
+use Modules\Import\Public\Services\SourceRefRanker;
 
 // Read-side projection of pending_enrichment_conflicts for the
 // first-conflict toast's mount() fallback. Every read is scoped by
@@ -18,10 +19,13 @@ final readonly class ReceiptConflictQuery
 {
     use CoercesScalars;
 
-    public function __construct(private DatabaseManager $db) {}
+    public function __construct(
+        private DatabaseManager $db,
+        private SourceRefRanker $ranker,
+    ) {}
 
     /**
-     * @return array{conflictId: int, transactionId: int, field: string, storedValue: ?string, incomingValue: ?string, sourceFormat: string, storedCurrency: string, incomingCurrency: string}|null
+     * @return array{conflictId: int, transactionId: int, field: string, storedValue: ?string, incomingValue: ?string, sourceFormat: string, incomingIsReceipt: bool, storedCurrency: string, incomingCurrency: string}|null
      */
     public function latestForUser(User $user): ?array
     {
@@ -47,6 +51,7 @@ final readonly class ReceiptConflictQuery
 
         $transactionId = self::toInt($row->transaction_id);
         $storedCurrency = self::toString($row->stored_currency);
+        $sourceFormat = is_string($row->incoming_source_format) ? $row->incoming_source_format : '';
 
         return [
             // The id, not just the transaction: the toast quotes ONE conflict's
@@ -56,7 +61,11 @@ final readonly class ReceiptConflictQuery
             'field' => is_string($row->field_name) ? $row->field_name : '',
             'storedValue' => self::decodeScalar(is_string($row->stored_value) ? $row->stored_value : null),
             'incomingValue' => self::decodeScalar(is_string($row->incoming_value) ? $row->incoming_value : null),
-            'sourceFormat' => is_string($row->incoming_source_format) ? $row->incoming_source_format : '',
+            'sourceFormat' => $sourceFormat,
+            // Which of the two questions the toast asks. Answered by the
+            // ranker rather than re-derived beside it, because the copy has to
+            // name the same side of the split the write-time policy did.
+            'incomingIsReceipt' => $this->ranker->isReceiptFormat($sourceFormat),
             'storedCurrency' => $storedCurrency,
             'incomingCurrency' => $this->incomingCurrencyFor($user, $transactionId) ?? $storedCurrency,
         ];

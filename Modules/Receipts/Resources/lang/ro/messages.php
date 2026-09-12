@@ -18,5 +18,10 @@ return [
         'body' => ':heading („:receipt”) față de extrasul de cont („:statement”). Vrei ca Beatrax să prefere bonurile la conflictele viitoare?',
         'use_receipt' => 'Folosește bonul',
         'keep_statement' => 'Păstrează extrasul',
+        'heading_restated' => 'Un extras de cont ulterior înregistrează o valoare diferită pentru :field',
+        'restated_title' => 'Banca a corectat această tranzacție.',
+        'restated_body' => ':heading („:incoming”) față de rândul deja salvat („:stored”). Vrei ca Beatrax să prefere valoarea nouă la diferențele viitoare?',
+        'use_restated' => 'Folosește valoarea nouă',
+        'keep_stored' => 'Păstrează valoarea salvată',
     ],
 ];

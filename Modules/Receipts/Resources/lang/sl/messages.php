@@ -18,5 +18,10 @@ return [
         'body' => ':heading („:receipt“) kot izpisek („:statement“). Ali naj Beatrax pri prihodnjih neujemanjih daje prednost potrdilom?',
         'use_receipt' => 'Uporabi potrdilo',
         'keep_statement' => 'Obdrži izpisek',
+        'heading_restated' => 'Poznejši izpisek beleži drugačen :field',
+        'restated_title' => 'Banka je to transakcijo popravila.',
+        'restated_body' => ':heading („:incoming“) kot že shranjena vrstica („:stored“). Ali naj Beatrax pri prihodnjih neujemanjih daje prednost novi vrednosti?',
+        'use_restated' => 'Uporabi novo vrednost',
+        'keep_stored' => 'Obdrži shranjeno vrednost',
     ],
 ];

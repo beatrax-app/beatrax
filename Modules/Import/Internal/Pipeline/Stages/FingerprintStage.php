@@ -9,6 +9,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Internal\Services\NearTotalMatch;
+use Modules\Import\Internal\Services\RestatedRowMatch;
+use Modules\Import\Public\Dto\EnrichedDisposition;
 use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Enums\EnrichmentConflictField;
 use Modules\Import\Public\Services\SourceRefRanker;
@@ -31,6 +33,7 @@ final readonly class FingerprintStage
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
         private NearTotalMatch $nearTotals,
+        private RestatedRowMatch $restatements,
     ) {}
 
     public function classify(CanonicalTransaction $tx, User $user): FingerprintDisposition
@@ -38,8 +41,29 @@ final readonly class FingerprintStage
         $existing = $this->exactMatch($tx, $user);
 
         return $existing === null
-            ? $this->nearTotalDisposition($tx, $user)
+            ? $this->unmatchedDisposition($tx, $user)
             : $this->rankedDisposition($existing, $tx, $user);
+    }
+
+    // A reference the ledger already holds is an exact answer, so it is asked
+    // before the receipt band's approximate one. Where both fire they point at
+    // one row, and the reference is the term the bank itself assigned.
+    private function unmatchedDisposition(CanonicalTransaction $tx, User $user): FingerprintDisposition
+    {
+        $reference = $tx->sourceRef;
+
+        // Both arms below need a reference of the row's own: one to find the
+        // stored row by, the other to weigh against the stored one. Without it
+        // the ledger bridge leaves such a row as the sole occurrence of itself.
+        if ($reference === null) {
+            return FingerprintDisposition::newRow();
+        }
+
+        $restated = $this->restatements->matching($tx, $user);
+
+        return $restated === null
+            ? $this->nearTotalDisposition($tx, $reference, $user)
+            : $this->enrichedAgainst($restated, $tx, $reference, $user);
     }
 
     private function exactMatch(CanonicalTransaction $tx, User $user): ?stdClass
@@ -55,14 +79,9 @@ final readonly class FingerprintStage
     // nearly matches, so the two are one event and the difference a
     // disagreement to record. Only an incoming receipt gets the band: a
     // statement is the authority on what settled, and no fuzzy total absorbs one.
-    private function nearTotalDisposition(CanonicalTransaction $tx, User $user): FingerprintDisposition
+    private function nearTotalDisposition(CanonicalTransaction $tx, string $incomingRef, User $user): FingerprintDisposition
     {
-        $incomingRef = $tx->sourceRef;
-
-        // Without a reference of its own the receipt has nothing to attach and
-        // nothing the ranker can weigh, which is the same reason the ledger
-        // bridge leaves such a message as the sole occurrence of itself.
-        if ($incomingRef === null || ! $this->ranker->isReceiptFormat($tx->sourceFormat)) {
+        if (! $this->ranker->isReceiptFormat($tx->sourceFormat)) {
             return FingerprintDisposition::newRow();
         }
 
@@ -73,12 +92,20 @@ final readonly class FingerprintStage
         // disagrees.
         return $near === null
             ? FingerprintDisposition::newRow()
-            : FingerprintDisposition::enriched(
-                existingId: self::toInt($near->id),
-                fromSourceRef: self::storedRefOf($near),
-                toSourceRef: $incomingRef,
-                conflictingFields: $this->detectConflicts($near, $tx, $user),
-            );
+            : $this->enrichedAgainst($near, $tx, $incomingRef, $user);
+    }
+
+    // One construction for all three arms, so the near-total and restatement
+    // lookups cannot hand the applier a disposition shaped unlike the exact
+    // arm's.
+    private function enrichedAgainst(stdClass $existing, CanonicalTransaction $tx, string $incomingRef, User $user): EnrichedDisposition
+    {
+        return FingerprintDisposition::enriched(
+            existingId: self::toInt($existing->id),
+            fromSourceRef: self::storedRefOf($existing),
+            toSourceRef: $incomingRef,
+            conflictingFields: $this->detectConflicts($existing, $tx, $user),
+        );
     }
 
     private static function storedRefOf(stdClass $row): ?string
@@ -103,12 +130,7 @@ final readonly class FingerprintStage
             return FingerprintDisposition::duplicate();
         }
 
-        return FingerprintDisposition::enriched(
-            existingId: self::toInt($existing->id),
-            fromSourceRef: $existingRef,
-            toSourceRef: $incomingRef,
-            conflictingFields: $this->detectConflicts($existing, $tx, $user),
-        );
+        return $this->enrichedAgainst($existing, $tx, $incomingRef, $user);
     }
 
     /**

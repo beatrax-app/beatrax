@@ -18,5 +18,10 @@ return [
         'body' => ':heading — kvittot anger ”:receipt”, kontoutdraget ”:statement”. Ska Beatrax föredra kvitton vid framtida konflikter?',
         'use_receipt' => 'Använd kvittot',
         'keep_statement' => 'Behåll kontoutdraget',
+        'heading_restated' => 'Ett senare kontoutdrag har avvikande :field',
+        'restated_title' => 'Banken har korrigerat den här transaktionen.',
+        'restated_body' => ':heading — det senare kontoutdraget anger ”:incoming”, den sparade raden ”:stored”. Ska Beatrax föredra det nya värdet vid framtida avvikelser?',
+        'use_restated' => 'Använd det nya värdet',
+        'keep_stored' => 'Behåll det sparade värdet',
     ],
 ];
