@@ -53,7 +53,6 @@
                     name="username"
                     wire:model="username"
                     autocomplete="username"
-                    autofocus
                 />
 
                 {{-- The live checklist below describes this field better than the

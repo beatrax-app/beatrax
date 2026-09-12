@@ -126,11 +126,14 @@
                                hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
                         data-testid="ob-confirm-disconnect"
                     >{{ Lang::get('openbanking::messages.disconnect.confirm') }}</button>
+                    {{-- Cancel is what the dialog opens onto, not Disconnect:
+                         the destructive half of a confirm should cost a
+                         deliberate move to reach. --}}
                     <x-core::secondary-button
                         block="flex"
                         class="min-h-[44px]"
                         wire:click="cancelDisconnect"
-                        autofocus
+                        x-init="$nextTick(() => $el.focus())"
                         data-testid="ob-cancel-disconnect"
                     >{{ Lang::get('openbanking::messages.disconnect.cancel') }}</x-core::secondary-button>
                 </div>

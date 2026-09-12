@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 
@@ -116,3 +117,26 @@ it('rejects an invalid close_behavior value (validation guard)', function (): vo
 
     expect($this->user->fresh()->close_behavior)->toBeNull();
 })->group('phase-15');
+
+it('takes focus on the event that opens the dialog rather than on the load behind it', function (): void {
+    // The prompt is the whole window and the dialog is opened from mount(), so
+    // the row is in the document before the dialog is: an x-init here would
+    // reach a button inside a closed <dialog>, where focus() does nothing.
+    $html = Livewire::test(CloseWindowPrompt::class)->html();
+    $markup = RenderedMarkup::of($html);
+
+    $keepInTray = $markup->firstOrFail('[x-ref="keepInTray"]');
+
+    expect($keepInTray->attribute('wire:click'))->toBe('chooseKeepInTray')
+        ->and($keepInTray->attribute('autofocus'))->toBeNull(
+            'autofocus reads as focus on document load, which is what it is everywhere but a dialog and a popover'
+        );
+
+    $onOpen = (string) $markup->firstOrFail('[x-on\:modal-show\.document]')
+        ->attribute('x-on:modal-show.document');
+
+    // The ref the listener reaches for and the ref the button registers are two
+    // strings that have to be the same one, and nothing else checks that.
+    expect($onOpen)->toContain('$refs.keepInTray.focus()')
+        ->and($onOpen)->toContain(CloseWindowPrompt::MODAL_NAME);
+});

@@ -30,7 +30,7 @@
                 class="text-left"
                 :label="Lang::get('openbanking::messages.warning.acknowledge')"
                 wire:model.live="acknowledged"
-                autofocus
+                x-init="$nextTick(() => $el.focus())"
                 aria-label="{{ Lang::get('openbanking::messages.warning.acknowledge') }}"
                 data-testid="ob-warning-checkbox"
             />

@@ -376,3 +376,22 @@ it('keeps the drawn chart out of the morph, whichever viz is mounted', function 
         'the '.$viz.' chart target is morphed, so any action that raises no report-updated blanks it',
     );
 })->with(['bar', 'line', 'donut']);
+
+it('focuses the report-name box when the click reveals it, which autofocus never did', function (): void {
+    $user = rbUser();
+    test()->actingAs($user);
+
+    $builder = Livewire::test(ReportBuilder::class);
+
+    expect(RenderedMarkup::of($builder->html())->has('.srch-amount-input'))->toBeFalse(
+        'the box is behind showSaveForm, so it is not in the document the autofocus pass read'
+    );
+
+    // A document stops accepting autofocus candidates once focus has left its
+    // body, and the click that reveals this box is what moves it. The attribute
+    // that used to sit here had therefore never fired.
+    $box = RenderedMarkup::of($builder->call('openSaveForm')->html())->firstOrFail('.srch-amount-input');
+
+    expect($box->attribute('x-init'))->toBe('$nextTick(() => $el.focus())')
+        ->and($box->attribute('autofocus'))->toBeNull();
+});

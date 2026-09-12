@@ -40,7 +40,17 @@
 
             <x-core::checkbox-field :label="$checkboxRemember" wire:model="rememberChoice" />
 
-            <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            {{--
+                Focus is taken on the event that opens the dialog, because this
+                row is in the document from the first paint and so has no moment
+                of its own to focus itself at. mount() dispatches modal-show,
+                Flux's dialog answers the same event by calling showModal().
+            --}}
+            <div
+                class="flex flex-col gap-2 sm:flex-row sm:justify-end"
+                x-data
+                x-on:modal-show.document="$event.detail && $event.detail.name === @js($modalName) && $nextTick(() => $refs.keepInTray.focus())"
+            >
                 {{--
                     "Quit Beatrax" — destructive, rose-styled, NOT
                     default-focused (UI-SPEC). The heavier choice
@@ -58,14 +68,14 @@
 
                 {{--
                     "Keep running in the tray" — primary action,
-                    emerald-600, default-focused (autofocus). Keeps
+                    emerald-600, and the one the dialog opens onto. Keeps
                     the worker + scheduler alive so the
                     partner's background work continues uninterrupted.
                 --}}
                 <button
                     type="button"
                     wire:click="chooseKeepInTray"
-                    autofocus
+                    x-ref="keepInTray"
                     class="h-12 rounded-md bg-emerald-700 px-5 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:bg-emerald-700 dark:hover:bg-emerald-800"
                 >
                     {{ $buttonKeepInTray }}

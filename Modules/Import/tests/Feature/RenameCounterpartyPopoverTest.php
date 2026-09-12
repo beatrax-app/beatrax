@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Import\Internal\Exceptions\MerchantAliasPatternTooShortException;
 use Modules\Import\Internal\Http\Livewire\RenameCounterpartyPopover;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
@@ -126,4 +127,26 @@ it('renders the italic desc-fallback span when aliasFriendlyName is null and the
     expect($html)->toContain('BCK*SHELL PIETER NIEUW *0123');
     expect($html)->toContain('Bol.com');
     expect($html)->toContain('rename-counterparty:open');
+});
+
+it('focuses the friendly-name box when the popover opens, not when the page behind it loads', function (): void {
+    // The modal is mounted once at the bottom of the wizard and opened by an
+    // event, so the box is in the document long before the reader asks for it.
+    $markup = RenderedMarkup::of(
+        Livewire::test(RenameCounterpartyPopover::class)
+            ->dispatch('rename-counterparty:open', raw: 'SHELL PIETER NIEUW', rowIndex: 0)
+            ->html()
+    );
+
+    $box = $markup->firstOrFail('#rename-popover-friendly');
+
+    expect($box->attribute('x-ref'))->toBe('friendly')
+        ->and($box->attribute('autofocus'))->toBeNull();
+
+    $onOpen = (string) $markup->firstOrFail('form')->attribute('x-on:modal-show.document');
+
+    // The ref the listener reaches for and the ref the box registers are two
+    // strings that have to be the same one, and nothing else checks that.
+    expect($onOpen)->toContain('$refs.friendly.focus()')
+        ->and($onOpen)->toContain('rename-counterparty');
 });
