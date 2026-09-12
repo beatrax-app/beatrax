@@ -38,7 +38,7 @@ it('shows every durable location the inventory holds, resolved', function (): vo
     $user = hdlUser(false, 'hdl-paths');
     $locations = UserDataLocations::all();
 
-    expect($locations)->toHaveCount(7);
+    expect($locations)->toHaveCount(11);
 
     $component = Livewire::actingAs($user)->test(HelpDataLocations::class);
 
@@ -52,7 +52,7 @@ it('gives every location its own aria-labelled copy button', function (): void {
     $user = hdlUser(false, 'hdl-aria');
     $locations = UserDataLocations::all();
 
-    expect($locations)->toHaveCount(7);
+    expect($locations)->toHaveCount(11);
 
     $component = Livewire::actingAs($user)->test(HelpDataLocations::class);
 
@@ -104,7 +104,7 @@ it('names every path in the deletion procedure, journal files included', functio
     $locations = UserDataLocations::all();
     $databaseFiles = UserDataLocations::databaseFiles();
 
-    expect($locations)->toHaveCount(7)
+    expect($locations)->toHaveCount(11)
         ->and($databaseFiles)->toHaveCount(3);
 
     $component = Livewire::actingAs($user)->test(HelpDataLocations::class);

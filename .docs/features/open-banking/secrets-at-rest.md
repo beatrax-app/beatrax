@@ -238,9 +238,10 @@ could spend. Four things keep it here, and none of them is an accident:
 - The database backup is a `VACUUM INTO` of the database. The credentials were
   moved out of the database precisely so that it cannot carry them.
 
-Deleting an account takes its file with it:
-`secrets/open-banking/%d.json` is in `UserScopedFilePurge::KEYED_TO_THE_ACCOUNT`,
-not only in the device-wide sweep that runs for the last account on the device.
+Deleting an account takes its file with it: `secrets/open-banking/%d.json` is
+account-scoped in the inventory `UserScopedFilePurge` reads, and named there as
+key material — so it goes with the account, not only in the device-wide sweep
+that runs for the last account on the device.
 SQLite reuses row ids, so a file left behind is a file a future account would
 inherit. That tier is removed *after* the deletion commits and each path is read
 back, because a rollback cannot put a file back: unlinking inside the
