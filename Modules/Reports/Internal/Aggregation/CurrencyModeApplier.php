@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\ConvertedTotal;
 use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Dto\Period;
@@ -183,12 +184,7 @@ final readonly class CurrencyModeApplier
         // banner reads ":count not converted", so flagging without counting
         // renders a literal zero beside the warning.
         $fees = $this->fx->withRates($otherMovements->byCurrency, $baseCurrency, $rates);
-        foreach ($fees->unconverted as $code) {
-            $excludedCurrencies[$code] = true;
-        }
-        foreach ($fees->rates->codes() as $code) {
-            $pricedCurrencies[$code] = true;
-        }
+        self::foldFees($fees, $excludedCurrencies, $pricedCurrencies);
 
         $excluded = self::sortedCodes($excludedCurrencies);
 
@@ -200,6 +196,23 @@ final readonly class CurrencyModeApplier
             otherMovementsByCurrency: $fees->minor === 0 ? [] : [$baseCurrency => $fees->minor],
             conversion: ConversionDisclosure::of($rates->only(self::sortedCodes($pricedCurrencies)), $excluded),
         );
+    }
+
+    // A fee bucket answers for both sets: the code it could not price belongs
+    // to the exclusion, and the code it did belongs to the disclosure.
+    /**
+     * @param  array<string, true>  $excludedCurrencies
+     * @param  array<string, true>  $pricedCurrencies
+     */
+    private static function foldFees(ConvertedTotal $fees, array &$excludedCurrencies, array &$pricedCurrencies): void
+    {
+        foreach ($fees->unconverted as $code) {
+            $excludedCurrencies[$code] = true;
+        }
+
+        foreach ($fees->rates->codes() as $code) {
+            $pricedCurrencies[$code] = true;
+        }
     }
 
     // The currency's own subtotal converts once and the remainder is handed back

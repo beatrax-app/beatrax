@@ -175,19 +175,30 @@ module:
   reader with four ARS accounts, each holding an unconvertible expense,
   was told "1 account not converted" while ARS 2,300.00 of spend went
   missing. Both are now SETS — `excludedCurrencies: list<string>` and
-  `excludedAccountIds: list<int>` — which also makes the compare-mode
-  union correct: the previous window's counters used to be ADDED to the
-  current window's, so a currency unconvertible in both periods counted
-  as two. The transaction path renders through
-  `x-core::fx-disclosure`, which names the currency in the sentence the
-  dashboard already uses and the rate the rest of the report converted
-  at; the balance path keeps `reports::builder.fx_excluded`, which counts
-  accounts and is right there. `'original'` mode discloses no rate,
-  because it converts nothing — its disclosure carries an empty rate set
-  and the exclusion list only. The net-worth metric discloses no rate
-  either, and for a different reason: `NetWorthSeriesQuery` converts each
-  account line at each bucket's own historical rate, so a sixty-bucket
-  series has sixty rate sets and no single one answers for the headline. The
+  `excludedAccounts: array<int, string>`, account id => name — which
+  also makes the compare-mode union correct: the previous window's
+  counters used to be ADDED to the current window's, so a currency
+  unconvertible in both periods counted as two. Keyed by id, because
+  that is the identity a series unions on: one unconvertible account
+  sampled over sixty buckets is one account. The name rides along
+  because both paths say the same sentence, and both now say it through
+  `x-core::fx-disclosure` — the currencies beside the rate the rest of
+  the report converted at, the accounts through
+  `ReportResultDto::excludedAccountNames()` with no rate set at all,
+  because an account is out precisely because no rate reached its
+  currency. A count said the total was short without saying which
+  account to go and look at, which is what
+  [B10-R17](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md)
+  asks for; `reports::builder.fx_excluded` is retired, and the compare
+  union preserves keys (`ReportAggregator::unionAccounts`) rather than
+  renumbering them.
+
+  `'original'` mode discloses no rate, because it converts nothing — its
+  disclosure carries an empty rate set and the exclusion list only. The
+  net-worth metric discloses no rate either, and for a different reason:
+  `NetWorthSeriesQuery` converts each account line at each bucket's own
+  historical rate, so a sixty-bucket series has sixty rate sets and no
+  single one answers for the headline. The
   rate for every discovered currency, fees included, is fetched once
   per report: each dimension query returns rows already scoped to the
   one currency it was asked for, so converting per row read the whole

@@ -3,7 +3,7 @@
     'id',              // Required. Unique on the page — it becomes the popover's id and its anchor name.
     'label' => null,   // The figure this is about, already localised, for the trigger's accessible name.
     'onlineRates' => null,  // Whether online rate fetching is on, where the surface knows it; null leaves the note neutral.
-    'flat' => false,   // A print target: the lines render inline instead of behind a popover.
+    'flat' => false,   // A print target: the rate lines render inline instead of behind a popover.
 ])
 
 @use('Carbon\CarbonImmutable')
@@ -40,9 +40,12 @@
     rather than a child of it, because the caller's own colour and type classes
     land on the line and would otherwise cascade into the panel.
 
-    **Do not place this inside a `<p>`**: a popover is a `<div>`, and a block
-    start tag closes an open paragraph in the parser, which moves everything
-    after it out of the paragraph.
+    **A disclosure that carries rates must not be placed inside a `<p>`**: the
+    popover is a `<div>`, and a block start tag closes an open paragraph in the
+    parser, which moves everything after it out of the paragraph. One with no
+    rates — an exclusion list on its own, which is what a net-worth account
+    line or a report's account line hands over — draws no popover at all and is
+    phrasing content, so it may finish a sentence.
 
     `flat` is for the PDF export. dompdf implements neither `[popover]` nor the
     UA rule that hides one, so the panel would print as unstyled text after the

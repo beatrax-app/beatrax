@@ -8,7 +8,6 @@ return [
 
     'across' => ':count tilillä|:count tilillä',
 
-    'not_converted' => '· :count tiliä ei muunnettu — kurssia ei saatavilla|· :count tiliä ei muunnettu — kurssia ei saatavilla',
     'no_rate_available' => '· kurssia ei saatavilla',
 
     'toggle_hide' => 'Piilota',

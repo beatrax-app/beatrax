@@ -379,12 +379,17 @@
                             </span>
                         </div>
                     @endforeach
-                    {{-- Currencies for a transaction metric, accounts for a
-                         balance: one counter used to say "1 account" over four
-                         unconvertible ARS accounts, because it was counting
-                         currencies and the sentence named accounts. --}}
-                    {{-- Amber only where a currency was left out: a rate the
-                         reader does have is information, not a warning. --}}
+                    {{-- Two lines, not one field: a transaction metric leaves
+                         CURRENCIES out of the total and a balance leaves
+                         ACCOUNTS out, and each names what it dropped. A count
+                         told a reader which figure was short but not which
+                         account to go and look at.
+
+                         Amber only where something WAS left out: a rate the
+                         reader does have is information, not a warning. The
+                         account line carries no rate set — an account is left
+                         out because no rate reached its currency, so there is
+                         none to name. --}}
                     <x-core::fx-disclosure
                         :disclosure="$result->conversion"
                         id="report-total"
@@ -392,11 +397,13 @@
                         class="block text-xs"
                         style="color: var({{ $result->excludedCurrencies === [] ? '--color-text-muted' : '--color-amber' }});"
                     />
-                    @if ($result->excludedAccountIds !== [])
-                        <p class="text-xs" style="color: var(--color-amber);">
-                            {{ Lang::choice('reports::builder.fx_excluded', count($result->excludedAccountIds), ['count' => count($result->excludedAccountIds)]) }}
-                        </p>
-                    @endif
+                    <x-core::fx-disclosure
+                        :disclosure="$result->accountExclusion()"
+                        id="report-accounts"
+                        :label="$metricLabel"
+                        class="block text-xs"
+                        style="color: var(--color-amber);"
+                    />
                 </div>
 
                 {{-- Always-on data table — same $displayRows as the chosen chart --}}

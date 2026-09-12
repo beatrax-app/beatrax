@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'face ao período anterior',
     'view_transactions' => 'Ver transações',
 
-    'fx_excluded' => ':count conta não convertida — não há taxa disponível|:count contas não convertidas — não há taxa disponível',
-
     'group_header' => [
         'category' => 'Categoria',
         'counterparty' => 'Contraparte',

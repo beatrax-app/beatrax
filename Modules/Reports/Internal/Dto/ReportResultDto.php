@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Dto;
 
 use Modules\FX\Public\Dto\ConversionDisclosure;
+use Modules\FX\Public\Dto\RateSet;
 use Spatie\LaravelData\Data;
 
 final class ReportResultDto extends Data
@@ -12,7 +13,7 @@ final class ReportResultDto extends Data
     /**
      * @param  list<ReportResultRow>  $rows
      * @param  list<string>  $excludedCurrencies  settled currencies left out of a base-mode total because no rate reaches the reader's own — a SET, so the same currency excluded in both compared windows is still one currency
-     * @param  list<int>  $excludedAccountIds  accounts left out of a net-worth point for the same reason; a set for the same reason, and a different thing from the currencies above — one field meaning both told a reader with four unconvertible accounts that one account was missing
+     * @param  array<int, string>  $excludedAccounts  account id => name for accounts left out of a net-worth point for the same reason; keyed by id for the same set semantics, and a different thing from the currencies above — one field meaning both told a reader with four unconvertible accounts that one account was missing
      * @param  ?list<ReportResultRow>  $comparisonRows  Only populated when the driving ReportDefinition has compare = true
      * @param  array<string, int>  $otherMovementsByCurrency  settled currency => fees/adjustments/uncounted refunds over the same period and filters — money no metric counts, reported beside the total rather than folded into it. Keyed by currency because 'original' mode converts nothing, so a fee bucket outside the headline currency has nowhere else to be said.
      * @param  ?int  $previousTotalMinor  The previous period's own headline total, computed the same way this one is — never re-derived by summing rows, which mixes currencies and adds balances across buckets. Null when the previous window produced nothing and the join reads a missing counterpart as unknown rather than as zero.
@@ -23,7 +24,7 @@ final class ReportResultDto extends Data
         public readonly int $totalMinor,
         public readonly string $currency,
         public readonly array $excludedCurrencies = [],
-        public readonly array $excludedAccountIds = [],
+        public readonly array $excludedAccounts = [],
         public readonly ?array $comparisonRows = null,
         public readonly array $otherMovementsByCurrency = [],
         public readonly ?int $previousTotalMinor = null,
@@ -33,6 +34,29 @@ final class ReportResultDto extends Data
 
     public function hasExclusions(): bool
     {
-        return $this->excludedCurrencies !== [] || $this->excludedAccountIds !== [];
+        return $this->excludedCurrencies !== [] || $this->excludedAccounts !== [];
+    }
+
+    // The sentence names accounts, and two accounts a reader gave the same name
+    // are one name to read: deduplicated here rather than printing it twice.
+    /**
+     * @return list<string>
+     */
+    public function excludedAccountNames(): array
+    {
+        $names = array_values(array_unique($this->excludedAccounts));
+        sort($names);
+
+        return $names;
+    }
+
+    // The account line says the same sentence as the currency line and goes
+    // through the same component, with no rate set: an account is out because
+    // no rate reached its currency, so there is none to name beside it.
+    public function accountExclusion(): ?ConversionDisclosure
+    {
+        return $this->excludedAccounts === []
+            ? null
+            : ConversionDisclosure::of(RateSet::empty($this->currency), $this->excludedAccountNames());
     }
 }

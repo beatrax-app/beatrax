@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'vs eelmine periood',
     'view_transactions' => 'Vaata tehinguid',
 
-    'fx_excluded' => ':count kontot ei teisendatud — kurss puudub|:count kontot ei teisendatud — kurss puudub',
-
     'group_header' => [
         'category' => 'Kategooria',
         'counterparty' => 'Vastaspool',

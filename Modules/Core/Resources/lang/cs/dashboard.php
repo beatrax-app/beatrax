@@ -31,6 +31,7 @@ return [
     'th_category' => 'Kategorie',
     'th_amount' => 'Částka',
     'uncategorized' => 'Bez kategorie',
+    'uncategorized_count' => ':count transakce bez kategorie|:count transakce bez kategorie|:count transakcí bez kategorie',
 
     'jump_to_records' => [
         'body' => 'Za toto období tu nic není. Vaše nejnovější transakce tu stále jsou.',

@@ -39,10 +39,22 @@
                     @php($accountCount = $netWorth->accountCount())
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {{ Lang::choice('core::net_worth.across', $accountCount, ['count' => $accountCount]) }}
-                        @if ($netWorth->balancesWithoutRate > 0)
-                            {{-- No-rate fallback (§7.4 UI-SPEC) — replaces old "excludes non-EUR balances" span --}}
-                            <span style="color: var(--color-amber);">{{ Lang::choice('core::net_worth.not_converted', $netWorth->balancesWithoutRate, ['count' => $netWorth->balancesWithoutRate]) }}</span>
-                        @endif
+                        {{-- No-rate fallback (§7.4 UI-SPEC). The accounts by
+                             name, not a tally of balances: the breakdown that
+                             names them is behind a button, so a reader who
+                             never pressed it was told a figure was short and
+                             not which account was missing from it.
+
+                             Inside the paragraph because it finishes its
+                             sentence, which is safe for exactly this
+                             disclosure: it carries no rates, so the component
+                             draws no popover and stays phrasing content. --}}
+                        <x-core::fx-disclosure
+                            :disclosure="$netWorth->accountExclusion()"
+                            id="net-worth-accounts"
+                            :label="Lang::get('core::net_worth.heading')"
+                            style="color: var(--color-amber);"
+                        />
                     </p>
 
                     {{-- Every rate, source, as-of date and stale note on this

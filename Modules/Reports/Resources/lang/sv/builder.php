@@ -100,8 +100,6 @@ return [
     'vs_previous' => 'mot föregående period',
     'view_transactions' => 'Visa transaktioner',
 
-    'fx_excluded' => ':count konto har inte räknats om — ingen kurs tillgänglig|:count konton har inte räknats om — ingen kurs tillgänglig',
-
     'group_header' => [
         'category' => 'Kategori',
         'counterparty' => 'Motpart',

@@ -1426,9 +1426,14 @@ display currency), `topCategories` (delegated to
 `TransactionListQuery::recent`, which the display currency switches to
 the settled projection rather than filtering, so every dashboard panel
 agrees on the currency in view without losing rows),
-`uncategorizedCount` (lifetime count driving the nav badge), and
-`isFirstRun` (true when the user has zero transactions across all
-time — the route handler redirects to `/imports/new` until then).
+`uncategorizedCount` (lifetime count of rows with no category, split
+parents excluded, read off the `transactions_uncategorized_idx` partial
+index), and `isFirstRun` (true when the user has zero transactions
+across all time — the route handler redirects to `/imports/new` until
+then). No nav badge reads the count: the dashboard renders it as a tile
+linking to `/uncategorized`, above the period figures, because a triage
+queue is what needs attention first. `TriageInbox` counts the same
+predicate itself for its own header.
 
 **Subtractive income rule.** Inflow/outflow filter by
 `transactions.type`, never by amount sign — a `transfer_in` row carries
