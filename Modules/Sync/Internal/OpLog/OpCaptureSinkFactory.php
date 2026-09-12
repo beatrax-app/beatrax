@@ -6,6 +6,8 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
+use Modules\Core\Public\Exceptions\BackupIoException;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\DeviceSyncStandingReader;
 use Psr\Log\LoggerInterface;
 
@@ -26,14 +28,23 @@ final readonly class OpCaptureSinkFactory
         private LoggerInterface $log,
     ) {}
 
-    // Four states cannot sign and all four defer: a console with no session,
-    // an engaged app-lock, a key-file no key in this database opens, and a
-    // restored database whose self row names a key-file that never travelled.
+    // Five states cannot sign and all five defer: a console with no session,
+    // an engaged app-lock, a key-file no key in this database opens, a
+    // restored database whose self row names a key-file that never travelled,
+    // and the key-file failing to READ at all.
+    //
+    // The last one is not a BindingResolutionException and used to escape here.
+    // DeviceIdentityLoader::load() declares it — the loader turns "will not
+    // open" into a state and leaves a genuine I/O fault as a throw — so an
+    // EMFILE, a permissions blip or a full volume at the moment of a write
+    // reached the listener's last-resort catch, which logs and returns. That
+    // is the one path where nothing is owed afterwards: no deferred coordinate,
+    // no backfill, and the edit never reaches the peer.
     public function forUser(int $userId): OpCaptureSink
     {
         try {
             return $this->container->make(OpLogWriter::class);
-        } catch (BindingResolutionException) {
+        } catch (BindingResolutionException|SecretFileException|BackupIoException) {
             return $this->withoutASigningKey($userId);
         }
     }
