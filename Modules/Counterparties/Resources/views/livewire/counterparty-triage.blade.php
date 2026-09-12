@@ -128,7 +128,7 @@
             <p class="triage-meta">
                 {{ Lang::choice('counterparties::triage.meta', count($recentTransactions), [
                     'count' => count($recentTransactions),
-                    'date' => ! empty($recentTransactions) ? Fmt::shortDate((string) $recentTransactions[0]->posted_at) : '—',
+                    'date' => $recentTransactions !== [] ? Fmt::shortDate((string) $recentTransactions[0]->posted_at) : '—',
                 ]) }}
             </p>
 

@@ -80,11 +80,11 @@
 </div>
 
 {{-- ─── Account chip ───────────────────────────────────────────────────── --}}
-@if (! empty($availableAccounts ?? []))
+@if (($availableAccounts ?? []) !== [])
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <span class="srch-chip {{ ! empty($filterAccounts ?? []) ? 'srch-chip--active' : '' }}">
+        <span class="srch-chip {{ ($filterAccounts ?? []) !== [] ? 'srch-chip--active' : '' }}">
             <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
-                @if (! empty($filterAccounts ?? []))
+                @if (($filterAccounts ?? []) !== [])
                     @php
                         $acctCount = count($filterAccounts);
                         $acctCounted = Lang::choice('ledger::list.filter.acct', $acctCount, ['count' => $acctCount]);
@@ -97,7 +97,7 @@
                     {{ Lang::get('ledger::list.filter.account') }} &#9662;
                 @endif
             </button>
-            @if (! empty($filterAccounts ?? []))
+            @if (($filterAccounts ?? []) !== [])
                 <button
                     type="button"
                     wire:click.stop="$set('filterAccounts', [])"
@@ -225,7 +225,7 @@
 </div>
 
 {{-- ─── Category chip ──────────────────────────────────────────────────── --}}
-@if (! empty($availableCategories ?? []))
+@if (($availableCategories ?? []) !== [])
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
         @php
             // "No category" is one of the buckets this chip can hold, so it

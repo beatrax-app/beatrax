@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Http;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Routing\Router;
 use Illuminate\Routing\UrlGenerator;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl;
@@ -32,7 +32,7 @@ final class BridgeSignedUploadUrl extends GenerateSignedUploadUrl
         $configured = FileUploadConfiguration::maxUploadTime();
         $minutes = is_int($configured) || is_float($configured) ? $configured : 5;
 
-        $expiry = Carbon::now()->addMinutes($minutes);
+        $expiry = CarbonImmutable::now()->addMinutes($minutes);
 
         // Everywhere the app's own generator writes a root the verifier can
         // rebuild, the ordinary absolute URL already verifies. Keyed on the
