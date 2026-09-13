@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Druga strana',
         'account' => 'Račun',
         'month' => 'Mesec',
+        'week' => 'Nedelja',
         'default' => 'Grupa',
     ],
 

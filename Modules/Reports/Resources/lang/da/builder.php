@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Modpart',
         'account' => 'Konto',
         'month' => 'Måned',
+        'week' => 'Uge',
         'default' => 'Gruppe',
     ],
 

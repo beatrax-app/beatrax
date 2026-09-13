@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Darījuma partneris',
         'account' => 'Konts',
         'month' => 'Mēnesis',
+        'week' => 'Nedēļa',
         'default' => 'Grupa',
     ],
 

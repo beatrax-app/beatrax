@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Vastapuoli',
         'account' => 'Tili',
         'month' => 'Kuukausi',
+        'week' => 'Viikko',
         'default' => 'Ryhmä',
     ],
 

@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Karşı taraf',
         'account' => 'Hesap',
         'month' => 'Ay',
+        'week' => 'Hafta',
         'default' => 'Grup',
     ],
 

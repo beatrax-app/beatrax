@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Motpart',
         'account' => 'Konto',
         'month' => 'Månad',
+        'week' => 'Vecka',
         'default' => 'Grupp',
     ],
 

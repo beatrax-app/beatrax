@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Kita šalis',
         'account' => 'Sąskaita',
         'month' => 'Mėnuo',
+        'week' => 'Savaitė',
         'default' => 'Grupė',
     ],
 

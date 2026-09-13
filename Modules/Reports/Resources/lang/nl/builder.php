@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Tegenpartij',
         'account' => 'Rekening',
         'month' => 'Maand',
+        'week' => 'Week',
         'default' => 'Groep',
     ],
 

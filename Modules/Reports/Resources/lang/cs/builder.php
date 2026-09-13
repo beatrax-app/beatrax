@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Protistrana',
         'account' => 'Účet',
         'month' => 'Měsíc',
+        'week' => 'Týden',
         'default' => 'Skupina',
     ],
 

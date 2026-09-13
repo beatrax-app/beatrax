@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Tiers',
         'account' => 'Compte',
         'month' => 'Mois',
+        'week' => 'Semaine',
         'default' => 'Groupe',
     ],
 

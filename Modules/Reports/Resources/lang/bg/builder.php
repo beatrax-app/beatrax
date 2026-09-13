@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Контрагент',
         'account' => 'Сметка',
         'month' => 'Месец',
+        'week' => 'Седмица',
         'default' => 'Група',
     ],
 

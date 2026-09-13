@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Contraparte',
         'account' => 'Cont',
         'month' => 'Lună',
+        'week' => 'Săptămână',
         'default' => 'Grup',
     ],
 

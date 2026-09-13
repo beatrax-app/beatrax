@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Vastaspool',
         'account' => 'Konto',
         'month' => 'Kuu',
+        'week' => 'Nädal',
         'default' => 'Rühm',
     ],
 

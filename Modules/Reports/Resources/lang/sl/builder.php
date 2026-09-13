@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Nasprotna stranka',
         'account' => 'Račun',
         'month' => 'Mesec',
+        'week' => 'Teden',
         'default' => 'Skupina',
     ],
 

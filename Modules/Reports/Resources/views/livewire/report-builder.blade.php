@@ -71,8 +71,8 @@
     // Read from the definition as a whole, never the dimension alone: net_worth
     // hides the picker but keeps whatever the URL last said, which headed a
     // column of months with "Category" while the CSV of the same report said
-    // "Period".
-    $groupHeader = ReportGroupHeading::for($definition->metric, $definition->dimension)->label();
+    // "Period". The granularity decides which bucket the column holds.
+    $groupHeader = ReportGroupHeading::for($definition->metric, $definition->dimension)->label($definition->granularity);
 
     $metricLabel = $metricLabels[$definition->metric] ?? Lang::get('reports::builder.metric.fallback');
 

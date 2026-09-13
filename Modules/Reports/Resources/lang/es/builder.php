@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Contraparte',
         'account' => 'Cuenta',
         'month' => 'Mes',
+        'week' => 'Semana',
         'default' => 'Grupo',
     ],
 

@@ -105,6 +105,7 @@ return [
         'counterparty' => 'Partner',
         'account' => 'Számla',
         'month' => 'Hónap',
+        'week' => 'Hét',
         'default' => 'Csoport',
     ],
 
