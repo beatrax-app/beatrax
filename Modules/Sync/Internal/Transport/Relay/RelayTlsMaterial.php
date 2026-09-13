@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport\Relay;
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\TlsKeyPair;
 use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 // Self-signed TLS material for the local relay, plus the SPKI pin a peer uses
@@ -32,9 +33,12 @@ final class RelayTlsMaterial
         return UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::KEY_FILE;
     }
 
-    public function exists(): bool
+    // Not "both files are there": `relay:serve` takes its TLS bind on the
+    // strength of this answer and reads neither half, so a key that does not
+    // open the certificate binds TLS and refuses every peer handshake.
+    public function isUsable(): bool
     {
-        return is_file($this->certPath()) && is_file($this->keyPath());
+        return TlsKeyPair::opensCertificate($this->certPath(), $this->keyPath());
     }
 
     // Generates the keypair and certificate if absent, then returns the SPKI
@@ -44,7 +48,7 @@ final class RelayTlsMaterial
      */
     public function ensure(string $commonName): string
     {
-        if (! $this->exists()) {
+        if (! $this->isUsable()) {
             $this->generate($commonName);
         }
 

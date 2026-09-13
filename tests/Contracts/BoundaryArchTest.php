@@ -2427,6 +2427,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
         'Modules/Counterparties/tests/Feature/CounterpartyEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Counterparties/tests/Feature/ResolveCounterpartyStageTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
+        'Modules/Desktop/tests/Feature/ARelayThatCompletesNoHandshakeIsRestartedTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Desktop/tests/Feature/AutoUpdate/UpdateFeedSmokeTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
         'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayTlsMaterial',
