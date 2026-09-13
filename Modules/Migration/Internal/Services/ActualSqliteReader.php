@@ -9,6 +9,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Migration\Internal\Enums\ActualBudgetType;
 use Modules\Migration\Internal\Exceptions\ActualSqliteReadException;
 use Modules\Migration\Internal\Exceptions\UnrecognizedActualBudgetTypeException;
+use Modules\Migration\Internal\Exceptions\UnrecognizedMigrationFileException;
 use Modules\Migration\Internal\Parsers\Support\BoundedJson;
 use Modules\Migration\Internal\Services\Concerns\SummarizesRuleConditions;
 use PDO;
@@ -199,7 +200,17 @@ final readonly class ActualSqliteReader
             return [];
         }
 
-        $stmt = $this->pdo->query(sprintf('SELECT category, month, amount FROM %s', $table));
+        // A budget table keeps its rows after the category they name is gone,
+        // and those rows reached the preview's "months of budget history" count
+        // and then nothing: promotion has no category to write them to and said
+        // so nowhere. The tombstone rule every other read here applies.
+        $liveCategoryIds = $this->viewExists('v_categories')
+            ? 'SELECT id FROM v_categories'
+            : 'SELECT id FROM categories WHERE tombstone = 0';
+
+        $sql = sprintf('SELECT category, month, amount FROM %s WHERE category IN (%s)', $table, $liveCategoryIds);
+
+        $stmt = $this->pdo->query($sql);
         if ($stmt === false) {
             throw new ActualSqliteReadException(sprintf('could not query %s', $table));
         }
@@ -344,6 +355,9 @@ final readonly class ActualSqliteReader
             SQL;
     }
 
+    // Every query in this class funnels through here, which is the one place a
+    // column out of an untrusted file can be held to being text before a name
+    // or a note travels on to a writer that takes it for text.
     /**
      * @return array<string, mixed>|null
      */
@@ -359,6 +373,12 @@ final readonly class ActualSqliteReader
         }
 
         /** @var array<string, mixed> $row */
+        foreach ($row as $column => $value) {
+            if (is_string($value) && ! mb_check_encoding($value, 'UTF-8')) {
+                throw UnrecognizedMigrationFileException::cell('db.sqlite', $column, $value, 'expected UTF-8 text');
+            }
+        }
+
         return $row;
     }
 
