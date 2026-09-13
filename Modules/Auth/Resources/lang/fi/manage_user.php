@@ -7,6 +7,8 @@ return [
     'heading' => 'Hallitse käyttäjää :name',
     'subtitle' => 'Katso, nollaa tai luo uudet koodit tälle käyttäjälle.',
 
+    'owner_password_label' => 'Tilisi salasana',
+
     'set_password' => [
         'heading' => 'Aseta tälle käyttäjälle uusi salasana',
         'description' => 'Seuraavalla kirjautumiskerralla häntä pyydetään valitsemaan salasana.',

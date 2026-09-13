@@ -7,6 +7,8 @@ return [
     'heading' => ':name beheren',
     'subtitle' => 'Codes voor deze gebruiker bekijken, opnieuw instellen of opnieuw genereren.',
 
+    'owner_password_label' => 'Je accountwachtwoord',
+
     'set_password' => [
         'heading' => 'Nieuw wachtwoord voor deze gebruiker instellen',
         'description' => 'Bij de volgende keer inloggen wordt gevraagd om een wachtwoord te kiezen.',

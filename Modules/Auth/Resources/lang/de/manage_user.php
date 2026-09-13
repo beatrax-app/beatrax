@@ -7,6 +7,8 @@ return [
     'heading' => ':name verwalten',
     'subtitle' => 'Codes für diesen Benutzer ansehen, zurücksetzen oder neu erzeugen.',
 
+    'owner_password_label' => 'Dein Kontopasswort',
+
     'set_password' => [
         'heading' => 'Neues Passwort für diesen Benutzer festlegen',
         'description' => 'Bei der nächsten Anmeldung muss ein eigenes Passwort gewählt werden.',

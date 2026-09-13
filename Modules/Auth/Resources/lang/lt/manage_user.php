@@ -7,6 +7,8 @@ return [
     'heading' => 'Tvarkyti :name',
     'subtitle' => 'Peržiūrėk, nustatyk iš naujo arba sugeneruok šio naudotojo kodus.',
 
+    'owner_password_label' => 'Tavo paskyros slaptažodis',
+
     'set_password' => [
         'heading' => 'Nustatyti naują šio naudotojo slaptažodį',
         'description' => 'Kitą kartą prisijungdamas jis bus paprašytas pasirinkti slaptažodį.',

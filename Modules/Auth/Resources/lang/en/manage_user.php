@@ -7,6 +7,8 @@ return [
     'heading' => 'Manage :name',
     'subtitle' => 'View, reset, or regenerate codes for this user.',
 
+    'owner_password_label' => 'Your account password',
+
     'set_password' => [
         'heading' => 'Set new password for this user',
         'description' => 'Their next sign-in will ask them to choose a password.',

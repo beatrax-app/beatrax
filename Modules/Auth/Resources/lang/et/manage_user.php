@@ -7,6 +7,8 @@ return [
     'heading' => 'Halda kasutajat :name',
     'subtitle' => 'Vaata, lähtesta või genereeri sellele kasutajale uued koodid.',
 
+    'owner_password_label' => 'Sinu konto parool',
+
     'set_password' => [
         'heading' => 'Määra sellele kasutajale uus parool',
         'description' => 'Järgmisel sisselogimisel palutakse tal endale parool valida.',
