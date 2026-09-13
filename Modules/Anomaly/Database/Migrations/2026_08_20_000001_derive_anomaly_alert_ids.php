@@ -10,6 +10,8 @@ use Modules\Ledger\Public\Enums\Direction;
 
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'no-op-carries-it: it rewrites anomaly_alerts.id and the anomaly_suppression_rules.source_anomaly_alert_id naming it, and the registry carries neither -- state, dismissed_as, snoozed_until and actioned_at are the alert columns it names, counterparty_id the rule one.';
+
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());

@@ -11,6 +11,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // this column was already keyed on that same string.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the new column is filled from the detected_name on the same row, which the registry carries, so both devices copy the same value into it.';
+
     public function up(): void
     {
         $this->schema()->table('recurring_series', static function (Blueprint $table): void {

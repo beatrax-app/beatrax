@@ -10,6 +10,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // rows still on that default move — a user who chose 24 is not clobbered.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: a row still on the old default of eighteen becomes two on whichever device holds it, and the column is one setting the registry carries for the reader rather than for a device.';
+
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());

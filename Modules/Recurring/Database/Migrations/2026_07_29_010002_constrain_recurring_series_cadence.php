@@ -11,6 +11,8 @@ use Modules\Recurring\Public\Enums\SeriesCadence;
 // from SeriesCadence so the enum stays the one place it is written down.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: a cadence outside the vocabulary becomes irregular on whichever device holds the row, read off the same SeriesCadence both builds carry.';
+
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());

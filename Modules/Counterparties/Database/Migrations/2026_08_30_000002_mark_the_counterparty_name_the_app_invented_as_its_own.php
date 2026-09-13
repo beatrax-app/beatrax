@@ -14,6 +14,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // its constants: what this has to recognise is the wording already on disk.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the mark is added to the metadata JSON on the row, on the evidence of the type and slug carried by that same row, so a device holding it reaches the same value.';
+
     private const string METADATA_KEY = 'default_name';
 
     private const string UNKNOWN = 'unknown';

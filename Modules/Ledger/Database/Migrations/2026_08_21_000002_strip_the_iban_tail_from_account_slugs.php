@@ -16,6 +16,8 @@ use Modules\Ledger\Public\Services\AccountSlugResolver;
 // no key and runs on a locked device.
 return new class extends Migration
 {
+    private const string DOES_NOT_ANNOUNCE = 'no-op-carries-it: accounts.slug is not among the columns the registry carries for the table, as the comment on carriesIbanTail() already states, so the rename travels in no Set.';
+
     // The shorter of the two runs the leaky generators wrote (6 and 8).
     // Below that a name segment could end in the IBAN's own last characters
     // by coincidence, and the rewrite would be a rename rather than a fix.

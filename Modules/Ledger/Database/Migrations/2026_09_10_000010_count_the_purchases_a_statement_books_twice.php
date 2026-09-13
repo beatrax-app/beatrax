@@ -12,6 +12,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // that tuple the row is, counted within the file it arrived in.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the ordinal counts the rows of its own dedup tuple carrying a lower id, over a group both devices hold under the ids their creates carried, and it only ever tells apart rows identical on all seven of those columns.';
+
     private const string INDEX = 'transactions_fingerprint_uq';
 
     private const string COLUMN = 'occurrence_ordinal';

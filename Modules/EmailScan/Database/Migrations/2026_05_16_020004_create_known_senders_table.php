@@ -13,6 +13,8 @@ use Modules\Core\Public\Support\DerivedRowId;
 // trigger accepts 'system'.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'nothing-predates-the-rows: the table is created here and the three seeds are inserted under ids DerivedRowId folds from their own pattern, so every device mints the same three rows and no peer holds an earlier copy of them.';
+
     public function up(): void
     {
         $this->schema()->create('known_senders', static function (Blueprint $table): void {

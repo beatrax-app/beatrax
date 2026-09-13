@@ -16,6 +16,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // constants: what this has to recognise is the wording already on disk.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'the-device-answers-for-itself: the replacement word is translated into users.locale, which the registry deliberately keeps device-local, so each device writes the word of its own reader for the account it minted.';
+
     private const string ENGLISH_NAME = 'Cash';
 
     private const string CASH_KIND = 'cash';

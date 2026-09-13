@@ -27,6 +27,8 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 // slugged it to something else and keeps their name in every language.
 return new class extends Migration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the mark is decided by the slug on the row against the bank-fee corpus of every region at once, which ships inside the build both devices run.';
+
     public function up(): void
     {
         $kinds = $this->kindBySlug();

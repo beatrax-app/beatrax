@@ -12,6 +12,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // settled currency, and a default_currency that is not it.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the replacement is the one settled currency the transactions of that account were booked in, which both devices read off the same rows.';
+
     public function up(): void
     {
         $schema = $this->schema();
