@@ -53,10 +53,12 @@ const RETIRED_COLUMN_CANNOT_ASK_HERE = [
 const RETIRED_COLUMN_SITE_FLOOR = 6;
 
 // A WRITE naming an absent column raises `no such column` and stops. It is the
-// loud half of this and needs no guard, so an array key is not a site.
+// loud half of this and needs no guard, so an array key is not a site. A read
+// that names its table is still a read: the qualified form raises instead of
+// answering, which is the other mitigation and not an exemption from asking.
 function retiredColumnIsRead(string $statement): bool
 {
-    return PatternScan::matches('/\''.RETIRED_COLUMN.'\'\s*(?!=>)/', $statement)
+    return PatternScan::matches('/\'(?:[a-z0-9_]+\.)?'.RETIRED_COLUMN.'\'\s*(?!=>)/', $statement)
         && ! PatternScan::matches('/\''.RETIRED_COLUMN.'\'\s*=>/', $statement);
 }
 

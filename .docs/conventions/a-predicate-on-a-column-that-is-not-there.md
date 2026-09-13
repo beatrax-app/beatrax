@@ -10,7 +10,7 @@ sqlite> select "self_retired_at", typeof("self_retired_at") from device_registry
 self_retired_at|text
 ```
 
-The two directions are not equally survivable:
+The directions are not equally survivable, and only the last one is loud:
 
 | written | reaches SQLite as | while the column is absent |
 |---|---|---|
@@ -18,6 +18,46 @@ The two directions are not equally survivable:
 | `whereNull('c')` | `"c" is null` | **always false** — nothing qualifies, and a set comes back empty |
 | `where('c', $v)` | `"c" = ?` | false unless `$v` is the column's own name |
 | `first(['c'])` | `select "c"` | the **string** `'c'`, so `!== null` is true |
+| `orderBy('c')` | `order by "c"` | one constant for every row, so the rows come back unordered |
+| `whereNull('t.c')` | `"t"."c" is null` | **raises `no such column: t.c`** |
+
+**Naming the table is the cheapest mitigation in the tree, and for a long time
+this page did not say so.** A qualified name is resolved against the table it
+names rather than falling back to a string literal, so the clause that was
+silently true or silently false becomes an error with the column in it. It
+costs one token, it needs no connection in hand, and it works where asking does
+not — inside a closure handed to `where()`, in a static helper that is given a
+builder somebody else opened, on a screen a refusal must not reach.
+
+Measured against `sqlite3` directly, on a table with no `gone` column:
+
+```
+sqlite> select count(*) from t where "gone" is null;            -- 0, silently
+sqlite> select count(*) from t where "t"."gone" is null;
+Error: in prepare, no such column: t.gone
+```
+
+The qualified form is accepted in the `WHERE` clause of an `UPDATE` and a
+`DELETE` too, and raises there just the same, so a predicate above a write does
+not have to be left bare. Two things it does **not** change: `select "t"."c"`
+still names the result column `c`, and an alias replaces the table — a builder
+opened as `table('x as c')` must be qualified `c.col`, because `x.col` raises
+whether or not the column is there.
+
+## Which columns this is actually about
+
+A column declared in the original `create` cannot be absent while its table is
+there, and an absent **table** raises. So the set at risk is exactly the columns
+a migration added to a table that already existed — the `Schema::table()`
+half, never the `Schema::create()` half. Measured at 40 tables and 126 columns.
+
+That line is what
+[`APredicateOnAColumnAMigrationAddedNamesItsTableArchTest`](../../tests/Contracts/APredicateOnAColumnAMigrationAddedNamesItsTableArchTest.php)
+derives its subject from, rather than a list somebody has to remember to add to:
+every predicate over one of those columns either names its table or asks the
+schema. The guard holds the **predicate** half only. A projection is silent too
+and is not mandated, because qualifying one is not free — the fix there is to
+ask.
 
 ## This is a property of the database, not of the source
 
@@ -31,6 +71,11 @@ running started before it.
 So no amount of reading the source finds this. A guard whose rule is "every
 column literal matches a column the migrations declare" passes every site
 below. The question is what the process is pointed at.
+
+What a static rule *can* hold is the reader's posture rather than the schema:
+whether a predicate over a column that may not have landed here is written so
+that its absence is loud. That is the rule above, and it is why the guard is
+about qualification and asking rather than about the column existing.
 
 **Measuring it needs the right copy.** A SQLite file in WAL mode carries recent
 writes — schema changes included — in its `-wal` sidecar until a checkpoint. So

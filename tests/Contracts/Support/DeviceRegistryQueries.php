@@ -77,7 +77,7 @@ final class DeviceRegistryQueries
                 continue;
             }
 
-            $statement = self::statementAround($text, $index);
+            $statement = QueryStatements::around($text, $index);
 
             if (! self::isAQuerySite($statement)) {
                 continue;
@@ -85,7 +85,7 @@ final class DeviceRegistryQueries
 
             $found[] = [
                 'path' => $path,
-                'function' => self::functionAround($tokens, $text, $index),
+                'function' => QueryStatements::functionAround($tokens, $text, $index),
                 'statement' => $statement,
                 'decides' => self::decides($statement),
             ];
@@ -116,128 +116,5 @@ final class DeviceRegistryQueries
     public static function keyFor(string $path, string $function): string
     {
         return $path.'::'.$function;
-    }
-
-    /**
-     * The whole statement the table name sits in, which is the span a filter
-     * could be written into. A query builder reads left to right and a decorator
-     * wraps it, so both directions are walked: `stillADevice(...)` stands before
-     * the table name and `->whereNull(...)` after it.
-     *
-     * @param  list<string>  $text
-     */
-    private static function statementAround(array $text, int $index): string
-    {
-        $start = self::boundaryBefore($text, $index);
-        $end = self::boundaryAfter($text, $index);
-
-        $statement = implode('', array_slice($text, $start, $end - $start + 1));
-
-        return trim(PatternScan::replace('/\s+/', ' ', $statement));
-    }
-
-    /**
-     * The table name is an argument, so the walk starts INSIDE a group and has
-     * to climb out of it: depth goes negative on the way and a boundary is
-     * anything at or outside the level the statement itself sits at. A
-     * separator deeper than that belongs to a closure or an array passed along
-     * the chain, and stopping on one would read half a statement.
-     *
-     * @param  list<string>  $text
-     */
-    private static function boundaryBefore(array $text, int $index): int
-    {
-        $depth = 0;
-
-        for ($at = $index - 1; $at >= 0; $at--) {
-            $token = $text[$at];
-            $depth += self::closes($token) ? 1 : (self::opens($token) ? -1 : 0);
-
-            if ($depth <= 0 && ($token === ';' || $token === '{' || $token === '}')) {
-                return $at + 1;
-            }
-        }
-
-        return 0;
-    }
-
-    /**
-     * A `{` closes the read as surely as a `;` does: a chain that ends in one
-     * is a `foreach` header, and the block it opens is not part of the query.
-     *
-     * @param  list<string>  $text
-     */
-    private static function boundaryAfter(array $text, int $index): int
-    {
-        $depth = 0;
-        $count = count($text);
-
-        for ($at = $index + 1; $at < $count; $at++) {
-            $token = $text[$at];
-            $depth += self::opens($token) ? 1 : (self::closes($token) ? -1 : 0);
-
-            if ($depth <= 0 && ($token === ';' || $token === '{')) {
-                return $token === '{' ? $at - 1 : $at;
-            }
-        }
-
-        return $count - 1;
-    }
-
-    private static function opens(string $token): bool
-    {
-        return $token === '(' || $token === '[' || $token === '{';
-    }
-
-    private static function closes(string $token): bool
-    {
-        return $token === ')' || $token === ']' || $token === '}';
-    }
-
-    /**
-     * The named function the statement sits in, found by walking back to the
-     * nearest `function` keyword carrying a name. A closure in between is
-     * `function (` and is stepped over, so a query written inside one is
-     * attributed to the method that owns the closure rather than to nothing.
-     *
-     * @param  list<array{0:int,1:string,2:int}|string>  $tokens
-     * @param  list<string>  $text
-     */
-    private static function functionAround(array $tokens, array $text, int $index): string
-    {
-        for ($at = $index - 1; $at >= 0; $at--) {
-            $token = $tokens[$at];
-
-            if (! is_array($token) || $token[0] !== T_FUNCTION) {
-                continue;
-            }
-
-            $name = self::nameAfter($tokens, $text, $at);
-
-            if ($name !== null) {
-                return $name;
-            }
-        }
-
-        return '{no function}';
-    }
-
-    /**
-     * @param  list<array{0:int,1:string,2:int}|string>  $tokens
-     * @param  list<string>  $text
-     */
-    private static function nameAfter(array $tokens, array $text, int $at): ?string
-    {
-        for ($next = $at + 1, $count = count($tokens); $next < $count; $next++) {
-            if (trim($text[$next]) === '' || $text[$next] === '&') {
-                continue;
-            }
-
-            $token = $tokens[$next];
-
-            return is_array($token) && $token[0] === T_STRING ? $token[1] : null;
-        }
-
-        return null;
     }
 }
