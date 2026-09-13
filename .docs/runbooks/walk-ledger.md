@@ -104,7 +104,9 @@ one**, and `not walked` is a useful answer — a walk you did not do is not.
 
 Base `1d412d166`. Instance: `wt-walkledger`, `php artisan serve` on
 `127.0.0.1:8477`, `demo:seed` data, signed in as `demo-1`. Widths 1440×900 and
-390×844. Evidence: [`.docs/evidence/walks/2026-09-13-v2-manifest/`](../evidence/walks/2026-09-13-v2-manifest/).
+390×844. Evidence: captured as `2026-09-13-v2-manifest/`, kept off this
+repository — see **Adding a row**. The file names in the last column are the
+index to it.
 
 | id | surface | desktop | phone | date | outcome | evidence |
 |---|---|---|---|---|---|---|
@@ -547,9 +549,18 @@ answered `none_enrolled`. The one thing the reader could act on — enrol a face
 
 ## Adding a row
 
-Walk it, then add the row in the same pull request as the behaviour. The
-evidence directory is dated and per-manifest
-(`.docs/evidence/walks/<date>-<what>/`) so a later walk of the same identifier
-adds a row rather than overwriting one. `.docs/` is excluded from every shipped
-bundle (`config/nativephp.php`), so screenshots here never reach a build —
-unlike `storage/app`, which does.
+Walk it, then add the row in the same pull request as the behaviour. **The
+captures themselves do not go in the pull request.** Name them in the evidence
+column, dated and per-manifest (`<date>-<what>/`), and keep the files on the
+machine that walked them; the names are what lets a later walk of the same
+identifier add a row rather than overwrite one.
+
+`.docs/evidence/` is ignored for that reason, and the reason is not the one
+this page used to give. It said `.docs/` is excluded from every shipped bundle
+(`config/nativephp.php`), so screenshots there never reach a build. That is
+true and it is beside the point: **this repository is public.** 63 captures of
+a real ledger on a real handset were committed before anyone asked what a
+bundle exclusion does not bound, and removing them meant rewriting history
+across twelve branches — after which the blobs are still fetchable from GitHub
+by hash. A bundle exclusion bounds a build. It does not bound a repository, and
+neither does `.gitignore` once a file is already committed.
