@@ -16,6 +16,7 @@ use Modules\Import\Internal\Exceptions\UploadStagingException;
 use Modules\Import\Internal\Pipeline\ImportPipeline;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Services\RemoteFetchPath;
+use Modules\Import\Internal\Services\StagedStatementPath;
 use Modules\Import\Internal\Services\StatementDerivedRecords;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
@@ -32,10 +33,6 @@ use Modules\Ledger\Public\Enums\ImportRunStatus;
  */
 final readonly class RunImport implements RunsImports
 {
-    private const string STORAGE_DISK = 'local';
-
-    private const string STORAGE_PREFIX = 'imports';
-
     public function __construct(
         private ImportPipeline $pipeline,
         private PreviewCache $cache,
@@ -43,7 +40,17 @@ final readonly class RunImport implements RunsImports
         private ConfirmImport $confirmAction,
         private StorageFactory $storage,
         private StatementDerivedRecords $derivedRecords,
+        private StagedStatementPath $stagedSource,
     ) {}
+
+    public function runFromStagedRun(ImportRun $run, User $user, ?BankCsvFormatHint $formatHint = null): ?ImportPreviewResult
+    {
+        $staged = $this->stagedSource->forRun($run->raw_file_path, $user);
+
+        return $staged === null
+            ? null
+            : $this->runFromUpload($staged, $run->source_format, $user, basename($staged), $formatHint);
+    }
 
     public function runFromUpload(string $localPath, string $sourceFormat, User $user, string $originalFilename, ?BankCsvFormatHint $formatHint = null): ImportPreviewResult
     {
@@ -103,7 +110,7 @@ final readonly class RunImport implements RunsImports
     // declared format so HeaderSniffer still recognises the stored copy.
     private function copyToStableLocation(string $sourcePath, User $user, string $sha, string $sourceFormat): string
     {
-        $disk = $this->storage->disk(self::STORAGE_DISK);
+        $disk = $this->storage->disk(StagedStatementPath::DISK);
         $extension = match ($sourceFormat) {
             SourceFormat::Camt053->value => 'xml',
             SourceFormat::Mt940->value => 'sta',
@@ -112,7 +119,7 @@ final readonly class RunImport implements RunsImports
             'mbox' => 'mbox',
             default => 'csv',
         };
-        $relative = sprintf('%s/%d/%s.%s', self::STORAGE_PREFIX, $user->id, $sha, $extension);
+        $relative = sprintf('%s/%s.%s', StagedStatementPath::directoryFor($user->id), $sha, $extension);
 
         $expectedBytes = @filesize($sourcePath);
         $source = @fopen($sourcePath, 'rb');

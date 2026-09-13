@@ -228,18 +228,12 @@ final class ConnectBankStep extends Component
             ->where('id', $importRunId)
             ->where('user_id', $user->id)
             ->first();
-        if ($run === null || ! file_exists($run->raw_file_path)) {
+        if ($run === null) {
             return;
         }
 
         try {
-            $importer->runFromUpload(
-                $run->raw_file_path,
-                $this->selectedFormat,
-                $user,
-                basename($run->raw_file_path),
-                $formatHint,
-            );
+            $importer->runFromStagedRun($run, $user, $formatHint);
         } catch (Throwable $e) {
             $logger->warning('ConnectBankStep: re-preview after bank account creation failed.', [
                 'import_run_id' => $importRunId,
