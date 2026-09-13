@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Modules\Budgets\Public\Services\BudgetNudgeDispatch;
 use Modules\Core\Models\User;
+use Modules\Notifications\Tests\Support\BusThatRefusesOneReadersJob;
 
 uses(RefreshDatabase::class);
 
@@ -41,46 +42,10 @@ function everyReaderSweptThree(string $prefix): array
     ];
 }
 
-// The dispatch seam is what really throws on this product: the queue table is
-// the same single-writer SQLite file everything else is holding, and a busy one
-// surfaces here as a RuntimeException out of one user's dispatch.
-final class ABusThatRefusesOneReadersJob extends Dispatcher
-{
-    /** @var list<int> */
-    public array $accepted = [];
-
-    public function __construct(private readonly int $refuseUserId) {}
-
-    public function dispatch($command): mixed
-    {
-        // Read off the job rather than matched against its class: both passes
-        // queue a job owned by the module that raises it, and naming either
-        // here would be this module's test reaching into a neighbour's.
-        $userId = is_object($command) && property_exists($command, 'userId') && is_int($command->userId)
-            ? $command->userId
-            : null;
-
-        if ($userId === $this->refuseUserId) {
-            throw new RuntimeException('SQLITE_BUSY: the queue table was locked');
-        }
-
-        if ($userId !== null) {
-            $this->accepted[] = $userId;
-        }
-
-        return null;
-    }
-
-    public function dispatchSync($command, $handler = null): mixed
-    {
-        return $this->dispatch($command);
-    }
-}
-
 it('emits the budget nudges of the readers after the one whose dispatch throws', function (): void {
     [$first, $second, $third] = everyReaderSweptThree('nudges');
 
-    $bus = new ABusThatRefusesOneReadersJob((int) $second->id);
+    $bus = new BusThatRefusesOneReadersJob((int) $second->id);
     $this->app->bind(BudgetNudgeDispatch::class, static fn (): BudgetNudgeDispatch => new BudgetNudgeDispatch($bus));
 
     expect(Artisan::call('budgets:emit-nudges'))->toBe(0);
@@ -94,7 +59,7 @@ it('emits the budget nudges of the readers after the one whose dispatch throws',
 it('prunes the inboxes of the readers after the one whose dispatch throws', function (): void {
     [$first, $second, $third] = everyReaderSweptThree('prune');
 
-    $bus = new ABusThatRefusesOneReadersJob((int) $second->id);
+    $bus = new BusThatRefusesOneReadersJob((int) $second->id);
     $this->app->instance(Dispatcher::class, $bus);
     $this->app->instance(Illuminate\Contracts\Bus\Dispatcher::class, $bus);
 

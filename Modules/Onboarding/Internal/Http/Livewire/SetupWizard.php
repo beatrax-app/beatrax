@@ -182,7 +182,13 @@ final class SetupWizard extends Component
         ResumeStepResolver $resume,
         Dispatcher $events,
     ): void {
-        $this->advanceAndLeave($db, $currentUser, $registry, $query, $clock, $resume, $events, WizardStepStatus::Done->value);
+        // Asked before the write, because after it every row is finished either
+        // way: this is what tells the first Finish from a later one, and the
+        // completion event is owed once.
+        $wasAlreadyComplete = $resume->resolve($currentUser->id()) === '';
+
+        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Done->value);
+        $this->leaveIfComplete($events, $currentUser, $wasAlreadyComplete);
     }
 
     // The view hides skip on non-skippable steps; this guard is the
@@ -201,30 +207,18 @@ final class SetupWizard extends Component
             return;
         }
 
-        $this->advanceAndLeave($db, $currentUser, $registry, $query, $clock, $resume, $events, WizardStepStatus::Skipped->value);
-    }
-
-    // Both exits from a step can be the one that leaves nothing pending, and
-    // only Finish knew what to do about it: a reader who walked Back to the last
-    // skippable step and skipped it again stayed on the step they had just
-    // dismissed, with no event raised and nowhere sent.
-    private function advanceAndLeave(
-        DatabaseManager $db,
-        CurrentUser $currentUser,
-        WizardStepRegistry $registry,
-        WizardProgressQuery $query,
-        Clock $clock,
-        ResumeStepResolver $resume,
-        Dispatcher $events,
-        string $terminalStatus,
-    ): void {
-        // Asked before the write, because after it every row is finished either
-        // way: this is what tells the first Finish from a later one, and the
-        // completion event is owed once.
         $wasAlreadyComplete = $resume->resolve($currentUser->id()) === '';
 
-        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, $terminalStatus);
+        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Skipped->value);
+        $this->leaveIfComplete($events, $currentUser, $wasAlreadyComplete);
+    }
 
+    // Walking Back reopens a finished step, so the step a reader then SKIPS can
+    // be the advance that leaves nothing pending. Only Finish knew what to do
+    // about it: skip marked the row and stopped, on the step it had just
+    // dismissed, with no event raised and nowhere sent.
+    private function leaveIfComplete(Dispatcher $events, CurrentUser $currentUser, bool $wasAlreadyComplete): void
+    {
         if (! $this->allComplete) {
             return;
         }
