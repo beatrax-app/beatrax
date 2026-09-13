@@ -500,6 +500,49 @@ Inverted three ways: unlinking `config/currency.php` fails two arms, renaming
 `lang/` out from under its link fails the resolve arm, and a declaration for a
 file that is not there fails the staleness arm.
 
+### The native bridge is closed on the phone, and one comment said otherwise
+
+`NativeBridgeIsShellOnly` is prepended to the global stack in **both**
+bootstraps. Everything written about it — its own docblock, the desktop
+architecture page, `TheNativeBridgeAnswersOnlyTheShellTest`'s named routes — is
+about the desktop root. On the phone it behaves differently, and permanently.
+
+Two of its conditions cannot be met there:
+
+- `carriesTheShellSecret()` reads `config('nativephp-internal.secret')`.
+  `nativephp/mobile` merges its own bundled `nativephp-internal.php`, and that
+  file has **no `secret` key at all** — only `running`, `platform`, `tempdir`.
+  So the secret is null in every mobile environment, device builds included.
+- `issuedByAPage()` refuses anything carrying `Sec-Fetch-Site` or `Origin`. On
+  mobile the legitimate callers *are* pages: iOS injects
+  `fetch('/_native/api/events', …)` from `ContentView.swift`, Android does the
+  same from `NativeActionCoordinator.kt`, and the shipped `native.js` — the
+  `window.Native` bridge — POSTs to `/_native/api/call`.
+
+So both routes the mobile package registers answer **404**, always. Measured by
+booting the mobile root and posting to them: 404 with the middleware, 400
+without it (the controller rejecting an empty payload), which isolates the gate
+as the cause.
+
+**Nothing is broken by this.** Native results reach this application as
+`native-event` CustomEvents dispatched on `document` and carried into Livewire —
+`resources/js/app.js` says so in its own words: *"there is no PHP-side event to
+listen for"*. The bridge it closes is one this app does not use.
+
+And the closure is load-bearing rather than incidental. With the middleware
+removed, a page-issued `POST /_native/api/events` on the mobile root answers
+**200**, and `DispatchEventFromAppController` constructs whatever event class the
+request body named.
+
+What was wrong was the record. `resources/views/native/app-shell.blade.php` told
+a reader that `php` mode gives "the `window.Native` bridge" — and a call through
+that bridge 404s here. The comment says what is true now, and
+`TheNativeBridgeAnswersOnlyTheShellTest` closes over **whatever `_native` routes
+the deployment registers** rather than three named desktop ones, so the root
+running it decides the set. Inverted on the mobile root: removing the gate fails
+seven arms, and the new one names `POST /_native/api/events -> 200` and
+`POST /_native/api/call -> 400`.
+
 ### A vendor hard-codes a class name, and answers a miss with silence
 
 `nativephp/mobile` resolves which plugins a build may load by looking the
