@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'KAYNAK: ',
+        'from_other' => 'KAYNAK: :source',
         'from_bank' => 'BANKA EKSTRENDEN',
         'from_ics' => 'ICS KART EKSTRELERİNDEN',
         'from_paypal' => "PAYPAL'DAN",

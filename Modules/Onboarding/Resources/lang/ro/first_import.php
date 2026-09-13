@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'DIN ',
+        'from_other' => 'DIN :source',
         'from_bank' => 'DIN EXTRASUL TĂU DE CONT',
         'from_ics' => 'DIN EXTRASELE TALE DE CARD ICS',
         'from_paypal' => 'DIN PAYPAL',

@@ -25,7 +25,7 @@ return [
     'months' => ':count mes.|:count mes.|:count mes.',
     'not_scanned_yet' => 'još nije skenirano',
     'not_scanned_yet_phone' => 'nije skenirano na ovom telefonu',
-    'last_scanned' => 'poslednje skeniranje',
+    'last_scanned' => 'poslednje skeniranje :when',
     'window_prefix' => 'Period:',
     'edit' => 'Izmeni',
 

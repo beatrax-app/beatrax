@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Без категорії',
     'no_counterparty' => 'Без контрагента',
     'unavailable_counterparty' => 'Контрагента немає на цьому пристрої',
+    'unavailable_account' => 'Рахунку немає на цьому пристрої',
     'title' => 'Звіти',
     'page_title' => 'Звіти · Beatrax',
     'subtitle' => 'Склади звіт зі свого реєстру.',

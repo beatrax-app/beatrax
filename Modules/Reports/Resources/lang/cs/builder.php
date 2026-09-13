@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Bez kategorie',
     'no_counterparty' => 'Bez protistrany',
     'unavailable_counterparty' => 'Protistrana není v tomto zařízení',
+    'unavailable_account' => 'Účet není v tomto zařízení',
     'title' => 'Sestavy',
     'page_title' => 'Sestavy · Beatrax',
     'subtitle' => 'Poskládej si sestavu ze své knihy.',

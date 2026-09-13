@@ -51,7 +51,7 @@ return [
     ],
 
     'chain_flow' => [
-        'aria_prefix' => 'Finansman zinciri: ',
+        'aria' => 'Finansman zinciri: :chain',
         'join' => ' ardından ',
     ],
 

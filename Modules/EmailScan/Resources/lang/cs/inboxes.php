@@ -25,7 +25,7 @@ return [
     'months' => ':count měs.|:count měs.|:count měs.',
     'not_scanned_yet' => 'zatím neskenováno',
     'not_scanned_yet_phone' => 'v tomto telefonu neskenováno',
-    'last_scanned' => 'naposledy skenováno',
+    'last_scanned' => 'naposledy skenováno :when',
     'window_prefix' => 'Okno:',
     'edit' => 'Upravit',
 

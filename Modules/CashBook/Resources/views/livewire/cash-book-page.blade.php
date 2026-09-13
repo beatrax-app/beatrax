@@ -71,7 +71,7 @@
                 name="categoryId"
                 field-id="cb-category"
                 type="select"
-                :label="Lang::get('cashbook::cash-book.category').' '.Lang::get('cashbook::cash-book.optional')"
+                :label="Lang::get('cashbook::cash-book.optional_field', ['label' => Lang::get('cashbook::cash-book.category')])"
                 wire:model="categoryId"
             >
                 <option value="" @selected($categoryId === null)>{{ Lang::get('cashbook::cash-book.uncategorized') }}</option>
@@ -84,7 +84,7 @@
         <x-core::form-field
             name="description"
             field-id="cb-description"
-            :label="Lang::get('cashbook::cash-book.note').' '.Lang::get('cashbook::cash-book.optional')"
+            :label="Lang::get('cashbook::cash-book.optional_field', ['label' => Lang::get('cashbook::cash-book.note')])"
             wire:model="description"
         />
 

@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Contraparte',
     'counterparty_placeholder' => 'p. ej. Panadería',
     'category' => 'Categoría',
-    'optional' => '(opcional)',
+    'optional_field' => ':label (opcional)',
     'uncategorized' => 'Sin categoría',
     'note' => 'Nota',
 

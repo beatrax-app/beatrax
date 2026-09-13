@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Χωρίς κατηγορία',
     'no_counterparty' => 'Χωρίς αντισυμβαλλόμενο',
     'unavailable_counterparty' => 'Ο αντισυμβαλλόμενος δεν υπάρχει σε αυτή τη συσκευή',
+    'unavailable_account' => 'Ο λογαριασμός δεν υπάρχει σε αυτή τη συσκευή',
     'title' => 'Αναφορές',
     'page_title' => 'Αναφορές · Beatrax',
     'subtitle' => 'Σύνθεσε μια αναφορά από το καθολικό σου.',

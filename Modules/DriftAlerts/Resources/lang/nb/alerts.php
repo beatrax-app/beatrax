@@ -52,7 +52,7 @@ return [
         'per_year' => '/år',
         'meta_prior_now' => 'tidligere :prior → nå :now',
         'meta_detected' => 'oppdaget :date',
-        'meta_threshold' => 'terskel ±:percent %',
+        'meta_threshold' => 'terskel ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/år)',
         'cancel_impact' => 'Si opp denne → spar :amount/år',
         'cadence_flipped' => 'Intervallet er endret — vises også i',

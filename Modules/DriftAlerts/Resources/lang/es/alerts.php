@@ -52,7 +52,7 @@ return [
         'per_year' => '/año',
         'meta_prior_now' => 'antes :prior → ahora :now',
         'meta_detected' => 'detectado el :date',
-        'meta_threshold' => 'umbral ±:percent %',
+        'meta_threshold' => 'umbral ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/año)',
         'cancel_impact' => 'Cancela esto → ahorra :amount/año',
         'cadence_flipped' => 'La frecuencia ha cambiado — también aparece en',

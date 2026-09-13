@@ -138,7 +138,7 @@ it('renders the rose alert badge on the Forecasts row when the shortfall count i
         ->assertSee(tnfsBadge(1, '1'), false);
 });
 
-it('compacts the badge label to 1k once the shortfall count reaches four digits', function (): void {
+it('compacts the badge label once the shortfall count reaches four digits', function (): void {
     $account = tnfsAsnAccount($this->user, 'sf-many-'.bin2hex(random_bytes(3)));
     tnfsSeedShortfall($this->user, $account, 1000);
 
@@ -148,7 +148,7 @@ it('compacts the badge label to 1k once the shortfall count reaches four digits'
         // The label compacts; the aria-label keeps the exact number, which is
         // the half a screen reader reads out. The deleted top-nav capped both
         // at "99+" and lost the number entirely.
-        ->assertSee(tnfsBadge(1000, '1k'), false)
+        ->assertSee(tnfsBadge(1000, '1K'), false)
         ->assertDontSee('>99+<', false);
 });
 

@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'ALLIKAST ',
+        'from_other' => 'ALLIKAST :source',
         'from_bank' => 'SINU KONTOVÄLJAVÕTTEST',
         'from_ics' => 'SINU ICS KAARDIVÄLJAVÕTETEST',
         'from_paypal' => 'PAYPALIST',

@@ -25,7 +25,7 @@ return [
     'months' => ':count lună|:count luni|:count de luni',
     'not_scanned_yet' => 'încă nescanat',
     'not_scanned_yet_phone' => 'nescanat pe acest telefon',
-    'last_scanned' => 'ultima scanare',
+    'last_scanned' => 'ultima scanare :when',
     'window_prefix' => 'Interval:',
     'edit' => 'Editează',
 

@@ -7,7 +7,7 @@ return [
     'needs_reconnect' => 'vajab uuesti ühendamist',
     'not_scanned_yet' => 'veel skannimata',
     'not_scanned_yet_phone' => 'selles telefonis skannimata',
-    'last_scanned' => 'viimati skannitud',
+    'last_scanned' => 'viimati skannitud :when',
     'out_of_date' => 'aegunud',
     'not_scanned_here' => 'selles seadmes ei skannita',
     'more' => '+:count veel',

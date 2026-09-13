@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Poravnano v :code',
     'chart_requires_js' => 'Grafikon zahteva JavaScript.',
 
-    'tolerance_toast' => 'Toleranca: :percent %',
+    'tolerance_toast' => 'Toleranca: :percent %',
 ];

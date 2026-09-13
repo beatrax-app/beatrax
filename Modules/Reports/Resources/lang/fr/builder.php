@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Non catégorisé',
     'no_counterparty' => 'Aucun tiers',
     'unavailable_counterparty' => 'Tiers absent de cet appareil',
+    'unavailable_account' => 'Compte absent de cet appareil',
     'title' => 'Rapports',
     'page_title' => 'Rapports · Beatrax',
     'subtitle' => 'Compose un rapport à partir de ton registre.',

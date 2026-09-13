@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Kategorizálatlan',
     'no_counterparty' => 'Nincs partner',
     'unavailable_counterparty' => 'A partner nincs meg ezen az eszközön',
+    'unavailable_account' => 'A számla nincs meg ezen az eszközön',
     'title' => 'Jelentések',
     'page_title' => 'Jelentések · Beatrax',
     'subtitle' => 'Állíts össze jelentést a nyilvántartásodból.',

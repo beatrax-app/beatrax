@@ -6,7 +6,7 @@ return [
     'page_title' => 'Sortering af modparter',
     'heading' => 'Sortér ukendte modparter',
 
-    'progress' => ':seen af :total · :percent % · ~:minutes min tilbage',
+    'progress' => ':seen af :total · :percent % · ~:minutes min tilbage',
     'progress_aria' => 'Sorteringsforløb',
 
     'all_caught_aria' => 'Alle modparter er mærket',

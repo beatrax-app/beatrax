@@ -6,7 +6,7 @@ return [
     'page_title' => 'Triaje de contrapartes',
     'heading' => 'Clasifica las contrapartes desconocidas',
 
-    'progress' => ':seen de :total · :percent % · quedan ~:minutes min',
+    'progress' => ':seen de :total · :percent % · quedan ~:minutes min',
     'progress_aria' => 'Progreso del triaje',
 
     'all_caught_aria' => 'Todas las contrapartes etiquetadas',

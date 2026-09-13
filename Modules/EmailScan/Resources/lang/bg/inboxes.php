@@ -25,7 +25,7 @@ return [
     'months' => ':count месец|:count месеца',
     'not_scanned_yet' => 'още не е сканирано',
     'not_scanned_yet_phone' => 'не е сканирано на този телефон',
-    'last_scanned' => 'последно сканиране',
+    'last_scanned' => 'последно сканиране :when',
     'window_prefix' => 'Период:',
     'edit' => 'Редактирай',
 

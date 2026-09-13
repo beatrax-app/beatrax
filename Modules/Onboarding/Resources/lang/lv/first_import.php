@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'NO ',
+        'from_other' => 'NO :source',
         'from_bank' => 'NO JŪSU BANKAS KONTA IZRAKSTA',
         'from_ics' => 'NO JŪSU ICS KARTES IZRAKSTIEM',
         'from_paypal' => 'NO PAYPAL',

@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: :pct % fullført',
+        'aria' => ':name: :pct % fullført',
     ],
 
     'card' => [

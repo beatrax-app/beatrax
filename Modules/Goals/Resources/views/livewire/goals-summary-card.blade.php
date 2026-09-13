@@ -11,6 +11,7 @@
 @use('Modules\Goals\Public\Dto\GoalProgressRow')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Goals\Public\Enums\GoalProgressState')
+@use('Modules\Core\Public\Support\Fmt')
 
 <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
     {{-- Card header --}}
@@ -64,7 +65,7 @@
                             width="w-20"
                             class="shrink-0"
                         />
-                        <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
+                        <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Fmt::percent($pct) }}</span>
                         <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                             @if ($row->progressState === GoalProgressState::Overdue->value)
                                 <x-core::status-pill tone="warning">{{ Lang::get('goals::messages.status.overdue') }}</x-core::status-pill>

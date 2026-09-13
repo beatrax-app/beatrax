@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Services\UserDataPathService')
+@use('Modules\Core\Public\Support\Fmt')
 {{--
     /budgets — the rebuilt zero-based envelope grid.
 
@@ -229,7 +230,7 @@
                             </select>
                         </td>
                         <td class="px-4 py-2 text-right align-top">
-                            <div class="inline-flex items-center gap-1">
+                            <div @class(['inline-flex items-center gap-1', 'flex-row-reverse' => Fmt::percentSignLeads()])>
                                 <input
                                     type="text"
                                     inputmode="numeric"
@@ -391,10 +392,18 @@
                                     wire:blur="setNotifyThreshold('{{ $row->categoryId }}')"
                                     aria-label="{{ Lang::get('budgets::messages.row.notify_aria', ['category' => $row->categoryPath]) }}"
                                     placeholder="{{ $defaultNotifyThreshold }}"
-                                    class="h-8 w-24 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    @class([
+                                        'h-8 w-24 rounded-md border border-slate-200 bg-white text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100',
+                                        'pl-6 pr-2' => Fmt::percentSignLeads(),
+                                        'pl-2 pr-6' => ! Fmt::percentSignLeads(),
+                                    ])
                                     style="font-variant-numeric: tabular-nums;"
                                 >
-                                <span class="pointer-events-none absolute right-2 text-xs text-slate-600 dark:text-slate-400">%</span>
+                                <span @class([
+                                    'pointer-events-none absolute text-xs text-slate-600 dark:text-slate-400',
+                                    'left-2' => Fmt::percentSignLeads(),
+                                    'right-2' => ! Fmt::percentSignLeads(),
+                                ])>%</span>
                             </span>
                         </label>
                         {{-- The column header the table gives this field is not

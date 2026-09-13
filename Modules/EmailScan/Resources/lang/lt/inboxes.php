@@ -25,7 +25,7 @@ return [
     'months' => ':count mėnuo|:count mėnesiai|:count mėnesių',
     'not_scanned_yet' => 'dar nenuskaityta',
     'not_scanned_yet_phone' => 'šiame telefone nenuskaityta',
-    'last_scanned' => 'paskutinį kartą nuskaityta',
+    'last_scanned' => 'paskutinį kartą nuskaityta :when',
     'window_prefix' => 'Laikotarpis:',
     'edit' => 'Redaguoti',
 

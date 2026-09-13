@@ -25,7 +25,7 @@ return [
     'months' => ':count maand|:count maanden',
     'not_scanned_yet' => 'nog niet gescand',
     'not_scanned_yet_phone' => 'niet gescand op deze telefoon',
-    'last_scanned' => 'laatst gescand',
+    'last_scanned' => 'laatst gescand :when',
     'window_prefix' => 'Periode:',
     'edit' => 'Bewerken',
 

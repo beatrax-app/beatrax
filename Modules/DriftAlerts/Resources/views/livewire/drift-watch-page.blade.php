@@ -31,7 +31,7 @@
             default => '',
         };
 
-        return $sign.Fmt::number(abs($rounded), 1).'%';
+        return Fmt::percent(abs($rounded), 1, $sign);
     };
 
     $deltaClass = [

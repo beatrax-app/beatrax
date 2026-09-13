@@ -6,7 +6,7 @@ return [
     'page_title' => 'Triaj contrapărți',
     'heading' => 'Triază contrapărțile necunoscute',
 
-    'progress' => ':seen din :total · :percent % · ~:minutes min rămase',
+    'progress' => ':seen din :total · :percent % · ~:minutes min rămase',
     'progress_aria' => 'Progresul triajului',
 
     'all_caught_aria' => 'Toate contrapărțile sunt etichetate',

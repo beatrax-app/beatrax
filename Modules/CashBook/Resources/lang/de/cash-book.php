@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Zahlungspartner',
     'counterparty_placeholder' => 'z. B. Bäckerei',
     'category' => 'Kategorie',
-    'optional' => '(optional)',
+    'optional_field' => ':label (optional)',
     'uncategorized' => 'Nicht kategorisiert',
     'note' => 'Notiz',
 

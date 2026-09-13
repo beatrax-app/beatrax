@@ -60,8 +60,9 @@
             } elseif ($line->lastScanAt === null) {
                 $lineCopy = $providerLabel . ': ' . Lang::get($onPhone ? 'email-scan::health.not_scanned_yet_phone' : 'email-scan::health.not_scanned_yet');
             } else {
-                $lineCopy = $providerLabel . ': ' . Lang::get('email-scan::health.last_scanned') . ' '
-                    . \Carbon\CarbonImmutable::instance($line->lastScanAt)->diffForHumans();
+                $lineCopy = $providerLabel . ': ' . Lang::get('email-scan::health.last_scanned', [
+                    'when' => \Carbon\CarbonImmutable::instance($line->lastScanAt)->diffForHumans(),
+                ]);
                 $stateWord = match ($line->status) {
                     'stale' => Lang::get('email-scan::health.out_of_date'),
                     'unscheduled' => Lang::get('email-scan::health.not_scanned_here'),

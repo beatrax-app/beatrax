@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Goals\Public\Enums\GoalProgressState')
+@use('Modules\Core\Public\Support\Fmt')
 {{--
     /goals page — list savings goals with 3-state progress bars and projected-
     date copy; Flux create/edit modal with inline field validation; Edit /
@@ -91,7 +92,7 @@
                     <div class="w-full min-w-0 sm:w-auto sm:flex-1">
                         <div class="flex items-baseline gap-3">
                             <p class="primary min-w-0 flex-1">{{ $row->name }}</p>
-                            <span class="amount">{{ $pct }}%</span>
+                            <span class="amount">{{ Fmt::percent($pct) }}</span>
                         </div>
                         <p class="secondary">
                             {{ $fmt($row->contributedMinor, $row->currency) }} / {{ $fmt($row->targetMinor, $row->currency) }}

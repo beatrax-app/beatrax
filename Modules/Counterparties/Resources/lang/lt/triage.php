@@ -6,7 +6,7 @@ return [
     'page_title' => 'Kitų šalių rūšiavimas',
     'heading' => 'Rūšiuoti nežinomas kitas šalis',
 
-    'progress' => ':seen iš :total · :percent % · liko ~:minutes min.',
+    'progress' => ':seen iš :total · :percent % · liko ~:minutes min.',
     'progress_aria' => 'Rūšiavimo eiga',
 
     'all_caught_aria' => 'Visos kitos šalys pažymėtos',

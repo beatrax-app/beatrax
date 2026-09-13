@@ -52,7 +52,7 @@ return [
         'per_year' => '/god.',
         'meta_prior_now' => 'prije :prior → sada :now',
         'meta_detected' => 'otkriveno :date',
-        'meta_threshold' => 'prag ±:percent %',
+        'meta_threshold' => 'prag ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/god.)',
         'cancel_impact' => 'Otkaži ovo → uštedi :amount/god.',
         'cadence_flipped' => 'Učestalost je promijenjena — prikazuje se i u',

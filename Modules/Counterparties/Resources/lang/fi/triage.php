@@ -6,7 +6,7 @@ return [
     'page_title' => 'Vastapuolten käsittely',
     'heading' => 'Käsittele tuntemattomat vastapuolet',
 
-    'progress' => ':seen / :total · :percent % · ~:minutes min jäljellä',
+    'progress' => ':seen / :total · :percent % · ~:minutes min jäljellä',
     'progress_aria' => 'Käsittelyn edistyminen',
 
     'all_caught_aria' => 'Kaikki vastapuolet merkitty',

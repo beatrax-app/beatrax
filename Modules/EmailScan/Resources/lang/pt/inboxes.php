@@ -25,7 +25,7 @@ return [
     'months' => ':count mês|:count meses',
     'not_scanned_yet' => 'ainda não analisada',
     'not_scanned_yet_phone' => 'não analisada neste telemóvel',
-    'last_scanned' => 'última análise',
+    'last_scanned' => 'última análise :when',
     'window_prefix' => 'Janela:',
     'edit' => 'Editar',
 

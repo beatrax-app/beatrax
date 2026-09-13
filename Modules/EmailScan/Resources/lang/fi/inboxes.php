@@ -25,7 +25,7 @@ return [
     'months' => ':count kuukausi|:count kuukautta',
     'not_scanned_yet' => 'ei vielä skannattu',
     'not_scanned_yet_phone' => 'ei skannattu tässä puhelimessa',
-    'last_scanned' => 'viimeksi skannattu',
+    'last_scanned' => 'viimeksi skannattu :when',
     'window_prefix' => 'Ikkuna:',
     'edit' => 'Muokkaa',
 

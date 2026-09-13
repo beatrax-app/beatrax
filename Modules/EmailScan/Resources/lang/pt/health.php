@@ -7,7 +7,7 @@ return [
     'needs_reconnect' => 'precisa de nova ligação',
     'not_scanned_yet' => 'ainda não analisada',
     'not_scanned_yet_phone' => 'não analisada neste telemóvel',
-    'last_scanned' => 'última análise',
+    'last_scanned' => 'última análise :when',
     'out_of_date' => 'desatualizado',
     'not_scanned_here' => 'não é analisado neste dispositivo',
     'more' => '+:count mais',

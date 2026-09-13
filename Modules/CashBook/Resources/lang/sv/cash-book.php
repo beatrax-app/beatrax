@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Motpart',
     'counterparty_placeholder' => 't.ex. Bageri',
     'category' => 'Kategori',
-    'optional' => '(valfritt)',
+    'optional_field' => ':label (valfritt)',
     'uncategorized' => 'Okategoriserat',
     'note' => 'Anteckning',
 

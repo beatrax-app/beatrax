@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
@@ -61,9 +62,13 @@ final readonly class AccountSpendQuery
 
         $result = [];
         foreach ($map as $accountId => $amountMinor) {
+            // An account row that is gone while its transactions remain, which
+            // is the same fact its counterparty sibling names one file away.
+            // It read "Unknown account" in twenty-six languages: a key absent
+            // everywhere is one a parity check has nothing to compare.
             $result[] = new ReportResultRow(
                 groupKey: $accountId,
-                groupLabel: $labels[$accountId] ?? 'Unknown account',
+                groupLabel: $labels[$accountId] ?? Lang::get('reports::builder.unavailable_account'),
                 amountMinor: $amountMinor,
                 currency: $currency,
             );

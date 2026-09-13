@@ -1,5 +1,6 @@
 @use('Modules\Core\Public\Navigation\Destination')
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 {{--
     /recurring/series/{id} drill-in page — full amount-over-time chart
     (native-currency primary + EUR shadow when distinct) over the
@@ -77,7 +78,7 @@
                     aria-label="{{ Lang::get('recurring::detail.variance_tolerance_aria') }}"
                 >
                     <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.tolerance') }}</span>
-                    <span style="font-variant-numeric: tabular-nums;">{{ $series->varianceTolerancePercent }}%</span>
+                    <span style="font-variant-numeric: tabular-nums;">{{ Fmt::percent($series->varianceTolerancePercent) }}</span>
                 </x-core::secondary-button>
                 <div
                     x-show="open"
@@ -97,7 +98,7 @@
                                 'font-medium text-slate-900 dark:text-slate-100' => $series->varianceTolerancePercent === $percent,
                                 'text-slate-500 dark:text-slate-400' => $series->varianceTolerancePercent !== $percent,
                             ])
-                        >{{ $percent }}%</button>
+                        >{{ Fmt::percent($percent) }}</button>
                     @endforeach
                 </div>
             </div>

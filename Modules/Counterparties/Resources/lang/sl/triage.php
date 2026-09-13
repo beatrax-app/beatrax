@@ -6,7 +6,7 @@ return [
     'page_title' => 'Triaža nasprotnih strank',
     'heading' => 'Triaža neznanih nasprotnih strank',
 
-    'progress' => ':seen od :total · :percent % · še ~:minutes min',
+    'progress' => ':seen od :total · :percent % · še ~:minutes min',
     'progress_aria' => 'Napredek triaže',
 
     'all_caught_aria' => 'Vse nasprotne stranke so označene',

@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Druga strana',
     'counterparty_placeholder' => 'npr. Pekara',
     'category' => 'Kategorija',
-    'optional' => '(opciono)',
+    'optional_field' => ':label (opciono)',
     'uncategorized' => 'Bez kategorije',
     'note' => 'Beleška',
 

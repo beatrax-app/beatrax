@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Necategorizat',
     'no_counterparty' => 'Fără contraparte',
     'unavailable_counterparty' => 'Contrapartea nu există pe acest dispozitiv',
+    'unavailable_account' => 'Contul nu există pe acest dispozitiv',
     'title' => 'Rapoarte',
     'page_title' => 'Rapoarte · Beatrax',
     'subtitle' => 'Compune un raport din registrul tău.',

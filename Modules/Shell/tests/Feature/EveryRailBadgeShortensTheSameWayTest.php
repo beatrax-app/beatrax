@@ -61,12 +61,38 @@ it('shortens the triage badge the way it shortens every other one', function ():
 
     $html = (string) Livewire::actingAs($this->user)->test(AppSidebar::class)->html();
 
-    expect(Fmt::compactCount(1234))->toBe('1.2k')
-        ->and(railBadgeTriageText($html))->toBe('1.2k');
+    expect(Fmt::compactCount(1234))->toBe('1.2K')
+        ->and(railBadgeTriageText($html))->toBe('1.2K');
 });
 
 // The same badge in a locale whose decimal mark is the comma: compactCount is
 // where that is known, and an integer echoed past it carries no locale at all.
+// The abbreviation is the locale's as much as the decimal mark is. Polish
+// shortens a thousand to "tys." and German to nothing at all, and a badge that
+// wrote "k" at both was showing an English abbreviation to twenty-five readers.
+it('shortens the badge with the word the reader language uses', function (): void {
+    railBadgeUnknownCounterparties($this->user->id, 1234);
+
+    app()->setLocale('pl');
+
+    $html = (string) Livewire::actingAs($this->user)->test(AppSidebar::class)->html();
+
+    expect(railBadgeTriageText($html))->toBe("1,2\u{00A0}tys.");
+});
+
+// CLDR gives German no short form below a million, so the figure is written
+// out. A shortening that invented one would be putting a word in front of a
+// reader that their language does not use.
+it('writes the count out where the reader language has no short form', function (): void {
+    railBadgeUnknownCounterparties($this->user->id, 1234);
+
+    app()->setLocale('de');
+
+    $html = (string) Livewire::actingAs($this->user)->test(AppSidebar::class)->html();
+
+    expect(railBadgeTriageText($html))->toBe('1.234');
+});
+
 it('writes the shortened triage count in the reader own mark', function (): void {
     railBadgeUnknownCounterparties($this->user->id, 1234);
 
@@ -74,6 +100,6 @@ it('writes the shortened triage count in the reader own mark', function (): void
 
     $html = (string) Livewire::actingAs($this->user)->test(AppSidebar::class)->html();
 
-    expect(Fmt::compactCount(1234))->toBe('1,2k')
-        ->and(railBadgeTriageText($html))->toBe('1,2k');
+    expect(Fmt::compactCount(1234))->toBe('1,2K')
+        ->and(railBadgeTriageText($html))->toBe('1,2K');
 });

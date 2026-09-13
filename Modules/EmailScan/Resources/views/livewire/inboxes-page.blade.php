@@ -108,7 +108,9 @@
                     $windowText = Lang::choice('email-scan::inboxes.months', $inbox->backfillWindowMonths);
                     $lastScanText = $inbox->lastScanAt === null
                         ? Lang::get($onPhone ? 'email-scan::inboxes.not_scanned_yet_phone' : 'email-scan::inboxes.not_scanned_yet')
-                        : Lang::get('email-scan::inboxes.last_scanned').' '.\Carbon\CarbonImmutable::instance($inbox->lastScanAt)->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW, short: true);
+                        : Lang::get('email-scan::inboxes.last_scanned', [
+                            'when' => \Carbon\CarbonImmutable::instance($inbox->lastScanAt)->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_RELATIVE_TO_NOW, short: true),
+                        ]);
 
                     // Status Badge Matrix — UI-SPEC § Status Badge Matrix.
                     // Six variants matching inbox_scan_state.status enum.

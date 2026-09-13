@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Abgerechnet in :code',
     'chart_requires_js' => 'Für das Diagramm wird JavaScript benötigt.',
 
-    'tolerance_toast' => 'Toleranz: :percent %',
+    'tolerance_toast' => 'Toleranz: :percent %',
 ];

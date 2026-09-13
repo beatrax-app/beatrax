@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Αντισυμβαλλόμενος',
     'counterparty_placeholder' => 'π.χ. Φούρνος',
     'category' => 'Κατηγορία',
-    'optional' => '(προαιρετικό)',
+    'optional_field' => ':label (προαιρετικό)',
     'uncategorized' => 'Χωρίς κατηγορία',
     'note' => 'Σημείωση',
 

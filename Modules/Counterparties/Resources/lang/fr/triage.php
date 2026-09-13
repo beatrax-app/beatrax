@@ -6,7 +6,7 @@ return [
     'page_title' => 'Triage des tiers',
     'heading' => 'Trier les tiers inconnus',
 
-    'progress' => ':seen sur :total · :percent % · ~:minutes min restantes',
+    'progress' => ':seen sur :total · :percent % · ~:minutes min restantes',
     'progress_aria' => 'Progression du triage',
 
     'all_caught_aria' => 'Tous les tiers sont étiquetés',

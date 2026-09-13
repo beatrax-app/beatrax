@@ -6,7 +6,7 @@ return [
     'page_title' => 'Trijaža protustranaka',
     'heading' => 'Trijaža nepoznatih protustranaka',
 
-    'progress' => ':seen od :total · :percent % · još ~:minutes min',
+    'progress' => ':seen od :total · :percent % · još ~:minutes min',
     'progress_aria' => 'Napredak trijaže',
 
     'all_caught_aria' => 'Sve protustranke su označene',

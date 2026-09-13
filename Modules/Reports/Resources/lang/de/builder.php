@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Nicht kategorisiert',
     'no_counterparty' => 'Kein Zahlungspartner',
     'unavailable_counterparty' => 'Zahlungspartner nicht auf diesem Gerät',
+    'unavailable_account' => 'Konto nicht auf diesem Gerät',
     'title' => 'Berichte',
     'page_title' => 'Berichte · Beatrax',
     'subtitle' => 'Stelle einen Bericht aus deinem Hauptbuch zusammen.',

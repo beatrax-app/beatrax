@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Ikke kategorisert',
     'no_counterparty' => 'Ingen motpart',
     'unavailable_counterparty' => 'Motparten finnes ikke på denne enheten',
+    'unavailable_account' => 'Kontoen finnes ikke på denne enheten',
     'title' => 'Rapporter',
     'page_title' => 'Rapporter · Beatrax',
     'subtitle' => 'Sett sammen en rapport ut fra transaksjonene dine.',

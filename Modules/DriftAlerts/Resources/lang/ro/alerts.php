@@ -52,7 +52,7 @@ return [
         'per_year' => '/an',
         'meta_prior_now' => 'anterior :prior → acum :now',
         'meta_detected' => 'detectat :date',
-        'meta_threshold' => 'prag ±:percent %',
+        'meta_threshold' => 'prag ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/an)',
         'cancel_impact' => 'Anulează → economisești :amount/an',
         'cadence_flipped' => 'Frecvența s-a schimbat — apare și în',

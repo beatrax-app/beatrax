@@ -23,6 +23,8 @@ final class Fmt
 
     private const int COMPACT_FROM = 1000;
 
+    private const int COMPACT_MILLION = 1000000;
+
     public static function number(int|float $value, int $decimals = 0): string
     {
         $locale = Container::getInstance()->make(Translator::class)->getLocale();
@@ -68,6 +70,31 @@ final class Fmt
         return str_replace('.', $marks->decimalMark(), $value);
     }
 
+    // Where the percent sign goes, which is the locale's own convention and not
+    // a house style: thirteen shipped locales keep a no-break space before it,
+    // Turkish writes it in front of the digits, and twelve close it up. A
+    // template that typed the sign itself had one spelling for all twenty-six.
+    public static function percent(int|float $value, int $decimals = 0, string $sign = ''): string
+    {
+        $marks = Locale::tryFrom(self::locale()) ?? Locale::En;
+        $digits = self::number($value, $decimals);
+
+        // The sign leads in every locale, the prefix ones included: ICU writes
+        // a negative Turkish percentage -%42, not %-42.
+        return $marks->percentSignBeforeDigits()
+            ? $sign.'%'.$digits
+            : $sign.$digits.$marks->percentGap().'%';
+    }
+
+    // For a box the reader types a figure into, where the sign sits is all the
+    // locale decides: the digits are the input's own. Turkish puts it in front,
+    // so a template that only ever appended it printed the unit on the wrong
+    // side of the field.
+    public static function percentSignLeads(): bool
+    {
+        return (Locale::tryFrom(self::locale()) ?? Locale::En)->percentSignBeforeDigits();
+    }
+
     // The locale's own short-date pattern, corrected where it writes the month
     // before the day. English is the only shipped locale that does, and it is
     // what a fresh install runs on, so 08/20/2026 is what a new reader met.
@@ -108,15 +135,37 @@ final class Fmt
     // tenth carries the locale's decimal mark: "1.2k" is one point two thousand
     // to an English reader and twelve hundred thousand to a Dutch one, whose
     // own mark for a tenth is the comma the money beside it already uses.
+
+    // The abbreviation is the locale's too. A literal "k" was English's, and not
+    // even English's: CLDR gives it "K". German is given no short form below a
+    // million at all, so it answers null here and the figure is written out.
+
+    // ICU is not asked at run time — the phone could only answer for English,
+    // and a badge reading differently on two paired devices is the defect this
+    // shortening exists to avoid.
     public static function compactCount(int $value): string
     {
-        if ($value < self::COMPACT_FROM) {
-            return self::number($value);
+        $marks = Locale::tryFrom(self::locale()) ?? Locale::En;
+
+        $abbreviations = [
+            self::COMPACT_MILLION => $marks->compactMillions(),
+            self::COMPACT_FROM => $marks->compactThousands(),
+        ];
+
+        foreach ($abbreviations as $magnitude => $abbreviation) {
+            if ($abbreviation === null || abs($value) < $magnitude) {
+                continue;
+            }
+
+            // Two significant digits, which is what CLDR's short form keeps:
+            // 1234 shortens to 1.2K and 12345 to 12K, not to 12.3K.
+            $scaled = $value / $magnitude;
+            $rounded = round($scaled, abs($scaled) < 10 ? 1 : 0, \RoundingMode::HalfEven);
+
+            return self::number($rounded, $rounded === floor($rounded) ? 0 : 1).$abbreviation;
         }
 
-        $thousands = round($value / self::COMPACT_FROM, 1);
-
-        return self::number($thousands, $thousands === floor($thousands) ? 0 : 1).'k';
+        return self::number($value);
     }
 
     // Every short date on screen, so the lists, the search results and the

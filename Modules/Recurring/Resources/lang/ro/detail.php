@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Decontat în :code',
     'chart_requires_js' => 'Graficul necesită JavaScript.',
 
-    'tolerance_toast' => 'Toleranță: :percent %',
+    'tolerance_toast' => 'Toleranță: :percent %',
 ];

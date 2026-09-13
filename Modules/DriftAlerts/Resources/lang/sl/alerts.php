@@ -52,7 +52,7 @@ return [
         'per_year' => '/leto',
         'meta_prior_now' => 'prej :prior → zdaj :now',
         'meta_detected' => 'zaznano :date',
-        'meta_threshold' => 'prag ±:percent %',
+        'meta_threshold' => 'prag ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/leto)',
         'cancel_impact' => 'Prekliči to → prihrani :amount/leto',
         'cadence_flipped' => 'Pogostost se je spremenila — prikazuje se tudi v',

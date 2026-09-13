@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Karşı taraf',
     'counterparty_placeholder' => 'ör. Fırın',
     'category' => 'Kategori',
-    'optional' => '(isteğe bağlı)',
+    'optional_field' => ':label (isteğe bağlı)',
     'uncategorized' => 'Kategorisiz',
     'note' => 'Not',
 

@@ -7,7 +7,7 @@ return [
     'needs_reconnect' => 'vaatii uudelleenyhdistämisen',
     'not_scanned_yet' => 'ei vielä skannattu',
     'not_scanned_yet_phone' => 'ei skannattu tässä puhelimessa',
-    'last_scanned' => 'viimeksi skannattu',
+    'last_scanned' => 'viimeksi skannattu :when',
     'out_of_date' => 'vanhentunut',
     'not_scanned_here' => 'ei skannata tällä laitteella',
     'more' => '+:count lisää',

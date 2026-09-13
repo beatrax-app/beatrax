@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'ΑΠΟ ',
+        'from_other' => 'ΑΠΟ :source',
         'from_bank' => 'ΑΠΟ ΤΗΝ ΚΑΤΑΣΤΑΣΗ ΤΗΣ ΤΡΑΠΕΖΑΣ ΣΟΥ',
         'from_ics' => 'ΑΠΟ ΤΙΣ ΚΑΤΑΣΤΑΣΕΙΣ ΤΗΣ ΚΑΡΤΑΣ ICS',
         'from_paypal' => 'ΑΠΟ ΤΟ PAYPAL',

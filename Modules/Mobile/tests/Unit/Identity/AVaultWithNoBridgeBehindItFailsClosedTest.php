@@ -92,7 +92,7 @@ it('reads a bridge that never answered as a failure, never as nothing enrolled',
 
     // MISSING here would take the lock screen down the branch that marks the
     // cold-start enrolment gone and tells the reader to set it up again.
-    expect(bridgelessVault($log)->recover(7)->status)->toBe(BiometricRecoverResult::FAILED);
+    expect(bridgelessVault($log)->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::FAILED);
     expect($log->lines)->toBe([]);
 });
 

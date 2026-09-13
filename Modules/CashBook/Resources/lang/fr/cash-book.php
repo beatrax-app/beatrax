@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Tiers',
     'counterparty_placeholder' => 'ex. Boulangerie',
     'category' => 'Catégorie',
-    'optional' => '(facultatif)',
+    'optional_field' => ':label (facultatif)',
     'uncategorized' => 'Non catégorisé',
     'note' => 'Note',
 

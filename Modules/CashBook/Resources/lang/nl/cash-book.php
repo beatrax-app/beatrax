@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Tegenpartij',
     'counterparty_placeholder' => 'bijv. Bakkerij',
     'category' => 'Categorie',
-    'optional' => '(optioneel)',
+    'optional_field' => ':label (optioneel)',
     'uncategorized' => 'Zonder categorie',
     'note' => 'Notitie',
 

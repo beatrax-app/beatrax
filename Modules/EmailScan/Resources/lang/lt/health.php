@@ -7,7 +7,7 @@ return [
     'needs_reconnect' => 'reikia prijungti iš naujo',
     'not_scanned_yet' => 'dar nenuskaityta',
     'not_scanned_yet_phone' => 'šiame telefone nenuskaityta',
-    'last_scanned' => 'paskutinį kartą nuskaityta',
+    'last_scanned' => 'paskutinį kartą nuskaityta :when',
     'out_of_date' => 'pasenę',
     'not_scanned_here' => 'šiame įrenginyje neskenuojama',
     'more' => 'dar :count',

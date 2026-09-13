@@ -6,7 +6,7 @@ return [
     'page_title' => 'Sortering av motparter',
     'heading' => 'Sorter ukjente motparter',
 
-    'progress' => ':seen av :total · :percent % · ~:minutes min igjen',
+    'progress' => ':seen av :total · :percent % · ~:minutes min igjen',
     'progress_aria' => 'Sorteringsfremdrift',
 
     'all_caught_aria' => 'Alle motparter er merket',

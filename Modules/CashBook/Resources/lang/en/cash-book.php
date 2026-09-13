@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Counterparty',
     'counterparty_placeholder' => 'e.g. Bakery',
     'category' => 'Category',
-    'optional' => '(optional)',
+    'optional_field' => ':label (optional)',
     'uncategorized' => 'Uncategorized',
     'note' => 'Note',
 

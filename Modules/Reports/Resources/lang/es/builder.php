@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Sin categorizar',
     'no_counterparty' => 'Sin contraparte',
     'unavailable_counterparty' => 'Contraparte no disponible en este dispositivo',
+    'unavailable_account' => 'Cuenta no disponible en este dispositivo',
     'title' => 'Informes',
     'page_title' => 'Informes · Beatrax',
     'subtitle' => 'Compón un informe a partir de tu libro mayor.',

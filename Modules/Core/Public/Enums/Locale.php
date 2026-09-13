@@ -70,6 +70,11 @@ enum Locale: string
     // here; it matches config/app.php's fallback_locale so the two never differ.
     public const string DEFAULT = self::En->value;
 
+    // The space CLDR puts between a figure and what follows it — a group mark,
+    // a currency symbol, a percent sign, a shortened thousand. It is no-break
+    // in every one of them so the two halves cannot land on separate lines.
+    private const string NBSP = "\u{00A0}";
+
     // The endonym shown in the switcher — each language named in itself, so
     // a Dutch-only reader still recognises their own option.
     public function label(): string
@@ -113,7 +118,7 @@ enum Locale: string
             self::En => ',',
             self::Fr => "\u{202F}",
             self::Bg, self::Cs, self::Et, self::Fi, self::Hu, self::Lt,
-            self::Lv, self::Nb, self::Pl, self::Sk, self::Sv, self::Uk => "\u{00A0}",
+            self::Lv, self::Nb, self::Pl, self::Sk, self::Sv, self::Uk => self::NBSP,
             self::Da, self::De, self::El, self::Es, self::Hr, self::It,
             self::Nl, self::Pt, self::Ro, self::Sl, self::Sr, self::Tr => '.',
         };
@@ -142,7 +147,7 @@ enum Locale: string
     // every other locale keeps a non-breaking space between the two.
     public function symbolGap(): string
     {
-        return $this === self::En || $this === self::Tr ? '' : "\u{00A0}";
+        return $this === self::En || $this === self::Tr ? '' : self::NBSP;
     }
 
     // Dutch is the only shipped locale whose negative pattern keeps the symbol
@@ -150,6 +155,86 @@ enum Locale: string
     public function signPrecedesSymbol(): bool
     {
         return $this !== self::Nl;
+    }
+
+    // What each locale shortens a thousand to, transcribed from CLDR's short
+    // compact patterns for the same reason the marks above are: on device ICU
+    // can only answer for English. A literal "k" is English's own abbreviation,
+    // and English does not even use that one — it writes "K".
+
+    // German answers null: CLDR gives it no short form below a million, so the
+    // figure is written out, which is what a German reader is meant to see.
+    public function compactThousands(): ?string
+    {
+        return match ($this) {
+            self::Cs, self::Hr, self::Sk, self::Sl => self::NBSP.'tis.',
+            self::Da => self::NBSP.'t',
+            self::De => null,
+            self::Et => self::NBSP.'tuh',
+            self::En, self::It, self::Nl => 'K',
+            self::Es, self::Pt => self::NBSP.'mil',
+            self::Fr => self::NBSP.'k',
+            self::Lv, self::Lt => self::NBSP."t\u{016B}kst.",
+            self::Hu => self::NBSP.'E',
+            self::Nb => 'k',
+            self::Pl => self::NBSP.'tys.',
+            self::Ro => self::NBSP.'K',
+            self::Sr => self::NBSP."\u{0445}\u{0438}\u{0459}.",
+            self::Fi => self::NBSP.'t.',
+            self::Sv => self::NBSP.'tn',
+            self::Tr => self::NBSP.'B',
+            self::El => self::NBSP."\u{03C7}\u{03B9}\u{03BB}.",
+            self::Bg => self::NBSP."\u{0445}\u{0438}\u{043B}.",
+            self::Uk => self::NBSP."\u{0442}\u{0438}\u{0441}.",
+        };
+    }
+
+    // Every shipped locale shortens a million, German included, so this one
+    // never answers null where compactThousands() does.
+    public function compactMillions(): string
+    {
+        return match ($this) {
+            self::Cs, self::Hr, self::Ro, self::Sk => self::NBSP.'mil.',
+            self::Da, self::Sl => self::NBSP.'mio.',
+            self::De => self::NBSP.'Mio.',
+            self::Et, self::Pl => self::NBSP.'mln',
+            self::En => 'M',
+            self::Es, self::Fr, self::Hu => self::NBSP.'M',
+            self::It => self::NBSP.'Mln',
+            self::Lv, self::Fi => self::NBSP.'milj.',
+            self::Lt, self::Nl => self::NBSP.'mln.',
+            self::Nb => self::NBSP.'mill.',
+            self::Pt => self::NBSP.'mi',
+            self::Sr => self::NBSP."\u{043C}\u{0438}\u{043B}.",
+            self::Sv => self::NBSP.'mn',
+            self::Tr => self::NBSP.'Mn',
+            self::El => self::NBSP."\u{03B5}\u{03BA}.",
+            self::Bg => self::NBSP."\u{043C}\u{043B}\u{043D}.",
+            self::Uk => self::NBSP."\u{043C}\u{043B}\u{043D}",
+        };
+    }
+
+    // Where the percent sign sits relative to the digits. Turkish is the only
+    // shipped locale that writes it in front (%42), transcribed from each
+    // locale's ICU percent pattern for the same reason the marks above are: on
+    // device ICU can only answer for English.
+    public function percentSignBeforeDigits(): bool
+    {
+        return $this === self::Tr;
+    }
+
+    // Thirteen locales keep a no-break space between the figure and the sign
+    // (42 %); the rest close it up (42%). The space is the one CLDR names, and
+    // it is no-break on purpose: a plain one lets the sign wrap to the next
+    // line on its own.
+    public function percentGap(): string
+    {
+        return match ($this) {
+            self::Cs, self::Da, self::De, self::Es, self::Fi, self::Fr, self::Hr,
+            self::Lt, self::Nb, self::Ro, self::Sk, self::Sl, self::Sv => self::NBSP,
+            self::Bg, self::El, self::En, self::Et, self::Hu, self::It, self::Lv,
+            self::Nl, self::Pl, self::Pt, self::Sr, self::Tr, self::Uk => '',
+        };
     }
 
     // Seven locales write U+2212 MINUS SIGN where the rest write the ASCII

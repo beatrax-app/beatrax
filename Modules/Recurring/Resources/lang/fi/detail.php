@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Tilitetty valuutassa :code',
     'chart_requires_js' => 'Kaavio vaatii JavaScriptin.',
 
-    'tolerance_toast' => 'Toleranssi: :percent %',
+    'tolerance_toast' => 'Toleranssi: :percent %',
 ];

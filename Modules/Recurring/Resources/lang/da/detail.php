@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Afregnet i :code',
     'chart_requires_js' => 'Diagrammet kræver JavaScript.',
 
-    'tolerance_toast' => 'Tolerance: :percent %',
+    'tolerance_toast' => 'Tolerance: :percent %',
 ];

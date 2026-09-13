@@ -52,7 +52,7 @@ return [
         'per_year' => '/m.',
         'meta_prior_now' => 'anksčiau :prior → dabar :now',
         'meta_detected' => 'aptikta :date',
-        'meta_threshold' => 'riba ±:percent %',
+        'meta_threshold' => 'riba ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/m.)',
         'cancel_impact' => 'Nutrauk tai → sutaupysi :amount/m.',
         'cadence_flipped' => 'Dažnumas pasikeitė — taip pat rodoma čia:',
