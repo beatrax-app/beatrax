@@ -8066,6 +8066,47 @@ go red, which is the failure [A needle short enough to match generated
 markup](#a-needle-short-enough-to-match-generated-markup) is about, arriving
 from the other side.
 
+## A picker's id converted to a number in the browser
+
+`tests/Contracts/ADerivedIdNeverReachesTheBrowserAsANumberArchTest.php` reads
+the two shapes; `Modules/Ledger/tests/Feature/AGoalIdSurvivesTheButtonThatAttributesItTest.php`
+is the third, which it does not.
+
+An id past 2<sup>53</sup> has to cross to the browser as a string, and the rule
+above reads the two ways a blade writes one straight into a JavaScript-evaluated
+attribute. There is a third way, and it clears both readers because the id
+arrives correctly quoted and is broken *afterwards*: an `<option value="…">`
+hands JavaScript a string, an `x-model` holds that string, and the button beside
+the select converts it before the call —
+
+```html
+x-on:click="$wire.attributeToGoal(Number(selectedGoal))"
+```
+
+`Number()` is the same rounding a bare number literal suffers, one step later
+and with no `{{ }}` on the line for a scan keyed to echoes to find. `parseInt()`,
+`parseFloat()` and a unary `+` do it too.
+
+The transaction-detail goal picker shipped this way. `goals.id` comes from
+`DeviceMintedRowId::mint()`, which is `random_int(1, PHP_INT_MAX)`, so all but
+about one goal in a thousand is past 2<sup>53</sup>: the reader chose a goal,
+pressed the button, and `GoalContributionWriter::attribute()` was handed an id
+that named no row. It returns false for a foreign or missing id on purpose — so
+there was no error, no toast and no row, on the one screen where a transaction
+is assigned to anything.
+
+Nothing caught it from either end. Six tests drove `attributeToGoal()` with the
+goal's own PHP integer, which never passes through a double; and `GoalFactory`
+minted no id at all, so every goal in the suite carried an autoincrement 1 — a
+magnitude the field never produces. The factory now mints the id the writer
+mints, for the reason `seedFixtureUserAndAccount()` takes a currency rather than
+hardcoding one: a fixture that cannot reach the failing magnitude cannot see the
+failure.
+
+The fix is to send the value the select is holding. The component reads it back
+through `DerivedRowId::fromWire()`, which is what every other id-taking Livewire
+method on that page already does.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
