@@ -349,14 +349,36 @@ module:
   [which kinds hold money](../ledger/architecture.md#accountkind--which-kinds-hold-money).
   **Scope limitation:** the most-recent point in this series is
   NOT guaranteed to equal the dashboard net-worth card's "today" figure.
-  Both now read `AccountBalanceQuery` as of a date, so the anchor is no
-  longer the difference — the remaining one is cleared status. The series
-  samples `clearedBalanceAsOf()`, which counts only cleared and reconciled
-  rows, because a historical point should not move as old manual entries
-  are confirmed; the card reads `currentBalanceAsOf()`, which counts every
-  row, because an uncleared entry is still money the reader has. An
-  account with pending rows therefore reads higher on the card than on the
-  series' last point, by exactly the uncleared amount.
+  Both read `AccountBalanceQuery` as of a date, so the anchor is not the
+  difference — but there are **two** differences left, not one, and the
+  gap is their sum rather than either alone.
+
+  1. **The day each one asks about.** The card asks for *today*
+     (`Clock::now()->startOfDay()`). A series point asks for its own
+     bucket's last day (`endExclusive->subDay()`), which for the bucket
+     the current period is still inside is a date in the FUTURE — a
+     `this_month` report read on 13 September samples 30 September, and
+     the ledger does carry rows dated after today, which
+     [the calendar's own window](../calendar/architecture.md) reads too.
+  2. **Which rows each one counts.** The card reads
+     `currentBalanceAsOf()`, which counts every row, because an uncleared
+     entry is still money the reader has. The series samples
+     `clearedBalanceAsOf()`, which counts only cleared and reconciled
+     ones. Note what that does and does not buy: a historical point DOES
+     move when an old entry is later confirmed — confirming it adds it to
+     every point at or after its posted day — so "a historical point does
+     not move" is not the property this choice has.
+
+  Neither difference has a fixed sign, so neither does the gap. Measured
+  on the shipped sample dataset in EUR on 2026-09-13: the card read
+  613574 and the `this_month` series point 623714, the card BELOW the
+  point by 10140. Decomposed at one date and one status at a time:
+  cleared-at-today 643743, current-at-today 613574 (the pending rows are
+  money going out, so dropping them raises the figure by 30169), and
+  cleared-at-2026-09-30 623714 (the future-dated rows take 20029 off it
+  again). `Modules/Reports/tests/Unit/TheNetWorthSeriesAndTheCardDifferInTwoPlacesTest.php`
+  pins both causes on a three-row ledger so this page cannot drift from
+  them again.
 
   The card previously sourced its balance from Forecasting's
   `BalanceAnchorResolver`. That resolver answers where a *projection*
