@@ -126,7 +126,9 @@ every non-mobile runtime, so the refusal branch is unreachable from a desktop
 browser at any width. The only local way to force a mobile runtime writes the
 durable store into the shared parent of every worktree — see the warning under
 [standing up an instance](#standing-up-an-instance-to-walk). Reaching it needs a
-phone build with the relay endpoint empty.
+phone build with the relay endpoint empty. **Since walked on both handsets** —
+see [Walked on device](#walked-on-device--e2-r23-e5-r28); this row stays as it
+was written.
 
 ### How each state was reached
 
@@ -223,6 +225,10 @@ copied in, and the notes below describe what is in them.
 | G7-R18 | `/settings` deferring option naming the machine's own zone, and the way back to it | yes | yes | 2026-09-13 | `walked` (relayed) | `relayed-e5e6f-g7-tz-phone.png` |
 | E5-R26 | — | — | — | — | `no surface` | — |
 | F3-R37 | — | — | — | — | `no surface` | — |
+
+**E5-R28 has since been walked on both handsets** — see
+[Walked on device](#walked-on-device--e2-r23-e5-r28). The `device-needed` row
+above stays as it was written.
 
 Read in those screenshots: the held-back block at 390 carries a heading, an
 explainer that names a **condition** rather than an act, *"155 changes signed by
@@ -343,6 +349,201 @@ withheld count and its condition exactly as the requirement asks, but the
 heading above it reads **"This device is synced"**. The count is the fix for a
 first sync reporting a whole history it does not have; the heading still reports
 one. Evidence: `relayed-e5e6f-g7-synccomplete-phone.png`.
+
+## Walked on device — E2-R23, E5-R28
+
+Two rows above stood open because their only surface is a phone build's own
+runtime. Both were walked on hardware on 2026-09-13, on a Galaxy A51 and an
+iPhone 12 mini.
+
+**The build, and why it is named here.** `efaa611dd` — `origin/main` at the
+time — built from `wt-phonewalk` as `2.0.0` / versionCode `20000`.
+`native:install --with-icu`, then `scripts/nativephp_patch_all.php`, then
+`native:run` per platform. **Uninstall first on both**: the A51 reports
+`firstInstallTime == lastUpdateTime`, and the iPhone went from the shipped
+`1.3.0` to `2.0.0`. The deployed PHP was read back off each device before
+anything was pressed — `Modules/Auth/Internal/Lock/ColdStartEnroller.php`
+present and `ColdStartEnrollmentService.php` absent in
+`app_storage/laravel/` (Android) and `Documents/app/` (iOS) — so neither walk
+ran against the tree an earlier device run exercised.
+
+The staleness check for this run, against the paths it exercised:
+
+```sh
+git diff --stat efaa611dd origin/main -- \
+  Modules/Sync/Internal/Pairing/PairingAnswerability.php \
+  Modules/Sync/Internal/Http/Livewire/PairingFlowModal.php \
+  Modules/Sync/Resources/views/livewire/pairing-flow-modal.blade.php \
+  Modules/Sync/Resources/lang/en/pairing.php \
+  Modules/Mobile/Internal/Http/Livewire/MobilePairingScan.php \
+  Modules/Mobile/Internal/Http/Livewire/MobileLockScreen.php \
+  Modules/Mobile/Internal/Identity/ \
+  Modules/Mobile/Resources/views/livewire/mobile-lock-screen.blade.php \
+  Modules/Auth/Public/Http/Livewire/AppLockSettingsSection.php \
+  Modules/Auth/Public/Http/Livewire/Concerns/ManagesBiometricEnrollment.php \
+  Modules/Auth/Resources/views/livewire/app-lock-settings-section.blade.php \
+  mobile-app/nativephp-plugins/biometric-vault/
+```
+
+Empty against `origin/main` at `57cbc74f2`, three commits later. The three
+commits in between touch reports, the dashboard, the desktop bundle and the
+Android permission checker, and none of the paths above.
+
+**The instruments.** The A51 over CDP (`adb forward` to
+`webview_devtools_remote_<pid>`), the iPhone over the WebKit inspector proxy.
+Screenshots are the device's own: `adb exec-out screencap` on Android, and on
+iOS `Page.snapshotRect` through the inspector, because `idevicescreenshot`
+refuses without a mounted developer disk image. Neither handset was paired to
+anything; the owner's desktop ledger on `127.0.0.1:4000` was not navigated,
+dialled or paired against.
+
+| id | surface | Android | iPhone | date | outcome | evidence |
+|---|---|---|---|---|---|---|
+| E2-R23 | `sync.pairing-flow-modal` on `/data-devices`, **Show my code** pressed with no `relay.json` on the device | yes | yes | 2026-09-13 | `walked — defect` | `e2-r23-choose-direction-android.png`, `e2-r23-refusal-{android,ios}.png`, `e2-r23-named-direction-{android,ios}.png` |
+| E5-R28 | The biometric row in `auth.app-lock-settings-section` on `/data-devices`, and the `Use fingerprint` trigger on `/mobile/lock` | yes | yes | 2026-09-13 | `walked — defect` | `e5-r28-affordance-offered-{android,ios}.png`, `e5-r28-enroll-prompt-android.png`, `e5-r28-enroll-refusal-ios.png`, `e5-r28-lockscreen-affordance-android.png`, `e5-r28-{android-capability-answer,android-biometricprompt-focus,ios-capability-refusal}.txt` |
+| G7-R17 | Cross-device propagation half | — | — | 2026-09-13 | `not walked` | — |
+
+**G7-R17 — why not.** The install half is already recorded above. The
+propagation half needs two paired devices, and these two handsets cannot pair
+to each other: only one side of a pairing listens, `sync:serve` runs under
+`SyncListenerProcess` and needs `Native\Desktop\Facades\ChildProcess`, so
+neither phone can be the side that is answered. Pairing them would need a
+relay standing between them and a camera pointed at the other's QR, which is
+what E2-R23's refusal says in as many words. The only listening device on this
+network is the owner's desktop app, serving the real ledger, which this pass
+was told not to pair against. Reaching it needs a second instance standing up
+its own credentialed `sync:serve`.
+
+### How each state was reached
+
+Both handsets were taken through the same setup by action, not by seeding:
+welcome screen → **Create account** → the recovery-code screen, acknowledged →
+`/data-devices` → an app-lock PIN set with the account password → **Enable
+encryption** → the **Enable sync** switch, which is what makes the
+**Pair a new device** control exist at all.
+
+- **E2-R23** — opened the pairing modal from that control and pressed
+  **Show my code**. The precondition is the out-of-box one and was checked
+  rather than assumed: `app_storage/persisted_data/sync/relay.json` does not
+  exist on the A51, and the relay-endpoint field on the page behind the modal
+  is empty, showing its `https://relay.example.com` placeholder. Then pressed
+  **Enter a code**, which is the direction the refusal names, to confirm that
+  road exists.
+- **E5-R28** — read the biometric row on `/data-devices` at the moment the app
+  lock came on, then pressed **Enroll**. On the A51 that took the OS-vault arm
+  (a PIN box headed *"Turn on biometric unlock — confirm with PIN"*), and on
+  the iPhone it refused. The A51 was then idled out to `/mobile/lock` with the
+  auto-lock set to one minute and cold-started, so that the lock screen's own
+  `x-init` trigger fired rather than being tapped.
+
+### What the screenshots show
+
+- **E2-R23, both handsets.** The modal reads *"Pair a new device · Step 1 of
+  3"* over two cards, **Show my code** (*"Show this device's code for the
+  other device to read."*) and **Enter a code** (*"Type the code shown on the
+  other device."*). Pressing the first puts a rose `role="alert"` line above
+  both of them: *"A code shown here could not be answered: this device cannot
+  be reached over the network, and no relay is set up. Show the other device's
+  code and enter that here instead."* Nothing clips — at 411 CSS px on the A51
+  the alert is 298×109 with its right edge at 355, and at 375 on the iPhone it
+  is 262×95 with its right edge at 319. `pairing_tokens` on the A51 holds
+  **zero rows** after the press, so the ceremony really is refused before a
+  token is minted rather than after.
+- **E2-R23, the named direction.** **Enter a code** lands on `/mobile/pair` on
+  both: a scan frame reading *"The camera is off. Open it to scan the code
+  shown on your other device."* over **Open the camera**, **Enter code
+  instead** and **Cancel**. The iPhone adds a paragraph the A51 does not —
+  *"Searching the network for the other device does not work on iPhone yet, so
+  a typed code cannot find it on its own. Scan the code with the camera
+  instead…"* — so the road the refusal points at names its own limit on the
+  platform that has one.
+- **E5-R28, A51.** The App-lock section renders *"Use fingerprint"* over
+  *"Enroll this device to unlock with biometrics."* with an **Enroll** button.
+  That offer is the platform's own answer: `window.PublicKeyCredential` is
+  `undefined` in this WebView, so the row's client probe cannot have set it,
+  and the server-rendered Livewire snapshot already carries
+  `biometricCapable: true`. logcat shows why — PHP calls the bridge and
+  Android answers `canAuthenticate(STRONG)=0 (available)`; the device has one
+  fingerprint enrolled, registered at 19:37 the same day. Enrolment succeeded
+  (the row becomes *"This device is enrolled for biometric unlock."* with
+  **Remove**, and `user_app_lock_configs.cold_start_biometric_enrolled` reads
+  `1`), and no refusal was logged, which is correct because nothing refused.
+- **E5-R28, the A51 lock screen.** After a cold start the screen carries the
+  Beatrax mark, ten PIN dots, the keypad, and an accent-filled **Use
+  fingerprint** button below it, with *"Forgot your PIN? Sign out"* under that.
+  The trigger is not decorative: at the moment it fired,
+  `dumpsys window` reported `mCurrentFocus=Window{BiometricPrompt}` — the
+  system prompt, raised by the app without a tap — and keystore2 logged the
+  enclave operation behind it. The prompt's window is secure, so `screencap`
+  returns an empty file; that is why the focus line is in the evidence beside
+  the screenshot of the screen underneath it.
+- **E5-R28, iPhone.** The same row renders *"Use Face ID"* with an **Enroll**
+  button — and pressing it answers, in rose, *"This version of Beatrax has
+  nowhere to store an unlock key, so biometric unlock is not offered. Your
+  device is not the limitation."* Both are in one frame: the sentence saying
+  biometric unlock is not offered, printed directly above the control offering
+  it. See the finding below.
+
+### What the device walking found
+
+Numbered on from the seven above, so a reference stays unique.
+
+#### 8. A code that cannot be answered is still offered, and refuses on press
+
+**E2-R23 surface, both handsets.** The requirement says a device that can
+neither accept a pairing frame nor carry a relay *"MUST NOT offer to show a
+code, and MUST name the direction that can complete instead."* The second half
+is done well. The first is not: **Show my code** renders as an ordinary,
+enabled card — `disabled` is false and there is no `aria-disabled` on either
+handset — and the refusal only appears after it is pressed. The card is
+unchanged afterwards, so the same press can be repeated indefinitely.
+`PairingAnswerability::canBeAnswered()` is consulted inside
+`PairingFlowModal::showMyCode()`, which is to say after the offer has been
+made, while the step that draws the two cards asks nothing. Evidence:
+`e2-r23-choose-direction-android.png`, `e2-r23-refusal-{android,ios}.png`.
+
+#### 9. The biometric offer is decided by a browser probe, not by the platform
+
+**E5-R28 surface, iPhone.** The row offering Face ID enrolment is rendered
+because the WKWebView exposes `window.PublicKeyCredential`, and
+`app-lock-settings-section.blade.php` carries
+`x-init="if (window.PublicKeyCredential) { $wire.set('biometricCapable', true) }"`.
+The platform's own answer was the opposite, and was on the wire before the
+probe ran: the server-rendered snapshot for `/data-devices` fetched from the
+device carries `biometricCapable: false`, and
+`Library/Application Support/storage/logs/laravel.log` records why, once per
+render — `BiometricKeyVault: this device cannot gate an entry behind a
+biometric. {"reason":"none_enrolled"}`, i.e. `LAError.biometryNotEnrolled`
+from `canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics)`.
+
+The A51 is the control: there `window.PublicKeyCredential` is `undefined`, the
+probe cannot fire, the snapshot says `biometricCapable: true`, and the row is
+correct. So the defect is invisible on exactly the platform whose WebView has
+no WebAuthn, and shows on the one that does.
+
+The requirement's other two clauses hold on both handsets. The check does
+demand the authentication the entry is written under — `BIOMETRIC_STRONG`
+against a Keystore key created with `AUTH_BIOMETRIC_STRONG`, and
+`.deviceOwnerAuthenticationWithBiometrics` against a keychain item written
+`.biometryCurrentSet` — and the refusal is recorded with the cause the
+platform gave. Evidence: `e5-r28-affordance-offered-ios.png`,
+`e5-r28-ios-capability-refusal.txt`, `e5-r28-android-capability-answer.txt`.
+
+#### 10. The enrolment refusal blames the build for a device limitation
+
+**E5-R28 surface, iPhone.** Pressing **Enroll** reaches
+`ManagesBiometricEnrollment::browserEnrollmentRefusal()`, which sees
+`nativephp-internal.running` and answers
+`auth::app_lock.error_enroll_unsupported`: *"This version of Beatrax has
+nowhere to store an unlock key, so biometric unlock is not offered. Your
+device is not the limitation."* Every clause of that is wrong on this device.
+The build does carry the vault — `vendor/beatrax/mobile-biometric-vault` and
+its `Facades/BiometricVault.php` are both on the phone, and the iOS half of
+the plugin compiled into this build. Biometric unlock *is* offered, two rows
+below the sentence. And the device is precisely the limitation: the platform
+answered `none_enrolled`. The one thing the reader could act on — enrol a face
+— is the one thing the copy tells them not to bother with. Evidence:
+`e5-r28-enroll-refusal-ios.png`.
 
 ## Adding a row
 
