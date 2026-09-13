@@ -371,6 +371,13 @@ Then it reads what it built with `desktop:review-mac-bundle`, and fails if it
 found no bundle at all: a `find` that matched nothing and a bundle with no
 findings print the same thing.
 
+Beside it, answering a different question: `desktop:inspect-bundle` reads the
+same `.app` for what it must not carry at all — key material, a build
+credential, a database, or a vendored package's dev tooling. Review refuses a
+bundle for how it was built; this refuses it for what came along. The store
+bundle is packed from the same application tree the direct download is, so it
+earns the same read the three desktop legs of `release.yml` now carry.
+
 The store bundle carries **no updater**. Apple forbids an app updating itself
 outside the store, and Electron disables `autoUpdater` in a `mas` build anyway —
 writing `NATIVEPHP_UPDATER_ENABLED=false` into the shipped `.env` means the

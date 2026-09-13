@@ -61,6 +61,18 @@ return [
         // tree needs its own entry.
         'tests',
 
+        // A vendored package's own dev tooling and documentation. Nothing
+        // autoloads either and nothing reads them at runtime; the mobile
+        // bundler drops both inside vendor packages already, and the desktop
+        // had no equivalent list at all. Licences are deliberately kept.
+        '*/tools',
+        '*/docs',
+        '*/*.md',
+
+        // Same slash problem as `tests`: `*/tools` cannot match the repo-root
+        // tree, which holds the dev-only PHPStan rules.
+        'tools',
+
         '.docs',
         '.github',
 
