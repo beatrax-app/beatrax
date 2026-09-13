@@ -11,7 +11,7 @@ use SplFileInfo;
 // A floor catches exactly one failure: a walk that read nothing. It says
 // nothing about a walk that read almost everything and lost one module, which
 // is the shape a narrowing actually takes — one more fragment in a skip list,
-// one more clause in a path filter. Thirteen guards of fifteen planted passed
+// one more clause in a path filter. Fifteen guards of eighteen planted passed
 // green with a module unread, their floors never moving.
 /**
  * @link ../../../.docs/conventions/arch-invariants.md#a-floor-does-not-notice-a-module-going-missing

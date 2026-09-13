@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\WalkCensus;
 
 // Pairing is the ceremony that admits a device, and the confirmed registry row
 // it writes is the only record of that. A second source beside the lookup — an
@@ -82,6 +83,13 @@ it('reads a peer static key out of the confirmed registry and combines it with n
         1000,
         'The walk opened '.count($sources).' shipped files, which is too few to have read the tree at all.',
     );
+
+    // The floor never moved when `/Ledger/` was added beside `/tests/`, and a
+    // peer key merged with a configured map, planted in that module, went
+    // unreported. Which modules exist is read off the filesystem instead.
+    $missed = WalkCensus::modulesMissedBy($sources);
+
+    expect($missed)->toBe([], 'the walk reached no file at all in these modules, so a widened peer-key read in one of them is judged by nobody: '.implode(', ', $missed));
 
     $shapes = [
         '/\A\$\w+\s*=\s*\$[\w>-]+->deviceX25519Keys\([^()]*\)\z/',

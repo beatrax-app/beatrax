@@ -263,16 +263,20 @@ nothing fails on that assertion rather than on the offender list it never built.
 
 Every walk here asserts a floor on what it scanned, and that floor catches
 exactly one failure: a walk that read *nothing*. It says nothing about the walk
-that read almost everything. Fifteen guards were instrumented and then planted
+that read almost everything. Eighteen guards were instrumented and then planted
 with one realistic narrowing each — `/Ledger/` added beside `/tests/` in a path
 filter, `.blade.php` mistyped, one root dropped from a two-root list, one more
-fragment in a `RepoTree` skip list. Thirteen of the fifteen stayed **green**, and
+fragment in a `RepoTree` skip list. Fifteen of the eighteen stayed **green**, and
 green with a real violation planted in the region they had stopped reading: an
 unowned `withoutGlobalScope`, a second writer of the occurrence log, a dispatch
 inside a transaction, a replayer built from the retained device-key map, a file
 reading `ed25519SecretKeyHex`, a `role="progressbar"` with nothing to announce,
-a broken `@include`, a `TODO` in a template comment. Each guard's floor sat
-thousands under its real count and never moved.
+a broken `@include`, a `TODO` in a template comment, a fourth reader of
+`device_introductions`, a peer key merged with a configured map. Each guard's
+floor sat thousands under its real count and never moved. The three that went
+red were saved by something other than the floor: a root dropped from `covers`,
+a recogniser that stopped matching anything at all, and an allow-list entry
+that happened to name a file in the module the plant removed.
 
 An exact pin does not save a walk from this either. `PRIVATE_KEY_HOLDERS` and
 `CONFIRMED_KEY_REPLAY_SITES` compare with `toBe()`, which catches a holder that

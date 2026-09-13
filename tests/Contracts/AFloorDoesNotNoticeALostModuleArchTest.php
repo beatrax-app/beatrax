@@ -6,8 +6,8 @@ use Tests\Contracts\Support\RepoTree;
 use Tests\Contracts\Support\WalkCensus;
 
 // Every walk in tests/Contracts asserts a floor before it reads a verdict, and
-// that floor catches exactly one failure: a walk that read nothing. Fifteen
-// guards were planted with one realistic narrowing each and thirteen stayed
+// that floor catches exactly one failure: a walk that read nothing. Eighteen
+// guards were planted with one realistic narrowing each and fifteen stayed
 // green — with a real violation sitting in the region they stopped reading.
 // WalkCensus is the second reader those floors now stand beside, and a reader
 // that cannot go red says nothing, so it is driven here against planted lists
