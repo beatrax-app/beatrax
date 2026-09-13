@@ -325,7 +325,13 @@ hand-replicated join+filter since its view resolution is more involved.
 `budgetType()` returns an `ActualBudgetType`, normalizing Actual's legacy
 pre-migration preference values (`'rollover'`→envelope, `'report'`→tracking)
 onto the current `envelope`/`tracking` pair; `budgetAssignments()` branches on
-it to read `zero_budgets` or `reflect_budgets`. A real export routinely ships
+it to read `zero_budgets` or `reflect_budgets`, restricted in both cases to the
+categories the export still has. Those tables keep a row after the category it
+names is tombstoned, and such a row was staged, counted in the preview's
+"months of budget history will import", and then dropped by
+`PromoteBudgetAssignments::promote()`, which has no category id to write it to
+and reports nothing when it finds none — the preview promising months the
+promotion never wrote. A real export routinely ships
 with no `preferences.budgetType` row at all, and refusing those rejected the
 whole file, so `declaredBudgetType()` returns `null` there and `budgetType()`
 falls back to `ActualSqliteReader::DEFAULT_BUDGET_TYPE` (envelope, Actual's own
@@ -398,10 +404,46 @@ one: at a fixed hundredth a yen figure read a hundred times itself.
 A `Budget.csv` cell needs the opposite reading, which is what the sibling
 `parseSigned()` is for. There, `0,00` and a negative are both figures the
 reader wrote, and only an *absent* cell means the export says nothing —
-`parseBudgetedMinor()` returns `null` for that one and
+`requireSignedMinorOrNull()` returns `null` for that one and
 `buildBudgetAssignments()` stages no row at all. Collapsing the two into a
 single `int` staged a month the file never mentioned as a budget of zero,
 which promotion then applied by deleting the reader's own figure for it.
+
+`parseSigned()` alone could not be that reading, because it answers the same
+`null` to an absent cell and to one it could not read. A `Budgeted` cell
+holding `€ 200,00`, or a figure past `MoneyInput::MAX_MINOR`, therefore staged
+no row for that category-month: the reader's budget for it was simply absent,
+`migration_staging_unmapped_items` held nothing, and the preview called the
+import fully mapped. `requireSignedMinorOrNull()` refuses that cell the way
+`requireMinor()` refuses an unreadable `Outflow` — A8-R26's answer, the whole
+file before a row is staged, rather than a month quietly missing from a
+history imported once.
+
+A register row's amount is its `Inflow` less its `Outflow`. Reading the inflow
+alone whenever it was set — `$inflow > 0 ? $inflow : -$outflow` — discarded the
+outflow of any row stating both, so a row written `45.00 / 5.00` reached the
+ledger as a €5 receipt rather than a €40 payment. The subtraction is the same
+answer for every row stating one column, which is every row YNAB itself writes.
+
+`parseRegisterDate()` checks the cell's *shape* before parsing it, because
+`createFromFormat()`'s `Y` takes two digits as readily as four and warns about
+neither: `01/15/26` parsed cleanly into 15 January in the year 26, and
+`SafeDate::fromFormatOrNull()`'s warning check — the only guard downstream —
+had nothing to object to. A four-digit year is the one part of `m/d/Y` that
+cannot be seen after the parse, so it is required as a regex before it. The
+month/day order is not, and a `d/m/Y` export is still refused rather than read:
+a file where every date could be either is indistinguishable from one that
+means the other, and the format is stated nowhere in the export.
+
+A CSV cell that is not valid UTF-8 is bytes, not text, and every reader past
+the parser takes it for text. A Latin-1 payee name travelled as far as
+`Counterparties`' slug resolver and threw there — *during promotion*, with the
+categories and the budget grid already written and `PromoteStagingToDomain`
+deliberately outside any wrapping transaction, so there was nothing to roll
+back. `ReadsYnabCsvFiles::normalizeRow()` refuses it at the one point every
+register and budget cell passes through, naming the file and the column;
+`ActualSqliteReader::fetchAssocRow()` is the same gate for the one query path
+every column of an untrusted SQLite export is read through.
 
 `ZipExtractor` extracts an uploaded export ZIP into a scoped temp directory
 under `storage/app/`, never a web-served path, guarding against a zip-bomb
