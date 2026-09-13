@@ -182,24 +182,7 @@ final class SetupWizard extends Component
         ResumeStepResolver $resume,
         Dispatcher $events,
     ): void {
-        // Asked before the write, because after it every row is finished either
-        // way: this is what tells the first Finish from a later one, and the
-        // completion event is owed once.
-        $wasAlreadyComplete = $resume->resolve($currentUser->id()) === '';
-
-        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Done->value);
-
-        if (! $this->allComplete) {
-            return;
-        }
-
-        if (! $wasAlreadyComplete) {
-            $events->dispatch(new WizardCompleted($currentUser->id()));
-        }
-
-        // The wizard's one exit that means "finished", and the reason `done` is
-        // the step skip refuses. An action may navigate where mount() may not.
-        $this->redirect('/');
+        $this->advanceAndLeave($db, $currentUser, $registry, $query, $clock, $resume, $events, WizardStepStatus::Done->value);
     }
 
     // The view hides skip on non-skippable steps; this guard is the
@@ -212,12 +195,47 @@ final class SetupWizard extends Component
         WizardProgressQuery $query,
         Clock $clock,
         ResumeStepResolver $resume,
+        Dispatcher $events,
     ): void {
         if (! $registry->isSkippable($this->currentStepKey)) {
             return;
         }
 
-        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Skipped->value);
+        $this->advanceAndLeave($db, $currentUser, $registry, $query, $clock, $resume, $events, WizardStepStatus::Skipped->value);
+    }
+
+    // Both exits from a step can be the one that leaves nothing pending, and
+    // only Finish knew what to do about it: a reader who walked Back to the last
+    // skippable step and skipped it again stayed on the step they had just
+    // dismissed, with no event raised and nowhere sent.
+    private function advanceAndLeave(
+        DatabaseManager $db,
+        CurrentUser $currentUser,
+        WizardStepRegistry $registry,
+        WizardProgressQuery $query,
+        Clock $clock,
+        ResumeStepResolver $resume,
+        Dispatcher $events,
+        string $terminalStatus,
+    ): void {
+        // Asked before the write, because after it every row is finished either
+        // way: this is what tells the first Finish from a later one, and the
+        // completion event is owed once.
+        $wasAlreadyComplete = $resume->resolve($currentUser->id()) === '';
+
+        $this->advance($db, $currentUser, $registry, $query, $clock, $resume, $terminalStatus);
+
+        if (! $this->allComplete) {
+            return;
+        }
+
+        if (! $wasAlreadyComplete) {
+            $events->dispatch(new WizardCompleted($currentUser->id()));
+        }
+
+        // The wizard's one exit that means "finished", and the reason `done` is
+        // the step skip refuses. An action may navigate where mount() may not.
+        $this->redirect('/');
     }
 
     // "Resume later", whose aria-label promises it saves your progress. It
