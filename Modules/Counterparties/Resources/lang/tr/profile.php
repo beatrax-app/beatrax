@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategoriler',
 
-        'categories_empty_html' => 'Henüz kategori yok — kategorisiz işlemler <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorilendirme</a> bölümünde görünür.',
+        'categories_empty_html' => 'Henüz kategori yok — kategorisiz işlemler <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorilendirme</a> bölümünde görünür.',
         'no_recurring' => 'Düzenli kalıp algılanmadı.',
         'per_month_suffix' => '/ay',
         'funding_chain' => 'Finansman zinciri',

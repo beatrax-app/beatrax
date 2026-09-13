@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategorije',
 
-        'categories_empty_html' => 'Još nema kategorija — transakcije bez kategorije prikazuju se u odjeljku <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorizacija</a>.',
+        'categories_empty_html' => 'Još nema kategorija — transakcije bez kategorije prikazuju se u odjeljku <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorizacija</a>.',
         'no_recurring' => 'Nisu otkriveni ponavljajući obrasci.',
         'per_month_suffix' => '/mj.',
         'funding_chain' => 'Lanac financiranja',

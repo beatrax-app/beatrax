@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategorier',
 
-        'categories_empty_html' => 'Ingen kategorier ennå — ikke kategoriserte transaksjoner vises i <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorisering</a>.',
+        'categories_empty_html' => 'Ingen kategorier ennå — ikke kategoriserte transaksjoner vises i <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorisering</a>.',
         'no_recurring' => 'Ingen gjentakende mønstre oppdaget.',
         'per_month_suffix' => '/mnd',
         'funding_chain' => 'Finansieringskjede',

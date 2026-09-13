@@ -13,6 +13,7 @@
       $fundingChain      ChainSummary|null
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Core\Public\Navigation\Destination')
 
 <div class="space-y-6" style="margin-top: var(--space-5);">
     <div class="cp-tab-duo">
@@ -23,7 +24,7 @@
             </h3>
             @if ($categoryBreakdown->isEmpty())
                 <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-                    {!! Lang::get('counterparties::profile.merchant.categories_empty_html') !!}
+                    {!! Lang::get('counterparties::profile.merchant.categories_empty_html', ['url' => Destination::Categorization->url()]) !!}
                 </p>
             @else
                 <ul style="margin: 0; padding: 0; list-style: none;">
