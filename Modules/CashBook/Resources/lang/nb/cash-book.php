@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Motpart',
     'counterparty_placeholder' => 'f.eks. Bakeri',
     'category' => 'Kategori',
-    'optional' => '(valgfritt)',
+    'optional_field' => ':label (valgfritt)',
     'uncategorized' => 'Ikke kategorisert',
     'note' => 'Notat',
 

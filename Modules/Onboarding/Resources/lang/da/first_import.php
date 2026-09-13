@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'FRA ',
+        'from_other' => 'FRA :source',
         'from_bank' => 'FRA DIT KONTOUDTOG',
         'from_ics' => 'FRA DINE ICS-KORTUDTOG',
         'from_paypal' => 'FRA PAYPAL',

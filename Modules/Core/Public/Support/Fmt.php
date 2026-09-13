@@ -139,8 +139,9 @@ final class Fmt
     // The abbreviation is the locale's too. A literal "k" was English's, and not
     // even English's: CLDR gives it "K". German is given no short form below a
     // million at all, so it answers null here and the figure is written out.
+
     // ICU is not asked at run time — the phone could only answer for English,
-    // and a badge that reads differently on the two devices is the defect this
+    // and a badge reading differently on two paired devices is the defect this
     // shortening exists to avoid.
     public static function compactCount(int $value): string
     {

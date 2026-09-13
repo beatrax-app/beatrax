@@ -25,7 +25,7 @@ return [
     'months' => ':count mēnešu|:count mēnesis|:count mēneši',
     'not_scanned_yet' => 'vēl nav skenēts',
     'not_scanned_yet_phone' => 'šajā tālrunī nav skenēts',
-    'last_scanned' => 'pēdējoreiz skenēts',
+    'last_scanned' => 'pēdējoreiz skenēts :when',
     'window_prefix' => 'Periods:',
     'edit' => 'Rediģēt',
 

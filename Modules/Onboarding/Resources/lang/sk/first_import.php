@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'ZDROJ: ',
+        'from_other' => 'ZDROJ: :source',
         'from_bank' => 'ZDROJ: TVOJ BANKOVÝ VÝPIS',
         'from_ics' => 'ZDROJ: TVOJE VÝPISY KARTY ICS',
         'from_paypal' => 'ZDROJ: PAYPAL',

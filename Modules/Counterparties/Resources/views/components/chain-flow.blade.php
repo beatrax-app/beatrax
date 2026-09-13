@@ -22,7 +22,9 @@
 ])
 @php
     $labels = array_map(static fn ($node) => is_array($node) ? ($node['label'] ?? '') : (string) $node, $nodes);
-    $ariaLabel = Lang::get('counterparties::components.chain_flow.aria_prefix').implode(Lang::get('counterparties::components.chain_flow.join'), array_filter($labels));
+    $ariaLabel = Lang::get('counterparties::components.chain_flow.aria', [
+        'chain' => implode(Lang::get('counterparties::components.chain_flow.join'), array_filter($labels)),
+    ]);
 @endphp
 <div
     {{ $attributes->merge(['class' => 'chain-flow']) }}

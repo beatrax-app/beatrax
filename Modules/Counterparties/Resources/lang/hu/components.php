@@ -51,7 +51,7 @@ return [
     ],
 
     'chain_flow' => [
-        'aria_prefix' => 'Fedezeti lánc: ',
+        'aria' => 'Fedezeti lánc: :chain',
         'join' => ' ide: ',
     ],
 

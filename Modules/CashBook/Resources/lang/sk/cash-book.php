@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Protistrana',
     'counterparty_placeholder' => 'napr. Pekáreň',
     'category' => 'Kategória',
-    'optional' => '(nepovinné)',
+    'optional_field' => ':label (nepovinné)',
     'uncategorized' => 'Bez kategórie',
     'note' => 'Poznámka',
 

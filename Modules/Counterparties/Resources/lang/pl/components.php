@@ -51,7 +51,7 @@ return [
     ],
 
     'chain_flow' => [
-        'aria_prefix' => 'Łańcuch finansowania: ',
+        'aria' => 'Łańcuch finansowania: :chain',
         'join' => ' do ',
     ],
 

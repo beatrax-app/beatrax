@@ -25,7 +25,7 @@ return [
     'months' => ':count mes.|:count mes.|:count mes.',
     'not_scanned_yet' => 'zatiaľ neprehľadané',
     'not_scanned_yet_phone' => 'v tomto telefóne neprehľadané',
-    'last_scanned' => 'naposledy prehľadané',
+    'last_scanned' => 'naposledy prehľadané :when',
     'window_prefix' => 'Obdobie:',
     'edit' => 'Upraviť',
 

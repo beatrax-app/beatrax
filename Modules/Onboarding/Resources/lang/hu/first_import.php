@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'INNEN: ',
+        'from_other' => 'INNEN: :source',
         'from_bank' => 'A BANKSZÁMLAKIVONATODBÓL',
         'from_ics' => 'AZ ICS KÁRTYAKIVONATAIDBÓL',
         'from_paypal' => 'A PAYPALRÓL',

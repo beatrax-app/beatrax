@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'IŠ ',
+        'from_other' => 'IŠ :source',
         'from_bank' => 'IŠ TAVO BANKO IŠRAŠO',
         'from_ics' => 'IŠ TAVO ICS KORTELĖS IŠRAŠŲ',
         'from_paypal' => 'IŠ PAYPAL',

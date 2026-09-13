@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Kita šalis',
     'counterparty_placeholder' => 'pvz. Kepykla',
     'category' => 'Kategorija',
-    'optional' => '(neprivaloma)',
+    'optional_field' => ':label (neprivaloma)',
     'uncategorized' => 'Be kategorijos',
     'note' => 'Pastaba',
 

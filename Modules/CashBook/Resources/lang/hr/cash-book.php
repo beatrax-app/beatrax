@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Protustranka',
     'counterparty_placeholder' => 'npr. Pekarnica',
     'category' => 'Kategorija',
-    'optional' => '(neobavezno)',
+    'optional_field' => ':label (neobavezno)',
     'uncategorized' => 'Bez kategorije',
     'note' => 'Bilješka',
 

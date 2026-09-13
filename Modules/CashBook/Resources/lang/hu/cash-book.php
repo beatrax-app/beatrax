@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Partner',
     'counterparty_placeholder' => 'pl. Pékség',
     'category' => 'Kategória',
-    'optional' => '(opcionális)',
+    'optional_field' => ':label (opcionális)',
     'uncategorized' => 'Kategorizálatlan',
     'note' => 'Megjegyzés',
 

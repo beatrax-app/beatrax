@@ -51,7 +51,7 @@ return [
     ],
 
     'chain_flow' => [
-        'aria_prefix' => 'Rahoitusketju: ',
+        'aria' => 'Rahoitusketju: :chain',
         'join' => ' kohteeseen ',
     ],
 

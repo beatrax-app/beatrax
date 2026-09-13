@@ -39,7 +39,9 @@
         SourceFormat::Camt053->value, SourceFormat::Mt940->value, CsvPresetRegistry::ASN, CsvPresetRegistry::ING_NL => Lang::get('onboarding::first_import.section.from_bank'),
         SourceFormat::IcsPdf->value => Lang::get('onboarding::first_import.section.from_ics'),
         SourceFormat::PaypalCsv->value => Lang::get('onboarding::first_import.section.from_paypal'),
-        default => Lang::get('onboarding::first_import.section.from_prefix').strtoupper(str_replace('-', ' ', $section->sourceFormat)),
+        default => Lang::get('onboarding::first_import.section.from_other', [
+            'source' => strtoupper(str_replace('-', ' ', $section->sourceFormat)),
+        ]),
     };
 
     $rowCount = $section->totalRows;

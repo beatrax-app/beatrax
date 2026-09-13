@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Contraparte',
     'counterparty_placeholder' => 'ex.: Padaria',
     'category' => 'Categoria',
-    'optional' => '(opcional)',
+    'optional_field' => ':label (opcional)',
     'uncategorized' => 'Sem categoria',
     'note' => 'Nota',
 

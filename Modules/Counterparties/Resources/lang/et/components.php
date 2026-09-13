@@ -51,7 +51,7 @@ return [
     ],
 
     'chain_flow' => [
-        'aria_prefix' => 'Rahastusahel: ',
+        'aria' => 'Rahastusahel: :chain',
         'join' => ' kuni ',
     ],
 

@@ -25,7 +25,7 @@ return [
     'months' => ':count ay',
     'not_scanned_yet' => 'henüz taranmadı',
     'not_scanned_yet_phone' => 'bu telefonda taranmadı',
-    'last_scanned' => 'son tarama',
+    'last_scanned' => 'son tarama :when',
     'window_prefix' => 'Aralık:',
     'edit' => 'Düzenle',
 

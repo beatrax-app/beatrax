@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Modpart',
     'counterparty_placeholder' => 'f.eks. Bager',
     'category' => 'Kategori',
-    'optional' => '(valgfrit)',
+    'optional_field' => ':label (valgfrit)',
     'uncategorized' => 'Ikke kategoriseret',
     'note' => 'Note',
 

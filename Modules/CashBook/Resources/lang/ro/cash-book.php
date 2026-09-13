@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Contraparte',
     'counterparty_placeholder' => 'ex. Brutărie',
     'category' => 'Categorie',
-    'optional' => '(opțional)',
+    'optional_field' => ':label (opțional)',
     'uncategorized' => 'Necategorizat',
     'note' => 'Notă',
 

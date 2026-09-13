@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Vastapuoli',
     'counterparty_placeholder' => 'esim. Leipomo',
     'category' => 'Kategoria',
-    'optional' => '(valinnainen)',
+    'optional_field' => ':label (valinnainen)',
     'uncategorized' => 'Luokittelematon',
     'note' => 'Muistiinpano',
 

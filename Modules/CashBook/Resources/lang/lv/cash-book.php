@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Darījuma partneris',
     'counterparty_placeholder' => 'piem. Maiznīca',
     'category' => 'Kategorija',
-    'optional' => '(neobligāti)',
+    'optional_field' => ':label (neobligāti)',
     'uncategorized' => 'Bez kategorijas',
     'note' => 'Piezīme',
 

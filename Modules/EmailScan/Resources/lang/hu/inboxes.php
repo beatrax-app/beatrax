@@ -25,7 +25,7 @@ return [
     'months' => ':count hónap|:count hónap',
     'not_scanned_yet' => 'még nem vizsgáltuk',
     'not_scanned_yet_phone' => 'ezen a telefonon nem vizsgáltuk',
-    'last_scanned' => 'utolsó vizsgálat',
+    'last_scanned' => 'utolsó vizsgálat :when',
     'window_prefix' => 'Időszak:',
     'edit' => 'Szerkesztés',
 

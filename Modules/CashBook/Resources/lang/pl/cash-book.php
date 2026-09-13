@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Kontrahent',
     'counterparty_placeholder' => 'np. Piekarnia',
     'category' => 'Kategoria',
-    'optional' => '(opcjonalnie)',
+    'optional_field' => ':label (opcjonalnie)',
     'uncategorized' => 'Bez kategorii',
     'note' => 'Notatka',
 

@@ -25,7 +25,7 @@ return [
     'months' => ':count måned|:count måneder',
     'not_scanned_yet' => 'ikke skannet ennå',
     'not_scanned_yet_phone' => 'ikke skannet på denne telefonen',
-    'last_scanned' => 'sist skannet',
+    'last_scanned' => 'sist skannet :when',
     'window_prefix' => 'Periode:',
     'edit' => 'Rediger',
 

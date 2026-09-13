@@ -51,7 +51,7 @@ return [
     ],
 
     'chain_flow' => [
-        'aria_prefix' => 'Finansējuma ķēde: ',
+        'aria' => 'Finansējuma ķēde: :chain',
         'join' => ' uz ',
     ],
 

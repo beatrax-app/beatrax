@@ -25,7 +25,7 @@ return [
     'months' => ':count kuu|:count kuud',
     'not_scanned_yet' => 'veel skannimata',
     'not_scanned_yet_phone' => 'selles telefonis skannimata',
-    'last_scanned' => 'viimati skannitud',
+    'last_scanned' => 'viimati skannitud :when',
     'window_prefix' => 'Aken:',
     'edit' => 'Muuda',
 

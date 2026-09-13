@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Vastaspool',
     'counterparty_placeholder' => 'nt Pagariäri',
     'category' => 'Kategooria',
-    'optional' => '(valikuline)',
+    'optional_field' => ':label (valikuline)',
     'uncategorized' => 'Kategoriseerimata',
     'note' => 'Märkus',
 

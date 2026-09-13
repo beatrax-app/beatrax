@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Контрагент',
     'counterparty_placeholder' => 'напр. Пекарна',
     'category' => 'Категория',
-    'optional' => '(по избор)',
+    'optional_field' => ':label (по избор)',
     'uncategorized' => 'Некатегоризирано',
     'note' => 'Бележка',
 

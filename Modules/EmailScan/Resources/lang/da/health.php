@@ -7,7 +7,7 @@ return [
     'needs_reconnect' => 'skal forbindes igen',
     'not_scanned_yet' => 'ikke scannet endnu',
     'not_scanned_yet_phone' => 'ikke scannet på denne telefon',
-    'last_scanned' => 'sidst scannet',
+    'last_scanned' => 'sidst scannet :when',
     'out_of_date' => 'forældet',
     'not_scanned_here' => 'scannes ikke på denne enhed',
     'more' => '+:count mere',

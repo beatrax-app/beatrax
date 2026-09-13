@@ -7,7 +7,7 @@ return [
     'needs_reconnect' => 'χρειάζεται επανασύνδεση',
     'not_scanned_yet' => 'δεν έχει σαρωθεί ακόμη',
     'not_scanned_yet_phone' => 'δεν σαρώθηκε σε αυτό το τηλέφωνο',
-    'last_scanned' => 'τελευταία σάρωση',
+    'last_scanned' => 'τελευταία σάρωση :when',
     'out_of_date' => 'ξεπερασμένο',
     'not_scanned_here' => 'δεν σαρώνεται σε αυτή τη συσκευή',
     'more' => '+:count ακόμη',

@@ -30,7 +30,7 @@ return [
     ],
 
     'section' => [
-        'from_prefix' => 'DE ',
+        'from_other' => 'DE :source',
         'from_bank' => 'DE TON RELEVÉ BANCAIRE',
         'from_ics' => 'DE TES RELEVÉS DE CARTE ICS',
         'from_paypal' => 'DE PAYPAL',

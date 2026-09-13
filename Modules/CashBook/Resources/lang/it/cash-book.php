@@ -16,7 +16,7 @@ return [
     'counterparty' => 'Controparte',
     'counterparty_placeholder' => 'es. Panetteria',
     'category' => 'Categoria',
-    'optional' => '(facoltativo)',
+    'optional_field' => ':label (facoltativo)',
     'uncategorized' => 'Senza categoria',
     'note' => 'Nota',
 

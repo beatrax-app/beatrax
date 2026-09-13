@@ -85,6 +85,7 @@ const FROZEN_LINE_PINS = [
         ':count source|:count sources' => null,
         ':count transaction|:count transactions' => null,
         ':fetched / ~:count message|:fetched / ~:count messages' => null,
+        ':label (optional)' => null,
         'Action' => null,
         'Action :number' => null,
         'Actions' => null,

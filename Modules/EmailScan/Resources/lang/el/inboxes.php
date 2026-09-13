@@ -25,7 +25,7 @@ return [
     'months' => ':count μήνας|:count μήνες',
     'not_scanned_yet' => 'δεν έχει σαρωθεί ακόμη',
     'not_scanned_yet_phone' => 'δεν σαρώθηκε σε αυτό το τηλέφωνο',
-    'last_scanned' => 'τελευταία σάρωση',
+    'last_scanned' => 'τελευταία σάρωση :when',
     'window_prefix' => 'Παράθυρο:',
     'edit' => 'Επεξεργασία',
 

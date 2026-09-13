@@ -25,7 +25,7 @@ return [
     'months' => ':count Monat|:count Monate',
     'not_scanned_yet' => 'noch nicht gescannt',
     'not_scanned_yet_phone' => 'auf diesem Telefon nicht durchsucht',
-    'last_scanned' => 'zuletzt gescannt',
+    'last_scanned' => 'zuletzt gescannt :when',
     'window_prefix' => 'Zeitraum:',
     'edit' => 'Bearbeiten',
 
