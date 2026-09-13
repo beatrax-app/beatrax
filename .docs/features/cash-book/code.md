@@ -103,8 +103,10 @@ The three crossings that exist are all from *tests*, and all pinned in
     public `$paginators` map on every write, because a payload could otherwise
     replace it with a scalar that `getPage()` then indexes.
   - `CashBookPage::mount()` — seeds the date field with today.
-  - Private `manualEntriesQuery()`, `amountError()`, `amountExample()`,
-    `ownedCategoryId()`.
+  - Private `manualEntriesQuery()` — the paginated manual-entry read. It joins
+    the account so it can rank on `NewestTransactionFirst::ACROSS_ACCOUNTS`
+    rather than on `t.id`, which is a number each device counts for itself.
+  - Private `amountError()`, `amountExample()`, `ownedCategoryId()`.
   - Traits: `CoercesScalars` (the `toInt` / `toString` narrowing used on raw
     rows), `DispatchesToast`, `HandlesTaxTagging` (`Tax`'s per-row tag popover),
     `WithPagination`.

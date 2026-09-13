@@ -33,6 +33,7 @@ use Modules\Import\Public\Enums\SyntheticSourceFormat;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -345,16 +346,19 @@ final class CashBookPage extends Component
         return $view;
     }
 
+    // The 25-row page makes this order decide WHICH entries the reader is
+    // shown, not merely their sequence, and `t.id` is counted per device — so
+    // six coffees typed on one day filled page one differently on the phone.
     private function manualEntriesQuery(Connection $connection, int $userId): Builder
     {
         $query = $connection->table('transactions as t')
-            ->leftJoin('categories as c', 'c.id', '=', 't.category_id');
+            ->leftJoin('categories as c', 'c.id', '=', 't.category_id')
+            ->join('accounts as '.NewestTransactionFirst::ACCOUNT, NewestTransactionFirst::ACCOUNT.'.id', '=', 't.account_id');
 
         return CategoryPathName::joinParent($query, $userId, 'c', 'cp')
             ->where('t.user_id', $userId)
             ->where('t.source_format', SyntheticSourceFormat::Manual->value)
-            ->orderByDesc('t.posted_at')
-            ->orderByDesc('t.id');
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS);
     }
 
     // An amount the parser could not read is not an amount that is too small.

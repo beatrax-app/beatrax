@@ -12,7 +12,7 @@ suite is feature tests over `RefreshDatabase`.
 
 ## Feature tests
 
-- **Location:** `Modules/CashBook/tests/Feature/` — sixteen files, eighty
+- **Location:** `Modules/CashBook/tests/Feature/` — seventeen files, eighty-one
   tests.
 - **Setup:** `Modules/CashBook/tests/TestCase` extends the root `Tests\TestCase`
   and is wired to `RefreshDatabase` by the per-module map in the project root's
@@ -128,6 +128,10 @@ composer test
 - **A typed counterparty is an identity the reports can group by**, and an
   entry named on nobody invents none.
   (`tests/Feature/ATypedCounterpartyOnAManualEntryIsAnIdentityTheReportCanGroupTest.php`)
+- **The entry list is ranked by what both devices hold.** The 25-row page makes
+  the ordering decide which entries are shown at all, so it ends on
+  `NewestTransactionFirst::ACROSS_ACCOUNTS` rather than on `transactions.id`.
+  (`tests/Feature/TheEntryListIsRankedTheSameOnEveryDeviceTest.php`)
 - **Every entry stays reachable.** An entry added from a later page returns the
   reader to the head of the list; deleting the last entry on the last page does
   not strand them on an empty one; and a page number in the URL that no longer
@@ -195,8 +199,8 @@ composer test
 - [`Ledger`](../ledger/how-to-test.md) — `RecordsTransactions` (the write
   seam), `CanonicalTransaction`, `Direction`, `TransactionType`, `AccountKind`,
   `BaseCurrency`, `AccountSlugResolver`, `FingerprintComposer`,
-  `CounterpartyKey`, `TransactionStatusQuery`, `CategoryPathName`, `Money`,
-  `MoneyInput`. Every table it writes is Ledger's.
+  `CounterpartyKey`, `TransactionStatusQuery`, `CategoryPathName`,
+  `NewestTransactionFirst`, `Money`, `MoneyInput`. Every table it writes is Ledger's.
 - [`Core`](../core/how-to-test.md) — `User`, `Clock`, `CurrentUser`, `Lang`,
   `Brand`, `Locale`, `SafeDate`, `SafeExceptionContext`, `DerivedRowId`,
   `LocaleCollator`, `CoercesScalars`, `DispatchesToast`, `LoadsModuleResources`,
@@ -261,6 +265,10 @@ transaction detail edits a typed row like any other; `Reports`, `Search`,
   through `CashBookPage::delete()`, which writes tombstones through
   `DependentRowCascade` and dispatches `TransactionMutated`. A row removed with
   raw SQL announces nothing, and the peer's history restores it.
+- **Two devices list the same entries in a different order** — they should not
+  any more. The list ranks on `NewestTransactionFirst::ACROSS_ACCOUNTS`; if a
+  divergence survives, one of that clause's columns disagrees between the
+  devices, which is a sync question rather than a cash-book one.
 - **The category picker shows a duplicate label** — that is
   `CategoryPathName::distinct()`'s subject, not this page's; see
   [category display names](../ledger/category-display-names.md).

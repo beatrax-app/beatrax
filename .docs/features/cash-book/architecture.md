@@ -3,7 +3,7 @@
 `CashBook` is the hand-entry surface: `/cash`, where a reader types money that
 never appeared on a statement — a coffee paid in coins, a market stall, a
 neighbour paid back. It owns no table of its own. What it owns is the write
-path that turns four typed fields into a row in
+path that turns the fields a reader types into a row in
 [`Ledger`](../ledger/architecture.md)'s canonical `transactions`, and the two
 anchor rows such a row needs before it can exist: the reader's cash account,
 and the synthetic import run every hand-typed entry is filed under.
@@ -50,7 +50,7 @@ What the module explicitly does NOT do:
 ## Module boundary
 
 There is no `Public/` surface, so the section a template asks for is empty on
-purpose. `Internal/` holds three classes and one Livewire component:
+purpose. `Internal/` holds three classes, one of them the Livewire component:
 
 - **`Internal/Http/Livewire/CashBookPage`** — the `/cash` screen. Form, list,
   pagination, the delete confirmation, and the category picker.
@@ -123,9 +123,10 @@ holds rather than re-homed beside it.
 
 ## The account is named in the reader's own word
 
-`accounts.name` is data, not a translation key — eight screens draw it
-verbatim. So the first entry used to freeze the word "Cash" in English whatever
-the reader was reading in, and switching language never moved it.
+`accounts.name` is data, not a translation key, and fourteen Blade views
+across nine modules print it verbatim. So the first entry used to freeze the
+word "Cash" in English whatever the reader was reading in, and switching
+language never moved it.
 
 The name is therefore re-resolved on every entry, from
 `import::payment_type.cash` — the word the app already ships in all 26 locales,
@@ -192,6 +193,19 @@ A false keeps the reader's fields on screen, because somebody told their entry
 was not recorded, on a form that has just cleared itself, has to reconstruct
 what they typed before they can try again.
 
+## The list is ranked the same on every device
+
+The entry list draws 25 rows to a page, so its ordering decides *which*
+entries the reader is shown, not merely their sequence. It used to end on
+`t.id`, and `transactions.id` is a per-device autoincrement: six coffees typed
+on one day filled page one one way on the desktop and another on the phone,
+with the overflow landing on page two in each case.
+
+It now ends on `NewestTransactionFirst::ACROSS_ACCOUNTS`, the clause four other
+modules rank this table with — `transactions_fingerprint_uq` minus the two
+columns a device counts for itself, plus the account named by its IBAN. Every
+term in it is a fact both devices hold.
+
 ## Deleting an entry
 
 Delete is the one destructive action on the page, so it asks first — a confirm
@@ -215,7 +229,8 @@ encrypted counterparty name with no foreign key, no cascade and no trigger.
 ```
 /cash  →  CashBookPage::render()
             ManualEntryAnchors::currencyForUser($user)   ← labels + parses
-            paginated read of source_format = 'manual'
+            source_format = 'manual', 25 to a page,
+              ranked by NewestTransactionFirst::ACROSS_ACCOUNTS
 
 add  →  CashBookPage::add()
           MoneyInput::tryToPositiveMinor($amount, $currency)
