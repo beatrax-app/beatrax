@@ -7,6 +7,8 @@ return [
     'heading' => 'Gestisci :name',
     'subtitle' => 'Visualizza, reimposta o rigenera i codici di questo utente.',
 
+    'owner_password_label' => 'La password del tuo account',
+
     'set_password' => [
         'heading' => 'Imposta una nuova password per questo utente',
         'description' => 'Al prossimo accesso dovrà scegliere una password.',

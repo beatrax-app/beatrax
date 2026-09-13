@@ -7,6 +7,8 @@ return [
     'heading' => 'Gérer :name',
     'subtitle' => 'Consulte, réinitialise ou régénère les codes de cet utilisateur.',
 
+    'owner_password_label' => 'Le mot de passe de ton compte',
+
     'set_password' => [
         'heading' => 'Définir un nouveau mot de passe pour cet utilisateur',
         'description' => 'À sa prochaine connexion, cette personne devra choisir un mot de passe.',

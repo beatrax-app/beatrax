@@ -8,5 +8,7 @@ return [
     'not_scanned_yet' => 'még nincs átvizsgálva',
     'not_scanned_yet_phone' => 'ezen a telefonon nem vizsgáltuk',
     'last_scanned' => 'utoljára átvizsgálva',
+    'out_of_date' => 'elavult',
+    'not_scanned_here' => 'ezen az eszközön nem fut vizsgálat',
     'more' => '+:count további',
 ];

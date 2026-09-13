@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Sistēmas brīdinājumi',
 
+    'severity' => [
+        'critical' => 'Kritisks',
+        'warning' => 'Brīdinājums',
+    ],
+
     'actions' => [
         'download_and_install' => 'Lejupielādēt un instalēt',
         'download_and_install_aria' => 'Lejupielādēt un instalēt — atzīmē sistēmas brīdinājumu #:id kā atrisinātu',

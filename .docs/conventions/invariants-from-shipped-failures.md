@@ -8066,6 +8066,85 @@ go red, which is the failure [A needle short enough to match generated
 markup](#a-needle-short-enough-to-match-generated-markup) is about, arriving
 from the other side.
 
+## A picker's id converted to a number in the browser
+
+`tests/Contracts/ADerivedIdNeverReachesTheBrowserAsANumberArchTest.php` reads
+the two shapes; `Modules/Ledger/tests/Feature/AGoalIdSurvivesTheButtonThatAttributesItTest.php`
+is the third, which it does not.
+
+An id past 2<sup>53</sup> has to cross to the browser as a string, and the rule
+above reads the two ways a blade writes one straight into a JavaScript-evaluated
+attribute. There is a third way, and it clears both readers because the id
+arrives correctly quoted and is broken *afterwards*: an `<option value="…">`
+hands JavaScript a string, an `x-model` holds that string, and the button beside
+the select converts it before the call —
+
+```html
+x-on:click="$wire.attributeToGoal(Number(selectedGoal))"
+```
+
+`Number()` is the same rounding a bare number literal suffers, one step later
+and with no `{{ }}` on the line for a scan keyed to echoes to find. `parseInt()`,
+`parseFloat()` and a unary `+` do it too.
+
+The transaction-detail goal picker shipped this way. `goals.id` comes from
+`DeviceMintedRowId::mint()`, which is `random_int(1, PHP_INT_MAX)`, so all but
+about one goal in a thousand is past 2<sup>53</sup>: the reader chose a goal,
+pressed the button, and `GoalContributionWriter::attribute()` was handed an id
+that named no row. It returns false for a foreign or missing id on purpose — so
+there was no error, no toast and no row, on the one screen where a transaction
+is assigned to anything.
+
+Nothing caught it from either end. Six tests drove `attributeToGoal()` with the
+goal's own PHP integer, which never passes through a double; and `GoalFactory`
+minted no id at all, so every goal in the suite carried an autoincrement 1 — a
+magnitude the field never produces. The factory now mints the id the writer
+mints, for the reason `seedFixtureUserAndAccount()` takes a currency rather than
+hardcoding one: a fixture that cannot reach the failing magnitude cannot see the
+failure.
+
+The fix is to send the value the select is holding. The component reads it back
+through `DerivedRowId::fromWire()`, which is what every other id-taking Livewire
+method on that page already does.
+
+## A log line a peer can repeat
+
+`SyncSession::receiveOps()` decodes one frame into however many entries the peer
+chose to send, then walks them. Two refusals live in that walk — an author no
+local key verifies, and a signature the author's own key does not sign — and
+each one originally wrote its own line per entry. A peer whose history had been
+signed by a retired identity wrote the same warning **six thousand times** in
+one exchange, and the run still read as an ordinary sync from every surface
+above it: the volume was the only symptom, and volume is what nobody scrolls.
+
+The repair is to count per author inside the walk and report once after it, with
+`array_sum()` for the total, `array_keys()` for the authors, and the size of the
+frame beside them.
+
+**It had to be made twice.** The first fix converted the unverifiable-author
+refusal and left the invalid-signature refusal beside it still writing per
+entry — the same defect, in the same loop, surviving its own fix by one
+branch. That is the shape a rule is for, so
+`ALogLineAPeerCanRepeatIsBoundedArchTest` now reads every file under
+`Modules/Sync/Internal/Transport`.
+
+### What the rule refuses
+
+A logger call whose enclosing block is a loop body, unless control leaves that
+loop from the same statement block — `break`, `return`, `throw`, `exit`.
+`continue` is deliberately not a bound: it was the spelling both floods had, and
+it guarantees the next iteration rather than preventing it.
+
+One call in the tree is inside a loop and passes:
+`SyncWebSocketHandler`'s `peer revoked mid-session — closing.`, which writes its
+line and breaks. It needs no pin, because the rule recognises the `break`
+structurally — an entry granting it an exemption would go stale the moment that
+code moved, whereas the bound travels with it.
+
+The scope is deliberately `Internal/Transport` and not the module. It is where
+the iteration count is chosen by the machine on the other end of the socket
+rather than by this one, which is what turns a per-item line into a flood.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

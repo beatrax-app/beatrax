@@ -63,7 +63,20 @@ first that matches:
    `Transfers`' own pairer. The window, the direction, the amount, the
    currency predicate, the already-paired exclusion and the ordering are
    all passed in from here, so widening the arm never widens the shared
-   query — and nothing the other caller asks for reaches this one.
+   query — and nothing the other caller asks for reaches this one. The
+   already-claimed exclusion the two arms below write into their own SQL
+   cannot be passed in, because that search excludes one id at a time, so
+   this arm tests the claim on the answer instead: one step past a leg
+   another non-rejected `paypal_funding` link already holds, and a refusal
+   rather than a guess beyond that. Without it two PayPal withdrawals of
+   one amount in one window both named the same bank deposit, **confirmed
+   at 1.000**, so neither reached the review queue, while a second deposit
+   of the same size went unlinked — money that arrived once drawn as
+   arriving twice. A leg another link holds is not an alternative either,
+   so the ambiguity probe skips it rather than sending a now-unique match
+   to the queue.
+   `Modules/Chains/tests/Unit/Resolvers/ADeterministicFundingLegIsClaimedOnlyOnceTest.php`
+   pins both halves.
 2. **ASN-direct arm.** Handles the shape where the funding-leg
    `Bankstorting` row is absent from the PayPal CSV entirely — the
    user's export ships only outgoing merchant payments, not the
@@ -106,7 +119,17 @@ first that matches:
    `counterparty_name`**, not `counterparty_normalized`: that column is a
    keyed one-way digest for an encrypted user, and two digests of one
    merchant spelled two ways are as far apart as two unrelated ones, which
-   would have taken every candidate below the 0.6 floor.
+   would have taken every candidate below the 0.6 floor. The distance is
+   counted in CHARACTERS, through `Core::EditDistance`, and not in the
+   bytes `levenshtein()` counts: the merchant term divides that distance
+   by a character length, so a name outside ASCII was measured two and
+   three bytes to the letter against a threshold stated in letters.
+   `FingerprintComposer::normalize()` strips diacritics but keeps every
+   `\p{L}`, so Greek, Cyrillic and CJK names reach the comparison whole —
+   and the same four-character difference that scores 0.636 as
+   "netflix"/"netflix int" scored 0.364 in Greek and was dropped.
+   `Modules/Chains/tests/Unit/Resolvers/AMerchantWrittenInAnotherScriptIsComparedTheSameWayTest.php`
+   pins the two scripts against each other.
 
 Every arm computes the same `evidence.signature_hash` —
 `sha256(counterparty_normalized|funding-account IBAN)`, over the value the

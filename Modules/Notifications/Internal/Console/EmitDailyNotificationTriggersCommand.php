@@ -12,6 +12,7 @@ use Modules\DriftAlerts\Public\Services\SavingsPromptDispatch;
 use Modules\Notifications\Internal\Enums\DeferredNotificationPass;
 use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
 use Modules\Notifications\Internal\Support\NotificationPassOutcome;
+use Modules\Notifications\Internal\Support\PerUserPass;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Position\Public\Services\PositionDigestDispatch;
 use Modules\Recurring\Public\Services\PaymentReminderDispatch;
@@ -45,6 +46,7 @@ final class EmitDailyNotificationTriggersCommand extends Command
         private readonly SavingsPromptDispatch $savingsPrompts,
         private readonly DailyLocalWindow $window,
         private readonly DeferredNotificationPasses $deferred,
+        private readonly PerUserPass $users,
         private readonly LoggerInterface $logger,
     ) {
         parent::__construct();
@@ -64,7 +66,11 @@ final class EmitDailyNotificationTriggersCommand extends Command
         $emitted = 0;
         $deferred = 0;
 
-        User::query()->lazyById(100)->each(function (User $user) use (&$emitted, &$deferred): void {
+        // attempt() isolates one trigger from the other two for ONE reader; the
+        // walk isolates one reader from every reader after them. Neither covers
+        // the other: the two lines above it are outside attempt() on purpose,
+        // and a throw there used to end the pass for everybody still to come.
+        $failed = $this->users->each($this->signature, function (User $user) use (&$emitted, &$deferred): void {
             // All three triggers write nothing but notification content, so a
             // process that cannot seal has no partial work to do here. The
             // window claim above is left consumed on purpose: the pass this
@@ -83,7 +89,7 @@ final class EmitDailyNotificationTriggersCommand extends Command
             $emitted++;
         });
 
-        $this->info(NotificationPassOutcome::line('Daily triggers', $emitted, $deferred));
+        $this->info(NotificationPassOutcome::line('Daily triggers', $emitted, $deferred, $failed));
 
         return self::SUCCESS;
     }

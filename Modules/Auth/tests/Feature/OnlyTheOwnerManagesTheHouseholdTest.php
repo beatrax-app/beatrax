@@ -84,7 +84,11 @@ it('still lets the owner reset a partner password and mint their codes', functio
 
     Livewire::test(ManageUserPage::class, ['username' => $partner->username])
         ->set('newPartnerPassword', 'a-brand-new-password')
+        ->set('ownerPassword', 'owner-password-12chars')
         ->call('setPartnerPassword')
+        // Spent on the write it authorised, so the second one asks again: the
+        // proof is per write, not a pass the page keeps open.
+        ->set('ownerPassword', 'owner-password-12chars')
         ->call('regenerateCodes')
         ->assertCount('regeneratedCodes', 10);
 

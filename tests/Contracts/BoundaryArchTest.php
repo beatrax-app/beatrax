@@ -2665,6 +2665,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // The rule asks which keys the shipped channel replaces, and the answer
         // is the processor's own list. Reading it off the class is the point:
         // a second copy here would go on passing the day one was dropped there.
+        'tests/Contracts/ACaptureNamesATableTheRegistryCarriesArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/AFileNameTheReaderChoseIsLoggedUnderARedactedKeyArchTest.php -> Modules\\DevMode\\Internal\\Logging\\RedactSecretsProcessor',
         // The one guard that holds seven window pairs to one definition each has
         // to reach the definitions themselves, and five of the seven are the

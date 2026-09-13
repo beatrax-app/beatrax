@@ -8,5 +8,7 @@ return [
     'not_scanned_yet' => 'veel skannimata',
     'not_scanned_yet_phone' => 'selles telefonis skannimata',
     'last_scanned' => 'viimati skannitud',
+    'out_of_date' => 'aegunud',
+    'not_scanned_here' => 'selles seadmes ei skannita',
     'more' => '+:count veel',
 ];

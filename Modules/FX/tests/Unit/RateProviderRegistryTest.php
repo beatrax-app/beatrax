@@ -7,6 +7,7 @@ use Modules\FX\Internal\Exceptions\AllProvidersFailed;
 use Modules\FX\Internal\RateProviderRegistry;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
+use Modules\FX\Public\Support\BundledRates;
 
 /**
  * @param  array{date: string, rates: array<string, string>}  $result
@@ -31,6 +32,13 @@ function makeFakeProvider(string $key, int $priority, ?array $result = null, boo
         public function priority(): int
         {
             return $this->p;
+        }
+
+        // Mirrors the shipped chain: the two feeds reach the network and the
+        // bundled snapshot reads a file already on the device.
+        public function reachesTheNetwork(): bool
+        {
+            return $this->k !== BundledRates::SOURCE;
         }
 
         public function fetch(): array
@@ -88,7 +96,6 @@ describe('RateProviderRegistry', function (): void {
         $cache = Mockery::mock(CacheRepository::class);
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
         $cache->shouldReceive('get')->with('fx.circuit.frankfurter.failures', 0)->andReturn(0);
-        $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
         $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->andReturn(true);
         $cache->shouldReceive('add')->with('fx.circuit.frankfurter.failures', 1, Mockery::any())->andReturn(true);
         $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
@@ -108,10 +115,8 @@ describe('RateProviderRegistry', function (): void {
         $cache = Mockery::mock(CacheRepository::class);
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
         $cache->shouldReceive('get')->with('fx.circuit.frankfurter.failures', 0)->andReturn(0);
-        $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
         $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->andReturn(true);
         $cache->shouldReceive('add')->with('fx.circuit.frankfurter.failures', 1, Mockery::any())->andReturn(true);
-        $cache->shouldReceive('add')->with('fx.circuit.bundled.failures', 1, Mockery::any())->andReturn(true);
 
         $registry = new RateProviderRegistry([$ecb, $frankfurter, $bundled], $cache);
 
@@ -124,7 +129,6 @@ describe('RateProviderRegistry', function (): void {
 
         $cache = Mockery::mock(CacheRepository::class);
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(3);
-        $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
         $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
 
         $registry = new RateProviderRegistry([$ecb, $bundled], $cache);
@@ -155,7 +159,6 @@ describe('RateProviderRegistry', function (): void {
 
         $cache = Mockery::mock(CacheRepository::class);
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
-        $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
         $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
         $cache->shouldNotReceive('put');
         $cache->shouldReceive('add')->with('fx.circuit.ecb.failures', 1, Mockery::any())->once()->andReturn(false);
@@ -174,7 +177,6 @@ describe('RateProviderRegistry', function (): void {
 
         $cache = Mockery::mock(CacheRepository::class);
         $cache->shouldReceive('get')->with('fx.circuit.ecb.failures', 0)->andReturn(0);
-        $cache->shouldReceive('get')->with('fx.circuit.bundled.failures', 0)->andReturn(0);
         $cache->shouldReceive('forget')->with('fx.circuit.bundled.failures');
         $cache->shouldNotReceive('put');
         $cache->shouldNotReceive('increment');

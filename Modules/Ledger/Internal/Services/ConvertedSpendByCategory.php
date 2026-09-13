@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Internal\Services;
 
-use Modules\FX\Public\Dto\ConversionDisclosure;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Internal\Dto\ConvertedCategorySpend;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
+use Modules\Ledger\Public\Support\ConvertedBuckets;
 
 // Spend arrives bucketed by the currency each row settled in. Filtering those
 // buckets to the reader's display currency instead of converting them made the
@@ -26,45 +26,25 @@ final readonly class ConvertedSpendByCategory
 
     public function forUserAndPeriod(int $userId, Period $period, string $displayCurrency, bool $includeUncategorized = false): ConvertedCategorySpend
     {
-        /** @var array<string, array<int, int>> $byCurrency */
-        $byCurrency = [];
+        /** @var array<int, array<string, int>> $buckets */
+        $buckets = [];
+        $currencies = [];
         foreach ($this->spendByCategory->forUserAndPeriodByCurrency($userId, $period, $includeUncategorized) as $key => $spendMinor) {
             [$categoryId, $currency] = explode('|', $key, 2) + [1 => ''];
-            $byCurrency[$currency][(int) $categoryId] = $spendMinor;
+            $buckets[(int) $categoryId][$currency] = $spendMinor;
+            $currencies[] = $currency;
         }
 
-        $rates = $this->fx->ratesTo(array_keys($byCurrency), $displayCurrency);
+        $rates = $this->fx->ratesTo($currencies, $displayCurrency);
+        $converted = ConvertedBuckets::of($this->fx, $buckets, $displayCurrency, $rates);
 
-        $spendByCategoryId = [];
-        $unconverted = [];
-        foreach ($byCurrency as $currency => $partsByCategory) {
-            // Null is a currency no rate reaches, named rather than counted at
-            // one to one -- the choice the tile above these rows makes too.
-            $converted = $this->fx->distribute($partsByCategory, $currency, $displayCurrency, $rates);
-
-            if ($converted === null) {
-                $unconverted[] = $currency;
-
-                continue;
-            }
-
-            foreach ($converted as $categoryId => $spendMinor) {
-                $spendByCategoryId[$categoryId] = ($spendByCategoryId[$categoryId] ?? 0) + $spendMinor;
-            }
-        }
-
-        sort($unconverted);
-
+        // Narrowed to the buckets that reached the figures: the spread is
+        // all-or-nothing per currency, so a code in $unconverted moved none of
+        // these rows and its rate says nothing about them.
         return new ConvertedCategorySpend(
-            $spendByCategoryId,
-            $unconverted,
-            // Narrowed to the buckets that reached the figures: distribute()
-            // is all-or-nothing per currency, so a code in $unconverted moved
-            // none of these rows and its rate says nothing about them.
-            ConversionDisclosure::of(
-                $rates->only(array_values(array_diff(array_keys($byCurrency), $unconverted))),
-                $unconverted,
-            ),
+            $converted->minorByKey,
+            $converted->unconverted,
+            $converted->conversion,
         );
     }
 }

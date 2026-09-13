@@ -22,6 +22,7 @@ return [
         'heading' => 'Záložní kódy',
         'body' => 'Záložní kódy jsou jediná cesta zpět do tvého účtu, když zapomeneš heslo.',
         'warning' => 'Ukládají se zahashované, takže je nelze zobrazit znovu. Vytvořením nové sady okamžitě zneplatníš tu původní.',
+        'password_label' => 'Heslo k účtu',
         'regenerate' => 'Vytvořit nové kódy',
         'regenerate_confirm' => 'Vytvořit novou sadu záložních kódů? Sada, kterou máš teď, přestane fungovat ve chvíli, kdy vznikne nová, a znovu ji už nikdo nezobrazí — vytištěná nebo opsaná kopie je od té chvíle k ničemu. Ulož si nové kódy, dokud jsi ještě na této stránce.',
     ],

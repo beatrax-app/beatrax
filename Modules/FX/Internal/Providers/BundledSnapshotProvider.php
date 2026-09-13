@@ -29,6 +29,14 @@ final class BundledSnapshotProvider implements RateProvider
         return 0;
     }
 
+    // Shipped with the app, so a failure is a broken or missing file rather
+    // than an outage: nothing here is waiting on a network to come back, and
+    // skipping this one takes the offline fallback out of the chain with it.
+    public function reachesTheNetwork(): bool
+    {
+        return false;
+    }
+
     /**
      * @return array{date: string, rates: array<string, string>}
      *

@@ -27,6 +27,11 @@ final readonly class EcbRateProvider implements RateProvider
         return 200;
     }
 
+    public function reachesTheNetwork(): bool
+    {
+        return true;
+    }
+
     /**
      * @return array{date: string, rates: array<string, string>}
      *

@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Notifications\Internal\Jobs\PruneNotificationsJob;
+use Modules\Notifications\Internal\Support\PerUserPass;
 
 // The job's predicate keys solely on the always-plaintext created_at column,
 // never title/body/params/trigger_type, so the sweep stays bounded even on a
@@ -22,13 +23,18 @@ final class PruneNotificationsCommand extends Command
 
     public function __construct(
         private readonly Dispatcher $bus,
+        private readonly PerUserPass $users,
     ) {
         parent::__construct();
     }
 
+    // Through the walk that survives one reader, because the dispatch itself is
+    // what throws here: the queue table is the same single-writer SQLite file
+    // the sweep it queues will read, and a busy one used to leave every user
+    // after the first contention with an inbox nothing ever bounded.
     public function handle(): int
     {
-        User::query()->lazyById(100)->each(function (User $user): void {
+        $this->users->each($this->signature, function (User $user): void {
             $this->bus->dispatch(new PruneNotificationsJob($user->id));
         });
 

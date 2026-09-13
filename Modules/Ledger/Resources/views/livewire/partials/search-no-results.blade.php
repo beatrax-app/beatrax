@@ -11,7 +11,13 @@
     Variables in scope (from transactions-list.blade.php):
     - $searchQuery (string) — the current query
     - $isSearchMode (bool)
-    - $filterAfter, $filterBefore, $filterAccounts, $filterCategories, $filterAmountMin, $filterAmountMax, $filterAmountDir
+    - $filterAfter, $filterBefore, $filterAccounts, $filterCategories, $filterUncategorized,
+      $filterAmountMin, $filterAmountMax, $filterAmountDir, $filterTypes
+
+    Every filter $activeFilterCount counts draws a chip here. One that does not
+    leaves the prompt above asking for a control the reader cannot see: ticking
+    "No category" on a ledger with none emptied the list under "Remove a filter
+    to see more" and an empty strip.
     - $didYouMean (?string)
     - $activeFilterCount (int)
 --}}
@@ -64,6 +70,18 @@
                 </span>
             @endforeach
 
+            @if ($filterUncategorized ?? false)
+                <span class="srch-chip srch-chip--active">
+                    {{ Lang::get('ledger::common.uncategorized') }}
+                    <button
+                        type="button"
+                        wire:click="$set('filterUncategorized', false)"
+                        class="srch-chip-close"
+                        aria-label="{{ Lang::get('ledger::list.filter.remove_category_aria') }}"
+                    >&times;</button>
+                </span>
+            @endif
+
             @if (($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? AmountDirection::Both->value) !== AmountDirection::Both->value)
                 <span class="srch-chip srch-chip--active">
                     {{ Lang::get('ledger::list.filter.amount') }}
@@ -72,6 +90,27 @@
                         wire:click="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', '{{ AmountDirection::Both->value }}')"
                         class="srch-chip-close"
                         aria-label="{{ Lang::get('ledger::list.filter.remove_amount_aria') }}"
+                    >&times;</button>
+                </span>
+            @endif
+
+            {{-- One chip for the whole set: a report drill-down sends the
+                 metric's types together, and clearing one of them would leave
+                 the list answering a question no figure was ever built from. --}}
+            @if (($filterTypes ?? []) !== [])
+                @php
+                    $typeNames = implode(', ', array_map(
+                        static fn (string $type): string => Lang::get('ledger::detail.type_label.'.$type),
+                        $filterTypes,
+                    ));
+                @endphp
+                <span class="srch-chip srch-chip--active">
+                    {{ $typeNames }}
+                    <button
+                        type="button"
+                        wire:click="$set('filterTypes', [])"
+                        class="srch-chip-close"
+                        aria-label="{{ Lang::get('ledger::list.filter.remove_named_aria', ['name' => $typeNames]) }}"
                     >&times;</button>
                 </span>
             @endif

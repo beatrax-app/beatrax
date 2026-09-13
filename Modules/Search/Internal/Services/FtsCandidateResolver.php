@@ -131,9 +131,11 @@ final readonly class FtsCandidateResolver
 
     // Fallback for queries too short for FTS5: a trigram index holds no token
     // this short, so the needle runs as a LIKE over the same plaintext body
-    // the index is built from -- the corpus both the >=3-char arm and the
-    // short WORDS of a longer query are already matched against.
+    // the index is built from. One corpus, but not one comparison: LIKE folds
+    // ASCII case only, where the trigram tokenizer folds all of Unicode.
     /**
+     * @link ../../../../.docs/features/search/architecture.md#where-the-two-arms-disagree
+     *
      * @param  Closure(Builder): void  $applyFilters
      * @return list<int>
      */

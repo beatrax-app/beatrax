@@ -103,6 +103,7 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Modules\Sync\Public\Services\ImportSyncCapture;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Services\StrandedCreateHealthCheck;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
@@ -138,6 +139,12 @@ final class SyncServiceProvider extends ServiceProvider
         $this->app->singleton(OrSetStrategy::class);
         $this->app->singleton(MergeRulesRegistry::class);
         $this->app->singleton(DeviceKeySigner::class);
+
+        // Bound rather than left to autowiring because DoctorCommand takes it
+        // as an optional argument, and the container returns the default for a
+        // parameter with one unless the class is BOUND -- so an unbound check
+        // resolves to null and its row silently never prints.
+        $this->app->singleton(StrandedCreateHealthCheck::class);
 
         // The libsodium conversions the crypto paths run inside their
         // try-blocks, behind an interface so a test can make them fail.

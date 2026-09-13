@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Ειδοποιήσεις συστήματος',
 
+    'severity' => [
+        'critical' => 'Κρίσιμο',
+        'warning' => 'Προειδοποίηση',
+    ],
+
     'actions' => [
         'download_and_install' => 'Λήψη και εγκατάσταση',
         'download_and_install_aria' => 'Λήψη και εγκατάσταση — σημειώνει την ειδοποίηση συστήματος #:id ως επιλυμένη',

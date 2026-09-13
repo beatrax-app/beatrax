@@ -169,7 +169,7 @@ function placeholderWriterContainer(): Container
 {
     $calls = [];
     $container = new IlluminateContainer;
-    $container->bind(OpLogWriter::class, fn (): SyncOffOpSink => new SyncOffOpSink(capturingLogger($calls)));
+    $container->bind(OpLogWriter::class, fn (): SyncOffOpSink => new SyncOffOpSink(capturingLogger($calls), 1));
 
     return $container;
 }

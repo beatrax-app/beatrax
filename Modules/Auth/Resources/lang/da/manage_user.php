@@ -7,6 +7,8 @@ return [
     'heading' => 'Administrér :name',
     'subtitle' => 'Se, nulstil eller generér nye koder for denne bruger.',
 
+    'owner_password_label' => 'Din kontoadgangskode',
+
     'set_password' => [
         'heading' => 'Angiv ny adgangskode for denne bruger',
         'description' => 'Ved næste login bliver brugeren bedt om at vælge en adgangskode.',

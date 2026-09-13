@@ -7,6 +7,8 @@ return [
     'heading' => 'Upravljanje: :name',
     'subtitle' => 'Pregledaj, resetuj ili ponovo generiši kodove ovog korisnika.',
 
+    'owner_password_label' => 'Lozinka tvog naloga',
+
     'set_password' => [
         'heading' => 'Postavi novu lozinku za ovog korisnika',
         'description' => 'Pri sledećoj prijavi biće zatraženo da izabere lozinku.',

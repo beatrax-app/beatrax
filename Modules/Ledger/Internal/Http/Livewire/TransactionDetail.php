@@ -289,14 +289,19 @@ final class TransactionDetail extends Component
         $this->toast(Lang::get('ledger::detail.toast.unreconciled'));
     }
 
+    // The picker's option value reaches here as the browser holds it. A
+    // `<select>` hands JavaScript a string, and converting one to a number
+    // before the call rounds every id past 2^53 exactly as a bare number
+    // literal written into the attribute would.
     public function reassignCounterparty(
-        int $newCounterpartyId,
+        int|string $newCounterpartyId,
         CurrentUser $currentUser,
         DatabaseManager $db,
         Dispatcher $events,
         ReassignsCounterparty $reassign,
         FieldProvenanceWriter $provenance,
     ): void {
+        $newCounterpartyId = DerivedRowId::fromWire($newCounterpartyId);
         $user = $currentUser->user();
 
         $status = $db->connection()
@@ -336,21 +341,22 @@ final class TransactionDetail extends Component
     // Deliberately NOT behind the reconciled lock the sibling mutators use:
     // an attribution is a separate row that leaves the transaction untouched,
     // and a reconciled row is exactly the confirmed money a goal wants.
+
+    // A goal id is minted rather than taken from the autoincrement, so it is
+    // past 2^53 in all but one case in a thousand, and the reading above is
+    // what decides whether the reader's attribution lands at all.
     public function attributeToGoal(
-        int $goalId,
+        int|string $goalId,
         CurrentUser $currentUser,
         GoalContributionWriter $contributions,
     ): void {
-        if (! $contributions->attribute($currentUser->user(), $goalId, $this->transactionId)) {
+        if (! $contributions->attribute($currentUser->user(), DerivedRowId::fromWire($goalId), $this->transactionId)) {
             return;
         }
 
         $this->toast(Lang::get('ledger::detail.toast.goal_attributed'));
     }
 
-    // Quoted on the way out and read back here: a goal id is minted, not taken
-    // from the autoincrement, so it runs past 2^53 and a number literal is
-    // rounded by the browser before the server ever sees it.
     public function removeGoalAttribution(
         int|string $goalId,
         CurrentUser $currentUser,

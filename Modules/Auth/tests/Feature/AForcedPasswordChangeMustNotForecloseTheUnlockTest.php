@@ -70,6 +70,7 @@ it('leaves a partner the owner reset with a lock screen they can reach', functio
 
     Livewire::test(ManageUserPage::class, ['username' => 'foreclose-partner'])
         ->set('newPartnerPassword', 'foreclose-partner-new')
+        ->set('ownerPassword', 'foreclose-owner-pass')
         ->call('setPartnerPassword');
 
     expect(DB::table('users')->where('id', $partner->id)->value('force_password_change_at_next_login'))
