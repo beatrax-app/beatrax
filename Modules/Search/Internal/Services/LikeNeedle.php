@@ -6,11 +6,15 @@ namespace Modules\Search\Internal\Services;
 
 use Illuminate\Database\Query\Builder;
 use InvalidArgumentException;
+use Modules\Core\Public\Support\UnicodeFolding;
 
 // SQLite gives LIKE no escape character unless the predicate names one, so an
 // escaped pattern sent without the ESCAPE clause does not neutralise the
 // wildcard — it adds a literal backslash the reader never typed. Pattern and
 // clause are built in the same call here so the two cannot drift apart again.
+/**
+ * @link ../../../../.docs/architecture/case-folding-is-one-function.md
+ */
 final class LikeNeedle
 {
     private const string ESCAPE_CHARACTER = '\\';
@@ -25,30 +29,28 @@ final class LikeNeedle
         $query->orWhereRaw(self::predicate($column), ['%'.self::escape($needle).'%']);
     }
 
-    public static function startsWithAnyCase(Builder $query, string $column, string $needle): void
+    public static function startsWith(Builder $query, string $column, string $needle): void
     {
-        $query->whereRaw(self::foldedPredicate($column), [self::escape($needle).'%']);
+        $query->whereRaw(self::predicate($column), [self::escape($needle).'%']);
     }
 
-    public static function orStartsWithAnyCase(Builder $query, string $column, string $needle): void
+    public static function orStartsWith(Builder $query, string $column, string $needle): void
     {
-        $query->orWhereRaw(self::foldedPredicate($column), [self::escape($needle).'%']);
+        $query->orWhereRaw(self::predicate($column), [self::escape($needle).'%']);
     }
 
+    // Both sides folded, by the same function the trigram tokenizer's own
+    // case-insensitivity is matched against: SQLite's LIKE folds ASCII and its
+    // LOWER() folds no more, so the arm a needle landed in used to decide
+    // whether a non-ASCII capital in the body was reachable at all.
     /**
      * @return literal-string
      */
     private static function predicate(string $column): string
     {
-        return self::column($column)." LIKE ? ESCAPE '".self::ESCAPE_CHARACTER."'";
-    }
-
-    /**
-     * @return literal-string
-     */
-    private static function foldedPredicate(string $column): string
-    {
-        return 'LOWER('.self::column($column).") LIKE LOWER(?) ESCAPE '".self::ESCAPE_CHARACTER."'";
+        return UnicodeFolding::sql(self::column($column))
+            .' LIKE '.UnicodeFolding::sql('?')
+            ." ESCAPE '".self::ESCAPE_CHARACTER."'";
     }
 
     // whereRaw() needs a literal-string, so the column is matched against a

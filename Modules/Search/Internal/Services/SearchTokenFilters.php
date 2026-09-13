@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\UnicodeFolding;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Search\Public\Dto\SearchFilters;
 
@@ -114,7 +115,7 @@ final readonly class SearchTokenFilters
             ->where('user_id', $user->id)
             ->where(function (Builder $match) use ($names): void {
                 foreach ($names as $name) {
-                    LikeNeedle::orStartsWithAnyCase($match, 'name', $name);
+                    LikeNeedle::orStartsWith($match, 'name', $name);
                 }
             });
 
@@ -132,7 +133,7 @@ final readonly class SearchTokenFilters
      */
     private function resolveCategoryNameToIds(User $user, string $name): array
     {
-        $needle = mb_strtolower($name);
+        $needle = UnicodeFolding::of($name);
 
         $slugs = [];
         foreach (CategoryDisplayName::displayNamesBySlug() as $slug => $displayed) {
@@ -147,7 +148,7 @@ final readonly class SearchTokenFilters
                 $scope->where('user_id', $user->id)->orWhereNull('user_id');
             })
             ->where(function (Builder $match) use ($name, $slugs): void {
-                LikeNeedle::startsWithAnyCase($match, 'name', $name);
+                LikeNeedle::startsWith($match, 'name', $name);
                 if ($slugs !== []) {
                     $match->orWhere(function (Builder $translated) use ($slugs): void {
                         $translated->where('name_is_default', true)->whereIn('slug', $slugs);
@@ -169,7 +170,7 @@ final readonly class SearchTokenFilters
 
     private static function startsWith(string $haystack, string $needle): bool
     {
-        return $haystack !== '' && str_starts_with(mb_strtolower($haystack), $needle);
+        return $haystack !== '' && str_starts_with(UnicodeFolding::of($haystack), $needle);
     }
 
     /**

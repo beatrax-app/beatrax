@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\EditDistance;
+use Modules\Core\Public\Support\UnicodeFolding;
 use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
@@ -59,7 +60,7 @@ final readonly class DidYouMeanSuggester
             static fn (string $w): bool => $w !== '',
         ));
 
-        return $words === [] ? null : mb_strtolower($words[count($words) - 1]);
+        return $words === [] ? null : UnicodeFolding::of($words[count($words) - 1]);
     }
 
     // Decrypt-then-tally corpus over a bounded most-recent window: a
@@ -128,7 +129,7 @@ final readonly class DidYouMeanSuggester
         if ($decrypted === '') {
             return [];
         }
-        $tokens = preg_split('/\s+/', mb_strtolower($decrypted));
+        $tokens = preg_split('/\s+/', UnicodeFolding::of($decrypted));
         if ($tokens === false) {
             return [];
         }

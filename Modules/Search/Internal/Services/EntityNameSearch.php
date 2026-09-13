@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\UnicodeFolding;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\Support\CategoryPathName;
@@ -80,7 +81,7 @@ final readonly class EntityNameSearch
             ->select(['id', 'display_name', 'slug', 'metadata'])
             ->lazyById(self::COUNTERPARTY_SCAN_CHUNK);
 
-        $needle = mb_strtolower($q);
+        $needle = UnicodeFolding::of($q);
         $results = [];
         foreach ($rows as $row) {
             if (count($results) >= self::COUNTERPARTY_MATCH_LIMIT) {
@@ -96,7 +97,7 @@ final readonly class EntityNameSearch
             // stored English is what a screenshot, an export and a support
             // thread all say, so typing it has to keep working.
             $label = CounterpartyDefaultName::resolve($stored, $row->metadata ?? null);
-            if (! str_contains(mb_strtolower($label), $needle) && ! str_contains(mb_strtolower($stored), $needle)) {
+            if (! str_contains(UnicodeFolding::of($label), $needle) && ! str_contains(UnicodeFolding::of($stored), $needle)) {
                 continue;
             }
 
@@ -188,11 +189,11 @@ final readonly class EntityNameSearch
      */
     private static function slugsDisplayingSubstring(string $q): array
     {
-        $needle = mb_strtolower($q);
+        $needle = UnicodeFolding::of($q);
 
         $slugs = [];
         foreach (CategoryDisplayName::displayNamesBySlug() as $slug => $displayed) {
-            if (str_contains(mb_strtolower($displayed), $needle)) {
+            if (str_contains(UnicodeFolding::of($displayed), $needle)) {
                 $slugs[] = $slug;
             }
         }
