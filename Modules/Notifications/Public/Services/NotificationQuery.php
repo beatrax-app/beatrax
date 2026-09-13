@@ -132,13 +132,19 @@ final readonly class NotificationQuery
 
         $this->reportUnnamed($page);
 
-        $last = $page === [] ? null : $page[count($page) - 1];
+        // Derived inside the branch that spends it. $hasMore means the result
+        // outran a whole page, so the slice is a full one and has a last row --
+        // an argument about counts. Held outside, the row is nullable to an
+        // analyser and not to a reader, and neither shape of that survives.
+        $tail = array_slice($page, -1);
+
+        $nextCursor = $hasMore && $tail !== []
+            ? self::encodeCursor($tail[0]->createdAt->toDateTimeString(), $tail[0]->id)
+            : null;
 
         return [
             'rows' => $page,
-            'nextCursor' => $hasMore
-                ? self::encodeCursor($last->createdAt->toDateTimeString(), $last->id)
-                : null,
+            'nextCursor' => $nextCursor,
         ];
     }
 
