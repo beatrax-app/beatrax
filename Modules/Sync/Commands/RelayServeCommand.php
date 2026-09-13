@@ -352,8 +352,8 @@ final class RelayServeCommand extends Command
     // than inferred from a quiet bind.
     private function tlsBindContext(): ?BindContext
     {
-        if (! $this->tls->exists()) {
-            $this->logger->warning('relay:serve: no TLS material; serving plaintext.');
+        if (! $this->tls->isUsable()) {
+            $this->logger->warning('relay:serve: no usable TLS material; serving plaintext.');
 
             return null;
         }

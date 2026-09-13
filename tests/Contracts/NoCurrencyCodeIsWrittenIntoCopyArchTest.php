@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Support\CurrencyNames;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Tests\Contracts\Support\WalkCensus;
 
 // A currency code is data, not copy. "Settled EUR" over a column that prints
 // each row's own currency, and "Amount (EUR)" over a PDF that prints the
@@ -125,6 +126,13 @@ function copyCurrencyAssertTheWalkRead(): void
         20000,
         'the walk flattened '.$strings.' translated lines, which is too few to be this tree.'
     );
+
+    // Neither floor moves when the glob stops matching one module's lang tree,
+    // and a currency code written into that module's copy is then read by
+    // nobody. Which modules ship copy is read per directory instead.
+    $missed = WalkCensus::modulesMissedBy(array_keys($lines), '.php', '/Resources/lang/');
+
+    expect($missed)->toBe([], 'these modules ship Resources/lang files the glob matched none of, so the copy in them is judged by nobody: '.implode(', ', $missed));
 }
 
 // Every code the picker offers, not the four the enum declares: the install

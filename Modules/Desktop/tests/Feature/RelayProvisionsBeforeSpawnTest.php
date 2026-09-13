@@ -13,6 +13,7 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\LocalRelayProvisioner;
 use Modules\Sync\Public\Services\SyncPorts;
 use Modules\Sync\Public\Testing\DeviceIdentityTestHarness;
+use Native\Desktop\Facades\ChildProcess;
 use Psr\Log\AbstractLogger;
 
 uses(RefreshDatabase::class);
@@ -89,7 +90,16 @@ it('has the certificate and the endpoint in place by the time it starts the rela
     /** @var RelayConfig $config */
     $config = app(RelayConfig::class);
 
-    expect($tls->exists())->toBeFalse();
+    expect($tls->isUsable())->toBeFalse();
+
+    // A port this test owns and a faked facade: against the real relay port
+    // this dialled — and could have restarted — the developer's own running
+    // desktop, and read the opposite branch on a machine with none.
+    $probe = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($probe)->not->toBeFalse();
+    config()->set('sync.relay_port', (int) explode(':', (string) stream_socket_get_name($probe, false))[1]);
+    fclose($probe);
+    ChildProcess::fake();
 
     (new RelayListenerProcess(
         app(DeviceRegistryService::class),
@@ -104,7 +114,7 @@ it('has the certificate and the endpoint in place by the time it starts the rela
 
     // Whether the child process spawns is NativePHP's business and unavailable
     // outside the desktop runtime; what this pins is the state it would read.
-    expect($tls->exists())->toBeTrue()
+    expect($tls->isUsable())->toBeTrue()
         ->and($config->endpointUrl())->toStartWith('https://')
         ->and($config->pin())->toStartWith('sha256//');
 });

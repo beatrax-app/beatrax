@@ -587,6 +587,21 @@ Both `rpId` (host portion of `APP_URL`) and the full origin are validated
 independently on every assertion; validating only one of the two is a
 known WebAuthn integration pitfall.
 
+Both ceremonies rebuild their options server-side to hand to
+`check()`, and the validator reads its requirements off *those* options
+rather than off what the browser was issued — `CheckUserVerification`
+returns early unless `userVerification` is `required` on the copy it is
+given. `completeEnrollment()` rebuilt the creation options without the
+`authenticatorSelection` block, so from the first release until this was
+found the user-verified bit was never checked at enrollment: an
+attestation carrying User Present but not User Verified — a tap with no
+biometric behind it — enrolled a credential and wrapped the data key
+under it. Both ends of both ceremonies now build their options through
+`WebAuthnCeremonyOptions`, which also owns the `rpId` and origin reading,
+so a requirement cannot be issued to the browser and dropped from the
+copy that is verified. Assertions always carried it and were never
+affected.
+
 Each enrolled device gets its own random 32-byte "biometric wrap secret";
 the data key is wrapped under that per-device secret (not under the PIN
 wrap key), so the PIN wrap remains the cryptographic root and a single

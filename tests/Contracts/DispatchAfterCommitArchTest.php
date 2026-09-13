@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\BladePhpSource;
+use Tests\Contracts\Support\WalkCensus;
 
 /**
  * A background dispatch inside the transaction that caused it is a promise the
@@ -142,6 +143,13 @@ it('never dispatches from inside the transaction that caused it', function (): v
         1000,
         'The backend walk opened almost nothing, so no transaction body was read at all.'
     );
+
+    // And it stays green over a walk that lost one module: `/Ledger/` beside
+    // `/tests/` in the filter above left a dispatch inside a transaction there
+    // unreported while this count stayed in the six thousands.
+    $missed = WalkCensus::modulesMissedBy($files);
+
+    expect($missed)->toBe([], 'the walk reached no file at all in these modules, so a dispatch inside a transaction in one of them is judged by nobody: '.implode(', ', $missed));
 
     $found = dispatchesInsideATransaction($files);
 

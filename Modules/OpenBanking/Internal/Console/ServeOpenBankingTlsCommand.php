@@ -25,6 +25,14 @@ final class ServeOpenBankingTlsCommand extends Command
     /** @var string */
     protected $description = 'Terminate TLS on the loopback OAuth redirect port so the Enable Banking consent dance can run locally (HTTPS -> a plain `artisan serve` backend, self-signed 127.0.0.1 certificate).';
 
+    // A port is sixteen bits on the wire. `relay:serve` and `sync:serve` both
+    // refuse anything past this; this one checked only the lower bound.
+    private const int MAX_PORT = 65535;
+
+    // What `artisan serve` binds when nothing has said otherwise, and so what
+    // the redirect URI resolves to on an install that has not been configured.
+    private const int FALLBACK_PORT = 8000;
+
     private bool $running = true;
 
     public function __construct(
@@ -68,18 +76,41 @@ final class ServeOpenBankingTlsCommand extends Command
         $frontPort = $this->resolveFrontPort();
         $backendPort = (int) $this->option('backend-port');
 
-        if ($frontPort <= 0 || $backendPort <= 0) {
-            $this->error('Both the HTTPS port and the backend port must be positive integers.');
+        $refusal = $this->portRefusal($frontPort, $backendPort);
 
-            return null;
-        }
-        if ($frontPort === $backendPort) {
-            $this->error(sprintf('The HTTPS port (%s) and the backend port (%s) must differ.', $frontPort, $backendPort));
+        if ($refusal !== null) {
+            $this->error($refusal);
 
             return null;
         }
 
         return ['front' => $frontPort, 'backend' => $backendPort];
+    }
+
+    /**
+     * @return string|null the reason to report, or null when both ports are usable
+     */
+    private function portRefusal(int $frontPort, int $backendPort): ?string
+    {
+        // The middle arm is the one a reader would not predict:
+        // stream_socket_server() takes the low sixteen bits rather than
+        // refusing, so 99999 bound 127.0.0.1:34463 while the command announced
+        // https://127.0.0.1:99999 and nothing listened where the browser went.
+        return match (true) {
+            $frontPort <= 0 || $backendPort <= 0 => 'Both the HTTPS port and the backend port must be positive integers.',
+            $frontPort > self::MAX_PORT || $backendPort > self::MAX_PORT => sprintf(
+                'Both ports must be at most %s: the HTTPS port is %s and the backend port is %s.',
+                self::MAX_PORT,
+                $frontPort,
+                $backendPort,
+            ),
+            $frontPort === $backendPort => sprintf(
+                'The HTTPS port (%s) and the backend port (%s) must differ.',
+                $frontPort,
+                $backendPort,
+            ),
+            default => null,
+        };
     }
 
     /**
@@ -141,7 +172,18 @@ final class ServeOpenBankingTlsCommand extends Command
     {
         $this->newLine();
         $this->info(sprintf('HTTPS loopback listener ready → https://127.0.0.1:%s', $frontPort));
-        $this->line('  OAuth redirect URI: <comment>'.$this->redirectUri->forProvider('open-banking', scheme: 'https').'</comment>');
+        $this->line('  OAuth redirect URI: <comment>'.$this->registeredRedirectUri().'</comment>');
+
+        // --port moves where this binds and not what Enable Banking has
+        // registered, so the line above can name a port nothing is listening on.
+        if ($this->registeredRedirectPort() !== $frontPort) {
+            $this->warn(sprintf(
+                '  That URI names port %s and this listener is on %s: the consent redirect will not reach it.',
+                $this->registeredRedirectPort(),
+                $frontPort,
+            ));
+        }
+
         $this->line('  Tunnelling to plain HTTP backend on 127.0.0.1:'.$backendPort.($noBackend ? ' (external)' : ''));
         $this->line('  Your browser will warn about the self-signed certificate — accept it (or trust the cert above) once.');
         $this->comment('  Press Ctrl+C to stop.');
@@ -157,10 +199,19 @@ final class ServeOpenBankingTlsCommand extends Command
 
         // Derived from the redirect URI so the listener can never drift from
         // the port Enable Banking has registered.
-        $uri = $this->redirectUri->forProvider('open-banking', scheme: 'https');
-        $port = parse_url($uri, PHP_URL_PORT);
+        return $this->registeredRedirectPort();
+    }
 
-        return is_int($port) && $port > 0 ? $port : 8000;
+    private function registeredRedirectUri(): string
+    {
+        return $this->redirectUri->forProvider('open-banking', scheme: 'https');
+    }
+
+    private function registeredRedirectPort(): int
+    {
+        $port = parse_url($this->registeredRedirectUri(), PHP_URL_PORT);
+
+        return is_int($port) && $port > 0 ? $port : self::FALLBACK_PORT;
     }
 
     /**
@@ -176,6 +227,11 @@ final class ServeOpenBankingTlsCommand extends Command
                 'allow_self_signed' => true,
                 'verify_peer' => false,
                 'verify_peer_name' => false,
+                // `tls://` on its own offers every version the linked OpenSSL
+                // permits, so the floor was the build's rather than this
+                // app's. Stated here, as `relay:serve` states it through Amp's
+                // ServerTlsContext default.
+                'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_SERVER | STREAM_CRYPTO_METHOD_TLSv1_3_SERVER,
             ],
         ]);
 
@@ -288,7 +344,10 @@ final class ServeOpenBankingTlsCommand extends Command
             return 'unavailable';
         }
 
-        $digest = openssl_x509_fingerprint($pem, 'sha256');
+        // Suppressed so the `=== false` guard below decides: unsuppressed,
+        // Laravel's handler turns the E_WARNING a non-certificate raises into
+        // an ErrorException, and the announcement throws instead of degrading.
+        $digest = @openssl_x509_fingerprint($pem, 'sha256');
         if ($digest === false) {
             return 'unavailable';
         }

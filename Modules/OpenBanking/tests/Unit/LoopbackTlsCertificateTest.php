@@ -112,6 +112,40 @@ it('regenerates a certificate that expires within the day', function (): void {
         ->and($parsed['validTo_time_t'])->toBeGreaterThan(time() + 86400);
 });
 
+// ensure() used to count the key rather than read it, and nothing downstream
+// reads it either: the bind succeeds, the command announces the listener ready,
+// and the browser gets a reset connection with nothing in the log.
+it('regenerates when the key on disk does not open the certificate', function (string $replacement): void {
+    $cert = new LoopbackTlsCertificate($this->tlsDir);
+    $paths = $cert->ensure();
+    $firstSerial = openssl_x509_parse((string) file_get_contents($paths['cert']))['serialNumberHex'] ?? null;
+
+    file_put_contents($paths['key'], $replacement);
+
+    $regenerated = (new LoopbackTlsCertificate($this->tlsDir))->ensure();
+    $secondSerial = openssl_x509_parse((string) file_get_contents($regenerated['cert']))['serialNumberHex'] ?? null;
+
+    expect($secondSerial)->not->toBe($firstSerial)
+        ->and(openssl_x509_check_private_key(
+            (string) file_get_contents($regenerated['cert']),
+            (string) file_get_contents($regenerated['key']),
+        ))->toBeTrue();
+})->with([
+    'an empty file' => [''],
+    'text that is not a key' => ['not a private key at all'],
+    'a key from another generation' => [fn (): string => loopbackForeignKeyPem()],
+]);
+
+function loopbackForeignKeyPem(): string
+{
+    $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    expect($key)->not->toBeFalse();
+    $pem = '';
+    openssl_pkey_export($key, $pem);
+
+    return $pem;
+}
+
 it('refuses when the certificate directory cannot be created', function (): void {
     // A plain file where the directory belongs: is_dir() false, mkdir() failing.
     $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'ob-tls-blocked-'.bin2hex(random_bytes(6));

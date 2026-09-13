@@ -135,11 +135,23 @@ final readonly class GraphApiClient implements GraphApiClientContract
         // response that declares nothing is read a chunk at a time and dropped
         // the moment it passes the ceiling. Casting the body to string instead
         // let the mailbox decide how much of this device's heap to spend.
-        return BoundedRead::stream(
+        $raw = BoundedRead::stream(
             'Graph message '.$providerMessageId,
             $response->getBody(),
             UploadLimits::MAX_MESSAGE_BYTES,
         );
+
+        // No RFC 822 message is zero bytes, so an empty 200 is the transport's
+        // condition and not the message's. Returned as bytes it was written as
+        // an empty .eml plus a `fetched` row, and alreadyIndexed() then answers
+        // true for that id forever — the receipt is gone with the walk green.
+        if ($raw === '') {
+            throw new ProviderTransportException(
+                'GraphApiClient: Graph answered $value for message '.$providerMessageId.' with an empty body.',
+            );
+        }
+
+        return $raw;
     }
 
     /**
@@ -363,8 +375,14 @@ final readonly class GraphApiClient implements GraphApiClientContract
             );
         }
 
+        // A body that parses but is not a JSON object is not a Graph response
+        // at all, and read as an empty final page it landed the scan on `idle`
+        // with last_scan_at advanced — "your mailbox had nothing" told in the
+        // same words as "the provider answered with nothing".
         if (! is_array($decoded)) {
-            return [];
+            throw new ProviderTransportException(
+                'GraphApiClient: Graph response from '.$url.' decoded to '.get_debug_type($decoded).', not an object.',
+            );
         }
 
         // json_decode yields array<mixed, mixed>; casting each key is what
