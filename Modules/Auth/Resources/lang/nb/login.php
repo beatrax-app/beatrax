@@ -11,6 +11,7 @@ return [
     'remember' => 'Forbli innlogget på denne enheten',
     'submit' => 'Logg inn',
     'lost_password' => 'Har du mistet passordet ditt? Bruk en gjenopprettingskode.',
+    'throttled_recovery' => 'Eller skriv inn en gjenopprettingskode for å prøve igjen nå. Koden blir merket som brukt.',
 
     'error_invalid' => 'Brukernavnet eller passordet er feil.',
     'error_throttled' => 'For mange forsøk — prøv igjen om :wait.',

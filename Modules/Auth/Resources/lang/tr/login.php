@@ -11,6 +11,7 @@ return [
     'remember' => 'Bu cihazda oturumum açık kalsın',
     'submit' => 'Giriş yap',
     'lost_password' => 'Parolanı mı kaybettin? Bir kurtarma kodu kullan.',
+    'throttled_recovery' => 'Ya da hemen yeniden denemek için bir kurtarma kodu yaz. Kod kullanılmış olarak işaretlenecek.',
 
     'error_invalid' => 'Kullanıcı adı veya parola hatalı.',
     'error_throttled' => 'Çok fazla deneme — :wait sonra yeniden dene.',

@@ -33,6 +33,28 @@
                 autocomplete="current-password"
             />
 
+            {{-- Shown by the meter, which is consulted before any account is
+                 looked up, so a username nobody has offers this escape exactly
+                 as one somebody has does. --}}
+            @if ($recoveryOffered)
+                <div class="space-y-2">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        {{ Lang::get('auth::login.throttled_recovery') }}
+                    </p>
+
+                    <x-core::form-field
+                        field-id="recovery-code"
+                        name="recoveryCode"
+                        :label="Lang::get('auth::reset_password.recovery_code')"
+                        :hint="Lang::get('auth::reset_password.recovery_code_hint')"
+                        wire:model="recoveryCode"
+                        autocomplete="off"
+                        placeholder="A2BJ-XK9M-PQ7N-RX4F-V8HD"
+                        class="font-mono"
+                    />
+                </div>
+            @endif
+
             <x-core::checkbox-field
                 field-id="remember-me"
                 :label="Lang::get('auth::login.remember')"
