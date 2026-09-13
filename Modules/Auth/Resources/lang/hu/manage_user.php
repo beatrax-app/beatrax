@@ -7,6 +7,8 @@ return [
     'heading' => ':name kezelése',
     'subtitle' => 'Nézd meg, állítsd vissza vagy generáld újra ennek a felhasználónak a kódjait.',
 
+    'owner_password_label' => 'A fiókod jelszava',
+
     'set_password' => [
         'heading' => 'Új jelszó beállítása ehhez a felhasználóhoz',
         'description' => 'A következő bejelentkezésekor jelszót kell választania.',

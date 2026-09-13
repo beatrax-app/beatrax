@@ -7,6 +7,8 @@ return [
     'heading' => 'Gestionar :name',
     'subtitle' => 'Consulta, restablece o regenera los códigos de este usuario.',
 
+    'owner_password_label' => 'Tu contraseña de la cuenta',
+
     'set_password' => [
         'heading' => 'Definir una contraseña nueva para este usuario',
         'description' => 'La próxima vez que inicie sesión se le pedirá que elija una contraseña.',

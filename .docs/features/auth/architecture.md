@@ -21,8 +21,10 @@ account created on a device is the owner: their `is_developer` flag is set
 true at signup. The owner adds a partner via `/settings/users/new`, picks
 the partner's initial password, and the partner is forced to change it on
 first sign-in via the `force_password_change_at_next_login` flag. The same
-owner can reset the partner's password from `/settings/users/{id}`; the
-partner cannot reset the owner. The multi-user data scoping that backs
+owner can reset the partner's password, and regenerate their recovery
+sheet, from `/settings/users/{id}` — both at the cost of re-typing the
+owner's own account password, since either one outlives the partner's next
+password change. The partner cannot reset the owner. The multi-user data scoping that backs
 that asymmetry — every domain row carries `user_id` — is described in
 [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md).
 
@@ -318,6 +320,8 @@ The owner-resets-partner flow:
 GET /settings/users/{username}             (developer-gated)
 ManageUserPage::mount → assert is_developer, else 404
 POST ManageUserPage::setPartnerPassword
+  → re-assert is_developer (no middleware on a Livewire update)
+  → check the OWNER's own password, else refuse
   → write partner row inline:
        password = new hash
        force_password_change_at_next_login = true   ← owner-driven case

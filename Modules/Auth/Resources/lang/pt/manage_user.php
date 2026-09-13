@@ -7,6 +7,8 @@ return [
     'heading' => 'Gerir :name',
     'subtitle' => 'Consulta, repõe ou gera novos códigos para este utilizador.',
 
+    'owner_password_label' => 'A palavra-passe da tua conta',
+
     'set_password' => [
         'heading' => 'Definir uma nova palavra-passe para este utilizador',
         'description' => 'No próximo início de sessão, ser-lhe-á pedido que escolha uma palavra-passe.',

@@ -64,6 +64,11 @@ function livewireSnapshotAllowList(): array
         ManageUserPage::class => [
             // The partner is forced to change it at next sign-in.
             'newPartnerPassword',
+            // The owner's own, re-typed to authorise either write on that page,
+            // and zeroed on both once it has been checked. Owner authority is
+            // carried by the session; this is the part of being the owner that
+            // a session somebody else is holding cannot supply.
+            'ownerPassword',
         ],
         AddUserPage::class => [
             // The partner is forced to change it at first sign-in.

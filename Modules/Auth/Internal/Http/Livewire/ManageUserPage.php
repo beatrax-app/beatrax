@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Services\AccountOwner;
 use Modules\Auth\Internal\Services\SessionRevoker;
@@ -38,6 +39,12 @@ final class ManageUserPage extends Component
 
     public string $newPartnerPassword = '';
 
+    // Both writes below hand out a way into an account the reader is not signed
+    // in as, and neither is retired by that account's own password change. Owner
+    // authority is a property of the session, so a session somebody else is
+    // holding carries it; this is the part of being the owner that it cannot.
+    public string $ownerPassword = '';
+
     /** @var list<string> */
     public array $regeneratedCodes = [];
 
@@ -65,6 +72,7 @@ final class ManageUserPage extends Component
         AppLockProvisioner $provisioner,
         AccountOwner $owner,
         SessionRevoker $sessions,
+        AppLockCredentialRejections $rejections,
     ): void {
         // The route middleware does not re-run on a Livewire update, so an
         // owner who is no longer the owner mid-session kept resetting passwords.
@@ -75,6 +83,17 @@ final class ManageUserPage extends Component
         if (strlen($this->newPartnerPassword) < PasswordPolicy::MINIMUM_LENGTH) {
             $this->flashMessage = Lang::get('auth::manage_user.error_min_length');
             $this->newPartnerPassword = '';
+
+            return;
+        }
+
+        // Shape before proof, the order the app-lock panels already take: a
+        // password spent on a form that was going to be refused anyway is one
+        // the reader has to type again for nothing.
+        $rejection = $rejections->accountPassword($this->ownerPassword, $currentUser->user()->password);
+
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
 
             return;
         }
@@ -98,14 +117,29 @@ final class ManageUserPage extends Component
         }
 
         $this->newPartnerPassword = '';
+        $this->ownerPassword = '';
         $this->flashMessage = Lang::get('auth::manage_user.password_set', ['name' => $this->partnerUsername]);
     }
 
-    public function regenerateCodes(RegenerateRecoveryCodesAction $regenerate, CurrentUser $currentUser, AccountOwner $owner): void
-    {
+    public function regenerateCodes(
+        RegenerateRecoveryCodesAction $regenerate,
+        CurrentUser $currentUser,
+        AccountOwner $owner,
+        AppLockCredentialRejections $rejections,
+    ): void {
         if (! $owner->isOwner($currentUser->user())) {
             throw new NotFoundHttpException;
         }
+
+        $rejection = $rejections->accountPassword($this->ownerPassword, $currentUser->user()->password);
+
+        if ($rejection !== null) {
+            $this->flashMessage = $rejection;
+
+            return;
+        }
+
+        $this->ownerPassword = '';
 
         $this->regeneratedCodes = $regenerate($currentUser->user(), $this->partnerUsername);
         $this->flashMessage = Lang::get('auth::manage_user.codes_regenerated', ['name' => $this->partnerUsername]);

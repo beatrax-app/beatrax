@@ -7,6 +7,8 @@ return [
     'heading' => 'Hantera :name',
     'subtitle' => 'Visa, återställ eller generera om koder för den här användaren.',
 
+    'owner_password_label' => 'Ditt kontolösenord',
+
     'set_password' => [
         'heading' => 'Ange nytt lösenord för den här användaren',
         'description' => 'Vid nästa inloggning ombeds användaren att välja ett lösenord.',

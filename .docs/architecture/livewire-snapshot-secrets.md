@@ -74,9 +74,10 @@ allow-list makes it safe.
 
 The components currently allow-listed are all of that first kind: the sign-in,
 sign-up, change-password, reset-password, add-user and admin-sets-partner-password
-forms; the app-lock, delete-account and recovery-code-regeneration confirmations,
-which re-type the account password to authorise a security downgrade, an
-irreversible delete, or a fresh sheet that outlives the session asking for it; the
+forms; the app-lock, delete-account, recovery-code-regeneration and
+manage-partner confirmations, which re-type the reader's own account password to
+authorise a security downgrade, an irreversible delete, a fresh sheet that
+outlives the session asking for it, or a write into a partner's account; the
 BYO-OAuth wizard, where the user pastes their own `client_secret`; and the mobile
 import bootstrap, which creates the first account on a new device. Eleven
 components hold a password or passphrase this way, and that is the pattern, not an
@@ -125,6 +126,9 @@ worth knowing about when editing them:
 - `RecoveryCodesSection::regenerate()` zeroes it the moment the check passes, so
   the snapshot that redirects to the fresh sheet no longer carries the password
   that authorised it.
+- `ManageUserPage` holds two: the partner's new password, and the owner's own as
+  proof. Both are zeroed once spent, and the second is the only entry on this
+  list that authorises a write into somebody else's account.
 - `MobileImportBootstrap` zeroes the password and its confirmation the moment
   `submit()` consumes them; its retry path re-reads from a server-side session
   stash rather than from those properties. The stash holds plaintext, which is

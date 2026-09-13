@@ -7,6 +7,8 @@ return [
     'heading' => 'Zarządzanie: :name',
     'subtitle' => 'Podejrzyj, zresetuj lub wygeneruj ponownie kody tego użytkownika.',
 
+    'owner_password_label' => 'Twoje hasło do konta',
+
     'set_password' => [
         'heading' => 'Ustaw nowe hasło dla tego użytkownika',
         'description' => 'Przy następnym logowaniu pojawi się prośba o wybranie hasła.',

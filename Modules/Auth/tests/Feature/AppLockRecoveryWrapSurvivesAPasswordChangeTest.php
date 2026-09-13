@@ -159,6 +159,7 @@ it('says so when an owner sets a partner password it holds no old password for',
 
     Livewire::test(ManageUserPage::class, ['username' => 'rewrap-partner'])
         ->set('newPartnerPassword', 'set-by-owner-123')
+        ->set('ownerPassword', 'owner-password-123')
         ->call('setPartnerPassword');
 
     expect(app(AppLockProvisioner::class)->keyState((int) $partner->id))->toBe(AppLockKeyState::RecoveryUnreadable);

@@ -21,7 +21,7 @@ is not.
 |---|---|---|
 | `x-core::confirm-strip` | A row action, or a form whose destructive branch is one field among many. A `confirm*` method sets an id or a flag, the view swaps in the strip. | 3 keys |
 | `wire:confirm` | A single high-stakes button that is not part of a row. The native dialog is unmissable, which is what a once-a-year action wants. | 1 key |
-| A typed phrase or password | Account-level. `Core/EncryptedBackupRestore` types a phrase; `Auth/DeleteAccountSection` and `Auth/RecoveryCodesSection` take the password. | — |
+| A typed phrase or password | Account-level. `Core/EncryptedBackupRestore` types a phrase; `Auth/DeleteAccountSection`, `Auth/RecoveryCodesSection` and `Auth/ManageUserPage` take the password. | — |
 
 Use one of the three. A fourth spelling is how ten inline "are you sure?" strips
 came to disagree about everything, which is the story
@@ -90,7 +90,7 @@ through the questions that matter.
 |---|---|
 | `RulesPage::triggerReapply` | Rewrites every category, counterparty, note and tax tag a rule put there, across the reader's whole history. Manual values and reconciled rows are skipped; everything else is overwritten with no record of the prior value. |
 | `SettingsPage::save`, when the period start day moved | `EnvelopePeriodRekeyer::rekeyToCurrentPeriods()` deletes every `envelope_assignments` row and re-inserts it under new period keys, **summing** the amounts wherever two old periods fold onto one new one. Setting the day back re-runs the same merge on the summed rows rather than splitting them. It was a plain form save with nothing said. |
-| `RecoveryCodesSection::regenerate` | Retires the only offline way back into the account. The codes are stored hashed and cannot be shown again, so a printed copy dies with them. The partner-facing equivalent, `ManageUserPage::regenerateCodes`, already asks the reader to type a username; this one asked nothing. It now takes both: `wire:confirm` for what is lost, and the account password for who is asking — see below. |
+| `RecoveryCodesSection::regenerate` | Retires the only offline way back into the account. The codes are stored hashed and cannot be shown again, so a printed copy dies with them. The partner-facing equivalent, `ManageUserPage::regenerateCodes`, asked the reader to type a username; this one asked nothing. It now takes both: `wire:confirm` for what is lost, and the account password for who is asking — see below. |
 | `HandlesTaxTagging::applyBatchTag` | Writes a tag onto every remaining untagged transaction for a counterparty in a tax year. The only inverse is `untag`, one transaction at a time. |
 | `PreviewMigration::discard` | `DiscardMigrationRun` truncates seven staging tables. Recovery means uploading and re-parsing the whole export. It sat beside the confirm button with the same visual weight. |
 | `AuditLogPage::truncateAll` | Deletes every `dev_mode_audit` row the developer owns. The log is write-only and nothing re-derives it: what was run, with which arguments, and what it printed is gone. It always asked — but with a hand-rolled `window.confirm` in an `x-on:click`, which is the fourth spelling the rules above now refuse. `wire:confirm` is the shape, since it is one button on a page rather than a row. |
@@ -124,6 +124,33 @@ vocabulary across the surfaces that ask it.
 The box is a `wire:model` property, and it is registered as one — the argument
 that allows it, and the zeroing that goes past that argument, are in
 [Livewire snapshot secrets](../architecture/livewire-snapshot-secrets.md#the-allow-list-and-the-one-thing-that-justifies-an-entry).
+
+### The same question, asked on somebody else's behalf
+
+`/settings/users/<name>` carries the two writes that reach *another* account:
+the owner sets the partner's password, and the owner mints the partner's
+recovery sheet. Both were owner-only and neither asked for anything.
+
+Owner-only is an **authority**, and authority here is a property of the
+session — so a session in the wrong hands carries it whole. That is the same
+gap as the row above, one account further out, and the ceiling is higher: the
+partner's own password change retires neither write, because the attacker set
+that password or holds the codes that reset it.
+
+The proof taken is the **owner's own account password**, and it is worth saying
+why that is the right thing to ask for rather than merely the familiar one. The
+credential being replaced is the partner's, and it is not available to ask for:
+the whole reason this screen exists is that the owner does not hold it. The
+partner cannot consent either — they are not at the device, which is the
+premise. What *is* being exercised is the owner's authority, so the thing to
+prove is that the owner is present. Proof has to match the authority being
+used, not the credential being rewritten.
+
+The typed-username box on the regenerate panel is not that proof and never was.
+It is `x-model`, so the name never leaves the browser; it only unlocks the
+button. The name is printed at the top of the page, and a crafted Livewire
+update never renders the button at all. It stays, as a pause against the wrong
+partner — but it was the only thing there, and it stopped nobody.
 
 ## A promise of an undo is not an undo
 

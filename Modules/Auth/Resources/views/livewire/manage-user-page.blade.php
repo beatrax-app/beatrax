@@ -33,6 +33,16 @@
                 autocomplete="new-password"
             />
 
+            <x-core::form-field
+                field-id="set-password-owner-password"
+                name="ownerPassword"
+                type="password"
+                :label="Lang::get('auth::manage_user.owner_password_label')"
+                wire:model="ownerPassword"
+                autocomplete="current-password"
+                data-testid="set-password-owner-password"
+            />
+
             <div class="flex items-center gap-2">
                 <button
                     type="button"
@@ -70,13 +80,26 @@
             <p id="regenerate-body" class="text-sm text-rose-900 dark:text-rose-200">{{ Lang::get('auth::manage_user.regenerate.body') }}</p>
 
             {{-- x-model, not wire:model: the typed name never leaves the
-                 browser, it only unlocks the button next to it. --}}
+                 browser, it only unlocks the button next to it. It is a pause,
+                 not a gate — the name is printed at the top of this page, and a
+                 crafted update never renders the button at all. The password
+                 below is the gate. --}}
             <x-core::form-field
                 field-id="confirm-username"
                 name="confirmUsername"
                 :label="Lang::get('auth::manage_user.regenerate.confirm_label')"
                 x-model="typed"
                 autocomplete="off"
+            />
+
+            <x-core::form-field
+                field-id="regenerate-owner-password"
+                name="ownerPassword"
+                type="password"
+                :label="Lang::get('auth::manage_user.owner_password_label')"
+                wire:model="ownerPassword"
+                autocomplete="current-password"
+                data-testid="regenerate-owner-password"
             />
 
             <div class="flex items-center gap-2">
