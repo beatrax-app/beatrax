@@ -27,6 +27,15 @@ final class FileDropBlobWriteException extends RuntimeException
         return new self(sprintf('FileDropEmlBlobStore: short write to temp file at %s.', $tmp));
     }
 
+    public static function couldNotFlush(string $tmp, string $step): self
+    {
+        return new self(sprintf(
+            'FileDropEmlBlobStore: %s failed for temp file at %s; the bytes are not all on disk.',
+            $step,
+            $tmp,
+        ));
+    }
+
     public static function chmodTempFileFailed(string $tmp): self
     {
         return new self(sprintf('FileDropEmlBlobStore: failed to chmod temp file at %s.', $tmp));

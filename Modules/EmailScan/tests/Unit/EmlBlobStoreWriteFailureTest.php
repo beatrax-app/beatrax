@@ -6,6 +6,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\OwnerOnlyPath;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
+use Tests\Helpers\FailingStream;
 
 // put() writes a sibling .tmp, fsyncs, narrows it to 0600 and renames over the
 // canonical path, so a reader never sees a partial .eml and the bytes are never
@@ -60,4 +61,38 @@ it('reports a rename it cannot complete, and leaves no temp file', function (): 
     @unlink($target.DIRECTORY_SEPARATOR.'occupied');
     @rmdir($target);
     ebsCleanup($target);
+});
+
+afterEach(function (): void {
+    FailingStream::reset();
+});
+
+// A full disk cannot be staged with a real file: fwrite answers from a
+// userspace buffer, so the count agrees and the failure arrives at the flush.
+// Over a registered scheme the three arms that ask whether the bytes are
+// actually on disk are reachable one at a time.
+it('reports a write the filesystem only half accepted', function (): void {
+    FailingStream::register();
+    FailingStream::$failWrites = true;
+    $path = 'beatraxfail://blobs/2026/06/message.eml';
+
+    expect(fn () => ebsWriteStore()->put($path, 'raw mime bytes'))
+        ->toThrow(RuntimeException::class, 'short write');
+});
+
+it('reports bytes the flush could not put on disk', function (): void {
+    FailingStream::register();
+    FailingStream::$failFlush = true;
+    $path = 'beatraxfail://blobs/2026/06/message.eml';
+
+    expect(fn () => ebsWriteStore()->put($path, 'raw mime bytes'))
+        ->toThrow(RuntimeException::class, 'fflush failed');
+});
+
+it('reports a flush the fsync did not confirm', function (): void {
+    FailingStream::register();
+    $path = 'beatraxfail://blobs/2026/06/message.eml';
+
+    expect(fn () => ebsWriteStore()->put($path, 'raw mime bytes'))
+        ->toThrow(RuntimeException::class, 'fsync failed');
 });

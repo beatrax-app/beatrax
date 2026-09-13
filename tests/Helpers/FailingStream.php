@@ -22,7 +22,17 @@ final class FailingStream
     // buffered bytes left and its next fread never reaches the wrapper.
     public static int $chunkSize = PHP_INT_MAX;
 
+    // Zero bytes, not a partial count: PHP loops on a userland write and
+    // re-offers whatever the wrapper declined, so a short answer is retried
+    // until it adds up and fwrite reports the full length. Only a write that
+    // accepts nothing breaks that loop.
     public static bool $failWrites = false;
+
+    // A full disk surfaces here, not at the write: fwrite copies into a
+    // userspace buffer and reports success, so the failure arrives when that
+    // buffer is drained. fsync needs no flag — PHP refuses to fsync anything
+    // that is not a plain file, so it answers false over any wrapper.
+    public static bool $failFlush = false;
 
     // Required by the wrapper protocol; PHP assigns the stream context here.
     public mixed $context = null;
@@ -46,6 +56,7 @@ final class FailingStream
         self::$failOnRead = PHP_INT_MAX;
         self::$chunkSize = PHP_INT_MAX;
         self::$failWrites = false;
+        self::$failFlush = false;
     }
 
     public function stream_open(string $path, string $mode, int $options, ?string &$openedPath): bool
@@ -94,6 +105,43 @@ final class FailingStream
     public function stream_stat(): array
     {
         return ['size' => strlen(self::$data)];
+    }
+
+    public function stream_flush(): bool
+    {
+        return ! self::$failFlush;
+    }
+
+    public function stream_lock(int $operation): bool
+    {
+        return true;
+    }
+
+    // The three the atomic-write paths reach for around the bytes themselves.
+    // Answering them lets a case reach the write it is about rather than
+    // failing on the directory or the chmod before it.
+    public function stream_metadata(string $path, int $option, mixed $value): bool
+    {
+        return true;
+    }
+
+    public function mkdir(string $path, int $mode, int $options): bool
+    {
+        return true;
+    }
+
+    // Answers "cannot stat" rather than being left off. Every atomic-write
+    // path asks whether the parent directory is there before it opens
+    // anything, and an unimplemented url_stat makes is_dir() raise a warning
+    // that Pest promotes to an exception well before the case gets started.
+    public function url_stat(string $path, int $flags): array|false
+    {
+        return false;
+    }
+
+    public function rename(string $from, string $to): bool
+    {
+        return true;
     }
 
     public function stream_close(): void {}

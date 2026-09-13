@@ -98,13 +98,30 @@ final readonly class EmlBlobStore
                     sprintf('EmlBlobStore: short write to temp file at %s.', $tmp),
                 );
             }
-            @fflush($fp);
-            if (function_exists('fsync')) {
-                @fsync($fp);
+            // fwrite reports what it put in a userspace buffer, so a full disk
+            // surfaces here rather than above: an unasked flush lets a short
+            // file be chmod'ed and renamed over a good one.
+            if (@fflush($fp) === false) {
+                throw new EmlBlobWriteException(
+                    sprintf('EmlBlobStore: fflush failed for temp file at %s; the bytes are not all on disk.', $tmp),
+                );
             }
+
+            if (function_exists('fsync') && @fsync($fp) === false) {
+                throw new EmlBlobWriteException(
+                    sprintf('EmlBlobStore: fsync failed for temp file at %s; the bytes are not all on disk.', $tmp),
+                );
+            }
+
             @flock($fp, LOCK_UN);
-            @fclose($fp);
+            $closed = @fclose($fp);
             $fp = null;
+
+            if ($closed === false) {
+                throw new EmlBlobWriteException(
+                    sprintf('EmlBlobStore: fclose failed for temp file at %s; the bytes are not all on disk.', $tmp),
+                );
+            }
 
             if (! @chmod($tmp, SecretFileMode::FILE)) {
                 throw new EmlBlobWriteException(
