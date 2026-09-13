@@ -1843,6 +1843,23 @@ configuration: pairing frames travel ONLY over the relay courier, so with no
 relay the handshake has nowhere to deliver — the desktop never receives the
 phone's accept and the phone polls forever.
 
+`relay:serve` chooses a TLS bind over a plaintext one by asking
+`RelayTlsMaterial::isUsable()` once, at startup, and then reads neither half of
+the material again. That question used to be `exists()` — two `is_file()`
+calls. A key that does not open its certificate passed it, so the relay took
+the TLS bind, refused every peer handshake, and the QR went on advertising
+`https://` and a pin derived from a certificate no peer could reach.
+`isUsable()` loads the key and checks it against the certificate
+(`Modules\Core\Public\Support\TlsKeyPair::opensCertificate()`, shared with
+the OpenBanking loopback listener), so `ensure()` regenerates instead.
+
+`RelayListenerProcess` restarts a relay that holds the port while the endpoint
+says `https://` and the probe gets no TLS handshake. The probe measures whether
+a handshake completes, not why it did not: plaintext from a relay started
+before the material existed, and nothing at all from one holding a key that
+opens nothing. The log line says what was observed rather than naming the first
+of those as the cause.
+
 What IS opt-in is a REMOTE relay: `RelayConfig`'s endpoint URL defaults to
 absent, and self-hosters point it at their own `php artisan relay:serve`. The
 locally-spawned one is the offline-buffering and pairing fallback beside the
