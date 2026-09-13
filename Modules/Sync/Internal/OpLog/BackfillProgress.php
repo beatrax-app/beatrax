@@ -6,7 +6,9 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
 use Modules\Core\Public\Support\Instant;
+use Modules\Core\Public\Support\SchemaShape;
 
 // Where a pre-sync capture got to, on disk, so the next pass continues instead
 // of restarting. The op-log write and the cursor advance share one transaction,
@@ -79,7 +81,18 @@ final readonly class BackfillProgress
     // tick, so it is a covered lookup on a table holding one row per user.
     public function isOpen(int $userId): bool
     {
-        return $this->db->connection()->table('sync_backfill_state')
+        $connection = $this->db->connection();
+
+        // `failed_slices` arrived in a later migration, and an absent column
+        // compares as its own name: SQLite sorts text above every integer, so
+        // `< 3` is false and the walk reads as finished forever.
+        $missing = SchemaShape::missingColumns($connection, 'sync_backfill_state', ['completed_at', 'failed_slices']);
+
+        if ($missing !== []) {
+            throw ColumnNotDeclaredException::on('sync_backfill_state', $missing);
+        }
+
+        return $connection->table('sync_backfill_state')
             ->where('user_id', $userId)
             ->whereNull('completed_at')
             ->where('failed_slices', '<', self::MAX_FAILED_SLICES)

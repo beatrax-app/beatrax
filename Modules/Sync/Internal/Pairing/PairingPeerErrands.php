@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Public\Enums\PairingFrameSend;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -23,6 +24,7 @@ final readonly class PairingPeerErrands
 {
     public function __construct(
         private DatabaseManager $db,
+        private DeviceRegistryService $devices,
         private PairingPeerLink $peerLink,
         private PairingFrameCourier $frameCourier,
         private GdkRotationService $rotation,
@@ -101,15 +103,16 @@ final readonly class PairingPeerErrands
      */
     public function fanOutEpochsToConfirmedPeers(int $userId, Session $session): bool
     {
-        $recipients = $this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 0)
-            ->whereNotNull('confirmed_at')
-            // A retired row is confirmed so a rebuild can verify what it
-            // signed, and a wrap addressed to it sits in a mailbox the machine
-            // it names will never open.
-            ->whereNull('self_retired_at')
-            ->pluck('id');
+        // A retired row is confirmed so a rebuild can verify what it signed, and
+        // a wrap addressed to it sits in a mailbox the machine it names will
+        // never open. Asked through the seam, which refuses where the column
+        // that decides it is not on the table yet.
+        $recipients = $this->devices->stillADevice(
+            $this->db->connection()->table('device_registry')
+                ->where('user_id', $userId)
+                ->where('is_self', 0)
+                ->whereNotNull('confirmed_at')
+        )->pluck('id');
 
         if ($recipients->isEmpty()) {
             $this->logger->warning('GDK epoch fan-out found no confirmed peer to deliver to — the peer cannot decrypt anything until it is admitted.', [
