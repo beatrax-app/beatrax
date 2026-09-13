@@ -758,6 +758,15 @@ filled only by a row that ran past the header, and a `null` in any real
 column is a row that stopped short. A row whose every cell is empty still
 skips, because that is the blank line an export ends on.
 
+`CsvPreset::DEBIT_CREDIT` is a documented amount strategy no shipped preset
+uses yet, and its branches had never been run. Reading it: the reader took
+the first *non-empty* of the two columns, and half the two-column exports in
+the wild write `0,00` in the column the row did not move through rather than
+leaving it blank — so `Debet 0,00 / Credit 23,45` booked **nothing**. The
+figure now comes off the column that is not zero; a row stating both at once
+is refused rather than settled by which branch was written first, and a row
+that is genuinely zero on both sides stays a zero-amount row.
+
 A date is read at the width its format declares. PHP's `Y` matches one to
 four digits and raises no parse warning for the short reading, so
 `26-05-01` under a `Y-m-d` preset was booked in the year 26.

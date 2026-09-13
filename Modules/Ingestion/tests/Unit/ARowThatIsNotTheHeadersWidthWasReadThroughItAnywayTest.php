@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Ingestion\Internal\Exceptions\InvalidAmountException;
+use Modules\Ingestion\Internal\Exceptions\SniffMismatchException;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Tests\Support\CsvHandedToTheApp;
 
@@ -57,4 +58,15 @@ it('skips a filler line that holds nothing at all', function (): void {
         .',,,,,,,,,,'."\n";
 
     expect(CsvHandedToTheApp::parsedThrough(CsvPresetRegistry::N26, $body))->toHaveCount(1);
+});
+
+// A duplicate among the columns the sniff requires is named by the sniff. One
+// among the rest reaches getHeader(), whose SyntaxError has to arrive as a
+// format mismatch — the marker the wizard branches on — and not as a 500.
+it('refuses a duplicate header the sniff had no reason to check', function (): void {
+    $body = str_replace('"MutatieSoort"', '"Code"', CsvHandedToTheApp::ING_HEADER)."\n"
+        .'"20260501","Albert Heijn","NL91ABNA0417164300","NL57ASNB0123456789","BA","Af","23,45","Betaalautomaat","Pasvolgnr 001"'."\n";
+
+    expect(fn (): array => CsvHandedToTheApp::parsedThrough(CsvPresetRegistry::ING_NL, $body))
+        ->toThrow(SniffMismatchException::class, 'duplicate or malformed column headers');
 });

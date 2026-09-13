@@ -22,12 +22,6 @@ use Throwable;
 
 final readonly class GenericCsvAdapter implements SourceAdapter
 {
-    // league/csv maps a record onto the header by offset, so a row carrying
-    // more cells than the header names loses the surplus and one carrying
-    // fewer reads those columns as empty — both without a word. A column past
-    // the header's last is filled only by a row that ran past it.
-    private const string RAN_PAST_THE_HEADER = "\0beyond-the-header";
-
     public function __construct(
         private CsvPreset $preset,
         private GenericCsvAmountParser $amounts,
@@ -59,7 +53,7 @@ final readonly class GenericCsvAdapter implements SourceAdapter
             // user-facing sniff message instead of a raw 500.
             $header = $reader->getHeader();
             $normMap = $this->buildHeaderMap($header);
-            $records = $reader->getRecords([...array_map(strval(...), $header), self::RAN_PAST_THE_HEADER]);
+            $records = $reader->getRecords([...array_map(strval(...), $header), CsvRowShape::RAN_PAST_THE_HEADER]);
         } catch (SyntaxError $e) {
             throw new SniffMismatchException(sprintf(
                 'The %s CSV could not be read (it may have duplicate or malformed column headers).',
@@ -70,12 +64,9 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         $index = 0;
         foreach ($records as $record) {
             /** @var array<string, string|null> $record */
-            $ranPast = ($record[self::RAN_PAST_THE_HEADER] ?? null) !== null;
-            unset($record[self::RAN_PAST_THE_HEADER]);
-
-            if (self::carriesData($record)) {
-                $this->refuseARowThatIsNotTheHeadersWidth($record, $ranPast, $index);
-            }
+            $ranPast = ($record[CsvRowShape::RAN_PAST_THE_HEADER] ?? null) !== null;
+            unset($record[CsvRowShape::RAN_PAST_THE_HEADER]);
+            CsvRowShape::refuseARowThatIsNotTheHeadersWidth($record, $ranPast, $index);
 
             if ($this->rejectedByState($record, $normMap)) {
                 continue;
@@ -83,7 +74,7 @@ final readonly class GenericCsvAdapter implements SourceAdapter
 
             $dateCell = trim($this->cell($record, $normMap, $this->preset->dateHeader));
             if ($dateCell === '') {
-                $this->refuseAnUndatedRowThatCarriesData($record, $index);
+                CsvRowShape::refuseAnUndatedRowThatCarriesData($record, $this->preset->dateHeader, $index);
 
                 continue;
             }
@@ -145,67 +136,6 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         return CsvPreset::normalizeHeader($header);
     }
 
-    // The sibling positional reader refuses an undated row through parseDate(),
-    // and this one skipped it -- so an ING row carrying an amount, a
-    // counterparty and a description but no date left the import with nothing
-    // said, and the rows after it renumbered over the gap.
-    /**
-     * @param  array<string, string|null>  $record
-     */
-    private function refuseAnUndatedRowThatCarriesData(array $record, int $index): void
-    {
-        if (self::carriesData($record)) {
-            throw new InvalidAmountException(sprintf(
-                "Row %d: the '%s' column is empty, and the row is not.",
-                $index,
-                $this->preset->dateHeader,
-            ));
-        }
-    }
-
-    // A row that does not line up with the header is refused rather than read
-    // through it: one cell of an unescaped delimiter shifts every column after
-    // it, and the amount then comes off whichever column landed there.
-    /**
-     * @param  array<string, string|null>  $record
-     */
-    private function refuseARowThatIsNotTheHeadersWidth(array $record, bool $ranPastTheHeader, int $index): void
-    {
-        if ($ranPastTheHeader) {
-            throw new InvalidAmountException(sprintf(
-                'Row %d carries more cells than the %d columns the header names.',
-                $index,
-                count($record),
-            ));
-        }
-
-        foreach ($record as $column => $value) {
-            if ($value === null) {
-                throw new InvalidAmountException(sprintf(
-                    "Row %d stops before the '%s' column the header names.",
-                    $index,
-                    $column,
-                ));
-            }
-        }
-    }
-
-    // A trailing blank line, or a filler row a bank's export writes between
-    // sections: nothing to read and nothing to refuse.
-    /**
-     * @param  array<string, string|null>  $record
-     */
-    private static function carriesData(array $record): bool
-    {
-        foreach ($record as $value) {
-            if (is_string($value) && trim($value) !== '') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /**
      * @param  array<string, string|null>  $record
      * @param  array<string, string>  $normMap
@@ -264,14 +194,26 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         $debit = trim($this->cell($record, $normMap, (string) $this->preset->debitHeader));
         $credit = trim($this->cell($record, $normMap, (string) $this->preset->creditHeader));
 
-        if ($debit !== '') {
-            return -abs($this->amounts->parseMinor($debit, $sep, $currency));
-        }
-        if ($credit !== '') {
-            return abs($this->amounts->parseMinor($credit, $sep, $currency));
+        if ($debit === '' && $credit === '') {
+            throw new InvalidAmountException('Both debit and credit columns are empty.');
         }
 
-        throw new InvalidAmountException('Both debit and credit columns are empty.');
+        $debitMinor = $debit === '' ? 0 : abs($this->amounts->parseMinor($debit, $sep, $currency));
+        $creditMinor = $credit === '' ? 0 : abs($this->amounts->parseMinor($credit, $sep, $currency));
+
+        // An export of this shape writes 0,00 in the column the row did not
+        // move through rather than leaving it blank, so emptiness cannot say
+        // which column carries the figure and the zero has to. Both at once is
+        // a row no reading of a two-column export answers.
+        if ($debitMinor !== 0 && $creditMinor !== 0) {
+            throw new InvalidAmountException(sprintf(
+                "Row states a debit of '%s' and a credit of '%s' at once.",
+                $debit,
+                $credit,
+            ));
+        }
+
+        return $creditMinor !== 0 ? $creditMinor : -$debitMinor;
     }
 
     /**

@@ -8,6 +8,7 @@ use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
+use Modules\Ingestion\Public\Dto\CsvPreset;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
@@ -29,13 +30,24 @@ final class CsvHandedToTheApp
      */
     public static function parsedThrough(string $format, string $body): array
     {
-        $path = sys_get_temp_dir().'/beatrax-csv-'.bin2hex(random_bytes(8)).'.csv';
-        file_put_contents($path, $body);
-
         $preset = (new CsvPresetRegistry)->get($format);
         if ($preset === null) {
             throw new RuntimeException(sprintf('No CSV preset named %s.', $format));
         }
+
+        return self::parsedThroughPreset($preset, $body);
+    }
+
+    // For a preset the registry does not ship. HeaderSniffer is final and
+    // resolves its own preset from the format id, so the body still has to
+    // satisfy the registered preset of whichever id this one names.
+    /**
+     * @return list<SourceTransactionDto>
+     */
+    public static function parsedThroughPreset(CsvPreset $preset, string $body): array
+    {
+        $path = sys_get_temp_dir().'/beatrax-csv-'.bin2hex(random_bytes(8)).'.csv';
+        file_put_contents($path, $body);
 
         $adapter = new GenericCsvAdapter($preset, new GenericCsvAmountParser, new HeaderSniffer);
 
