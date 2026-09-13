@@ -408,19 +408,31 @@ it('settles an equidistant pair on the earlier booked_at, whichever row was impo
     expect($ask(6600))->toBe($earlierSecond->id, 'later-but-first id '.$laterFirst->id);
 });
 
-it('settles two rows sharing a booked_at on the lower id for the chain-resolution caller', function (): void {
+// The account, the amount and the currency are all pinned by the predicates,
+// so what parts two rows the statement booked identically is the ordinal it
+// counted them in — and the id the tie used to fall to is a number the peer
+// hands to a different row.
+it('settles two rows sharing a booked_at on the ordinal, not on the lower id', function (): void {
+    $second = counterLegPinTx($this->user, $this->asn, $this->run, [
+        'amount_minor' => 7700,
+        'settled_amount_minor' => 7700,
+        'booked_at' => '2026-05-16 09:00:00',
+        'posted_at' => '2026-05-16',
+        'counterparty_normalized' => 'counter-leg-contested',
+        'occurrence_ordinal' => 1,
+    ]);
     $first = counterLegPinTx($this->user, $this->asn, $this->run, [
         'amount_minor' => 7700,
         'settled_amount_minor' => 7700,
         'booked_at' => '2026-05-16 09:00:00',
         'posted_at' => '2026-05-16',
+        'counterparty_normalized' => 'counter-leg-contested',
+        'occurrence_ordinal' => 0,
     ]);
-    counterLegPinTx($this->user, $this->asn, $this->run, [
-        'amount_minor' => 7700,
-        'settled_amount_minor' => 7700,
-        'booked_at' => '2026-05-16 09:00:00',
-        'posted_at' => '2026-05-16',
-    ]);
+
+    // The statement's first occurrence is created second, so it holds the
+    // HIGHER id: the id rule and the agreed rule answer with different rows.
+    expect($first->id)->toBeGreaterThan($second->id, 'the fixture no longer inverts id order against ordinal order');
 
     expect($this->lookup->counterLegOnAccount(
         new CounterLegMatch(
