@@ -79,6 +79,12 @@ final class SafeDate
         return self::parseOrNull(trim($raw))?->startOfDay();
     }
 
+    // 'Y' matches one to four digits, so a dialect that declares a four-digit
+    // year still accepted "26-05-01" and booked it in the year 26 with no
+    // warning raised. Every format this is called with carries a four-digit
+    // year, and no import reaches back past the first millennium.
+    private const int EARLIEST_YEAR = 1000;
+
     // createFromFormat() rolls an out-of-range component forward rather than
     // refusing it: "31-02-2026" books itself on 3 March. The roll shows up
     // only as a parse warning, which is what gets checked — a format
@@ -96,7 +102,9 @@ final class SafeDate
         }
 
         $errors = CarbonImmutable::getLastErrors();
-        $rejected = ($errors['warning_count'] ?? 0) > 0 || ($errors['error_count'] ?? 0) > 0;
+        $rejected = ($errors['warning_count'] ?? 0) > 0
+            || ($errors['error_count'] ?? 0) > 0
+            || $parsed->year < self::EARLIEST_YEAR;
 
         return $rejected ? null : $parsed;
     }

@@ -5875,6 +5875,18 @@ held their own copy of that round-trip before this — `GoalWriter`,
 `PeriodPresetResolver`, `PeriodQuery`, `SetAccountOpeningBalance` and the
 framework's own `date_format` rule — and they did not all agree.
 
+`SafeDate::fromFormatOrNull()` is the other reading, for a source that names its
+own format — a bank CSV preset's `Y-m-d` or `Ymd`. It reads the parse warnings
+rather than round-tripping, because a round-trip would also refuse `02/05/2026`
+read through `n/j/Y`. That check had a blind spot of its own: **`Y` matches one
+to four digits, and the short reading raises no warning**, so `26-05-01` under a
+`Y-m-d` preset parsed into the year 26 and imported with nothing said — while
+`dayOrNull()` refused the same string on its round-trip, so the two readings of
+"is this the day somebody meant" disagreed. A year before 1000 is refused there
+too now, which is exactly the reading a four-digit `Y` came up short on and
+leaves the formats that declare two digits (`ymd`, MT940's sliding window)
+alone.
+
 **Normalising is still right, but only for a machine.** A MIME `Date:` header
 and a stored timestamp whose time half is an artefact have no `Y-m-d` shape to
 check, so the lenient reader survives under a name that says what it does:

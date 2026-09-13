@@ -568,6 +568,20 @@ transaction, defaulting any unrecognised conflict-resolution action to
 `'keep'` so a forged action key can never silently replace an existing
 alias.
 
+The classification is against the entries already seen in **this file**,
+not only against the table. `merchant_aliases` is unique on
+`(user_id, pattern)`, so a file naming one pattern twice — two exports
+concatenated, or one hand-edited — used to be diffed as two `new` rows and
+then hit the constraint inside `apply()`'s transaction: the whole import
+rolled back with nothing written, nothing said, and a stack trace out of
+`confirmImport()`. The second mention is a conflict with the first, which
+is the answer the screen already knows how to put to the reader.
+
+`pattern` is the raw description a row arrived with, and the resolver's
+exact tier is keyed on that string, so two casings are two descriptions
+and deliberately two aliases; surrounding whitespace is trimmed at parse
+time and so collapses onto the stored row.
+
 `LongestCommonPrefix::compute()` powers the Settings → Aliases
 bulk-merge dialog's pattern prefill: it throws on fewer than two inputs,
 returns `''` on any empty input, and refuses a prefix shorter than 4

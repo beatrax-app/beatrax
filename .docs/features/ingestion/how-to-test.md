@@ -23,6 +23,13 @@ isolation.
 - **Common stubs:** unit tests are pure-function; no stubs
   needed. The exception types are asserted by class, not by
   message.
+- **A hostile CSV body:**
+  `Modules\Ingestion\Tests\Support\CsvHandedToTheApp` writes a
+  body to a `.csv` under a temporary name and reads it through a
+  shipped preset, header constants included. Hostile bodies are
+  one-offs rather than committed fixtures — each says its whole
+  story in the test that writes it, and a fixture nobody can
+  read beside its assertion is a fixture that drifts.
 
 ## Feature tests
 

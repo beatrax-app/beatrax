@@ -51,8 +51,9 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         try {
             // getHeader() throws on duplicate column names; surface that as a
             // user-facing sniff message instead of a raw 500.
-            $normMap = $this->buildHeaderMap($reader->getHeader());
-            $records = $reader->getRecords();
+            $header = $reader->getHeader();
+            $normMap = $this->buildHeaderMap($header);
+            $records = $reader->getRecords([...array_map(strval(...), $header), CsvRowShape::RAN_PAST_THE_HEADER]);
         } catch (SyntaxError $e) {
             throw new SniffMismatchException(sprintf(
                 'The %s CSV could not be read (it may have duplicate or malformed column headers).',
@@ -63,13 +64,17 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         $index = 0;
         foreach ($records as $record) {
             /** @var array<string, string|null> $record */
+            $ranPast = ($record[CsvRowShape::RAN_PAST_THE_HEADER] ?? null) !== null;
+            unset($record[CsvRowShape::RAN_PAST_THE_HEADER]);
+            CsvRowShape::refuseARowThatIsNotTheHeadersWidth($record, $ranPast, $index);
+
             if ($this->rejectedByState($record, $normMap)) {
                 continue;
             }
 
             $dateCell = trim($this->cell($record, $normMap, $this->preset->dateHeader));
             if ($dateCell === '') {
-                $this->refuseAnUndatedRowThatCarriesData($record, $index);
+                CsvRowShape::refuseAnUndatedRowThatCarriesData($record, $this->preset->dateHeader, $index);
 
                 continue;
             }
@@ -131,26 +136,6 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         return CsvPreset::normalizeHeader($header);
     }
 
-    // The sibling positional reader refuses an undated row through parseDate(),
-    // and this one skipped it -- so an ING row carrying an amount, a
-    // counterparty and a description but no date left the import with nothing
-    // said, and the rows after it renumbered over the gap.
-    /**
-     * @param  array<string, string|null>  $record
-     */
-    private function refuseAnUndatedRowThatCarriesData(array $record, int $index): void
-    {
-        foreach ($record as $value) {
-            if (is_string($value) && trim($value) !== '') {
-                throw new InvalidAmountException(sprintf(
-                    "Row %d: the '%s' column is empty, and the row is not.",
-                    $index,
-                    $this->preset->dateHeader,
-                ));
-            }
-        }
-    }
-
     /**
      * @param  array<string, string|null>  $record
      * @param  array<string, string>  $normMap
@@ -209,14 +194,26 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         $debit = trim($this->cell($record, $normMap, (string) $this->preset->debitHeader));
         $credit = trim($this->cell($record, $normMap, (string) $this->preset->creditHeader));
 
-        if ($debit !== '') {
-            return -abs($this->amounts->parseMinor($debit, $sep, $currency));
-        }
-        if ($credit !== '') {
-            return abs($this->amounts->parseMinor($credit, $sep, $currency));
+        if ($debit === '' && $credit === '') {
+            throw new InvalidAmountException('Both debit and credit columns are empty.');
         }
 
-        throw new InvalidAmountException('Both debit and credit columns are empty.');
+        $debitMinor = $debit === '' ? 0 : abs($this->amounts->parseMinor($debit, $sep, $currency));
+        $creditMinor = $credit === '' ? 0 : abs($this->amounts->parseMinor($credit, $sep, $currency));
+
+        // An export of this shape writes 0,00 in the column the row did not
+        // move through rather than leaving it blank, so emptiness cannot say
+        // which column carries the figure and the zero has to. Both at once is
+        // a row no reading of a two-column export answers.
+        if ($debitMinor !== 0 && $creditMinor !== 0) {
+            throw new InvalidAmountException(sprintf(
+                "Row states a debit of '%s' and a credit of '%s' at once.",
+                $debit,
+                $credit,
+            ));
+        }
+
+        return $creditMinor !== 0 ? $creditMinor : -$debitMinor;
     }
 
     /**
@@ -250,7 +247,10 @@ final readonly class GenericCsvAdapter implements SourceAdapter
     private function currency(array $record, array $normMap): string
     {
         if ($this->preset->currencyHeader !== null) {
-            $fromRow = trim($this->cell($record, $normMap, $this->preset->currencyHeader));
+            // Upper-cased because ISO 4217 is and the currency table's lookup
+            // is: a row spelling its currency 'jpy' found no entry, fell back
+            // to the repo-wide two decimals and booked a hundred times the yen.
+            $fromRow = mb_strtoupper(trim($this->cell($record, $normMap, $this->preset->currencyHeader)));
             if ($fromRow !== '') {
                 return $fromRow;
             }
