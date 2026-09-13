@@ -79,11 +79,15 @@ An IMAP library is not a shortcut here; it is a specification violation.
 bin/worktree.sh <name>            # -> ../wt-<name>, bootstrapped, control run
 ```
 
-Use it. A fresh worktree is missing three gitignored things, and each absence
+Use it. A fresh worktree is missing four gitignored things, and each absence
 looks like a real test failure rather than like missing setup — `vendor/`
 (no `vendor/bin/pest`), `public/build/` (22 tests fail with
-`ViteManifestNotFoundException`), and `.env` (`key:generate` throws on a file
-that is not there).
+`ViteManifestNotFoundException`), `.env` (`key:generate` throws on a file
+that is not there), and the **second Composer root** under `mobile-app/`, whose
+`bootstrap/cache` and `storage/framework` directories are gitignored and empty,
+so git creates neither and the framework cannot boot there — mobile tests skip
+in the repo root, as they should, and fail in the mobile one, where they are
+meant to run. The script lays all four down and runs a control in each root.
 
 Both directories are **hardlinked, never symlinked**. A symlinked `vendor/`
 makes Pest resolve the project root to the main checkout, so every test in the

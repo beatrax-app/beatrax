@@ -3,7 +3,7 @@
     "A skipped test is counted in the same line as a passing one, in a colour nobody reads. A test that skips in EVERY job of the pipeline therefore looks, in every report, exactly like a test that holds — and it holds nothing. This file is the decision about which skips are real capability gates and which job supplies the capability.",
     "`runs_in` is the load-bearing field, and there is no value for it meaning 'nowhere'. Naming a job is a claim, and .github/scripts/skip-budget.py verifies the claim IN that job: the file has to be collected there and skip nothing there. A gate that no job can answer is not pinnable, so it has to be fixed.",
     "`markers` counts the `markTestSkipped(` and `->skip(` call sites in the file and is held by tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php. `skipped` counts the TESTS a job reports skipped, which differs: one marker in a beforeEach retires a whole file, and one marker on a datasetted test retires a case per row.",
-    "`runs_in` may be null, and only with a `runs_nowhere` block naming the artefact that is missing and what would produce it. That is the ONE case a job list cannot answer: a gate on something a native build generates, which no job here runs. The earlier rule was that such a gate is not pinnable and has to be fixed, and the two entries below sat as `expect(true)->toBeTrue()` instead — a PASS for a rule that read nothing, in every job, for as long as nobody looked. Recording that they run nowhere is worse-looking and better: the skip is visible in every report, the counts below are still verified in both jobs, and the entry says what would make it answerable."
+    "No entry here runs nowhere, and tests/Contracts/EverySkipNamesAJobThatRunsItArchTest.php now holds that at zero. The two that did were the Android notification activity and the iOS timezone shell, and both were wrong about what they needed: nativephp/mobile SHIPS the Android Studio and Xcode templates that native:install copies into the generated tree, so the bytes each anchor reads arrive with `composer install` in the mobile root. One reached for the generated path under the shipped root and the other for a generated tree from the wrong base; each miss read as a capability gate. They are the same shape as the `expect(true)->toBeTrue()` blocks the budget replaced — a rule that read nothing, reported in a colour nobody reads — one costume further along. `runs_in: null` with a `runs_nowhere` block naming the missing artefact and what would produce it is still a legal shape and still verified; raising the ceiling past zero is the argument to have before the next one is written down."
   ],
   "jobs": {
     "quality shard": "ci.yml `quality shard N (PHP 8.5)` — repo-root Composer root, ubuntu-latest, every testsuite in phpunit.xml split across three runners.",
@@ -284,14 +284,10 @@
       "markers": 1,
       "skipped": {
         "quality shard": 1,
-        "mobile-app quality": 1
+        "mobile-app quality": 0
       },
-      "runs_in": null,
-      "runs_nowhere": {
-        "artefact": "vendor/nativephp/mobile/resources/androidstudio/…/the notification activity",
-        "answered_by": "Present in neither Composer root's vendor tree as shipped; it arrives with the Android Studio scaffold a native build unpacks."
-      },
-      "why": "Ties the hand-written notification-activity fixture to the activity the build generates. The patch and fixture tests above it run in both jobs; this arm alone reaches for the upstream file."
+      "runs_in": "mobile-app quality",
+      "why": "Ties the hand-written notification-activity fixture to the activity the build generates. It is not a build artefact: Native\\Mobile\\Concerns\\InstallsAndroid copies vendor/nativephp/mobile/resources/androidstudio/ onto nativephp/android/, so the shipped template IS the generated file before this repo's patch scripts run. The arm reached for the GENERATED path under the SHIPPED root — an `android/` segment that exists in the copy's destination and not in its source — found nothing, and the entry recorded that miss as a capability no job here could supply. Every sibling in this directory already anchors on the same vendor tree, which the mobile root installs."
     },
     "Modules/Mobile/tests/Unit/TheBackgroundManifestCarriesEveryTaskThePhoneMustRunTest.php": {
       "markers": 2,
@@ -306,14 +302,10 @@
       "markers": 1,
       "skipped": {
         "quality shard": 1,
-        "mobile-app quality": 1
+        "mobile-app quality": 0
       },
-      "runs_in": null,
-      "runs_nowhere": {
-        "artefact": "mobile-app/nativephp/ios/NativePHP/NativePHPApp.swift",
-        "answered_by": "A native iOS build materialises the project tree; no job in ci.yml runs one."
-      },
-      "why": "Ties the hand-written iOS timezone fixture to the shell the build actually compiles. The fixture tests above it DO run everywhere — this is the one arm that reaches for the generated project, and it is kept because the anchor it encodes is what stops the fixture drifting from the real file once a job can produce one."
+      "runs_in": "mobile-app quality",
+      "why": "Ties the hand-written iOS timezone fixture to the shell the build actually compiles. InstallsIos copies vendor/nativephp/mobile/resources/xcode/ onto nativephp/ios/, so the two Swift files these anchors name ship in the package and no native build has to run for them to be read. The arm read the generated tree instead, at `mobile-app/nativephp/...` — a path that cannot resolve from the mobile root either, where base_path() IS mobile-app. It now requires BOTH runtimes to be found, so one seam moving upstream fails rather than shortening the loop."
     },
     "Modules/Receipts/tests/Feature/ScanInboxDropFolderJobTest.php": {
       "markers": 1,
@@ -372,12 +364,12 @@
       "why": "Gated on dns-sd or avahi-publish-service being on the host, and ubuntu-latest shipped neither — so it skipped in every job. The shard and coverage runners now install avahi-utils alongside poppler-utils; the binary is all the advertiser looks for."
     },
     "tests/Contracts/AStoreShapeIsBuiltBesideTheSideloadableOneArchTest.php": {
-      "markers": 1,
+      "markers": 2,
       "skipped": {
         "quality shard": 0
       },
       "runs_in": "quality shard",
-      "why": "Both Composer roots run this file and only the repo root has the workflows beside it. Not listed for the mobile-app job, which runs the Mobile testsuite only and never collects tests/Contracts."
+      "why": "Both Composer roots run this file and only the repo root has the workflows beside it. Both markers guard the same absence and both RUN in the quality shard, which is why the zero pinned there still answers for the file. Not listed for the mobile-app job, which runs the Mobile testsuite only and never collects tests/Contracts."
     },
     "tests/Contracts/BoundaryArchTest.php": {
       "markers": 16,

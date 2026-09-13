@@ -8366,6 +8366,45 @@ missing from — the case the port check exists for — and neither it nor a pid
 can say whether what holds the port serves the certificate the pairing QR
 advertises.
 
+## An artefact the next build in the same job deletes
+
+`tests/Contracts/AStoreShapeIsBuiltBesideTheSideloadableOneArchTest.php`
+
+The Android release leg builds two shapes from one project: the sideloadable
+APK, then the AAB Play takes. Both go through `mobile:package-android`, which
+calls `native:package`, which calls `prepareAndroidBuild()` on every run unless
+`--skip-prepare` is passed — and nothing here passes it. The first thing that
+does is `cleanGradleCache()`, which removes `nativephp/android/app/build`
+**whole**. That is the directory holding `outputs/apk/release/app-release.apk`.
+
+So the store-bundle step deletes the APK the step before it built, signed and
+verified. Measured on probe tag `2.0.0-probe.5`: `Packaged …/app-release.apk` at
+15:15:06, `Packaged …/app-release.aab` at 15:17:14, and
+`mobile:inspect-bundle: no artifact at …/app-release.apk` at 15:17:15. The job
+log names the cause in one column — `Cleaning Gradle cache` took **0.01ms** in
+the APK step, with nothing yet to remove, and **66.33ms** in the bundle step,
+which is the populated `app/build` going.
+
+What made it worse than a red build is what would have happened had the
+inspection been repaired on its own. `actions/upload-artifact` honours
+`if-no-files-found: error` only when **every** path matched nothing, and the AAB
+still matched — so the release would have published green carrying no APK at
+all, retiring the direct download without a word.
+
+Nothing on a pull request builds Android, so no PR's CI could ever have seen
+this. It took a dispatched build against a probe tag.
+
+Both artefacts are now copied into `android-artifacts/` the moment their signer
+is confirmed, and the inspection, the merged-manifest permission read and the
+upload all read those copies: the bytes read are the bytes uploaded. The rule
+fails a workflow that inspects and uploads the APK where Gradle left it, or that
+stages it only after the build that deletes it.
+
+Inspecting each artefact immediately after building it was the obvious repair
+and the wrong one — it makes the check pass while the APK still vanishes before
+the permission read and the upload. An artefact two steps share must outlive the
+one that made it.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

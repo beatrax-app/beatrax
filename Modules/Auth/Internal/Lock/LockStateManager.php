@@ -91,8 +91,13 @@ final readonly class LockStateManager
     // still live: sodium_memzero() on it remains the caller's responsibility.
     public function unlock(Session $session, string $dataKey): void
     {
+        // Taken before the session is touched. A custodian that fails closed
+        // throws on this line, and clearing the lock flag first left a session
+        // that reads unlocked with no key behind it.
+        $handle = $this->custodian->store($dataKey);
+
         $session->put(self::SESSION_KEY, false);
-        $session->put(self::DATA_KEY_SESSION, $this->custodian->store($dataKey));
+        $session->put(self::DATA_KEY_SESSION, $handle);
 
         // Flagged here, not at the five call sites, because only one of them
         // remembered to and a sixth path would forget too.

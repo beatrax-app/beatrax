@@ -1682,8 +1682,13 @@ like one — `SafeStorageSecretShield` answers it by asking `KeyCustodian::custo
 round-tripping random bytes through the custodian, rather than by returning `true`. Both halves are
 needed. Off a bundle the custodian is the identity function and the round trip catches it; on a
 Linux desktop with no keyring `safeStorage` is *available* and does encrypt, so only the custody
-report catches it. What a self-hosted reader sees is a localised sentence explaining why, not a
-button that does nothing.
+report catches it. A third case joined them with `F3-R37`: a `safeStorage` that is present and
+*refuses* the write, where `store()` now throws `KeyCustodyRefused` and `protectsAtRest()` answers
+false from the refusal rather than propagating it. That one matters most here, because
+`biometric_wrap_secret` carries no `encrypted` cast — the shield is its only layer, so a refusal
+that degraded to plaintext would have written `secret || wrapped_key`, a working copy of the
+app-lock data key, into the same SQLite file as the ledger it opens. What a self-hosted reader sees
+is a localised sentence explaining why, not a button that does nothing.
 
 `F3-R33` (operating-system key custody wired on desktop and mobile) is closed: `KeyCustodian` is
 bound to `DesktopKeyCustodian` inside the desktop bundle and to `SecureStorageKeyCustodian` on the

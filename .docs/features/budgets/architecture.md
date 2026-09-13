@@ -107,6 +107,16 @@ about EUR 8 the fold had left out. A code is listed only where its own
 bucket is non-zero — a currency whose spend and returns net to nothing is
 not money the total is missing.
 
+The D1 spec page's own "Currency scope" section still reads *"spend
+settled in another currency is surfaced separately as 'spend not shown
+here' rather than folded in"*, and its edge-case table repeats it. That
+is the rule `D1-R18` and `D1-R29` replaced — R18 requires the conversion
+before the fold, R29 narrows "surfaced separately" to the codes the rate
+table cannot price — and what is described above is the replacement, not
+the prose. The correction belongs in the spec rather than here; it is
+recorded so the next reader who checks that page first does not read
+`D1-R29` as unimplemented.
+
 The conversion is grouped by **currency** and spread back over the
 envelopes rather than run per envelope, through
 `Ledger\Public\Support\ConvertedBuckets` — the same seam the dashboard's

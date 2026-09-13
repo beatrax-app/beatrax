@@ -1381,6 +1381,46 @@ takes effect without restarting the application. No shipped `.env` template
 pins `APP_TIMEZONE` — a pinned one ships the packager's day to every reader,
 which is what `Europe/Amsterdam` in the desktop template was doing.
 
+### The option that declines to choose, and how to get back to it
+
+The control is `<x-core::timezone-select>`: every identifier the platform
+knows, grouped by region through `TimezoneOptions::grouped()`, and above
+them one sentinel option carrying `InstallTimezone::THIS_MACHINE` — the
+string `host`, which is not a zone and can therefore never collide with
+one.
+
+Its label is `core::settings.timezone.this_machine`, *"This machine
+(:zone)"*, and the placeholder is filled with `HostTimezone::detect()` —
+tier 3's own answer, resolved at render. Naming it is the point. The two
+answers are allowed to differ, so "This machine" on its own would tell a
+reader nothing about which day they are about to read; it would be an
+option whose consequence is invisible until after it is taken. All 26
+locales carry the key with the `:zone` placeholder intact.
+
+What the control shows as selected is the **stored** choice or the
+sentinel, never the resolved zone: `SettingsPage::mount()` sets
+`$timezone` to `InstallTimezone::chosen() ?? InstallTimezone::THIS_MACHINE`.
+Substituting the resolved zone would make a reader who has chosen nothing
+look as though they had chosen the zone they happen to be sitting in —
+and it would also make deferring unreachable, because the sentinel would
+never be the selected option again and re-picking it would be a no-op
+against a row that already held that zone.
+
+Returning to deferring is a real write, not the absence of one.
+`SettingsPage::setTimezone()` maps the sentinel back to `null` before
+calling `InstallTimezone::choose()`, which writes that null to
+`users.timezone` and then re-runs `InstallTimezone::zone()` through
+`InstallTimezone::apply()` in the same request — so the install drops
+straight back to tier 3 without a restart, and the label reads the
+machine's zone again. The sentinel is named in the validation rule
+(`required|in:host,…` over every identifier), so it is a value the form
+accepts rather than one the rule has to be talked out of rejecting.
+
+`TheTimeZoneControlWritesTheOwnersRowTest` holds the three halves that
+matter here: *"opens on the sentinel while nothing has been chosen"*,
+*"names the detected zone on the sentinel option"*, and *"clears the row
+again when the reader picks the machine"*.
+
 ## The language an install opens in
 
 The switcher's "System" option is the absence of a stored choice, not a

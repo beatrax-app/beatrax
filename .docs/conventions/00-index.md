@@ -155,6 +155,10 @@ pass for a clean one.
   stops narrowing and `whereNull` matches nothing; why no static rule sees it,
   which copy of a WAL database to measure against, and the three distinct causes
   that wear the one symptom
+- [A requirement written after the work is cited by nothing](a-requirement-written-after-the-work-is-cited-by-nothing.md)
+  — what the governance gate actually reads as a citation, why prose naming an
+  identifier is not one, the eleven v2 requirements that are cited by nothing,
+  and what a later citation records rather than fixes
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

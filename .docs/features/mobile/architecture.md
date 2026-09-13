@@ -1244,6 +1244,43 @@ the session's key handle — `forget()` must therefore delete the Keychain
 entry on lock, unlike the desktop custodian whose handle is
 self-contained ciphertext.
 
+### A refused write is not a store that could not be reached
+
+`store()` has two failure answers and they are deliberately not the same
+one. Off device — where `class_exists()` on the native facade fails, or
+`UserDataPathService::isMobileRuntime()` says this is not a phone — it
+degrades to pass-through, the handle IS the raw key, byte for byte what
+`NullKeyCustodian` does on web and in CI. On device, a native `set()`
+that answers anything but a literal `true` is a different situation: the
+store is there and it refused. The raw key must not become the handle in
+that case, because `LockStateManager::unlock()` writes whatever the
+custodian returns into the session, and the bundled session driver is
+`database` with a thirty-day lifetime — the key would come to rest in
+`sessions.payload`, a row in the same SQLite file as the ledger it
+opens, behind nothing but this install's own `APP_KEY`. That is not
+platform custody; it is the key sitting next to the lock.
+
+So `SecureStorageKeyCustodian::store()` throws
+`SecureStorageException::nativeSetFailed()`, naming the slot it could not
+write, and it writes nothing. The custodian's contract for that throw is
+the one the Auth page states for the custody seam: the caller reads it as
+"no key held" and the reader takes the PIN unlock, which is where a
+custodian that cannot hold a key belongs. There is no designed screen for
+the refusal and no copy for it in any locale — reaching it in the field
+needs a phone whose Keychain or Keystore refuses a write, so what a
+reader would see is the unlock not completing.
+
+`read()` is what makes this load-bearing rather than tidy. Its early
+return hands a handle that does not start with the slot prefix straight
+back to the caller, on the reasoning that such a handle can only be a
+pass-through raw key from an off-device `store()`. That reasoning is only
+true because an on-device refusal throws instead of returning one. Put
+the raw key back as the return value and `read()` starts handing it out
+again on a device that has custody available — which is why
+`SecureStorageKeyCustodianTest`'s *"fails closed by throwing instead of
+returning the raw key when native set() fails"* asserts both halves, the
+throw and that the slot stays empty.
+
 ## Camera-first pairing
 
 `MobilePairingScan` extends the existing `PairingFlowModal` step machine

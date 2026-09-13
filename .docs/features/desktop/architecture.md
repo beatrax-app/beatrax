@@ -488,7 +488,19 @@ an opaque ciphertext blob under a `nativephp:safestorage:v1:` marker,
 `read()` decrypts it back. When `System::canEncrypt()` is false (headless CI,
 an early-boot race before Electron initialises safeStorage) `store()` degrades
 to a pass-through and the Auth module's own encrypted-session custody applies
-unchanged. `read()` degrades only for an *unmarked* handle: the marker is what
+unchanged.
+
+A safeStorage that **is** available and then refuses the write is a different
+case and gets the opposite answer: `System::encrypt()` is
+`->post(...)->json('result')`, so any error response decodes to `null`, and
+`store()` throws `KeyCustodyRefused` rather than return the raw key
+(`F3-R37`). Returning it put the app-lock data key — the root wrap of the GDK
+keyring, the device identity keys and every sealed column — into the session
+payload, unencrypted by any layer this class owns. `DesktopColdStartVault::enroll()`
+in this same directory already refused on exactly this signal; the custodian
+did not, and `SafeStorageSecretShield` inherited the gap through it.
+
+`read()` degrades only for an *unmarked* handle: the marker is what
 tells a raw key stored while safeStorage was down from ciphertext that has to
 be opened, and handing the second back unchanged released a 56-byte non-key
 into `DeviceIdentityLoader`, the GDK keyring and the sensitive-column codec
@@ -538,14 +550,26 @@ bundle built before the hook existed, and a shell that refuses the call all
 mean the same thing: **no keyring, so no claim of protection.** Only
 `gnome_libsecret` and the KWallet backends earn `KeyCustody::OperatingSystem`.
 
-What that changes is the claim, not the bytes. `store()` and `read()` stay keyed
-on `canEncrypt()` alone, so a keyring-less Linux desktop still encrypts and
-still round-trips: refusing there would strand every blob an earlier build wrote
-on that machine — the OAuth secrets and the biometric wrap among them — for a
-layer that was never the secret. `custody()` is what tells a caller persisting
-key material to stop, and `SafeStorageSecretShield::protectsAtRest()` now asks
-it *before* the round-trip probe, because the probe alone answers yes about
-ciphertext anyone can open.
+What that changes is the claim, not the bytes. `store()` and `read()` stay
+blind to *which backend* the probe names, so a keyring-less Linux desktop still
+encrypts and still round-trips: refusing there would strand every blob an
+earlier build wrote on that machine — the OAuth secrets and the biometric wrap
+among them — for a layer that was never the secret. What `store()` does refuse
+is a **write the store rejected outright**, which strands nothing because
+nothing was written. `custody()` is what tells a caller persisting key material
+to stop, and `SafeStorageSecretShield::protectsAtRest()` now asks it *before*
+the round-trip probe, because the probe alone answers yes about ciphertext
+anyone can open.
+
+`custody()` answers from the outcome of the write, not only from the probe.
+`canEncrypt()` reports whether safeStorage *could* encrypt, which is not
+evidence that it did — it answered `true` on every refusal this class shipped
+with, so a refused write still reported `KeyCustody::OperatingSystem` and the
+app told its reader the OS held a key it had just declined to take. A
+custodian that has seen a refusal reports
+`KeyCustody::PlatformStoreRefusedTheWrite`, whose `protectsAtRest()` is false;
+the binding is a singleton, so the shield and `LockStateManager` share the
+instance that saw it.
 
 ## What the shell's secret proves, and what it does not
 

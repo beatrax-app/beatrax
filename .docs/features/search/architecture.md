@@ -255,9 +255,9 @@ What the module explicitly does NOT do:
   resolves a candidate rowid set (FTS5 `MATCH` when the text query is
   ≥3 characters; a bounded `LIKE` over that same indexed body
   otherwise, since FTS5's trigram tokenizer needs a 3-character
-  minimum — so both arms search one corpus, though they do not compare
-  against it the same way: see
-  [where the two arms disagree](#where-the-two-arms-disagree)),
+  minimum — so both arms search one corpus and compare against it the
+  same way: see
+  [how the two arms compare](#how-the-two-arms-compare)),
   applies the
   existing filter dimensions with per-dimension ownership validation,
   and returns a cursor-paginated `SearchResultPage` with
@@ -308,37 +308,60 @@ whose table argument the scanner cannot read is reported rather than assumed
 innocent. Each site either reaches `SearchIndexWriterContract` or is pinned with
 the reason its write leaves the document still describing the row.
 
-## Where the two arms disagree
+## How the two arms compare
 
-One corpus, two comparisons. FTS5's trigram tokenizer folds case over the whole
+One corpus, one comparison. FTS5's trigram tokenizer folds case over the whole
 of Unicode; SQLite's `LIKE` and `LOWER()` fold ASCII only, and no pragma changes
-that. So the arm a needle lands in decides whether a non-ASCII capital in the
-body is reachable, and **a needle does change what it is matched against at the
-third character** — the opposite of what this page claimed until it was
-measured. Over a body containing `MÖRK BAR`:
+that. So until this was fixed, the arm a needle landed in — which is decided by
+its **length**, three characters being the trigram minimum — decided whether a
+non-ASCII capital in the body was reachable. Over a body containing `MÖRK BAR`:
 
-| needle | characters | arm | result |
-|---|---|---|---|
-| `ör` | 2 | `LIKE` | **not found** |
-| `örk` | 3 | FTS5 `MATCH` | found |
-| `ÖR` | 2 | `LIKE` | found |
-| `ÖRK` | 3 | FTS5 `MATCH` | found |
+| needle | characters | arm | before | after |
+|---|---|---|---|---|
+| `ör` | 2 | `LIKE` | **not found** | found |
+| `örk` | 3 | FTS5 `MATCH` | found | found |
+| `ÖR` | 2 | `LIKE` | found | found |
+| `ÖRK` | 3 | FTS5 `MATCH` | found | found |
 
-The same split runs through every `LikeNeedle` caller, so one palette keystroke
-folds case two ways: `EntityNameSearch` matches a counterparty in PHP with
-`mb_strtolower()` and finds `Ölkanne` from `ölkanne`, while the goal, pot,
-category and recurring sections match in SQL and do not.
+`LikeNeedle` now folds both sides of every predicate it builds through
+`Core::UnicodeFolding` — one PHP method, registered as the SQLite function
+`beatrax_fold` on every connection, which is the only way a SQL comparison and a
+PHP one can be the same rule. There is no `LOWER()` left in this module.
 
-**This is known and deliberately not fixed, because every fix is larger than the
-defect.** A case-folded shadow column would double the disclosed plaintext copy
-of the reader's own notes — the one thing
+That closes the palette's second split as well: `EntityNameSearch` matched a
+counterparty in PHP and found `Ölkanne` from `ölkanne`, while the goal, pot,
+category and recurring sections matched in SQL and did not. The PHP side reads
+the same `UnicodeFolding::of()` the SQL side calls, so all five sections now
+answer alike.
+
+The registration is the delicate part — a SQLite user function is
+connection-scoped, and a connection that missed it refuses the query outright
+rather than folding differently. Which connections, why the refusal is
+deliberate, and what pins it:
+[case folding is one function](../../architecture/case-folding-is-one-function.md).
+
+Nothing was widened to get here. A case-folded shadow column would have doubled
+the disclosed plaintext copy of the reader's own notes — the one thing
 [the shadow's disclosure](#a-column-this-process-cannot-read) promises does not
-widen — for the sake of a two-character needle. Folding the stored body instead
-would render every snippet in lower case, since the body is what `snippet()`
-shows. A `sqliteCreateFunction` UDF would fold correctly but has to be
-registered on every connection the query can run on, which is a decision about
-this application's database connection rather than about search. Whoever takes
-it should take it as one.
+widen. Folding the stored body instead would have rendered every snippet in
+lower case, since the body is what `snippet()` shows.
+
+## The LIKE arm's cap is a cut, not a page
+
+The short-query arm answers out of at most
+`FtsCandidateResolver::LIKE_FALLBACK_CANDIDATE_CAP` — 500 — rows, and it carries
+no cursor: the 501st match is not on a later page, it is not in the answer. So
+the clause that ranks those rows decides *which* matches a two-character needle
+reaches at all.
+
+It used to rank on `TransactionCursor::orderNewestFirst()`, which ends on
+`transactions.id` because the paged reads it was written for compare on that id.
+Here there is nothing to page, and `transactions.id` is a number each device
+counts for itself, so two paired devices answered the same short query out of
+two different 500. It ranks on
+`Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS` now, joined
+through `::ACCOUNT` — the clause four other reads of this table already use. See
+[an ordering that picks](../../architecture/an-ordering-that-picks.md).
 
 ## A document that outlives its transaction
 
