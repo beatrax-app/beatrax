@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'To urządzenie jest zsynchronizowane',
     'heading' => 'To urządzenie jest zsynchronizowane',
+    'heading_withheld' => 'To urządzenie jest skonfigurowane',
     'records' => 'Skopiowano :count rekord z urządzenia :peer.|Skopiowano :count rekordy z urządzenia :peer.|Skopiowano :count rekordów z urządzenia :peer.',
     'records_none' => 'Wszystko aktualne — nie było nic nowego do skopiowania. Urządzenie źródłowe: :peer.',
     'withheld' => ':count zmiana jeszcze nie dotarła.|:count zmiany jeszcze nie dotarły.|:count zmian jeszcze nie dotarło.',

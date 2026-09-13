@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Acest dispozitiv este sincronizat',
     'heading' => 'Acest dispozitiv este sincronizat',
+    'heading_withheld' => 'Acest dispozitiv este configurat',
     'records' => 'S-a copiat :count înregistrare de pe :peer.|S-au copiat :count înregistrări de pe :peer.|S-au copiat :count de înregistrări de pe :peer.',
     'records_none' => 'La zi cu :peer. Nu a fost nimic nou de copiat.',
     'withheld' => ':count modificare nu a ajuns încă.|:count modificări nu au ajuns încă.|:count de modificări nu au ajuns încă.',

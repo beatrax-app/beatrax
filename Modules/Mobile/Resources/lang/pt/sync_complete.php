@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Este dispositivo está sincronizado',
     'heading' => 'Este dispositivo está sincronizado',
+    'heading_withheld' => 'Este dispositivo está configurado',
     'records' => 'Foi copiado :count registo de :peer.|Foram copiados :count registos de :peer.',
     'records_none' => 'Já está atualizado com :peer. Não havia nada de novo para copiar.',
     'withheld' => ':count alteração ainda não chegou.|:count alterações ainda não chegaram.',

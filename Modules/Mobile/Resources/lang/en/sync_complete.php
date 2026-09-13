@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'This device is synced',
     'heading' => 'This device is synced',
+    'heading_withheld' => 'This device is set up',
     'records' => 'Copied :count record from :peer.|Copied :count records from :peer.',
     'records_none' => 'Caught up with :peer. There was nothing new to copy.',
     'withheld' => ':count change has not arrived yet.|:count changes have not arrived yet.',

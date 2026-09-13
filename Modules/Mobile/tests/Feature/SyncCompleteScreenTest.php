@@ -7,6 +7,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\RenderedMarkup;
 use Modules\Mobile\Internal\Http\Livewire\SyncCompleteScreen;
 
 uses(RefreshDatabase::class);
@@ -92,4 +94,84 @@ it('leads to the app rather than dead-ending', function (): void {
     Livewire::test(SyncCompleteScreen::class)
         ->call('continueToApp')
         ->assertRedirect(route('dashboard'));
+});
+
+// Walked at 390x844 with a peer holding an unverifiable author's work back:
+// the screen stated the count and its condition exactly as asked, under a
+// heading reading "This device is synced". The count is the fix for a first
+// sync reporting a whole history it does not have; the heading was still
+// reporting one, in the same three inches of screen.
+function syncCompleteWithheld(int $userId, int $entries): void
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $now = CarbonImmutable::now()->toIso8601String();
+
+    $db->connection()->table('sync_withheld_history')->insert([
+        'user_id' => $userId,
+        'peer_device_id' => '2d4f6a88-1111-4222-8333-444455556666',
+        'author_device_id' => 'old-phone',
+        'entry_count' => $entries,
+        'updated_at' => $now,
+    ]);
+
+    // The screen reads the count off the sync's own progress row, which answers
+    // zero for a user that has none: without one the fixture would be a screen
+    // that had never synced rather than one that synced short.
+    $db->connection()->table('mobile_sync_progress')->insert([
+        'user_id' => $userId,
+        'peer_device_id' => '2d4f6a88-1111-4222-8333-444455556666',
+        'records_expected' => 100 + $entries,
+        'records_applied' => 100,
+        'phase' => 'complete',
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+}
+
+it('never calls the device synced over history that has not arrived', function (): void {
+    $user = syncCompleteUser();
+    syncCompletePeer((int) $user->id, 'the-mac');
+    syncCompleteWithheld((int) $user->id, 155);
+
+    $this->actingAs($user);
+
+    Livewire::test(SyncCompleteScreen::class)
+        ->assertSet('withheldEntries', 155)
+        // Both halves on one screen: what is missing, and a heading that does
+        // not deny it.
+        ->assertSee(Lang::choice('mobile::sync_complete.withheld', 155))
+        ->assertSee(Lang::get('mobile::sync_complete.heading_withheld'))
+        ->assertDontSee(Lang::get('mobile::sync_complete.heading'));
+});
+
+// The positive control, and the other half of the same rule: with nothing held
+// back the claim is true and the screen makes it.
+it('calls the device synced when nothing is being held back', function (): void {
+    $user = syncCompleteUser();
+    syncCompletePeer((int) $user->id, 'the-mac');
+
+    $this->actingAs($user);
+
+    Livewire::test(SyncCompleteScreen::class)
+        ->assertSet('withheldEntries', 0)
+        ->assertSee(Lang::get('mobile::sync_complete.heading'))
+        ->assertDontSee(Lang::get('mobile::sync_complete.heading_withheld'));
+});
+
+// The tab and the heading are one claim read two ways, and a title still saying
+// "synced" is the same denial in the place a reader checks second.
+it('gives the tab the same claim the heading makes', function (): void {
+    $user = syncCompleteUser();
+    syncCompletePeer((int) $user->id, 'the-mac');
+    syncCompleteWithheld((int) $user->id, 155);
+
+    $this->actingAs($user);
+
+    $title = RenderedMarkup::of($this->get(route('mobile.setup.done'))->getContent())
+        ->firstOrFail('title')
+        ->text();
+
+    expect($title)->toContain(Lang::get('mobile::sync_complete.heading_withheld'))
+        ->and($title)->not->toContain(Lang::get('mobile::sync_complete.heading'));
 });

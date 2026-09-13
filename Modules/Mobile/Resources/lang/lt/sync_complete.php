@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Šis įrenginys sinchronizuotas',
     'heading' => 'Šis įrenginys sinchronizuotas',
+    'heading_withheld' => 'Šis įrenginys nustatytas',
     'records' => 'Iš :peer nukopijuotas :count įrašas.|Iš :peer nukopijuoti :count įrašai.|Iš :peer nukopijuota :count įrašų.',
     'records_none' => 'Iš :peer kopijuoti nebuvo ko — viskas jau suvienodinta.',
     'withheld' => ':count pakeitimas dar neatkeliavo.|:count pakeitimai dar neatkeliavo.|:count pakeitimų dar neatkeliavo.',
