@@ -38,6 +38,27 @@ function desktopPemBlock(string $label = 'PRIVATE KEY'): string
     );
 }
 
+// A real SQLite file, because the question is what the bytes hold and a
+// fixture spelling out the header answers it dishonestly. `$sql` of null
+// leaves what the pragma provider leaves: an opened file, one header page,
+// no schema.
+function desktopSqliteAt(string $root, string $name, ?string $sql): void
+{
+    $path = $root.'/'.$name;
+    @mkdir(dirname($path), 0700, true);
+
+    // WAL is the substrate pragma the provider really sets, and setting it is
+    // what writes the header page. Switched back afterwards so no -wal or
+    // -shm sidecar is left beside the file being judged.
+    $database = new PDO('sqlite:'.$path);
+    $database->exec('PRAGMA journal_mode=WAL');
+    $database->exec('PRAGMA journal_mode=DELETE');
+
+    if ($sql !== null) {
+        $database->exec($sql);
+    }
+}
+
 /** @return list<string> */
 function desktopTreeRefusals(string $root): array
 {
@@ -123,12 +144,19 @@ it('refuses a container whose whole purpose is to hold a key', function (string 
     'an Apple provisioning profile' => 'beatrax.mobileprovision',
 ]);
 
-it('refuses a database, because the desktop writes its own outside the bundle', function (): void {
-    $root = desktopTreeOf(['Contents/Resources/build/app/database/database.sqlite' => 'SQLite format 3']);
+it('refuses a database, because the desktop writes its own outside the bundle', function (string $sql): void {
+    // A schema is enough. It means the builder's own application ran against
+    // the file, and waiting for rows would accept the build that is one
+    // migration away from carrying them.
+    $root = desktopTreeOf(['Contents/Resources/build/app/artisan' => '<?php // artisan']);
+    desktopSqliteAt($root, 'Contents/Resources/build/app/database/database.sqlite', $sql);
 
     expect(desktopTreeRefusals($root))->toHaveCount(1)
         ->and(desktopTreeRefusals($root)[0])->toContain('a database');
-});
+})->with([
+    'a schema with no rows' => 'CREATE TABLE ledger (id integer primary key)',
+    'a schema with rows' => 'CREATE TABLE ledger (id integer primary key, note text); INSERT INTO ledger (note) VALUES (\'a payee\')',
+]);
 
 // Every desktop build carries one, created by the `->booting()` hook so the
 // SQLite connector has a file to open. Refusing it by extension would refuse
@@ -140,6 +168,20 @@ it('accepts the empty database file the bootstrap hook creates', function (): vo
     ]);
 
     expect(desktopTreeRefusals($root))->toBe([]);
+});
+
+// The hook leaves nothing, and then the provider that sets the substrate
+// pragmas opens the connection during boot and writes a header page. Judged
+// on size that file is 4096 bytes and reads as populated, which is how three
+// platforms refused their own builds while the artefact was clean.
+it('accepts the bare header page the pragma provider leaves behind', function (): void {
+    $root = desktopTreeOf(['Contents/Resources/build/app/artisan' => '<?php // artisan']);
+    desktopSqliteAt($root, 'Contents/Resources/build/app/database/database.sqlite', null);
+
+    clearstatcache();
+
+    expect(filesize($root.'/Contents/Resources/build/app/database/database.sqlite'))->toBe(4096)
+        ->and(desktopTreeRefusals($root))->toBe([]);
 });
 
 it('refuses a build credential that still carries a value', function (): void {
