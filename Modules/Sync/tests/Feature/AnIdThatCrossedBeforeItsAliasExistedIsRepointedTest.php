@@ -8,13 +8,13 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
-use Modules\Sync\Internal\Merge\PlannedRepoint;
 use Modules\Sync\Internal\Merge\UntranslatedParentId;
 use Modules\Sync\Internal\Merge\UntranslatedParentIds;
-use Modules\Sync\Internal\Merge\UntranslatedParentRepair;
 use Modules\Sync\Internal\Merge\UntranslatedParentVerdict;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\OpLog\OpType;
+use Modules\Sync\Internal\Repair\PlannedRepoint;
+use Modules\Sync\Internal\Repair\UntranslatedParentRepair;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\UntranslatedParentHealthCheck;
 

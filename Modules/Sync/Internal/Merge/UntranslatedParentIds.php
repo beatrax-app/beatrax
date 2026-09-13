@@ -19,7 +19,7 @@ final class UntranslatedParentIds
 {
     // Keyed by parent table, device and the peer's number: one judgement serves
     // every row naming it. Forty-two transactions named twenty counterparties.
-    /** @var array<string, ParentIdJudgement> */
+    /** @var array<string, ParentIdJudgment> */
     private array $judged = [];
 
     public function __construct(
@@ -100,7 +100,7 @@ final class UntranslatedParentIds
     // Null where the judgement asks for nothing: no verdict at all, or a target
     // the column already holds -- this device having caught up, not a row to
     // move again.
-    private function finding(PeerParentColumn $at, ?string $storedValue, ParentIdJudgement $judged): ?UntranslatedParentId
+    private function finding(PeerParentColumn $at, ?string $storedValue, ParentIdJudgment $judged): ?UntranslatedParentId
     {
         if ($judged->verdict === null) {
             return null;
@@ -118,10 +118,10 @@ final class UntranslatedParentIds
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function judge(array $payload, PeerParentColumn $at, int $userId): ParentIdJudgement
+    private function judge(array $payload, PeerParentColumn $at, int $userId): ParentIdJudgment
     {
         if ($this->corroborated($payload, $at, $userId)) {
-            return ParentIdJudgement::agreed('this device wrote the same id into the same column of the same row');
+            return ParentIdJudgment::agreed('this device wrote the same id into the same column of the same row');
         }
 
         return $this->judged[$at->parentTable."\0".$at->deviceId."\0".$at->peerValue]
@@ -130,12 +130,12 @@ final class UntranslatedParentIds
 
     // The judgement that depends on the parent id alone, so it is asked once
     // per id however many rows name it.
-    private function judgeParent(string $parentTable, string $deviceId, string $peerValue, int $userId): ParentIdJudgement
+    private function judgeParent(string $parentTable, string $deviceId, string $peerValue, int $userId): ParentIdJudgment
     {
         $alias = $this->aliases->localFor($parentTable, $deviceId, $peerValue, $userId);
 
         if ($alias !== null) {
-            return ParentIdJudgement::misfiled($alias, sprintf('the alias recorded for %s %s from this peer', $parentTable, $peerValue));
+            return ParentIdJudgment::misfiled($alias, sprintf('the alias recorded for %s %s from this peer', $parentTable, $peerValue));
         }
 
         $peerParent = $this->rows->payload($parentTable, $peerValue, $deviceId, $userId);
@@ -149,13 +149,13 @@ final class UntranslatedParentIds
     // not own is outside every device's capture -- the seeded category taxonomy
     // is the case -- so its numbers are shared by construction rather than
     // translated. Anything else is a number nothing here can speak for.
-    private function withoutACreate(string $parentTable, string $peerValue, int $userId): ParentIdJudgement
+    private function withoutACreate(string $parentTable, string $peerValue, int $userId): ParentIdJudgment
     {
         if (! $this->rows->ownedHere($parentTable, $peerValue, $userId)) {
-            return ParentIdJudgement::agreed(sprintf('%s %s belongs to no reader, so no device captures it and its ids are shared', $parentTable, $peerValue));
+            return ParentIdJudgment::agreed(sprintf('%s %s belongs to no reader, so no device captures it and its ids are shared', $parentTable, $peerValue));
         }
 
-        return ParentIdJudgement::unspoken($this->whyNothingSpeaks($parentTable, $peerValue, $userId));
+        return ParentIdJudgment::unspoken($this->whyNothingSpeaks($parentTable, $peerValue, $userId));
     }
 
     // Two silences, and the reader has to tell them apart. An id THIS device
@@ -184,20 +184,20 @@ final class UntranslatedParentIds
     /**
      * @param  array<string, mixed>  $peerParent
      */
-    private function againstTheCreate(string $parentTable, string $peerValue, array $peerParent, int $userId): ParentIdJudgement
+    private function againstTheCreate(string $parentTable, string $peerValue, array $peerParent, int $userId): ParentIdJudgment
     {
         if (! $this->aliases->naturalKeyIdentifies($parentTable, $peerParent)) {
-            return ParentIdJudgement::unspoken(sprintf('the peer\'s create for %s %s carries no natural key', $parentTable, $peerValue));
+            return ParentIdJudgment::unspoken(sprintf('the peer\'s create for %s %s carries no natural key', $parentTable, $peerValue));
         }
 
         $twin = $this->aliases->localTwinOf($parentTable, $peerParent);
         $key = self::readable($this->aliases->naturalKeyOf($parentTable, $peerParent));
 
         if ($twin === null) {
-            return ParentIdJudgement::unplaceable(sprintf('no %s row of this reader holds %s', $parentTable, $key));
+            return ParentIdJudgment::unplaceable(sprintf('no %s row of this reader holds %s', $parentTable, $key));
         }
 
-        return ParentIdJudgement::misfiled((string) $twin, sprintf('the peer\'s %s %s is %s here, by %s', $parentTable, $peerValue, $twin, $key));
+        return ParentIdJudgment::misfiled((string) $twin, sprintf('the peer\'s %s %s is %s here, by %s', $parentTable, $peerValue, $twin, $key));
     }
 
     // Two devices that wrote the same number into the same column of the same

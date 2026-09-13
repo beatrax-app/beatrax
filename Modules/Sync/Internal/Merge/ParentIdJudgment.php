@@ -7,7 +7,7 @@ namespace Modules\Sync\Internal\Merge;
 // What the log says about one of the peer's numbers. A null verdict is the
 // peer and this device agreeing, which is the ordinary answer and the one that
 // never reaches a reader.
-final readonly class ParentIdJudgement
+final readonly class ParentIdJudgment
 {
     private function __construct(
         public ?UntranslatedParentVerdict $verdict,

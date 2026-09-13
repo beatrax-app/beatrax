@@ -1478,7 +1478,7 @@ create is the log's latest word on the column. A raw `UPDATE` would leave it
 standing, so the peer never hears the correction and the next rebuild or
 re-apply resolves last-write-wins straight back onto the wrong id.
 
-`UntranslatedParentRepair` therefore writes through `ReassignsCounterparty` —
+`Internal\Repair\UntranslatedParentRepair` therefore writes through `ReassignsCounterparty` —
 the action the detail screen's own picker calls — and dispatches
 `TransactionMutated`, so `SyncCaptureListener` emits the `Set`. From a keyless
 console the sink is `DeferredOpCaptureSink`, and the drain stamps the HLC and
@@ -1487,6 +1487,13 @@ reads the value on the first request that can sign.
 A column no module publishes an announcing writer for is **refused**, not
 written: the default is refusal, so a column added to the translation map
 tomorrow is reported and skipped rather than repointed in silence.
+
+It sits under `Internal\Repair\` rather than beside the census in
+`Internal\Merge\`, and it has to stay there. `AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest`
+reads every `new <Event>(` under `Internal\Merge\` as the arrival path raising
+it, and the arrival path raising `TransactionMutated` is exactly the regression
+that guard exists to catch. This is not an arriving row — it is a local write
+this device makes, and a local write announces itself.
 
 #### What it will not touch
 

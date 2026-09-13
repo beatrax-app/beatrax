@@ -2,19 +2,30 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sync\Internal\Merge;
+namespace Modules\Sync\Internal\Repair;
 
 use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Search\Public\Contracts\SearchIndexRepairContract;
+use Modules\Sync\Internal\Merge\PeerAuthoredRows;
+use Modules\Sync\Internal\Merge\PeerParentColumn;
+use Modules\Sync\Internal\Merge\PeerRowAliases;
+use Modules\Sync\Internal\Merge\UntranslatedParentId;
+use Modules\Sync\Internal\Merge\UntranslatedParentIds;
+use Modules\Sync\Internal\Merge\UntranslatedParentVerdict;
 use Modules\Sync\Public\Events\TransactionMutated;
 
 // Repoints the rows `UntranslatedParentIds` can prove are on the wrong parent,
 // and refuses every other finding out loud. The write goes through the action
 // the detail screen's picker calls, so the mutation is ANNOUNCED: a raw UPDATE
 // would leave the backfilled create as the log's latest word on the column.
+
+// Outside `Internal\Merge\` deliberately, and it has to stay outside. A row
+// arriving from a peer raises no domain event -- the decision each entry of
+// `AN_EVENT_THE_MERGE_NEVER_RAISES` records -- and this is not an arriving row:
+// it is a local write, made by this device, which therefore announces itself.
 /**
  * @link ../../../../.docs/features/sync/architecture.md#an-id-that-crossed-before-its-alias-existed
  */

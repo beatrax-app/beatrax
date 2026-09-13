@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sync\Internal\Merge;
+namespace Modules\Sync\Internal\Repair;
+
+use Modules\Sync\Internal\Merge\UntranslatedParentId;
 
 // A finding and what this device would do about it. Every action but one is a
 // refusal, and the refusal is the default: a column no writer here announces

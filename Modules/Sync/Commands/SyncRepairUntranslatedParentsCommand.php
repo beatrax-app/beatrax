@@ -7,8 +7,8 @@ namespace Modules\Sync\Commands;
 use Illuminate\Console\Command;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\OwnerAccount;
-use Modules\Sync\Internal\Merge\PlannedRepoint;
-use Modules\Sync\Internal\Merge\UntranslatedParentRepair;
+use Modules\Sync\Internal\Repair\PlannedRepoint;
+use Modules\Sync\Internal\Repair\UntranslatedParentRepair;
 
 /**
  * @link ../../../.docs/features/sync/architecture.md#an-id-that-crossed-before-its-alias-existed
