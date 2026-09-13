@@ -157,3 +157,33 @@ it('dispatches three ProjectForecastJobs (one per baseline horizon) on save', fu
     });
     Bus::assertDispatchedTimes(ProjectForecastJob::class, count(ForecastHorizon::cases()));
 });
+
+// The box is pre-filled with MoneyInput's own grouping, and thirteen of the
+// twenty-six shipped locales group a figure's thousands with a space. Its
+// pattern admitted digits, '.' and ',' alone, so the control declared invalid
+// the very value it had just rendered into itself — the same shape as the
+// receipt anchors that captured `EUR 1 234,56` as `1`.
+it('admits the grouped figure it rendered, in a locale that groups with a space', function (): void {
+    $account = abeAccount($this->user, 250000);
+    $this->actingAs($this->user);
+    $this->app->make('translator')->setLocale('sv');
+
+    $component = Livewire::test(AccountBufferEditor::class, [
+        'accountId' => $account->id,
+        'currentBufferMinor' => 250000,
+        'currency' => 'EUR',
+        'accountName' => 'ASN',
+    ]);
+
+    $rendered = $component->get('bufferInput');
+    expect($rendered)->toBe("2\u{00A0}500,00");
+
+    expect(preg_match('/pattern="([^"]+)"/', $component->html(), $attribute))->toBe(1);
+
+    // The attribute is a JavaScript pattern; its \uXXXX escapes are transcribed
+    // to PCRE's own so the control's own rule is what the figure is tested
+    // against, rather than a second copy of it written here.
+    $rule = str_replace(['\u00A0', '\u202F'], ['\x{00A0}', '\x{202F}'], $attribute[1]);
+
+    expect(preg_match('/^(?:'.$rule.')$/u', $rendered))->toBe(1);
+});

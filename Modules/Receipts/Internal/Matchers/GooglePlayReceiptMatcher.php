@@ -26,7 +26,7 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
 
     private const string ORDER_ID_REGEX = '/GPA\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}/';
 
-    private const string USD_FIGURE = '\$\s*([0-9.,]+)\s*USD';
+    private const string USD_FIGURE = '\$'.ReceiptBodyText::SPACING.'('.ReceiptBodyText::FIGURE.')'.ReceiptBodyText::SPACING.'USD';
 
     // The order's total, and only then the line a receipt with no total states
     // instead. Tried in this order because a receipt carries both plus a tax
@@ -58,7 +58,8 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
         // `(€ 12,07 EUR)`, closed to the marks this app names on both ends: an
         // item line reading `(30 day)` is the same shape as a denominated
         // figure, and a bare [A-Z]{3} read it as one.
-        $settled = '(?:\s*\((?:'.$markers.')?\s*([0-9]+(?:[.,][0-9]+)*)\s*('.$markers.')\))?';
+        $settled = '(?:'.ReceiptBodyText::SPACING.'\((?:'.$markers.')?'.ReceiptBodyText::SPACING
+            .'('.ReceiptBodyText::FIGURE.')'.ReceiptBodyText::SPACING.'('.$markers.')\))?';
 
         return '/'.ReceiptBodyText::underLabel($labels, self::USD_FIGURE.$settled).'/i';
     }

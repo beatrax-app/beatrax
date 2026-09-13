@@ -97,7 +97,9 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
     private static function directionRegex(): string
     {
         return '/'.ReceiptBodyText::underLabel(self::TOTAL_LABELS, ReceiptBodyText::markedAmount())
-            .'[ \t]*(?:(?:'.ReceiptBodyText::currencyMarkers().')[ \t]*)?(?-i:(Af|Bij))[ \t]*\r?$/im';
+            .ReceiptBodyText::INLINE_SPACING
+            .'(?:(?:'.ReceiptBodyText::currencyMarkers().')'.ReceiptBodyText::INLINE_SPACING.')?'
+            .'(?-i:(Af|Bij))'.ReceiptBodyText::INLINE_SPACING.'\r?$/im';
     }
 
     public function key(): string

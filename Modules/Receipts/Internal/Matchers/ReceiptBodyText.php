@@ -20,6 +20,28 @@ final class ReceiptBodyText
     // one line, so no label is in front of the figure it names any more.
     private const string BLOCK_BOUNDARY_REGEX = '/<br\s*\/?>|<\/(?:p|div|td|th|tr|table|tbody|thead|li|ul|ol|h[1-6]|blockquote)\s*>/i';
 
+    // The three marks MoneyInput reads a figure's thousands by, as raw bytes
+    // rather than \x{00A0}: these anchors run without /u, where one ill-formed
+    // byte anywhere in a message makes preg_match return false and the whole
+    // receipt a miss with no reason recorded against it.
+    private const string GROUP_SPACE = '(?: |\xc2\xa0|\xe2\x80\xaf)';
+
+    // The space a sender may leave between a label, a mark and its figure.
+    // Neither of the two non-breaking marks is \s, so "&euro;&nbsp;12,99" was
+    // not a denominated figure at all.
+    public const string SPACING = '(?:\s|\xc2\xa0|\xe2\x80\xaf)*';
+
+    // The same, horizontal only, for an anchor that must stay on its own line.
+    public const string INLINE_SPACING = '(?:[ \t]|\xc2\xa0|\xe2\x80\xaf)*';
+
+    // A figure as the reader's own locale writes one. Thirteen of the shipped
+    // locales group with a space, and a class of '.' and ',' alone stops at the
+    // first of them: "EUR 1 234,56" was captured as "1" and booked as EUR 1,00.
+    /**
+     * @link ../../../../.docs/features/receipts/architecture.md#a-figure-is-grouped-the-way-its-reader-writes-one
+     */
+    public const string FIGURE = '(?:[0-9]{1,3}(?:'.self::GROUP_SPACE.'[0-9]{3})+(?![0-9])(?:[.,][0-9]+)?|[0-9][0-9.,]*)';
+
     public function plainText(string $html): string
     {
         $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
@@ -58,7 +80,7 @@ final class ReceiptBodyText
     // EUR 123.456,00, and a transaction id ending USD00001 as USD 1.00.
     public static function markedAmount(): string
     {
-        return '(?<![0-9A-Za-z])('.self::currencyMarkers().')\s*([0-9][0-9.,]*)';
+        return '(?<![0-9A-Za-z])('.self::currencyMarkers().')'.self::SPACING.'('.self::FIGURE.')';
     }
 
     // A figure is the receipt's total only where its sender labelled it one.
@@ -74,7 +96,7 @@ final class ReceiptBodyText
         // "Subtotal" is not "Total", and booking either charges the reader the
         // pre-tax figure. A longer label a sender does spell — PayPal's
         // "Transactiebedrag" — is listed rather than reached by substring.
-        return '(?<![A-Za-z])(?:'.$labels.')\s*:\s*'.$figure;
+        return '(?<![A-Za-z])(?:'.$labels.')'.self::SPACING.':'.self::SPACING.$figure;
     }
 
     // What currencyMarkers() captured, back as an ISO code. A figure the

@@ -438,6 +438,56 @@ separate search for the first bracket in the body, which is how a total settled
 at the price line's euros; the two now come out of one match, so a leg can only
 belong to the figure it was printed beside.
 
+### A figure is grouped the way its reader writes one
+
+`MoneyInput` reads three marks as a figure's thousands separator: a plain
+space, the non-breaking space `Locale::groupMark()` returns for twelve of the
+shipped locales, and the narrow no-break space it returns for French. That is
+half the shipped set, and PayPal and Google Play each mail a receipt in the
+language of the account it belongs to.
+
+Every anchor standing in front of that parse captured the digits with a class of
+`.` and `,` alone — `[0-9][0-9.,]*` in `markedAmount()`, `[0-9.,]+` in both
+senders' `$ … USD` anchors and in PayPal's conversion leg,
+`[0-9]+(?:[.,][0-9]+)*` in Google Play's bracket. A class holding neither space
+stops at the first one, so the anchor handed the parse the figure's first group
+and nothing else. The three senders failed it three different ways, measured one
+line at a time against a shipped fixture's shape:
+
+| Sender | Body | Booked | The charge |
+|---|---|---|---|
+| PayPal | `Bedrag: EUR 1 234,56` | −€1,00 | −€1 234,56 |
+| PayPal | `Bedrag: €&nbsp;12,99` | a miss | −€12,99 |
+| ICS | `Bedrag: € 2 500,00 Af` | a miss, `ics_direction_unstated` | −€2 500,00 |
+| Google Play | `Total: $1 234.56 USD` | a miss | −$1 234,56 |
+| Google Play | `Total: $1 299.00 USD (€1 182,00 EUR)` | settled −$1 299,00 | settled −€1 182,00 |
+
+The first row is the one that cost money rather than coverage: a thousandth of
+the charge, booked as a transaction, with no reason recorded against it and
+nothing on the row to say it was ever read wrong. ICS lost the `Af` standing
+behind the truncated figure and withheld the charge instead. Google Play's
+settled leg is not withheld when it cannot be read — it falls back to the native
+dollars — so a converted receipt settled at a figure and a currency the message
+never stated, and every balance, budget and forecast summed that.
+
+`ReceiptBodyText::FIGURE` is the one figure pattern now, and every anchor
+composes it. Its space-grouped alternative is closed to runs of **exactly three
+digits** and is tried first; the class the anchors always had stands behind it
+unchanged, so a figure that read correctly still reads the same way and
+`Bedrag: EUR 12,99 100 punten` still stops at the comma. `SPACING` does the same
+for the gaps a mark, a label and a colon leave between them, neither
+non-breaking mark being `\s`. Both are spelled as raw bytes rather than as
+`\x{00A0}`, because these anchors run without `/u`: there, one ill-formed byte
+anywhere in a message makes `preg_match` return false and loses the whole
+receipt rather than one figure in it.
+
+The same class sat one line of HTML away in Forecasting's buffer box, which
+pre-fills itself through `MoneyInput::formatMinor()` and then declared that very
+value invalid under `pattern="[0-9.,]+"` — half the shipped locales rendering a
+four-figure buffer into a control that refused to admit it. What is displayed
+must also parse back, on both sides of the seam:
+[money-formatting](../ledger/money-formatting.md).
+
 ### A receipt whose only part is html
 
 ICS and Google Play resolve a body as `textBody` or else
