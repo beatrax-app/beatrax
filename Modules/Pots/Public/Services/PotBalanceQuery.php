@@ -11,6 +11,7 @@ use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Pots\Internal\Services\PotAllocationLedger;
 use Modules\Pots\Internal\Services\PotRowLoader;
+use Modules\Pots\Internal\Services\PotSettlement;
 use Modules\Pots\Public\Dto\PotRow;
 use Modules\Pots\Public\Dto\ReconciliationRow;
 use Modules\Pots\Public\Enums\PotStatus;
@@ -209,17 +210,34 @@ final readonly class PotBalanceQuery
             return [];
         }
 
+        $connection = $this->db->connection();
+
         // In each pot's own denomination, the same bound balanceForPot()
         // applies: the caller converts these figures as if they were the pot's
         // currency, so a movement carrying another one would be re-priced at a
         // rate it never had.
-        $rows = $this->db->connection()
+        $query = $connection
             ->table('pot_movements')
             ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
+            ->leftJoinSub(
+                PotSettlement::lastPerPot($connection, self::toInt($user->id)),
+                'settled',
+                'settled.pot_id',
+                '=',
+                'pot_movements.pot_id',
+            )
             ->where('pot_movements.user_id', $user->id)
             ->whereIn('pot_movements.pot_id', $potIds)
             ->whereColumn('pot_movements.currency', 'pots.currency')
-            ->where('pot_movements.created_at', '>=', $since)
+            ->where('pot_movements.created_at', '>=', $since);
+
+        // And the same settlement cutoff the balance is read through, because
+        // the rate and the level are two readings of one pot: a restored pot's
+        // movements from before it was archived are not in the balance, and
+        // counting them here dated the finish from money the pot does not hold.
+        PotSettlement::movedSince($query, 'pot_movements', 'settled');
+
+        $rows = $query
             ->groupByRaw('pot_movements.pot_id, date(pot_movements.created_at)')
             ->selectRaw(
                 'pot_movements.pot_id as pot_id, date(pot_movements.created_at) as day, '
