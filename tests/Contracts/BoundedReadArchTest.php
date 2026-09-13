@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Str;
 use Modules\Core\Public\Support\BladePhpSource;
+use Modules\Core\Public\Support\PatternScan;
 
 /**
  * @link ../../.docs/architecture/reads-bounded-by-the-user.md
@@ -22,6 +23,11 @@ const BOUNDED_READ_GROWING_TABLES = [
     'forecast_runs', 'forecast_shortfall_windows', 'import_runs', 'file_imports',
     'counterparties', 'categorization_rules', 'rule_conditions', 'rule_actions',
 ];
+
+// A `const NAME = 'value'` declaration, with or without a typed const. The
+// value is captured so a table named through a constant resolves to the same
+// string a literal would have given.
+const BOUNDED_READ_CONST_DECLARATION = '/\bconst\s+(?:[A-Za-z_|\\\\]+\s+)?([A-Z][A-Z0-9_]*)\s*=\s*\'([^\']+)\'/';
 
 // The Eloquent spelling of the same read. A model name is mapped rather than
 // resolved so the scanner stays a lexer: these are the growing tables above
@@ -282,15 +288,78 @@ function boundedReadTableNamedAt(array $tokens, int $count, int $index): ?string
     }
 
     $argument = boundedReadSkipSpace($tokens, $count, $open + 1, 1);
-    $literal = $tokens[$argument] ?? null;
+    $named = boundedReadArgumentTable($tokens, $count, $argument);
 
-    if (! is_array($literal) || $literal[0] !== T_CONSTANT_ENCAPSED_STRING) {
+    return $named !== null && in_array($named, BOUNDED_READ_GROWING_TABLES, true) ? $named : null;
+}
+
+// The table an argument names, spelled there or held in a class constant.
+// Reading only the literal left every read behind a constant unscanned, and an
+// unscanned read counts zero -- which is indistinguishable from an allow-list
+// entry that has gone stale, so the obvious repair deletes the guard.
+/**
+ * @param  list<array{0: int, 1: string, 2: int}|string>  $tokens
+ */
+function boundedReadArgumentTable(array $tokens, int $count, int $index): ?string
+{
+    $literal = $tokens[$index] ?? null;
+
+    if (is_array($literal) && $literal[0] === T_CONSTANT_ENCAPSED_STRING) {
+        return explode(' ', trim($literal[1], "'\""))[0];
+    }
+
+    $value = boundedReadConstantFetch($tokens, $count, $index);
+
+    return $value === null ? null : explode(' ', trim($value, "'\""))[0];
+}
+
+// `Foo::BAR` in argument position. PSR-4 makes the file name the class name,
+// so the short name is enough to find the declaration.
+/**
+ * @param  list<array{0: int, 1: string, 2: int}|string>  $tokens
+ */
+function boundedReadConstantFetch(array $tokens, int $count, int $index): ?string
+{
+    $class = $tokens[$index] ?? null;
+    $colon = boundedReadSkipSpace($tokens, $count, $index + 1, 1);
+    $name = boundedReadSkipSpace($tokens, $count, $colon + 1, 1);
+
+    if (! is_array($class) || $class[0] !== T_STRING) {
         return null;
     }
 
-    $named = explode(' ', trim($literal[1], "'\""))[0];
+    if (! is_array($tokens[$colon] ?? null) || $tokens[$colon][0] !== T_DOUBLE_COLON) {
+        return null;
+    }
 
-    return in_array($named, BOUNDED_READ_GROWING_TABLES, true) ? $named : null;
+    return is_array($tokens[$name] ?? null) && $tokens[$name][0] === T_STRING
+        ? boundedReadConstantIndex()[$class[1].'::'.$tokens[$name][1]] ?? null
+        : null;
+}
+
+/**
+ * Every `const NAME = 'literal'` the walked tree declares, keyed by
+ * `ShortClassName::NAME`.
+ *
+ * @return array<string, string>
+ */
+function boundedReadConstantIndex(): array
+{
+    static $index = null;
+
+    if ($index !== null) {
+        return $index;
+    }
+
+    $index = [];
+
+    foreach (boundedReadSourceFiles() as $file) {
+        foreach (PatternScan::sets(BOUNDED_READ_CONST_DECLARATION, (string) file_get_contents($file)) as $set) {
+            $index[basename($file, '.php').'::'.$set[1]] = $set[2];
+        }
+    }
+
+    return $index;
 }
 
 /**
