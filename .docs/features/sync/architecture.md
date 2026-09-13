@@ -977,9 +977,23 @@ row is printed. A clean database gets a count of what was examined rather than a
 bare "ok": a pass that reports silence is unreadable, because one that stopped
 looking says the same as one that looked at everything and found nothing.
 
-The whole check is 2.6 seconds over 12 871 ops and 647 create groups, and it is
-exact rather than sampled — a floor would read the same whether one row or
-forty were missing.
+Every read it makes is bounded, and that shaped the design rather than
+decorating it. `op_log_entries` is the one table that grows with every mutation
+for the life of the install, and on a phone an exhausted heap is `E_ERROR` — no
+exception, no log line, no retry. So both candidate sets are asked for **in
+SQL** and only the answers cross into memory: the ids two devices both minted
+come back from a `GROUP BY pk HAVING COUNT(DISTINCT device_id) > 1`, and the ids
+no row of this reader's is at from a `WHERE NOT EXISTS` against the table
+itself, owner-scoped the way the applier writes. Reading every create group in
+to sift them here would be the whole log — 647 groups on the measured database,
+and one per row the reader ever wrote on a mature one. The reader list is read
+off `users`, which is a household, rather than off the log. Every chain names
+the table as a literal rather than through a constant, so
+[`BoundedReadArchTest`](../../architecture/reads-bounded-by-the-user.md) can
+read it: a guard keyed on a spelling is one a constant hides the read from.
+
+The whole check is 2.2 seconds over 12 871 ops, and it is exact rather than
+sampled — a floor would read the same whether one row or forty were missing.
 
 #### What the measured 23 are, and what this does not close
 

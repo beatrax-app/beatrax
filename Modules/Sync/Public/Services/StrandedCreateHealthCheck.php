@@ -122,9 +122,10 @@ final readonly class StrandedCreateHealthCheck
         return ['checked' => $checked, 'stranded' => $stranded];
     }
 
-    // Every reader the log carries ops for, not the one at the keyboard: this
-    // runs from a console with no session, and a household's second member is
-    // exactly as able to lose a row as the first.
+    // Every reader on the install, not the one at the keyboard: this runs from
+    // a console with no session, and a household's second member is exactly as
+    // able to lose a row as the first. Read off `users`, which is a household,
+    // rather than off the log, which grows with every mutation forever.
     /**
      * @return list<int>
      */
@@ -132,7 +133,7 @@ final readonly class StrandedCreateHealthCheck
     {
         $ids = [];
 
-        foreach ($this->db->connection()->table('op_log_entries')->distinct()->orderBy('user_id')->pluck('user_id') as $id) {
+        foreach ($this->db->connection()->table('users')->orderBy('id')->pluck('id') as $id) {
             if (is_numeric($id)) {
                 $ids[] = (int) $id;
             }

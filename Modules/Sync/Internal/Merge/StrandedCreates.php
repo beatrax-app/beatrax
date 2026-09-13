@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Modules\Sync\Internal\OpLog\OpType;
 
@@ -17,8 +18,6 @@ use Modules\Sync\Internal\OpLog\OpType;
  */
 final readonly class StrandedCreates
 {
-    private const string LOG = 'op_log_entries';
-
     public function __construct(
         private DatabaseManager $db,
         private PeerRowAliases $aliases,
@@ -37,9 +36,8 @@ final readonly class StrandedCreates
         $stranded = [];
 
         foreach ($this->tables($userId) as $table) {
-            $groups = $this->createGroups($table, $userId);
-            $checked += count($groups);
-            $count = $this->strandedIn($table, $groups, $userId);
+            $checked += $this->claimedRows($table, $userId);
+            $count = $this->strandedIn($table, $userId);
 
             if ($count > 0) {
                 $stranded[$table] = $count;
@@ -49,24 +47,15 @@ final readonly class StrandedCreates
         return ['checked' => $checked, 'stranded' => $stranded];
     }
 
-    // Only two kinds of pk can be hiding a loss, and asking about the rest
-    // would report every row whose natural key was edited after it was
-    // created: one no row of this reader's is at, and one two devices both
-    // minted. A pk one device minted and a row is sitting at is that row.
-    /**
-     * @param  array<int|string, list<string>>  $groups
-     */
-    private function strandedIn(string $table, array $groups, int $userId): int
+    private function strandedIn(string $table, int $userId): int
     {
-        $present = $this->presentPks($table, array_keys($groups), $userId);
+        $absent = array_fill_keys($this->absentPks($table, $userId), true);
         $stranded = 0;
 
-        foreach ($groups as $pk => $devices) {
-            $here = isset($present[$pk]);
-
-            if (! $here || count($devices) > 1) {
-                $stranded += $this->unlandedRows($table, (string) $pk, $devices, $userId, $here);
-            }
+        // Both candidate sets in one walk, and an id in both is walked once:
+        // it is the same question about the same id either way.
+        foreach ($this->contestedPks($table, $userId) + $absent as $pk => $ignored) {
+            $stranded += $this->unlandedRows($table, (string) $pk, $userId, ! isset($absent[$pk]));
         }
 
         return $stranded;
@@ -74,14 +63,11 @@ final readonly class StrandedCreates
 
     // Counted per ROW rather than per author: two devices that wrote the same
     // logical row under one id and lost it lost one row, not two.
-    /**
-     * @param  list<string>  $devices
-     */
-    private function unlandedRows(string $table, string $pk, array $devices, int $userId, bool $pkIsHere): int
+    private function unlandedRows(string $table, string $pk, int $userId, bool $pkIsHere): int
     {
         $unlanded = 0;
 
-        foreach ($this->rowsUnder($table, $pk, $devices, $userId) as $authors) {
+        foreach ($this->rowsUnder($table, $pk, $userId) as $authors) {
             if (! $this->landed($table, $pk, $authors, $userId, $pkIsHere)) {
                 $unlanded++;
             }
@@ -95,11 +81,12 @@ final readonly class StrandedCreates
     // made afterwards speaks for both; two it can are the collision, and
     // reading one's edits into the other's payload would hide the loss.
     /**
-     * @param  list<string>  $devices
      * @return list<list<string>>
      */
-    private function rowsUnder(string $table, string $pk, array $devices, int $userId): array
+    private function rowsUnder(string $table, string $pk, int $userId): array
     {
+        $devices = $this->authorsOf($table, $pk, $userId);
+
         if (count($devices) < 2) {
             return [$devices];
         }
@@ -166,7 +153,7 @@ final readonly class StrandedCreates
     {
         $opTypes = $withEdits ? [OpType::CreateRow->value, OpType::Set->value] : [OpType::CreateRow->value];
 
-        $rows = $this->db->connection()->table(self::LOG)
+        $rows = $this->db->connection()->table('op_log_entries')
             ->where('user_id', $userId)
             ->where('table_name', $table)
             ->where('pk', $pk)
@@ -202,10 +189,10 @@ final readonly class StrandedCreates
      */
     private function tables(int $userId): array
     {
-        $names = $this->db->connection()->table(self::LOG)
+        $names = $this->db->connection()->table('op_log_entries')
             ->where('user_id', $userId)
             ->where('op_type', OpType::CreateRow->value)
-            ->distinct()
+            ->groupBy('table_name')
             ->orderBy('table_name')
             ->pluck('table_name');
 
@@ -220,51 +207,78 @@ final readonly class StrandedCreates
         return $tables;
     }
 
-    // One read per table for what would otherwise be three: which ids the log
-    // claims, which of them two devices both claim, and who claimed each.
-    /**
-     * @return array<int|string, list<string>>
-     */
-    private function createGroups(string $table, int $userId): array
+    private function claimedRows(string $table, int $userId): int
     {
-        $rows = $this->db->connection()->table(self::LOG)
+        return $this->db->connection()->table('op_log_entries')
             ->where('user_id', $userId)
             ->where('table_name', $table)
             ->where('op_type', OpType::CreateRow->value)
             ->distinct()
-            ->get(['pk', 'device_id']);
+            ->count('pk');
+    }
 
-        $groups = [];
+    // Only two kinds of id can be hiding a loss, and both are asked for in
+    // SQL so that only the answer crosses into memory. Reading every create
+    // group in to sift them here is the whole log on a phone, and the log is
+    // the one table that grows with every mutation for the life of the install.
+    /**
+     * @return array<int|string, true>
+     */
+    private function contestedPks(string $table, int $userId): array
+    {
+        $pks = $this->db->connection()->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->where('op_type', OpType::CreateRow->value)
+            ->groupBy('pk')
+            ->havingRaw('COUNT(DISTINCT device_id) > 1')
+            ->pluck('pk');
 
-        foreach ($rows as $row) {
-            $pk = is_string($row->pk ?? null) || is_numeric($row->pk ?? null) ? (string) $row->pk : '';
-            $device = is_string($row->device_id ?? null) ? $row->device_id : '';
+        return array_fill_keys($this->textColumn($pks), true);
+    }
 
-            if ($pk !== '' && $device !== '') {
-                $groups[$pk][] = $device;
-            }
-        }
+    // An id no row of THIS reader's is at. One autoincrement serves every
+    // reader on the install, so the scope is the same one the applier writes
+    // through; unscoped, a housemate's row would answer for this one.
+    /**
+     * @return list<string>
+     */
+    private function absentPks(string $table, int $userId): array
+    {
+        $pks = $this->db->connection()->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->where('op_type', OpType::CreateRow->value)
+            ->whereNotExists(fn (Builder $row) => $this->ownership->scopeToUser(
+                $row->from($table)->whereColumn($table.'.id', 'op_log_entries.pk'),
+                $table,
+                $userId,
+            ))
+            ->groupBy('pk')
+            ->pluck('pk');
 
-        return $groups;
+        return $this->textColumn($pks);
     }
 
     /**
-     * @param  list<int|string>  $pks
-     * @return array<int|string, true>
+     * @return list<string>
      */
-    private function presentPks(string $table, array $pks, int $userId): array
+    private function authorsOf(string $table, string $pk, int $userId): array
     {
-        $query = $this->db->connection()->table($table)->whereIn('id', $pks);
+        $devices = $this->db->connection()->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->where('op_type', OpType::CreateRow->value)
+            ->where('pk', $pk)
+            ->groupBy('device_id')
+            ->pluck('device_id');
 
-        return array_fill_keys(
-            $this->textColumn($this->ownership->scopeToUser($query, $table, $userId)->pluck('id')),
-            true,
-        );
+        return $this->textColumn($devices);
     }
 
     private function tombstoned(string $table, string $pk, int $userId): bool
     {
-        return $this->db->connection()->table(self::LOG)
+        return $this->db->connection()->table('op_log_entries')
             ->where('user_id', $userId)
             ->where('table_name', $table)
             ->where('pk', $pk)
