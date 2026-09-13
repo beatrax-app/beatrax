@@ -1,0 +1,8 @@
+63:[2026-09-13 20:50:55] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 
+64:[2026-09-13 20:52:25] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 
+65:[2026-09-13 20:54:50] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 
+66:[2026-09-13 20:55:01] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 
+67:[2026-09-13 20:55:09] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 
+68:[2026-09-13 20:56:33] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 
+69:[2026-09-13 20:57:05] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 
+70:[2026-09-13 20:58:26] local.DEBUG: BiometricKeyVault: this device cannot gate an entry behind a biometric. {"reason":"none_enrolled"} 

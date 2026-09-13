@@ -1,0 +1,4 @@
+09-13 21:07:36.930 24837 24884 I NativePHP: nativephp_call() called with method: BiometricVault.IsAvailable
+09-13 21:07:36.930 24837 24884 I BridgeJNI: 🚀 BridgeJNI: NativePHPCall called with function='BiometricVault.IsAvailable'
+09-13 21:07:36.934 24837 24884 D BiometricVault.IsAvailable: canAuthenticate(STRONG)=0 (available)
+09-13 21:07:36.934 24837 24884 I BridgeJNI: ✅ BridgeJNI: NativePHPCall('BiometricVault.IsAvailable') completed successfully
