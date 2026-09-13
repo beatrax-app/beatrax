@@ -122,12 +122,12 @@ that range are logged and skipped rather than written.
 
 ### When the refresh comes back with nothing
 
-`FxRefreshStatus` holds the last refresh attempt that produced no rows,
-per user, so a screen waiting on one can say what happened instead of
-timing out and guessing. Settings polls for a write to `exchange_rates`
-and gives up after fifteen polls; the retry backoff runs to twenty
-minutes, so without a record the reader watched a spinner die and was
-told nothing about why.
+`FxRefreshStatus` holds how the last refresh attempt ended, per user, so
+a screen waiting on one can say what happened instead of timing out and
+guessing. Settings clears the record, dispatches, then polls it and gives
+up after fifteen polls; the retry backoff runs to twenty minutes, so
+without a record the reader watched a spinner die and was told nothing
+about why.
 
 Two things write it. `handle()` records `AllProvidersFailed` on the
 attempt that raised it and rethrows, which is what puts the reason in
@@ -139,12 +139,31 @@ so it resolves its collaborators from the container itself. A feed that
 answered with rates the range guard threw all away writes no row either,
 and records `NoUsableRates` rather than returning in silence.
 
-The record is cleared by the next successful upsert, and by the gate that
-returns early for a user who has turned online fetch off — with no
-outbound fetch there is no failure to report. It lives in the cache
-beside the provider circuit breaker rather than in a table: which rates a
-device could reach is that device's own state and must not travel on the
-op log.
+A successful upsert records the success in the same slot, and the gate
+that returns early for a user who has turned online fetch off clears it —
+with no outbound fetch there is no outcome to report. It lives in the
+cache beside the provider circuit breaker rather than in a table: which
+rates a device could reach is that device's own state and must not travel
+on the op log.
+
+### Why the screen reads the record and not the table
+
+The poll used to take `max(updated_at)` over `exchange_rates` when the
+refresh started and compare it on every tick. No index covers
+`updated_at`, so each tick read every row, and the poll runs up to
+sixteen times in a thirty-second window — 21,930 rows examined per tick
+on two years of daily fetches across the thirty currencies the bundled
+snapshot carries. The job knows whether its upsert landed; nothing else
+has to derive it.
+
+One read of the table is left on that screen, the "rates last updated"
+date. It is asked for as `max(rate_date)` rather than as an ordered
+`first()`, and `exchange_rates_newest_date` is the index that answers it:
+`SEARCH exchange_rates USING COVERING INDEX exchange_rates_newest_date`
+at one row, against `SCAN … USING COVERING INDEX
+exchange_rates_inverse_lookup` plus a temporary b-tree over all of them.
+`rate_date` is the second column of every other index on the table, so
+none of them can seek to its maximum.
 
 ## Conversion: passthrough, staleness, and cross-rates
 

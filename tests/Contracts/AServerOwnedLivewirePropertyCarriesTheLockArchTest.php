@@ -53,7 +53,6 @@ function serverOwnedPropertyExemptions(): array
         'Modules\\Core\\Public\\Http\\Livewire\\EncryptedBackupDownload::$error' => 'an error line, read back only to decide whether to re-render it',
         'Modules\\Mobile\\Internal\\Http\\Livewire\\MobileRestoreFromBackup::$error' => 'an error line, read back only to decide whether to re-render it',
         'Modules\\Pots\\Internal\\Http\\Livewire\\PotsPage::$errorAmountLimitMinor' => 'the figure quoted in a refusal message, re-derived on every refusal',
-        'Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage::$fxRefreshBaseline' => 'a poll watermark compared against the live table, never written back',
         'Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage::$fxRefreshPolls' => 'a poll counter whose only effect is giving up sooner',
         'Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage::$fxRefreshing' => 'a poll flag; forging it polls a refresh that is not running',
 
