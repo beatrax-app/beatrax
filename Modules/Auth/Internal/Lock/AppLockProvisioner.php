@@ -13,6 +13,7 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Lang;
 
 /**
@@ -32,7 +33,26 @@ final readonly class AppLockProvisioner
         private EncryptionMigrationService $encryption,
         private AppLockKeyMaterialAlerts $keyMaterialAlerts,
         private ColdStartVault $coldStartVault,
+        private PinVerificationService $verifier,
+        private SessionFactory $sessions,
     ) {}
+
+    // The one door a PIN offered as proof goes through, whichever screen took
+    // it. A settings panel is reached from an unlocked session, which is what
+    // made an unmetered check here look harmless: it is the session a borrowed
+    // laptop already has, and the answer it gives opens the lock screen too.
+    /**
+     * @link ../../../../.docs/features/auth/every-pin-check-is-metered.md
+     */
+    private function proveCurrentPin(int $userId, string $pin): ?string
+    {
+        // The empty box is refused ahead of the verifier, which would spend a
+        // metered attempt on a reader who has typed nothing — and the hasher
+        // below it raises on one rather than answering.
+        return $pin === ''
+            ? null
+            : $this->verifier->verify($userId, $pin, ($this->sessions)())->dataKey;
+    }
 
     // A PIN's only entropy is its length, so a short one is offline-brute-
     // forceable from a stolen database, and one the numeric keypad cannot type
@@ -264,20 +284,16 @@ final readonly class AppLockProvisioner
         $row = $this->db->connection()
             ->table('user_app_lock_configs')
             ->where('user_id', $userId)
-            ->first(['kdf_salt', 'pin_hash', 'pin_wrapped_key']);
+            ->first(['kdf_salt']);
 
         $salt = self::stringColumn($row, 'kdf_salt');
-        $pinHash = self::stringColumn($row, 'pin_hash');
-        $pinWrapped = self::stringColumn($row, 'pin_wrapped_key');
 
-        if ($salt === null || $pinHash === null || $pinWrapped === null
-            || ! $this->pinHasher->verify($pin, $pinHash)
-        ) {
-            return false;
-        }
+        // The verifier unwraps in order to prove the PIN, so the key it hands
+        // back is the one being re-wrapped here. Deriving again would pay
+        // Argon2id twice for one repair.
+        $dataKey = $salt === null ? null : $this->proveCurrentPin($userId, $pin);
 
-        $dataKey = $this->unwrapDataKey($pin, $salt, $pinWrapped);
-        if ($dataKey === null) {
+        if ($salt === null || $dataKey === null) {
             return false;
         }
 
@@ -372,22 +388,17 @@ final readonly class AppLockProvisioner
         $row = $this->db->connection()
             ->table('user_app_lock_configs')
             ->where('user_id', $userId)
-            ->first(['kdf_salt', 'pin_hash', 'pin_wrapped_key']);
+            ->first(['kdf_salt']);
 
         $salt = self::stringColumn($row, 'kdf_salt');
-        $pinHash = self::stringColumn($row, 'pin_hash');
-        $pinWrapped = self::stringColumn($row, 'pin_wrapped_key');
 
-        // A wrong PIN and an unusable blob refuse identically: separating them
-        // would confirm a correct PIN against a corrupt account.
-        if ($salt === null || $pinHash === null || $pinWrapped === null
-            || ! $this->pinHasher->verify($currentPin, $pinHash)
-        ) {
-            return false;
-        }
+        // A wrong PIN and an unusable blob still refuse identically: the
+        // verifier separates them only to raise the corruption alert, and
+        // saying which it was would confirm a correct PIN against a corrupt
+        // account.
+        $dataKey = $salt === null ? null : $this->proveCurrentPin($userId, $currentPin);
 
-        $dataKey = $this->unwrapDataKey($currentPin, $salt, $pinWrapped);
-        if ($dataKey === null) {
+        if ($salt === null || $dataKey === null) {
             return false;
         }
 
@@ -489,34 +500,18 @@ final readonly class AppLockProvisioner
         return $dataKey;
     }
 
-    // Bypasses the failed-attempt backoff meter on purpose: that is scoped to
-    // lock-screen attempts, and callers here are already unlocked.
-    public function verifyPin(int $userId, string $pin): bool
-    {
-        $row = $this->db->connection()
-            ->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->first(['pin_hash']);
-
-        if ($row === null || ! is_string($row->pin_hash)) {
-            return false;
-        }
-
-        return $this->pinHasher->verify($pin, $row->pin_hash);
-    }
-
     // A row that is not there and a PIN that does not verify answer alike:
     // there is no lock here to take down either way.
     public function disable(int $userId, string $pin): AppLockDisableResult
     {
-        $row = $this->db->connection()
-            ->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->first(['pin_hash']);
+        $dataKey = $this->proveCurrentPin($userId, $pin);
 
-        if ($row === null || ! is_string($row->pin_hash) || ! $this->pinHasher->verify($pin, $row->pin_hash)) {
+        if ($dataKey === null) {
             return AppLockDisableResult::PinIncorrect;
         }
+
+        // Nothing below needs it: this is the proof, not a use of the key.
+        sodium_memzero($dataKey);
 
         // The wraps below are the only durable copies of the data key. With
         // encrypted data on disk, clearing them IS the stranding, and no later
