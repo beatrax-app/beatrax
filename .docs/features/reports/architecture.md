@@ -687,7 +687,8 @@ module:
   rather than forking a new one; a fresh save's id is stashed into
   `loadedReportId` so a subsequent save on the same page load also
   updates in place instead of creating a duplicate.
-- **A stored definition is coerced, never trusted
+- **A stored definition is coerced where the reader could have supplied
+  the word, and rejected where only a peer could
   (`Internal\Support\ReportDefinitionFactory::fromStored()`):**
   `saved_reports.definition` is a synced LWW column, so a row written by a
   peer on a different build is a realistic source of a word this build does
@@ -695,12 +696,41 @@ module:
   unknown `granularity`, a `customFrom` that is not a date — so a single
   unreadable row 500'd `/reports`, and the dashboard with it when the report
   was pinned. Every read of a stored definition (`ReportBuilder::mount()`,
-  `PinnedReportsQuery`) now goes through the factory, which coerces each
-  field through the same `ReportVocabulary` the URL rail uses and drops a
-  `customFrom`/`customTo` that is not a `Y-m-d` date, so the builder asks
-  for the range again — a question the reader can answer — instead of
-  replaying a window nobody chose. `ReportDefinition::from()` is unchanged
-  and still strict; it is simply no longer the read path.
+  `PinnedReportsQuery`) goes through the factory instead, and the factory
+  does not treat every field alike. `metric`, `dimension`, `periodPreset`,
+  `currencyMode`, `viz` and `amountDirection` fall back to their own
+  defaults, because each of those is also a word the address bar can supply
+  and a default is the only alternative to a 500. **`granularity` does
+  not.** It reads through `ReportVocabulary::storedGranularity()`, which
+  answers `null` — never monthly — for a word outside `ReportGranularity`,
+  and the factory carries that `null` onto a nullable `granularity` on the
+  `ReportDefinition` it builds. A `customFrom`/`customTo` that is not a
+  `Y-m-d` date is dropped the same way, so the builder asks for the range
+  again — a question the reader can answer — instead of replaying a window
+  nobody chose. `ReportDefinition::from()` is unchanged and still strict; it
+  is simply no longer the read path.
+- **The `#[Url]` rails still default, and the grouping is resolved at the
+  sites that need one.** The reader-supplied side keeps its coercion:
+  `ReportVocabulary::granularity()`, read by
+  `ReportBuilder::currentDefinition()` and
+  `ReportDefinitionRequestFactory::fromExportQuery()`, still answers
+  `ReportGranularity::default()` for an unknown `?gran=`, because that word
+  arrived from an address bar the reader is holding and can correct. A
+  `null` off the stored boundary is resolved further in, in the open, by
+  every site that needs a concrete bucket: `ReportAggregator::dimensionRows()`
+  and `ReportAggregator::buildNetWorthResult()`,
+  `ReportBuilder::bucketsByDate()`,
+  `ReportBuilder::applyDefinition()` (which is what opens the builder's
+  toggle on Monthly), and the nullable `$granularity` parameters of
+  `TimeBucketSpendQuery::forUserAndPeriod()` and
+  `NetWorthSeriesQuery::forUser()`. The distinction is whose word it was: a
+  saved report written by a build that knows a grouping this one does not is
+  not a reader mistake to correct, and answering "monthly" for it would be
+  this build deciding what that peer meant.
+  `AStoredGroupingThisBuildCannotReadIsNotMonthlyTest` holds both halves so
+  neither can be generalised into the other: four stored words rejected —
+  `'daily'`, C2's series vocabulary, among them — and the reader-supplied
+  rail still defaulting in the same file.
 - **Independent cap re-enforcement (`PinnedReportsQuery`):** `TogglePin`
   already enforces the 3-pin cap in the write layer; the dashboard
   read query's own `LIMIT 3` is a second, independent enforcement point
