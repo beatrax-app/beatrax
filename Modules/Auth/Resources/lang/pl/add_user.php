@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Hasło początkowe',
     'initial_password_hint' => 'Wpisz hasło, które da się raz odczytać na głos lub przepisać. Zostanie zmienione przy pierwszym logowaniu.',
     'confirm_initial_password' => 'Potwierdź hasło początkowe',
+    'owner_password_label' => 'Twoje hasło do konta',
     'submit' => 'Ustaw hasło początkowe',
 
     'error_mismatch' => 'Hasła nie są zgodne.',

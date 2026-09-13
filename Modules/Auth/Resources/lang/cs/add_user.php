@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Počáteční heslo',
     'initial_password_hint' => 'Zadej heslo, které se dá jednou přečíst nahlas nebo opsat. Při prvním přihlášení ho nahradí vlastním.',
     'confirm_initial_password' => 'Potvrdit počáteční heslo',
+    'owner_password_label' => 'Tvoje heslo k účtu',
     'submit' => 'Nastavit počáteční heslo',
 
     'error_mismatch' => 'Hesla se neshodují.',

@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Esialgne parool',
     'initial_password_hint' => 'Sisesta parool, mille saad talle ette lugeda või korra sisse tippida. Esimesel sisselogimisel vahetab ta selle välja.',
     'confirm_initial_password' => 'Kinnita esialgne parool',
+    'owner_password_label' => 'Sinu konto parool',
     'submit' => 'Määra esialgne parool',
 
     'error_mismatch' => 'Paroolid ei kattu.',

@@ -24,7 +24,7 @@ it('creates a partner flagged for a forced password change', function (): void {
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
 
-    $partner = $addUser(developerCaller(), 'partner', 'partner-initial-pw-12');
+    $partner = $addUser(developerCaller(), 'partner', 'partner-initial-pw-12', 'owner-password-12chars');
 
     expect($partner)->toBeInstanceOf(User::class);
     expect($partner->is_developer)->toBeFalse();
@@ -35,7 +35,7 @@ it('lowercases the partner username before storage', function (): void {
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
 
-    $partner = $addUser(developerCaller(), 'Bob', 'partner-initial-pw-12');
+    $partner = $addUser(developerCaller(), 'Bob', 'partner-initial-pw-12', 'owner-password-12chars');
 
     expect($partner->username)->toBe('bob');
 });
@@ -47,7 +47,7 @@ it('provisions no recovery codes the partner could not be handed', function (): 
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
 
-    $partner = $addUser(developerCaller(), 'partner', 'partner-initial-pw-12');
+    $partner = $addUser(developerCaller(), 'partner', 'partner-initial-pw-12', 'owner-password-12chars');
 
     expect(UserRecoveryCode::query()->where('user_id', $partner->id)->get())->toHaveCount(0);
 });
@@ -58,10 +58,10 @@ it('rejects a duplicate username with the locked copy', function (): void {
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
 
-    $addUser($caller, 'partner', 'partner-initial-pw-12');
+    $addUser($caller, 'partner', 'partner-initial-pw-12', 'owner-password-12chars');
 
     try {
-        $addUser($caller, 'partner', 'another-initial-pw-12');
+        $addUser($caller, 'partner', 'another-initial-pw-12', 'owner-password-12chars');
         $this->fail('expected a ValidationException');
     } catch (ValidationException $e) {
         expect($e->errors())->toHaveKey('username');
@@ -75,7 +75,7 @@ it('rejects a password shorter than twelve characters', function (): void {
     $addUser = $this->app->make(AddUserAction::class);
 
     try {
-        $addUser(developerCaller(), 'partner', 'short');
+        $addUser(developerCaller(), 'partner', 'short', 'owner-password-12chars');
         $this->fail('expected a ValidationException');
     } catch (ValidationException $e) {
         expect($e->errors())->toHaveKey('password');
@@ -100,7 +100,7 @@ it('throws a 404 for a caller who is not the account owner', function (): void {
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
 
-    expect(fn () => $addUser($nonDeveloper, 'partner', 'partner-initial-pw-12'))
+    expect(fn () => $addUser($nonDeveloper, 'partner', 'partner-initial-pw-12', 'plain-password-12ch'))
         ->toThrow(NotFoundHttpException::class);
 });
 
@@ -132,6 +132,7 @@ it('creates the partner and flashes the success copy on submit', function (): vo
         ->set('username', 'partner')
         ->set('initialPassword', 'partner-initial-pw-12')
         ->set('initialPasswordConfirmation', 'partner-initial-pw-12')
+        ->set('ownerPassword', 'owner-password-12chars')
         ->call('submit')
         ->assertSet('flashMessage', 'User partner created. They will set their own password the first time they sign in.');
 
@@ -147,6 +148,7 @@ it('flashes an error for an empty username rather than raising', function (): vo
         ->set('username', '   ')
         ->set('initialPassword', 'partner-initial-pw-12')
         ->set('initialPasswordConfirmation', 'partner-initial-pw-12')
+        ->set('ownerPassword', 'owner-password-12chars')
         ->call('submit')
         ->assertSet('flashMessage', 'Use up to 32 letters, digits, dots, dashes or underscores.');
 });
@@ -156,6 +158,7 @@ it('flashes a mismatch error when the two passwords differ', function (): void {
         ->set('username', 'partner')
         ->set('initialPassword', 'partner-initial-pw-12')
         ->set('initialPasswordConfirmation', 'a-different-password')
+        ->set('ownerPassword', 'owner-password-12chars')
         ->call('submit')
         ->assertSet('flashMessage', 'Passwords do not match.');
 

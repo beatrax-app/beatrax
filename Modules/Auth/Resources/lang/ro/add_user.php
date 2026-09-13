@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Parolă inițială',
     'initial_password_hint' => 'Scrie o parolă pe care o poate citi cu voce tare sau o poate tasta o singură dată. O va înlocui la prima autentificare.',
     'confirm_initial_password' => 'Confirmă parola inițială',
+    'owner_password_label' => 'Parola contului tău',
     'submit' => 'Setează parola inițială',
 
     'error_mismatch' => 'Parolele nu coincid.',

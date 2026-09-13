@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Mot de passe initial',
     'initial_password_hint' => 'Choisis un mot de passe que cette personne pourra lire à voix haute ou taper une fois. Il sera remplacé à la première connexion.',
     'confirm_initial_password' => 'Confirme le mot de passe initial',
+    'owner_password_label' => 'Le mot de passe de ton compte',
     'submit' => 'Définir le mot de passe initial',
 
     'error_mismatch' => 'Les mots de passe ne correspondent pas.',
