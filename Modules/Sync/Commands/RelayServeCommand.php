@@ -347,8 +347,9 @@ final class RelayServeCommand extends Command
         return $this->json($status, json_encode(['error' => $errorCode], JSON_THROW_ON_ERROR));
     }
 
-    // ext-pcntl is absent from the bundled desktop PHP, so the SIGTERM and
-    // SIGINT constants do not exist there and referencing them is fatal.
+    // Null is a decision, not an absence: material that cannot serve a
+    // connection drops the relay to plaintext, which is why the fall-back is
+    // said out loud rather than inferred from a quiet bind.
     private function tlsBindContext(): ?BindContext
     {
         if (! $this->tls->isUsable()) {
@@ -364,6 +365,9 @@ final class RelayServeCommand extends Command
         );
     }
 
+    // Both halves are required: ext-pcntl is absent from the bundled desktop
+    // PHP, so the SIGTERM and SIGINT constants do not exist there and merely
+    // referencing them is fatal — and a runtime can define one without the other.
     private function canTrapSignals(): bool
     {
         return \function_exists('pcntl_signal') && \defined('SIGTERM') && \defined('SIGINT');
