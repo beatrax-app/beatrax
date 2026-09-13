@@ -155,9 +155,9 @@ signal and the returned value is valid plaintext.
   funding leg the matcher will never pair is still a valid answer.
 - The two callers also disagree on which of several candidates
   wins, so `CounterLegOrder` is a parameter rather than a default.
-  Both orderings end in `booked_at` then `id`: an equidistant or
-  same-day pair used to resolve on whichever index SQLite picked,
-  which made the chosen leg an accident of the query planner.
+  Both orderings run out through
+  `Internal\Support\EarliestLegFirst`, for the reason in
+  [which leg becomes the pair](#which-leg-becomes-the-pair).
 
 - `PairUnlinker::unpair($userId, $survivorId, $deletedType)` —
   the surviving half of a deleted pair stops being a transfer.
@@ -169,6 +169,77 @@ signal and the returned value is valid plaintext.
 
 The module raises no events; it persists in response to the
 upstream `TransactionImported`.
+
+## Which leg becomes the pair
+
+Three reads decide it, and all three write their answer into
+`transactions.pair_transaction_id`, which syncs:
+
+- `PairLookup::counterLegOnAccount()` returns one id — that id *is* the
+  pair.
+- `TransferPairer::findPartnerByReverseLookup()` hands its candidates to
+  `matchDecryptedCandidate()`, which answers with the **first** row that
+  decrypts to a match, so the query's order is the pair.
+- `TransferPairer::pairOrphansForUser()` is greedy: the first orphan to
+  ask claims a contested leg, and `pairOne()` persists that claim before
+  the next orphan gets to ask. The sweep order is therefore the answer
+  too.
+
+All three used to run out on `transactions.id`, and `transactions.id` is
+an autoincrement each device counts for itself: the same logical row is
+id 41 here and id 58 there. The tie is not rare. On the live desktop
+database **184 of 216 transactions share a `booked_at` with another
+row**, and there is a real `(account_id, amount_minor, booked_at)`
+duplicate group — account 1, −350, 2026-02-03 — which is exactly the
+shape a counter-leg search returns two of.
+
+What that cost is not a display wobble. One device pairs A with C and
+the other pairs B with C; both write `pair_transaction_id` on rows the
+other also wrote, the column travels as plain LWW, and the loser of that
+race is left as a transfer leg naming a row that names somebody else.
+That is the half-pair `ClearHalfPairsOnMergedRows` exists to clear —
+below — so the ordering was manufacturing work for the repair.
+
+`Internal\Support\EarliestLegFirst` is the one clause all three now end
+on:
+
+```
+booked_at, posted_at, amount_minor, currency,
+counterparty_normalized, occurrence_ordinal        -- ON_ONE_ACCOUNT
+                                , leg_account.iban -- ACROSS_ACCOUNTS
+```
+
+Those are the columns of `transactions_fingerprint_uq` **minus**
+`user_id` and `account_id`, the two a device counts for itself. Every
+one of them is a fact off the statement both devices imported:
+`occurrence_ordinal` is which occurrence of an otherwise identical tuple
+the row is, counted within the file it arrived in, and
+`counterparty_normalized` is a GDK-keyed digest — arbitrary as an order,
+but the same arbitrary order on both devices, since paired devices share
+the key.
+
+`counterLegOnAccount()` pins `account_id` and `amount_minor` in its
+predicates, so `ON_ONE_ACCOUNT` is the remainder of a UNIQUE index there
+and the order is total, not merely better. The other two searches span
+accounts — the sweep over every orphan, the reverse arm over every
+account but the firing leg's — and those six columns are unique only
+*within* an account. Two accounts paying the same amount on the same day
+to the same payee is the ordinary shape of that tie, not a contrived
+one: it is what `ReverseLookupOrderingIsTotalTest` builds. So both join
+`accounts` and end on `iban`, which is what the account IS rather than
+what this device numbered it — `unique(user_id, iban)`, never sealed,
+and the same column `Recurring`'s `SeriesAccountResolver` reaches for.
+With the IBAN standing in for `account_id`, the clause is the whole
+UNIQUE index and the order is total everywhere.
+
+**`fingerprint` is not the shortcut it looks like.** It is one column,
+it is unique per row, and it is composed rather than minted — and it is
+still wrong here, because `FingerprintComposer` folds `account_id` into
+the digest. Held constant over 1 600 same-day pairs, changing only the
+account id from 1 to 2 flipped the order of the two digests 804 times.
+That is also why `Ledger`'s `RederiveFingerprintOnMergedRows` recomputes
+the digest after `PeerRowAliases::translate()` rewrites that column on
+an arriving row. Composed is not the same property as agreed.
 
 ## A pair only one side let go of
 

@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Transfers\Internal\Support\EarliestLegFirst;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
 use Modules\Transfers\Public\Support\CounterLegMatch;
 use Modules\Transfers\Public\Support\CounterLegWindow;
@@ -81,10 +82,10 @@ final readonly class PairLookup
         };
 
         // Distance alone, and booked_at alone, both leave the last word to
-        // SQLite — today's answer falls out of whichever index the planner
-        // happens to pick. This tail is the same rule the planner was applying
-        // by accident, written down: earlier date first, then lower id.
-        $row = $ordered->orderBy('booked_at')->orderBy('id')->first(['id']);
+        // SQLite. The tail that settles it used to end on the id, which the
+        // peer counts for itself, so the two devices answered this with
+        // different rows and then wrote both answers into one synced column.
+        $row = $ordered->orderByRaw(EarliestLegFirst::ON_ONE_ACCOUNT)->first(['id']);
 
         if ($row === null) {
             return null;
