@@ -64,13 +64,57 @@ function logHoldsWriter(int $userId, string $deviceId): OpLogWriter
     return $writer;
 }
 
-/** @return array<string, int> */
-function logHoldsCensus(int $userId): array
+/** @return array{checked: int, unplaced: array<string, int>, removedHere: array<string, int>, held: array<string, int>} */
+function logHoldsCauses(int $userId): array
 {
     /** @var StrandedCreates $stranded */
     $stranded = app(StrandedCreates::class);
 
-    return $stranded->census($userId)['stranded'];
+    return $stranded->census($userId);
+}
+
+/** @return array<string, int> */
+function logHoldsCensus(int $userId): array
+{
+    return logHoldsCauses($userId)['unplaced'];
+}
+
+function logHoldsRegister(DatabaseManager $db, int $userId, string $deviceId, bool $self): void
+{
+    $keypair = $self ? test()->localKeypair : test()->peerKeypair;
+
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => $self ? 'Mac' : 'Galaxy A51',
+        'ed25519_public_key_hex' => bin2hex(sodium_crypto_sign_publickey($keypair)),
+        'x25519_public_key_hex' => bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => $self ? 1 : 0,
+        'paired_at' => '2026-08-01T10:00:00Z',
+        'confirmed_at' => '2026-08-01T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-08-01T10:00:00Z',
+        'updated_at' => '2026-08-01T10:00:00Z',
+    ]);
+}
+
+function logHoldsHold(DatabaseManager $db, int $userId, int|string $pk, string $reason): void
+{
+    $db->connection()->table('op_log_quarantine')->insert([
+        'user_id' => $userId,
+        'op_entry_id' => null,
+        'table_name' => 'counterparties',
+        'pk' => (string) $pk,
+        'device_id' => LOG_HOLDS_PEER_DEVICE,
+        'reason' => $reason,
+        'hlc_l' => 1789071986333,
+        'hlc_c' => 0,
+        'raw_value' => null,
+        'created_at' => '2026-09-11 16:40:34',
+        'gdk_epoch' => null,
+        'op_type' => OpType::CreateRow->value,
+    ]);
 }
 
 function logHoldsReplay(DatabaseManager $db, int $userId): void
@@ -111,6 +155,9 @@ beforeEach(function (): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $this->db = $db;
+
+    logHoldsRegister($db, (int) $this->user->id, LOG_HOLDS_LOCAL_DEVICE, self: true);
+    logHoldsRegister($db, (int) $this->user->id, LOG_HOLDS_PEER_DEVICE, self: false);
 
     $this->localId = (int) $db->connection()->table('counterparties')->insertGetId([
         'user_id' => (int) $this->user->id,
@@ -223,7 +270,7 @@ it('names the count and the table and prints no value from the row', function ()
     $message = logHoldsHealthCheck()->message();
 
     expect(logHoldsHealthCheck()->severity())->toBe('warning')
-        ->and($message)->toContain('1 row the op log holds and no table has', 'counterparties 1')
+        ->and($message)->toContain('1 row a peer sent that no table here has', 'counterparties 1')
         ->and($message)->not->toContain('kpn-mobiel')
         ->and($message)->not->toContain('Kpn-mobiel');
 });
@@ -233,4 +280,150 @@ it('names the count and the table and prints no value from the row', function ()
 it('says how many rows it checked when none of them is missing', function (): void {
     expect(logHoldsHealthCheck()->severity())->toBe('ok')
         ->and(logHoldsHealthCheck()->message())->toBe('1 row the op log claims, all of them here');
+});
+
+// The op log carries no record that a delete was deliberate: a migration that
+// removes a row emits no tombstone on purpose, because one would travel and
+// take the peer's good copy with it. Authorship carries it instead -- the
+// capture runs on the write, so a create THIS device signed proves the row was
+// here, and nothing a peer holds is waiting to be placed under it.
+it('does not count a row this device wrote and no longer has as one a peer is owed', function (): void {
+    $userId = (int) $this->user->id;
+
+    $gone = (int) $this->db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $userId,
+        ...logHoldsCounterparty('hema', '2026-08-02 09:00:00'),
+    ]);
+
+    logHoldsWriter($userId, LOG_HOLDS_LOCAL_DEVICE)
+        ->writeCreateRow('counterparties', $gone, logHoldsCounterparty('hema', '2026-08-02 09:00:00'));
+
+    $this->db->connection()->table('counterparties')->where('id', $gone)->delete();
+
+    $census = logHoldsCauses($userId);
+
+    expect($census['unplaced'])->toBe([])
+        ->and($census['removedHere'])->toBe(['counterparties' => 1])
+        ->and($census['held'])->toBe([]);
+});
+
+// A hold under a verdict nothing arriving later undoes is the answer already
+// given. Counting it as a row still owed is asking the reader to act on a
+// refusal the merge has closed.
+it('does not count a peer create the quarantine answered for good', function (): void {
+    $userId = (int) $this->user->id;
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', 9101, logHoldsCounterparty('netflix', '2026-02-02 08:30:00'));
+
+    logHoldsHold($this->db, $userId, 9101, 'unplaceable_collision');
+
+    $census = logHoldsCauses($userId);
+
+    expect($census['unplaced'])->toBe([])
+        ->and($census['held'])->toBe(['counterparties' => 1])
+        ->and($census['removedHere'])->toBe([]);
+});
+
+// The inverse, which is what proves the rule is the VERDICT and not the
+// presence of a hold: a collision a re-home still answers is a row this device
+// is owed, and it stays in the count a reader acts on.
+it('still counts a peer create held under a verdict a later state undoes', function (): void {
+    $userId = (int) $this->user->id;
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', 9102, logHoldsCounterparty('netflix', '2026-02-02 08:30:00'));
+
+    logHoldsHold($this->db, $userId, 9102, 'primary_key_collision');
+
+    $census = logHoldsCauses($userId);
+
+    expect($census['unplaced'])->toBe(['counterparties' => 1])
+        ->and($census['held'])->toBe([])
+        ->and($census['removedHere'])->toBe([]);
+});
+
+// All three on ONE table. A rule keyed on a table name could not draw this
+// line, and the next migration that legitimately deletes would be invisible
+// to it -- which is the whole reason the cause is asked of the log instead.
+it('separates three causes on one table, which no rule keyed on a table name could', function (): void {
+    $userId = (int) $this->user->id;
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
+
+    $gone = (int) $this->db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $userId,
+        ...logHoldsCounterparty('hema', '2026-08-02 09:00:00'),
+    ]);
+    logHoldsWriter($userId, LOG_HOLDS_LOCAL_DEVICE)
+        ->writeCreateRow('counterparties', $gone, logHoldsCounterparty('hema', '2026-08-02 09:00:00'));
+    $this->db->connection()->table('counterparties')->where('id', $gone)->delete();
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', 9103, logHoldsCounterparty('netflix', '2026-02-02 08:30:00'));
+    logHoldsHold($this->db, $userId, 9103, 'unplaceable_collision');
+
+    $census = logHoldsCauses($userId);
+
+    expect($census['unplaced'])->toBe(['counterparties' => 1])
+        ->and($census['removedHere'])->toBe(['counterparties' => 1])
+        ->and($census['held'])->toBe(['counterparties' => 1]);
+});
+
+// The defect this split exists for: every deliberate deletion used to raise the
+// warning by one, so the row could never read ok again and grew with every
+// migration. A reader learns to skip a check that never clears, which costs
+// them the rows that do matter.
+it('reaches ok while the log still holds rows no repair would return', function (): void {
+    $userId = (int) $this->user->id;
+
+    $gone = (int) $this->db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $userId,
+        ...logHoldsCounterparty('hema', '2026-08-02 09:00:00'),
+    ]);
+    logHoldsWriter($userId, LOG_HOLDS_LOCAL_DEVICE)
+        ->writeCreateRow('counterparties', $gone, logHoldsCounterparty('hema', '2026-08-02 09:00:00'));
+    $this->db->connection()->table('counterparties')->where('id', $gone)->delete();
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', 9104, logHoldsCounterparty('netflix', '2026-02-02 08:30:00'));
+    logHoldsHold($this->db, $userId, 9104, 'unplaceable_collision');
+
+    $message = logHoldsHealthCheck()->message();
+
+    expect(logHoldsHealthCheck()->severity())->toBe('ok')
+        ->and($message)->toContain(
+            'all of them here or accounted for',
+            '1 row this device wrote and no longer has, with no tombstone behind them (counterparties 1)',
+            '1 row held under a verdict no later state undoes (counterparties 1)',
+        )
+        ->and($message)->not->toContain('hema')
+        ->and($message)->not->toContain('netflix');
+});
+
+// Both populations are named even while the actionable one is non-empty: the
+// row is pasted into bug reports, and a count with no cause beside it is what
+// sent the last reader to the wrong twenty-three rows.
+it('names what is accounted for beside the rows a peer is still owed', function (): void {
+    $userId = (int) $this->user->id;
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
+
+    $gone = (int) $this->db->connection()->table('counterparties')->insertGetId([
+        'user_id' => $userId,
+        ...logHoldsCounterparty('hema', '2026-08-02 09:00:00'),
+    ]);
+    logHoldsWriter($userId, LOG_HOLDS_LOCAL_DEVICE)
+        ->writeCreateRow('counterparties', $gone, logHoldsCounterparty('hema', '2026-08-02 09:00:00'));
+    $this->db->connection()->table('counterparties')->where('id', $gone)->delete();
+
+    $message = logHoldsHealthCheck()->message();
+
+    expect(logHoldsHealthCheck()->severity())->toBe('warning')
+        ->and($message)->toContain(
+            '1 row a peer sent that no table here has (counterparties 1)',
+            'Accounted for beside them: 1 row this device wrote and no longer has, with no tombstone behind them (counterparties 1)',
+        );
 });
