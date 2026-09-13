@@ -279,3 +279,39 @@ it('leaves the shipped key in place, and says so, when the file cannot be writte
 
     chmod($this->envFile, 0o644);
 });
+
+// The inverse of the case above, and the worse one: the rotation lands and the
+// record of it does not. Every launch then reads "not yet rotated", rotates
+// again, and throws away everything the previous key encrypted.
+it('does not rotate a second time when the sentinel could not be written', function (): void {
+    if (posix_geteuid() === 0) {
+        $this->markTestSkipped('root bypasses directory write permissions.');
+    }
+
+    $paths = $this->app->make(UserDataPathService::class);
+    $kernel = ensureAppKeySpyKernel();
+
+    // A spy that really rotates: the key reaches the file, so the only thing
+    // that can go wrong afterwards is the stamp.
+    $kernel->onCall = function (): void {
+        file_put_contents($this->envFile, sprintf(
+            "APP_NAME=Beatrax\nAPP_KEY=%s\n",
+            'base64:'.base64_encode(random_bytes(32)),
+        ));
+    };
+
+    // Writable file inside a directory that admits no new entries, which is
+    // what an install on a locked-down data directory looks like.
+    chmod($this->tempRoot, 0o500);
+
+    $action = new EnsureAppKey($paths, $kernel, environmentFile: $this->envFile);
+    @$action->run();
+    $afterFirst = appKeyWrittenIn($this->envFile);
+    @$action->run();
+    $afterSecond = appKeyWrittenIn($this->envFile);
+
+    chmod($this->tempRoot, 0o700);
+
+    expect(file_exists(UserDataPathService::appPath('first-launch.app-key-generated')))->toBeFalse()
+        ->and($afterSecond)->toBe($afterFirst);
+});
