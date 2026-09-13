@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN-koden må ha :min til :max sifre — bare tall.',
     'error_pin_mismatch' => 'PIN-kodene er ikke like. Prøv igjen.',
     'error_pin_required' => 'Tast inn PIN-koden din.',
-    'error_pin_incorrect' => 'Feil PIN-kode.',
     'error_account_password_required' => 'Skriv inn kontopassordet ditt.',
     'error_account_password' => 'Feil kontopassord.',
     'change_pin_success' => 'Krypteringsnøkkelen din er sikret på nytt med den nye PIN-koden din.',

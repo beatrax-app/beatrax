@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Lock\AppLockDisableResult;
@@ -9,8 +10,19 @@ use Modules\Auth\Internal\Lock\AppLockKdf;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
+use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
+
+// There is no unmetered way to ask any more: proving the PIN goes through the
+// verifier that counts, here as everywhere else.
+function forgotPinOpensTheLock(int $userId, string $pin): bool
+{
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    return app(PinVerificationService::class)->verify($userId, $pin, $session)->dataKey !== null;
+}
 
 it('AppLockProvisioner has rewrapForNewPin, changePin, and disable methods', function (): void {
     expect(method_exists(AppLockProvisioner::class, 'rewrapForNewPin'))->toBeTrue();
@@ -102,7 +114,7 @@ it('settings Forgot PIN flow resets the PIN via the account password', function 
         ->call('resetForgottenPin', '567890', '567890')
         ->assertSee('Incorrect account password.');
 
-    expect($provisioner->verifyPin($user->id, '123456'))->toBeTrue();
+    expect(forgotPinOpensTheLock($user->id, '123456'))->toBeTrue();
 
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmForgotPin')
@@ -112,8 +124,8 @@ it('settings Forgot PIN flow resets the PIN via the account password', function 
         ->assertSet('accountPassword', '')
         ->assertSet('newPin', '');
 
-    expect($provisioner->verifyPin($user->id, '567890'))->toBeTrue();
-    expect($provisioner->verifyPin($user->id, '123456'))->toBeFalse();
+    expect(forgotPinOpensTheLock($user->id, '567890'))->toBeTrue();
+    expect(forgotPinOpensTheLock($user->id, '123456'))->toBeFalse();
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 });
 

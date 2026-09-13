@@ -140,7 +140,11 @@ describe('a rate refresh that came back with nothing', function (): void {
 
         ($this->runJob)($registry);
 
-        expect($this->status->lastFailure($this->fxUserId))->toBeNull();
+        // Both halves: the failure stops being reported, and the success is
+        // recorded in its place. The settings screen reads the second one to
+        // know the fetch landed, rather than watching the rate table for it.
+        expect($this->status->lastFailure($this->fxUserId))->toBeNull()
+            ->and($this->status->succeeded($this->fxUserId))->toBeTrue();
     });
 
     it('stops reporting the failure once the reader turns online fetch off', function (): void {

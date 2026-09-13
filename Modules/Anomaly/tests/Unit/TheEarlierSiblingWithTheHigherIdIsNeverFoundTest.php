@@ -59,9 +59,10 @@ it('still fires exactly once — on the later-dated charge, whatever the ids say
         ->and(duplicateFires($this->app, $this->db, $earlierId, $user))->toBeFalse();
 });
 
-// The `id <` tie-break still has to settle a genuine double-tap at a terminal,
-// where both captures carry the same posted_at.
-it('settles a same-day pair on the id so the earlier row does not fire as well', function (): void {
+// A genuine double-tap at a terminal gives both captures one posted_at, so the
+// date cannot order the pair and the rest of the key has to. Here that is the
+// booked instant; where a bank supplies one of those too, occurrence_ordinal.
+it('settles a same-day pair on the booked instant so the earlier capture stays silent', function (): void {
     $user = AnomalyCorpusSeeder::makeUser();
     $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
     $fixture['history'][0]['posted_at'] = '2026-06-15';

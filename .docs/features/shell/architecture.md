@@ -37,6 +37,17 @@ depends on; what stayed is the chrome around it, `AppNavigation` and
 keywords. See
 [Navigation destinations](../../architecture/navigation-destinations.md).
 
+`AppNavigation` also answers **which row is the one the reader opened**.
+`Destination::path()` renders a destination's declared route parameters into a
+query string, so `UnusualCharges` has the path `/drift?type=anomaly` and
+`DriftAlerts` has `/drift`: comparing a request path against either marked the
+wrong one. `AppNavigation::active()` takes the request's path and query and
+returns the destination whose declared parameters the request satisfies, the
+most specific one winning — so the anomaly screen lights the Unusual charges
+row and the drift screen lights Drift alerts. A parameter no destination
+declares, a page or a sort, changes nothing: a reader who reached a screen with
+one in the address is still on it.
+
 The four `Core` outbound edges that remain (`Auth`, `Desktop`, `Search`, `Sync`)
 are kernel services rather than screens — the encryption-migration service, the
 chrome resolver every layout calls, the doctor command's FTS probe, and the two

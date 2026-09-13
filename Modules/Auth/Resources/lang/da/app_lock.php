@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN-koden skal have :min til :max cifre — kun tal.',
     'error_pin_mismatch' => 'PIN-koderne er ikke ens. Prøv igen.',
     'error_pin_required' => 'Indtast din PIN-kode.',
-    'error_pin_incorrect' => 'Forkert PIN-kode.',
     'error_account_password_required' => 'Indtast din kontoadgangskode.',
     'error_account_password' => 'Forkert kontoadgangskode.',
     'change_pin_success' => 'Din krypteringsnøgle er sikret på ny med din nye PIN-kode.',

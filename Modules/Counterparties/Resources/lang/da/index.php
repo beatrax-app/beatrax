@@ -37,7 +37,6 @@ return [
     'label_this' => 'Mærk denne modpart',
 
     'stat_12mo' => '12 mdr.',
-    'stat_net_received' => 'Netto modtaget',
     'stat_avg_mo' => 'Gns. / md.',
     'sparkline_aria' => 'Aktivitetsgraf for 12 måneder',
 

@@ -117,6 +117,10 @@ final class Dashboard extends Component
             'reauthInboxCount' => $reauthInboxCount,
             'reauthToastDismissed' => $this->reauthToastDismissed,
             'isDeveloper' => $console->permits() && $user->is_developer === true,
+            // Only `fx:refresh-rates` ends a stale rate's wait and it skips a
+            // reader with fetching off, so without this the tiles promised a
+            // refresh nothing would run while the card beside them said so.
+            'fxOnlineEnabled' => $user->fx_online_enabled === true,
         ]);
     }
 }

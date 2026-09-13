@@ -42,24 +42,18 @@ final readonly class PotRowLoader
         private Clock $clock,
     ) {}
 
+    // One pot's shape of the same statement, so the guard PotWriter checks
+    // against inside its write transaction and the figure the card prints
+    // cannot answer differently.
+    public function balanceForPot(int $potId, User $user): int
+    {
+        return $this->balancesForPots([$potId], $user)[$potId] ?? 0;
+    }
+
     // Bounded to the pot's own denomination: `pots.currency` is frozen at
     // creation and `accounts.default_currency` is not, so one account holds
     // pots in two and a movement need not carry the one its pot does. Summed
     // across them the total is not an amount, and the card prints it as one.
-    public function balanceForPot(int $potId, User $user): int
-    {
-        return (int) $this->db->connection()
-            ->table('pot_movements')
-            ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
-            ->where('pot_movements.user_id', $user->id)
-            ->where('pot_movements.pot_id', $potId)
-            ->whereColumn('pot_movements.currency', 'pots.currency')
-            ->sum('pot_movements.amount_minor');
-    }
-
-    // balanceForPot()'s bound, grouped rather than asked per pot — the shape
-    // movementCounts() below already refuses. A pot with no movement in its
-    // own currency is absent, which is the 0 its caller defaults to.
     /**
      * @param  list<int>  $potIds
      * @return array<int, int>
@@ -72,11 +66,22 @@ final readonly class PotRowLoader
 
         $connection = $this->db->connection();
 
-        $rows = $connection->table('pot_movements')
+        $query = $connection->table('pot_movements')
             ->join('pots', 'pots.id', '=', 'pot_movements.pot_id')
+            ->leftJoinSub(
+                PotSettlement::lastPerPot($connection, self::toInt($user->id)),
+                'settled',
+                'settled.pot_id',
+                '=',
+                'pot_movements.pot_id',
+            )
             ->where('pot_movements.user_id', $user->id)
             ->whereIn('pot_movements.pot_id', $potIds)
-            ->whereColumn('pot_movements.currency', 'pots.currency')
+            ->whereColumn('pot_movements.currency', 'pots.currency');
+
+        PotSettlement::movedSince($query, 'pot_movements', 'settled');
+
+        $rows = $query
             ->groupBy('pot_movements.pot_id')
             ->get([
                 'pot_movements.pot_id',

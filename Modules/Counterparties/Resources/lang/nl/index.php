@@ -37,7 +37,6 @@ return [
     'label_this' => 'Deze tegenpartij labelen',
 
     'stat_12mo' => '12 mnd',
-    'stat_net_received' => 'Netto ontvangen',
     'stat_avg_mo' => 'Gem. / mnd',
     'sparkline_aria' => 'Activiteitsgrafiek over 12 maanden',
 

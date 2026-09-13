@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN mora da ima :min do :max cifara — samo brojevi.',
     'error_pin_mismatch' => 'PIN-ovi se ne poklapaju. Probaj ponovo.',
     'error_pin_required' => 'Unesi svoj PIN.',
-    'error_pin_incorrect' => 'Neispravan PIN.',
     'error_account_password_required' => 'Unesi lozinku svog naloga.',
     'error_account_password' => 'Neispravna lozinka naloga.',
     'change_pin_success' => 'Tvoj ključ za šifrovanje je ponovo obezbeđen novim PIN-om.',

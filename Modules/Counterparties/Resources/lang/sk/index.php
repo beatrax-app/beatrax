@@ -37,7 +37,6 @@ return [
     'label_this' => 'Označ túto protistranu',
 
     'stat_12mo' => '12 mes.',
-    'stat_net_received' => 'Netto prijaté',
     'stat_avg_mo' => 'Priem. / mes.',
     'sparkline_aria' => 'Graf aktivity za 12 mesiacov',
 

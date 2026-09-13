@@ -94,11 +94,6 @@ final class SettingsPage extends Component
 
     public bool $fxRefreshGaveUp = false;
 
-    // What the rate table's newest write looked like when the refresh started.
-    // A weekend feed carries the previous business day, so the rate DATE does
-    // not move on a successful fetch and cannot be the completion signal.
-    public ?string $fxRefreshBaseline = null;
-
     public int $fxRefreshPolls = 0;
 
     public ?string $fxLastUpdated = null;
@@ -238,12 +233,14 @@ final class SettingsPage extends Component
     // for as long as the page stayed open.
     private const int FX_REFRESH_MAX_POLLS = 15;
 
-    public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser, DatabaseManager $db, FxRefreshStatus $fxStatus): void
+    // Cleared before the dispatch, so the three states the poll below reads apart
+    // are the three this refresh can be in: nothing recorded yet, succeeded,
+    // failed. A record left from an earlier attempt would answer for this one.
+    public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser, FxRefreshStatus $fxStatus): void
     {
         $this->fxRefreshing = true;
         $this->fxRefreshGaveUp = false;
         $this->fxRefreshPolls = 0;
-        $this->fxRefreshBaseline = $this->latestRateWrite($db);
 
         $fxStatus->clear($currentUser->user()->id);
         $dispatch($currentUser->user()->id);
@@ -265,7 +262,11 @@ final class SettingsPage extends Component
             return;
         }
 
-        if ($this->latestRateWrite($db) !== $this->fxRefreshBaseline) {
+        // The job's own word for it. Watching the rate table for a write instead
+        // cost a max() over an unindexed column every two seconds — a full scan
+        // of a table that grows with every rate fetched, up to sixteen of them
+        // inside one thirty-second refresh window.
+        if ($fxStatus->succeeded($currentUser->user()->id)) {
             $this->fxRefreshing = false;
             $this->loadFxLastUpdated($db);
 
@@ -280,23 +281,13 @@ final class SettingsPage extends Component
         }
     }
 
-    // The newest write, not the newest rate date. An upsert always stamps
-    // updated_at, so this moves even when the feed repeats a date.
-    private function latestRateWrite(DatabaseManager $db): ?string
-    {
-        $value = $db->connection()->table('exchange_rates')->max('updated_at');
-
-        return is_string($value) ? $value : null;
-    }
-
+    // max(), not an ordered first(): both answer with the newest date, and only
+    // this one reaches it through the index rather than sorting the table to
+    // find its last row.
     private function loadFxLastUpdated(DatabaseManager $db): void
     {
-        $latestRate = $db->connection()
-            ->table('exchange_rates')
-            ->orderByDesc('rate_date')
-            ->first(['rate_date']);
+        $rawDate = $db->connection()->table('exchange_rates')->max('rate_date');
 
-        $rawDate = $latestRate->rate_date ?? null;
         $this->fxLastUpdated = is_string($rawDate) ? substr($rawDate, 0, 10) : null;
     }
 

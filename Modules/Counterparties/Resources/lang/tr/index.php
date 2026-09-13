@@ -37,7 +37,6 @@ return [
     'label_this' => 'Bu karşı tarafı etiketle',
 
     'stat_12mo' => '12 ay',
-    'stat_net_received' => 'Net alınan',
     'stat_avg_mo' => 'Ort. / ay',
     'sparkline_aria' => '12 aylık etkinlik grafiği',
 

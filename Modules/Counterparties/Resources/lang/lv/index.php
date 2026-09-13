@@ -37,7 +37,6 @@ return [
     'label_this' => 'Marķēt šo darījuma partneri',
 
     'stat_12mo' => '12 mēn.',
-    'stat_net_received' => 'Neto saņemts',
     'stat_avg_mo' => 'Vidēji / mēn.',
     'sparkline_aria' => '12 mēnešu aktivitātes grafiks',
 

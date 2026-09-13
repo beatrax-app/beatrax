@@ -37,7 +37,6 @@ return [
     'label_this' => 'Merkitse tämä vastapuoli',
 
     'stat_12mo' => '12 kk',
-    'stat_net_received' => 'Netto saatu',
     'stat_avg_mo' => 'Ka. / kk',
     'sparkline_aria' => '12 kuukauden toiminnan pikakaavio',
 

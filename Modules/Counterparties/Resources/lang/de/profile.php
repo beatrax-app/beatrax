@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Anzeigenamen bearbeiten',
 
-    'hero_net_received' => 'Netto erhalten',
     'hero_12mo_total' => 'Summe 12 Monate',
     'hero_transactions' => 'Transaktionen',
     'hero_first_seen' => 'Zuerst gesehen',

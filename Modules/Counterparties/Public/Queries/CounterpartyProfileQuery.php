@@ -23,6 +23,7 @@ use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
 use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Dto\DecryptedRow;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -242,12 +243,26 @@ final readonly class CounterpartyProfileQuery
         $userId = (int) $cp->user_id;
 
         $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $cp->user_id)
-            ->where('counterparty_id', $cp->id)
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $cp->user_id)
+            ->where('transactions.counterparty_id', $cp->id)
+            // $limit makes this order decide WHICH rows the list holds, not
+            // only their sequence, and `id` is counted per device — so the
+            // profile printed one recent-activity list here and another there.
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS)
             ->limit($limit)
-            ->get(['id', 'posted_at', 'description', 'settled_amount_minor', 'settled_currency']);
+            ->get([
+                'transactions.id',
+                'transactions.posted_at',
+                'transactions.description',
+                'transactions.settled_amount_minor',
+                'transactions.settled_currency',
+            ]);
 
         $decrypted = $rows->map(function (stdClass $row) use ($userId): stdClass {
             if (is_string($row->description)) {

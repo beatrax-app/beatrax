@@ -103,7 +103,10 @@ column update:
   inside the same transaction as both inserts.
 - **archive** — settles whatever the pot still holds with one final
   `released_on_archive` movement for the negative of its balance, then flips
-  `status` to `archived`, both in the same transaction. The kind carries the
+  `status` to `archived`, both in the same transaction. The balance it reads and
+  the balance the card prints are both bounded by the last settlement — see
+  [a balance is what moved since the last
+  settlement](#a-balance-is-what-moved-since-the-last-settlement). The kind carries the
   meaning rather than a memo, because `memo` is a synced free-text column and
   a sentence written there would reach a peer frozen in whichever language
   wrote it. An archived pot always reads back as balance 0 — including one a
@@ -145,6 +148,53 @@ commits, never from inside the closure — `EnvelopeActivationService` relies on
 exactly that when it archives the category-linked pots one at a time instead of
 wrapping the walk in a spanning transaction, and a listener that reads the row
 back from inside an open transaction sees a state no other connection has.
+
+## A balance is what moved since the last settlement
+
+A pot has no stored balance, so the balance is a read over `pot_movements`. That
+read used to be every row the pot ever had, which made the figure depend on how
+many devices had written the *settlement* — the `released_on_archive` row
+archiving leaves behind.
+
+Nothing in the table stops there being two. `pot_movements` is registered
+`_create_required` with no last-write-wins field, its ids are minted from a
+random draw ([ADR-0026](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0026-an-id-two-devices-cannot-both-compute-is-minted.md)),
+and there is no unique index — which is right, because a movement is a reader
+action and two deposits of one amount on one day are two deposits. The envelope
+cutover is the one archiving no reader asks for: every device runs it for itself
+at its first launch after the update, over the same pots, so two devices that
+were apart both archived the same pot and both wrote a settlement. Summed, a pot
+holding EUR 100,00 came to rest reading **EUR -100,00**, against
+[D3-R10](https://github.com/beatrax-app/spec/blob/main/10-functional/features/d-money/d3-pots.md)'s
+"an archived pot MUST read as zero" — and restoring it brought it back at that
+same figure, against D3-R11's "the pot MUST return empty", where an active pot
+claiming a negative allocation reads back as unallocated money the account does
+not hold.
+
+So the read is bounded by the settlement instead. `PotSettlement::lastPerPot()`
+finds each pot's most recent `released_on_archive` stamp and `movedSince()` keeps
+only the movements after it: a settlement settles everything up to itself, so
+what the pot holds is what has moved since. A pot nobody ever archived has no
+stamp and keeps every movement it ever had.
+
+Both readers of that sum take the same bound — `PotRowLoader::balancesForPots()`,
+which the cards and `PotWriter`'s own guard read through, and
+`PotAllocationLedger::allocated()`, which builds the reconciliation header. A
+bound on one of them alone would have put a pot reading nought inside an
+allocated figure that still counted it.
+
+The cutoff is the **stamp** and nothing beside it. A minted id is a random draw,
+so ordering by it is not ordering by time, and two devices' settlements carry no
+order between them at all. The cost is that a movement sharing the settlement's
+second reads as settled — which is what makes a second device's settlement drop
+out, and what a peer's deposit into an already-archived pot would pay if it
+landed in that same second. A deposit stamped later than the settlement is
+counted, and named on the card, because it is money that really did arrive.
+
+**No stored row changes.** A pot that two devices settled still holds both rows,
+both still show in its history as "Released on archive", and nothing repairs
+them: they are the reader's ledger, and a sweep over it is the reader's decision
+rather than this module's.
 
 ## Linking: goal-only
 

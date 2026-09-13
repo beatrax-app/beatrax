@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\RepoTree;
+
 /**
  * @link ../../.docs/architecture/reads-bounded-by-the-user.md#the-other-axis-a-read-bounded-by-how-much-the-sender-sent
  */
@@ -21,13 +23,16 @@ function boundedMessageReadSources(): array
 {
     $repoRoot = dirname((string) realpath(base_path('Modules')));
 
-    // The live provider clients and the jobs that consume what they store.
-    // The Fake* clients alongside them replay .eml fixtures out of this repo,
-    // which is the one case where the length is not somebody else's to choose.
+    // The live provider clients, the jobs that consume what they store, and
+    // the import pipeline's own stages, which read a dropped-in .eml or .mbox
+    // the reader picked off their disk. The Fake* clients alongside the live
+    // ones replay .eml fixtures out of this repo, which is the one case where
+    // the length is not somebody else's to choose.
     $patterns = [
         'Modules/EmailScan/Internal/Clients/G*ApiClient.php',
         'Modules/EmailScan/Internal/Jobs/*.php',
         'Modules/Receipts/Internal/Jobs/*.php',
+        'Modules/Import/Internal/Pipeline/Stages/*.php',
     ];
 
     $sources = [];
@@ -38,6 +43,34 @@ function boundedMessageReadSources(): array
     }
 
     return $sources;
+}
+
+/** @return list<string> every production file that hands a whole message to RecordReceipt */
+function boundedMessageRecorderCallers(): array
+{
+    $repoRoot = dirname((string) realpath(base_path('Modules')));
+    $found = [];
+
+    foreach (RepoTree::files(RepoTree::PRODUCTION_PHP) as $path) {
+        $relative = str_replace($repoRoot.'/', '', $path);
+        $contents = (string) file_get_contents($path);
+
+        // The action's own file declares the name; the provider that registers
+        // it as a singleton names the class and never the bytes.
+        if (! str_contains($contents, 'use Modules\\Receipts\\Public\\Actions\\RecordReceipt;')) {
+            continue;
+        }
+
+        if (! str_contains($contents, 'RecordReceipt $')) {
+            continue;
+        }
+
+        $found[] = $relative;
+    }
+
+    sort($found);
+
+    return $found;
 }
 
 /** @return list<string> every live provider client in the mailbox directory */
@@ -112,8 +145,33 @@ it('scans the client and job files the ceiling is meant to cover', function (): 
         ->toContain('Modules/EmailScan/Internal/Clients/GmailApiClient.php')
         ->toContain('Modules/Receipts/Internal/Jobs/ScanInboxDropFolderJob.php')
         ->toContain('Modules/Receipts/Internal/Jobs/ProcessFetchedInboxMessagesJob.php')
+        ->toContain('Modules/Import/Internal/Pipeline/Stages/ParseStage.php')
         ->and($sources['Modules/Receipts/Internal/Jobs/ScanInboxDropFolderJob.php'])
+        ->toContain('BoundedRead::file(')
+        ->and($sources['Modules/Import/Internal/Pipeline/Stages/ParseStage.php'])
         ->toContain('BoundedRead::file(');
+});
+
+// The three globs above are hand-written narrowings, and a hand-written
+// narrowing cannot see a fourth door. RecordReceipt takes one whole RFC 822
+// message as a PHP string, so every file that holds one to call it is a place
+// the ceiling has to reach, whichever module it turns up in.
+it('reaches every file that hands a whole message to the receipt recorder', function (): void {
+    $callers = boundedMessageRecorderCallers();
+
+    expect(count($callers))->toBeGreaterThan(
+        2,
+        'Almost no caller of RecordReceipt was found, so the comparison below is about a tree nobody read.',
+    );
+
+    $missed = array_values(array_diff($callers, array_keys(boundedMessageReadSources())));
+
+    expect($missed)->toBe([], implode("\n  ", [
+        'These hold a whole mail message as a PHP string to hand it to RecordReceipt, and the globs above do',
+        'not reach them — so the ceiling rule is silent about a door somebody else chooses the length of.',
+        'Widen the pattern in boundedMessageReadSources() to name them:',
+        ...$missed,
+    ]));
 });
 
 // `G*ApiClient.php` is a hand-written narrowing of the clients directory, and a

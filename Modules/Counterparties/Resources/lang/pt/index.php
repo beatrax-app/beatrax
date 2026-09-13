@@ -37,7 +37,6 @@ return [
     'label_this' => 'Identificar esta contraparte',
 
     'stat_12mo' => '12 meses',
-    'stat_net_received' => 'Líquido recebido',
     'stat_avg_mo' => 'Média / mês',
     'sparkline_aria' => 'Gráfico de atividade de 12 meses',
 

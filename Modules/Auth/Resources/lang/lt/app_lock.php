@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN kodą turi sudaryti nuo :min iki :max skaitmenų — tik skaitmenys.',
     'error_pin_mismatch' => 'PIN kodai nesutampa. Bandyk dar kartą.',
     'error_pin_required' => 'Įvesk savo PIN kodą.',
-    'error_pin_incorrect' => 'Neteisingas PIN kodas.',
     'error_account_password_required' => 'Įvesk savo paskyros slaptažodį.',
     'error_account_password' => 'Neteisingas paskyros slaptažodis.',
     'change_pin_success' => 'Tavo šifravimo raktas iš naujo apsaugotas nauju PIN kodu.',

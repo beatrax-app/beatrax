@@ -180,7 +180,7 @@ final class AppLockSettingsSection extends Component
         $this->accountPassword = '';
 
         if (! $relinked) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
+            $this->flashMessage = $rejections->refusedPin($user->id);
 
             return;
         }
@@ -286,7 +286,7 @@ final class AppLockSettingsSection extends Component
         $result = $provisioner->disable($user->id, $currentPin);
 
         if ($result === AppLockDisableResult::PinIncorrect) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
+            $this->flashMessage = $rejections->refusedPin($user->id);
 
             return;
         }
@@ -336,7 +336,7 @@ final class AppLockSettingsSection extends Component
         $result = $provisioner->changePin($user->id, $currentPin, $newPin);
 
         if ($result === false) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
+            $this->flashMessage = $rejections->refusedPin($user->id);
 
             return;
         }

@@ -37,7 +37,6 @@ return [
     'label_this' => 'Etiquetar esta contraparte',
 
     'stat_12mo' => '12 meses',
-    'stat_net_received' => 'Neto recibido',
     'stat_avg_mo' => 'Med. / mes',
     'sparkline_aria' => 'Gráfico de actividad de 12 meses',
 
