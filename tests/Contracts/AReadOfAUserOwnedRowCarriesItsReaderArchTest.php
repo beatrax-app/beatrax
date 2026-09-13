@@ -61,8 +61,8 @@ const OWNED_ROW_READ_TRIAGED = [
     'Modules/Ledger/Public/Services/SplitSumHealthCheck.php::transaction_splits' => [1,
         'the denominator of the same device-wide report — how many transactions on this device carry legs at all.'],
 
-    'Modules/Ledger/Public/Services/SplitSumHealthCheck.php::transactions' => [1,
-        'the numerator beside it: the transactions whose legs no longer sum to them, reported as a device health line rather than shown to anyone.'],
+    'Modules/Ledger/Public/Services/SplitSumHealthCheck.php::transactions' => [2,
+        'the numerator beside it, and the capped id list named under it. Two statements because they are two questions: taking the numerator from the capped list reported the cap back as the size of the problem. Both are the same device health line rather than anything shown to a reader.'],
 
     'Modules/Ledger/Public/Support/SplitLegs.php::transaction_splits' => [1,
         'excludeParents() itself, a NOT EXISTS correlated to the caller\'s transactions alias. It narrows, never widens, and exposes no leg column, which is what makes it safe whatever bounds the caller.'],
