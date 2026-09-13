@@ -132,6 +132,27 @@ it('accepts a key that was stripped rather than merely mentioned', function (): 
     expect(bundleRefusals($path))->toBe([]);
 });
 
+it('accepts source that reasons about a key without carrying one', function (): void {
+    // Both of these shipped inside a real APK and were refused: the detector's
+    // own marker constant, and vendor code testing for the same header. A PEM
+    // block opens AND closes; source that talks about keys carries one half.
+    $path = bundleArchive([
+        'assets/app/Boot/ShippedBundleContents.php' => "<?php\nconst MARKER = 'PRIVATE KEY-----';\n",
+        'assets/app/vendor/Concerns/ChecksLatestBuildNumber.php' => "<?php\nif (! str_contains(\$k, '-----BEGIN PRIVATE KEY-----')) {\n    return;\n}\n",
+    ]);
+
+    expect(bundleRefusals($path))->toBe([]);
+});
+
+it('refuses a whole key pasted into source, which carries both halves', function (): void {
+    // The other side of the rule above: relaxing to a whole block must not let
+    // a key through because its file happens to end in .php.
+    $path = bundleArchive(['assets/app/Support/Signing.php' => "<?php\n\$k = <<<'PEM'\n".bundlePrivateKeyPem()."PEM;\n"]);
+
+    expect(bundleRefusals($path))->toHaveCount(1)
+        ->and(bundleRefusals($path)[0])->toContain('key material');
+});
+
 it('reads the archive the artifact carries, not only the artifact', function (): void {
     // The PHP application travels inside the build as its own zip. A scan that
     // stopped at the outer entries would read the wrapper and call it clean.
