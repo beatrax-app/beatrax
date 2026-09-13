@@ -18,9 +18,10 @@ final readonly class FingerprintHealthCheck
     use CoercesScalars;
 
     // Reading every column of a five-year ledger at once cost 52 MB against a
-    // 128 MB phone ceiling, which is why the re-derive sweep streams. The same
-    // eight columns are all this needs, and it stops at the first fifty.
-    private const int REPORT_AT_MOST = 50;
+    // 128 MB phone ceiling, which is why the re-derive sweep streams, and the
+    // same eight columns are all this needs. The ids are capped; the walk is
+    // not, because stopping it froze the denominator mid-scan.
+    private const int NAME_AT_MOST = 50;
 
     /** @var list<string> */
     private const array READ = [
@@ -62,49 +63,55 @@ final readonly class FingerprintHealthCheck
             return ['severity' => 'warning', 'message' => 'could not be read — run php artisan migrate'];
         }
 
-        [$checked, $ids] = $drifted;
+        [$checked, $drifting, $ids] = $drifted;
 
-        if ($ids === []) {
+        if ($drifting === 0) {
             return ['severity' => 'ok', 'message' => sprintf('%s at the current version — each describes its own row', $checked)];
         }
 
         // Not a blocker: the rows are all there and the ledger adds up. What a
         // drifted digest costs is dedup, so the next import of the same
         // statement books a second copy of these.
-        $shown = implode(', ', array_slice($ids, 0, 10));
-        $more = count($ids) > 10 ? ' and more' : '';
+        $rest = $drifting - count($ids);
+        $shown = implode(', ', $ids).($rest > 0 ? sprintf(' (+%d more)', $rest) : '');
 
         return [
             'severity' => 'warning',
-            'message' => count($ids).sprintf(' of %s no longer describe their row — re-import would duplicate them (ids %s%s); run beatrax:rederive-fingerprints', $checked, $shown, $more),
+            'message' => $drifting.sprintf(' of %s no longer describe their row — re-import would duplicate them (ids %s); run beatrax:rederive-fingerprints', $checked, $shown),
         ];
     }
 
+    // Both numbers describe the same population because the same pass produces
+    // them: the sentence says how many of how many, and a walk that stopped at
+    // the id cap left the second number counting only as far as it got.
     /**
-     * @return array{0: int, 1: list<int>}
+     * @return array{0: int, 1: int, 2: list<int>}
      */
     private function drifted(): array
     {
         $checked = 0;
+        $drifting = 0;
         $ids = [];
 
         $this->db->connection()->table('transactions')
             ->where('fingerprint_version', $this->composer->version())
             ->orderBy('id')
             ->select(self::READ)
-            ->each(function (object $row) use (&$checked, &$ids): bool {
+            ->each(function (object $row) use (&$checked, &$drifting, &$ids): void {
                 $checked++;
 
                 if ($this->describesItsRow($row)) {
-                    return true;
+                    return;
                 }
 
-                $ids[] = self::toInt($row->id ?? null);
+                $drifting++;
 
-                return count($ids) < self::REPORT_AT_MOST;
+                if (count($ids) < self::NAME_AT_MOST) {
+                    $ids[] = self::toInt($row->id ?? null);
+                }
             });
 
-        return [$checked, $ids];
+        return [$checked, $drifting, $ids];
     }
 
     private function describesItsRow(object $row): bool

@@ -54,7 +54,6 @@ function doctorDigestTransaction(int $userId, int $version): int
 
 function doctorDigestRealign(int $txId): void
 {
-    $health = app(FingerprintHealthCheck::class);
     $row = DB::table('transactions')->where('id', $txId)->first();
 
     DB::table('transactions')->where('id', $txId)->update([
@@ -71,8 +70,6 @@ function doctorDigestRealign(int $txId): void
             ),
         ),
     ]);
-
-    expect($health->severity())->toBe('ok');
 }
 
 it('says so when a digest no longer describes its row', function (): void {
@@ -108,6 +105,28 @@ it('does not count a row an older version still stamps', function (): void {
 
     expect($health->severity())->toBe('ok')
         ->and($health->message())->toContain('0 at the current version');
+});
+
+// Fifty-one against a fifty-id cap, with two aligned rows behind them: the
+// walk has to reach every row for the second number to mean the population it
+// names, and stopping it at the cap froze both numbers where it stopped.
+it('counts every drifted digest, walking on past the ids it can name', function (): void {
+    $user = doctorDigestUser();
+    $version = app(FingerprintComposer::class)->version();
+
+    for ($i = 0; $i < 51; $i++) {
+        doctorDigestTransaction((int) $user->id, $version);
+    }
+
+    for ($i = 0; $i < 2; $i++) {
+        doctorDigestRealign(doctorDigestTransaction((int) $user->id, $version));
+    }
+
+    $health = app(FingerprintHealthCheck::class);
+
+    expect($health->severity())->toBe('warning')
+        ->and($health->message())->toContain('51 of 53 no longer describe their row')
+        ->and($health->message())->toContain('(+1 more)');
 });
 
 it('is ok on a ledger with nothing in it', function (): void {
