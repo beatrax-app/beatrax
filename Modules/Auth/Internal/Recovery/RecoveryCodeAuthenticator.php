@@ -38,21 +38,22 @@ final readonly class RecoveryCodeAuthenticator
         /** @var list<array{userId: int, kind: string, severity: string, message: string, metadata: array<string, mixed>, once: bool}> $alerts */
         $alerts = [];
 
+        $connection = $this->db->connection();
+        $username = Username::normalize($usernameInput);
+
+        /** @var User|null $user */
+        $user = User::query()->where('username', $username)->first();
+        $candidate = $this->hyphenate($this->normalizer->normalize($codeInput));
+
+        // Derived BEFORE the transaction opens, as PinVerificationService
+        // derives its Argon2id. Ten bcrypt-12 hashes is 3.5 seconds, IMMEDIATE
+        // takes the write lock at BEGIN, and the shells serve one request at a
+        // time -- so holding it freezes the app for a caller with no credential.
+        $matchedId = $this->matchingCodeId($candidate, $this->unusedCodes($connection, $user));
+
         /** @var User|null $result */
-        $result = $this->db->connection()->transaction(function () use ($usernameInput, $codeInput, &$alerts): ?User {
-            $connection = $this->db->connection();
-            $username = Username::normalize($usernameInput);
-
-            /** @var User|null $user */
-            $user = User::query()->where('username', $username)->first();
-            $candidate = $this->hyphenate($this->normalizer->normalize($codeInput));
-
-            $matchedId = $this->matchingCodeId($candidate, $this->unusedCodes($connection, $user));
-
-            if ($user instanceof User && $matchedId !== null) {
-                $connection->table('user_recovery_codes')
-                    ->where('id', $matchedId)
-                    ->update(['used_at' => $this->clock->now()]);
+        $result = $connection->transaction(function () use ($connection, $user, $matchedId, &$alerts): ?User {
+            if ($user instanceof User && $matchedId !== null && $this->spend($connection, $matchedId)) {
                 $alerts[] = self::successAlert($user);
 
                 return $user;
@@ -90,9 +91,20 @@ final readonly class RecoveryCodeAuthenticator
         return $connection->table('user_recovery_codes')
             ->where('user_id', $user->id)
             ->whereNull('used_at')
-            ->lockForUpdate()
             ->get(['id', 'code_hash'])
             ->all();
+    }
+
+    // The compare-and-set the read above cannot make on its own: the rows were
+    // read before the transaction opened, so a second attempt may have spent
+    // this one in between. An UPDATE that changes no row is that answer, and
+    // it is one statement, so no reader can land between its test and its set.
+    private function spend(Connection $connection, mixed $matchedId): bool
+    {
+        return $connection->table('user_recovery_codes')
+            ->where('id', $matchedId)
+            ->whereNull('used_at')
+            ->update(['used_at' => $this->clock->now()]) === 1;
     }
 
     // A fixed comparison count whatever the account state, so neither timing
