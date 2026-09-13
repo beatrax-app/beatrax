@@ -8,6 +8,7 @@ use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\OpLog\OpLogBackfiller;
+use Modules\Sync\Public\Services\JsonRowReferences;
 
 uses(RefreshDatabase::class);
 
@@ -18,7 +19,7 @@ uses(RefreshDatabase::class);
 
 // Every text column on a covered table is a candidate, because a capture puts
 // every column of a row on the wire. Each is either declared in
-// CoveredTableOrder::JSON_PARENTS or written down here with what it holds.
+// JsonRowReferences or written down here with what it holds instead.
 const TEXT_COLUMNS_THAT_NAME_NO_COVERED_ROW = [
     'anomaly_alerts.reasons' => 'the words the evaluator flagged the row for -- "large", "duplicate", "first_time" -- and not one of them is an id',
     'chain_links.evidence' => 'what the resolver measured: matched amounts, day offsets, tolerances, and original_reference_id, which is the SELLER\'s order number and names nothing in this database',
@@ -128,7 +129,7 @@ it('classifies every column a peer could send a JSON value in', function (): voi
         'number on the peer:',
         ...$unclassified,
         '',
-        'Declare the paths in CoveredTableOrder::JSON_PARENTS, or -- if the value',
+        'Declare the paths in JsonRowReferences, or -- if the value',
         'names no row in this database -- add the column to',
         'TEXT_COLUMNS_THAT_NAME_NO_COVERED_ROW here with what it holds instead.',
     ]));
@@ -145,10 +146,38 @@ it('keeps no entry for a column that is declared now or gone', function (): void
 
     expect($stale)->toBe([], implode("\n", [
         'These are written down as carrying no covered row id, but the column is',
-        'either declared in JSON_PARENTS now or no longer exists, so the entry',
+        'either declared in JsonRowReferences now or no longer exists, so the entry',
         'excuses nothing. Remove it:',
         ...$stale,
     ]));
+});
+
+// jsonParentColumns() drops a path whose target is not covered, so a typo there
+// reads as a column with one fewer path rather than as a mistake. This is the
+// arm that says so. The table a site SITS on is checked where the capture is,
+// by ACaptureNamesATableTheRegistryCarriesArchTest.
+it('points every declared path at a table the merge registry carries', function (): void {
+    $covered = array_keys(app(MergeRulesRegistry::class)->rules());
+    $declared = jsonParentDeclaredColumns(app(CoveredTableOrder::class), app(MergeRulesRegistry::class));
+    $references = new JsonRowReferences;
+    $uncovered = [];
+
+    foreach ($covered as $table) {
+        foreach ($references->columnsFor($table) as $column => $paths) {
+            foreach ($paths as $target) {
+                if (! in_array($target, $covered, true)) {
+                    $uncovered[] = $table.'.'.$column.' -> '.$target;
+                }
+            }
+        }
+    }
+
+    expect($declared)->not->toBe([], 'the declaration was not read, so agreeing with the registry means nothing')
+        ->and($uncovered)->toBe([], implode("\n", [
+            'These paths name a table the merge registry does not carry, so a repoint that',
+            'rewrites one dispatches a capture nothing will ever announce:',
+            ...$uncovered,
+        ]));
 });
 
 it('points every declared path at a table a re-home can record an alias for', function (): void {
