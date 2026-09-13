@@ -6,6 +6,7 @@
 @php
     /**
      * @var string $currentPath
+     * @var \Modules\Core\Public\Navigation\Destination|null $activeDestination
      * @var string $username
      * @var string $userInitial
      * @var bool $isDeveloper
@@ -16,8 +17,10 @@
      *
      * Active-state helper — mirrors TopNav's `$isActive` lambda
      * (pre-rewrite analog) so route-driven highlighting reads from
-     * the controller-provided `$currentPath` rather than a global
-     * helper.
+     * the controller-provided roster rather than a global helper.
+     * It takes the destination, not its path: UnusualCharges and
+     * DriftAlerts are one route told apart by a query parameter, and
+     * comparing paths lit the Drift row on the anomaly screen.
      *
      * Every row's href and active path come from its Destination and
      * its label from AppNavigation, the roster the command palette is
@@ -25,7 +28,7 @@
      * row added here with a bare route() reaches the rail and nothing
      * else, and an arch test fails for saying so.
      */
-    $isActive = static fn (string $path): string => $currentPath === $path ? 'active' : '';
+    $isActive = static fn (Destination $destination): string => $destination === $activeDestination ? 'active' : '';
     $unknownCounterpartyCount = $unknownCount;
 @endphp
 
@@ -88,11 +91,11 @@
         $navCount = static fn (string $key): string => Fmt::compactCount((int) ($navCounts[$key] ?? 0));
     @endphp
 
-    <a href="{{ Destination::Dashboard->url() }}" class="side-item {{ $isActive(Destination::Dashboard->path()) }}">
+    <a href="{{ Destination::Dashboard->url() }}" class="side-item {{ $isActive(Destination::Dashboard) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Dashboard) }}</span>
         {{ AppNavigation::label(Destination::Dashboard) }}
     </a>
-    <a href="{{ Destination::Transactions->url() }}" class="side-item {{ $isActive(Destination::Transactions->path()) }}">
+    <a href="{{ Destination::Transactions->url() }}" class="side-item {{ $isActive(Destination::Transactions) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Transactions) }}</span>
         {{ AppNavigation::label(Destination::Transactions) }}
         @if (($navCounts['transactions'] ?? 0) > 0)
@@ -107,14 +110,14 @@
          through a queue, which is the same reason Drift Alerts and Unusual
          charges carry the rose variant. Count merged into navCounts by the
          Forecasting nav-badge composer; hidden at zero. --}}
-    <a href="{{ Destination::Forecasts->url() }}" class="side-item {{ $isActive(Destination::Forecasts->path()) }}">
+    <a href="{{ Destination::Forecasts->url() }}" class="side-item {{ $isActive(Destination::Forecasts) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Forecasts) }}</span>
         {{ AppNavigation::label(Destination::Forecasts) }}
         @if (($navCounts['forecast'] ?? 0) > 0)
             <span role="img" class="side-badge alert" aria-label="{{ Lang::choice('core::sidebar.badge.forecast', $navCounts['forecast'], ['count' => $navCounts['forecast'], 'days' => ForecastHighlightsQuery::TILE_HORIZON]) }}">{{ $navCount('forecast') }}</span>
         @endif
     </a>
-    <a href="{{ Destination::Calendar->url() }}" class="side-item {{ $isActive(Destination::Calendar->path()) }}">
+    <a href="{{ Destination::Calendar->url() }}" class="side-item {{ $isActive(Destination::Calendar) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Calendar) }}</span>
         {{ AppNavigation::label(Destination::Calendar) }}
     </a>
@@ -124,7 +127,7 @@
          .side-badge (NOT .side-badge.alert) — an unread count is an
          actionable-count-to-clear, not a problem state, per
          component-library.md's badge-intensity taxonomy. --}}
-    <a href="{{ Destination::Notifications->url() }}" class="side-item {{ $isActive(Destination::Notifications->path()) }}">
+    <a href="{{ Destination::Notifications->url() }}" class="side-item {{ $isActive(Destination::Notifications) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Notifications) }}</span>
         {{ AppNavigation::label(Destination::Notifications) }}
         @if (($navCounts['notifications'] ?? 0) > 0)
@@ -140,14 +143,14 @@
          Named for the obligations rather than for their frequency, so the
          heading does not simply repeat the name of the first item under it. --}}
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_recurring') }}</div>
-    <a href="{{ Destination::Recurring->url() }}" class="side-item {{ $isActive(Destination::Recurring->path()) }}">
+    <a href="{{ Destination::Recurring->url() }}" class="side-item {{ $isActive(Destination::Recurring) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Recurring) }}</span>
         {{ AppNavigation::label(Destination::Recurring) }}
         @if (($navCounts['recurring'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::choice('core::sidebar.badge.recurring', $navCounts['recurring'], ['count' => $navCounts['recurring']]) }}">{{ $navCount('recurring') }}</span>
         @endif
     </a>
-    <a href="{{ Destination::Subscriptions->url() }}" class="side-item {{ $isActive(Destination::Subscriptions->path()) }}">
+    <a href="{{ Destination::Subscriptions->url() }}" class="side-item {{ $isActive(Destination::Subscriptions) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Subscriptions) }}</span>
         {{ AppNavigation::label(Destination::Subscriptions) }}
         @if (($navCounts['subscriptions'] ?? 0) > 0)
@@ -164,7 +167,7 @@
          Default .side-badge (NOT .muted, NOT .alert) — an awaiting-review
          count is exactly the actionable-count-to-clear the badge-intensity
          taxonomy reserves the inverted fill for. --}}
-    <a href="{{ Destination::Chains->url() }}" class="side-item {{ $isActive(Destination::Chains->path()) }}">
+    <a href="{{ Destination::Chains->url() }}" class="side-item {{ $isActive(Destination::Chains) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Chains) }}</span>
         {{ AppNavigation::label(Destination::Chains) }}
         @if (($navCounts['chains'] ?? 0) > 0)
@@ -175,14 +178,14 @@
          Links to ?type=anomaly; amber .side-badge.alert
          shows the open anomaly count (revival-aware, merged into
          navCounts by the Anomaly nav-badge composer) and hides at zero. --}}
-    <a href="{{ Destination::UnusualCharges->url() }}" class="side-item">
+    <a href="{{ Destination::UnusualCharges->url() }}" class="side-item {{ $isActive(Destination::UnusualCharges) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::UnusualCharges) }}</span>
         {{ AppNavigation::label(Destination::UnusualCharges) }}
         @if (($navCounts['anomaly'] ?? 0) > 0)
             <span role="img" class="side-badge alert" aria-label="{{ Lang::choice('core::sidebar.badge.anomaly', $navCounts['anomaly'], ['count' => $navCounts['anomaly']]) }}">{{ $navCount('anomaly') }}</span>
         @endif
     </a>
-    <a href="{{ Destination::DriftAlerts->url() }}" class="side-item {{ $isActive(Destination::DriftAlerts->path()) }}">
+    <a href="{{ Destination::DriftAlerts->url() }}" class="side-item {{ $isActive(Destination::DriftAlerts) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::DriftAlerts) }}</span>
         {{ AppNavigation::label(Destination::DriftAlerts) }}
         @if (($navCounts['drift'] ?? 0) > 0)
@@ -193,7 +196,7 @@
     {{-- Planning: money you are steering on purpose, as opposed to money
          that is leaving on its own above. --}}
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_planning') }}</div>
-    <a href="{{ Destination::Budgets->url() }}" class="side-item {{ $isActive(Destination::Budgets->path()) }}">
+    <a href="{{ Destination::Budgets->url() }}" class="side-item {{ $isActive(Destination::Budgets) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Budgets) }}</span>
         {{ AppNavigation::label(Destination::Budgets) }}
         @if (($navCounts['budgets'] ?? 0) > 0)
@@ -202,18 +205,18 @@
     </a>
     {{-- Tax tagging + per-year export. The muted side-badge shows the
          lifetime tagged item count when > 0; hidden when zero for calm posture. --}}
-    <a href="{{ Destination::Tax->url() }}" class="side-item {{ $isActive(Destination::Tax->path()) }}">
+    <a href="{{ Destination::Tax->url() }}" class="side-item {{ $isActive(Destination::Tax) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Tax) }}</span>
         {{ AppNavigation::label(Destination::Tax) }}
         @if (($navCounts['tax_tagged'] ?? 0) > 0)
             <span role="img" class="side-badge muted" aria-label="{{ Lang::choice('core::sidebar.badge.tax', $navCounts['tax_tagged'], ['count' => $navCounts['tax_tagged']]) }}">{{ $navCount('tax_tagged') }}</span>
         @endif
     </a>
-    <a href="{{ Destination::Goals->url() }}" class="side-item {{ $isActive(Destination::Goals->path()) }}">
+    <a href="{{ Destination::Goals->url() }}" class="side-item {{ $isActive(Destination::Goals) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Goals) }}</span>
         {{ AppNavigation::label(Destination::Goals) }}
     </a>
-    <a href="{{ Destination::Pots->url() }}" class="side-item {{ $isActive(Destination::Pots->path()) }}">
+    <a href="{{ Destination::Pots->url() }}" class="side-item {{ $isActive(Destination::Pots) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Pots) }}</span>
         {{ AppNavigation::label(Destination::Pots) }}
     </a>
@@ -232,13 +235,13 @@
     </a>
     {{-- Reconcile — the standalone statement-balance confirmation surface;
          no account-detail page exists in the app. --}}
-    <a href="{{ Destination::Reconcile->url() }}" class="side-item {{ $isActive(Destination::Reconcile->path()) }}">
+    <a href="{{ Destination::Reconcile->url() }}" class="side-item {{ $isActive(Destination::Reconcile) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Reconcile) }}</span>
         {{ AppNavigation::label(Destination::Reconcile) }}
     </a>
 
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_ingestion') }}</div>
-    <a href="{{ Destination::Imports->url() }}" class="side-item {{ $isActive(Destination::Imports->path()) }}">
+    <a href="{{ Destination::Imports->url() }}" class="side-item {{ $isActive(Destination::Imports) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Imports) }}</span>
         {{ AppNavigation::label(Destination::Imports) }}
         @if (($navCounts['imports'] ?? 0) > 0)
@@ -258,7 +261,7 @@
          `<a href="#">` and swallowed every tap — highlighting on press and
          going nowhere, which reads as a broken app rather than an absent
          feature. It comes back when there is a page to point at. --}}
-    <a href="{{ Destination::CashBook->url() }}" class="side-item {{ $isActive(Destination::CashBook->path()) }}">
+    <a href="{{ Destination::CashBook->url() }}" class="side-item {{ $isActive(Destination::CashBook) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::CashBook) }}</span>
         {{ AppNavigation::label(Destination::CashBook) }}
     </a>
@@ -266,7 +269,7 @@
          expired and need reconnecting — both are errands with a done state, so
          this takes the default inverted .side-badge rather than the rose alert
          variant. Nothing here is wrong with the user's money. --}}
-    <a href="{{ Destination::Email->url() }}" class="side-item {{ $isActive(Destination::Email->path()) }}">
+    <a href="{{ Destination::Email->url() }}" class="side-item {{ $isActive(Destination::Email) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Email) }}</span>
         {{ AppNavigation::label(Destination::Email) }}
         @if (($navCounts['inboxes'] ?? 0) > 0)
@@ -284,7 +287,7 @@
         with?" surface. Resolves to the named route
         `counterparties.index` shipped with 17-06b.
     --}}
-    <a href="{{ Destination::Counterparties->url() }}" class="side-item {{ $isActive(Destination::Counterparties->path()) }}">
+    <a href="{{ Destination::Counterparties->url() }}" class="side-item {{ $isActive(Destination::Counterparties) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Counterparties) }}</span>
         {{ AppNavigation::label(Destination::Counterparties) }}
         @if (($navCounts['counterparties'] ?? 0) > 0)
@@ -298,7 +301,7 @@
         sidebar stays calm. Count populated from the injected
         CounterpartyTriageQueue read query.
     --}}
-    <a href="{{ Destination::Triage->url() }}" class="side-item {{ $isActive(Destination::Triage->path()) }}">
+    <a href="{{ Destination::Triage->url() }}" class="side-item {{ $isActive(Destination::Triage) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Triage) }}</span>
         {{ AppNavigation::label(Destination::Triage) }}
         @if ($unknownCounterpartyCount > 0)
@@ -307,14 +310,14 @@
                 class="side-badge"
                 style="background: var(--color-amber-bg); color: var(--color-amber); font-weight: 600;"
                 aria-label="{{ Lang::choice('core::sidebar.badge.triage', $unknownCounterpartyCount, ['count' => $unknownCounterpartyCount]) }}"
-            >{{ $unknownCounterpartyCount }}</span>
+            >{{ Fmt::compactCount($unknownCounterpartyCount) }}</span>
         @endif
     </a>
-    <a href="{{ Destination::Categorization->url() }}" class="side-item {{ $isActive(Destination::Categorization->path()) }}">
+    <a href="{{ Destination::Categorization->url() }}" class="side-item {{ $isActive(Destination::Categorization) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Categorization) }}</span>
         {{ AppNavigation::label(Destination::Categorization) }}
     </a>
-    <a href="{{ Destination::Community->url() }}" class="side-item {{ $isActive(Destination::Community->path()) }}">
+    <a href="{{ Destination::Community->url() }}" class="side-item {{ $isActive(Destination::Community) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Community) }}</span>
         {{ AppNavigation::label(Destination::Community) }}
     </a>
@@ -326,7 +329,7 @@
          e.g. Modules/Sync/Resources/views/livewire/pairing-flow-modal.blade.php)
          — deliberately NOT Flux's device-phone-mobile icon, which is
          reserved for device-type indicators (UI-SPEC §3). --}}
-    <a href="{{ Destination::DataDevices->url() }}" class="side-item {{ $isActive(Destination::DataDevices->path()) }}">
+    <a href="{{ Destination::DataDevices->url() }}" class="side-item {{ $isActive(Destination::DataDevices) }}">
         <span class="ic" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -334,11 +337,11 @@
         </span>
         {{ AppNavigation::label(Destination::DataDevices) }}
     </a>
-    <a href="{{ Destination::DataLocations->url() }}" class="side-item {{ $isActive(Destination::DataLocations->path()) }}">
+    <a href="{{ Destination::DataLocations->url() }}" class="side-item {{ $isActive(Destination::DataLocations) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::DataLocations) }}</span>
         {{ AppNavigation::label(Destination::DataLocations) }}
     </a>
-    <a href="{{ Destination::Settings->url() }}" class="side-item {{ $isActive(Destination::Settings->path()) }}">
+    <a href="{{ Destination::Settings->url() }}" class="side-item {{ $isActive(Destination::Settings) }}">
         <span class="ic" aria-hidden="true">{{ AppNavigation::icon(Destination::Settings) }}</span>
         {{ AppNavigation::label(Destination::Settings) }}
     </a>
