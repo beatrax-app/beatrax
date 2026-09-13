@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Contraseña inicial',
     'initial_password_hint' => 'Escribe una contraseña que esa persona pueda leer en voz alta o teclear una vez. La cambiará en el primer inicio de sesión.',
     'confirm_initial_password' => 'Confirmar la contraseña inicial',
+    'owner_password_label' => 'Tu contraseña de la cuenta',
     'submit' => 'Definir contraseña inicial',
 
     'error_mismatch' => 'Las contraseñas no coinciden.',

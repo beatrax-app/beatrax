@@ -100,9 +100,6 @@ final readonly class MerchantDisplayName
     // back to the key rather than writing ciphertext onto the review screen.
     private function fromTransactions(int $userId, string $normalized): ?string
     {
-        // first() takes one row out of the tie a DATE column leaves, and the
-        // string it carries is the name the review screen prints. Ordered on
-        // `id` the two devices named the same series differently.
         $row = $this->db->connection()->table('transactions')
             ->join(
                 'accounts as '.NewestTransactionFirst::ACCOUNT,
@@ -113,6 +110,10 @@ final readonly class MerchantDisplayName
             ->where('transactions.user_id', $userId)
             ->where('transactions.counterparty_normalized', $normalized)
             ->whereNotNull('transactions.counterparty_name')
+            // first() takes one row out of the tie a DATE column leaves, and
+            // the string it carries is the name the review screen prints: one
+            // device could label the series "ALBERT HEIJN 1234" and the other
+            // "Albert Heijn". The fingerprint six tie WITHIN one account.
             ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS)
             ->first(['transactions.counterparty_name']);
 

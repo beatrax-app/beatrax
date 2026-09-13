@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Password iniziale',
     'initial_password_hint' => 'Scegli una password che possa leggere ad alta voce o digitare una volta sola. La sostituirà al primo accesso.',
     'confirm_initial_password' => 'Conferma la password iniziale',
+    'owner_password_label' => 'La password del tuo account',
     'submit' => 'Imposta la password iniziale',
 
     'error_mismatch' => 'Le password non coincidono.',

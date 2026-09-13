@@ -28,7 +28,19 @@ returns silently at the first one that fails:
 2. **There are at least two occurrences.** With one occurrence there is
    nothing to compare against, so a first-ever charge never drifts.
 3. **The comparison is arithmetically meaningful.** `occurrences[0]` is
-   the latest and `occurrences[1]` the prior. A prior of `0` minor units
+   the latest and `occurrences[1]` the prior — and which is which is a
+   fact about the charges, not about the rows. `observed_at` is a
+   `DATE`, so two charges of one day tie, and the tie used to fall to
+   `recurring_series_occurrences.id`, which `OccurrenceWriter` mints
+   with `random_int()`. That made the pair a coin toss, and a
+   differently-weighted coin on each paired device: a €10.99 → €12.99
+   rise read as a €12.99 → €10.99 fall, flipping the sign of
+   `delta_minor` and, against a threshold between the two ratios,
+   deciding whether an alert opened at all. The order now comes from
+   `Recurring`'s
+   [`NewestOccurrenceFirst`](../recurring/series-detection.md#which-occurrence-is-the-newest)
+   clause, which reaches through to the charge's `booked_at`, amount and
+   occurrence ordinal. A prior of `0` minor units
    (a refunded or waived period) would divide by zero, and an
    `irregular` cadence yields a year multiplier of `0`, so both return
    no alert rather than a fabricated one.

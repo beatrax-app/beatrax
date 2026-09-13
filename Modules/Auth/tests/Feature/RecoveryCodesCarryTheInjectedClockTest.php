@@ -64,7 +64,7 @@ it('stamps the codes a partner is handed at their first password change with the
 
     /** @var AddUserAction $addUser */
     $addUser = $this->app->make(AddUserAction::class);
-    $partner = $addUser($owner, 'partner', 'a-long-password-12chars');
+    $partner = $addUser($owner, 'partner', 'a-long-password-12chars', 'a-long-password-12chars');
 
     Livewire::actingAs($partner)->test(ChangePasswordPage::class)
         ->set('currentPassword', 'a-long-password-12chars')

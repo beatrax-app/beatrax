@@ -71,11 +71,12 @@ final readonly class ExpenseSeriesDetector implements SeriesDetector
             ->where('posted_at', '>=', $since)
             // posted_at is a DATE, so two charges of one merchant on one day tie
             // and the cluster's last row — its latest amount — was whichever the
-            // scan returned last. booked_at carries the time of day; the
-            // fingerprint is unique per row and every device computes it alike.
+            // scan returned last. booked_at carries the time of day; the amount
+            // and the ordinal are the content columns the fingerprint folds.
             ->orderBy('posted_at')
             ->orderBy('booked_at')
-            ->orderBy('fingerprint')
+            ->orderBy('amount_minor')
+            ->orderBy('occurrence_ordinal')
             ->get();
 
         $groups = [];

@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Startlösenord',
     'initial_password_hint' => 'Skriv ett lösenord som personen kan läsa upp eller skriva in en gång. Det byts ut vid första inloggningen.',
     'confirm_initial_password' => 'Bekräfta startlösenord',
+    'owner_password_label' => 'Ditt kontolösenord',
     'submit' => 'Ange startlösenord',
 
     'error_mismatch' => 'Lösenorden stämmer inte överens.',

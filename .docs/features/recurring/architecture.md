@@ -223,7 +223,12 @@ stay silent so caller policy stays caller-side).
 Cursor pagination on `id` matches the chains-side review queue.
 `approvedForUser` orders by the magnitude of the monthly figure, taken into
 the reader's base currency, `DESC` then `id DESC`, so the dashboard tile and
-fixed-payments view consume a stable "largest first" projection.
+fixed-payments view consume a stable "largest first" projection. `id` is a
+legitimate tie-break *here* and nowhere the occurrence log is read: a
+`recurring_series` id is derived from the columns that identify the
+cluster, so it is arbitrary but identical on both devices — see
+[which occurrence is the newest](series-detection.md#which-occurrence-is-the-newest)
+for the table of which ids are which.
 
 That figure is **derived in SQL** from `latest_amount_minor` and `cadence`,
 by the same rule `MonthlyEquivalent` applies in PHP for the row itself —
@@ -282,7 +287,10 @@ stays visible.
 **Chain-fallback semantics:** when a series' `latest_funding_chain_link_id`
 is null or points at a `chain_links` row whose `state` is anything other
 than `confirmed`/`candidate`, the query walks back through the series'
-occurrences (ordered by `observed_at` DESC) and adopts the first
+occurrences (ordered newest-charge-first through
+[`NewestOccurrenceFirst`](series-detection.md#which-occurrence-is-the-newest),
+because `observed_at` alone ties within a day and the occurrence id that
+used to break that tie is minted per device) and adopts the first
 occurrence's confirmed/candidate chain. The walk runs as a single batch
 query against the full "needs-fallback" set so the per-row query count
 stays flat. `RecurringSeriesQuery` (above) deliberately skips this walk —

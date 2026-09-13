@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Početna lozinka',
     'initial_password_hint' => 'Unesi lozinku koju možeš pročitati naglas ili otkucati jednom. Zameniće je pri prvoj prijavi.',
     'confirm_initial_password' => 'Potvrdi početnu lozinku',
+    'owner_password_label' => 'Lozinka tvog naloga',
     'submit' => 'Postavi početnu lozinku',
 
     'error_mismatch' => 'Lozinke se ne poklapaju.',

@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Kezdeti jelszó',
     'initial_password_hint' => 'Adj meg olyan jelszót, amelyet fel tud olvasni vagy egyszer be tud gépelni. Az első bejelentkezéskor lecseréli.',
     'confirm_initial_password' => 'Kezdeti jelszó megerősítése',
+    'owner_password_label' => 'A fiókod jelszava',
     'submit' => 'Kezdeti jelszó beállítása',
 
     'error_mismatch' => 'A jelszavak nem egyeznek.',

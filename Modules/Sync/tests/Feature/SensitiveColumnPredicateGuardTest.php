@@ -425,8 +425,13 @@ it('keeps the sealed list and the knowingly-plaintext list disjoint', function (
 // a knowingly-plaintext column left its exemptions silently covering the most
 // dangerous predicates in the codebase. Nothing is skipped now, so promoting
 // the column turns every call that rests on it red, and the answer is the list
-// of them — eleven files were written down, and there are twenty-one call
+// of them — eleven files were written down, and there are twenty-two call
 // sites now that the walk reads the demo seeders it used to skip whole.
+
+// One of those is an orderBy, and it is the entry that would cost most. A
+// sealed `where` matches nothing, which is at least a miss somebody notices;
+// a sealed `orderBy` returns rows in ciphertext order, which is silent
+// nonsense — and AEAD re-seals under a fresh nonce, so not even stable here.
 it('turns every accounts.iban call red the moment that column joins the registry', function (): void {
     $promoted = [...SensitiveFieldRegistry::columns(), 'accounts.iban'];
 
@@ -460,6 +465,7 @@ it('turns every accounts.iban call red the moment that column joins the registry
         'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectCardStep.php::iban::where',
         'Modules/Onboarding/Internal/Http/Livewire/Steps/ConnectCardStep.php::iban::write',
         'Modules/Receipts/Internal/ReceiptLedgerBridge.php::iban::where',
+        'Modules/Recurring/Internal/Queries/SeriesAccountResolver.php::iban::orderBy',
         'Modules/Transfers/Internal/Services/TransferPairer.php::iban::where',
     ]);
 });

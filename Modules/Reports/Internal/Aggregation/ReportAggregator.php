@@ -75,6 +75,7 @@ final readonly class ReportAggregator
             previousTotalMinor: $comparison['previousTotalMinor'],
             previousCurrency: $comparison['previousCurrency'],
             conversion: self::disclosureOver($result->conversion, $excludedCurrencies),
+            totalsByCurrency: $result->totalsByCurrency,
         );
     }
 

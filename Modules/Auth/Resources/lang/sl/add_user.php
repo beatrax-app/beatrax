@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Začetno geslo',
     'initial_password_hint' => 'Vnesi geslo, ki mu ga lahko prebereš na glas ali ga enkrat vtipkaš. Ob prvi prijavi ga bo zamenjal.',
     'confirm_initial_password' => 'Potrdi začetno geslo',
+    'owner_password_label' => 'Geslo tvojega računa',
     'submit' => 'Nastavi začetno geslo',
 
     'error_mismatch' => 'Gesli se ne ujemata.',

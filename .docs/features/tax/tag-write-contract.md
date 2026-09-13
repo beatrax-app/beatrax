@@ -131,6 +131,17 @@ removes them through
 does not reach the operation log is replayed back by the next paired device
 to sync.
 
+That writer refuses a **reconciled** row, for the reason every tax write
+does: a reconcile freezes exactly the classification a tag is. So the list
+the command prints and the removals it lands are two different numbers, and
+it now says both — `UntagTransaction::execute()` answers whether a tag is
+gone once it returns, and the command counts that rather than the size of
+the list it was handed. It printed `Removed 2 tag(s).` over a tag still
+sitting in the table, which is the shape the batch-tag banner was fixed
+for: report what was written, never what was offered. The refused rows get
+their own line naming the cause and the way out, because "removed 1 of 2"
+with no reason is a number nobody can act on.
+
 It is a command rather than a migration for the same reason: a migration
 runs unattended on every device, and this one removes data a reader entered.
 

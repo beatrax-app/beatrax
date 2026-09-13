@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Palavra-passe inicial',
     'initial_password_hint' => 'Escreve uma palavra-passe que a pessoa possa ler em voz alta ou escrever uma vez. Vai substituí-la no primeiro início de sessão.',
     'confirm_initial_password' => 'Confirmar palavra-passe inicial',
+    'owner_password_label' => 'A palavra-passe da tua conta',
     'submit' => 'Definir palavra-passe inicial',
 
     'error_mismatch' => 'As palavras-passe não coincidem.',

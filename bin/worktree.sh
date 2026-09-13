@@ -108,7 +108,8 @@ copy_tree() {
 # not only on creation: a worktree bootstrapped before this existed still holds
 # the links, and re-running is how it is repaired.
 unshare_composer_metadata() {
-    local shared=$target/vendor/composer
+    local root=${1:-vendor}
+    local shared=$target/$root/composer
 
     if [[ ! -d $shared ]]; then
         return 0
@@ -117,7 +118,7 @@ unshare_composer_metadata() {
     # Link count is the question, not whether this run made them: any file here
     # with more than one name is one a sibling's composer can rewrite.
     if [[ -z $(find "$shared" -type f -links +1 -print -quit) ]]; then
-        echo "    vendor/composer already this worktree's own"
+        echo "    $root/composer already this worktree's own"
         return 0
     fi
 
@@ -125,7 +126,7 @@ unshare_composer_metadata() {
     cp -R "$shared" "$shared.unshared"
     rm -rf "$shared"
     mv "$shared.unshared" "$shared"
-    echo "    vendor/composer unhardlinked"
+    echo "    $root/composer unhardlinked"
 }
 
 # The classmap comes across with vendor/ and describes the checkout it was
@@ -143,7 +144,17 @@ redump_autoload() {
 
 echo "==> bootstrapping"
 link_tree vendor
-unshare_composer_metadata
+unshare_composer_metadata vendor
+
+# The second Composer root. DocsNameSymbolsThatExistArchTest reads a classmap
+# from each and SKIPS when either is unreadable, so without this the rule was
+# inert in all 25 worktrees and ran only in CI.
+if [[ -d $main/mobile-app/vendor ]]; then
+    link_tree mobile-app/vendor
+    unshare_composer_metadata mobile-app/vendor
+else
+    echo "    mobile-app/vendor absent from the main checkout; the docs-symbol rule will skip"
+fi
 redump_autoload
 copy_tree public/build
 
@@ -156,7 +167,8 @@ fi
 
 # A symlink here is the failure this script exists to prevent, so it is checked
 # rather than trusted.
-for what in vendor public/build; do
+for what in vendor public/build mobile-app/vendor; do
+    [[ -e $target/$what ]] || continue
     if [[ -L $target/$what ]]; then
         echo "!!  $target/$what is a SYMLINK. Pest will resolve the project root to" >&2
         echo "!!  the main checkout and every test will fail with \$this->app null." >&2
@@ -166,7 +178,8 @@ done
 
 # Checked rather than trusted for the same reason: a shared inode is silent here
 # and loud in a sibling worktree nobody is looking at.
-for shared in vendor/composer public/build; do
+for shared in vendor/composer public/build mobile-app/vendor/composer; do
+    [[ -d $target/$shared ]] || continue
     if [[ -n $(find "$target/$shared" -type f -links +1 -print -quit) ]]; then
         echo "!!  $target/$shared still shares files with another checkout." >&2
         echo "!!  Writing there — a dump-autoload, a touch — would rewrite theirs too." >&2
