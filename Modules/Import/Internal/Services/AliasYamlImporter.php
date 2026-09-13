@@ -55,8 +55,11 @@ final readonly class AliasYamlImporter
         try {
             $document = Yaml::parse($yamlContent, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
         } catch (ParseException $e) {
+            // The line, never the message: Symfony quotes the offending source
+            // line back — `Indentation problem at line 4 (near " bad-indent:
+            // NL91ABNA0417164300")` — and this file is the reader's upload.
             $this->logger->info('AliasYamlImporter: YAML parse failed.', [
-                'exception_message' => $e->getMessage(),
+                'parsed_line' => $e->getParsedLine(),
             ]);
 
             throw AliasFileRejectedException::file(AliasFileRejection::NotYaml, $e);
