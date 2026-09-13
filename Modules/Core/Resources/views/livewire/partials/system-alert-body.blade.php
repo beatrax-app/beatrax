@@ -7,9 +7,9 @@
 
     The body is severity-independent. Everything that differs between a
     critical, a warning and an informational row is carried by the
-    wrapping x-core::alert — its tone class string and its live-region
-    semantics — so this markup is included once per row whatever the
-    severity is.
+    banner around it — the severity word it prints, and the tone and
+    live-region semantics it hands x-core::alert — so this markup is
+    included once per row whatever the severity is.
 
     Each row stacks below `sm` and only sits the actions beside the
     message from `sm` up. The buttons do not shrink, so on a phone a

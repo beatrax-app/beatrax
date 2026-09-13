@@ -1323,6 +1323,26 @@ The component holds zero properties so it stays stateless across
 re-renders — Livewire re-runs `render()` after every action, so the
 post-acknowledge view automatically drops the dismissed row.
 
+### The severity is a word, not only a tone
+
+`partials/system-alert-body` says of itself that it is
+severity-independent, and it is: one critical row, one warning row and
+one informational row are written in the same markup with the same
+buttons. Everything that differed between them was the tone name handed
+to `x-core::alert` — rose, amber, slate — and the live-region politeness,
+which is a delivery decision rather than something a reader perceives.
+So an alert about tokens that may be unredacted and one about a backup
+that is a day late reached a reader who hears the banner, or who cannot
+separate two hues, as the same announcement.
+
+The banner now prints the severity above the body:
+`core::alerts.severity.critical` and `core::alerts.severity.warning`,
+resolved through `Lang` so all 26 locales carry it. **An informational
+row gets no word**, because the absence has to read as "nothing is wrong
+here"; a word on the quiet tier would make silence on the loud one
+ambiguous. Colour reinforces the word rather than carrying the tier by
+itself.
+
 ## The zone an installation reads its days in
 
 `app.timezone` is not a display preference here. It is the frame every

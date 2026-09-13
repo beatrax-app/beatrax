@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Sistem uyarıları',
 
+    'severity' => [
+        'critical' => 'Kritik',
+        'warning' => 'Uyarı',
+    ],
+
     'actions' => [
         'download_and_install' => 'İndir ve yükle',
         'download_and_install_aria' => 'İndir ve yükle — #:id numaralı sistem uyarısını çözüldü olarak işaretler',

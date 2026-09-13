@@ -35,7 +35,7 @@
     No day-grouping headers, no per-type chip color — `.type-chip`
     is the one new CSS class this row introduces.
 --}}
-<div class="flex flex-wrap items-center rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700">
+<div class="flex flex-wrap items-center rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700" data-testid="notification-row">
     <a
         href="{{ $notification->deepLinkUrl ?? '#' }}"
         @if (! $notification->readAt)
@@ -47,8 +47,16 @@
                {{ $notification->deepLinkDisabled ? 'cursor-default' : 'hover:bg-slate-50 dark:hover:bg-slate-900' }}"
     >
         <div class="flex flex-wrap items-start gap-3">
+            {{-- The dot and the semibold title are what separate an unread row
+                 from a read one, and both were invisible to a reader who hears
+                 the list: the dot was aria-hidden and weight is not announced.
+                 It carries the word the Unread tab already uses. --}}
             @unless ($notification->readAt)
-                <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>
+                <span
+                    role="img"
+                    class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400"
+                    aria-label="{{ Lang::get('notifications::inbox.tabs.unread') }}"
+                ></span>
             @endunless
             <span class="type-chip" aria-hidden="true">{{ $notification->glyph }} {{ $notification->typeWord }}</span>
             <div class="min-w-0 flex-1">

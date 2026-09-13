@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Системні сповіщення',
 
+    'severity' => [
+        'critical' => 'Критично',
+        'warning' => 'Попередження',
+    ],
+
     'actions' => [
         'download_and_install' => 'Завантажити і встановити',
         'download_and_install_aria' => 'Завантажити і встановити — позначає системне сповіщення #:id як вирішене',

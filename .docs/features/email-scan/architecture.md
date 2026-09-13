@@ -458,6 +458,26 @@ was the contradiction this closes.
 `'healthy'` still means what it says on a phone, because a Scan-now tap is a
 real scan; it is only the absence of one that stops being a fault.
 
+### And a dot cannot be the whole of the diagnosis
+
+Three of the tile's four states print the same line — `last scanned
+<when>` — so once the diagnosis stopped being a fault on a phone, the
+only thing separating *healthy*, *stale* and *unscheduled* was the hue of
+a dot that carries `aria-hidden`. A mailbox scanned an hour ago and one
+that stopped scanning a fortnight ago said the same words in the same
+order. `not_scanned_yet_phone` covers only the case where there is no
+last scan at all; a phone that scanned once by hand and then went quiet
+falls past it.
+
+The two states that reported nothing now say which they are beside the
+line: `email-scan::health.out_of_date` for `stale`, and
+`email-scan::health.not_scanned_here` for `unscheduled` — the latter
+device-neutral rather than phone-worded, because a desktop that is not
+the scheduled one reaches it too. `reauth` and the never-scanned case
+already named themselves in the copy and are left alone, and `healthy`
+deliberately says nothing: there is no judgement to report, and a word
+there would make the silence on the others ambiguous.
+
 ## `InboxScanStateMachine`
 
 The single legal mutator of `inbox_scan_state.status`,

@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Systemadvarsler',
 
+    'severity' => [
+        'critical' => 'Kritisk',
+        'warning' => 'Advarsel',
+    ],
+
     'actions' => [
         'download_and_install' => 'Hent og installér',
         'download_and_install_aria' => 'Hent og installér — markerer systemadvarsel #:id som løst',

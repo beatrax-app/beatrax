@@ -17,6 +17,12 @@
      `unscheduled` is the state of an inbox on a device that schedules no
      scan, so it is drawn as the neutral it is rather than as a warning
      nothing on that device can ever clear.
+     Two of those four states used to reach the reader as a dot and
+     nothing else: `stale` and `unscheduled` both print the same
+     "last scanned <when>" line that `healthy` does, so the hue was the
+     whole of the judgement. Each now says which it is in a word, and the
+     dot reinforces it. `healthy` deliberately says nothing — there is no
+     judgement to report, and a word there would make silence ambiguous.
      The tile heading itself stays `text-slate-900` regardless of
      overall status — the calm aesthetic forbids painting the tile
      title red (UI-SPEC § Typography / Email-scan-health tile). --}}
@@ -44,6 +50,11 @@
                 default => 'bg-slate-400 dark:bg-slate-500',
             };
             $providerLabel = $line->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365';
+            // The word only ever goes beside a "last scanned" line, which is
+            // the one copy the three non-reauth states share. The two branches
+            // above already name the state they are in, and saying it twice
+            // would read as two separate findings about one inbox.
+            $stateWord = null;
             if ($line->status === 'reauth') {
                 $lineCopy = $providerLabel . ': ' . Lang::get('email-scan::health.needs_reconnect');
             } elseif ($line->lastScanAt === null) {
@@ -51,11 +62,19 @@
             } else {
                 $lineCopy = $providerLabel . ': ' . Lang::get('email-scan::health.last_scanned') . ' '
                     . \Carbon\CarbonImmutable::instance($line->lastScanAt)->diffForHumans();
+                $stateWord = match ($line->status) {
+                    'stale' => Lang::get('email-scan::health.out_of_date'),
+                    'unscheduled' => Lang::get('email-scan::health.not_scanned_here'),
+                    default => null,
+                };
             }
         @endphp
-        <div class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+        <div class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300" data-testid="email-scan-health-line">
             <span class="h-2 w-2 rounded-full {{ $dotColor }}" aria-hidden="true"></span>
             <span class="truncate">{{ $lineCopy }}</span>
+            @if ($stateWord !== null)
+                <span class="shrink-0 font-medium">{{ $stateWord }}</span>
+            @endif
         </div>
     @endforeach
 
