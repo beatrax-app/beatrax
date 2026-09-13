@@ -94,10 +94,20 @@ The query fails. It does not fall back.
 
 A fallback to `LOWER()` is exactly the ASCII-only comparison this replaced, so a
 connection that quietly took it would return **fewer rows with no signal** —
-the original defect, now hidden behind a fix. `UnicodeFolding::registerOn()`
-therefore refuses at connect time if the PDO cannot carry a user function, and
-any connection that somehow escapes registration raises SQLite's own
-`no such function: beatrax_fold` on the first folded query. Both are loud.
+the original defect, now hidden behind a fix.
+
+`UnicodeFolding::registerOn()` therefore refuses at connect time, with
+`Core::UnicodeFoldingUnavailableException`. It carries the connection's name as
+a property and not only inside the sentence, because which connection came up
+short is the one question a caller has. Two ways to arrive:
+
+| Why | Named constructor |
+|---|---|
+| The PDO is not a `Pdo\Sqlite`, so it has no `createFunction()` — what `new PDO` hands back, which is how Laravel builds a connection below PHP 8.4 and how anything opening the file outside the framework does at any version | `notASqlitePdo()` |
+| SQLite itself declined the registration | `driverRefused()` |
+
+A connection that somehow escapes registration altogether raises SQLite's own
+`no such function: beatrax_fold` on the first folded query. All three are loud.
 
 `tests/Contracts/AFoldedQueryCannotRunOnAnUnfoldedConnectionArchTest.php` is
 what keeps that second case unreachable: it walks every connection

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Support;
 
 use Illuminate\Database\Connection;
+use Modules\Core\Public\Exceptions\UnicodeFoldingUnavailableException;
 use Pdo\Sqlite;
-use RuntimeException;
 
 // SQLite's `LIKE` and `LOWER()` fold ASCII and nothing else, and no pragma
 // changes that. This is the one definition of "ignore case": the PHP fold
@@ -46,20 +46,18 @@ final class UnicodeFolding
         // and a reader typing into the search box is the wrong place to find
         // out that this process opened the database through something else.
         if (! $pdo instanceof Sqlite) {
-            throw new RuntimeException(sprintf(
-                'Connection [%s] hands out a %s rather than a Pdo\Sqlite, so %s cannot be registered on it.',
+            throw UnicodeFoldingUnavailableException::notASqlitePdo(
                 $connection->getName() ?? '',
                 $pdo::class,
                 self::SQL_FUNCTION,
-            ));
+            );
         }
 
         if (! $pdo->createFunction(self::SQL_FUNCTION, self::fold(...), 1, Sqlite::DETERMINISTIC)) {
-            throw new RuntimeException(sprintf(
-                'SQLite refused to register %s on connection [%s].',
-                self::SQL_FUNCTION,
+            throw UnicodeFoldingUnavailableException::driverRefused(
                 $connection->getName() ?? '',
-            ));
+                self::SQL_FUNCTION,
+            );
         }
     }
 
