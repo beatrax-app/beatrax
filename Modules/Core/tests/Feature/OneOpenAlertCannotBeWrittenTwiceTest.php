@@ -75,14 +75,13 @@ it('answers the refused write with null rather than an exception', function (): 
         message: 'Background processing stopped.',
     );
 
-    $again = static fn (): ?SystemAlert => $writer->raiseOnceSystemWide(
+    $again = $writer->raiseOnceSystemWide(
         kind: 'worker.crashed',
         severity: SystemAlertSeverity::Critical->value,
         message: 'Background processing stopped.',
     );
 
-    expect($again)->not->toThrow(Throwable::class);
-    expect($again())->toBeNull();
+    expect($again)->toBeNull();
     expect(oneOpenAlertRowCount('worker.crashed'))->toBe(1);
 });
 

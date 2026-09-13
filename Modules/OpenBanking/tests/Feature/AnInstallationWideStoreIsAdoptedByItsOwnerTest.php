@@ -187,10 +187,16 @@ it('leaves a bankless store alone rather than pick between two accounts', functi
 });
 
 it('does nothing at all on an installation that never connected a bank', function (): void {
-    aiwsUser('aiws-never');
+    $reader = aiwsUser('aiws-never');
+    $this->seededUserIds = [$reader->id];
 
-    expect(fn (): mixed => aiwsMigration()->up())->not->toThrow(Throwable::class);
-    expect(is_file(OpenBankingSecretsFixture::legacyPath()))->toBeFalse();
+    aiwsMigration()->up();
+
+    // No file either side of the move: a keyed store minted out of nothing is
+    // the same wrong answer as one adopted by the wrong reader.
+    expect(is_file(OpenBankingSecretsFixture::legacyPath()))->toBeFalse()
+        ->and(is_file(OpenBankingSecretsFixture::path($reader->id)))->toBeFalse()
+        ->and(OpenBankingSecretsFixture::repository()->hasApplication($reader->id))->toBeFalse();
 });
 
 // A store that cannot be read is repairable; one this migration deleted is not.
