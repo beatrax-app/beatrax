@@ -15,7 +15,6 @@ use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Public\Dto\CapturedReceipt;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
-use Modules\Receipts\Public\Enums\MatchOutcomeKind;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 use Modules\Receipts\Public\Support\ReceiptCaptureLog;
@@ -126,14 +125,15 @@ final readonly class RecordReceipt
             return $outcome;
         }
 
+        // Stamped on every outcome, not only the parsed one: the registry names
+        // the matcher that answered whatever it answered, and without the key a
+        // sender that read this message and withheld it is the same row as a
+        // message no registered sender claimed at all.
         $update = [
             'updated_at' => $this->clock->now()->toDateTimeString(),
             'status' => $outcome->kind->toInboxStatus()->value,
+            'matcher_key' => $outcome->matcherKey,
         ];
-
-        if ($outcome->kind === MatchOutcomeKind::Parsed) {
-            $update['matcher_key'] = $outcome->matcherKey;
-        }
 
         $connection->table('file_imports')
             ->where('id', $fileImportId)
