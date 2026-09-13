@@ -51,20 +51,30 @@ function lockedColdStartUser(string $username, bool $enrolled = true, int $floor
 }
 
 // The enclave is unreachable in the repo toolchain, so its outcome is dictated.
-function bindVaultRecover(BiometricRecoverResult $result): void
+// The sentence it was asked with is kept: on a phone that is the only thing the
+// OS puts in front of the reader, and nothing else can read it back.
+function bindVaultRecover(BiometricRecoverResult $result): object
 {
-    app()->bind(BiometricKeyVault::class, fn ($app) => new class($app->make(BiometricKeyBlobCodec::class), $app->make(LoggerInterface::class), $result) extends BiometricKeyVault
+    $asked = new class
+    {
+        public ?string $reason = null;
+    };
+
+    app()->bind(BiometricKeyVault::class, fn ($app) => new class($app->make(BiometricKeyBlobCodec::class), $app->make(LoggerInterface::class), $result, $asked) extends BiometricKeyVault
     {
         public function __construct(
             BiometricKeyBlobCodec $codec,
             LoggerInterface $log,
             private readonly BiometricRecoverResult $result,
+            private readonly object $asked,
         ) {
             parent::__construct($codec, $log);
         }
 
-        public function recover(int $userId, string $reason = 'Unlock Beatrax'): BiometricRecoverResult
+        public function recover(int $userId, string $reason): BiometricRecoverResult
         {
+            $this->asked->reason = $reason;
+
             return $this->result;
         }
 
@@ -73,6 +83,8 @@ function bindVaultRecover(BiometricRecoverResult $result): void
             return $this->result;
         }
     });
+
+    return $asked;
 }
 
 function released(): ?string
@@ -96,6 +108,28 @@ it('enrolled + floor-fresh + RECOVERED admits the key and redirects', function (
     Livewire::test(MobileLockScreen::class)->call('biometricPrompt')->assertRedirect(route('dashboard'));
 
     expect(released())->toBe($key);
+});
+
+// The OS renders this sentence itself, on the Face ID / fingerprint sheet. It
+// is the last thing a reader is shown before the key to the ledger is released,
+// and it was the only line on that screen still frozen in English.
+it('asks the enclave in the language the reader set', function (): void {
+    lockedColdStartUser('cs-reason-nl');
+    $asked = bindVaultRecover(BiometricRecoverResult::canceled());
+    app()->setLocale('nl');
+
+    Livewire::test(MobileLockScreen::class)->call('biometricPrompt');
+
+    expect($asked->reason)->toBe('Beatrax ontgrendelen');
+});
+
+it('asks in English for an English reader', function (): void {
+    lockedColdStartUser('cs-reason-en');
+    $asked = bindVaultRecover(BiometricRecoverResult::canceled());
+
+    Livewire::test(MobileLockScreen::class)->call('biometricPrompt');
+
+    expect($asked->reason)->toBe('Unlock Beatrax');
 });
 
 it('enrolled + floor-fresh + CANCELED does not admit', function (): void {

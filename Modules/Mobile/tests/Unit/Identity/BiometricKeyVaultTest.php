@@ -25,7 +25,7 @@ it('round-trips the data key through enroll() then recover()', function (): void
 
     expect($vault->enroll(7, $dataKey))->toBeTrue();
 
-    $result = $vault->recover(7);
+    $result = $vault->recover(7, 'Unlock Beatrax');
 
     expect($result->isRecovered())->toBeTrue()
         ->and($result->dataKey)->toBe($dataKey);
@@ -42,7 +42,7 @@ it('stores a wrapped blob per user, never the raw key', function (): void {
 });
 
 it('returns missing when nothing is enrolled', function (): void {
-    expect(fakeVault()->recover(7)->status)->toBe(BiometricRecoverResult::MISSING);
+    expect(fakeVault()->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::MISSING);
 });
 
 it('maps a native cancel to CANCELED (not missing — the caller must not treat it as no-key)', function (): void {
@@ -50,7 +50,7 @@ it('maps a native cancel to CANCELED (not missing — the caller must not treat 
     $vault->enroll(7, random_bytes(32));
     $vault->forcedGet = ['value' => '', 'canceled' => true];
 
-    expect($vault->recover(7)->status)->toBe(BiometricRecoverResult::CANCELED);
+    expect($vault->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::CANCELED);
 });
 
 it('maps a native failed flag to FAILED (enrolled but auth failed — NOT missing)', function (): void {
@@ -58,21 +58,21 @@ it('maps a native failed flag to FAILED (enrolled but auth failed — NOT missin
     $vault->enroll(7, random_bytes(32));
     $vault->forcedGet = ['value' => '', 'failed' => true];
 
-    expect($vault->recover(7)->status)->toBe(BiometricRecoverResult::FAILED);
+    expect($vault->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::FAILED);
 });
 
 it('maps an empty native result to FAILED (bridge error — NOT missing)', function (): void {
     $vault = fakeVault();
     $vault->forcedGet = [];
 
-    expect($vault->recover(7)->status)->toBe(BiometricRecoverResult::FAILED);
+    expect($vault->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::FAILED);
 });
 
 it('maps a native async marker (Android) to PENDING_ASYNC', function (): void {
     $vault = fakeVault();
     $vault->forcedGet = ['async' => true, 'event' => 'BiometricVault.Recovered'];
 
-    expect($vault->recover(7)->status)->toBe(BiometricRecoverResult::PENDING_ASYNC);
+    expect($vault->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::PENDING_ASYNC);
 });
 
 it('returns UNAVAILABLE and enroll()=false off-device', function (): void {
@@ -80,24 +80,24 @@ it('returns UNAVAILABLE and enroll()=false off-device', function (): void {
     $vault->available = false;
 
     expect($vault->enroll(7, random_bytes(32)))->toBeFalse()
-        ->and($vault->recover(7)->status)->toBe(BiometricRecoverResult::UNAVAILABLE);
+        ->and($vault->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::UNAVAILABLE);
 });
 
 it('returns missing after clear()', function (): void {
     $vault = fakeVault();
     $vault->enroll(7, random_bytes(32));
-    expect($vault->recover(7)->isRecovered())->toBeTrue();
+    expect($vault->recover(7, 'Unlock Beatrax')->isRecovered())->toBeTrue();
 
     $vault->clear(7);
 
-    expect($vault->recover(7)->status)->toBe(BiometricRecoverResult::MISSING);
+    expect($vault->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::MISSING);
 });
 
 it('returns missing when the stored blob is corrupt (fails closed)', function (): void {
     $vault = fakeVault();
     $vault->store['beatrax.coldstart.datakey.7'] = base64_encode('too-short-not-a-real-blob');
 
-    expect($vault->recover(7)->status)->toBe(BiometricRecoverResult::MISSING);
+    expect($vault->recover(7, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::MISSING);
 });
 
 it('completePendingRecover round-trips a stashed blob to RECOVERED', function (): void {
@@ -160,8 +160,8 @@ it("writes each user's key into that user's own enclave slot", function (): void
     $vault->enroll(2, $second);
 
     expect(array_keys($vault->store))->toBe(['beatrax.coldstart.datakey.1', 'beatrax.coldstart.datakey.2'])
-        ->and($vault->recover(1)->dataKey)->toBe($first)
-        ->and($vault->recover(2)->dataKey)->toBe($second);
+        ->and($vault->recover(1, 'Unlock Beatrax')->dataKey)->toBe($first)
+        ->and($vault->recover(2, 'Unlock Beatrax')->dataKey)->toBe($second);
 });
 
 it('clears only the slot it was asked for', function (): void {
@@ -171,8 +171,8 @@ it('clears only the slot it was asked for', function (): void {
 
     $vault->clear(2);
 
-    expect($vault->recover(1)->isRecovered())->toBeTrue()
-        ->and($vault->recover(2)->status)->toBe(BiometricRecoverResult::MISSING);
+    expect($vault->recover(1, 'Unlock Beatrax')->isRecovered())->toBeTrue()
+        ->and($vault->recover(2, 'Unlock Beatrax')->status)->toBe(BiometricRecoverResult::MISSING);
 });
 
 // A delete that quietly failed leaves a wrapped data key in the enclave while
