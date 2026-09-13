@@ -253,6 +253,36 @@ error.
 enumerates the handlers **by reflection** and fails when the live class has one
 the file does not name, so a twelfth handler cannot join in silence.
 
+## A data migration is the same wall, with a delete on the other side
+
+A migration is a fourth keyless process, and it was the one nothing covered. It
+holds no session, so `OpLogWriterFactory::forCurrentUser()` refuses it for the
+reason it refuses the scheduler — and a migration that *deletes* replicated rows
+has a failure the others do not: `OpLogRebuilder::deleteReplayableRows()` drops
+every row the log names a create for and then replays that create, so a row
+removed without a tombstone is handed straight back. `verifyRestored()` counts
+what went missing and has no word for what came back, which is why the
+resurrection passed its own verification.
+
+Deferring the coordinate alone does not answer it. The peer's copy is repaid by
+the drain, but this device rebuilds from its own log, and until the drain runs
+that log still says "create". So `KeylessTombstone::announce()` does both: it
+writes the `delete_tombstone` entry locally **and** queues the coordinate.
+
+The entry is authored by `OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID`, not by this
+device. That is the only author `OpLogEntryVerifier` admits without a signature,
+and the unsigned row under this device's own id is not a shortcut — it
+quarantines as `forged_signature` on the very replay it was written for.
+`TransferPairCascade` writes under the same author for the same reason.
+
+Two properties that are easy to get wrong and are pinned by test:
+
+- **The stamp has to outrank every op on the row.** A tombstone that loses the
+  delete-wins comparison to the create it answers brings the row back, so the
+  clock is advanced past the row's own highest entry rather than merely read.
+- **The key is the coordinate, not the coordinate plus the clock.** A migration
+  is re-runnable, and keying on the HLC too would leave one tombstone per run.
+
 ## What this does not repair
 
 `ImportSyncCapture` sits behind the same wall and is fixed differently. It

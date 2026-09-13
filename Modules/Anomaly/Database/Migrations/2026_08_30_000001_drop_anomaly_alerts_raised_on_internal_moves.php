@@ -6,6 +6,7 @@ use Illuminate\Database\Connection;
 use Modules\Core\Database\Support\ModuleMigration;
 use Modules\Core\Public\Support\RowChunk;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Sync\Public\Support\KeylessTombstone;
 
 return new class extends ModuleMigration
 {
@@ -13,6 +14,11 @@ return new class extends ModuleMigration
     // rule that replaced them would never raise, and the reader was told their
     // own savings transfer was an unusual charge. Re-runnable and a no-op on a
     // database holding none, so a from-scratch run and a post-dump run agree.
+    //
+    // The delete is announced, or the next rebuild replays the create the log
+    // still holds and hands the alert back. The argument is the one written
+    // out in the 2026_09_11 repair beside this: both devices author a create
+    // under the same pk, so this row is one the peer's ops still address.
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());
@@ -20,6 +26,10 @@ return new class extends ModuleMigration
         $alertIds = $this->alertsOnInternalMoves($connection);
 
         foreach (array_chunk($alertIds, RowChunk::DEFAULT_SIZE) as $chunk) {
+            // Before the deletes below, not after: the announcement reads the
+            // owning user off the row, and op_log_entries.user_id is NOT NULL.
+            KeylessTombstone::announce($connection, 'anomaly_alerts', $chunk);
+
             // The FKs already say cascade for the history and null for the
             // mute's provenance, but SQLite only honours them with the
             // foreign_keys pragma on. Stated here so the outcome is the same
