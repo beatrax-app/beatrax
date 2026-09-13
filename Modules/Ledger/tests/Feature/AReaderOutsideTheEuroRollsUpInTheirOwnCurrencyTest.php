@@ -53,7 +53,7 @@ it('lets a reader choose any currency the bundled snapshot can price', function 
 
 it('rolls the period up in the currency the reader chose', function (): void {
     // One euro figure, so the expected krona total is the snapshot rate applied
-    // to it and nothing else: 100.00 EUR at 10.8430 is 1,084.30 SEK.
+    // to it and nothing else: 100.00 EUR at 11.2373 is 1,123.73 SEK.
     $this->makeTransaction($this->user, $this->account, $this->run, [
         'amount_minor' => 10000,
         'posted_at' => '2026-05-05',
@@ -67,7 +67,7 @@ it('rolls the period up in the currency the reader chose', function (): void {
     expect($summary->inflow->currency())->toBe('SEK')
         ->and($summary->outflow->currency())->toBe('SEK')
         ->and($summary->net->currency())->toBe('SEK')
-        ->and($summary->inflow->toMinor())->toBe(108430);
+        ->and($summary->inflow->toMinor())->toBe(112373);
 });
 
 it('converts every currency it spans into the chosen one and leaves none out', function (): void {
@@ -111,9 +111,9 @@ it('does not mis-scale a roll-up in a currency that counts no minor unit', funct
 
     $summary = $this->query->for($this->user->fresh(), $this->periods->current());
 
-    // 100.00 EUR at 148.30 is 14,830 krónur — fourteen thousand minor units at
+    // 100.00 EUR at 139.60 is 13,960 krónur — thirteen thousand minor units at
     // a scale of one, not 1,483,000 at a scale of a hundred.
     expect($summary->inflow->currency())->toBe('ISK')
-        ->and($summary->inflow->toMinor())->toBe(14830)
+        ->and($summary->inflow->toMinor())->toBe(13960)
         ->and($summary->inflow->format())->not->toContain(',00');
 });

@@ -158,6 +158,11 @@ it('FX-converts a USD account\'s forecast points to the base currency instead of
     $eurAccount = cpblAccount($db, $user->id, 'ASN Checking', 'EUR');
     $usdAccount = cpblAccount($db, $user->id, 'Google Play USD', 'USD');
 
+    // Cleared first. The bundled snapshot is in this table from install and the
+    // service takes the latest rate_date, so a seeded rate only wins while the
+    // shipped one is older than it -- which refreshing the snapshot ended.
+    $db->connection()->table('exchange_rates')->delete();
+
     // EUR→USD rate 2.0: USD 2 000.00 is worth EUR 1 000.00.
     $db->connection()->table('exchange_rates')->insert([
         'base_currency' => 'EUR',

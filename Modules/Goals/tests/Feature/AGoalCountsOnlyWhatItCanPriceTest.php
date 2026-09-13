@@ -127,8 +127,8 @@ it('prices an attribution in a currency it can reach', function (): void {
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
-    // The bundled snapshot prices USD1,000.00 at EUR880.36.
-    expect($rows[0]->contributedMinor)->toBe(88_036);
+    // The bundled snapshot prices USD1,000.00 at EUR862.66.
+    expect($rows[0]->contributedMinor)->toBe(86_266);
 });
 
 it('reads a goal denominated in a currency that is not the reader s base', function (): void {
@@ -137,9 +137,9 @@ it('reads a goal denominated in a currency that is not the reader s base', funct
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
-    // EUR1,000.00 buys USD1,135.90 at the bundled rate.
+    // EUR1,000.00 buys USD1,159.20 at the bundled rate.
     expect($rows[0]->currency)->toBe(Currency::Usd->value)
-        ->and($rows[0]->contributedMinor)->toBe(113_590);
+        ->and($rows[0]->contributedMinor)->toBe(115_920);
 });
 
 // The level and the projection each converted every attribution on its own, and
