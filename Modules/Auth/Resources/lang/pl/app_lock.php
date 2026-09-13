@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN musi mieć od :min do :max cyfr — tylko cyfry.',
     'error_pin_mismatch' => 'Kody PIN nie są zgodne. Spróbuj ponownie.',
     'error_pin_required' => 'Wpisz swój PIN.',
-    'error_pin_incorrect' => 'Nieprawidłowy PIN.',
     'error_account_password_required' => 'Wpisz swoje hasło do konta.',
     'error_account_password' => 'Nieprawidłowe hasło do konta.',
     'change_pin_success' => 'Klucz szyfrowania został ponownie zabezpieczony nowym PIN-em.',

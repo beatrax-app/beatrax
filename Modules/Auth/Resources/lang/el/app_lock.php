@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'Το PIN πρέπει να έχει :min έως :max ψηφία — μόνο αριθμούς.',
     'error_pin_mismatch' => 'Τα PIN δεν ταιριάζουν. Δοκίμασε ξανά.',
     'error_pin_required' => 'Δώσε το PIN σου.',
-    'error_pin_incorrect' => 'Λανθασμένο PIN.',
     'error_account_password_required' => 'Δώσε τον κωδικό πρόσβασης του λογαριασμού σου.',
     'error_account_password' => 'Λανθασμένος κωδικός πρόσβασης λογαριασμού.',
     'change_pin_success' => 'Το κλειδί κρυπτογράφησής σου ασφαλίστηκε ξανά με το νέο σου PIN.',

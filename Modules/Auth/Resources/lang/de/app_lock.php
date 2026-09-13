@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'Die PIN muss :min bis :max Ziffern haben — nur Zahlen.',
     'error_pin_mismatch' => 'Die PINs stimmen nicht überein. Versuch es noch mal.',
     'error_pin_required' => 'Gib deine PIN ein.',
-    'error_pin_incorrect' => 'Falsche PIN.',
     'error_account_password_required' => 'Gib dein Kontopasswort ein.',
     'error_account_password' => 'Falsches Kontopasswort.',
     'change_pin_success' => 'Dein Verschlüsselungsschlüssel wurde mit deiner neuen PIN neu gesichert.',

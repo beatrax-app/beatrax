@@ -9,10 +9,10 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
 use Livewire\Component;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
+use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PinUnlockAttempt;
 use Modules\Auth\Internal\Lock\PinVerificationService;
@@ -20,7 +20,6 @@ use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\Contracts\AppLockPinShape;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Services\MobileLockGateway;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Navigation\Destination;
@@ -79,9 +78,8 @@ final class LockScreen extends Component
         PinVerificationService $verifier,
         UrlGenerator $urls,
         Session $session,
-        DatabaseManager $db,
-        Clock $clock,
         MobileLockGateway $gateway,
+        AppLockCredentialRejections $rejections,
     ): void {
         if (! AppLockPinShape::isWellFormed($pin)) {
             $this->flashMessage = Lang::get('auth::lock_screen.error_pin_shape', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]);
@@ -96,7 +94,7 @@ final class LockScreen extends Component
         if ($dataKey === null) {
             $this->forgottenPinHelpDue = $gateway->forgottenPinHelpDue($user->id);
 
-            $this->flashMessage = $this->refusalMessage($user->id, $attempt, $verifier, $db, $clock);
+            $this->flashMessage = $this->refusalMessage($user->id, $attempt, $rejections);
 
             return;
         }
@@ -104,29 +102,14 @@ final class LockScreen extends Component
         $this->redirect($this->intendedUrl($session, $urls), navigate: false);
     }
 
-    // Three ways not to be let in, and the reader is owed the difference.
-    // Only the last of them spent an attempt, so it is the only one that may
-    // name a remaining count.
-    private function refusalMessage(int $userId, PinUnlockAttempt $attempt, PinVerificationService $verifier, DatabaseManager $db, Clock $clock): string
+    // Three ways not to be let in, and the reader is owed the difference. Two
+    // of them are shared with every other screen that meters a PIN and live
+    // with the rest of the vocabulary; the race is this screen's alone.
+    private function refusalMessage(int $userId, PinUnlockAttempt $attempt, AppLockCredentialRejections $rejections): string
     {
-        if ($attempt->pinChangedMidAttempt) {
-            return Lang::get('auth::lock_screen.error_pin_changed');
-        }
-
-        // verify() answers before checking the PIN during a backoff window, so
-        // a correct PIN lands here too and must be told apart.
-        $lockedUntil = $verifier->lockedUntil($userId);
-        if ($lockedUntil !== null) {
-            $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
-
-            return Lang::get('auth::lock_screen.error_backoff', ['wait' => $seconds.'s']);
-        }
-
-        $remaining = $this->remainingAttempts($userId, $db);
-
-        return $remaining !== null
-            ? Lang::choice('auth::lock_screen.error_incorrect_remaining', $remaining)
-            : Lang::get('auth::lock_screen.error_incorrect');
+        return $attempt->pinChangedMidAttempt
+            ? Lang::get('auth::lock_screen.error_pin_changed')
+            : $rejections->refusedPin($userId);
     }
 
     // The vault returns the key only on a successful prompt, so a null here
@@ -212,25 +195,5 @@ final class LockScreen extends Component
         $view->extends('layouts.lock', ['title' => Lang::get('auth::lock_screen.page_title')]);
 
         return $view;
-    }
-
-    private function remainingAttempts(int $userId, DatabaseManager $db): ?int
-    {
-        $row = $db->connection()->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->first(['failed_attempts']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        $failed = $row->failed_attempts;
-        if (! is_int($failed) && ! is_string($failed)) {
-            return null;
-        }
-
-        $remaining = PinVerificationService::HARD_CAP - (int) $failed;
-
-        return max(0, $remaining);
     }
 }

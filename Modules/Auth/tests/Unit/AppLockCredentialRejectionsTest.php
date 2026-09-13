@@ -6,14 +6,16 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
 use Modules\Core\Public\Support\Lang;
 
-// Six actions on the app-lock screen ask these three questions. The answers are
+// Six actions on the app-lock screen ask these questions. The answers are
 // pinned here rather than through one of the six, because the defect this class
 // was extracted from was a vocabulary spread wide enough that an edit could only
 // half-change it — and the half left behind is the one nobody re-reads.
 
+// Resolved rather than built: refusedPin() reads the failure meter, so this
+// class now holds collaborators a hand-built one would have to guess at.
 function appLockRejections(): AppLockCredentialRejections
 {
-    return new AppLockCredentialRejections(app(Hasher::class));
+    return app(AppLockCredentialRejections::class);
 }
 
 it('names the empty PIN box rather than calling it wrong', function (): void {
