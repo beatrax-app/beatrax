@@ -168,5 +168,7 @@ return [
         'no_session_id' => 'Enable Banking nije vratio ID sesije.',
         'bank_not_linked' => 'Ta banka nije povezana na ovom uređaju. Ponovo je poveži da bi se sinhronizacija nastavila.',
         'oauth_state_mismatch' => 'Ova veza za povezivanje je istekla ili je već iskorišćena. Ponovo započnite povezivanje banke.',
+        'connection_not_saved' => 'Ovu vezu nije bilo moguće sačuvati na disk — proveri dozvole fascikle sa tajnama pa probaj ponovo.',
+        'consent_not_completed' => 'Tvoja banka nije dovršila povezivanje. Ništa nije promenjeno — probaj da se povežeš ponovo.',
     ],
 ];

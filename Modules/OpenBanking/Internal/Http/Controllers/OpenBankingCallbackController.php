@@ -8,16 +8,21 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\OpenBanking\Internal\Actions\CompleteBankConsent;
-use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
+use Modules\OpenBanking\Internal\Support\ReaderRefusal;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 final readonly class OpenBankingCallbackController
 {
+    // Both query parameters are a stranger's to write, so the log takes a
+    // bounded copy rather than whatever length a link carried.
+    private const int PROVIDER_REASON_CAP = 200;
+
     public function __construct(
         private OpenBankingStateRepository $oauthState,
         private CurrentUser $currentUser,
@@ -28,9 +33,11 @@ final readonly class OpenBankingCallbackController
 
     public function __invoke(Request $request): RedirectResponse
     {
-        $cancellation = $this->cancellationMessage($request);
-        if ($cancellation !== null) {
-            return $this->backToSettings('open_banking_canceled', $cancellation);
+        if ($this->wasCanceledAtTheBank($request)) {
+            return $this->backToSettings(
+                'open_banking_canceled',
+                Lang::get('openbanking::messages.errors.consent_not_completed'),
+            );
         }
 
         // Resolve the current user before consuming the state so the consume
@@ -57,34 +64,42 @@ final readonly class OpenBankingCallbackController
         return $this->backToSettings('open_banking_connected', $connectionId);
     }
 
-    // Most refusals in this flow build their message from Lang, so what they
-    // carry is already the reader's own words. The credentials one does not:
-    // it names the secrets file by absolute path, and this flash renders
-    // verbatim on the settings screen.
+    // This flash renders verbatim on the settings screen, so ReaderRefusal owns
+    // which refusals may speak for themselves. The rest are recorded here and
+    // answered on screen in the reader's own words.
     private function readerReason(RuntimeException $e): string
     {
-        if ($e instanceof OpenBankingCredentialsException) {
+        $refusal = ReaderRefusal::for($e);
+
+        if ($refusal->hidesDetail) {
             $this->logger->warning(
-                'OpenBankingCallbackController: the stored credentials could not be read.',
+                'OpenBankingCallbackController: a refusal with no detail a reader could act on.',
                 SafeExceptionContext::describe($e),
             );
-
-            return $e->readerMessage();
         }
 
-        return $e->getMessage();
+        return $refusal->message;
     }
 
-    private function cancellationMessage(Request $request): ?string
+    // The bank names its refusal in the query string of a GET a reader can be
+    // handed a link to, so neither parameter may be drawn: the settings page
+    // rendered whatever the URL carried inside its own danger alert, which put
+    // a stranger's sentence on screen wearing the app's chrome.
+    private function wasCanceledAtTheBank(Request $request): bool
     {
         $errorParam = $request->query('error');
         if (! is_string($errorParam) || $errorParam === '') {
-            return null;
+            return false;
         }
 
         $description = $request->query('error_description');
 
-        return is_string($description) && $description !== '' ? $description : $errorParam;
+        $this->logger->info('OpenBankingCallbackController: the bank did not complete the consent.', [
+            'error' => mb_substr($errorParam, 0, self::PROVIDER_REASON_CAP),
+            'error_description' => mb_substr(is_string($description) ? $description : '', 0, self::PROVIDER_REASON_CAP),
+        ]);
+
+        return true;
     }
 
     private function backToSettings(string $key, mixed $value): RedirectResponse

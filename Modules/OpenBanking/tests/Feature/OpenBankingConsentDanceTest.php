@@ -356,7 +356,13 @@ it('callback with provider error redirects with open_banking_canceled flash and 
 
     $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_canceled');
-    expect(session('open_banking_canceled'))->toContain('user denied');
+
+    // The bank's own words arrive in the query string of a GET, so they are
+    // recorded rather than drawn: the reader is told the connection did not
+    // finish, in their own language.
+    expect(session('open_banking_canceled'))
+        ->toBe(trans('openbanking::messages.errors.consent_not_completed'))
+        ->not->toContain('user denied');
 
     expect(ocdRowCount($user))->toBe(0);
 });
@@ -393,7 +399,13 @@ it('compensating rollback: secret-write failure after a NEW row insert deletes t
 
     $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_failed');
-    expect(session('open_banking_failed'))->toContain('simulated write failure');
+
+    // The refusal the reader is shown is their own words here too, on the same
+    // rule the state-mismatch case above states: what failed is recorded, and
+    // this message used to be the absolute path of the secrets file.
+    expect(session('open_banking_failed'))
+        ->toBe(trans('openbanking::messages.errors.connection_not_saved'))
+        ->not->toContain('simulated write failure');
 
     expect(ocdRowCount($user))->toBe(0);
 });
@@ -567,7 +579,9 @@ it('compensating rollback: secret-write failure on a RE-LINK restores the row pr
     $response = $this->get('/oauth/callback/open-banking?state='.$state.'&code=fake');
 
     $response->assertRedirect(route('settings.open-banking'));
-    expect(session('open_banking_failed'))->toContain('simulated re-link write failure');
+    expect(session('open_banking_failed'))
+        ->toBe(trans('openbanking::messages.errors.connection_not_saved'))
+        ->not->toContain('simulated re-link write failure');
 
     // Rolled back to the prior consent + account uid, never advertising a fresh
     // consent the secrets file cannot back.

@@ -168,5 +168,7 @@ return [
         'no_session_id' => 'Az Enable Banking nem adott vissza munkamenet-azonosítót.',
         'bank_not_linked' => 'Ez a bank nincs csatlakoztatva ezen az eszközön. Csatlakoztasd újra, hogy a szinkronizálás folytatódjon.',
         'oauth_state_mismatch' => 'Ez a kapcsolódási hivatkozás lejárt, vagy már felhasználták. Kezdje elölről a bank összekapcsolását.',
+        'connection_not_saved' => 'Ezt a kapcsolatot nem sikerült lemezre menteni — ellenőrizd a titkokat tároló könyvtár jogosultságait, és próbáld újra.',
+        'consent_not_completed' => 'A bankod nem fejezte be a kapcsolódást. Semmi nem változott — próbálj újra kapcsolódni.',
     ],
 ];

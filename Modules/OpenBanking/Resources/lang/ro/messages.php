@@ -168,5 +168,7 @@ return [
         'no_session_id' => 'Enable Banking nu a returnat un ID de sesiune.',
         'bank_not_linked' => 'Banca aceasta nu este conectată pe acest dispozitiv. Conecteaz-o din nou ca sincronizarea să continue.',
         'oauth_state_mismatch' => 'Acest link de conectare a expirat sau a fost deja folosit. Începe din nou conectarea băncii.',
+        'connection_not_saved' => 'Această conexiune nu a putut fi salvată pe disc — verifică permisiunile directorului de secrete și încearcă din nou.',
+        'consent_not_completed' => 'Banca ta nu a finalizat conectarea. Nu s-a schimbat nimic — încearcă să te conectezi din nou.',
     ],
 ];

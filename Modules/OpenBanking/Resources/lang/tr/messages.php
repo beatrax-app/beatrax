@@ -168,5 +168,7 @@ return [
         'no_session_id' => 'Enable Banking bir oturum kimliği döndürmedi.',
         'bank_not_linked' => 'Bu banka bu cihazda bağlı değil. Eşitlemenin sürmesi için yeniden bağla.',
         'oauth_state_mismatch' => 'Bu bağlanma bağlantısının süresi dolmuş veya daha önce kullanılmış. Bankanızı bağlama işlemini yeniden başlatın.',
+        'connection_not_saved' => 'Bu bağlantı diske kaydedilemedi — secrets dizininin izinlerini kontrol edip yeniden dene.',
+        'consent_not_completed' => 'Bankan bağlantıyı tamamlamadı. Hiçbir şey değişmedi — yeniden bağlanmayı dene.',
     ],
 ];
