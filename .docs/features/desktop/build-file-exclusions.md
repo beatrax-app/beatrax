@@ -67,6 +67,51 @@ ships in its publishable `config/nativephp.php`. They are kept as published:
   exclusion: as the section above explains, `*/tests` cannot match a path with no
   separator to its left, so the root tree needs its own line or it ships.
 
+## Dev tooling and documentation inside vendor packages
+
+`*/tools`, `*/docs` and `*/*.md` drop what a vendored package ships for its own
+maintainers. Nothing autoloads any of it — no package puts a PSR-4 root under
+`tools` — and nothing in the running application reads a README.
+
+Four packages in the shipped `--no-dev` set carry a `tools` directory:
+`amphp/hpack` (a fuzzer), `amphp/http-server` (an h2spec script and TLS
+fixtures), `brick/money` (an ECS configuration) and `daverandom/libdns` (an
+autoload generator). One of them is key material. `amphp/http-server/tools/tls/`
+holds `localhost.key.pem`, a PEM `PRIVATE KEY` block, and `localhost.pem`, the
+certificate with that same key appended. They are amphp's own throwaway
+localhost fixtures, published openly in that repository — not this product's
+signing key, its sync identity or anything secret. What earns them an entry is
+that they shipped at all, in an artefact nothing ever opened.
+
+`firebase/php-jwt/README.md` is the same thing from the documentation side: its
+usage example is a real PEM private key, and the package is a runtime
+dependency, so `*/tools` alone would have left it. `LICENSE` files are
+deliberately **not** excluded — attribution has to ship.
+
+`tools` on its own line is the repo-root tree of dev-only PHPStan rules, and it
+is there for the reason `tests` sits beside `*/tests`: a pattern containing `/`
+cannot match a top-level name.
+
+None of this was reachable from the packager's own pruning.
+`pruneVendorDirectory()` runs `composer install --no-dev` in the build tree and
+then removes `vendor/bin` and `vendor/nativephp/php-bin` — and nothing else.
+That composer run does not restore what the copy filter skipped, because it
+leaves an already-installed package's directory alone; `*/tests` has been
+proving that on every shipped bundle since it was added. The mobile bundler
+keeps its vendor exclusions in `nativephp/mobile`'s own pattern list, which is
+why these entries are desktop-only and are declared as such in
+`ADurableDataDirectoryIsNeverShippedInTheBundleArchTest`.
+
+The entries are the fix. What proves they still hold is
+`php artisan desktop:inspect-bundle`, which reads a built application tree and
+refuses one carrying key material, a build credential, a database, or a
+vendored package's `tools` directory. It runs on every desktop leg of
+`release.yml`, `release-build.yml` and the store lane, and it fails the job
+both when it finds something and when it finds no bundle at all. Key material
+is decided by reading the bytes rather than the file name: the bundle
+legitimately carries `cacert.pem`, the public CA roots the PHP runtime needs
+for TLS, and a rule keyed on the extension would refuse every build for it.
+
 ## Size: why the caches are excluded
 
 `.phpstan-cache`, `.phpunit.cache`, `.pint.cache` are the toolchain's own

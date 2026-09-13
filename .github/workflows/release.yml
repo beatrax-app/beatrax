@@ -361,6 +361,21 @@ jobs:
                   artifact-path: nativephp/electron/dist/*.dmg
                   expected-identifier: ${{ steps.app-identity.outputs.identifier }}
 
+            # The bundle, never the exclusion list. The desktop bundler prunes
+            # `vendor/bin` and the PHP binary package and nothing else, so a
+            # vendored package's TLS test key rode along in every build since
+            # that package was installed, and no job ever opened a desktop
+            # artefact to say so. Byte-identical in both bundling workflows.
+            - name: Read the built bundle for anything it must not carry
+              run: |
+                  set -euo pipefail
+                  APP=$(find nativephp/electron/dist -maxdepth 2 -name '*.app' -print -quit)
+                  if [ -z "$APP" ]; then
+                      echo "::error::No .app under nativephp/electron/dist — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  php artisan desktop:inspect-bundle "$APP" --no-interaction
+
             - name: Emit auto-update manifests (latest-mac.yml, beta-mac.yml)
               # electron-builder skips writing the publisher manifest
               # when invoked with `-p never` (NativePHP's default
@@ -565,6 +580,21 @@ jobs:
                       exit 1
                   }
 
+            # The same read as the macOS leg, over the tree NSIS packs. The
+            # installer's own bytes are not opened here, so a file added at
+            # packaging time would not be seen; everything the application tree
+            # carries is. Byte-identical in both bundling workflows.
+            - name: Read the built package for anything it must not carry
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  ROOT=$(find nativephp/electron/dist -maxdepth 1 -type d -name '*unpacked*' -print -quit)
+                  if [ -z "$ROOT" ]; then
+                      echo "::error::No *unpacked* directory under nativephp/electron/dist — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  php artisan desktop:inspect-bundle "$ROOT" --no-interaction
+
             - name: Emit auto-update manifests (latest.yml, beta.yml)
               shell: bash
               env:
@@ -685,15 +715,16 @@ jobs:
                   php artisan native:build
 
             # This is the position the macOS and Windows legs hold their
-            # signing guard and their artifact interrogation, and Linux
-            # deliberately has neither. There is no desktop equivalent of
-            # Developer ID or Authenticode that a `.deb` or an AppImage
-            # carries and a Linux desktop checks on launch, so a signing
-            # identity here would be one nothing verifies. What stands in
-            # for it is the project's own chain: the Ed25519-signed
-            # `latest-linux.yml` emitted below covers the AppImage, and the
-            # Ed25519-signed checksum file the publish job writes covers
-            # both artefacts.
+            # signing guard, and Linux deliberately has none. There is no
+            # desktop equivalent of Developer ID or Authenticode that a
+            # `.deb` or an AppImage carries and a Linux desktop checks on
+            # launch, so a signing identity here would be one nothing
+            # verifies. What stands in for it is the project's own chain:
+            # the Ed25519-signed `latest-linux.yml` emitted below covers the
+            # AppImage, and the Ed25519-signed checksum file the publish job
+            # writes covers both artefacts. The artifact interrogation the
+            # other two legs carry is a separate question and Linux has it,
+            # in the step below this one.
             #
             # That leaves one thing worth asserting, because nothing else
             # does: the upload step's `if-no-files-found: error` fires only
@@ -718,6 +749,22 @@ jobs:
                       echo 'The AppImage is covered by the Ed25519-signed latest-linux.yml; both it and'
                       echo 'the .deb are covered by the Ed25519-signed checksum file.'
                   } >> "$GITHUB_STEP_SUMMARY"
+
+            # The same read as the other two legs. Linux has no OS-level
+            # signature to verify, but what a bundle carries is not a signing
+            # question, and the AppImage and both `.deb` arches are packed from
+            # the unpacked trees this walks. Byte-identical in both workflows.
+            - name: Read the built packages for anything they must not carry
+              run: |
+                  set -euo pipefail
+                  mapfile -t ROOTS < <(find nativephp/electron/dist -maxdepth 1 -type d -name '*unpacked*' | sort)
+                  if [ "${#ROOTS[@]}" -eq 0 ]; then
+                      echo "::error::No *unpacked* directory under nativephp/electron/dist — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  for root in "${ROOTS[@]}"; do
+                      php artisan desktop:inspect-bundle "$root" --no-interaction
+                  done
 
             - name: Emit auto-update manifests (latest-linux.yml, beta-linux.yml)
               env:

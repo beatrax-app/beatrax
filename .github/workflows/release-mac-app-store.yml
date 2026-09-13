@@ -130,6 +130,20 @@ jobs:
                   fi
                   php artisan desktop:review-mac-bundle "$APP"
 
+            # Review is one question and contraband is another. The store
+            # bundle is packed from the same application tree the direct
+            # download is, so it earns the same read the three legs of
+            # release.yml now carry.
+            - name: Read the store bundle for anything it must not carry
+              run: |
+                  set -euo pipefail
+                  APP=$(find nativephp/electron/dist/mas* -maxdepth 1 -name '*.app' -print -quit)
+                  if [ -z "$APP" ]; then
+                      echo "::error::No .app under nativephp/electron/dist/mas* — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  php artisan desktop:inspect-bundle "$APP" --no-interaction
+
             - name: Upload the store bundle
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:

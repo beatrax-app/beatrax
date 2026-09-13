@@ -134,6 +134,21 @@ jobs:
                   artifact-path: nativephp/electron/dist/*.dmg
                   expected-identifier: ${{ steps.app-identity.outputs.identifier }}
 
+            # The bundle, never the exclusion list. The desktop bundler prunes
+            # `vendor/bin` and the PHP binary package and nothing else, so a
+            # vendored package's TLS test key rode along in every build since
+            # that package was installed, and no job ever opened a desktop
+            # artefact to say so. Byte-identical in both bundling workflows.
+            - name: Read the built bundle for anything it must not carry
+              run: |
+                  set -euo pipefail
+                  APP=$(find nativephp/electron/dist -maxdepth 2 -name '*.app' -print -quit)
+                  if [ -z "$APP" ]; then
+                      echo "::error::No .app under nativephp/electron/dist — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  php artisan desktop:inspect-bundle "$APP" --no-interaction
+
             - name: Upload macOS artifacts (arm64)
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -256,6 +271,21 @@ jobs:
                       exit 1
                   }
 
+            # The same read as the macOS leg, over the tree NSIS packs. The
+            # installer's own bytes are not opened here, so a file added at
+            # packaging time would not be seen; everything the application tree
+            # carries is. Byte-identical in both bundling workflows.
+            - name: Read the built package for anything it must not carry
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  ROOT=$(find nativephp/electron/dist -maxdepth 1 -type d -name '*unpacked*' -print -quit)
+                  if [ -z "$ROOT" ]; then
+                      echo "::error::No *unpacked* directory under nativephp/electron/dist — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  php artisan desktop:inspect-bundle "$ROOT" --no-interaction
+
             - name: Upload Windows artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -311,14 +341,31 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
-            # No signing guard and no artifact interrogation here, where the
-            # macOS and Windows legs carry both, and that is deliberate rather
-            # than missing: Linux has no OS-level signature a desktop verifies,
-            # so there is nothing to guard for or to interrogate. Its integrity
-            # signal is added at publish time by release.yml — the Ed25519-signed
-            # `latest-linux.yml` over the AppImage, and the Ed25519-signed
-            # checksum file over that and the `.deb`. This workflow publishes
-            # nothing, so neither exists on this path.
+            # No signing guard here, where the macOS and Windows legs carry
+            # one, and that is deliberate rather than missing: Linux has no
+            # OS-level signature a desktop verifies, so there is nothing to
+            # guard for. Its integrity signal is added at publish time by
+            # release.yml — the Ed25519-signed `latest-linux.yml` over the
+            # AppImage, and the Ed25519-signed checksum file over that and the
+            # `.deb`. This workflow publishes nothing, so neither exists on
+            # this path. What a bundle carries is not a signing question, so
+            # the interrogation above runs on every leg.
+            # The same read as the other two legs. Linux has no OS-level
+            # signature to verify, but what a bundle carries is not a signing
+            # question, and the AppImage and both `.deb` arches are packed from
+            # the unpacked trees this walks. Byte-identical in both workflows.
+            - name: Read the built packages for anything they must not carry
+              run: |
+                  set -euo pipefail
+                  mapfile -t ROOTS < <(find nativephp/electron/dist -maxdepth 1 -type d -name '*unpacked*' | sort)
+                  if [ "${#ROOTS[@]}" -eq 0 ]; then
+                      echo "::error::No *unpacked* directory under nativephp/electron/dist — nothing was read, so nothing is proven."
+                      exit 1
+                  fi
+                  for root in "${ROOTS[@]}"; do
+                      php artisan desktop:inspect-bundle "$root" --no-interaction
+                  done
+
             - name: Upload Linux artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
