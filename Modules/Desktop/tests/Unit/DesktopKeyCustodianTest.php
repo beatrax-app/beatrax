@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Config\Repository;
 use Illuminate\Http\Client\Factory;
 use Modules\Auth\Public\Enums\KeyCustody;
+use Modules\Auth\Public\Exceptions\KeyCustodyRefused;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\SafeStorageBackendProbe;
 use Modules\Desktop\Tests\Support\StubElectronApi;
@@ -164,4 +165,52 @@ it('sends a pre-custody session to one PIN unlock rather than releasing the raw 
     $custodian = new DesktopKeyCustodian(bundleConfig(), $system, custodianBackend('gnome_libsecret'));
 
     expect($custodian->read($raw))->toBeNull();
+});
+
+// A store that is PRESENT and refuses the write is neither degrade case above.
+// System::encrypt() is `->post(...)->json('result')`, so any error response
+// decodes to null -- and the raw key this returned went straight into the
+// session that LockStateManager persists.
+
+function custodianWhoseSafeStorageRefusesTheWrite(): DesktopKeyCustodian
+{
+    $system = Mockery::mock(System::class);
+    $system->shouldReceive('canEncrypt')->andReturn(true);
+    $system->shouldReceive('encrypt')->andReturn(null);
+
+    return new DesktopKeyCustodian(bundleConfig(), $system, custodianBackend('gnome_libsecret'));
+}
+
+it('fails closed instead of handing the raw key back when safeStorage refuses the write', function (): void {
+    $raw = random_bytes(32);
+
+    expect(fn (): string => custodianWhoseSafeStorageRefusesTheWrite()->store($raw))
+        ->toThrow(KeyCustodyRefused::class);
+});
+
+it('reports no operating-system custody after safeStorage refused the write', function (): void {
+    $custodian = custodianWhoseSafeStorageRefusesTheWrite();
+
+    // The refusal is the precondition, not the assertion: custody() answering
+    // from canEncrypt() and the backend probe alone could not see it happen.
+    try {
+        $custodian->store(random_bytes(32));
+    } catch (KeyCustodyRefused) {
+        $custodian->custody();
+    }
+
+    expect($custodian->custody())->toBe(KeyCustody::PlatformStoreRefusedTheWrite)
+        ->and($custodian->custody()->protectsAtRest())->toBeFalse();
+});
+
+// An empty string is the other shape an error response decodes to, and it took
+// the same branch as null before the fix.
+it('treats an empty safeStorage answer as a refusal too', function (): void {
+    $system = Mockery::mock(System::class);
+    $system->shouldReceive('canEncrypt')->andReturn(true);
+    $system->shouldReceive('encrypt')->andReturn('');
+
+    $custodian = new DesktopKeyCustodian(bundleConfig(), $system, custodianBackend('gnome_libsecret'));
+
+    expect(fn (): string => $custodian->store(random_bytes(32)))->toThrow(KeyCustodyRefused::class);
 });

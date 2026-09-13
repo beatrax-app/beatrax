@@ -7,11 +7,12 @@ namespace Modules\Desktop\Internal\Native;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Enums\KeyCustody;
+use Modules\Auth\Public\Exceptions\KeyCustodyRefused;
 use Native\Desktop\System;
 
 // Depends on the CONCRETE Native\Desktop\System rather than the facade, whose
 // PHPDoc wrongly types encrypt/decrypt as non-nullable.
-final readonly class DesktopKeyCustodian implements KeyCustodian
+final class DesktopKeyCustodian implements KeyCustodian
 {
     // Marks a handle this custodian actually encrypted, so a later read can
     // tell ciphertext it must open from a raw key an unavailable safeStorage
@@ -19,10 +20,18 @@ final readonly class DesktopKeyCustodian implements KeyCustodian
     // guessing released the ciphertext as though it were the data key.
     private const string ENCRYPTED_PREFIX = 'nativephp:safestorage:v1:';
 
+    private const string STORE = 'Electron safeStorage';
+
+    // What a store() call actually got back, and the only evidence custody() has
+    // that a key ever reached safeStorage. Null until one has run. canEncrypt()
+    // answers whether a write COULD succeed, and it answered yes on every
+    // refusal this class shipped with.
+    private ?bool $writeAccepted = null;
+
     public function __construct(
-        private ConfigRepository $config,
-        private System $system,
-        private SafeStorageBackendProbe $backend,
+        private readonly ConfigRepository $config,
+        private readonly System $system,
+        private readonly SafeStorageBackendProbe $backend,
     ) {}
 
     public function store(string $rawKey): string
@@ -38,8 +47,15 @@ final readonly class DesktopKeyCustodian implements KeyCustodian
         sodium_memzero($encoded);
 
         if ($encrypted === null || $encrypted === '') {
-            return $rawKey;
+            // Present and refusing: not the absent store the branch above
+            // degrades for. Returning the key here put it in the session
+            // payload, beside the ledger it is the root wrap of.
+            $this->writeAccepted = false;
+
+            throw KeyCustodyRefused::writeRefused(self::class, self::STORE);
         }
+
+        $this->writeAccepted = true;
 
         return self::ENCRYPTED_PREFIX.$encrypted;
     }
@@ -92,6 +108,13 @@ final readonly class DesktopKeyCustodian implements KeyCustodian
     {
         if (! $this->canEncrypt()) {
             return KeyCustody::Session;
+        }
+
+        // Answered from the write, not from the probe: that safeStorage CAN
+        // encrypt is not evidence that it did, and a custody report sourced
+        // from the probe alone claimed the OS held a key it had refused.
+        if ($this->writeAccepted === false) {
+            return KeyCustody::PlatformStoreRefusedTheWrite;
         }
 
         return $this->backend->protects()
