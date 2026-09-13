@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Modules\Sync\Internal\OpLog\OpType;
+use Modules\Sync\Internal\OpLog\QuarantineOutcome;
 
 // Creates the durable log carries whose row is in no table. Two shapes, and a
 // check that asks only about primary keys sees one of them: the pk is free and
@@ -24,56 +25,124 @@ final readonly class StrandedCreates
         private RowOwnership $ownership,
     ) {}
 
-    // Every row the log claims, and how many of them nothing holds, per table.
-    // The count is exact rather than sampled: a floor would read the same
-    // whether one row or forty were missing.
+    // Every row the log claims, and the ones nothing holds split by what put
+    // them there, per table. The counts are exact rather than sampled: a floor
+    // would read the same whether one row or forty were missing.
     /**
-     * @return array{checked: int, stranded: array<string, int>}
+     * @return array{checked: int, unplaced: array<string, int>, removedHere: array<string, int>, held: array<string, int>}
      */
     public function census(int $userId): array
     {
         $checked = 0;
-        $stranded = [];
+        $causes = ['unplaced' => [], 'removedHere' => [], 'held' => []];
 
         foreach ($this->tables($userId) as $table) {
             $checked += $this->claimedRows($table, $userId);
-            $count = $this->strandedIn($table, $userId);
 
-            if ($count > 0) {
-                $stranded[$table] = $count;
+            foreach ($this->strandedIn($table, $userId) as $cause => $count) {
+                if ($count > 0) {
+                    $causes[$cause][$table] = $count;
+                }
             }
         }
 
-        return ['checked' => $checked, 'stranded' => $stranded];
+        return [
+            'checked' => $checked,
+            'unplaced' => $causes['unplaced'],
+            'removedHere' => $causes['removedHere'],
+            'held' => $causes['held'],
+        ];
     }
 
-    private function strandedIn(string $table, int $userId): int
+    /**
+     * @return array{unplaced: int, removedHere: int, held: int}
+     */
+    private function strandedIn(string $table, int $userId): array
     {
         $absent = array_fill_keys($this->absentPks($table, $userId), true);
-        $stranded = 0;
+        $counts = ['unplaced' => 0, 'removedHere' => 0, 'held' => 0];
 
         // Both candidate sets in one walk, and an id in both is walked once:
         // it is the same question about the same id either way.
         foreach ($this->contestedPks($table, $userId) + $absent as $pk => $ignored) {
-            $stranded += $this->unlandedRows($table, (string) $pk, $userId, ! isset($absent[$pk]));
+            foreach ($this->unlandedRows($table, (string) $pk, $userId, ! isset($absent[$pk])) as $cause) {
+                $counts[$cause]++;
+            }
         }
 
-        return $stranded;
+        return $counts;
     }
 
     // Counted per ROW rather than per author: two devices that wrote the same
     // logical row under one id and lost it lost one row, not two.
-    private function unlandedRows(string $table, string $pk, int $userId, bool $pkIsHere): int
+    /**
+     * @return list<'unplaced'|'removedHere'|'held'>
+     */
+    private function unlandedRows(string $table, string $pk, int $userId, bool $pkIsHere): array
     {
-        $unlanded = 0;
+        $causes = [];
 
         foreach ($this->rowsUnder($table, $pk, $userId) as $authors) {
             if (! $this->landed($table, $pk, $authors, $userId, $pkIsHere)) {
-                $unlanded++;
+                $causes[] = $this->causeOf($table, $pk, $authors, $userId);
             }
         }
 
-        return $unlanded;
+        return $causes;
+    }
+
+    // What the absence means, asked of the log rather than of a list of table
+    // names -- a rule naming a table is blind to the next one that legitimately
+    // loses a row. Only `unplaced` is a row a repair could still place, and it
+    // is the only one that reaches a reader as something to act on.
+    /**
+     * @param  list<string>  $authors
+     * @return 'unplaced'|'removedHere'|'held'
+     */
+    private function causeOf(string $table, string $pk, array $authors, int $userId): string
+    {
+        if ($this->writtenHere($authors, $userId)) {
+            return 'removedHere';
+        }
+
+        return $this->heldTerminally($table, $pk, $authors, $userId) ? 'held' : 'unplaced';
+    }
+
+    // A create THIS device authored is proof the row was here: the capture runs
+    // on the write, so the row existed to be written. Gone now, and with no
+    // tombstone, it was removed locally -- by a migration, a cascade, a repair
+    // -- and no peer holds a copy of it for the applier to have failed to place.
+    /**
+     * @param  list<string>  $authors
+     */
+    private function writtenHere(array $authors, int $userId): bool
+    {
+        return $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->whereIn('device_id', $authors)
+            ->where(static fn (Builder $row): Builder => $row
+                ->where('is_self', 1)
+                ->orWhereNotNull('self_retired_at'))
+            ->exists();
+    }
+
+    // A peer's create the quarantine already answered, under a verdict
+    // `QuarantineOutcome` lists as terminal -- so nothing arriving later takes
+    // it again and the row is not a repair waiting to be run. A hold on a
+    // recoverable reason is not one: that row is still owed.
+    /**
+     * @param  list<string>  $authors
+     */
+    private function heldTerminally(string $table, string $pk, array $authors, int $userId): bool
+    {
+        return $this->db->connection()->table('op_log_quarantine')
+            ->where('user_id', $userId)
+            ->where('table_name', $table)
+            ->where('pk', $pk)
+            ->whereIn('device_id', $authors)
+            ->where('op_type', OpType::CreateRow->value)
+            ->whereIn('reason', QuarantineOutcome::terminalReasonValues())
+            ->exists();
     }
 
     // Which of the devices claiming one id claimed the SAME row. Two creates
