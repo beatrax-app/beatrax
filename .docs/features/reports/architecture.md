@@ -537,6 +537,20 @@ module:
   `subDay()` conversion happens. `time_bucket` carries no group filter
   param (a time-bucket row has no category/account/counterparty id).
 
+  **Known gap: it carries no settled currency, so `'original'` mode gives
+  two rows one URL.** In that mode a group present in two currencies is two
+  rows, and `build()` keys on dimension + group key + period + definition —
+  none of which tells them apart. Measured on the shipped sample dataset,
+  `spend` by category over `this_year`: four pairs share one URL, and the
+  reader who clicks `Groceries ¥5,280` lands on the same list as
+  `Groceries €1,085.21` — one holding both, adding up to neither row.
+  Closing it needs a settled-currency FILTER on the transactions list, which
+  is not what `?currency=` there is: that parameter is the `CurrencyView`
+  display toggle (`eur_only` / `original`), not a predicate. Base mode is
+  unaffected, since a group is one row there and the list covering every
+  currency it counted is exactly right
+  (`TheDrilldownListAddsUpToTheRowItWasOpenedFromTest`).
+
   **The reader's own account/category/counterparty filters ride along.**
   Only the clicked row's group was ever emitted, so a report narrowed to
   one account and grouped by category opened a list carrying every
