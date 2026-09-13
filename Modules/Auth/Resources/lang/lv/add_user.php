@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Sākotnējā parole',
     'initial_password_hint' => 'Ievadiet paroli, ko var nolasīt skaļi vai ievadīt vienu reizi. Pirmajā pieteikšanās reizē tā tiks nomainīta.',
     'confirm_initial_password' => 'Apstipriniet sākotnējo paroli',
+    'owner_password_label' => 'Jūsu konta parole',
     'submit' => 'Iestatīt sākotnējo paroli',
 
     'error_mismatch' => 'Paroles nesakrīt.',

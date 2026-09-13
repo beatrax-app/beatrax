@@ -74,7 +74,7 @@ it('refuses a self-promoted partner the add-user action', function (): void {
     $partner = householdPartner();
     $partner->update(['is_developer' => true]);
 
-    app(AddUserAction::class)($partner->fresh(), 'a-third-person', 'third-password-12ch');
+    app(AddUserAction::class)($partner->fresh(), 'a-third-person', 'third-password-12ch', 'partner-password-12ch');
 })->throws(NotFoundHttpException::class);
 
 it('still lets the owner reset a partner password and mint their codes', function (): void {

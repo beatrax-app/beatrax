@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Aloitussalasana',
     'initial_password_hint' => 'Kirjoita salasana, jonka voit lukea ääneen tai kirjoittaa kerran. Käyttäjä vaihtaa sen ensimmäisellä kirjautumisella.',
     'confirm_initial_password' => 'Vahvista aloitussalasana',
+    'owner_password_label' => 'Tilisi salasana',
     'submit' => 'Aseta aloitussalasana',
 
     'error_mismatch' => 'Salasanat eivät täsmää.',

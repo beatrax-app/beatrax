@@ -33,7 +33,7 @@ function addedPartnerAccount(): User
     /** @var AddUserAction $addUser */
     $addUser = app(AddUserAction::class);
 
-    return $addUser(householdOwnerAccount(), 'partner', 'partner-initial-pw-12');
+    return $addUser(householdOwnerAccount(), 'partner', 'partner-initial-pw-12', 'a-long-password-12chars');
 }
 
 it('mints no recovery codes at the moment nobody is there to take them', function (): void {
