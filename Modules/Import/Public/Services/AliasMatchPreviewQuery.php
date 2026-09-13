@@ -10,6 +10,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Dto\AliasMatchPreviewResultDto;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -62,13 +63,24 @@ final readonly class AliasMatchPreviewQuery
     {
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->select(['id', 'description', 'counterparty_name', 'posted_at', 'amount_minor'])
-            // The column the preview prints, so the 500 rows it keeps are the
-            // 500 the reader would call most recent. `id` breaks the tie a DATE
-            // column leaves, or the cut is a different 500 run to run.
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $userId)
+            ->select([
+                'transactions.id',
+                'transactions.description',
+                'transactions.counterparty_name',
+                'transactions.posted_at',
+                'transactions.amount_minor',
+            ])
+            // The cut decides WHICH 500 the match count is taken over, and a
+            // DATE column ties, so the tie-break has to be one both devices
+            // compute the same way. `id` made it a different 500 on the peer.
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS)
             ->limit(self::SCAN_LIMIT)
             ->get();
 
