@@ -57,11 +57,21 @@ final class SweepUntaggableTaxTagsCommand extends Command
 
         // Through the sanctioned writer, never a bulk DELETE: the removal has
         // to reach the op log or a paired device replays the tag back.
+        $removed = 0;
         foreach ($rows as $row) {
-            $this->untag->execute($row['user_id'], $row['transaction_id'], $row['transaction_split_id']);
+            if ($this->untag->execute($row['user_id'], $row['transaction_id'], $row['transaction_split_id'])) {
+                $removed++;
+            }
         }
 
-        $this->info('Removed '.count($rows).' tag(s).');
+        $this->info('Removed '.$removed.' tag(s).');
+
+        // A reconcile freezes the classification a tag is, so the writer keeps
+        // one on a reconciled row. Counting the list instead said the tag was
+        // gone over a row still carrying it.
+        if ($removed < count($rows)) {
+            $this->warn((count($rows) - $removed).' tag(s) were refused: their row is reconciled. Un-reconcile it to remove the tag.');
+        }
 
         return self::SUCCESS;
     }

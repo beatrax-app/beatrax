@@ -20,7 +20,10 @@ final readonly class UntagTransaction
         private ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
-    public function execute(int $userId, int $transactionId, ?int $transactionSplitId = null): void
+    // Answers whether a tag is gone once the call returns, so a caller counting
+    // what it removed reports what it removed: the sweep printed the size of
+    // the list it had been handed over a tag the refusal below had kept.
+    public function execute(int $userId, int $transactionId, ?int $transactionSplitId = null): bool
     {
         // The rule engine, a bulk untag and a replay all reach this action
         // without passing the page's own lock, and a tag is exactly the
@@ -32,7 +35,7 @@ final readonly class UntagTransaction
             ->value('status');
 
         if (TransactionStatusQuery::locksEdits($status)) {
-            return;
+            return false;
         }
 
         // Read the id before the delete: a tombstone needs the pk, and after
@@ -59,24 +62,28 @@ final readonly class UntagTransaction
             )
             ->delete();
 
-        if ($deleted > 0) {
-            if (is_numeric($tagId)) {
-                $this->events->dispatch(new EntityMutated(
-                    table: 'tax_transaction_tags',
-                    pk: (int) $tagId,
-                    userId: $userId,
-                    mutationType: 'delete',
-                ));
-            }
-
-            $this->events->dispatch(new TransactionUntagged(
-                userId: $userId,
-                transactionId: $transactionId,
-            ));
-
-            // Re-index so the note text leaves the search results; a no-op when
-            // the Search module is absent, and the writer re-checks ownership.
-            $this->searchIndex?->upsertForTransaction($transactionId, $userId);
+        if ($deleted === 0) {
+            return false;
         }
+
+        if (is_numeric($tagId)) {
+            $this->events->dispatch(new EntityMutated(
+                table: 'tax_transaction_tags',
+                pk: (int) $tagId,
+                userId: $userId,
+                mutationType: 'delete',
+            ));
+        }
+
+        $this->events->dispatch(new TransactionUntagged(
+            userId: $userId,
+            transactionId: $transactionId,
+        ));
+
+        // Re-index so the note text leaves the search results; a no-op when
+        // the Search module is absent, and the writer re-checks ownership.
+        $this->searchIndex?->upsertForTransaction($transactionId, $userId);
+
+        return true;
     }
 }
