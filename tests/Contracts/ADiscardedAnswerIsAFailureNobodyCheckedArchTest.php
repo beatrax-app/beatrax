@@ -16,7 +16,13 @@ use Tests\Contracts\Support\RepoTree;
 // per-file pin would wave on the next chmod written into the same class, which
 // is the whole shape this guard exists to catch; `proves` is re-run against the
 // walk, so a pin whose call has moved or changed fails as loudly as a new one.
-const DISCARDED_CHMOD_PINS = [
+// chmod leaves a mode to the umask. fflush and fsync leave BYTES unwritten:
+// fwrite reports what it put in a userspace buffer, so a full disk surfaces at
+// the flush, and a short temp file then gets chmod'ed and renamed over a good
+// one. Both are an answer nobody read.
+const DISCARDED_ANSWER_NAMES = ['chmod', 'fflush', 'fsync'];
+
+const DISCARDED_ANSWER_PINS = [
     'Modules/Core/Internal/Console/Support/BackupSidecar.php' => [
         'reason' => 'rename() preserves the mode of a tmp file this class already chmod\'ed and checked, so the re-chmod is belt-and-braces over a settled mode',
         'proves' => '/^chmod\(\$sidecar,0o600\)$/',
@@ -24,6 +30,10 @@ const DISCARDED_CHMOD_PINS = [
     'Modules/Core/Public/Support/OwnerOnlyPath.php' => [
         'reason' => 'the seam itself: it discards the answer on purpose and reads the mode back off disk instead, which is the stronger question',
         'proves' => '/^chmod\(\$path,\$mode\)$/',
+    ],
+    'Modules/DevMode/Internal/Logging/LogFileStats.php' => [
+        'reason' => 'truncating a log to zero, where the flush has no bytes to lose and the caller already answers 0 on any failure',
+        'proves' => '/^fflush\(\$handle\)$/',
     ],
     'Modules/DevMode/Internal/Process/CommandSpawner.php' => [
         'reason' => 'the mkdir(0700) above it is checked and throws; this only re-states the mode of a run directory an earlier spawn already created',
@@ -43,12 +53,12 @@ const DISCARDED_CHMOD_PINS = [
  *
  * @return list<string>
  */
-function discardedChmodShippedFiles(): array
+function discardedAnswerShippedFiles(): array
 {
     return RepoTree::files(RepoTree::PRODUCTION_PHP);
 }
 
-function discardedChmodRelative(string $path): string
+function discardedAnswerRelative(string $path): string
 {
     return str_replace(RepoTree::root().'/', '', $path);
 }
@@ -61,7 +71,7 @@ function discardedChmodRelative(string $path): string
  *
  * @return list<array{line: int, call: string}>
  */
-function discardedChmodCalls(string $source): array
+function discardedAnswerCalls(string $source): array
 {
     $tokens = array_values(array_filter(
         token_get_all($source),
@@ -72,7 +82,8 @@ function discardedChmodCalls(string $source): array
     $calls = [];
 
     foreach ($tokens as $index => $token) {
-        if (! is_array($token) || $token[0] !== T_STRING || strtolower($token[1]) !== 'chmod') {
+        if (! is_array($token) || $token[0] !== T_STRING
+            || ! in_array(strtolower($token[1]), DISCARDED_ANSWER_NAMES, true)) {
             continue;
         }
 
@@ -90,7 +101,7 @@ function discardedChmodCalls(string $source): array
             continue;
         }
 
-        $calls[] = ['line' => $token[2], 'call' => discardedChmodCallText($tokens, $index)];
+        $calls[] = ['line' => $token[2], 'call' => discardedAnswerCallText($tokens, $index, $token[1])];
     }
 
     return $calls;
@@ -102,9 +113,9 @@ function discardedChmodCalls(string $source): array
  *
  * @param  list<array{0:int,1:string,2:int}|string>  $tokens
  */
-function discardedChmodCallText(array $tokens, int $index): string
+function discardedAnswerCallText(array $tokens, int $index, string $name): string
 {
-    $text = 'chmod';
+    $text = $name;
     $depth = 0;
 
     for ($cursor = $index + 1, $count = count($tokens); $cursor < $count; $cursor++) {
@@ -133,8 +144,8 @@ function discardedChmodCallText(array $tokens, int $index): string
 // a ledger, a plaintext snapshot, a bank credential. chmod answering false and
 // nobody asking is the mode staying wherever the umask left it, silently and
 // for as long as the file exists.
-it('reads the answer of every chmod that ships', function (): void {
-    $files = discardedChmodShippedFiles();
+it('reads the answer of every call that ships and can fail quietly', function (): void {
+    $files = discardedAnswerShippedFiles();
 
     // Far under the ~6,700 the tree holds. A walk that opened nothing would
     // find no discarded call and report a clean tree.
@@ -148,12 +159,12 @@ it('reads the answer of every chmod that ships', function (): void {
     $found = 0;
 
     foreach ($files as $path) {
-        $relative = discardedChmodRelative($path);
+        $relative = discardedAnswerRelative($path);
         $source = BladePhpSource::forPath($path, (string) file_get_contents($path));
 
-        foreach (discardedChmodCalls($source) as $call) {
+        foreach (discardedAnswerCalls($source) as $call) {
             $found++;
-            $pin = DISCARDED_CHMOD_PINS[$relative] ?? null;
+            $pin = DISCARDED_ANSWER_PINS[$relative] ?? null;
 
             if ($pin !== null && PatternScan::matches($pin['proves'], $call['call'])) {
                 $reached[$relative] = true;
@@ -166,21 +177,21 @@ it('reads the answer of every chmod that ships', function (): void {
     }
 
     expect($found)->toBeGreaterThanOrEqual(
-        count(DISCARDED_CHMOD_PINS),
-        'The walk found fewer discarded chmod() calls than are pinned, so the reader stopped rather than the tree getting cleaner.',
+        count(DISCARDED_ANSWER_PINS),
+        'The walk found fewer discarded calls than are pinned, so the reader stopped rather than the tree getting cleaner.',
     );
 
     expect($offenders)->toBe(
         [],
-        "A chmod() whose answer nothing reads leaves the mode to the umask and says nothing when it fails.\n".
-        'Route the path through '.OwnerOnlyPath::class." instead of adding a pin:\n  ".
+        "An answer nothing reads is a failure nobody hears: a mode left to the umask, or bytes never written.\n".
+        'For a mode, route the path through '.OwnerOnlyPath::class.". For a flush, throw:\n  ".
         implode("\n  ", $offenders),
     );
 
     // A pin nothing reaches any more is a claim about the tree that stopped
     // being true, and it would otherwise sit here forever.
     $reachedPins = array_keys($reached);
-    $declaredPins = array_keys(DISCARDED_CHMOD_PINS);
+    $declaredPins = array_keys(DISCARDED_ANSWER_PINS);
     sort($reachedPins);
     sort($declaredPins);
 
@@ -194,7 +205,7 @@ it('reads the answer of every chmod that ships', function (): void {
 it('still holds each pinned call site to the reason it was granted for', function (): void {
     $broken = [];
 
-    foreach (DISCARDED_CHMOD_PINS as $relative => $pin) {
+    foreach (DISCARDED_ANSWER_PINS as $relative => $pin) {
         $path = RepoTree::root().'/'.$relative;
 
         if (! is_file($path)) {
@@ -203,7 +214,7 @@ it('still holds each pinned call site to the reason it was granted for', functio
             continue;
         }
 
-        $calls = array_column(discardedChmodCalls((string) file_get_contents($path)), 'call');
+        $calls = array_column(discardedAnswerCalls((string) file_get_contents($path)), 'call');
         $matching = array_filter($calls, static fn (string $call): bool => PatternScan::matches($pin['proves'], $call));
 
         if (count($matching) !== 1) {
@@ -221,7 +232,7 @@ it('still holds each pinned call site to the reason it was granted for', functio
 // The guard is only worth its runtime if it fails on the shape it describes,
 // and the near-misses are the half a pattern gets wrong: a checked answer, a
 // method that merely shares the name, and a call inside a longer expression.
-it('reports a discarded chmod and leaves every answer somebody reads alone', function (): void {
+it('reports a discarded answer and leaves every one somebody reads alone', function (): void {
     $planted = implode("\n", [
         '<?php',
         '@chmod($path, 0600);',
@@ -230,13 +241,17 @@ it('reports a discarded chmod and leaves every answer somebody reads alone', fun
         '$ok = chmod($assigned, 0600);',
         '$files->chmod($viaMethod, 0600);',
         'Filesystem::chmod($viaStatic, 0600);',
+        '@fflush($fp);',
+        'fsync($fp);',
+        'if (@fflush($ok) === false) { throw new RuntimeException("no"); }',
+        '$flushed = fsync($kept);',
     ]);
 
-    $calls = discardedChmodCalls($planted);
+    $calls = discardedAnswerCalls($planted);
 
     expect(array_column($calls, 'call'))->toBe(
-        ['chmod($path,0600)', 'chmod($other,0700)'],
+        ['chmod($path,0600)', 'chmod($other,0700)', 'fflush($fp)', 'fsync($fp)'],
         'The reader either missed a discarded call or read a checked one as discarded.',
     );
-    expect(array_column($calls, 'line'))->toBe([2, 3], 'A pinned call is found by its line, so the line has to be the call\'s own.');
+    expect(array_column($calls, 'line'))->toBe([2, 3, 8, 9], 'A pinned call is found by its line, so the line has to be the call\'s own.');
 });

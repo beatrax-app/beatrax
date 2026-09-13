@@ -77,13 +77,24 @@ final readonly class FileDropEmlBlobStore
             if ($written === false || $written !== strlen($rawMime)) {
                 throw FileDropBlobWriteException::shortWrite($tmp);
             }
-            @fflush($fp);
-            if (function_exists('fsync')) {
-                @fsync($fp);
+            // fwrite reports what it put in a userspace buffer, so a full disk
+            // surfaces here rather than above: an unasked flush lets a short
+            // file be chmod'ed and renamed over a good one.
+            if (@fflush($fp) === false) {
+                throw FileDropBlobWriteException::couldNotFlush($tmp, 'fflush');
             }
+
+            if (function_exists('fsync') && @fsync($fp) === false) {
+                throw FileDropBlobWriteException::couldNotFlush($tmp, 'fsync');
+            }
+
             @flock($fp, LOCK_UN);
-            @fclose($fp);
+            $closed = @fclose($fp);
             $fp = null;
+
+            if ($closed === false) {
+                throw FileDropBlobWriteException::couldNotFlush($tmp, 'fclose');
+            }
 
             if (! @chmod($tmp, SecretFileMode::FILE)) {
                 throw FileDropBlobWriteException::chmodTempFileFailed($tmp);

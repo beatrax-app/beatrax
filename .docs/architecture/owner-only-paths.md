@@ -104,9 +104,17 @@ arrives at `0644` publishes its write-ahead log at `0644` too.
 
 ## The guard
 
-`tests/Contracts/ADiscardedChmodIsAPermissionNobodyCheckedArchTest.php`
-tokenises every shipping file and fails on a `chmod()` call that opens its own
-statement — the shape whose answer has nowhere to go. Three files are pinned:
-the class above, which discards the answer deliberately because it reads the
-mode back instead, and two sites where a checked call over the same path has
-already settled the mode.
+`tests/Contracts/ADiscardedAnswerIsAFailureNobodyCheckedArchTest.php`
+tokenises every shipping file and fails on a `chmod()`, `fflush()` or `fsync()`
+call that opens its own statement — the shape whose answer has nowhere to go.
+
+`chmod` leaves a mode to the umask. The other two leave **bytes unwritten**:
+`fwrite` reports what it put in a userspace buffer, so a full disk surfaces at
+the flush rather than at the write, and a short temp file is then chmod'ed and
+renamed over a good one. Three atomic-write paths did exactly that — the
+file-drop blob store, the mail blob store and the open-banking secrets file.
+
+Four sites are pinned: the class above, which discards the answer deliberately
+because it reads the mode back instead; two where a checked call over the same
+path has already settled the mode; and one flush that truncates a log to zero,
+where there are no bytes to lose.
