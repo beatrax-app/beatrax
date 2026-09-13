@@ -400,6 +400,15 @@ it('bounds the scope to the statement and the builder it was assigned to', funct
 
     $twoStatements = '<?php $a = $db->table(\'transactions\')->first(); $b = $db->table(\'y\')->where(\'user_id\', $u)->get();';
     expect($unscoped($twoStatements))->toBe([1], 'and neither can the next statement on its own');
+
+    // The bound the chase needs most: $query is the commonest variable name in
+    // this tree, and a walk that ran past the closing brace would let the next
+    // method's scope answer for this one wherever the two happened to agree.
+    $nextMethod = "<?php\nclass A {\n"
+        ."    public function a(\$db, \$id) { \$q = \$db->table('transactions')->where('id', \$id); return \$q->get(); }\n"
+        ."    public function b(\$db, \$u) { \$q = \$db->table('y')->where('user_id', \$u); return \$q->get(); }\n"
+        .'}';
+    expect($unscoped($nextMethod))->toBe([3], 'the scope in the method below it belongs to a different query');
 });
 
 it('reads a table literal only where the whole name is the sole argument', function (): void {
