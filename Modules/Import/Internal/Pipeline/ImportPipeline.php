@@ -332,9 +332,7 @@ final readonly class ImportPipeline
     {
         $rowDescription = self::trimToNull($source->description);
 
-        $diff = $disposition instanceof EnrichedDisposition
-            ? ['source_ref' => ['from' => $disposition->fromSourceRef, 'to' => $disposition->toSourceRef]]
-            : null;
+        $diff = $disposition instanceof EnrichedDisposition ? $disposition->previewDiff() : null;
 
         return new PreviewRowDto(
             rowIndex: $source->sourceRowIndex,
