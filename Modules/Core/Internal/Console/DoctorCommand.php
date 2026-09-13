@@ -23,6 +23,7 @@ use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
 use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Ledger\Public\Services\SplitSumHealthCheck;
 use Modules\Search\Public\Services\FtsHealthCheck;
+use Modules\Sync\Public\Services\StrandedCreateHealthCheck;
 
 final class DoctorCommand extends Command
 {
@@ -50,6 +51,7 @@ final class DoctorCommand extends Command
         private readonly ?FtsHealthCheck $ftsHealth = null,
         private readonly ?FingerprintHealthCheck $fingerprintHealth = null,
         private readonly ?SplitSumHealthCheck $splitSumHealth = null,
+        private readonly ?StrandedCreateHealthCheck $strandedCreateHealth = null,
     ) {
         parent::__construct();
     }
@@ -90,7 +92,7 @@ final class DoctorCommand extends Command
         // module that owns the question, so none may return a Core Internal
         // ProbeResult. The row is built here from the plain values they answer
         // in, and the optional ones are null where their module is absent.
-        foreach ([$this->schemaShapeHealth, $this->ftsHealth, $this->fingerprintHealth, $this->splitSumHealth] as $health) {
+        foreach ([$this->schemaShapeHealth, $this->ftsHealth, $this->fingerprintHealth, $this->splitSumHealth, $this->strandedCreateHealth] as $health) {
             if ($health === null) {
                 continue;
             }

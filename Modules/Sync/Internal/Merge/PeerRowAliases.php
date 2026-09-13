@@ -76,7 +76,27 @@ final readonly class PeerRowAliases
      */
     public function naturalKeyIdentifies(string $table, array $payload): bool
     {
-        return $this->usableIndexes($table, $payload) !== [];
+        return $this->naturalKeyOf($table, $payload) !== null;
+    }
+
+    // What the payload would be FOUND by, rather than whether it could be, so
+    // two creates arriving under one id can be compared to each other: equal
+    // here is one logical row whichever device wrote it, and unequal is the
+    // collision. Null where nothing but the id tells the table's rows apart.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function naturalKeyOf(string $table, array $payload): ?string
+    {
+        $parts = [];
+
+        foreach ($this->usableIndexes($table, $payload) as $columns) {
+            foreach ($columns as $column) {
+                $parts[] = $column.'='.self::asText($payload[$column]);
+            }
+        }
+
+        return $parts === [] ? null : implode("\0", $parts);
     }
 
     // The id to address a row by HERE: the peer's own where the two agree, the
@@ -177,7 +197,7 @@ final readonly class PeerRowAliases
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function localTwinOf(string $table, array $payload): int|string|null
+    public function localTwinOf(string $table, array $payload): int|string|null
     {
         foreach ($this->usableIndexes($table, $payload) as $columns) {
             $query = $this->db->connection()->table($table);
