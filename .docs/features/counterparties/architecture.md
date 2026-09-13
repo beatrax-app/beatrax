@@ -363,7 +363,7 @@ Ascending is arbitrary; the slug carries no recency. Arbitrary-but-agreed
 is what a tie-break needs, and it is the one thing `id` was not.
 
 The 20 descriptions `suggestionFor()` tallies a merchant name out of are
-ordered by the same `NewestTransactionFirst::SQL`. The cap picks the
+ordered by the same `NewestTransactionFirst::ACROSS_ACCOUNTS`. The cap picks the
 pool the percentage is computed over, and PHP's `arsort()` is stable, so
 a two-way tie in that tally is settled by whichever description the
 query returned first. Both halves reach the reader — as a suggested

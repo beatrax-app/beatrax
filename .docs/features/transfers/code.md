@@ -70,7 +70,7 @@ No `Models/`, `Database/Migrations/`, `Routes/`, or
 - **Enums/**
   - `CounterLegOrder` — `NearestToCentre` (chain resolution) /
     `EarliestBooked` (the pairer). Both run out through
-    `EarliestLegFirst::SQL`, so the ordering is total either way
+    `EarliestLegFirst::ON_ONE_ACCOUNT`, so the ordering is total either way
     **and** the same order on a paired device.
 
 ## Internal services
@@ -80,8 +80,12 @@ No `Models/`, `Database/Migrations/`, `Routes/`, or
   no per-instance state. Its forward arm holds no query of its
   own: it resolves the partner account, then asks
   `PairLookup::counterLegOnAccount`.
-- `Internal/Support/EarliestLegFirst::SQL` — the one ORDER BY all
-  three pairing reads end on. `transactions.id` is a per-device
+- `Internal/Support/EarliestLegFirst` — the ORDER BY all three
+  pairing reads end on, in the two spellings the reads need:
+  `ACROSS_ACCOUNTS` for `TransferPairer`'s two, which join the
+  account and settle on its IBAN, and `ON_ONE_ACCOUNT` for
+  `PairLookup`, which is already scoped to one account and needs
+  no such column. `transactions.id` is a per-device
   autoincrement, so the leg it chose was a different leg on the
   peer; see
   [which leg becomes the pair](architecture.md#which-leg-becomes-the-pair).
