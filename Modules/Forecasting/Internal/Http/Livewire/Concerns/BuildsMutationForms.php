@@ -16,6 +16,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayloa
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
 // The mutation-form surface of ScenarioEditorSidebar: the per-kind default
@@ -118,7 +119,7 @@ trait BuildsMutationForms
      *                          string-keyed form array
      * @return array<string, mixed>
      */
-    private function coercePayloadForm(mixed $payload): array
+    private function coercePayloadForm(mixed $payload, string $baseCurrency): array
     {
         if (! is_array($payload)) {
             return [];
@@ -130,7 +131,43 @@ trait BuildsMutationForms
             }
         }
 
-        return $coerced;
+        return $this->withEditableAmounts($coerced, $baseCurrency);
+    }
+
+    // The stored payload names its figure amountMinor / newAmountMinor; the
+    // boxes are bound to amount / newAmount. Untranslated, three of the five
+    // kinds could not be edited at all.
+    /**
+     * @param  array<string, mixed>  $form
+     * @return array<string, mixed>
+     *
+     * @link ../../../../../../.docs/features/forecasting/architecture.md#reading-a-stored-amount-back-into-its-box
+     */
+    private function withEditableAmounts(array $form, string $baseCurrency): array
+    {
+        $amountMinor = $form['amountMinor'] ?? null;
+        if (is_int($amountMinor)) {
+            unset($form['amountMinor']);
+            $currency = $form[ScenarioFormField::Currency->value] ?? null;
+            $form[ScenarioFormField::Amount->value] = MoneyInput::formatAbsMinor(
+                $amountMinor,
+                is_string($currency) && $currency !== '' ? $currency : $baseCurrency,
+            );
+        }
+
+        $newAmountMinor = $form['newAmountMinor'] ?? null;
+        if (is_int($newAmountMinor)) {
+            unset($form['newAmountMinor']);
+            $seriesId = $form[ScenarioFormField::SeriesId->value] ?? null;
+            $form[ScenarioFormField::NewAmount->value] = MoneyInput::formatAbsMinor(
+                $newAmountMinor,
+                is_numeric($seriesId)
+                    ? $this->currencyForSeries((int) $seriesId, $baseCurrency)
+                    : $baseCurrency,
+            );
+        }
+
+        return $form;
     }
 
     private function intField(ScenarioFormField $field): int

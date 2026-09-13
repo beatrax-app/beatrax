@@ -171,7 +171,7 @@ final class ScenarioEditorSidebar extends Component
         $this->dispatch('scenario-mutated');
     }
 
-    public function editMutation(int|string $mutationId): void
+    public function editMutation(int|string $mutationId, BaseCurrency $baseCurrency): void
     {
         $mutationId = DerivedRowId::fromWire($mutationId);
 
@@ -186,7 +186,7 @@ final class ScenarioEditorSidebar extends Component
                 continue;
             }
             $this->selectedKind = $kind;
-            $this->form = $this->coercePayloadForm($m['payload'] ?? null);
+            $this->form = $this->coercePayloadForm($m['payload'] ?? null, $baseCurrency->code());
 
             return;
         }
