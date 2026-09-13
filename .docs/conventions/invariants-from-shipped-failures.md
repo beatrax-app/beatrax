@@ -7641,12 +7641,49 @@ handler all simply absent. Nothing in the tree links `/dev/logs` with
 away from live.
 
 The rule beside this one accepts a registration written in the template's own
-`<script>` and asks only whether the name is there. This half asks when. It is
-measured by position: a registration written before the script first mentions
-`alpine:init` is one the eager path reaches, which is the shape
-`resources/js/app.js` uses — register off `window.Alpine` if it is already
-there, and keep the listener as the fallback for the page that loads before
-Alpine exists.
+`<script>` and asks only whether the name is there. This half asks when. The
+shape it asks for is the one `resources/js/app.js` uses — register off
+`window.Alpine` if it is already there, and keep the listener as the fallback
+for the page that loads before Alpine exists.
+
+### Not only `alpine:init`, and not only once per file
+
+For its first year the rule looked for the literal `alpine:init` with a `strpos`
+over the whole file, and called a file clean as soon as one registration was
+written above the first mention of it. Both halves of that let the same defect
+back through, and both were measured rather than argued.
+
+`alpine:init` is not the only event that has already fired. `livewire.js` is
+parser-blocking in `<body>`: it adds its own `DOMContentLoaded` listener while
+the document is still being parsed, and calls `Livewire.start()` — and through
+it `Alpine.start()` — from that listener. A deferred module adds its listener
+after parsing, so it is always the second one, and a provider registered from it
+is registered after every element on the page has been initialised. That is
+worse than the `alpine:init` case rather than milder: it misses on the **first**
+page load, with no navigation involved at all. Planted into the application
+layout and read in a browser on `/goals` — one provider registered at module
+top level, one from a `DOMContentLoaded` listener — the eager element's scope
+came back `["reached"]` and the late element's came back `[]`, with
+`Alpine Expression Error: raceProbeLate is not defined` in the console and a
+200 on the page. The rule passed that tree. `load`, `alpine:initialized`,
+`livewire:navigated` and `livewire:initialized` are all the same or later.
+`livewire:init` is the one in that family that is still in time: Livewire
+dispatches it on the way **into** `start()`, ahead of Alpine, and it is
+deliberately not on the list.
+
+A verdict about the file is also the wrong grain. `app.js` registers nine
+providers eagerly and mentions `alpine:init` only at its foot, so a tenth added
+behind any listener below them inherited the first nine's answer. Appending one
+`livewire:navigated` registration to `app.js` passed the rule as it stood and
+fails it now.
+
+The rule reads the argument list of each late listener as a span and asks, per
+name, whether every registration of that name falls inside one. Reading the span
+means stepping over strings, template literals, comments and regular-expression
+literals whole, because a `)` inside any of them closes nothing — and a scanner
+that miscounts there does not fail loudly, it ends the listener early and calls
+everything after it eager. `v.replace(/[)]/g, '')` is the shape that would do
+it, and it is pinned.
 
 ### The same shape in the file the rule never opened
 
