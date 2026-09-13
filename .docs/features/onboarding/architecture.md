@@ -182,8 +182,9 @@ anonymous Blade components for the per-step UI shell.
   strip. Internal, and the one shape the jump gate and the
   resolver both read.
 - `WizardCompleted` event — carries the user id, raised by
-  `SetupWizard::next()` on the one advance that leaves nothing
-  pending, and only when something was still pending going in.
+  `SetupWizard::leaveIfComplete()` — the tail `next()` and `skip()`
+  share — on the advance that leaves nothing pending, and only when
+  something was still pending going in.
   `DoneStep::finish()` used to raise it and redirect itself,
   which left the terminal row `pending` forever: the resolver
   kept answering `done` as the first pending step, so every
@@ -221,7 +222,13 @@ step, under a control whose aria-label says it "saves your progress".
 
 The per-step "Skip this step" control is the other exit, and that one
 does mark its own row `skipped` — through `SetupWizard::skip()`, gated
-on `WizardStepRegistry::isSkippable()`.
+on `WizardStepRegistry::isSkippable()`. A skip can itself be the advance
+that leaves nothing pending, because walking Back reopens a finished
+step: skip and Finish therefore share one tail, `leaveIfComplete()`,
+which raises `WizardCompleted` when something was pending going in and
+redirects to `/`. Before they shared it, a reader who walked back to the
+last skippable step and skipped it again was left on the step they had
+just dismissed, with nothing raised and nowhere sent.
 
 Finish, on the terminal step, is the third and the only one that means
 the wizard is over. It goes through the same seam as every other step:

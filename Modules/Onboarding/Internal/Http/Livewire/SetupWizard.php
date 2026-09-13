@@ -188,18 +188,7 @@ final class SetupWizard extends Component
         $wasAlreadyComplete = $resume->resolve($currentUser->id()) === '';
 
         $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Done->value);
-
-        if (! $this->allComplete) {
-            return;
-        }
-
-        if (! $wasAlreadyComplete) {
-            $events->dispatch(new WizardCompleted($currentUser->id()));
-        }
-
-        // The wizard's one exit that means "finished", and the reason `done` is
-        // the step skip refuses. An action may navigate where mount() may not.
-        $this->redirect('/');
+        $this->leaveIfComplete($events, $currentUser, $wasAlreadyComplete);
     }
 
     // The view hides skip on non-skippable steps; this guard is the
@@ -212,12 +201,35 @@ final class SetupWizard extends Component
         WizardProgressQuery $query,
         Clock $clock,
         ResumeStepResolver $resume,
+        Dispatcher $events,
     ): void {
         if (! $registry->isSkippable($this->currentStepKey)) {
             return;
         }
 
+        $wasAlreadyComplete = $resume->resolve($currentUser->id()) === '';
+
         $this->advance($db, $currentUser, $registry, $query, $clock, $resume, WizardStepStatus::Skipped->value);
+        $this->leaveIfComplete($events, $currentUser, $wasAlreadyComplete);
+    }
+
+    // Walking Back reopens a finished step, so the step a reader then SKIPS can
+    // be the advance that leaves nothing pending. Only Finish knew what to do
+    // about it: skip marked the row and stopped, on the step it had just
+    // dismissed, with no event raised and nowhere sent.
+    private function leaveIfComplete(Dispatcher $events, CurrentUser $currentUser, bool $wasAlreadyComplete): void
+    {
+        if (! $this->allComplete) {
+            return;
+        }
+
+        if (! $wasAlreadyComplete) {
+            $events->dispatch(new WizardCompleted($currentUser->id()));
+        }
+
+        // The wizard's one exit that means "finished", and the reason `done` is
+        // the step skip refuses. An action may navigate where mount() may not.
+        $this->redirect('/');
     }
 
     // "Resume later", whose aria-label promises it saves your progress. It

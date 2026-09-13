@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Notifications\Internal\Enums\DeferredNotificationPass;
 use Modules\Notifications\Internal\Support\DeferredNotificationPasses;
 use Modules\Notifications\Internal\Support\NotificationPassOutcome;
+use Modules\Notifications\Internal\Support\PerUserPass;
 
 // Scheduled hourly, not daily, so "you're at 90%" arrives near the spend that
 // crossed the threshold. The per-period occurrence key stops the same crossing
@@ -25,6 +26,7 @@ final class EmitBudgetNudgesCommand extends Command
     public function __construct(
         private readonly BudgetNudgeDispatch $nudges,
         private readonly DeferredNotificationPasses $deferred,
+        private readonly PerUserPass $users,
     ) {
         parent::__construct();
     }
@@ -34,7 +36,7 @@ final class EmitBudgetNudgesCommand extends Command
         $emitted = 0;
         $deferred = 0;
 
-        User::query()->lazyById(100)->each(function (User $user) use (&$emitted, &$deferred): void {
+        $failed = $this->users->each($this->signature, function (User $user) use (&$emitted, &$deferred): void {
             // Asked before the carryover fold rather than after it. A scheduled
             // process holds no app-lock key, so every nudge it derived would be
             // refused at the seal — and asking here means the mark records the
@@ -49,7 +51,7 @@ final class EmitBudgetNudgesCommand extends Command
             $emitted++;
         });
 
-        $this->info(NotificationPassOutcome::line('Budget nudges', $emitted, $deferred));
+        $this->info(NotificationPassOutcome::line('Budget nudges', $emitted, $deferred, $failed));
 
         return self::SUCCESS;
     }
