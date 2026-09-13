@@ -6,9 +6,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Reports\Internal\Aggregation\AccountSpendQuery;
 use Modules\Reports\Internal\Aggregation\CounterpartySpendQuery;
 
 uses(RefreshDatabase::class);
@@ -17,6 +19,10 @@ uses(RefreshDatabase::class);
 // Dutch. The category dimension routes both of its stand-in labels through
 // Lang; the counterparty dimension carried them as literals, and the two facts
 // it states are as distinct as the two CategorySpendQuery keeps apart.
+
+// The account dimension was the third, and the quietest: its stand-in had no
+// key at all, in any of the twenty-six catalogues, so a parity check comparing
+// the locales to each other found nothing to report.
 
 // The English line, so a Dutch reading can be held against it. A missing Dutch
 // line falls back to English and renders exactly what the literal did, so
@@ -183,4 +189,55 @@ it('keeps the empty bucket and the unresolved counterparty two different lines',
     expect(array_intersect($labels, $englishLines))->toBe([]);
     expect($labels)->toContain(Lang::get('reports::builder.no_counterparty'))
         ->toContain(Lang::get('reports::builder.unavailable_counterparty'));
+});
+
+// The account row is gone while its transactions remain -- here by belonging to
+// somebody else, which is the same unresolved id a deleted row leaves behind.
+function cgnForeignAccount(User $owner): Account
+{
+    /** @var Account */
+    return Account::query()->create([
+        'user_id' => $owner->id,
+        'name' => 'CGN Peer Bank',
+        'slug' => 'cgn-peer-'.bin2hex(random_bytes(3)),
+        'kind' => 'bank',
+        'iban' => 'NL00CGP'.strtoupper(bin2hex(random_bytes(6))),
+        'default_currency' => 'EUR',
+    ]);
+}
+
+it('names an account this device cannot resolve in the language the report is read in', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = cgnUser('cgn');
+    $foreign = cgnForeignAccount(cgnUser('cgn-peer'));
+    cgnSpend($db, $user, $foreign, null);
+
+    $english = cgnEnglish('reports::builder.unavailable_account');
+    app()->setLocale('nl');
+
+    $rows = app(AccountSpendQuery::class)->forUserAndPeriod($user, cgnPeriod(), 'spend', 'EUR');
+
+    expect(Lang::get('reports::builder.unavailable_account'))->not->toBe('reports::builder.unavailable_account');
+    expect($rows)->toHaveCount(1);
+    expect($rows[0]->groupLabel)->toBe(Lang::get('reports::builder.unavailable_account'))
+        ->and($rows[0]->groupLabel)->not->toBe($english);
+});
+
+// The line has to exist in all twenty-six, not merely in the two this file
+// reads: a key present in none of them is what made this defect invisible, and
+// a key present in only some is what an English fallback hides.
+it('carries the unresolved-account line in every language the product ships', function (): void {
+    $missing = [];
+
+    foreach (Locale::cases() as $locale) {
+        app()->setLocale($locale->value);
+        $line = Lang::get('reports::builder.unavailable_account');
+
+        if ($line === 'reports::builder.unavailable_account' || trim($line) === '') {
+            $missing[] = $locale->value;
+        }
+    }
+
+    expect($missing)->toBe([], 'No unresolved-account line for: '.implode(', ', $missing));
 });

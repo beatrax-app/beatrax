@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Bez kategorijas',
     'no_counterparty' => 'Nav darījuma partnera',
     'unavailable_counterparty' => 'Darījuma partnera šajā ierīcē nav',
+    'unavailable_account' => 'Konta šajā ierīcē nav',
     'title' => 'Atskaites',
     'page_title' => 'Atskaites · Beatrax',
     'subtitle' => 'Izveidojiet atskaiti no savas virsgrāmatas.',

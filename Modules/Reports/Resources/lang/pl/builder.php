@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Bez kategorii',
     'no_counterparty' => 'Brak kontrahenta',
     'unavailable_counterparty' => 'Kontrahent niedostępny na tym urządzeniu',
+    'unavailable_account' => 'Konto niedostępne na tym urządzeniu',
     'title' => 'Raporty',
     'page_title' => 'Raporty · Beatrax',
     'subtitle' => 'Ułóż raport na podstawie swojej księgi.',

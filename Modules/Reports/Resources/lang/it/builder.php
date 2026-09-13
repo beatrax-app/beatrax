@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Senza categoria',
     'no_counterparty' => 'Nessuna controparte',
     'unavailable_counterparty' => 'Controparte non presente su questo dispositivo',
+    'unavailable_account' => 'Conto non presente su questo dispositivo',
     'title' => 'Report',
     'page_title' => 'Report · Beatrax',
     'subtitle' => 'Componi un report a partire dal tuo registro.',

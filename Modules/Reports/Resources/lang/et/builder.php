@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Kategoriseerimata',
     'no_counterparty' => 'Vastaspooleta',
     'unavailable_counterparty' => 'Vastaspoolt pole selles seadmes',
+    'unavailable_account' => 'Kontot pole selles seadmes',
     'title' => 'Aruanded',
     'page_title' => 'Aruanded · Beatrax',
     'subtitle' => 'Koosta oma pearaamatust aruanne.',

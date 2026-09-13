@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Be kategorijos',
     'no_counterparty' => 'Kitos šalies nėra',
     'unavailable_counterparty' => 'Kitos šalies šiame įrenginyje nėra',
+    'unavailable_account' => 'Sąskaitos šiame įrenginyje nėra',
     'title' => 'Ataskaitos',
     'page_title' => 'Ataskaitos · Beatrax',
     'subtitle' => 'Sudaryk ataskaitą iš savo didžiosios knygos.',

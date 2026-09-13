@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Bez kategorije',
     'no_counterparty' => 'Nema protustranke',
     'unavailable_counterparty' => 'Protustranke nema na ovom uređaju',
+    'unavailable_account' => 'Računa nema na ovom uređaju',
     'title' => 'Izvješća',
     'page_title' => 'Izvješća · Beatrax',
     'subtitle' => 'Sastavi izvješće iz svoje glavne knjige.',

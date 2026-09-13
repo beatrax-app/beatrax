@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Luokittelematon',
     'no_counterparty' => 'Ei vastapuolta',
     'unavailable_counterparty' => 'Vastapuolta ei ole tällä laitteella',
+    'unavailable_account' => 'Tiliä ei ole tällä laitteella',
     'title' => 'Raportit',
     'page_title' => 'Raportit · Beatrax',
     'subtitle' => 'Kokoa raportti tilikirjastasi.',

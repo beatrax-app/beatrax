@@ -14,6 +14,11 @@ use Symfony\Component\Finder\Finder;
 // A sentence a reader is shown therefore has no default: the signature is what
 // makes each call site say which language it is asking in.
 
+// A `??` fallback is the same shape wearing the other face. A report row read
+// "Unknown account" in all twenty-six languages, between two siblings that both
+// resolved a key, and a parity check cannot see it: parity compares locales to
+// each other, and a key absent from all of them is absent from the comparison.
+
 // Capitalised and more than one word. A locale code, a driver name, a date
 // pattern and a column are none of those; a sentence is all of them.
 const READER_SENTENCE_SHAPE = '/^\p{Lu}\p{Ll}+(?:\P{Lu}*\s\P{Z}+)+$/u';
@@ -223,6 +228,72 @@ it('never lets a parameter default answer for a sentence a reader is shown', fun
         '',
         'A default is what lets a call site omit the language it is asking in.',
         'Drop it, and pass Lang::get(...) from each call site instead.',
+    ]));
+});
+
+/**
+ * Every `??` whose right-hand side is a quoted string, in $path.
+ *
+ * @return list<array{line: int, value: string}>
+ */
+function sentenceFallbacks(string $path): array
+{
+    $tokens = token_get_all((string) file_get_contents($path));
+    $count = count($tokens);
+    $found = [];
+
+    for ($i = 0; $i < $count; $i++) {
+        if (! is_array($tokens[$i]) || $tokens[$i][0] !== T_COALESCE) {
+            continue;
+        }
+
+        $j = $i + 1;
+
+        while ($j < $count && is_array($tokens[$j]) && $tokens[$j][0] === T_WHITESPACE) {
+            $j++;
+        }
+
+        if ($j < $count && is_array($tokens[$j]) && $tokens[$j][0] === T_CONSTANT_ENCAPSED_STRING) {
+            $found[] = ['line' => $tokens[$j][2], 'value' => substr($tokens[$j][1], 1, -1)];
+        }
+    }
+
+    return $found;
+}
+
+// The tree falls back to a string literal 240 times, and a walk that stops
+// reading finds no sentence among them and calls the tree clean.
+const SENTENCE_FALLBACK_FLOOR = 150;
+
+it('never lets a fallback answer for a sentence a reader is shown', function (): void {
+    $offenders = [];
+    $read = 0;
+
+    foreach (sentenceDefaultFiles() as $path) {
+        foreach (sentenceFallbacks($path) as $fallback) {
+            $read++;
+
+            if (preg_match(READER_SENTENCE_SHAPE, $fallback['value']) !== 1) {
+                continue;
+            }
+
+            $offenders[] = str_replace(base_path().'/', '', $path).':'.$fallback['line']
+                ."  ?? '".$fallback['value']."'";
+        }
+    }
+
+    expect($read)->toBeGreaterThan(
+        SENTENCE_FALLBACK_FLOOR,
+        'The reader found '.$read.' string fallbacks, which is what a walk that stopped reading looks like.'
+    );
+
+    expect($offenders)->toBe([], implode("\n", [
+        'These fall back to a sentence a reader is shown:',
+        ...$offenders,
+        '',
+        'A lookup that misses still faces a reader. Resolve a key for the miss,',
+        'and add it to all 26 catalogues — a key in none of them is one a parity',
+        'check has nothing to compare, so it reads as in parity.',
     ]));
 });
 

@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Uncategorized',
     'no_counterparty' => 'No counterparty',
     'unavailable_counterparty' => 'Counterparty not on this device',
+    'unavailable_account' => 'Account not on this device',
     'title' => 'Reports',
     'page_title' => 'Reports · Beatrax',
     'subtitle' => 'Compose a report from your ledger.',

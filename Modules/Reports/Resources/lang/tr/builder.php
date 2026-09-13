@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Kategorisiz',
     'no_counterparty' => 'Karşı taraf yok',
     'unavailable_counterparty' => 'Karşı taraf bu cihazda yok',
+    'unavailable_account' => 'Hesap bu cihazda yok',
     'title' => 'Raporlar',
     'page_title' => 'Raporlar · Beatrax',
     'subtitle' => 'Defterinden bir rapor oluştur.',

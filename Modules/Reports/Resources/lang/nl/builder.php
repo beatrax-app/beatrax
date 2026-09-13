@@ -6,6 +6,7 @@ return [
     'uncategorized' => 'Niet gecategoriseerd',
     'no_counterparty' => 'Geen tegenpartij',
     'unavailable_counterparty' => 'Tegenpartij niet op dit apparaat',
+    'unavailable_account' => 'Rekening niet op dit apparaat',
     'title' => 'Rapporten',
     'page_title' => 'Rapporten · Beatrax',
     'subtitle' => 'Stel een rapport samen uit je grootboek.',
