@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Elige una fecha de inicio y una de fin.',
             'malformed' => 'Usa una fecha válida con el formato AAAA-MM-DD.',
             'inverted' => 'La fecha de fin es anterior a la de inicio.',
+            'unknown_preset' => 'Ese no es uno de los periodos disponibles. Elige uno de la lista.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Contraparte',
         'account' => 'Cuenta',
         'month' => 'Mes',
+        'week' => 'Semana',
         'default' => 'Grupo',
     ],
 

@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Tämä laite on synkronoitu',
     'heading' => 'Tämä laite on synkronoitu',
+    'heading_withheld' => 'Tämä laite on määritetty',
     'records' => 'Kopioitiin :count tietue. Lähde: :peer.|Kopioitiin :count tietuetta. Lähde: :peer.',
     'records_none' => 'Ei uutta kopioitavaa — kaikki on jo ajan tasalla. Lähde: :peer.',
     'withheld' => ':count muutos ei ole vielä saapunut.|:count muutosta ei ole vielä saapunut.',

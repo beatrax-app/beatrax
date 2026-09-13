@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Ovaj uređaj je sinkroniziran',
     'heading' => 'Ovaj uređaj je sinkroniziran',
+    'heading_withheld' => 'Ovaj uređaj je postavljen',
     'records' => 'Kopiran :count zapis s uređaja :peer.|Kopirana :count zapisa s uređaja :peer.|Kopirano :count zapisa s uređaja :peer.',
     'records_none' => 'Sve je usklađeno — nije bilo ničeg novog za kopiranje. Izvorni uređaj: :peer.',
     'withheld' => ':count promjena još nije stigla.|:count promjene još nisu stigle.|:count promjena još nije stiglo.',

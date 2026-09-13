@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Izvēlies gan sākuma, gan beigu datumu.',
             'malformed' => 'Izmanto derīgu datumu formātā GGGG-MM-DD.',
             'inverted' => 'Beigu datums ir pirms sākuma datuma.',
+            'unknown_preset' => 'Šis nav viens no piedāvātajiem periodiem. Izvēlies kādu no saraksta.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Darījuma partneris',
         'account' => 'Konts',
         'month' => 'Mēnesis',
+        'week' => 'Nedēļa',
         'default' => 'Grupa',
     ],
 

@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Vali nii algus- kui lõppkuupäev.',
             'malformed' => 'Kasuta kehtivat kuupäeva kujul AAAA-KK-PP.',
             'inverted' => 'Lõppkuupäev on enne alguskuupäeva.',
+            'unknown_preset' => 'See ei ole üks pakutavatest perioodidest. Vali mõni loendist.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Vastaspool',
         'account' => 'Konto',
         'month' => 'Kuu',
+        'week' => 'Nädal',
         'default' => 'Rühm',
     ],
 

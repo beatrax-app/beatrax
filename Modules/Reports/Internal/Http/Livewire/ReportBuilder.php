@@ -206,6 +206,7 @@ final class ReportBuilder extends Component
         // from the download callback has already sent 200 and the headers, so
         // the reader gets a truncated file instead of the message.
         try {
+            ReportVocabulary::periodPresetNamedHere($this->periodPreset);
             $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
         } catch (InvalidReportPeriod $problem) {
             $this->flashMessage = self::periodMessage($problem);
@@ -265,6 +266,11 @@ final class ReportBuilder extends Component
         $drilldownUrls = [];
 
         try {
+            // The rail can only press a word this build names; the address bar
+            // can carry any word at all, and the definition above has already
+            // coerced it. Asked here so the report is refused rather than drawn
+            // over a period nobody chose with every button unpressed.
+            ReportVocabulary::periodPresetNamedHere($this->periodPreset);
             $period = $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);
             $result = $aggregator->run($user, $definition);
             // With compare on, comparisonRows is the union of current+previous

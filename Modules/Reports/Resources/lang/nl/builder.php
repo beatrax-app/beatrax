@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Kies zowel een begin- als een einddatum.',
             'malformed' => 'Gebruik een geldige datum in de vorm JJJJ-MM-DD.',
             'inverted' => 'De einddatum ligt vóór de begindatum.',
+            'unknown_preset' => 'Dat is geen van de aangeboden periodes. Kies er een uit de lijst.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Tegenpartij',
         'account' => 'Rekening',
         'month' => 'Maand',
+        'week' => 'Week',
         'default' => 'Groep',
     ],
 

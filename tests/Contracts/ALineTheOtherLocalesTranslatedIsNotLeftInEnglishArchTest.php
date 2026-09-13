@@ -182,6 +182,7 @@ const FROZEN_LINE_PINS = [
         'Triage' => null,
         'Type' => null,
         'version' => null,
+        'Week' => ['nl'],
         ' — optional' => null,
         '→ file:' => null,
         '↗ transaction' => null,

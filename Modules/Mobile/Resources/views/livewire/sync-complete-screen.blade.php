@@ -14,6 +14,10 @@
     Every line about syncing carries :action, filled from the label the very
     next screen puts on its button, so the two cannot name different things —
     this one used to deny the button that one is built around.
+
+    Variables in scope:
+      $heading : string — composed by the component, which knows whether any
+                 history is still held back
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <div
@@ -27,8 +31,10 @@
                 <x-core::app-mark />
             </div>
 
+            {{-- Composed by the component, so the tab title and the heading
+                 cannot make different claims about the same sync. --}}
             <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {{ Lang::get('mobile::sync_complete.heading') }}
+                {{ $heading }}
             </h1>
 
             {{-- A completed catch-up that copied nothing is a real outcome —
@@ -42,10 +48,10 @@
                 @endif
             </p>
 
-            {{-- The one place this flow can say the history came up short. The
-                 heading above is a claim about the transfer, which did finish;
-                 what did not is the ledger, and a reader who leaves here
-                 unaware of that has no later screen to learn it from. --}}
+            {{-- The one place this flow can say the history came up short, and
+                 the reason the heading above stops short of claiming the ledger
+                 is whole: a reader who leaves here unaware of this has no later
+                 screen to learn it from. --}}
             @if ($withheldEntries > 0)
                 <x-core::alert tone="info" class="text-left" data-testid="sync-complete-withheld">
                     <p>{{ Lang::choice('mobile::sync_complete.withheld', $withheldEntries) }}</p>

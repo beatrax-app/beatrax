@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Dit apparaat is gesynchroniseerd',
     'heading' => 'Dit apparaat is gesynchroniseerd',
+    'heading_withheld' => 'Dit apparaat is ingesteld',
     'records' => ':count record gekopieerd van :peer.|:count records gekopieerd van :peer.',
     'records_none' => 'Bijgewerkt met :peer. Er was niets nieuws om te kopiëren.',
     'withheld' => ':count wijziging is nog niet binnengekomen.|:count wijzigingen zijn nog niet binnengekomen.',

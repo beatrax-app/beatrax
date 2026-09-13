@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Izberi tako začetni kot končni datum.',
             'malformed' => 'Vnesi veljaven datum v obliki LLLL-MM-DD.',
             'inverted' => 'Končni datum je pred začetnim.',
+            'unknown_preset' => 'To ni eno od ponujenih obdobij. Izberi eno s seznama.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Nasprotna stranka',
         'account' => 'Račun',
         'month' => 'Mesec',
+        'week' => 'Teden',
         'default' => 'Skupina',
     ],
 

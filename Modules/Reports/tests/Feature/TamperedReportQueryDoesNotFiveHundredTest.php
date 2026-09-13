@@ -7,8 +7,10 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
+use Symfony\Component\HttpFoundation\Response;
 
 uses(RefreshDatabase::class);
 
@@ -96,9 +98,18 @@ it('answers the export route when a query parameter names nothing', function (st
 })->with([
     'metric' => ['metric', 'bogus'],
     'dimension' => ['dim', 'bogus'],
-    'period' => ['period', 'bogus'],
     'currency mode' => ['ccy', 'bogus'],
     'visualisation' => ['viz', 'bogus'],
     'amount direction' => ['amount_dir', 'bogus'],
     'granularity' => ['gran', 'bogus'],
 ]);
+
+// The period is the one of the seven that names the rows rather than labelling
+// them, so it is refused with the reason instead of being coerced. Still not a
+// 500, which is what this file is about.
+it('refuses an export over a period it cannot name rather than exporting another one', function (): void {
+    $response = $this->get('/reports/export?period=bogus');
+
+    expect($response->status())->toBe(Response::HTTP_UNPROCESSABLE_ENTITY)
+        ->and($response->getContent())->toContain(Lang::get('reports::builder.period.error.unknown_preset'));
+});

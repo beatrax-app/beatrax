@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Wybierz datę początkową i końcową.',
             'malformed' => 'Podaj poprawną datę w formacie RRRR-MM-DD.',
             'inverted' => 'Data końcowa jest wcześniejsza niż początkowa.',
+            'unknown_preset' => 'To nie jest jeden z oferowanych okresów. Wybierz jeden z listy.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Kontrahent',
         'account' => 'Konto',
         'month' => 'Miesiąc',
+        'week' => 'Tydzień',
         'default' => 'Grupa',
     ],
 

@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Vyber počáteční i koncové datum.',
             'malformed' => 'Zadej platné datum ve tvaru RRRR-MM-DD.',
             'inverted' => 'Koncové datum je dříve než počáteční.',
+            'unknown_preset' => 'To není jedno z nabízených období. Vyber jedno ze seznamu.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Protistrana',
         'account' => 'Účet',
         'month' => 'Měsíc',
+        'week' => 'Týden',
         'default' => 'Skupina',
     ],
 

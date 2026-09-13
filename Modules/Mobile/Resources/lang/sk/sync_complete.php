@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Toto zariadenie je zosynchronizované',
     'heading' => 'Toto zariadenie je zosynchronizované',
+    'heading_withheld' => 'Toto zariadenie je nastavené',
     'records' => 'Skopírovaný :count záznam zo zariadenia :peer.|Skopírované :count záznamy zo zariadenia :peer.|Skopírovaných :count záznamov zo zariadenia :peer.',
     'records_none' => 'Všetko je aktuálne, nebolo čo kopírovať. Zdroj: :peer.',
     'withheld' => ':count zmena zatiaľ nedorazila.|:count zmeny zatiaľ nedorazili.|:count zmien zatiaľ nedorazilo.',

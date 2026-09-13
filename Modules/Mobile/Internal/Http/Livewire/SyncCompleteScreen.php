@@ -79,10 +79,22 @@ final class SyncCompleteScreen extends Component
 
     public function render(ViewFactory $views): View
     {
-        $view = $views->make('mobile::livewire.sync-complete-screen');
+        $heading = $this->heading();
 
-        $view->extends('layouts.lock', ['title' => Lang::get('mobile::sync_complete.page_title').Brand::TITLE_SUFFIX]);
+        $view = $views->make('mobile::livewire.sync-complete-screen', ['heading' => $heading]);
+
+        $view->extends('layouts.lock', ['title' => $heading.Brand::TITLE_SUFFIX]);
 
         return $view;
+    }
+
+    // "This device is synced" is a claim about the ledger, and while a peer is
+    // holding history back it is a false one — the count below it says so in the
+    // same breath. The setup DID finish, so the heading says that instead.
+    private function heading(): string
+    {
+        return Lang::get($this->withheldEntries > 0
+            ? 'mobile::sync_complete.heading_withheld'
+            : 'mobile::sync_complete.heading');
     }
 }

@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'See seade on sünkroonitud',
     'heading' => 'See seade on sünkroonitud',
+    'heading_withheld' => 'See seade on seadistatud',
     'records' => 'Seadmest :peer kopeeriti :count kirje.|Seadmest :peer kopeeriti :count kirjet.',
     'records_none' => 'Seadmega :peer ollakse ühel lainel. Uut polnud midagi kopeerida.',
     'withheld' => ':count muudatus ei ole veel kohale jõudnud.|:count muudatust ei ole veel kohale jõudnud.',
