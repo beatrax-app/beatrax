@@ -62,14 +62,6 @@ const PICK_ORDER_ALLOWED = [
         'picks' => 1,
         'why' => 'A diagnostic that reports at most N ids of rows whose legs disagree with their parent. The ids it prints ARE this device\'s ids — that is what the reader is being handed — so a peer agreeing on the order would say nothing.',
     ],
-    'Modules/Recurring/Internal/Queries/SeriesAccountResolver.php::recurring_series_occurrences' => [
-        'picks' => 1,
-        'why' => 'KNOWN DIVERGENT. A row_number() window over observed_at then rso.id, taken at rank 1, decides which account a series is filed under. recurring_series_occurrences.id is DeviceMintedRowId::mint() — random per device, not merely counted per device — so this is the same shape with a worse tie-break, and the device-stable tail has to come from the joined transaction.',
-    ],
-    'Modules/Recurring/Public/Services/RecurringOccurrenceQuery.php::recurring_series_occurrences' => [
-        'picks' => 2,
-        'why' => 'KNOWN DIVERGENT. latestOccurrencesForSeries() feeds DriftEvaluator, which writes a derived alert id, and amountTrendForSeries() cuts the chart at maxPoints; both end on a minted id. One of the two does not join transactions today, so the fix is a query change rather than a clause change.',
-    ],
 ];
 
 /**
@@ -490,12 +482,12 @@ function pickOrderScan(string $source, string $self = 'Probe'): array
 }
 
 /**
- * Every pick against a subject table that ends on a bare id, keyed
- * `path::table` and carrying the lines, read off one walk of the tree.
+ * Every pick against a subject table, keyed `path::table` and carrying the
+ * column each one ends on, read off one walk of the tree.
  *
- * @return array<string, list<string>>
+ * @return array<string, list<array{line:int,last:string,how:string}>>
  */
-function pickOrderOffendersByKey(): array
+function pickOrderPicksByKey(): array
 {
     static $memo = null;
 
@@ -503,23 +495,54 @@ function pickOrderOffendersByKey(): array
         return $memo;
     }
 
-    $offenders = [];
+    $picks = [];
 
     foreach (SonarSourceFiles::all() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
 
         foreach (pickOrderScan((string) file_get_contents($path), basename($path, '.php')) as $hit) {
-            if ($hit['last'] !== 'id') {
-                continue;
-            }
-
-            $offenders[$relative.'::'.$hit['table']][] = 'line '.$hit['line'].', '.$hit['how'];
+            $picks[$relative.'::'.$hit['table']][] = [
+                'line' => $hit['line'],
+                'last' => $hit['last'],
+                'how' => $hit['how'],
+            ];
         }
     }
 
-    ksort($offenders);
+    ksort($picks);
 
-    return $memo = $offenders;
+    return $memo = $picks;
+}
+
+/**
+ * The subset of those that end on a bare id.
+ *
+ * @return array<string, list<string>>
+ */
+function pickOrderOffendersByKey(): array
+{
+    $offenders = [];
+
+    foreach (pickOrderPicksByKey() as $key => $picks) {
+        foreach ($picks as $pick) {
+            if ($pick['last'] === 'id') {
+                $offenders[$key][] = 'line '.$pick['line'].', '.$pick['how'];
+            }
+        }
+    }
+
+    return $offenders;
+}
+
+/**
+ * @return list<string>
+ */
+function pickOrderLastTermsAt(string $key): array
+{
+    return array_map(
+        static fn (array $pick): string => $pick['last'],
+        pickOrderPicksByKey()[$key] ?? [],
+    );
 }
 
 // Every verdict below is read off one walk, and a walk that opened nothing
@@ -537,6 +560,20 @@ it('walks the tree it is about to read its verdicts off', function (): void {
         'The constant reader could not assemble the one clause this rule exists to spread, so every '
         .'orderByRaw() behind a constant reads as an ordering with no terms and cannot offend.',
     );
+});
+
+// A read whose table and whose clause are both behind a class constant is the
+// shape a scanner goes blind on while still passing: the allow-list reads
+// "allows N, found 0", which is what a FIXED read looks like too. These three
+// are named rather than counted, so blindness and a fix cannot be confused.
+it('still reads a pick whose table and clause are both behind a constant', function (): void {
+    expect(pickOrderConstantIndex()['SeriesTables::OCCURRENCES'] ?? null)->toBe('recurring_series_occurrences as o')
+        ->and(pickOrderConstantIndex()['NewestOccurrenceFirst::SQL'] ?? null)->toContain('occurrence_ordinal');
+
+    expect(pickOrderLastTermsAt('Modules/Recurring/Public/Services/RecurringOccurrenceQuery.php::recurring_series_occurrences'))
+        ->toBe(['occurrence_ordinal', 'occurrence_ordinal'])
+        ->and(pickOrderLastTermsAt('Modules/Recurring/Internal/Queries/SeriesAccountResolver.php::recurring_series_occurrences'))
+        ->toBe(['occurrence_ordinal']);
 });
 
 it('reads a pick that ends on an id, and leaves a walk that ends on one alone', function (): void {
@@ -653,10 +690,10 @@ it('does not let the known-divergent baseline grow', function (): void {
     ));
 
     expect(count($known))->toBe(
-        4,
-        'Four reads on this tree pick a row out of a tie on an id the device counts for itself, each '
+        2,
+        'Two files on this tree pick a row out of a tie on an id the device counts for itself, each '
         .'costed in an-ordering-that-picks.md. The count may fall — delete a line here when one is '
-        .'fixed. It may not rise: a fifth is one more screen that disagrees with the phone beside it.'
+        .'fixed. It may not rise: a third is one more screen that disagrees with the phone beside it.'
         ."\n  ".implode("\n  ", $known),
     );
 });
