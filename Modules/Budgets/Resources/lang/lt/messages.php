@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Perkelta iš :category',
         'moved_to' => 'Perkelta į :category',
         'moved_unreadable' => 'Perkelta su :category naujesne Beatrax versija',
+        'truncated' => 'Paskutiniai judėjimai: :shown iš :count',
         'undo' => 'Anuliuoti',
     ],
 

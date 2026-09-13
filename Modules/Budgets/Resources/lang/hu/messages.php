@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Áthelyezve innen: :category',
         'moved_to' => 'Áthelyezve ide: :category',
         'moved_unreadable' => 'Áthelyezve ezzel: :category — a Beatrax egy újabb verziójával',
+        'truncated' => 'Legutóbbi mozgások: :shown / :count',
         'undo' => 'Visszavonás',
     ],
 

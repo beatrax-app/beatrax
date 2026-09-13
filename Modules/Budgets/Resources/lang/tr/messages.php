@@ -74,6 +74,7 @@ return [
         'moved_from' => ':category kategorisinden taşındı',
         'moved_to' => ':category kategorisine taşındı',
         'moved_unreadable' => ':category ile taşındı — Beatrax uygulamasının daha yeni bir sürümü tarafından',
+        'truncated' => 'Son hareketler: :shown / :count',
         'undo' => 'Geri al',
     ],
 

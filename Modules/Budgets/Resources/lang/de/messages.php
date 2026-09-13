@@ -70,6 +70,7 @@ return [
         'moved_from' => 'Verschoben aus :category',
         'moved_to' => 'Verschoben nach :category',
         'moved_unreadable' => 'Mit :category verschoben, von einer neueren Version von Beatrax',
+        'truncated' => 'Letzte Bewegungen: :shown von :count',
         'undo' => 'Rückgängig',
     ],
 

@@ -311,6 +311,15 @@
                                             </li>
                                         @endforeach
                                     </ul>
+                                    {{-- The Moved figure on the row above is the sum of every move
+                                         this envelope made this period, and this list stops at ten.
+                                         Ten lines under a total of eleven read as the whole working
+                                         for it, the way the pots card's history once did. --}}
+                                    @if (($moveCounts[$row->categoryId] ?? 0) > count($recentMoves[$row->categoryId]))
+                                        <p class="pt-1 text-xs text-slate-500 dark:text-slate-400">
+                                            {{ Lang::get('budgets::messages.history.truncated', ['shown' => count($recentMoves[$row->categoryId]), 'count' => $moveCounts[$row->categoryId]]) }}
+                                        </p>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

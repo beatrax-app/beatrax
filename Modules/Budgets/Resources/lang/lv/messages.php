@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Pārvietots no :category',
         'moved_to' => 'Pārvietots uz :category',
         'moved_unreadable' => 'Pārvietots ar :category jaunākā Beatrax versijā',
+        'truncated' => 'Pēdējās kustības: :shown no :count',
         'undo' => 'Atsaukt',
     ],
 

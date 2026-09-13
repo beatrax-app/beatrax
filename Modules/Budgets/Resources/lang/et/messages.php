@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Liigutatud kategooriast :category',
         'moved_to' => 'Liigutatud kategooriasse :category',
         'moved_unreadable' => 'Liigutatud kategooriaga :category Beatraxi uuema versiooni poolt',
+        'truncated' => 'Viimased liikumised: :shown / :count',
         'undo' => 'Võta tagasi',
     ],
 

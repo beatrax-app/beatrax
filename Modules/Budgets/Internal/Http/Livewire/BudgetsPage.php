@@ -339,6 +339,7 @@ final class BudgetsPage extends Component
                 'moveFromCategory' => null,
                 'moveDestinations' => [],
                 'recentMoves' => [],
+                'moveCounts' => [],
                 'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
                 'conversion' => null,
             ]);
@@ -394,7 +395,9 @@ final class BudgetsPage extends Component
             );
         }
 
-        $recentMoves = $balances->recentMovesForCategories($user->id, array_keys($rows), $selected);
+        $categoryIds = array_keys($rows);
+        $recentMoves = $balances->recentMovesForCategories($user->id, $categoryIds, $selected);
+        $moveCounts = $balances->moveCountsForCategories($user->id, $categoryIds, $selected);
 
         $view = $views->make('budgets::livewire.budgets-page', [
             'rows' => $rows,
@@ -408,6 +411,7 @@ final class BudgetsPage extends Component
             'moveFromCategory' => $moveFromCategory,
             'moveDestinations' => $moveDestinations,
             'recentMoves' => $recentMoves,
+            'moveCounts' => $moveCounts,
             'defaultNotifyThreshold' => CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
             // A view variable rather than a property: the fold is not hydrated
             // back from the browser, and a disclosure that round-tripped

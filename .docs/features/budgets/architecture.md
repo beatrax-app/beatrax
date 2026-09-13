@@ -283,7 +283,9 @@ stayed green had the writer started storing the datetime form.
   categories in one query to avoid an N+1 on every grid render, each row
   converted into the reader's base currency the way the fold nets it —
   a line left in its stored units read `+EUR 500.00` beside a moved column
-  reading `EUR 440.18`, off one rate the fold had already applied),
+  reading `EUR 440.18`, off one rate the fold had already applied, plus
+  `moveCountsForCategories()`, the real number of moves behind each `Moved`
+  figure),
   `EnvelopeProgressQuery` (the fold reduced to one progress row per
   envelope that has something to report, which is what `Position`
   composes its budget status from), `BudgetProgressQuery` (the
@@ -334,6 +336,18 @@ signed amount and says so instead of picking a direction —
 `envelope_moves.kind` has no CHECK and a peer on a newer version writes its
 own spelling straight through the op log
 ([a peer may be on a newer version](../sync/a-peer-may-be-on-a-newer-version.md)).
+
+The list stops at ten lines and the `Moved` term above it does not, so the
+two only add up while the envelope made ten moves or fewer: eleven printed
+ten lines summing to `-EUR 62.00` under a column reading `-EUR 66.00`, with
+nothing on the page saying a line was missing.
+`EnvelopeBalanceQuery::moveCountsForCategories()` carries the real total —
+one grouped statement for the whole grid, never one per envelope, and
+counted the way the fold sums rather than the way the list filters, since
+the fold counts a move whoever owns its counterpart category and the list
+leaves that one out. `history.truncated` closes the list whenever the two
+disagree, which is the line the pots card already draws under its own
+([`Pots` — architecture](../pots/architecture.md)).
 
 All service
 collaborators arrive as method parameters (no constructor injection,

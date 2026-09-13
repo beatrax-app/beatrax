@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Przeniesiono z kategorii: :category',
         'moved_to' => 'Przeniesiono do kategorii: :category',
         'moved_unreadable' => 'Przeniesiono z kategorią: :category przez nowszą wersję Beatrax',
+        'truncated' => 'Ostatnie ruchy: :shown z :count',
         'undo' => 'Cofnij',
     ],
 

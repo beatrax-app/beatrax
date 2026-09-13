@@ -70,6 +70,7 @@ return [
         'moved_from' => 'Verplaatst van :category',
         'moved_to' => 'Verplaatst naar :category',
         'moved_unreadable' => 'Verplaatst met :category door een nieuwere versie van Beatrax',
+        'truncated' => 'Recentste mutaties: :shown van :count',
         'undo' => 'Ongedaan maken',
     ],
 
