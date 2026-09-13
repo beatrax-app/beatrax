@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Modules\Import\Internal\Pipeline\Stages;
 
 use Generator;
-use Illuminate\Contracts\Filesystem\FileNotFoundException;
-use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Exceptions\BoundedReadException;
+use Modules\Core\Public\Support\BoundedRead;
 use Modules\Core\Public\Support\SafeExceptionContext;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Internal\Exceptions\ReceiptFormatMismatchException;
 use Modules\Import\Internal\Exceptions\ReceiptParseException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
@@ -37,7 +38,6 @@ final readonly class ParseStage
         private RecordReceipt $recordReceipt,
         private MboxIterator $mbox,
         private ReceiptSourceAdapter $receiptAdapter,
-        private Filesystem $files,
         private LoggerInterface $logger,
     ) {}
 
@@ -85,8 +85,8 @@ final readonly class ParseStage
 
         if ($sourceFormat === SourceFormat::Eml->value) {
             try {
-                $bytes = $this->files->get($localPath);
-            } catch (FileNotFoundException $e) {
+                $bytes = BoundedRead::file($sourceFilename, $localPath, UploadLimits::MAX_MESSAGE_BYTES);
+            } catch (BoundedReadException $e) {
                 throw ReceiptParseException::unreadable($localPath, $e);
             }
 
