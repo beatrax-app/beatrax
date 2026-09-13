@@ -53,7 +53,11 @@ rather than leaving a user half-converted.
   `category_id`, and `PotWriter::assertXorLink()` means a pot can never hold
   both a goal and a category, so a goal-linked pot is never in the population.
 - **Archived pots stay visible**, in the collapsed "Archived pots" disclosure
-  on the pots page, at a balance of zero.
+  on the pots page, at a balance of zero — however many devices ran the cutover.
+  Each of them archives the same pot for itself, so each writes its own release,
+  and a balance that summed them read minus what the pot had held. The balance is
+  bounded by the last release instead: see [a balance is what moved since the
+  last settlement](architecture.md#a-balance-is-what-moved-since-the-last-settlement).
 
 The retirement is one-way: `down()` is deliberately empty, because rolling back
 would resurrect category-linked pots and un-stamp the anchor for users who have
