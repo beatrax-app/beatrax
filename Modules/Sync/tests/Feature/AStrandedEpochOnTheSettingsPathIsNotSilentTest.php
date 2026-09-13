@@ -181,6 +181,52 @@ it('does not tell a stranded reader that nothing changed', function (): void {
         ->assertDontSee(Lang::get('sync::devices.close_no_changes'));
 });
 
+// The sentence is shared with the pairing screen, and it used to open "This
+// device is paired, but …". `showEnableEncryptionModal()` says in its own
+// comment that it is "ONLY reachable from the single-device (sync off) optional
+// offer", so on this path there is no pairing at all — the reader below has no
+// peer and sync is off. Pinned whole, not searched for a word: a clause that
+// comes back is a clause that reads as true.
+it('claims nothing about pairing, on the path where there is none', function (): void {
+    $user = settingsStrandedUser('settings-stranded-unpaired');
+    test()->actingAs($user);
+
+    app()->instance(EncryptionMigrationService::class, settingsStrandedMigrationService(
+        new StrandedEncryptionEpochException(SETTINGS_STRANDED_MESSAGE),
+    ));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('showEncryptionModal', true)
+        ->call('enableEncryption')
+        ->assertSet('encryptionStep', EncryptionSetupStep::Stranded->value)
+        ->assertSee(Lang::get('mobile::pairing.encryption_incomplete'));
+
+    // English is the source the other twenty-five were rewritten from, so a
+    // re-added clause appears here first.
+    expect(Lang::get('mobile::pairing.encryption_incomplete'))
+        ->toBe('Encrypting the data stored on this device did not finish. It is not encrypted at rest yet.');
+});
+
+// One sentence for both screens, deliberately. Split into two keys, the pairing
+// copy is free to start claiming a pairing again and this test would never see
+// it — the screen it is false on would be reading the other key.
+it('is the same sentence the pairing screen shows', function (): void {
+    $pairing = (string) file_get_contents(base_path('Modules/Mobile/Resources/views/livewire/mobile-pairing-scan.blade.php'));
+    $settings = (string) file_get_contents(base_path('Modules/Sync/Resources/views/livewire/devices-and-sync-settings-section.blade.php'));
+
+    // One needle per call: toContain() reads every further argument as another
+    // needle, so an explanation passed beside one becomes a string the source
+    // has to contain.
+    $missing = [];
+    foreach (['Modules/Mobile pairing scan' => $pairing, 'Modules/Sync settings section' => $settings] as $where => $source) {
+        if (! str_contains($source, "Lang::get('mobile::pairing.encryption_incomplete')")) {
+            $missing[] = $where;
+        }
+    }
+
+    expect($missing)->toBe([], 'These no longer render the shared sentence: '.implode(', ', $missing));
+});
+
 it('still tells a rolled-back reader that nothing changed, because nothing did', function (): void {
     $user = settingsStrandedUser('settings-rollback-copy');
     test()->actingAs($user);

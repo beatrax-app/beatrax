@@ -36,7 +36,7 @@ return [
 
     'success_heading' => 'Zařízení spárováno',
     'success_body' => 'Tomuto zařízení se teď důvěřuje. Tvoje data se po připojení synchronizují.',
-    'encryption_incomplete' => 'Zařízení je spárováno, ale šifrování dat uložených v něm se nedokončilo. Data zatím nejsou uložena zašifrovaně.',
+    'encryption_incomplete' => 'Šifrování dat uložených v tomto zařízení se nedokončilo. Data zatím nejsou uložena zašifrovaně.',
     'done' => 'Hotovo',
 
     'errors' => [

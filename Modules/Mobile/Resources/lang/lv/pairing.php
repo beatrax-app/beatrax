@@ -36,7 +36,7 @@ return [
 
     'success_heading' => 'Ierīce sapārota',
     'success_body' => 'Šī ierīce tagad ir uzticama. Dati tiks sinhronizēti, tiklīdz izveidosies savienojums.',
-    'encryption_incomplete' => 'Ierīce ir sapārota, taču tajā saglabāto datu šifrēšana netika pabeigta. Dati vēl netiek glabāti šifrēti.',
+    'encryption_incomplete' => 'Šajā ierīcē saglabāto datu šifrēšana netika pabeigta. Dati vēl netiek glabāti šifrēti.',
     'done' => 'Gatavs',
 
     'errors' => [
