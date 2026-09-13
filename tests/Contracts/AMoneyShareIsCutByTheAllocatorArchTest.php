@@ -18,10 +18,6 @@ const MONEY_ALLOCATOR = 'Modules/FX/Public/Services/CrossCurrencyTotal.php';
 // Each entry is one that does not cut a whole into parts, and says what it does
 // instead; `proves` re-checks that against the code.
 const MONEY_SHARE_PINS = [
-    'Modules/Chains/Internal/Resolvers/PaypalFundingResolver.php' => [
-        'reason' => 'a matching tolerance around a settlement, used to decide whether two rows are the same payment',
-        'proves' => '/AMOUNT_BAND_PERCENT/',
-    ],
     'Modules/Chains/Public/Support/SettlementTolerance.php' => [
         'reason' => 'how far a statement may be off before it stops counting as paid; a threshold, not a share of anything',
         'proves' => '/FLOOR_MINOR/',
