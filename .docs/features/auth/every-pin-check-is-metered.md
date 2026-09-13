@@ -31,9 +31,9 @@ goes through `proveCurrentPin()`, which is the metered verifier, and the data
 key that comes back is the one the caller re-wraps — so a PIN change derives
 once rather than verifying a hash and then deriving again.
 
-`AppLockProvisioner::verifyPin()` is gone rather than made private. A private
-raw check is a public one a later edit can promote back; there is nothing here
-to promote.
+The provisioner's own unmetered check is gone rather than made private. A
+private raw check is a public one a later edit can promote back; there is
+nothing here to promote.
 
 ## What the meter is keyed on
 

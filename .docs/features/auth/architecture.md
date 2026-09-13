@@ -419,8 +419,8 @@ security-sensitive it is:
 
 Each of those PINs is checked by `PinVerificationService`, the same verifier
 the lock screen goes through, so a guess made from an unlocked settings screen
-spends the same meter. `AppLockProvisioner::verifyPin()` — the side-effect-free
-check these panels used to take — no longer exists
+spends the same meter. The provisioner's own side-effect-free PIN check — the
+one these panels used to take, which moved no counter — no longer exists
 ([why](every-pin-check-is-metered.md)).
 
 ### Session custody (`LockStateManager`)

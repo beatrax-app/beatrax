@@ -10,10 +10,10 @@ use Modules\Auth\Public\Contracts\AppLockPinShape;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Lang;
 
-// One owner for what the app-lock screen says back to a reader: the same three
-// questions — is the PIN there, do the two new PINs agree, is this the account
-// password — are asked by six actions on that one screen, and a vocabulary
-// spread over six call sites is one a later edit can only half-change.
+// One owner for what the app lock says back to a reader. Is the PIN there, do
+// the two new PINs agree, is this the account password, and why was a PIN just
+// refused: four questions, six settings actions and both lock screens asking
+// them, and a vocabulary spread that far is one a later edit half-changes.
 final readonly class AppLockCredentialRejections
 {
     public function __construct(
