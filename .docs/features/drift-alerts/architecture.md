@@ -406,9 +406,12 @@ letting Carbon raise a bare `InvalidFormatException` out of an unscoped
 - `DriftEvaluator::evaluateForSeries($seriesId, $user)` — the math. Reads
   the newest three occurrences through
   `RecurringOccurrenceQuery::latestOccurrencesForSeries` — two for the
-  movement, a third for the interval the prior amount was billed over —
-  computes
-  `delta_minor`, applies the effective threshold (per-series override →
+  movement, a third for the interval the prior amount was billed over.
+  "Newest" is ordered by the charge, not by the occurrence id, which is
+  minted with `random_int()` and so ranked a same-day pair differently
+  on each device; see
+  [which occurrence is the newest](../recurring/series-detection.md#which-occurrence-is-the-newest).
+  It computes `delta_minor`, applies the effective threshold (per-series override →
   user-global → 5% default, first one set), inserts on
   threshold-crossing. `AmountMovement` decides whether there is a
   movement to measure at all: it refuses a zero prior (the

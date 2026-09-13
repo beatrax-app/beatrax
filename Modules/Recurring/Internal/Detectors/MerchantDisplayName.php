@@ -103,8 +103,14 @@ final readonly class MerchantDisplayName
             ->where('user_id', $userId)
             ->where('counterparty_normalized', $normalized)
             ->whereNotNull('counterparty_name')
+            // posted_at is a DATE and the id is a per-device autoincrement, so
+            // which of a day's charges named the merchant was decided by a
+            // number the peer counts for itself: one device could label the
+            // series "ALBERT HEIJN 1234" and the other "Albert Heijn".
             ->orderByDesc('posted_at')
-            ->orderByDesc('id')
+            ->orderByDesc('booked_at')
+            ->orderByDesc('amount_minor')
+            ->orderByDesc('occurrence_ordinal')
             ->first(['counterparty_name']);
 
         if ($row === null) {
