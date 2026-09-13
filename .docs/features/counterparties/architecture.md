@@ -385,13 +385,13 @@ a two-way tie in that tally is settled by whichever description the
 query returned first. Both halves reach the reader — as a suggested
 name, and as a confidence band.
 
-## The phone list is the one rendering that says which way the total went
+## What says which way the total went, and what must not claim it
 
 The figure is a magnitude at all four index renderings and on the profile
 hero, and that is deliberate — [the exception, and why it is
 one](triage-suggestions.md#the-recent-transactions-list-and-why-its-amounts-are-signed).
-The phone list is the only one of the five that also reports direction,
-and it reported it in emerald and in nothing else: `abs()` had already
+The phone list was the first of the five found reporting direction, and
+it reported it in emerald and in nothing else: `abs()` had already
 taken the sign off, so a total received and a total paid printed the same
 characters. A reader who hears the row, and a reader who cannot separate
 the two colours, were told money owed and money received alike.
@@ -406,10 +406,30 @@ which is the rule `Resources/views/components/type-chip.blade.php` states
 for this surface. A total of exactly zero points neither way and gets no
 word: absence has to mean "no direction", not "the other direction".
 
-The cards, the desktop table and the profile hero report no direction at
-all, before or after this. Giving them one would be a signed aggregate
-where the product has chosen a magnitude, which is a different question
-from making an existing signal perceivable.
+The card and the profile hero reported one as well, and reported it as a
+claim rather than as a reading: the label was picked by the
+counterparty's **type**, so every personal row read `Net received`
+whether the twelve months had run that way or the other one. The figure
+beside it is the same magnitude, so nothing on the surface could
+contradict the sentence — a friend you had net paid €500 read `Net
+received` over `€500.00`. Both labels are now picked by the sign of
+`total12mMinor` and by nothing else, from the pair the phone list already
+uses: `core::dashboard.in` where the twelve months came in,
+`core::dashboard.out` where they went out, and the surface's own neutral
+name — `stat_12mo`, `hero_12mo_total` — where the total is exactly zero
+and points neither way, on the same rule as the row above. On the hero
+that one label is also what `x-core::fx-disclosure` announces as the
+trigger's accessible name, so the rate details stopped naming a direction
+of their own as well.
+
+`stat_net_received` and `hero_net_received` are therefore gone from all
+twenty-six locales. Nothing renders them, and a line no reader can reach
+is one `EveryTranslatedLineReachesAReaderArchTest` reports.
+
+Direction is still reported for a personal counterparty only, and the
+desktop table still reports none. Giving the other types one would be a
+signed aggregate where the product has chosen a magnitude, which is a
+different question from either of the ones above.
 
 ## What the index toolbar offers
 

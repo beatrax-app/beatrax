@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Rediģēt attēloto nosaukumu',
 
-    'hero_net_received' => 'Neto saņemts',
     'hero_12mo_total' => '12 mēnešu kopsumma',
     'hero_transactions' => 'Darījumi',
     'hero_first_seen' => 'Pirmoreiz redzēts',

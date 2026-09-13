@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Modifica il nome visualizzato',
 
-    'hero_net_received' => 'Netto ricevuto',
     'hero_12mo_total' => 'Totale 12 mesi',
     'hero_transactions' => 'Transazioni',
     'hero_first_seen' => 'Prima volta',

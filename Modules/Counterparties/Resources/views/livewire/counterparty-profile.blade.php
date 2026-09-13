@@ -21,6 +21,19 @@
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     $isSelf = $profile->type === CounterpartyType::SelfAccount->value;
+
+    // The hero figure is a magnitude, so this caption is the only thing on the
+    // tile that can name a direction — and it must not name one the figure
+    // contradicts. The pair is the dashboard flow tiles', and a total of
+    // exactly zero went neither way, so it keeps the period's own name.
+    $heroDirection = $profile->type === CounterpartyType::Personal->value
+        ? match (true) {
+            $profile->total12mMinor > 0 => Lang::get('core::dashboard.in'),
+            $profile->total12mMinor < 0 => Lang::get('core::dashboard.out'),
+            default => null,
+        }
+        : null;
+    $heroLabel = $heroDirection ?? Lang::get('counterparties::profile.hero_12mo_total');
 @endphp
 
 <div class="space-y-6">
@@ -52,7 +65,7 @@
                  class="cp-profile-hero-stats">
             <div class="frame frame-tight">
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-                    @if ($profile->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::profile.hero_net_received') }}@else{{ Lang::get('counterparties::profile.hero_12mo_total') }}@endif
+                    {{ $heroLabel }}
                 </div>
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                     {{ Money::ofMinor(abs($profile->total12mMinor), $profile->currency)->format() }}
@@ -60,7 +73,7 @@
                 <x-core::fx-disclosure
                     :disclosure="$profile->conversion"
                     id="cp-profile-total"
-                    :label="$profile->type === CounterpartyType::Personal->value ? Lang::get('counterparties::profile.hero_net_received') : Lang::get('counterparties::profile.hero_12mo_total')"
+                    :label="$heroLabel"
                     style="display: block; font-size: var(--text-xs); color: var(--color-text-faint);"
                 />
             </div>

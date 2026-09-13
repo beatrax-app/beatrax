@@ -37,7 +37,6 @@ return [
     'label_this' => 'Označi ovu protustranku',
 
     'stat_12mo' => '12 mj.',
-    'stat_net_received' => 'Neto primljeno',
     'stat_avg_mo' => 'Prosj. / mj.',
     'sparkline_aria' => 'Grafikon aktivnosti u 12 mjeseci',
 
