@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migrator;
 use Modules\Core\Public\Services\UserDataPathService;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 final readonly class MobileFirstLaunchBootstrap
 {
@@ -90,10 +91,31 @@ final readonly class MobileFirstLaunchBootstrap
         }
     }
 
+    // Runs in a finally, so nothing here may throw: a throw would REPLACE the
+    // migration failure on its way out, and the caller would log the wrong
+    // cause. Measured — `no such table: migrations` reached the log in place of
+    // `migration 2 of 190 failed`, naming a symptom of the first failure.
+    private function recordSchemaCompletion(): void
+    {
+        try {
+            $this->recordWhetherTheSchemaIsWhole();
+        } catch (Throwable $e) {
+            // The last resort, and it refuses rather than clears: whatever went
+            // wrong above, the one answer that must never be reached by accident
+            // is "the schema is whole".
+            SchemaCompletionMarker::raise();
+
+            $this->logger->warning(
+                'MobileFirstLaunchBootstrap: could not record whether the schema is whole, so it is recorded as incomplete.',
+                ['reason' => $e::class],
+            );
+        }
+    }
+
     // A marker that could not be written is the same failure one launch later,
     // and the only place that blind spot is named: this process refuses from
     // memory, and nothing else would ever say the next one cannot.
-    private function recordSchemaCompletion(): void
+    private function recordWhetherTheSchemaIsWhole(): void
     {
         if (! $this->hasPendingMigrations()) {
             SchemaCompletionMarker::clear();
