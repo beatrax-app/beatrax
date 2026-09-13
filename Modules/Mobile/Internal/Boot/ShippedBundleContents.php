@@ -15,9 +15,18 @@ use ZipArchive;
 // list is a claim about a build; this is the build.
 final readonly class ShippedBundleContents
 {
-    // Key material, whichever shape it takes. A keystore in the bundle is the
-    // release-signing identity handed to anyone who unzips a public download.
-    private const array SECRET_EXTENSIONS = ['jks', 'keystore', 'p12', 'pfx', 'pem', 'p8', 'mobileprovision', 'key'];
+    // A container whose whole purpose is to hold a key, so its name answers the
+    // question. One in the bundle is the release-signing identity handed to
+    // anyone who unzips a public download.
+    private const array KEY_CONTAINER_EXTENSIONS = ['jks', 'keystore', 'p12', 'pfx', 'p8', 'mobileprovision'];
+
+    // These carry a key OR a certificate, and the two are not the same thing,
+    // so the file is read rather than judged by its name.
+    private const array KEY_TEXT_EXTENSIONS = ['pem', 'key'];
+
+    // Every PEM private-key header ends this way, whatever algorithm or
+    // encryption precedes it: RSA, EC, OPENSSH and ENCRYPTED all match.
+    private const string PRIVATE_KEY_MARKER = 'PRIVATE KEY-----';
 
     // A file holding a ledger. The phone runs every migration on first launch
     // and ships no database at all, so any of these is the builder's own.
@@ -73,8 +82,9 @@ final readonly class ShippedBundleContents
         foreach ($files as $file) {
             $relative = substr($file->getPathname(), strlen($unpacked) + 1);
             $extension = strtolower($file->getExtension());
+            $text = $this->readableText($file);
 
-            if (in_array($extension, self::SECRET_EXTENSIONS, true)) {
+            if ($this->carriesKeyMaterial($extension, $text)) {
                 $refusals[] = 'key material: '.$relative;
 
                 continue;
@@ -86,7 +96,7 @@ final readonly class ShippedBundleContents
                 continue;
             }
 
-            foreach ($this->secretAssignments($file) as $name) {
+            foreach ($this->secretAssignments($text) as $name) {
                 $refusals[] = 'a secret in '.$relative.': '.$name;
             }
         }
@@ -96,20 +106,50 @@ final readonly class ShippedBundleContents
         return $refusals;
     }
 
+    // A private key, wherever it travels and whatever it is called. Read from
+    // the bytes rather than the name, so `id_rsa` is caught and the 151 public
+    // root certificates the PHP runtime needs for TLS are not: a list of
+    // certificates anyone can download is not a secret this artifact leaked.
+    private function carriesKeyMaterial(string $extension, ?string $text): bool
+    {
+        if (in_array($extension, self::KEY_CONTAINER_EXTENSIONS, true)) {
+            return true;
+        }
+
+        // Unreadable and named like a key: nothing here can show it clean, and
+        // an artifact that was not read has not been shown to carry nothing.
+        if ($text === null) {
+            return in_array($extension, self::KEY_TEXT_EXTENSIONS, true);
+        }
+
+        return str_contains($text, self::PRIVATE_KEY_MARKER);
+    }
+
+    // Null for a file this cannot read as text, which is the answer the callers
+    // need: neither of them may treat "unread" as "carries nothing".
+    private function readableText(SplFileInfo $file): ?string
+    {
+        if ($file->getSize() > 512_000 || ! $this->readsAsText($file)) {
+            return null;
+        }
+
+        return (string) file_get_contents($file->getPathname());
+    }
+
     // An assignment with a value, never a bare name: a stripped key that is
     // still mentioned in a comment, or left as `KEY=`, carries nothing.
     /**
      * @return list<string>
      */
-    private function secretAssignments(SplFileInfo $file): array
+    private function secretAssignments(?string $text): array
     {
-        if ($file->getSize() > 512_000 || ! $this->readsAsText($file)) {
+        if ($text === null) {
             return [];
         }
 
         $found = [];
 
-        foreach (explode("\n", (string) file_get_contents($file->getPathname())) as $line) {
+        foreach (explode("\n", $text) as $line) {
             $line = trim($line);
 
             if ($line === '' || str_starts_with($line, '#')) {

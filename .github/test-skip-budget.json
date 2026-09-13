@@ -372,12 +372,12 @@
       "why": "Gated on dns-sd or avahi-publish-service being on the host, and ubuntu-latest shipped neither — so it skipped in every job. The shard and coverage runners now install avahi-utils alongside poppler-utils; the binary is all the advertiser looks for."
     },
     "tests/Contracts/AStoreShapeIsBuiltBesideTheSideloadableOneArchTest.php": {
-      "markers": 1,
+      "markers": 2,
       "skipped": {
         "quality shard": 0
       },
       "runs_in": "quality shard",
-      "why": "Both Composer roots run this file and only the repo root has the workflows beside it. Not listed for the mobile-app job, which runs the Mobile testsuite only and never collects tests/Contracts."
+      "why": "Both Composer roots run this file and only the repo root has the workflows beside it. Both markers guard the same absence and both RUN in the quality shard, which is why the zero pinned there still answers for the file. Not listed for the mobile-app job, which runs the Mobile testsuite only and never collects tests/Contracts."
     },
     "tests/Contracts/BoundaryArchTest.php": {
       "markers": 16,
