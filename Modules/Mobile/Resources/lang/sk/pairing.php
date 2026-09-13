@@ -36,7 +36,7 @@ return [
 
     'success_heading' => 'Zariadenie spárované',
     'success_body' => 'Tomuto zariadeniu sa teraz dôveruje. Po pripojení sa tvoje údaje zosynchronizujú.',
-    'encryption_incomplete' => 'Zariadenie je spárované, ale šifrovanie údajov uložených v ňom sa nedokončilo. Údaje sa zatiaľ neukladajú zašifrované.',
+    'encryption_incomplete' => 'Šifrovanie údajov uložených v tomto zariadení sa nedokončilo. Údaje sa zatiaľ neukladajú zašifrované.',
     'done' => 'Hotovo',
 
     'errors' => [

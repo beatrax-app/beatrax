@@ -180,6 +180,17 @@ echo "==> positive control"
 if (cd "$target" && vendor/bin/pest tests/Contracts/BoundaryArchTest.php >/dev/null 2>&1); then
     echo "    the harness binds and a known-green file passes"
 else
+    # Named first because it is the usual cause and it does not look like one:
+    # the worktree is created on origin/main while vendor/ is hardlinked from a
+    # main checkout that may be older, so its autoloader describes a tree that
+    # is no longer there. Watched it fail with a psr-4 root renamed on main.
+    behind=$(git -C "$main" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
+    if [[ ${behind:-0} -gt 0 ]]; then
+        echo "!!  $main is $behind commit(s) behind origin/main, and this worktree was" >&2
+        echo "!!  created on origin/main. Its vendor/ came from there, so the autoloader" >&2
+        echo "!!  does not match this tree. Fix that first:" >&2
+        echo "!!    git -C $main pull --ff-only && (cd $main && composer install)" >&2
+    fi
     echo "!!  the control file did not pass. Do not trust a failure in this worktree" >&2
     echo "!!  until this does — run it directly to see why:" >&2
     echo "!!    cd $target && vendor/bin/pest tests/Contracts/BoundaryArchTest.php" >&2

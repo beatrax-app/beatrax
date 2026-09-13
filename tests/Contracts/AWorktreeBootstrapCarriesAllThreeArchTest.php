@@ -109,6 +109,17 @@ it('ends on a positive control, so a broken suite and a bare worktree are told a
     expect($script)->toContain('vendor/bin/pest');
 });
 
+// The control failing is the common case and its cause is not visible from the
+// worktree: vendor/ is hardlinked from a main checkout that may be behind the
+// origin/main this worktree was created on, so the autoloader describes a tree
+// that moved. Watched it happen with a psr-4 root renamed on main.
+it('names the stale main checkout when the control fails', function (): void {
+    $script = worktreeBootstrapScript();
+
+    expect($script)->toContain('rev-list --count HEAD..origin/main')
+        ->and($script)->toContain('behind origin/main, and this worktree was');
+});
+
 it('is the thing AGENTS.md tells an agent to run', function (): void {
     expect((string) file_get_contents(base_path('AGENTS.md')))->toContain('bin/worktree.sh');
 });
