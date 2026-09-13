@@ -11,6 +11,7 @@ use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Public\Http\Livewire\DeleteAccountSection;
+use Modules\Auth\Public\Http\Livewire\RecoveryCodesSection;
 use Modules\Core\Public\Services\SecretsColumnRegistry;
 use Modules\EmailScan\Public\Http\Livewire\OAuthClientWizardModal;
 use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
@@ -88,6 +89,13 @@ function livewireSnapshotAllowList(): array
             // Re-typed to authorise enabling, re-linking or re-wrapping the app
             // lock, and zeroed on every one of those six paths the moment the
             // provisioner has consumed it.
+            'accountPassword',
+        ],
+        RecoveryCodesSection::class => [
+            // Re-typed to authorise minting a fresh sheet, and zeroed the moment
+            // the check passes it. A sheet outlives the session that asked for
+            // it, so this box is all that stands between a borrowed session and
+            // a credential the reader's own password change cannot take back.
             'accountPassword',
         ],
         MobileImportBootstrap::class => [
