@@ -9,7 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Ledger\Public\Services\TransactionCursor;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use stdClass;
 
 // The candidate half of a search: narrow the ledger to the rows a text
@@ -149,12 +149,22 @@ final readonly class FtsCandidateResolver
                 '=',
                 'transactions.id',
             )
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
             ->where('transactions.user_id', $user->id)
             ->where('transaction_search_docs.user_id', $user->id);
 
         $applyFilters($query);
         LikeNeedle::contains($query, 'transaction_search_docs.search_body', $textQuery);
-        TransactionCursor::orderNewestFirst($query);
+
+        // The cap decides WHICH 500 rows a short query is answered out of, so
+        // the tie a DATE column leaves decides the answer rather than its
+        // order. `transactions.id` is counted per device; this clause is not.
+        $query->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS);
 
         $matched = [];
         foreach ($query->limit(self::LIKE_FALLBACK_CANDIDATE_CAP)->get(['transactions.id']) as $row) {

@@ -340,6 +340,23 @@ registered on every connection the query can run on, which is a decision about
 this application's database connection rather than about search. Whoever takes
 it should take it as one.
 
+## The LIKE arm's cap is a cut, not a page
+
+The short-query arm answers out of at most
+`FtsCandidateResolver::LIKE_FALLBACK_CANDIDATE_CAP` — 500 — rows, and it carries
+no cursor: the 501st match is not on a later page, it is not in the answer. So
+the clause that ranks those rows decides *which* matches a two-character needle
+reaches at all.
+
+It used to rank on `TransactionCursor::orderNewestFirst()`, which ends on
+`transactions.id` because the paged reads it was written for compare on that id.
+Here there is nothing to page, and `transactions.id` is a number each device
+counts for itself, so two paired devices answered the same short query out of
+two different 500. It ranks on
+`Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS` now, joined
+through `::ACCOUNT` — the clause four other reads of this table already use. See
+[an ordering that picks](../../architecture/an-ordering-that-picks.md).
+
 ## A document that outlives its transaction
 
 The body is a plaintext shadow, so a document left behind by a deleted row is a

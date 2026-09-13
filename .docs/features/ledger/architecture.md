@@ -1788,11 +1788,19 @@ backwards compatibility.
 
 The sort is the other half of that contract, so it lives with it:
 `TransactionCursor::orderNewestFirst($query)` is the single owner of
-`ORDER BY posted_at DESC, id DESC`, and the four queries that page on
-this cursor — `TransactionListQuery`, `SearchQuery`,
-`UncategorizedTriageQuery` and `FtsCandidateResolver` — all call it
-rather than spelling the pair out. A query that breaks the tie the
-other way pages past rows the comparison then skips.
+`ORDER BY posted_at DESC, id DESC`, and the three queries that page on
+this cursor — `TransactionListQuery`, `SearchQuery` and
+`UncategorizedTriageQuery` — all call it rather than spelling the pair
+out. A query that breaks the tie the other way pages past rows the
+comparison then skips.
+
+`FtsCandidateResolver` used to call it as a fourth, and it never paged:
+its short-query arm caps candidates at 500 with no cursor, so the `id`
+tail cut the answer rather than ordering a page. It ranks on
+`NewestTransactionFirst::ACROSS_ACCOUNTS` now. The same distinction is
+why `SearchQuery::palette()` is on the known-divergent baseline in
+[an ordering that picks](../../architecture/an-ordering-that-picks.md):
+page one of a pager, read as the whole answer, is a pick.
 
 **The date a row shows is the date it is sorted by.** The row DTO field
 is `postedAt`, carrying `Fmt::shortDate(posted_at)` — the same column
