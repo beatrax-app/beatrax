@@ -31,7 +31,7 @@ it('rejects a PIN that is not digits', function (string $pin): void {
     $rejections = app(AppLockCredentialRejections::class);
 
     expect($rejections->newPin($pin, $pin))->toBe(Lang::get('auth::app_lock.error_pin_digits', ['min' => AppLockPinShape::MINIMUM_LENGTH, 'max' => AppLockPinShape::MAXIMUM_LENGTH]));
-})->with(['abcdef', 'abc123', '12345 6', '２４６８１０', '246810.', '-246810']);
+})->with(['abcdef', 'abc123', '12345 6', '２４６８１０', '246810.', '-246810', "246810\n"]);
 
 it('rejects a PIN longer than the keypad can hold', function (): void {
     /** @var AppLockCredentialRejections $rejections */
