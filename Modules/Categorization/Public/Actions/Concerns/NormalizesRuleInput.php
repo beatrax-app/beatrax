@@ -17,6 +17,7 @@ use Modules\Categorization\Public\Enums\NoteMode;
 use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 trait NormalizesRuleInput
 {
@@ -169,6 +170,24 @@ trait NormalizesRuleInput
                 sprintf("Categorization rule: amount condition value2 '%s' must be an integer minor-unit string.", $value2)
             );
         }
+
+        // Digits alone are not enough. RuleEngine::toIntValue() casts the stored
+        // bound with (int), which saturates: a forty-digit bound was stored whole
+        // and compared as PHP_INT_MAX -- never true under '>', true for every row
+        // under '<'. MAX_MINOR is the ceiling every stored amount already obeys.
+        $bound = filter_var($value, FILTER_VALIDATE_INT);
+        if ($bound === false || abs($bound) > MoneyInput::MAX_MINOR) {
+            throw new InvalidArgumentException(
+                sprintf("Categorization rule: amount condition value '%s' is past the largest amount this application stores.", $value)
+            );
+        }
+
+        $bound2 = $value2 === null ? 0 : filter_var($value2, FILTER_VALIDATE_INT);
+        if ($bound2 === false || abs($bound2) > MoneyInput::MAX_MINOR) {
+            throw new InvalidArgumentException(
+                sprintf("Categorization rule: amount condition value2 '%s' is past the largest amount this application stores.", $value2)
+            );
+        }
     }
 
     /**
@@ -262,6 +281,12 @@ trait NormalizesRuleInput
         $text = isset($payload['text']) && is_string($payload['text']) ? trim($payload['text']) : '';
         if ($text === '') {
             throw new InvalidArgumentException('Categorization rule: note action requires non-empty text.');
+        }
+        // Named here rather than left to encodePayload, which answers any bad
+        // byte with "action payload could not be encoded" -- the step, not the
+        // field the reader has to go and fix.
+        if (! mb_check_encoding($text, 'UTF-8')) {
+            throw new InvalidArgumentException('Categorization rule: note action text is not valid UTF-8.');
         }
         $mode = isset($payload['mode']) && is_string($payload['mode'])
             ? NoteMode::tryFrom($payload['mode']) ?? NoteMode::Set
