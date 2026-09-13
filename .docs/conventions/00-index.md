@@ -150,6 +150,10 @@ pass for a clean one.
   — why a read-then-insert is a statement about the past, what the connection's
   `IMMEDIATE` transaction mode already gives you, and which of the three fixes
   belongs at which site
+- [A requirement written after the work is cited by nothing](a-requirement-written-after-the-work-is-cited-by-nothing.md)
+  — what the governance gate actually reads as a citation, why prose naming an
+  identifier is not one, the eleven v2 requirements that are cited by nothing,
+  and what a later citation records rather than fixes
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically
