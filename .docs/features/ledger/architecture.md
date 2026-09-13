@@ -623,9 +623,16 @@ per-render `$searchRows` map. Clearing search restores the prior
 `$fullHistory` toggle state via `$preSearchFullHistory`.
 
 **Split legs.** `legsFor()` batch-loads `transaction_splits` for a page
-of transaction ids in one query, keyed by `transaction_id`. Every id is
-already user-scoped by the list query that produced it, so joining on
-`transaction_id` alone cannot leak another user's legs. Split detection
+of transaction ids in one query, keyed by `transaction_id`, and bounds
+them with `SplitLegs::ownedBy()`. This page used to say the opposite —
+that every id is already user-scoped by the list query that produced it,
+so joining on `transaction_id` alone could not leak another user's legs
+— and the code matched the claim. It was wrong in the way an ownership
+argument is usually wrong: it reasoned about where the ids came from
+today rather than about what the query asks for. An id list is a claim
+about which rows to read, never about who owns them, and `legsFor()`
+spent its `$userId` argument entirely on the category join, which
+constrains the `parent_categories` alias and no leg. Split detection
 downstream is by leg-row presence only (>= 2 legs), never `category_id`
 nullity — a split parent may carry a vestigial non-null `category_id`.
 

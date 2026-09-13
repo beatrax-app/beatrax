@@ -46,7 +46,10 @@ What the module explicitly does NOT do:
   id arriving at a read is not evidence of who owns the row it names.
   `tests/Contracts/AReadOfCounterpartiesCarriesItsReaderArchTest.php` holds
   every runtime read to naming a `user_id`, with migrations the one exception
-  because they run before any reader exists.
+  because they run before any reader exists. That reasoning never depended on
+  counterparties, and
+  `tests/Contracts/AReadOfAUserOwnedRowCarriesItsReaderArchTest.php` now asks
+  the same question of every table carrying a `user_id`.
 - It never resolves itself. The 7-step precedence chain depends on
   contracts owned by other modules — `ResolvesKnownCounterpartyIban`
   from `Import`, `MerchantNameResolver` from `Import`. The resolver is

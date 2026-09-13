@@ -88,6 +88,10 @@ const BLADE_SCANNER_WALKS_NO_TEMPLATE = [
         'reason' => 'is handed a source rather than choosing a file, and both walks that use it read theirs through the seam',
         'proves' => '#function significantTokens\(string \$source\)#',
     ],
+    'tests/Contracts/Support/UserOwnedRowReads.php' => [
+        'reason' => 'is handed a source rather than choosing a file, and the walk that uses it reads its own through the seam',
+        'proves' => '#function statementsIn\(string \$source#',
+    ],
     'tests/Contracts/Support/SonarSourceFiles.php' => [
         'reason' => 'is sonar.sources and nothing else, mirroring an analyser that reads a template as PHP and finds no code in it',
         'proves' => '#sonar\.sources#',

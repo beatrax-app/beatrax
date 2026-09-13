@@ -1058,6 +1058,38 @@ stage writes the account and skips the re-preview — the same answer the
 remote-fetch branch has always given, because in both cases there is no
 local file whose rows could be read again.
 
+## The disk holding those files is not served
+
+`imports/{userId}/{sha256}.csv|.eml|.pdf` sits under the `local` disk,
+whose root `CoreServiceProvider` points at the writable data tree. The
+framework's own `config/filesystems.php` sets `serve => true` on that
+disk, and `FilesystemServiceProvider::serveFiles()` then registers
+`GET /storage/{path}` and `PUT /storage/{path}` with
+`where('path', '.*')` — inside `$this->app->booted()`, which is after
+the middleware groups are applied, so those two routes carry no session,
+no CSRF token, no authenticated user, no app-lock and no user scope.
+
+This repository had no `config/filesystems.php` at all, so that default
+stood. It was never anonymously reachable: the disk carries no
+`visibility` key, `ServeFile::hasValidSignature()` falls through to
+`private` and demands an `APP_KEY` HMAC, and `PathTraversalDetected`
+aborts 404. The narrower problem is that the signature authenticates the
+**path and not the caller** — one scheme spans every user's directory
+under that root, and `PUT …?upload=1` writes the request body to
+whichever path it names. Nothing in the product mints such a URL: the
+`Storage` facade is used zero times under `Modules/`.
+
+The published config sets `serve => false` and declares one disk, rooted
+through `UserDataPathService` the way `config/database.php` and
+`config/logging.php` are. `CoreServiceProvider` sets the same value
+again at registration, which is not redundant: `config:cache` freezes
+whatever the config file computed on the machine that cached it, and the
+provider's runtime `set()` is what corrects it.
+`AnUploadedArtifactLandsWhereTheDataLivesArchTest` pins both halves —
+that no configured disk says `serve => true`, and that the router holds
+no route the framework minted for a disk — because the config key and
+the registered route are two separate claims.
+
 ## Applying enrichments
 
 `ApplyEnrichments` wraps each `PendingEnrichment` in its own per-row DB

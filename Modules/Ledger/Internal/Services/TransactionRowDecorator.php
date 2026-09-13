@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
@@ -53,7 +54,12 @@ final readonly class TransactionRowDecorator
             ->table('transaction_splits')
             ->leftJoin('categories', 'transaction_splits.category_id', '=', 'categories.id');
 
-        $rows = CategoryPathName::joinParent($legs, $userId, 'categories', 'parent_categories')
+        // Through the parent, like every sibling reader of this table: the id
+        // list arrives from the component's own state, and a list is a claim
+        // about which rows to read, never about who owns them.
+        $scoped = SplitLegs::ownedBy(CategoryPathName::joinParent($legs, $userId, 'categories', 'parent_categories'), $userId);
+
+        $rows = $scoped
             ->whereIn('transaction_splits.transaction_id', $transactionIds)
             ->orderBy('transaction_splits.transaction_id')
             ->orderBy('transaction_splits.sort_order')

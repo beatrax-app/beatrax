@@ -69,12 +69,10 @@ abstract class TestCase extends BaseTestCase
         // useStoragePath() above moves it, so Storage::disk('local') went on
         // writing to the real tree — one directory shared by every --parallel
         // worker, whose repeating staging paths overwrote each other mid-read.
-        foreach (['local' => 'app/private', 'public' => 'app/public'] as $disk => $sub) {
-            $this->app['config']->set(
-                sprintf('filesystems.disks.%s.root', $disk),
-                $this->isolatedStorageRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $sub),
-            );
-        }
+        $this->app['config']->set(
+            'filesystems.disks.local.root',
+            $this->isolatedStorageRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'private',
+        );
 
         // Vite picks dev-server URLs over manifest URLs whenever `public/hot`
         // exists, which the running dev server writes — so with the desktop app
