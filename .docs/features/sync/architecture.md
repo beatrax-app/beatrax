@@ -965,10 +965,11 @@ check as an optional constructor argument, and Laravel's container returns the
 default for a parameter that has one **unless the class is bound**, so an
 unbound check resolves to null and its row silently never prints.
 
-The row names the count and the tables and nothing else:
+The row names the counts and the tables and nothing else, and the warning is
+only ever the rows a repair could still place:
 
 ```
-rows the log still holds warning  23 rows the op log holds and no table has (counterparties 15, anomaly_alerts 6, system_alerts 2) — each arrived under an id that is either free or held by a different row; the values stay in op_log_entries and are not printed here
+rows the log still holds warning  15 rows a peer sent that no table here has (counterparties 15) — each arrived under an id that is either free or held by a different row; the values stay in op_log_entries and are not printed here. Accounted for beside them: 6 rows this device wrote and no longer has, with no tombstone behind them (anomaly_alerts 6), 2 rows held under a verdict no later state undoes (system_alerts 2)
 ```
 
 What is stranded is the reader's own ledger — a counterparty is the shop they
@@ -976,6 +977,10 @@ bought from — and a console line is pasted into bug reports, so no value from 
 row is printed. A clean database gets a count of what was examined rather than a
 bare "ok": a pass that reports silence is unreadable, because one that stopped
 looking says the same as one that looked at everything and found nothing.
+
+```
+rows the log still holds ok       551 rows the op log claims, all of them here or accounted for: 6 rows this device wrote and no longer has, with no tombstone behind them (anomaly_alerts 6), 2 rows held under a verdict no later state undoes (system_alerts 2)
+```
 
 Every read it makes is bounded, and that shaped the design rather than
 decorating it. `op_log_entries` is the one table that grows with every mutation
@@ -995,19 +1000,69 @@ read it: a guard keyed on a spelling is one a constant hides the read from.
 The whole check is 2.2 seconds over 12 871 ops, and it is exact rather than
 sampled — a floor would read the same whether one row or forty were missing.
 
+#### Three causes, and why only one of them is a warning
+
+The first version of this check counted all three as one number, and that number
+could never reach zero. `OpType` has a `DeleteTombstone` case and the measured
+log holds **none** of them — 12 684 `create_row` and 187 `set` — so a row a
+migration deliberately removed was byte-for-byte the same, to a census, as a row
+that never landed. Every future deliberate deletion added one, and a check that
+can never read ok is one a reader learns to skip, which costs them the rows that
+do matter. The three are told apart by what the log says put them there, never
+by a table name: a rule keyed on `anomaly_alerts` would be blind to the next
+migration that legitimately deletes.
+
+| cause | what the log says | reported as |
+|---|---|---|
+| `removedHere` | every author of the create is this device | accounted for |
+| `held` | a peer's create the quarantine answered under a terminal verdict | accounted for |
+| `unplaced` | a peer's create nothing here explains | **warning** |
+
+**`removedHere` is decided by authorship, and authorship is proof the row was
+here.** The capture runs on the write, so a `create_row` this device signed is a
+row this device held — it cannot have signed one for a row that never existed.
+Gone now, and with no tombstone, it was removed locally: by a migration, by a
+cascade, by a repair. Nothing a peer holds is waiting to be placed under that
+id, so there is no repair to run and nothing for a reader to act on. It is also
+the only shape that needs no new bookkeeping. A "deliberately removed" ledger a
+migration writes would record the fact the log already carries, would oblige
+every future migration to remember to write it, and would say nothing at all
+about the two migrations that have already run on the measured database.
+
+**`held` is decided by the verdict, not by the presence of a hold.**
+`QuarantineOutcome::terminalReasonValues()` is this app's existing statement of
+which refusals no later state undoes, composed from `QuarantineReason::recoverable()`
+so the two cannot disagree. A create held under `primary_key_collision` is still
+owed — a re-home answers it — and stays in the warning. One held under
+`unplaceable_collision` is not.
+
+A retired self row counts as this device. `self_retired_at` is only ever stamped
+on a row that was `is_self`, and a restored database brings that machine's table
+rows and its op log together, so a row missing after the restore was missing
+before it.
+
 #### What the measured 23 are, and what this does not close
 
-- **`counterparties` 15** are the loss above.
+- **`counterparties` 15** are the loss above, and the only warning. The creates
+  are the peer's, the natural key is usable, and today's applier re-homes them.
 - **`anomaly_alerts` 6** are this device's **own** creates whose rows are gone
   with no tombstone behind them —
-  `2026_08_30_000001_drop_anomaly_alerts_raised_on_internal_moves` deletes them
-  with raw SQL, which emits none. They are a second finding rather than a false
-  positive: a local delete no tombstone records is one the peer's history can
-  undo.
+  `2026_08_30_000001_drop_anomaly_alerts_raised_on_internal_moves` and
+  `2026_09_11_000001_an_alert_that_states_an_amount_the_charge_it_names_does_not_have`
+  delete them with raw SQL, which emits none. **Both are right to.** The
+  predicate each uses is a row against the row it points at, so every device
+  reaches the same verdict about its own copy, and a delete that travelled would
+  take a good row with it. Stated rather than warned about.
 - **`system_alerts` 2** are the two `unplaceable_collision` holds. That table
   declares `dedup_key` and deliberately does not sync it, so no natural key can
   identify the payload and the pk answers — which is the older, weaker question,
-  kept for exactly the tables it is the only one available for.
+  kept for exactly the tables it is the only one available for. Terminal by
+  design, so stated rather than warned about.
+
+Placing the fifteen on a copy of that database — inserting each peer slug the
+table does not have, which is what a re-home writes — takes the row to `ok` with
+the other eight still named. The same copy under the old check still read
+`warning  8 rows`, which is the floor this change removes.
 
 **No repair ships with this.** Replaying the fifteen stranded creates through
 `AlreadyPresentCreate::answer()` would place them, because that path now
