@@ -6,16 +6,16 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Psr\Log\LoggerInterface;
 
-// The one sink allowed to lose a mutation, and it loses nothing: a device with
+// The one sink allowed to lose a mutation, and it loses nothing: a reader with
 // neither an identity key-file nor a registered self row has never synced, so
-// there is no peer to owe, and switching sync on backfills the whole database.
-// A restored self row falsifies that, and the standing enum is what says so.
+// there is no peer to owe, and enabling it backfills their whole database. A
+// restored self row falsifies that, and the standing enum is what says so.
 /**
  * @link ../../../../.docs/features/sync/pre-sync-history-capture.md
  */
 final readonly class SyncOffOpSink implements OpCaptureSink
 {
-    public function __construct(private LoggerInterface $log) {}
+    public function __construct(private LoggerInterface $log, private int $userId) {}
 
     public function writeSet(string $table, int|string $pk, string $field, mixed $value): void
     {
@@ -37,12 +37,15 @@ final readonly class SyncOffOpSink implements OpCaptureSink
         $this->skipped($table, $pk);
     }
 
-    // Debug, not error: an install that never enabled sync raises this on
-    // every write it makes, and at error level that was 120k lines in one real
-    // log — burying the failures the level is for.
+    // Debug, not error: a reader who never enabled sync raises this on every
+    // write they make, and at error level that was 120k lines in one real log.
+    /**
+     * @link ../../../../.docs/features/sync/a-mutation-a-keyless-process-cannot-sign.md#the-standing-is-the-readers-not-the-installs
+     */
     private function skipped(string $table, int|string $pk): void
     {
-        $this->log->debug('SyncOffOpSink: sync is not enabled on this device; nothing captured.', [
+        $this->log->debug('SyncOffOpSink: sync is not enabled for this reader; nothing captured.', [
+            'user_id' => $this->userId,
             'table' => $table,
             'pk' => (string) $pk,
         ]);
