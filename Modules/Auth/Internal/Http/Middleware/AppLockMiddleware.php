@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
 use Modules\Auth\Internal\Lock\LockIdleClock;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Internal\Lock\LockSurface;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Duration;
@@ -24,16 +25,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class AppLockMiddleware
 {
+    // The unlock surface is named once, in LockSurface, because the forced
+    // password change reads the same list: a route exempt from one gate and
+    // bounced by the other is a redirect loop the reader cannot leave.
     /**
      * @var list<string>
      */
     private const array ALLOWED_ROUTE_NAMES = [
-        'auth.lock',
-        'auth.lock.biometric.challenge',
-        'auth.lock.biometric.verify',
-        'auth.lock.engage',
-        'mobile.lock',
-        'logout',
+        ...LockSurface::ROUTE_NAMES,
         // Driven entirely by wire:poll, which does not count as activity, so
         // the PIN dropped over a working screen. No financial data here.
         'mobile.pair',
