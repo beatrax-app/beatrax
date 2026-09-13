@@ -49,6 +49,30 @@ final readonly class FileDropEmlBlobStore
         ));
     }
 
+    // Split out rather than inlined: put() sits one branch under the
+    // analyser's ceiling with this in it, and the three failures here are one
+    // question — are the bytes on disk? fwrite reports what it put in a
+    // userspace buffer, so a full disk surfaces at the flush, not at the write.
+    /**
+     * @param  resource  $handle
+     */
+    private function writeEveryByteToDisk($handle, string $tmp, string $rawMime): void
+    {
+        $written = @fwrite($handle, $rawMime);
+
+        if ($written === false || $written !== strlen($rawMime)) {
+            throw FileDropBlobWriteException::shortWrite($tmp);
+        }
+
+        if (@fflush($handle) === false) {
+            throw FileDropBlobWriteException::couldNotFlush($tmp, 'fflush');
+        }
+
+        if (function_exists('fsync') && @fsync($handle) === false) {
+            throw FileDropBlobWriteException::couldNotFlush($tmp, 'fsync');
+        }
+    }
+
     public function put(string $absolutePath, string $rawMime): void
     {
         $dir = dirname($absolutePath);
@@ -73,21 +97,7 @@ final readonly class FileDropEmlBlobStore
 
         try {
             @flock($fp, LOCK_EX);
-            $written = @fwrite($fp, $rawMime);
-            if ($written === false || $written !== strlen($rawMime)) {
-                throw FileDropBlobWriteException::shortWrite($tmp);
-            }
-            // fwrite reports what it put in a userspace buffer, so a full disk
-            // surfaces here rather than above: an unasked flush lets a short
-            // file be chmod'ed and renamed over a good one.
-            if (@fflush($fp) === false) {
-                throw FileDropBlobWriteException::couldNotFlush($tmp, 'fflush');
-            }
-
-            if (function_exists('fsync') && @fsync($fp) === false) {
-                throw FileDropBlobWriteException::couldNotFlush($tmp, 'fsync');
-            }
-
+            $this->writeEveryByteToDisk($fp, $tmp, $rawMime);
             @flock($fp, LOCK_UN);
             $closed = @fclose($fp);
             $fp = null;
