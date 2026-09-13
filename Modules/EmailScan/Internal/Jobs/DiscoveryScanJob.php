@@ -413,12 +413,18 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
             ]);
     }
 
+    // `last_seen_at` is a DATETIME, so the answer has to be an instant this
+    // app zone stores: a stamp that parses and then formats past the year 9999
+    // is refused by Instant::appLocal, and the refusal would abort the whole
+    // discovery pass rather than the one candidate that carried it.
     private function safeParseDate(string $raw, Clock $clock): DateTimeImmutable
     {
         try {
-            return new DateTimeImmutable($raw);
+            $parsed = new DateTimeImmutable($raw);
         } catch (Throwable) {
             return $clock->now()->toDateTimeImmutable();
         }
+
+        return Instant::storesAsAppLocal($parsed) ? $parsed : $clock->now()->toDateTimeImmutable();
     }
 }

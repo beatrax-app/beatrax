@@ -61,6 +61,15 @@ final class Instant
         return $stamp;
     }
 
+    // Whether appLocal() would answer rather than throw. A moment this app
+    // zone pushes past the year 9999 formats to five year digits and leaves
+    // the column a shape CarbonImmutable::parse cannot read; a caller holding
+    // an instant somebody else chose asks here before it stores one.
+    public static function storesAsAppLocal(DateTimeInterface $moment): bool
+    {
+        return preg_match(self::STORED_PATTERN, self::inAppZone($moment)->format('Y-m-d H:i:s')) === 1;
+    }
+
     // The app zone is taken from the default the framework sets out of
     // app.timezone, which is by construction the zone CarbonImmutable::now()
     // — and therefore Clock::now() — lands in. Reading config here instead
