@@ -118,11 +118,15 @@ of either — so a private re-derivation is caught before it can drift. See
 [where the scale comes
 from](minor-units-and-zero-decimal-currencies.md#where-the-scale-comes-from).
 
-The remaining constant users are the boundaries where no currency is in
-scope: three of the four `Ingestion` amount parsers (`IcsAmountParser`
-delegates to `MoneyInput` and does none of its own) and the amount
-rendering in the `Calendar`, `Tax` and `Onboarding` views. Treat the
-hundred there as an assumption the code makes, not a property of money.
+The constant is now spelled in two files and nowhere else: `Money`, which
+declares it and reads it in `majorUnits()` for a code no currency table
+knows, and `CurrencyScale`, which is where the `?? MINOR_UNITS_PER_MAJOR`
+fallback lives. All four `Ingestion` amount parsers — `BankAmountParser`,
+`GenericCsvAmountParser`, `PaypalAmountParser` and `IcsAmountParser` —
+take a `?string $currencyCode` and parse at the currency's own scale, and
+the `Calendar`, `Tax` and `Onboarding` views do not name the constant at
+all. Where it is still read, treat the hundred as the fallback for a code
+nothing can price, not as a property of money.
 
 ## `format()` picks the locale from the reader
 
