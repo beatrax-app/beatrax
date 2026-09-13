@@ -63,7 +63,20 @@ first that matches:
    `Transfers`' own pairer. The window, the direction, the amount, the
    currency predicate, the already-paired exclusion and the ordering are
    all passed in from here, so widening the arm never widens the shared
-   query — and nothing the other caller asks for reaches this one.
+   query — and nothing the other caller asks for reaches this one. The
+   already-claimed exclusion the two arms below write into their own SQL
+   cannot be passed in, because that search excludes one id at a time, so
+   this arm tests the claim on the answer instead: one step past a leg
+   another non-rejected `paypal_funding` link already holds, and a refusal
+   rather than a guess beyond that. Without it two PayPal withdrawals of
+   one amount in one window both named the same bank deposit, **confirmed
+   at 1.000**, so neither reached the review queue, while a second deposit
+   of the same size went unlinked — money that arrived once drawn as
+   arriving twice. A leg another link holds is not an alternative either,
+   so the ambiguity probe skips it rather than sending a now-unique match
+   to the queue.
+   `Modules/Chains/tests/Unit/Resolvers/ADeterministicFundingLegIsClaimedOnlyOnceTest.php`
+   pins both halves.
 2. **ASN-direct arm.** Handles the shape where the funding-leg
    `Bankstorting` row is absent from the PayPal CSV entirely — the
    user's export ships only outgoing merchant payments, not the

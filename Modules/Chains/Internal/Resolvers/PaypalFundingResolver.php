@@ -222,16 +222,17 @@ final readonly class PaypalFundingResolver
         $currency = self::toString($row->currency ?? null);
         $center = CarbonImmutable::parse(self::toString($row->booked_at ?? null));
 
-        $partnerId = $this->counterLegFor($accountId, -$amountMinor, $currency, $center, null, $user);
+        $partnerId = $this->unclaimedCounterLeg($accountId, -$amountMinor, $currency, $center, $user);
         if ($partnerId === null) {
             return null;
         }
 
-        // The PayPal export names the destination ACCOUNT, never the row on it.
-        // A second incoming row of the same size in the window is a second
-        // answer to the same question — a webshop refund took the place of the
-        // real funder and, written confirmed, never reached the review queue.
-        $ambiguous = $this->counterLegFor($accountId, -$amountMinor, $currency, $center, $partnerId, $user) !== null;
+        // The export names the destination ACCOUNT, never the row on it, so a
+        // second incoming row of the same size is a second answer — a webshop
+        // refund took the real funder's place, confirmed, where nobody could
+        // disagree. A leg another link holds is not one of the answers.
+        $rival = $this->counterLegFor($accountId, -$amountMinor, $currency, $center, $partnerId, $user);
+        $ambiguous = $rival !== null && ! $this->isClaimedFundingLeg($rival, $user);
 
         $referenceId = $parsed['row']['Reference Txn ID'] ?? null;
 
@@ -255,6 +256,36 @@ final readonly class PaypalFundingResolver
                 ),
             ],
         ];
+    }
+
+    // The exclusion the other two arms write into their own candidate SQL. This
+    // arm delegates its search, and that search excludes one id at a time, so
+    // the claim is tested on the answer instead: one step past a taken leg, and
+    // a refusal rather than a guess beyond it.
+    private function unclaimedCounterLeg(int $accountId, int $amountMinor, string $currency, CarbonImmutable $center, User $user): ?int
+    {
+        $nearest = $this->counterLegFor($accountId, $amountMinor, $currency, $center, null, $user);
+
+        if ($nearest === null || ! $this->isClaimedFundingLeg($nearest, $user)) {
+            return $nearest;
+        }
+
+        $next = $this->counterLegFor($accountId, $amountMinor, $currency, $center, $nearest, $user);
+
+        return $next !== null && $this->isClaimedFundingLeg($next, $user) ? null : $next;
+    }
+
+    // Non-rejected, because a rejected pair frees its leg again — the same set
+    // the sibling arms join against.
+    private function isClaimedFundingLeg(int $transactionId, User $user): bool
+    {
+        return $this->db->connection()
+            ->table('chain_links')
+            ->where('user_id', $user->id)
+            ->where('kind', ChainLinkKind::PaypalFunding->value)
+            ->whereIn('state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
+            ->where('to_transaction_id', $transactionId)
+            ->exists();
     }
 
     // The one counter-leg search, asked through the service Transfers owns
