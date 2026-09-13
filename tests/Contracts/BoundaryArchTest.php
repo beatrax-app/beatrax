@@ -2670,6 +2670,13 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // a second copy here would go on passing the day one was dropped there.
         'tests/Contracts/ACaptureNamesATableTheRegistryCarriesArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/AFileNameTheReaderChoseIsLoggedUnderARedactedKeyArchTest.php -> Modules\\DevMode\\Internal\\Logging\\RedactSecretsProcessor',
+        // Both providers ARE the subject: the guard proves a connection opened
+        // before the listener existed still carries the folding function, and
+        // the only way to prove it is to run the two replays by hand. Neither
+        // has a Public spelling, and a seam opened for this would be one more
+        // way to attach the listener than the one the guard is counting.
+        'tests/Contracts/AFoldedQueryCannotRunOnAnUnfoldedConnectionArchTest.php -> Modules\\Core\\Internal\\Providers\\AlreadyOpenConnectionsProvider',
+        'tests/Contracts/AFoldedQueryCannotRunOnAnUnfoldedConnectionArchTest.php -> Modules\\Core\\Internal\\Providers\\UnicodeFoldingProvider',
         // The comparison and the ordering it cuts against are one key in two
         // spellings, and the guard has to read both. One lives in Ledger's
         // Public support; the other is Anomaly's own, and publishing it would
