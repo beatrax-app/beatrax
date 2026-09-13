@@ -7641,12 +7641,49 @@ handler all simply absent. Nothing in the tree links `/dev/logs` with
 away from live.
 
 The rule beside this one accepts a registration written in the template's own
-`<script>` and asks only whether the name is there. This half asks when. It is
-measured by position: a registration written before the script first mentions
-`alpine:init` is one the eager path reaches, which is the shape
-`resources/js/app.js` uses — register off `window.Alpine` if it is already
-there, and keep the listener as the fallback for the page that loads before
-Alpine exists.
+`<script>` and asks only whether the name is there. This half asks when. The
+shape it asks for is the one `resources/js/app.js` uses — register off
+`window.Alpine` if it is already there, and keep the listener as the fallback
+for the page that loads before Alpine exists.
+
+### Not only `alpine:init`, and not only once per file
+
+For its first year the rule looked for the literal `alpine:init` with a `strpos`
+over the whole file, and called a file clean as soon as one registration was
+written above the first mention of it. Both halves of that let the same defect
+back through, and both were measured rather than argued.
+
+`alpine:init` is not the only event that has already fired. `livewire.js` is
+parser-blocking in `<body>`: it adds its own `DOMContentLoaded` listener while
+the document is still being parsed, and calls `Livewire.start()` — and through
+it `Alpine.start()` — from that listener. A deferred module adds its listener
+after parsing, so it is always the second one, and a provider registered from it
+is registered after every element on the page has been initialised. That is
+worse than the `alpine:init` case rather than milder: it misses on the **first**
+page load, with no navigation involved at all. Planted into the application
+layout and read in a browser on `/goals` — one provider registered at module
+top level, one from a `DOMContentLoaded` listener — the eager element's scope
+came back `["reached"]` and the late element's came back `[]`, with
+`Alpine Expression Error: raceProbeLate is not defined` in the console and a
+200 on the page. The rule passed that tree. `load`, `alpine:initialized`,
+`livewire:navigated` and `livewire:initialized` are all the same or later.
+`livewire:init` is the one in that family that is still in time: Livewire
+dispatches it on the way **into** `start()`, ahead of Alpine, and it is
+deliberately not on the list.
+
+A verdict about the file is also the wrong grain. `app.js` registers nine
+providers eagerly and mentions `alpine:init` only at its foot, so a tenth added
+behind any listener below them inherited the first nine's answer. Appending one
+`livewire:navigated` registration to `app.js` passed the rule as it stood and
+fails it now.
+
+The rule reads the argument list of each late listener as a span and asks, per
+name, whether every registration of that name falls inside one. Reading the span
+means stepping over strings, template literals, comments and regular-expression
+literals whole, because a `)` inside any of them closes nothing — and a scanner
+that miscounts there does not fail loudly, it ends the listener early and calls
+everything after it eager. `v.replace(/[)]/g, '')` is the shape that would do
+it, and it is pinned.
 
 ### The same shape in the file the rule never opened
 
@@ -8069,15 +8106,15 @@ from the other side.
 ## A picker's id converted to a number in the browser
 
 `tests/Contracts/ADerivedIdNeverReachesTheBrowserAsANumberArchTest.php` reads
-the two shapes; `Modules/Ledger/tests/Feature/AGoalIdSurvivesTheButtonThatAttributesItTest.php`
-is the third, which it does not.
+all three shapes; `Modules/Ledger/tests/Feature/AGoalIdSurvivesTheButtonThatAttributesItTest.php`
+pins the instance below from the other end.
 
-An id past 2<sup>53</sup> has to cross to the browser as a string, and the rule
-above reads the two ways a blade writes one straight into a JavaScript-evaluated
-attribute. There is a third way, and it clears both readers because the id
-arrives correctly quoted and is broken *afterwards*: an `<option value="…">`
-hands JavaScript a string, an `x-model` holds that string, and the button beside
-the select converts it before the call —
+An id past 2<sup>53</sup> has to cross to the browser as a string, and two of
+the rule's readers cover the ways a blade writes one straight into a
+JavaScript-evaluated attribute. There is a third way, and it cleared both of
+them, because the id arrives correctly quoted and is broken *afterwards*: an
+`<option value="…">` hands JavaScript a string, an `x-model` holds that string,
+and the button beside the select converts it before the call —
 
 ```html
 x-on:click="$wire.attributeToGoal(Number(selectedGoal))"
@@ -8106,6 +8143,36 @@ failure.
 The fix is to send the value the select is holding. The component reads it back
 through `DerivedRowId::fromWire()`, which is what every other id-taking Livewire
 method on that page already does.
+
+### The reader that closes it, and why it is positional
+
+A second instance was sitting in the triage inbox, wearing a different
+mechanism: the keyboard shortcut read the id back out of a `data-txid`
+attribute the blade had written correctly and passed it through
+`parseInt(row.dataset.txid, 10)`. `transactions.id` is a per-device
+autoincrement, so nothing was corrupt — this one was scheduled rather than
+shipped, and would have broken silently the day that id became derived.
+
+The third reader decides on the **parameter the argument lands on**. It resolves
+the method named in a `$wire.method(…)` or `wire:click="method(…)"` call against
+the Livewire signatures in the tree, counts only the parameters no container can
+fill, and refuses `parseInt(`, `parseFloat(`, `Number(` or a unary `+` at a
+position typed `int|string` — which is what a method taking `DerivedRowId::fromWire()`
+declares, and what nothing else in this tree declares.
+
+Positional is the whole rule. The same shortcut's sibling, the `<select>` one
+row down, calls the same method and coerces too:
+
+```html
+$wire.selectForRow('{{ $row->transactionId }}', $event.target.value ? parseInt($event.target.value, 10) : null)
+```
+
+That `parseInt()` is on argument **1**, a category id the component types `?int`
+because categories are a per-device autoincrement. It is legitimate, and a
+blanket "no coercion in a wire call" rule would have been red on it — which is
+the rule that gets switched off. The guard pins that site as a positive control:
+it has to have reached it and cleared it on the type, because a reader reporting
+nothing at all reads the same as a clean tree.
 
 ## A log line a peer can repeat
 

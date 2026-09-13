@@ -7,6 +7,8 @@ namespace Modules\Recurring\Internal\Queries;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Recurring\Internal\Support\NewestOccurrenceFirst;
+use Modules\Recurring\Internal\Support\SeriesTables;
 use stdClass;
 
 // recurring_series carries no account column, so the originating account is
@@ -44,15 +46,15 @@ final readonly class SeriesAccountResolver
     {
         $connection = $this->db->connection();
 
-        $ranked = $connection->table('recurring_series_occurrences as rso')
-            ->join('transactions as t', 't.id', '=', 'rso.transaction_id')
-            ->where('rso.user_id', $user->id)
+        $ranked = $connection->table('recurring_series_occurrences as o')
+            ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+            ->where('o.user_id', $user->id)
             ->where('t.user_id', $user->id)
-            ->whereIn('rso.recurring_series_id', $seriesIds)
-            ->select(['rso.recurring_series_id as series_id', 't.account_id as account_id'])
+            ->whereIn('o.recurring_series_id', $seriesIds)
+            ->select(['o.recurring_series_id as series_id', 't.account_id as account_id'])
             ->selectRaw(
                 'row_number() over ('
-                .'partition by rso.recurring_series_id order by rso.observed_at desc, rso.id desc'
+                .'partition by o.recurring_series_id order by '.NewestOccurrenceFirst::SQL
                 .') as occurrence_rank'
             );
 
@@ -118,10 +120,14 @@ final readonly class SeriesAccountResolver
 
     private function firstAccountId(User $user): ?int
     {
+        // The id is a per-device autoincrement, so two accounts sharing a name
+        // — a second ASN current account, a second PayPal — were parted by a
+        // number the peer hands to a different row. The IBAN is what the
+        // account IS, carries unique(user_id, iban), and is never sealed.
         $row = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
             ->orderBy('name')
-            ->orderBy('id')
+            ->orderBy('iban')
             ->first(['id']);
 
         if ($row === null) {

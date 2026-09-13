@@ -90,16 +90,43 @@ final readonly class DailyBalanceAggregator
         return [
             'map' => $map,
             'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor,
-            // What the first grid day opened on. cumulativeBalanceBefore() is
-            // already exactly that figure — it seeds the overlay's running
-            // total — and the grid's first cell had no predecessor to chain
-            // from, so it reported unknown for a balance held right here.
-            'gridStartOpening' => $overlay === null ? null : self::dayBalance(
+            'gridStartOpening' => $this->openingBefore($gridStart, $overlay, $byDateCurrency, $baseCurrency, $rates, $isComputingAny),
+        ];
+    }
+
+    // What the first grid day opened on, which is the day before it closing.
+    // Answered off whichever half of the line reaches that day: the overlay's
+    // running total, or — on a strip that begins after today — the projection,
+    // which carries a point for every day it reaches.
+    /**
+     * @param  array{cumByCurrency: array<string, int>, deltaByDateCurrency: array<string, array<string, int>>, gridStart: CarbonImmutable, pastEnd: CarbonImmutable}|null  $overlay
+     * @param  array<string, array<string, int>>  $byDateCurrency
+     */
+    private function openingBefore(
+        CarbonImmutable $gridStart,
+        ?array $overlay,
+        array $byDateCurrency,
+        string $baseCurrency,
+        RateSet $rates,
+        bool $isComputingAny,
+    ): ?DayBalanceDto {
+        if ($overlay !== null) {
+            return self::dayBalance(
                 $this->fx->withRates($overlay['cumByCurrency'], $baseCurrency, $rates),
                 $overlay['cumByCurrency'],
                 false,
-            ),
-        ];
+            );
+        }
+
+        // No point for that day is no opening: a grid whose projection begins
+        // inside it states "—" rather than a figure chained off nothing.
+        $projected = $byDateCurrency[$gridStart->subDay()->toDateString()] ?? null;
+
+        return $projected === null ? null : self::dayBalance(
+            $this->fx->withRates($projected, $baseCurrency, $rates),
+            $projected,
+            $isComputingAny,
+        );
     }
 
     /**

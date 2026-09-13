@@ -54,6 +54,7 @@ Modules/Recurring/
 │   │   └── SeriesRowVanishedException.php
 │   ├── Support/
 │   │   ├── DerivedSeriesId.php
+│   │   ├── NewestOccurrenceFirst.php
 │   │   ├── SeriesIds.php
 │   │   └── SeriesTables.php
 │   └── Http/Livewire/
@@ -237,6 +238,11 @@ Modules/Recurring/
   $counterpartyKey, $currency)` — the `recurring_series` id both
   devices compute. Not the table's UNIQUE; see
   [How a series is detected](series-detection.md#the-cluster-key).
+- `Internal/Support/NewestOccurrenceFirst::SQL` — the one ORDER BY
+  every read of the occurrence log uses, under `SeriesTables`'
+  aliases. The occurrence id is minted with `random_int()`, so a
+  same-day tie broken on it was broken differently on each device;
+  see [which occurrence is the newest](series-detection.md#which-occurrence-is-the-newest).
 - `Internal/Jobs/DetectRecurringSeriesJob::handle(DatabaseManager,
   Clock, iterable $detectors, RecurringSeriesStateMachine,
   ?Session, ?AppLockKeyService, ?EncryptionMigrationService,

@@ -228,7 +228,7 @@ final readonly class RecurringSeriesQuery
      */
     public function counterpartyIdForSeries(int $seriesId, User $user): ?int
     {
-        $row = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+        $row = $this->db->connection()->table('recurring_series_occurrences as o')
             ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
             ->where('o.user_id', $user->id)
@@ -259,7 +259,7 @@ final readonly class RecurringSeriesQuery
             return [];
         }
 
-        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
             ->join(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->whereIn('o.recurring_series_id', $unique)
             ->where('o.user_id', $user->id)
@@ -319,6 +319,10 @@ final readonly class RecurringSeriesQuery
      */
     public function allApprovedForUser(User $user): array
     {
+        // The id stays as the tie-break here: a series id is DERIVED from the
+        // columns that identify the cluster, so it is arbitrary but every
+        // device computes the same number. Only the MINTED and autoincrement
+        // ids break a tie differently on two devices.
         $rows = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
             ->whereIn('state', RecurringSeriesState::projectableValues())
