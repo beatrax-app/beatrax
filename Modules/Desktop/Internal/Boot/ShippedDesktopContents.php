@@ -17,10 +17,10 @@ final readonly class ShippedDesktopContents
     // question. Nothing in this product's runtime reads one.
     private const array KEY_CONTAINER_EXTENSIONS = ['jks', 'keystore', 'p12', 'pfx', 'p8', 'mobileprovision'];
 
-    // A file holding a ledger. The desktop writes its database under
-    // NATIVEPHP_STORAGE_PATH, so a populated one inside the bundle is the
-    // builder's own. Emptiness is the whole discriminator: the `->booting()`
-    // hook creates a zero-byte file every build, by design.
+    // A file holding a ledger. The desktop writes its own under
+    // NATIVEPHP_STORAGE_PATH, so one carrying a schema here is the builder's.
+    // A byte count cannot be the discriminator: the pragma provider opens the
+    // precreated file during boot, which leaves a bare header page behind.
     /** @link ../../../../.docs/architecture/sqlite-file-precreation.md */
     private const array DATA_EXTENSIONS = ['sqlite', 'sqlite3', 'db'];
 
@@ -58,6 +58,10 @@ final readonly class ShippedDesktopContents
 
     private const int TEXT_CEILING = 2_000_000;
 
+    // Far past where a schema can begin, and past any file a build has an
+    // innocent reason to leave behind.
+    private const int SCHEMA_SCAN_CEILING = 1_048_576;
+
     // Every refusal the tree earns, and an empty list when it earns none.
     /**
      * @return list<string>
@@ -87,6 +91,44 @@ final readonly class ShippedDesktopContents
         return count($this->everyFile($root));
     }
 
+    // What the bundle may carry is a file the migrator has never reached: zero
+    // bytes, or the bare header the pragma provider leaves. A schema means the
+    // builder's own application ran against it, and rows are not needed for
+    // that to be true.
+    /**
+     * @link ../../../../.docs/architecture/sqlite-file-precreation.md
+     *
+     * @return list<string>
+     */
+    private function ledgerRefusal(SplFileInfo $file, string $relative): array
+    {
+        if (! $this->carriesASchema($file->getPathname())) {
+            return [];
+        }
+
+        return ['a database: '.$relative.', holding '.$file->getSize().' bytes'];
+    }
+
+    // SQLite keeps every object's CREATE statement verbatim in its schema
+    // table, so the bytes answer this without opening a connection -- which on
+    // a WAL database would write sidecar files beside the artefact being
+    // judged. Unreadable counts as carrying one: refusal is the safe answer.
+    private function carriesASchema(string $path): bool
+    {
+        $size = @filesize($path);
+        $head = @file_get_contents($path, false, null, 0, self::SCHEMA_SCAN_CEILING);
+
+        if ($head === false || $size === false) {
+            return true;
+        }
+
+        if (stripos($head, 'CREATE TABLE') !== false) {
+            return true;
+        }
+
+        return $size > self::SCHEMA_SCAN_CEILING;
+    }
+
     /**
      * @return list<string>
      */
@@ -99,7 +141,7 @@ final readonly class ShippedDesktopContents
         }
 
         if (in_array($extension, self::DATA_EXTENSIONS, true)) {
-            return $file->getSize() === 0 ? [] : ['a database: '.$relative.', holding '.$file->getSize().' bytes'];
+            return $this->ledgerRefusal($file, $relative);
         }
 
         return array_merge(
