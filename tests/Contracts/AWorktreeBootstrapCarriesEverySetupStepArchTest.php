@@ -7,9 +7,12 @@ declare(strict_types=1);
 // failures across 4 files, no .env is a key:generate that throws on a file that
 // is not there, and no mobile-app/vendor is a docs-symbol rule that SKIPS.
 
-// The last one is the quietest and is why this file is no longer named for
-// three: a skip reads as a pass to everything that counts tests, so that rule
-// ran only in CI for as long as the script left the second Composer root out.
+// The quiet ones are why this file is not named for a number. A skip reads as a
+// pass to everything that counts tests, so the docs-symbol rule ran only in CI
+// for as long as the script left the second Composer root out. The root's own
+// runtime directories are gitignored AND empty, so git creates neither and the
+// framework cannot boot there: measured, all 8 tests of one Mobile file FAIL
+// rather than skip, which is the same absence wearing the loudest costume.
 
 /**
  * The script without its comment lines. The header explains what each of the
@@ -34,17 +37,19 @@ it('is executable, because a setup step nobody can run is documentation', functi
         ->and(is_executable($path))->toBeTrue();
 });
 
-it('brings all three of the things a fresh worktree lacks', function (): void {
+it('brings every gitignored thing a fresh worktree lacks', function (): void {
     $script = worktreeBootstrapScript();
 
-    // The CALL that brings each one, not the name: every one of the three is
-    // also named by the symlink check further down, so a rule looking for the
-    // bare name passes with the copy deleted. Watched it do exactly that.
+    // The CALL that brings each one, not the name: every one of them is also
+    // named by the symlink check further down, so a rule looking for the bare
+    // name passes with the copy deleted. Watched it do exactly that.
     $brings = [
         'vendor' => 'link_tree vendor',
         'public/build' => 'copy_tree public/build',
         '.env' => 'cp "$main/.env"',
         'mobile-app/vendor' => 'link_tree mobile-app/vendor',
+        'the mobile root\'s runtime directories' => '"$target/mobile-app/bootstrap/cache"',
+        'the mobile root\'s .env' => 'cp "$main/mobile-app/.env"',
     ];
 
     $missing = [];
@@ -112,7 +117,11 @@ it('gives each worktree its own vendor/composer, which composer rewrites in plac
 it('ends on a positive control, so a broken suite and a bare worktree are told apart', function (): void {
     $script = worktreeBootstrapScript();
 
-    expect($script)->toContain('vendor/bin/pest');
+    // One control per Composer root. The mobile root's bootstrap can fail while
+    // the repo root's passes, and the script would then hand back a worktree
+    // whose Mobile tests fail for a reason that is not in the code.
+    expect($script)->toContain('vendor/bin/pest')
+        ->and($script)->toContain('cd "$target/mobile-app" && APP_ENV=testing vendor/bin/pest');
 });
 
 // The control failing is the common case and its cause is not visible from the
