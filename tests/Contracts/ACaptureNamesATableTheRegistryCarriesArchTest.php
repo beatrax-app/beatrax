@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Public\Services\JsonRowReferences;
 
 /**
  * @link ../../.docs/features/sync/merge-registry-authoring.md
@@ -26,6 +27,20 @@ const CAPTURE_DYNAMIC_SITES = [
     'Modules/Migration/Internal/Pipeline/EntityChangeApplier.php',
     'Modules/Sync/Public/Services/DependentRowCascade.php',
 ];
+
+// The middle case, and the one worth having: a site whose table is a variable
+// HERE but a declaration somewhere a reader can follow. Resolved rather than
+// pinned, so its tables get the same check a literal does instead of an
+// exemption saying nothing can be checked.
+/**
+ * @return array<string, list<string>> file => every table it can emit a capture under
+ */
+function captureResolvedSites(): array
+{
+    return [
+        'Modules/Counterparties/Internal/Actions/RepointJsonReferences.php' => (new JsonRowReferences)->tables(),
+    ];
+}
 
 /**
  * @return list<string>
@@ -75,14 +90,32 @@ function captureDispatches(): array
     return $found;
 }
 
+// The literal where the site names one, and the declaration's tables where it
+// names a variable a declaration answers for. A site that is neither answers
+// with nothing and is pinned instead, by the test below.
+/**
+ * @param  array{file:string,line:int,table:string|null}  $dispatch
+ * @return list<string>
+ */
+function captureTablesOf(array $dispatch): array
+{
+    if ($dispatch['table'] !== null) {
+        return [$dispatch['table']];
+    }
+
+    return captureResolvedSites()[$dispatch['file']] ?? [];
+}
+
 it('names, at every capture site, a table the merge registry carries', function (): void {
     $registry = new MergeRulesRegistry;
     $dispatches = captureDispatches();
     $offenders = [];
 
     foreach ($dispatches as $dispatch) {
-        if ($dispatch['table'] !== null && ! $registry->isRegistered($dispatch['table'])) {
-            $offenders[] = sprintf('%s:%d captures for `%s`', $dispatch['file'], $dispatch['line'], $dispatch['table']);
+        foreach (captureTablesOf($dispatch) as $table) {
+            if (! $registry->isRegistered($table)) {
+                $offenders[] = sprintf('%s:%d captures for `%s`', $dispatch['file'], $dispatch['line'], $table);
+            }
         }
     }
 
@@ -97,13 +130,20 @@ it('names, at every capture site, a table the merge registry carries', function 
     // The walk read something. A scope that moves under this rule reports no
     // offenders for the same reason a correct tree does.
     expect(count($dispatches))->toBeGreaterThan(40);
+
+    // And the resolver answered. An empty answer would read as a site with no
+    // table to check rather than as a resolver that stopped resolving, which is
+    // the exemption this arm exists to avoid granting by accident.
+    foreach (captureResolvedSites() as $file => $tables) {
+        expect($tables)->not->toBe([], $file.' resolves to no table at all, so its capture is checked against nothing');
+    }
 });
 
 it('keeps to the three capture sites that decide their table at runtime', function (): void {
     $dynamic = [];
 
     foreach (captureDispatches() as $dispatch) {
-        if ($dispatch['table'] === null) {
+        if ($dispatch['table'] === null && ! isset(captureResolvedSites()[$dispatch['file']])) {
             $dynamic[] = $dispatch['file'];
         }
     }
