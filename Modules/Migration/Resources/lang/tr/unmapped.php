@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Hedef: :name',
         'category_goal' => ':name hedefi',
+        'schedule' => 'Planlanmış işlem: :name',
         'schedule_untitled' => 'Adsız planlanmış işlem',
+        'saved_report' => 'Kaydedilmiş rapor: :name',
         'transaction' => 'İşlem: :name · :date · :amount',
         'transaction_unnamed' => 'İşlem',
         'amount_update' => 'İşlem tutarı güncellemesi',

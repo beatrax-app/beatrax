@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Mål: :name',
         'category_goal' => 'Mål for :name',
+        'schedule' => 'Planlagt transaksjon: :name',
         'schedule_untitled' => 'Planlagt transaksjon uten navn',
+        'saved_report' => 'Lagret rapport: :name',
         'transaction' => 'Transaksjon: :name · :date · :amount',
         'transaction_unnamed' => 'Transaksjon',
         'amount_update' => 'Oppdatering av transaksjonsbeløp',

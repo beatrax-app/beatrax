@@ -349,36 +349,43 @@ module:
   [which kinds hold money](../ledger/architecture.md#accountkind--which-kinds-hold-money).
   **Scope limitation:** the most-recent point in this series is
   NOT guaranteed to equal the dashboard net-worth card's "today" figure.
-  Both read `AccountBalanceQuery` as of a date, so the anchor is not the
-  difference — but there are **two** differences left, not one, and the
-  gap is their sum rather than either alone.
+  **One** difference is left, and it is the DATE alone. Both surfaces
+  read the same seam the same way — `AccountBalanceQuery`'s
+  `currentBalanceAsOf()` — so ask them about the same day and they agree
+  to the cent.
 
-  1. **The day each one asks about.** The card asks for *today*
-     (`Clock::now()->startOfDay()`). A series point asks for its own
-     bucket's last day (`endExclusive->subDay()`), which for the bucket
-     the current period is still inside is a date in the FUTURE — a
-     `this_month` report read on 13 September samples 30 September, and
-     the ledger does carry rows dated after today, which
-     [the calendar's own window](../calendar/architecture.md) reads too.
-  2. **Which rows each one counts.** The card reads
-     `currentBalanceAsOf()`, which counts every row, because an uncleared
-     entry is still money the reader has. The series samples
-     `clearedBalanceAsOf()`, which counts only cleared and reconciled
-     ones. Note what that does and does not buy: a historical point DOES
-     move when an old entry is later confirmed — confirming it adds it to
-     every point at or after its posted day — so "a historical point does
-     not move" is not the property this choice has.
+  **The day each one asks about.** The card asks for *today*
+  (`Clock::now()->startOfDay()`). A series point asks for its own
+  bucket's last day (`endExclusive->subDay()`), which for the bucket the
+  current period is still inside is a date in the FUTURE — a
+  `this_month` report read on 13 September samples 30 September, and the
+  ledger does carry rows dated after today, which
+  [the calendar's own window](../calendar/architecture.md) reads too. The
+  gap is therefore exactly the rows posted between the two dates, and it
+  has no fixed sign: a future-dated income raises the point above the
+  card and a future-dated expense drops it below.
 
-  Neither difference has a fixed sign, so neither does the gap. Measured
-  on the shipped sample dataset in EUR on 2026-09-13: the card read
-  613574 and the `this_month` series point 623714, the card BELOW the
-  point by 10140. Decomposed at one date and one status at a time:
-  cleared-at-today 643743, current-at-today 613574 (the pending rows are
-  money going out, so dropping them raises the figure by 30169), and
-  cleared-at-2026-09-30 623714 (the future-dated rows take 20029 off it
-  again). `Modules/Reports/tests/Unit/TheNetWorthSeriesAndTheCardDifferInTwoPlacesTest.php`
-  pins both causes on a three-row ledger so this page cannot drift from
-  them again.
+  The series used to sample `clearedBalanceAsOf()` instead, and that was
+  the second difference. It was never a stated requirement — no `C7`
+  acceptance criterion names cleared — and it bought nothing the page
+  could point at: a historical point still MOVED when an old entry was
+  later confirmed, because confirming it added it to every point at or
+  after its posted day. What it cost was the reader's trust in a chart
+  that contradicted the number printed above it. An uncleared entry is
+  money the reader has, and both surfaces now say so.
+
+  Measured on the shipped sample dataset in EUR on 2026-09-13, the point
+  whose own day IS today moved 643743 → 613574 and now equals the card's
+  613574 exactly, closing a 30169 gap carried by five uncleared JPY cash
+  rows. Earlier points moved by what was still unconfirmed on their own
+  day: 2026-06-30 unchanged at 726745, 2026-07-31 918129 → 900530,
+  2026-08-31 837048 → 809958. The `this_month` point, which samples
+  2026-09-30, went 623714 → 593545 — still not the card's figure, and
+  that residue is the date difference above, not a second cause.
+  `Modules/Reports/tests/Unit/TheNetWorthSeriesAndTheCardDifferOnlyInTheDayTheyAskAboutTest.php`
+  pins both halves on a three-row ledger — the agreement on a shared day
+  and the gap on a bucket that outruns it — so this page cannot drift
+  from them again.
 
   The card previously sourced its balance from Forecasting's
   `BalanceAnchorResolver`. That resolver answers where a *projection*

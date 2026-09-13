@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Eesmärk: :name',
         'category_goal' => 'Kategooria :name eesmärk',
+        'schedule' => 'Ajastatud tehing: :name',
         'schedule_untitled' => 'Nimeta ajastatud tehing',
+        'saved_report' => 'Salvestatud aruanne: :name',
         'transaction' => 'Tehing: :name · :date · :amount',
         'transaction_unnamed' => 'Tehing',
         'amount_update' => 'Tehingusumma uuendus',

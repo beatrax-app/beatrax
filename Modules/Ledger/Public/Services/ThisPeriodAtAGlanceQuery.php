@@ -60,18 +60,26 @@ final readonly class ThisPeriodAtAGlanceQuery
         private CardStatementQuery $cardStatements,
     ) {}
 
+    // The one question the first-run redirect asks. Composing the whole summary
+    // to read this boolean off it cost ten queries on an install past its first
+    // import, and discarded every figure but this one.
+    public function isFirstRun(User $user): bool
+    {
+        return ! $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->exists();
+    }
+
     public function for(User $user, Period $period, ?string $displayCurrency = null): DashboardSummary
     {
         $displayCurrency ??= $this->baseCurrency->code();
 
         $connection = $this->db->connection();
 
-        $totalCount = $connection
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->count();
-
-        if ($totalCount === 0) {
+        // Asked through the same method the redirect asks, so the screen and the
+        // redirect cannot disagree about which install is on its first run.
+        if ($this->isFirstRun($user)) {
             return new DashboardSummary(
                 period: $period,
                 inflow: Money::ofMinor(0, $displayCurrency),

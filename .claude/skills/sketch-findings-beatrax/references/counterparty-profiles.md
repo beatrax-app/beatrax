@@ -31,8 +31,11 @@ flexes across all five via per-type variations.
 ### Hero stat composition
 
 - **Merchant**: `12-month total` (with ↑/↓ delta vs prior 12mo) + `Average / month`
-- **Personal**: `Net received` (color green if positive, default text if negative)
-  + sub-line breaking out `€X in − €Y out`
+- **Personal**: the label follows the **sign of the figure**, not the
+  counterparty type — `core::dashboard.in` when positive, `core::dashboard.out`
+  when negative, and the neutral key at zero, over an `abs()`'d amount. Do not
+  reinstate a fixed `Net received`: it asserts a direction the figure can
+  contradict, which is what #798 removed. Sub-line breaks out `€X in − €Y out`
 - **Bank**: `12-month total` (delta) + `Net of interest`
 - **Government**: `2026 YTD` (current tax year emphasized) + `2025 final`
   (with vs-prior-year sub)

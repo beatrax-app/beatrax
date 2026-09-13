@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Cíl: :name',
         'category_goal' => 'Cíl kategorie :name',
+        'schedule' => 'Naplánovaná transakce: :name',
         'schedule_untitled' => 'Naplánovaná transakce bez názvu',
+        'saved_report' => 'Uložená sestava: :name',
         'transaction' => 'Transakce: :name · :date · :amount',
         'transaction_unnamed' => 'Transakce',
         'amount_update' => 'Aktualizace částky transakce',

@@ -11,6 +11,7 @@ return [
     'remember' => 'Forbliv logget ind på denne enhed',
     'submit' => 'Log ind',
     'lost_password' => 'Har du mistet din adgangskode? Brug en gendannelseskode.',
+    'throttled_recovery' => 'Eller skriv en gendannelseskode for at prøve igen nu. Koden bliver markeret som brugt.',
 
     'error_invalid' => 'Brugernavnet eller adgangskoden er forkert.',
     'error_throttled' => 'For mange forsøg — prøv igen om :wait.',
