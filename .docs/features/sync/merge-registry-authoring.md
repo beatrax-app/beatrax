@@ -100,6 +100,33 @@ that tuple turned out to be a number each device counts for itself — and the
 applier still seeds it from the op's pk, so it stays out. What makes two devices
 one row there is `anomaly_alerts_uniq`, not the id.
 
+**Three tables are minted and were described here, and in their own modules, as
+derived.** `anomaly_alerts` (above), `drift_alerts` (`DriftEvaluator`) and
+`recurring_series_occurrences` (`OccurrenceWriter`) all call
+`DeviceMintedRowId::mint()`, which is `random_int(1, PHP_INT_MAX)`. Only
+`recurring_series` is genuinely derived, through `DerivedSeriesId` ->
+`DerivedRowId::for()`.
+
+The distinction is not pedantry, because the three id kinds behave differently
+in the one place readers reach for them — as a tie-break in an `ORDER BY`:
+
+| kind | written by | same on both devices? | safe to tie-break on? |
+|---|---|---|---|
+| derived | `DerivedRowId::for()` | **yes** — a fold of values both compute | yes |
+| minted | `DeviceMintedRowId::mint()` | no — `random_int` | no |
+| autoincrement | the database | no — counted per device | no |
+
+A minted id sorts in no order at all, so "derived, therefore hash order" and
+"minted, therefore no order" happen to give the same *advice* about paging —
+which is why four comments carried the wrong premise without anyone noticing.
+They differ where it matters: a derived id is identical on both devices, so it
+is the one kind a tie-break may rest on.
+
+**Read the writer, not a comment about it.** Grep for
+`DerivedRowId::for('<table>'` and `DeviceMintedRowId::mint()` in the module that
+writes the row. A migration that derived ids once does not make the column
+derived — `anomaly_alerts` is exactly that trap.
+
 ### `user_id` is usually nullable, and sometimes is not
 
 The multi-user convention leaves `user_id` nullable on most tables, which keeps
