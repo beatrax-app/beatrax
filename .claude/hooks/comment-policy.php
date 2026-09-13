@@ -23,16 +23,18 @@ if (! is_string($named) && ! str_contains((string) ($input['command'] ?? ''), '.
 // tree currently has uncommitted, which is the same set a moment later.
 $paths = is_string($named) ? [$named] : commentPolicyDirtyPhpFiles();
 
-// The same set CommentPolicyArchTest calls backend files: Modules/,
-// never a test or a migration. Judging more than the authority does would
-// invent failures the gate will not have.
+// The same set CommentPolicyArchTest calls backend files -- all four roots,
+// minus tests, migrations and phpstan-stubs/. Judging more than the authority
+// invents failures the gate will not have; judging less, which read Modules/
+// alone, left every bootstrap/, tools/ and seeder violation for the gate.
 $paths = array_values(array_filter(
     $paths,
     static fn (string $p): bool => str_ends_with($p, '.php')
         && is_file($p)
-        && preg_match('#/Modules/#', $p) === 1
+        && preg_match('#/(Modules|bootstrap|tools|database/seeders)/#', $p) === 1
         && ! str_contains($p, '/tests/')
         && ! str_contains($p, '/Database/Migrations/')
+        && ! str_contains($p, '/phpstan-stubs/')
         && preg_match('#/(vendor|node_modules|storage|bootstrap/cache)/#', $p) !== 1,
 ));
 
