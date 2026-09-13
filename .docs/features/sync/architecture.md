@@ -1059,6 +1059,52 @@ before it.
   kept for exactly the tables it is the only one available for. Terminal by
   design, so stated rather than warned about.
 
+#### A predicate on a column the migration has not added
+
+The first build of this split read `ok` on that same database, with all 23 in
+the accounted-for bucket. The cause is one line, and it is not a logic error.
+
+SQLite reads a **double-quoted name matching no column as a string literal**
+rather than raising. Laravel quotes identifiers, so while
+`device_registry.self_retired_at` is absent —
+`2026_09_12_000040_a_retired_self_row_verifies_history_and_is_not_a_device` had
+not run on the measured database — the arm that recognises this device
+
+```php
+->where('is_self', 1)->orWhereNotNull('self_retired_at')
+```
+
+reaches SQLite as `"self_retired_at" IS NOT NULL`, which is **always true**.
+Every peer device passed a self-only test, and the one actionable population was
+absorbed into the one that is not. Measured on the real peer row:
+
+```
+with the OR arm:  … and (is_self=1 or "self_retired_at" is not null)  -> 1
+is_self=1 alone:  … and is_self=1                                    -> 0
+```
+
+`whereNull()` fails the other way — a literal is never null, so it matches
+nothing — which is how `op_log_quarantine.op_type` would empty the `held` bucket
+into the warning. That direction over-reports, which is survivable; the
+`whereNotNull` direction under-reports, which is the failure this whole page
+exists to remove.
+
+**The window is an ordinary state, not an accident.** A build lands before its
+migration runs, and the desktop app that is already running started before it.
+So the census **declines to answer** rather than guessing: `REQUIRED_COLUMNS`
+names every column it reads across the three tables it queries, one
+`getColumnListing` per table checks them before any classification happens, and
+a missing one raises `CensusColumnMissingException`. The doctor row then names
+the column and the remedy instead of a count:
+
+```
+rows the log still holds  warning  cannot classify — device_registry is missing self_retired_at; run php artisan migrate
+```
+
+Refusing beats degrading. Dropping the arm when the column is absent would still
+produce a number, and nothing in the output would say that number was computed
+without it — which is the same silence a check that stopped looking produces.
+
 Placing the fifteen on a copy of that database — inserting each peer slug the
 table does not have, which is what a re-home writes — takes the row to `ok` with
 the other eight still named. The same copy under the old check still read
