@@ -26,7 +26,7 @@ final readonly class EnvelopeActivationService
     {
         $userIds = $this->db->connection()
             ->table('users')
-            ->whereNull('envelope_activated_at')
+            ->whereNull('users.envelope_activated_at')
             ->pluck('id')
             ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
             ->filter(static fn (int $id): bool => $id > 0)
@@ -50,7 +50,7 @@ final readonly class EnvelopeActivationService
         $claimed = $this->db->connection()
             ->table('users')
             ->where('id', $userId)
-            ->whereNull('envelope_activated_at')
+            ->whereNull('users.envelope_activated_at')
             ->update(['envelope_activated_at' => $this->clock->now()->toDateTimeString()]);
 
         if ($claimed === 0) {

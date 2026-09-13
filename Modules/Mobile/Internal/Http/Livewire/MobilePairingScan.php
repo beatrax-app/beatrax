@@ -560,10 +560,10 @@ final class MobilePairingScan extends Component
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
             // Confirmed and not a device: the row a restore's repair retired
-            // verifies history and collects nothing. Asked with no schema
-            // question in front of it, alone among this column's readers,
-            // because the gate cannot render this screen before the migration.
-            ->whereNull('self_retired_at')
+            // verifies history and collects nothing. Named with its table so an
+            // absent column raises rather than answering silently; the gate
+            // keeps this screen unrendered until every migration has run.
+            ->whereNull('device_registry.self_retired_at')
             ->pluck('id');
 
         foreach ($recipients as $deviceRegistryId) {
@@ -718,8 +718,8 @@ final class MobilePairingScan extends Component
             ->where('user_id', $userId)
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
-            // Unguarded for the reason the fan-out above is.
-            ->whereNull('self_retired_at')
+            // Named with its table for the reason the fan-out above is.
+            ->whereNull('device_registry.self_retired_at')
             ->exists();
     }
 

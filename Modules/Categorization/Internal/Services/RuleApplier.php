@@ -280,7 +280,7 @@ final class RuleApplier
             ->table('tax_transaction_tags')
             ->where('user_id', $userId)
             ->where('transaction_id', $transactionId)
-            ->whereNull('transaction_split_id')
+            ->whereNull('tax_transaction_tags.transaction_split_id')
             ->first(['deduction_category_id', 'tax_year_override', 'note']);
 
         $currentDeductionCategoryId = $current !== null && is_numeric($current->deduction_category_id)

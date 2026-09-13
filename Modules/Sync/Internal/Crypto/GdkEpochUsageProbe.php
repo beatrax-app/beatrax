@@ -19,7 +19,7 @@ final readonly class GdkEpochUsageProbe
         return $this->db->connection()
             ->table('op_log_entries')
             ->where('user_id', $userId)
-            ->where('gdk_epoch', $epochId)
+            ->where('op_log_entries.gdk_epoch', $epochId)
             ->exists();
     }
 }

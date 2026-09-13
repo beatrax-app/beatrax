@@ -159,7 +159,7 @@ final readonly class StrandedCreateRepair
             ->where('table_name', $table)
             ->where('pk', $pk)
             ->where('device_id', $deviceId)
-            ->where('op_type', OpType::CreateRow->value)
+            ->where('op_log_quarantine.op_type', OpType::CreateRow->value)
             ->exists();
     }
 

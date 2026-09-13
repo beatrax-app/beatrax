@@ -173,7 +173,7 @@ final readonly class CardStatementQuery
             $this->db->connection()->table('card_statement_credits')
                 ->where('user_id', $user->id)
                 ->where('to_statement_id', $statementId)
-                ->where('currency', $currency)
+                ->where('card_statement_credits.currency', $currency)
                 ->sum('amount_minor'),
         );
 

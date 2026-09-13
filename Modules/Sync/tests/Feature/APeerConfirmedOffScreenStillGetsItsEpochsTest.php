@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Http\Middleware\DeliversOwedEpochs;
@@ -107,6 +110,23 @@ it('still owes a peer that was admitted before this column existed', function ()
         ->update(['epochs_delivered_at' => null]);
 
     expect(app(GdkRotationService::class)->peersOwedEpochs((int) $user->id))->toContain($registryId);
+});
+
+// A build ships with the migration and runs against a database that has not
+// had it yet, which the schema-drift page calls an ordinary state. Absent, the
+// quoted column name is read as a string literal: `whereNull` is false for
+// every row, the answer is "nobody is owed", and the phone that holds no epoch
+// sits on a log it cannot decrypt with nothing left to retry for it.
+it('refuses to answer at all while the delivery stamp is not on the table', function (): void {
+    $user = pcoUser();
+    pcoConfirmedPeer($user);
+
+    Schema::table('device_registry', static function (Blueprint $table): void {
+        $table->dropColumn('epochs_delivered_at');
+    });
+
+    expect(fn (): array => app(GdkRotationService::class)->peersOwedEpochs((int) $user->id))
+        ->toThrow(ColumnNotDeclaredException::class);
 });
 
 // The tail has two halves and the screen skipped both. A key with no history

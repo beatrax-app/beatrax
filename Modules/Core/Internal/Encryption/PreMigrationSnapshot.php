@@ -96,7 +96,7 @@ final readonly class PreMigrationSnapshot
         try {
             $connection->table('op_log_entries')
                 ->where('user_id', $userId)
-                ->whereNull('gdk_epoch')
+                ->whereNull('op_log_entries.gdk_epoch')
                 ->whereNotNull('value')
                 ->select(['id', 'value', 'gdk_epoch'])
                 ->orderBy('id')

@@ -573,12 +573,12 @@ final readonly class IcsSettlementResolver
                 $group
                     ->where(static function ($printed) use ($printedStart, $printedEnd): void {
                         /** @var QueryBuilder $printed */
-                        $printed->whereNotNull('due_date')
-                            ->whereBetween('due_date', [$printedStart, $printedEnd]);
+                        $printed->whereNotNull('card_statements.due_date')
+                            ->whereBetween('card_statements.due_date', [$printedStart, $printedEnd]);
                     })
                     ->orWhere(static function ($derived) use ($derivedStart, $derivedEnd): void {
                         /** @var QueryBuilder $derived */
-                        $derived->whereNull('due_date')
+                        $derived->whereNull('card_statements.due_date')
                             ->whereBetween('period_end', [$derivedStart, $derivedEnd]);
                     });
             })
@@ -721,7 +721,7 @@ final readonly class IcsSettlementResolver
             ->orderBy('id');
 
         if ($currency !== null) {
-            $query->where('currency', $currency);
+            $query->where('card_statements.currency', $currency);
         }
 
         $row = $query->first(['id']);
@@ -738,7 +738,7 @@ final readonly class IcsSettlementResolver
             ->table('card_statement_credits')
             ->where('user_id', $user->id)
             ->where('to_statement_id', $statementId)
-            ->where('currency', $currency)
+            ->where('card_statement_credits.currency', $currency)
             ->sum('amount_minor');
 
         return self::toInt($sum);

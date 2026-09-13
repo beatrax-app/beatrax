@@ -276,6 +276,10 @@ final readonly class GdkRotationService
      */
     public function peersOwedEpochs(int $userId): array
     {
+        // Owed is read as null, so an absent column answers "nobody is owed"
+        // and leaves a confirmed peer holding no epoch it can decrypt with.
+        $this->assertRegistryColumnsAreReadable(['epochs_delivered_at']);
+
         $ids = [];
 
         foreach ($this->deviceRegistry->stillADevice(
@@ -283,7 +287,7 @@ final readonly class GdkRotationService
                 ->where('user_id', $userId)
                 ->where('is_self', 0)
                 ->whereNotNull('confirmed_at')
-                ->whereNull('epochs_delivered_at')
+                ->whereNull('device_registry.epochs_delivered_at')
         )->pluck('id') as $id) {
             if (is_numeric($id)) {
                 $ids[] = (int) $id;
@@ -349,7 +353,7 @@ final readonly class GdkRotationService
      */
     private function resolveFanOutRecipient(int $userId, int $newDeviceRegistryId): ?array
     {
-        $this->assertRetirementIsReadable();
+        $this->assertRegistryColumnsAreReadable(['self_retired_at']);
 
         $recipient = $this->db->connection()->table('device_registry')
             ->where('id', $newDeviceRegistryId)
@@ -386,7 +390,7 @@ final readonly class GdkRotationService
      */
     private function refuseAnIdNoListOffers(int $userId, int $deviceRegistryId): void
     {
-        $this->assertRetirementIsReadable();
+        $this->assertRegistryColumnsAreReadable(['self_retired_at']);
 
         $target = $this->db->connection()->table('device_registry')
             ->where('id', $deviceRegistryId)
@@ -445,11 +449,13 @@ final readonly class GdkRotationService
     // `self_retired_at !== null` below is true for every row: no recipient
     // would ever resolve, and no device could ever be revoked.
     /**
+     * @param  list<string>  $columns
+     *
      * @throws ColumnNotDeclaredException
      */
-    private function assertRetirementIsReadable(): void
+    private function assertRegistryColumnsAreReadable(array $columns): void
     {
-        $missing = SchemaShape::missingColumns($this->db->connection(), 'device_registry', ['self_retired_at']);
+        $missing = SchemaShape::missingColumns($this->db->connection(), 'device_registry', $columns);
 
         if ($missing !== []) {
             throw ColumnNotDeclaredException::on('device_registry', $missing);

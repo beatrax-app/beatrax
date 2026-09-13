@@ -83,7 +83,7 @@ final readonly class SyncStatusService
             // The retired row backs no session for the same reason the peer it
             // once was backs none: the machine is gone, and a row left standing
             // for it on this screen is the fault nobody can act on.
-            ->whereNull('self_retired_at')
+            ->whereNull('device_registry.self_retired_at')
             ->pluck('device_id')
             ->all();
 

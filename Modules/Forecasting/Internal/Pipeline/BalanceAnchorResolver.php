@@ -89,7 +89,7 @@ final readonly class BalanceAnchorResolver
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
             ->where(static function (Builder $sameMoney) use ($currency): void {
-                $sameMoney->whereNull('currency')->orWhere('currency', $currency);
+                $sameMoney->whereNull('card_statements.currency')->orWhere('card_statements.currency', $currency);
             })
             ->orderByDesc('period_end')
             ->orderByDesc('id')

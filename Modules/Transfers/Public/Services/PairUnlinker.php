@@ -32,7 +32,7 @@ final readonly class PairUnlinker implements UnpairsTransferLegs
             ->table('transactions')
             ->where('id', $survivorId)
             ->where('user_id', $userId)
-            ->whereNull('pair_transaction_id')
+            ->whereNull('transactions.pair_transaction_id')
             ->first(['type', 'amount_minor']);
 
         $newType = $survivor === null
@@ -47,7 +47,7 @@ final readonly class PairUnlinker implements UnpairsTransferLegs
             ->table('transactions')
             ->where('id', $survivorId)
             ->where('user_id', $userId)
-            ->whereNull('pair_transaction_id')
+            ->whereNull('transactions.pair_transaction_id')
             ->update(['type' => $newType->value]);
 
         return $affected > 0 ? $newType : null;

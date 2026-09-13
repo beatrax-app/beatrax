@@ -215,7 +215,7 @@ final readonly class CounterpartyIndexQuery
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
-            ->whereNotNull('counterparty_id')
+            ->whereNotNull('transactions.counterparty_id')
             ->whereIn('type', TransactionType::externalMovementValues())
             ->whereBetween('posted_at', [$cutoffDate, $endDate])
             ->groupBy('counterparty_id', 'settled_currency')
@@ -289,7 +289,7 @@ final readonly class CounterpartyIndexQuery
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
-            ->whereNotNull('counterparty_id')
+            ->whereNotNull('transactions.counterparty_id')
             ->whereIn('type', TransactionType::externalMovementValues())
             ->whereBetween('posted_at', [$cutoffDate, $endDate])
             ->groupBy('counterparty_id', 'ym', 'settled_currency')

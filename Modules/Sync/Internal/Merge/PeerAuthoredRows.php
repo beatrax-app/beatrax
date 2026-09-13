@@ -42,7 +42,7 @@ final readonly class PeerAuthoredRows
         return $this->textColumn($connection->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', 0)
-            ->whereNull('self_retired_at')
+            ->whereNull('device_registry.self_retired_at')
             ->orderBy('device_id')
             ->pluck('device_id'));
     }

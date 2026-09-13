@@ -45,7 +45,7 @@ final readonly class ForecastHighlightsQuery
             ->whereNull('scenario_id')
             // The tile reads the 30-day run, so it counts the 30-day run's own
             // windows rather than whichever horizon last wrote the table.
-            ->where('horizon_days', self::TILE_HORIZON)
+            ->where('forecast_shortfall_windows.horizon_days', self::TILE_HORIZON)
             ->where('starts_at', '<=', $horizon)
             ->where('ends_at', '>=', $today)
             ->count();

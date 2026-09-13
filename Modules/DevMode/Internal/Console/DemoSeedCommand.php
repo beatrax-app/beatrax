@@ -109,7 +109,7 @@ final class DemoSeedCommand extends Command
     private function demoUserIds(Connection $connection): array
     {
         $demoUserIds = $connection->table('users')
-            ->whereIn('username', SampleDatasetSeeder::personaUsernames())
+            ->whereIn('users.username', SampleDatasetSeeder::personaUsernames())
             ->pluck('id')
             ->all();
 

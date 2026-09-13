@@ -30,7 +30,7 @@ final readonly class UpdateCheckPreference
         try {
             return ! $this->db->connection()
                 ->table('users')
-                ->where(self::COLUMN, false)
+                ->where('users.'.self::COLUMN, false)
                 ->exists();
         } catch (Throwable $e) {
             // First launch reaches this before the table exists, which is a

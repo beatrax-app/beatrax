@@ -82,7 +82,7 @@ final readonly class ReceiptConflictQuery
             ->where('user_id', $user->id)
             ->where('transaction_id', $transactionId)
             ->where('field_name', EnrichmentConflictField::Currency->value)
-            ->whereNull('resolution')
+            ->whereNull('pending_enrichment_conflicts.resolution')
             ->value('incoming_value');
 
         $decoded = self::decodeScalar(is_string($held) ? $held : null);

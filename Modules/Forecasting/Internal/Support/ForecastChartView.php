@@ -142,7 +142,7 @@ final readonly class ForecastChartView
             ->whereNull('scenario_id')
             // Without the horizon the 365-day run's windows shaded the 30-day
             // chart, because whichever run finished last owned the table.
-            ->where('horizon_days', $horizon)
+            ->where('forecast_shortfall_windows.horizon_days', $horizon)
             ->orderBy('starts_at')
             ->get();
         $shortfallWindows = [];
@@ -386,7 +386,7 @@ final readonly class ForecastChartView
         $bufferRows = $this->db->connection()->table('accounts')
             ->where('user_id', $user->id)
             ->whereNotIn('kind', AccountKind::mirrorValues())
-            ->whereNotNull('forecast_min_buffer_minor')
+            ->whereNotNull('accounts.forecast_min_buffer_minor')
             ->get(['forecast_min_buffer_minor', 'default_currency']);
 
         /** @var array<string, int> $bufferByCurrency */

@@ -98,10 +98,10 @@ final class ManageUserPage extends Component
             return;
         }
 
-        $partnerId = $db->connection()->table('users')->where('username', $this->partnerUsername)->value('id');
+        $partnerId = $db->connection()->table('users')->where('users.username', $this->partnerUsername)->value('id');
 
         $db->connection()->table('users')
-            ->where('username', $this->partnerUsername)
+            ->where('users.username', $this->partnerUsername)
             ->update([
                 'password' => $hasher->make($this->newPartnerPassword),
                 'force_password_change_at_next_login' => true,
