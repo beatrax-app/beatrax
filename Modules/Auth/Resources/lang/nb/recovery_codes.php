@@ -22,6 +22,7 @@ return [
         'heading' => 'Gjenopprettingskoder',
         'body' => 'Gjenopprettingskoder er den eneste veien tilbake til kontoen din hvis du glemmer passordet.',
         'warning' => 'De lagres hashet og kan derfor ikke vises igjen. Et nytt sett gjør det gamle ugyldig med en gang.',
+        'password_label' => 'Kontopassord',
         'regenerate' => 'Lag nye koder',
         'regenerate_confirm' => 'Vil du lage et nytt sett gjenopprettingskoder? Settet du har nå, slutter å virke i det øyeblikket det nye blir laget, og det kan ikke vises igjen — en utskrevet eller nedskrevet kopi blir ubrukelig. Lagre de nye kodene før du forlater denne siden.',
     ],

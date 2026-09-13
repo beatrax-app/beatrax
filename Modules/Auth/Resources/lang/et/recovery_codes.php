@@ -22,6 +22,7 @@ return [
         'heading' => 'Taastekoodid',
         'body' => 'Taastekoodid on ainus viis oma kontole tagasi pääseda, kui unustad parooli.',
         'warning' => 'Neid hoitakse räsituna, seega ei saa neid uuesti näidata. Uue komplekti loomine tühistab vana kohe.',
+        'password_label' => 'Konto parool',
         'regenerate' => 'Loo uued koodid',
         'regenerate_confirm' => 'Kas luua uus taastekoodide komplekt? Praegune komplekt lakkab kehtimast hetkel, mil uus valmib, ja seda ei saa enam näidata — väljaprinditud või üles kirjutatud koopia muutub kasutuks. Salvesta uued koodid, enne kui sellelt lehelt lahkud.',
     ],

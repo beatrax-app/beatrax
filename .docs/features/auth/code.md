@@ -99,7 +99,11 @@ domain model uses.
     username existed).
   - `RegenerateRecoveryCodesAction` — invalidates the target user's unused
     codes and issues ten fresh ones. Two call paths: a user regenerates
-    their own; the owner regenerates a partner's.
+    their own; the owner regenerates a partner's. It checks no credential
+    itself, because the third caller is `RegenerateRecoveryCodesCommand`,
+    whose proof is access to the machine. Each surface proves what it can:
+    `RecoveryCodesSection` takes the account password, `ManageUserPage` is
+    owner-only and names the partner.
   - `DeleteAccountAction` — the account leaves this device. Re-checks the
     password, promotes the oldest survivor if the last administrator is the
     one leaving, then purges rows, files, keyring and session. The rows go
