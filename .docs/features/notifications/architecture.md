@@ -184,9 +184,8 @@ per-device settings. `NotificationPreferenceQuery` is the sole Public
 read/write seam: `forCurrentDevice()` reads (or returns locked defaults
 for) this device's row, `forOtherDevices()` reads, read-only for the settings
 "Other devices" panel, the preference row of every device the registry still
-confirms, and
-`saveForCurrentDevice()` is the only write path, validating server-side
-(out-of-range input throws, never clamps) and dispatching
+confirms, and `saveForCurrentDevice()` is the only write path, validating
+server-side (out-of-range input throws, never clamps) and dispatching
 `NotificationPreferenceMutated` only after the write commits.
 
 An install with no sync identity — `DeviceRegistryService::localDeviceId()`
@@ -214,6 +213,15 @@ device therefore listed the removed one for ever, and nameless, because
 panel fell back to "Unnamed device". `forOtherDevices()` now admits only the
 device ids that map still holds, so the answer comes from the one place that
 knows what a reader's devices are.
+
+Each row's summary line names the other device's cadence with the word the
+cadence control itself renders — `notifications::settings.digest.<value>` — not
+with the enum's stored spelling. Three of the line's four values already went
+through `Lang::get()`; the fourth was `DigestCadence->value`, so a Dutch reader
+read "overzicht weekly" beside three Dutch words. The word is taken verbatim
+rather than case-folded: lower-casing it would be a typographic rule guessed at
+for twenty-six languages, and it is the same word the reader chose in the
+control above.
 
 `NotificationPreferenceMutated`'s `preferenceId` is
 `notification_preferences.id`, a local autoincrement surrogate — unlike
