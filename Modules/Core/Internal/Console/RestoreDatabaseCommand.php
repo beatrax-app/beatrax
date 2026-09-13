@@ -237,11 +237,11 @@ final class RestoreDatabaseCommand extends Command
         try {
             ($this->transplant)($staged, $livePath, $preRestorePath);
         } catch (BackupIoException $e) {
+            $this->error('Restore failed mid-swap. Pre-restore snapshot at '.$preRestorePath.'.');
             $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
                 'phase' => 'copy',
                 'reason' => $e->getMessage(),
             ]);
-            $this->error('Restore failed mid-swap. Pre-restore snapshot at '.$preRestorePath.'.');
 
             throw new RestoreFailedException(leaveDown: true);
         }
@@ -289,9 +289,19 @@ final class RestoreDatabaseCommand extends Command
         $preRestorePath = $this->backupsDirectory().DIRECTORY_SEPARATOR
             .'pre-restore-'.$this->clock->now()->format('Y-m-d-His').'-'.bin2hex(random_bytes(4)).'.sqlite';
         $escaped = str_replace("'", "''", $preRestorePath);
-        // VACUUM INTO must not run inside a transaction; this call stands alone
-        // on the named `sqlite` connection, which opens none.
-        $this->db->connection(SqliteDatabase::connectionName($this->config))->statement(sprintf("VACUUM INTO '%s'", $escaped));
+
+        try {
+            // VACUUM INTO must not run inside a transaction; this call stands
+            // alone on the named `sqlite` connection, which opens none.
+            $this->db->connection(SqliteDatabase::connectionName($this->config))->statement(sprintf("VACUUM INTO '%s'", $escaped));
+        } catch (Throwable $e) {
+            // The operator's undo, and the first of the three full-sized
+            // files a restore writes, so it is where a disk runs out. A
+            // QueryException off it escaped the command and put the statement
+            // and both paths on whatever console was watching.
+            $this->refuse(new BackupIoException('The pre-restore snapshot could not be written: '.$preRestorePath, 0, $e));
+        }
+
         if ($this->files->chmod($preRestorePath, 0o600) === false) {
             $this->error('Failed to chmod pre-restore snapshot to 0600; aborting.');
 
@@ -328,11 +338,11 @@ final class RestoreDatabaseCommand extends Command
 
         // Maintenance mode stays ON so the operator notices and restores
         // from the pre-restore snapshot.
+        $this->error('Post-swap integrity check failed. Maintenance mode left ON; pre-restore snapshot at '.$preRestorePath.'.');
         $this->recordRestoreFailureAlert($sourcePath, $livePath, $preRestorePath, [
             'phase' => 'post_swap',
             'integrity_check' => is_string($rawIntegrity) ? $rawIntegrity : '',
         ]);
-        $this->error('Post-swap integrity check failed. Maintenance mode left ON; pre-restore snapshot at '.$preRestorePath.'.');
 
         throw new RestoreFailedException(leaveDown: true);
     }
@@ -431,20 +441,28 @@ final class RestoreDatabaseCommand extends Command
             'snapshot' => basename($preRestorePath),
         ]);
 
-        SystemAlert::create([
-            'user_id' => null,
-            'kind' => BackupAlertKind::Corrupt->value,
-            'severity' => SystemAlertSeverity::Critical->value,
-            'message' => $line->sentence(),
-            'metadata' => array_merge(StoredCopy::inParams($line) + [
-                // A restore failure shares the backup_corrupt kind with the
-                // backup command, and without this the banner told the reader
-                // a backup had aborted because their database was corrupt.
-                'cause' => BackupFailureCause::RestoreFailed->value,
-                'source_path' => $sourcePath,
-                'live_path' => $livePath,
-                'pre_restore_snapshot' => $preRestorePath,
-            ], $extra),
-        ]);
+        try {
+            SystemAlert::create([
+                'user_id' => null,
+                'kind' => BackupAlertKind::Corrupt->value,
+                'severity' => SystemAlertSeverity::Critical->value,
+                'message' => $line->sentence(),
+                'metadata' => array_merge(StoredCopy::inParams($line) + [
+                    // A restore failure shares the backup_corrupt kind with the
+                    // backup command, and without this the banner told the reader
+                    // a backup had aborted because their database was corrupt.
+                    'cause' => BackupFailureCause::RestoreFailed->value,
+                    'source_path' => $sourcePath,
+                    'live_path' => $livePath,
+                    'pre_restore_snapshot' => $preRestorePath,
+                ], $extra),
+            ]);
+        } catch (Throwable $e) {
+            // The row goes into the database the failure is about, so a swap
+            // that failed on an unwritable file throws here too — and that
+            // threw past the refusal, releasing maintenance mode. db:backup's
+            // failCorrupt() met the same thing on its corrupt-source branch.
+            $this->warn('The restore failure could not be recorded as an alert: '.SafeExceptionContext::shortName($e));
+        }
     }
 }

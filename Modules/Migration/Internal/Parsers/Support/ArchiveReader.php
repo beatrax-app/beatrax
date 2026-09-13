@@ -30,6 +30,9 @@ interface ArchiveReader
      */
     public function index(): array;
 
+    /**
+     * @throws UnrecognizedMigrationFileException When an entry is not the bytes its own header declares.
+     */
     public function extractTo(string $directory): bool;
 
     public function close(): void;

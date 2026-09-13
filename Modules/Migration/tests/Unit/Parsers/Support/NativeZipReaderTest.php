@@ -238,3 +238,204 @@ it('NativeZipReader: refuses to answer about an archive nobody opened', function
     expect(fn () => $reader->index())
         ->toThrow(UnrecognizedMigrationFileException::class, 'the archive was asked about before it was opened');
 });
+
+/**
+ * @param  array<int, array{0: int, 1: string}>  $patches  offset from the record's start => replacement bytes
+ */
+function nativeZipReaderPatch(string $path, string $signature, array $patches): string
+{
+    $raw = (string) file_get_contents($path);
+    $record = $signature === "PK\x05\x06" ? (int) strrpos($raw, $signature) : (int) strpos($raw, $signature);
+
+    foreach ($patches as [$offset, $bytes]) {
+        $raw = substr_replace($raw, $bytes, $record + $offset, strlen($bytes));
+    }
+
+    file_put_contents($path, $raw);
+
+    return $path;
+}
+
+// Every refusal below is a hand-edited archive rather than a fixture, because
+// the shapes being refused are ones no packer writes. The subject is what the
+// reader says about each: a file it cannot read and a file this build has no
+// reader for are answered by different sentences on the screen.
+it('NativeZipReader: names what it refuses in a malformed archive', function (callable $build, string $exception, string $message): void {
+    $path = $build();
+    $reader = new NativeZipReader;
+
+    expect(fn () => $reader->open($path))->toThrow($exception, $message);
+
+    $reader->close();
+    @unlink($path);
+})->with([
+    'a ZIP64 archive' => [
+        fn (): string => nativeZipReaderPatch(
+            nativeZipReaderBuildZip(['Register.csv' => 'date,payee']),
+            "PK\x05\x06",
+            [[16, pack('V', 0xFFFFFFFF)]],
+        ),
+        ArchiveReaderUnavailableException::class,
+        'is a ZIP64 archive, which the built-in reader cannot open',
+    ],
+    'an encrypted entry' => [
+        function (): string {
+            $path = sys_get_temp_dir().'/native-zip-reader-encrypted-'.uniqid('', true).'.zip';
+            $zip = new ZipArchive;
+            $zip->open($path, ZipArchive::CREATE);
+            $zip->addFromString('Register.csv', str_repeat('date,payee,amount', 20));
+            $zip->setEncryptionName('Register.csv', ZipArchive::EM_AES_256, 'not the reader\'s to know');
+            $zip->close();
+
+            return $path;
+        },
+        ArchiveReaderUnavailableException::class,
+        "archive entry 'Register.csv' is encrypted, which the built-in reader cannot open",
+    ],
+    'an end record that runs off the end of the file' => [
+        function (): string {
+            $path = sys_get_temp_dir().'/native-zip-reader-stub-eocd-'.uniqid('', true).'.zip';
+            file_put_contents($path, str_repeat('x', 25)."PK\x05\x06");
+
+            return $path;
+        },
+        UnrecognizedMigrationFileException::class,
+        'ends inside its own end-of-central-directory record',
+    ],
+    'a central directory shorter than the end record declares' => [
+        function (): string {
+            $path = nativeZipReaderBuildZip(['Register.csv' => str_repeat("date,payee,amount\n", 500)]);
+            $raw = (string) file_get_contents($path);
+            $central = (int) strpos($raw, "PK\x01\x02");
+            file_put_contents($path, substr($raw, 0, (int) floor($central * 0.4)).substr($raw, $central));
+
+            return $path;
+        },
+        UnrecognizedMigrationFileException::class,
+        'is shorter than its own end record declares',
+    ],
+    'an end record counting more entries than the directory holds' => [
+        fn (): string => nativeZipReaderPatch(
+            nativeZipReaderBuildZip(['Register.csv' => 'date,payee']),
+            "PK\x05\x06",
+            [[10, pack('v', 2)]],
+        ),
+        UnrecognizedMigrationFileException::class,
+        'could not read zip entry metadata at index 1',
+    ],
+    'an entry name longer than the directory that carries it' => [
+        fn (): string => nativeZipReaderPatch(
+            nativeZipReaderBuildZip(['Register.csv' => 'date,payee']),
+            "PK\x01\x02",
+            [[28, pack('v', 0xFFFF)]],
+        ),
+        UnrecognizedMigrationFileException::class,
+        'zip entry name at index 0 runs past the end of the central directory',
+    ],
+]);
+
+// These two are refused while an entry is being written rather than while the
+// directory is being read, so they are the endings ZipExtractor has to be able
+// to clean up after.
+it('NativeZipReader: names what it refuses while writing an entry', function (callable $build, string $message): void {
+    $path = $build();
+    $extractor = nativeZipReaderExtractorWithoutExtension();
+
+    expect(fn (): string => $extractor->extract($path))->toThrow(UnrecognizedMigrationFileException::class, $message);
+
+    $extractor->cleanup();
+    @unlink($path);
+})->with([
+    'an entry pointing at no local file header' => [
+        fn (): string => nativeZipReaderPatch(
+            nativeZipReaderBuildZip(['Register.csv' => 'date,payee']),
+            "PK\x01\x02",
+            [[42, pack('V', 1)]],
+        ),
+        "archive entry 'Register.csv' points at no local file header",
+    ],
+    'an entry declaring more compressed bytes than the file holds' => [
+        fn (): string => nativeZipReaderPatch(
+            nativeZipReaderBuildZip(['Register.csv' => 'date,payee']),
+            "PK\x01\x02",
+            [[20, pack('V', 4_000_000)]],
+        ),
+        "archive entry 'Register.csv' stops before the length its header declares",
+    ],
+]);
+
+it('NativeZipReader: reads an archive with no entries in it at all', function (): void {
+    $path = sys_get_temp_dir().'/native-zip-reader-empty-'.uniqid('', true).'.zip';
+    file_put_contents($path, "PK\x05\x06".pack('vvvvVVv', 0, 0, 0, 0, 0, 0, 0));
+
+    $extractor = nativeZipReaderExtractorWithoutExtension();
+
+    try {
+        expect(nativeZipReaderTreeOf($extractor->extract($path)))->toBe([]);
+    } finally {
+        $extractor->cleanup();
+        @unlink($path);
+    }
+});
+
+it('NativeZipReader: makes the directory an explicit directory entry names', function (): void {
+    $path = sys_get_temp_dir().'/native-zip-reader-dir-'.uniqid('', true).'.zip';
+    $zip = new ZipArchive;
+    $zip->open($path, ZipArchive::CREATE);
+    $zip->addEmptyDir('export/data');
+    $zip->addFromString('export/data/Register.csv', 'date,payee');
+    $zip->close();
+
+    $extractor = nativeZipReaderExtractorWithoutExtension();
+
+    try {
+        $extracted = $extractor->extract($path);
+        expect(is_dir($extracted.'/export/data'))->toBeTrue();
+        expect(nativeZipReaderTreeOf($extracted))->toBe(['export/data/Register.csv' => 'date,payee']);
+    } finally {
+        $extractor->cleanup();
+        @unlink($path);
+    }
+});
+
+// Refusing this is the same answer ext-zip gives, and it is the branch that
+// decides whether an entry with nowhere to go is a failed extraction or a
+// silently missing file.
+it('NativeZipReader: refuses an archive whose entry has a file where its parent directory should be', function (): void {
+    $path = nativeZipReaderBuildZip([
+        'export' => 'this is a file, not a directory',
+        'export/Register.csv' => 'date,payee',
+    ]);
+
+    $extractor = nativeZipReaderExtractorWithoutExtension();
+
+    expect(fn (): string => $extractor->extract($path))
+        ->toThrow(UnrecognizedMigrationFileException::class, 'failed to extract archive contents');
+
+    $extractor->cleanup();
+    @unlink($path);
+});
+
+// A DOS packer puts an MS-DOS date where a Unix one puts a mode, so reading
+// permission bits out of it would call ordinary exports symlinks.
+it('NativeZipReader: reads a symlink mode only from a Unix packer', function (int $opsys, bool $symlink): void {
+    $path = sys_get_temp_dir().'/native-zip-reader-opsys-'.uniqid('', true).'.zip';
+    $zip = new ZipArchive;
+    $zip->open($path, ZipArchive::CREATE);
+    $zip->addFromString('maybe-link', '/etc/passwd');
+    $zip->setExternalAttributesName('maybe-link', $opsys, 0o120777 << 16);
+    $zip->close();
+
+    $reader = new NativeZipReader;
+    $reader->open($path);
+
+    try {
+        expect($reader->index()[0]->isSymlink)->toBe($symlink);
+    } finally {
+        $reader->close();
+        @unlink($path);
+    }
+})->with([
+    'unix' => [ZipArchive::OPSYS_UNIX, true],
+    'dos' => [ZipArchive::OPSYS_DOS, false],
+]);

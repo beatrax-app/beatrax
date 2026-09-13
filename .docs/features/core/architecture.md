@@ -723,6 +723,34 @@ critical `system_alerts(backup_corrupt)` row, keeps maintenance mode
 ON, leaves the pre-restore snapshot on disk, and returns `FAILURE` so
 the operator can inspect and restore from the snapshot if needed.
 
+Three of the endings on that rail used to run off it, and all three
+share one shape — the step that reports a failure is written against
+the same disk or the same database the failure is about:
+
+- **The snapshot itself.** A restore writes three full-sized files and
+  this is the first, so it is where a disk runs out. `VACUUM INTO`
+  threw a raw `QueryException` straight out of the command, printing
+  the statement, the live path and the snapshot path on whatever
+  console was watching — the one thing `because()` exists to prevent.
+  It is now a `BackupIoException` through `refuse()`, which is correct
+  for `leaveDown: false`: nothing has been opened and no snapshot
+  exists to name.
+- **The swap.** `LiveDatabaseTransplant` promised `BackupIoException`
+  and raised a bare `Exception` for a live file `SQLite3` could not
+  open (measured: `Unable to open database: unable to open database
+  file` on a read-only live database). `db:restore` catches exactly
+  `BackupIoException` there, so that ending released maintenance mode,
+  recorded no alert and never named the snapshot; `RestoreRefusal` told
+  a reader `restore_failed` rather than `restore_could_not_read`. Every
+  ending inside the transplant is now translated, with the original
+  chained.
+- **The alert.** `system_alerts` is written into the live database, so
+  a swap that failed because that database could not be written throws
+  again while recording it — measured as `attempt to write a readonly
+  database`, escaping past the refusal and releasing maintenance mode.
+  The console line now comes first and the row is best-effort, which is
+  the shape `db:backup`'s `failCorrupt()` already had.
+
 Both commands are fully constructor-DI'd (no Laravel facade) and share
 `UserDataPathService` for the backups directory, so the contract is
 uniform across the pair.

@@ -47,7 +47,12 @@ final class NativeZipReader implements ArchiveReader
 
     private const int UNIX_MODE_SYMLINK = 0o120000;
 
-    private const int DIRECTORY_MODE = 0o700;
+    private const int MAX_DEFLATE_EXPANSION = 1032;
+
+    // The floor under the read above. Without one the tail of every legitimate
+    // entry is read a byte at a time; with it the worst a hostile header can
+    // hold in memory at once is 4KB inflated, which is 4.2MB.
+    private const int MIN_INFLATE_READ_BYTES = 4096;
 
     /** @var resource|null */
     private $handle = null;
@@ -277,19 +282,11 @@ final class NativeZipReader implements ArchiveReader
      */
     private function writeEntry(array $entry, string $directory): bool
     {
-        $target = $directory.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $entry['name']);
-
         if (str_ends_with($entry['name'], '/')) {
-            return is_dir($target) || @mkdir($target, self::DIRECTORY_MODE, true);
+            return ExtractionTarget::directory($directory, $entry['name']);
         }
 
-        // A parent that cannot be made and a file that cannot be opened are
-        // the same answer: there is nowhere to put this entry.
-        $parent = dirname($target);
-        $out = is_dir($parent) || @mkdir($parent, self::DIRECTORY_MODE, true)
-            ? @fopen($target, 'wb')
-            : false;
-
+        $out = ExtractionTarget::open($directory, $entry['name']);
         if ($out === false) {
             return false;
         }
@@ -316,12 +313,11 @@ final class NativeZipReader implements ArchiveReader
             ));
         }
 
-        $checksum = hash_init('crc32b');
+        $arriving = new EntryAsDeclared($entry['name'], $entry['uncompressedSize'], $entry['crc32']);
         $remaining = $entry['compressedSize'];
-        $written = 0;
 
         while ($remaining > 0) {
-            $chunk = $this->readAt($offset, min($remaining, ZipLocalEntry::READ_CHUNK_BYTES));
+            $chunk = $this->readAt($offset, $this->readSize($inflate !== null, $remaining, $arriving->outstanding()));
             if ($chunk === '') {
                 throw new UnrecognizedMigrationFileException(sprintf(
                     "archive entry '%s' stops before the length its header declares",
@@ -337,38 +333,32 @@ final class NativeZipReader implements ArchiveReader
             $flush = $remaining === 0 ? ZLIB_FINISH : ZLIB_NO_FLUSH;
             $plain = $inflate === null ? $chunk : (string) inflate_add($inflate, $chunk, $flush);
 
-            hash_update($checksum, $plain);
-            $written += strlen($plain);
+            $arriving->accept($plain);
             if ($plain !== '' && fwrite($out, $plain) === false) {
                 return false;
             }
         }
 
-        $this->guardEntryArrivedWhole($entry, $written, hash_final($checksum));
+        $arriving->sealed();
 
         return true;
     }
 
-    /**
-     * @param  CentralEntry  $entry
-     */
-    private function guardEntryArrivedWhole(array $entry, int $written, string $checksum): void
+    // Deflate expands by at most 1032:1, so an entry still owing N bytes needs
+    // at most N/1032 of input to produce them. Reading to that rather than to
+    // a fixed 256KB is what stops a lying header buying a chunk's expansion:
+    // one hostile 256KB read measured 257.6MB of output in a single string.
+    private function readSize(bool $inflating, int $remainingInput, int $outstandingOutput): int
     {
-        if ($written !== $entry['uncompressedSize']) {
-            throw new UnrecognizedMigrationFileException(sprintf(
-                "archive entry '%s' inflated to %d bytes where its header declares %d",
-                $entry['name'],
-                $written,
-                $entry['uncompressedSize'],
-            ));
+        if (! $inflating) {
+            return min($remainingInput, ZipLocalEntry::READ_CHUNK_BYTES);
         }
 
-        if ($checksum !== sprintf('%08x', $entry['crc32'])) {
-            throw new UnrecognizedMigrationFileException(sprintf(
-                "archive entry '%s' fails its own CRC32 check",
-                $entry['name'],
-            ));
-        }
+        return min(
+            $remainingInput,
+            ZipLocalEntry::READ_CHUNK_BYTES,
+            max(self::MIN_INFLATE_READ_BYTES, intdiv($outstandingOutput, self::MAX_DEFLATE_EXPANSION) + 1),
+        );
     }
 
     /**

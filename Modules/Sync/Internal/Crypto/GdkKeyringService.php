@@ -150,9 +150,10 @@ final class GdkKeyringService
         $this->keyringCache = [];
 
         if (! @rename($stage->tmpEncPath, $encPath)) {
-            // Do NOT @unlink the staged file on rename failure. At this point
-            // current_epoch is already committed and this .tmp is the ONLY
-            // copy of the epoch key — keep it so a re-entrant call can retry.
+            // Do NOT @unlink the staged file on rename failure: current_epoch
+            // is committed and this .tmp is the ONLY copy of the epoch key.
+            // Nothing reconciles it later — the stage lives on an instance the
+            // container binds fresh — so a hand repair renames this one.
             throw SecretFileException::couldNotFinalizeKeyring($stage->userId);
         }
     }
