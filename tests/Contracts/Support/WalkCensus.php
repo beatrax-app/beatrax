@@ -119,8 +119,13 @@ final class WalkCensus
         return false;
     }
 
+    // mobile-app/ is the second Composer root and its Modules is a symlink to
+    // the one walked here, so a path read from that root arrives one segment
+    // deeper and every module would read as unreached.
     private static function relative(string $path): string
     {
-        return str_replace(RepoTree::root().'/', '', str_replace(DIRECTORY_SEPARATOR, '/', $path));
+        $relative = str_replace(RepoTree::root().'/', '', str_replace(DIRECTORY_SEPARATOR, '/', $path));
+
+        return str_starts_with($relative, 'mobile-app/') ? substr($relative, strlen('mobile-app/')) : $relative;
     }
 }

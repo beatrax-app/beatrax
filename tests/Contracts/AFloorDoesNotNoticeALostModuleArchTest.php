@@ -63,11 +63,13 @@ it('counts a walk by the root each file sits under', function (): void {
     $counts = WalkCensus::byRoot([
         'Modules/Ledger/Internal/Thing.php',
         RepoTree::root().'/Modules/Core/Public/Other.php',
+        RepoTree::root().'/mobile-app/Modules/Mobile/Internal/Third.php',
         'resources/views/errors/404.blade.php',
     ]);
 
     expect($counts)->toBe(
-        ['Modules' => 2, 'resources' => 1],
-        'The count is read off the first path segment, with an absolute path relative to the repository root first.'
+        ['Modules' => 3, 'resources' => 1],
+        'The count is read off the first path segment, with an absolute path made relative to the repository '
+        .'root first and the second Composer root\'s prefix taken off.'
     );
 });
