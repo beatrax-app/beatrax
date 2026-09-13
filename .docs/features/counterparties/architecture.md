@@ -382,6 +382,7 @@ pool the percentage is computed over, and PHP's `arsort()` is stable, so
 a two-way tie in that tally is settled by whichever description the
 query returned first. Both halves reach the reader — as a suggested
 name, and as a confidence band.
+
 ## The phone list is the one rendering that says which way the total went
 
 The figure is a magnitude at all four index renderings and on the profile
