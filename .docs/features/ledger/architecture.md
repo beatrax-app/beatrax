@@ -1398,6 +1398,15 @@ transactions list by type label, because a URL filter can only name a
 label. A drilldown from a spend figure therefore lists the rows whose
 label says spend, not every row the figure counted.
 
+`TransactionsList` narrows that parameter to the vocabulary **on the
+property** rather than only on the way to the matcher, for the reason the
+account and category ids are cleaned there: Livewire hands a `#[Url]`
+property to the view as well as to the query, so a word the address bar
+invented made `activeFilterCount()` claim a narrowing the matcher had
+already discarded. The whole set draws one chip in the no-results strip
+and clears as one — the metric sent its types together, and a list holding
+half of them answers a question no figure was built from.
+
 They did not agree. The dashboard counted `income`/`expense` only, so a
 EUR100.00 purchase with a EUR30.00 refund against it in the same month
 read Out EUR100.00, In EUR0.00, Net -EUR100.00 — for a month in which
