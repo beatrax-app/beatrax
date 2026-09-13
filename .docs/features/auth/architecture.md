@@ -214,9 +214,16 @@ kind, so the next break-in attempt still reaches them.
 state — roughly 3.3 s of CPU — because that is what keeps a missing username
 indistinguishable in timing from a wrong code. Lowering it would trade a
 user-enumeration oracle for a cheaper request, so it stays where it is and
-`ResetPasswordAction` bounds **how often** it can be spent instead: five
+`RecoveryAttemptThrottle` bounds **how often** it can be spent instead: five
 attempts per minute, keyed on the username as typed (so an unknown one is
 metered exactly like a known one) and cleared on a successful redemption.
+
+That meter belongs to the **sheet**, not to a screen. Two surfaces spend the
+same ten secrets — the reset page and the sign-in escape below — and a counter
+each would have handed a caller the cap twice over against one account. Five
+guesses spread across two screens are five guesses, which is the property
+`user_app_lock_configs.user_id` being unique gives the PIN meter
+([every PIN check is metered](every-pin-check-is-metered.md)).
 
 ### Sign-in is metered the same way
 
@@ -234,8 +241,12 @@ one rule with one declaration rather than two that drift. It is keyed the same
 way as recovery: on the username as
 typed and normalised, so an unknown one is metered exactly like a known one and
 the counter answers nothing the constant failure message and the equalised hash
-refuse to answer in words. A successful sign-in clears it, so it is a ceiling on
-a machine's rate rather than a lockout a household can be walked into.
+refuse to answer in words. A successful sign-in clears it.
+
+`SignInThrottle` and `RecoveryAttemptThrottle` are the same four calls over two
+keys, so they sit on `GuestCredentialMeter` rather than as two copies that can
+drift about the window or the key shape. The counters are separate on purpose:
+spending one credential must not spend the other.
 
 **Both** sign-in paths consult it, because there are two. The Livewire form
 reaches `LoginAction`; a form posted before Livewire has booted goes through
@@ -249,6 +260,59 @@ The two paths differ in what they can say. `LoginAction` throws
 message rather than folding it into `error_invalid` — a reader who is waiting
 and a reader who is wrong take different actions. Fortify has no channel for a
 wait, so a spent meter answers there exactly as a wrong password does.
+
+### Waiting is not the only way out of it
+
+A meter keyed on the username a caller typed is a meter anybody who can reach
+the screen can spend. Five wrong passwords against a name a stranger read off an
+envelope and the household is held off its own ledger, and the correct password
+does not help: the meter is read **before** the credential, deliberately, so
+that a right password and a wrong one cost the same under it. Removing that
+order would answer in timing the question the constant message refuses to answer
+in words.
+
+So the order stays and a second credential opens the meter instead.
+`RecoveryCodeEscape` takes a recovery code alongside the password, spends it
+through the same `RecoveryCodeAuthenticator::verify()` the reset page uses —
+same row lock, same audit row, same equalised ten hashes, same nothing returned
+for an unknown username as for a wrong code — and on a match clears both meters.
+The code is consumed doing it, exactly as one spent on a reset is.
+
+**The code is spent whether or not the password that followed it was right.** It
+has to be: it is judged before the password is read, which is the whole point of
+the order above, so nothing at the moment it is consumed knows yet whether the
+attempt it bought will succeed. What the screen may therefore promise is another
+attempt and not a sign-in, which is what
+`auth::login.throttled_recovery` says. A reader who mistypes twice has spent two
+of ten; a reader who has run out has the reset page and the command on the
+machine, which is what the sheet was always the first of three paths for.
+
+The shared meter is deliberate and is not a simplification waiting to happen. A
+counter each would be two allowances over one sheet, and the sheet is what is
+being guessed — not the screen it is typed into.
+
+This is the shape the app-lock already had. There, the account password clears
+the PIN meter on the way through `AppLockProvisioner::primeSessionAfterLogin()`;
+here, a recovery code clears the sign-in meter. In both, the credential above
+the metered one is the way past it, and the meter below is never the last word.
+
+The escalation differs, and the reason is that there is nobody to sign out.
+`F3-R19` ends a run of wrong PINs by ending the session, because a guesser at a
+settings panel is already holding an unlocked one. A guesser at the sign-in
+screen holds nothing: the only thing left to take away is further attempts, so
+the escape is capped rather than escalated, on the recovery sheet's own five a
+minute.
+
+**What the reader sees.** The refusal itself is unchanged — `error_throttled`
+with the wait, the same sentence for a username somebody has and one nobody
+does. Under it, a recovery-code field and one line saying what it does
+(`auth::login.throttled_recovery`), shown by `LoginPage::$recoveryOffered`,
+which the meter sets. The meter is consulted before any account is looked up, so
+the escape is offered for both alike: it cannot be an oracle, because nothing
+that decides whether to draw it has asked whether the account exists. A wrong
+code answers with the reset page's own `error_wrong_code`, which is constant for
+the same reason. Fortify's pre-Livewire path has no field to put a code in and
+no channel for the wait, so it is unchanged there too.
 
 ### Handing the codes over
 

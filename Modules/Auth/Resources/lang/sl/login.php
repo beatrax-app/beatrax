@@ -11,6 +11,7 @@ return [
     'remember' => 'Ostani prijavljen na tej napravi',
     'submit' => 'Prijavi se',
     'lost_password' => 'Si izgubil geslo? Uporabi kodo za obnovitev.',
+    'throttled_recovery' => 'Ali pa vnesi kodo za obnovitev in takoj poskusi znova. Koda bo označena kot porabljena.',
 
     'error_invalid' => 'Uporabniško ime ali geslo ni pravilno.',
     'error_throttled' => 'Preveč poskusov — poskusi znova čez :wait.',

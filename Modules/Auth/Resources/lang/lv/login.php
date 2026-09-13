@@ -11,6 +11,7 @@ return [
     'remember' => 'Saglabāt pieteikšanos šajā ierīcē',
     'submit' => 'Pieteikties',
     'lost_password' => 'Pazaudējāt paroli? Izmantojiet atkopšanas kodu.',
+    'throttled_recovery' => 'Vai arī ievadiet atkopšanas kodu, lai uzreiz mēģinātu vēlreiz. Kods tiks atzīmēts kā izmantots.',
 
     'error_invalid' => 'Lietotājvārds vai parole ir nepareiza.',
     'error_throttled' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :wait.',
