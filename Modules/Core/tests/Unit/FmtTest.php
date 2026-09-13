@@ -44,19 +44,79 @@ it('never writes a digit group and a decimal with the same character', function 
 // thousands with -- beside a card correctly reading "5.701,66".
 it('shortens a badge count with the marks the reader uses for a tenth', function (): void {
     app()->make(Translator::class)->setLocale(Locale::Nl->value);
-    expect(Fmt::compactCount(1200))->toBe('1,2k');
+    expect(Fmt::compactCount(1200))->toBe('1,2K');
 
     app()->make(Translator::class)->setLocale(Locale::En->value);
-    expect(Fmt::compactCount(1200))->toBe('1.2k');
+    expect(Fmt::compactCount(1200))->toBe('1.2K');
 });
 
 it('offers a tenth only when the shortened count has one', function (): void {
     app()->make(Translator::class)->setLocale(Locale::Nl->value);
 
     expect(Fmt::compactCount(999))->toBe('999')
-        ->and(Fmt::compactCount(1000))->toBe('1k')
-        ->and(Fmt::compactCount(12000))->toBe('12k')
+        ->and(Fmt::compactCount(1000))->toBe('1K')
+        ->and(Fmt::compactCount(12000))->toBe('12K')
         ->and(Fmt::compactCount(0))->toBe('0');
+});
+
+// CLDR keeps two significant digits in the short form, so a five-digit count
+// loses the tenth a four-digit one keeps. Appending to a figure rounded to one
+// decimal place would have written 12.3K where CLDR writes 12K.
+it('keeps two significant digits, the way the short form does', function (): void {
+    app()->make(Translator::class)->setLocale(Locale::En->value);
+
+    expect(Fmt::compactCount(1234))->toBe('1.2K')
+        ->and(Fmt::compactCount(9999))->toBe('10K')
+        ->and(Fmt::compactCount(12345))->toBe('12K')
+        ->and(Fmt::compactCount(150000))->toBe('150K')
+        ->and(Fmt::compactCount(1500000))->toBe('1.5M');
+});
+
+// The abbreviation is transcribed because the phone's ICU can only answer for
+// English, and a table nothing checks is a table that drifts. ICU is asked here
+// and has to agree for all 26 at both magnitudes.
+it('abbreviates a thousand and a million the way CLDR abbreviates them', function (): void {
+    $wrong = [];
+
+    foreach (Locale::cases() as $locale) {
+        $short = new NumberFormatter($locale->value, NumberFormatter::DECIMAL_COMPACT_SHORT);
+
+        foreach ([1000 => $locale->compactThousands(), 1000000 => $locale->compactMillions()] as $magnitude => $transcribed) {
+            $rendered = (string) $short->format($magnitude);
+
+            // A locale CLDR gives no short form at this magnitude renders the
+            // figure itself, which is never "1" followed by letters.
+            $cldr = preg_match('/^1(\D*)$/u', $rendered, $matches) === 1 ? $matches[1] : null;
+
+            if ($transcribed !== $cldr) {
+                $wrong[] = $locale->value.' at '.$magnitude.': transcribed '.var_export($transcribed, true)
+                    .', CLDR says '.var_export($cldr, true);
+            }
+        }
+    }
+
+    expect($wrong)->toBe([], implode("\n", [
+        'Modules/Core/Public/Enums/Locale.php has drifted from CLDR:',
+        ...$wrong,
+    ]));
+});
+
+// A lower-case k written straight onto the digits was what every locale got.
+// Norwegian is the only one of the twenty-six CLDR spells that way — French
+// uses the same letter but keeps a no-break space before it, and English
+// itself writes a capital K.
+it('writes an abbreviation the reader language actually uses', function (): void {
+    $english = [];
+
+    foreach (Locale::cases() as $locale) {
+        app()->make(Translator::class)->setLocale($locale->value);
+
+        if ($locale !== Locale::Nb && preg_match('/\dk$/u', Fmt::compactCount(1200)) === 1) {
+            $english[] = $locale->value;
+        }
+    }
+
+    expect($english)->toBe([], 'These still shorten with English\'s own letter: '.implode(', ', $english));
 });
 
 it('reads the same with and without ICU in all twenty-six languages', function (): void {

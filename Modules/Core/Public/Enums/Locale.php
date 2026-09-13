@@ -152,6 +152,79 @@ enum Locale: string
         return $this !== self::Nl;
     }
 
+    // What each locale shortens a thousand to, transcribed from CLDR's short
+    // compact patterns for the same reason the marks above are: on device ICU
+    // can only answer for English. A literal "k" is English's own abbreviation,
+    // and English does not even use that one — it writes "K".
+
+    // German answers null: CLDR gives it no short form below a million, so the
+    // figure is written out, which is what a German reader is meant to see.
+    public function compactThousands(): ?string
+    {
+        return match ($this) {
+            self::Cs => "\u{00A0}tis.",
+            self::Da => "\u{00A0}t",
+            self::De => null,
+            self::Et => "\u{00A0}tuh",
+            self::En => 'K',
+            self::Es => "\u{00A0}mil",
+            self::Fr => "\u{00A0}k",
+            self::Hr => "\u{00A0}tis.",
+            self::It => 'K',
+            self::Lv => "\u{00A0}t\u{016B}kst.",
+            self::Lt => "\u{00A0}t\u{016B}kst.",
+            self::Hu => "\u{00A0}E",
+            self::Nl => 'K',
+            self::Nb => 'k',
+            self::Pl => "\u{00A0}tys.",
+            self::Pt => "\u{00A0}mil",
+            self::Ro => "\u{00A0}K",
+            self::Sk => "\u{00A0}tis.",
+            self::Sl => "\u{00A0}tis.",
+            self::Sr => "\u{00A0}\u{0445}\u{0438}\u{0459}.",
+            self::Fi => "\u{00A0}t.",
+            self::Sv => "\u{00A0}tn",
+            self::Tr => "\u{00A0}B",
+            self::El => "\u{00A0}\u{03C7}\u{03B9}\u{03BB}.",
+            self::Bg => "\u{00A0}\u{0445}\u{0438}\u{043B}.",
+            self::Uk => "\u{00A0}\u{0442}\u{0438}\u{0441}.",
+        };
+    }
+
+    // Every shipped locale shortens a million, German included, so this one
+    // never answers null where compactThousands() does.
+    public function compactMillions(): string
+    {
+        return match ($this) {
+            self::Cs => "\u{00A0}mil.",
+            self::Da => "\u{00A0}mio.",
+            self::De => "\u{00A0}Mio.",
+            self::Et => "\u{00A0}mln",
+            self::En => 'M',
+            self::Es => "\u{00A0}M",
+            self::Fr => "\u{00A0}M",
+            self::Hr => "\u{00A0}mil.",
+            self::It => "\u{00A0}Mln",
+            self::Lv => "\u{00A0}milj.",
+            self::Lt => "\u{00A0}mln.",
+            self::Hu => "\u{00A0}M",
+            self::Nl => "\u{00A0}mln.",
+            self::Nb => "\u{00A0}mill.",
+            self::Pl => "\u{00A0}mln",
+            self::Pt => "\u{00A0}mi",
+            self::Ro => "\u{00A0}mil.",
+            self::Sk => "\u{00A0}mil.",
+            self::Sl => "\u{00A0}mio.",
+            self::Sr => "\u{00A0}\u{043C}\u{0438}\u{043B}.",
+            self::Fi => "\u{00A0}milj.",
+            self::Sv => "\u{00A0}mn",
+            self::Tr => "\u{00A0}Mn",
+            self::El => "\u{00A0}\u{03B5}\u{03BA}.",
+            self::Bg => "\u{00A0}\u{043C}\u{043B}\u{043D}.",
+            self::Uk => "\u{00A0}\u{043C}\u{043B}\u{043D}",
+        };
+    }
+
     // Where the percent sign sits relative to the digits. Turkish is the only
     // shipped locale that writes it in front (%42), transcribed from each
     // locale's ICU percent pattern for the same reason the marks above are: on

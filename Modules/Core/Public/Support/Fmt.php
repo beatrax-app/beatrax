@@ -23,6 +23,8 @@ final class Fmt
 
     private const int COMPACT_FROM = 1000;
 
+    private const int COMPACT_MILLION = 1000000;
+
     public static function number(int|float $value, int $decimals = 0): string
     {
         $locale = Container::getInstance()->make(Translator::class)->getLocale();
@@ -133,15 +135,36 @@ final class Fmt
     // tenth carries the locale's decimal mark: "1.2k" is one point two thousand
     // to an English reader and twelve hundred thousand to a Dutch one, whose
     // own mark for a tenth is the comma the money beside it already uses.
+
+    // The abbreviation is the locale's too. A literal "k" was English's, and not
+    // even English's: CLDR gives it "K". German is given no short form below a
+    // million at all, so it answers null here and the figure is written out.
+    // ICU is not asked at run time — the phone could only answer for English,
+    // and a badge that reads differently on the two devices is the defect this
+    // shortening exists to avoid.
     public static function compactCount(int $value): string
     {
-        if ($value < self::COMPACT_FROM) {
-            return self::number($value);
+        $marks = Locale::tryFrom(self::locale()) ?? Locale::En;
+
+        $abbreviations = [
+            self::COMPACT_MILLION => $marks->compactMillions(),
+            self::COMPACT_FROM => $marks->compactThousands(),
+        ];
+
+        foreach ($abbreviations as $magnitude => $abbreviation) {
+            if ($abbreviation === null || abs($value) < $magnitude) {
+                continue;
+            }
+
+            // Two significant digits, which is what CLDR's short form keeps:
+            // 1234 shortens to 1.2K and 12345 to 12K, not to 12.3K.
+            $scaled = $value / $magnitude;
+            $rounded = round($scaled, abs($scaled) < 10 ? 1 : 0, \RoundingMode::HalfEven);
+
+            return self::number($rounded, $rounded === floor($rounded) ? 0 : 1).$abbreviation;
         }
 
-        $thousands = round($value / self::COMPACT_FROM, 1);
-
-        return self::number($thousands, $thousands === floor($thousands) ? 0 : 1).'k';
+        return self::number($value);
     }
 
     // Every short date on screen, so the lists, the search results and the
