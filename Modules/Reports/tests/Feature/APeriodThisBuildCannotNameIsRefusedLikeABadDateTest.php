@@ -171,6 +171,15 @@ it('draws the refusal as a refusal', function (): void {
         ->and($refusal->attribute('id'))->toBe('report-period-error');
 });
 
+// An unknown preset leaves every button in the group unpressed, which is the
+// honest answer — so the group itself has to carry the reason, or a reader
+// arriving at it is told nothing is chosen and not why.
+it('points the period group at the refusal when no button can be pressed', function (): void {
+    $page = unnamedPeriodBuilder('since_the_dawn_of_time');
+
+    expect($page->count('[role=group][aria-describedby=report-period-error]'))->toBe(1);
+});
+
 it('never draws the refusal in the empty state it is not', function (): void {
     $page = unnamedPeriodBuilder('since_the_dawn_of_time');
 
@@ -205,5 +214,6 @@ it('leaves the control unmarked when nothing was refused', function (): void {
     );
 
     expect($page->count('[aria-invalid=true]'))->toBe(0)
+        ->and($page->count('[aria-describedby=report-period-error]'))->toBe(0)
         ->and($page->count('[role=alert]'))->toBe(0);
 });

@@ -1,3 +1,4 @@
+@use('Illuminate\View\ComponentAttributeBag')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Reports\Internal\Enums\ReportCurrencyMode')
 @use('Modules\Reports\Internal\Enums\ReportGranularity')
@@ -149,14 +150,22 @@
             @endif
 
             {{-- Period --}}
+            @php
+                // An attribute bag rather than an @if inside a start tag: a
+                // conditional attribute written there is markup no HTML reader
+                // can parse, and the ones that try attribute it to whichever
+                // element they last understood.
+                $periodRefusalNote = new ComponentAttributeBag($periodError === '' ? [] : [
+                    'aria-describedby' => 'report-period-error',
+                ]);
+                $periodRefusedField = new ComponentAttributeBag($periodError === '' ? [] : [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'report-period-error',
+                ]);
+            @endphp
             <div>
                 <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.period.heading') }}</p>
-                <div
-                    role="group"
-                    aria-label="{{ Lang::get('reports::builder.period.heading') }}"
-                    class="filter-chips"
-                    @if ($periodError !== '') aria-describedby="report-period-error" @endif
-                >
+                <div role="group" aria-label="{{ Lang::get('reports::builder.period.heading') }}" class="filter-chips" {{ $periodRefusalNote }}>
                     @foreach ($periodLabels as $key => $label)
                         <button
                             type="button"
@@ -168,25 +177,24 @@
                 </div>
                 @if ($periodPreset === ReportPeriodPreset::Custom->value)
                     <div class="srch-date-range mt-2">
-                        {{-- aria-invalid and the description land on the button
-                             the reader focuses: the field still displays the date
-                             that was refused, which is what they came back to fix,
-                             so the control has to say it is the refused one. --}}
+                        {{-- The bag lands on the BUTTON the reader focuses, which
+                             is where date-input puts everything that is not a
+                             wire: binding. The field still displays the date that
+                             was refused — that is what they came back to fix — so
+                             it has to say it is the refused one. --}}
                         <label for="report-custom-from" class="srch-filter-label">{{ Lang::get('reports::builder.period.from') }}</label>
                         <x-core::date-input
                             field-id="report-custom-from"
                             wire:model.live="customFrom"
                             :aria-label="Lang::get('reports::builder.period.from')"
-                            :aria-invalid="$periodError !== '' ? 'true' : null"
-                            :aria-describedby="$periodError !== '' ? 'report-period-error' : null"
+                            :attributes="$periodRefusedField"
                         />
                         <label for="report-custom-to" class="srch-filter-label mt-1">{{ Lang::get('reports::builder.period.to') }}</label>
                         <x-core::date-input
                             field-id="report-custom-to"
                             wire:model.live="customTo"
                             :aria-label="Lang::get('reports::builder.period.to')"
-                            :aria-invalid="$periodError !== '' ? 'true' : null"
-                            :aria-describedby="$periodError !== '' ? 'report-period-error' : null"
+                            :attributes="$periodRefusedField"
                         />
                     </div>
                 @endif
