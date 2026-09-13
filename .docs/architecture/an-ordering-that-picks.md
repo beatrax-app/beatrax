@@ -55,28 +55,77 @@ guard tokenises each file, resolves class constants to a fixpoint (the clause
 above is assembled from two of them), and reads the `ORDER BY` inside raw
 fragments as well as the `orderBy*()` calls.
 
-Its one honest blind spot is a chain assembled across two variables, and an
-`orderBy($column)` whose term is a variable: an unreadable last term is not
-reported, because the scanner says what it can see and no more. The live
-example is `SearchQuery::palette()`, which takes its ordering from
-`Ledger\Public\Services\TransactionCursor::orderNewestFirst()` rather than
-spelling it in the chain — and that one is on the **walk** side anyway. A
-keyset pager visits every row across its pages, and the `id` tail is required
-by the row-value comparison (`(posted_at, id) < (?, ?)`) that the cursor pages
-against: ordering one way and comparing the other repeats or skips a row at
-every page boundary.
+## It follows a builder past the chain that opened it
+
+A pick is often not spelled on one token chain. `CashBookPage` returned the
+builder from `manualEntriesQuery()` and paginated it in `render()`, and the
+first guard followed one chain, so neither half held both the `orderByDesc`
+and the `paginate`. It reported the read only when the query was inlined onto
+a single chain — which is how the defect was found, and not a guard anybody
+can rely on.
+
+The guard now carries a builder value through a file: a local variable, a
+`$this->method()` that returns one, a method's own return, and a call through
+a typed property. It carries one across files too, through a small index built
+by reading the tree twice — which methods leave an ordering on a builder handed
+to them, and which hand a builder back. That index is what makes
+`Ledger\Public\Services\TransactionCursor::orderNewestFirst()` visible at the
+four call sites in three modules that rank on it.
+
+A walk is also only a walk while nothing can stop it. `each()` and the
+`chunk` family stop when a callback returns false, so a callback declaring a
+`bool` return is a cut spelled where the chain shows none —
+`FingerprintHealthCheck::drifted()` is that shape, and it reports at most N
+ids.
+
+### What the scanner still cannot follow
+
+It is a lexer that resolves the names it can see spelled out, so a builder
+leaves its reach five ways. Each is listed in `PICK_ORDER_UNREACHED` in the
+guard, so its silence reads as a boundary rather than as coverage:
+
+- a builder handed to a closure it cannot resolve — `$applyFilters($query)`,
+  `->tap($fn)`;
+- a builder stored on a property and ordered from another method through
+  `$this->query`;
+- a builder passed into another object's constructor and ordered inside it;
+- a table named by a variable — `->table($table)`, which no lexer resolves to
+  one name;
+- an ordering assembled from a variable rather than a literal or a class
+  constant.
+
+## A keyset pager walks, and its page one does not
+
+`TransactionCursor::orderNewestFirst()` ends on `transactions.id`, and the
+`id` tail is **required**: it is the other half of the row-value comparison
+`(posted_at, id) < (?, ?)` that `TransactionCursor::apply()` pages against.
+Ordering one way and comparing the other repeats or skips a row at every page
+boundary. Across its pages such a read visits every row, so
+`TransactionListQuery` (both reads) and `UncategorizedTriageQuery` are walks,
+pinned in the guard with that reason.
+
+`SearchQuery` is the exception, and it is why that file is on the baseline
+rather than beside them: `palette()` calls `search()` with no cursor and a
+limit of five and **never pages**. Page one read as the whole answer is a pick,
+so the command palette's five hits are decided by a tie on a per-device id.
+Fixing it is not a clause swap — the same builder feeds the paged list — so it
+needs the cursor to carry `NewestTransactionFirst::KEY_ACROSS_ACCOUNTS` rather
+than `(posted_at, id)`, across the three modules that page on it and the
+Livewire state that holds the pair.
 
 ## The known-divergent baseline
 
-Two reads, in one file, pick a row out of a tie on a per-device id today. They
-are a baseline, not a licence: the count in the guard may fall, and may not
-rise.
+Three reads, in two files, pick a row out of a tie on a per-device id today.
+They are a baseline, not a licence: the guard pins the **names** rather than a
+count, so a number that moves for an honest reason — the scanner's reach
+widening — cannot carry a third file in beside them.
 
 | Read | What fixing it needs |
 | --- | --- |
 | `Chains\Internal\Resolvers\PaypalFundingResolver` (two arms) | An ORDER BY change, and only that. Both arms order by nearness in time **first** and end on the id, and both cut at 20; past the cut the alias arm stops at the first two rows whose IBAN matches and the fuzzy arm keeps the first candidate at a tied score (`> $bestScore`), so the cut decides the answer. What it needs is a distance term followed by `NewestTransactionFirst::ACROSS_ACCOUNTS`, joined through `::ACCOUNT`, in both arms. |
+| `Search\Public\Services\SearchQuery` (`palette()`) | A cursor change, so not a clause swap. The id tail is the other half of the keyset comparison the search page fetches with, and `palette()` rides the same builder with no cursor at all — five hits, never paged. Fixing it means the cursor carrying `NewestTransactionFirst::KEY_ACROSS_ACCOUNTS` rather than `(posted_at, id)`, across the three modules that page on it and the Livewire state that holds the pair. |
 
-Unlike the duplicate detector below, **the candidate sets already agree**:
+Unlike the duplicate detector below, **PayPal's candidate sets already agree**:
 neither arm carries an id in its `WHERE`, and the fuzzy arm's
 `id <> $rowId` excludes the anchor row itself, which each device names
 correctly out of its own numbering. Only the sequence within an agreed set
@@ -89,6 +138,19 @@ do not converge on one row — the pair holds two links out of one PayPal
 expense. That is the one-transaction-in-two-chains the arms' own `existing.id`
 exclusion exists to prevent, arriving over sync instead of from a second local
 pass.
+
+## The short-query candidate cut
+
+`Search\Internal\Services\FtsCandidateResolver::likeFallbackIds()` answers a
+needle under three characters out of a LIKE over the indexed body, capped at
+500 rows. It took its ordering from `TransactionCursor::orderNewestFirst()` and
+carried no cursor, so the cap was a cut rather than a page: which 500 of 501
+matches a short query was answered from was decided by a per-device number. It
+ends on `NewestTransactionFirst::ACROSS_ACCOUNTS` now, joined through
+`::ACCOUNT` like the four reads below.
+
+Neither guard could see it. The ordering is spelled in `Ledger` and the cut in
+`Search`, so no single token chain held both halves.
 
 ## The picks that were fixed
 
@@ -195,6 +257,13 @@ practice.
 - `Ledger\Public\Services\SplitSumHealthCheck` — a diagnostic that reports at
   most N ids of rows whose legs disagree with their parent. The ids it prints
   **are** this device's ids; that is what the reader is handed.
+- `Ledger\Public\Services\FingerprintHealthCheck` — the same diagnostic
+  shape, cut by an `each()` callback that returns false at the Nth drifted row
+  rather than by a `limit()`. The ids it prints are this device's too, and they
+  are what the rederive command is then run against.
+- `Ledger\Public\Services\TransactionListQuery` and
+  `Categorization\Public\Services\UncategorizedTriageQuery` — keyset pagers,
+  walks across their pages, whose `id` tail the cursor comparison requires.
 
 ## Recurring's occurrences, which are already fixed
 

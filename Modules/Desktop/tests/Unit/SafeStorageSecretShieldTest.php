@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Config\Repository;
 use Illuminate\Http\Client\Factory;
+use Modules\Auth\Public\Exceptions\KeyCustodyRefused;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\SafeStorageBackendProbe;
 use Modules\Desktop\Internal\Native\SafeStorageSecretShield;
@@ -84,4 +85,36 @@ it('reports no at-rest protection on a Linux desktop with no keyring, though the
 
     expect($shield->protectsAtRest())->toBeFalse()
         ->and($shield->protect($blob))->not->toBe($blob);
+});
+
+// protectsAtRest() is the question biometric enrolment asks before writing a
+// wrap of the app-lock data key. Now that a refused write throws, an
+// unguarded probe would propagate out of the check instead of answering it.
+
+function bundledShieldWhoseStoreRefuses(): SafeStorageSecretShield
+{
+    $system = Mockery::mock(System::class);
+    $system->shouldReceive('canEncrypt')->andReturn(true);
+    $system->shouldReceive('encrypt')->andReturn(null);
+
+    return new SafeStorageSecretShield(
+        new DesktopKeyCustodian(
+            new Repository(['nativephp-internal' => ['running' => true]]),
+            $system,
+            shieldBackend('gnome_libsecret'),
+        ),
+    );
+}
+
+it('answers no at-rest protection, rather than throwing, when the key store refuses the write', function (): void {
+    expect(bundledShieldWhoseStoreRefuses()->protectsAtRest())->toBeFalse();
+});
+
+// protect() is the opposite case on purpose: its callers persist what it
+// returns, so a shield that cannot shield must not hand back the plaintext.
+it('refuses to hand a caller the plaintext to persist when the key store refuses the write', function (): void {
+    $secret = random_bytes(48);
+
+    expect(fn (): string => bundledShieldWhoseStoreRefuses()->protect($secret))
+        ->toThrow(KeyCustodyRefused::class);
 });

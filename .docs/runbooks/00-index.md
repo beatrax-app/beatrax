@@ -17,3 +17,4 @@ and what to do when something fails.
 | [repo-security-setup.md](repo-security-setup.md) | Reproducing the GitHub repo security posture from scratch on a fork or fresh clone |
 | [signing-identities.md](signing-identities.md) | Every identity the release pipeline signs with, when each expires, and the command that reads that date |
 | [operator-recovery.md](operator-recovery.md) | Backup, restore, corrupt-backup remediation, stuck-lock recovery, failed-jobs maintenance |
+| [walk-ledger.md](walk-ledger.md) | Walking a behaviour in a browser at both widths, and the record of which requirement identifiers have been walked |

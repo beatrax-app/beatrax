@@ -951,9 +951,28 @@ storage-model-agnostic so one call-site wiring serves every platform:
   key is written to the iOS Keychain / Android Keystore and the handle is
   only a reference token; `forget` MUST delete the backing entry.
 
-An implementation that cannot reach its backing store right now (e.g. an
-early-boot race) MUST degrade gracefully by returning the raw key
-unchanged, matching the pass-through behaviour on web. `read()` returns
+An implementation whose backing store is **absent or unreachable** (e.g. an
+early-boot race, a shape with no OS key store at all) MUST degrade
+gracefully by returning the raw key unchanged, matching the pass-through
+behaviour on web.
+
+A store that is **present and refuses the write** is not that case, and
+MUST NOT be answered the same way: it throws `KeyCustodyRefused`
+(`Public/Exceptions/`) rather than hand a raw key back to
+`LockStateManager`, which puts what it gets into the session on the next
+line. Both shells throw it — `SecureStorageKeyCustodian` on a refused
+native `set()`, `DesktopKeyCustodian` on a `safeStorage` `encrypt()` that
+answers null — and the shared supertype is deliberate: the two custodians
+answered this same refusal differently for a release, and the desktop one
+was the half that returned the key. The unlock surface treats the throw as
+"no key held" and re-runs the PIN path (`F3-R37`).
+
+This is also why the blanket sentence that used to stand here — that an
+implementation which "cannot reach its backing store" must always return
+the raw key unchanged — was wrong: it read as covering the refusal too,
+and it is the reason the desktop custodian looked correct to a reader.
+
+`read()` returns
 null when the custodian owns a real backing entry but cannot recover the
 key from it (an evicted Keychain entry, ciphertext that no longer
 decrypts) — callers must treat null as "no key held" and fall back to a
