@@ -193,9 +193,11 @@ it('chains today\'s SoD from yesterday\'s actual and marks unknown SoD as null',
     expect($gridFirst->eodBalanceMinor)->toBe(0);
 });
 
-// The opening figure exists only where the actuals overlay reaches. A grid that
-// starts after today is projection all the way down, and a projection carries
-// points for its own days and no opening balance for the day before the first.
+// A grid that starts after today is projection all the way down, and this
+// fixture's projection carries a single point well inside it — so there is no
+// point for the day before the first cell and no opening to state. Where the
+// projection does reach that day, as a real one does every day of its year,
+// the opening is read off it: AFutureGridOpensOnWhatTheMonthBeforeClosedOn.
 it('still reports an unknown start of day on a grid the actuals overlay never reaches', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqsbUser('future-grid');

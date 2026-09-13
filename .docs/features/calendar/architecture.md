@@ -281,16 +281,27 @@ since yesterday (a past day) carries no forecast point of its own.
 
 The chain is **seeded**, not started empty. The grid's first cell has no prior
 grid day, and it reported "Start of day —" for a figure the aggregator was
-holding: `cumulativeBalanceBefore()` computes the balance as of the instant
-before `gridStart` in order to seed the past-day overlay's running total, and
-that value *is* the first day's opening balance. `buildBalanceMap()` returns it
-as `gridStartOpening` and `CalendarQuery` seeds `$prevEod` with it. The null
-that remains is the honest one: `gridStartOpening` is null whenever the actuals
-overlay does not reach `gridStart` — a grid that begins after today is
-projection all the way down, and a projection carries points for its own days,
-not an opening balance for the day before the first one. It is also withheld
-when the opening balance could not be fully priced, on the same terms as any
-other censored figure.
+holding. `openingBefore()` answers it from whichever half of the line reaches
+the day before `gridStart`, and both halves already hold that day:
+
+- where the actuals overlay reaches the grid, `cumulativeBalanceBefore()`
+  computes the balance as of the instant before `gridStart` in order to seed
+  the overlay's running total, and that value *is* the first day's opening;
+- where it does not — every strip that begins after today — the projection
+  carries a point for **every** day it reaches, including the one before the
+  first cell, so the opening is read off the same bucket the previous month's
+  grid draws that date's end-of-day from.
+
+`buildBalanceMap()` returns it as `gridStartOpening` and `CalendarQuery` seeds
+`$prevEod` with it. Seeded from the overlay alone, the first cell of every
+future month opened on "—" while the month before it stated the figure: 28
+September 2026 read €6,276.14 from the September grid and "Start of day —"
+from the October one, the same date and the same click.
+
+The null that remains is the honest one: no point for the day before the first
+cell — a projection that begins inside the grid — is no opening to state. It is
+also withheld when the opening balance could not be fully priced, on the same
+terms as any other censored figure.
 
 **A currency with no rate is named, never rounded away.** `CrossCurrencyTotal`
 returns the codes it could not price alongside the converted figure, and
