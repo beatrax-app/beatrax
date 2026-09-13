@@ -191,9 +191,10 @@ a date is not the rate that was in effect on it, and the result says so —
 `asOf` carries the row's real date, which is what a disclosure line
 renders. It is chosen anyway because the alternative is the defect above:
 silently dropping the whole account out of every early bucket, which
-understates net worth without ever saying it did. A bundled snapshot
-ships dated `2026-06-05`, so on a fresh install every figure older than
-that takes this path.
+understates net worth without ever saying it did. The bundled snapshot ships
+dated whatever the last refresh wrote — `BundledSnapshot::SHIP_WITHIN_DAYS`
+bounds how old that may be at the moment a bundle is packaged — so on a fresh
+install every figure older than that date takes this path.
 
 The rows for one date are memoised for the life of the resolved service.
 A net-worth series asks for the same bucket date once per account

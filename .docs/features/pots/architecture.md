@@ -177,11 +177,17 @@ only the movements after it: a settlement settles everything up to itself, so
 what the pot holds is what has moved since. A pot nobody ever archived has no
 stamp and keeps every movement it ever had.
 
-Both readers of that sum take the same bound — `PotRowLoader::balancesForPots()`,
-which the cards and `PotWriter`'s own guard read through, and
-`PotAllocationLedger::allocated()`, which builds the reconciliation header. A
-bound on one of them alone would have put a pot reading nought inside an
-allocated figure that still counted it.
+Three readers of that sum take the same bound — `PotRowLoader::balancesForPots()`,
+which the cards and `PotWriter`'s own guard read through,
+`PotAllocationLedger::allocated()`, which builds the reconciliation header, and
+`PotBalanceQuery::dailyNetMovementForPotsSince()`, which buckets the ninety-day
+window a goal's projected finish is measured over. A bound on some of them alone
+put a pot reading nought inside an allocated figure that still counted it, and
+left the goal card measuring its rate over the release its own contributed
+figure had already let go of: a pot funded EUR 400,00 before the window opened,
+released on archive inside it and funded EUR 180,00 again after the restore read
+as minus EUR 220,00 a day — a goal the card called stalled while money was going
+into it.
 
 The cutoff is the **stamp** and nothing beside it. A minted id is a random draw,
 so ordering by it is not ordering by time, and two devices' settlements carry no

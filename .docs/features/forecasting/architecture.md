@@ -739,7 +739,7 @@ every restore, then carries.
       "today_balance_minor": 150000,
       "anchor_source": "sum_of_transactions",
       "unconverted_currencies": [],
-      "rates": [{"from": "USD", "to": "EUR", "rate": "0.88035919", "source": "bundled", "as_of": "2026-06-05"}],
+      "rates": [{"from": "USD", "to": "EUR", "rate": "0.86266391", "source": "bundled", "as_of": "2026-09-11"}],
       "points": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}],
       "points_by_funder": [{"date": "...", "low_minor": 0, "point_minor": 0, "high_minor": 0, "currency": "EUR"}]
     }

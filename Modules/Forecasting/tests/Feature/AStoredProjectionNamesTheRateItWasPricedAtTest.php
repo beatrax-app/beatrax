@@ -25,12 +25,12 @@ uses(RefreshDatabase::class);
 // not name, and a run stored before the format carried one must say that
 // rather than render as though it had converted nothing.
 
-// EUR 1 = USD 1.1359 from the bundled snapshot, read the other way round at the
+// EUR 1 = USD 1.1592 from the bundled snapshot, read the other way round at the
 // column's own eight places. forDisplay() keeps 0.88, which does not rebuild
 // the figure the fold folded in.
-const SPR_USD_RATE = '0.88035919';
+const SPR_USD_RATE = '0.86266391';
 
-const SPR_SNAPSHOT_DAY = '2026-06-05';
+const SPR_SNAPSHOT_DAY = '2026-09-11';
 
 function sprUser(): User
 {
@@ -53,9 +53,9 @@ function sprAccount(User $user): int
         'iban' => 'NL00SPR'.strtoupper(bin2hex(random_bytes(5))),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 150_000,
-        'opening_balance_as_of_date' => '2026-06-01',
-        'created_at' => '2026-06-01 00:00:00',
-        'updated_at' => '2026-06-01 00:00:00',
+        'opening_balance_as_of_date' => '2026-09-07',
+        'created_at' => '2026-09-07 00:00:00',
+        'updated_at' => '2026-09-07 00:00:00',
     ]);
 }
 
@@ -77,12 +77,12 @@ function sprDollarSeries(User $user, int $accountId): void
         'latest_currency' => 'USD',
         'monthly_equivalent_minor' => -1_199,
         'variance_tolerance_percent' => 5,
-        'next_expected_at' => '2026-06-18',
+        'next_expected_at' => '2026-09-24',
         'next_expected_confidence_low' => false,
         'cluster_key' => 'spr-cluster-'.bin2hex(random_bytes(4)),
         'cluster_counterparty_key' => 'netflix us',
-        'created_at' => '2026-06-01 00:00:00',
-        'updated_at' => '2026-06-01 00:00:00',
+        'created_at' => '2026-09-07 00:00:00',
+        'updated_at' => '2026-09-07 00:00:00',
     ]);
 
     $importRunId = $db->connection()->table('import_runs')->insertGetId([
@@ -90,13 +90,13 @@ function sprDollarSeries(User $user, int $accountId): void
         'source_format' => 'asn-csv',
         'raw_file_path' => '/tmp/spr-'.bin2hex(random_bytes(4)).'.csv',
         'sha256' => hash('sha256', 'spr-'.bin2hex(random_bytes(8))),
-        'uploaded_at' => '2026-06-01 00:00:00',
+        'uploaded_at' => '2026-09-07 00:00:00',
         'status' => 'committed',
-        'created_at' => '2026-06-01 00:00:00',
-        'updated_at' => '2026-06-01 00:00:00',
+        'created_at' => '2026-09-07 00:00:00',
+        'updated_at' => '2026-09-07 00:00:00',
     ]);
 
-    foreach (['2026-03-18', '2026-04-18', '2026-05-18'] as $day) {
+    foreach (['2026-06-24', '2026-07-25', '2026-08-24'] as $day) {
         $transactionId = $db->connection()->table('transactions')->insertGetId([
             'user_id' => $user->id,
             'account_id' => $accountId,
@@ -116,8 +116,8 @@ function sprDollarSeries(User $user, int $accountId): void
             'type' => 'expense',
             'source_format' => 'asn-csv',
             'source_row_index' => 1,
-            'created_at' => '2026-06-01 00:00:00',
-            'updated_at' => '2026-06-01 00:00:00',
+            'created_at' => '2026-09-07 00:00:00',
+            'updated_at' => '2026-09-07 00:00:00',
         ]);
 
         $db->connection()->table('recurring_series_occurrences')->insert([
@@ -127,8 +127,8 @@ function sprDollarSeries(User $user, int $accountId): void
             'observed_at' => $day,
             'observed_amount_minor' => -1_199,
             'observed_currency' => 'USD',
-            'created_at' => '2026-06-01 00:00:00',
-            'updated_at' => '2026-06-01 00:00:00',
+            'created_at' => '2026-09-07 00:00:00',
+            'updated_at' => '2026-09-07 00:00:00',
         ]);
     }
 }
@@ -182,7 +182,7 @@ function sprLegacyRun(User $user, int $accountId): void
     $points = [];
     for ($day = 0; $day <= 30; $day++) {
         $points[] = [
-            'date' => CarbonImmutable::parse('2026-06-06')->addDays($day)->toDateString(),
+            'date' => CarbonImmutable::parse('2026-09-12')->addDays($day)->toDateString(),
             'low_minor' => 148_000,
             'point_minor' => 149_000,
             'high_minor' => 150_000,
@@ -199,7 +199,7 @@ function sprLegacyRun(User $user, int $accountId): void
 
     $db->connection()->table('forecast_runs')->where('id', $run->id)->update([
         'result_json' => json_encode([
-            'as_of' => '2026-06-06',
+            'as_of' => '2026-09-12',
             'horizon_days' => 30,
             'accounts' => [
                 (string) $accountId => [
@@ -221,7 +221,7 @@ afterEach(function (): void {
 });
 
 it('writes the rates the fold priced with into the run it stores', function (): void {
-    [$user, $accountId] = sprProjectedAt('2026-06-06');
+    [$user, $accountId] = sprProjectedAt('2026-09-12');
 
     $block = sprStoredAccountBlock($user, $accountId);
 
@@ -239,7 +239,7 @@ it('writes the rates the fold priced with into the run it stores', function (): 
 });
 
 it('names that rate on the curve the run is read back into', function (): void {
-    [$user, $accountId] = sprProjectedAt('2026-06-06');
+    [$user, $accountId] = sprProjectedAt('2026-09-12');
 
     $dto = app(ForecastQuery::class)->forUser($accountId, 30, null, $user);
 
@@ -255,20 +255,20 @@ it('names that rate on the curve the run is read back into', function (): void {
 // would sit under a date that is still true saying a snapshot three months old
 // is fresh.
 it('ages the stored rate against the day it is read, not the day it was written', function (): void {
-    [$user, $accountId] = sprProjectedAt('2026-06-06');
+    [$user, $accountId] = sprProjectedAt('2026-09-12');
 
     expect(app(ForecastQuery::class)->forUser($accountId, 30, null, $user)->conversion?->isStale())->toBeFalse();
 
-    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-12')->startOfDay());
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-12-19')->startOfDay());
 
     $later = app(ForecastQuery::class)->forUser($accountId, 30, null, $user);
 
     expect($later->conversion?->isStale())->toBeTrue()
-        ->and($later->conversion?->ageInDaysAt(CarbonImmutable::parse('2026-09-12')))->toBe(99);
+        ->and($later->conversion?->ageInDaysAt(CarbonImmutable::parse('2026-12-19')))->toBe(99);
 });
 
 it('draws the rate on the forecast page', function (): void {
-    [$user, $accountId] = sprProjectedAt('2026-06-06');
+    [$user, $accountId] = sprProjectedAt('2026-09-12');
 
     $view = app(ForecastChartView::class)->selectedAccount($accountId, 30, null, $user, 'EUR');
 
@@ -292,7 +292,7 @@ it('draws the rate on the forecast page', function (): void {
 // converted nothing, records an empty set, and has nothing to say. It must not
 // be confused with the run below, which converted at rates nobody kept.
 it('records an empty set where the fold converted nothing, and discloses nothing', function (): void {
-    [$user, $accountId] = sprProjectedAt('2026-06-06', withSeries: false);
+    [$user, $accountId] = sprProjectedAt('2026-09-12', withSeries: false);
 
     $block = sprStoredAccountBlock($user, $accountId);
     $dto = app(ForecastQuery::class)->forUser($accountId, 30, null, $user);
@@ -303,7 +303,7 @@ it('records an empty set where the fold converted nothing, and discloses nothing
 });
 
 it('says a run stored without its rates cannot name them, rather than saying nothing', function (): void {
-    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-06')->startOfDay());
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-12')->startOfDay());
     $user = sprUser();
     $accountId = sprAccount($user);
     sprLegacyRun($user, $accountId);
@@ -331,7 +331,7 @@ it('says a run stored without its rates cannot name them, rather than saying not
 });
 
 it('replaces that state as soon as the next projection runs', function (): void {
-    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-06-06')->startOfDay());
+    CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-12')->startOfDay());
     $user = sprUser();
     $accountId = sprAccount($user);
     sprDollarSeries($user, $accountId);

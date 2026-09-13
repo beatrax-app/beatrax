@@ -37,8 +37,8 @@ const PICK_ORDER_BOUNDS = [
 
 // `chunkById()` and its family walk — ordering by id is how several of them
 // page safely — but only while the callback cannot stop them. One declaring a
-// `bool` return can, and that makes the walk a cut: FingerprintHealthCheck
-// reports at most N ids and returns false at the Nth.
+// `bool` return can, and a walk stopped at the Nth row is a cut taken in an
+// order each device numbers its own way.
 const PICK_ORDER_WALK_CALLS = ['each', 'eachById', 'chunk', 'chunkById', 'lazy', 'lazyById'];
 
 // The calls after which the value is no longer a builder. Without this a
@@ -89,10 +89,6 @@ const PICK_ORDER_ALLOWED = [
     'Modules/Ledger/Internal/Services/CounterpartyKeyProvenance.php::transactions' => [
         'picks' => 1,
         'why' => 'A probe, not a read for a screen: it asks whether ANY stored digest reproduces under a candidate key, so which rows the sample holds cannot change the answer. Ordering by id is how it takes a cheap, repeatable sample of this device\'s own file.',
-    ],
-    'Modules/Ledger/Public/Services/FingerprintHealthCheck.php::transactions' => [
-        'picks' => 1,
-        'why' => 'A diagnostic whose each() callback returns false at the Nth drifted row, so the walk is a cut. It reports at most N ids of rows whose stored fingerprint no longer describes them, and those ids ARE this device\'s ids — that is what the reader is handed before running the rederive command against this device\'s file.',
     ],
     'Modules/Ledger/Public/Services/SplitSumHealthCheck.php::transactions' => [
         'picks' => 1,

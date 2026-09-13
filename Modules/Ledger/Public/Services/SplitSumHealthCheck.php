@@ -21,7 +21,7 @@ final readonly class SplitSumHealthCheck
     // one path that never asked: a peer's op. A SET raising a leg is not gated,
     // and the parent's own settled_amount_minor merges as plain LWW, so either
     // side of the equation can move on its own.
-    private const int REPORT_AT_MOST = 20;
+    private const int NAME_AT_MOST = 10;
 
     // A split whose legs do not add up, asked of the same seam the two
     // category roll-ups ask, so this probe and the surfaces it reports on can
@@ -61,12 +61,12 @@ final readonly class SplitSumHealthCheck
     private function result(): array
     {
         try {
-            [$checked, $ids] = $this->unbalanced();
+            [$checked, $disagreeing, $ids] = $this->unbalanced();
         } catch (Throwable) {
             return ['severity' => 'warning', 'message' => 'could not be read — run php artisan migrate'];
         }
 
-        if ($ids === []) {
+        if ($disagreeing === 0) {
             return [
                 'severity' => 'ok',
                 'message' => $checked === 0
@@ -79,17 +79,20 @@ final readonly class SplitSumHealthCheck
         // parent's own category when the legs disagree, so no total is wrong.
         // What it costs is the split itself -- the chosen leg categories stop
         // counting, and the editor refuses to save until someone rebalances.
-        $shown = implode(', ', array_slice($ids, 0, 10));
-        $more = count($ids) > 10 ? ' and more' : '';
+        $rest = $disagreeing - count($ids);
+        $shown = implode(', ', $ids).($rest > 0 ? sprintf(' (+%d more)', $rest) : '');
 
         return [
             'severity' => 'warning',
-            'message' => count($ids).sprintf(" of %s no longer add up to their transaction — their leg categories stopped counting and the spend fell back to the parent's (ids %s%s); re-open each split to rebalance it", $checked, $shown, $more),
+            'message' => $disagreeing.sprintf(" of %s no longer add up to their transaction — their leg categories stopped counting and the spend fell back to the parent's (ids %s); re-open each split to rebalance it", $checked, $shown),
         ];
     }
 
+    // Counted over the whole table and named from a bounded slice of it, which
+    // are two statements because they are two questions: a numerator taken from
+    // the capped id list reported the cap back as the size of the problem.
     /**
-     * @return array{0: int, 1: list<int>}
+     * @return array{0: int, 1: int, 2: list<int>}
      */
     private function unbalanced(): array
     {
@@ -98,13 +101,17 @@ final readonly class SplitSumHealthCheck
         $checked = $connection->table('transaction_splits')->distinct()->count('transaction_id');
 
         if ($checked === 0) {
-            return [0, []];
+            return [0, 0, []];
         }
+
+        $disagreeing = $connection->table('transactions')
+            ->whereRaw(self::legsDisagree())
+            ->count();
 
         $rows = $connection->table('transactions')
             ->whereRaw(self::legsDisagree())
             ->orderBy('id')
-            ->limit(self::REPORT_AT_MOST)
+            ->limit(self::NAME_AT_MOST)
             ->get(['id']);
 
         $ids = [];
@@ -113,6 +120,6 @@ final readonly class SplitSumHealthCheck
             $ids[] = self::toInt($row->id ?? null);
         }
 
-        return [$checked, $ids];
+        return [$checked, $disagreeing, $ids];
     }
 }

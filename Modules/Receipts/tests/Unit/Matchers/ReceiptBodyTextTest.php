@@ -35,3 +35,16 @@ it('returns null for a currency it knows and digits it does not', function (): v
 
     expect($text->amountMinor('twelve', Currency::Eur->value))->toBeNull();
 });
+
+// `??` is right-associative, so `a ?? b->value ?? c` parses as `a ?? (b->value
+// ?? c)` and the read sits in the left-operand position PHP suppresses. The
+// fallback is the branch that runs, measured under the booted handler at
+// error_reporting -1, and a null-safe arrow would say nothing it does not.
+it('falls back to the given currency for a mark it cannot name', function (): void {
+    $text = new ReceiptBodyText;
+
+    expect($text->currencyMarked('ABC', Currency::Eur->value))->toBe(Currency::Eur->value)
+        ->and($text->currencyMarked('  ', Currency::Usd->value))->toBe(Currency::Usd->value)
+        ->and($text->currencyMarked('usd', Currency::Eur->value))->toBe(Currency::Usd->value)
+        ->and($text->currencyMarked('€', Currency::Usd->value))->toBe(Currency::Eur->value);
+});

@@ -19,6 +19,16 @@ final class BundledSnapshotProvider implements RateProvider
             ?? __DIR__.'/../../Resources/rates-snapshot.json';
     }
 
+    // Read by the build-time guard, so the one place the shipped file's
+    // location is written down stays this constructor. Resolved, because the
+    // relative default is what a refusal would otherwise print at somebody.
+    public function path(): string
+    {
+        $resolved = realpath($this->snapshotPath);
+
+        return $resolved === false ? $this->snapshotPath : $resolved;
+    }
+
     public function key(): string
     {
         return BundledRates::SOURCE;

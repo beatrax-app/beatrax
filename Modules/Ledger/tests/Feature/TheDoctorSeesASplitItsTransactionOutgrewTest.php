@@ -135,6 +135,30 @@ it('names a transaction whose legs are not all in its own currency', function ()
         ->and($health->message())->toContain('1 of 1 no longer add up to their transaction');
 });
 
+// Twenty-five against a ten-id cap: the sentence's first number is how many
+// rows disagree, and taking it from the id list instead reported the cap back
+// as the size of the problem.
+it('counts every split that disagrees, not the ones it has room to name', function (): void {
+    $user = splitSumUser();
+
+    for ($i = 0; $i < 25; $i++) {
+        $unbalanced = splitSumTransaction((int) $user->id, -8000);
+        splitSumLeg((int) $user->id, $unbalanced, -5000);
+        splitSumLeg((int) $user->id, $unbalanced, -4000);
+    }
+
+    for ($i = 0; $i < 3; $i++) {
+        $balanced = splitSumTransaction((int) $user->id, -8000);
+        splitSumLeg((int) $user->id, $balanced, -8000);
+    }
+
+    $health = app(SplitSumHealthCheck::class);
+
+    expect($health->severity())->toBe('warning')
+        ->and($health->message())->toContain('25 of 28 no longer add up to their transaction')
+        ->and($health->message())->toContain('(+15 more)');
+});
+
 it('leaves an unsplit transaction out of the count', function (): void {
     $user = splitSumUser();
     splitSumTransaction((int) $user->id, -8000);

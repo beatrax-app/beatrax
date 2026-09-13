@@ -4,19 +4,34 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
 // One ¥480,000 expense moved the Out tile from EUR 2,101.82 to EUR 5,118.79.
-// EUR 3,016.97 of that figure is yen priced at 0.00628536 from the snapshot
-// bundled with the app, published 2026-06-05 and ninety-nine days old on the
-// day below — and the tile showed the reader the number and nothing else. It
-// was not a missing label: the rate, the source and the date were dropped
-// before the tile could have read them.
+// EUR 3,016.97 of that figure is yen priced at 0.00628536 from a bundled
+// snapshot ninety-nine days old — and the tile showed the reader the number
+// and nothing else. It was not a missing label: the rate, the source and the
+// date were dropped before the tile could have read them.
+//
+// The rate is seeded below rather than read off the shipped file. This case is
+// ABOUT a stale snapshot, and the shipped one is refreshed whenever it goes
+// stale, so reading it makes the subject disappear the day someone refreshes.
 
 beforeEach(function (): void {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-12 12:00:00'));
+
+    DB::table('exchange_rates')->delete();
+    DB::table('exchange_rates')->insert([
+        'base_currency' => 'EUR',
+        'quote_currency' => 'JPY',
+        'rate_date' => '2026-06-05',
+        'rate' => '159.10000000',
+        'source' => 'bundled',
+        'created_at' => '2026-06-05 00:00:00',
+        'updated_at' => '2026-06-05 00:00:00',
+    ]);
 
     /** @var User $user */
     $user = User::query()->updateOrCreate(

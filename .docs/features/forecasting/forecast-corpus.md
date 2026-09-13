@@ -196,10 +196,11 @@ dollar series reached the fold with a null rate and raised, taking the
 whole projection with it. Six green tests sat on top of that. The
 fixture now supplies what the field supplies, which is nothing, and
 `FixtureCorpusTest` fails if a rate is put back on any series row. Its
-expected triples are the bundled snapshot's EUR 1 = USD 1.1359 read
-the other way round, 0.88035919, applied to each bound before the band
+expected triples are the bundled snapshot's EUR 1 = USD 1.1592 read
+the other way round, 0.86266391, applied to each bound before the band
 is taken; a snapshot refresh moves them, and re-deriving them is the
-point of the exercise.
+point of the exercise. `scripts/refresh_bundled_rates.php` is what moves
+them, and `ForecastingProjectionContractTest` is what says by how much.
 
 ### `salary-and-side-income`
 

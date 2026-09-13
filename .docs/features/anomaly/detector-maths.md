@@ -106,9 +106,15 @@ and therefore `robustSigma = 0` — every deviation from the median divides by
 zero and every charge one cent off is infinitely anomalous. The denominator
 is floored, at the larger of two values:
 
-- `RobustStatistics::MAD_FLOOR_MINOR = 50` — a flat 50 minor units (€0.50),
-  the hard minimum enforced inside `robustZ()` itself, regardless of what
-  the caller passes;
+- `RobustStatistics::MAD_FLOOR_MINOR = 50` — a flat 50 minor units, the hard
+  minimum enforced inside `robustZ()` itself regardless of what the caller
+  passes. Fifty of the charge's own smallest denomination, so €0.50 on a euro
+  sample and ¥50 on a yen one, and deliberately **not** converted the way
+  `AnomalyEvaluator::floorIn()` converts the entry floor: that one is an amount
+  of money the reader chose and has to mean the same value everywhere, while
+  this one is a noise floor in units of "the smallest step this currency can
+  take". Converting it would make the yen floor some hundreds of yen and
+  suppress real deviation;
 - `LargeVsTypicalDetector::MAD_FLOOR_MEDIAN_FRACTION = 0.01` of the sample's
   median magnitude, computed by the detector in `madFloorFor()` and passed in
   as the caller's floor.
