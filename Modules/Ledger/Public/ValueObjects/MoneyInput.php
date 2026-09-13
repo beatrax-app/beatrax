@@ -10,9 +10,10 @@ use Modules\Ledger\Internal\Support\MoneyText;
 // "12.50", "1.234,56" and "12,50"; the rightmost of '.' or ',' is the decimal.
 final class MoneyInput
 {
-    // A hand-typed amount is a household figure, and nine whole digits is
-    // already past every one of them — a tenth is a slipped finger far more
-    // often than a payment.
+    // Eleven minor-unit digits, which a hand-typed household figure is already
+    // past: nine whole digits at a hundredth, and eleven for the zero-decimal
+    // currencies, where the minor unit IS the major one. Either way the digit
+    // after it is a slipped finger far more often than a payment.
     public const int MAX_MINOR = 99_999_999_999;
 
     // The 15-digit ceiling keeps the minor-unit multiplication inside a 64-bit
