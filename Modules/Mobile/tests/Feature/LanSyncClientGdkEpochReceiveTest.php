@@ -26,6 +26,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Exceptions\LanSyncException;
+use Modules\Mobile\Internal\Sync\ConfirmedLanPeer;
 use Modules\Mobile\Internal\Sync\LanDialOutcome;
 use Modules\Mobile\Internal\Sync\LanSyncClient;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
@@ -459,13 +460,13 @@ function lanScriptedFakeConnection(array $script): WebsocketConnection
 // The identity stays untyped here for the same reason the fixtures above build
 // one through the service: readRefusal() reads no key material, and naming the
 // DTO would cross a module boundary this file has no other reason to cross.
-function lanReceiveReadRefusal(LanSyncException $e, object $identity): LanDialOutcome
+function lanReceiveReadRefusal(LanSyncException $e, object $identity, string $peerDeviceId = 'desktop-peer'): LanDialOutcome
 {
     $client = app(LanSyncClient::class);
     $readRefusal = new ReflectionMethod($client, 'readRefusal');
 
     /** @var LanDialOutcome $outcome */
-    $outcome = $readRefusal->invoke($client, $e, $identity);
+    $outcome = $readRefusal->invoke($client, $e, $identity, $peerDeviceId);
 
     return $outcome;
 }
@@ -848,7 +849,7 @@ it('drains the inbox it kept a wrap in, on the same exchange that talked to the 
 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
-    $client->exchangeGdkEpochWraps($connection, $phoneSyncSession, $phone, $session);
+    $client->exchangeGdkEpochWraps($connection, $phoneSyncSession, $phone, $session, 'desktop-peer');
 
     expect($keyring->loadKeyring($userId, $session)->keyFor(77))
         ->toBe(sodium_bin2hex($rawEpochKey), 'the retained wrap must be applied by the exchange that follows it');
@@ -1134,7 +1135,7 @@ it('runs a whole exchange in the order the responder reads it, and leaves no ses
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    $outcome = $client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic));
+    $outcome = $client->runExchange($connection, $phone, $session, new ConfirmedLanPeer('desktop-peer', sodium_bin2hex($desktopPublic)));
 
     expect($outcome)->toBe(LanDialOutcome::Synced);
 
@@ -1178,7 +1179,7 @@ it('does not call an exchange the peer abandoned mid-catch-up a completed sync',
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    expect($client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic)))
+    expect($client->runExchange($connection, $phone, $session, new ConfirmedLanPeer('desktop-peer', sodium_bin2hex($desktopPublic))))
         ->toBe(LanDialOutcome::NotReached, 'a peer that never sent CATCH_UP_COMPLETE exchanged no history')
         ->and(lanExchangeSessionRow($userId, 'desktop-abandons')?->status)
         ->toBe('closed');
@@ -1204,7 +1205,7 @@ it('reports a peer that hung up rather than throwing the whole sync tick away', 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    expect($client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic)))
+    expect($client->runExchange($connection, $phone, $session, new ConfirmedLanPeer('desktop-peer', sodium_bin2hex($desktopPublic))))
         ->toBe(LanDialOutcome::NotSecured)
         ->and(lanExchangeSessionRow($userId, 'desktop-hangs-up')?->status)
         ->toBe('closed', 'the row this dial opened must not outlive the connection it was opened for');
@@ -1237,7 +1238,7 @@ it('tells a peer its own gate refuses, and records that refusal as a failure', f
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    expect(fn () => $client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic)))
+    expect(fn () => $client->runExchange($connection, $phone, $session, new ConfirmedLanPeer('desktop-peer', sodium_bin2hex($desktopPublic))))
         ->toThrow(LanSyncException::class, 'confirmed-device auth gate');
 
     expect(lanExchangeTypesSent($heard))->toBe(

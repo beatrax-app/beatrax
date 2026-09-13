@@ -4,35 +4,27 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Actions;
 
-use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
-use Modules\Auth\Internal\Services\GuestAttemptCap;
+use Modules\Auth\Internal\Services\RecoveryAttemptThrottle;
 use Modules\Auth\Internal\Services\SessionRevoker;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
-use Modules\Auth\Public\Support\Username;
-use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\Lang;
 
 // Never drives the guard: neither logs the user in nor reads the session,
 // so the reset flow ends with the user signing in fresh on /login.
 final readonly class ResetPasswordAction
 {
-    private static function decaySeconds(): int
-    {
-        return Duration::Minute->seconds();
-    }
-
     public function __construct(
         private DatabaseManager $db,
         private Hasher $hasher,
         private RecoveryCodeAuthenticator $authenticator,
         private AppLockProvisioner $provisioner,
         private SessionRevoker $sessions,
-        private RateLimiter $limiter,
+        private RecoveryAttemptThrottle $attempts,
     ) {}
 
     public function __invoke(string $usernameInput, string $codeInput, string $newPassword): void
@@ -43,22 +35,19 @@ final readonly class ResetPasswordAction
             ]);
         }
 
-        // Keyed on what the caller typed, so an unknown username is metered
-        // exactly like a known one and the limiter answers nothing about which.
-        $throttleKey = 'auth.reset-password:'.Username::normalize($usernameInput);
-
         // One attempt here costs ten bcrypt-12 hashes plus a write into the
         // household's alert banner. The hash count is the enumeration defence
-        // and stays; the cap bounds how often it can be spent.
-        if ($this->limiter->tooManyAttempts($throttleKey, GuestAttemptCap::PER_MINUTE)) {
+        // and stays; the cap bounds how often it can be spent — and it is the
+        // sheet's cap, shared with the sign-in escape that spends the same ten.
+        if ($this->attempts->isExhausted($usernameInput)) {
             throw ValidationException::withMessages([
                 'code' => Lang::get('auth::reset_password.error_throttled', [
-                    'wait' => $this->limiter->availableIn($throttleKey).'s',
+                    'wait' => $this->attempts->availableIn($usernameInput).'s',
                 ]),
             ]);
         }
 
-        $this->limiter->hit($throttleKey, self::decaySeconds());
+        $this->attempts->recordAttempt($usernameInput);
 
         $user = $this->authenticator->verify($usernameInput, $codeInput);
 
@@ -68,7 +57,7 @@ final readonly class ResetPasswordAction
             ]);
         }
 
-        $this->limiter->clear($throttleKey);
+        $this->attempts->clear($usernameInput);
 
         $this->db->connection()->table('users')
             ->where('id', $user->id)

@@ -103,6 +103,35 @@ counting as it goes, so the figures come from the rows themselves.
 The row's action is a link to Budgets rather than an acknowledgement, and
 Dismiss sits beside it: reading the row is not doing the work it asks for.
 
+## Why the goal picker offers one
+
+The cutover archives every **active** pot carrying a category link, so after it
+runs the shape should not exist. It does exist in the field: until
+`PotWriter::restore()` was taught to clear the column, restoring an archived
+pot put the shape straight back — active, category-linked, and refused as a
+goal target on the strength of it. No migration sweeps the rows that write left
+behind, and nothing about a pot's own screen tells its owner it is in that
+state.
+
+`PotWriter::linkGoal()` refuses such a pot with
+`PotLinkedToCategoryException`, and `GoalsPage` renders that as
+`goals::messages.errors.pot_linked_category` — a sentence in every shipped
+language naming the control that clears the link. The remedy it names works:
+`PotsPage::updatePot()` always sends a null category, so opening the pot and
+saving it drops the column.
+
+The goal picker used to filter those pots out with `whereNull('category_id')`,
+which made that sentence unreachable — a pot visible on the Pots page was
+silently absent from the picker with nothing anywhere saying why. Worse, the
+union branch that keeps the edited goal's own pot selectable carried no such
+filter, so one pot in that state was present in one branch of the same query
+and absent from the other.
+
+The picker offers it. The write refuses it and says what to do about it, which
+is what [D3-R16](https://github.com/beatrax-app/spec/blob/main/10-functional/features/d-money/d3-pots.md)
+asks for: a retirement surfaced to upgrading users as something requiring
+manual re-assignment is not surfaced by a pot that quietly is not there.
+
 ## Where the code is
 
 | Concern | File |

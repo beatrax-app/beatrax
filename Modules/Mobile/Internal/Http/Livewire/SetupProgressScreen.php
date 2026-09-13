@@ -15,7 +15,6 @@ use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
-use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Mobile\Internal\Sync\SetupStep;
 use Modules\Mobile\Internal\Sync\SyncBlockedReason;
 use Modules\Mobile\Internal\Sync\SyncPhase;
@@ -65,7 +64,6 @@ final class SetupProgressScreen extends Component
         InitialSyncPuller $puller,
         Session $session,
         UrlGenerator $urls,
-        PeerLanAddress $peerAddress,
         LoggerInterface $logger,
     ): void {
         if ($this->phase === SyncPhase::Complete) {
@@ -74,19 +72,12 @@ final class SetupProgressScreen extends Component
             return;
         }
 
-        // Without the desktop's address only the relay leg runs, and that
-        // drains a mailbox without applying rows: 0 of 0 forever. Recalled
-        // rather than located, because a browse costs its whole timeout and
-        // the pull below already runs one when nothing is remembered.
+        // The address is the pull's to resolve, because the pull is what knows
+        // which peer its cursor is for. Recalled here, it named no device, so
+        // the screen could hand one desktop's address to a pull aimed at
+        // another. No browse is added: locate() still recalls first.
         try {
-            $address = $peerAddress->recall($currentUser->id());
-
-            $progress = $puller->pull(
-                $currentUser->id(),
-                $session,
-                $address['host'] ?? null,
-                $address['port'] ?? null,
-            );
+            $progress = $puller->pull($currentUser->id(), $session);
 
             $this->applyProgress($progress);
         } catch (Throwable $e) {

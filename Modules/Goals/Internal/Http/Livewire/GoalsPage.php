@@ -247,15 +247,19 @@ final class GoalsPage extends Component
         $rows = $query->forUser($user);
         $archived = $query->archivedForUser($user);
 
-        // Fully unlinked pots, plus the edited goal's own pot so its current link
-        // stays selectable. One base query, so the two branches cannot drift.
+        // Unlinked pots, plus the edited goal's own pot so its current link stays
+        // selectable. A retired category link is NOT filtered out: PotWriter
+        // refuses such a pot and its refusal names the control that clears it,
+        // and a pot hidden here met that sentence nowhere.
+        /**
+         * @link ../../../../../.docs/features/pots/category-link-retirement.md#why-the-goal-picker-offers-one
+         */
         $basePotsQuery = static function () use ($db, $user): Builder {
             return $db->connection()
                 ->table('pots')
                 ->where('user_id', $user->id)
                 ->where('status', PotStatus::Active->value)
-                ->whereNull('goal_id')
-                ->whereNull('category_id');
+                ->whereNull('goal_id');
         };
 
         $potsQuery = $basePotsQuery();

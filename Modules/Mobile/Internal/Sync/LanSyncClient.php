@@ -53,18 +53,20 @@ final readonly class LanSyncClient
     /**
      * @throws LanSyncException when this device's own gate refuses the peer.
      */
-    public function syncOnce(string $host, int $port, DeviceIdentityDto $identity, Session $session): LanDialOutcome
+    public function syncOnce(PeerDial $dial, DeviceIdentityDto $identity, Session $session): LanDialOutcome
     {
-        $peerStaticHex = $this->resolvePeerStaticKeyHex($identity);
-        if ($peerStaticHex === null) {
-            $this->logger?->info('LanSyncClient: no confirmed LAN peer key yet — skipping (retryable).');
+        $peer = $this->confirmedPeer($identity, $dial->deviceId);
+        if ($peer === null) {
+            $this->logger?->info('LanSyncClient: no confirmed key-agreement key for the peer being dialled — skipping (retryable).', [
+                'peer_device_id' => $dial->deviceId,
+            ]);
 
             return LanDialOutcome::NotReached;
         }
 
         try {
             $connection = connect(
-                sprintf('ws://%s:%s/', $host, $port),
+                sprintf('ws://%s:%s/', $dial->host, $dial->port),
                 new TimeoutCancellation(ProtocolTimings::SYNC_DIAL_SECONDS),
             );
         } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {
@@ -79,7 +81,7 @@ final readonly class LanSyncClient
         }
 
         try {
-            return $this->runExchange($connection, $identity, $session, $peerStaticHex);
+            return $this->runExchange($connection, $identity, $session, $peer);
         } finally {
             $connection->close();
         }
@@ -95,13 +97,13 @@ final readonly class LanSyncClient
         WebsocketConnection $connection,
         DeviceIdentityDto $identity,
         Session $session,
-        string $peerStaticHex,
+        ConfirmedLanPeer $peer,
     ): LanDialOutcome {
         $syncSession = null;
         $admitted = false;
 
         try {
-            $noiseSession = $this->performHandshake($connection, $identity, $peerStaticHex);
+            $noiseSession = $this->performHandshake($connection, $identity, $peer->staticKeyHex);
 
             [$syncSession, $deviceKeys] = $this->buildSyncSession($identity);
 
@@ -118,7 +120,7 @@ final readonly class LanSyncClient
             // Keys BEFORE the data they decrypt. Drained after catch-up, the
             // first sync applied the desktop's whole encrypted history against
             // an empty keyring and quarantined it, with no replay path.
-            $this->exchangeGdkEpochWraps($connection, $syncSession, $identity, $session);
+            $this->exchangeGdkEpochWraps($connection, $syncSession, $identity, $session, $peer->deviceId);
 
             // A peer that closed before its own CATCH_UP_COMPLETE told this
             // device nothing about what it holds, and calling that Synced put
@@ -127,7 +129,7 @@ final readonly class LanSyncClient
                 ? LanDialOutcome::Synced
                 : LanDialOutcome::NotReached;
         } catch (LanSyncException $e) {
-            $outcome = $this->readRefusal($e, $identity);
+            $outcome = $this->readRefusal($e, $identity, $peer->deviceId);
         } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {
             // A stall or a hang-up mid-exchange, which the same OS gate can
             // produce on the first LAN connect an install ever makes.
@@ -167,10 +169,10 @@ final readonly class LanSyncClient
     /**
      * @throws LanSyncException
      */
-    private function readRefusal(LanSyncException $e, DeviceIdentityDto $identity): LanDialOutcome
+    private function readRefusal(LanSyncException $e, DeviceIdentityDto $identity, string $peerDeviceId): LanDialOutcome
     {
         if ($e->isPeerRevocation()) {
-            $this->forgetRevokedPeer($identity->userId, $this->resolvePeerDeviceId($identity));
+            $this->forgetRevokedPeer($identity->userId, $peerDeviceId);
         } elseif (! $e->isDialIncomplete()) {
             throw $e;
         }
@@ -218,14 +220,16 @@ final readonly class LanSyncClient
         ]);
     }
 
-    private function resolvePeerStaticKeyHex(DeviceIdentityDto $identity): ?string
+    // Looked up by the id of the device being dialled, never taken as the first
+    // entry of the map. Noise IK names the responder before msg1, so the wrong
+    // entry is not a slower handshake — it is one that cannot complete, and the
+    // peers past the first were unreachable for as long as this read the map.
+    private function confirmedPeer(DeviceIdentityDto $identity, string $peerDeviceId): ?ConfirmedLanPeer
     {
         $confirmed = $this->registryService->deviceX25519Keys($identity->userId);
         unset($confirmed[$identity->deviceId]);
 
-        $values = array_values($confirmed);
-
-        return $values[0] ?? null;
+        return ConfirmedLanPeer::fromConfirmed($confirmed, $peerDeviceId);
     }
 
     /**
@@ -372,9 +376,8 @@ final readonly class LanSyncClient
         SyncSession $syncSession,
         DeviceIdentityDto $identity,
         Session $session,
+        string $peerDeviceId,
     ): void {
-        $peerDeviceId = $this->resolvePeerDeviceId($identity);
-
         $this->receiveGdkEpochWraps($connection, $syncSession, $identity, $peerDeviceId, $session);
         $this->pushGdkEpochWraps($connection, $syncSession, $peerDeviceId);
 
@@ -477,18 +480,6 @@ final readonly class LanSyncClient
         }
 
         return ($parsed['type'] ?? null) === GdkEpochDeliveryGateway::MSG_EPOCH_WRAP;
-    }
-
-    // The one peer this client dials, addressed by the same registry the
-    // static key came from so the two can never name different devices.
-    private function resolvePeerDeviceId(DeviceIdentityDto $identity): string
-    {
-        $confirmed = $this->registryService->deviceX25519Keys($identity->userId);
-        unset($confirmed[$identity->deviceId]);
-
-        $deviceIds = array_keys($confirmed);
-
-        return $deviceIds === [] ? '' : $deviceIds[0];
     }
 
     // The phase runs before catch-up, so its end cannot be inferred from a
