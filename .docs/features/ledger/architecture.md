@@ -1398,6 +1398,15 @@ transactions list by type label, because a URL filter can only name a
 label. A drilldown from a spend figure therefore lists the rows whose
 label says spend, not every row the figure counted.
 
+`TransactionsList` narrows that parameter to the vocabulary **on the
+property** rather than only on the way to the matcher, for the reason the
+account and category ids are cleaned there: Livewire hands a `#[Url]`
+property to the view as well as to the query, so a word the address bar
+invented made `activeFilterCount()` claim a narrowing the matcher had
+already discarded. The whole set draws one chip in the no-results strip
+and clears as one — the metric sent its types together, and a list holding
+half of them answers a question no figure was built from.
+
 They did not agree. The dashboard counted `income`/`expense` only, so a
 EUR100.00 purchase with a EUR30.00 refund against it in the same month
 read Out EUR100.00, In EUR0.00, Net -EUR100.00 — for a month in which
@@ -1704,6 +1713,24 @@ parts, largest magnitude first and ties by position. `Reports`'
 two surfaces cannot answer the same question differently — a second
 implementation of the redistribution is exactly how the drift came back
 the first time.
+
+The grouping itself is `Public\Support\ConvertedBuckets`, because the
+drift did come back: `Budgets` folds the same stored figures into the
+same reporting currency and converted them envelope by envelope, so a
+yen reader read one rent envelope at JPY 198,875 on `/budgets` and JPY
+198,874 on the dashboard card. The fold reads through `ConvertedBuckets`
+now, and so does this query — it takes buckets rather than a period
+because the fold has already batched a whole walk's worth of them and
+must not go back to the database per month.
+
+It carries a `ConversionDisclosure` rather than the rate set and the
+left-out codes side by side, and answers for **one key** as well as for
+the whole: `conversionFor()` narrows both halves to that row — the rates
+of the currencies it actually held, and of the codes no rate reached only
+the ones it holds a non-zero bucket in. Narrowing that at each call site
+instead is how a batched read shared by two dozen envelopes came to
+disclose every other envelope's rates, and how a badge and the rate line
+under it came to name different codes.
 
 A currency the rate table cannot reach yields `null` and is left out
 rather than counted at one to one, which is the same choice the tile

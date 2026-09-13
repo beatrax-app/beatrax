@@ -1423,6 +1423,14 @@ on `']`) and `(int) $accountId` (a cast in front, which only `$entry->id` ever
 survived because `->` gave it a second way in). A ternary between two ids would
 still slip; nothing writes one.
 
+Both readers key on the id being **echoed** into the line, and there is a third
+shape that carries none: a select's `<option value="…">` hands the browser a
+correctly quoted string, and the button beside it converts that string with
+`Number()` before calling the component. The rounding is the same, one step
+later, with no `{{ }}` on the line to find — see [a picker's id converted to a
+number in the
+browser](../../conventions/invariants-from-shipped-failures.md#a-pickers-id-converted-to-a-number-in-the-browser).
+
 ### A rebuild has to prove it restored what it deleted
 
 `sync:rebuild` deletes every row the log can recreate and replays the log over

@@ -295,3 +295,12 @@ money a goal wants to count.
 Every write raises `Sync\Public\Events\GoalContributionMutated`, which the
 Sync capture listener records as a `create_row` or `delete_tombstone` op — an
 attribution made on the desktop reaches the phone.
+
+A goal id is minted, not taken from the autoincrement, so both wrappers take
+`int|string` and read it back through `DerivedRowId::fromWire()`. The picker is
+an Alpine `x-model` select, so the id reaches the browser as an option value —
+a string — and the button beside it has to hand that string on untouched.
+Wrapping it in `Number()` rounds every id past 2<sup>53</sup> exactly as a bare
+number literal in the attribute would, and the attribution then names no row and
+fails silently: [a picker's id converted to a number in the
+browser](../../conventions/invariants-from-shipped-failures.md#a-pickers-id-converted-to-a-number-in-the-browser).

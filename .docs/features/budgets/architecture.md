@@ -107,6 +107,20 @@ about EUR 8 the fold had left out. A code is listed only where its own
 bucket is non-zero — a currency whose spend and returns net to nothing is
 not money the total is missing.
 
+The conversion is grouped by **currency** and spread back over the
+envelopes rather than run per envelope, through
+`Ledger\Public\Support\ConvertedBuckets` — the same seam the dashboard's
+category card reads. Converted envelope by envelope the fold rounded a
+second time, and a yen reader read one rent envelope at JPY 198,875 on
+this grid beside JPY 198,874 on the card, off the same stored euro rows.
+The month's assignments and moves are grouped the same way, for the same
+reason: they are the parts of one converted whole, and the grid prints
+every part of it. `EnvelopeRow::$unconvertedSpentCurrencies` and
+`$spentConversion` both come off that one conversion narrowed to the row,
+so the amber badge and the rate line under it cannot name different
+codes. See
+[conversion is grouped by currency, not by category](../ledger/architecture.md#conversion-is-grouped-by-currency-not-by-category).
+
 `CarryoverQuery` is bound as a request-lifetime singleton so the grid, the
 sticky "Ready to assign" header, and the dashboard glance card share one
 container instance per HTTP request. It deliberately does *not* cache fold
