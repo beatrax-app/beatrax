@@ -9,10 +9,10 @@ namespace Modules\Recurring\Internal\Support;
 // disagrees between them is a query that silently reads the wrong column.
 final class SeriesTables
 {
-    // Joins take this; every table ROOT spells the string out instead, because
-    // BoundedReadArchTest resolved a table from a literal only and read the
-    // constant as no read at all. A note, not a rule: the guard is learning to
-    // resolve constants, and this stops being worth doing the day it does.
+    // Roots take this too, not only joins: the bounded-read guard resolves a
+    // table through a constant now, so spelling the string out at a root buys
+    // nothing. It still counts these reads -- a guard that cannot resolve the
+    // constant reds them as "allows 1, found 0".
     public const string OCCURRENCES = 'recurring_series_occurrences as o';
 
     public const string TRANSACTIONS = 'transactions as t';

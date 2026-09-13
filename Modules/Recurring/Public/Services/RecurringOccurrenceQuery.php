@@ -91,7 +91,7 @@ final readonly class RecurringOccurrenceQuery
             return [];
         }
 
-        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
             ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
             ->where('o.user_id', $user->id)
@@ -138,7 +138,7 @@ final readonly class RecurringOccurrenceQuery
             return [];
         }
 
-        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
             ->join(SeriesTables::SERIES, 's.id', '=', 'o.recurring_series_id')
             ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
@@ -186,7 +186,7 @@ final readonly class RecurringOccurrenceQuery
         }
 
         $effectiveLimit = max(1, $maxPoints);
-        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
             ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
             ->where('o.user_id', $user->id)
