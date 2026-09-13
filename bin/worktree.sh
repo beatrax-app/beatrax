@@ -128,9 +128,23 @@ unshare_composer_metadata() {
     echo "    vendor/composer unhardlinked"
 }
 
+# The classmap comes across with vendor/ and describes the checkout it was
+# written in, not this one. A worktree on a commit where a file has moved or
+# gone inherits an entry pointing at a path it does not have, and the include
+# fails inside the autoloader — which reads as thirty-one broken tests, not as
+# a stale classmap. Done after the unshare, so it writes only here.
+redump_autoload() {
+    if (cd "$target" && composer dump-autoload --quiet 2>/dev/null); then
+        echo "    autoload rebuilt against this checkout"
+    else
+        echo "!!  composer dump-autoload failed in $target; the classmap still describes $main" >&2
+    fi
+}
+
 echo "==> bootstrapping"
 link_tree vendor
 unshare_composer_metadata
+redump_autoload
 copy_tree public/build
 
 if [[ -e $target/.env ]]; then
@@ -168,13 +182,14 @@ if (cd "$target" && vendor/bin/pest tests/Contracts/BoundaryArchTest.php >/dev/n
 else
     # Named first because it is the usual cause and it does not look like one:
     # the worktree is created on origin/main while vendor/ is hardlinked from a
-    # main checkout that may be older, so its autoloader describes a tree that
-    # is no longer there. Watched it fail with a psr-4 root renamed on main.
+    # main checkout that may be older. The bootstrap above rebuilt the classmap,
+    # which is the half a dump-autoload can repair; what it cannot repair is the
+    # installed package set, which is still the older checkout's.
     behind=$(git -C "$main" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
     if [[ ${behind:-0} -gt 0 ]]; then
         echo "!!  $main is $behind commit(s) behind origin/main, and this worktree was" >&2
-        echo "!!  created on origin/main. Its vendor/ came from there, so the autoloader" >&2
-        echo "!!  does not match this tree. Fix that first:" >&2
+        echo "!!  created on origin/main. Its vendor/ came from there, so the packages" >&2
+        echo "!!  installed there are not this tree's. Fix that first:" >&2
         echo "!!    git -C $main pull --ff-only && (cd $main && composer install)" >&2
     fi
     echo "!!  the control file did not pass. Do not trust a failure in this worktree" >&2

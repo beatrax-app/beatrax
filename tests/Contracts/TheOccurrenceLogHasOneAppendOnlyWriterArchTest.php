@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\Contracts\Support\WalkCensus;
+
 /**
  * @link ../../.docs/features/recurring/how-to-test.md
  */
@@ -109,6 +111,13 @@ it('finds the writer it is named for, so a silent scan cannot pass this file', f
     // far under: a walk that lost a root reports the same empty offender lists
     // the three rules below report on a tree with one writer.
     expect(count($sources))->toBeGreaterThan(2000, 'the production walk read almost nothing — the roots are wrong, not the tree.');
+
+    // The floor never moved when `/Ledger/` was added to the skip beside
+    // `/tests/`, and a second insert into the log planted in that module went
+    // unreported. The anchor below only answers for the module it names.
+    $missed = WalkCensus::modulesMissedBy(array_keys($sources));
+
+    expect($missed)->toBe([], 'the walk reached no file at all in these modules, so a second writer in one of them is invisible to all three rules here: '.implode(', ', $missed));
 
     $writers = array_keys(occurrenceLogWriteSites($sources));
 

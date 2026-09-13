@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\WalkCensus;
 
 // TranslationParityArchTest measures en against every locale in both
 // directions, so a line carried by all twenty-six files is in parity by
@@ -14,6 +15,15 @@ use Modules\Core\Public\Support\PatternScan;
 function translatedLineRepoRoot(): string
 {
     return dirname((string) realpath(base_path('Modules')));
+}
+
+/** @return list<string> every English lang file the modules ship */
+function translatedLineEnglishFiles(): array
+{
+    $files = array_map(strval(...), (array) glob(translatedLineRepoRoot().'/Modules/*/Resources/lang/en/*.php'));
+    sort($files);
+
+    return array_values($files);
 }
 
 /** @return array<string, string> module directory name => the namespace its provider registers */
@@ -227,6 +237,16 @@ it('has a call site for every line it asks twenty-six translators to carry', fun
         1000,
         'the walk declared '.count($declared).' English keys, which is too few to be this tree.'
     );
+
+    // The floor is worth one failure and no more: narrowed to Modules/[A-S]*
+    // the key glob still declared thousands, and a line nothing renders,
+    // planted in a module outside that range, went unreported. Which modules
+    // ship English copy is read per directory rather than off the pattern. The
+    // census is over what the glob matched, not over what a namespace was
+    // found for — a module registering none is the rule below this one.
+    $missed = WalkCensus::modulesMissedBy(translatedLineEnglishFiles(), '.php', '/Resources/lang/en/');
+
+    expect($missed)->toBe([], 'these modules ship Resources/lang/en files the key glob matched none of, so every line in them reads as reached: '.implode(', ', $missed));
 
     expect(count($files))->toBeGreaterThan(
         1000,

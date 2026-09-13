@@ -17,6 +17,29 @@ it('Core module has the lowest priority of all modules', function (): void {
         .'few to be this repository. Every priority comparison below would pass over almost nothing.'
     );
 
+    // The floor is worth one failure and no more: narrowed to Modules/[A-S]*
+    // the glob still matched twenty-four manifests, and a Tax priority set
+    // below Core's went unreported. Which directories hold a manifest is read
+    // per directory rather than off the same pattern, so a glob that stops
+    // matching some of them disagrees with the tree instead of shrinking
+    // quietly. Ten modules declare no manifest at all and are not in either
+    // list: this rule orders the ones that do.
+    $declaring = [];
+
+    foreach ((array) glob(base_path('Modules/*'), GLOB_ONLYDIR) as $directory) {
+        if (is_string($directory) && is_file($directory.'/module.json')) {
+            $declaring[] = basename($directory);
+        }
+    }
+
+    sort($declaring);
+
+    expect(array_map(static fn (string $path): string => basename(dirname($path)), $moduleJsons))->toBe(
+        $declaring,
+        'The manifest glob and a walk of the module directories disagree about which modules declare one, so '
+        .'the ordering below is asserted over whichever subset the pattern still matches.'
+    );
+
     $priorities = [];
     foreach ($moduleJsons as $path) {
         $contents = file_get_contents($path);

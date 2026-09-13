@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\RepoTree;
+use Tests\Contracts\Support\WalkCensus;
 
 /**
  * @link ../../.docs/conventions/00-index.md
@@ -724,6 +725,23 @@ it('reads every identifier shape this repository mints and leaves the prose form
     }
 });
 
+// Every rule in this file is an offender list read off one of two walks, and
+// both are floored thousands under what they open — which catches a walk that
+// read nothing and nothing else. With `/Ledger/` added beside `/tests/` in the
+// backend filter, a banned TODO planted in that module went unreported and
+// every count here stayed in the six thousands.
+/**
+ * @link ../../.docs/conventions/arch-invariants.md#a-floor-does-not-notice-a-module-going-missing
+ */
+it('opens every module in both of the walks its rules are read off', function (string $walk, array $files): void {
+    $missed = WalkCensus::modulesMissedBy($files);
+
+    expect($missed)->toBe([], 'the '.$walk.' walk reached no file at all in these modules, so every comment in them is read by nobody: '.implode(', ', $missed));
+})->with([
+    'backend' => fn (): array => ['backend', commentPolicyBackendFiles()],
+    'identifier' => fn (): array => ['identifier', commentPolicyIdentifierFiles()],
+]);
+
 it('has no banned deferral or provenance tokens in comments (M5)', function (): void {
     $files = commentPolicyIdentifierFiles();
 
@@ -752,10 +770,17 @@ it('has no banned deferral or provenance tokens in comments (M5)', function (): 
 it('has no banned deferral or provenance tokens in Blade comments (M5)', function (): void {
     $files = commentPolicyBladeFiles();
 
-    // The floor sits well under the 279 templates this tree ships.
+    // The floor sits well under the 285 templates this tree ships, and stayed
+    // green with the resources/ root dropped and a banned token planted in one
+    // of its templates. The roots are named rather than counted.
     expect(count($files))->toBeGreaterThan(
         100,
         'The Blade walk opened almost nothing, so no template comment was read at all.'
+    );
+
+    expect(array_keys(WalkCensus::byRoot($files)))->toBe(
+        ['Modules', 'resources'],
+        'The Blade walk covers '.implode(', ', array_keys(WalkCensus::byRoot($files))).' rather than Modules, resources.'
     );
 
     $hits = [];

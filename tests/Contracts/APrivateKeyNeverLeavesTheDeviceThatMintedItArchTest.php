@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\WalkCensus;
 
 // There is no account and no server, so a device's own signing and
 // key-agreement secrets are the whole of its identity: a copy of one on a
@@ -187,6 +188,13 @@ it('keeps the private half of a device identity to the files that spend it here'
         'The walk opened '.count($sources).' files of the two shipped roots, so a clean answer here is a walk '
         .'that read almost nothing.'
     );
+
+    // The pin below catches a holder that stops holding. It cannot catch a new
+    // one in a module the walk no longer opens: `/Ledger/` beside `/tests/`
+    // hid a file reading ed25519SecretKeyHex and this count never moved.
+    $missed = WalkCensus::modulesMissedBy($sources);
+
+    expect($missed)->toBe([], 'the walk reached no file at all in these modules, so a private half spent in one of them would never join the pin: '.implode(', ', $missed));
 
     $holders = [];
 
