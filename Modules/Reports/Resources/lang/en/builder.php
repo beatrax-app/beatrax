@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Pick both a start and an end date.',
             'malformed' => 'Use a valid date in YYYY-MM-DD form.',
             'inverted' => 'The end date falls before the start date.',
+            'unknown_preset' => 'That is not one of the periods offered. Pick one from the list.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Counterparty',
         'account' => 'Account',
         'month' => 'Month',
+        'week' => 'Week',
         'default' => 'Group',
     ],
 

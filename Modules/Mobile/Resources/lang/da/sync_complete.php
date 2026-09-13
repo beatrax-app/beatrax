@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Denne enhed er synkroniseret',
     'heading' => 'Denne enhed er synkroniseret',
+    'heading_withheld' => 'Denne enhed er sat op',
     'records' => 'Kopierede :count post fra :peer.|Kopierede :count poster fra :peer.',
     'records_none' => 'Ajour med :peer. Der var ikke noget nyt at kopiere.',
     'withheld' => ':count ændring er ikke kommet frem endnu.|:count ændringer er ikke kommet frem endnu.',

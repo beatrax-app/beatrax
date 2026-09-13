@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Ta naprava je sinhronizirana',
     'heading' => 'Ta naprava je sinhronizirana',
+    'heading_withheld' => 'Ta naprava je nastavljena',
     // i18n-review: sl · records — rewritten from a count label so the dual is
     // visible ("sta kopirana 2 zapisa"). Leading with :peer is a guess about what
     // reads well when the device name is long.

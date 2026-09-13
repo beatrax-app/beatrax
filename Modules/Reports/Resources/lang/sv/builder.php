@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Välj både ett start- och ett slutdatum.',
             'malformed' => 'Använd ett giltigt datum i formatet ÅÅÅÅ-MM-DD.',
             'inverted' => 'Slutdatumet ligger före startdatumet.',
+            'unknown_preset' => 'Det är inte en av de perioder som erbjuds. Välj en från listan.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Motpart',
         'account' => 'Konto',
         'month' => 'Månad',
+        'week' => 'Vecka',
         'default' => 'Grupp',
     ],
 

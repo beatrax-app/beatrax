@@ -235,8 +235,30 @@ see the last finding below.
 
 ## Defects the walking found
 
-Each is recorded here with the width it appeared at, and nothing was fixed: a
-fix smuggled into a walk makes both unreadable.
+Each is recorded here with the width it appeared at, and nothing was fixed in
+the walk that found them: a fix smuggled into a walk makes both unreadable.
+
+**All seven are fixed**, in a pull request of their own. Three of the seven were
+one defect wearing two faces or found on the wrong surface, which is why there
+are five fixes below rather than seven, and what each one was re-measured
+against is written under it.
+
+| # | Fixed by | Re-measured |
+|---|---|---|
+| 1 | The disclosure sentence moved out of the `shrink-0` figure it was growing inside | Name span 0px → 234px, figure right edge 569px/580px → 349px in a 390px viewport, `li.scrollWidth === li.clientWidth` |
+| 2 | `ReportGroupHeading::label()` takes the granularity, and it is a required argument | `Week` over 1 Sep … 29 Sep; `Month` still over months |
+| 3 + 6 | One defect: the report page's refusal surface. The `?period=` rail now reaches it, and it is drawn as a refusal | No report drawn, the danger-tone alert the app refuses with, `aria-invalid` on the control that caused it |
+| 4 | The preview reads `EnrichedDisposition::conflictingFields` instead of `source_ref` alone | `amount_minor: −€12.99 → −€14.99` in place of `source_ref: 4471902 → 4471902` |
+| 5 | `beatraxFitAxisLabels` measures the drawn boxes, for every chart rather than the card the walk found it on | Overlaps 72px/10px/10px/85px → **0**, first tick clipped 6–7px → **0** |
+| 7 | The heading answers for the withheld count beside it | `This device is set up` over `155 changes have not arrived yet.` |
+
+Two of the seven were not what the row above them said. **#5 is not the pinned
+card's defect**: the same chart on `/reports` overlapped `Kappabashi Dougu` and
+`ANA` by 85px at 390 and had never carried an override of its own — the card was
+where the walk looked, not where the defect lived. And **#6 did carry
+`role="alert"`** when it was re-read; what it did not carry was a tone, and it
+wore `srch-no-results` — literally the empty state two branches below it in the
+same template — with `aria-live="polite"` overriding its own role.
 
 ### 1. The net-worth breakdown loses the account name and runs off the screen (phone)
 

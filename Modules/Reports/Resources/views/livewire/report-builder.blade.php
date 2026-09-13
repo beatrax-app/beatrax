@@ -1,3 +1,4 @@
+@use('Illuminate\View\ComponentAttributeBag')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Reports\Internal\Enums\ReportCurrencyMode')
 @use('Modules\Reports\Internal\Enums\ReportGranularity')
@@ -71,8 +72,8 @@
     // Read from the definition as a whole, never the dimension alone: net_worth
     // hides the picker but keeps whatever the URL last said, which headed a
     // column of months with "Category" while the CSV of the same report said
-    // "Period".
-    $groupHeader = ReportGroupHeading::for($definition->metric, $definition->dimension)->label();
+    // "Period". The granularity decides which bucket the column holds.
+    $groupHeader = ReportGroupHeading::for($definition->metric, $definition->dimension)->label($definition->granularity);
 
     $metricLabel = $metricLabels[$definition->metric] ?? Lang::get('reports::builder.metric.fallback');
 
@@ -149,9 +150,22 @@
             @endif
 
             {{-- Period --}}
+            @php
+                // An attribute bag rather than an @if inside a start tag: a
+                // conditional attribute written there is markup no HTML reader
+                // can parse, and the ones that try attribute it to whichever
+                // element they last understood.
+                $periodRefusalNote = new ComponentAttributeBag($periodError === '' ? [] : [
+                    'aria-describedby' => 'report-period-error',
+                ]);
+                $periodRefusedField = new ComponentAttributeBag($periodError === '' ? [] : [
+                    'aria-invalid' => 'true',
+                    'aria-describedby' => 'report-period-error',
+                ]);
+            @endphp
             <div>
                 <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.period.heading') }}</p>
-                <div role="group" aria-label="{{ Lang::get('reports::builder.period.heading') }}" class="filter-chips">
+                <div role="group" aria-label="{{ Lang::get('reports::builder.period.heading') }}" class="filter-chips" {{ $periodRefusalNote }}>
                     @foreach ($periodLabels as $key => $label)
                         <button
                             type="button"
@@ -163,10 +177,25 @@
                 </div>
                 @if ($periodPreset === ReportPeriodPreset::Custom->value)
                     <div class="srch-date-range mt-2">
+                        {{-- The bag lands on the BUTTON the reader focuses, which
+                             is where date-input puts everything that is not a
+                             wire: binding. The field still displays the date that
+                             was refused — that is what they came back to fix — so
+                             it has to say it is the refused one. --}}
                         <label for="report-custom-from" class="srch-filter-label">{{ Lang::get('reports::builder.period.from') }}</label>
-                        <x-core::date-input field-id="report-custom-from" wire:model.live="customFrom" :aria-label="Lang::get('reports::builder.period.from')" />
+                        <x-core::date-input
+                            field-id="report-custom-from"
+                            wire:model.live="customFrom"
+                            :aria-label="Lang::get('reports::builder.period.from')"
+                            :attributes="$periodRefusedField"
+                        />
                         <label for="report-custom-to" class="srch-filter-label mt-1">{{ Lang::get('reports::builder.period.to') }}</label>
-                        <x-core::date-input field-id="report-custom-to" wire:model.live="customTo" :aria-label="Lang::get('reports::builder.period.to')" />
+                        <x-core::date-input
+                            field-id="report-custom-to"
+                            wire:model.live="customTo"
+                            :aria-label="Lang::get('reports::builder.period.to')"
+                            :attributes="$periodRefusedField"
+                        />
                     </div>
                 @endif
             </div>
@@ -279,12 +308,24 @@
             </div>
 
             @if ($periodError !== '')
-                {{-- The composition is untouched: only the range needs fixing,
-                     and the rail still holds every other choice the reader made. --}}
-                <div class="srch-no-results" aria-live="polite" aria-atomic="true" role="alert">
-                    <p class="srch-no-results__heading">{{ Lang::get('reports::builder.period.heading') }}</p>
-                    <p class="srch-no-results__body">{{ $periodError }}</p>
-                </div>
+                {{-- The composition is untouched: only the period needs fixing,
+                     and the rail still holds every other choice the reader made.
+
+                     x-core::alert in the danger tone, not `srch-no-results`: that
+                     class is the empty state two branches below, and a refusal a
+                     reader cannot tell from an absence is not a refusal. role
+                     alert without aria-live beside it — the role already implies
+                     assertive, and the polite value was overriding it. --}}
+                <x-core::alert
+                    tone="danger"
+                    id="report-period-error"
+                    role="alert"
+                    aria-atomic="true"
+                    class="space-y-1"
+                >
+                    <p class="font-medium">{{ Lang::get('reports::builder.period.heading') }}</p>
+                    <p>{{ $periodError }}</p>
+                </x-core::alert>
             @elseif (! $hasResults)
                 {{-- Friendly empty state (Req: never an error) — rail stays interactive --}}
                 <div class="srch-no-results" aria-live="polite" aria-atomic="true">

@@ -32,4 +32,9 @@ final class InvalidReportPeriod extends InvalidArgumentException
     {
         return new self(PeriodProblem::Inverted, 'The "custom" period preset requires customTo to be on or after customFrom.');
     }
+
+    public static function unknownPreset(string $value): self
+    {
+        return new self(PeriodProblem::UnknownPreset, sprintf('The period preset must be one this build names, got: "%s".', $value));
+    }
 }

@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Dieses Gerät ist synchronisiert',
     'heading' => 'Dieses Gerät ist synchronisiert',
+    'heading_withheld' => 'Dieses Gerät ist eingerichtet',
     'records' => ':count Datensatz von :peer kopiert.|:count Datensätze von :peer kopiert.',
     'records_none' => 'Auf dem Stand von :peer. Es gab nichts Neues zu kopieren.',
     'withheld' => ':count Änderung ist noch nicht angekommen.|:count Änderungen sind noch nicht angekommen.',

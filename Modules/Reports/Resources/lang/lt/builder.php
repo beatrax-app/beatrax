@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Pasirink ir pradžios, ir pabaigos datą.',
             'malformed' => 'Naudok teisingą datą formatu MMMM-MM-DD.',
             'inverted' => 'Pabaigos data yra anksčiau nei pradžios.',
+            'unknown_preset' => 'Tai nėra vienas iš siūlomų laikotarpių. Pasirink vieną iš sąrašo.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Kita šalis',
         'account' => 'Sąskaita',
         'month' => 'Mėnuo',
+        'week' => 'Savaitė',
         'default' => 'Grupė',
     ],
 

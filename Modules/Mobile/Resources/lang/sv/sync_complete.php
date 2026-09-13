@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Den här enheten är synkroniserad',
     'heading' => 'Den här enheten är synkroniserad',
+    'heading_withheld' => 'Den här enheten är konfigurerad',
     'records' => 'Kopierade :count post från :peer.|Kopierade :count poster från :peer.',
     'records_none' => 'Ikapp med :peer. Det fanns inget nytt att kopiera.',
     'withheld' => ':count ändring har inte kommit fram än.|:count ändringar har inte kommit fram än.',

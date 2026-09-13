@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Alege atât o dată de început, cât și una de sfârșit.',
             'malformed' => 'Folosește o dată validă în formatul AAAA-LL-ZZ.',
             'inverted' => 'Data de sfârșit este înaintea celei de început.',
+            'unknown_preset' => 'Aceasta nu este una dintre perioadele oferite. Alege una din listă.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Contraparte',
         'account' => 'Cont',
         'month' => 'Lună',
+        'week' => 'Săptămână',
         'default' => 'Grup',
     ],
 

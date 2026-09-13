@@ -10,6 +10,7 @@ use Modules\Reports\Internal\Enums\ReportGranularity;
 use Modules\Reports\Internal\Enums\ReportMetricSelection;
 use Modules\Reports\Internal\Enums\ReportPeriodPreset;
 use Modules\Reports\Internal\Enums\ReportViz;
+use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 
 /**
  * @link ../../../../.docs/conventions/invariants-from-shipped-failures.md
@@ -33,6 +34,24 @@ final class ReportVocabulary
     public static function periodPreset(?string $value): string
     {
         return (ReportPeriodPreset::tryFrom((string) $value) ?? ReportPeriodPreset::default())->value;
+    }
+
+    // The address bar's own copy of the question above, for the surfaces that
+    // read one. Coercing there drew a full report over a period the reader had
+    // not asked for, with every button in the group unpressed and nothing said;
+    // the `from`/`to` rail beside it refuses, and this is the same refusal.
+    /**
+     * @throws InvalidReportPeriod
+     */
+    public static function periodPresetNamedHere(?string $value): string
+    {
+        $named = ReportPeriodPreset::tryFrom((string) $value);
+
+        if ($named === null && $value !== null && $value !== '') {
+            throw InvalidReportPeriod::unknownPreset($value);
+        }
+
+        return ($named ?? ReportPeriodPreset::default())->value;
     }
 
     public static function currencyMode(?string $value): string

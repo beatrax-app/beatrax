@@ -25,11 +25,12 @@
                      lifted out of the chart and rendered below as ordinary card
                      content, so it wraps and takes the room it needs.
 
-                     The x axis is given `trim: false` for the same reason. At this
+                     The x axis asks the same of the server's options: at this
                      card's width ApexCharts truncates every tick to fit — five
                      months of history rendered as "Apr 2…", "May 2…", which reads
-                     as a day of the month rather than a year. Hiding the ticks
-                     that would collide keeps the ones it does draw complete. --}}
+                     as a day of the month rather than a year. Which of the
+                     complete ticks survive is beatraxFitAxisLabels' decision,
+                     taken the same way for every chart in the app. --}}
                 @php
                     $options = json_decode($card['optionsJson'], true);
                     $legend = [];
@@ -57,9 +58,6 @@
                             if (! window.ApexCharts) { return; }
                             const opts = window.beatraxApplyChartTheme(JSON.parse($el.dataset.options));
                             @if ($legend !== []) opts.legend = Object.assign({}, opts.legend, { show: false }); @endif
-                            opts.xaxis = Object.assign({}, opts.xaxis, {
-                                labels: Object.assign({}, (opts.xaxis || {}).labels, { trim: false, hideOverlappingLabels: true }),
-                            });
                             chart = new window.ApexCharts($el.querySelector('#{{ $card['chartElementId'] }}'), opts);
                             chart.render();
                         "

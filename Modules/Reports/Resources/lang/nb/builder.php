@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Velg både en start- og en sluttdato.',
             'malformed' => 'Bruk en gyldig dato på formatet ÅÅÅÅ-MM-DD.',
             'inverted' => 'Sluttdatoen er før startdatoen.',
+            'unknown_preset' => 'Det er ikke en av periodene som tilbys. Velg en fra listen.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Motpart',
         'account' => 'Konto',
         'month' => 'Måned',
+        'week' => 'Uke',
         'default' => 'Gruppe',
     ],
 

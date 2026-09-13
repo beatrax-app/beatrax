@@ -7,10 +7,17 @@ namespace Modules\Reports\Internal\Http;
 use Illuminate\Http\Request;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Reports\Internal\Dto\ReportDefinition;
+use Modules\Reports\Internal\Exceptions\InvalidReportPeriod;
 use Modules\Reports\Internal\Support\ReportVocabulary;
 
 final class ReportDefinitionRequestFactory
 {
+    // Every caller resolves the period it builds and already answers an
+    // unusable one with 422 and the reason, so the refusal below joins a path
+    // the route has rather than opening a new one.
+    /**
+     * @throws InvalidReportPeriod
+     */
     public function fromExportQuery(Request $request): ReportDefinition
     {
         return new ReportDefinition(
@@ -19,7 +26,7 @@ final class ReportDefinitionRequestFactory
             // a bad STORED value is ReportDefinition::from()'s job instead.
             metric: ReportVocabulary::metric($this->nullableString($request->query('metric'))),
             dimension: ReportVocabulary::dimension($this->nullableString($request->query('dim'))),
-            periodPreset: ReportVocabulary::periodPreset($this->nullableString($request->query('period'))),
+            periodPreset: ReportVocabulary::periodPresetNamedHere($this->nullableString($request->query('period'))),
             granularity: ReportVocabulary::granularity($this->nullableString($request->query('gran'))),
             currencyMode: ReportVocabulary::currencyMode($this->nullableString($request->query('ccy'))),
             viz: ReportVocabulary::viz($this->nullableString($request->query('viz'))),

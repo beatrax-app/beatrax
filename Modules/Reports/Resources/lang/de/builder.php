@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Wähle sowohl ein Start- als auch ein Enddatum.',
             'malformed' => 'Verwende ein gültiges Datum im Format JJJJ-MM-TT.',
             'inverted' => 'Das Enddatum liegt vor dem Startdatum.',
+            'unknown_preset' => 'Das ist keiner der angebotenen Zeiträume. Wähle einen aus der Liste.',
         ],
     ],
 
@@ -105,6 +106,7 @@ return [
         'counterparty' => 'Zahlungspartner',
         'account' => 'Konto',
         'month' => 'Monat',
+        'week' => 'Woche',
         'default' => 'Gruppe',
     ],
 

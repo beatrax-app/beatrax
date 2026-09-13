@@ -28,4 +28,39 @@ final class EnrichedDisposition extends FingerprintDisposition
     {
         return PreviewRowStatus::Enriched;
     }
+
+    // What the preview tells the reader this row changes. The source reference
+    // is only one of the answers and on a restatement it is never the right
+    // one: that arm matches ON the reference, so the two sides are identical by
+    // construction and drawing them as a change named the one field that held.
+    /**
+     * @return array<string, array{from: ?string, to: string}>|null
+     */
+    public function previewDiff(): ?array
+    {
+        $diff = $this->fromSourceRef === $this->toSourceRef
+            ? []
+            : ['source_ref' => ['from' => $this->fromSourceRef, 'to' => $this->toSourceRef]];
+
+        foreach ($this->conflictingFields as $field => $sides) {
+            $diff[(string) $field] = [
+                'from' => self::asText($sides['stored']),
+                'to' => self::asText($sides['incoming']) ?? '',
+            ];
+        }
+
+        return $diff === [] ? null : $diff;
+    }
+
+    // Minor units stay minor units: the preview formats them against the row's
+    // own currency, and a string formatted here would freeze the reader's
+    // locale into a cached preview replayed at confirm time.
+    private static function asText(mixed $value): ?string
+    {
+        return match (true) {
+            is_string($value) => $value,
+            is_int($value) => (string) $value,
+            default => null,
+        };
+    }
 }

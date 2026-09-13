@@ -2,12 +2,26 @@
 @use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Core\Public\Support\Fmt;
+    use Modules\Import\Public\Enums\EnrichmentConflictField;
     use Modules\Import\Public\Enums\ImportFailureReason;
     use Modules\Import\Public\Enums\PreviewRowStatus;
     use Modules\Import\Internal\Enums\ReceiptCaptureState;
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
+
+    // An enrichment's two sides are carried as the column's own text so the
+    // cached preview holds no formatting from the locale it was taken in.
+    // Money is the one column that reads as a number rather than as a word.
+    $previewChange = static function (string $field, ?string $value, ?string $currency) use ($fmt): ?string {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return $field === EnrichmentConflictField::AmountMinor->value && $currency !== null && is_numeric($value)
+            ? $fmt((int) $value, $currency)
+            : $value;
+    };
 
     // Header-action enablement. Discard is meaningful whenever a preview is
     // still in cache; Confirm additionally needs the three own-account prompts
@@ -406,14 +420,20 @@
                                     <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950" title="{{ Lang::get('import::preview.status.duplicate_title') }}">{{ Lang::get('import::preview.status.duplicate') }}</span>
                                 @elseif ($row->status === PreviewRowStatus::Enriched)
                                     <span class="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20" title="{{ Lang::get('import::preview.status.enriched_title') }}">{{ Lang::get('import::preview.status.enriched') }}</span>
-                                    @if ($row->diff && isset($row->diff['source_ref']))
+                                    {{-- Every field the enrichment changes, not
+                                         source_ref alone. A restatement is matched
+                                         ON the reference, so that one field is
+                                         identical by construction and the amount —
+                                         the field that actually disagrees — was
+                                         the one this line never mentioned. --}}
+                                    @foreach ($row->diff ?? [] as $field => $change)
                                         <div class="mt-1 text-xs text-slate-500 font-mono dark:text-slate-400">
-                                            source_ref:
-                                            <span class="text-slate-600 dark:text-slate-400">{{ $row->diff['source_ref']['from'] ?? '∅' }}</span>
+                                            {{ $field }}:
+                                            <span class="text-slate-600 dark:text-slate-400">{{ $previewChange($field, $change['from'], $row->currency) ?? '∅' }}</span>
                                             →
-                                            <span class="text-sky-700">{{ $row->diff['source_ref']['to'] }}</span>
+                                            <span class="text-sky-700">{{ $previewChange($field, $change['to'], $row->currency) }}</span>
                                         </div>
-                                    @endif
+                                    @endforeach
                                 @else
                                     {{-- The reason, spelled out under the badge rather than hidden in a
                                          title attribute. There is no hover on a phone, so the tooltip was
