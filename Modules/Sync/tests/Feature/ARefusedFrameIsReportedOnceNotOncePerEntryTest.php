@@ -15,7 +15,7 @@ use Modules\Sync\Internal\Transport\Noise\NoiseHandshakeState;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Internal\Transport\SyncSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
-use Modules\Sync\Tests\Support\DiallingSyncPeer;
+use Modules\Sync\Tests\Support\DialingSyncPeer;
 use Modules\Sync\Tests\Support\RecordingLogger;
 
 uses(RefreshDatabase::class);
@@ -49,7 +49,7 @@ function refusedFrameSession(RecordingLogger $logger): array
     $deskKx = sodium_crypto_kx_keypair();
     $deskSecret = sodium_crypto_kx_secretkey($deskKx);
     $deskPublic = sodium_crypto_kx_publickey($deskKx);
-    $peer = new DiallingSyncPeer($deskPublic);
+    $peer = new DialingSyncPeer($deskPublic);
 
     foreach ([
         ['desktop-self', sodium_bin2hex($deskPublic), 1],

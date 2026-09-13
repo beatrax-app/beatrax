@@ -11,7 +11,7 @@ use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 // The initiator half of a LAN session, far enough to drive the responder: it
 // dials the Noise IK handshake and then speaks the control vocabulary that
 // LanSyncClient speaks, without the mobile module's dependency graph.
-final class DiallingSyncPeer
+final class DialingSyncPeer
 {
     public readonly string $secretKey;
 
@@ -59,7 +59,7 @@ final class DiallingSyncPeer
     public function session(): NoiseSession
     {
         return $this->session ?? throw new LogicException(
-            'DiallingSyncPeer: the handshake has not been adopted yet.'
+            'DialingSyncPeer: the handshake has not been adopted yet.'
         );
     }
 

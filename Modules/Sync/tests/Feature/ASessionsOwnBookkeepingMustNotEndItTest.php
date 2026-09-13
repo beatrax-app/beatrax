@@ -26,7 +26,7 @@ use Modules\Sync\Internal\Transport\SyncSession;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
-use Modules\Sync\Tests\Support\DiallingSyncPeer;
+use Modules\Sync\Tests\Support\DialingSyncPeer;
 use Modules\Sync\Tests\Support\RecordingLogger;
 use Modules\Sync\Tests\Support\ScriptedPeerSocket;
 use Modules\Sync\Tests\Support\StrandedSessionClock;
@@ -44,7 +44,7 @@ uses(RefreshDatabase::class);
 const BOOKKEEPING_NOW = '2026-09-05T12:00:00Z';
 
 /**
- * @return array{0: int, 1: string, 2: string, 3: DiallingSyncPeer, 4: string}
+ * @return array{0: int, 1: string, 2: string, 3: DialingSyncPeer, 4: string}
  */
 function bookkeepingHousehold(): array
 {
@@ -62,7 +62,7 @@ function bookkeepingHousehold(): array
     $deskSecret = sodium_crypto_kx_secretkey($deskKx);
     $deskPublic = sodium_crypto_kx_publickey($deskKx);
 
-    $peer = new DiallingSyncPeer($deskPublic);
+    $peer = new DialingSyncPeer($deskPublic);
     $peerSigning = sodium_crypto_sign_keypair();
 
     foreach ([
@@ -124,7 +124,7 @@ function bookkeepingSession(RecordingLogger $logger, array $deviceKeys = [], ?in
     );
 }
 
-function bookkeepingHandshake(DiallingSyncPeer $peer, string $deskSecret, string $deskPublic): NoiseSession
+function bookkeepingHandshake(DialingSyncPeer $peer, string $deskSecret, string $deskPublic): NoiseSession
 {
     $responder = NoiseHandshakeState::initIkResponder($deskSecret, $deskPublic);
     $responder->readMessage($peer->handshakeMessage());

@@ -7,11 +7,8 @@ use Amp\Http\Server\Request as AmpRequest;
 use Amp\Http\Server\Response as AmpResponse;
 use Amp\Socket\InternetAddress;
 use Amp\Websocket\WebsocketMessage;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use League\Uri\Http as HttpUri;
-use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Enums\SyncSessionStatus;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -21,7 +18,8 @@ use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
-use Modules\Sync\Tests\Support\DiallingSyncPeer;
+use Modules\Sync\Tests\Support\DialingSyncPeer;
+use Modules\Sync\Tests\Support\HangUpHousehold;
 use Modules\Sync\Tests\Support\RecordingLogger;
 use Modules\Sync\Tests\Support\ScriptedPeerSocket;
 
@@ -31,84 +29,6 @@ uses(RefreshDatabase::class);
 // from the others by something a reader can see: a status on the session row, a
 // notice the peer can read, or a confirmation cleared. handleClient() swallows
 // the throw in all of them, so nothing above it reports which one happened.
-/**
- * @link ../../../../.docs/features/sync/peer-session-lifecycle.md
- */
-final class HangUpHousehold
-{
-    public readonly int $userId;
-
-    public readonly string $secretKey;
-
-    public readonly string $publicKey;
-
-    public function __construct(public readonly string $deviceId = 'desktop-self')
-    {
-        $user = User::query()->create([
-            'username' => 'hangup-'.bin2hex(random_bytes(5)),
-            'password' => bcrypt('fixture'),
-            'period_start_day' => 1,
-            'default_currency_view' => 'eur_only',
-        ]);
-
-        $this->userId = (int) $user->id;
-
-        $keypair = sodium_crypto_kx_keypair();
-        $this->secretKey = sodium_crypto_kx_secretkey($keypair);
-        $this->publicKey = sodium_crypto_kx_publickey($keypair);
-
-        $this->register($this->deviceId, sodium_bin2hex($this->publicKey), isSelf: true);
-    }
-
-    public function register(string $deviceId, string $x25519Hex, bool $isSelf = false, ?string $confirmedAt = '2026-09-01T10:05:00Z'): string
-    {
-        $signing = sodium_crypto_sign_keypair();
-
-        $this->db()->connection()->table('device_registry')->insert([
-            'user_id' => $this->userId,
-            'device_id' => $deviceId,
-            'name' => $deviceId,
-            'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($signing)),
-            'x25519_public_key_hex' => $x25519Hex,
-            'safety_number_words' => 'abandon ability able about above absent',
-            'is_self' => $isSelf ? 1 : 0,
-            'paired_at' => '2026-09-01T10:00:00Z',
-            'confirmed_at' => $confirmedAt,
-            'last_seen_at' => null,
-            'created_at' => '2026-09-01T10:00:00Z',
-            'updated_at' => '2026-09-01T10:00:00Z',
-        ]);
-
-        return sodium_bin2hex(sodium_crypto_sign_secretkey($signing));
-    }
-
-    public function handler(RecordingLogger $logger): SyncWebSocketHandler
-    {
-        return new SyncWebSocketHandler(
-            registryService: app(DeviceRegistryService::class),
-            signer: new DeviceKeySigner,
-            framer: new TransportFramer,
-            catchUp: app(PeerCatchUpExchanger::class),
-            db: $this->db(),
-            clock: app(Clock::class),
-            logger: $logger,
-            localStaticSecret: $this->secretKey,
-            localStaticPublic: $this->publicKey,
-            localDeviceId: $this->deviceId,
-            userId: $this->userId,
-        );
-    }
-
-    public function sessionRow(): ?object
-    {
-        return $this->db()->connection()->table('sync_sessions')->where('user_id', $this->userId)->first();
-    }
-
-    public function db(): DatabaseManager
-    {
-        return app(DatabaseManager::class);
-    }
-}
 
 function hangUpRun(SyncWebSocketHandler $handler, ScriptedPeerSocket $socket): void
 {
@@ -127,7 +47,7 @@ function hangUpRun(SyncWebSocketHandler $handler, ScriptedPeerSocket $socket): v
 /**
  * @return list<Closure(ScriptedPeerSocket): ?WebsocketMessage>
  */
-function hangUpThroughEpochPhase(DiallingSyncPeer $peer): array
+function hangUpThroughEpochPhase(DialingSyncPeer $peer): array
 {
     return [
         ScriptedPeerSocket::sends($peer->handshakeMessage()),
@@ -200,7 +120,7 @@ it('closes a connection whose first handshake message is not one', function (): 
 
 it('records a refusal and says nothing about a removal to a key it never admitted', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $logger = new RecordingLogger;
 
     $socket = ScriptedPeerSocket::running(ScriptedPeerSocket::sends($peer->handshakeMessage()));
@@ -217,7 +137,7 @@ it('records a refusal and says nothing about a removal to a key it never admitte
 
 it('tells a device it did remove why the connection is going away', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex(), confirmedAt: null);
 
     $logger = new RecordingLogger;
@@ -240,7 +160,7 @@ it('tells a device it did remove why the connection is going away', function ():
 
 it('drops its own confirmation when the peer is the one doing the removing', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $logger = new RecordingLogger;
@@ -266,7 +186,7 @@ it('drops its own confirmation when the peer is the one doing the removing', fun
 
 it('stops applying a peer\'s ops the moment the reader removes it mid-session', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $peerSecretHex = $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -307,7 +227,7 @@ it('stops applying a peer\'s ops the moment the reader removes it mid-session', 
 
 it('closes the socket of a peer that stalls in the middle of catch-up', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $logger = new RecordingLogger;
@@ -326,7 +246,7 @@ it('closes the socket of a peer that stalls in the middle of catch-up', function
 
 it('finishes the exchange when the peer declares frames it then never sends', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -361,7 +281,7 @@ it('finishes the exchange when the peer declares frames it then never sends', fu
 
 it('reads no frames at all from a peer that declares a negative count', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -394,7 +314,7 @@ it('reads no frames at all from a peer that declares a negative count', function
 
 it('treats an unreadable epoch control frame as an empty phase rather than a failure', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -431,7 +351,7 @@ it('treats an unreadable epoch control frame as an empty phase rather than a fai
 
 it('keeps a pending wrap when the peer answers the acknowledgement with something else', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $house->db()->connection()->table('relay_mailbox')->insert([
@@ -487,7 +407,7 @@ it('hangs up rather than half-handshaking a peer that disconnects before msg1', 
 
 it('does not turn a refusal into a throw when the refused peer has already gone', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex(), confirmedAt: null);
 
     $logger = new RecordingLogger;
@@ -510,7 +430,7 @@ it('does not turn a refusal into a throw when the refused peer has already gone'
 
 it('ends the exchange quietly when the peer hangs up after being asked for its history', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -536,7 +456,7 @@ it('ends the exchange quietly when the peer hangs up after being asked for its h
 
 it('asks for no frames from a response that declares no count', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -568,7 +488,7 @@ it('asks for no frames from a response that declares no count', function (): voi
 
 it('replays the history a peer sends during catch-up, not only what arrives live', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $peerSecretHex = $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -607,7 +527,7 @@ it('replays the history a peer sends during catch-up, not only what arrives live
 
 it('ends a live stream on the first frame it cannot open', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $peerSecretHex = $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -647,7 +567,7 @@ it('ends a live stream on the first frame it cannot open', function (): void {
 
 it('re-checks a peer\'s trust on a throttle rather than once per op', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $peerSecretHex = $house->register('phone-peer', $peer->publicKeyHex());
 
     $catchUp = app(PeerCatchUpExchanger::class);
@@ -704,7 +624,7 @@ it('re-checks a peer\'s trust on a throttle rather than once per op', function (
 
 it('still acknowledges the epoch phase when the peer announces wraps it never sends', function (): void {
     $house = new HangUpHousehold;
-    $peer = new DiallingSyncPeer($house->publicKey);
+    $peer = new DialingSyncPeer($house->publicKey);
     $house->register('phone-peer', $peer->publicKeyHex());
 
     $logger = new RecordingLogger;
