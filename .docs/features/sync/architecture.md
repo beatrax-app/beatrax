@@ -316,7 +316,7 @@ Internal Sync crypto capabilities no other Public class exposes:
    that class without conflating the two AD shapes it exists to keep distinct.
 
 The project's custom PHPStan cross-module rule (`beatrax.boundary`, see
-`app/PhpStan/Rules/BoundaryRule.php`) forbids Core from importing
+`tools/PhpStan/Rules/BoundaryRule.php`) forbids Core from importing
 `Modules\Sync\Internal\*` directly — this class is the minimal Public wrapper
 that closes that gap while keeping every raw GDK key byte and the `GdkEpoch`
 DTO itself fully inside the Sync module boundary. Callers across the boundary

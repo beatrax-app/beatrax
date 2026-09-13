@@ -15,7 +15,7 @@ function pageLayoutFixtureAnalysis(string $fixture): string
         base_path('vendor/bin/phpstan'),
         'analyse',
         '--configuration='.base_path('phpstan-fixtures.neon'),
-        base_path('app/PhpStan/Rules/Fixtures/'.$fixture),
+        base_path('tools/PhpStan/Rules/Fixtures/'.$fixture),
         '--no-progress',
         '--error-format=raw',
         '--no-ansi',

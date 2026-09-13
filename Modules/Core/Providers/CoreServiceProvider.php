@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Providers;
 
 use App\Models\User;
-use App\Support\SampleData\SampleDatasetSeeder;
+use Database\Seeders\SampleDatasetSeeder;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Events\Dispatcher;

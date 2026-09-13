@@ -25,7 +25,7 @@ function rawTraceSources(): array
 {
     $files = [];
 
-    foreach (['Modules', 'app', 'routes', 'config', 'bootstrap', 'database', 'scripts'] as $root) {
+    foreach (['Modules', 'routes', 'config', 'bootstrap', 'database', 'scripts'] as $root) {
         $absolute = base_path($root);
 
         if (is_dir($absolute)) {

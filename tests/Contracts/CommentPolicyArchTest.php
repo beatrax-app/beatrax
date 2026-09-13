@@ -72,7 +72,16 @@ function commentPolicyWalkPhp(string $directory, array $prunedDirectories): arra
 /** @return list<string> absolute paths to in-scope backend PHP files */
 function commentPolicyBackendFiles(): array
 {
-    $roots = [base_path('Modules'), base_path('app')];
+    // bootstrap/, database/seeders/ and tools/ hold first-party PHP the style
+    // rules never saw: the mobile root's walk is root-wide, so
+    // mobile-app/bootstrap/app.php WAS checked while its desktop twin was not,
+    // and the two files are near-identical.
+    $roots = [
+        base_path('Modules'),
+        base_path('bootstrap'),
+        base_path('database/seeders'),
+        base_path('tools'),
+    ];
     $files = [];
     foreach ($roots as $root) {
         if (! is_dir($root)) {
@@ -87,7 +96,12 @@ function commentPolicyBackendFiles(): array
             if (! $file->isFile() || ! str_ends_with($path, '.php')) {
                 continue;
             }
-            if (str_contains($path, '/tests/') || str_contains($path, '/Database/Migrations/')) {
+            // phpstan-stubs/ for the same reason config/ and scripts/ are exempt
+            // below: each is a standalone file whose /* */ header is the only
+            // documentation it has, and M3 would forbid that block outright.
+            if (str_contains($path, '/tests/')
+                || str_contains($path, '/Database/Migrations/')
+                || str_contains($path, '/phpstan-stubs/')) {
                 continue;
             }
             $files[] = $path;

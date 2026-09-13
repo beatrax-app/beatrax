@@ -128,7 +128,7 @@ const LEDGER_DAY_HANDOVERS = [];
  */
 function ledgerDayBackendFiles(): array
 {
-    return ledgerDayFilesUnder(['Modules', 'app'], '.php', static fn (string $path): bool => ! str_contains($path, '/tests/')
+    return ledgerDayFilesUnder(['Modules'], '.php', static fn (string $path): bool => ! str_contains($path, '/tests/')
         && ! str_contains($path, '/Database/Migrations/'));
 }
 

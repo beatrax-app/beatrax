@@ -213,7 +213,6 @@ it('writes a registered command name in the case it is registered under, everywh
     $files = array_merge(
         instructedCommandFilesUnder(base_path('.docs'), ['.md']),
         instructedCommandFilesUnder(base_path('Modules'), ['.php', '.md', '.blade.php']),
-        instructedCommandFilesUnder(base_path('app'), ['.php']),
         instructedCommandFilesUnder(base_path('resources'), ['.php', '.blade.php', '.js']),
         instructedCommandFilesUnder(base_path('lang'), ['.php']),
         instructedCommandFilesUnder(base_path('scripts'), ['.php']),

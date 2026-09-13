@@ -16,7 +16,7 @@ final class SonarSourceFiles
      *
      * @var list<string>
      */
-    private const ROOTS = ['app', 'Modules', 'config', 'routes', 'database'];
+    private const ROOTS = ['Modules', 'config', 'routes', 'database'];
 
     /**
      * The half of `sonar.exclusions` a `.php` walk over ROOTS can reach, plus

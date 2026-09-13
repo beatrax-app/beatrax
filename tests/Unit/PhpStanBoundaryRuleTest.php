@@ -14,7 +14,7 @@ it('emits a BoundaryRule error on the bad fixture', function (): void {
         base_path('vendor/bin/phpstan'),
         'analyse',
         '--configuration='.base_path('phpstan-fixtures.neon'),
-        base_path('app/PhpStan/Rules/Fixtures/BadBoundaryFixture.php'),
+        base_path('tools/PhpStan/Rules/Fixtures/BadBoundaryFixture.php'),
         '--no-progress',
         '--error-format=raw',
         '--no-ansi',
@@ -37,7 +37,7 @@ it('emits zero errors on the good fixture', function (): void {
         base_path('vendor/bin/phpstan'),
         'analyse',
         '--configuration='.base_path('phpstan-fixtures.neon'),
-        base_path('app/PhpStan/Rules/Fixtures/GoodBoundaryFixture.php'),
+        base_path('tools/PhpStan/Rules/Fixtures/GoodBoundaryFixture.php'),
         '--no-progress',
         '--error-format=raw',
         '--no-ansi',
@@ -62,5 +62,5 @@ it('emits zero errors on the good fixture', function (): void {
 // claimed, and it cost ~125s cold in whichever shard held the Unit suite.
 //
 // The two above are the opposite case and stay: phpstan.neon excludes
-// app/PhpStan/Rules/Fixtures/*, so the CI job never analyses these fixtures and
+// tools/PhpStan/Rules/Fixtures/*, so the CI job never analyses these fixtures and
 // nothing else proves the custom BoundaryRule still fires.

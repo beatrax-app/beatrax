@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Providers\NativeServiceProvider;
 use Beatrax\BiometricVault\BiometricVaultServiceProvider;
+use Native\Mobile\Edge\ElementRegistry;
 use Native\Mobile\Providers\BiometricsServiceProvider;
 use Native\Mobile\Providers\NetworkServiceProvider;
 use Native\Mobile\Providers\ScannerServiceProvider;
@@ -51,7 +52,7 @@ it('NativeServiceProvider::plugins() lists all 8 registered NativePHP mobile plu
 });
 
 it('NativeServiceProvider.php source references the 8 plugin FQCNs verbatim (belt-and-suspenders on the compiled-build source)', function (): void {
-    $source = (string) file_get_contents(base_path('app/Providers/NativeServiceProvider.php'));
+    $source = (string) file_get_contents(base_path('Modules/Mobile/Providers/NativePhpContract/NativeServiceProvider.php'));
 
     foreach ([
         'Native\Mobile\Providers\BiometricsServiceProvider',
@@ -65,4 +66,53 @@ it('NativeServiceProvider.php source references the 8 plugin FQCNs verbatim (bel
     ] as $expectedFqcn) {
         expect($source)->toContain($expectedFqcn);
     }
+});
+
+// nativephp/mobile resolves the plugin allow-list by `class_exists()` and `new`
+// on the LITERAL string 'App\\Providers\\NativeServiceProvider'
+// (Plugins/PluginDiscovery.php, lines 89 and 138). A miss is not an error there:
+// it returns an empty allow-list — "block all plugins for security" — with no
+// exception and no log line.
+//
+// Measured when this class was renamed to Modules\Mobile\Providers\*: the
+// native element registry went from 54 types to 25. Everything a UI plugin
+// registers disappeared — webview, button, toggle, modal, every form control —
+// and the app shell rendered its chrome around an empty column. The desktop
+// root noticed nothing; only the mobile Composer root can see it at all.
+it('keeps the class name nativephp hard-codes, whichever root is asking', function (): void {
+    expect(class_exists('App\\Providers\\NativeServiceProvider'))->toBeTrue(
+        'nativephp/mobile looks this class up by literal name and silently blocks every plugin when it misses.'
+    );
+
+    // And by a psr-4 root that is not a repository-root app/ directory: the
+    // namespace is the vendor's contract, the directory is ours.
+    /** @var array{autoload: array{psr-4: array<string, string>}} $composer */
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
+
+    expect($composer['autoload']['psr-4'])->toHaveKey('App\\Providers\\')
+        ->and($composer['autoload']['psr-4']['App\\Providers\\'])->not->toStartWith('app/');
+})->group('repo-root-only');
+
+// The live registry, not a source scan: the failure is a lookup that answers
+// with silence, and only the artefact it builds shows whether it answered.
+it('registers the element types the UI plugins contribute', function (): void {
+    if (! class_exists(ElementRegistry::class)) {
+        test()->markTestSkipped('nativephp/mobile is installed only under mobile-app/vendor, so there is no registry to read from this root.');
+    }
+
+    $types = array_keys(ElementRegistry::all());
+
+    // Named one by one rather than counted: a floor moves with every vendor
+    // release, and what actually breaks is a specific element going missing.
+    // webview is the app shell's whole body; the rest are the form surface.
+    $fromPlugins = ['webview', 'button', 'toggle', 'modal', 'select', 'slider'];
+
+    $missing = array_values(array_diff($fromPlugins, $types));
+
+    expect($missing)->toBe([], sprintf(
+        'Plugin discovery registered nothing for: %s. The registry holds %d types. '
+        .'That is what an empty allow-list looks like — check that App\\Providers\\NativeServiceProvider still resolves.',
+        implode(', ', $missing),
+        count($types),
+    ));
 });

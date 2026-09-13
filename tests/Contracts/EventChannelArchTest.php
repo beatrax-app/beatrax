@@ -91,7 +91,7 @@ function eventChannelFiles(): array
 {
     $files = [];
 
-    foreach ([base_path('Modules'), base_path('app'), base_path('resources')] as $root) {
+    foreach ([base_path('Modules'), base_path('resources')] as $root) {
         if (! is_dir($root)) {
             continue;
         }

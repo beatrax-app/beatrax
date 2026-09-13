@@ -24,10 +24,10 @@ use Tests\Contracts\Support\TopLevelDeclarations;
 // moved or renamed the pin stops matching and fails here, so an exemption
 // cannot outlive what earned it.
 const DECLARATIONS_NO_AUTOLOADER_REACHES = [
-    'app/PhpStan/Rules/Fixtures/BadBoundaryFixture.php declares BadBoundaryFixture' => 'the custom BoundaryRule fires on a class whose namespace is a neighbouring module private one, so a fixture that named its own directory would not be a subject of the rule at all. Being unreachable is the point twice over: were it autoloadable it would be real code inside that private namespace, which every boundary reader would then judge as shipped. phpstan.neon excludes the directory from the analysis for the same reason, and PhpStanBoundaryRuleTest points PHPStan at the file by path',
-    'app/PhpStan/Rules/Fixtures/BadPageLayoutFixture.php declares BadPageLayoutFixture' => 'the page-layout rule reads a Livewire full-page component, which is a module-private class by construction; PhpStanPageLayoutMacroTest analyses the file by path',
-    'app/PhpStan/Rules/Fixtures/GoodBoundaryFixture.php declares GoodBoundaryFixture' => 'the clean half of the BoundaryRule pair, which has to sit in the same namespace as the offending half or it would prove the rule silent for the wrong reason',
-    'app/PhpStan/Rules/Fixtures/GoodPageLayoutFixture.php declares GoodPageLayoutFixture' => 'the clean half of the page-layout pair, same reason',
+    'tools/PhpStan/Rules/Fixtures/BadBoundaryFixture.php declares BadBoundaryFixture' => 'the custom BoundaryRule fires on a class whose namespace is a neighbouring module private one, so a fixture that named its own directory would not be a subject of the rule at all. Being unreachable is the point twice over: were it autoloadable it would be real code inside that private namespace, which every boundary reader would then judge as shipped. phpstan.neon excludes the directory from the analysis for the same reason, and PhpStanBoundaryRuleTest points PHPStan at the file by path',
+    'tools/PhpStan/Rules/Fixtures/BadPageLayoutFixture.php declares BadPageLayoutFixture' => 'the page-layout rule reads a Livewire full-page component, which is a module-private class by construction; PhpStanPageLayoutMacroTest analyses the file by path',
+    'tools/PhpStan/Rules/Fixtures/GoodBoundaryFixture.php declares GoodBoundaryFixture' => 'the clean half of the BoundaryRule pair, which has to sit in the same namespace as the offending half or it would prove the rule silent for the wrong reason',
+    'tools/PhpStan/Rules/Fixtures/GoodPageLayoutFixture.php declares GoodPageLayoutFixture' => 'the clean half of the page-layout pair, same reason',
 ];
 
 it('walks the tree it is about to read a verdict off', function (): void {

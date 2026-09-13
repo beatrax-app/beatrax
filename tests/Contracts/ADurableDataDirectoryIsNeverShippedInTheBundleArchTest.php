@@ -370,7 +370,6 @@ function bundleExclusionsOnlyOneShellNeeds(): array
             'tests' => "the mobile packager's defaults already drop tests at any depth",
             '*/tests' => "the mobile packager's defaults already drop tests at any depth",
             '.phpunit.cache' => "the mobile packager's defaults already drop it at any depth",
-            'local' => 'a drop directory that exists at the repository root only',
             'nativephp' => 'the previous build output here; under the mobile root it is the copy TARGET and excluding it would empty the bundle',
             'mobile-app' => 'the second Composer root, which only the first root contains',
         ],

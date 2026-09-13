@@ -106,7 +106,7 @@ final class SensitiveColumnScan
     {
         $files = [];
 
-        foreach (['Modules', 'app'] as $root) {
+        foreach (['Modules'] as $root) {
             $dir = $repositoryRoot.$root;
             if (! is_dir($dir)) {
                 continue;

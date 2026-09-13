@@ -75,7 +75,7 @@ it('ships exactly one implementation of the cost contract', function (): void {
     $repoRoot = dirname((string) realpath(base_path('Modules')));
     $implementations = [];
 
-    foreach (['Modules', 'app'] as $directory) {
+    foreach (['Modules'] as $directory) {
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($repoRoot.'/'.$directory, RecursiveDirectoryIterator::SKIP_DOTS),
         );
@@ -108,7 +108,7 @@ it('lets no second class name a derivation cost of its own', function (): void {
     $repoRoot = dirname((string) realpath(base_path('Modules')));
     $namers = [];
 
-    foreach (['Modules', 'app'] as $directory) {
+    foreach (['Modules'] as $directory) {
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($repoRoot.'/'.$directory, RecursiveDirectoryIterator::SKIP_DOTS),
         );

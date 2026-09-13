@@ -1262,7 +1262,7 @@ truth for the id itself stays the unique key on
 Public surface so the matcher consumer in the Receipts module can
 resolve `.eml` paths for messages persisted by the EmailScan fetcher
 without crossing the Internal namespace boundary enforced by
-`App\PhpStan\Rules\BoundaryRule` and the `pinnedCrossModuleInternalImports`
+`Beatrax\Tooling\PhpStan\Rules\BoundaryRule` and the `pinnedCrossModuleInternalImports`
 arch invariant.
 
 ## `OAuthSecretsRepository`

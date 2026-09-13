@@ -403,7 +403,7 @@ seeds is one the peer's own row can no longer land beside. See
   was enabled), `reveal()` returns its input unchanged so legacy /
   unshielded rows keep working.
 - `SampleDataLoader` — the contract behind the settings-page sample-data
-  control, implemented by `App\Support\SampleData\SampleDatasetSeeder`.
+  control, implemented by `Modules\DevMode\Internal\SampleData\SampleDatasetSeeder`.
   One ordering of the demo seeders serves both callers: `demo:seed` over
   invented accounts, and `SampleDataCard` over the reader's own. Because
   the Dev Console is closed on a store build, the second is the only

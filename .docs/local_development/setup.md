@@ -234,7 +234,7 @@ the underlying tooling.
 `mobile-app/` is a **second Composer root**, not a subdirectory of the first. It has its
 own `vendor/`, and it depends on `nativephp/mobile` where the repo root depends on
 `nativephp/desktop` — the two host packages hard-conflict, which is the whole reason
-for the split. The domain code is shared into it by symlink — `app/`, `Modules/`,
+for the split. The domain code is shared into it by symlink — `Modules/`, `tools/`,
 `resources/`, `routes/`, `public/` and `tests/` are each a link back to the repo root,
 so a change to a module is picked up by both roots with no copying. `database/` is
 **not** among them: `mobile-app/database/` is a real directory that links only

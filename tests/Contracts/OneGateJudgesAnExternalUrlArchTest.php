@@ -50,7 +50,7 @@ function externalUrlPhpSources(): array
     // Every root that ships PHP, not Modules and app alone: "one place only" is
     // a claim about the application, and a route file or a release script
     // opening a URL would have been invisible to the narrower pair.
-    foreach (['Modules', 'app', 'bootstrap', 'config', 'database', 'routes', 'scripts'] as $name) {
+    foreach (['Modules', 'bootstrap', 'config', 'database', 'routes', 'scripts'] as $name) {
         $root = base_path($name);
 
         if (! is_dir($root)) {

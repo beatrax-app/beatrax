@@ -34,6 +34,7 @@
         "Mockery",
         "Mockery\\MockInterface",
         "Native\\Mobile\\Edge\\Element",
+        "Native\\Mobile\\Edge\\ElementRegistry",
         "Native\\Mobile\\Edge\\NativeComponent",
         "Native\\Mobile\\Facades\\Biometrics",
         "Native\\Mobile\\Facades\\Browser",

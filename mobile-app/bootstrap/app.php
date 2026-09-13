@@ -43,13 +43,12 @@ use Psr\Log\LoggerInterface;
 /**
  * @link ../../.docs/features/mobile/architecture.md#the-mobile-roots-own-bootstrap
  */
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
     )
     ->withCommands([
-        __DIR__.'/../app/Console/Commands',
         // Registered from this root only, never the shared MobileServiceProvider.
         // Under the desktop root the two autoload but stay unregistered, so they
         // are inert there and cannot reach the desktop app.
@@ -239,3 +238,11 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->create();
+
+// There is no app/ for Laravel to match a psr-4 root against, and without one
+// Application::getNamespace() throws — in Blade's ComponentTagCompiler, so a
+// view renders into a RuntimeException. Modules/ is where this application's
+// classes are. tests/Contracts/TheAppDirectoryStaysGoneArchTest.php holds it.
+$app->useAppPath($app->basePath('Modules'));
+
+return $app;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace Modules\DevMode\Internal\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;

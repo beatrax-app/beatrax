@@ -188,7 +188,7 @@ function referenceDataRuntimeSources(): array
 {
     $paths = [];
 
-    foreach (['Modules', 'app'] as $root) {
+    foreach (['Modules'] as $root) {
         /** @var iterable<SplFileInfo> $files */
         $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path($root)));
 

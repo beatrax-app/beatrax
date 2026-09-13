@@ -71,19 +71,22 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/",
+            "App\\Providers\\": "Modules/Mobile/Providers/NativePhpContract/",
             "Modules\\Auth\\": "Modules/Auth/",
             "Modules\\": "Modules/",
-            "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {
         "psr-4": {
+            "Beatrax\\Tooling\\PhpStan\\": "tools/PhpStan/",
             "Tests\\": "tests/",
             "Modules\\Mobile\\Tests\\": "Modules/Mobile/tests/",
             "Modules\\Sync\\Tests\\": "Modules/Sync/tests/"
-        }
+        },
+        "exclude-from-classmap": [
+            "tools/PhpStan/Rules/Fixtures/"
+        ]
     },
     "scripts": {
         "pre-autoload-dump": [

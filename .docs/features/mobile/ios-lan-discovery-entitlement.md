@@ -467,7 +467,7 @@ and the mechanism is not FFI or HTTP:
   `registry.register(...)` calls.
 - **There is already a first-party one in this repo**:
   `mobile-app/nativephp-plugins/biometric-vault/`, allowlisted in
-  `mobile-app/app/Providers/NativeServiceProvider.php`. Its generated
+  `Modules/Mobile/Providers/NativeServiceProvider.php`. Its generated
   registration lines are present in the built project. The mechanism is proven
   here, not merely documented.
 
@@ -495,7 +495,7 @@ short of a real device can exercise it.
    synchronous, so it must block on a semaphore — acceptable, because the PHP
    caller already blocks for the whole browse timeout.
 3. Add its service provider to
-   `mobile-app/app/Providers/NativeServiceProvider.php::plugins()`. Without that
+   `Modules/Mobile/Providers/NativeServiceProvider.php::plugins()`. Without that
    entry `PluginDiscovery` ignores the package entirely.
 4. Build and run on a real iPhone alongside a desktop running `sync:serve`,
    then type a pairing code on the phone.

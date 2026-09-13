@@ -85,7 +85,7 @@ Practical recipes for exercising the `EmailScan` module in isolation.
   Livewire snapshot.
 - `tests/Contracts/NoExtImapTest.php` holds the no-IMAP half in three
   places: `composer.json` requires no `ext-imap`, no PHP under
-  `Modules/` or `app/` calls `extension_loaded('imap')`, and
+  `Modules/` calls `extension_loaded('imap')`, and
   `composer.lock` names none of `webklex/php-imap`,
   `webklex/laravel-imap` or `ddeboer/imap`. `composer.json`'s own
   `conflict` block hard-fails the install; the lockfile grep catches

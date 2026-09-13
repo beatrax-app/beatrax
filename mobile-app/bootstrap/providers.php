@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Providers\HorizonServiceProvider;
 use App\Providers\NativeServiceProvider;
 use Modules\Anomaly\Providers\AnomalyServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
@@ -15,6 +14,7 @@ use Modules\Community\Providers\CommunityServiceProvider;
 use Modules\Core\Providers\CoreServiceProvider;
 use Modules\Counterparties\Providers\CounterpartiesServiceProvider;
 use Modules\DevMode\Providers\DevModeServiceProvider;
+use Modules\DevMode\Providers\HorizonServiceProvider;
 use Modules\DriftAlerts\Providers\DriftAlertsServiceProvider;
 use Modules\EmailScan\Providers\EmailScanServiceProvider;
 use Modules\Forecasting\Providers\ForecastingServiceProvider;

@@ -152,7 +152,7 @@ The same trait rule, applied inside a module rather than at its edge, produced
 module-boundary contract. Selected examples:
 
 - **`pinnedCrossModuleInternalImports`** — the import half of the boundary. It
-  scans `Modules/`, `tests/` and `app/` textually for a `use` of another
+  scans `Modules/` and `tests/` textually for a `use` of another
   module's `Internal\`, and asserts the result equals two pinned literal lists:
   a production list holding exactly the `Mobile` → `Sync` protocol crossings,
   and a test list holding every crossing the suite makes today. A third
@@ -198,9 +198,9 @@ module-boundary contract. Selected examples:
 - **`noFacadeCallsFromCoreConsoleCommands`** /
   **`noLaravelGlobalHelpersInCoreConsoleCommands`** — even the
   Console-bootstrap layer respects the DI-only rule.
-- **`noHorizonImportsInShippedBuildCode`** — no file under `app/`, `Modules/`,
+- **`noHorizonImportsInShippedBuildCode`** — no file under `Modules/`,
   `bootstrap/` or `routes/` may name a `Laravel\Horizon\` symbol except the
-  one allow-listed provider, `app/Providers/HorizonServiceProvider.php`.
+  one allow-listed provider, `Modules/DevMode/Providers/HorizonServiceProvider.php`.
   `DevMode`'s provider registers that provider only where
   `config('app.dev_mode')` is true (`BEATRAX_DEV_MODE`) and the require-dev
   package is actually installed, so a `--no-dev` bundle neither serves the
@@ -218,7 +218,7 @@ module-boundary contract. Selected examples:
   `storage_path()` and `database_path()`, the container spellings of the same
   question (`$app->storagePath()`, `$this->laravel->databasePath()`, `App::`
   and the rest), and the hard-coded `database.sqlite` / `storage/app/`
-  literals, are all forbidden under `Modules/`, `app/` and `config/` outside
+  literals, are all forbidden under `Modules/` and `config/` outside
   `UserDataPathService` — the helpers everywhere, the literals everywhere but
   a Blade view, which may legitimately print a path to the reader. The
   container half was added after two classes reached the framework's storage
@@ -247,7 +247,7 @@ the load-bearing safety net for the entire module structure. The import half
 is only half the boundary — [Table ownership](table-ownership.md) covers the
 half the modules cross through the database.
 
-### The static-analysis half: `app/PhpStan/Rules/BoundaryRule.php`
+### The static-analysis half: `tools/PhpStan/Rules/BoundaryRule.php`
 
 A custom Larastan rule catches the same class of violation one layer
 earlier, at `phpstan analyse` time rather than at test-run time. From a
@@ -270,7 +270,7 @@ not inside a module at all — so a migration, a seeder, a test, or an
 never say so. `pinnedCrossModuleInternalImports` covers exactly that
 gap, which is why the two are not redundant. The importer module is detected via
 the declared namespace first (so the deliberate violation fixtures
-under `app/PhpStan/Rules/Fixtures/` exercise the rule without needing
+under `tools/PhpStan/Rules/Fixtures/` exercise the rule without needing
 to live inside `Modules/`), falling back to the filesystem path when
 the namespace is anonymous.
 

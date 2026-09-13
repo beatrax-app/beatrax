@@ -425,7 +425,7 @@ The `:60:`/`:62:` balance cells in `Mt940Adapter` reach the same method;
 the six normalisation lines used to be written out in both places, and
 each caller now keeps only its own exception message. Both `:61:` date
 rules live in `Modules\Ingestion\Public\Banking\SwiftDate`, on the
-seam rather than inside the parser, because `App\Fixtures\Mt940Rebaser`
+seam rather than inside the parser, because `Modules\DevMode\Internal\Fixtures\Mt940Rebaser`
 has to date a rebased fixture exactly as the import will read it back.
 The two-digit year resolves to a
 four-digit calendar year via the SWIFT sliding-window rule (closest

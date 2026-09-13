@@ -23,7 +23,6 @@ function viewReferencePhpFiles(): array
     $files = [];
     foreach ([
         base_path('Modules'),
-        base_path('app'),
         base_path('routes'),
         base_path('bootstrap'),
         base_path('config'),

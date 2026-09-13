@@ -127,7 +127,7 @@ function tuningNumberFiles(): array
 {
     $paths = [];
 
-    foreach (['Modules', 'app'] as $root) {
+    foreach (['Modules'] as $root) {
         $directory = base_path($root);
         if (! is_dir($directory)) {
             continue;

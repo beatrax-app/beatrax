@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Lang;
 /** @return list<string> the directories the mobile Composer root has to reach */
 function mobileRootDirectories(): array
 {
-    return ['app', 'Modules', 'config', 'database', 'lang', 'public', 'resources', 'routes'];
+    return ['Modules', 'config', 'database', 'lang', 'public', 'resources', 'routes'];
 }
 
 // Resolved rather than assumed: the suite runs from both roots, and base_path()

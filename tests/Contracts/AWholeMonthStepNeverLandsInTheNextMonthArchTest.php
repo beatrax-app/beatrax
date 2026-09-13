@@ -96,7 +96,7 @@ function wholeMonthStepFiles(): array
 {
     $paths = [];
 
-    foreach (['Modules', 'app', 'tests', 'routes', 'database', 'config', 'bootstrap'] as $root) {
+    foreach (['Modules', 'tests', 'routes', 'database', 'config', 'bootstrap'] as $root) {
         $directory = base_path($root);
         if (! is_dir($directory)) {
             continue;

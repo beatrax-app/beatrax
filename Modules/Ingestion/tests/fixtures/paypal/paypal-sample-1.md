@@ -3,7 +3,7 @@
 `paypal-sample-1.csv` is the anonymised redaction of a real PayPal
 "Activity Download" CSV export covering 2026-04-01 → 2026-05-15. The
 raw `.csv` lives outside the git tree under
-`local/paypal/raw-paypal-activity.csv` (gitignored). Only the redacted
+`storage/app/dev-imports/paypal/raw-paypal-activity.csv` (gitignored). Only the redacted
 fixture is committed.
 
 The companion redaction script lives at `scripts/anonymize_paypal_csv.php`
@@ -11,7 +11,7 @@ and is re-runnable on any future export of the same shape.
 
 ## Source
 
-Anonymised from `local/paypal/raw-paypal-activity.csv` via
+Anonymised from `storage/app/dev-imports/paypal/raw-paypal-activity.csv` via
 `scripts/anonymize_paypal_csv.php` on 2026-05-15. The raw export was
 generated through Activity → Statements → Custom report → "Activity
 download" / "All transactions" on the user's personal PayPal account.
@@ -20,7 +20,7 @@ Run:
 
 ```sh
 php scripts/anonymize_paypal_csv.php \
-    local/paypal/raw-paypal-activity.csv \
+    storage/app/dev-imports/paypal/raw-paypal-activity.csv \
     > Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv
 ```
 

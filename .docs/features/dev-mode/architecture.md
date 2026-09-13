@@ -704,7 +704,7 @@ the surrounding `ensureDeveloperMode` middleware regardless.
 That registration walks two arch invariants:
 
 - `noHorizonImportsInShippedBuildCode` forbids any non-stripped
-  `Laravel\Horizon\` symbol outside `app/Providers/HorizonServiceProvider.php`.
+  `Laravel\Horizon\` symbol outside `Modules/DevMode/Providers/HorizonServiceProvider.php`.
   The arch test strips `class_exists(\Laravel\Horizon\...)` arguments
   from its regex sweep first, so an inline FQCN inside `class_exists()`
   is legal.
@@ -713,7 +713,7 @@ That registration walks two arch invariants:
   breaking that arch test. The hoist is suppressed because the
   imported short name `HorizonServiceProvider` is already in scope —
   Pint refuses to introduce an ambiguity. The matching pattern lives in
-  `bootstrap/providers.php`: the local `App\Providers\HorizonServiceProvider`
+  `bootstrap/providers.php`: the local `Modules\DevMode\Providers\HorizonServiceProvider`
   is imported at the top of `DevModeServiceProvider` purely as a
   name-conflict shim, and used in the route-registration body, so the
   import is not unused.

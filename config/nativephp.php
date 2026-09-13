@@ -90,12 +90,6 @@ return [
         // a thing to leave resting on a vendor default we do not control.
         '.git',
 
-        // A manual drop directory for PayPal exports. .gitignore keeps
-        // local/paypal/ present and its contents out of git, nothing in the
-        // application reads it, and what a developer drops there is a real
-        // financial statement.
-        'local',
-
         // Holds the previous build's own app bundle; without this the copy
         // walker recurses into it and shuffles ~6 GB of stale output.
         'nativephp',

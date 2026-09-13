@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Fixtures;
+namespace Modules\DevMode\Internal\Fixtures;
 
 use Carbon\CarbonImmutable;
 

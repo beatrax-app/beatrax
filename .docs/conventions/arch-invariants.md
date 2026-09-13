@@ -42,7 +42,7 @@ raw query-builder calls, string literals, column names inside an `update()`
 payload, cross-module imports, Blade Livewire mounts, and the paths the static
 analyser is configured to skip.
 
-The custom PHPStan rule `App\PhpStan\Rules\BoundaryRule` enforces the
+The custom PHPStan rule `Beatrax\Tooling\PhpStan\Rules\BoundaryRule` enforces the
 import half of the same invariant at `phpstan analyse` time, one layer earlier
 and, on the paths it does analyse, more strictly: its allow-list is `Public` and
 `Models` only, so a cross-module `Database\`, `Providers\`, `Routes\`, `Http\`
@@ -301,7 +301,7 @@ heredoc as one string token and never as a `class` keyword.
 
 The exemptions are pinned with their reasons and re-checked against the walk, so
 a pin whose site has moved fails as loudly as a new violation. The four
-`app/PhpStan/Rules/Fixtures/` files are the durable ones: the custom
+`tools/PhpStan/Rules/Fixtures/` files are the durable ones: the custom
 `BoundaryRule` fires on a class whose namespace is a module `Internal`, so a
 fixture naming its own directory would not be a subject of the rule at all — and
 an autoloadable class in that `Internal\Examples` namespace would be real code

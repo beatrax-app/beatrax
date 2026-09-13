@@ -112,7 +112,7 @@ artifact is simply broken.
 
 ## Privacy: the entries that keep a real ledger out of the installer
 
-Four entries exist for one reason, and it is the most consequential on this page:
+Three entries exist for one reason, and it is the most consequential on this page:
 a copy of the working tree is a copy of whatever the person running the build has
 been doing with the application.
 
@@ -129,11 +129,13 @@ been doing with the application.
   logs, all of them pictures of a real ledger. On the machine where this was
   found they came to 1.6 GB across 4,024 files, copied into the build because
   neither name matched any existing pattern.
-- `local` is a manual drop directory for PayPal exports. `.gitignore` keeps
-  `local/paypal/` present and its contents out of git, nothing in the application
-  reads it, and what a developer drops there is a real financial statement.
 
-`.git` is the fifth, for a related reason. The packager's own internal list
+A manual PayPal drop directory was once a fourth entry, named `local` because it
+sat at the repository root. It lives at `storage/app/dev-imports/paypal/` now,
+inside the `storage/app` exclusion above, so neither shell needs a name of its
+own for it and neither can lose it by forgetting one.
+
+`.git` is the fourth, for a related reason. The packager's own internal list
 excludes it too, but the whole history of a personal-finance application is not a
 thing to leave resting on a vendor default we do not control.
 

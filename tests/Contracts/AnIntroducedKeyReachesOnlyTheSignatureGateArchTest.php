@@ -47,7 +47,7 @@ function introducedKeySources(): array
 {
     $found = [];
 
-    foreach (['app', 'Modules'] as $directory) {
+    foreach (['Modules'] as $directory) {
         $root = base_path($directory);
 
         if (! is_dir($root)) {

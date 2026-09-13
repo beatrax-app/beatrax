@@ -50,7 +50,7 @@ it('is the only place the seasonal rule is written down', function (): void {
     $home = 'Modules/Tax/Internal/Support/FilingSeason.php';
 
     $offenders = [];
-    foreach (['Modules', 'app', 'resources'] as $directory) {
+    foreach (['Modules', 'resources'] as $directory) {
         $files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($repoRoot.'/'.$directory, RecursiveDirectoryIterator::SKIP_DOTS),
         );

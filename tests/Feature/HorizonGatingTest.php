@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Providers\HorizonServiceProvider;
 use Illuminate\Routing\Router;
+use Modules\DevMode\Providers\HorizonServiceProvider;
 
 uses()->group('Phase14');
 

@@ -220,7 +220,6 @@ function productionFilesThatCouldWriteARow(): array
 {
     return [
         ...everyFileThatCouldWriteARow(base_path('Modules')),
-        ...everyFileThatCouldWriteARow(base_path('app')),
     ];
 }
 

@@ -107,7 +107,7 @@ domain model uses.
     rollback cannot put a file back — see
     [the user-scoped purge](user-scoped-purge.md#the-two-file-tiers-and-why-neither-is-inside-the-transaction).
   - `PurgeUserDataAction` — the same row purge without the password check,
-    for a caller that has no credential to check. `app/Console/Commands/
+    for a caller that has no credential to check. `Modules/DevMode/Internal/Console/
     DemoSeedCommand.php` uses it for `demo:seed --reset`; before the seam
     existed it kept a second list of tables, which went stale and left
     9,765 rows on a reseeded device. See

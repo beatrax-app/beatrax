@@ -53,7 +53,7 @@ function chainLinkInsertOffenders(array $sources): array
 function chainLinkWriteSources(): array
 {
     $sources = [];
-    foreach (['Modules', 'app', 'database'] as $directory) {
+    foreach (['Modules', 'database'] as $directory) {
         $root = base_path($directory);
         if (! is_dir($root)) {
             continue;

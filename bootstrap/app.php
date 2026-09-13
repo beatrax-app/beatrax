@@ -30,16 +30,11 @@ use Modules\Sync\Internal\Http\Middleware\DrainsDeferredOpCaptures;
 use Modules\Sync\Internal\Http\Middleware\ResumesPreSyncCapture;
 use Psr\Log\LoggerInterface;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
     )
-    // Only for commands spanning several modules and so owned by none —
-    // a module's own commands register in its ServiceProvider.
-    ->withCommands([
-        __DIR__.'/../app/Console/Commands',
-    ])
     ->withMiddleware(function (Middleware $middleware): void {
         // The client writes this one from matchMedia, so it arrives in
         // plaintext; decrypting it fails and the request reaches the resolver
@@ -63,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // `web`, not global: both read StartSession and the auth guard.
         // SetLocale goes first because EnsureDatabaseReady redirects a device
         // with no account, which left every pre-signup screen in English.
+
         // This root only. The mobile root drives its own re-projection from
         // the import cursor, and a second one firing per poll would rebuild
         // the whole history on every tick of a running import.
@@ -83,9 +79,6 @@ return Application::configure(basePath: dirname(__DIR__))
             // mobile one leaves by a plain link and either can be walked away
             // from. This ends them from the other side instead.
             ForgetsSpentRecoveryCodes::class,
-            // The recovery-codes ceremonies have no exit the server sees: the
-            // mobile one leaves by a plain link and either can be walked away
-            // from. This ends them from the other side instead.
             // Terminate-time, and last: a pairing ceremony must not depend on
             // one screen staying open, and this root's other driver — the
             // sync:serve timer — is only running while the daemon is up.
@@ -146,3 +139,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $app->make(EnsurePrivateDatabaseFile::class)->run();
     })
     ->create();
+
+// There is no app/ for Laravel to match a psr-4 root against, and without one
+// Application::getNamespace() throws — in Blade's ComponentTagCompiler, so a
+// view renders into a RuntimeException. Modules/ is where this application's
+// classes are. tests/Contracts/TheAppDirectoryStaysGoneArchTest.php holds it.
+$app->useAppPath($app->basePath('Modules'));
+
+return $app;
