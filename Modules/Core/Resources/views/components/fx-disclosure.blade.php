@@ -34,6 +34,11 @@
     claim about the figure, and an old record supports it no more than it
     supports the opposite.
 
+    A stale rate is marked on the trigger twice over, because the marker used
+    to be amber and nothing else: the ring fills in, which survives greyscale,
+    and the stale sentence joins the trigger's accessible name, which is the
+    only reading a screen reader gets. Both come off the same `staleNote()`.
+
     The age is Carbon's own relative phrase rather than a sentence of ours: it
     is localised in all twenty-six languages without a plural rule per
     language, and the distance between "3 days ago" and "3 months ago" is the
@@ -66,6 +71,16 @@
 
     $fxNothingToSay = $disclosure === null || $disclosure->isEmpty();
 
+    $fxStaleNote = $fxNothingToSay ? null : $disclosure->staleNote($onlineRates);
+
+    // The trigger's name carries the judgement, not just the subject. The
+    // marker beside it is a filled ring against a hollow one, which a reader
+    // who hears the page rather than sees it is not offered at all.
+    $fxTriggerName = $label === null
+        ? Lang::get('core::fx.rate_details')
+        : Lang::get('core::fx.rate_details_for', ['name' => $label]);
+    $fxTriggerLabel = $fxStaleNote === null ? $fxTriggerName : $fxTriggerName.'. '.$fxStaleNote;
+
     $fxDated = static fn (?CarbonImmutable $when): string => $when === null
         ? ''
         : Lang::get('core::fx.as_of_age', [
@@ -87,7 +102,7 @@
                 class="fx-disclosure-trigger fx-disclosure-trigger--inline"
                 style="anchor-name: --{{ $fxPanelId }};"
                 popovertarget="{{ $fxPanelId }}"
-                aria-label="{{ $label === null ? Lang::get('core::fx.rate_details') : Lang::get('core::fx.rate_details_for', ['name' => $label]) }}"
+                aria-label="{{ $fxTriggerLabel }}"
             >
                 <span class="fx-icon {{ $disclosure->isStale() ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
             </button>
@@ -104,7 +119,6 @@
     </span>
 
     @if ($disclosure->hasRates())
-        @php($fxStaleNote = $disclosure->staleNote($onlineRates))
         @if ($flat)
             <div data-fx-rates-detail>
                 @include('core::components.partials.fx-rate-lines', ['disclosure' => $disclosure, 'fxDated' => $fxDated, 'fxStaleNote' => $fxStaleNote])

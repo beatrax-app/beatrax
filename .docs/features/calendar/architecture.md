@@ -315,6 +315,15 @@ rose. That flag is true when the converted part is negative **or** when any
 bucket the rate table could not reach is itself negative — being overdrawn in
 pesos is an overdraft whatever the pesos are worth.
 
+A risk cell carries a rose **edge bar** as well as the tint, and the bar is the
+part of it that is not a hue. The tint alone measures 1.20:1 against a plain
+cell in light and 1.11:1 in dark once the colour is taken away, and the signed
+balance it leant on sits in the cell corner under `hidden sm:inline-block` — so
+below 640px the phone drew the day number, the entry count and a tint nobody
+without colour vision could see, and nothing else said the day went negative.
+The cell's `aria-label` already named it; the screen was the surface with no
+second signal.
+
 ## Past-day paid/missed matching
 
 For a past grid day, each entry that is still only an *expectation* — no
