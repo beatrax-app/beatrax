@@ -7,6 +7,7 @@ namespace Modules\Recurring\Internal\Detectors;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Services\BlindIndexCodec;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
@@ -99,13 +100,21 @@ final readonly class MerchantDisplayName
     // back to the key rather than writing ciphertext onto the review screen.
     private function fromTransactions(int $userId, string $normalized): ?string
     {
+        // first() takes one row out of the tie a DATE column leaves, and the
+        // string it carries is the name the review screen prints. Ordered on
+        // `id` the two devices named the same series differently.
         $row = $this->db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->where('counterparty_normalized', $normalized)
-            ->whereNotNull('counterparty_name')
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
-            ->first(['counterparty_name']);
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $userId)
+            ->where('transactions.counterparty_normalized', $normalized)
+            ->whereNotNull('transactions.counterparty_name')
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS)
+            ->first(['transactions.counterparty_name']);
 
         if ($row === null) {
             return null;

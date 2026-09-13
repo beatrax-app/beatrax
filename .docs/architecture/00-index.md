@@ -17,6 +17,7 @@ A topic in this subtree answers "how does X work across the codebase?" rather th
 | [Chain resolution](chain-resolution.md) | PayPal funding chains, ICS bulk-iDEAL settlement chains, the `pair_transaction_id` linkage, and the known-counterparty-IBAN alias bridge |
 | [Categorization](categorization.md) | The two-layer rule-and-memory categorizer, the priority fold in which the last matching rule wins, and the receipt-vs-statement enrichment conflict resolver |
 | [A read bounded by how much the user has](reads-bounded-by-the-user.md) | What a five-year ledger costs the reads that have no bound, which whole-table reads are correct as written, and the guard that keeps a new one from landing |
+| [An ordering that picks, and one that walks](an-ordering-that-picks.md) | Why a tie broken on `id` shows two devices different rows, the pick-versus-walk line the guard draws, and the four reads that still fall the wrong side of it |
 | [Measuring write cost](measuring-write-cost.md) | Why any bulk-write timing taken inside the test suite looks quadratic, and how to take one that does not |
 | [A rebuilt table loses a partial index](a-rebuilt-table-loses-a-partial-index.md) | Why adding a foreign key silently strips a `WHERE` clause off an index, what it cost the uncategorised count, and the guard that reads the predicate rather than the name |
 | [The Argon2id cost](argon2id-cost.md) | The one work factor every passphrase-derived key is stretched at, how it is pinned, and why the suite is allowed to derive at libsodium's floor |

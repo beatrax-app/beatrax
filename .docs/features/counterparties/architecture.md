@@ -312,7 +312,7 @@ order of a list. Today none of those eight groups happens to be at its
 counterparty's newest date, which is the difference between a defect
 that is firing and one that is an import away.
 
-The clause is `Internal\Support\NewestTransactionFirst::ACROSS_ACCOUNTS`:
+The clause is `Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS`:
 
 ```
 posted_at desc, booked_at desc, amount_minor desc, currency desc,
@@ -334,11 +334,25 @@ occurrence_ordinal)` groups** on the file at all.
 
 Six are not enough in general, because they are unique only *within* an
 account and one counterparty is charged across several — a subscription
-billed to two cards, a shop the reader pays from either account. So both
-reads join `accounts` and end on `iban`: `unique(user_id, iban)`, never
+billed to two cards, a shop the reader pays from either account. So each
+read joins `accounts` and ends on `iban`: `unique(user_id, iban)`, never
 sealed, and what the account IS rather than what this device numbered
 it. With the IBAN standing in for `account_id` the clause is the whole
 UNIQUE index, so the rank is total rather than merely better.
+
+There are **four** transaction reads in this module, not two, and the
+first pass fixed the ranked ones while leaving the two capped lists that
+put rows in front of the reader directly:
+`CounterpartyTriage::recentTransactionsFor()`, the five charges shown as
+the evidence for a triage decision, and
+`CounterpartyProfileQuery::recentActivity()`, the profile's
+recent-activity list. Both take a `limit`, so the tie decided *which*
+rows the two devices showed, which is the same harm the window function
+was fixed for. All four carry the clause now, and
+[an ordering that picks](../../architecture/an-ordering-that-picks.md)
+is the guard that keeps a fifth from landing without it — along with the
+same read in `Search`, `Import` and `Recurring`, which is why the clause
+now lives in `Ledger\Public\`.
 
 `fingerprint` is the obvious single-column answer and it is wrong:
 `FingerprintComposer` folds `account_id` into the digest, so the two
@@ -363,7 +377,7 @@ Ascending is arbitrary; the slug carries no recency. Arbitrary-but-agreed
 is what a tie-break needs, and it is the one thing `id` was not.
 
 The 20 descriptions `suggestionFor()` tallies a merchant name out of are
-ordered by the same `NewestTransactionFirst::SQL`. The cap picks the
+ordered by the same `NewestTransactionFirst::ACROSS_ACCOUNTS`. The cap picks the
 pool the percentage is computed over, and PHP's `arsort()` is stable, so
 a two-way tie in that tally is settled by whichever description the
 query returned first. Both halves reach the reader — as a suggested
