@@ -134,6 +134,10 @@ final class AnomalyCorpusSeeder
                 'type' => $type,
                 'source_format' => 'asn-csv',
                 'source_row_index' => $rowIndex,
+                // Which occurrence of the dedup tuple this row is. Left at 0 by
+                // every fixture but the duplicate-group one, where three charges
+                // a bank booked identically are told apart by nothing else.
+                'occurrence_ordinal' => (int) ($row['occurrence_ordinal'] ?? 0),
                 'fingerprint_version' => 3,
                 'created_at' => '2026-06-13 00:00:00',
                 'updated_at' => '2026-06-13 00:00:00',
