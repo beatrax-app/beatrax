@@ -11,16 +11,18 @@ use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Transfers\Internal\Support\EarliestLegFirst;
 
 uses(RefreshDatabase::class);
 
 // The reverse arm narrows to a small candidate set in SQL and then decrypts and
-// matches in PHP, taking the first row that matches. It ordered by booked_at
-// alone — and two legs of one transfer routinely book on the same day, which is
-// the ordinary case, not an edge one. With the key equal, which row arrives
-// first is the engine's to choose: it can differ between runs, between SQLite
-// builds, and after a vacuum. Whichever leg it picks then gets written into
-// pair_transaction_id, so the arbitrary answer is the one that persists.
+// matches in PHP, taking the first row that matches. Two legs of one transfer
+// routinely book on the same day, which is the ordinary case, not an edge one.
+
+// The tie used to be settled on the id, which is an autoincrement each device
+// counts for itself: the same logical row is a different number on the peer, so
+// the two devices picked different legs and both wrote the answer into
+// pair_transaction_id, which travels as last-write-wins.
 
 function reverseOrderUser(): User
 {
@@ -59,7 +61,7 @@ function reverseOrderTx(User $user, Account $account, ImportRun $run, array $ove
     ], $overrides));
 }
 
-it('settles two candidates sharing a booked_at on the lower id', function (): void {
+it('settles two candidates sharing a booked_at on a key the peer computes alike', function (): void {
     $user = reverseOrderUser();
 
     $bank = Account::create([
@@ -102,20 +104,24 @@ it('settles two candidates sharing a booked_at on the lower id', function (): vo
     ]);
 
     // Both name the bank account, both book at the same instant, both are
-    // unpaired: nothing but the ordering separates them.
-    $first = reverseOrderTx($user, $savings, $run, [
+    // unpaired: nothing off the statement separates them but the account they
+    // sit on. The savings row is created first and so holds the LOWER id, while
+    // the buffer row holds the first IBAN — the two rules answer differently.
+    $lowerId = reverseOrderTx($user, $savings, $run, [
         'type' => 'transfer_out',
         'amount_minor' => -5000,
         'settled_amount_minor' => -5000,
         'counterparty_iban' => 'NL57ASNB0123456789',
     ]);
 
-    reverseOrderTx($user, $second, $run, [
+    $firstIban = reverseOrderTx($user, $second, $run, [
         'type' => 'transfer_out',
         'amount_minor' => -5000,
         'settled_amount_minor' => -5000,
         'counterparty_iban' => 'NL57ASNB0123456789',
     ]);
+
+    expect($firstIban->id)->toBeGreaterThan($lowerId->id, 'the fixture no longer inverts id order against IBAN order');
 
     // The incoming leg carries no counterparty IBAN, which is what sends it
     // down the reverse arm rather than the forward one.
@@ -131,14 +137,14 @@ it('settles two candidates sharing a booked_at on the lower id', function (): vo
     /** @var Transaction $paired */
     $paired = Transaction::query()->findOrFail($incoming->id);
 
-    expect($paired->pair_transaction_id)->toBe($first->id);
+    expect($paired->pair_transaction_id)->toBe($firstIban->id);
 });
 
-// The behavioural pin above passes on this build today — which is the whole
-// problem. SQLite is free to answer a tie either way, so a green run proves
-// only what it did this time. What can be asserted is that the query leaves it
-// no choice: the candidate read has to end on a column no two rows share.
-it('orders the candidate read on something no two rows can tie on', function (): void {
+// The behavioural pin above proves which leg THIS build picks. What it cannot
+// prove is that the clause names no column the peer numbers differently, since
+// both devices run the same build against different numbers. That is a fact
+// about the SQL, so it is asserted against the SQL.
+it('orders the candidate read on columns both devices hold alike', function (): void {
     $user = reverseOrderUser();
 
     $bank = Account::create([
@@ -180,17 +186,20 @@ it('orders the candidate read on something no two rows can tie on', function ():
     // toContain() is variadic over NEEDLES, so a failure message passed beside
     // the needle silently becomes a second one. The offending orderings are
     // collected instead, which also names every one of them at once.
-    $leavingATie = [];
-    foreach ($candidateReads as $sql) {
-        $orderBy = substr($sql, (int) strrpos($sql, 'order by'));
+    $agreed = [EarliestLegFirst::ACROSS_ACCOUNTS, EarliestLegFirst::ON_ONE_ACCOUNT];
 
-        if (! str_contains($orderBy, '"id"')) {
-            $leavingATie[] = $orderBy;
+    $countedPerDevice = [];
+    foreach ($candidateReads as $sql) {
+        $orderBy = trim(substr($sql, (int) strrpos($sql, 'order by') + strlen('order by')));
+        $orderBy = trim((string) preg_replace('/\s+limit\s+\d+$/', '', $orderBy));
+
+        if (! in_array($orderBy, $agreed, true)) {
+            $countedPerDevice[] = $orderBy;
         }
     }
 
-    expect($leavingATie)->toBe(
+    expect($countedPerDevice)->toBe(
         [],
-        "These orderings leave a tie to SQLite:\n  ".implode("\n  ", $leavingATie)
+        "These orderings name a column the peer counts for itself:\n  ".implode("\n  ", $countedPerDevice)
     );
 });
