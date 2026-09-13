@@ -10,6 +10,8 @@ use Amp\Socket\TlsInfo;
 use Amp\Socket\UnixAddress;
 use Amp\TimeoutException;
 use Amp\Websocket\Client\WebsocketConnection;
+use Amp\Websocket\WebsocketCloseCode;
+use Amp\Websocket\WebsocketClosedException;
 use Amp\Websocket\WebsocketCloseInfo;
 use Amp\Websocket\WebsocketCount;
 use Amp\Websocket\WebsocketMessage;
@@ -891,4 +893,360 @@ it('puts a PEER_REVOKED frame on the wire that the peer can actually open', func
     $told = json_decode($desktopNoiseSession->decrypt($sent[0]), true, 8, JSON_THROW_ON_ERROR);
 
     expect($told['type'])->toBe(GdkEpochDeliveryGateway::MSG_PEER_REVOKED);
+});
+
+// The whole exchange, from the phone's side of it. Every test above drives one
+// step through a fake connection; none of them has ever run runExchange(), so
+// the order the initiator puts its frames on the wire in — and what it does
+// when the desktop stops answering part way through it — was never read.
+
+// A responder that completes the REAL Noise IK handshake against whatever the
+// phone dials with, then serves $script sealed in wire order with its own send
+// cipher, and records what the phone sent, decrypted.
+/**
+ * @param  list<string>  $script  Desktop plaintexts, in the order the phone reads them.
+ * @param  ArrayObject<int, string>|null  $heard  Receives each phone plaintext.
+ * @param  bool  $hangUpOnSend  Throws WebsocketClosedException on the first
+ *                              post-handshake send, which is what amphp does
+ *                              once the peer has closed the socket.
+ */
+function lanExchangeDesktop(
+    string $desktopSecretKey,
+    string $desktopPublicKey,
+    array $script,
+    ?ArrayObject $heard = null,
+    bool $hangUpOnSend = false,
+): WebsocketConnection {
+    return new class($desktopSecretKey, $desktopPublicKey, $script, $heard, $hangUpOnSend) implements IteratorAggregate, WebsocketConnection
+    {
+        private NoiseHandshakeState $handshake;
+
+        private ?NoiseSession $noise = null;
+
+        private ?string $msg2 = null;
+
+        private int $cursor = 0;
+
+        public function __construct(
+            string $desktopSecretKey,
+            string $desktopPublicKey,
+            private array $script,
+            private ?ArrayObject $heard,
+            private bool $hangUpOnSend,
+        ) {
+            $this->handshake = NoiseHandshakeState::initIkResponder($desktopSecretKey, $desktopPublicKey);
+        }
+
+        public function receive(?Cancellation $cancellation = null): ?WebsocketMessage
+        {
+            if ($this->msg2 !== null) {
+                $msg2 = $this->msg2;
+                $this->msg2 = null;
+
+                return WebsocketMessage::fromBinary($msg2);
+            }
+
+            if ($this->noise === null || $this->cursor >= count($this->script)) {
+                return null;
+            }
+
+            return WebsocketMessage::fromBinary($this->noise->encrypt($this->script[$this->cursor++]));
+        }
+
+        // The first send is Noise msg1 and is answered in kind; everything
+        // after it is session traffic this desktop can open.
+        public function sendBinary(string $data): void
+        {
+            if ($this->noise === null) {
+                $this->handshake->readMessage($data);
+                $this->msg2 = $this->handshake->writeMessage('');
+                [$send, $recv, $peerStatic] = $this->handshake->split();
+                $this->noise = new NoiseSession($send, $recv, $peerStatic);
+
+                return;
+            }
+
+            if ($this->hangUpOnSend) {
+                throw new WebsocketClosedException(
+                    'Client unexpectedly closed',
+                    WebsocketCloseCode::ABNORMAL_CLOSE,
+                    'Writing to the client failed',
+                );
+            }
+
+            $this->heard?->append($this->noise->decrypt($data));
+        }
+
+        public function getHandshakeResponse(): Response
+        {
+            throw new LogicException('not used in this test');
+        }
+
+        public function getId(): int
+        {
+            return 3;
+        }
+
+        public function getLocalAddress(): SocketAddress
+        {
+            return new UnixAddress('test');
+        }
+
+        public function getRemoteAddress(): SocketAddress
+        {
+            return new UnixAddress('test');
+        }
+
+        public function getTlsInfo(): ?TlsInfo
+        {
+            return null;
+        }
+
+        public function getCloseInfo(): WebsocketCloseInfo
+        {
+            throw new LogicException('not used in this test');
+        }
+
+        public function isCompressionEnabled(): bool
+        {
+            return false;
+        }
+
+        public function sendText(string $data): void {}
+
+        public function streamText(ReadableStream $stream): void {}
+
+        public function streamBinary(ReadableStream $stream): void {}
+
+        public function ping(): void {}
+
+        public function getCount(WebsocketCount $type): int
+        {
+            return 0;
+        }
+
+        public function getTimestamp(WebsocketTimestamp $type): float
+        {
+            return NAN;
+        }
+
+        public function isClosed(): bool
+        {
+            return false;
+        }
+
+        public function close(int $code = 1000, string $reason = ''): void {}
+
+        public function onClose(Closure $onClose): void {}
+
+        public function getIterator(): Traversable
+        {
+            return new ArrayIterator([]);
+        }
+    };
+}
+
+// A phone with an identity, and one confirmed desktop in its registry.
+/**
+ * @return array{0: object, 1: string, 2: string, 3: string} identity, desktop
+ *                                                           secret, desktop
+ *                                                           public, desktop hex
+ */
+function lanExchangePhoneAndDesktop(int $userId, Session $session, string $deviceId, ?string $confirmedAt = '2026-09-01T10:05:00Z'): array
+{
+    $identity = app(DeviceIdentityService::class)->generateAndPersist($userId, $session);
+
+    $desktopKeyPair = sodium_crypto_kx_keypair();
+    $desktopSecret = sodium_crypto_kx_secretkey($desktopKeyPair);
+    $desktopPublic = sodium_crypto_kx_publickey($desktopKeyPair);
+
+    app(DatabaseManager::class)->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        'x25519_public_key_hex' => sodium_bin2hex($desktopPublic),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-09-01T10:00:00Z',
+        'confirmed_at' => $confirmedAt,
+        'created_at' => '2026-09-01T10:00:00Z',
+        'updated_at' => '2026-09-01T10:00:00Z',
+    ]);
+
+    return [$identity, $desktopSecret, $desktopPublic, sodium_bin2hex($desktopPublic)];
+}
+
+/** @param ArrayObject<int, string> $heard */
+function lanExchangeTypesSent(ArrayObject $heard): array
+{
+    $types = [];
+
+    foreach ($heard as $plaintext) {
+        /** @var array{type?: string} $decoded */
+        $decoded = json_decode($plaintext, true, 8, JSON_THROW_ON_ERROR);
+        $types[] = $decoded['type'] ?? '(not a control message)';
+    }
+
+    return $types;
+}
+
+function lanExchangeSessionRow(int $userId, string $peerDeviceId): ?object
+{
+    return app(DatabaseManager::class)->connection()
+        ->table('sync_sessions')
+        ->where('user_id', $userId)
+        ->where('peer_device_id', $peerDeviceId)
+        ->first();
+}
+
+it('runs a whole exchange in the order the responder reads it, and leaves no session row open', function (): void {
+    $user = lanReceiveUser('lan-exchange-whole');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    [$phone, $desktopSecret, $desktopPublic] = lanExchangePhoneAndDesktop($userId, $session, 'desktop-whole');
+
+    /** @var ArrayObject<int, string> $heard */
+    $heard = new ArrayObject;
+
+    // Exactly what SyncWebSocketHandler puts on the wire, in its order: the
+    // epoch push header, the ack for what this phone pushed back, then the
+    // four catch-up frames.
+    $connection = lanExchangeDesktop($desktopSecret, $desktopPublic, [
+        json_encode(['type' => 'GDK_EPOCH_PUSH', 'count' => 0], JSON_THROW_ON_ERROR),
+        json_encode(['type' => 'GDK_EPOCH_ACK', 'count' => 0], JSON_THROW_ON_ERROR),
+        json_encode(['type' => 'CATCH_UP_RESPONSE', 'frame_count' => 0], JSON_THROW_ON_ERROR),
+        json_encode([
+            'type' => 'CATCH_UP_REQUEST',
+            'cursors' => [],
+            'verifiable' => null,
+            'device_id' => 'desktop-whole',
+            'user_id' => $userId,
+        ], JSON_THROW_ON_ERROR),
+        json_encode(['type' => 'CATCH_UP_COMPLETE'], JSON_THROW_ON_ERROR),
+    ], $heard);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+
+    $outcome = $client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic));
+
+    expect($outcome)->toBe(LanDialOutcome::Synced);
+
+    // The initiator's half of the sequence. A phone that sent these in any
+    // other order would deadlock against the responder, and nothing before
+    // this read the order at all.
+    expect(lanExchangeTypesSent($heard))->toBe([
+        'GDK_EPOCH_ACK',
+        'GDK_EPOCH_PUSH',
+        'CATCH_UP_REQUEST',
+        'CATCH_UP_RESPONSE',
+        'CATCH_UP_COMPLETE',
+    ]);
+
+    $row = lanExchangeSessionRow($userId, 'desktop-whole');
+
+    expect($row?->status)->toBe('closed', 'an exchange that ended must not leave a row claiming it is still running');
+});
+
+// A desktop whose own catch-up threw closes the socket, and a close reads here
+// as a clean null. Answered as Synced, the phone told the reader every device
+// agreed over a tick in which the desktop said nothing at all about what it holds.
+it('does not call an exchange the peer abandoned mid-catch-up a completed sync', function (): void {
+    $user = lanReceiveUser('lan-exchange-abandoned');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    [$phone, $desktopSecret, $desktopPublic] = lanExchangePhoneAndDesktop($userId, $session, 'desktop-abandons');
+
+    // The epoch phase completes and the desktop then goes away, which is
+    // where its own runCatchUp() gives up on a read of its own.
+    $connection = lanExchangeDesktop($desktopSecret, $desktopPublic, [
+        json_encode(['type' => 'GDK_EPOCH_PUSH', 'count' => 0], JSON_THROW_ON_ERROR),
+        json_encode(['type' => 'GDK_EPOCH_ACK', 'count' => 0], JSON_THROW_ON_ERROR),
+    ]);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+
+    expect($client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic)))
+        ->toBe(LanDialOutcome::NotReached, 'a peer that never sent CATCH_UP_COMPLETE exchanged no history')
+        ->and(lanExchangeSessionRow($userId, 'desktop-abandons')?->status)
+        ->toBe('closed');
+});
+
+// amphp raises WebsocketClosedException from the SEND, not the read, so a
+// desktop that hangs up is first heard from on the next frame out. Uncaught,
+// it left syncOnce() entirely — past the relay leg, the epoch inbox drain and
+// the held-entry recovery pass that run after the LAN leg on the same tick.
+it('reports a peer that hung up rather than throwing the whole sync tick away', function (): void {
+    $user = lanReceiveUser('lan-exchange-hangup');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    [$phone, $desktopSecret, $desktopPublic] = lanExchangePhoneAndDesktop($userId, $session, 'desktop-hangs-up');
+
+    $connection = lanExchangeDesktop($desktopSecret, $desktopPublic, [], null, hangUpOnSend: true);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+
+    expect($client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic)))
+        ->toBe(LanDialOutcome::NotSecured)
+        ->and(lanExchangeSessionRow($userId, 'desktop-hangs-up')?->status)
+        ->toBe('closed', 'the row this dial opened must not outlive the connection it was opened for');
+});
+
+// The race the user creates by removing the desktop while a tick is dialling
+// it: the key was read off a confirmed row and the gate re-reads a row that no
+// longer is. The peer is told before the hang-up, and the row keeps the word
+// `failed` — closing it would overwrite the one state that says verification.
+it('tells a peer its own gate refuses, and records that refusal as a failure', function (): void {
+    $user = lanReceiveUser('lan-exchange-gate-refuses');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    AppLockTestHarness::unlock($session, str_repeat('k', 32));
+
+    [$phone, $desktopSecret, $desktopPublic] = lanExchangePhoneAndDesktop(
+        $userId,
+        $session,
+        'desktop-unconfirmed',
+        confirmedAt: null,
+    );
+
+    /** @var ArrayObject<int, string> $heard */
+    $heard = new ArrayObject;
+    $connection = lanExchangeDesktop($desktopSecret, $desktopPublic, [], $heard);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+
+    expect(fn () => $client->runExchange($connection, $phone, $session, sodium_bin2hex($desktopPublic)))
+        ->toThrow(LanSyncException::class, 'confirmed-device auth gate');
+
+    expect(lanExchangeTypesSent($heard))->toBe(
+        [GdkEpochDeliveryGateway::MSG_PEER_REVOKED],
+        'a peer told nothing cannot tell being removed from a flaky link',
+    );
+
+    expect(lanExchangeSessionRow($userId, 'unknown')?->status)->toBe(
+        'failed',
+        'a refused handshake is a verification failure, and closing its row would erase which kind it was',
+    );
 });
