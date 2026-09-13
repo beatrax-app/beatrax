@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'A mentés nem sikerült — a tételek összegének pontosan egyeznie kell a tranzakció végösszegével.',
         'not_found' => 'A tranzakció nem található.',
-        'amount_zero' => 'Az összeg nem lehet :amount',
+        'amount_positive' => 'Adj meg nullánál nagyobb összeget.',
         'choose_category' => 'Válassz kategóriát.',
         'choose_before_removing' => 'Az eltávolítás előtt válassz kategóriát.',
         'choose_before_unsplitting' => 'A felosztás megszüntetése előtt válassz kategóriát.',

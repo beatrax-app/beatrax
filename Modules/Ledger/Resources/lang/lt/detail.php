@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Nepavyko išsaugoti — dalių sumos turi tiksliai sutapti su visa operacijos suma.',
         'not_found' => 'Operacija nerasta.',
-        'amount_zero' => 'Suma negali būti :amount',
+        'amount_positive' => 'Įvesk už nulį didesnę sumą.',
         'choose_category' => 'Pasirink kategoriją.',
         'choose_before_removing' => 'Prieš pašalindamas pasirink kategoriją.',
         'choose_before_unsplitting' => 'Prieš panaikindamas padalijimą pasirink kategoriją.',
