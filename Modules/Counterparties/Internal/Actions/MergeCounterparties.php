@@ -29,12 +29,15 @@ final readonly class MergeCounterparties implements MergesCounterparties
 
     private const string SOURCE_MAP_ENTITY = 'counterparty';
 
+    private const string TABLE = 'counterparties';
+
     public function __construct(
         private DatabaseManager $db,
         private CounterpartySlugResolver $slugResolver,
         private SensitiveColumnCodec $codec,
         private SessionFactory $session,
         private DateFactory $dates,
+        private RepointJsonReferences $jsonReferences,
     ) {}
 
     /**
@@ -148,6 +151,13 @@ final readonly class MergeCounterparties implements MergesCounterparties
 
         $this->repointSuppressionRules($userId, $absorbedId, $survivorId, $events);
         $this->repointSourceMap($userId, $absorbedId, $survivorId, $events);
+
+        // A counterparty id inside a JSON value names the absorbed row as
+        // surely as a column does, and no grep for `counterparty_id` reaches
+        // one. Derived from the declaration the merge layer's alias
+        // translation reads, so the two cannot cover different sites.
+        $events = [...$events, ...$this->jsonReferences->move(self::TABLE, $userId, $absorbedId, $survivorId)];
+
         $this->removeRow($userId, $absorbedId, $events);
 
         return $moved;
