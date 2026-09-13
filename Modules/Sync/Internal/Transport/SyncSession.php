@@ -206,6 +206,10 @@ final class SyncSession
         // like an ordinary sync from every surface above it.
         $unverifiableAuthors = [];
 
+        // The same count for the other refusal in this loop, which kept the
+        // per-entry line the one above was written to replace.
+        $invalidSignatures = [];
+
         foreach ($entries as $entry) {
             $pubKeyHex = $deviceKeys[$entry->deviceId] ?? null;
             if ($pubKeyHex === null) {
@@ -216,10 +220,7 @@ final class SyncSession
 
             $pubKeyBin = sodium_hex2bin($pubKeyHex);
             if (! $this->signer->verifyAny($entry->signatureCandidates(), $entry->signature, $pubKeyBin)) {
-                $this->logger?->warning('SyncSession: dropped entry with invalid signature.', [
-                    'device_id' => $entry->deviceId,
-                    'reason' => 'signature_invalid',
-                ]);
+                $invalidSignatures[$entry->deviceId] = ($invalidSignatures[$entry->deviceId] ?? 0) + 1;
 
                 continue;
             }
@@ -231,6 +232,19 @@ final class SyncSession
             }
 
             $verified[] = $entry;
+        }
+
+        if ($invalidSignatures !== []) {
+            // Refused, not dropped: the cursor below is advanced only over what
+            // this device accounted for, so an author whose whole offer fails
+            // here keeps its place and is offered the same entries again on
+            // every reconnect.
+            $this->logger?->warning('SyncSession: refused entries the author\'s own key does not sign.', [
+                'reason' => 'signature_invalid',
+                'refused' => array_sum($invalidSignatures),
+                'received' => count($entries),
+                'device_ids' => array_keys($invalidSignatures),
+            ]);
         }
 
         if ($unverifiableAuthors !== []) {
@@ -316,8 +330,17 @@ final class SyncSession
         $this->status = SyncSessionStatus::Closed;
         $this->noiseSession = null;
 
-        if ($this->sessionRowId !== null) {
-            $now = Instant::zulu($this->clock->now());
+        if ($this->sessionRowId === null) {
+            return;
+        }
+
+        $now = Instant::zulu($this->clock->now());
+
+        // The last of this class's four writes to the row and the only one that
+        // was a precondition. Losing the single SQLite writer here threw out of
+        // the responder's teardown, which the WebSocket layer answers with an
+        // abnormal close on a session that had just finished cleanly.
+        try {
             $this->db->connection()
                 ->table('sync_sessions')
                 ->where('id', $this->sessionRowId)
@@ -326,6 +349,10 @@ final class SyncSession
                     'last_seen_at' => $now,
                     'updated_at' => $now,
                 ]);
+        } catch (Throwable $e) {
+            $this->logger?->debug('SyncSession: session close stamp skipped.', [
+                'reason' => $e::class,
+            ]);
         }
     }
 
@@ -388,21 +415,6 @@ final class SyncSession
         string $lastSeenAt,
     ): void {
         $now = Instant::zulu($this->clock->now());
-
-        if ($this->sessionRowId !== null) {
-            $this->db->connection()
-                ->table('sync_sessions')
-                ->where('id', $this->sessionRowId)
-                ->update([
-                    'status' => $status->value,
-                    'error_message' => $errorMessage,
-                    'connected_at' => $connectedAt,
-                    'last_seen_at' => $lastSeenAt,
-                    'updated_at' => $now,
-                ]);
-
-            return;
-        }
 
         // Keyed on the table's own unique index, not a plain insert: this
         // object lives for ONE connection, so its cached row id is null on
