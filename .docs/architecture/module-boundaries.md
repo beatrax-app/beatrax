@@ -52,6 +52,37 @@ two decisions produced.
 | `Tax` | Tax-deductible tagging, per-year categorisation, and CSV/PDF export for Dutch IB/OB tax filing |
 | `Transfers` | Self-transfer detection across accounts, transfer-pair resolution |
 
+### How the thirty-five providers get ordered
+
+Two mechanisms register them, and which one a module falls under is not visible
+from the module itself.
+
+1. **nwidart** (`config/modules.php`, activator file `modules_statuses.json`)
+   registers the **24 enabled** modules in *ascending* `module.json` priority.
+   Core declares the lowest, so it registers first.
+2. **`bootstrap/providers.php`** registers the remaining **11** afterwards.
+   Laravel loads that file after the package manifest that brings nwidart in,
+   so every entry in it lands after the whole nwidart block regardless of the
+   order written there.
+
+25 modules ship a `module.json`. `Anomaly` ships one but is absent from
+`modules_statuses.json`, so nwidart never reads its priority and its provider is
+ordered by `bootstrap/providers.php` alongside the ten modules that declare no
+manifest at all (`Calendar`, `Chains`, `Desktop`, `DevMode`, `DriftAlerts`,
+`EmailScan`, `Forecasting`, `Receipts`, `Recurring`, `Transfers`).
+
+The order is load-bearing because `CoreServiceProvider::register()` installs the
+`App\Models\User` class alias, and there is no `app/` directory for that name to
+resolve against otherwise. A provider that reaches for `App\Models\User` before
+Core has registered finds nothing.
+
+Measured on this tree: 40 provider classes across all 35 modules, with
+`CoreServiceProvider` at position 31 of 93 loaded providers. Flipping `Core` to
+`false` in `modules_statuses.json` moves it to 61 and puts 25 provider classes
+across 24 modules ahead of the alias — while the `module.json` priority rule
+stays green throughout, because it reads manifests rather than the boot. Both
+halves are held by `tests/Contracts/ModulePrioritiesArchTest.php`.
+
 ## The Public / Internal / Models split
 
 Every module has a fixed directory layout:
