@@ -347,9 +347,9 @@ final class RelayServeCommand extends Command
         return $this->json($status, json_encode(['error' => $errorCode], JSON_THROW_ON_ERROR));
     }
 
-    // Null is a decision, not an absence: with no material on disk the relay
-    // serves plaintext, which is why the fall-back is said out loud rather
-    // than inferred from a quiet bind.
+    // Null is a decision, not an absence: material that cannot serve a
+    // connection drops the relay to plaintext, which is why the fall-back is
+    // said out loud rather than inferred from a quiet bind.
     private function tlsBindContext(): ?BindContext
     {
         if (! $this->tls->isUsable()) {

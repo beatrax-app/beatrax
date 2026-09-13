@@ -107,7 +107,7 @@ it('reports a failure instead of parking when it cannot take the port', function
     expect($code)->toBe(RelayServeCommand::FAILURE)
         ->and($output)->toContain('relay:serve: fatal')
         ->and($logger->said('relay:serve: fatal error.'))->toBeTrue()
-        ->and($logger->said('no TLS material; serving plaintext'))->toBeTrue('a relay that drops to plaintext must say so out loud');
+        ->and($logger->said('no usable TLS material'))->toBeTrue('a relay that drops to plaintext must say so out loud');
 });
 
 it('refuses a port outside the range a socket can carry', function (): void {
@@ -119,20 +119,20 @@ it('refuses a port outside the range a socket can carry', function (): void {
         ->and($output)->toContain('invalid port 70000');
 });
 
-it('binds TLS whenever the material is there, and plaintext only when it is not', function (): void {
+it('binds TLS only when the material can actually serve a connection', function (): void {
     $logger = new RecordingLogger;
     $command = relayDaemonCommand($logger);
     $context = new ReflectionMethod($command, 'tlsBindContext');
 
     expect($context->invoke($command))->toBeNull('there is no material yet')
-        ->and($logger->said('no TLS material; serving plaintext'))->toBeTrue();
+        ->and($logger->said('no usable TLS material'))->toBeTrue();
 
     (new RelayTlsMaterial)->ensure('beatrax-relay.test');
 
     $bound = $context->invoke($command);
 
     expect($bound)->toBeInstanceOf(BindContext::class)
-        ->and($bound?->getTlsContext())->not->toBeNull('material on disk must never be served around');
+        ->and($bound?->getTlsContext())->not->toBeNull('a key that opens its certificate must never be served around');
 });
 
 it('answers a delivery it cannot store with a refusal rather than a stack trace', function (): void {
