@@ -49,7 +49,11 @@ final class IcsPdfAdapter implements SourceAdapter
     // anything that is not grouped reads exactly as it did before.
     private const string FIGURE = '(?:\d{1,3}(?:'.self::GROUP_MARK.'\d{3})+(?![\d])(?:,\d+)?|[\d.,]+)';
 
-    private const string AMOUNT_AF_BIJ_FRAGMENT = '€\s+('.self::FIGURE.')\s+(Af|Bij)';
+    // Every figure this statement prints in its summary blocks carries the
+    // euro sign in a column of its own, so the two live together.
+    private const string EURO_FIGURE = '€\s+('.self::FIGURE.')';
+
+    private const string AMOUNT_AF_BIJ_FRAGMENT = self::EURO_FIGURE.'\s+(Af|Bij)';
 
     private const string TRAILING_COUNTRY_CODE_REGEX = '/\s+[A-Z]{2}$/';
 
@@ -478,8 +482,8 @@ final class IcsPdfAdapter implements SourceAdapter
         $pattern = '/'.preg_quote(IcsPdfExtractionMap::SUMMARY_CREDIT_LIMIT, '/')
             .'\s+'.preg_quote(IcsPdfExtractionMap::SUMMARY_MIN_DUE, '/')
             .'[\s\S]*?'
-            .'€\s+('.self::FIGURE.')\s+'
-            .'€\s+('.self::FIGURE.')/';
+            .self::EURO_FIGURE.'\s+'
+            .self::EURO_FIGURE.'/';
 
         if (preg_match($pattern, $text, $m) !== 1) {
             return [];
