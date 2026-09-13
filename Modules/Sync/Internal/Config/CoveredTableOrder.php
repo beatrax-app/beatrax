@@ -35,6 +35,39 @@ final readonly class CoveredTableOrder
         'transactions' => ['counterparty_id' => 'counterparties'],
     ];
 
+    // The same references, one level further out of reach: the ids are keys
+    // inside a JSON value, so the column is one opaque blob to a foreign key
+    // and to every schema read. A saved report's account filter decides which
+    // money the figure counts, so the peer's number is a different report.
+    /**
+     * @var array<string, array<string, array<string, string>>> table => column => (path => covered table)
+     *
+     * @link ../../../../.docs/features/sync/op-log-merge-rules.md#references-that-live-inside-a-json-value
+     */
+    private const array JSON_PARENTS = [
+        'saved_reports' => [
+            'definition' => [
+                'accounts.*' => 'accounts',
+                'categories.*' => 'categories',
+                'counterparties.*' => 'counterparties',
+            ],
+        ],
+        // `rule_id` is deliberately absent: categorization_rules is device-local,
+        // so no create for one ever arrives, no alias can exist, and declaring
+        // it would read as coverage where none is possible.
+        'transactions' => [
+            'auto_category_provenance' => [
+                'category_id' => 'categories',
+                'memory_id' => 'merchant_memories',
+            ],
+            'enriched_from' => ['*.import_run_id' => 'import_runs'],
+        ],
+        'user_preferences' => [
+            'calendar_entries_accounts' => ['*' => 'accounts'],
+            'calendar_balance_accounts' => ['*' => 'accounts'],
+        ],
+    ];
+
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
@@ -148,6 +181,29 @@ final readonly class CoveredTableOrder
         }
     }
 
+    // The JSON columns of $table, each mapped to the paths inside it that name
+    // a covered row. A path is dot-separated; `*` stands for every element of
+    // a list, so `accounts.*` is the account filter and `*.import_run_id` the
+    // run named by each entry of a provenance list.
+    /**
+     * @return array<string, array<string, string>> column => (path => the covered table it names)
+     */
+    public function jsonParentColumns(string $table): array
+    {
+        $covered = array_keys($this->rules->rules());
+        $columns = [];
+
+        foreach (self::JSON_PARENTS[$table] ?? [] as $column => $paths) {
+            $declared = array_filter($paths, static fn (string $target): bool => in_array($target, $covered, true));
+
+            if ($declared !== []) {
+                $columns[$column] = $declared;
+            }
+        }
+
+        return $columns;
+    }
+
     // The same question, raising rather than answering nothing. dependencies()
     // asks it this way so a schema that will not answer reaches insertionOrder()
     // and is reported there as the fallback it really is, instead of thirty-nine
@@ -197,10 +253,37 @@ final readonly class CoveredTableOrder
         // a reference declared there because it carries no constraint is written
         // down before the rows naming it, not merely translated once both are
         // here. Self-references and uncovered targets are excluded there.
+
+        // A JSON parent joins them for the same reason: the alias a rewrite
+        // reads is recorded when the parent's own create lands, so a parent
+        // written afterwards is one whose id could not be rewritten.
         foreach ($covered as $table) {
-            $dependencies[$table] = array_values(array_unique(array_values($this->parentColumnsOrThrow($table))));
+            $dependencies[$table] = array_values(array_unique([
+                ...array_values($this->parentColumnsOrThrow($table)),
+                ...$this->jsonParentTargets($table),
+            ]));
         }
 
         return $dependencies;
+    }
+
+    // Self-references are dropped for the reason parentColumnsOrThrow() drops
+    // them: no order satisfies a table that is its own parent.
+    /**
+     * @return list<string>
+     */
+    private function jsonParentTargets(string $table): array
+    {
+        $targets = [];
+
+        foreach ($this->jsonParentColumns($table) as $paths) {
+            foreach ($paths as $target) {
+                if ($target !== $table) {
+                    $targets[] = $target;
+                }
+            }
+        }
+
+        return $targets;
     }
 }
