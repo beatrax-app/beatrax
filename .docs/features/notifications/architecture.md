@@ -182,8 +182,9 @@ and there is nowhere left for the sentence to be right on its own.
 device, not per user, since quiet hours and toggles are inherently
 per-device settings. `NotificationPreferenceQuery` is the sole Public
 read/write seam: `forCurrentDevice()` reads (or returns locked defaults
-for) this device's row, `forOtherDevices()` reads every other device
-read-only for the settings "Other devices" panel, and
+for) this device's row, `forOtherDevices()` reads, read-only for the settings
+"Other devices" panel, the preference row of every device the registry still
+confirms, and
 `saveForCurrentDevice()` is the only write path, validating server-side
 (out-of-range input throws, never clamps) and dispatching
 `NotificationPreferenceMutated` only after the write commits.
@@ -202,6 +203,17 @@ renames that row onto the real device id the first time the install has
 one, and `forCurrentDevice()` falls back to it, so pairing neither loses
 the settings nor leaves the pre-pairing row showing up as a foreign device
 in "Other devices".
+
+The registry is what decides which devices that panel has, and the panel asking
+the preference table instead is what left a removed one on it. Removal takes a
+peer's trust, its sessions, its mailbox and its tokens; it does not take its
+`notification_preferences` row, and it was never meant to — the row is the
+household's history of what that device was set to. Excluding only *this*
+device therefore listed the removed one for ever, and nameless, because
+`otherDeviceNames()` stops answering for a device it no longer confirms and the
+panel fell back to "Unnamed device". `forOtherDevices()` now admits only the
+device ids that map still holds, so the answer comes from the one place that
+knows what a reader's devices are.
 
 `NotificationPreferenceMutated`'s `preferenceId` is
 `notification_preferences.id`, a local autoincrement surrogate — unlike
