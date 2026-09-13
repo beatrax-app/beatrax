@@ -85,10 +85,10 @@ function migrationWritesSayingNothing(): array
     $silent = [];
 
     foreach (MigrationRowWrites::writingADeclaredTable() as $reading) {
-        $offence = migrationWriteOffence($reading);
+        $offense = migrationWriteOffense($reading);
 
-        if ($offence !== null) {
-            $silent[] = $reading['path'].' -- writes '.implode(', ', $reading['tables']).': '.$offence;
+        if ($offense !== null) {
+            $silent[] = $reading['path'].' -- writes '.implode(', ', $reading['tables']).': '.$offense;
         }
     }
 
@@ -100,7 +100,7 @@ function migrationWritesSayingNothing(): array
 /**
  * @param  array{path: string, tables: list<string>, announces: bool, ground: ?string, reason: ?string}  $reading
  */
-function migrationWriteOffence(array $reading): ?string
+function migrationWriteOffense(array $reading): ?string
 {
     if ($reading['announces']) {
         return $reading['ground'] === null
@@ -177,10 +177,10 @@ it('reports a migration that says nothing and clears one that declines or announ
         ->toBe([['goals'], ['goals'], ['goals']], 'The walk missed one of the three writes it was handed, so a tree '
             .'full of them would report clean for the same reason.');
 
-    expect(migrationWriteOffence($silent))
+    expect(migrationWriteOffense($silent))
         ->toBe('it neither announces nor carries a '.MigrationRowWrites::DECLINATION.' constant');
-    expect(migrationWriteOffence($declined))->toBeNull('A declination naming an admitted ground clears the write.');
-    expect(migrationWriteOffence($announcing))->toBeNull('An announced delete is not a declined one.');
+    expect(migrationWriteOffense($declined))->toBeNull('A declination naming an admitted ground clears the write.');
+    expect(migrationWriteOffense($announcing))->toBeNull('An announced delete is not a declined one.');
 
     // The delete that announces has to be told from the delete that does not,
     // or a tree where nothing announces reads the same as this one.

@@ -105,7 +105,7 @@ final class MigrationRowWrites
     public static function in(string $path, string $source, array $tables): array
     {
         /** @var list<array{0:int,1:string,2:int}|string> $tokens */
-        $tokens = token_get_all($source);
+        $tokens = BackendSourceFiles::tokensOf($path, $source);
         $text = array_map(static fn (array|string $token): string => is_array($token) ? $token[1] : $token, $tokens);
 
         [$ground, $reason] = self::declinationIn($tokens, $text);
