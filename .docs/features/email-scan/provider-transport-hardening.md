@@ -136,10 +136,16 @@ headers. Both clients route provider failures through a mapper —
 exception text. Anything reaching a log or a user-facing error goes
 through that scrubbing first.
 
-JSON that fails to decode raises `ProviderTransportException`; a body
-that decodes to a non-array returns `[]` rather than throwing, so a
-surprising-but-harmless response shape degrades to an empty page instead
-of failing the scan.
+JSON that fails to decode raises `ProviderTransportException`, and so
+does a body that decodes to something which is not a JSON object — a
+`null`, a bare string, a number, a boolean. That second arm used to
+return `[]` instead, on the reading that a surprising response shape was
+harmless. It is not: `GraphDeltaWalk` read the empty page as the last
+one, `runMicrosoftIncremental` wrote nothing, and `IncrementalScanJob`
+then applied `idle` and reset the retry counter — so `last_scan_at`
+advanced and the inbox looked healthy. "Your mailbox had nothing" and
+"the provider answered with nothing" were told to the reader in the same
+words, and only one of them is something they can act on.
 
 ## Graph query quirks worth knowing
 
@@ -160,6 +166,32 @@ These are provider constraints, not choices:
 - `/messages/{id}/$value` returns raw RFC 822 bytes directly, with no
   base64 or JSON envelope — unlike Gmail's `users.messages.get`, whose
   `raw` field is base64url with padding stripped.
+
+## A body that is not a message
+
+No RFC 822 message is zero bytes, so a 200 on `/messages/{id}/$value`
+with an empty body is the transport's condition rather than the
+message's, and it raises `ProviderTransportException`. Handed back as
+bytes it was written straight through: an empty `.eml` on disk plus an
+`inbox_messages` row in `status='fetched'` with no sender and no
+subject, after which `InboxScanContext::alreadyIndexed()` answers true
+for that provider id forever and no later pass ever fetches it again.
+One receipt gone, with the walk reporting success.
+
+Gmail's half of the same shape is the `raw` field. The SDK's getters are
+declared `string`/`int` in their docblocks and hand back the model
+field, which is `null` until the response fills it — so a `format=raw`
+response carrying no payload reached `strlen()` as a null and became a
+`TypeError`. A `TypeError` is outside every per-message catch list
+(`BackfillInboxJob::storeOrSkip`, `IncrementalScanJob::storeGmailMessage`
+and `persistDeltaMessage` each name their three), so the walk abandoned
+the rest of the window and the cursor met the same id again on the next
+tick. It now raises `GmailRawDecodeException`, which those lists already
+skip *and* record as a `skipped` row, so the loss is visible and the
+cursor moves on. `users.getProfile`'s `historyId` goes through the same
+`sdkString()` guard the history walk's own `historyId` already used; it
+is the only baseline an inbox with no cursor can adopt, so a `TypeError`
+on the return left that inbox idle forever.
 
 On the delta path, a caller-pinned anchor wins over the cursor's own
 baked-in filter: a multi-hour backfill must fix its lower bound before

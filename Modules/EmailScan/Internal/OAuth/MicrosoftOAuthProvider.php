@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Internal\OAuth;
 use DateTimeImmutable;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Token\AccessTokenInterface;
+use Modules\Core\Public\Enums\Duration;
 use Modules\EmailScan\Internal\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Internal\SafeMessage;
 use Modules\EmailScan\Public\Enums\MailProvider;
@@ -147,8 +148,13 @@ class MicrosoftOAuthProvider
         }
         $provider = $this->makeProvider($client['redirect_uri']);
 
+        // Azure::request() asks hasExpired() before every call, and league's
+        // AccessToken throws outright where no expiry was ever set — so a
+        // token carrying only its string never reached /me at all. The nominal
+        // hour is what GmailInboxResources stamps on this same shape.
         $tokenObj = new AzureAccessToken([
             'access_token' => $accessToken,
+            'expires_in' => Duration::Hour->seconds(),
         ], $provider);
 
         return $this->readEmailFromToken($provider, $tokenObj);
