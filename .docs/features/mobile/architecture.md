@@ -469,6 +469,37 @@ the reader saw on screen.
 
 Verified on hardware after a clean install: **"Bestand is verplicht."**
 
+### The same shape again, in config, hidden by a matching fallback
+
+`config/currency.php` was in neither list: not linked into `mobile-app/config/`
+and not one of the four files that root owns. So on the phone
+`config('currency.base')` read **null**.
+
+Nothing looked wrong, because `BaseCurrency::installDefault()` falls back to
+`Currency::Eur->value` — the same value the config file names. Measured by
+booting both roots:
+
+| | desktop root | mobile root |
+|---|---|---|
+| as shipped | `'EUR'` → EUR | `null` → EUR |
+| shipped default changed to USD | `'USD'` → USD | `null` → **EUR** |
+
+The two agreed only by coincidence. Changing the default an install ships with
+would have left two devices of one install rendering different base currencies,
+on a setting that is money.
+
+`mobile-app/config/currency.php` is a link now, and
+`tests/Contracts/TheMobileRootLinksEveryTreeItReadsArchTest.php` holds three
+things: the tracked link set by exact count (25 — a floor cannot tell one
+missing link from a full set), that every tracked link resolves, and that every
+desktop `config/*.php` is either linked or declared as one this root owns with
+the reason. Four are declared: `auto_update.php`, `nativephp.php`,
+`selfhost.php`, `view.php`.
+
+Inverted three ways: unlinking `config/currency.php` fails two arms, renaming
+`lang/` out from under its link fails the resolve arm, and a declaration for a
+file that is not there fails the staleness arm.
+
 ### A vendor hard-codes a class name, and answers a miss with silence
 
 `nativephp/mobile` resolves which plugins a build may load by looking the
