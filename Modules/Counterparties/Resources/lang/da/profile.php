@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Denne modpart er ikke mærket endnu',
-        'not_labelled_body' => 'At mærke ukendte modparter hjælper overblikket med at vise korrekte månedssummer og finansieringskæder.',
+        'not_labeled_heading' => 'Denne modpart er ikke mærket endnu',
+        'not_labeled_body' => 'At mærke ukendte modparter hjælper overblikket med at vise korrekte månedssummer og finansieringskæder.',
         'label_cta' => 'Mærk denne modpart',
     ],
 

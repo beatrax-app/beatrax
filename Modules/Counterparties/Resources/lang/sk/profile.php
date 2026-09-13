@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Táto protistrana zatiaľ nie je označená',
-        'not_labelled_body' => 'Označovanie neznámych pomáha Prehľadu ukazovať presné mesačné súčty a finančné reťazce.',
+        'not_labeled_heading' => 'Táto protistrana zatiaľ nie je označená',
+        'not_labeled_body' => 'Označovanie neznámych pomáha Prehľadu ukazovať presné mesačné súčty a finančné reťazce.',
         'label_cta' => 'Označiť túto protistranu',
     ],
 

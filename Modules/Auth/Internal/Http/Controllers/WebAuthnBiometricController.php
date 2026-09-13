@@ -8,8 +8,8 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\Auth\Internal\Actions\EnrolBiometricCredential;
-use Modules\Auth\Internal\Lock\BiometricEnrolmentOutcome;
+use Modules\Auth\Internal\Actions\EnrollBiometricCredential;
+use Modules\Auth\Internal\Lock\BiometricEnrollmentOutcome;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
@@ -33,7 +33,7 @@ final class WebAuthnBiometricController
         // it, this returns assertion options (unlock an existing one).
         if ($request->query('enroll') === '1') {
             if (! $shield->protectsAtRest()) {
-                return $this->enrolmentResponse(BiometricEnrolmentOutcome::Unshielded);
+                return $this->enrollmentResponse(BiometricEnrollmentOutcome::Unshielded);
             }
 
             $options = $service->creationOptions($user->id, $user->username, $session);
@@ -73,37 +73,37 @@ final class WebAuthnBiometricController
 
     public function enroll(
         Request $request,
-        EnrolBiometricCredential $enrol,
+        EnrollBiometricCredential $enroll,
         Session $session,
     ): JsonResponse {
         /** @var array<string, mixed> $credentialResponse */
         $credentialResponse = $request->json()->all();
 
-        return $this->enrolmentResponse($enrol($credentialResponse, $request->userAgent() ?? '', $session));
+        return $this->enrollmentResponse($enroll($credentialResponse, $request->userAgent() ?? '', $session));
     }
 
     // The unshielded refusal is answered here rather than in the caller, so
     // both routes into enrolment — the options request and the completion —
     // report the same thing.
-    private function enrolmentResponse(BiometricEnrolmentOutcome $outcome): JsonResponse
+    private function enrollmentResponse(BiometricEnrollmentOutcome $outcome): JsonResponse
     {
         return match ($outcome) {
-            BiometricEnrolmentOutcome::Enrolled => new JsonResponse(['enrolled' => true]),
-            BiometricEnrolmentOutcome::Unshielded => new JsonResponse(
+            BiometricEnrollmentOutcome::Enrolled => new JsonResponse(['enrolled' => true]),
+            BiometricEnrollmentOutcome::Unshielded => new JsonResponse(
                 ['enrolled' => false, 'error' => 'Biometric key material cannot be protected at rest here.'],
                 Response::HTTP_FORBIDDEN,
             ),
-            BiometricEnrolmentOutcome::SessionLocked => new JsonResponse(
+            BiometricEnrollmentOutcome::SessionLocked => new JsonResponse(
                 ['enrolled' => false, 'error' => 'Session not unlocked.'],
                 Response::HTTP_FORBIDDEN,
             ),
             // Named apart from the other refusals because it is the only one
             // the reader can answer: type the code again and come back.
-            BiometricEnrolmentOutcome::PinNotProved => new JsonResponse(
+            BiometricEnrollmentOutcome::PinNotProved => new JsonResponse(
                 ['enrolled' => false, 'error' => 'pin_not_proved'],
                 Response::HTTP_FORBIDDEN,
             ),
-            BiometricEnrolmentOutcome::Failed => new JsonResponse(
+            BiometricEnrollmentOutcome::Failed => new JsonResponse(
                 ['enrolled' => false, 'error' => 'Enrollment failed.'],
                 Response::HTTP_UNPROCESSABLE_ENTITY,
             ),

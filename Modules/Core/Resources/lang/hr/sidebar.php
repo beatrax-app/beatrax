@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLANIRANJE',
     'section_insights' => 'ANALIZE',
     'section_ingestion' => 'UNOS PODATAKA',
-    'section_organise' => 'SREDI',
+    'section_organize' => 'SREDI',
     'section_settings' => 'POSTAVKE',
 
     'nav' => [

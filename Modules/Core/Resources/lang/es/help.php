@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Base de datos:',
-        'artefacts_imports' => 'Extractos importados:',
-        'artefacts_mail' => 'Correo escaneado:',
-        'artefacts_drop' => 'Carpeta vigilada:',
+        'artifacts_imports' => 'Extractos importados:',
+        'artifacts_mail' => 'Correo escaneado:',
+        'artifacts_drop' => 'Carpeta vigilada:',
         'backups' => 'Copias de seguridad:',
         'secrets' => 'Credenciales de las conexiones:',
         'logs' => 'Registros:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Copiar la ruta de la base de datos al portapapeles',
-        'artefacts_imports' => 'Copiar la ruta de los extractos importados al portapapeles',
-        'artefacts_mail' => 'Copiar la ruta del correo escaneado al portapapeles',
-        'artefacts_drop' => 'Copiar la ruta de la carpeta vigilada al portapapeles',
+        'artifacts_imports' => 'Copiar la ruta de los extractos importados al portapapeles',
+        'artifacts_mail' => 'Copiar la ruta del correo escaneado al portapapeles',
+        'artifacts_drop' => 'Copiar la ruta de la carpeta vigilada al portapapeles',
         'backups' => 'Copiar la ruta de las copias de seguridad al portapapeles',
         'secrets' => 'Copiar la ruta de las credenciales de las conexiones al portapapeles',
         'logs' => 'Copiar la ruta de los registros al portapapeles',
     ],
 
-    'artefacts_heading' => 'Tus documentos originales no están dentro de la copia de seguridad',
-    'artefacts_body' => 'Una copia de seguridad contiene la base de datos y nada más. Los extractos que importaste, el correo que recogió el escáner y los recibos que dejaste en la carpeta vigilada siguen donde están, en las tres carpetas de arriba. Guardar una copia de seguridad en un sitio seguro no los copia, así que un archivo completo significa llevarte también esas carpetas — o usar Exportarlo todo aquí abajo, que las empaqueta junto con la copia de seguridad.',
+    'artifacts_heading' => 'Tus documentos originales no están dentro de la copia de seguridad',
+    'artifacts_body' => 'Una copia de seguridad contiene la base de datos y nada más. Los extractos que importaste, el correo que recogió el escáner y los recibos que dejaste en la carpeta vigilada siguen donde están, en las tres carpetas de arriba. Guardar una copia de seguridad en un sitio seguro no los copia, así que un archivo completo significa llevarte también esas carpetas — o usar Exportarlo todo aquí abajo, que las empaqueta junto con la copia de seguridad.',
 
     'export_heading' => 'Exportarlo todo',
     'export_body' => 'Un único archivo con una copia cifrada de tu base de datos y todos los documentos originales que le has dado a Beatrax. Descomprímelo donde quieras y tus documentos estarán dentro tal como siempre estuvieron, en las carpetas de las que salieron.',

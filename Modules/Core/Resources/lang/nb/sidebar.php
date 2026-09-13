@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLANLEGGING',
     'section_insights' => 'INNSIKT',
     'section_ingestion' => 'DATA INN',
-    'section_organise' => 'ORGANISER',
+    'section_organize' => 'ORGANISER',
     'section_settings' => 'INNSTILLINGER',
 
     'nav' => [

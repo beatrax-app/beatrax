@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Database:',
-        'artefacts_imports' => 'Geïmporteerde afschriften:',
-        'artefacts_mail' => 'Gescande e-mail:',
-        'artefacts_drop' => 'Bewaakte inleesmap:',
+        'artifacts_imports' => 'Geïmporteerde afschriften:',
+        'artifacts_mail' => 'Gescande e-mail:',
+        'artifacts_drop' => 'Bewaakte inleesmap:',
         'backups' => 'Back-ups:',
         'secrets' => 'Koppelingsgegevens:',
         'logs' => 'Logboeken:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Databasepad naar klembord kopiëren',
-        'artefacts_imports' => 'Pad van geïmporteerde afschriften naar klembord kopiëren',
-        'artefacts_mail' => 'Pad van gescande e-mail naar klembord kopiëren',
-        'artefacts_drop' => 'Pad van bewaakte inleesmap naar klembord kopiëren',
+        'artifacts_imports' => 'Pad van geïmporteerde afschriften naar klembord kopiëren',
+        'artifacts_mail' => 'Pad van gescande e-mail naar klembord kopiëren',
+        'artifacts_drop' => 'Pad van bewaakte inleesmap naar klembord kopiëren',
         'backups' => 'Back-uppad naar klembord kopiëren',
         'secrets' => 'Pad van koppelingsgegevens naar klembord kopiëren',
         'logs' => 'Logboekpad naar klembord kopiëren',
     ],
 
-    'artefacts_heading' => 'Je brondocumenten zitten niet in de back-up',
-    'artefacts_body' => 'Een back-up bevat de database en verder niets. De afschriften die je hebt geïmporteerd, de e-mail die de scanner ophaalde en de bonnen die je in de bewaakte map zette blijven staan waar ze staan, in de drie mappen hierboven. Een back-up ergens veilig neerzetten kopieert ze dus niet: een volledig archief betekent die mappen ook meenemen — of hieronder Alles exporteren gebruiken, dat ze samen met de back-up inpakt.',
+    'artifacts_heading' => 'Je brondocumenten zitten niet in de back-up',
+    'artifacts_body' => 'Een back-up bevat de database en verder niets. De afschriften die je hebt geïmporteerd, de e-mail die de scanner ophaalde en de bonnen die je in de bewaakte map zette blijven staan waar ze staan, in de drie mappen hierboven. Een back-up ergens veilig neerzetten kopieert ze dus niet: een volledig archief betekent die mappen ook meenemen — of hieronder Alles exporteren gebruiken, dat ze samen met de back-up inpakt.',
 
     'export_heading' => 'Alles exporteren',
     'export_body' => 'Eén archief met een versleutelde kopie van je database en elk brondocument dat je aan Beatrax hebt gegeven. Pak het uit waar je wilt en je documenten staan erin zoals ze altijd waren, in de mappen waar ze vandaan kwamen.',

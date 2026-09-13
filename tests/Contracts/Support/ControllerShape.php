@@ -48,13 +48,13 @@ final class ControllerShape
     /**
      * @return list<string> one sentence per rule this source breaks
      */
-    public static function offences(string $source): array
+    public static function offenses(string $source): array
     {
         $tokens = SonarSourceFiles::tokens($source);
         $brackets = SonarSourceFiles::brackets($tokens);
         $complexity = self::complexityByFunction($source);
 
-        $offences = self::persistenceReach($tokens);
+        $offenses = self::persistenceReach($tokens);
 
         foreach (SonarClassShape::types($tokens, $brackets) as $type) {
             if ($type['kind'] !== 'class') {
@@ -70,16 +70,16 @@ final class ControllerShape
             ));
 
             if (count($methods) > self::MAX_METHODS) {
-                $offences[] = $type['name'].' declares '.count($methods)
+                $offenses[] = $type['name'].' declares '.count($methods)
                     .' methods besides its constructor (at most '.self::MAX_METHODS.')';
             }
 
             foreach ($methods as $method) {
-                $offences = array_merge($offences, self::methodOffences($tokens, $brackets, $method, $complexity));
+                $offenses = array_merge($offenses, self::methodOffenses($tokens, $brackets, $method, $complexity));
             }
         }
 
-        return $offences;
+        return $offenses;
     }
 
     /**
@@ -89,23 +89,23 @@ final class ControllerShape
      * @param  array<string,int>  $complexity
      * @return list<string>
      */
-    private static function methodOffences(array $tokens, array $brackets, array $method, array $complexity): array
+    private static function methodOffenses(array $tokens, array $brackets, array $method, array $complexity): array
     {
-        $offences = [];
+        $offenses = [];
         $statements = self::statements($tokens, $brackets, $method['nameIndex']);
 
         if ($statements > self::MAX_STATEMENTS) {
-            $offences[] = $method['name'].'() runs '.$statements
+            $offenses[] = $method['name'].'() runs '.$statements
                 .' statements (at most '.self::MAX_STATEMENTS.')';
         }
 
         $score = $complexity[$method['name']] ?? 0;
         if ($score > self::MAX_COMPLEXITY) {
-            $offences[] = $method['name'].'() scores '.$score
+            $offenses[] = $method['name'].'() scores '.$score
                 .' on cognitive complexity (at most '.self::MAX_COMPLEXITY.')';
         }
 
-        return $offences;
+        return $offenses;
     }
 
     /**
@@ -204,7 +204,7 @@ final class ControllerShape
     {
         $scores = [];
 
-        foreach (SonarCognitiveComplexity::analyse($source)['functions'] as $function) {
+        foreach (SonarCognitiveComplexity::analyze($source)['functions'] as $function) {
             $scores[$function['name']] = max($scores[$function['name']] ?? 0, $function['value']);
         }
 

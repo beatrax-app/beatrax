@@ -56,7 +56,7 @@ function expectedConditionStatusFor(Throwable $e): int
 it('lets no HTTP entry point raise an exception that carries no answer of its own', function (): void {
     /** @var Router $router */
     $router = app(Router::class);
-    $offences = [];
+    $offenses = [];
     $files = HttpEntryPointThrows::files($router);
 
     // Two hundred and eight files sit under an Http/ directory today, before
@@ -73,13 +73,13 @@ it('lets no HTTP entry point raise an exception that carries no answer of its ow
                 continue;
             }
 
-            $offences[] = str_replace(base_path().'/', '', $file).':'.$throw['line'].' raises '.$throw['class'];
+            $offenses[] = str_replace(base_path().'/', '', $file).':'.$throw['line'].' raises '.$throw['class'];
         }
     }
 
-    expect($offences)->toBe([], implode("\n", array_merge(
+    expect($offenses)->toBe([], implode("\n", array_merge(
         ['These raise an exception the generic handler can only answer 500 with:'],
-        $offences,
+        $offenses,
         ['A condition a client or the environment can trigger is not a server fault. Give it an '
             .'exception that names its own status, or answer it where the reader is — the OAuth '
             .'callbacks flash a line and redirect rather than raising at all.'],

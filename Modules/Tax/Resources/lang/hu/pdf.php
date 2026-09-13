@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Összes bevétel:',
 
     'empty' => 'Nincs adózásra megjelölt tranzakció a(z) :year évben.',
-    'uncategorised' => 'Kategorizálatlan',
+    'uncategorized' => 'Kategorizálatlan',
 
     'col_date' => 'Dátum',
     'col_counterparty' => 'Partner',

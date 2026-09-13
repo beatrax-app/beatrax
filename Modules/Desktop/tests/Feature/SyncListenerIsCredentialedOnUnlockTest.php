@@ -21,7 +21,7 @@ afterEach(function (): void {
     DeviceIdentityTestHarness::forgetAll();
 });
 
-function credentialledListenerLogger(): object
+function credentialedListenerLogger(): object
 {
     return new class extends AbstractLogger
     {
@@ -51,7 +51,7 @@ function credentialledListenerLogger(): object
     };
 }
 
-function credentialledListenerUser(): User
+function credentialedListenerUser(): User
 {
     $user = User::query()->create([
         'username' => 'sync-credentials-'.bin2hex(random_bytes(4)),
@@ -127,12 +127,12 @@ function withTheLanPortHeld(Closure $work): void
 // listener down and rebuilding it EVERY time, which is fatal to a ceremony
 // spanning the very lock HoldPairingCeremonyOpenOnUnlock exists to carry.
 it('leaves a listener alone when it is already running the credentials being offered', function (): void {
-    credentialledListenerUser();
+    credentialedListenerUser();
 
     $cache = new CacheRepository(new ArrayStore);
     $cache->forever('sync-listener:credentialled-device', 'device-already-running');
 
-    $logger = credentialledListenerLogger();
+    $logger = credentialedListenerLogger();
 
     withTheLanPortHeld(function () use ($logger, $cache): void {
         (new SyncListenerProcess(
@@ -149,9 +149,9 @@ it('leaves a listener alone when it is already running the credentials being off
 // The other half of the same rule: a keyless boot daemon, or one holding some
 // other device's identity, MUST be replaced rather than left in place.
 it('replaces a listener that is not running the credentials being offered', function (): void {
-    credentialledListenerUser();
+    credentialedListenerUser();
 
-    $logger = credentialledListenerLogger();
+    $logger = credentialedListenerLogger();
 
     withTheLanPortHeld(function () use ($logger): void {
         (new SyncListenerProcess(

@@ -359,7 +359,7 @@ it('orders nearest-to-centre ahead of earliest for the chain-resolution caller',
             unpairedOnly: false,
             excludeTransactionId: null,
         ),
-        new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCentre),
+        new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCenter),
         $this->user,
     ))->toBe($nearer->id, 'earlier id '.$earlier->id.', nearer id '.$nearer->id);
 });
@@ -400,7 +400,7 @@ it('settles an equidistant pair on the earlier booked_at, whichever row was impo
             unpairedOnly: false,
             excludeTransactionId: null,
         ),
-        new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCentre),
+        new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCenter),
         $this->user,
     );
 
@@ -431,7 +431,7 @@ it('settles two rows sharing a booked_at on the lower id for the chain-resolutio
             unpairedOnly: false,
             excludeTransactionId: null,
         ),
-        new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCentre),
+        new CounterLegWindow(CarbonImmutable::parse('2026-05-15 12:00:00'), 3, CounterLegOrder::NearestToCenter),
         $this->user,
     ))->toBe($first->id);
 });

@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Авариен фонд',
     'goal_japan_trip' => 'Пътуване до Япония',
     'goal_replace_laptop' => 'Смяна на лаптопа',
-    'goal_winter_tyres' => 'Зимни гуми',
+    'goal_winter_tires' => 'Зимни гуми',
     'goal_ryokan_stay' => 'Престой в рьокан',
     'goal_shinkansen_pass' => 'Карта за шинкансен',
     'pot_emergency_fund' => 'Авариен фонд',

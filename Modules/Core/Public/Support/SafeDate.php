@@ -74,7 +74,7 @@ final class SafeDate
     // reader or a peer supplies: a machine-emitted free-form string — a MIME
     // `Date:` header, a stored timestamp whose time half is an artefact — has
     // no Y-m-d shape to check, so this parses what it can and rolls the rest.
-    public static function normalisedDayOrNull(string $raw): ?CarbonImmutable
+    public static function normalizedDayOrNull(string $raw): ?CarbonImmutable
     {
         return self::parseOrNull(trim($raw))?->startOfDay();
     }

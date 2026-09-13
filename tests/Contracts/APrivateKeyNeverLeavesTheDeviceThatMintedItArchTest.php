@@ -132,7 +132,7 @@ function privateKeyCode(string $path): string
 // to a serialiser ships the key while naming no field at all, and the pattern
 // above reads the file as clean. One site does it, sealing the key-file to disk.
 /** @var array<string, string> path => why it may serialise the identity whole */
-const PRIVATE_KEY_SERIALISERS = [
+const PRIVATE_KEY_SERIALIZERS = [
     'Modules/Sync/Internal/Identity/DeviceIdentityService.php' => 'Seals the key-file this device keeps: the array is encrypted under the app-lock KEK on the next line and never leaves the disk it is written to.',
 ];
 
@@ -157,7 +157,7 @@ it('hands no serialiser a device identity whole', function (): void {
 
         $relative = privateKeyRelative($path);
 
-        if (! array_key_exists($relative, PRIVATE_KEY_SERIALISERS)) {
+        if (! array_key_exists($relative, PRIVATE_KEY_SERIALIZERS)) {
             $offenders[] = $relative;
         }
     }

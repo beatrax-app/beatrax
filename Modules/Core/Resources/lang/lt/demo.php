@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Rezervinis fondas',
     'goal_japan_trip' => 'Kelionė į Japoniją',
     'goal_replace_laptop' => 'Nešiojamojo kompiuterio keitimas',
-    'goal_winter_tyres' => 'Žieminės padangos',
+    'goal_winter_tires' => 'Žieminės padangos',
     'goal_ryokan_stay' => 'Nakvynė ryokane',
     'goal_shinkansen_pass' => 'Shinkansen bilietas',
     'pot_emergency_fund' => 'Rezervinis fondas',

@@ -147,7 +147,7 @@ final readonly class BookedEntryPlacer
         /** @var array<int, array<string, CarbonImmutable>> $expectedBySeries */
         $expectedBySeries = [];
         foreach ($seriesEntries as $dateStr => $entries) {
-            $date = SafeDate::normalisedDayOrNull($dateStr);
+            $date = SafeDate::normalizedDayOrNull($dateStr);
             if ($date === null) {
                 continue;
             }

@@ -182,7 +182,7 @@ and the assertion — see
   and `Modules/Transfers/tests/Feature/CounterLegSearchTest.php`,
   either of which fails if a caller grows its own copy of the
   query again.
-- **Both counter-leg orderings are total.** `NearestToCentre`
+- **Both counter-leg orderings are total.** `NearestToCenter`
   and `EarliestBooked` alike run out through `booked_at` then
   `id`, so two equidistant legs — or two legs booked at the
   same instant — resolve by rule and not by whichever index
@@ -255,7 +255,7 @@ and the assertion — see
     (write) invoked by `ResolveChainLinksJob` for the
     orphan-sweep, and `PairLookup::counterLegOnAccount` (read)
     by `PaypalFundingResolver`'s deterministic arm, which also
-    names `CounterLegOrder::NearestToCentre`.
+    names `CounterLegOrder::NearestToCenter`.
 
 ## Configuration + feature flags
 

@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Baza podataka:',
-        'artefacts_imports' => 'Uvezeni izvodi:',
-        'artefacts_mail' => 'Skenirana pošta:',
-        'artefacts_drop' => 'Nadgledana fascikla:',
+        'artifacts_imports' => 'Uvezeni izvodi:',
+        'artifacts_mail' => 'Skenirana pošta:',
+        'artifacts_drop' => 'Nadgledana fascikla:',
         'backups' => 'Rezervne kopije:',
         'secrets' => 'Akreditivi povezanih usluga:',
         'logs' => 'Zapisi:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopiraj putanju baze podataka u ostavu',
-        'artefacts_imports' => 'Kopiraj putanju uvezenih izvoda u ostavu',
-        'artefacts_mail' => 'Kopiraj putanju skenirane pošte u ostavu',
-        'artefacts_drop' => 'Kopiraj putanju nadgledane fascikle u ostavu',
+        'artifacts_imports' => 'Kopiraj putanju uvezenih izvoda u ostavu',
+        'artifacts_mail' => 'Kopiraj putanju skenirane pošte u ostavu',
+        'artifacts_drop' => 'Kopiraj putanju nadgledane fascikle u ostavu',
         'backups' => 'Kopiraj putanju rezervnih kopija u ostavu',
         'secrets' => 'Kopiraj putanju akreditiva povezanih usluga u ostavu',
         'logs' => 'Kopiraj putanju zapisa u ostavu',
     ],
 
-    'artefacts_heading' => 'Tvoji izvorni dokumenti nisu u rezervnoj kopiji',
-    'artefacts_body' => 'Rezervna kopija sadrži bazu podataka i ništa više. Izvodi koje si uvezao, pošta koju je skener povukao i računi koje si spustio u nadgledanu fasciklu ostaju tamo gde jesu, u tri gore navedene fascikle. Čuvanje rezervne kopije na sigurnom mestu ih ne kopira, pa potpuna arhiva znači da poneseš i te fascikle — ili da upotrebiš Izvezi sve ispod, što ih pakuje zajedno sa rezervnom kopijom.',
+    'artifacts_heading' => 'Tvoji izvorni dokumenti nisu u rezervnoj kopiji',
+    'artifacts_body' => 'Rezervna kopija sadrži bazu podataka i ništa više. Izvodi koje si uvezao, pošta koju je skener povukao i računi koje si spustio u nadgledanu fasciklu ostaju tamo gde jesu, u tri gore navedene fascikle. Čuvanje rezervne kopije na sigurnom mestu ih ne kopira, pa potpuna arhiva znači da poneseš i te fascikle — ili da upotrebiš Izvezi sve ispod, što ih pakuje zajedno sa rezervnom kopijom.',
 
     'export_heading' => 'Izvezi sve',
     'export_body' => 'Jedna arhiva sa šifrovanom kopijom tvoje baze podataka i svakim izvornim dokumentom koji si dao Beatraxu. Raspakuj je gde god želiš i dokumenti su unutra onakvi kakvi su oduvek bili, u fasciklama iz kojih su došli.',

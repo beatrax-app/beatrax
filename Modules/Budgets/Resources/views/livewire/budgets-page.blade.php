@@ -56,7 +56,7 @@
 
     {{-- Sticky to-budget header --}}
     @php
-        $toBudgetColour = $toBudgetMinor >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+        $toBudgetColor = $toBudgetMinor >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
     @endphp
     <div class="sticky top-0 z-10 mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
         {{-- The label carries no element of its own: the tip's panel is a
@@ -71,7 +71,7 @@
             :label="Lang::get('budgets::messages.ready.label')"
             :body="Lang::get('budgets::help.ready_to_assign')"
         /></div>
-        <p class="mt-1 text-3xl font-semibold {{ $toBudgetColour }}" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
+        <p class="mt-1 text-3xl font-semibold {{ $toBudgetColor }}" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
             {{ $fmt($toBudgetMinor) }}
         </p>
         <x-core::fx-disclosure

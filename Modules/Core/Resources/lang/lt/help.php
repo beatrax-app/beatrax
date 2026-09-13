@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Duomenų bazė:',
-        'artefacts_imports' => 'Importuoti išrašai:',
-        'artefacts_mail' => 'Nuskaitytas paštas:',
-        'artefacts_drop' => 'Stebimas aplankas:',
+        'artifacts_imports' => 'Importuoti išrašai:',
+        'artifacts_mail' => 'Nuskaitytas paštas:',
+        'artifacts_drop' => 'Stebimas aplankas:',
         'backups' => 'Atsarginės kopijos:',
         'secrets' => 'Jungčių prisijungimo duomenys:',
         'logs' => 'Žurnalai:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopijuoti duomenų bazės kelią į iškarpinę',
-        'artefacts_imports' => 'Kopijuoti importuotų išrašų kelią į iškarpinę',
-        'artefacts_mail' => 'Kopijuoti nuskaityto pašto kelią į iškarpinę',
-        'artefacts_drop' => 'Kopijuoti stebimo aplanko kelią į iškarpinę',
+        'artifacts_imports' => 'Kopijuoti importuotų išrašų kelią į iškarpinę',
+        'artifacts_mail' => 'Kopijuoti nuskaityto pašto kelią į iškarpinę',
+        'artifacts_drop' => 'Kopijuoti stebimo aplanko kelią į iškarpinę',
         'backups' => 'Kopijuoti atsarginių kopijų kelią į iškarpinę',
         'secrets' => 'Kopijuoti jungčių prisijungimo duomenų kelią į iškarpinę',
         'logs' => 'Kopijuoti žurnalų kelią į iškarpinę',
     ],
 
-    'artefacts_heading' => 'Tavo pirminiai dokumentai nėra atsarginėje kopijoje',
-    'artefacts_body' => 'Atsarginėje kopijoje yra duomenų bazė ir daugiau nieko. Išrašai, kuriuos importavai, paštas, kurį parsisiuntė skaitytuvas, ir kvitai, kuriuos įmetei į stebimą aplanką, lieka ten, kur buvo — trijuose aukščiau išvardytuose aplankuose. Padėjus atsarginę kopiją saugioje vietoje jie nenukopijuojami, tad visas archyvas reiškia pasiimti ir tuos aplankus — arba pasinaudoti žemiau esančiu „Eksportuoti viską“, kuris supakuoja juos kartu su atsargine kopija.',
+    'artifacts_heading' => 'Tavo pirminiai dokumentai nėra atsarginėje kopijoje',
+    'artifacts_body' => 'Atsarginėje kopijoje yra duomenų bazė ir daugiau nieko. Išrašai, kuriuos importavai, paštas, kurį parsisiuntė skaitytuvas, ir kvitai, kuriuos įmetei į stebimą aplanką, lieka ten, kur buvo — trijuose aukščiau išvardytuose aplankuose. Padėjus atsarginę kopiją saugioje vietoje jie nenukopijuojami, tad visas archyvas reiškia pasiimti ir tuos aplankus — arba pasinaudoti žemiau esančiu „Eksportuoti viską“, kuris supakuoja juos kartu su atsargine kopija.',
 
     'export_heading' => 'Eksportuoti viską',
     'export_body' => 'Vienas archyvas su užšifruota tavo duomenų bazės kopija ir kiekvienu pirminiu dokumentu, kurį atidavei Beatrax. Išskleisk jį kur nori — dokumentai bus viduje tokie, kokie visada buvo, tuose pačiuose aplankuose, iš kurių atkeliavo.',

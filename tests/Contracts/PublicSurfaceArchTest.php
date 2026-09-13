@@ -93,7 +93,7 @@ it('does not allow a Public class without a consumer outside its own module (pin
         'Modules/Budgets/Public/Enums/EnvelopeMoveKind.php',
         'Modules/Budgets/Public/Enums/OverspendMode.php',
         'Modules/Budgets/Public/Services/EnvelopeBalanceQuery.php',
-        'Modules/Categorization/Public/Actions/Concerns/NormalisesRuleInput.php',
+        'Modules/Categorization/Public/Actions/Concerns/NormalizesRuleInput.php',
         'Modules/Categorization/Public/Actions/DeleteCategorizationRule.php',
         'Modules/Categorization/Public/Actions/UpdateCategorizationRule.php',
         'Modules/Categorization/Public/Dto/AutoCategorizationOutcomeDto.php',
@@ -329,11 +329,11 @@ it('does not allow a Public class without a consumer outside its own module (pin
 
         // A name written into a PHP string, a JSON key or a neon path arrives
         // doubled; collapsing first lets one pattern read every spelling.
-        $normalised = str_replace('\\\\', '\\', $contents);
-        if (! str_contains($normalised, '\\Public\\')) {
+        $normalized = str_replace('\\\\', '\\', $contents);
+        if (! str_contains($normalized, '\\Public\\')) {
             continue;
         }
-        $hits = PatternScan::sets('/Modules\\\\([A-Za-z0-9_]+)\\\\Public\\\\[A-Za-z0-9_\\\\]+/', $normalised);
+        $hits = PatternScan::sets('/Modules\\\\([A-Za-z0-9_]+)\\\\Public\\\\[A-Za-z0-9_\\\\]+/', $normalized);
         foreach ($hits as $hit) {
             if ($hit[1] !== $owner) {
                 $referenced[rtrim($hit[0], '\\')] = true;

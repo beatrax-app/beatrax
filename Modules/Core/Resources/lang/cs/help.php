@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Databáze:',
-        'artefacts_imports' => 'Naimportované výpisy:',
-        'artefacts_mail' => 'Načtená pošta:',
-        'artefacts_drop' => 'Sledovaná složka:',
+        'artifacts_imports' => 'Naimportované výpisy:',
+        'artifacts_mail' => 'Načtená pošta:',
+        'artifacts_drop' => 'Sledovaná složka:',
         'backups' => 'Zálohy:',
         'secrets' => 'Přihlašovací údaje propojení:',
         'logs' => 'Protokoly:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Zkopírovat cestu k databázi do schránky',
-        'artefacts_imports' => 'Zkopírovat cestu k naimportovaným výpisům do schránky',
-        'artefacts_mail' => 'Zkopírovat cestu k načtené poště do schránky',
-        'artefacts_drop' => 'Zkopírovat cestu ke sledované složce do schránky',
+        'artifacts_imports' => 'Zkopírovat cestu k naimportovaným výpisům do schránky',
+        'artifacts_mail' => 'Zkopírovat cestu k načtené poště do schránky',
+        'artifacts_drop' => 'Zkopírovat cestu ke sledované složce do schránky',
         'backups' => 'Zkopírovat cestu k zálohám do schránky',
         'secrets' => 'Zkopírovat cestu k přihlašovacím údajům propojení do schránky',
         'logs' => 'Zkopírovat cestu k protokolům do schránky',
     ],
 
-    'artefacts_heading' => 'Tvoje zdrojové dokumenty v záloze nejsou',
-    'artefacts_body' => 'Záloha obsahuje databázi a nic víc. Výpisy, které jsi naimportoval, pošta, kterou stáhl skener, i účtenky, které jsi vložil do sledované složky, zůstávají tam, kde jsou — ve třech složkách vypsaných výše. Uložením zálohy na bezpečné místo se nezkopírují, takže úplný archiv znamená vzít i tyhle složky — nebo použít Exportovat všechno níže, které je zabalí spolu se zálohou.',
+    'artifacts_heading' => 'Tvoje zdrojové dokumenty v záloze nejsou',
+    'artifacts_body' => 'Záloha obsahuje databázi a nic víc. Výpisy, které jsi naimportoval, pošta, kterou stáhl skener, i účtenky, které jsi vložil do sledované složky, zůstávají tam, kde jsou — ve třech složkách vypsaných výše. Uložením zálohy na bezpečné místo se nezkopírují, takže úplný archiv znamená vzít i tyhle složky — nebo použít Exportovat všechno níže, které je zabalí spolu se zálohou.',
 
     'export_heading' => 'Exportovat všechno',
     'export_body' => 'Jediný archiv se zašifrovanou kopií tvojí databáze a s každým zdrojovým dokumentem, který jsi Beatraxu dal. Rozbal ho kdekoli a dokumenty v něm najdeš přesně takové, jaké byly, ve složkách, ze kterých pocházejí.',

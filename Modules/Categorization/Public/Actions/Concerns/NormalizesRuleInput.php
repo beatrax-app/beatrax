@@ -18,7 +18,7 @@ use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 
-trait NormalisesRuleInput
+trait NormalizesRuleInput
 {
     // The one vocabulary that is not an enum: `field` names a transaction
     // attribute, not a closed rule-domain concept, so it stays a plain list.

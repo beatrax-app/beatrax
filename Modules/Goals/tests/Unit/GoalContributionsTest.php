@@ -85,7 +85,7 @@ function contributedByGoalId(User $user): array
 }
 
 it('gives two goals over one account their own contributed figures', function (): void {
-    $tyres = Goal::factory()->create([
+    $tires = Goal::factory()->create([
         'user_id' => $this->user->id,
         'name' => 'Winter tyres',
         'target_minor' => 60000,
@@ -100,17 +100,17 @@ it('gives two goals over one account their own contributed figures', function ()
         'status' => 'active',
     ]);
 
-    $tyreTx = contributionTx($this->user->id, $this->account->id, $this->run->id, 20000, CarbonImmutable::today()->subDays(5)->toDateString());
+    $tireTx = contributionTx($this->user->id, $this->account->id, $this->run->id, 20000, CarbonImmutable::today()->subDays(5)->toDateString());
     $holidayTx = contributionTx($this->user->id, $this->account->id, $this->run->id, 500000, CarbonImmutable::today()->subDays(4)->toDateString());
     contributionTx($this->user->id, $this->account->id, $this->run->id, 385000, CarbonImmutable::today()->subDays(3)->toDateString());
 
     $writer = app(GoalContributionWriter::class);
-    $writer->attribute($this->user, $tyres->id, $tyreTx->id);
+    $writer->attribute($this->user, $tires->id, $tireTx->id);
     $writer->attribute($this->user, $holiday->id, $holidayTx->id);
 
     $contributed = contributedByGoalId($this->user);
 
-    expect($contributed[$tyres->id])->toBe(20000);
+    expect($contributed[$tires->id])->toBe(20000);
     expect($contributed[$holiday->id])->toBe(500000);
 });
 

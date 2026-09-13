@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Totala inkomster:',
 
     'empty' => 'Inga skattemärkta transaktioner för :year.',
-    'uncategorised' => 'Okategoriserat',
+    'uncategorized' => 'Okategoriserat',
 
     'col_date' => 'Datum',
     'col_counterparty' => 'Motpart',

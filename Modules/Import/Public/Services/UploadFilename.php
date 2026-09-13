@@ -16,7 +16,7 @@ final class UploadFilename
     // that could climb out of one is folded away first, and the extension is
     // taken from the declared format rather than from the uploaded name so a
     // later re-read of the stored copy still sniffs as the format it claims.
-    public static function sanitise(string $original, string $extension): string
+    public static function sanitize(string $original, string $extension): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);
         $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);

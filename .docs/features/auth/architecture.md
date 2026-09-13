@@ -901,7 +901,7 @@ are gateway-specific rather than pure delegation:
   PIN path is immune because `PinVerificationService::verify()` already
   stamps activity on success; this is the biometric equivalent.
 - `markColdStartEnrolled()` and `isColdStartEnrolled()` delegate to
-  `ColdStartEnrolmentFlag`, which owns the `cold_start_biometric_enrolled`
+  `ColdStartEnrollmentFlag`, which owns the `cold_start_biometric_enrolled`
   column on its own. `MobileColdStartVault` takes that collaborator rather
   than this gateway: the gateway is built from `AppLockProvisioner`, and the
   provisioner forgets the cold-start vault on enable and disable, so a vault

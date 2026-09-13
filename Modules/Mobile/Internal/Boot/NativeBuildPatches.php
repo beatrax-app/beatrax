@@ -59,7 +59,7 @@ final readonly class NativeBuildPatches
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
         'nativephp_ios_app_category.php',
-        'nativephp_ios_purpose_string_localisations.php',
+        'nativephp_ios_purpose_string_localizations.php',
         'nativephp_dedupe_background_task_identifiers.php',
         'nativephp_require_icu_runtime.php',
     ];
@@ -73,7 +73,7 @@ final readonly class NativeBuildPatches
         'nativephp_ios_privacy_manifest.php',
         'nativephp_ios_export_compliance.php',
         'nativephp_ios_app_category.php',
-        'nativephp_ios_purpose_string_localisations.php',
+        'nativephp_ios_purpose_string_localizations.php',
         'nativephp_exclude_data_from_backup.php',
     ];
 

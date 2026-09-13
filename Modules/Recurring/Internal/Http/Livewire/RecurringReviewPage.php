@@ -112,9 +112,9 @@ final class RecurringReviewPage extends Component
 
     public function editName(int|string $seriesId, ?string $newName, CurrentUser $currentUser, EditRecurringSeriesName $action): void
     {
-        $normalised = $newName !== null && trim($newName) === '' ? null : $newName;
+        $normalized = $newName !== null && trim($newName) === '' ? null : $newName;
         $id = DerivedRowId::fromWire($seriesId);
-        if (! $this->apply(fn () => ($action)($id, $currentUser->user(), $normalised))) {
+        if (! $this->apply(fn () => ($action)($id, $currentUser->user(), $normalized))) {
             return;
         }
         $this->toast(Lang::get('recurring::review.toast.renamed'));

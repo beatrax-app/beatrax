@@ -12,7 +12,7 @@ final class SeriesIds
      * @param  array<int|string, mixed>  $seriesIds
      * @return list<int>
      */
-    public static function normalise(array $seriesIds): array
+    public static function normalize(array $seriesIds): array
     {
         $clean = [];
 

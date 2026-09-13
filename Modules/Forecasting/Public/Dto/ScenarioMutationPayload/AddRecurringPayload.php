@@ -27,7 +27,7 @@ final class AddRecurringPayload extends ScenarioMutationPayload
         public readonly ?string $note = null,
     ) {
         $this->startDate = self::assertCalendarDay($startDate, 'startDate');
-        $this->currency = self::normalisedCurrency($currency);
+        $this->currency = self::normalizedCurrency($currency);
         // Unchecked, an unknown cadence yields zero occurrences and a typo'd
         // direction flips the sign — both silently.
         if (Direction::tryFrom($direction) === null) {

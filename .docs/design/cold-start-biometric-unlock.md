@@ -326,7 +326,7 @@ on-device UAT):
   It has exactly one caller: the Enroll button on `AppLockSettingsSection`,
   which opens a PIN confirmation exactly as de-enrolling does. Enrolment is
   opt-in, and this is the only place the reader can opt in.
-- `Modules/Auth/Internal/Lock/BrowserEnrolmentAuthoriser` — the same bargain on
+- `Modules/Auth/Internal/Lock/BrowserEnrollmentAuthorizer` — the same bargain on
   the road with no OS vault, where the durable wrap is the WebAuthn credential
   row rather than an enclave entry. It opens the same data key to the same
   biometric and outlives the session just as plainly, and it used to cost an
@@ -337,11 +337,11 @@ on-device UAT):
   browser and comes back a round trip later, so the PIN cannot produce the very
   key being wrapped. It produces a `FreshPinProof` instead — single-use,
   deadlined at two minutes, bound to the account that typed it, drained on the
-  read that judges it — and `EnrolBiometricCredential` spends that before it
+  read that judges it — and `EnrollBiometricCredential` spends that before it
   reads a key or writes a byte. The key itself is never carried across the gap;
   it is read from the custodian at the moment it is wrapped, so no second
   durable copy exists meanwhile.
-  `tests/Contracts/ANativeEnrolmentTakesAFreshPinArchTest.php` covers both
+  `tests/Contracts/ANativeEnrollmentTakesAFreshPinArchTest.php` covers both
   wraps, and holds them to rules that differ for that reason — the proof half is
   checked at file scope, which is weaker than the `enroll()` half and is said so
   in the guard.
@@ -355,7 +355,7 @@ on-device UAT):
   There were two enrolment controls before there was one: the PIN-gated one was
   mounted by no screen, and the one the phone actually rendered armed the vault
   from the session's own key and asked for nothing at all.
-  `tests/Contracts/ANativeEnrolmentTakesAFreshPinArchTest.php` derives both
+  `tests/Contracts/ANativeEnrollmentTakesAFreshPinArchTest.php` derives both
   halves rather than pinning them — that `ColdStartVault::enroll()` is reached
   from exactly one place outside the vault implementations, and that the place
   spends a PIN on the very key it stores.
@@ -371,7 +371,7 @@ on-device UAT):
   Livewire method is callable whatever `mount()` rendered, and the desktop vault
   keys its file on the user id alone, so an entry left by an earlier holder of
   that id opens to a key this account has never held. `mount()` had read the flag
-  since `OrphanedColdStartEnrolmentTest` was written; the action had not, so the
+  since `OrphanedColdStartEnrollmentTest` was written; the action had not, so the
   control was off the screen and the unlock behind it was not.
   Past that gate it draws the same distinction over the shared
   `ColdStartVault`, which flattens every refusal to a null. It is recovered by

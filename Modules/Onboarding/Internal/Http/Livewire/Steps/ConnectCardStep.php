@@ -138,7 +138,7 @@ final class ConnectCardStep extends Component
         /** @var list<string|null> $currencies */
         $currencies = [];
         foreach ($this->statements as $statement) {
-            $originalFilename = UploadFilename::sanitise($statement->getClientOriginalName(), '.pdf');
+            $originalFilename = UploadFilename::sanitize($statement->getClientOriginalName(), '.pdf');
             try {
                 $result = $importer->runFromUpload($statement->getRealPath(), $this->selectedFormat, $user, $originalFilename);
                 $ids[] = $result->importRunId;

@@ -19,7 +19,7 @@ enum OAuthAlertKind: string
     // Which kinds a reader clears by re-authorising a mailbox. The scrub-set
     // failure is this machine's log redaction going offline, which no amount
     // of re-consenting touches, so it gets no link.
-    public static function promptsReauthorisation(string $kind): bool
+    public static function promptsReauthorization(string $kind): bool
     {
         return match (self::tryFrom($kind)) {
             self::ReconsentRequired, self::ReauthRequired => true,

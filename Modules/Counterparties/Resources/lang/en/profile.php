@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => "This counterparty isn't labelled yet",
-        'not_labelled_body' => 'Labelling unknowns helps the dashboard surface accurate monthly totals and funding chains.',
+        'not_labeled_heading' => "This counterparty isn't labelled yet",
+        'not_labeled_body' => 'Labelling unknowns helps the dashboard surface accurate monthly totals and funding chains.',
         'label_cta' => 'Label this counterparty',
     ],
 

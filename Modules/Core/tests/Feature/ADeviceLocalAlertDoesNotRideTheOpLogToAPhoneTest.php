@@ -60,7 +60,7 @@ it('seeds every alert under the owner its production writer would give it', func
 it('leaves the machine-local kinds where a paired device can never receive them', function (): void {
     $this->artisan('demo:seed')->assertSuccessful();
 
-    $travelling = SystemAlert::withoutGlobalScopes()
+    $traveling = SystemAlert::withoutGlobalScopes()
         ->whereNotNull('user_id')
         ->pluck('kind')
         ->unique()
@@ -69,5 +69,5 @@ it('leaves the machine-local kinds where a paired device can never receive them'
 
     // Only the recovery failure is about the account rather than the machine,
     // so it is the only kind a second device has any business receiving.
-    expect($travelling)->toBe(['auth.recovery_code_failed']);
+    expect($traveling)->toBe(['auth.recovery_code_failed']);
 });

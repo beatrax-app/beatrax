@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLANOWANIE',
     'section_insights' => 'ANALIZY',
     'section_ingestion' => 'WCZYTYWANIE DANYCH',
-    'section_organise' => 'PORZĄDKUJ',
+    'section_organize' => 'PORZĄDKUJ',
     'section_settings' => 'USTAWIENIA',
 
     'nav' => [

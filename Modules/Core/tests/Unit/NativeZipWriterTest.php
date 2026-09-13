@@ -54,8 +54,8 @@ it('NativeZipWriter: writes an archive ext-zip opens, entry for entry', function
     $entries = [
         'beatrax-backup-2026-09-05.sqlite.enc' => random_bytes(320 * 1024),
         'notes.txt' => "a small text file\nwith two lines\n",
-        'artefacts/imports/1/statement.csv' => "date,payee,amount\n2026-01-01,Shop,-12.50\n",
-        'artefacts/receipts/café-ünïcode-Ω.txt' => 'a receipt filed under an accented payee',
+        'artifacts/imports/1/statement.csv' => "date,payee,amount\n2026-01-01,Shop,-12.50\n",
+        'artifacts/receipts/café-ünïcode-Ω.txt' => 'a receipt filed under an accented payee',
     ];
 
     $path = nativeZipWriterPack($entries);
@@ -80,8 +80,8 @@ it('NativeZipWriter: writes an archive the system unzip verifies', function (): 
 
     $path = nativeZipWriterPack([
         'beatrax-backup.sqlite.enc' => random_bytes(200 * 1024),
-        'artefacts/imports/1/statement.csv' => str_repeat("date,payee,amount\n", 500),
-        'artefacts/receipts/café-ünïcode-Ω.txt' => 'a receipt filed under an accented payee',
+        'artifacts/imports/1/statement.csv' => str_repeat("date,payee,amount\n", 500),
+        'artifacts/receipts/café-ünïcode-Ω.txt' => 'a receipt filed under an accented payee',
     ]);
 
     $report = (string) shell_exec(escapeshellarg($unzip).' -t '.escapeshellarg($path).' 2>&1');
@@ -128,12 +128,12 @@ it('NativeZipWriter: stores an entry name with forward slashes and no leading sl
 
     $writer = new NativeZipWriter;
     $writer->open($path);
-    $writer->addFile($source, '/artefacts\\imports\\1\\statement.csv');
+    $writer->addFile($source, '/artifacts\\imports\\1\\statement.csv');
     $writer->finish();
 
     $zip = new ZipArchive;
     expect($zip->open($path))->toBeTrue();
-    expect(nativeZipWriterNamesIn($zip))->toBe(['artefacts/imports/1/statement.csv']);
+    expect(nativeZipWriterNamesIn($zip))->toBe(['artifacts/imports/1/statement.csv']);
     $zip->close();
 });
 

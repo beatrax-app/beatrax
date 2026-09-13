@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Esta contraparte aún no está etiquetada',
-        'not_labelled_body' => 'Etiquetar las desconocidas ayuda a que el panel muestre totales mensuales y cadenas de financiación exactos.',
+        'not_labeled_heading' => 'Esta contraparte aún no está etiquetada',
+        'not_labeled_body' => 'Etiquetar las desconocidas ayuda a que el panel muestre totales mensuales y cadenas de financiación exactos.',
         'label_cta' => 'Etiquetar esta contraparte',
     ],
 

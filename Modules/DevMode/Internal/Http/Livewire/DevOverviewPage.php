@@ -129,14 +129,14 @@ final class DevOverviewPage extends Component
         if (! is_array($decoded)) {
             return [];
         }
-        $normalised = [];
+        $normalized = [];
         foreach ($decoded as $key => $value) {
             if (is_string($key)) {
-                $normalised[$key] = $value;
+                $normalized[$key] = $value;
             }
         }
 
-        return $normalised;
+        return $normalized;
     }
 
     /**

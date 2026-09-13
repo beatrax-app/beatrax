@@ -16,7 +16,7 @@ use Tests\Contracts\Support\BackendSourceFiles;
 //
 // So the rule is a shape check, not a parse: SafeDate::dayOrNull() formats the
 // result back and compares it to what arrived. Its sibling
-// SafeDate::normalisedDayOrNull() still normalises, and is named for that —
+// SafeDate::normalizedDayOrNull() still normalises, and is named for that —
 // it is the right reader for a machine-emitted string with no Y-m-d shape to
 // check, and the wrong one for anything a reader or a peer supplies.
 // @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-date-from-outside-normalised-instead-of-refused
@@ -515,13 +515,13 @@ it('reads a supplied day before the op-log applier writes it, on both paths', fu
     $gate = base_path('Modules/Sync/Internal/Merge/SuppliedDateGate.php');
 
     expect(is_file($gate))->toBeTrue('SuppliedDateGate is gone — the applier writes supplied days unread again.');
-    // A refusing reader, never normalisedDayOrNull: this is the supplying
+    // A refusing reader, never normalizedDayOrNull: this is the supplying
     // side, so a value that is not exactly a day is refused rather than rolled
     // into one. dayIgnoringTimeOrNull sets aside only the time the writer's own
     // cast stamps on, then puts the day itself through dayOrNull.
     $gateSource = (string) file_get_contents($gate);
     expect($gateSource)->toContain('SafeDate::dayIgnoringTimeOrNull')
-        ->and($gateSource)->not->toContain('SafeDate::normalisedDayOrNull');
+        ->and($gateSource)->not->toContain('SafeDate::normalizedDayOrNull');
 
     // And that reader must stay a refusing one: the name promises it discards
     // a time, not that it rolls a day nobody meant into one that exists.
@@ -590,8 +590,8 @@ it('sees a planted picker and a planted second spelling, and is not fooled by a 
 // site above reading correctly and behaving the way it did before.
 it('keeps a refusing reader and a normalising one under names that say which is which', function (): void {
     expect(method_exists(SafeDate::class, 'dayOrNull'))->toBeTrue();
-    expect(method_exists(SafeDate::class, 'normalisedDayOrNull'))->toBeTrue();
+    expect(method_exists(SafeDate::class, 'normalizedDayOrNull'))->toBeTrue();
 
     expect(SafeDate::dayOrNull('2027-02-29'))->toBeNull();
-    expect(SafeDate::normalisedDayOrNull('2027-02-29')?->toDateString())->toBe('2027-03-01');
+    expect(SafeDate::normalizedDayOrNull('2027-02-29')?->toDateString())->toBe('2027-03-01');
 });

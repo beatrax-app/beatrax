@@ -74,7 +74,7 @@ final class ConnectPaypalStep extends Component
         $user = $currentUser->user();
 
         $tmp = $this->activityCsv->getRealPath();
-        $originalFilename = UploadFilename::sanitise($this->activityCsv->getClientOriginalName(), '.csv');
+        $originalFilename = UploadFilename::sanitize($this->activityCsv->getClientOriginalName(), '.csv');
 
         $result = $this->runPreview($importer, $tmp, $user, $originalFilename, $logger, $app);
 

@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Общо приходи:',
 
     'empty' => 'Няма данъчно маркирани транзакции за :year.',
-    'uncategorised' => 'Некатегоризирани',
+    'uncategorized' => 'Некатегоризирани',
 
     'col_date' => 'Дата',
     'col_counterparty' => 'Контрагент',

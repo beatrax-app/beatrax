@@ -15,7 +15,7 @@ use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Http\Livewire\Concerns\BuildsMutationForms;
-use Modules\Forecasting\Internal\Http\Livewire\Concerns\SummarisesMutations;
+use Modules\Forecasting\Internal\Http\Livewire\Concerns\SummarizesMutations;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Actions\EditScenarioMutation;
@@ -31,7 +31,7 @@ final class ScenarioEditorSidebar extends Component
 {
     use BuildsMutationForms;
     use DispatchesToast;
-    use SummarisesMutations;
+    use SummarizesMutations;
 
     // Locked because deleteScenario() takes no id parameter: it acts on this
     // property and never compares it to $confirmingDeleteScenario. Unlocked, a

@@ -54,7 +54,7 @@ const PERCENT_SIGN_TOKEN = '/(?:(\d|:[a-z_]+)(\s|\x{00a0}|\x{202f})?%(?![sdu]))|
 // hundred files in the same 26 locales, and a rule about how a reader is shown
 // a figure has no reason to stop at a directory boundary.
 /** @return list<string> every translation file the product ships */
-function percentSignCatalogues(): array
+function percentSignCatalogs(): array
 {
     $files = [];
 
@@ -105,7 +105,7 @@ it('spells a percent sign the way each locale spells it', function (): void {
     $offenders = [];
     $cells = 0;
 
-    foreach (percentSignCatalogues() as $path) {
+    foreach (percentSignCatalogs() as $path) {
         if (preg_match('#/lang/([a-z]{2})/#', $path, $matches) !== 1) {
             continue;
         }
@@ -135,7 +135,7 @@ it('spells a percent sign the way each locale spells it', function (): void {
 
     expect($cells)->toBeGreaterThan(
         PERCENT_SIGN_CELL_FLOOR,
-        'The reader found '.$cells.' percent signs across '.count(percentSignCatalogues())
+        'The reader found '.$cells.' percent signs across '.count(percentSignCatalogs())
         .' catalogues, which is what a walk that stopped reading looks like: no sign found is no sign to judge.'
     );
 

@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Databas:',
-        'artefacts_imports' => 'Importerade kontoutdrag:',
-        'artefacts_mail' => 'Inläst e-post:',
-        'artefacts_drop' => 'Bevakad mapp:',
+        'artifacts_imports' => 'Importerade kontoutdrag:',
+        'artifacts_mail' => 'Inläst e-post:',
+        'artifacts_drop' => 'Bevakad mapp:',
         'backups' => 'Säkerhetskopior:',
         'secrets' => 'Inloggningsuppgifter för kopplingar:',
         'logs' => 'Loggar:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopiera sökvägen till databasen till urklipp',
-        'artefacts_imports' => 'Kopiera sökvägen till importerade kontoutdrag till urklipp',
-        'artefacts_mail' => 'Kopiera sökvägen till inläst e-post till urklipp',
-        'artefacts_drop' => 'Kopiera sökvägen till den bevakade mappen till urklipp',
+        'artifacts_imports' => 'Kopiera sökvägen till importerade kontoutdrag till urklipp',
+        'artifacts_mail' => 'Kopiera sökvägen till inläst e-post till urklipp',
+        'artifacts_drop' => 'Kopiera sökvägen till den bevakade mappen till urklipp',
         'backups' => 'Kopiera sökvägen till säkerhetskopior till urklipp',
         'secrets' => 'Kopiera sökvägen till inloggningsuppgifter för kopplingar till urklipp',
         'logs' => 'Kopiera sökvägen till loggar till urklipp',
     ],
 
-    'artefacts_heading' => 'Dina källdokument ligger inte i säkerhetskopian',
-    'artefacts_body' => 'En säkerhetskopia innehåller databasen och inget annat. Kontoutdragen du importerade, e-posten som inläsningen hämtade och kvittona du la i den bevakade mappen blir kvar där de är, i de tre mapparna ovan. Att lägga en säkerhetskopia på ett tryggt ställe kopierar dem inte, så ett fullständigt arkiv innebär att du tar med de mapparna också — eller använder Exportera allt nedan, som packar ihop dem med säkerhetskopian åt dig.',
+    'artifacts_heading' => 'Dina källdokument ligger inte i säkerhetskopian',
+    'artifacts_body' => 'En säkerhetskopia innehåller databasen och inget annat. Kontoutdragen du importerade, e-posten som inläsningen hämtade och kvittona du la i den bevakade mappen blir kvar där de är, i de tre mapparna ovan. Att lägga en säkerhetskopia på ett tryggt ställe kopierar dem inte, så ett fullständigt arkiv innebär att du tar med de mapparna också — eller använder Exportera allt nedan, som packar ihop dem med säkerhetskopian åt dig.',
 
     'export_heading' => 'Exportera allt',
     'export_body' => 'Ett arkiv med en krypterad kopia av din databas och varje källdokument du har gett Beatrax. Packa upp det var du vill, så ligger dina dokument där precis som förut, i mapparna de kom från.',

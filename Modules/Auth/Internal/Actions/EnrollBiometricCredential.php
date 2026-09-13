@@ -6,7 +6,7 @@ namespace Modules\Auth\Internal\Actions;
 
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\BiometricEnrolmentOutcome;
+use Modules\Auth\Internal\Lock\BiometricEnrollmentOutcome;
 use Modules\Auth\Internal\Lock\FreshPinProof;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PlatformDetector;
@@ -15,7 +15,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Throwable;
 
-final readonly class EnrolBiometricCredential
+final readonly class EnrollBiometricCredential
 {
     public function __construct(
         private WebAuthnBiometricService $service,
@@ -29,7 +29,7 @@ final readonly class EnrolBiometricCredential
     /**
      * @param  array<string, mixed>  $credentialResponse
      */
-    public function __invoke(array $credentialResponse, string $userAgent, Session $session): BiometricEnrolmentOutcome
+    public function __invoke(array $credentialResponse, string $userAgent, Session $session): BiometricEnrollmentOutcome
     {
         $refusal = $this->refusal($session);
 
@@ -42,25 +42,25 @@ final readonly class EnrolBiometricCredential
         $dataKey = $this->lockState->heldKey($session);
 
         return $dataKey === null
-            ? BiometricEnrolmentOutcome::SessionLocked
+            ? BiometricEnrollmentOutcome::SessionLocked
             : $this->record($credentialResponse, $userAgent, $dataKey, $session);
     }
 
     // Both answers are reached before a key is read and before a byte is
     // written, so a ceremony either refusal turns away leaves nothing behind
     // and cannot be replayed on the same proof.
-    private function refusal(Session $session): ?BiometricEnrolmentOutcome
+    private function refusal(Session $session): ?BiometricEnrollmentOutcome
     {
         // The enrolled row is `secret || wrapped_key` in the same SQLite file
         // as the ledger, so a shield that leaves those bytes readable turns
         // enrolment into a plaintext copy of the app-lock data key.
         if (! $this->shield->protectsAtRest()) {
-            return BiometricEnrolmentOutcome::Unshielded;
+            return BiometricEnrollmentOutcome::Unshielded;
         }
 
         return $this->pinProof->consume($session, $this->currentUser->user()->id)
             ? null
-            : BiometricEnrolmentOutcome::PinNotProved;
+            : BiometricEnrollmentOutcome::PinNotProved;
     }
 
     /**
@@ -71,7 +71,7 @@ final readonly class EnrolBiometricCredential
         string $userAgent,
         string $dataKey,
         Session $session,
-    ): BiometricEnrolmentOutcome {
+    ): BiometricEnrollmentOutcome {
         $user = $this->currentUser->user();
 
         try {
@@ -85,9 +85,9 @@ final readonly class EnrolBiometricCredential
                 $session,
             );
         } catch (Throwable) {
-            return BiometricEnrolmentOutcome::Failed;
+            return BiometricEnrollmentOutcome::Failed;
         }
 
-        return BiometricEnrolmentOutcome::Enrolled;
+        return BiometricEnrollmentOutcome::Enrolled;
     }
 }

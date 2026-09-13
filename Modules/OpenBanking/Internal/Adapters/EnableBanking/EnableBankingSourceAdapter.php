@@ -231,7 +231,7 @@ final readonly class EnableBankingSourceAdapter implements RemoteSourceAdapter
             amountMinor: $amountMinor,
             sourceRef: null,
             description: $this->collapseRemittance($row->remittanceInformation),
-            rawPayload: $this->serialiseEnableBankingFragment($row),
+            rawPayload: $this->serializeEnableBankingFragment($row),
             sourceRowIndex: $rowIndex,
         );
     }
@@ -261,7 +261,7 @@ final readonly class EnableBankingSourceAdapter implements RemoteSourceAdapter
     /**
      * @return array{enable_banking: array<string, mixed>}
      */
-    private function serialiseEnableBankingFragment(EnableBankingTransactionData $row): array
+    private function serializeEnableBankingFragment(EnableBankingTransactionData $row): array
     {
         return [
             'enable_banking' => [

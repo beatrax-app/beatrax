@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Database:',
-        'artefacts_imports' => 'Estratti conto importati:',
-        'artefacts_mail' => 'Posta analizzata:',
-        'artefacts_drop' => 'Cartella sorvegliata:',
+        'artifacts_imports' => 'Estratti conto importati:',
+        'artifacts_mail' => 'Posta analizzata:',
+        'artifacts_drop' => 'Cartella sorvegliata:',
         'backups' => 'Backup:',
         'secrets' => 'Credenziali dei collegamenti:',
         'logs' => 'Log:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Copia negli appunti il percorso del database',
-        'artefacts_imports' => 'Copia negli appunti il percorso degli estratti conto importati',
-        'artefacts_mail' => 'Copia negli appunti il percorso della posta analizzata',
-        'artefacts_drop' => 'Copia negli appunti il percorso della cartella sorvegliata',
+        'artifacts_imports' => 'Copia negli appunti il percorso degli estratti conto importati',
+        'artifacts_mail' => 'Copia negli appunti il percorso della posta analizzata',
+        'artifacts_drop' => 'Copia negli appunti il percorso della cartella sorvegliata',
         'backups' => 'Copia negli appunti il percorso dei backup',
         'secrets' => 'Copia negli appunti il percorso delle credenziali dei collegamenti',
         'logs' => 'Copia negli appunti il percorso dei log',
     ],
 
-    'artefacts_heading' => 'I tuoi documenti originali non sono dentro il backup',
-    'artefacts_body' => "Un backup contiene il database e nient'altro. Gli estratti conto che hai importato, la posta raccolta dallo scanner e le ricevute che hai lasciato nella cartella sorvegliata restano dove sono, nelle tre cartelle elencate sopra. Mettere un backup al sicuro non le copia, quindi un archivio completo significa portarsi via anche quelle cartelle — oppure usare Esporta tutto qui sotto, che le impacchetta insieme al backup.",
+    'artifacts_heading' => 'I tuoi documenti originali non sono dentro il backup',
+    'artifacts_body' => "Un backup contiene il database e nient'altro. Gli estratti conto che hai importato, la posta raccolta dallo scanner e le ricevute che hai lasciato nella cartella sorvegliata restano dove sono, nelle tre cartelle elencate sopra. Mettere un backup al sicuro non le copia, quindi un archivio completo significa portarsi via anche quelle cartelle — oppure usare Esporta tutto qui sotto, che le impacchetta insieme al backup.",
 
     'export_heading' => 'Esporta tutto',
     'export_body' => 'Un unico archivio con una copia cifrata del tuo database e ogni documento originale che hai dato a Beatrax. Scompattalo dove vuoi e i tuoi documenti sono lì dentro come sono sempre stati, nelle cartelle da cui provengono.',

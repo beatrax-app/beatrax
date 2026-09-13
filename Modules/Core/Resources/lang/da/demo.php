@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Nødopsparing',
     'goal_japan_trip' => 'Japanrejse',
     'goal_replace_laptop' => 'Udskift den bærbare',
-    'goal_winter_tyres' => 'Vinterdæk',
+    'goal_winter_tires' => 'Vinterdæk',
     'goal_ryokan_stay' => 'Ophold på ryokan',
     'goal_shinkansen_pass' => 'Shinkansen-kort',
     'pot_emergency_fund' => 'Nødopsparing',

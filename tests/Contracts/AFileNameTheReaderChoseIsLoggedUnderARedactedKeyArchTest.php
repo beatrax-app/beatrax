@@ -142,10 +142,10 @@ function pathKeysIn(string $args): array
     $found = [];
 
     foreach (PatternScan::sets('/\'([A-Za-z0-9_\-]+)\'\s*=>/', $args) as $match) {
-        $normalised = strtolower(str_replace(['-', ' '], '_', (string) $match[1]));
+        $normalized = strtolower(str_replace(['-', ' '], '_', (string) $match[1]));
 
-        if (in_array($normalised, PATH_SHAPED_CONTEXT_KEYS, true)) {
-            $found[] = $normalised;
+        if (in_array($normalized, PATH_SHAPED_CONTEXT_KEYS, true)) {
+            $found[] = $normalized;
         }
     }
 

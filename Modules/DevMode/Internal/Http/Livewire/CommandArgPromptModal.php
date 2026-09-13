@@ -205,7 +205,7 @@ final class CommandArgPromptModal extends Component
             return null;
         }
 
-        $args = $this->normalisedArgs($spec);
+        $args = $this->normalizedArgs($spec);
 
         return $this->argsSatisfyRules($spec, $args, $validator) ? $args : null;
     }
@@ -215,7 +215,7 @@ final class CommandArgPromptModal extends Component
     /**
      * @return array<string, mixed>
      */
-    private function normalisedArgs(CommandSpec $spec): array
+    private function normalizedArgs(CommandSpec $spec): array
     {
         $args = [];
         foreach ($spec->argsSchema as $arg) {

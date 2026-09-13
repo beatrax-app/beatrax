@@ -16,7 +16,7 @@
     use Modules\Ledger\Public\ValueObjects\Money;
 
     $fmt = static fn (int $minor): string => Money::ofMinor($minor, BaseCurrency::value())->format();
-    $figureColour = $toBudgetMinor !== null && $toBudgetMinor < 0
+    $figureColor = $toBudgetMinor !== null && $toBudgetMinor < 0
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-emerald-700 dark:text-emerald-400';
 @endphp
@@ -51,7 +51,7 @@
                         :body="Lang::get('budgets::help.ready_to_assign')"
                     /></div>
                     <p
-                        class="mt-1 text-3xl font-semibold {{ $toBudgetMinor === null ? 'text-slate-600 dark:text-slate-400' : $figureColour }}"
+                        class="mt-1 text-3xl font-semibold {{ $toBudgetMinor === null ? 'text-slate-600 dark:text-slate-400' : $figureColor }}"
                         style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;"
                     >
                         {{ $toBudgetMinor === null ? '—' : $fmt($toBudgetMinor) }}

@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Iš viso pajamų:',
 
     'empty' => ':year m. mokesčių žyma pažymėtų operacijų nėra.',
-    'uncategorised' => 'Be kategorijos',
+    'uncategorized' => 'Be kategorijos',
 
     'col_date' => 'Data',
     'col_counterparty' => 'Kita šalis',

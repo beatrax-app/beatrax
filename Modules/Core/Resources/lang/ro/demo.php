@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Fond de urgență',
     'goal_japan_trip' => 'Călătorie în Japonia',
     'goal_replace_laptop' => 'Înlocuirea laptopului',
-    'goal_winter_tyres' => 'Anvelope de iarnă',
+    'goal_winter_tires' => 'Anvelope de iarnă',
     'goal_ryokan_stay' => 'Sejur la ryokan',
     'goal_shinkansen_pass' => 'Abonament Shinkansen',
     'pot_emergency_fund' => 'Fond de urgență',

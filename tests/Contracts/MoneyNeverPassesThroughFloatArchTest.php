@@ -42,7 +42,7 @@ const FLOAT_MONEY_CHART_COORDINATE_SITES = [
     ],
     'resources/js/app.js' => [
         'reason' => 'the other half of the boundary: every axis label, and the tooltip ApexCharts falls back to, renders through the currency formatter this installs rather than through the raw coordinate',
-        'proves' => 'beatraxLocaliseChart',
+        'proves' => 'beatraxLocalizeChart',
     ],
 ];
 
@@ -377,7 +377,7 @@ it('lets no chart print the coordinate itself', function (): void {
 
     expect($offenders)->toBe([], implode("\n", [
         'These enable ApexCharts dataLabels, which prints the coordinate itself rather than the label',
-        'window.beatraxLocaliseChart() formats:',
+        'window.beatraxLocalizeChart() formats:',
         ...$offenders,
         '',
         'A chart coordinate is allowed to be a float because no reader ever sees the number. Turning',

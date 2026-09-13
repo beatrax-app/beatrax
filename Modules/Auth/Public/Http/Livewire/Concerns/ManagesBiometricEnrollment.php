@@ -11,9 +11,9 @@ use Livewire\Component;
 use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
-use Modules\Auth\Internal\Lock\BrowserEnrolmentAuthoriser;
+use Modules\Auth\Internal\Lock\BrowserEnrollmentAuthorizer;
 use Modules\Auth\Internal\Lock\ColdStartEnroller;
-use Modules\Auth\Internal\Lock\ColdStartEnrolmentResult;
+use Modules\Auth\Internal\Lock\ColdStartEnrollmentResult;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
@@ -26,7 +26,7 @@ use Modules\Core\Public\Support\Lang;
 /**
  * @phpstan-require-extends Component
  */
-trait ManagesBiometricEnrolment
+trait ManagesBiometricEnrollment
 {
     // Half of a browser round trip: lock.js answers 'beatrax:webauthn-create'
     // by POSTing an attestation to /lock/biometric/enroll, then dispatching
@@ -45,7 +45,7 @@ trait ManagesBiometricEnrolment
         // Both roads ask for the PIN, and the browser one is asked whether it
         // exists first: a reader on a dead road should be told so rather than
         // handed a code box that leads nowhere.
-        $refusal = $vault->isAvailable() ? null : $this->browserEnrolmentRefusal($config, $shield);
+        $refusal = $vault->isAvailable() ? null : $this->browserEnrollmentRefusal($config, $shield);
 
         if ($refusal !== null) {
             $this->flashMessage = $refusal;
@@ -60,7 +60,7 @@ trait ManagesBiometricEnrolment
     // Reached only once the OS vault above turned out to be unavailable: both
     // answers here are about the browser road specifically, and a device with
     // its own vault never travels it.
-    private function browserEnrolmentRefusal(ConfigRepository $config, SecretShield $shield): ?string
+    private function browserEnrollmentRefusal(ConfigRepository $config, SecretShield $shield): ?string
     {
         return match (true) {
             // Same dead-button case as an unavailable vault, with nothing left
@@ -83,7 +83,7 @@ trait ManagesBiometricEnrolment
         string $pin,
         CurrentUser $currentUser,
         ColdStartEnroller $enroller,
-        BrowserEnrolmentAuthoriser $browser,
+        BrowserEnrollmentAuthorizer $browser,
         ColdStartVault $vault,
         AppLockCredentialRejections $rejections,
         Session $session,
@@ -97,16 +97,16 @@ trait ManagesBiometricEnrolment
         }
 
         $vault->isAvailable()
-            ? $this->armTheOsVault($enroller->enrol($currentUser->user()->id, $pin, $session))
-            : $this->armTheBrowser($browser->authorise($currentUser->user()->id, $pin, $session));
+            ? $this->armTheOsVault($enroller->enroll($currentUser->user()->id, $pin, $session))
+            : $this->armTheBrowser($browser->authorize($currentUser->user()->id, $pin, $session));
     }
 
     // The panel stays open on a refusal for the same reason the disable one
     // does: another PIN is an answer the reader can still give.
-    private function armTheOsVault(ColdStartEnrolmentResult $result): void
+    private function armTheOsVault(ColdStartEnrollmentResult $result): void
     {
-        if ($result !== ColdStartEnrolmentResult::Enrolled) {
-            $this->flashMessage = $result === ColdStartEnrolmentResult::PinRejected
+        if ($result !== ColdStartEnrollmentResult::Enrolled) {
+            $this->flashMessage = $result === ColdStartEnrollmentResult::PinRejected
                 ? Lang::get('auth::app_lock.error_pin_incorrect')
                 : Lang::get('auth::app_lock.error_enroll_failed');
 
@@ -120,11 +120,11 @@ trait ManagesBiometricEnrolment
 
     // The ceremony leaves for the browser here and answers on its own route, so
     // this closes the panel on a PIN it accepted rather than on an enrolment it
-    // has seen. onBiometricEnrolled() and onBiometricEnrolmentFailed() are the
+    // has seen. onBiometricEnrolled() and onBiometricEnrollmentFailed() are the
     // two ways it comes back.
-    private function armTheBrowser(bool $authorised): void
+    private function armTheBrowser(bool $authorized): void
     {
-        if (! $authorised) {
+        if (! $authorized) {
             $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
 
             return;
@@ -148,7 +148,7 @@ trait ManagesBiometricEnrolment
     // the reader was reaching for the sensor is the one refusal they can act
     // on, so it is the one that gets its own line.
     #[On('biometric-enrol-failed')]
-    public function onBiometricEnrolmentFailed(string $reason = ''): void
+    public function onBiometricEnrollmentFailed(string $reason = ''): void
     {
         $this->flashMessage = Lang::get($reason === 'pin_not_proved'
             ? 'auth::app_lock.error_enroll_pin_expired'

@@ -72,7 +72,7 @@ Three endings, and the reader is told which one happened:
 
 | Ending | Raised by | What the screen says |
 |---|---|---|
-| The file is not an export we read | `UnrecognizedMigrationFileException` | `migration::new.errors.unrecognised` |
+| The file is not an export we read | `UnrecognizedMigrationFileException` | `migration::new.errors.unrecognized` |
 | This build has no reader for it | `ArchiveReaderUnavailableException` | `migration::new.errors.archive_reader_unavailable` |
 | We failed | anything else | `migration::new.errors.internal_detail`, carrying the exception's short name as a code |
 

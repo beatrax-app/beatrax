@@ -133,7 +133,7 @@ it('says so in every language the form is offered in', function (): void {
     $root = base_path('Modules/Categorization/Resources/lang');
     $english = (require $root.'/en/rule_form.php')['priority_help'];
 
-    $unlocalised = [];
+    $unlocalized = [];
     foreach (array_diff((array) scandir($root), ['.', '..', 'en']) as $locale) {
         $file = $root.'/'.$locale.'/rule_form.php';
         if (! is_file($file)) {
@@ -142,9 +142,9 @@ it('says so in every language the form is offered in', function (): void {
 
         $translated = (require $file)['priority_help'];
         if ($translated === '' || $translated === $english) {
-            $unlocalised[] = $locale;
+            $unlocalized[] = $locale;
         }
     }
 
-    expect($unlocalised)->toBe([]);
+    expect($unlocalized)->toBe([]);
 });

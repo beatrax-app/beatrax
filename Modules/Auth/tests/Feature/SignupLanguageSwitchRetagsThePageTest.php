@@ -10,7 +10,7 @@ use Modules\Auth\Internal\Http\Livewire\SignupPage;
 // layout does not redraw: with the page switched from Dutch to German the copy
 // read "Willkommen bei Beatrax" under `document.documentElement.lang === "nl"`,
 // which is what a screen reader takes its pronunciation from and what
-// beatraxLocaliseChart takes its month names and number format from.
+// beatraxLocalizeChart takes its month names and number format from.
 
 it('tells the page which language it is now in when the switch is a round trip', function (): void {
     Livewire::test(SignupPage::class)

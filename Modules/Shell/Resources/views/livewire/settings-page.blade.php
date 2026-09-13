@@ -82,7 +82,7 @@
                      preference, which outranks the session key the pre-auth
                      shells read. --}}
                 <x-core::locale-select
-                    labelled
+                    labeled
                     field-id="settings-locale-select"
                     :selected="$locale"
                     select-class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
@@ -106,7 +106,7 @@
                      answer "what does this screen mean by a word or a day",
                      and neither is a preference about money. --}}
                 <x-core::timezone-select
-                    labelled
+                    labeled
                     field-id="settings-timezone-select"
                     :selected="$timezone"
                     select-class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"

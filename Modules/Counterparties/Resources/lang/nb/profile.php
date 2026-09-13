@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Denne motparten er ikke merket ennå',
-        'not_labelled_body' => 'Å merke ukjente motparter hjelper oversikten med å vise riktige månedssummer og finansieringskjeder.',
+        'not_labeled_heading' => 'Denne motparten er ikke merket ennå',
+        'not_labeled_body' => 'Å merke ukjente motparter hjelper oversikten med å vise riktige månedssummer og finansieringskjeder.',
         'label_cta' => 'Merk denne motparten',
     ],
 

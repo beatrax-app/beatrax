@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Baza podataka:',
-        'artefacts_imports' => 'Uvezeni izvodi:',
-        'artefacts_mail' => 'Skenirana pošta:',
-        'artefacts_drop' => 'Nadzirana mapa:',
+        'artifacts_imports' => 'Uvezeni izvodi:',
+        'artifacts_mail' => 'Skenirana pošta:',
+        'artifacts_drop' => 'Nadzirana mapa:',
         'backups' => 'Sigurnosne kopije:',
         'secrets' => 'Vjerodajnice povezanih usluga:',
         'logs' => 'Zapisi:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopiraj putanju baze podataka u međuspremnik',
-        'artefacts_imports' => 'Kopiraj putanju uvezenih izvoda u međuspremnik',
-        'artefacts_mail' => 'Kopiraj putanju skenirane pošte u međuspremnik',
-        'artefacts_drop' => 'Kopiraj putanju nadzirane mape u međuspremnik',
+        'artifacts_imports' => 'Kopiraj putanju uvezenih izvoda u međuspremnik',
+        'artifacts_mail' => 'Kopiraj putanju skenirane pošte u međuspremnik',
+        'artifacts_drop' => 'Kopiraj putanju nadzirane mape u međuspremnik',
         'backups' => 'Kopiraj putanju sigurnosnih kopija u međuspremnik',
         'secrets' => 'Kopiraj putanju vjerodajnica povezanih usluga u međuspremnik',
         'logs' => 'Kopiraj putanju zapisa u međuspremnik',
     ],
 
-    'artefacts_heading' => 'Tvoji izvorni dokumenti nisu u sigurnosnoj kopiji',
-    'artefacts_body' => 'Sigurnosna kopija sadrži bazu podataka i ništa više. Izvodi koje si uvezao, pošta koju je skener povukao i računi koje si spustio u nadziranu mapu ostaju ondje gdje jesu, u tri gore navedene mape. Spremanje sigurnosne kopije na sigurno mjesto ne kopira ih, pa potpuna arhiva znači da moraš ponijeti i te mape — ili upotrijebiti Izvezi sve u nastavku, što ih pakira zajedno sa sigurnosnom kopijom.',
+    'artifacts_heading' => 'Tvoji izvorni dokumenti nisu u sigurnosnoj kopiji',
+    'artifacts_body' => 'Sigurnosna kopija sadrži bazu podataka i ništa više. Izvodi koje si uvezao, pošta koju je skener povukao i računi koje si spustio u nadziranu mapu ostaju ondje gdje jesu, u tri gore navedene mape. Spremanje sigurnosne kopije na sigurno mjesto ne kopira ih, pa potpuna arhiva znači da moraš ponijeti i te mape — ili upotrijebiti Izvezi sve u nastavku, što ih pakira zajedno sa sigurnosnom kopijom.',
 
     'export_heading' => 'Izvezi sve',
     'export_body' => 'Jedna arhiva sa šifriranom kopijom tvoje baze podataka i svakim izvornim dokumentom koji si dao Beatraxu. Raspakiraj je gdje god želiš i dokumenti su unutra onakvi kakvi su oduvijek bili, u mapama iz kojih su došli.',

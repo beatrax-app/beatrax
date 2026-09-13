@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Toplam gelir:',
 
     'empty' => ':year için vergi etiketli işlem yok.',
-    'uncategorised' => 'Kategorisiz',
+    'uncategorized' => 'Kategorisiz',
 
     'col_date' => 'Tarih',
     'col_counterparty' => 'Karşı taraf',

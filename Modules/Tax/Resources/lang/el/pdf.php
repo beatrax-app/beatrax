@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Σύνολο εσόδων:',
 
     'empty' => 'Δεν υπάρχουν συναλλαγές με φορολογική επισήμανση για το :year.',
-    'uncategorised' => 'Χωρίς κατηγορία',
+    'uncategorized' => 'Χωρίς κατηγορία',
 
     'col_date' => 'Ημερομηνία',
     'col_counterparty' => 'Αντισυμβαλλόμενος',

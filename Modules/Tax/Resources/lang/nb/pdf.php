@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Sum inntekter:',
 
     'empty' => 'Ingen skattemerkede transaksjoner for :year.',
-    'uncategorised' => 'Ikke kategorisert',
+    'uncategorized' => 'Ikke kategorisert',
 
     'col_date' => 'Dato',
     'col_counterparty' => 'Motpart',

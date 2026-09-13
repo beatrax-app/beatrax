@@ -21,9 +21,9 @@ return [
 
     'location' => [
         'database' => 'Datubāze:',
-        'artefacts_imports' => 'Importētie konta pārskati:',
-        'artefacts_mail' => 'Skenētais pasts:',
-        'artefacts_drop' => 'Uzraudzītā mape:',
+        'artifacts_imports' => 'Importētie konta pārskati:',
+        'artifacts_mail' => 'Skenētais pasts:',
+        'artifacts_drop' => 'Uzraudzītā mape:',
         'backups' => 'Dublējumi:',
         'secrets' => 'Savienojumu pieteikšanās dati:',
         'logs' => 'Žurnāli:',
@@ -31,16 +31,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopēt datubāzes ceļu starpliktuvē',
-        'artefacts_imports' => 'Kopēt importēto konta pārskatu ceļu starpliktuvē',
-        'artefacts_mail' => 'Kopēt skenētā pasta ceļu starpliktuvē',
-        'artefacts_drop' => 'Kopēt uzraudzītās mapes ceļu starpliktuvē',
+        'artifacts_imports' => 'Kopēt importēto konta pārskatu ceļu starpliktuvē',
+        'artifacts_mail' => 'Kopēt skenētā pasta ceļu starpliktuvē',
+        'artifacts_drop' => 'Kopēt uzraudzītās mapes ceļu starpliktuvē',
         'backups' => 'Kopēt dublējumu ceļu starpliktuvē',
         'secrets' => 'Kopēt savienojumu pieteikšanās datu ceļu starpliktuvē',
         'logs' => 'Kopēt žurnālu ceļu starpliktuvē',
     ],
 
-    'artefacts_heading' => 'Jūsu avota dokumenti neatrodas dublējumā',
-    'artefacts_body' => 'Dublējumā ir datubāze un nekas cits. Konta pārskati, ko importējāt, pasts, ko ievilka skeneris, un čeki, ko ielikāt uzraudzītajā mapē, paliek tur, kur ir, — trijās iepriekš uzskaitītajās mapēs. Dublējuma pārvietošana uz drošu vietu tos nenokopē, tāpēc pilns arhīvs nozīmē paņemt līdzi arī šīs mapes — vai izmantot tālāk pieejamo Eksportēt visu, kas tās iesaiņo kopā ar dublējumu.',
+    'artifacts_heading' => 'Jūsu avota dokumenti neatrodas dublējumā',
+    'artifacts_body' => 'Dublējumā ir datubāze un nekas cits. Konta pārskati, ko importējāt, pasts, ko ievilka skeneris, un čeki, ko ielikāt uzraudzītajā mapē, paliek tur, kur ir, — trijās iepriekš uzskaitītajās mapēs. Dublējuma pārvietošana uz drošu vietu tos nenokopē, tāpēc pilns arhīvs nozīmē paņemt līdzi arī šīs mapes — vai izmantot tālāk pieejamo Eksportēt visu, kas tās iesaiņo kopā ar dublējumu.',
 
     'export_heading' => 'Eksportēt visu',
     'export_body' => 'Viens arhīvs ar šifrētu jūsu datubāzes kopiju un katru avota dokumentu, ko esat devis Beatrax. Atarhivējiet to jebkur, un dokumenti būs iekšā tādi paši kā vienmēr, tajās mapēs, no kurām nāca.',

@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Fondo di emergenza',
     'goal_japan_trip' => 'Viaggio in Giappone',
     'goal_replace_laptop' => 'Sostituire il portatile',
-    'goal_winter_tyres' => 'Pneumatici invernali',
+    'goal_winter_tires' => 'Pneumatici invernali',
     'goal_ryokan_stay' => 'Soggiorno in ryokan',
     'goal_shinkansen_pass' => 'Pass Shinkansen',
     'pot_emergency_fund' => 'Fondo di emergenza',

@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
-use Modules\Auth\Public\Services\ColdStartEnrolmentFlag;
+use Modules\Auth\Public\Services\ColdStartEnrollmentFlag;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricRecoverResult;
@@ -107,8 +107,8 @@ function coldStartVaultUser(string $username): User
 // second prompt would ask the user twice.
 
 it('reports availability from the enclave', function (): void {
-    $available = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
-    $unavailable = new MobileColdStartVault(app(BiometricKeyVault::class), app(ColdStartEnrolmentFlag::class));
+    $available = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrollmentFlag::class));
+    $unavailable = new MobileColdStartVault(app(BiometricKeyVault::class), app(ColdStartEnrollmentFlag::class));
 
     expect($available->isAvailable())->toBeTrue()
         ->and($unavailable->isAvailable())->toBeFalse();
@@ -116,7 +116,7 @@ it('reports availability from the enclave', function (): void {
 
 it('records the enrollment against the user and reads it back', function (): void {
     $user = coldStartVaultUser('cold-start-enrolls');
-    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrollmentFlag::class));
 
     expect($vault->isEnrolled((int) $user->id))->toBeFalse()
         ->and($vault->enroll((int) $user->id, random_bytes(32)))->toBeTrue()
@@ -127,7 +127,7 @@ it('records the enrollment against the user and reads it back', function (): voi
 // an unlock that cannot work and the user is stuck behind a dead button.
 it('leaves the flag false when the enclave refuses to enroll', function (): void {
     $user = coldStartVaultUser('cold-start-refuses');
-    $vault = new MobileColdStartVault(coldStartEnclave(enrolls: false), app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(enrolls: false), app(ColdStartEnrollmentFlag::class));
 
     expect($vault->enroll((int) $user->id, random_bytes(32)))->toBeFalse()
         ->and($vault->isEnrolled((int) $user->id))->toBeFalse();
@@ -138,7 +138,7 @@ it('leaves the flag false when the enclave refuses to enroll', function (): void
 it('scopes the enrollment flag per user', function (): void {
     $first = coldStartVaultUser('cold-start-first');
     $second = coldStartVaultUser('cold-start-second');
-    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrollmentFlag::class));
 
     $vault->enroll((int) $first->id, random_bytes(32));
 
@@ -150,7 +150,7 @@ it('returns the key the enclave yields, prompting exactly once', function (): vo
     $user = coldStartVaultUser('cold-start-recovers');
     $dataKey = random_bytes(32);
     $enclave = coldStartEnclave(recovers: $dataKey);
-    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrollmentFlag::class));
 
     expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBe($dataKey)
         ->and($enclave->recoveredFor)->toBe([(int) $user->id]);
@@ -158,7 +158,7 @@ it('returns the key the enclave yields, prompting exactly once', function (): vo
 
 it('returns nothing when the enclave recovery is not completed', function (): void {
     $user = coldStartVaultUser('cold-start-canceled');
-    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault(coldStartEnclave(), app(ColdStartEnrollmentFlag::class));
 
     expect($vault->recover((int) $user->id, 'Unlock Beatrax'))->toBeNull();
 });
@@ -166,7 +166,7 @@ it('returns nothing when the enclave recovery is not completed', function (): vo
 it('clears both the enclave entry and the flag when forgetting', function (): void {
     $user = coldStartVaultUser('cold-start-forgets');
     $enclave = coldStartEnclave();
-    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrollmentFlag::class));
 
     $vault->enroll((int) $user->id, random_bytes(32));
 
@@ -182,7 +182,7 @@ it('takes the flag down but reports the enclave keeping the key', function (): v
     $user = coldStartVaultUser('cold-start-refused');
     $enclave = coldStartEnclave();
     $enclave->refusesClear = true;
-    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrollmentFlag::class));
 
     $vault->enroll((int) $user->id, random_bytes(32));
 
@@ -198,7 +198,7 @@ it('takes the flag down but reports the enclave keeping the key', function (): v
 it('records the enrolment as gone when the enclave has nothing left to read', function (): void {
     $user = coldStartVaultUser('cold-start-missing');
     $enclave = coldStartEnclave(refusal: BiometricRecoverResult::missing());
-    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrollmentFlag::class));
 
     $vault->enroll((int) $user->id, random_bytes(32));
 
@@ -211,7 +211,7 @@ it('records the enrolment as gone when the enclave has nothing left to read', fu
 it('keeps the enrolment through a refusal that is not about the entry', function (BiometricRecoverResult $refusal): void {
     $user = coldStartVaultUser('cold-start-keeps-'.$refusal->status);
     $enclave = coldStartEnclave(refusal: $refusal);
-    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrolmentFlag::class));
+    $vault = new MobileColdStartVault($enclave, app(ColdStartEnrollmentFlag::class));
 
     $vault->enroll((int) $user->id, random_bytes(32));
 

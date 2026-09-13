@@ -47,9 +47,9 @@ final class ManageUserPage extends Component
             throw new NotFoundHttpException;
         }
 
-        $normalised = Username::normalize($username);
+        $normalized = Username::normalize($username);
 
-        $partner = User::query()->where('username', $normalised)->first();
+        $partner = User::query()->where('username', $normalized)->first();
 
         if (! $partner instanceof User) {
             throw new NotFoundHttpException;

@@ -17,7 +17,7 @@ use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 
-function shieldedEnrolmentUser(string $username): User
+function shieldedEnrollmentUser(string $username): User
 {
     return User::query()->create([
         'username' => $username,
@@ -60,7 +60,7 @@ function bindNoBiometricVault(): void
 }
 
 it('refuses a WebAuthn creation challenge when the bound shield does not protect the blob at rest', function (): void {
-    $this->actingAs(shieldedEnrolmentUser('enrol-shield-challenge'));
+    $this->actingAs(shieldedEnrollmentUser('enrol-shield-challenge'));
 
     $this->postJson('/lock/biometric/challenge?enroll=1', [])
         ->assertForbidden()
@@ -68,7 +68,7 @@ it('refuses a WebAuthn creation challenge when the bound shield does not protect
 });
 
 it('still issues an assertion challenge under the same pass-through shield, so unlocking an existing credential is untouched', function (): void {
-    $this->actingAs(shieldedEnrolmentUser('enrol-shield-assertion'));
+    $this->actingAs(shieldedEnrollmentUser('enrol-shield-assertion'));
 
     $this->postJson('/lock/biometric/challenge', [])
         ->assertOk()
@@ -76,7 +76,7 @@ it('still issues an assertion challenge under the same pass-through shield, so u
 });
 
 it('refuses the enrolment POST itself, not only the challenge that precedes it', function (): void {
-    $this->actingAs(shieldedEnrolmentUser('enrol-shield-post'));
+    $this->actingAs(shieldedEnrollmentUser('enrol-shield-post'));
 
     $response = $this->postJson('/lock/biometric/enroll', []);
 
@@ -89,7 +89,7 @@ it('refuses the enrolment POST itself, not only the challenge that precedes it',
 });
 
 it('issues the creation challenge where the shield really does protect the blob', function (): void {
-    $this->actingAs(shieldedEnrolmentUser('enrol-shield-real'));
+    $this->actingAs(shieldedEnrollmentUser('enrol-shield-real'));
     bindProtectingShield();
 
     $this->postJson('/lock/biometric/challenge?enroll=1', [])
@@ -98,7 +98,7 @@ it('issues the creation challenge where the shield really does protect the blob'
 });
 
 it('the settings section refuses to start a browser enrolment on a self-hosted web deployment', function (): void {
-    $user = shieldedEnrolmentUser('enrol-shield-section');
+    $user = shieldedEnrollmentUser('enrol-shield-section');
     $this->actingAs($user);
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'shielded-pass');
     bindNoBiometricVault();
@@ -111,7 +111,7 @@ it('the settings section refuses to start a browser enrolment on a self-hosted w
 });
 
 it('the settings section still starts a browser enrolment where a real shield is bound', function (): void {
-    $user = shieldedEnrolmentUser('enrol-shield-section-ok');
+    $user = shieldedEnrollmentUser('enrol-shield-section-ok');
     $this->actingAs($user);
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'shielded-pass');
     bindNoBiometricVault();
@@ -130,7 +130,7 @@ it('the settings section still starts a browser enrolment where a real shield is
 });
 
 it('does not start the browser ceremony on a wrong PIN', function (): void {
-    $user = shieldedEnrolmentUser('enrol-shield-section-wrong');
+    $user = shieldedEnrollmentUser('enrol-shield-section-wrong');
     $this->actingAs($user);
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'shielded-pass');
     bindNoBiometricVault();

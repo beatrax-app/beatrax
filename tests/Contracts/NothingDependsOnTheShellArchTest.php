@@ -49,8 +49,8 @@ function shellInboundReferences(array $paths): array
                 BackendSourceFiles::codeTokens($path),
             ));
 
-        $normalised = str_replace('\\\\', '\\', $source);
-        $matches = PatternScan::all('/Modules\\\\Shell\\\\[A-Za-z0-9_\\\\]+/', $normalised);
+        $normalized = str_replace('\\\\', '\\', $source);
+        $matches = PatternScan::all('/Modules\\\\Shell\\\\[A-Za-z0-9_\\\\]+/', $normalized);
 
         foreach (array_unique($matches[0]) as $symbol) {
             $hits[] = $relative.' -> '.rtrim($symbol, '\\');

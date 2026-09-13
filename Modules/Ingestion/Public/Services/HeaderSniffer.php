@@ -147,10 +147,10 @@ final readonly class HeaderSniffer
         }
 
         $columns = str_getcsv($firstLine, $preset->delimiter, '"', '');
-        $present = array_map(static fn (?string $c): string => CsvPreset::normaliseHeader((string) $c), $columns);
+        $present = array_map(static fn (?string $c): string => CsvPreset::normalizeHeader((string) $c), $columns);
 
         foreach ($preset->requiredHeaders() as $expected) {
-            if (! in_array(CsvPreset::normaliseHeader($expected), $present, strict: true)) {
+            if (! in_array(CsvPreset::normalizeHeader($expected), $present, strict: true)) {
                 throw new SniffMismatchException(sprintf(
                     "This CSV doesn't match the %s layout (missing the '%s' column). Make sure you picked the right bank.",
                     $preset->label,

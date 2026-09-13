@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Total venituri:',
 
     'empty' => 'Nicio tranzacție etichetată fiscal pentru :year.',
-    'uncategorised' => 'Necategorizate',
+    'uncategorized' => 'Necategorizate',
 
     'col_date' => 'Dată',
     'col_counterparty' => 'Contraparte',

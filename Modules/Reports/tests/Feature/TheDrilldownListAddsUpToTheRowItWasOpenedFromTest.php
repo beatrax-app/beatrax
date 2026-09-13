@@ -180,7 +180,7 @@ function ddlCategory(string $name): Category
     ]);
 }
 
-function ddlCategorisedMovement(User $user, ?int $categoryId, int $amountMinor, string $postedAt, string $vendor): int
+function ddlCategorizedMovement(User $user, ?int $categoryId, int $amountMinor, string $postedAt, string $vendor): int
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -288,8 +288,8 @@ it('opens the uncategorized bucket on a list of exactly what it counted', functi
     $this->actingAs($user);
 
     $office = ddlCategory('Office');
-    ddlCategorisedMovement($user, null, -8_500, '2026-01-05', 'DDL Kiosk');
-    ddlCategorisedMovement($user, $office->id, -10_000, '2026-01-06', 'DDL Stationers');
+    ddlCategorizedMovement($user, null, -8_500, '2026-01-05', 'DDL Kiosk');
+    ddlCategorizedMovement($user, $office->id, -10_000, '2026-01-06', 'DDL Stationers');
 
     $report = ddlCategoryReport();
     $params = ddlParamsFor($report, 'Uncategorized');
@@ -309,13 +309,13 @@ it('shows the split parent whose leg a category row counted', function (): void 
 
     // Fully attributed to one category: parent and legs are the same money, so
     // the list can add up to the row exactly.
-    $whole = ddlCategorisedMovement($user, null, -10_000, '2026-01-07', 'DDL Pharmacy');
+    $whole = ddlCategorizedMovement($user, null, -10_000, '2026-01-07', 'DDL Pharmacy');
     ddlSplit($user, $whole, $care->id, -6_000);
     ddlSplit($user, $whole, $care->id, -4_000);
 
     // Attributed across two: the list can only show the parent, but showing
     // nothing at all is what left the row with no transactions behind it.
-    $shared = ddlCategorisedMovement($user, null, -2_105, '2026-01-08', 'DDL Drugstore');
+    $shared = ddlCategorizedMovement($user, null, -2_105, '2026-01-08', 'DDL Drugstore');
     ddlSplit($user, $shared, $care->id, -1_000);
     ddlSplit($user, $shared, $office->id, -1_105);
 
@@ -340,10 +340,10 @@ it('adds up to the row when every leg of the split is in the row category', func
 
     $care = ddlCategory('Personal care');
 
-    $whole = ddlCategorisedMovement($user, null, -10_000, '2026-01-07', 'DDL Pharmacy');
+    $whole = ddlCategorizedMovement($user, null, -10_000, '2026-01-07', 'DDL Pharmacy');
     ddlSplit($user, $whole, $care->id, -6_000);
     ddlSplit($user, $whole, $care->id, -4_000);
-    ddlCategorisedMovement($user, $care->id, -2_105, '2026-01-08', 'DDL Drugstore');
+    ddlCategorizedMovement($user, $care->id, -2_105, '2026-01-08', 'DDL Drugstore');
 
     $report = ddlCategoryReport();
     $params = ddlParamsFor($report, 'Personal care');

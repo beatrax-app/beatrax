@@ -217,7 +217,7 @@ final readonly class DriftAlertQuery
 
         $this->applyCursor($query, $user, $cursorId);
 
-        return $this->materialise($user, $query->get());
+        return $this->materialize($user, $query->get());
     }
 
     /**
@@ -234,7 +234,7 @@ final readonly class DriftAlertQuery
 
         $this->applyCursor($query, $user, $cursorId);
 
-        return $this->materialise($user, $query->get());
+        return $this->materialize($user, $query->get());
     }
 
     // The id is derived from the alert's own columns, so it sorts in hash
@@ -270,7 +270,7 @@ final readonly class DriftAlertQuery
      * @param  Collection<int, stdClass>  $rows
      * @return list<DriftAlertDto>
      */
-    private function materialise(User $user, Collection $rows): array
+    private function materialize(User $user, Collection $rows): array
     {
         if ($rows->isEmpty()) {
             return [];

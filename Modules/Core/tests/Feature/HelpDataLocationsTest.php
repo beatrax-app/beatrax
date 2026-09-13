@@ -67,16 +67,16 @@ it('gives every location its own aria-labelled copy button', function (): void {
 
 it('says the source documents are outside the backup and names their folders', function (): void {
     $user = hdlUser(false, 'hdl-artefacts');
-    $artefacts = UserDataLocations::artefacts();
+    $artifacts = UserDataLocations::artifacts();
 
-    expect($artefacts)->toHaveCount(3);
+    expect($artifacts)->toHaveCount(3);
 
     $component = Livewire::actingAs($user)->test(HelpDataLocations::class);
 
     $component->assertSeeText('Your source documents are not inside the backup');
     $component->assertSeeText('A backup holds the database and nothing else.');
 
-    foreach ($artefacts as $path) {
+    foreach ($artifacts as $path) {
         $component->assertSee($path);
     }
 });

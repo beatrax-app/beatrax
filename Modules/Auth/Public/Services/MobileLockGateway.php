@@ -32,7 +32,7 @@ final readonly class MobileLockGateway
         private AppLockProvisioner $provisioner,
         private AppLockKeyService $keyService,
         private Clock $clock,
-        private ColdStartEnrolmentFlag $coldStartFlag,
+        private ColdStartEnrollmentFlag $coldStartFlag,
     ) {}
 
     public function unlockWithRecoveredKey(int $userId, string $dataKey, Session $session): void

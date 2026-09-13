@@ -20,7 +20,7 @@ uses(RefreshDatabase::class);
 // EnvelopeWriter at write time from the reader's base currency, so the two
 // months either side of a currency change genuinely hold different codes:
 // USD 100.00 merged into EUR 100.00 came out as 20000 labelled EUR.
-// EnvelopePeriodRekeyer::totalled() merges the same pair and its own comment
+// EnvelopePeriodRekeyer::totaled() merges the same pair and its own comment
 // names this bug; the migration is the sibling that never asked.
 
 function runTheStrandedPlanRepairAcrossCurrencies(): void

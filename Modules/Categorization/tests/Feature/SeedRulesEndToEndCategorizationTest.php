@@ -95,7 +95,7 @@ it('categorises ≥40% of a live-distribution fixture and stamps provenance on e
     $stage = $this->app->make(ApplyAutoCategoryStage::class);
     $recorder = $this->app->make(RecordsTransactions::class);
 
-    $categorised = 0;
+    $categorized = 0;
     $total = count($fixture);
 
     foreach ($fixture as $index => $row) {
@@ -111,7 +111,7 @@ it('categorises ≥40% of a live-distribution fixture and stamps provenance on e
         $outcome = $stage->apply($canonical, $this->user);
 
         if ($outcome->canonical->categoryId !== null) {
-            $categorised++;
+            $categorized++;
             expect($outcome->canonical->autoCategoryProvenance)->not->toBeNull();
             expect($outcome->canonical->autoCategoryProvenance)->toHaveKeys(['source', 'rule_id', 'memory_id', 'category_id']);
             expect($outcome->canonical->autoCategoryProvenance['source'])->toBe('rule');
@@ -121,21 +121,21 @@ it('categorises ≥40% of a live-distribution fixture and stamps provenance on e
         $recorder([$outcome->canonical], $this->user);
     }
 
-    $ratio = $categorised / $total;
+    $ratio = $categorized / $total;
     expect($ratio)
-        ->toBeGreaterThanOrEqual(0.4, sprintf('Expected ≥40%% categorisation, got %.1f%% (%d/%d)', $ratio * 100, $categorised, $total));
+        ->toBeGreaterThanOrEqual(0.4, sprintf('Expected ≥40%% categorisation, got %.1f%% (%d/%d)', $ratio * 100, $categorized, $total));
 
     $persistedWithCategory = DB::table('transactions')
         ->where('user_id', $this->user->id)
         ->whereNotNull('category_id')
         ->count();
-    expect($persistedWithCategory)->toBe($categorised);
+    expect($persistedWithCategory)->toBe($categorized);
 
     $persistedWithProvenance = DB::table('transactions')
         ->where('user_id', $this->user->id)
         ->whereNotNull('auto_category_provenance')
         ->count();
-    expect($persistedWithProvenance)->toBe($categorised);
+    expect($persistedWithProvenance)->toBe($categorized);
 });
 
 it('routes every universal-merchant anchor row to its expected category', function (): void {

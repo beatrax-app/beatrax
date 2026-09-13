@@ -95,7 +95,7 @@ trait ReadsYnabCsvFiles
     {
         $rows = [];
         foreach ($reader->getRecords() as $record) {
-            $rows[] = $this->normaliseRow($record);
+            $rows[] = $this->normalizeRow($record);
         }
 
         return $rows;
@@ -105,7 +105,7 @@ trait ReadsYnabCsvFiles
      * @param  array<array-key, mixed>  $record
      * @return array<string, string>
      */
-    private function normaliseRow(array $record): array
+    private function normalizeRow(array $record): array
     {
         $row = [];
         foreach ($record as $key => $value) {

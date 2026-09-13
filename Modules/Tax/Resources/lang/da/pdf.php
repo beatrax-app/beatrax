@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Indtægter i alt:',
 
     'empty' => 'Ingen skattemarkerede transaktioner for :year.',
-    'uncategorised' => 'Ikke kategoriseret',
+    'uncategorized' => 'Ikke kategoriseret',
 
     'col_date' => 'Dato',
     'col_counterparty' => 'Modpart',

@@ -59,7 +59,7 @@ wrong answers before it was found.
 
 ## S3776 — cognitive complexity
 
-[`AFunctionStaysWithinTheComplexityTheAnalyserAllowsArchTest`](../../tests/Contracts/AFunctionStaysWithinTheComplexityTheAnalyserAllowsArchTest.php)
+[`AFunctionStaysWithinTheComplexityTheAnalyzerAllowsArchTest`](../../tests/Contracts/AFunctionStaysWithinTheComplexityTheAnalyzerAllowsArchTest.php)
 · threshold **15**, the profile's own
 
 The largest source of findings this project has had: 116 of them. Cognitive
@@ -85,7 +85,7 @@ quietly change the number while the tree still happens to be clean.
 
 ## S1448 — too many methods in a class
 
-[`AClassStaysUnderTheMethodCountTheAnalyserAllowsArchTest`](../../tests/Contracts/AClassStaysUnderTheMethodCountTheAnalyserAllowsArchTest.php)
+[`AClassStaysUnderTheMethodCountTheAnalyzerAllowsArchTest`](../../tests/Contracts/AClassStaysUnderTheMethodCountTheAnalyzerAllowsArchTest.php)
 · ceiling **20**, non-public methods counted
 
 Eighteen findings. The ceiling counts private and protected methods too, so a
@@ -106,7 +106,7 @@ guard cannot be stricter than the rule it stands in for.
 
 ## S107 — too many parameters
 
-[`AParameterListStaysUnderWhatTheAnalyserCountsArchTest`](../../tests/Contracts/AParameterListStaysUnderWhatTheAnalyserCountsArchTest.php)
+[`AParameterListStaysUnderWhatTheAnalyzerCountsArchTest`](../../tests/Contracts/AParameterListStaysUnderWhatTheAnalyzerCountsArchTest.php)
 · ceiling **7**, for constructors and everything else alike
 
 Twenty findings, and the rule whose behaviour is explained at the top of this
@@ -131,7 +131,7 @@ discovered later.
 
 ## S1142 — too many return statements
 
-[`AFunctionLeavesByFewerExitsThanTheAnalyserCountsArchTest`](../../tests/Contracts/AFunctionLeavesByFewerExitsThanTheAnalyserCountsArchTest.php)
+[`AFunctionLeavesByFewerExitsThanTheAnalyzerCountsArchTest`](../../tests/Contracts/AFunctionLeavesByFewerExitsThanTheAnalyzerCountsArchTest.php)
 · maximum **3**, the rule's own default
 
 Twenty-seven findings, and the one that had no local mirror while the three

@@ -91,7 +91,7 @@ it('never lets a shell event name a session or auth symbol', function (): void {
         'Modules\\Core\\Public\\Contracts\\CurrentUser',
     ];
 
-    $offences = [];
+    $offenses = [];
 
     foreach (ShellEventGraph::reach() as $class => $seed) {
         // A name the graph reached that is not a first-party file on disk --
@@ -106,16 +106,16 @@ it('never lets a shell event name a session or auth symbol', function (): void {
 
         foreach ($forbidden as $symbol) {
             if (str_contains($source, $symbol)) {
-                $offences[] = sprintf('%s names %s (reached from %s)', $class, $symbol, $seed);
+                $offenses[] = sprintf('%s names %s (reached from %s)', $class, $symbol, $seed);
             }
         }
 
         if (PatternScan::matches('/(?<![\w>$])(?:session|auth)\s*\(/', $source)) {
-            $offences[] = sprintf('%s calls the session()/auth() helper (reached from %s)', $class, $seed);
+            $offenses[] = sprintf('%s calls the session()/auth() helper (reached from %s)', $class, $seed);
         }
     }
 
-    expect($offences)->toBe([], implode("\n", array_merge($offences, [
+    expect($offenses)->toBe([], implode("\n", array_merge($offenses, [
         '',
         'The shell posts these events from the Electron main process with no',
         'cookie, onto a route loaded without StartSession, so the session such a',

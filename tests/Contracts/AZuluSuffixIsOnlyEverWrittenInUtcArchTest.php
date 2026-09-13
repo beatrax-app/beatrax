@@ -19,7 +19,7 @@ use Tests\Contracts\Support\BackendSourceFiles;
  *
  * @return list<string>
  */
-function utcLabellingCalls(): array
+function utcLabelingCalls(): array
 {
     return ['gmdate', 'gmstrftime'];
 }
@@ -32,7 +32,7 @@ function utcLabellingCalls(): array
  */
 function zuluStampsRenderedPastTheSeam(array $paths): array
 {
-    $labelling = utcLabellingCalls();
+    $labeling = utcLabelingCalls();
     $offenders = [];
 
     foreach ($paths as $path) {
@@ -44,13 +44,13 @@ function zuluStampsRenderedPastTheSeam(array $paths): array
             }
 
             $isFormatCall = $token[1] === 'format' || $token[1] === 'date';
-            $isLabelling = in_array($token[1], $labelling, true);
-            if (! $isFormatCall && ! $isLabelling) {
+            $isLabeling = in_array($token[1], $labeling, true);
+            if (! $isFormatCall && ! $isLabeling) {
                 continue;
             }
 
             $arguments = BackendSourceFiles::callArguments($tokens, $index);
-            if ($isLabelling || str_contains($arguments, '\Z')) {
+            if ($isLabeling || str_contains($arguments, '\Z')) {
                 $offenders[] = str_replace(base_path().'/', '', $path);
 
                 break;
@@ -111,8 +111,8 @@ it('sees a Zulu stamp rendered without a conversion, and passes the seam', funct
         }
         PHP);
 
-    $labelled = $scratch.'/PlantedGmdateWrites.php';
-    file_put_contents($labelled, <<<'PHP'
+    $labeled = $scratch.'/PlantedGmdateWrites.php';
+    file_put_contents($labeled, <<<'PHP'
         <?php
         final class PlantedGmdateWrites
         {
@@ -148,9 +148,9 @@ it('sees a Zulu stamp rendered without a conversion, and passes the seam', funct
         PHP);
 
     try {
-        $found = zuluStampsRenderedPastTheSeam([$planted, $labelled, $clean, $unrelated]);
+        $found = zuluStampsRenderedPastTheSeam([$planted, $labeled, $clean, $unrelated]);
     } finally {
-        foreach ([$planted, $labelled, $clean, $unrelated] as $path) {
+        foreach ([$planted, $labeled, $clean, $unrelated] as $path) {
             unlink($path);
         }
 
@@ -160,7 +160,7 @@ it('sees a Zulu stamp rendered without a conversion, and passes the seam', funct
     $names = array_map(static fn (string $path): string => basename($path), $found);
     sort($names);
 
-    $expected = [basename($planted), basename($labelled)];
+    $expected = [basename($planted), basename($labeled)];
     sort($expected);
 
     expect($names)->toBe($expected, implode("\n  ", [

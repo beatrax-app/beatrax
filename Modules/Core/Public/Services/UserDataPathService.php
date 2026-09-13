@@ -133,15 +133,15 @@ final class UserDataPathService
             return $base;
         }
 
-        $normalised = ltrim($relative, '/\\');
-        $segments = preg_split('#[/\\\\]#', $normalised);
+        $normalized = ltrim($relative, '/\\');
+        $segments = preg_split('#[/\\\\]#', $normalized);
         if ($segments !== false && in_array('..', $segments, true)) {
             throw new InvalidArgumentException(
                 sprintf("Path-traversal segment '..' is not allowed in an appPath() argument: %s", $relative),
             );
         }
 
-        return $base.DIRECTORY_SEPARATOR.$normalised;
+        return $base.DIRECTORY_SEPARATOR.$normalized;
     }
 
     public static function backupsPath(): string

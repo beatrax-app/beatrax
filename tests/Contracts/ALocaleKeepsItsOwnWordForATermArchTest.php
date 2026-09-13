@@ -122,7 +122,7 @@ it('answers an English term with the one word the locale settled on, not a secon
                 continue;
             }
 
-            $localised = flattenedStrings($translated);
+            $localized = flattenedStrings($translated);
 
             foreach (flattenedStrings($source) as $key => $english) {
                 foreach ($terms as $term => $native) {
@@ -130,7 +130,7 @@ it('answers an English term with the one word the locale settled on, not a secon
                         continue;
                     }
 
-                    $value = $localised[$key] ?? null;
+                    $value = $localized[$key] ?? null;
 
                     if ($value === null) {
                         continue;

@@ -81,7 +81,7 @@ function labelInNameControls(string $source): array
  */
 function labelInNameVerdict(string $source, string $label): array
 {
-    $labelled = 0;
+    $labeled = 0;
     $compared = 0;
     $offenders = [];
 
@@ -94,7 +94,7 @@ function labelInNameVerdict(string $source, string $label): array
             continue;
         }
 
-        $labelled++;
+        $labeled++;
 
         $visible = labelInNameVisibleText($control->inner);
 
@@ -119,7 +119,7 @@ function labelInNameVerdict(string $source, string $label): array
         }
     }
 
-    return ['labelled' => $labelled, 'compared' => $compared, 'offenders' => $offenders];
+    return ['labelled' => $labeled, 'compared' => $compared, 'offenders' => $offenders];
 }
 
 // Buttons and links, which is what MarkupSource is asked for. A `[role=button]`
@@ -138,19 +138,19 @@ it('has every button and link\'s static visible label contained in its accessibl
     expect(count($files))->toBeGreaterThan(100, 'the Blade walk read almost nothing — the roots are wrong, not the tree.');
 
     $offenders = [];
-    $labelled = 0;
+    $labeled = 0;
 
     foreach ($files as $path) {
         $verdict = labelInNameVerdict((string) file_get_contents($path), $path);
 
-        $labelled += $verdict['labelled'];
+        $labeled += $verdict['labelled'];
         $offenders = [...$offenders, ...$verdict['offenders']];
     }
 
     // 105 today. A parser that stopped reading elements, or an attribute reader
     // that stopped resolving aria-label, empties this while the offender list
     // below stays every bit as empty as a clean tree's.
-    expect($labelled)->toBeGreaterThan(40, 'almost no control was read as carrying an aria-label at all — the markup reader is broken, not the templates.');
+    expect($labeled)->toBeGreaterThan(40, 'almost no control was read as carrying an aria-label at all — the markup reader is broken, not the templates.');
 
     expect($offenders)->toBe([], "Visible label text must be part of the accessible name. Offenders:\n  ".implode("\n  ", $offenders));
 });

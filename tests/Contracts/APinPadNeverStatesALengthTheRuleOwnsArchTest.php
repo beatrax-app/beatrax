@@ -211,8 +211,8 @@ it('states no length AppLockPinShape owns, in any template on the PIN path', fun
     foreach (pinPadTemplates() as $path) {
         $relative = str_replace(RepoTree::root().'/', '', $path);
 
-        foreach (pinPadStatedLengths($relative, (string) file_get_contents($path)) as $offence) {
-            $stated[] = $offence;
+        foreach (pinPadStatedLengths($relative, (string) file_get_contents($path)) as $offense) {
+            $stated[] = $offense;
         }
     }
 

@@ -104,7 +104,7 @@ final class AppNavigation
             ...self::planningRows(),
             ...self::insightRows(),
             ...self::ingestionRows(),
-            ...self::organiseRows(),
+            ...self::organizeRows(),
             ...self::settingsRows(),
         ];
     }
@@ -176,7 +176,7 @@ final class AppNavigation
     /**
      * @return list<array{destination: Destination, icon: string, key: string, keywords: list<string>}>
      */
-    private static function organiseRows(): array
+    private static function organizeRows(): array
     {
         return [
             ['destination' => Destination::Counterparties, 'icon' => '◉', 'key' => 'counterparties', 'keywords' => ['merchant', 'payee', 'vendor', 'shop']],

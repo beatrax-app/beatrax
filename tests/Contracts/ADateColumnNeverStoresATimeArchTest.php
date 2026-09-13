@@ -182,9 +182,9 @@ it('never lets a DATE column cast store more than the ten characters of a day', 
                 // serializeDate(), which rewrites the day into UTC — east of it
                 // a DATE column reported the day before in every array and JSON
                 // form the model has.
-                $serialised = $instance->toArray()[$column] ?? null;
-                if ($serialised !== '2026-09-16') {
-                    $wrong[] = $table.'.'.$column.' <- '.$shape.' => toArray '.var_export($serialised, true);
+                $serialized = $instance->toArray()[$column] ?? null;
+                if ($serialized !== '2026-09-16') {
+                    $wrong[] = $table.'.'.$column.' <- '.$shape.' => toArray '.var_export($serialized, true);
                 }
             }
         }

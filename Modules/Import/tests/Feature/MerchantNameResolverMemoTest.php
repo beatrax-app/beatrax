@@ -160,13 +160,13 @@ it('answers every description exactly as a resolver that re-reads the table per 
     $user = memoUser('memo-identical-answers');
     $descriptions = memoSeedRealisticAliases($user->id);
 
-    $memoised = app(MerchantNameResolver::class);
+    $memoized = app(MerchantNameResolver::class);
 
     $expected = [];
     $actual = [];
     foreach ($descriptions as $description) {
         $expected[$description] = memoColdResolver()->resolve($description, $user->id);
-        $actual[$description] = $memoised->resolve($description, $user->id);
+        $actual[$description] = $memoized->resolve($description, $user->id);
     }
 
     expect($actual)->toBe($expected)
@@ -186,17 +186,17 @@ it('still matches an alias past the generalized scan cap on its exact pattern', 
     }
     memoAlias($user->id, 'PAST THE CAP *9999', 'past the cap', 'Past The Cap');
 
-    $memoised = app(MerchantNameResolver::class);
+    $memoized = app(MerchantNameResolver::class);
 
-    expect($memoised->resolve('PAST THE CAP *9999', $user->id))
+    expect($memoized->resolve('PAST THE CAP *9999', $user->id))
         ->toBe(memoColdResolver()->resolve('PAST THE CAP *9999', $user->id))
         ->toBe('Past The Cap');
 
-    expect($memoised->resolve('PAST THE CAP AMSTERDAM', $user->id))
+    expect($memoized->resolve('PAST THE CAP AMSTERDAM', $user->id))
         ->toBe(memoColdResolver()->resolve('PAST THE CAP AMSTERDAM', $user->id))
         ->toBeNull();
 
-    expect($memoised->resolve('FILLER 3 AMSTERDAM', $user->id))
+    expect($memoized->resolve('FILLER 3 AMSTERDAM', $user->id))
         ->toBe(memoColdResolver()->resolve('FILLER 3 AMSTERDAM', $user->id))
         ->toBe('Filler 3');
 });

@@ -52,7 +52,7 @@ Bifrost tree the mobile root *is* the repo root and `Modules/` sits beside
 
 ## How they reach the bundle
 
-`scripts/nativephp_ios_purpose_string_localisations.php` writes
+`scripts/nativephp_ios_purpose_string_localizations.php` writes
 `NativePHP/<locale>.lproj/InfoPlist.strings` — C string literal syntax, one
 `"key" = "value";` per line.
 

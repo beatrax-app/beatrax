@@ -35,7 +35,7 @@ final class PeerFailure
         ],
     ];
 
-    private const string UNRECOGNISED = 'sync::status.labels.connection_failed';
+    private const string UNRECOGNIZED = 'sync::status.labels.connection_failed';
 
     // Unreachable for a message this build has no reading of, and for no
     // message at all: a peer that cannot be reached is normal, and reporting a
@@ -51,7 +51,7 @@ final class PeerFailure
     {
         $reading = self::reading($message);
 
-        return $reading === null ? self::UNRECOGNISED : $reading['label'];
+        return $reading === null ? self::UNRECOGNIZED : $reading['label'];
     }
 
     /**

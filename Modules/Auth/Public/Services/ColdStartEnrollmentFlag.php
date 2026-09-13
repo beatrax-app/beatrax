@@ -13,7 +13,7 @@ use Illuminate\Database\DatabaseManager;
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
  */
-final readonly class ColdStartEnrolmentFlag
+final readonly class ColdStartEnrollmentFlag
 {
     public function __construct(private DatabaseManager $db) {}
 

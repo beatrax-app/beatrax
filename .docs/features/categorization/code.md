@@ -14,7 +14,7 @@ Modules/Categorization/
 │   │   ├── CreateCategorizationRule.php
 │   │   ├── UpdateCategorizationRule.php
 │   │   ├── DeleteCategorizationRule.php
-│   │   └── Concerns/NormalisesRuleInput.php
+│   │   └── Concerns/NormalizesRuleInput.php
 │   ├── Dto/
 │   │   ├── AutoCategorizationOutcomeDto.php
 │   │   ├── CategorizationRuleDto.php

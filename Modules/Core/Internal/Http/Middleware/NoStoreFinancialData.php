@@ -46,7 +46,7 @@ final readonly class NoStoreFinancialData
     // policy made every lock screen and setup screen re-read a 91 KB PNG
     // through PHP, on a device with no web server in front of it.
     /** @var list<string> */
-    private const array PUBLIC_ARTEFACT_ROUTES = [
+    private const array PUBLIC_ARTIFACT_ROUTES = [
         'app.icon',
         'app.splash',
         'pwa.icon',
@@ -67,7 +67,7 @@ final readonly class NoStoreFinancialData
         /** @var Response $response */
         $response = $next($request);
 
-        if (! in_array($request->route()?->getName(), self::PUBLIC_ARTEFACT_ROUTES, true)) {
+        if (! in_array($request->route()?->getName(), self::PUBLIC_ARTIFACT_ROUTES, true)) {
             $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
             $response->headers->set('Pragma', 'no-cache');
         }

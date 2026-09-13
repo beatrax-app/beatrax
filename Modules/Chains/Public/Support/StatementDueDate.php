@@ -32,12 +32,12 @@ final readonly class StatementDueDate
     // IcsStatementHeader::paymentDueDate() returns null on a line it half-read.
     public static function of(?string $printedDueDate, string $periodEnd): CarbonImmutable
     {
-        $printed = $printedDueDate === null ? null : SafeDate::normalisedDayOrNull($printedDueDate);
+        $printed = $printedDueDate === null ? null : SafeDate::normalizedDayOrNull($printedDueDate);
         if ($printed !== null) {
             return $printed;
         }
 
-        $billed = SafeDate::normalisedDayOrNull($periodEnd);
+        $billed = SafeDate::normalizedDayOrNull($periodEnd);
         if ($billed === null) {
             throw new InvalidArgumentException('card_statements.period_end does not read as a day.');
         }

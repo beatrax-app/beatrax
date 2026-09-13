@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Identity;
 
 use Modules\Auth\Public\Contracts\ColdStartVault;
-use Modules\Auth\Public\Services\ColdStartEnrolmentFlag;
+use Modules\Auth\Public\Services\ColdStartEnrollmentFlag;
 
 // Presents the enclave-gated key vault through the shared ColdStartVault
 // contract, so the lock screen asks one question on every platform instead
@@ -17,7 +17,7 @@ final readonly class MobileColdStartVault implements ColdStartVault
 {
     public function __construct(
         private BiometricKeyVault $vault,
-        private ColdStartEnrolmentFlag $enrolment,
+        private ColdStartEnrollmentFlag $enrollment,
     ) {}
 
     public function isAvailable(): bool
@@ -29,14 +29,14 @@ final readonly class MobileColdStartVault implements ColdStartVault
     // itself would fire the biometric prompt just to render a button.
     public function isEnrolled(int $userId): bool
     {
-        return $this->enrolment->isEnrolled($userId);
+        return $this->enrollment->isEnrolled($userId);
     }
 
     public function enroll(int $userId, string $dataKey): bool
     {
         $enrolled = $this->vault->enroll($userId, $dataKey);
 
-        $this->enrolment->mark($userId, $enrolled);
+        $this->enrollment->mark($userId, $enrolled);
 
         return $enrolled;
     }
@@ -52,7 +52,7 @@ final readonly class MobileColdStartVault implements ColdStartVault
         // never stored. The flag is this platform's whole record of the entry,
         // so it comes down with it rather than outliving it.
         if ($result->status === BiometricRecoverResult::MISSING) {
-            $this->enrolment->mark($userId, false);
+            $this->enrollment->mark($userId, false);
         }
 
         return $result->isRecovered() ? $result->dataKey : null;
@@ -64,7 +64,7 @@ final readonly class MobileColdStartVault implements ColdStartVault
     {
         $cleared = $this->vault->clear($userId);
 
-        $this->enrolment->mark($userId, false);
+        $this->enrollment->mark($userId, false);
 
         return $cleared;
     }

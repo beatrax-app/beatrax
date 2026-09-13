@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Datenbank:',
-        'artefacts_imports' => 'Importierte Kontoauszüge:',
-        'artefacts_mail' => 'Eingelesene E-Mails:',
-        'artefacts_drop' => 'Überwachter Ablageordner:',
+        'artifacts_imports' => 'Importierte Kontoauszüge:',
+        'artifacts_mail' => 'Eingelesene E-Mails:',
+        'artifacts_drop' => 'Überwachter Ablageordner:',
         'backups' => 'Backups:',
         'secrets' => 'Zugangsdaten der Verbindungen:',
         'logs' => 'Protokolle:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Pfad der Datenbank in die Zwischenablage kopieren',
-        'artefacts_imports' => 'Pfad der importierten Kontoauszüge in die Zwischenablage kopieren',
-        'artefacts_mail' => 'Pfad der eingelesenen E-Mails in die Zwischenablage kopieren',
-        'artefacts_drop' => 'Pfad des überwachten Ablageordners in die Zwischenablage kopieren',
+        'artifacts_imports' => 'Pfad der importierten Kontoauszüge in die Zwischenablage kopieren',
+        'artifacts_mail' => 'Pfad der eingelesenen E-Mails in die Zwischenablage kopieren',
+        'artifacts_drop' => 'Pfad des überwachten Ablageordners in die Zwischenablage kopieren',
         'backups' => 'Pfad der Backups in die Zwischenablage kopieren',
         'secrets' => 'Pfad der Zugangsdaten der Verbindungen in die Zwischenablage kopieren',
         'logs' => 'Pfad der Protokolle in die Zwischenablage kopieren',
     ],
 
-    'artefacts_heading' => 'Deine Quelldokumente stecken nicht im Backup',
-    'artefacts_body' => 'Ein Backup enthält die Datenbank und sonst nichts. Die Kontoauszüge, die du importiert hast, die E-Mails, die der Scanner geholt hat, und die Belege, die du in den überwachten Ordner gelegt hast, bleiben dort, wo sie sind — in den drei oben genannten Ordnern. Ein Backup an einen sicheren Ort zu legen kopiert sie nicht mit; ein vollständiges Archiv heißt also, diese Ordner ebenfalls mitzunehmen — oder unten Alles exportieren zu benutzen, das sie zusammen mit dem Backup einpackt.',
+    'artifacts_heading' => 'Deine Quelldokumente stecken nicht im Backup',
+    'artifacts_body' => 'Ein Backup enthält die Datenbank und sonst nichts. Die Kontoauszüge, die du importiert hast, die E-Mails, die der Scanner geholt hat, und die Belege, die du in den überwachten Ordner gelegt hast, bleiben dort, wo sie sind — in den drei oben genannten Ordnern. Ein Backup an einen sicheren Ort zu legen kopiert sie nicht mit; ein vollständiges Archiv heißt also, diese Ordner ebenfalls mitzunehmen — oder unten Alles exportieren zu benutzen, das sie zusammen mit dem Backup einpackt.',
 
     'export_heading' => 'Alles exportieren',
     'export_body' => 'Ein Archiv mit einer verschlüsselten Kopie deiner Datenbank und jedem Quelldokument, das du Beatrax gegeben hast. Entpack es, wo du willst, und deine Dokumente liegen darin wie eh und je, in den Ordnern, aus denen sie kamen.',

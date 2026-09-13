@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Total income:',
 
     'empty' => 'No tax-tagged transactions for :year.',
-    'uncategorised' => 'Uncategorised',
+    'uncategorized' => 'Uncategorised',
 
     'col_date' => 'Date',
     'col_counterparty' => 'Counterparty',

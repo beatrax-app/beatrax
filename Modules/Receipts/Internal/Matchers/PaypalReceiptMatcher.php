@@ -179,7 +179,7 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
     {
         [$transactionId, $nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency] = $charge;
 
-        $bookedAt = SafeDate::normalisedDayOrNull($parsed->headers['date'] ?? '');
+        $bookedAt = SafeDate::normalizedDayOrNull($parsed->headers['date'] ?? '');
         if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }

@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Fundusz awaryjny',
     'goal_japan_trip' => 'Wyjazd do Japonii',
     'goal_replace_laptop' => 'Wymiana laptopa',
-    'goal_winter_tyres' => 'Opony zimowe',
+    'goal_winter_tires' => 'Opony zimowe',
     'goal_ryokan_stay' => 'Pobyt w ryokanie',
     'goal_shinkansen_pass' => 'Bilet na shinkansen',
     'pot_emergency_fund' => 'Fundusz awaryjny',

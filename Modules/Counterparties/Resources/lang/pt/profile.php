@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Esta contraparte ainda não está identificada',
-        'not_labelled_body' => 'Identificar as desconhecidas ajuda o painel a mostrar totais mensais e cadeias de financiamento corretos.',
+        'not_labeled_heading' => 'Esta contraparte ainda não está identificada',
+        'not_labeled_body' => 'Identificar as desconhecidas ajuda o painel a mostrar totais mensais e cadeias de financiamento corretos.',
         'label_cta' => 'Identificar esta contraparte',
     ],
 

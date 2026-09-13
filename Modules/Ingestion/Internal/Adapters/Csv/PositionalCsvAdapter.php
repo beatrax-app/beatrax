@@ -57,7 +57,7 @@ final readonly class PositionalCsvAdapter implements SourceAdapter
 
         $index = 0;
         foreach ($reader->getRecords() as $record) {
-            $row = $this->normaliseRow($record);
+            $row = $this->normalizeRow($record);
 
             // Resolved before the amount, not after: the row's own currency is
             // what says how many minor units one major unit holds.
@@ -100,7 +100,7 @@ final readonly class PositionalCsvAdapter implements SourceAdapter
     /**
      * @return array<int, string>
      */
-    private function normaliseRow(mixed $record): array
+    private function normalizeRow(mixed $record): array
     {
         if (! is_array($record)) {
             throw new InvalidAmountException('Unexpected non-array record from CSV reader.');

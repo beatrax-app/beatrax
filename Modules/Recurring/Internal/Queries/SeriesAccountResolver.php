@@ -18,7 +18,7 @@ final readonly class SeriesAccountResolver
     public function __construct(private DatabaseManager $db) {}
 
     /**
-     * @param  list<int>  $seriesIds  already normalised; callers use SeriesIds::normalise()
+     * @param  list<int>  $seriesIds  already normalised; callers use SeriesIds::normalize()
      * @return array<int, int>
      */
     public function forSeriesIds(array $seriesIds, User $user): array

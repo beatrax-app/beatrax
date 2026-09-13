@@ -75,7 +75,7 @@ function uniqueIndexesThatAreNotACrossDeviceIdentity(): array
 /**
  * @return list<string>
  */
-function travellingTablesTakingIdsFromTheSequence(): array
+function travelingTablesTakingIdsFromTheSequence(): array
 {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -113,7 +113,7 @@ it('accounts for every travelling table whose pk is only the next number', funct
     $accountedFor = [...array_keys(mintsItsOwnRowIds()), ...array_keys(neverLeavesTheDeviceThatWroteIt())];
     sort($accountedFor);
 
-    expect(travellingTablesTakingIdsFromTheSequence())->toBe($accountedFor);
+    expect(travelingTablesTakingIdsFromTheSequence())->toBe($accountedFor);
 });
 
 it('never captures a table that has no id of its own to send', function (): void {

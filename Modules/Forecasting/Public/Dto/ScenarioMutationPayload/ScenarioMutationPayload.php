@@ -21,7 +21,7 @@ abstract class ScenarioMutationPayload extends Data
     // could not denominate them was DailyFold — which refuses by raising, and
     // takes the whole projection with it. Money owns the ISO-4217 registry the
     // rest of the app is measured against, so it is the one asked here.
-    protected static function normalisedCurrency(string $raw): string
+    protected static function normalizedCurrency(string $raw): string
     {
         $code = strtoupper(trim($raw));
         if (Money::tryOfMinor(0, $code) === null) {

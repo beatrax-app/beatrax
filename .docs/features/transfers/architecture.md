@@ -71,7 +71,7 @@ What the module explicitly does NOT do:
     several the caller wants.
 - **Enums/**
   - `CounterLegOrder` — which of several counter-legs wins.
-    `NearestToCentre` for chain resolution, `EarliestBooked`
+    `NearestToCenter` for chain resolution, `EarliestBooked`
     for the pairer.
 
 `Internal/` houses the matcher + listener:
@@ -293,7 +293,7 @@ Chains::PaypalFundingResolver deterministic arm
                [TransferIn], currency: null,
                unpairedOnly: false, excludeTransactionId: null),
              new CounterLegWindow($bookedAt, CounterLegWindow::DEFAULT_DAYS,
-               NearestToCentre),
+               NearestToCenter),
              $user)
        → write chain_links row
 ```
