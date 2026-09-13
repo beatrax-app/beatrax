@@ -9,6 +9,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
+use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
@@ -155,4 +158,69 @@ it('writes nothing when the migration finishes', function (): void {
     test()->actingAs($user);
 
     expect(settingsEncryptionWarnings(settingsEnableEncryption($user, null)['records']))->toBe([]);
+});
+
+// The two endings are different states and the sentences differ with them. A
+// rollback really did leave the data alone; a stranded epoch is committed over
+// rows whose keyring never landed, and telling that reader "no changes made"
+// is the app describing the one outcome it did not have.
+it('does not tell a stranded reader that nothing changed', function (): void {
+    $user = settingsStrandedUser('settings-stranded-copy');
+    test()->actingAs($user);
+
+    app()->instance(EncryptionMigrationService::class, settingsStrandedMigrationService(
+        new StrandedEncryptionEpochException(SETTINGS_STRANDED_MESSAGE),
+    ));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('showEncryptionModal', true)
+        ->call('enableEncryption')
+        ->assertSet('encryptionStep', EncryptionSetupStep::Stranded->value)
+        ->assertSee(Lang::get('mobile::pairing.encryption_incomplete'))
+        ->assertDontSee(Lang::get('sync::devices.encryption_failed_body'))
+        ->assertDontSee(Lang::get('sync::devices.close_no_changes'));
+});
+
+it('still tells a rolled-back reader that nothing changed, because nothing did', function (): void {
+    $user = settingsStrandedUser('settings-rollback-copy');
+    test()->actingAs($user);
+
+    app()->instance(EncryptionMigrationService::class, settingsStrandedMigrationService(
+        new RuntimeException('The migration could not start.'),
+    ));
+
+    Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('showEncryptionModal', true)
+        ->call('enableEncryption')
+        ->assertSet('encryptionStep', EncryptionSetupStep::Error->value)
+        ->assertSee(Lang::get('sync::devices.encryption_failed_body'))
+        ->assertDontSee(Lang::get('mobile::pairing.encryption_incomplete'));
+});
+
+// assertSee(Lang::get($key)) passes on a key that resolves to nothing, because
+// the blade and the assertion degrade to the same string together. Key
+// existence is owned tree-wide by EveryKeyACallSiteNamesResolvesToALineArchTest;
+// this reads what the branch actually rendered.
+it('renders the stranded ending with no unresolved translation key', function (): void {
+    $user = settingsStrandedUser('settings-stranded-keys');
+    test()->actingAs($user);
+
+    app()->instance(EncryptionMigrationService::class, settingsStrandedMigrationService(
+        new StrandedEncryptionEpochException(SETTINGS_STRANDED_MESSAGE),
+    ));
+
+    $html = Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('showEncryptionModal', true)
+        ->call('enableEncryption')
+        ->assertSet('encryptionStep', EncryptionSetupStep::Stranded->value)
+        ->html();
+
+    // PatternScan, not preg_match_all: a scan that never ran leaves the same
+    // empty array as one that found nothing, and this assertion reads absence
+    // as a pass.
+    $found = PatternScan::all('/\b[a-z][a-z_]*::[a-z][a-z_]*(?:\.[a-z][a-z_]*)+/', $html)[0];
+
+    expect($found)->toBe([], 'The modal rendered a translation key instead of a sentence: '.implode(', ', $found));
+
+    expect($html)->toContain(Lang::get('core::help.tip.close'));
 });
