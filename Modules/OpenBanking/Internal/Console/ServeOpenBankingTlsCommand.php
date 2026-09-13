@@ -76,31 +76,41 @@ final class ServeOpenBankingTlsCommand extends Command
         $frontPort = $this->resolveFrontPort();
         $backendPort = (int) $this->option('backend-port');
 
-        if ($frontPort <= 0 || $backendPort <= 0) {
-            $this->error('Both the HTTPS port and the backend port must be positive integers.');
+        $refusal = $this->portRefusal($frontPort, $backendPort);
 
-            return null;
-        }
-        // stream_socket_server() takes the low sixteen bits rather than
-        // refusing: 99999 bound 127.0.0.1:34463 while the command announced
-        // https://127.0.0.1:99999, so nothing listened where the browser went.
-        if ($frontPort > self::MAX_PORT || $backendPort > self::MAX_PORT) {
-            $this->error(sprintf(
-                'Both ports must be at most %s: the HTTPS port is %s and the backend port is %s.',
-                self::MAX_PORT,
-                $frontPort,
-                $backendPort,
-            ));
-
-            return null;
-        }
-        if ($frontPort === $backendPort) {
-            $this->error(sprintf('The HTTPS port (%s) and the backend port (%s) must differ.', $frontPort, $backendPort));
+        if ($refusal !== null) {
+            $this->error($refusal);
 
             return null;
         }
 
         return ['front' => $frontPort, 'backend' => $backendPort];
+    }
+
+    /**
+     * @return string|null the reason to report, or null when both ports are usable
+     */
+    private function portRefusal(int $frontPort, int $backendPort): ?string
+    {
+        // The middle arm is the one a reader would not predict:
+        // stream_socket_server() takes the low sixteen bits rather than
+        // refusing, so 99999 bound 127.0.0.1:34463 while the command announced
+        // https://127.0.0.1:99999 and nothing listened where the browser went.
+        return match (true) {
+            $frontPort <= 0 || $backendPort <= 0 => 'Both the HTTPS port and the backend port must be positive integers.',
+            $frontPort > self::MAX_PORT || $backendPort > self::MAX_PORT => sprintf(
+                'Both ports must be at most %s: the HTTPS port is %s and the backend port is %s.',
+                self::MAX_PORT,
+                $frontPort,
+                $backendPort,
+            ),
+            $frontPort === $backendPort => sprintf(
+                'The HTTPS port (%s) and the backend port (%s) must differ.',
+                $frontPort,
+                $backendPort,
+            ),
+            default => null,
+        };
     }
 
     /**
