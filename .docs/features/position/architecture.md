@@ -8,9 +8,10 @@ than any raw cross-module query. It exists so that the surfaces answering
 `PositionQuery::forUser()` rather than each composing their own figures.
 
 The module is register-only and thin: no routes, no views, no Livewire
-components. `EmitPositionDigestJob` is its consumer; the dashboard still
-composes its own summary through `ThisPeriodAtAGlanceQuery`, which this
-module also reads.
+components. Two consumers read it, and they read different amounts of it:
+`EmitPositionDigestJob` takes the whole `PositionSummaryDto`, and the
+dashboard takes `PositionTilesDto` — see [two seams, one
+composition](#two-seams-one-composition).
 
 ## Composition, never a raw SELECT
 
@@ -56,6 +57,32 @@ shortfall still gets a fully-populated DTO — never null. "Nothing notable"
 is itself a valid position; the digest's whole ritual is dispatching it
 regardless.
 
+## Two seams, one composition
+
+`tilesForUser()` answers with the three members a dashboard render draws —
+`summary`, `tilesByCurrency`, `emailScanHealth` — and `forUser()` is
+composed **from** it, so the two cannot come to disagree about a tile.
+
+The dashboard reads the narrower one. It draws no figure from the other
+four, and each of those four is a child component's own question asked
+again by that child — with a client-owned filter or toggle the parent's
+snapshot could not carry, and in three of the four cases a *different*
+question of the same module:
+
+| member | what the position asks | what the child on the dashboard asks |
+|---|---|---|
+| `upcoming` | `RecurringSeriesQuery::allApprovedForUser`, filtered to the period | `FixedPaymentsViewQuery::topByMonthlyEquivalent($user, 6, …)` plus monthly totals, under the card's own `#[Url]`-bound `fp-filter` |
+| `budgets` | `EnvelopeProgressQuery::forPeriod` | `BudgetProgressQuery::expenseCategories` plus `CarryoverQuery::forUserAndPeriod` |
+| `shortfallRisk` | `ForecastHighlightsQuery::shortfallRiskForUser` — one enum | `ForecastHighlightsQuery::forUser` — an eight-member DTO |
+| `netWorth` | `NetWorthQuery::forUser` | `NetWorthQuery::forUser`, behind the card's own `$expanded` toggle, which re-renders the child alone |
+
+Only the last is the same call, and it is the one whose child re-renders
+without the parent. So the answer to "pass them down or let the children
+own them" is that the children own them, and the position stops building
+figures for a page that draws none of them: composing all seven ran 37
+statements where 11 answer the screen, and a whole `GET /` went from 102
+statements to 82.
+
 ## The digest job
 
 `EmitPositionDigestJob` is dispatched by a scheduler entry (owned by the
@@ -98,12 +125,13 @@ the job returns.
 
 ## Public surface
 
-- **DTO** — `PositionSummaryDto` (`Public/Dto`), the single composed value
-  object.
+- **DTOs** — `PositionSummaryDto` (`Public/Dto`), the whole composed value
+  object, and `PositionTilesDto`, the three members a dashboard render
+  draws. The first is composed from the second.
 - **Event** — `PositionDigestDue` (`Public/Events`), raised once per cadence
   occurrence; the sole subscriber is a listener in the Notifications module.
 - **Service** — `PositionQuery` (`Public/Services`), the sole composition
-  entry point.
+  entry point, through `forUser()` or `tilesForUser()`.
 
 `Modules\Position` never imports the Notifications module's namespace —
 `PositionDigestDue` is a plain readonly event that any listener elsewhere

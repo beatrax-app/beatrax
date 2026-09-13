@@ -89,11 +89,13 @@ final class Dashboard extends Component
 
         // One Position seam so the dashboard and the position digest cannot
         // disagree. `$summary` stays settled-EUR-only; only the tiles split.
-        $positionSummary = $position->forUser($user, $period);
-        $summary = $positionSummary->summary;
-        $tiles = $positionSummary->tilesByCurrency;
+        // The narrower of its two methods: the other four members are each a
+        // child component's own question, asked again by that child.
+        $positionTiles = $position->tilesForUser($user, $period);
+        $summary = $positionTiles->summary;
+        $tiles = $positionTiles->tilesByCurrency;
 
-        $emailScanHealth = $positionSummary->emailScanHealth;
+        $emailScanHealth = $positionTiles->emailScanHealth;
 
         $reauthInboxCount = $db->connection()
             ->table('inbox_scan_state')

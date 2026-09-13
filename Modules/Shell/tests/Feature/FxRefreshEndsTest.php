@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,7 @@ function writeRate(string $rate, string $updatedAt): void
     );
 }
 
-it('stops saying it is refreshing once the rate table takes a write', function (): void {
+it('stops saying it is refreshing once the job records that the fetch landed', function (): void {
     writeRate('1.1000', '2026-08-20 09:00:00');
 
     $component = Livewire::test(SettingsPage::class)->call('refreshFxRates');
@@ -59,13 +60,62 @@ it('stops saying it is refreshing once the rate table takes a write', function (
     expect($component->get('fxRefreshing'))->toBeTrue();
 
     // A weekend feed repeats the previous business day, so the rate DATE does
-    // not move on a successful fetch. The write timestamp does.
+    // not move on a successful fetch and never was the signal. The job's own
+    // record of the upsert is, and it costs the screen no query at all.
     writeRate('1.1100', '2026-08-21 09:00:00');
+    app(FxRefreshStatus::class)->recordSuccess((int) auth()->id());
 
     $component->call('pollFxRefresh');
 
     expect($component->get('fxRefreshing'))->toBeFalse()
         ->and($component->get('fxRefreshGaveUp'))->toBeFalse();
+});
+
+// The poll used to compare max(updated_at) against a baseline it took when the
+// refresh started. No index covers updated_at, so every tick read every row of
+// a table that grows with every rate fetched — up to sixteen of them inside one
+// thirty-second refresh window, on a device with a 128 MB ceiling.
+it('asks the rate table nothing at all while it polls', function (): void {
+    writeRate('1.1000', '2026-08-20 09:00:00');
+
+    $connection = app(DatabaseManager::class)->connection();
+    $component = Livewire::test(SettingsPage::class);
+
+    $rateReads = 0;
+    $connection->listen(function (QueryExecuted $query) use (&$rateReads): void {
+        if (str_contains($query->sql, 'exchange_rates')) {
+            $rateReads++;
+        }
+    });
+
+    $component->call('refreshFxRates');
+
+    for ($poll = 0; $poll < 15; $poll++) {
+        $component->call('pollFxRefresh');
+    }
+
+    expect($component->get('fxRefreshing'))->toBeFalse()
+        ->and($rateReads)->toBe(
+            0,
+            'The refresh and its fifteen polls read exchange_rates '.$rateReads.' times. Each one is a full '
+            .'scan: no index covers updated_at, and the newest rate date is only reached through the index '
+            .'when it is asked for as a max().',
+        );
+});
+
+// The one read left on this screen. Without the index it walks the whole table
+// through a covering index to find its last row — 21,930 rows on two years of
+// daily fetches over the thirty currencies the bundled snapshot carries.
+it('reaches the newest rate date through an index rather than walking the table', function (): void {
+    writeRate('1.1000', '2026-08-20 09:00:00');
+
+    $plan = app(DatabaseManager::class)->connection()
+        ->select('explain query plan select max("rate_date") from "exchange_rates"');
+
+    $detail = implode(' ', array_map(static fn (object $row): string => (string) $row->detail, $plan));
+
+    expect($detail)->toContain('exchange_rates_newest_date');
+    expect($detail)->not->toContain('USE TEMP B-TREE');
 });
 
 it('gives up and says so when nothing ever arrives', function (): void {

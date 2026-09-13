@@ -2427,6 +2427,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
         'Modules/Counterparties/tests/Feature/CounterpartyEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Counterparties/tests/Feature/ResolveCounterpartyStageTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
+        'Modules/Desktop/tests/Feature/ALivenessDialIsNotAFailedHandshakeTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Desktop/tests/Feature/ARelayThatCompletesNoHandshakeIsRestartedTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Desktop/tests/Feature/AutoUpdate/UpdateFeedSmokeTest.php -> Modules\\Core\\Internal\\AutoUpdate\\HttpPublisherManifestFetcher',
         'Modules/Desktop/tests/Feature/RelayProvisionsBeforeSpawnTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
@@ -2669,6 +2670,11 @@ it('does not allow a cross-module Internal import outside the pinned production 
         // a second copy here would go on passing the day one was dropped there.
         'tests/Contracts/ACaptureNamesATableTheRegistryCarriesArchTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/AFileNameTheReaderChoseIsLoggedUnderARedactedKeyArchTest.php -> Modules\\DevMode\\Internal\\Logging\\RedactSecretsProcessor',
+        // The comparison and the ordering it cuts against are one key in two
+        // spellings, and the guard has to read both. One lives in Ledger's
+        // Public support; the other is Anomaly's own, and publishing it would
+        // open a seam for a test rather than for a caller.
+        'tests/Contracts/AKeyComparedAsARowValueSpellsItsOwnOrderingArchTest.php -> Modules\\Anomaly\\Internal\\Support\\BackwardOnly',
         // The one guard that holds seven window pairs to one definition each has
         // to reach the definitions themselves, and five of the seven are the
         // private side of their own module. A Public spelling for any of them

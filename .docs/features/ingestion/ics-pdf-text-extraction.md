@@ -180,9 +180,10 @@ new end-of-string:
 
 1. **Direction** — the trailing whitespace-delimited `Af` / `Bij` token.
    Missing marker is a parse error, never a default.
-2. **Settled EUR amount** — now the trailing `[\d.,]+` run. `Af` negates
-   it; the statement itself never prints a minus sign, the marker column
-   carries the sign.
+2. **Settled EUR amount** — now the trailing figure, read by
+   `IcsPdfAdapter::FIGURE` rather than by a bare `[\d.,]+` run, for the
+   reason in the next section. `Af` negates it; the statement itself never
+   prints a minus sign, the marker column carries the sign.
 3. **Native amount + currency** — an optional trailing
    `<amount> <ISO-4217>` pair. Present only on foreign-currency rows.
    When it is present the native pair becomes `amountMinor`/`currency`
@@ -204,6 +205,53 @@ and the matcher was corrected against it, which
 `Receipts/tests/Contracts/FingerprintParityTest`'s foreign pair now holds:
 see [the euro column is the settled leg on both sides of one
 charge](../receipts/architecture.md#the-euro-column-is-the-settled-leg-on-both-sides-of-one-charge).
+
+## A figure a run boundary split in two
+
+`PdfTextLayoutReader::renderRow()` never lets two text runs touch. Each run is
+placed at the column its x coordinate asks for, or one space past what is
+already written, whichever is further right — the floor that keeps `5,17` and
+`Af` from rendering as `5,17Af`, which is what smalot's own `getText()` does
+and what stopped a purchase being recognised as a transaction at all.
+
+The same floor cuts the other way. A report generator that kerns a thousands
+separator draws `1.416,50` as two runs, and the reader then writes a space
+between them. All three cuttings are real, and the anonymised statement
+rendered cell by cell produces them:
+
+| the generator draws | the reader writes |
+| --- | --- |
+| `1.` `416,50` | `1. 416,50` |
+| `1` `.416,50` | `1 .416,50` |
+| `1` `416,50` | `1 416,50` |
+
+A character class of digits, periods and commas stops at that space. It leaves
+the thousand behind as the last word of the description and books the rest:
+`1.197,44` on a transaction row became `197,44`, and `€ 1.416,50` in the totals
+block matched nothing at all, so the statement arrived with no opening balance,
+no closing balance and no credit limit.
+
+`IcsPdfAdapter::FIGURE` is therefore an alternation, grouped first: a run of one
+to three digits, then one or more groups of *exactly* three separated by a
+period, a space, or both in either order, then an optional decimal comma — and
+the old character class behind it, unchanged, so anything ungrouped reads
+exactly as it did. Three digits is what makes the space part of the figure
+rather than the gap in front of it. A comma is never a group mark here; it is
+the decimal, and reading one as grouping would book a hundredth of the charge.
+
+The space belongs to the PDF reader, not to the issuer. `IcsAmountParser` is
+strict about ICS's one notation on purpose — a looser parser reads a `6,06`
+that lost its comma as six hundred euros — so `IcsPdfAdapter::parseFigure()`
+undoes the layout artefact on the way in rather than the parser being widened.
+
+Every anchor over this text layer runs without `/u`, which is what lets the
+group marks be spelled as raw bytes. The modifier bought nothing: the patterns
+are ASCII plus a literal euro sign either way. It cost the whole read — one
+ill-formed byte anywhere in an extraction makes `preg_match` return `false`,
+and a reader testing `!== 1` cannot tell that from "this statement states no
+totals". `IcsAmountParser::currencyPattern()` keeps its `/u`, because there the
+character class holds multi-byte symbols and a byte-wise class would match half
+of one; its subject is a single figure rather than the document.
 
 ## Deriving the year
 

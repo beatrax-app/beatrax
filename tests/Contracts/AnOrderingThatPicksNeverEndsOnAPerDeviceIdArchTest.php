@@ -47,13 +47,9 @@ const PICK_ORDER_FILE_FLOOR = 1_000;
 // added to an allowed file pushes past the entry, and an entry that stops
 // matching fails too, so the list cannot rot into a blanket exemption.
 const PICK_ORDER_ALLOWED = [
-    'Modules/Anomaly/Internal/Detectors/DuplicateChargeDetector.php::transactions' => [
-        'picks' => 1,
-        'why' => 'KNOWN DIVERGENT. The id is load-bearing in the WHERE too — `posted_at = anchor AND id < $thisId` is what makes a same-day pair backward-only — so reordering alone would be cosmetic: the candidate SET already differs between devices. Of three identical same-day charges, device A alerts on the second and third and device B on the first and third, and anomaly_alerts ids are DerivedRowId::for(user_id, transaction_id), so the two devices file different alert rows for one duplicate.',
-    ],
     'Modules/Chains/Internal/Resolvers/PaypalFundingResolver.php::transactions' => [
         'picks' => 2,
-        'why' => 'KNOWN DIVERGENT. Both arms order by nearness in time FIRST and end on the id, and both cut at 20: the alias arm stops at the first two rows whose IBAN matches, the fuzzy arm keeps the first candidate at a tied score (`> $bestScore`), and ChainLinkInsertHelper derives the link id. Fixing needs a distance-primary clause with a device-stable tail, which NewestTransactionFirst does not spell.',
+        'why' => 'KNOWN DIVERGENT, but NOT the shape DuplicateChargeDetector was: both candidate SETS already agree between devices — neither arm carries an id in its WHERE, and the fuzzy arm\'s `id <> $rowId` excludes the anchor itself, which each device names correctly. Only the sequence diverges, so this one IS an ORDER BY change: a distance term, then NewestTransactionFirst::ACROSS_ACCOUNTS joined through ::ACCOUNT, in both arms. Until then the cut at 20 and the two post-SQL picks past it (the alias arm stops at the first two IBAN matches, the fuzzy arm keeps the first candidate at a tied score, `> $bestScore`) answer differently here and there. ChainLinkInsertHelper MINTS the link id and chain_links_pair_uq is UNIQUE(user, from, to, kind), so two answers do not merge: the pair holds two links out of one PayPal expense, which is the one-transaction-in-two-chains the arms\' own `existing.id` exclusion exists to prevent.',
     ],
     'Modules/Ledger/Internal/Services/CounterpartyKeyProvenance.php::transactions' => [
         'picks' => 1,
@@ -691,10 +687,10 @@ it('does not let the known-divergent baseline grow', function (): void {
     ));
 
     expect(count($known))->toBe(
-        2,
-        'Two files on this tree pick a row out of a tie on an id the device counts for itself, each '
-        .'costed in an-ordering-that-picks.md. The count may fall — delete a line here when one is '
-        .'fixed. It may not rise: a third is one more screen that disagrees with the phone beside it.'
+        1,
+        'One file on this tree picks a row out of a tie on an id the device counts for itself, costed '
+        .'in an-ordering-that-picks.md. The count may fall — delete a line here when one is fixed. It '
+        .'may not rise: a second is one more screen that disagrees with the phone beside it.'
         ."\n  ".implode("\n  ", $known),
     );
 });

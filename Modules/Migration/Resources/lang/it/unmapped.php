@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Obiettivo: :name',
         'category_goal' => 'Obiettivo della categoria :name',
+        'schedule' => 'Transazione pianificata: :name',
         'schedule_untitled' => 'Transazione pianificata senza nome',
+        'saved_report' => 'Report salvato: :name',
         'transaction' => 'Transazione: :name · :date · :amount',
         'transaction_unnamed' => 'Transazione',
         'amount_update' => "Aggiornamento dell'importo della transazione",

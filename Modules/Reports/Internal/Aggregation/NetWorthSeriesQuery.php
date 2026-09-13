@@ -92,7 +92,10 @@ final readonly class NetWorthSeriesQuery
 
         foreach ($accounts as $account) {
             $accountId = self::toInt($account->id);
-            $balance = $this->accountBalanceQuery->clearedBalanceAsOf($accountId, $user, $asOf);
+            // The same seam the dashboard card reads, so a point whose date is
+            // today IS the card: an uncleared row is money the reader has, and
+            // a line that dropped it disagreed with the figure printed above it.
+            $balance = $this->accountBalanceQuery->currentBalanceAsOf($accountId, $user, $asOf);
 
             // One account can hold several currencies, so each line is
             // converted at its own rate rather than the account being credited

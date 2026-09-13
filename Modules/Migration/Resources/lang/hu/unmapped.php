@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Cél: :name',
         'category_goal' => ':name kategória célja',
+        'schedule' => 'Ütemezett tranzakció: :name',
         'schedule_untitled' => 'Névtelen ütemezett tranzakció',
+        'saved_report' => 'Mentett jelentés: :name',
         'transaction' => 'Tranzakció: :name · :date · :amount',
         'transaction_unnamed' => 'Tranzakció',
         'amount_update' => 'Tranzakció összegének frissítése',
