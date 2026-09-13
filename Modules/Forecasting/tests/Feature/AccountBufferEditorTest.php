@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
@@ -178,12 +179,13 @@ it('admits the grouped figure it rendered, in a locale that groups with a space'
     $rendered = $component->get('bufferInput');
     expect($rendered)->toBe("2\u{00A0}500,00");
 
-    expect(preg_match('/pattern="([^"]+)"/', $component->html(), $attribute))->toBe(1);
+    $attribute = PatternScan::first('/pattern="([^"]+)"/', $component->html());
+    expect($attribute)->toHaveKey(1);
 
     // The attribute is a JavaScript pattern; its \uXXXX escapes are transcribed
     // to PCRE's own so the control's own rule is what the figure is tested
     // against, rather than a second copy of it written here.
     $rule = str_replace(['\u00A0', '\u202F'], ['\x{00A0}', '\x{202F}'], $attribute[1]);
 
-    expect(preg_match('/^(?:'.$rule.')$/u', $rendered))->toBe(1);
+    expect(PatternScan::matches('/^(?:'.$rule.')$/u', $rendered))->toBeTrue();
 });
