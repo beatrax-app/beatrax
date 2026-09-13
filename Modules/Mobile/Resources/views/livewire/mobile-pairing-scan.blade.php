@@ -12,8 +12,9 @@
     Camera view: the frame below is a placeholder, not a preview. The real
     scan surface is `nativephp/mobile-scanner`'s own full-screen activity,
     launched through QrScanBridge::open() and closing back into this component
-    via the CodeScanned / ScannerCancelled events MobilePairingScan listens
-    for. The plugin lives only in mobile-app/vendor, so the repo-root
+    via the CodeScanned event MobilePairingScan listens for. ScannerCancelled
+    is the other listener, and arrives only when the camera permission is
+    refused -- closing the scanner unscanned dispatches nothing at all. The plugin lives only in mobile-app/vendor, so the repo-root
     toolchain cannot resolve it — hence the runtime FQCN strings there and the
     reflection-only signatures in tools/phpstan-stubs.
 --}}

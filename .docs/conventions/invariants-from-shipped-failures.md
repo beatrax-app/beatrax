@@ -8066,6 +8066,44 @@ go red, which is the failure [A needle short enough to match generated
 markup](#a-needle-short-enough-to-match-generated-markup) is about, arriving
 from the other side.
 
+## A log line a peer can repeat
+
+`SyncSession::receiveOps()` decodes one frame into however many entries the peer
+chose to send, then walks them. Two refusals live in that walk — an author no
+local key verifies, and a signature the author's own key does not sign — and
+each one originally wrote its own line per entry. A peer whose history had been
+signed by a retired identity wrote the same warning **six thousand times** in
+one exchange, and the run still read as an ordinary sync from every surface
+above it: the volume was the only symptom, and volume is what nobody scrolls.
+
+The repair is to count per author inside the walk and report once after it, with
+`array_sum()` for the total, `array_keys()` for the authors, and the size of the
+frame beside them.
+
+**It had to be made twice.** The first fix converted the unverifiable-author
+refusal and left the invalid-signature refusal beside it still writing per
+entry — the same defect, in the same loop, surviving its own fix by one
+branch. That is the shape a rule is for, so
+`ALogLineAPeerCanRepeatIsBoundedArchTest` now reads every file under
+`Modules/Sync/Internal/Transport`.
+
+### What the rule refuses
+
+A logger call whose enclosing block is a loop body, unless control leaves that
+loop from the same statement block — `break`, `return`, `throw`, `exit`.
+`continue` is deliberately not a bound: it was the spelling both floods had, and
+it guarantees the next iteration rather than preventing it.
+
+One call in the tree is inside a loop and passes:
+`SyncWebSocketHandler`'s `peer revoked mid-session — closing.`, which writes its
+line and breaks. It needs no pin, because the rule recognises the `break`
+structurally — an entry granting it an exemption would go stale the moment that
+code moved, whereas the bound travels with it.
+
+The scope is deliberately `Internal/Transport` and not the module. It is where
+the iteration count is chosen by the machine on the other end of the socket
+rather than by this one, which is what turns a per-item line into a flood.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in
