@@ -857,6 +857,164 @@ one expression rather than a rule each caller had to remember. The consequences
 of running one anyway, and why the refusal is a throw rather than a count, are
 on [sensitive-columns-at-rest](sensitive-columns-at-rest.md#a-pass-that-cannot-seal-must-not-run).
 
+### Rows the log holds and the table does not
+
+Every section above is about what the applier does with a create it cannot
+place. This one is about the creates nothing did anything with, and about the
+fact that until now nothing counted them.
+
+**Measured on the paired Mac and Galaxy A51, 2026-09-13.** Nineteen
+`counterparties` primary keys carry a `create_row` from *both* devices under a
+**different `slug`** — the natural key — so they are nineteen pairs of
+genuinely different counterparties sharing one id. Fifteen of the phone's
+nineteen slugs are in no row of the desktop's `counterparties` table. Their 135
+`create_row` ops are on disk. `op_log_row_aliases` holds **0** rows for the
+table, so nothing was re-homed, and `op_log_quarantine` holds **0**, so nothing
+was recorded as refused. Every stranded op's `hlc_l` lies between
+1789060004827 and 1789060092351, and the catch-up watermark in
+`sync_peer_catch_up_state` for that author is 1789169148113 — above all of
+them, so catch-up will not send them again.
+
+Nothing on this device will ever ask for them. [Retrying a create two devices
+minted one id for](#retrying-a-create-two-devices-minted-one-id-for) is driven
+by `op_log_quarantine`: `RetriedCollisionCreates` reads holds and replays the
+creates they name. With no hold there is no coordinate to retry from, and the
+only surviving record that those fifteen rows ever existed is
+`op_log_entries` itself.
+
+By contrast the same batch re-homed 42 `transactions`, 2 `import_runs` and 1
+`accounts` — the aliases are there. `recurring_series` and
+`recurring_series_occurrences` carry derived ids, so their apparent collisions
+are two devices computing one id for one row, which is the design and not a
+loss.
+
+**Today's applier does not produce this.** `AlreadyPresentCreate::answer()` →
+`RehomedCreate::under()` re-homes the counterparties shape:
+`counterparties_user_id_slug_unique` is non-partial and `counterparties.slug` is
+[knowingly plaintext](sensitive-columns-at-rest.md), so
+`naturalKeyIdentifies()` answers yes and the row is stored under an id this
+device mints with the peer's id aliased to it.
+`APeersCounterpartyUnderAnIdThisDeviceUsesIsNotLostTest` drives exactly that
+shape through the replayer and it re-homes, aliases, stays idempotent over three
+replays, and lands the peer's later `set` on the re-homed row. The fifteen are
+residue of a build that predates `RehomedCreate`: their ops were recorded
+2026-09-10 22:48:52 and that class shipped 2026-09-11 11:27.
+
+#### The question a primary key cannot answer
+
+The obvious detector — *a `create_row` whose pk is absent from its table* —
+finds **0** of those fifteen, because the pk is not absent. It is occupied, by
+the counterparty this device created under the same number. On the same
+database that detector finds seven rows, all `anomaly_alerts`, and none of the
+counterparties.
+
+So there are two shapes and one question underneath them:
+
+| shape | what the id looks like | what a pk check says |
+|---|---|---|
+| the id is free | no row of this reader's is at it | missing |
+| the id is taken by a different row | a row is at it | present, and wrong |
+
+`Internal\Merge\StrandedCreates` asks the question the applier asks instead of
+the question the id answers: **is the row this create describes here at all?**
+It reads the natural key the same way `PeerRowAliases::localTwinOf()` does —
+every non-partial unique index other than the primary key, every column of it
+carried non-null and unsealed — so the check and the merge can never disagree
+about which rows are here.
+
+Only two kinds of id are examined. One no row of this reader's is at, and one
+**two devices both minted**. A pk a single device created and a row is sitting
+at is that device's row, whatever its columns say now; asking the natural key
+about it would report every row whose key was edited after it was created.
+
+#### How each legitimate absence is excluded
+
+- **A re-homed row** has an alias. `PeerRowAliases::localFor()` is asked for
+  every device claiming the id, and an alias is the two devices having agreed
+  which local row that id means — which is precisely what a re-home records.
+- **A deleted row** has a `delete_tombstone` for the same `(table, pk)`, from
+  any device. A tombstone is the record of a row deliberately gone, and it
+  answers whether or not anything is at the id any more.
+- **A derived-id merge** is not a special case and needs no list of tables. Two
+  devices that computed one id for one row computed it from the same values, so
+  the natural key finds the row and the create is not reported. The 21
+  `recurring_series_occurrences` and 1 `recurring_series` "collisions" on the
+  measured database are all silent for this reason.
+- **A row whose natural key was edited afterwards** is not read off its create
+  alone. The payload is the create overlaid with every later `set`, so a
+  renamed counterparty is not reported as one that never landed. Whose edits
+  may be read is decided first: the devices claiming one id are grouped by the
+  natural key their *creates* carry, so two creates the key cannot tell apart
+  are one row and share their edits, while two it can are the collision and do
+  not — reading one side's rename into the other's payload would hide the loss
+  this check exists to find.
+- **`users`** is skipped entirely. The applier addresses a self-scoped table by
+  the session's own id and never by the wire pk, so an id no row here wears is
+  the ordinary case rather than a row that went missing.
+
+A create is counted once per **row**, not once per author: two devices that
+wrote the same logical row under one id and lost it lost one row.
+
+#### Where it is reported
+
+`Public\Services\StrandedCreateHealthCheck` is a plain-values health check in
+the shape `beatrax:doctor` already consumes — `label()`, `severity()`,
+`message()`, like `SplitSumHealthCheck` — and `SyncServiceProvider` binds it.
+The binding is load-bearing: `DoctorCommand` takes every cross-module health
+check as an optional constructor argument, and Laravel's container returns the
+default for a parameter that has one **unless the class is bound**, so an
+unbound check resolves to null and its row silently never prints.
+
+The row names the count and the tables and nothing else:
+
+```
+rows the log still holds warning  23 rows the op log holds and no table has (counterparties 15, anomaly_alerts 6, system_alerts 2) — each arrived under an id that is either free or held by a different row; the values stay in op_log_entries and are not printed here
+```
+
+What is stranded is the reader's own ledger — a counterparty is the shop they
+bought from — and a console line is pasted into bug reports, so no value from a
+row is printed. A clean database gets a count of what was examined rather than a
+bare "ok": a pass that reports silence is unreadable, because one that stopped
+looking says the same as one that looked at everything and found nothing.
+
+Every read it makes is bounded, and that shaped the design rather than
+decorating it. `op_log_entries` is the one table that grows with every mutation
+for the life of the install, and on a phone an exhausted heap is `E_ERROR` — no
+exception, no log line, no retry. So both candidate sets are asked for **in
+SQL** and only the answers cross into memory: the ids two devices both minted
+come back from a `GROUP BY pk HAVING COUNT(DISTINCT device_id) > 1`, and the ids
+no row of this reader's is at from a `WHERE NOT EXISTS` against the table
+itself, owner-scoped the way the applier writes. Reading every create group in
+to sift them here would be the whole log — 647 groups on the measured database,
+and one per row the reader ever wrote on a mature one. The reader list is read
+off `users`, which is a household, rather than off the log. Every chain names
+the table as a literal rather than through a constant, so
+[`BoundedReadArchTest`](../../architecture/reads-bounded-by-the-user.md) can
+read it: a guard keyed on a spelling is one a constant hides the read from.
+
+The whole check is 2.2 seconds over 12 871 ops, and it is exact rather than
+sampled — a floor would read the same whether one row or forty were missing.
+
+#### What the measured 23 are, and what this does not close
+
+- **`counterparties` 15** are the loss above.
+- **`anomaly_alerts` 6** are this device's **own** creates whose rows are gone
+  with no tombstone behind them —
+  `2026_08_30_000001_drop_anomaly_alerts_raised_on_internal_moves` deletes them
+  with raw SQL, which emits none. They are a second finding rather than a false
+  positive: a local delete no tombstone records is one the peer's history can
+  undo.
+- **`system_alerts` 2** are the two `unplaceable_collision` holds. That table
+  declares `dedup_key` and deliberately does not sync it, so no natural key can
+  identify the payload and the pk answers — which is the older, weaker question,
+  kept for exactly the tables it is the only one available for.
+
+**No repair ships with this.** Replaying the fifteen stranded creates through
+`AlreadyPresentCreate::answer()` would place them, because that path now
+re-homes; it would also write to the reader's ledger, and a check that reports
+is the part that can be shipped without asking. Detection is this page; repair
+is a decision.
+
 ### A split leg that would overfill its transaction (`Internal\Merge\SplitOverfillGate`)
 
 `SaveTransactionSplit` requires a transaction's legs to add up to it **exactly**.
