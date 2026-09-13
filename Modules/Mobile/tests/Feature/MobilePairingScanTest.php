@@ -645,6 +645,26 @@ it('the native ScannerCancelled event lands on the typed-code fallback', functio
         ->assertSet('cameraUnavailableNotice', true);
 });
 
+// The camera's own road in. Every scan test above hands submitCode() the string
+// the event would have carried, so the one line joining the two had never run —
+// and a payload that never reaches submitCode() is a camera that pairs nothing.
+it('carries a scanned payload from the native event all the way to the confirm step', function (): void {
+    $user = pairingScanTestUser('mobile-pair-scanned-event');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    $issued = pairingScanIssueToken($user);
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('onCodeScanned', data: $issued['qrPayload'], format: 'qr')
+        ->assertSet('step', 'confirm')
+        ->assertSet('flashMessage', '')
+        ->assertCount('safetyWords', 6);
+});
+
 it('an empty CodeScanned payload is ignored rather than treated as a bad code', function (): void {
     $user = pairingScanTestUser('mobile-pair-empty-scan');
     test()->actingAs($user);
