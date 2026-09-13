@@ -16,6 +16,11 @@ final readonly class KnownSenderQuery
 {
     use CoercesScalars;
 
+    // The column that says who wrote the label, and the only thing that may
+    // decide whether it is read as a copy spec. The value cannot decide: the
+    // envelope is unsigned, public, and a From display name can carry it.
+    private const string APP_AUTHORED = 'system';
+
     public function __construct(private DatabaseManager $db) {}
 
     /**
@@ -38,16 +43,18 @@ final readonly class KnownSenderQuery
         foreach ($rows as $row) {
             /** @var stdClass $row */
             $userId = $row->user_id;
+            $source = self::toString($row->source);
+            $label = self::toString($row->label);
             $out[] = new KnownSenderDto(
                 id: self::toInt($row->id),
                 userId: is_numeric($userId) ? (int) $userId : null,
                 emailPattern: self::toString($row->email_pattern),
-                // A label the reader promoted is their own words and comes back
-                // as it was typed; a seeded one is a stored line and comes back
-                // in the reader's language. The source-then-name order moves out
-                // of SQL with it: a stored line sorts by its envelope there.
-                label: StoredCopy::read(self::toString($row->label)),
-                source: self::toString($row->source),
+                // A seeded label is a stored line and comes back in the
+                // reader's language; a promoted one is the From display name
+                // and comes back as it was sent. The source-then-name order
+                // moves out of SQL with it: a spec sorts by its envelope there.
+                label: $source === self::APP_AUTHORED ? StoredCopy::read($label) : $label,
+                source: $source,
             );
         }
 

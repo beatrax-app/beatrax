@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Redigér visningsnavn',
 
-    'hero_net_received' => 'Netto modtaget',
     'hero_12mo_total' => 'I alt 12 måneder',
     'hero_transactions' => 'Transaktioner',
     'hero_first_seen' => 'Først set',

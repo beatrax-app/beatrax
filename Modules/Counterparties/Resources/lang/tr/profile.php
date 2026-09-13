@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Görünen adı düzenle',
 
-    'hero_net_received' => 'Net alınan',
     'hero_12mo_total' => '12 aylık toplam',
     'hero_transactions' => 'İşlemler',
     'hero_first_seen' => 'İlk görülme',

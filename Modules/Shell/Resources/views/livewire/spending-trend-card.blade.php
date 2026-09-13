@@ -39,6 +39,7 @@
             <x-core::fx-disclosure
                 :disclosure="$trend->conversion"
                 id="spend-trend"
+                :online-rates="$fxOnlineEnabled"
                 :label="Lang::get('core::spending_trend.heading')"
                 class="mt-1 block text-xs text-slate-600 dark:text-slate-400"
             />

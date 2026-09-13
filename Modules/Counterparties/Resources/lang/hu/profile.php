@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Megjelenítendő név szerkesztése',
 
-    'hero_net_received' => 'Nettó bevétel',
     'hero_12mo_total' => '12 havi összeg',
     'hero_transactions' => 'Tranzakciók',
     'hero_first_seen' => 'Első előfordulás',
