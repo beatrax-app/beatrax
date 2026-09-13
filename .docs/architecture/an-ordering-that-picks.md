@@ -41,6 +41,11 @@ It lives in `Ledger\Public\` because `Ledger` owns the `transactions` table and
 five modules read it. One clause they share is the only way two devices agree;
 a copy per module is a second answer waiting to drift.
 
+A read that does not merely rank but asks whether a row comes **before** a
+named one wants `::KEY_ACROSS_ACCOUNTS` beside it: the same columns as a row
+value, so the comparison and the ordering are one key. See
+[a comparison over the same key](#a-comparison-over-the-same-key).
+
 ## The guard reads raw strings too
 
 The window spelling carries no `limit()` and no `first()` — the rank *is* the
@@ -63,18 +68,33 @@ every page boundary.
 
 ## The known-divergent baseline
 
-Three reads, in two files, pick a row out of a tie on a per-device id today.
-They are a baseline, not a licence: the count in the guard may fall, and may
-not rise. Neither is a clause swap — in both the id is doing work somewhere
-other than the ORDER BY, so swapping the clause would turn the guard green
-while the defect kept firing.
+Two reads, in one file, pick a row out of a tie on a per-device id today. They
+are a baseline, not a licence: the count in the guard may fall, and may not
+rise.
 
-| Read | Why it is not fixed with a clause swap |
+| Read | What fixing it needs |
 | --- | --- |
-| `Anomaly\Internal\Detectors\DuplicateChargeDetector` | The id is load-bearing in the `WHERE` as well — `posted_at = anchor AND id < $thisId` is what makes a same-day pair backward-only — so the candidate **set** already differs between devices and reordering alone would be cosmetic. Of three identical same-day charges, device A alerts on the second and third and device B on the first and third; `anomaly_alerts.id` is `DerivedRowId::for(user_id, transaction_id)`, so the two file different alert rows for one duplicate. |
-| `Chains\Internal\Resolvers\PaypalFundingResolver` (two arms) | Both order by nearness in time **first** and end on the id, and both cut at 20. The alias arm stops at the first two rows whose IBAN matches; the fuzzy arm keeps the first candidate at a tied score (`> $bestScore`). `ChainLinkInsertHelper` derives the link id. Fixing needs a distance-primary clause with a device-stable tail, which `NewestTransactionFirst` does not spell. |
+| `Chains\Internal\Resolvers\PaypalFundingResolver` (two arms) | An ORDER BY change, and only that. Both arms order by nearness in time **first** and end on the id, and both cut at 20; past the cut the alias arm stops at the first two rows whose IBAN matches and the fuzzy arm keeps the first candidate at a tied score (`> $bestScore`), so the cut decides the answer. What it needs is a distance term followed by `NewestTransactionFirst::ACROSS_ACCOUNTS`, joined through `::ACCOUNT`, in both arms. |
+
+Unlike the duplicate detector below, **the candidate sets already agree**:
+neither arm carries an id in its `WHERE`, and the fuzzy arm's
+`id <> $rowId` excludes the anchor row itself, which each device names
+correctly out of its own numbering. Only the sequence within an agreed set
+diverges, which is what makes this one a clause swap after all.
+
+What it costs while it stands: `ChainLinkInsertHelper` **mints** the link id
+and `chain_links_pair_uq` is `UNIQUE(user_id, from_transaction_id,
+to_transaction_id, kind)`, so two devices answering with different funding legs
+do not converge on one row — the pair holds two links out of one PayPal
+expense. That is the one-transaction-in-two-chains the arms' own `existing.id`
+exclusion exists to prevent, arriving over sync instead of from a second local
+pass.
 
 ## The picks that were fixed
+
+`Anomaly`'s `DuplicateChargeDetector` was the harder of the two known-divergent
+reads and is fixed: it compares against the shared key rather than ranking on
+an id, and the measurement it used to produce is below.
 
 `Counterparties` had four transaction reads and the first pass fixed the two
 that rank. `CounterpartyTriage::recentTransactionsFor()` — the five charges
@@ -93,10 +113,10 @@ only *within* one account: a merchant charged from two of them can still tie,
 and the clause is better rather than total. It ends on `occurrence_ordinal`
 rather than on an id, so this rule does not name it.
 
-### What the duplicate detector's divergence looks like
+### The duplicate detector, and why it was not a clause swap
 
 Three identical charges the bank booked on one day, numbered in statement order
-by one device and in another order by its peer. Running the detector's own
+by one device and in another order by its peer. Running the detector's old
 predicate — `posted_at < anchor OR (posted_at = anchor AND id < $thisId)`, then
 `ORDER BY posted_at DESC, id DESC` taken at one row — over both:
 
@@ -108,10 +128,64 @@ predicate — `posted_at < anchor OR (posted_at = anchor AND id < $thisId)`, the
 
 Each device raises two alerts, which is what "exactly one alert per pair" is
 supposed to give. But they are not the same two: A files them against Y and Z,
-B against X and Z, and Z's sibling differs as well. `anomaly_alerts.id` is
-derived from `(user_id, transaction_id)`, so the pair holds **three** distinct
-alert rows for one duplicate group. Changing only the `ORDER BY` would not move
-this: the `id <` in the WHERE is what makes the candidate sets differ.
+B against X and Z. `anomaly_alerts.id` is minted and the dedup index is
+`UNIQUE(transaction_id)`, which merges per CHARGE rather than per pair — so the
+pair converges on **three** alert rows for one duplicate group.
+
+The `id <` sat in the `WHERE`, not only in the `ORDER BY`, so the candidate
+**sets** differed before any ordering happened and a clause swap would have
+turned the guard green while the defect kept firing. What it took instead was a
+**comparison** over the device-stable key rather than a ranking of it —
+`NewestTransactionFirst::KEY_ACROSS_ACCOUNTS`, below.
+
+## A comparison over the same key
+
+An ordering answers "which of these is nearest". A backward-looking read asks
+something the ordering cannot: "is this row strictly BEFORE that one". Those
+are two halves of one key, and they have to be the same key or the read cuts on
+one and ranks by the other.
+
+`NewestTransactionFirst::KEY_ACROSS_ACCOUNTS` spells the columns of
+`ACROSS_ACCOUNTS` as a row value — `(posted_at, booked_at, amount_minor,
+currency, counterparty_normalized, occurrence_ordinal, charge_account.iban)` —
+because SQLite compares a row value lexicographically, which is exactly what
+that ORDER BY sorts by. Within one user the key is unique: it is
+`transactions_fingerprint_uq` with `account_id` swapped for the IBAN that
+account carries `UNIQUE(user_id, iban)` on. So "strictly less than this row's
+tuple" is a total order with the anchor itself as the only tie, which is what
+makes "backward-only" mean the same thing on both devices.
+
+`AKeyComparedAsARowValueSpellsItsOwnOrderingArchTest` holds the two spellings
+together — they are two hand-written column lists, and a pair that drifts apart
+still runs.
+
+### What it costs
+
+Measured over the demo dataset (176 transactions) and a 60 000-row synthetic
+ledger, comparing the old predicate against the new one row for row:
+
+| | demo, 165 rows | 60 000-row ledger, 2 000 rows |
+| --- | --- | --- |
+| before | 0.0478 ms/row | 1.4484 ms/row |
+| after | 0.0362 ms/row | 1.0285 ms/row |
+| | **−24%** | **−29%** |
+
+Cheaper, not dearer, and for a reason worth keeping: the old `posted_at >=
+windowOpen` had no upper bound, so the seek ran from the window's start to the
+end of the file — the whole remaining ledger when a backfill anchors years
+back. SQLite decomposed the `OR` into a `MULTI-INDEX OR` over two searches and
+sorted the union. The new shape states the window as a closed range beside the
+exact comparison, so the same index
+(`transactions_user_id_posted_at_index`) is seeked once on
+`user_id=? AND posted_at>? AND posted_at<?`. The row value must stay **beside**
+that range rather than replace it: a bare `(a, b, …) < (…)` gives the planner
+nothing to seek on.
+
+What it adds is one integer-primary-key lookup on `accounts` per candidate row,
+one scalar subquery evaluated once for the anchor's own IBAN, and a temp B-tree
+over the last six ORDER BY terms — which sorts only the rows surviving the
+window, counterparty, amount, currency and type filters, nought to a handful in
+practice.
 
 ## The picks that are allowed to end on an id
 

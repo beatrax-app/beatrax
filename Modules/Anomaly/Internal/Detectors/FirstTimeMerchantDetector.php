@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Internal\Detectors;
 
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Query\Builder;
+use Modules\Anomaly\Internal\Support\BackwardOnly;
 use Modules\Anomaly\Internal\Support\ChargeAnchor;
 use Modules\Anomaly\Internal\Support\RobustStatistics;
 use Modules\Core\Models\User;
@@ -13,6 +13,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 
 /**
  * @link ../../../../.docs/features/anomaly/detector-maths.md
@@ -53,28 +54,30 @@ final readonly class FirstTimeMerchantDetector
         // today's twelve months is two questions about two different moments.
         $anchor = ChargeAnchor::forRow($txn, $this->clock);
 
-        return $this->isFirstTimeMerchant($user, $counterpartyId, $excludeId, $anchor)
+        return $this->isFirstTimeMerchant($user, $counterpartyId, $txn, $anchor)
             && $this->isLargeVsOverall($txn, $user, $absMinor, $excludeId, $anchor);
     }
 
     // PRIOR, not merely other. Asking for no OTHER charge silenced the first
     // charge of every merchant the user went on to use again, which over a
-    // backfill is nearly all of them. The same-day `id <` tie-break is the
-    // convention DuplicateChargeDetector's backward window already uses.
-    private function isFirstTimeMerchant(User $user, int $counterpartyId, int $excludeId, ChargeAnchor $anchor): bool
+    // backfill is nearly all of them. Which same-day charge is the prior one
+    // is BackwardOnly's question, and the anchor excludes itself by answering it.
+    /**
+     * @param  array<string, mixed>  $txn  the raw transactions row under test
+     */
+    private function isFirstTimeMerchant(User $user, int $counterpartyId, array $txn, ChargeAnchor $anchor): bool
     {
-        $anchorDate = $anchor->date();
-
         $priorCount = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
-            ->where('counterparty_id', $counterpartyId)
-            ->where('id', '!=', $excludeId)
-            ->where(function (Builder $backward) use ($anchorDate, $excludeId): void {
-                $backward->where('posted_at', '<', $anchorDate)
-                    ->orWhere(function (Builder $sameDay) use ($anchorDate, $excludeId): void {
-                        $sameDay->where('posted_at', $anchorDate)->where('id', '<', $excludeId);
-                    });
-            })
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $user->id)
+            ->where('transactions.counterparty_id', $counterpartyId)
+            ->where('transactions.posted_at', '<=', $anchor->date())
+            ->whereRaw(BackwardOnly::COMPARISON, BackwardOnly::anchorKey($txn))
             ->count();
 
         return $priorCount === 0;
