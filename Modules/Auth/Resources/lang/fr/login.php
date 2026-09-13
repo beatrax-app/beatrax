@@ -11,6 +11,7 @@ return [
     'remember' => 'Rester connecté sur cet appareil',
     'submit' => 'Se connecter',
     'lost_password' => 'Mot de passe perdu ? Utilise un code de récupération.',
+    'throttled_recovery' => 'Ou saisis un code de récupération pour te connecter tout de suite. Le code sera marqué comme utilisé.',
 
     'error_invalid' => 'Nom d\'utilisateur ou mot de passe incorrect.',
     'error_throttled' => 'Trop de tentatives — réessaie dans :wait.',

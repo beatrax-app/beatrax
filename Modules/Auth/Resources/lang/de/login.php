@@ -11,6 +11,7 @@ return [
     'remember' => 'Auf diesem Gerät angemeldet bleiben',
     'submit' => 'Anmelden',
     'lost_password' => 'Passwort vergessen? Nutze einen Wiederherstellungscode.',
+    'throttled_recovery' => 'Oder gib einen Wiederherstellungscode ein, um dich jetzt anzumelden. Der Code wird als verbraucht markiert.',
 
     'error_invalid' => 'Benutzername oder Passwort ist falsch.',
     'error_throttled' => 'Zu viele Versuche — versuche es in :wait erneut.',

@@ -8,6 +8,7 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Hashing\Hasher;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Services\RecoveryCodeEscape;
 use Modules\Auth\Internal\Services\SignInThrottle;
 use Modules\Auth\Public\Exceptions\SignInThrottled;
 use Modules\Auth\Public\Support\Username;
@@ -22,18 +23,20 @@ final readonly class LoginAction
         private AppLockProvisioner $provisioner,
         private SessionFactory $session,
         private SignInThrottle $throttle,
+        private RecoveryCodeEscape $escape,
     ) {}
 
     /**
      * @throws SignInThrottled where the meter for this username is spent
      */
-    public function __invoke(string $usernameInput, string $password, bool $rememberMe): bool
+    public function __invoke(string $usernameInput, string $password, bool $rememberMe, string $recoveryCodeInput = ''): bool
     {
         // Before the lookup and before the hash: an exhausted meter must cost
         // the caller nothing to discover, or the throttle becomes the timing
-        // channel the equalised hash below exists to close.
+        // channel the equalised hash below exists to close. The escape sits
+        // here for the same reason, judged on the code and never the account.
         if ($this->throttle->isExhausted($usernameInput)) {
-            throw new SignInThrottled($this->throttle->availableIn($usernameInput));
+            $this->escape->clearOrRefuse($usernameInput, $recoveryCodeInput);
         }
 
         $this->throttle->recordAttempt($usernameInput);
