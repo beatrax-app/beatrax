@@ -9,7 +9,6 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Navigation\Destination;
-use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
 // The route names and URLs are the ones Core registered before the shell moved
@@ -19,15 +18,15 @@ use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::get('/', static function (
         CurrentUser $currentUser,
-        PeriodQuery $periods,
         ThisPeriodAtAGlanceQuery $glance,
         UrlGenerator $urls,
         ViewFactory $views,
     ): RedirectResponse|Response {
         // First-run redirect: zero transactions → /imports/new. Keeps the
-        // dashboard from rendering empty tiles on a fresh install.
-        $summary = $glance->for($currentUser->user(), $periods->current());
-        if ($summary->isFirstRun) {
+        // dashboard from rendering empty tiles on a fresh install. Asked
+        // directly: composing the summary to read one boolean off it ran ten
+        // queries here, and the Dashboard component then ran them again.
+        if ($glance->isFirstRun($currentUser->user())) {
             return new RedirectResponse(Destination::Imports->urlFrom($urls));
         }
 
