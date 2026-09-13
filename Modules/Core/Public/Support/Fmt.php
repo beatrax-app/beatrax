@@ -68,6 +68,31 @@ final class Fmt
         return str_replace('.', $marks->decimalMark(), $value);
     }
 
+    // Where the percent sign goes, which is the locale's own convention and not
+    // a house style: thirteen shipped locales keep a no-break space before it,
+    // Turkish writes it in front of the digits, and twelve close it up. A
+    // template that typed the sign itself had one spelling for all twenty-six.
+    public static function percent(int|float $value, int $decimals = 0, string $sign = ''): string
+    {
+        $marks = Locale::tryFrom(self::locale()) ?? Locale::En;
+        $digits = self::number($value, $decimals);
+
+        // The sign leads in every locale, the prefix ones included: ICU writes
+        // a negative Turkish percentage -%42, not %-42.
+        return $marks->percentSignBeforeDigits()
+            ? $sign.'%'.$digits
+            : $sign.$digits.$marks->percentGap().'%';
+    }
+
+    // For a box the reader types a figure into, where the sign sits is all the
+    // locale decides: the digits are the input's own. Turkish puts it in front,
+    // so a template that only ever appended it printed the unit on the wrong
+    // side of the field.
+    public static function percentSignLeads(): bool
+    {
+        return (Locale::tryFrom(self::locale()) ?? Locale::En)->percentSignBeforeDigits();
+    }
+
     // The locale's own short-date pattern, corrected where it writes the month
     // before the day. English is the only shipped locale that does, and it is
     // what a fresh install runs on, so 08/20/2026 is what a new reader met.

@@ -6,7 +6,7 @@ return [
     'welcome' => [
         'page_title' => 'Bienvenue',
         'heading' => 'Bienvenue dans Beatrax',
-        'subtitle' => 'Ton tableau de bord financier 100 % local est prêt. Crée ton premier compte pour commencer.',
+        'subtitle' => 'Ton tableau de bord financier 100 % local est prêt. Crée ton premier compte pour commencer.',
         'get_started' => 'Commencer',
     ],
 

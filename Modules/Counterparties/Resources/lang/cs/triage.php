@@ -6,7 +6,7 @@ return [
     'page_title' => 'Třídění protistran',
     'heading' => 'Roztřiď neznámé protistrany',
 
-    'progress' => ':seen z :total · :percent % · zbývá ~:minutes min',
+    'progress' => ':seen z :total · :percent % · zbývá ~:minutes min',
     'progress_aria' => 'Průběh třídění',
 
     'all_caught_aria' => 'Všechny protistrany označeny',

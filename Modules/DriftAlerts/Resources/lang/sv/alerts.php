@@ -52,7 +52,7 @@ return [
         'per_year' => '/år',
         'meta_prior_now' => 'tidigare :prior → nu :now',
         'meta_detected' => 'upptäckt :date',
-        'meta_threshold' => 'tröskelvärde ±:percent %',
+        'meta_threshold' => 'tröskelvärde ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/år)',
         'cancel_impact' => 'Säg upp den här → spara :amount/år',
         'cadence_flipped' => 'Intervallet har ändrats — visas även i',

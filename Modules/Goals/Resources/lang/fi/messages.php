@@ -27,7 +27,7 @@ return [
     ],
 
     'progress' => [
-        'aria' => ':name: :pct % valmiina',
+        'aria' => ':name: :pct % valmiina',
     ],
 
     'card' => [

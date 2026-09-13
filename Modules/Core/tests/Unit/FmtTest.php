@@ -97,3 +97,53 @@ it('writes the minus sign the reader\'s own language writes', function (): void 
     expect(Fmt::numberWithoutIcu(-1234))->toStartWith("\u{2212}")
         ->and(Fmt::numberWithoutIcu(-1234))->not->toContain('-');
 });
+
+// The same list of thresholds is declared twice: Settings reads it from the
+// catalogue, and the drift editor renders it from the figure. fi's catalogue
+// said "±1 %" because a guard forces the catalogue to follow CLDR, and the
+// editor beside it rendered "±1%" for want of anything that knew.
+it('spells a threshold the way the catalogue two screens away spells it', function (): void {
+    $disagreed = [];
+
+    foreach (Locale::cases() as $locale) {
+        app()->make(Translator::class)->setLocale($locale->value);
+
+        /** @var array<string, mixed> $settings */
+        $settings = require base_path('Modules/Core/Resources/lang/'.$locale->value.'/settings.php');
+
+        foreach (['1', '10', '25', '50'] as $threshold) {
+            $catalogue = $settings['drift']['options'][$threshold];
+            $rendered = Fmt::percent((int) $threshold, sign: '±');
+
+            if ($catalogue !== $rendered) {
+                $disagreed[] = $locale->value.' ['.$threshold.'] catalogue '.bin2hex((string) $catalogue)
+                    .' vs rendered '.bin2hex($rendered);
+            }
+        }
+    }
+
+    expect($disagreed)->toBe([], implode("\n", [
+        'A reader meets these two spellings of the same threshold on two screens:',
+        ...$disagreed,
+    ]));
+});
+
+// Turkish writes the sign in front of the digits and thirteen locales keep a
+// no-break space before it. ICU is asked here rather than transcribed, so a
+// figure the reader is shown is checked against CLDR and not against the enum
+// that Fmt::percent() and its guard both read.
+it('places the percent sign where ICU places it, in every language', function (): void {
+    $wrong = [];
+
+    foreach (Locale::cases() as $locale) {
+        app()->make(Translator::class)->setLocale($locale->value);
+
+        $expected = (new NumberFormatter($locale->value, NumberFormatter::PERCENT))->format(0.42);
+
+        if (Fmt::percent(42) !== $expected) {
+            $wrong[] = $locale->value.' writes '.bin2hex(Fmt::percent(42)).', ICU writes '.bin2hex((string) $expected);
+        }
+    }
+
+    expect($wrong)->toBe([], implode("\n", ['These disagree with CLDR:', ...$wrong]));
+});

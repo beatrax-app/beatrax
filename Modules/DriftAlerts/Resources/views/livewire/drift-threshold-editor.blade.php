@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 {{--
     Per-series drift threshold popover. Mounted inline by both the
     /drift grouped-by-series header and the
@@ -28,7 +29,7 @@
             @if ($currentValue === null)
                 {{ Lang::get('drift-alerts::threshold.global') }}
             @else
-                ±{{ $currentValue }}%
+                {{ Fmt::percent($currentValue, sign: '±') }}
             @endif
         </span>
     </x-core::secondary-button>
@@ -50,7 +51,7 @@
                     'font-medium text-slate-900 dark:text-slate-100' => $currentValue === $opt,
                     'text-slate-500 dark:text-slate-400' => $currentValue !== $opt,
                 ])
-            >±{{ $opt }}%</button>
+            >{{ Fmt::percent($opt, sign: '±') }}</button>
         @endforeach
         <div class="my-1 border-t border-slate-200 dark:border-slate-700"></div>
         <button

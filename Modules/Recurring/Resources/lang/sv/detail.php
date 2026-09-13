@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Reglerat i :code',
     'chart_requires_js' => 'Diagrammet kräver JavaScript.',
 
-    'tolerance_toast' => 'Tolerans: :percent %',
+    'tolerance_toast' => 'Tolerans: :percent %',
 ];

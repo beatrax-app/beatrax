@@ -52,7 +52,7 @@ return [
         'per_year' => '/Jahr',
         'meta_prior_now' => 'vorher :prior → jetzt :now',
         'meta_detected' => 'erkannt am :date',
-        'meta_threshold' => 'Schwelle ±:percent %',
+        'meta_threshold' => 'Schwelle ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/Jahr)',
         'cancel_impact' => 'Das kündigen → :amount/Jahr sparen',
         'cadence_flipped' => 'Rhythmus geändert — erscheint auch in',

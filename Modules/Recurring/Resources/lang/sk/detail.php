@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Zúčtované v :code',
     'chart_requires_js' => 'Graf vyžaduje JavaScript.',
 
-    'tolerance_toast' => 'Tolerancia: :percent %',
+    'tolerance_toast' => 'Tolerancia: :percent %',
 ];

@@ -6,7 +6,7 @@ return [
     'page_title' => 'Triage der Zahlungspartner',
     'heading' => 'Triage unbekannter Zahlungspartner',
 
-    'progress' => ':seen von :total · :percent % · noch ~:minutes Min.',
+    'progress' => ':seen von :total · :percent % · noch ~:minutes Min.',
     'progress_aria' => 'Fortschritt der Triage',
 
     'all_caught_aria' => 'Alle Zahlungspartner gekennzeichnet',

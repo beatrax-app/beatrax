@@ -52,7 +52,7 @@ return [
         'per_year' => '/rok',
         'meta_prior_now' => 'dřív :prior → teď :now',
         'meta_detected' => 'zjištěno :date',
-        'meta_threshold' => 'práh ±:percent %',
+        'meta_threshold' => 'práh ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/rok)',
         'cancel_impact' => 'Zrušit → úspora :amount/rok',
         'cadence_flipped' => 'Změna frekvence — zobrazuje se také v',

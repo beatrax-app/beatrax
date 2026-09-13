@@ -52,7 +52,7 @@ return [
         'per_year' => '/v',
         'meta_prior_now' => 'ennen :prior → nyt :now',
         'meta_detected' => 'havaittu :date',
-        'meta_threshold' => 'raja ±:percent %',
+        'meta_threshold' => 'raja ±:percent %',
         'meta_eur_equiv' => '(≈ :amount/v)',
         'cancel_impact' => 'Irtisano tämä → säästä :amount/v',
         'cadence_flipped' => 'Maksuväli vaihtui — näkyy myös kohdassa',

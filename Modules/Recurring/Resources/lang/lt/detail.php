@@ -26,5 +26,5 @@ return [
     'settled_equivalent' => 'Atsiskaityta :code',
     'chart_requires_js' => 'Diagramai reikia JavaScript.',
 
-    'tolerance_toast' => 'Tolerancija: :percent %',
+    'tolerance_toast' => 'Tolerancija: :percent %',
 ];

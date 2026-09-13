@@ -152,6 +152,29 @@ enum Locale: string
         return $this !== self::Nl;
     }
 
+    // Where the percent sign sits relative to the digits. Turkish is the only
+    // shipped locale that writes it in front (%42), transcribed from each
+    // locale's ICU percent pattern for the same reason the marks above are: on
+    // device ICU can only answer for English.
+    public function percentSignBeforeDigits(): bool
+    {
+        return $this === self::Tr;
+    }
+
+    // Thirteen locales keep a no-break space between the figure and the sign
+    // (42 %); the rest close it up (42%). The space is the one CLDR names, and
+    // it is no-break on purpose: a plain one lets the sign wrap to the next
+    // line on its own.
+    public function percentGap(): string
+    {
+        return match ($this) {
+            self::Cs, self::Da, self::De, self::Es, self::Fi, self::Fr, self::Hr,
+            self::Lt, self::Nb, self::Ro, self::Sk, self::Sl, self::Sv => "\u{00A0}",
+            self::Bg, self::El, self::En, self::Et, self::Hu, self::It, self::Lv,
+            self::Nl, self::Pl, self::Pt, self::Sr, self::Tr, self::Uk => '',
+        };
+    }
+
     // Seven locales write U+2212 MINUS SIGN where the rest write the ASCII
     // hyphen-minus, transcribed from ICU for the same reason the marks above
     // are: on device ICU can only answer for English, and a phone spelling a
