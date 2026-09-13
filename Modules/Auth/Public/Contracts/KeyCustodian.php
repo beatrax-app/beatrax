@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace Modules\Auth\Public\Contracts;
 
 use Modules\Auth\Public\Enums\KeyCustody;
+use Modules\Auth\Public\Exceptions\KeyCustodyRefused;
 
 interface KeyCustodian
 {
-    // Implementations that cannot reach their backing store right now
-    // MUST degrade gracefully by returning the raw key unchanged -- the
-    // pass-through session custody then applies, exactly as on web.
+    // A store that is absent or unreachable MUST degrade to pass-through: the
+    // raw key comes back unchanged and session custody applies, as on web. A
+    // store that is present and refuses the write is not that case and MUST
+    // throw -- the caller persists whatever this returns.
+    /**
+     * @throws KeyCustodyRefused
+     */
     public function store(string $rawKey): string;
 
     // Returns null when the custodian owns a real backing entry but

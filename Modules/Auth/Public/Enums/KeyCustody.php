@@ -16,6 +16,12 @@ enum KeyCustody: string
 
     case PlatformStoreDoesNotProtect = 'platform_store_does_not_protect';
 
+    // Kept apart from the case above for the same reason that one is kept apart
+    // from Session: a store that refused the write is holding nothing at all,
+    // where PlatformStoreDoesNotProtect is holding the key under protection
+    // worth nothing. A reader told they are unprotected is owed the difference.
+    case PlatformStoreRefusedTheWrite = 'platform_store_refused_the_write';
+
     // The single question a caller persisting key material must ask. Only the
     // operating-system case answers yes: the other two say the key bytes are
     // recoverable from the same disk the ciphertext sits on.
