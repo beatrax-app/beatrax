@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Στόχος: :name',
         'category_goal' => 'Στόχος της κατηγορίας :name',
+        'schedule' => 'Προγραμματισμένη συναλλαγή: :name',
         'schedule_untitled' => 'Προγραμματισμένη συναλλαγή χωρίς όνομα',
+        'saved_report' => 'Αποθηκευμένη αναφορά: :name',
         'transaction' => 'Συναλλαγή: :name · :date · :amount',
         'transaction_unnamed' => 'Συναλλαγή',
         'amount_update' => 'Ενημέρωση ποσού συναλλαγής',
