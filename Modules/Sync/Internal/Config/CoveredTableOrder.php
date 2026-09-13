@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Config;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Sync\Public\Services\JsonRowReferences;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -35,43 +36,11 @@ final readonly class CoveredTableOrder
         'transactions' => ['counterparty_id' => 'counterparties'],
     ];
 
-    // The same references, one level further out of reach: the ids are keys
-    // inside a JSON value, so the column is one opaque blob to a foreign key
-    // and to every schema read. A saved report's account filter decides which
-    // money the figure counts, so the peer's number is a different report.
-    /**
-     * @var array<string, array<string, array<string, string>>> table => column => (path => covered table)
-     *
-     * @link ../../../../.docs/features/sync/op-log-merge-rules.md#references-that-live-inside-a-json-value
-     */
-    private const array JSON_PARENTS = [
-        'saved_reports' => [
-            'definition' => [
-                'accounts.*' => 'accounts',
-                'categories.*' => 'categories',
-                'counterparties.*' => 'counterparties',
-            ],
-        ],
-        // `rule_id` is deliberately absent: categorization_rules is device-local,
-        // so no create for one ever arrives, no alias can exist, and declaring
-        // it would read as coverage where none is possible.
-        'transactions' => [
-            'auto_category_provenance' => [
-                'category_id' => 'categories',
-                'memory_id' => 'merchant_memories',
-            ],
-            'enriched_from' => ['*.import_run_id' => 'import_runs'],
-        ],
-        'user_preferences' => [
-            'calendar_entries_accounts' => ['*' => 'accounts'],
-            'calendar_balance_accounts' => ['*' => 'accounts'],
-        ],
-    ];
-
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
         private ?LoggerInterface $log = null,
+        private JsonRowReferences $jsonReferences = new JsonRowReferences,
     ) {}
 
     // Parents first. Falls back to plain registry order when the schema
@@ -182,9 +151,9 @@ final readonly class CoveredTableOrder
     }
 
     // The JSON columns of $table, each mapped to the paths inside it that name
-    // a covered row. A path is dot-separated; `*` stands for every element of
-    // a list, so `accounts.*` is the account filter and `*.import_run_id` the
-    // run named by each entry of a provenance list.
+    // a COVERED row. JsonRowReferences declares them for every reader; the
+    // filter here is this class's own question — a target outside the merge
+    // rules has no alias map to be translated through.
     /**
      * @return array<string, array<string, string>> column => (path => the covered table it names)
      */
@@ -193,7 +162,7 @@ final readonly class CoveredTableOrder
         $covered = array_keys($this->rules->rules());
         $columns = [];
 
-        foreach (self::JSON_PARENTS[$table] ?? [] as $column => $paths) {
+        foreach ($this->jsonReferences->columnsFor($table) as $column => $paths) {
             $declared = array_filter($paths, static fn (string $target): bool => in_array($target, $covered, true));
 
             if ($declared !== []) {

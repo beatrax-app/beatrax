@@ -65,7 +65,6 @@ return [
     'error_pin_digits' => 'PIN kodā jābūt :min līdz :max cipariem — tikai cipari.',
     'error_pin_mismatch' => 'PIN kodi nesakrīt. Mēģiniet vēlreiz.',
     'error_pin_required' => 'Ievadiet savu PIN kodu.',
-    'error_pin_incorrect' => 'Nepareizs PIN kods.',
     'error_account_password_required' => 'Ievadiet sava konta paroli.',
     'error_account_password' => 'Nepareiza konta parole.',
     'change_pin_success' => 'Jūsu šifrēšanas atslēga ir no jauna aizsargāta ar jauno PIN kodu.',

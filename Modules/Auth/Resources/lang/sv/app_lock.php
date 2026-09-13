@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN-koden måste ha :min till :max siffror — endast siffror.',
     'error_pin_mismatch' => 'PIN-koderna stämmer inte överens. Försök igen.',
     'error_pin_required' => 'Ange din PIN-kod.',
-    'error_pin_incorrect' => 'Fel PIN-kod.',
     'error_account_password_required' => 'Ange ditt kontolösenord.',
     'error_account_password' => 'Fel kontolösenord.',
     'change_pin_success' => 'Din krypteringsnyckel har säkrats om med din nya PIN-kod.',
