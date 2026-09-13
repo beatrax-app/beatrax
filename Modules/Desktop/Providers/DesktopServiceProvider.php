@@ -23,6 +23,7 @@ use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\HostPipeWatch;
 use Modules\Core\Public\Support\LoadsModuleResources;
+use Modules\Desktop\Commands\InspectDesktopBundleCommand;
 use Modules\Desktop\Commands\RecordMacBundlesCommand;
 use Modules\Desktop\Commands\ReviewMacBundleCommand;
 use Modules\Desktop\Internal\Boot\MacBundleReader;
@@ -165,11 +166,16 @@ final class DesktopServiceProvider extends ServiceProvider
         // window makes after a close.
         $router->pushMiddlewareToGroup('web', ClaimShellLockDemand::class);
 
-        // Reads a built .app for what App Store review refuses. Registered
-        // here rather than behind a build-only guard because the answer is
-        // about an artifact, and an operator asks it from any checkout.
+        // Read a built bundle for what review refuses and for what it must
+        // not carry at all. Registered here rather than behind a build-only
+        // guard because the answer is about an artifact, and an operator asks
+        // it from any checkout.
         $this->app->bind(ReadsAMacBundle::class, MacBundleReader::class);
-        $this->commands([ReviewMacBundleCommand::class, RecordMacBundlesCommand::class]);
+        $this->commands([
+            ReviewMacBundleCommand::class,
+            RecordMacBundlesCommand::class,
+            InspectDesktopBundleCommand::class,
+        ]);
 
         // NOT bundle-gated, for the same reason the Login listener below is not:
         // the file-open round-trip has to work in local dev and in tests, and
