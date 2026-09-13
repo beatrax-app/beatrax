@@ -300,20 +300,42 @@ it('does not rotate a second time when the sentinel could not be written', funct
         ));
     };
 
-    // Writable file inside a directory that admits no new entries, which is
-    // what an install on a locked-down data directory looks like.
-    chmod($this->tempRoot, 0o500);
+    // The marker's own directory, PRESENT and admitting no new entries. It has
+    // to exist: appPath() is NATIVEPHP_STORAGE_PATH/app, which the fixture does
+    // not create, so locking the root above it exercises the mkdir arm instead
+    // and this case passes while testing the wrong refusal.
+    $markerDir = dirname(UserDataPathService::appPath('first-launch.app-key-generated'));
+    mkdir($markerDir, 0o700, true);
+    chmod($markerDir, 0o500);
 
-    $action = new EnsureAppKey($paths, $kernel, environmentFile: $this->envFile);
+    $logger = new class extends AbstractLogger
+    {
+        /** @var list<string> */
+        public array $errors = [];
+
+        public function log($level, $message, array $context = []): void
+        {
+            if ($level === 'error') {
+                $this->errors[] = (string) $message;
+            }
+        }
+    };
+
+    $action = new EnsureAppKey($paths, $kernel, $logger, $this->envFile);
     @$action->run();
     $afterFirst = appKeyWrittenIn($this->envFile);
     @$action->run();
     $afterSecond = appKeyWrittenIn($this->envFile);
 
-    chmod($this->tempRoot, 0o700);
+    chmod($markerDir, 0o700);
 
-    expect(file_exists(UserDataPathService::appPath('first-launch.app-key-generated')))->toBeFalse()
-        ->and($afterSecond)->toBe($afterFirst);
+    // The message is asserted because the directory refusal above logs too, and
+    // "some error" cannot tell the two arms apart.
+    expect($logger->errors)->toHaveCount(2)
+        ->and($logger->errors[0])->toContain('first-launch marker could not be written')
+        ->and(file_exists(UserDataPathService::appPath('first-launch.app-key-generated')))->toBeFalse()
+        ->and($afterSecond)->toBe($afterFirst)
+        ->and($afterSecond)->toBe($this->shippedKey);
 });
 
 // The other half of claiming first: if the marker cannot even have a directory
