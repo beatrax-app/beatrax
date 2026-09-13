@@ -37,7 +37,6 @@ return [
     'label_this' => 'Label this counterparty',
 
     'stat_12mo' => '12 mo',
-    'stat_net_received' => 'Net received',
     'stat_avg_mo' => 'Avg / mo',
     'sparkline_aria' => '12-month activity sparkline',
 

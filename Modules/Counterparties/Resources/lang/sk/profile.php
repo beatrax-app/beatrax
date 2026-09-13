@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Upraviť zobrazované meno',
 
-    'hero_net_received' => 'Čisté prijaté',
     'hero_12mo_total' => 'Súčet za 12 mesiacov',
     'hero_transactions' => 'Transakcie',
     'hero_first_seen' => 'Prvýkrát zaznamenané',

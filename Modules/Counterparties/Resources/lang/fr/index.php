@@ -37,7 +37,6 @@ return [
     'label_this' => 'Étiqueter ce tiers',
 
     'stat_12mo' => '12 mois',
-    'stat_net_received' => 'Net reçu',
     'stat_avg_mo' => 'Moy. / mois',
     'sparkline_aria' => 'Courbe d\'activité sur 12 mois',
 

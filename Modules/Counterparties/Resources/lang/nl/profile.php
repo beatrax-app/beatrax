@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Weergavenaam bewerken',
 
-    'hero_net_received' => 'Netto ontvangen',
     'hero_12mo_total' => 'Totaal 12 maanden',
     'hero_transactions' => 'Transacties',
     'hero_first_seen' => 'Eerst gezien',
