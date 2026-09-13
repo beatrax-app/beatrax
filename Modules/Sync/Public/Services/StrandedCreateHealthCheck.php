@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
-use Modules\Sync\Internal\Exceptions\CensusColumnMissingException;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
 use Modules\Sync\Internal\Merge\StrandedCreates;
 use Throwable;
 
@@ -74,8 +74,8 @@ final readonly class StrandedCreateHealthCheck
     // the older message: the table itself is missing, which migrate also fixes.
     private static function unreadable(Throwable $unreadable): string
     {
-        return $unreadable instanceof CensusColumnMissingException
-            ? $unreadable->getMessage()
+        return $unreadable instanceof ColumnNotDeclaredException
+            ? 'cannot classify — '.$unreadable->getMessage()
             : 'could not be read — run php artisan migrate';
     }
 

@@ -29,6 +29,12 @@ final class SchemaShape
          where type = 'table' and sql like '%on delete cascade%'
         SQL;
 
+    // The table-valued form of the pragma, so the table name binds instead of
+    // being interpolated. A PRAGMA rather than a predicate over sqlite_master:
+    // the built-in is the one reader that cannot be fooled by the double-quote
+    // rule it exists to report on.
+    private const string COLUMNS_OF = 'select name from pragma_table_info(?)';
+
     private const string GUARDED_TABLE = 'users';
 
     private const string TRIGGERS_ON_GUARDED_TABLE = <<<'SQL'
@@ -76,6 +82,19 @@ final class SchemaShape
         $present = self::names($connection, self::TRIGGERS_ON_GUARDED_TABLE, [self::GUARDED_TABLE]);
 
         return array_values(array_diff(array_keys(self::ENUM_GUARD_TRIGGERS), $present));
+    }
+
+    // Which of the named columns the table does not carry. SQLite reads a
+    // double-quoted name matching no column as a string LITERAL rather than
+    // raising, so a predicate on one is not an error -- it is silently true or
+    // silently false, and the caller cannot tell either from a real answer.
+    /**
+     * @param  list<string>  $columns
+     * @return list<string>
+     */
+    public static function missingColumns(Connection $connection, string $table, array $columns): array
+    {
+        return array_values(array_diff($columns, self::names($connection, self::COLUMNS_OF, [$table])));
     }
 
     /** @return array<string, string> */
