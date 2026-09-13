@@ -6,10 +6,14 @@
     platform's own.
 
     `php` on the webview is what makes this the app's own Laravel runtime
-    rather than a sandboxed foreign page: shared session, the asset
-    pipeline, and the `window.Native` bridge. The `javascript` /
-    `dom-storage` opt-ins are deliberately absent — the renderers force both
-    on in php mode, and passing them would imply they were optional here.
+    rather than a sandboxed foreign page: shared session and the asset
+    pipeline. The `javascript` / `dom-storage` opt-ins are deliberately
+    absent — the renderers force both on in php mode, and passing them would
+    imply they were optional here.
+
+    Not the `window.Native` JS bridge, though: its calls POST to
+    /_native/api/call, and NativeBridgeIsShellOnly answers 404 there. Native
+    results reach this app as `native-event` CustomEvents instead.
 
     No `safe-area` class: the screen carries chrome on both edges, and
     adding it on top double-pads.
