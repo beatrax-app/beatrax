@@ -13,6 +13,12 @@ use Modules\Ledger\Public\ValueObjects\Money;
  */
 function seedRates(string $date, array $rates, string $source = 'ecb'): void
 {
+    // The bundled snapshot is already in this table, seeded at install, and
+    // the service takes the latest rate_date. These cases only ever passed
+    // because that snapshot was old enough to lose: refreshing it to a date
+    // after theirs made every one of them read the bundle instead.
+    DB::table('exchange_rates')->delete();
+
     foreach ($rates as $quote => $rate) {
         DB::table('exchange_rates')->insert([
             'base_currency' => 'EUR',

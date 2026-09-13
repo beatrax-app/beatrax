@@ -135,7 +135,7 @@ it('converts spend in another currency before it reaches the figures it reports'
 
     $row = app(CarryoverQuery::class)->forUserAndPeriod($this->user, $this->period)['rows'][$this->groceries->id];
 
-    expect($row->spentMinor)->toBe(25441 + 10593)
-        ->and($row->availableMinor)->toBe(-(25441 + 10593))
+    expect($row->spentMinor)->toBe(25441 + 10475)
+        ->and($row->availableMinor)->toBe(-(25441 + 10475))
         ->and($row->unconvertedSpentCurrencies)->toBe([]);
 });

@@ -178,7 +178,7 @@ it('converts a dollar account before adding it to the euro aggregate', function 
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
 
     expect($decoded)->toBeArray();
-    expect($decoded['series'][0]['data'][0]['y'])->toBe(1880.36);
+    expect($decoded['series'][0]['data'][0]['y'])->toBe(1862.66);
 });
 
 it('converts a dollar account buffer before adding it to the euro buffer floor', function (): void {
@@ -193,5 +193,5 @@ it('converts a dollar account buffer before adding it to the euro buffer floor',
     $decoded = json_decode(html_entity_decode($matches[1], ENT_QUOTES), associative: true);
 
     expect($decoded)->toBeArray();
-    expect($decoded['annotations']['yaxis'][0]['y2'])->toBe(940.18);
+    expect($decoded['annotations']['yaxis'][0]['y2'])->toBe(931.33);
 });

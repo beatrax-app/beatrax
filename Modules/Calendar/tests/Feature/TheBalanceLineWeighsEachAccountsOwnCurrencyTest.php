@@ -60,9 +60,9 @@ it('prices a dollar account baseline before it joins the euro balance line', fun
         CarbonImmutable::parse('2026-06-30'),
     );
 
-    // The bundled snapshot prices USD1,000.00 at EUR880.36, so a past day the
-    // overlay owns reads EUR1,880.36 — never EUR2,000.00.
-    expect($result['map']['2026-06-05']->minor)->toBe(188_036);
+    // The bundled snapshot prices USD1,000.00 at EUR862.66, so a past day the
+    // overlay owns reads EUR1,862.66 — never EUR2,000.00.
+    expect($result['map']['2026-06-05']->minor)->toBe(186_266);
 });
 
 it('leaves a single-currency line at its face value', function (): void {

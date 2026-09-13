@@ -493,9 +493,9 @@ it('summary totals convert a row settled in another currency', function (): void
     $page = $searchQuery->search($user, 'Summary Vendor', SearchFilters::empty());
 
     // Both rows are counted, and the dollar one at the bundled EUR/USD rate of
-    // 1.1359: USD 74.43 is EUR 65.53, over the euro row's EUR 10.00.
+    // 1.1592: USD 74.43 is EUR 64.21, over the euro row's EUR 10.00.
     expect($page->totalCount)->toBe(2)
-        ->and($page->totalOutMinor)->toBe(-7553);
+        ->and($page->totalOutMinor)->toBe(-7421);
 });
 
 it('applies the amount token as a min filter', function (): void {
