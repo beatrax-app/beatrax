@@ -123,6 +123,12 @@ final class MobilePairingScan extends Component
 
     public bool $awaitingPeer = false;
 
+    // Set by a tap the trust gate refused, cleared only by the next one. The
+    // poll below writes the same line every three seconds — as '' on every
+    // successful send — so without this the warning lived under one interval.
+    #[Locked]
+    public bool $safetyNumberChanged = false;
+
     // Non-blocking: the pairing itself succeeded, so this raises a notice on
     // the success step rather than undoing a ceremony. #[Locked] because a
     // client that could clear it would be silencing the one thing on screen
@@ -452,15 +458,15 @@ final class MobilePairingScan extends Component
                 // this a no-op that throws nothing, so clearing the message
                 // here left the step drawing a live Confirm button over four
                 // minutes in which not one frame was sent.
-                $this->flashMessage = $this->frameSendNotice(
+                $this->reportFrameSend($this->frameSendNotice(
                     $gateway->sendResponderAccept($userId, $this->importResponderTokenHash, $this->importDesktopDeviceId, $session),
                     $lock,
                     $userId,
-                );
+                ));
             } catch (Throwable $e) {
                 // The courier throws only when no road home is open at all.
                 // Swallowing that left the user watching a spinner forever.
-                $this->flashMessage = Lang::get($this->undeliveredAcceptKey($gateway, $this->importResponderTokenHash, $this->importDesktopDeviceId));
+                $this->reportFrameSend(Lang::get($this->undeliveredAcceptKey($gateway, $this->importResponderTokenHash, $this->importDesktopDeviceId)));
 
                 $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay re-emit failed during poll.', [
                     'user_id' => $userId,
@@ -578,6 +584,7 @@ final class MobilePairingScan extends Component
         $this->moveTo($this->entryArm());
         $this->pairingTokenId = '';
         $this->safetyWords = [];
+        $this->safetyNumberChanged = false;
         $this->importResponderTokenHash = '';
         $this->importDesktopDeviceId = '';
     }

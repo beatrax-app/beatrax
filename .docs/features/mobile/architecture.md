@@ -1290,6 +1290,18 @@ row says this side confirmed — read from the row, not from the screen's
 rendered here as it is on the desktop: the words are re-derived from what the
 row now binds and `pairing.errors.safety_number_changed` says why.
 
+The confirm step has two writers of one line, and they are not equals. The
+poll's re-emit reports whether its frame went out, which on every success is
+the empty string; a refused tap reports that the keys behind the six words on
+screen are no longer the ones the row binds. Both used to write
+`flashMessage` directly, so the rebind warning lived under one poll interval —
+the reader saw it, the next three-second tick wiped it, and the words
+underneath had silently changed. `MobilePairingScan::$safetyNumberChanged` is
+set by the refusal and cleared only by the next tap, and every delivery notice
+now goes through `ConfirmsAcrossTheLock::reportFrameSend()`, which declines to
+write while that flag stands. The poll still retires its own line: a reader who
+unlocks stops being told the identity is locked on the very next tick.
+
 **Typed codes.** A word-code carries the token alone, so before seeding,
 `submitCode()` asks `PairingGateway::discoverInitiatorOnLan()` for the public
 identity the code cannot carry: it browses `_beatrax-sync._tcp` and fetches
