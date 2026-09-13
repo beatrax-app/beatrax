@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Support;
 
 use Illuminate\Database\Connection;
-use Modules\Core\Public\Exceptions\UnicodeFoldingUnavailableException;
+use Modules\Core\Internal\Exceptions\UnicodeFoldingUnavailableException;
 use Pdo\Sqlite;
 
 // SQLite's `LIKE` and `LOWER()` fold ASCII and nothing else, and no pragma

@@ -97,9 +97,14 @@ connection that quietly took it would return **fewer rows with no signal** —
 the original defect, now hidden behind a fix.
 
 `UnicodeFolding::registerOn()` therefore refuses at connect time, with
-`Core::UnicodeFoldingUnavailableException`. It carries the connection's name as
-a property and not only inside the sentence, because which connection came up
-short is the one question a caller has. Two ways to arrive:
+`Core::UnicodeFoldingUnavailableException`, which lives in `Internal/`. It is
+not Public, because no neighbour can catch it meaningfully: the only method
+that throws it is pinned to one caller, the provider above, and the two things
+an outside catcher could want — fall back to ASCII folding, or report a broken
+install — are respectively the defect this removes and Core's own doctor. It
+carries the connection's name as a property and not only inside the sentence,
+because which connection came up short is the one question anything catching it
+has. Two ways to arrive:
 
 | Why | Named constructor |
 |---|---|

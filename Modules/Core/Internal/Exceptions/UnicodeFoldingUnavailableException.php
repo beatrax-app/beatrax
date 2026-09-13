@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Modules\Core\Public\Exceptions;
+namespace Modules\Core\Internal\Exceptions;
 
 use RuntimeException;
 
-// A connection that cannot carry the Unicode case fold, refused as it opens
-// rather than at the first folded search. The connection name is a property
-// and not only a sentence, because which connection came up short is the one
-// question a caller has.
+// Internal because the only method that throws it, UnicodeFolding::registerOn(),
+// is pinned to one caller: the provider beside this file. The connection name
+// is a property and not only a sentence, because which connection came up short
+// is the one question anything catching this has.
 /**
  * @link ../../../../.docs/architecture/case-folding-is-one-function.md
  */
