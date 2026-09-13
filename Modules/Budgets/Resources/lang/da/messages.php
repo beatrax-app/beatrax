@@ -70,6 +70,7 @@ return [
         'moved_from' => 'Flyttet fra :category',
         'moved_to' => 'Flyttet til :category',
         'moved_unreadable' => 'Flyttet med :category af en nyere version af Beatrax',
+        'truncated' => 'Seneste bevægelser: :shown af :count',
         'undo' => 'Fortryd',
     ],
 

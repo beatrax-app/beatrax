@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Siirretty kategoriasta :category',
         'moved_to' => 'Siirretty kategoriaan :category',
         'moved_unreadable' => 'Siirretty kategorian :category kanssa Beatraxin uudemmalla versiolla',
+        'truncated' => 'Viimeisimmät tapahtumat: :shown / :count',
         'undo' => 'Kumoa',
     ],
 

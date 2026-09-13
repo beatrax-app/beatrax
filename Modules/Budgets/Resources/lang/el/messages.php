@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Μεταφέρθηκε από :category',
         'moved_to' => 'Μεταφέρθηκε σε :category',
         'moved_unreadable' => 'Μεταφέρθηκε με :category από νεότερη έκδοση του Beatrax',
+        'truncated' => 'Πρόσφατες κινήσεις: :shown από :count',
         'undo' => 'Αναίρεση',
     ],
 

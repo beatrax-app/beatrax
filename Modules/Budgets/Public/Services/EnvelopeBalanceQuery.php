@@ -133,6 +133,45 @@ final readonly class EnvelopeBalanceQuery
         return $buckets;
     }
 
+    // How many rows the `Moved` term is the sum of. Ten lines under a total of
+    // eleven read as the whole working for it and were not. Counted the way the
+    // fold sums — every row, whoever owns the counterpart — in one grouped
+    // statement for the grid, not one per envelope.
+    /**
+     * @param  list<int>  $categoryIds
+     * @return array<int, int> category_id => moves this envelope made this period
+     */
+    public function moveCountsForCategories(int $userId, array $categoryIds, Period $period): array
+    {
+        $counts = [];
+        foreach ($categoryIds as $categoryId) {
+            $counts[$categoryId] = 0;
+        }
+
+        if ($categoryIds === []) {
+            return $counts;
+        }
+
+        $connection = $this->db->connection();
+
+        $rows = $connection
+            ->table('envelope_moves')
+            ->where('user_id', $userId)
+            ->whereIn('category_id', $categoryIds)
+            ->where('period_start', $period->start->toDateString())
+            ->groupBy('category_id')
+            ->get(['category_id', $connection->raw('COUNT(*) AS move_count')]);
+
+        foreach ($rows as $row) {
+            $categoryId = self::toInt($row->category_id);
+            if (array_key_exists($categoryId, $counts)) {
+                $counts[$categoryId] = self::toInt($row->move_count);
+            }
+        }
+
+        return $counts;
+    }
+
     /**
      * @param  array<int, \stdClass>  $rows
      */

@@ -1,6 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Public\Services\UserDataPathService')
-@use('Modules\Ledger\Public\Services\BaseCurrency')
 {{--
     /budgets — the rebuilt zero-based envelope grid.
 
@@ -17,8 +16,7 @@
     use Modules\Ledger\Public\ValueObjects\Money;
     use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
-    $fmt = static fn (int $minor, ?string $currency = null): string => Money::ofMinor($minor, $currency ?? BaseCurrency::value())
-        ->format();
+    $fmt = static fn (int $minor, string $currency): string => Money::ofMinor($minor, $currency)->format();
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-6">
@@ -72,7 +70,7 @@
             :body="Lang::get('budgets::help.ready_to_assign')"
         /></div>
         <p class="mt-1 text-3xl font-semibold {{ $toBudgetColor }}" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
-            {{ $fmt($toBudgetMinor) }}
+            {{ $fmt($toBudgetMinor, $currency) }}
         </p>
         <x-core::fx-disclosure
             :disclosure="$conversion"
@@ -313,6 +311,15 @@
                                             </li>
                                         @endforeach
                                     </ul>
+                                    {{-- The Moved figure on the row above is the sum of every move
+                                         this envelope made this period, and this list stops at ten.
+                                         Ten lines under a total of eleven read as the whole working
+                                         for it, the way the pots card's history once did. --}}
+                                    @if (($moveCounts[$row->categoryId] ?? 0) > count($recentMoves[$row->categoryId]))
+                                        <p class="pt-1 text-xs text-slate-500 dark:text-slate-400">
+                                            {{ Lang::get('budgets::messages.history.truncated', ['shown' => count($recentMoves[$row->categoryId]), 'count' => $moveCounts[$row->categoryId]]) }}
+                                        </p>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
