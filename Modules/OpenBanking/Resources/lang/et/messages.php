@@ -172,5 +172,6 @@ return [
         'bank_not_linked' => 'See pank ei ole selles seadmes ühendatud. Ühenda see uuesti, et sünkroonimine jätkuks.',
         'oauth_state_mismatch' => 'See ühenduslink on aegunud või juba kasutatud. Alusta panga ühendamist uuesti.',
         'connection_not_saved' => 'Seda ühendust ei õnnestunud kettale salvestada — kontrolli saladuste kausta õigusi ja proovi uuesti.',
+        'consent_not_completed' => 'Sinu pank ei viinud ühendamist lõpule. Midagi ei muudetud — proovi uuesti ühendada.',
     ],
 ];

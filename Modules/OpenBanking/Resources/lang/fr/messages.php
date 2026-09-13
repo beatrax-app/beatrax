@@ -169,5 +169,6 @@ return [
         'bank_not_linked' => 'Cette banque n\'est pas connectée sur cet appareil. Reconnecte-la pour relancer la synchronisation.',
         'oauth_state_mismatch' => 'Ce lien de connexion a expiré ou a déjà été utilisé. Recommencez la connexion à votre banque.',
         'connection_not_saved' => 'Impossible d\'enregistrer cette connexion sur le disque — vérifie les permissions de ton dossier de secrets et réessaie.',
+        'consent_not_completed' => 'Ta banque n\'a pas terminé la connexion. Rien n\'a été modifié — réessaie de te connecter.',
     ],
 ];

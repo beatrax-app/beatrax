@@ -169,5 +169,6 @@ return [
         'bank_not_linked' => 'Ta banka nije povezana na ovom uređaju. Ponovno je poveži da se sinkronizacija nastavi.',
         'oauth_state_mismatch' => 'Ova poveznica za povezivanje istekla je ili je već iskorištena. Ponovno pokrenite povezivanje banke.',
         'connection_not_saved' => 'Ovu vezu nije bilo moguće spremiti na disk — provjeri dopuštenja mape s tajnama pa pokušaj ponovno.',
+        'consent_not_completed' => 'Tvoja banka nije dovršila povezivanje. Ništa nije promijenjeno — pokušaj se povezati ponovno.',
     ],
 ];

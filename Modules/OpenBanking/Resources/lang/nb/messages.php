@@ -169,5 +169,6 @@ return [
         'bank_not_linked' => 'Denne banken er ikke koblet til på denne enheten. Koble den til på nytt for å gjenoppta synkroniseringen.',
         'oauth_state_mismatch' => 'Denne tilkoblingslenken er utløpt eller allerede brukt. Start tilkoblingen til banken på nytt.',
         'connection_not_saved' => 'Denne tilkoblingen kunne ikke lagres på disk — sjekk rettighetene til mappen med hemmeligheter og prøv igjen.',
+        'consent_not_completed' => 'Banken din fullførte ikke tilkoblingen. Ingenting ble endret — prøv å koble til på nytt.',
     ],
 ];

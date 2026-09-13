@@ -131,6 +131,7 @@ on what produced it:
 | `OpenBankingCredentialsException` | `readerMessage()` — the situation and the remedy, since a flash has only one line |
 | `SecretsWriteFailed` | `errors.connection_not_saved` |
 | anything else | `sync.unavailable`, the same sentence Sync now gives for the same failure |
+| the bank refusing at its own screen (`?error=…`) | `errors.consent_not_completed` |
 
 There is deliberately no `default` arm returning `getMessage()`: that is how a
 class added later reaches the screen without anyone deciding that it should.
@@ -140,6 +141,14 @@ reader's secrets file — home directory included — and an
 aggregator's own response body, both in English on all 26 locales.
 `OpenBankingCredentialsException::unreadable()` had already learned exactly
 this for itself; its three neighbours had not.
+
+The bank's own refusal is treated the same way, and it is the sharper case:
+`error` and `error_description` arrive as **query parameters on a GET**, so
+anyone who can hand a signed-in reader a link decides the text. The page drew
+whatever the URL carried inside its own danger alert — Blade escapes the
+markup, so there is no script, but the sentence is the payload and it arrives
+wearing the app's chrome. The callback now flashes
+`errors.consent_not_completed` and records both parameters, capped, in the log.
 
 Everything the reader is no longer shown is recorded instead, through
 `SafeExceptionContext::describe()`, which carries the exception class and

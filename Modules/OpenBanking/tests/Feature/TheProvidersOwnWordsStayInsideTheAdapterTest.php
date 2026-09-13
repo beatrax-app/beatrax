@@ -240,3 +240,24 @@ it('never files the provider response body onto the alert row that syncs', funct
         ->not->toContain('acc-uid-fixture-1')
         ->and($alert->metadata['reason'] ?? null)->toBe(EnableBankingApiException::class);
 });
+
+// The bank's refusal arrives as query parameters on a GET this reader can be
+// handed a link to, and the settings page drew whatever text the URL carried
+// inside its own danger alert. Blade escapes the markup; the sentence IS the
+// payload, and it arrives wearing the app's own chrome.
+it('never draws the text a link put in the callback URL', function (): void {
+    $user = powsUser('pows-reflected');
+    $this->powsUserIds[] = $user->id;
+    $this->actingAs($user);
+
+    $planted = 'Beatrax could not verify you. Call 0900-123456 and quote your bank password.';
+
+    $html = (string) $this->followingRedirects()
+        ->get('/oauth/callback/open-banking?error=access_denied&error_description='.rawurlencode($planted))
+        ->getContent();
+
+    expect($html)
+        ->not->toContain($planted)
+        ->not->toContain('access_denied')
+        ->toContain((string) trans('openbanking::messages.errors.consent_not_completed'));
+});

@@ -169,5 +169,6 @@ return [
         'bank_not_linked' => 'Tätä pankkia ei ole yhdistetty tällä laitteella. Yhdistä se uudelleen, niin synkronointi jatkuu.',
         'oauth_state_mismatch' => 'Tämä yhteyslinkki on vanhentunut tai jo käytetty. Aloita pankin yhdistäminen uudelleen.',
         'connection_not_saved' => 'Tätä yhteyttä ei voitu tallentaa levylle — tarkista salaisuushakemiston käyttöoikeudet ja yritä uudelleen.',
+        'consent_not_completed' => 'Pankkisi ei saanut yhteyttä valmiiksi. Mitään ei muutettu — yritä yhdistää uudelleen.',
     ],
 ];

@@ -166,5 +166,6 @@ return [
         'bank_not_linked' => 'Die bank is niet gekoppeld op dit apparaat. Koppel hem opnieuw om het synchroniseren te hervatten.',
         'oauth_state_mismatch' => 'Deze koppelingslink is verlopen of al gebruikt. Begin opnieuw met het koppelen van je bank.',
         'connection_not_saved' => 'Kon deze verbinding niet naar schijf opslaan — controleer de rechten van je secrets-map en probeer het opnieuw.',
+        'consent_not_completed' => 'Je bank heeft de verbinding niet afgerond. Er is niets gewijzigd — probeer opnieuw te verbinden.',
     ],
 ];

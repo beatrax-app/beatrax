@@ -169,5 +169,6 @@ return [
         'bank_not_linked' => 'Ese banco no está conectado en este dispositivo. Vuelve a conectarlo para reanudar la sincronización.',
         'oauth_state_mismatch' => 'Ese enlace de conexión ha caducado o ya se ha utilizado. Vuelve a iniciar la conexión con tu banco.',
         'connection_not_saved' => 'No se ha podido guardar esta conexión en disco — revisa los permisos del directorio de secretos e inténtalo de nuevo.',
+        'consent_not_completed' => 'Tu banco no ha completado la conexión. No se ha cambiado nada: vuelve a intentar conectarte.',
     ],
 ];

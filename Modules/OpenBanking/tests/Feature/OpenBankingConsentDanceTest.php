@@ -356,7 +356,13 @@ it('callback with provider error redirects with open_banking_canceled flash and 
 
     $response->assertRedirect(route('settings.open-banking'));
     $response->assertSessionHas('open_banking_canceled');
-    expect(session('open_banking_canceled'))->toContain('user denied');
+
+    // The bank's own words arrive in the query string of a GET, so they are
+    // recorded rather than drawn: the reader is told the connection did not
+    // finish, in their own language.
+    expect(session('open_banking_canceled'))
+        ->toBe(trans('openbanking::messages.errors.consent_not_completed'))
+        ->not->toContain('user denied');
 
     expect(ocdRowCount($user))->toBe(0);
 });
