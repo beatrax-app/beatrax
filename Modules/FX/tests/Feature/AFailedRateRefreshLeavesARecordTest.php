@@ -30,6 +30,11 @@ function makeRefusingRateProvider(string $key): RateProvider
             return 100;
         }
 
+        public function reachesTheNetwork(): bool
+        {
+            return true;
+        }
+
         public function fetch(): array
         {
             throw new RateFetchException('offline');
@@ -55,6 +60,11 @@ function makeAnsweringRateProvider(string $key, array $result): RateProvider
         public function priority(): int
         {
             return 100;
+        }
+
+        public function reachesTheNetwork(): bool
+        {
+            return true;
         }
 
         public function fetch(): array

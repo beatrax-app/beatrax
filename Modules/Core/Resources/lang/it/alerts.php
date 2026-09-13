@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Avvisi di sistema',
 
+    'severity' => [
+        'critical' => 'Critico',
+        'warning' => 'Avviso',
+    ],
+
     'actions' => [
         'download_and_install' => 'Scarica e installa',
         'download_and_install_aria' => "Scarica e installa — segna l'avviso di sistema #:id come risolto",

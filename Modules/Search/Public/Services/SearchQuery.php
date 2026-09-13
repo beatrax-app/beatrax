@@ -79,7 +79,7 @@ final readonly class SearchQuery
         $textQuery = $parsed['textQuery'];
         $parsedFilters = $parsed['filters'];
 
-        $filters = $this->tokenFilters->merge($user, $filters, $parsedFilters, $base);
+        $filters = $this->tokenFilters->merge($user, $filters, $parsedFilters);
 
         // Restated once, then applied by both passes below: the report row this
         // list opens from counted the reader's bound in every currency the

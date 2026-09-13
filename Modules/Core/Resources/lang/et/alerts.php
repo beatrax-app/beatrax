@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Süsteemi hoiatused',
 
+    'severity' => [
+        'critical' => 'Kriitiline',
+        'warning' => 'Hoiatus',
+    ],
+
     'actions' => [
         'download_and_install' => 'Laadi alla ja paigalda',
         'download_and_install_aria' => 'Laadi alla ja paigalda — märgib süsteemi hoiatuse #:id lahendatuks',

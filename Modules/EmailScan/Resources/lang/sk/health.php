@@ -8,5 +8,7 @@ return [
     'not_scanned_yet' => 'zatiaľ neskenované',
     'not_scanned_yet_phone' => 'v tomto telefóne neprehľadané',
     'last_scanned' => 'naposledy skenované',
+    'out_of_date' => 'zastarané',
+    'not_scanned_here' => 'na tomto zariadení sa neskenuje',
     'more' => '+:count ďalších',
 ];

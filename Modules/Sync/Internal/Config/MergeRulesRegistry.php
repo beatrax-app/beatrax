@@ -570,7 +570,7 @@ final class MergeRulesRegistry
             // AFTER recurring_series. Append-only detector output, written with
             // insertOrIgnore and never updated, so it declares no mergeable
             // field: the (series, transaction) UNIQUE is the same idempotency
-            // seam on the peer, and the `id` is derived from that same pair.
+            // seam on the peer. The `id` is MINTED, not derived from it.
             'recurring_series_occurrences' => [
                 '_delete_wins' => true,
                 '_create_required' => [
@@ -595,8 +595,9 @@ final class MergeRulesRegistry
             // — only the review columns move afterwards, each through the
             // state machine, so whoever acted on the alert last wins.
 
-            // The `id` is derived from the (recurring_series_id,
-            // latest_occurrence_id) its own UNIQUE names; neither ever moves.
+            // The `id` is MINTED by DriftEvaluator, not derived. What makes
+            // two devices one row is the (recurring_series_id,
+            // latest_occurrence_id) UNIQUE, and neither of those ever moves.
             'drift_alerts' => [
                 'state' => ['nullable' => false],
                 'snoozed_until' => ['nullable' => true],
