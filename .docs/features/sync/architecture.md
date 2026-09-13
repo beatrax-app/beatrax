@@ -1415,6 +1415,116 @@ and the wrongly named row's own column is never written, so no spend, income or
 net total moves on this. What moves is which row the ledger calls the other
 half.
 
+### An id that crossed before its alias existed
+
+The two columns above are ids `translate()` was never asked about. This is the
+other half: an id it **was** asked about, for which no alias existed to answer.
+
+`PeerRowAliases::rewriteId()` hands a value back unchanged when
+`localFor()` finds no alias, and that is right far more often than it is wrong —
+a derived primary key, the seeded category taxonomy and anything else two
+devices compute alike need no translation, and there is no alias for them
+because none is owed. Nothing separated that from an alias that *is* owed and
+was never recorded. Both read as silence.
+
+Measured on the paired Mac and Galaxy A51 on 2026-09-13: forty-two transactions
+the phone sent carry a `counterparty_id` in 1–20 and **all forty-two** name a
+counterparty other than the one the phone meant. `counterparty_id` carries no
+foreign key by design, so nothing refused the write; and a key would not have
+helped, because every one of those ids names a row that genuinely exists here.
+
+Fifteen of the peer's counterparties are the `unplaced` creates
+`sync:repair-stranded-creates` takes again. Four more are a shape nothing had a
+name for: the peer's create **did** land — a local row holds its natural key —
+but under an id this device minted, and the build that refused the insert
+recorded no alias. `StrandedCreates::landed()` calls those rows present, which
+they are, so the census clears them while every id pointing at them stays wrong.
+
+#### What the log can prove, and what it cannot
+
+`UntranslatedParentIds` walks every create a peer authored that this device
+placed, and every column of it `CoveredTableOrder::parentColumns()` names —
+scoped by cause, never by table. Four answers, in the order they are worth
+having:
+
+1. **An alias exists.** It is the answer, and a column holding anything else is
+   stale.
+2. **This device wrote the same id into the same column of the same row.** Two
+   devices agreeing about a number agree about the row it names — but only where
+   their creates carry the same *natural key*. Two autoincrements reach 14
+   independently, and the desktop's own fourteenth transaction happening to
+   carry the same counterparty number is a coincidence. Read without that check
+   the census called two of the forty-two correct.
+3. **The peer's own create for the parent is in the log.** Its natural key is
+   matched here the way a re-home matches it. A twin under a different id is the
+   answer; no twin at all is `Unplaceable`, which is the stranded create and not
+   this repair's to place.
+4. **Nothing speaks for the id.** Either no create exists for it anywhere, or
+   this device announced the row under that id and whether the peer kept it or
+   re-homed it is written in the *peer's* alias table and nowhere here. Refused,
+   and named — that is the same defect running the other way, and this side
+   cannot answer it.
+
+A parent row belonging to no reader — `categories`, seeded with `user_id IS
+NULL` — is outside `RowOwnership::scopeToUser()` and so outside every device's
+capture. Its ids are shared by construction rather than translated, which is why
+thirteen transactions naming a category are correct and are counted as agreed.
+
+#### Why the write has to be announced
+
+The desktop backfilled its whole table on 2026-09-11, re-announcing the forty-two
+re-homed rows under local ids with the wrong `counterparty_id` in them. That
+create is the log's latest word on the column. A raw `UPDATE` would leave it
+standing, so the peer never hears the correction and the next rebuild or
+re-apply resolves last-write-wins straight back onto the wrong id.
+
+`Internal\Repair\UntranslatedParentRepair` therefore writes through `ReassignsCounterparty` —
+the action the detail screen's own picker calls — and dispatches
+`TransactionMutated`, so `SyncCaptureListener` emits the `Set`. From a keyless
+console the sink is `DeferredOpCaptureSink`, and the drain stamps the HLC and
+reads the value on the first request that can sign.
+
+A column no module publishes an announcing writer for is **refused**, not
+written: the default is refusal, so a column added to the translation map
+tomorrow is reported and skipped rather than repointed in silence.
+
+It sits under `Internal\Repair\` rather than beside the census in
+`Internal\Merge\`, and it has to stay there. `AnEventTheMergeNeverRaisesIsOneSomebodyChoseArchTest`
+reads every `new <Event>(` under `Internal\Merge\` as the arrival path raising
+it, and the arrival path raising `TransactionMutated` is exactly the regression
+that guard exists to catch. This is not an arriving row — it is a local write
+this device makes, and a local write announces itself.
+
+#### What it will not touch
+
+- A column `field_provenance` marks as the reader's own. Silently overwriting a
+  correction is worse than leaving the row wrong, because the wrong row is
+  visible and the lost correction is not. The repair does not stamp one either,
+  which is the one place it departs from the picker it borrows: `manual` means
+  the reader chose this counterparty, and a later rule re-apply skips what it
+  marks. A repair restoring what the peer always meant has made no such choice.
+- A reconciled row, and a counterparty belonging to another reader — both are
+  `ReassignCounterparty`'s own refusals, inherited rather than restated.
+- Anything under verdict `Unplaceable` or `Unspoken`.
+
+#### Ordering
+
+`sync:repair-stranded-creates` first, and then — because its keyless arm records
+holds rather than rows — the app opened unlocked so `SealedLedgerRecovery` places
+them and `RehomedCreate` records their aliases. `sync:repair-untranslated-parents`
+after that. Run in the other order it repoints the four it can prove and refuses
+the twenty-seven by name; run again once the aliases exist, it takes them.
+
+#### Why nothing noticed
+
+`pragma foreign_key_check` cannot see this: the column carries no constraint,
+and a constraint would have passed every one of these ids anyway. The stranded
+census asks whether the parent **row** is here, never what points at it — and
+for four of the nineteen the row *is* here. The applier's gates judge the
+arriving row, not the ids it names. `beatrax:doctor` now carries
+`UntranslatedParentHealthCheck`, which asserts that every parent id a peer sent
+is the id the peer's own log proves it meant, and prints the denominator it read.
+
 ### One `ArrivingBatch`, both phases
 
 `applyCreates()` used to run with no batch at all, so a leg created by a
