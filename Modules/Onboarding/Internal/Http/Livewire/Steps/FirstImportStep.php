@@ -134,6 +134,12 @@ final class FirstImportStep extends Component
             $now = $clock->now()->toDateTimeString();
             $balanceConfirmations = $this->acceptedBalanceConfirmations($balanceRule);
 
+            // The largest import this account will ever take, and the outer
+            // transaction below makes every chunk RecordTransactions commits
+            // a savepoint instead. A 120-second expiry is a fatal, so the
+            // catch cannot see it and the whole import is lost, not the tail.
+            set_time_limit(0);
+
             $db->connection()->transaction(function () use ($db, $confirmImport, $user, $now, $runIdsToCommit, $logger): void {
                 $confirmed = $this->confirmEachStagedRun($confirmImport, $user, $runIdsToCommit, $logger);
 
