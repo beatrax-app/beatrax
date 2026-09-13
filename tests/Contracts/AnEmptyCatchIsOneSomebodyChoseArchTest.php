@@ -92,6 +92,10 @@ function catchBodiesLeftEmptyOnPurpose(): array
             'count' => 1,
             'why' => 'A category the user does not own can only arrive in a tampered payload, and the wizard refuses it rather than reporting it.',
         ],
+        'Modules/Sync/Public/Support/KeylessTombstone.php' => [
+            'count' => 1,
+            'why' => 'A migration older than the deferred-capture table runs before it exists. The local tombstone is already written by then, so the rebuild is answered either way and only the peer\'s copy waits -- and on a database young enough to be missing that table there is nothing to delete.',
+        ],
         'Modules/Sync/Internal/Crypto/GdkKeyringService.php' => [
             'count' => 1,
             'why' => 'A keyring left at the old KDF cost is read correctly; the next write upgrades it, so a failed rewrite costs nothing but time.',

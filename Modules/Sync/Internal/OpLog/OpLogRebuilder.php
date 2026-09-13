@@ -23,16 +23,14 @@ final class OpLogRebuilder
     // ceiling — the same reason PersistedOpLogEntries chunks its pk lookups.
     private const int REINDEX_CHUNK = 400;
 
-    // A device id is free text and a pk is a string, so the pair needs a
-    // separator neither can hold — the same NUL the alias readers key on.
-    private const string PK_SEPARATOR = "\0";
-
     /** @var list<string> */
     private readonly array $coveredTables;
 
     private readonly CoveredTableOrder $tableOrder;
 
     private readonly PersistedOpLogEntries $persistedEntries;
+
+    private readonly RestoredRowCensus $restored;
 
     // Keyed by userId, true = lock held. Non-static because readonly classes
     // cannot have static properties; each instance tracks its own lock,
@@ -61,6 +59,7 @@ final class OpLogRebuilder
         private readonly ?SearchIndexRepairContract $searchRepairs = null,
     ) {
         $this->persistedEntries = $persistedEntries ?? new PersistedOpLogEntries($db);
+        $this->restored = new RestoredRowCensus($db);
         // Built here when absent rather than left null. The container leaves
         // this optional parameter unresolved, and the null fallback was plain
         // registry order — which lists import_runs before transactions, so
@@ -312,7 +311,7 @@ final class OpLogRebuilder
         $missing = [];
 
         foreach ($removed as $table => $pks) {
-            $gone = array_values(array_diff($pks, $this->accountedFor($table, $pks, $userId)));
+            $gone = array_values(array_diff($pks, $this->restored->accountedFor($table, $pks, $userId)));
 
             if ($gone !== []) {
                 $missing[$table] = count($gone);
@@ -324,98 +323,6 @@ final class OpLogRebuilder
         }
 
         throw new RebuildWouldLoseRowsException($missing, $this->quarantinedSince($userId, $quarantineMark));
-    }
-
-    // Present again, aliased to a row stored under another id, or tombstoned
-    // by the log — a delete the log carries is the replay working, not a row
-    // it failed to bring back.
-    /**
-     * @param  list<int>  $pks
-     * @return list<int>
-     */
-    private function accountedFor(string $table, array $pks, int $userId): array
-    {
-        $present = self::asIds($this->db->connection()->table($table)->whereIn('id', $pks)->pluck('id'));
-
-        $aliased = $this->aliasedToALiveRow($table, $pks, $userId);
-
-        $tombstoned = self::asIds($this->db->connection()->table('op_log_entries')
-            ->where('user_id', $userId)
-            ->where('table_name', $table)
-            ->where('op_type', OpType::DeleteTombstone->value)
-            ->whereIn('pk', array_map(static fn (int $pk): string => (string) $pk, $pks))
-            ->distinct()
-            ->pluck('pk'));
-
-        return [...$present, ...$aliased, ...$tombstoned];
-    }
-
-    // An alias row says "device D's id R is our id L", and both halves are
-    // load-bearing. Read on R alone, a peer's alias for ITS row 4218 answered
-    // for this device's deleted row 4218, and an alias whose L named a row that
-    // never landed still counted as one that came back.
-    /**
-     * @param  list<int>  $pks
-     * @return list<int>
-     */
-    private function aliasedToALiveRow(string $table, array $pks, int $userId): array
-    {
-        $remoteIds = array_map(static fn (int $pk): string => (string) $pk, $pks);
-
-        $rows = $this->db->connection()->table('op_log_row_aliases')
-            ->where('user_id', $userId)
-            ->where('table_name', $table)
-            ->whereIn('remote_id', $remoteIds)
-            ->get(['device_id', 'remote_id', 'local_id']);
-
-        $authors = $this->createAuthorsByPk($table, $remoteIds, $userId);
-        $localIds = self::asIds($rows->pluck('local_id'));
-        $live = array_flip(self::asIds($this->db->connection()->table($table)->whereIn('id', $localIds)->pluck('id')));
-
-        $accounted = [];
-
-        foreach ($rows as $row) {
-            $remote = is_numeric($row->remote_id ?? null) ? (int) $row->remote_id : null;
-            $local = is_numeric($row->local_id ?? null) ? (int) $row->local_id : null;
-            $device = is_string($row->device_id ?? null) ? $row->device_id : '';
-
-            if ($remote === null || $local === null || ! isset($live[$local])) {
-                continue;
-            }
-
-            if (isset($authors[$device.self::PK_SEPARATOR.$remote])) {
-                $accounted[] = $remote;
-            }
-        }
-
-        return $accounted;
-    }
-
-    // Which device announced the create for each pk. The alias is only that
-    // device's word for the row, so an alias scoped to anyone else accounts for
-    // nothing the replay was asked to put back.
-    /**
-     * @param  list<string>  $remoteIds
-     * @return array<string, true>
-     */
-    private function createAuthorsByPk(string $table, array $remoteIds, int $userId): array
-    {
-        $authors = [];
-
-        foreach ($this->db->connection()->table('op_log_entries')
-            ->where('user_id', $userId)
-            ->where('table_name', $table)
-            ->where('op_type', OpType::CreateRow->value)
-            ->whereIn('pk', $remoteIds)
-            ->distinct()
-            ->get(['device_id', 'pk']) as $row) {
-            $device = is_string($row->device_id ?? null) ? $row->device_id : '';
-            $pk = is_scalar($row->pk ?? null) ? (string) $row->pk : '';
-
-            $authors[$device.self::PK_SEPARATOR.$pk] = true;
-        }
-
-        return $authors;
     }
 
     private function quarantineMark(int $userId): int

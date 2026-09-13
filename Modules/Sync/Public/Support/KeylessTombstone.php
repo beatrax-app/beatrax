@@ -31,7 +31,9 @@ use Throwable;
 final class KeylessTombstone
 {
     // Announce BEFORE the rows go, because the owner is read off the row: an
-    // `op_log_entries.user_id` is NOT NULL, and the alert's is nullable.
+    // `op_log_entries.user_id` is NOT NULL, and the alert's is nullable. The
+    // clock is resolved rather than injected for the reason `ModuleMigration`
+    // resolves its database manager: a migration has no constructor to reach.
     /**
      * @param  list<int>  $ids
      */
@@ -41,9 +43,9 @@ final class KeylessTombstone
             return;
         }
 
-        $now = self::clock()?->now();
-        $recordedAt = $now?->toDateTimeString() ?? gmdate('Y-m-d H:i:s');
-        $nowMs = $now?->getTimestampMs() ?? (int) (microtime(true) * 1000);
+        $now = Container::getInstance()->make(Clock::class)->now();
+        $recordedAt = $now->toDateTimeString();
+        $nowMs = $now->getTimestampMs();
 
         foreach ($connection->table($table)->whereIn('id', $ids)->whereNotNull('user_id')
             ->orderBy('id')->select(['id', 'user_id'])->cursor() as $row) {
@@ -140,18 +142,6 @@ final class KeylessTombstone
             // A migration older than the queue's own table runs before it
             // exists. The entry above is already written, so the local rebuild
             // is answered either way and only the peer's copy waits.
-        }
-    }
-
-    // Resolved rather than injected, for the reason `ModuleMigration` resolves
-    // its database manager: a migration runs outside the request lifecycle and
-    // has no constructor anyone can reach.
-    private static function clock(): ?Clock
-    {
-        try {
-            return Container::getInstance()->make(Clock::class);
-        } catch (Throwable) {
-            return null;
         }
     }
 }
