@@ -45,7 +45,7 @@ trait ReadsYnabCsvFiles
         $reader = $this->openReader($path, YnabCsvColumnMap::REGISTER_FILE);
         $this->columnMap->assertRegisterHeader($this->readerHeader($reader, YnabCsvColumnMap::REGISTER_FILE), $format);
 
-        return $this->readerRows($reader);
+        return $this->readerRows($reader, YnabCsvColumnMap::REGISTER_FILE);
     }
 
     /**
@@ -56,7 +56,7 @@ trait ReadsYnabCsvFiles
         $reader = $this->openReader($path, YnabCsvColumnMap::BUDGET_FILE);
         $this->columnMap->assertBudgetHeader($this->readerHeader($reader, YnabCsvColumnMap::BUDGET_FILE));
 
-        return $this->readerRows($reader);
+        return $this->readerRows($reader, YnabCsvColumnMap::BUDGET_FILE);
     }
 
     /**
@@ -91,28 +91,35 @@ trait ReadsYnabCsvFiles
      * @param  Reader<array<array-key, mixed>>  $reader
      * @return array<int, array<string, string>>
      */
-    private function readerRows(Reader $reader): array
+    private function readerRows(Reader $reader, string $fileLabel): array
     {
         $rows = [];
         foreach ($reader->getRecords() as $record) {
-            $rows[] = $this->normalizeRow($record);
+            $rows[] = $this->normalizeRow($record, $fileLabel);
         }
 
         return $rows;
     }
 
+    // A cell that is not valid UTF-8 is bytes, not text, and every reader past
+    // this one takes it for text: the name reached a slug resolver mid-promote
+    // and threw there, with the categories and the budget grid already written.
     /**
      * @param  array<array-key, mixed>  $record
      * @return array<string, string>
      */
-    private function normalizeRow(array $record): array
+    private function normalizeRow(array $record, string $fileLabel): array
     {
         $row = [];
         foreach ($record as $key => $value) {
             if ($value !== null && ! is_string($value)) {
                 throw new UnrecognizedMigrationFileException('unexpected non-string CSV cell value');
             }
-            $row[(string) $key] = $value ?? '';
+            $cell = $value ?? '';
+            if (! mb_check_encoding($cell, 'UTF-8')) {
+                throw UnrecognizedMigrationFileException::cell($fileLabel, (string) $key, $cell, 'expected UTF-8 text');
+            }
+            $row[(string) $key] = $cell;
         }
 
         return $row;

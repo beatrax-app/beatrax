@@ -26,6 +26,20 @@ final class AmountStringParser
         return MoneyInput::tryToMinor($value, $currencyCode);
     }
 
+    // The Budget.csv counterpart, where only an ABSENT cell means the export
+    // says nothing about this category-month. parseSigned() answers null to
+    // that and to a cell it could not read alike, and a caller that reads the
+    // second as the first drops a month of the reader's budget in silence.
+    public function requireSignedMinorOrNull(string $value, string $file, string $column, ?string $currencyCode = null): ?int
+    {
+        if (trim($value) === '') {
+            return null;
+        }
+
+        return $this->parseSigned($value, $currencyCode)
+            ?? throw UnrecognizedMigrationFileException::cell($file, $column, $value, 'expected an amount');
+    }
+
     // A blank cell is the column this row did not use and a written zero is a
     // figure the file states; parse() answers null to both. Anything else null
     // is a value the reader wrote that could not be read, and a caller that
