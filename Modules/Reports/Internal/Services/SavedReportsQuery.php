@@ -40,9 +40,13 @@ final readonly class SavedReportsQuery
 
             $name = is_string($row->name ?? null) ? $row->name : '';
             $definition = DefinitionJsonDecoder::decode($row->definition ?? null);
-            $pinned = (bool) ($row->pinned ?? false);
             $pinOrderRaw = $row->pin_order ?? null;
             $pinOrder = is_numeric($pinOrderRaw) ? (int) $pinOrderRaw : null;
+            // Both columns, the way PinnedReportsQuery and the cap inside the
+            // write read it: they are two field ops and either can cross the
+            // other, so the flag alone counted a pin the dashboard drew no card
+            // for and offered to unpin it.
+            $pinned = (bool) ($row->pinned ?? false) && $pinOrder !== null;
 
             $result[] = new SavedReportIndexRow(
                 id: $id,

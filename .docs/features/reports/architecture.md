@@ -699,6 +699,17 @@ module:
   read query's own `LIMIT 3` is a second, independent enforcement point
   so a stray fourth pinned row (a data anomaly, a future write-path
   bug) can never render a 4th mini card.
+- **"Pinned" is both columns, everywhere.** `pinned` and `pin_order` are
+  written together and captured as two separate field ops, so a concurrent
+  unpin on a second device converges on a row carrying one of them and not
+  the other — the state `PinnedReportsRowTest` calls "a pin whose order
+  crossed it". `PinnedReportsQuery`, `TogglePin`'s cap and
+  `PinOrderCompactor` all require `pinned = true AND pin_order IS NOT NULL`.
+  `SavedReportsQuery` read the flag alone, so `/reports/library` headed
+  itself "2 of 3 pinned" over a dashboard drawing one card, offered to
+  unpin a card nobody could see, and still had two pins left in the cap.
+  It reads both columns now, and the row's own button follows the same
+  field.
 
 ## Data flow
 
