@@ -168,5 +168,7 @@ return [
         'no_session_id' => 'Enable Banking returnerede ikke noget sessions-id.',
         'bank_not_linked' => 'Den bank er ikke tilsluttet på denne enhed. Tilslut den igen for at genoptage synkroniseringen.',
         'oauth_state_mismatch' => 'Dette forbindelseslink er udløbet eller allerede brugt. Start forbindelsen til din bank forfra.',
+        'connection_not_saved' => 'Denne forbindelse kunne ikke gemmes på disken — tjek rettighederne til mappen med hemmeligheder, og prøv igen.',
+        'consent_not_completed' => 'Din bank fuldførte ikke forbindelsen. Intet blev ændret — prøv at forbinde igen.',
     ],
 ];

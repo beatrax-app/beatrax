@@ -118,6 +118,42 @@ shape, adapted for Enable Banking's two-step `/auth` → `/sessions` exchange
   it — pairing one bank's session with another bank's account uid is not a
   refusal any more, it is unaddressable.
 
+### What a refusal may say
+
+Both controllers flash what they catch onto `/settings/open-banking`, where it
+renders verbatim. `ReaderRefusal` is the one list of which refusals may speak
+for themselves, and it is keyed on what each exception's message **is**, never
+on what produced it:
+
+| Refusal | What the reader is told |
+|---|---|
+| `OpenBankingConnectException`, `OpenBankingCallbackException`, `InvalidStateException` | its own message, which is already a `Lang` line |
+| `OpenBankingCredentialsException` | `readerMessage()` — the situation and the remedy, since a flash has only one line |
+| `SecretsWriteFailed` | `errors.connection_not_saved` |
+| anything else | `sync.unavailable`, the same sentence Sync now gives for the same failure |
+| the bank refusing at its own screen (`?error=…`) | `errors.consent_not_completed` |
+
+There is deliberately no `default` arm returning `getMessage()`: that is how a
+class added later reaches the screen without anyone deciding that it should.
+Before this list, a `SecretsWriteFailed` printed the absolute path of the
+reader's secrets file — home directory included — and an
+`EnableBankingApiException` printed the API URL and 300 bytes of the
+aggregator's own response body, both in English on all 26 locales.
+`OpenBankingCredentialsException::unreadable()` had already learned exactly
+this for itself; its three neighbours had not.
+
+The bank's own refusal is treated the same way, and it is the sharper case:
+`error` and `error_description` arrive as **query parameters on a GET**, so
+anyone who can hand a signed-in reader a link decides the text. The page drew
+whatever the URL carried inside its own danger alert — Blade escapes the
+markup, so there is no script, but the sentence is the payload and it arrives
+wearing the app's chrome. The callback now flashes
+`errors.consent_not_completed` and records both parameters, capped, in the log.
+
+Everything the reader is no longer shown is recorded instead, through
+`SafeExceptionContext::describe()`, which carries the exception class and
+nothing from its message.
+
 ## Settings page: server-authoritative enable gate
 
 `OpenBankingSettingsPage` (`/settings/open-banking`) is the trust surface:
@@ -334,6 +370,14 @@ existence check filters on `acknowledged_at IS NULL`, so once a prior alert is
 acknowledged a fresh failure creates a new row. It is not
 `SystemAlertWriter::raiseOnceForUser()`, which dedups per kind alone: a reader
 with two banks needs to be told about each of them.
+
+`OpenBankingConsentFailed::$reason` is the **exception class**, on the terms
+`SafeExceptionContext::describe()` sets for that key everywhere else in the
+tree. `system_alerts` is an owned, synced table, so whatever lands in
+`metadata` is replayed onto every paired device; the field used to carry 500
+characters of `$e->getMessage()`, which for the 401/403 that raises this alert
+is the aggregator's own response body and the request URL — the account uid
+among them. Nothing reads the field for display.
 
 The dedup lookup prefers SQLite's `json_extract` against the `metadata`
 column, falling back to a dual-needle LIKE match (`%"connection_id":N,%` OR

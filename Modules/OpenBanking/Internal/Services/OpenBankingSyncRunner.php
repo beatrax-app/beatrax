@@ -128,10 +128,14 @@ final readonly class OpenBankingSyncRunner
         $this->recordAttempt($connectionId, $user->id, $now, $status, $consentFailed ? ['consent_revoked_at' => $now] : []);
 
         if ($consentFailed) {
+            // The class, on the terms SafeExceptionContext::describe() sets for
+            // the same key everywhere else here: this lands in an owned, synced
+            // system_alerts row, and the message beside it is whatever the
+            // aggregator put in a 401 body.
             $this->events->dispatch(new OpenBankingConsentFailed(
                 connectionId: $connectionId,
                 userId: $user->id,
-                reason: substr($e->getMessage(), 0, 500),
+                reason: $e::class,
             ));
         }
 

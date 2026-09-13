@@ -168,5 +168,7 @@ return [
         'no_session_id' => 'O Enable Banking não devolveu nenhum ID de sessão.',
         'bank_not_linked' => 'Esse banco não está ligado neste dispositivo. Volta a ligá-lo para retomar a sincronização.',
         'oauth_state_mismatch' => 'Esse link de ligação expirou ou já foi utilizado. Comece novamente a ligação ao seu banco.',
+        'connection_not_saved' => 'Não foi possível guardar esta ligação no disco — verifica as permissões da tua pasta de segredos e tenta de novo.',
+        'consent_not_completed' => 'O teu banco não concluiu a ligação. Nada foi alterado — tenta ligar de novo.',
     ],
 ];
