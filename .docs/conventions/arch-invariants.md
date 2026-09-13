@@ -398,6 +398,57 @@ covers every one of them.
 When nothing enforces a claim, a page saying so plainly costs a reader nothing.
 A page claiming a gate that is not there costs them the review.
 
+## A read of a user-owned row carries its reader
+
+`AReadOfAUserOwnedRowCarriesItsReaderArchTest` is the generalisation of the
+counterparties rule beside it, and the one worth reading as a pattern for any
+rule that has to cover a whole class of tables rather than a named one.
+
+**The set is derived, never listed.** Which tables it covers is asked of the
+live schema at run time — every table carrying a `user_id`, `users` excluded —
+which is the same question `UserScopedDataPurge` asks when it empties an
+account. A list written into the test goes stale the first time a module adds a
+table, and it goes stale silently: the guard stays green over the one place
+nobody added. Three tables surfaced on the first run that a list built from a
+developer's own database did not have.
+
+**The reader follows the builder, not the semicolon.** Four readers in this tree
+build a query in one statement and scope it in the next:
+
+```php
+$joined = $db->connection()->table('transactions')->leftJoin(…);
+$query  = CategoryPathName::joinParent($joined, $user->id, …)->where('transactions.user_id', $user->id);
+```
+
+A scanner that stops at the `;` reports all four, and a rule that reports four
+false offenders is a rule somebody widens until it passes — which is how the one
+that genuinely never scoped would have been waved through with them. So the scan
+continues into the later statements of the same brace block that name the
+variable this one was assigned to, and stops at the block, because a name reused
+in the next method is a different query.
+
+**Mentioning the column is not being bounded by it.** The first cut accepted any
+`'user_id'` literal in the statement. Twelve reads passed on that and bound
+nothing: `->where('id', $inboxId)->value('user_id')` reads the owner off a row,
+which is the opposite of asking only for rows that have it. The rule now counts
+three spellings — the column as the first argument of a `where`/`join`/`having`,
+the column as a key in a written row, and the column compared inside a raw
+fragment — and a named ownership helper where the owner lives on a parent.
+
+**Two pinned lists, and the difference between them is the point.**
+`OWNED_ROW_READ_TRIAGED` holds the statements that were read one at a time,
+each with the mechanism that bounds it: a correlated `NOT EXISTS` under a scoped
+outer, an update by primary key inside an already-scoped `chunkById`, a
+device-wide integrity count that has no reader by construction.
+`OWNED_ROW_READ_FROZEN` holds the tables that were not, frozen at today's exact
+count with the shape their statements have. Both are exact in both directions: a
+new offender fails, and so does a pin whose statement has gone. Neither is a
+floor — a floor set below the real population cannot tell a clean tree from a
+reader that stopped reading.
+
+Freezing is not the same as exempting, and the names are chosen so a reviewer
+can tell at a glance which of the two a line is claiming.
+
 ## Where a rule's rationale lives
 
 The failure message, not a comment. Each `expect(...)->toBe([], "…")` carries the

@@ -77,8 +77,12 @@ final readonly class TransactionStatusWriter
                 return;
             }
 
+            // Named here as well as on the update above. The stamp narrows to
+            // the rows that update just wrote, and a narrowing is not a scope:
+            // an id list is what the caller asked for, never whose it is.
             $transactionIds = $connection->table('transactions')
                 ->whereIn('id', $candidateIds)
+                ->where('user_id', $user->id)
                 ->where('status', ClearedStatus::Reconciled->value)
                 ->where('updated_at', $reconciledAt)
                 ->pluck('id')
