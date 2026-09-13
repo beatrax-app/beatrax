@@ -84,32 +84,45 @@
                              line each, so the popover anchor, id and x-ref are
                              keyed by account AND currency or the two collide. --}}
                         @php($lineKey = $account->accountId . $account->currency)
-                        <li class="flex items-center justify-between gap-3 text-sm">
+                        {{-- flex-wrap, and the conversion note is a sibling of the
+                             figure rather than a child of it. A disclosure spells
+                             out a date, its age and its source, so the box holding
+                             it grows with the sentence; inside a shrink-0 figure
+                             that growth came off the only flexible thing on the
+                             row. Measured at 390: the name span rendered 0px wide
+                             and the figure ran to 569px, while body scrollWidth
+                             still read 390 because an ancestor clipped it. --}}
+                        <li class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
                             <span class="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">
                                 {{ $account->name }}
                                 @if ($account->isLiability)
                                     <span class="ml-1 text-xs text-slate-600 dark:text-slate-400">{{ Lang::get('core::net_worth.card_suffix') }}</span>
                                 @endif
                             </span>
-                            <span class="shrink-0 font-medium {{ $amountClass($account->balanceMinor) }}" style="font-variant-numeric: tabular-nums;">
-                                {{-- Native amount as primary display --}}
+                            {{-- Native amount as primary display, and the one box on
+                                 this row that still refuses to shrink: a formatted
+                                 amount has no break opportunity inside it. --}}
+                            <span class="shrink-0 whitespace-nowrap font-medium {{ $amountClass($account->balanceMinor) }}" style="font-variant-numeric: tabular-nums;">
                                 {{ $nativeFmt($account->balanceMinor, $account->currency) }}
-                                @if ($account->isConverted())
-                                    <span class="ml-1 text-xs" style="color: var(--color-text-faint);">
-                                        ≈ {{ $fmt($account->baseEquivalentMinor) }}
-                                        <x-core::fx-disclosure
-                                            :disclosure="$account->disclosure($baseCurrency)"
-                                            id="account-{{ $lineKey }}"
-                                            :label="$account->name"
-                                            :online-rates="(bool) $fxOnlineEnabled"
-                                        />
-                                    </span>
-                                @elseif ($account->hasNoRate($baseCurrency))
-                                    {{-- No rate at all for this pair — show the native amount
-                                         only, with a calm amber note in the base-equivalent slot. --}}
-                                    <span class="ml-1 text-xs" style="color: var(--color-amber);">{{ Lang::get('core::net_worth.no_rate_available') }}</span>
-                                @endif
                             </span>
+                            @if ($account->isConverted())
+                                {{-- basis-full below sm: the sentence takes the line
+                                     under the figure on a phone and stays beside it
+                                     on a desktop, where it has always fitted. --}}
+                                <span class="min-w-0 basis-full text-right text-xs sm:basis-auto" style="color: var(--color-text-faint);">
+                                    ≈ {{ $fmt($account->baseEquivalentMinor) }}
+                                    <x-core::fx-disclosure
+                                        :disclosure="$account->disclosure($baseCurrency)"
+                                        id="account-{{ $lineKey }}"
+                                        :label="$account->name"
+                                        :online-rates="(bool) $fxOnlineEnabled"
+                                    />
+                                </span>
+                            @elseif ($account->hasNoRate($baseCurrency))
+                                {{-- No rate at all for this pair — show the native amount
+                                     only, with a calm amber note in the base-equivalent slot. --}}
+                                <span class="min-w-0 text-xs" style="color: var(--color-amber);">{{ Lang::get('core::net_worth.no_rate_available') }}</span>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
