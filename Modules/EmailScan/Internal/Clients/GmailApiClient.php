@@ -94,9 +94,7 @@ final readonly class GmailApiClient implements GmailApiClientContract
             throw $this->mapProviderFailure($e);
         }
 
-        $historyId = $profile->getHistoryId();
-
-        return $historyId === '' ? null : $historyId;
+        return self::sdkString($profile->getHistoryId());
     }
 
     public function getRawMessage(int $inboxId, string $providerMessageId): string
@@ -114,11 +112,21 @@ final readonly class GmailApiClient implements GmailApiClientContract
             throw $this->mapProviderFailure($e);
         }
 
+        // A format=raw response carrying no payload read back as a null, and
+        // the TypeError that came of it is outside every per-message catch
+        // list — so the cursor stalled on that id and met it again on every
+        // later tick. Typed, the walk records the skip and moves past it.
+        $raw = self::sdkString($msg->getRaw());
+        if ($raw === null) {
+            throw new GmailRawDecodeException(
+                sprintf('GmailApiClient: message %s came back carrying no raw payload.', $providerMessageId),
+            );
+        }
+
         // Decided from the resource's own numbers, before base64UrlDecode
         // makes three more copies of a body Gmail will carry up to 35 MB
         // encoded. sizeEstimate is the provider's word for it and the encoded
         // length is ours; the larger one is the one this device has to hold.
-        $raw = $msg->getRaw();
         BoundedRead::refuseAbove(
             'Gmail message '.$providerMessageId,
             max($msg->getSizeEstimate(), strlen($raw)),
