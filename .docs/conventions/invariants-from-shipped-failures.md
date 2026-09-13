@@ -8212,6 +8212,81 @@ The scope is deliberately `Internal/Transport` and not the module. It is where
 the iteration count is chosen by the machine on the other end of the socket
 rather than by this one, which is what turns a per-item line into a flood.
 
+## A rule that mandated a column without checking it exists
+
+`AQueryOverTheDeviceRegistryDecidesAboutARetiredRowArchTest` is a good rule. A
+restored database carries the old machine's self row and never its key-file, so
+the repair takes `is_self` off and leaves `confirmed_at` alone — and one row
+then has to read two opposite ways. Neither reading can be the default, so the
+rule makes every `device_registry` query say which one it wants, with a reason
+per site. It walks 55 queries and it is correct about all of them.
+
+It also drove `self_retired_at` into eight query sites and checked none of them
+against the schema. It could not: SQLite reads a double-quoted name matching no
+column as a **string literal** rather than raising, so a predicate on a column
+whose migration has not run here yet is not an error — it is silently true or
+silently false depending on which way it was written. That is a property of the
+database the process is pointed at, not of the source, and no static rule sees
+it.
+
+The two the rule mandated fail in opposite directions:
+
+```php
+->where('is_self', 1)->orWhereNotNull('self_retired_at')   // always TRUE — every peer reads as this device
+->whereNull('self_retired_at')                             // always FALSE — no device reads as confirmed
+```
+
+The second is the worse one, because an empty result is frequently used to build
+a filter, and **an empty filter widens**. `SyncStatusService::forgetOrphanedSessions()`
+plucked the confirmed device ids, got none, and its
+`when($confirmed !== [], fn ($q) => $q->whereNotIn('peer_device_id', $confirmed))`
+skipped the narrowing clause — leaving a `delete()` scoped by `user_id` alone.
+The `when()` reads as a safety check and is not one: `whereNotIn` on an empty
+set compiles to `1 = 1`, so both arms of it delete every session the user has.
+
+**A rule that mandates a column manufactures a dependency on that column
+existing.** It is worth stating because the rule is not wrong and should not be
+withdrawn — the policy it enforces is real. What it needs is the other half: the
+readers it mandates have to ask the database before acting on the clause. That
+is `SchemaShape::missingColumns()` and `ColumnNotDeclaredException`, and
+refusing beats degrading, because a reader that drops the clause and carries on
+still produces an answer with nothing in it saying the clause never applied.
+
+### What this does not generalise to
+
+Three readers can misbehave for reasons needing different fixes, and grouping
+them by the symptom is how a static guard came to be proposed for a defect it
+would have passed:
+
+- **A declared column the migration has not applied here.** The above. Not
+  static — `self_retired_at` *is* declared, so a rule reading "every column
+  literal matches a column the migrations declare" passes every site named on
+  this page.
+- **A literal that is not a column at all** — the typo. That one is static, and
+  it is the only one an arch rule can hold. Swept and currently clean.
+
+The comparison direction is a third spelling of the first, not a fourth cause:
+`where('failed_slices', '<', 3)` on an absent column compares the text
+`'failed_slices'` to an integer, and SQLite sorts every text value above every
+integer, so it is false. Measured against a table with the column and one
+without:
+
+```
+PRESENT   failed_slices < 3        -> 1 row
+ABSENT   "failed_slices" < 3       -> 0 rows
+ABSENT   "failed_slices" is null   -> 0 rows
+ABSENT   "failed_slices" not null  -> every row
+```
+
+### Measuring it needs the right copy of the database
+
+A SQLite file in WAL mode keeps recent writes — schema changes included — in its
+`-wal` sidecar until a checkpoint. `cp nativephp.sqlite` alone reproduces the
+defect; copying the `-wal` and `-shm` beside it and running
+`PRAGMA journal_mode=delete` does not. The plain copy is what a naive backup and
+a pre-checkpoint snapshot give you, so the reading that looked clean was the
+artefact. Say which copy you have before reporting either result.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

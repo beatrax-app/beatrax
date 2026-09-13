@@ -7,7 +7,8 @@ namespace Modules\Sync\Internal\Merge;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
-use Modules\Sync\Internal\Exceptions\CensusColumnMissingException;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
+use Modules\Core\Public\Support\SchemaShape;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineOutcome;
 
@@ -42,7 +43,7 @@ final readonly class StrandedCreates
     /**
      * @return array{checked: int, unplaced: array<string, int>, removedHere: array<string, int>, held: array<string, int>}
      *
-     * @throws CensusColumnMissingException
+     * @throws ColumnNotDeclaredException
      */
     public function census(int $userId): array
     {
@@ -73,17 +74,17 @@ final readonly class StrandedCreates
     // migration running is an ordinary state, and in it every answer below is
     // wrong in a direction nothing reports -- so the census declines to give one.
     /**
-     * @throws CensusColumnMissingException
+     * @throws ColumnNotDeclaredException
      */
     private function assertEveryColumnIsThere(): void
     {
-        $schema = $this->db->connection()->getSchemaBuilder();
+        $connection = $this->db->connection();
 
         foreach (self::REQUIRED_COLUMNS as $table => $columns) {
-            $missing = array_values(array_diff($columns, $schema->getColumnListing($table)));
+            $missing = SchemaShape::missingColumns($connection, $table, $columns);
 
             if ($missing !== []) {
-                throw CensusColumnMissingException::of($table, $missing);
+                throw ColumnNotDeclaredException::on($table, $missing);
             }
         }
     }
