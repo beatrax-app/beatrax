@@ -36,7 +36,7 @@ return [
 
     'success_heading' => 'Cihaz eşleştirildi',
     'success_body' => 'Bu cihaz artık güvenilir. Bağlandığında verilerin senkronize olacak.',
-    'encryption_incomplete' => 'Cihaz eşleştirildi, ancak üzerinde saklanan verilerin şifrelenmesi tamamlanmadı. Veriler henüz şifreli olarak saklanmıyor.',
+    'encryption_incomplete' => 'Bu cihazda saklanan verilerin şifrelenmesi tamamlanmadı. Veriler henüz şifreli olarak saklanmıyor.',
     'done' => 'Bitti',
 
     'errors' => [
