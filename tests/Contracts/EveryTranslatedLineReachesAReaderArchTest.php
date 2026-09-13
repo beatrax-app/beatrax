@@ -112,7 +112,7 @@ function translatedLineSourceFiles(): array
     $root = translatedLineRepoRoot();
 
     $files = [];
-    foreach (['Modules', 'app', 'resources', 'routes', 'config', 'database'] as $dir) {
+    foreach (['Modules', 'resources', 'routes', 'config', 'database'] as $dir) {
         if (! is_dir($root.'/'.$dir)) {
             continue;
         }

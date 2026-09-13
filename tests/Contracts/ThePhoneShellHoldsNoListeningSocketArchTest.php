@@ -58,7 +58,7 @@ function phoneShellRoots(): array
         // shared tree, and they are named as well as tested for: a checkout
         // that materialised them as real directories would otherwise put the
         // desktop's own daemon inside the phone's walk.
-        $shared = ['Modules', 'app', 'routes', 'resources', 'public', 'tests'];
+        $shared = ['Modules', 'routes', 'resources', 'public', 'tests'];
 
         // Not the phone's own code: two are somebody else's packages, one is
         // runtime state the build writes, and one holds signing material that

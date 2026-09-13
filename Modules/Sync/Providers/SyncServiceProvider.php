@@ -437,7 +437,7 @@ final class SyncServiceProvider extends ServiceProvider
     }
 
     // The sync:serve and relay:serve daemons register from boot() rather than
-    // app/Console/Kernel.php, per the module boundary rule.
+    // from an application-wide console kernel, per the module boundary rule.
     private function registerConsoleCommands(): void
     {
         $this->commands([SyncServeCommand::class, RelayServeCommand::class, SyncRebuildCommand::class]);

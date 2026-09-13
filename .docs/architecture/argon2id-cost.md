@@ -13,7 +13,7 @@ All three derive at the cost named by `Modules\Core\Public\Contracts\KdfCost`.
 ## What ships
 
 `Modules\Core\Internal\Encryption\ProductionKdfCost` is the only implementation
-under `Modules/` or `app/`, and `CoreServiceProvider` binds it unconditionally.
+under `Modules/`, and `CoreServiceProvider` binds it unconditionally.
 It returns libsodium's `MODERATE` pair:
 
 | Parameter | Value |
@@ -67,7 +67,7 @@ guard. Between them they assert:
 - that a `BackupEncryptor` header records `3` and `268435456`.
 - that `KdfCost` resolves to `ProductionKdfCost` in an application built
   without the test harness, that no second implementation has appeared
-  under `Modules/` or `app/`, and that no other class there names a
+  under `Modules/`, and that no other class there names a
   `SODIUM_CRYPTO_PWHASH_OPSLIMIT_`/`MEMLIMIT_` constant at all — except
   `BackupEncryptor`, whose two are the ceiling it refuses a header above
   rather than a cost it derives at.
@@ -92,7 +92,7 @@ every test in the repository, since every module's `TestCase` extends that one.
 Two properties make that substitution safe rather than a hole:
 
 1. **No shipped class can select it.** There is no environment check, no config
-   flag and no constructor default anywhere in `Modules/` or `app/`; the single
+   flag and no constructor default anywhere in `Modules/`; the single
    binding names `ProductionKdfCost` and nothing else. `CheapKdfCost` lives
    under `tests/`, a composer `autoload-dev` root, so it is not in a bundle
    built without dev dependencies at all.

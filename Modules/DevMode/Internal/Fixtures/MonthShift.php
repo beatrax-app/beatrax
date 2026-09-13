@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Fixtures;
+namespace Modules\DevMode\Internal\Fixtures;
 
 use Carbon\CarbonImmutable;
 
 /**
- * @link ../../.docs/local_development/rebasing-a-statement-fixture.md#why-whole-months
+ * @link ../../../../.docs/local_development/rebasing-a-statement-fixture.md#why-whole-months
  */
 final readonly class MonthShift
 {

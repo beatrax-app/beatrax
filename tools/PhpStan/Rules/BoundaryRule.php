@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\PhpStan\Rules;
+namespace Beatrax\Tooling\PhpStan\Rules;
 
 use PhpParser\Node;
 use PhpParser\Node\UseItem;

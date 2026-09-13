@@ -40,7 +40,7 @@ it('stages nothing in the shared temp directory', function (): void {
     // a bootstrap file staging a file in /tmp leaks its name and size just as
     // readably, and neither was in the walk's sight.
     $roots = array_values(array_filter(
-        array_map(base_path(...), ['Modules', 'app', 'bootstrap', 'config', 'database', 'routes', 'scripts']),
+        array_map(base_path(...), ['Modules', 'bootstrap', 'config', 'database', 'routes', 'scripts']),
         is_dir(...),
     ));
 

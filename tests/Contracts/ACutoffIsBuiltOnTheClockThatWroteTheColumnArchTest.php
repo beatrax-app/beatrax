@@ -307,7 +307,7 @@ const RE_ZONING_PINS = [
     // A fixture rebaser, not a reader of stored data: it recomputes a CAMT
     // export's own printed offset when it shifts the file's dates, and leaves
     // any offset that zone does not explain alone.
-    'app/Fixtures/Camt053Rebaser.php' => 2,
+    'Modules/DevMode/Internal/Fixtures/Camt053Rebaser.php' => 2,
 ];
 
 it('decides which frame an instant is in only inside the seam', function (): void {

@@ -165,7 +165,7 @@ must carry its own explicit filter regardless of the trait.
   `CounterpartyProfile` (`/counterparties/{slug}`),
   `CounterpartyTriage` (`/counterparties/triage`).
 
-`App\PhpStan\Rules\BoundaryRule` and the `pinnedCrossModuleInternalImports`
+`Beatrax\Tooling\PhpStan\Rules\BoundaryRule` and the `pinnedCrossModuleInternalImports`
 arch invariant forbid any other module from importing
 `Modules\Counterparties\Internal\*`.
 

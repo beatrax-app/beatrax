@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace Modules\DevMode\Internal\Console;
 
-use App\Fixtures\Camt053Rebaser;
-use App\Fixtures\MonthShift;
-use App\Fixtures\Mt940Rebaser;
-use App\Fixtures\PresetCsvRebaser;
-use App\Fixtures\RebasesStatementDates;
-use App\Fixtures\StatementRebaseFailed;
-use App\Fixtures\StatementRebaseResult;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\SafeDate;
+use Modules\DevMode\Internal\Fixtures\Camt053Rebaser;
+use Modules\DevMode\Internal\Fixtures\MonthShift;
+use Modules\DevMode\Internal\Fixtures\Mt940Rebaser;
+use Modules\DevMode\Internal\Fixtures\PresetCsvRebaser;
+use Modules\DevMode\Internal\Fixtures\RebasesStatementDates;
+use Modules\DevMode\Internal\Fixtures\StatementRebaseFailed;
+use Modules\DevMode\Internal\Fixtures\StatementRebaseResult;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Throwable;
 
 /**
- * @link ../../../.docs/local_development/rebasing-a-statement-fixture.md
+ * @link ../../../../.docs/local_development/rebasing-a-statement-fixture.md
  */
 final class RebaseStatementFixtureCommand extends Command
 {

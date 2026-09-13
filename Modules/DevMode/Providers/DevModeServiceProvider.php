@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Providers;
 
-use App\Providers\HorizonServiceProvider;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
@@ -28,7 +27,10 @@ use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\CommandRegistry;
+use Modules\DevMode\Internal\Console\DemoSeedCommand;
 use Modules\DevMode\Internal\Console\PruneDevAuditCommand;
+use Modules\DevMode\Internal\Console\RebaseStatementFixtureCommand;
+use Modules\DevMode\Internal\Console\SetupCommand;
 use Modules\DevMode\Internal\Enums\ArgType;
 use Modules\DevMode\Internal\Enums\CommandTier;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
@@ -590,7 +592,10 @@ final class DevModeServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                DemoSeedCommand::class,
                 PruneDevAuditCommand::class,
+                RebaseStatementFixtureCommand::class,
+                SetupCommand::class,
             ]);
         }
     }

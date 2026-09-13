@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Fixtures;
+namespace Modules\DevMode\Internal\Fixtures;
 
 use Carbon\CarbonImmutable;
 use DateTimeZone;
@@ -10,7 +10,7 @@ use Modules\Core\Public\Support\PatternScan;
 use Modules\Core\Public\Support\SafeDate;
 
 /**
- * @link ../../.docs/local_development/rebasing-a-statement-fixture.md#camt053
+ * @link ../../../../.docs/local_development/rebasing-a-statement-fixture.md#camt053
  */
 final class Camt053Rebaser implements RebasesStatementDates
 {

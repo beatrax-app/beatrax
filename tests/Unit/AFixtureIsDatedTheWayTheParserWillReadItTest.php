@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Fixtures\MonthShift;
-use App\Fixtures\Mt940Rebaser;
 use Carbon\CarbonImmutable;
+use Modules\DevMode\Internal\Fixtures\MonthShift;
+use Modules\DevMode\Internal\Fixtures\Mt940Rebaser;
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940Tag61Parser;
 
 // A :61: date carries a two-digit year, so the century it lands in is a

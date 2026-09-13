@@ -113,7 +113,7 @@ function searchedSealSourceFiles(): array
 {
     $files = [];
 
-    foreach (['Modules', 'app'] as $root) {
+    foreach (['Modules'] as $root) {
         $files = array_merge($files, searchedSealWalk(base_path($root)));
     }
 

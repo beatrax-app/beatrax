@@ -23,14 +23,14 @@ if (! is_string($named) && ! str_contains((string) ($input['command'] ?? ''), '.
 // tree currently has uncommitted, which is the same set a moment later.
 $paths = is_string($named) ? [$named] : commentPolicyDirtyPhpFiles();
 
-// The same set CommentPolicyArchTest calls backend files: Modules/ and app/,
+// The same set CommentPolicyArchTest calls backend files: Modules/,
 // never a test or a migration. Judging more than the authority does would
 // invent failures the gate will not have.
 $paths = array_values(array_filter(
     $paths,
     static fn (string $p): bool => str_ends_with($p, '.php')
         && is_file($p)
-        && preg_match('#/(Modules|app)/#', $p) === 1
+        && preg_match('#/Modules/#', $p) === 1
         && ! str_contains($p, '/tests/')
         && ! str_contains($p, '/Database/Migrations/')
         && preg_match('#/(vendor|node_modules|storage|bootstrap/cache)/#', $p) !== 1,
@@ -71,72 +71,72 @@ $isDirective = static fn (string $text): bool => preg_match(
 $hits = [];
 
 foreach ($paths as $path) {
-$lineCommentLines = [];
+    $lineCommentLines = [];
 
-foreach (token_get_all((string) file_get_contents($path)) as $token) {
-    if (! is_array($token)) {
-        continue;
-    }
-
-    if ($token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '/*')) {
-        $hits[] = sprintf("%s:%s M3: informative /* */ block — use /** */ PHPDoc.", $path, $token[2]);
-    }
-
-    if ($token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '//') && ! $isDirective($token[1])) {
-        $lineCommentLines[] = $token[2];
-    }
-
-    if ($token[0] === T_DOC_COMMENT) {
-        $seenTag = false;
-        $hasContent = false;
-
-        foreach (explode("\n", $token[1]) as $raw) {
-            $line = trim(ltrim(trim($raw), '/*'));
-
-            if ($line === '') {
-                continue;
-            }
-
-            $hasContent = true;
-
-            if (str_starts_with($line, '@')) {
-                $seenTag = true;
-            } elseif (! $seenTag) {
-                $hits[] = sprintf("%s:%s M4: docblock carries prose — @-tags only, move the why to a // block above.", $path, $token[2]);
-                break;
-            }
+    foreach (token_get_all((string) file_get_contents($path)) as $token) {
+        if (! is_array($token)) {
+            continue;
         }
 
-        if ($hasContent && ! $seenTag) {
-            $hits[] = sprintf("%s:%s M4: docblock with no @-tags at all — delete it or make it a // block.", $path, $token[2]);
+        if ($token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '/*')) {
+            $hits[] = sprintf('%s:%s M3: informative /* */ block — use /** */ PHPDoc.', $path, $token[2]);
+        }
+
+        if ($token[0] === T_COMMENT && str_starts_with(ltrim($token[1]), '//') && ! $isDirective($token[1])) {
+            $lineCommentLines[] = $token[2];
+        }
+
+        if ($token[0] === T_DOC_COMMENT) {
+            $seenTag = false;
+            $hasContent = false;
+
+            foreach (explode("\n", $token[1]) as $raw) {
+                $line = trim(ltrim(trim($raw), '/*'));
+
+                if ($line === '') {
+                    continue;
+                }
+
+                $hasContent = true;
+
+                if (str_starts_with($line, '@')) {
+                    $seenTag = true;
+                } elseif (! $seenTag) {
+                    $hits[] = sprintf('%s:%s M4: docblock carries prose — @-tags only, move the why to a // block above.', $path, $token[2]);
+                    break;
+                }
+            }
+
+            if ($hasContent && ! $seenTag) {
+                $hits[] = sprintf('%s:%s M4: docblock with no @-tags at all — delete it or make it a // block.', $path, $token[2]);
+            }
         }
     }
-}
 
-sort($lineCommentLines);
+    sort($lineCommentLines);
 
-$blocks = [];
-$block = [];
+    $blocks = [];
+    $block = [];
 
-foreach ($lineCommentLines as $line) {
-    if ($block !== [] && $line !== end($block) + 1) {
+    foreach ($lineCommentLines as $line) {
+        if ($block !== [] && $line !== end($block) + 1) {
+            $blocks[] = $block;
+            $block = [];
+        }
+        $block[] = $line;
+    }
+
+    if ($block !== []) {
         $blocks[] = $block;
-        $block = [];
     }
-    $block[] = $line;
-}
 
-if ($block !== []) {
-    $blocks[] = $block;
-}
+    foreach ($blocks as $lines) {
+        $n = count($lines);
 
-foreach ($blocks as $lines) {
-    $n = count($lines);
-
-    if ($n > 4) {
-        $hits[] = sprintf("%s:%s M2: %s-line // block, max is 4. Cut it to 4 lines or fewer.", $path, $lines[0], $n);
+        if ($n > 4) {
+            $hits[] = sprintf('%s:%s M2: %s-line // block, max is 4. Cut it to 4 lines or fewer.', $path, $lines[0], $n);
+        }
     }
-}
 }
 
 if ($hits === []) {

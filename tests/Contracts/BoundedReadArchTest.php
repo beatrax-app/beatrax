@@ -194,7 +194,7 @@ const BOUNDED_READ_ALLOWED = [
         'reads' => 1,
         'why' => 'KNOWN UNBOUNDED. Every transaction id of one import run on the confirm request, then handed to an unchunked whereIn, while ConfirmImport beside it streams the rows themselves.',
     ],
-    'app/Console/Commands/DemoSeedCommand.php::import_runs' => [
+    'Modules/DevMode/Internal/Console/DemoSeedCommand.php::import_runs' => [
         'reads' => 1,
         'why' => 'Reachable only from php artisan demo:seed, and the source_format predicate matches nothing a shipped importer ever writes.',
     ],
@@ -400,7 +400,7 @@ function boundedReadSourceFiles(): array
 {
     $files = [];
 
-    foreach (['Modules', 'app'] as $root) {
+    foreach (['Modules'] as $root) {
         $files = array_merge($files, boundedReadWalk(base_path($root)));
     }
 

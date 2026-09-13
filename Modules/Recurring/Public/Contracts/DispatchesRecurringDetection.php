@@ -6,7 +6,7 @@ namespace Modules\Recurring\Public\Contracts;
 
 // Keeping the concrete DetectRecurringSeriesJob class on the Internal
 // surface (never referenced here) preserves the cross-module boundary
-// that App\PhpStan\Rules\BoundaryRule enforces.
+// that Beatrax\Tooling\PhpStan\Rules\BoundaryRule enforces.
 
 interface DispatchesRecurringDetection
 {

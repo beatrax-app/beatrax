@@ -55,7 +55,7 @@ it('never points the Layout attribute at the yield-based app layout', function (
     $offenders = [];
     $walked = 0;
 
-    foreach (['Modules', 'app'] as $root) {
+    foreach (['Modules'] as $root) {
         if (! is_dir(base_path($root))) {
             continue;
         }

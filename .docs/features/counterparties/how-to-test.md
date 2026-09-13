@@ -49,7 +49,7 @@ neither, so every invariant that touches it is repo-wide and lives in
 
 - `pinnedCrossModuleInternalImports` holds the import half of the
   boundary in both directions. It scans `Modules/`, `tests/` and
-  `app/` textually for a `use` of another module's `Internal\` and
+  textually for a `use` of another module's `Internal\` and
   asserts the result equals two pinned lists — a production list
   holding only the `Mobile` → `Sync` protocol crossings, and a test
   list holding every crossing the suite makes today. No production
@@ -61,7 +61,7 @@ neither, so every invariant that touches it is repo-wide and lives in
   (`SearchEncryptionFallbackTest`, `TaxBadgeSurfacesTest` and
   `APairOfWindowsThatMustAgreeHasOneDefinitionArchTest`). A new
   crossing in either direction fails the build until somebody writes
-  it on the list. `App\PhpStan\Rules\BoundaryRule` refuses the
+  it on the list. `Beatrax\Tooling\PhpStan\Rules\BoundaryRule` refuses the
   production ones outright.
 - `noAuthFacadeOrHelper` is what keeps the resolver off the `Auth`
   facade. It bans `Auth::`, `auth()`, `session()` and

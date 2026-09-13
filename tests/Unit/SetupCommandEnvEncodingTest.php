@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Console\Commands\SetupCommand;
+use Modules\DevMode\Internal\Console\SetupCommand;
 
 function encodeEnvValue(string $value): string
 {

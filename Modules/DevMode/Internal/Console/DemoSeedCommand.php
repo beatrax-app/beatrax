@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace Modules\DevMode\Internal\Console;
 
-use App\Support\SampleData\SampleDatasetSeeder;
+use Database\Seeders\SampleDatasetSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -12,7 +12,6 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Actions\PurgeUserDataAction;
 use Modules\Core\Public\Enums\SampleDataScope;
-use Modules\Ledger\Database\Seeders\Demo\DemoUsersSeeder;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\DependentRowCascade;
@@ -29,7 +28,6 @@ final class DemoSeedCommand extends Command
 
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly DemoUsersSeeder $users,
         private readonly PurgeUserDataAction $purgeUserData,
         private readonly DependentRowCascade $cascade,
         private readonly Container $container,
@@ -43,17 +41,20 @@ final class DemoSeedCommand extends Command
             $this->resetDemoData();
         }
 
+        // Resolved here, not injected, and after the reset: Artisan builds
+        // every command to list them, and the seeder reaches thirty graphs the
+        // container is told to build fresh each time. Injected, they would all
+        // be frozen at boot — built before the wipe, over data that is gone.
+        $dataset = $this->container->make(SampleDatasetSeeder::class);
+
         // The two invented personas. Everything after them is the shared
         // dataset, in the order SampleDatasetSeeder owns, because the
         // in-application control needs the same one over a real account.
         $this->line('Seeding demo users…');
-        $userMap = $this->users->run();
+        $userMap = $dataset->seedPersonas();
         $this->info(sprintf('  %d demo users present', count($userMap)));
 
-        // Resolved here, not injected: Artisan builds every command to list
-        // them, and the seeder reaches thirty graphs the container is told to
-        // build fresh each time. Injected, they would all be frozen at boot.
-        $counts = $this->container->make(SampleDatasetSeeder::class)->seed(
+        $counts = $dataset->seed(
             $userMap,
             SampleDataScope::WholeInstall,
             function (string $step, int $count): void {
@@ -108,7 +109,7 @@ final class DemoSeedCommand extends Command
     private function demoUserIds(Connection $connection): array
     {
         $demoUserIds = $connection->table('users')
-            ->whereIn('username', DemoUsersSeeder::usernames())
+            ->whereIn('username', SampleDatasetSeeder::personaUsernames())
             ->pluck('id')
             ->all();
 

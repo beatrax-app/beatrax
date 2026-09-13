@@ -29,7 +29,7 @@ const SCANNER_SEAM = 'tests/Contracts/Support/RepoTree.php';
 const SCANNERS_NAMING_THEIR_OWN_ROOTS = [
     'tests/Contracts/Support/BackendSourceFiles.php' => [
         'reason' => 'the runtime domain code, which is what the rules reading it are about: money that names its currency, a date refused rather than normalised, a column a screen reads back. routes, config and bootstrap are wiring, database is schema and seed, and scripts runs on a build machine and never ships -- widening this walk would not find those rules more subjects, it would ask them about files they do not describe. The build scripts are not unguarded: the checked-regex seams reach them, which is where a give-up that blanks the Android manifest was found',
-        'proves' => "base_path('Modules'), base_path('app')",
+        'proves' => "base_path('Modules')",
     ],
     'tests/Contracts/Support/SonarSourceFiles.php' => [
         'reason' => 'sonar.sources and nothing wider: a guard standing in for the hosted analysis fails on files the dashboard will never mention, which is the failure mode that gets a guard switched off',
@@ -255,7 +255,7 @@ it('finds each way a scope stops describing the tree', function (): void {
 it('reads a root named in code and not one named in prose', function (): void {
     $roots = scannerRootNames();
 
-    expect($roots)->toContain('Modules')->toContain('app')->toContain('.claude')->toContain('tools');
+    expect($roots)->toContain('Modules')->toContain('.claude')->toContain('tools');
 
     $names = "<?php\n// walks Modules and app\n/** @return list<string> under scripts */\n\$roots = ['config', 'routes'];\n";
 

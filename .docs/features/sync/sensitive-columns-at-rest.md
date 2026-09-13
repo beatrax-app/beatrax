@@ -813,7 +813,7 @@ join on one, or a raw `update()` that writes plaintext straight into an encrypte
 None of these raise; they just quietly stop being right.
 
 `SensitiveColumnPredicateGuardTest` is a source scan standing in for the type system that
-would otherwise have caught it. It walks every production file under `Modules/` and `app/` —
+would otherwise have caught it. It walks every production file under `Modules/` —
 skipping `tests/`, `Database/Migrations/` and `Resources/` — and looks for each bare column name from
 `SensitiveFieldRegistry::columns()` appearing in one of the shapes that only makes sense
 against plaintext: a `where`/`whereIn`/`orWhere`/`whereLike`, an `orderBy`/`groupBy`, a join

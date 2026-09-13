@@ -17,6 +17,14 @@ use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 // Only providers listed in plugins() compile into a native build, and only
 // mobile-app/bootstrap/providers.php loads this; the desktop build has
 // nativephp/desktop's own plugin surface.
+
+// The namespace is the vendor's, not ours: nativephp/mobile looks this class up
+// by the literal string 'App\Providers\NativeServiceProvider' and answers a
+// miss with an empty plugin allow-list — no exception, no log line, 29 of 54
+// native element types gone.
+/**
+ * @link ../../../../.docs/features/mobile/architecture.md#a-vendor-hard-codes-a-class-name-and-answers-a-miss-with-silence
+ */
 class NativeServiceProvider extends ServiceProvider
 {
     public function register(): void

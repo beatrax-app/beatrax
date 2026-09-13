@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\PhpStan\Reflection;
+namespace Beatrax\Tooling\PhpStan\Reflection;
 
 use Illuminate\Contracts\View\View as ViewContract;
 

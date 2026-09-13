@@ -44,7 +44,7 @@ Practical recipes for exercising the `DevMode` module in isolation.
 ## Contract / arch invariants
 
 - `noHorizonImportsInShippedBuildCode` — only
-  `app/Providers/HorizonServiceProvider.php` may import a Horizon
+  `Modules/DevMode/Providers/HorizonServiceProvider.php` may import a Horizon
   symbol. `class_exists(\Laravel\Horizon\…)` arguments are stripped
   from the scan first so the inline FQCN inside this provider's
   `boot()` is legal.
@@ -230,7 +230,7 @@ and the assertion — see
   and no `X-Frame-Options` either
   (`Modules/DevMode/tests/Feature/AHorizonRouteKeepsEveryDirectiveItDidNotWriteTest.php`).
 - **The Horizon import is allowed only in
-  `app/Providers/HorizonServiceProvider.php`.** The repo-wide
+  `Modules/DevMode/Providers/HorizonServiceProvider.php`.** The repo-wide
   `noHorizonImportsInShippedBuildCode` invariant blocks any
   Horizon symbol outside that file (the regex strips
   `class_exists(\Laravel\Horizon\…)` arguments first so the inline

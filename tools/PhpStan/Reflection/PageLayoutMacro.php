@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\PhpStan\Reflection;
+namespace Beatrax\Tooling\PhpStan\Reflection;
 
 use PHPStan\Reflection\ClassMemberReflection;
 use PHPStan\Reflection\ClassReflection;

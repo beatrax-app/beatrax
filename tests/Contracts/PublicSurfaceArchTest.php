@@ -32,7 +32,7 @@ function publicSurfaceSources(): array
     // `nativephp` is not in this list: it is a gitignored build output, absent
     // here and absent in CI, so it was a covered root naming nothing — and in a
     // built tree it would answer for a Public class with a copy of the app.
-    foreach (['Modules', 'app', 'routes', 'config', 'tests', 'database', 'bootstrap', 'resources', 'lang', 'mobile-app', 'scripts'] as $directory) {
+    foreach (['Modules', 'routes', 'config', 'tests', 'database', 'bootstrap', 'resources', 'lang', 'mobile-app', 'scripts'] as $directory) {
         if (! is_dir($repoRoot.'/'.$directory)) {
             continue;
         }

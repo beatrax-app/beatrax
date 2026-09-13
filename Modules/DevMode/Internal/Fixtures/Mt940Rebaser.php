@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Fixtures;
+namespace Modules\DevMode\Internal\Fixtures;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Public\Support\PatternScan;
@@ -10,7 +10,7 @@ use Modules\Core\Public\Support\SafeDate;
 use Modules\Ingestion\Public\Banking\SwiftDate;
 
 /**
- * @link ../../.docs/local_development/rebasing-a-statement-fixture.md#mt940
+ * @link ../../../../.docs/local_development/rebasing-a-statement-fixture.md#mt940
  */
 final class Mt940Rebaser implements RebasesStatementDates
 {
