@@ -312,7 +312,8 @@ it('writes no row at all when the key is out of reach, and records the coordinat
 
     $this->artisan('sync:repair-stranded-creates', ['--user' => (string) $this->userId, '--apply' => true])
         ->expectsOutputToContain('Nothing was written to counterparties')
-        ->expectsOutputToContain('2 create(s) recorded as owed')
+        ->expectsOutputToContain('2 create(s) recorded as owed, 2 owed in total')
+        ->expectsOutputToContain('Open the app with the lock off')
         ->assertExitCode(0);
 
     expect($this->db->connection()->table('counterparties')->where('user_id', $this->userId)->count())->toBe(15);
@@ -325,7 +326,7 @@ it('writes no row at all when the key is out of reach, and records the coordinat
     // Asked twice on purpose: a second run that wrote two more holds would
     // grow the audit table every time an operator looked.
     $this->artisan('sync:repair-stranded-creates', ['--user' => (string) $this->userId, '--apply' => true])
-        ->expectsOutputToContain('0 create(s) recorded as owed')
+        ->expectsOutputToContain('0 create(s) recorded as owed, 2 owed in total')
         ->assertExitCode(0);
 
     expect($this->db->connection()->table('op_log_quarantine')->where('user_id', $this->userId)->count())->toBe(2);
@@ -365,4 +366,18 @@ it('lets the sealed-ledger recovery pass place what the keyless run recorded', f
         ->toBe(['value' => 'Kpn-mobiel', 'decrypted' => true])
         ->and($this->db->connection()->table('op_log_quarantine')->where('user_id', $this->userId)->count())
         ->toBe(0, 'The hold is spent once the row it named is here; leaving it would report a refusal for a row sitting right there.');
+
+    // What the reader is handed, column by column. The only thing about a
+    // recovered row that differs from one this device created is its id, and
+    // nothing shows a reader an id -- the slug is what the URL carries.
+    expect(is_object($stored) ? (string) $stored->type : '')->toBe('merchant')
+        ->and(is_object($stored) ? (string) $stored->created_at : '')->toBe(
+            strandedRepairPeerWrote(),
+            'The day the peer wrote the row, not the day it was recovered.',
+        )
+        ->and(is_object($stored) ? (string) $stored->iban : '')->not->toBe('')
+        ->and(is_object($stored) ? (int) $stored->id : 0)->toBeGreaterThan(
+            max($this->localIds),
+            'A fresh id this device minted, because the one the peer used is a row of this device already.',
+        );
 });

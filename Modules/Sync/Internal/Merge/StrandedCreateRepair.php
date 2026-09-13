@@ -108,21 +108,27 @@ final readonly class StrandedCreateRepair
     // seal it rather than by a console that would write it unreadable for good.
     /**
      * @param  list<array{pk: string, devices: list<string>, naturalKey: string|null, action: string}>  $plans
-     * @return int Holds written, counting a row already holding one as nothing to do.
+     * @return array{written: int, owed: int} Holds written now, and how many creates are inside the pass's reach afterwards.
      */
-    public function hold(array $plans, string $table, int $userId, string $now): int
+    public function hold(array $plans, string $table, int $userId, string $now): array
     {
         $written = 0;
+        $owed = 0;
 
         foreach ($this->byDevice($plans, $table) as $deviceId => $rows) {
             foreach ($rows as $row) {
                 $written += $this->holdOne($table, $row['pk'], $deviceId, $userId, $now);
+                $owed += $this->alreadyHeld($table, $row['pk'], $deviceId, $userId) ? 1 : 0;
             }
         }
 
-        return $written;
+        return ['written' => $written, 'owed' => $owed];
     }
 
+    // Counted by reading the hold back, never by the write returning. A
+    // quarantine write is best-effort by design -- replay must continue whether
+    // or not the audit row lands -- so a swallowed failure would otherwise be
+    // reported as a coordinate that is not there, which is the worst answer.
     private function holdOne(string $table, string $pk, string $deviceId, int $userId, string $now): int
     {
         if ($this->alreadyHeld($table, $pk, $deviceId, $userId)) {
@@ -137,12 +143,15 @@ final readonly class StrandedCreateRepair
 
         $this->quarantine->record($arriving, QuarantineReason::PrimaryKeyCollision, $now);
 
-        return 1;
+        return $this->alreadyHeld($table, $pk, $deviceId, $userId) ? 1 : 0;
     }
 
     // Any hold at all on the create, not only a collision one: a row already
     // inside the recovery pass's reach needs no second coordinate, and writing
     // one per run would grow the audit table every time this is asked.
+    /**
+     * @phpstan-impure
+     */
     private function alreadyHeld(string $table, string $pk, string $deviceId, int $userId): bool
     {
         return $this->db->connection()->table('op_log_quarantine')

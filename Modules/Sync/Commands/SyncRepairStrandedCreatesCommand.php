@@ -122,11 +122,18 @@ final class SyncRepairStrandedCreatesCommand extends Command
     private function oweThemToTheRecoveryPass(string $table, array $plans, int $userId): int
     {
         $now = $this->container->make(Clock::class)->now()->toDateTimeString();
-        $written = $this->repair->hold($plans, $table, $userId, $now);
+        ['written' => $written, 'owed' => $owed] = $this->repair->hold($plans, $table, $userId, $now);
 
         $this->warn(sprintf('Nothing was written to %s: this process holds no app-lock key.', $table));
         $this->line('A create carries the peer\'s sealed name and IBAN, and a row stored without them would come back unreadable for good.');
-        $this->info(sprintf('%d create(s) recorded as owed. The app places them whole the next time it runs its sealed-ledger recovery with the lock open.', $written));
+        $this->info(sprintf('%d create(s) recorded as owed, %d owed in total.', $written, $owed));
+        $this->line('Open the app with the lock off and they are placed whole: the desktop runs its sealed-ledger recovery after every response, and the Devices & Sync screen runs it on open.');
+
+        // A short run is a coordinate that is not there, and the next run takes
+        // it: the count is read back off the table rather than off the write.
+        if ($owed < count($plans)) {
+            $this->warn(sprintf('%d of %d are owed. Run this again — a hold that did not land is written on the next pass.', $owed, count($plans)));
+        }
 
         return self::SUCCESS;
     }
