@@ -27,6 +27,11 @@ final class AddUserPage extends Component
 
     public string $initialPasswordConfirmation = '';
 
+    // The account this mints survives the owner changing their own password, so
+    // a session left open bought a standing way in that its owner could not
+    // revoke. Nobody holds the new account yet to notice it appear.
+    public string $ownerPassword = '';
+
     public function submit(CurrentUser $currentUser, AddUserAction $addUser): void
     {
         if ($this->initialPassword !== $this->initialPasswordConfirmation) {
@@ -37,7 +42,7 @@ final class AddUserPage extends Component
         }
 
         try {
-            $partner = $addUser($currentUser->user(), $this->username, $this->initialPassword);
+            $partner = $addUser($currentUser->user(), $this->username, $this->initialPassword, $this->ownerPassword);
         } catch (ValidationException $e) {
             $this->flashMessage = ValidationMessages::first($e, 'auth::add_user.error_generic');
             $this->resetPasswordFields();
@@ -47,6 +52,7 @@ final class AddUserPage extends Component
 
         $this->flashMessage = Lang::get('auth::add_user.created', ['name' => $partner->username]);
         $this->username = '';
+        $this->ownerPassword = '';
         $this->resetPasswordFields();
     }
 

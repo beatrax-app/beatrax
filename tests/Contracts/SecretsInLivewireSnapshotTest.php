@@ -74,6 +74,10 @@ function livewireSnapshotAllowList(): array
             // The partner is forced to change it at first sign-in.
             'initialPassword',
             'initialPasswordConfirmation',
+            // The owner's own, re-typed to authorise minting the account, and
+            // zeroed once spent. The account outlives the owner's own password
+            // change, and nobody holds it yet to notice it appear.
+            'ownerPassword',
         ],
         ResetPasswordPage::class => [
             // The page clears both fields after any error, so a failed attempt

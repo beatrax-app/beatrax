@@ -21,7 +21,7 @@ is not.
 |---|---|---|
 | `x-core::confirm-strip` | A row action, or a form whose destructive branch is one field among many. A `confirm*` method sets an id or a flag, the view swaps in the strip. | 3 keys |
 | `wire:confirm` | A single high-stakes button that is not part of a row. The native dialog is unmissable, which is what a once-a-year action wants. | 1 key |
-| A typed phrase or password | Account-level. `Core/EncryptedBackupRestore` types a phrase; `Auth/DeleteAccountSection`, `Auth/RecoveryCodesSection` and `Auth/ManageUserPage` take the password. | — |
+| A typed phrase or password | Account-level. `Core/EncryptedBackupRestore` types a phrase; `Auth/DeleteAccountSection`, `Auth/RecoveryCodesSection`, `Auth/ManageUserPage` and `Auth/AddUserAction` take the password. | — |
 
 Use one of the three. A fourth spelling is how ten inline "are you sure?" strips
 came to disagree about everything, which is the story
@@ -151,6 +151,35 @@ It is `x-model`, so the name never leaves the browser; it only unlocks the
 button. The name is printed at the top of the page, and a crafted Livewire
 update never renders the button at all. It stays, as a pause against the wrong
 partner — but it was the only thing there, and it stopped nobody.
+
+### The third face: minting one for a reader who is not there yet
+
+`/settings/users/new` creates a household member and chooses their first
+password. It was owner-only and nothing else, which is the same gap again —
+but the argument for what to ask cannot simply be copied, because creating is
+not rewriting.
+
+There is no standing credential of the new account to prove knowledge of; it
+does not exist. The reader who will hold it cannot consent, for the same
+reason. What is left is the owner's authority, which is what the rule has been
+the whole way down, so the owner's own password is the proof here too.
+
+The consequence is the same durability that made the sheet a takeover rather
+than an unwanted write: the owner changing their own password afterwards does
+not revoke the account. It is quieter than either partner write, because there
+is nobody yet to be signed out and puzzled.
+
+This one is checked **inside `AddUserAction`** rather than on the page, unlike
+its two siblings. Those share their action with the console, whose proof is
+access to the machine, so the gate has to sit on the surface. This action has
+one caller and no machine-proof path, and putting the proof beside the
+ownership test keeps *what you may do* and *that it is you* in one place —
+splitting them is the seam the other two grew in.
+
+The first account on an install takes none of this. There is no owner then, so
+there is no authority to prove and nothing to prove it with, which is why
+`SignupAction` and the mobile import bootstrap are not shaped like this and
+must not be.
 
 ## A promise of an undo is not an undo
 

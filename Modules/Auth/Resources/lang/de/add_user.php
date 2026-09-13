@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Startpasswort',
     'initial_password_hint' => 'Wähle ein Passwort, das du einmal vorlesen oder eintippen kannst. Beim ersten Anmelden wird es ersetzt.',
     'confirm_initial_password' => 'Startpasswort bestätigen',
+    'owner_password_label' => 'Dein Kontopasswort',
     'submit' => 'Startpasswort festlegen',
 
     'error_mismatch' => 'Die Passwörter stimmen nicht überein.',

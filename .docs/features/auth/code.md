@@ -90,9 +90,13 @@ domain model uses.
     the Livewire page, and any future API surface share one validation +
     rate-limit posture.
   - `LogoutAction` — sign-out. Symmetric counterpart to `LoginAction`.
-  - `AddUserAction` — owner-creates-partner. Caller must be a developer;
-    a non-developer caller raises `NotFoundHttpException`. Returns the
-    created partner `User`.
+  - `AddUserAction` — owner-creates-partner. Caller must be the owner;
+    anyone else raises `NotFoundHttpException`. Takes the caller's own
+    account password too, checked through `AppLockCredentialRejections`
+    right after the ownership test — ownership says what the caller may
+    do, the password says that it is really them, and the two live
+    together here rather than on the page so a second caller cannot
+    inherit one without the other. Returns the created partner `User`.
   - `ResetPasswordAction` — recovery-code-driven password reset. Takes
     `(username, code, newPassword)`; throws `ValidationException` keyed
     `code` on mismatch (generic message; does not reveal whether the
