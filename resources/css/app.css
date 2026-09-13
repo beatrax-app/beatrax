@@ -3475,11 +3475,14 @@ td.date,
     border: 1.5px solid currentColor;
 }
 
-/* Stale/bundled rate marker — amber dot replaces the neutral icon */
+/* Stale/bundled rate marker — the ring fills in, and the amber reinforces it.
+   The fill is the part a reader who cannot see the hue still gets: amber
+   against the ring's own slate is 1.51:1 light and 1.45:1 dark, and an amber
+   tint against the ring's transparent centre 1.11:1 and 1.21:1, so the marker
+   used to say nothing at all in greyscale. */
 .fx-icon--stale {
-    background: var(--color-amber-bg);
+    background: var(--color-amber);
     border-color: var(--color-amber);
-    color: var(--color-amber);
 }
 
 /* Inline variant for per-account breakdown rows — slightly smaller touch area */
@@ -4470,9 +4473,14 @@ td.date,
     }
 
 
-    /* Risk day tint (balance < 0) */
+    /* Risk day (balance < 0): an edge bar, and the tint reinforces it. The
+       tint alone is 1.20:1 light and 1.11:1 dark against a plain cell, and the
+       signed balance corner it leant on is `hidden sm:inline-block` — so below
+       640px the hue was the whole of the signal. The bar is the edge marker
+       the dashboard's failed-chain toast already wears. */
     .cal-cell--risk {
         background: var(--color-rose-bg);
+        box-shadow: inset 3px 0 0 var(--color-rose);
     }
 
     .cal-cell--risk:hover {
