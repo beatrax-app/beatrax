@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # bin/worktree.sh — create a git worktree that can actually run the suite.
 #
-# A fresh worktree is missing three gitignored things, and each absence looks
+# A fresh worktree is missing four gitignored things, and each absence looks
 # like a real test failure rather than like missing setup:
 #
 #   vendor/        no vendor/bin/pest at all.
@@ -9,6 +9,9 @@
 #                  ViteManifestNotFoundException, and one arch test cannot run.
 #   .env           the FirstLaunchBootstrap path runs key:generate, which does
 #                  file_get_contents('.env') and throws.
+#   mobile-app/    the second Composer root: its bootstrap/cache and storage
+#                  runtime directories are gitignored AND empty, so git creates
+#                  neither and the framework cannot boot there at all.
 #
 # public/build/ is COPIED rather than hardlinked, for its mtimes. `git worktree
 # add` stamps every source file at checkout time, so a hardlinked bundle carries
@@ -142,6 +145,30 @@ redump_autoload() {
     fi
 }
 
+# The second Composer root needs more than a vendor tree. bootstrap/cache and
+# the storage runtime directories are gitignored and empty, so `git worktree
+# add` creates neither and the framework cannot boot there — mobile-plugin
+# cases skip in the repo root, where they are meant to, and FAIL in the mobile
+# one, where they are meant to run. The classmap is stale for the reason the
+# repo root's is: it came across with vendor/ and describes $main.
+bootstrap_mobile_root() {
+    mkdir -p "$target/mobile-app/bootstrap/cache" "$target/mobile-app/database" \
+        "$target/mobile-app/storage/framework/cache" "$target/mobile-app/storage/framework/sessions" \
+        "$target/mobile-app/storage/framework/testing" "$target/mobile-app/storage/framework/views" \
+        "$target/mobile-app/storage/logs"
+    [[ -e $target/mobile-app/database/database.sqlite ]] || : > "$target/mobile-app/database/database.sqlite"
+
+    if [[ ! -e $target/mobile-app/.env && -e $main/mobile-app/.env ]]; then
+        cp "$main/mobile-app/.env" "$target/mobile-app/.env"
+    fi
+
+    if (cd "$target/mobile-app" && composer dump-autoload --quiet 2>/dev/null); then
+        echo "    mobile-app root bootstrapped, autoload rebuilt against this checkout"
+    else
+        echo "!!  composer dump-autoload failed in $target/mobile-app; its classmap still describes $main" >&2
+    fi
+}
+
 echo "==> bootstrapping"
 link_tree vendor
 unshare_composer_metadata vendor
@@ -152,6 +179,7 @@ unshare_composer_metadata vendor
 if [[ -d $main/mobile-app/vendor ]]; then
     link_tree mobile-app/vendor
     unshare_composer_metadata mobile-app/vendor
+    bootstrap_mobile_root
 else
     echo "    mobile-app/vendor absent from the main checkout; the docs-symbol rule will skip"
 fi
@@ -192,6 +220,21 @@ done
 echo "==> positive control"
 if (cd "$target" && vendor/bin/pest tests/Contracts/BoundaryArchTest.php >/dev/null 2>&1); then
     echo "    the harness binds and a known-green file passes"
+    # The mobile root has its own control, because its own bootstrap can fail
+    # while the repo root's passes. This file needs the framework to boot there
+    # AND nativephp/mobile's shipped Xcode template to be readable, which is
+    # both halves of what the block above lays down.
+    if [[ -d $target/mobile-app/vendor ]]; then
+        if (cd "$target/mobile-app" && APP_ENV=testing vendor/bin/pest \
+            Modules/Mobile/tests/Unit/TheZoneAnIPhoneCouldNotReadTest.php >/dev/null 2>&1); then
+            echo "    the mobile-app root boots and reads its shipped shell"
+        else
+            echo "!!  the repo root is set up and the mobile-app root is not. Mobile tests will" >&2
+            echo "!!  fail there rather than skip. Run it directly to see why:" >&2
+            echo "!!    cd $target/mobile-app && vendor/bin/pest Modules/Mobile/tests/Unit/TheZoneAnIPhoneCouldNotReadTest.php" >&2
+            exit 1
+        fi
+    fi
 else
     # Named first because it is the usual cause and it does not look like one:
     # the worktree is created on origin/main while vendor/ is hardlinked from a
