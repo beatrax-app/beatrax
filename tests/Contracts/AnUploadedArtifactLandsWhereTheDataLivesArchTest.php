@@ -89,16 +89,25 @@ it('keeps the binding where the container can apply it before a disk resolves', 
 
 // A new caller naming a disk this rule has not considered is the way the
 // defect returns, so the set is closed rather than sampled.
+//
+// Both entries name the SAME disk, and StagedStatementPath owns the constant
+// RunImport resolves it through, so neither can drift to a second root. They
+// inherit the binding above, which is appPath('private') — persisted_data/ on
+// a phone, the directory an app update does not replace.
 it('has no filesystem-disk caller that has not been accounted for', function (): void {
     $callers = uploadedArtifactDiskCallers();
 
-    expect($callers)->toBe(['Modules/Import/Public/Actions/RunImport.php'], implode("\n  ", [
-        'One place in the product resolves a filesystem disk by name, and the binding above',
-        'is what decides where that disk is rooted. A second caller either inherits the same',
-        'root — in which case it belongs in this list, with the reader having checked that a',
-        'phone would put its file somewhere an app update does not replace — or names a disk',
-        'of its own, which this rule then says nothing about. Compared in both directions:',
-        'a caller that disappeared fails here as loudly as one that appeared.',
+    expect($callers)->toBe([
+        'Modules/Import/Internal/Services/StagedStatementPath.php',
+        'Modules/Import/Public/Actions/RunImport.php',
+    ], implode("\n  ", [
+        'Two places in the product resolve a filesystem disk by name — the writer that stages',
+        'an upload and the reader that proves a stored path is this device\'s own — and the',
+        'binding above is what decides where that disk is rooted. A further caller either',
+        'inherits the same root, in which case it belongs in this list, with the reader having',
+        'checked that a phone would put its file somewhere an app update does not replace — or',
+        'names a disk of its own, which this rule then says nothing about. Compared in both',
+        'directions: a caller that disappeared fails here as loudly as one that appeared.',
         'Found: '.implode(', ', $callers),
     ]));
 });

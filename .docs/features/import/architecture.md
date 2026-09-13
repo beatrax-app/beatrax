@@ -1025,6 +1025,34 @@ than Import (e.g. `Modules\OpenBanking`) can drive the pipeline, since
 - Per-row duplicate detection is still enforced downstream by
   `FingerprintStage`, independent of this dedup layer.
 
+## The stored path is an audit string
+
+`import_runs.raw_file_path` reads like a handle and is not one. Two
+things are true of it that a caller reaching for `fopen()` has to know:
+
+- **It travels.** `MergeRulesRegistry` lists it in the create set for
+  `import_runs`, so the value a device reads back may have been written
+  by a peer, against a filesystem this device has never seen. A path
+  that resolves on both machines therefore names *this* reader's file
+  at the peer's choosing.
+- **It is not always a path.** Five writers put a marker there for a run
+  nobody uploaded: `open-banking://{key}` for a fetched window,
+  `demo://…` from the sample-data seeders, `'migration'` from
+  `PromoteStagingToDomain`, the manual-entry anchor, and the receipts
+  handoff sentinel.
+
+So every re-read asks `StagedStatementPath::forRun()`, which answers
+with an absolute path only when `realpath()` of the stored string lands
+inside this device's own `imports/{userId}/` directory, and with `null`
+otherwise. `RunsImports::runFromStagedRun()` is the one seam that reads
+the column; `ASyncedPathIsOnlyOpenedWhereItIsProvenLocalArchTest` pins
+that it stays the only one.
+
+A `null` is not an error. Naming an account on a run this device did not
+stage writes the account and skips the re-preview — the same answer the
+remote-fetch branch has always given, because in both cases there is no
+local file whose rows could be read again.
+
 ## Applying enrichments
 
 `ApplyEnrichments` wraps each `PendingEnrichment` in its own per-row DB

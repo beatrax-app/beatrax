@@ -10,6 +10,7 @@ use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ledger\Models\ImportRun;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
@@ -29,4 +30,10 @@ interface RunsImports
      * @param  Generator<int, SourceTransactionDto>  $sourceRows
      */
     public function runFromRemoteFetch(Generator $sourceRows, string $sourceFormat, User $user, string $idempotencyKey): ImportPreviewResult;
+
+    // Re-runs the preview of a run this device staged itself. `raw_file_path`
+    // is a synced audit string rather than a handle, so the caller hands over
+    // the row and the implementation decides whether there is a local file
+    // behind it at all; null says there was nothing here to read again.
+    public function runFromStagedRun(ImportRun $run, User $user, ?BankCsvFormatHint $formatHint = null): ?ImportPreviewResult;
 }
