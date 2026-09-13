@@ -22,6 +22,7 @@ use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Commands\SyncRebuildCommand;
+use Modules\Sync\Commands\SyncRepairUntranslatedParentsCommand;
 use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
@@ -106,6 +107,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Sync\Public\Services\StrandedCreateHealthCheck;
 use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Modules\Sync\Public\Services\SyncStatusService;
+use Modules\Sync\Public\Services\UntranslatedParentHealthCheck;
 use Psr\Log\LoggerInterface;
 
 final class SyncServiceProvider extends ServiceProvider
@@ -145,6 +147,7 @@ final class SyncServiceProvider extends ServiceProvider
         // parameter with one unless the class is BOUND -- so an unbound check
         // resolves to null and its row silently never prints.
         $this->app->singleton(StrandedCreateHealthCheck::class);
+        $this->app->singleton(UntranslatedParentHealthCheck::class);
 
         // The libsodium conversions the crypto paths run inside their
         // try-blocks, behind an interface so a test can make them fail.
@@ -447,7 +450,7 @@ final class SyncServiceProvider extends ServiceProvider
     // from an application-wide console kernel, per the module boundary rule.
     private function registerConsoleCommands(): void
     {
-        $this->commands([SyncServeCommand::class, RelayServeCommand::class, SyncRebuildCommand::class]);
+        $this->commands([SyncServeCommand::class, RelayServeCommand::class, SyncRebuildCommand::class, SyncRepairUntranslatedParentsCommand::class]);
     }
 
     // Resolve the authenticated user id for the OpLogReplayer device-key
