@@ -342,16 +342,23 @@
 
                 {{-- Total + FX exclusion note + headline delta --}}
                 <div class="space-y-1">
-                    <div class="flex flex-wrap items-baseline justify-between gap-4">
-                        {{-- The metric label is a translated noun, and strtolower() lowercased the
-                             German one while doing nothing at all to Greek or Cyrillic. CSS
-                             uppercases the line, so the damage only ever reached the DOM and
-                             the screen reader. --}}
-                        <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.total_prefix') }} {{ $metricLabel }}</span>
-                        <span class="{{ $amountClass($result->totalMinor) }}" style="font-size: var(--text-3xl); font-weight: 600; font-variant-numeric: tabular-nums;">
-                            {{ $fmt($result->totalMinor, $result->currency) }}
-                        </span>
-                    </div>
+                    {{-- One line per currency, because 'original' mode converts
+                         nothing and one of them cannot stand for the rest: the
+                         table listed €1,049.94 and ¥1,000 and headlined
+                         €1,049.94 alone. A converted report has one line and
+                         renders exactly as it did. --}}
+                    @foreach ($result->totalLines() as $totalCurrency => $totalMinor)
+                        <div class="flex flex-wrap items-baseline justify-between gap-4">
+                            {{-- The metric label is a translated noun, and strtolower() lowercased the
+                                 German one while doing nothing at all to Greek or Cyrillic. CSS
+                                 uppercases the line, so the damage only ever reached the DOM and
+                                 the screen reader. --}}
+                            <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">@if ($loop->first){{ Lang::get('reports::builder.total_prefix') }} {{ $metricLabel }}@endif</span>
+                            <span class="{{ $amountClass($totalMinor) }}" style="font-size: var(--text-3xl); font-weight: 600; font-variant-numeric: tabular-nums;">
+                                {{ $fmt($totalMinor, $totalCurrency) }}
+                            </span>
+                        </div>
+                    @endforeach
                     @if ($definition->compare)
                         <div class="flex items-center justify-end gap-2">
                             <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.vs_previous') }}</span>
@@ -459,8 +466,10 @@
 
                     <x-slot:foot>
                         <td class="px-4 py-2 font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('reports::builder.total') }}</td>
-                        <td class="px-4 py-2 text-right font-semibold {{ $amountClass($result->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
-                            {{ $fmt($result->totalMinor, $result->currency) }}
+                        <td class="px-4 py-2 text-right font-semibold" style="font-variant-numeric: tabular-nums;">
+                            @foreach ($result->totalLines() as $totalCurrency => $totalMinor)
+                                <span class="block {{ $amountClass($totalMinor) }}">{{ $fmt($totalMinor, $totalCurrency) }}</span>
+                            @endforeach
                         </td>
                         @if ($definition->compare)
                             <td class="px-4 py-2 text-right font-semibold" style="font-variant-numeric: tabular-nums;">
