@@ -296,6 +296,13 @@ final class MobilePairingScan extends Component
         $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices, $urls, $lock);
     }
 
+    // The vendor docblock promises this also fires when the scanner is closed
+    // without a scan. It does not: each shell dispatches it from exactly one
+    // site, the permission-denied branch, so the three arguments carry one
+    // reading and cameraDenied() is the whole of it.
+    /**
+     * @link ../../../../../.docs/features/mobile/architecture.md#what-the-native-scanner-reports
+     */
     #[On(self::EVENT_SCANNER_CANCELLED)]
     public function onScannerCancelled(bool $cancelled = true, ?string $reason = null, ?string $id = null): void
     {
