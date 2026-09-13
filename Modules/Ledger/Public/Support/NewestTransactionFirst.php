@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Modules\Counterparties\Internal\Support;
+namespace Modules\Ledger\Public\Support;
 
 // `posted_at DESC, id DESC` reads as "the newest charge", but posted_at is a
 // DATE and the id is a per-device autoincrement, so a day's charges ranked one
 // way here and the other way there — and the top one is what the screen shows.
+// Public, because four modules rank this table and one clause is what agrees.
 /**
  * @link ../../../../.docs/features/counterparties/architecture.md#which-charge-is-the-newest
  */
