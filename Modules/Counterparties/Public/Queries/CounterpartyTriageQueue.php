@@ -10,6 +10,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Internal\Actions\LabelCounterparty;
+use Modules\Counterparties\Internal\Support\NewestTransactionFirst;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
@@ -60,8 +61,12 @@ final readonly class CounterpartyTriageQueue
                     $scope->orWhere('id', $queueFirstId);
                 }
             })
+            // The cap makes this order decide membership, not just sequence,
+            // and the id it ended on is counted per device. `slug` is the
+            // identity string the merge rules match a counterparty on, carries
+            // unique(user_id, slug), and is never sealed.
             ->orderByDesc('updated_at')
-            ->orderByDesc('id')
+            ->orderBy('slug')
             ->limit(self::SCAN_LIMIT)
             ->get();
 
@@ -129,12 +134,21 @@ final readonly class CounterpartyTriageQueue
 
         /** @var iterable<stdClass> $transactions */
         $transactions = $this->db->connection()->table('transactions')
-            ->where('user_id', $unknown->user_id)
-            ->where('counterparty_id', $unknown->id)
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $unknown->user_id)
+            ->where('transactions.counterparty_id', $unknown->id)
+            // The cap picks the pool the tally is computed over, and arsort()
+            // is stable, so a two-way tie in that tally is settled by which
+            // description this order returned first. Both answers reach the
+            // reader as a name and a percentage.
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS)
             ->limit(20)
-            ->get(['description']);
+            ->get(['transactions.description']);
 
         /** @var array<string, int> $tally */
         $tally = [];
