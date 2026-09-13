@@ -35,6 +35,7 @@ use Modules\Core\Internal\Listeners\RefuseToShipAStaleFrontEnd;
 use Modules\Core\Internal\Providers\AlreadyOpenConnectionsProvider;
 use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
+use Modules\Core\Internal\Providers\UnicodeFoldingProvider;
 use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
 use Modules\Core\Internal\Support\MigrationWindow;
 use Modules\Core\Models\User as CoreUser;
@@ -75,6 +76,7 @@ final class CoreServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(SqliteOptimizationsProvider::class);
+        $this->app->register(UnicodeFoldingProvider::class);
         $this->app->singleton(BootProbeState::class);
         $this->app->register(HealthCheckServiceProvider::class);
         $this->app->register(AlreadyOpenConnectionsProvider::class);
