@@ -44,7 +44,7 @@ it('masks values for keys ending with password / secret / key / token suffixes (
     expect($redacted['app.name'])->toBe('beatrax');
 });
 
-it('preserves BEATRAX_DEV_MODE in plain text (Q4 resolution — only secret-suffix keys are masked)', function (): void {
+it('preserves BEATRAX_DEV_MODE in plain text, because only secret-suffix keys are masked', function (): void {
     $flattener = new ConfigFlattener;
 
     $redacted = $flattener->redactSecretSuffixes([

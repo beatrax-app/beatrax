@@ -201,7 +201,7 @@ it('enumerates at least as many primary surfaces as the sidebar has route()-back
     expect(count(mobileSurfaceParityRoutes()))->toBeGreaterThanOrEqual(24);
 });
 
-it('renders every primary sidebar surface without error against an on-device encrypted, synced fixture (R8)', function (string $routeName, array $params): void {
+it('renders every primary sidebar surface without error against an on-device encrypted, synced fixture', function (string $routeName, array $params): void {
     $response = $this->get(route($routeName, $params));
 
     $response->assertSuccessful();

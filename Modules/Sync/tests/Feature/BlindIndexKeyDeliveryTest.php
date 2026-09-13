@@ -773,8 +773,7 @@ it('says why the divergence alert could not be withdrawn, without saying what it
     Schema::drop('system_alerts');
     $logSpy = Log::spy();
 
-    expect(fn () => app(BlindIndexDivergenceAlerts::class)->converged((int) $user->id))
-        ->not->toThrow(Throwable::class);
+    app(BlindIndexDivergenceAlerts::class)->converged((int) $user->id);
 
     $logSpy->shouldHaveReceived('warning')
         ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'could not be withdrawn')

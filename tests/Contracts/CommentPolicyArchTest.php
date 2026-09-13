@@ -609,7 +609,7 @@ function commentPolicyTestFiles(): array
 // name nothing writes any more cannot sit here reading as considered.
 const COMMENT_POLICY_STANDARDS_NAMES = [
     'AES-256', 'ISO-4217', 'SHA-256', 'SHA-512', 'UTF-8',
-    'BCP-47', 'PSR-3', 'PSR-4', 'R-7', 'API-28',
+    'BCP-47', 'PSR-3', 'PSR-4', 'R-7', 'API-28', 'MT940',
 ];
 
 // Not a name at all: a regex character class whose middle reads like an
@@ -632,15 +632,18 @@ function commentPolicyWithoutStandards(string $text): string
 /** @return list<string> the requirement identifiers a test name carries, if any */
 function commentPolicyRequirementIds(string $name): array
 {
-    $matches = PatternScan::all(
-        COMMENT_POLICY_BANNED_TOKENS,
-        commentPolicyWithoutStandards($name),
-    );
+    $scrubbed = commentPolicyWithoutStandards($name);
 
-    /** @var list<string> $ids */
-    $ids = $matches[0];
+    /** @var list<string> $tokens */
+    $tokens = PatternScan::all(COMMENT_POLICY_BANNED_TOKENS, $scrubbed)[0];
 
-    return $ids;
+    /** @var list<string> $markers */
+    $markers = PatternScan::all(COMMENT_POLICY_TRACE_MARKER, $scrubbed)[0];
+
+    return array_values(array_unique([
+        ...$tokens,
+        ...array_map(static fn (string $marker): string => ltrim($marker, '('), $markers),
+    ]));
 }
 
 /** @return list<array{file: string, line: int, name: string}> */
@@ -703,25 +706,50 @@ const COMMENT_POLICY_IDENTIFIER_BODY = '\b(?:[A-Z]{2,6}\d{0,2}|[A-Z]\d{1,2})-[A-
 
 const COMMENT_POLICY_IDENTIFIER_TOKENS = '/'.COMMENT_POLICY_IDENTIFIER_BODY.'/';
 
+// The other half of the same ban. Every alternative above requires a hyphen,
+// and the spec mints whole namespaces without one -- M2 to M6, J1 to J5, P1 to
+// P7, and every area letter -- so nine shapes leaked into live test names, ten
+// of the offenders in this very file.
+
+// Read only where the token OPENS a parenthesis, because that is what a trace
+// marker is and a bare one is not distinguishable from prose: scanning bare
+// uppercase-and-digits over every test name returned 63 hits, 43 of them the
+// likes of MT940, N26, SHA512, FTS5, PSD2 and an HTML H1.
+const COMMENT_POLICY_TRACE_MARKER = '/\((?:[A-Z]{1,6}\d{1,4}(?:-[A-Z]{0,2}\d{1,4})?|[A-Z]{2,6}-[A-Z]{0,2}\d{1,4})(?=[\s,;:)-])/';
+
 const COMMENT_POLICY_BANNED_TOKENS = '/\b(TODO|FIXME|HACK|XXX|@todo)\b'
     .'|'.COMMENT_POLICY_IDENTIFIER_BODY
     .'|(?i:\b(?:Phase|Wave|Plan|Pitfall|Req|Issue|UAT)\s+#?\d)/';
 
+// Read through the reader the rules call, not against a pattern constant: the
+// control that let nine bare shapes through was written against the pattern
+// and inherited its blind spot, and every probe here is instead a token this
+// repository actually leaked into a name or a comment.
 it('reads every identifier shape this repository mints and leaves the prose forms alone', function (): void {
-    $identifiers = ['D-06', 'T-05-12', 'WR-11', 'GOV-R12', 'F3-R36'];
-    $prose = ['N-1', 'R-7', 'SHA-256', 'BCP-47', 'API-28'];
+    $identifiers = [
+        'D-06', 'T-05-12', 'WR-11', 'GOV-R12', 'F3-R36', 'G1-R14', 'E2-R8',
+        '(M2)', '(M3)', '(M4)', '(M5)', '(M6)', '(J5)', '(P1)',
+        '(G1)', '(B2)', '(F1)', '(R8)', '(L13)', '(V4)', '(S1448)',
+        '(G1 + G2)', '(Q4 resolution)', '(V4 access-control)', '(GOV-R12)',
+    ];
+    $prose = [
+        'N-1', 'R-7', 'SHA-256', 'BCP-47', 'API-28',
+        '(IDOR)', '(UAT)', '(USD)', '(A)', '(NORMAL)', '(429)', '(32B)',
+        '(U+2315)', '(NULL, 0)', '(HTTP 401)', '(HLC 1000)', '(2026-09-05)',
+        '(MT940 to CAMT)', '(ISO 20022)', '(CAMT.053)',
+    ];
 
     expect($identifiers)->not->toBe([], 'The minted-identifier probes were emptied, so this control proves nothing about the pattern.')
         ->and($prose)->not->toBe([], 'The prose probes were emptied, so nothing here proves the pattern leaves a standards name alone.');
 
     foreach ($identifiers as $identifier) {
-        expect(PatternScan::matches(COMMENT_POLICY_IDENTIFIER_TOKENS, $identifier))
-            ->toBeTrue($identifier.' is a shape this repository mints and the pattern must read it as one');
+        expect(commentPolicyRequirementIds('proves the thing '.$identifier))
+            ->not->toBe([], $identifier.' is a shape this repository mints and the rule must read it as one');
     }
 
     foreach ($prose as $word) {
-        expect(PatternScan::matches(COMMENT_POLICY_IDENTIFIER_TOKENS, commentPolicyWithoutStandards($word)))
-            ->toBeFalse($word.' is prose or a standards name and the pattern must leave it alone');
+        expect(commentPolicyRequirementIds('proves the thing '.$word))
+            ->toBe([], $word.' is prose, a standards name or a bank format, and the rule must leave it alone');
     }
 });
 
@@ -742,7 +770,7 @@ it('opens every module in both of the walks its rules are read off', function (s
     'identifier' => fn (): array => ['identifier', commentPolicyIdentifierFiles()],
 ]);
 
-it('has no banned deferral or provenance tokens in comments (M5)', function (): void {
+it('has no banned deferral or provenance tokens in comments', function (): void {
     $files = commentPolicyIdentifierFiles();
 
     // The floor sits far under the 6,500 files the identifier ban opens.
@@ -767,7 +795,7 @@ it('has no banned deferral or provenance tokens in comments (M5)', function (): 
 
 // A Blade file ends in .php and so was always in scope, but its comments are
 // invisible to the tokeniser — which is how 250-odd of them accumulated.
-it('has no banned deferral or provenance tokens in Blade comments (M5)', function (): void {
+it('has no banned deferral or provenance tokens in Blade comments', function (): void {
     $files = commentPolicyBladeFiles();
 
     // The floor sits well under the 285 templates this tree ships, and stayed
@@ -797,7 +825,7 @@ it('has no banned deferral or provenance tokens in Blade comments (M5)', functio
 // The stylesheet and the scripts are where a UI decision gets written down, so
 // they collected identifiers exactly the way Blade did and for the same reason:
 // nothing looked.
-it('has no banned deferral or provenance tokens in JS and CSS comments (M5)', function (): void {
+it('has no banned deferral or provenance tokens in JS and CSS comments', function (): void {
     $files = commentPolicyScriptFiles();
 
     // Twelve scripts and stylesheets are repo-owned today.
@@ -819,7 +847,7 @@ it('has no banned deferral or provenance tokens in JS and CSS comments (M5)', fu
 
 // A PHPStan carve-out and a workflow job are both explained in a comment, and
 // both explanations were citing requirement rows.
-it('has no banned deferral or provenance tokens in config comments (M5)', function (): void {
+it('has no banned deferral or provenance tokens in config comments', function (): void {
     $files = commentPolicyConfigFiles();
 
     // Fifteen workflows plus the root NEON, XML and YAML configs.
@@ -974,7 +1002,7 @@ it('has no requirement identifiers in test comments', function (): void {
     expect($hits)->toBe([], "A comment in a test says what the test proves, never which requirement it traces to — identifiers belong in the commit trailer and the PR body. Offenders:\n  ".implode("\n  ", $hits));
 });
 
-it('has no informative /* */ block comments (M3)', function (): void {
+it('has no informative /* */ block comments', function (): void {
     $files = commentPolicyBackendFiles();
 
     expect(count($files))->toBeGreaterThan(
@@ -996,11 +1024,12 @@ it('has no informative /* */ block comments (M3)', function (): void {
     expect($hits)->toBe([], "Use /** */ PHPDoc, never informative /* */ blocks. Offenders:\n  ".implode("\n  ", $hits));
 });
 
-// M1 is deleted, and its number stays vacant on purpose: this file names its
-// cases by those numbers, so a vacated number that acquires new text would
-// resolve silently to a rule it was never written against (ADR-0023).
+// These cases used to carry the rule number they enforce. A name is read at a
+// failure, where the number is the one thing that does not say what broke, and
+// the vacated-number trap it was carried for is the spec's to keep: a deleted
+// row's number stays vacant there, not here.
 
-it('has no // block over 4 lines (M2)', function (): void {
+it('has no // block over 4 lines', function (): void {
     $files = commentPolicyBackendFiles();
 
     expect(count($files))->toBeGreaterThan(
@@ -1020,7 +1049,7 @@ it('has no // block over 4 lines (M2)', function (): void {
     expect($hits)->toBe([], "An inline // block is at most 4 lines. Anything needing more prose belongs in .docs, linked from a tag-only docblock. Offenders:\n  ".implode("\n  ", $hits));
 });
 
-it('has @-tag-only docblocks with no descriptive prose (M4)', function (): void {
+it('has @-tag-only docblocks with no descriptive prose', function (): void {
     $files = commentPolicyBackendFiles();
 
     expect(count($files))->toBeGreaterThan(
@@ -1106,7 +1135,7 @@ function commentPolicyDocsLinkTargets(string $path): array
     return $targets;
 }
 
-it('has every @link .md target resolving to a real .docs file (M6)', function (): void {
+it('has every @link .md target resolving to a real .docs file', function (): void {
     $hits = [];
     $cited = 0;
 
@@ -1144,7 +1173,7 @@ it('has every @link .md target resolving to a real .docs file (M6)', function ()
 // link OUT of the code reaches a page; nothing proved a link between two pages
 // reaches anything, and a .docs page naming a class or a test that was never
 // written reads exactly like one describing shipped code.
-it('has every relative link in a .docs page resolving to a real file (M6)', function (): void {
+it('has every relative link in a .docs page resolving to a real file', function (): void {
     $pages = commentPolicyDocsPages();
 
     // The floor sits well under the 210 pages under .docs today.
@@ -1202,7 +1231,7 @@ function commentPolicyHeadingSlugs(string $page): array
 // strip the fragment before looking. A link to a section that no longer exists
 // lands the reader at the top of a page with no sign anything was missed,
 // which is the failure a renamed heading causes and nothing else catches.
-it('has every #fragment in a doc link naming a heading that exists (M6)', function (): void {
+it('has every #fragment in a doc link naming a heading that exists', function (): void {
     $hits = [];
     $cited = 0;
 
