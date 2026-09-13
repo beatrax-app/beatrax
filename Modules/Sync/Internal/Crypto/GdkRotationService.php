@@ -8,7 +8,9 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
 use Modules\Core\Public\Support\Instant;
+use Modules\Core\Public\Support\SchemaShape;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
@@ -347,6 +349,8 @@ final readonly class GdkRotationService
      */
     private function resolveFanOutRecipient(int $userId, int $newDeviceRegistryId): ?array
     {
+        $this->assertRetirementIsReadable();
+
         $recipient = $this->db->connection()->table('device_registry')
             ->where('id', $newDeviceRegistryId)
             ->where('user_id', $userId)
@@ -382,6 +386,8 @@ final readonly class GdkRotationService
      */
     private function refuseAnIdNoListOffers(int $userId, int $deviceRegistryId): void
     {
+        $this->assertRetirementIsReadable();
+
         $target = $this->db->connection()->table('device_registry')
             ->where('id', $deviceRegistryId)
             ->where('user_id', $userId)
@@ -433,5 +439,20 @@ final readonly class GdkRotationService
         }
 
         return $identity;
+    }
+
+    // Selecting an absent column yields the column's own NAME as a string, so
+    // `self_retired_at !== null` below is true for every row: no recipient
+    // would ever resolve, and no device could ever be revoked.
+    /**
+     * @throws ColumnNotDeclaredException
+     */
+    private function assertRetirementIsReadable(): void
+    {
+        $missing = SchemaShape::missingColumns($this->db->connection(), 'device_registry', ['self_retired_at']);
+
+        if ($missing !== []) {
+            throw ColumnNotDeclaredException::on('device_registry', $missing);
+        }
     }
 }

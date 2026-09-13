@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
 use Modules\Sync\Public\Enums\SyncOverallStatus;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 // sync_sessions rows outlive the registry rows they name, so a failed
@@ -186,4 +187,34 @@ it('still sweeps every session when no device is confirmed and the schema says s
 
     expect($status->forgetOrphanedSessions($userId))->toBe(2)
         ->and($status->peerStatuses($userId))->toBe([]);
+});
+
+// The seam. Its one line is invisible to the arch guard that covers the inline
+// sites -- it takes a Builder somebody else built, so no statement there names
+// the table -- which is why it is asserted directly instead.
+it('refuses at the seam, so every reader asking who my devices are refuses with it', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = dismissUser('dismiss-seam');
+
+    dismissConfirmedDevice($db, $userId, 'live-peer');
+
+    Schema::table('device_registry', fn (Blueprint $table) => $table->dropColumn('self_retired_at'));
+
+    /** @var DeviceRegistryService $devices */
+    $devices = app(DeviceRegistryService::class);
+
+    expect(fn () => $devices->confirmedDevices($userId))
+        ->toThrow(ColumnNotDeclaredException::class);
+});
+
+it('answers normally at the seam once the column is there', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = dismissUser('dismiss-seam-ok');
+
+    dismissConfirmedDevice($db, $userId, 'live-peer');
+
+    /** @var DeviceRegistryService $devices */
+    $devices = app(DeviceRegistryService::class);
+
+    expect($devices->confirmedDevices($userId))->toHaveCount(1);
 });

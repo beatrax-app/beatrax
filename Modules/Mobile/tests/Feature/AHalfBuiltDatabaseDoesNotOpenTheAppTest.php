@@ -105,3 +105,17 @@ it('marks the schema incomplete when the boot hook catches anything at all', fun
     // repo-root-only: the path resolves against the repo root, so from the
     // mobile-app root this looks for mobile-app/mobile-app/bootstrap/app.php.
 })->group('repo-root-only');
+
+// The pairing screen reads device_registry.self_retired_at with no schema
+// question in front of it, alone among that column's readers, because it
+// cannot be rendered until every migration has run. That exemption is pinned
+// in ARetiredRowQueryAsksWhetherTheColumnIsThere and this is what earns it: a
+// Livewire component cannot raise a refusal without answering 500.
+it('keeps the pairing screen behind the gate, which is what lets it read a late column unguarded', function (): void {
+    SchemaCompletionMarker::raise();
+
+    $response = throughDatabaseGate('mobile.pair');
+
+    expect($response->getStatusCode())->toBe(302)
+        ->and($response->headers->get('Location'))->toBe(route('mobile.database-incomplete'));
+});
