@@ -1408,13 +1408,26 @@ deliberately coarse twice over. It flags every bare id in **every** module that
 ships blades, small autoincrements included: a blade cannot tell the two apart
 by eye, and a minted id is a value that travels — a goal id is rendered in a
 Ledger blade, and Tax and DevMode mint nothing at all yet write these ids into
-wire attributes. And it reads two shapes, because there are two ways an id
-reaches a wire attribute: echoed straight into a `wire:`, `x-on:` or `@`
-attribute, and concatenated into the call string a blade hands to a mounted
-component that renders it into a `wire:click` of its own. Every
+wire attributes. And it reads three shapes, because there are three ways an id
+reaches the server as a number: echoed straight into a `wire:`, `x-on:` or `@`
+attribute, concatenated into the call string a blade hands to a mounted
+component that renders it into a `wire:click` of its own, and coerced in
+JavaScript after the blade wrote it correctly. Every
 `x-core::confirm-strip` works the second way, which is how Goals, Pots and
 Reports came to quote the button that ASKS the question and leave the button
 that ANSWERS it bare.
+
+The third shape is the one the first two cannot see by construction. The blade
+quotes the id into an attribute, JavaScript reads it back out of that attribute,
+and the rounding happens there — `parseInt(row.dataset.txid, 10)` on the triage
+keyboard shortcut, where every echo the other readers examine is already past.
+That reader is positional and not blanket: it resolves the method named in a
+`$wire.method(…)` or `wire:click="method(…)"` call to the Livewire signature the
+argument lands on, and refuses `parseInt(`, `parseFloat(`, `Number(` or a unary
+`+` only where the parameter at **that position** is typed `int|string` — this
+repository's spelling for "the id arriving here may be derived". The same call
+on the same row coerces its second argument too, a category id the component
+types `?int`, and that one is a per-device autoincrement and stays green.
 
 What it counts as an id is the name the expression ends on, and three ways of
 writing the same value used to slip past that: `$txId` (the anchor admitted no

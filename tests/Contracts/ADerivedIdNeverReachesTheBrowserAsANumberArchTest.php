@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\DerivedRowId;
 use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
+use Tests\Contracts\Support\WireCallableMethods;
 
 // `DerivedRowId::for()` mints a 63-bit id so two devices agree on a detector's
 // output. A blade that writes it into a JavaScript-evaluated attribute emits a
@@ -16,6 +17,21 @@ use Symfony\Component\Finder\Finder;
 // one blade quoted its id. The id must cross as a string.
 
 const JS_EXACT_INTEGER_MAX = 9007199254740991;
+
+// A parameter no container can resolve is one Livewire fills from the wire
+// payload, so a class-typed one takes no argument's place and the position a
+// coercion lands on is counted among these alone.
+const WIRE_FILLED_PARAMETER_TYPES = ['int', 'string', 'float', 'bool', 'array', 'mixed', 'null', 'false', 'true'];
+
+// Each reader's own floor, below which it has stopped rather than found the
+// tree clean. They differ because the shapes do: twenty expressions are echoed
+// into these attributes, one action is concatenated and handed to a mounted
+// component, and two hundred wire arguments resolve to a declared parameter.
+const BARE_ID_CANDIDATE_FLOORS = ['echo' => 10, 'concatenation' => 1, 'coercion' => 100];
+
+// The JavaScript that turns the string back into an IEEE double. Unary plus is
+// the same operator spelled shortest, and it is the one a reader skims past.
+const NUMERIC_COERCIONS = ['parseInt', 'parseFloat', 'Number'];
 
 /** @return list<string> modules whose rows carry ids past 2^53, read off the call sites */
 function modulesMintingDerivedIds(): array
@@ -98,21 +114,57 @@ function bareIdArgumentsIn(string $module): array
     return $offenders;
 }
 
-/**
- * Adds to, and reads back, how many argument expressions the two readers below
- * reached, before either decided whether one carries an id. Counted inside them
- * rather than by a second pass over the same patterns: a denominator that
- * re-implements the reading says nothing about whether the reading ran.
- */
-function bareIdCandidatesRead(?int $add = null): int
+// The same walk over the same templates for the third reader, kept apart from
+// the two above because its verdict is a different sentence: what is wrong at
+// these sites is not a missing pair of quotes, it is a coercion applied to an
+// id the quoting had already delivered intact.
+/** @return list<array{file: string, line: int, method: string, index: int, type: string, argument: string}> */
+function coercedWireArgumentsIn(string $module): array
 {
-    static $total = 0;
+    $viewsPath = base_path('Modules/'.$module.'/Resources/views');
 
-    if ($add !== null) {
-        $total += $add;
+    if (! is_dir($viewsPath)) {
+        return [];
     }
 
-    return $total;
+    $found = [];
+
+    foreach ((new Finder)->files()->in($viewsPath)->name('*.blade.php') as $file) {
+        foreach (explode("\n", $file->getContents()) as $index => $line) {
+            foreach (coercedWireArgumentsOn($line) as $coerced) {
+                $found[] = [
+                    'file' => str_replace(base_path().'/', '', $file->getRealPath()),
+                    'line' => $index + 1,
+                    ...$coerced,
+                ];
+            }
+        }
+    }
+
+    return $found;
+}
+
+/**
+ * Adds to, and reads back, how many argument expressions each reader below
+ * reached, before any of them decided whether one carries an id. Counted inside
+ * them rather than by a second pass over the same patterns: a denominator that
+ * re-implements the reading says nothing about whether the reading ran.
+ *
+ * Kept per reader rather than as one total. A reader that stopped matching is
+ * exactly what the number is for, and a shared pot lets the one that stopped
+ * hide behind the two that did not.
+ *
+ * @return array<string, int>
+ */
+function bareIdCandidatesRead(?string $reader = null, int $add = 0): array
+{
+    static $totals = ['echo' => 0, 'concatenation' => 0, 'coercion' => 0];
+
+    if ($reader !== null) {
+        $totals[$reader] += $add;
+    }
+
+    return $totals;
 }
 
 // The first way an id reaches a wire attribute: echoed straight into it, and
@@ -139,7 +191,7 @@ function bareIdEchoesOn(string $line): array
         $expressions = [...$expressions, ...$inner[1]];
     }
 
-    bareIdCandidatesRead(count($expressions));
+    bareIdCandidatesRead('echo', count($expressions));
 
     return array_values(array_filter($expressions, idBearingExpression(...)));
 }
@@ -155,9 +207,260 @@ function bareIdConcatenationsOn(string $line): array
 {
     $found = PatternScan::all('/\(\'\s*\.(.+?)\.\s*\'\)/', $line);
 
-    bareIdCandidatesRead(count($found[1]));
+    bareIdCandidatesRead('concatenation', count($found[1]));
 
     return array_values(array_filter(array_map(trim(...), $found[1]), idBearingExpression(...)));
+}
+
+// The third reader, and a shape the two above cannot see by construction: the
+// blade writes the id correctly, quoted, into an attribute, and JavaScript
+// reads it back out of that attribute and coerces it. Every echo the two scans
+// examine is already past by then, so the rounding happens where neither looks.
+
+// The rule is positional rather than blanket, because the same call carries
+// both kinds of id: a transaction id that may be derived, beside a category id
+// that is a per-device autoincrement the parameter types `int`. Coercing the
+// second is legitimate and coercing the first is the defect.
+/**
+ * @return list<array{method: string, index: int, type: string, argument: string}>
+ */
+function coercedWireArgumentsOn(string $line): array
+{
+    $declared = wireArgumentTypes();
+    $coerced = [];
+    $examined = 0;
+
+    foreach (wireCallsOn($line) as $call) {
+        foreach (wireCallArguments($call['arguments']) as $index => $argument) {
+            // A name no component declares is not a wire action. $dispatch,
+            // $set and Alpine's own helpers all read the same to a pattern,
+            // and a method taking fewer arguments than the call writes is the
+            // same answer: nothing here lands on a parameter.
+            $spellings = $declared[$call['method']][$index] ?? null;
+
+            if ($spellings === null) {
+                continue;
+            }
+
+            $examined++;
+
+            if (! numericallyCoerced($argument)) {
+                continue;
+            }
+
+            $coerced[] = [
+                'method' => $call['method'],
+                'index' => $index,
+                'type' => implode(' / ', $spellings),
+                'argument' => $argument,
+            ];
+        }
+    }
+
+    bareIdCandidatesRead('coercion', $examined);
+
+    return $coerced;
+}
+
+/**
+ * Every wire-callable method by name, with the type each ARGUMENT lands on.
+ *
+ * Keyed by name and not by component because the call sites are Blade: a shared
+ * component renders its mounting component's action into an attribute of its
+ * own, so no file path resolves the method for it. Where two components declare
+ * the same name, every spelling declared at that position is kept and the rule
+ * below reads them all — over-reporting a coercion is a review, under-reporting
+ * one is the defect this file exists for.
+ *
+ * @return array<string, array<int, list<string>>> method => argument index => the spellings declared at it
+ */
+function wireArgumentTypes(): array
+{
+    static $types = null;
+
+    if ($types !== null) {
+        return $types;
+    }
+
+    $spellings = [];
+
+    foreach (WireCallableMethods::components() as $component) {
+        foreach (WireCallableMethods::invokableOn($component) as $method) {
+            $index = 0;
+
+            foreach ($method->getParameters() as $parameter) {
+                $spelling = $parameter->getType() === null ? 'mixed' : (string) $parameter->getType();
+
+                if (! wireFillsParameter($spelling)) {
+                    continue;
+                }
+
+                $spellings[$method->getName()][$index][$spelling] = true;
+                $index++;
+            }
+        }
+    }
+
+    $types = array_map(
+        static fn (array $positions): array => array_map(array_keys(...), $positions),
+        $spellings,
+    );
+
+    return $types;
+}
+
+// A union is filled from the payload only when every arm of it is, so
+// `int|string` is an argument and `CurrentUser` is an injection.
+function wireFillsParameter(string $spelling): bool
+{
+    foreach (explode('|', ltrim($spelling, '?')) as $arm) {
+        if (! in_array(strtolower($arm), WIRE_FILLED_PARAMETER_TYPES, true)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Both spellings a blade reaches a component method by: the Alpine call, and
+ * the wire attribute whose whole value is the call.
+ *
+ * @return list<array{method: string, arguments: string}>
+ */
+function wireCallsOn(string $line): array
+{
+    $calls = [];
+
+    foreach (PatternScan::setsWithOffsets('/(?:\$wire\.|wire:[\w.:-]+="\s*)([A-Za-z_]\w*)\s*\(/', $line) as $set) {
+        $calls[] = [
+            'method' => $set[1][0],
+            'arguments' => wireCallArgumentList($line, $set[0][1] + strlen($set[0][0]) - 1),
+        ];
+    }
+
+    return $calls;
+}
+
+// Read by balancing rather than by a pattern: `parseInt(x, 10)` brings a
+// parenthesis and a comma of its own. A call that does not close on this line
+// yields the rest of it rather than nothing — every argument but the last is
+// still whole, and a reader answering "no arguments" would report it clean.
+function wireCallArgumentList(string $line, int $open): string
+{
+    $depth = 0;
+    $quote = null;
+    $length = strlen($line);
+
+    for ($index = $open; $index < $length; $index++) {
+        $character = $line[$index];
+
+        if ($quote !== null) {
+            if ($character === $quote && $line[$index - 1] !== '\\') {
+                $quote = null;
+            }
+
+            continue;
+        }
+
+        if ($character === "'" || $character === '"') {
+            $quote = $character;
+
+            continue;
+        }
+
+        if ($character === '(') {
+            $depth++;
+        } elseif ($character === ')') {
+            $depth--;
+
+            if ($depth === 0) {
+                return substr($line, $open + 1, $index - $open - 1);
+            }
+        }
+    }
+
+    return substr($line, $open + 1);
+}
+
+/**
+ * @return list<string> the arguments of one call, split where the call splits
+ *                      them and not inside a nested one
+ */
+function wireCallArguments(string $arguments): array
+{
+    if (trim($arguments) === '') {
+        return [];
+    }
+
+    $split = [];
+    $buffer = '';
+    $depth = 0;
+    $quote = null;
+    $length = strlen($arguments);
+
+    for ($index = 0; $index < $length; $index++) {
+        $character = $arguments[$index];
+
+        if ($quote !== null) {
+            $buffer .= $character;
+
+            if ($character === $quote && $arguments[$index - 1] !== '\\') {
+                $quote = null;
+            }
+
+            continue;
+        }
+
+        if ($character === "'" || $character === '"') {
+            $quote = $character;
+            $buffer .= $character;
+
+            continue;
+        }
+
+        if (str_contains('([{', $character)) {
+            $depth++;
+        } elseif (str_contains(')]}', $character)) {
+            $depth--;
+        }
+
+        if ($character === ',' && $depth === 0) {
+            $split[] = trim($buffer);
+            $buffer = '';
+
+            continue;
+        }
+
+        $buffer .= $character;
+    }
+
+    $split[] = trim($buffer);
+
+    return $split;
+}
+
+// A parameter accepting a string as well as an int is this repository's
+// spelling for "the id arriving here may be derived, so it crosses quoted": it
+// is the one shape DerivedRowId::fromWire() takes. Read as a set of arms rather
+// than as a literal, because reflection prints a union in its own canonical
+// order and not in the one the source declares.
+function parameterMayBeDerived(string $spelling): bool
+{
+    $arms = array_map(strtolower(...), explode('|', ltrim($spelling, '?')));
+
+    return in_array('int', $arms, true) && in_array('string', $arms, true);
+}
+
+function numericallyCoerced(string $argument): bool
+{
+    foreach (NUMERIC_COERCIONS as $coercion) {
+        if (PatternScan::matches('/\b'.$coercion.'\s*\(/', $argument)) {
+            return true;
+        }
+    }
+
+    return PatternScan::matches('/^\+\s*[A-Za-z_$(]/', $argument);
 }
 
 // What both scans are looking for, and what quoting takes away from them: a
@@ -193,24 +496,55 @@ it('never lets a blade write a derived id as a bare number', function (): void {
     expect($rendering)->not->toBeEmpty('no module ships Resources/views — the scan is broken, not the code');
 
     $offenders = [];
+    $coerced = [];
+    $cleared = [];
 
     foreach ($rendering as $module) {
         foreach (bareIdArgumentsIn($module) as $offender) {
             $offenders[] = $offender['file'].':'.$offender['line'].' passes '.$offender['argument']
                 .' unquoted — a derived id past 2^53 is rounded by the browser';
         }
+
+        foreach (coercedWireArgumentsIn($module) as $site) {
+            $where = $site['file'].' '.$site['method'].' argument '.$site['index'].' typed '.$site['type'];
+
+            if (! array_any(explode(' / ', $site['type']), parameterMayBeDerived(...))) {
+                $cleared[] = $where;
+
+                continue;
+            }
+
+            $coerced[] = $site['file'].':'.$site['line'].' coerces '.$site['argument'].' into '.$site['method']
+                .'() argument '.$site['index'].', typed '.$site['type']
+                .' — the browser rounds it before fromWire() ever reads it';
+        }
     }
 
-    // Twenty-one argument expressions stand in these attributes today. A run
-    // that reached none of them found nothing because it stopped, not because
-    // every id is quoted.
-    expect(bareIdCandidatesRead())->toBeGreaterThan(
-        10,
-        'The walk reached '.bareIdCandidatesRead().' argument expressions, so the two readers stopped matching '
-        .'rather than the tree being clean.',
+    // A floor for each reader separately. It catches the one failure a floor
+    // can catch — a reader that stopped — and a shared total would let the one
+    // that stopped hide behind the two that did not.
+    foreach (bareIdCandidatesRead() as $reader => $seen) {
+        expect($seen)->toBeGreaterThanOrEqual(
+            BARE_ID_CANDIDATE_FLOORS[$reader],
+            'The '.$reader.' reader reached '.$seen.' argument expressions, so it stopped matching rather than '
+            .'the tree being clean.',
+        );
+    }
+
+    // The live artefact the floors stand beside, and the one that says the
+    // coercion rule is positional rather than blanket: the select on a triage
+    // row coerces its SECOND argument, a category id the component types ?int,
+    // and the reader has to have reached that site and cleared it.
+    expect($cleared)->toContain(
+        'Modules/Categorization/Resources/views/livewire/triage-inbox.blade.php selectForRow argument 1 typed ?int',
     );
 
     expect($offenders)->toBe([], implode("\n  ", ['Ids must cross to the browser as strings:', ...$offenders]));
+
+    expect($coerced)->toBe([], implode("\n  ", [
+        'An id a component types int|string is one that may be derived, so nothing may coerce it on the way out:',
+        ...$coerced,
+    ]));
 });
 
 // The two readers and the id test are the whole of the verdict, so each is
@@ -234,6 +568,50 @@ it('sees an id passed bare in either shape, and leaves a quoted one alone', func
     expect(bareIdConcatenationsOn($handedOnQuoted))->toBe([], 'A quoted concatenation is what this rule asks for, and it was reported.');
 
     expect(idBearingExpression('Js::from($link->id)'))->toBeFalse('Js::from emits a JSON string, so it is the quoting and not the defect.');
+});
+
+// The third reader gets the same treatment, against the two signatures the
+// rule turns on. They are read off the tree rather than written out here: a
+// synthetic case standing on a synthetic signature would agree with itself
+// whatever the components declare.
+it('sees a coerced argument only where the parameter it lands on may be derived', function (): void {
+    $declared = wireArgumentTypes();
+
+    expect($declared['selectForRow'] ?? [])->toBe(
+        [0 => ['string|int'], 1 => ['?int']],
+        'This rule is read positionally off these two spellings, so a signature that no longer says int|string then '
+        .'?int leaves the cases below agreeing with nothing.',
+    );
+    expect($declared['setHorizon'] ?? [])->toBe(
+        [0 => ['int']],
+        'The green half of the rule needs a wire method whose first argument a component types plain int.',
+    );
+
+    $atADerivedPosition = '<div x-on:keydown="$wire.selectForRow(parseInt(row.dataset.txid, 10), 4)"></div>';
+    $unaryPlus = '<div x-on:keydown="$wire.selectForRow(+row.dataset.txid, 4)"></div>';
+    $atAnIntPosition = '<select x-on:change="$wire.selectForRow(\'{{ $row->transactionId }}\', $event.target.value ? parseInt($event.target.value, 10) : null)"></select>';
+    $wholeCallAtAnIntPosition = '<button wire:click="setHorizon(Number(chosen))">go</button>';
+    $quotedAtADerivedPosition = '<select x-on:change="$wire.selectForRow(\'{{ $row->transactionId }}\', null)"></select>';
+    $notAWireAction = '<button wire:click="$dispatch(\'open\', { id: parseInt(raw, 10) })">open</button>';
+
+    expect(coercedWireArgumentsOn($atADerivedPosition))->toBe(
+        [['method' => 'selectForRow', 'index' => 0, 'type' => 'string|int', 'argument' => 'parseInt(row.dataset.txid, 10)']],
+        'A coercion on the argument that may carry a derived id went unread.',
+    );
+    expect(coercedWireArgumentsOn($unaryPlus))->toBe(
+        [['method' => 'selectForRow', 'index' => 0, 'type' => 'string|int', 'argument' => '+row.dataset.txid']],
+        'Unary plus is the same coercion spelled shortest, and it went unread.',
+    );
+    expect(coercedWireArgumentsOn($atAnIntPosition))->toBe(
+        [['method' => 'selectForRow', 'index' => 1, 'type' => '?int', 'argument' => '$event.target.value ? parseInt($event.target.value, 10) : null']],
+        'The reader has to reach the coercion the shipped select does, so that the verdict can clear it on the type.',
+    );
+    expect(coercedWireArgumentsOn($wholeCallAtAnIntPosition))->toBe(
+        [['method' => 'setHorizon', 'index' => 0, 'type' => 'int', 'argument' => 'Number(chosen)']],
+        'A wire attribute whose whole value is the call is the second spelling, and it went unread.',
+    );
+    expect(coercedWireArgumentsOn($quotedAtADerivedPosition))->toBe([], 'A quoted argument is what this rule asks for, and it was reported.');
+    expect(coercedWireArgumentsOn($notAWireAction))->toBe([], 'A $dispatch payload lands on no component parameter, and it was reported.');
 });
 
 it('reads an id back whichever way the wire delivered it', function (): void {

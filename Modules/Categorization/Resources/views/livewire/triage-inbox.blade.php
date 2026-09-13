@@ -53,7 +53,7 @@
                     if ($event.key === '{{ $i + 1 }}') {
                         $event.preventDefault();
                         const row = $refs['row-' + cursor];
-                        if (row) { $wire.selectForRow(parseInt(row.dataset.txid, 10), {{ $cat->id }}); }
+                        if (row) { $wire.selectForRow(row.dataset.txid, {{ $cat->id }}); }
                     }
                 @endforeach
             "
