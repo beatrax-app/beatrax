@@ -8,57 +8,13 @@ use Illuminate\Hashing\HashManager;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Auth\Tests\Support\DepthRecordingHasher;
 use Modules\Core\Models\User;
-use SensitiveParameter;
 
-// config/database.php sets transaction_mode IMMEDIATE, so the write lock is
-// taken at BEGIN and held for the whole transaction. Ten bcrypt-12 hashes is
-// 3.5 seconds measured on this hardware, the shells serve one request at a
-// time, and this endpoint needs no credential to reach.
-
-// Counts the transaction depth every hash is asked at. Wrapping the real
-// hasher rather than faking it: the comparison has to keep working, and what
-// is being asserted is only where it happens.
-final class DepthRecordingHasher implements Hasher
-{
-    /** @var list<int> */
-    public array $depths = [];
-
-    public function __construct(private readonly Hasher $inner, private readonly DatabaseManager $db) {}
-
-    /** @param array<string, mixed> $options */
-    public function make(#[SensitiveParameter] $value, array $options = []): string
-    {
-        $this->record();
-
-        return $this->inner->make($value, $options);
-    }
-
-    /** @param array<string, mixed> $options */
-    public function check(#[SensitiveParameter] $value, $hashedValue, array $options = []): bool
-    {
-        $this->record();
-
-        return $this->inner->check($value, $hashedValue, $options);
-    }
-
-    /** @param array<string, mixed> $options */
-    public function needsRehash($hashedValue, array $options = []): bool
-    {
-        return $this->inner->needsRehash($hashedValue, $options);
-    }
-
-    /** @return array<string, mixed> */
-    public function info($hashedValue): array
-    {
-        return $this->inner->info($hashedValue);
-    }
-
-    private function record(): void
-    {
-        $this->depths[] = $this->db->connection()->transactionLevel();
-    }
-}
+// transaction_mode IMMEDIATE takes the write lock at BEGIN and holds it for
+// the whole transaction. Ten bcrypt-12 hashes is 3.5 seconds measured here,
+// the shells serve one request at a time, and this endpoint needs no
+// credential to reach.
 
 /**
  * @return array{user: User, codes: list<string>}

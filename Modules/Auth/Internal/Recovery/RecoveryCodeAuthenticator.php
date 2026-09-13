@@ -45,11 +45,10 @@ final readonly class RecoveryCodeAuthenticator
         $user = User::query()->where('username', $username)->first();
         $candidate = $this->hyphenate($this->normalizer->normalize($codeInput));
 
-        // Derived BEFORE the transaction opens. Ten bcrypt-12 hashes is 3.5
-        // seconds here, transaction_mode IMMEDIATE takes the write lock at
-        // BEGIN, and the shells serve one request at a time -- so holding it
-        // across them freezes the whole application, for a caller with no
-        // credential. PinVerificationService derives its Argon2id the same way.
+        // Derived BEFORE the transaction opens, as PinVerificationService
+        // derives its Argon2id. Ten bcrypt-12 hashes is 3.5 seconds, IMMEDIATE
+        // takes the write lock at BEGIN, and the shells serve one request at a
+        // time -- so holding it freezes the app for a caller with no credential.
         $matchedId = $this->matchingCodeId($candidate, $this->unusedCodes($connection, $user));
 
         /** @var User|null $result */
