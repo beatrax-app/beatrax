@@ -157,7 +157,7 @@ function aShellThatAnswersStartsWith(?array $answersWith, bool $throwsInstead = 
         }
 
         /** @param  array<string, string>|null  $env */
-        public function start(string|array $cmd, string $alias, ?string $cwd = null, ?array $env = null, bool $persistent = false): static
+        public function start(string|array $cmd, string $alias, ?string $cwd = null, ?array $env = null, bool $persistent = false, bool $handlesOwnShutdown = false): static
         {
             return $this;
         }
@@ -166,7 +166,7 @@ function aShellThatAnswersStartsWith(?array $answersWith, bool $throwsInstead = 
          * @param  array<string, string>|null  $env
          * @param  array<string, string>|null  $iniSettings
          */
-        public function php(string|array $cmd, string $alias, ?array $env = null, ?bool $persistent = false, ?array $iniSettings = null): static
+        public function php(string|array $cmd, string $alias, ?array $env = null, ?bool $persistent = false, ?array $iniSettings = null, bool $handlesOwnShutdown = false): static
         {
             return $this;
         }
@@ -175,7 +175,7 @@ function aShellThatAnswersStartsWith(?array $answersWith, bool $throwsInstead = 
          * @param  array<string, string>|null  $env
          * @param  array<string, string>|null  $iniSettings
          */
-        public function artisan(string|array $cmd, string $alias, ?array $env = null, ?bool $persistent = false, ?array $iniSettings = null): static
+        public function artisan(string|array $cmd, string $alias, ?array $env = null, ?bool $persistent = false, ?array $iniSettings = null, bool $handlesOwnShutdown = false): static
         {
             if ($this->throws) {
                 throw new ErrorException('Trying to access array offset on null');
@@ -185,7 +185,7 @@ function aShellThatAnswersStartsWith(?array $answersWith, bool $throwsInstead = 
         }
 
         /** @param  array<string, string>|null  $env */
-        public function node(string|array $cmd, string $alias, ?array $env = null, ?bool $persistent = false): static
+        public function node(string|array $cmd, string $alias, ?array $env = null, ?bool $persistent = false, bool $handlesOwnShutdown = false): static
         {
             return $this;
         }
