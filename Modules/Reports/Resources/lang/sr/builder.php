@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Izaberi i početni i završni datum.',
             'malformed' => 'Unesi ispravan datum u obliku GGGG-MM-DD.',
             'inverted' => 'Završni datum je pre početnog.',
+            'unknown_preset' => 'To nije jedan od ponuđenih perioda. Izaberi jedan sa liste.',
         ],
     ],
 

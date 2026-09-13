@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Valitse sekä alku- että loppupäivä.',
             'malformed' => 'Käytä kelvollista päivämäärää muodossa VVVV-KK-PP.',
             'inverted' => 'Loppupäivä on ennen alkupäivää.',
+            'unknown_preset' => 'Tämä ei ole yksi tarjotuista jaksoista. Valitse jokin luettelosta.',
         ],
     ],
 

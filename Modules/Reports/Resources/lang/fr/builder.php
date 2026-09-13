@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Choisissez une date de début et une date de fin.',
             'malformed' => 'Utilisez une date valide au format AAAA-MM-JJ.',
             'inverted' => 'La date de fin précède la date de début.',
+            'unknown_preset' => 'Ce n\'est pas l\'une des périodes proposées. Choisissez-en une dans la liste.',
         ],
     ],
 

@@ -151,7 +151,12 @@
             {{-- Period --}}
             <div>
                 <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.period.heading') }}</p>
-                <div role="group" aria-label="{{ Lang::get('reports::builder.period.heading') }}" class="filter-chips">
+                <div
+                    role="group"
+                    aria-label="{{ Lang::get('reports::builder.period.heading') }}"
+                    class="filter-chips"
+                    @if ($periodError !== '') aria-describedby="report-period-error" @endif
+                >
                     @foreach ($periodLabels as $key => $label)
                         <button
                             type="button"
@@ -163,10 +168,26 @@
                 </div>
                 @if ($periodPreset === ReportPeriodPreset::Custom->value)
                     <div class="srch-date-range mt-2">
+                        {{-- aria-invalid and the description land on the button
+                             the reader focuses: the field still displays the date
+                             that was refused, which is what they came back to fix,
+                             so the control has to say it is the refused one. --}}
                         <label for="report-custom-from" class="srch-filter-label">{{ Lang::get('reports::builder.period.from') }}</label>
-                        <x-core::date-input field-id="report-custom-from" wire:model.live="customFrom" :aria-label="Lang::get('reports::builder.period.from')" />
+                        <x-core::date-input
+                            field-id="report-custom-from"
+                            wire:model.live="customFrom"
+                            :aria-label="Lang::get('reports::builder.period.from')"
+                            :aria-invalid="$periodError !== '' ? 'true' : null"
+                            :aria-describedby="$periodError !== '' ? 'report-period-error' : null"
+                        />
                         <label for="report-custom-to" class="srch-filter-label mt-1">{{ Lang::get('reports::builder.period.to') }}</label>
-                        <x-core::date-input field-id="report-custom-to" wire:model.live="customTo" :aria-label="Lang::get('reports::builder.period.to')" />
+                        <x-core::date-input
+                            field-id="report-custom-to"
+                            wire:model.live="customTo"
+                            :aria-label="Lang::get('reports::builder.period.to')"
+                            :aria-invalid="$periodError !== '' ? 'true' : null"
+                            :aria-describedby="$periodError !== '' ? 'report-period-error' : null"
+                        />
                     </div>
                 @endif
             </div>
@@ -279,12 +300,24 @@
             </div>
 
             @if ($periodError !== '')
-                {{-- The composition is untouched: only the range needs fixing,
-                     and the rail still holds every other choice the reader made. --}}
-                <div class="srch-no-results" aria-live="polite" aria-atomic="true" role="alert">
-                    <p class="srch-no-results__heading">{{ Lang::get('reports::builder.period.heading') }}</p>
-                    <p class="srch-no-results__body">{{ $periodError }}</p>
-                </div>
+                {{-- The composition is untouched: only the period needs fixing,
+                     and the rail still holds every other choice the reader made.
+
+                     x-core::alert in the danger tone, not `srch-no-results`: that
+                     class is the empty state two branches below, and a refusal a
+                     reader cannot tell from an absence is not a refusal. role
+                     alert without aria-live beside it — the role already implies
+                     assertive, and the polite value was overriding it. --}}
+                <x-core::alert
+                    tone="danger"
+                    id="report-period-error"
+                    role="alert"
+                    aria-atomic="true"
+                    class="space-y-1"
+                >
+                    <p class="font-medium">{{ Lang::get('reports::builder.period.heading') }}</p>
+                    <p>{{ $periodError }}</p>
+                </x-core::alert>
             @elseif (! $hasResults)
                 {{-- Friendly empty state (Req: never an error) — rail stays interactive --}}
                 <div class="srch-no-results" aria-live="polite" aria-atomic="true">

@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Hem başlangıç hem de bitiş tarihi seç.',
             'malformed' => 'YYYY-AA-GG biçiminde geçerli bir tarih kullan.',
             'inverted' => 'Bitiş tarihi başlangıç tarihinden önce.',
+            'unknown_preset' => 'Bu, sunulan dönemlerden biri değil. Listeden birini seç.',
         ],
     ],
 

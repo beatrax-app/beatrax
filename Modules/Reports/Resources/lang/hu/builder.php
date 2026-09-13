@@ -46,6 +46,7 @@ return [
             'incomplete' => 'Válassz kezdő és záró dátumot is.',
             'malformed' => 'Adj meg érvényes dátumot ÉÉÉÉ-HH-NN formában.',
             'inverted' => 'A záró dátum korábbi a kezdőnél.',
+            'unknown_preset' => 'Ez nem a felkínált időszakok egyike. Válassz egyet a listából.',
         ],
     ],
 
