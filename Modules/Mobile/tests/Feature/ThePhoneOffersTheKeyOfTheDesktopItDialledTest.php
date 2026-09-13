@@ -83,7 +83,7 @@ it('offers the key of the desktop whose address it dialled, not the first one on
             new PeerDial('zz-studio-desktop', '127.0.0.1', $studio->port),
         );
 
-        expect($studio->wasDialled)->toBeTrue('the dial must reach the desktop whose address was resolved')
+        expect($studio->wasDialed)->toBeTrue('the dial must reach the desktop whose address was resolved')
             ->and($studio->openedTheHandshake)->toBeTrue(
                 'the desktop that was dialled must be able to open msg1 — it cannot when the phone wrote it to the other desktop\'s static key',
             );
@@ -111,7 +111,7 @@ it('cannot open a handshake at a desktop this phone holds no confirmed key for',
             new PeerDial('zz-studio-desktop', '127.0.0.1', $stranger->port),
         );
 
-        expect($stranger->wasDialled)->toBeTrue()
+        expect($stranger->wasDialed)->toBeTrue()
             ->and($stranger->openedTheHandshake)->toBeFalse();
     } finally {
         $stranger->stop();
@@ -136,7 +136,7 @@ it('does not dial at all for a peer it holds no confirmed key for', function ():
             new PeerDial('zz-never-paired-desktop', '127.0.0.1', $desktop->port),
         );
 
-        expect($desktop->wasDialled)->toBeFalse();
+        expect($desktop->wasDialed)->toBeFalse();
     } finally {
         $desktop->stop();
     }
@@ -159,8 +159,8 @@ it('walks past a desktop that answered and refused to reach the next confirmed o
 
         Livewire::test(SyncScreen::class)->call('syncNow');
 
-        expect($kitchen->wasDialled)->toBeTrue('the first confirmed peer is still dialled first')
-            ->and($studio->wasDialled)->toBeTrue('the second confirmed peer must be dialled too')
+        expect($kitchen->wasDialed)->toBeTrue('the first confirmed peer is still dialled first')
+            ->and($studio->wasDialed)->toBeTrue('the second confirmed peer must be dialled too')
             ->and($studio->openedTheHandshake)->toBeTrue('and dialled with its own key, not the first peer\'s');
     } finally {
         $kitchen->stop();

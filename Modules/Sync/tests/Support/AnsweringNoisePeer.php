@@ -19,7 +19,7 @@ use Throwable;
  */
 final class AnsweringNoisePeer
 {
-    public bool $wasDialled = false;
+    public bool $wasDialed = false;
 
     public bool $openedTheHandshake = false;
 
@@ -75,7 +75,7 @@ final class AnsweringNoisePeer
             return;
         }
 
-        $this->wasDialled = true;
+        $this->wasDialed = true;
         stream_set_blocking($client, false);
 
         $buffer = '';
