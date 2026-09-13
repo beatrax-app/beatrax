@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Shranjevanje ni uspelo — vsota postavk se mora natančno ujemati s skupnim zneskom transakcije.',
         'not_found' => 'Transakcija ni najdena.',
-        'amount_zero' => 'Znesek ne more biti :amount',
+        'amount_positive' => 'Vnesi znesek, večji od nič.',
         'choose_category' => 'Izberi kategorijo.',
         'choose_before_removing' => 'Pred odstranitvijo izberi kategorijo.',
         'choose_before_unsplitting' => 'Pred razveljavitvijo razdelitve izberi kategorijo.',

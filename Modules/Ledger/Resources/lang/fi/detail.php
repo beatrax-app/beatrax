@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Tallennus epäonnistui — osien summan on vastattava tapahtuman summaa täsmälleen.',
         'not_found' => 'Tapahtumaa ei löytynyt.',
-        'amount_zero' => 'Summa ei voi olla :amount',
+        'amount_positive' => 'Anna nollaa suurempi summa.',
         'choose_category' => 'Valitse kategoria.',
         'choose_before_removing' => 'Valitse kategoria ennen poistamista.',
         'choose_before_unsplitting' => 'Valitse kategoria ennen jaon purkamista.',

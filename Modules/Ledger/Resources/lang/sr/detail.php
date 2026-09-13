@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Čuvanje nije uspelo — zbir stavki mora tačno da odgovara ukupnom iznosu transakcije.',
         'not_found' => 'Transakcija nije pronađena.',
-        'amount_zero' => 'Iznos ne može biti :amount',
+        'amount_positive' => 'Unesi iznos veći od nule.',
         'choose_category' => 'Izaberi kategoriju.',
         'choose_before_removing' => 'Izaberi kategoriju pre uklanjanja.',
         'choose_before_unsplitting' => 'Izaberi kategoriju pre poništavanja podele.',
