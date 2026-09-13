@@ -315,3 +315,43 @@ it('does not rotate a second time when the sentinel could not be written', funct
     expect(file_exists(UserDataPathService::appPath('first-launch.app-key-generated')))->toBeFalse()
         ->and($afterSecond)->toBe($afterFirst);
 });
+
+// The other half of claiming first: if the marker cannot even have a directory
+// to live in, nothing is rotated, because a rotation nobody can record is the
+// one that repeats itself on every launch.
+it('leaves the shipped key alone when the marker has nowhere to live', function (): void {
+    if (posix_geteuid() === 0) {
+        $this->markTestSkipped('root bypasses directory write permissions.');
+    }
+
+    $locked = $this->tempRoot.DIRECTORY_SEPARATOR.'locked';
+    mkdir($locked, 0o500, true);
+    putenv('NATIVEPHP_STORAGE_PATH='.$locked.DIRECTORY_SEPARATOR.'data');
+
+    $kernel = ensureAppKeySpyKernel();
+
+    $logger = new class extends AbstractLogger
+    {
+        /** @var list<string> */
+        public array $errors = [];
+
+        public function log($level, $message, array $context = []): void
+        {
+            if ($level === 'error') {
+                $this->errors[] = (string) $message;
+            }
+        }
+    };
+
+    $action = new EnsureAppKey($this->app->make(UserDataPathService::class), $kernel, $logger, $this->envFile);
+    @$action->run();
+
+    chmod($locked, 0o700);
+
+    // Named, not merely counted: the marker-write refusal below logs too, and
+    // an assertion on "some error" cannot tell the two arms apart.
+    expect($kernel->calls)->toBe([])
+        ->and($logger->errors)->toHaveCount(1)
+        ->and($logger->errors[0])->toContain('directory holding the first-launch marker')
+        ->and(appKeyWrittenIn($this->envFile))->toBe($this->shippedKey);
+});
