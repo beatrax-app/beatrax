@@ -18,6 +18,9 @@ use SplFileInfo;
  */
 final class WalkCensus
 {
+    /** @var array<string, list<string>> */
+    private static array $holding = [];
+
     /**
      * The modules the tree holds files of this kind for, read off the
      * filesystem rather than off the walk, so a narrowed walk has an
@@ -72,6 +75,10 @@ final class WalkCensus
      */
     public static function modulesHolding(string $suffix, string $under = ''): array
     {
+        if (isset(self::$holding[$suffix.'|'.$under])) {
+            return self::$holding[$suffix.'|'.$under];
+        }
+
         $holding = [];
 
         foreach ((array) glob(RepoTree::root().'/Modules/*', GLOB_ONLYDIR) as $directory) {
@@ -82,7 +89,7 @@ final class WalkCensus
 
         sort($holding);
 
-        return $holding;
+        return self::$holding[$suffix.'|'.$under] = $holding;
     }
 
     private static function holdsShippedFile(string $directory, string $suffix, string $under): bool
