@@ -23,6 +23,7 @@ use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
+use Modules\Ledger\Public\Support\ConvertedBuckets;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -445,10 +446,14 @@ final readonly class CarryoverQuery
      */
     private function spendFromBuckets(array $buckets, string $currency, RateSet $rates): array
     {
+        // The whole month's spend converted per currency and spread back over
+        // the envelopes, which is the seam the dashboard's category card reads
+        // through. Converted envelope by envelope instead, one rent row came
+        // out a yen above the figure that card printed for the same month.
+        $converted = ConvertedBuckets::of($this->fx, $buckets, $currency, $rates);
+
         $spend = [];
         foreach ($buckets as $categoryId => $byCurrency) {
-            $converted = $this->fx->withRates($byCurrency, $currency, $rates);
-
             // A bucket that nets to nought is money the total is not missing,
             // whichever currency it was in.
             $unreached = [];
@@ -459,12 +464,15 @@ final readonly class CarryoverQuery
             }
 
             $spend[$categoryId] = [
-                'spent' => $converted->minor,
+                'spent' => $converted->minorByKey[$categoryId] ?? 0,
                 'unconverted' => $unreached,
-                // The narrowed set off the conversion itself, and $unreached
-                // rather than $converted->unconverted, so the line beside the
-                // figure names the same codes the badge above it does.
-                'conversion' => ConversionDisclosure::of($converted->rates, $unreached),
+                // Narrowed to this envelope's own codes, and carrying
+                // $unreached rather than the whole month's, so the line beside
+                // the figure names the same codes the badge above it does.
+                'conversion' => ConversionDisclosure::of(
+                    $converted->rates->only(array_keys($byCurrency)),
+                    $unreached,
+                ),
             ];
         }
 
@@ -601,11 +609,12 @@ final readonly class CarryoverQuery
 
         $rates = $this->fx->ratesTo($currencies, $currency);
 
+        // Per period rather than per envelope, for the reason the spend read
+        // above gives: the month's figures are the parts of one converted
+        // whole, and rounding each of them alone is a second rounding.
         $byPeriod = [];
         foreach ($buckets as $periodKey => $byCategory) {
-            foreach ($byCategory as $categoryId => $byCurrency) {
-                $byPeriod[$periodKey][$categoryId] = $this->fx->withRates($byCurrency, $currency, $rates)->minor;
-            }
+            $byPeriod[$periodKey] = ConvertedBuckets::of($this->fx, $byCategory, $currency, $rates)->minorByKey;
         }
 
         return ['byPeriod' => $byPeriod, 'rates' => $rates];

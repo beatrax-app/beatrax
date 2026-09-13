@@ -1705,6 +1705,15 @@ two surfaces cannot answer the same question differently — a second
 implementation of the redistribution is exactly how the drift came back
 the first time.
 
+The grouping itself is `Public\Support\ConvertedBuckets`, because the
+drift did come back: `Budgets` folds the same stored figures into the
+same reporting currency and converted them envelope by envelope, so a
+yen reader read one rent envelope at JPY 198,875 on `/budgets` and JPY
+198,874 on the dashboard card. The fold reads through `ConvertedBuckets`
+now, and so does this query — it takes buckets rather than a period
+because the fold has already batched a whole walk's worth of them and
+must not go back to the database per month.
+
 A currency the rate table cannot reach yields `null` and is left out
 rather than counted at one to one, which is the same choice the tile
 above these rows makes about it — and, like the tile, the figure that
