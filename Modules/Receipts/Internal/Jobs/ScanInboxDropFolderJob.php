@@ -91,7 +91,7 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         // adopted by every later one in the same hour.
         $importRunId = null;
 
-        foreach ($this->topLevelCandidates($files, $baseDir) as $path) {
+        foreach ($this->topLevelCandidates($baseDir) as $path) {
             try {
                 if (! $this->recordCandidate($recordReceipt, $mboxIterator, $bridge, $userRow, $path, $importRunId)) {
                     // Unknown extension on a top-level file — leave it
@@ -220,16 +220,27 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         }
     }
 
+    // Not Filesystem::files(): its Finder filters on isFile(), which a dangling
+    // symlink fails, and from symfony/finder 8.1.5 such an entry is not listed
+    // at all. The candidate whose size cannot be read then never reaches the
+    // guard that quarantines it, and accumulates in the drop folder unseen.
     /**
      * @return list<string>
      */
-    private function topLevelCandidates(Filesystem $files, string $baseDir): array
+    private function topLevelCandidates(string $baseDir): array
     {
-        $entries = $files->files($baseDir);
+        $names = @scandir($baseDir);
+        if ($names === false) {
+            return [];
+        }
+
         $out = [];
-        foreach ($entries as $info) {
-            $path = $info->getPathname();
-            $out[] = $path;
+        foreach ($names as $name) {
+            if (str_starts_with($name, '.') || is_dir($baseDir.'/'.$name)) {
+                continue;
+            }
+
+            $out[] = $baseDir.'/'.$name;
         }
 
         return $out;

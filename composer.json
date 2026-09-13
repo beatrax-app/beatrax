@@ -85,8 +85,7 @@
     "conflict": {
         "webklex/laravel-imap": "*",
         "webklex/php-imap": "*",
-        "ddeboer/imap": "*",
-        "laravel/framework": ">=13.24"
+        "ddeboer/imap": "*"
     },
     "require-dev": {
         "calebdw/larastan-livewire": "^2.0",

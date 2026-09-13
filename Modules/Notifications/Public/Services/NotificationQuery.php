@@ -136,7 +136,7 @@ final readonly class NotificationQuery
 
         return [
             'rows' => $page,
-            'nextCursor' => $hasMore && $last !== null
+            'nextCursor' => $hasMore
                 ? self::encodeCursor($last->createdAt->toDateTimeString(), $last->id)
                 : null,
         ];

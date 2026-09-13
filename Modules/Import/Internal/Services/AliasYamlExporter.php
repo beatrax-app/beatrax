@@ -34,6 +34,10 @@ final readonly class AliasYamlExporter
             ];
         }
 
-        return Yaml::dump(['entries' => $entries], inline: 4, indent: 2);
+        // The compact form — `- pattern: ...` rather than a bare dash and the
+        // mapping on the next line — is the shape every exported corpus has had.
+        // It stopped being the dumper's default in symfony/yaml 8.1, so naming the
+        // flag is what keeps a re-export diffing clean against a file already held.
+        return Yaml::dump(['entries' => $entries], inline: 4, indent: 2, flags: Yaml::DUMP_COMPACT_NESTED_MAPPING);
     }
 }
