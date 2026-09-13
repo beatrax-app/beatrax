@@ -8106,6 +8106,7 @@ failure.
 The fix is to send the value the select is holding. The component reads it back
 through `DerivedRowId::fromWire()`, which is what every other id-taking Livewire
 method on that page already does.
+
 ## A log line a peer can repeat
 
 `SyncSession::receiveOps()` decodes one frame into however many entries the peer
