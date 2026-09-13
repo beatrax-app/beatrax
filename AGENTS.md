@@ -118,6 +118,19 @@ Two things are shared between worktrees and will bite you:
   direct dependency declares. A package reachable only through another
   package's requirements disappears the day that package drops it, so an
   undeclared import is a break scheduled for an unrelated `composer update`.
+- **Four analyser ceilings are blocking, and a function that grows guard clauses
+  hits them without warning:** at most 3 `return`s per function (S1142), 20
+  methods per class (S1448), 7 parameters (S107), and cognitive complexity 15
+  (S3776). The answer is an extracted method, never a raised ceiling — the
+  numbers are the hosted profile's and this repo leaves them alone. Each has its
+  own guard under `tests/Contracts/`, and
+  [analyser-rules-enforced-locally](.docs/conventions/analyser-rules-enforced-locally.md)
+  explains how to prove a rule reports before guarding it.
+- **One dialect per surface:** a name the machine resolves is American
+  (`dialing`, `enrollment`, `normalize`), while English a reader is shown — and
+  the prose explaining it — stays British. Mixing them fails
+  `AnIdentifierIsAmericanAndItsCopyIsBritishArchTest`; see
+  [one-dialect-for-identifiers](.docs/conventions/one-dialect-for-identifiers.md).
 - Comments explain *why*, never *what*, and the bar is high: if the code says it,
   the comment does not need to. An inline `//` block has a **ceiling and no
   floor** — at most four lines (M2), and one line is a valid comment where one
@@ -129,7 +142,8 @@ Two things are shared between worktrees and will bite you:
 - These four rules are enforced twice: `tests/Contracts/CommentPolicyArchTest.php`
   is the authority, and `.claude/hooks/comment-policy.php` runs the same checks on
   every edit so a violation is reported the moment it is written rather than at
-  the gate. Both cover `Modules/` and `app/`, never tests or migrations.
+  the gate. Both cover `Modules/`, `bootstrap/`, `database/seeders/` and
+  `tools/`, never tests, migrations or `phpstan-stubs/`.
 - **No requirement identifiers in comments** (`GOV-R6`). They go in the commit
   trailer and the PR body, which is where the gate reads them.
 - An `@link` into `.docs/` is for a target a reader could not have guessed — a
