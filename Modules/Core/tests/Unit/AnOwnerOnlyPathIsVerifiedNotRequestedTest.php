@@ -110,6 +110,10 @@ it('refuses a directory a file already occupies', function (): void {
         ->and($logger->records[0]['context']['path'])->toBe($path);
 });
 
-it('stays silent with no logger bound', function (): void {
-    expect(fn (): bool => (new OwnerOnlyPath)->file(OWNER_ONLY_UNCHMODABLE))->not->toThrow(Throwable::class);
+// The logger is optional, and the refusal above is the one path that reaches
+// it. Bound to nothing it still has to be a refusal rather than a call on null,
+// so the answer is the same and only the line nobody can read is missing.
+it('refuses the same path with no logger bound', function (): void {
+    expect((new OwnerOnlyPath)->file(OWNER_ONLY_UNCHMODABLE))->toBeFalse()
+        ->and(ownerOnlyObservedMode(OWNER_ONLY_UNCHMODABLE))->toBe(0o666);
 });

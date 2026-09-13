@@ -347,7 +347,7 @@ it('GET /mobile/pair renders 200 for an authenticated user', function (): void {
         ->assertOk();
 });
 
-it('import mode reads ?mode=import at mount() and seeds a local token from the scanned QR identity (G1)', function (): void {
+it('import mode reads ?mode=import at mount() and seeds a local token from the scanned QR identity', function (): void {
     $user = pairingScanTestUser('mobile-pair-import-seed');
     test()->actingAs($user);
 
@@ -388,7 +388,7 @@ it('import mode reads ?mode=import at mount() and seeds a local token from the s
     expect($row->state)->toBe('awaiting_confirm', 'accept() must have bound the responder side on top of the seeded row');
 });
 
-it('import mode defers self-mint on both-confirm — sync_encryption_state stays absent and the GDK keyring stays empty (B2)', function (): void {
+it('import mode defers self-mint on both-confirm — sync_encryption_state stays absent and the GDK keyring stays empty', function (): void {
     $user = pairingScanTestUser('mobile-pair-import-no-selfmint');
     test()->actingAs($user);
 
@@ -438,7 +438,7 @@ it('import mode defers self-mint on both-confirm — sync_encryption_state stays
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
-    expect($keyring->loadKeyring((int) $user->id, $session)->epochs())->toBe([], 'the import path must never self-mint a GDK epoch (B2)');
+    expect($keyring->loadKeyring((int) $user->id, $session)->epochs())->toBe([], 'the import path must never self-mint a GDK epoch');
 
     // The desktop is nonetheless admitted into this device's registry.
     $initiatorRow = $db->connection()->table('device_registry')

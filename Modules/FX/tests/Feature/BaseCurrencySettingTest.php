@@ -74,7 +74,7 @@ it('shows a validation error message when baseCurrency is invalid', function ():
     expect($component->errors()->first('baseCurrency'))->toBe('Please choose a currency.');
 })->group('phase-1-fx');
 
-it('does not write another user\'s base_currency (V4 access-control)', function (): void {
+it('does not write another user\'s base_currency', function (): void {
     $other = User::create([
         'username' => 'other',
         'password' => 'opensesame',

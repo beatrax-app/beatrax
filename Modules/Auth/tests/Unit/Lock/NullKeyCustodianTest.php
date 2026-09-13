@@ -22,10 +22,17 @@ it('returns the handle unchanged from read()', function (): void {
     expect($custodian->read($custodian->store($raw)))->toBe($raw);
 });
 
-it('forget() is a no-op and does not throw', function (): void {
+// There is no backing entry to erase, so the handle keeps opening afterwards.
+// A custodian that quietly dropped something here would take the session key
+// with it, since on this platform the handle IS the key.
+it('forget() leaves the handle it was given still readable', function (): void {
     $custodian = new NullKeyCustodian;
+    $raw = random_bytes(32);
+    $handle = $custodian->store($raw);
 
-    expect(fn () => $custodian->forget('anything'))->not->toThrow(Throwable::class);
+    $custodian->forget($handle);
+
+    expect($custodian->read($handle))->toBe($raw);
 });
 
 // The handle IS the key here, so the session is the whole custody. Saying so

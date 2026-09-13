@@ -430,13 +430,6 @@ it('handles PayPal rows with empty events[] gracefully — falls back to fuzzy',
     expect(ChainLink::query()->count())->toBe(0);
 });
 
-it('handles PayPal rows with null raw_payload (no events) gracefully', function (): void {
-    seedPaypalExpense($this->user, $this->paypal, $this->run, 1000, 'aaaaaaaaaa');
-    seedAsnTransferIn($this->user, $this->asn, $this->run, 1000, 'zzzzzzzzzz');
-
-    expect(fn () => $this->resolver->resolveForUser($this->user))->not->toThrow(Throwable::class);
-});
-
 // levenshteinSimilarity('', '') is 1.0 — two empty strings really are
 // identical. Feeding it a value that means "unknown" made two rows whose
 // merchant nobody could read score a PERFECT match, and the resolver preferred

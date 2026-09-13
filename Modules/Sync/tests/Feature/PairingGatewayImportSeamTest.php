@@ -27,7 +27,7 @@ function importSeamUser(string $username): User
     ]);
 }
 
-it('enableSyncIdentityWithoutEpoch creates a self device_registry row and does NOT mint a GDK epoch (B2)', function (): void {
+it('enableSyncIdentityWithoutEpoch creates a self device_registry row and does NOT mint a GDK epoch', function (): void {
     $user = importSeamUser('import-seam-user');
 
     /** @var Session $session */
@@ -60,7 +60,7 @@ it('enableSyncIdentityWithoutEpoch creates a self device_registry row and does N
     expect($gateway->currentDeviceId((int) $user->id, $session))->toBe($selfRow->device_id);
 });
 
-it('does not create the on-disk GDK keyring file (B2)', function (): void {
+it('does not create the on-disk GDK keyring file', function (): void {
     $user = importSeamUser('import-seam-keyring-file');
 
     // SQLite rowids are reused across the per-test rollback, so an earlier test

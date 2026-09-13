@@ -81,7 +81,7 @@ it('refreshFxRates sets fxRefreshing to true', function (): void {
         ->assertSet('fxRefreshing', true);
 })->group('phase-1-fx');
 
-it('toggleFxOnline does not touch another user\'s row (V4)', function (): void {
+it('toggleFxOnline does not touch another user\'s row', function (): void {
     $other = User::create([
         'username' => 'other',
         'password' => 'opensesame',

@@ -8405,6 +8405,88 @@ and the wrong one — it makes the check pass while the APK still vanishes befor
 the permission read and the upload. An artefact two steps share must outlive the
 one that made it.
 
+## A matcher handed an interface that Pest reads as a message
+
+`tests/Contracts/AnExceptionMatcherNamesAClassNotAnInterfaceArchTest.php`
+
+Pest's `toThrow()` branches on `class_exists()`, and `Throwable` is an
+interface, so `class_exists('Throwable')` is `false`. The matcher falls through
+to `assertStringContainsString('Throwable', $e->getMessage())` — it stops asking
+what was thrown and starts asking whether the *message* contains the word.
+
+In the negative form that is worse than weak, it is total. `not->toThrow()`
+routes through `OppositeExpectation::__call`, which catches
+`ExpectationFailedException` and returns the original expectation. Nothing
+thrown raises `Exception [Throwable] not thrown.` and is caught. Something
+thrown whose message lacks the word fails the substring assert and is caught.
+Both are green. The only way `not->toThrow(Throwable::class)` can fail is an
+exception whose message literally says "Throwable".
+
+Twelve guards in this tree were written that way and nine of them were over key
+custody and crypto — `forget()`, the GDK re-wrap, blind-index key delivery —
+where "it did not blow up" was the entire claim. Measured rather than argued:
+`NullKeyCustodian::forget()` was rewritten to `throw new RuntimeException` and
+its guard **passed**.
+
+The repair is not a better matcher. There is no Pest matcher for "this must not
+throw at all", and the closest spelling, `expect(true)->toBeTrue()`, is a
+tautology that fails nothing either. Invoke the call plainly — an unexpected
+throw then fails the test with the real exception and a real stack, which is
+better diagnostics than any matcher — and assert the postcondition the subject
+should have left behind: the handle still opens, no native call was made, the
+row is unchanged, the second write was a no-op, the log line was still written.
+
+The rule resolves each `toThrow()` argument through the file's own imports and
+reports the ones that load as an interface and not as a class. It says nothing
+about a name that loads as neither, because that name belongs to the second
+Composer root and is not something this root can answer about.
+
+## A requirement-id ban blind to the ids with no hyphen
+
+`tests/Contracts/CommentPolicyArchTest.php`
+
+A test name must not carry the requirement it traces to: a name is read at a
+failure, where the useful thing is what broke. The ban had been in place for
+months and had never once fired, because every alternative in its pattern
+required a hyphen — `GOV-R12`, `E2-R8`, `F3-R36` — and the spec mints whole
+namespaces without one. `M2` to `M6`, `J1` to `J5`, `P1` to `P7`, and every
+area letter used on its own were invisible to it.
+
+Twenty-four test names carried one. Ten of them were in the authority file
+itself, which named its own cases `(M2)` through `(M6)`.
+
+The control was drawn from the same blind spot as the pattern. The rule ships a
+self-test called *"reads every identifier shape this repository mints"*, whose
+probe array was `['D-06', 'T-05-12', 'WR-11', 'GOV-R12', 'F3-R36']` — five
+shapes, all hyphenated, all of them written by reading the pattern rather than
+the tree. It passed, and it proved nothing about the half that was missing.
+
+Widening the token pattern to read a bare `M5` was measured and rejected.
+Scanning `\b[A-Z]{1,6}\d{1,4}\b` over all 3,057 test files returns 63 hits, of
+which 43 are `MT940`, `N26`, `SHA512`, `BIP39`, `FTS5`, `PSD2`, `S256` and an
+HTML `H1` — a ban that reds a bank-format test is a ban that gets exemption-listed
+into uselessness.
+
+What separates a trace from prose is not the token, it is the parenthesis it is
+written in. The rule reads a requirement id **where it opens a parenthetical**:
+that catches `(M5)`, `(G1 + G2)`, `(L13)`, `(V4 access-control)` and
+`(Q4 resolution — …)`, and leaves `(HTTP 401)`, `(HLC 1000)`, `(IDOR)`, `(32B)`,
+`(U+2315)` and `(ISO 20022)` alone, because in every one of those the letters
+and the digits are separated by a space or the token opens on a digit. Measured
+over the same 3,057 files: 25 hits, 24 of them real, the one miss `(MT940 → CAMT)`
+— and `MT940` is a SWIFT message format, so it joined the standards-name list the
+rule already carried for `ISO-4217` and `SHA-256`.
+
+It is deliberately blind to a bare id outside a parenthesis, and to one in an
+assertion message, which no walk here reads. Both limits are stated so the next
+reader widens them on measurement rather than on instinct.
+
+The probes now run through `commentPolicyRequirementIds()` — the function the
+rules actually call — instead of against a pattern constant, and every one of
+them is a token this repository really leaked. A control written from the
+implementation inherits the implementation's blind spot; one written from the
+tree does not.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

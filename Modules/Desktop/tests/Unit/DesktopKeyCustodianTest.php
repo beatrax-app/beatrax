@@ -47,8 +47,18 @@ it('read() returns the blob unchanged (the raw key) on the fallback path', funct
     expect($custodian->read($custodian->store($raw)))->toBe($raw);
 });
 
-it('forget() is a safe no-op and does not throw', function (): void {
-    expect(fn () => offBundleCustodian()->forget('any-handle'))->not->toThrow(Throwable::class);
+// Off the bundle the handle IS the raw key, so there is no keychain entry to
+// erase and nothing for this to call. The never-invoked System mock is the
+// second half of the claim: a native call here would be a refusal it cannot
+// answer, not a no-op.
+it('forget() erases nothing and reaches no native call off the bundle', function (): void {
+    $custodian = offBundleCustodian();
+    $raw = random_bytes(32);
+    $handle = $custodian->store($raw);
+
+    $custodian->forget($handle);
+
+    expect($custodian->read($handle))->toBe($raw);
 });
 
 // Inside the bundle safeStorage answers only once Electron has finished coming
