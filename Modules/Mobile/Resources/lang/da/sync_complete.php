@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Denne enhed er synkroniseret',
     'heading' => 'Denne enhed er synkroniseret',
     'heading_withheld' => 'Denne enhed er sat op',
     'records' => 'Kopierede :count post fra :peer.|Kopierede :count poster fra :peer.',

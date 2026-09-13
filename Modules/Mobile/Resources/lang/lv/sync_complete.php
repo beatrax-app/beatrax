@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Šī ierīce ir sinhronizēta',
     'heading' => 'Šī ierīce ir sinhronizēta',
     'heading_withheld' => 'Šī ierīce ir iestatīta',
     'records' => 'No :peer nokopēti :count ierakstu.|No :peer nokopēts :count ieraksts.|No :peer nokopēti :count ieraksti.',

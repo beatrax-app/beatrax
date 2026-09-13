@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Αυτή η συσκευή συγχρονίστηκε',
     'heading' => 'Αυτή η συσκευή συγχρονίστηκε',
     'heading_withheld' => 'Αυτή η συσκευή ρυθμίστηκε',
     'records' => 'Αντιγράφηκε :count εγγραφή. Πηγή: :peer.|Αντιγράφηκαν :count εγγραφές. Πηγή: :peer.',

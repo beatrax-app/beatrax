@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'See seade on sünkroonitud',
     'heading' => 'See seade on sünkroonitud',
     'heading_withheld' => 'See seade on seadistatud',
     'records' => 'Seadmest :peer kopeeriti :count kirje.|Seadmest :peer kopeeriti :count kirjet.',

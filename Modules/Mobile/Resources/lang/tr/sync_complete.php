@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Bu cihaz senkronize edildi',
     'heading' => 'Bu cihaz senkronize edildi',
     'heading_withheld' => 'Bu cihaz kuruldu',
     'records' => ':peer cihazından :count kayıt kopyalandı.',

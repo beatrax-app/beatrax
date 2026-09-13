@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Este dispositivo está sincronizado',
     'heading' => 'Este dispositivo está sincronizado',
     'heading_withheld' => 'Este dispositivo está configurado',
     'records' => 'Se ha copiado :count registro desde :peer.|Se han copiado :count registros desde :peer.',

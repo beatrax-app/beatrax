@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Това устройство е синхронизирано',
     'heading' => 'Това устройство е синхронизирано',
     'heading_withheld' => 'Това устройство е настроено',
     'records' => 'Копиран е :count запис от :peer.|Копирани са :count записа от :peer.',

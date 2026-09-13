@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Dit apparaat is gesynchroniseerd',
     'heading' => 'Dit apparaat is gesynchroniseerd',
     'heading_withheld' => 'Dit apparaat is ingesteld',
     'records' => ':count record gekopieerd van :peer.|:count records gekopieerd van :peer.',

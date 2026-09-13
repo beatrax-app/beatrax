@@ -129,14 +129,9 @@ final class PinnedReportsRow extends Component
             'beatraxCurrency' => $series->currency,
             'dataLabels' => ['enabled' => false],
             // The bucket labels are this card's legend: without them the bars
-            // name nothing, and hover is unavailable on a phone. Ticks and
-            // border stay off — the labels carry the meaning, the furniture
-            // does not.
-            //
-            // A label is complete or it is gone. Trimming at this card's width
-            // rendered five months of history as "Apr 2…", which reads as a day
-            // of the month; and ApexCharts' own overlap test is wrong for
-            // labels of unequal width, so beatraxFitAxisLabels decides instead.
+            // name nothing, and hover is unavailable on a phone. A label is
+            // complete or gone — trimming rendered "Apr 2…" as a day — and
+            // which survive is beatraxFitAxisLabels', not ApexCharts' own test.
             'xaxis' => [
                 'categories' => $categories,
                 'labels' => [

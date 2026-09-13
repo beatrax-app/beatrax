@@ -43,9 +43,8 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
         // Resolved before the stream opens: an exception from inside the
         // download callback has already sent 200 plus the CSV headers, so the
-        // reader would get a truncated file rather than the reason. The
-        // definition is built inside the same try because reading `?period=`
-        // is itself a refusal this answers.
+        // reader gets a truncated file rather than the reason. The definition
+        // joins the try — reading `?period=` is a refusal this answers too.
         try {
             $definition = $definitions->fromExportQuery($request);
             $periodPresetResolver->resolve($definition->periodPreset, $definition->customFrom, $definition->customTo);

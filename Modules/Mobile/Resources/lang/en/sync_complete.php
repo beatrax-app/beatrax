@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'This device is synced',
     'heading' => 'This device is synced',
     'heading_withheld' => 'This device is set up',
     'records' => 'Copied :count record from :peer.|Copied :count records from :peer.',

@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Denne enheten er synkronisert',
     'heading' => 'Denne enheten er synkronisert',
     'heading_withheld' => 'Denne enheten er satt opp',
     'records' => 'Kopierte :count oppføring fra :peer.|Kopierte :count oppføringer fra :peer.',
