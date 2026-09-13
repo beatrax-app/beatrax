@@ -41,6 +41,12 @@ class EncryptionMigrationService
     // and what remains is the counterparty sweep, which has its own marker.
     public function migrate(User $user, Session $session): void
     {
+        // The bundle launches PHP with max_execution_time=120 and the lift in
+        // CoreServiceProvider is console-only. Expiry is a FATAL, so the
+        // catch below that discards the staged epoch never runs, and this
+        // walks the whole ledger inside one transaction.
+        set_time_limit(0);
+
         $userId = $user->id;
         $connection = $this->db->connection();
 

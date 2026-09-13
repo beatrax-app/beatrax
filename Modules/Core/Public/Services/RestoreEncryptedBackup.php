@@ -60,6 +60,11 @@ final readonly class RestoreEncryptedBackup
      */
     public function __invoke(string $encryptedPath, string $passphrase): string
     {
+        // Whole-database decrypt, schema catch-up and transplant, reached from
+        // a Livewire request under a 120-second ceiling whose expiry is a
+        // fatal rather than something the caller can catch.
+        set_time_limit(0);
+
         $connection = SqliteDatabase::connectionName($this->config);
         $livePath = SqliteDatabase::livePath($this->config);
         if ($livePath === null) {
