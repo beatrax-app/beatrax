@@ -18,11 +18,19 @@ The spec page is
 [`30-repos/beatrax.md`](https://github.com/beatrax-app/spec/blob/main/30-repos/beatrax.md).
 
 **There is no `app/`.** Laravel's default application directory does not exist
-here and nothing autoloads `App\` — every class lives in the module that owns
-it. The one thing still called `App\Models\User` is a `class_alias` onto
-`Modules\Core\Models\User`, registered by `CoreServiceProvider` because
-`config/auth.php` and the framework's notification routing expect that name. The
-rest went where it belonged: PHPStan rules to `tools/PhpStan/`
+here — every class lives in the module that owns it. Two names survive, both
+because something outside this repository insists on them:
+
+- `App\Models\User` is a `class_alias` onto `Modules\Core\Models\User`,
+  registered by `CoreServiceProvider` because `config/auth.php` and the
+  framework's notification routing expect that name.
+- `App\Providers\NativeServiceProvider` is a psr-4 root pointing at
+  `Modules/Mobile/Providers/NativePhpContract/`. nativephp/mobile resolves its
+  plugin allow-list by `class_exists()` on that literal string and, when it
+  misses, returns an empty allow-list with no exception and no log line —
+  measured at 29 of 54 native element types silently disappearing.
+
+The rest went where it belonged: PHPStan rules to `tools/PhpStan/`
 (`Beatrax\Tooling\PhpStan\`, dev-only), developer commands and statement-fixture
 rebasers to `Modules/DevMode/`, the two published provider stubs to the modules
 that register them, and the sample-data composition root to `database/seeders/`

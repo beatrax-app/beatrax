@@ -63,7 +63,7 @@ parameters:
             # symlinked file) is likewise outside these paths. Registered
             # exclusively from `mobile-app/bootstrap/providers.php`; the
             # desktop root's own manifest never loads this provider.
-            - Modules/Mobile/Providers/NativeServiceProvider.php
+            - Modules/Mobile/Providers/NativePhpContract/NativeServiceProvider.php
     reportUnmatchedIgnoredErrors: true
     ignoreErrors:
         # Single permitted facade + config() use in module code: the

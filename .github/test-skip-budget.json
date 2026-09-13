@@ -262,6 +262,15 @@
       "runs_in": "mobile-app quality",
       "why": "Gated on the iOS project and SchedulerManifestGenerator. Both are reachable in the two roots the pipeline builds; the markers guard a checkout that installed neither."
     },
+    "Modules/Mobile/tests/Unit/NativeServiceProviderPluginWiringTest.php": {
+      "markers": 1,
+      "skipped": {
+        "quality shard": 1,
+        "mobile-app quality": 0
+      },
+      "runs_in": "mobile-app quality",
+      "why": "Reads the live Native\\Mobile\\Edge\\ElementRegistry, which only nativephp/mobile builds and which installs only under mobile-app/vendor. The desktop root has no registry to read; the mobile root is the only one where an empty plugin allow-list is visible at all."
+    },
     "Modules/Mobile/tests/Unit/NoInboundDeepLinkSchemeTest.php": {
       "markers": 1,
       "skipped": {

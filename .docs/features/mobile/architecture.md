@@ -427,12 +427,12 @@ arrives on.
 ### The mobile root reaches the application by symlink, and one link was missing
 
 `mobile-app/` is a second Composer root. It does not copy the application — it
-links to it: `app`, `Modules`, `public`, `resources`, `routes` and `tests` are
-all `120000` entries pointing at `../`. The bundle is built from that root and
-ships what it finds there, so a directory the root cannot see was never a
-candidate for the build.
+links to it: `Modules`, `public`, `resources`, `routes`, `tests`, `tools` and
+`database/seeders` are all `120000` entries pointing at `../`. The bundle is
+built from that root and ships what it finds there, so a directory the root
+cannot see was never a candidate for the build.
 
-`lang` was not among the six.
+`lang` was not among them.
 
 Measured on a Galaxy A51 set to Dutch: every screen rendered in Dutch and the
 validation error under the import file picker read **"The file field is
@@ -468,6 +468,55 @@ already, so the fix carries no new translation debt and cannot drift from what
 the reader saw on screen.
 
 Verified on hardware after a clean install: **"Bestand is verplicht."**
+
+### A vendor hard-codes a class name, and answers a miss with silence
+
+`nativephp/mobile` resolves which plugins a build may load by looking the
+application's own provider up **by literal string**, in
+`vendor/nativephp/mobile/src/Plugins/PluginDiscovery.php`:
+
+```php
+$providerClass = 'App\\Providers\\NativeServiceProvider';
+
+if (! class_exists($providerClass)) {
+    // No provider published yet - block all plugins for security
+    return $this->allowedPlugins = [];
+}
+```
+
+The name appears twice — `getAllowedPlugins()` and `hasPluginsProvider()` — and
+neither is configurable. A miss is not an error: the allow-list comes back
+empty, every plugin is refused, and nothing is thrown or logged.
+
+`registerCoreElements()` registers 25 element types and leaves the rest to the
+UI plugins, in its own words: *"`button`, `text_input`, `toggle`,
+`activity_indicator`, `bottom_sheet` are registered by UI plugins"*. So an empty
+allow-list is not a missing feature, it is a missing **half of the UI**.
+
+Measured, by renaming this one class into `Modules\Mobile\Providers`:
+
+| | registered element types |
+|---|---|
+| `App\Providers\NativeServiceProvider` resolves | **54** |
+| renamed | **25** |
+
+The 29 lost include `webview`, which is the app shell's entire body. The shell
+still rendered: `native_root_tabs` with its four `bottom_nav_item` children and
+an empty `column` where the application should be. Nothing failed on the desktop
+Composer root, where `nativephp/mobile` is not installed at all — the only
+signal was the `mobile-app quality` CI job, and only as a missing tree node.
+
+The class therefore keeps the namespace the vendor dictates. The **directory**
+is ours, and it is `Modules/Mobile/Providers/NativePhpContract/` — under the
+module that owns the mobile shell rather than in a repository-root `app/`. Both
+Composer manifests declare `"App\\Providers\\"` as a psr-4 root pointing there.
+
+`Modules/Mobile/tests/Unit/NativeServiceProviderPluginWiringTest.php` reads the
+live `ElementRegistry` rather than the source, because the defect is a lookup
+that answers with silence and only the artefact it builds shows whether it
+answered. It names the lost elements one by one rather than counting them: a
+count moves with every vendor release, and what breaks is a specific element
+going missing.
 
 ### A notification that said it arrived
 

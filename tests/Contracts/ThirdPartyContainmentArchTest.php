@@ -258,7 +258,7 @@ function thirdPartyIsModuleEntrypoint(string $relativePath): bool
 function thirdPartyCompositionRoots(): array
 {
     return [
-        'Modules/Mobile/Providers/NativeServiceProvider.php' => [
+        'Modules/Mobile/Providers/NativePhpContract/NativeServiceProvider.php' => [
             'reason' => 'NativePHP\'s published plugin-registration stub: its plugins() return type names the mobile plugin provider classes verbatim per the vendor contract, and those packages install only under mobile-app/vendor',
             'proves' => '/function plugins\(\)/',
         ],

@@ -39,12 +39,22 @@ it('keeps the composer hook that deletes what native:install republishes', funct
     );
 });
 
-it('has no App namespace left to autoload', function (): void {
+it('autoloads no App namespace beyond the one a vendor hard-codes', function (): void {
     /** @var array{autoload: array{psr-4: array<string, string>}, autoload-dev: array{psr-4: array<string, string>}} $composer */
     $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
 
     expect($composer['autoload']['psr-4'])->not->toHaveKey('App\\')
         ->and($composer['autoload-dev']['psr-4'])->toHaveKey('Beatrax\\Tooling\\PhpStan\\');
+
+    // `App\Providers\` is the one survivor and it is a vendor contract, not a
+    // convention: nativephp/mobile resolves its plugin allow-list by
+    // class_exists('App\Providers\NativeServiceProvider') and blocks every
+    // plugin in silence when it misses. The namespace is theirs; the directory
+    // is ours, and it is under the module that owns the mobile shell.
+    // Modules/Mobile/tests/Unit/NativeServiceProviderPluginWiringTest.php reads
+    // the registry that actually goes empty.
+    expect(array_keys($composer['autoload']['psr-4']))
+        ->toEqual(['App\\Providers\\', 'Modules\\Auth\\', 'Modules\\', 'Database\\Seeders\\']);
 
     // The tooling root is dev-only on purpose: its PHPStan rules run against
     // this tree and have no business in a --no-dev install, which is what a
@@ -63,7 +73,8 @@ it('says the same thing from the second composer root', function (): void {
     /** @var array{autoload: array{psr-4: array<string, string>}} $mobile */
     $mobile = json_decode((string) file_get_contents(base_path('mobile-app/composer.json')), true, 512, JSON_THROW_ON_ERROR);
 
-    expect($mobile['autoload']['psr-4'])->not->toHaveKey('App\\');
+    expect($mobile['autoload']['psr-4'])->not->toHaveKey('App\\')
+        ->and($mobile['autoload']['psr-4'])->toHaveKey('App\\Providers\\');
 
     // mobile-app/app was a tracked symlink onto the directory that is gone.
     expect(is_link(base_path('mobile-app/app')))->toBeFalse('the mobile root still links a directory that does not exist');

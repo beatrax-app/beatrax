@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Providers\NativeServiceProvider;
 use Modules\Anomaly\Providers\AnomalyServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Budgets\Providers\BudgetsServiceProvider;
@@ -22,7 +23,6 @@ use Modules\Goals\Providers\GoalsServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
-use Modules\Mobile\Providers\NativeServiceProvider;
 use Modules\Notifications\Providers\NotificationsServiceProvider;
 use Modules\Onboarding\Providers\OnboardingServiceProvider;
 use Modules\Position\Providers\PositionServiceProvider;
