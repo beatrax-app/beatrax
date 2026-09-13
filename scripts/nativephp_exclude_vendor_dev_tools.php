@@ -32,15 +32,19 @@ require_once __DIR__.'/nativephp_scaffold_root.php';
  * because an unpatched list ships key material and says nothing.
  */
 
-$target = beatraxMobileVendorPath('nativephp/mobile/src/Support/BundleExclusions.php') ?? '';
+$target = beatraxMobileVendorPath('nativephp/mobile/src/Support/BundleExclusions.php');
 
 $anchor = "    public const VENDOR_PATTERNS = [\n";
 $patched = $anchor."        'tools',\n";
 
-if (! is_file($target)) {
-    fwrite(STDERR, sprintf("Target not found: %s\n", $target));
+// Every platform's build runs the whole patch list, and only the mobile root
+// installs nativephp/mobile. A desktop tree has no Laravel bundle to copy
+// vendor into, so there is nothing here that could ship a key — and a required
+// patch that failed on its absence stopped macOS, Windows and Linux dead.
+if ($target === null) {
+    fwrite(STDOUT, "nativephp_exclude_vendor_dev_tools: no mobile vendor tree here — skipping.\n");
 
-    exit(1);
+    exit(0);
 }
 
 $contents = (string) file_get_contents($target);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
+use Symfony\Component\Process\Process;
 
 // The suite runs from both roots, so base_path() is not one place — the same
 // asymmetry NativeBuildPatches::locate() exists for. Resolved rather than assumed.
@@ -120,4 +121,38 @@ it('names only scripts that exist on disk', function (): void {
     foreach (perBuildPatchScripts() as $script) {
         expect($scripts.'/'.$script)->toBeFile();
     }
+});
+
+// apply() throws on a REQUIRED script that fails, and EVERY platform's build
+// runs the whole list — only the mobile root installs nativephp/mobile, only a
+// Mac scaffolds Xcode. A required patch that reads an absent target as failure
+// stops macOS, Windows and Linux dead; one did, and it took a release probe.
+it('leaves every required patch harmless on a tree that holds no target for it', function (): void {
+    $scripts = NativeBuildPatches::locate(base_path());
+
+    expect($scripts)->not->toBeNull();
+
+    $required = (new ReflectionClass(NativeBuildPatches::class))
+        ->getReflectionConstant('REQUIRED_SCRIPTS')
+        ->getValue();
+
+    expect($required)->toBeArray()->not->toBeEmpty();
+
+    $bare = sys_get_temp_dir().'/beatrax-required-none-'.bin2hex(random_bytes(6));
+
+    mkdir($bare, 0o755, true);
+
+    $failed = [];
+
+    /** @var list<string> $required */
+    foreach ($required as $script) {
+        $process = new Process([PHP_BINARY, $scripts.'/'.$script], env: ['BEATRAX_NATIVE_ROOT' => $bare]);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            $failed[] = $script.'  '.trim($process->getErrorOutput());
+        }
+    }
+
+    expect($failed)->toBe([], "A required patch aborts the build on every platform that runs the list, so a tree with no target for it must be a clean skip rather than a failure. These refused:\n  ".implode("\n  ", $failed));
 });
