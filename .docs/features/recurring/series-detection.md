@@ -79,6 +79,38 @@ deliberate. A USD subscription settles to a slightly different EUR
 amount every month as the rate moves; clustering on the settled amount
 would make one stable subscription look like twelve different ones.
 
+### Which row of a day is the latest
+
+Step 6 reads `latest_amount_minor` — and through it
+`monthly_equivalent_minor`, the figure the fixed-payments card prints and
+the "largest first" list ranks on — off the **last** row of the filtered
+cluster. `transactions.posted_at` is a `DATE`, so every charge a merchant
+made on one day ties under it, and the scan ordered on nothing else:
+which of the day's rows came last was whichever the index handed back
+last.
+
+Measured on one merchant, two charges on the subscription's own billing
+day and both inside the ±25% band — a €10.99 subscription and a €12.99
+gift card. Writing the gift card first gave the series
+`latest_amount_minor = -1099`; writing it second gave `-1299`. Same
+charges, same cluster, two different answers. The income side had it too:
+€3 500 salary against a €4 200 bonus paid the same day, 350000 or 420000
+depending on nothing but write order.
+
+The sort now carries two more terms, and both are values every device
+computes alike rather than counts for itself:
+
+| Term | Why |
+| --- | --- |
+| `posted_at` | The day, as before. |
+| `booked_at` | A `DATETIME`, so it carries the time of day the bank filed the charge — a meaningful answer where the two rows really did arrive in an order. |
+| `fingerprint` | `UNIQUE (user_id, fingerprint)`, and composed from the tuple rather than minted, so it is a total order and the peer computes the same one. |
+
+An autoincrement id would have settled the tie too, and would have
+settled it differently on each device: `transactions.id` is counted per
+device, so the same two charges rank one way here and the other way
+there. That is the whole reason the third term is the fingerprint.
+
 ## The numbers
 
 Everything the detector tolerates is a named constant. These are the

@@ -182,10 +182,10 @@ and there is nowhere left for the sentence to be right on its own.
 device, not per user, since quiet hours and toggles are inherently
 per-device settings. `NotificationPreferenceQuery` is the sole Public
 read/write seam: `forCurrentDevice()` reads (or returns locked defaults
-for) this device's row, `forOtherDevices()` reads every other device
-read-only for the settings "Other devices" panel, and
-`saveForCurrentDevice()` is the only write path, validating server-side
-(out-of-range input throws, never clamps) and dispatching
+for) this device's row, `forOtherDevices()` reads, read-only for the settings
+"Other devices" panel, the preference row of every device the registry still
+confirms, and `saveForCurrentDevice()` is the only write path, validating
+server-side (out-of-range input throws, never clamps) and dispatching
 `NotificationPreferenceMutated` only after the write commits.
 
 An install with no sync identity — `DeviceRegistryService::localDeviceId()`
@@ -202,6 +202,26 @@ renames that row onto the real device id the first time the install has
 one, and `forCurrentDevice()` falls back to it, so pairing neither loses
 the settings nor leaves the pre-pairing row showing up as a foreign device
 in "Other devices".
+
+The registry is what decides which devices that panel has, and the panel asking
+the preference table instead is what left a removed one on it. Removal takes a
+peer's trust, its sessions, its mailbox and its tokens; it does not take its
+`notification_preferences` row, and it was never meant to — the row is the
+household's history of what that device was set to. Excluding only *this*
+device therefore listed the removed one for ever, and nameless, because
+`otherDeviceNames()` stops answering for a device it no longer confirms and the
+panel fell back to "Unnamed device". `forOtherDevices()` now admits only the
+device ids that map still holds, so the answer comes from the one place that
+knows what a reader's devices are.
+
+Each row's summary line names the other device's cadence with the word the
+cadence control itself renders — `notifications::settings.digest.<value>` — not
+with the enum's stored spelling. Three of the line's four values already went
+through `Lang::get()`; the fourth was `DigestCadence->value`, so a Dutch reader
+read "overzicht weekly" beside three Dutch words. The word is taken verbatim
+rather than case-folded: lower-casing it would be a typographic rule guessed at
+for twenty-six languages, and it is the same word the reader chose in the
+control above.
 
 `NotificationPreferenceMutated`'s `preferenceId` is
 `notification_preferences.id`, a local autoincrement surrogate — unlike
@@ -240,6 +260,29 @@ reader](reader-language-copy.md)). Titles and bodies live in the
 `notifications::copy` lang files and are re-rendered per reader by
 `NotificationCopyRenderer`, so the OS banner and the inbox take the same
 sentence from the same key.
+
+## One reader's failure is one reader's
+
+Three scheduled commands in this module walk every user — `budgets:emit-nudges`
+hourly, `notifications:daily-triggers` once per local day, `notifications:prune`
+daily. Each one used to walk them in a bare `lazyById()->each()`, so the first
+throw ended the walk: every reader after the one it hit got nothing, on every
+tick, and the only record was the scheduler noting that the command failed.
+Which reader, and that the rest were never reached, was nowhere.
+
+`PerUserPass::each()` is the walk now. It catches per reader, logs that one with
+its id through `SafeExceptionContext` (never the exception's message — a
+`QueryException` carries the bindings), and carries on to the next. It returns
+the count, and `NotificationPassOutcome::line()` says it out loud, because a
+pass that threw for somebody is not the same answer as a pass with nothing to
+send them and the emitted/deferred tallies cannot tell those apart.
+
+It does not replace `EmitDailyNotificationTriggersCommand::attempt()`, and
+neither covers the other: `attempt()` isolates one of the three triggers from
+the other two **for one reader**, and the walk isolates one reader from every
+reader after them. The two lines that sit outside `attempt()` — the keyless
+check and this device's own preference read — are exactly where the daily pass
+died, and both are inside the walk.
 
 ## Retention
 

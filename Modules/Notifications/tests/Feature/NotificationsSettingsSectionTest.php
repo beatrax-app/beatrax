@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Notifications\Public\Http\Livewire\NotificationsSettingsSection;
 
@@ -216,10 +217,13 @@ it('lists a second paired device in the other-devices panel and excludes the sel
 
     $this->actingAs($user);
 
+    // The cadence is named with the word the cadence control itself renders,
+    // not with the enum's stored spelling: the three values beside it go
+    // through Lang, and this one used to be the odd one out in every language.
     Livewire::test(NotificationsSettingsSection::class)
         ->assertSee('Device peer-device')
         ->assertSee('reminders off')
-        ->assertSee('digest off')
+        ->assertSee('digest '.Lang::get('notifications::settings.digest.off'))
         ->assertDontSee('Device self-device');
 });
 

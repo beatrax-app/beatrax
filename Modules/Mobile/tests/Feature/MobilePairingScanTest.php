@@ -631,6 +631,10 @@ it('startScan() falls back to enter_code when the bridge cannot open a camera', 
         ->assertSet('cameraUnavailableNotice', true);
 });
 
+// permission_denied is the only reason either shell sends. The fixture used to
+// pass 'user-cancelled', which reads as a reader backing out of the scanner --
+// an event neither shell emits, and one that would not warrant the amber notice
+// this asserts. See .docs/features/mobile/architecture.md.
 it('the native ScannerCancelled event lands on the typed-code fallback', function (): void {
     $user = pairingScanTestUser('mobile-pair-cancelled');
     test()->actingAs($user);
@@ -640,7 +644,7 @@ it('the native ScannerCancelled event lands on the typed-code fallback', functio
     pairingScanSetUpIdentity($user, $session);
 
     Livewire::test(MobilePairingScan::class)
-        ->call('onScannerCancelled', true, 'user-cancelled', null)
+        ->call('onScannerCancelled', true, 'permission_denied', null)
         ->assertSet('step', 'enter_code')
         ->assertSet('cameraUnavailableNotice', true);
 });

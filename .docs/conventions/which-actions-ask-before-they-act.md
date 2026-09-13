@@ -21,7 +21,7 @@ is not.
 |---|---|---|
 | `x-core::confirm-strip` | A row action, or a form whose destructive branch is one field among many. A `confirm*` method sets an id or a flag, the view swaps in the strip. | 3 keys |
 | `wire:confirm` | A single high-stakes button that is not part of a row. The native dialog is unmissable, which is what a once-a-year action wants. | 1 key |
-| A typed phrase or password | Account-level. `Core/EncryptedBackupRestore` types a phrase; `Auth/DeleteAccountSection` takes the password. | — |
+| A typed phrase or password | Account-level. `Core/EncryptedBackupRestore` types a phrase; `Auth/DeleteAccountSection` and `Auth/RecoveryCodesSection` take the password. | — |
 
 Use one of the three. A fourth spelling is how ten inline "are you sure?" strips
 came to disagree about everything, which is the story
@@ -90,7 +90,7 @@ through the questions that matter.
 |---|---|
 | `RulesPage::triggerReapply` | Rewrites every category, counterparty, note and tax tag a rule put there, across the reader's whole history. Manual values and reconciled rows are skipped; everything else is overwritten with no record of the prior value. |
 | `SettingsPage::save`, when the period start day moved | `EnvelopePeriodRekeyer::rekeyToCurrentPeriods()` deletes every `envelope_assignments` row and re-inserts it under new period keys, **summing** the amounts wherever two old periods fold onto one new one. Setting the day back re-runs the same merge on the summed rows rather than splitting them. It was a plain form save with nothing said. |
-| `RecoveryCodesSection::regenerate` | Retires the only offline way back into the account. The codes are stored hashed and cannot be shown again, so a printed copy dies with them. The partner-facing equivalent, `ManageUserPage::regenerateCodes`, already asks the reader to type a username; this one asked nothing. |
+| `RecoveryCodesSection::regenerate` | Retires the only offline way back into the account. The codes are stored hashed and cannot be shown again, so a printed copy dies with them. The partner-facing equivalent, `ManageUserPage::regenerateCodes`, already asks the reader to type a username; this one asked nothing. It now takes both: `wire:confirm` for what is lost, and the account password for who is asking — see below. |
 | `HandlesTaxTagging::applyBatchTag` | Writes a tag onto every remaining untagged transaction for a counterparty in a tax year. The only inverse is `untag`, one transaction at a time. |
 | `PreviewMigration::discard` | `DiscardMigrationRun` truncates seven staging tables. Recovery means uploading and re-parsing the whole export. It sat beside the confirm button with the same visual weight. |
 | `AuditLogPage::truncateAll` | Deletes every `dev_mode_audit` row the developer owns. The log is write-only and nothing re-derives it: what was run, with which arguments, and what it printed is gone. It always asked — but with a hand-rolled `window.confirm` in an `x-on:click`, which is the fourth spelling the rules above now refuse. `wire:confirm` is the shape, since it is one button on a page rather than a row. |
@@ -99,6 +99,31 @@ through the questions that matter.
 The period-day move takes the strip rather than `wire:confirm` because it is one
 field inside a form: the button is a plain submit and cannot carry a question
 that only sometimes applies.
+
+## A question about the loss is not a question about the reader
+
+One row above is not like the others. Everything else in that table destroys or
+rewrites something the reader owns, and the reader is the only person who can
+be harmed by it, so a question they answer is the whole defence.
+
+Regeneration is the opposite: what it *makes* is the danger. The sheet outlives
+the session that minted it, and a later password change — which needs the
+current password and ends every other session — does not retire it. So anyone
+holding a live unlocked session could turn borrowed access into a credential
+the account's owner cannot take back, and `wire:confirm` is no obstacle at all
+to the person who already has the session: they simply answer it.
+
+It now carries both. The dialog still says what is lost, because that is the
+question for the reader who meant it. The account password beside it says who
+is asking, which is the question a borrowed session cannot answer — the same
+proof `DeleteAccountSection` takes two cards further down the same screen. The
+check is `AppLockCredentialRejections::accountPassword()` rather than a second
+hasher call, so *is this the account password* keeps one owner and one
+vocabulary across the surfaces that ask it.
+
+The box is a `wire:model` property, and it is registered as one — the argument
+that allows it, and the zeroing that goes past that argument, are in
+[Livewire snapshot secrets](../architecture/livewire-snapshot-secrets.md#the-allow-list-and-the-one-thing-that-justifies-an-entry).
 
 ## A promise of an undo is not an undo
 
