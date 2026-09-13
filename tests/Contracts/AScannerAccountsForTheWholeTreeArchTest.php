@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Tests\Contracts\Support\RepoTree;
+use Tests\Contracts\Support\WalkCensus;
 
 // A guard narrower than the claim it makes passes, and it passes because it
 // never looked. Three shipped instances wore three different mechanisms: a
@@ -34,6 +35,10 @@ const SCANNERS_NAMING_THEIR_OWN_ROOTS = [
     'tests/Contracts/Support/SonarSourceFiles.php' => [
         'reason' => 'sonar.sources and nothing wider: a guard standing in for the hosted analysis fails on files the dashboard will never mention, which is the failure mode that gets a guard switched off',
         'proves' => 'sonar-project.properties',
+    ],
+    'tests/Contracts/Support/WalkCensus.php' => [
+        'reason' => 'Modules is this walk\'s subject rather than its scope: it answers which modules a caller\'s walk reached, so it enumerates the module directories themselves and reads no scope of its own. A root list would make it a scanner, and it judges no file',
+        'proves' => 'Modules/*',
     ],
     'tests/Contracts/Support/WireCallableMethods.php' => [
         'reason' => 'a Livewire component class is a Modules/**/Http/Livewire file by construction, and the caller walk beside it reads Blade and JavaScript together, which no PHP scope models; both narrowings can only report a reachable method as unreachable, never wave a dead one through',
@@ -159,6 +164,53 @@ it('gives every scope a floor its walk cannot quietly fall under', function (str
     'every Blade view' => [RepoTree::EVERY_BLADE_VIEW, 200],
     'the runtime domain PHP' => [RepoTree::RUNTIME_DOMAIN_PHP, 4000],
 ]);
+
+// The accounting above is about roots, and a `skips` fragment is not a root:
+// `covers` goes on naming Modules and the walk goes on reaching files in it,
+// so one more fragment there removes a subtree from all forty-nine guards
+// reading the scope with nothing moving. Added to PRODUCTION_PHP, `/Ledger/`
+// left a month-first date planted in that module unreported and the floor above
+// — 5,000 against 6,667 — never moved.
+/**
+ * @link ../../.docs/conventions/arch-invariants.md#a-floor-does-not-notice-a-module-going-missing
+ */
+it('reaches every module the tree holds files of the scope\'s kind for', function (string $scope, string $suffix): void {
+    $missed = WalkCensus::modulesMissedBy(RepoTree::relativeFiles($scope), $suffix);
+
+    expect($missed)->toBe([], implode("\n  ", [
+        'RepoTree::files("'.$scope.'") reached no file at all in these modules, which hold '.$suffix
+            .' the scope claims. Every guard reading it passes over them and reports a clean tree:',
+        ...$missed,
+    ]));
+})->with([
+    'every PHP file' => [RepoTree::EVERY_PHP_FILE, '.php'],
+    'the production PHP' => [RepoTree::PRODUCTION_PHP, '.php'],
+    'every Blade view' => [RepoTree::EVERY_BLADE_VIEW, '.blade.php'],
+    'the runtime domain PHP' => [RepoTree::RUNTIME_DOMAIN_PHP, '.php'],
+]);
+
+// The census above answers for a fragment that empties a module. A fragment
+// that takes a slice out of every module empties none of them, so the set is
+// pinned as well: a refusal the whole tree inherits is a decision made in two
+// places rather than a line nobody reviews.
+const SCANNER_SKIPS = [
+    RepoTree::EVERY_PHP_FILE => ['/storage/framework/', '/.claude/worktrees/'],
+    RepoTree::PRODUCTION_PHP => ['/storage/framework/', '/.claude/worktrees/', '/tests/', '/Database/Migrations/', '/migrations/'],
+    RepoTree::EVERY_BLADE_VIEW => ['/tests/'],
+    RepoTree::RUNTIME_DOMAIN_PHP => ['/tests/', '/Database/Migrations/', '/Database/Seeders/', '/Database/Factories/'],
+];
+
+it('refuses no path fragment this file has not been told about', function (): void {
+    expect(SCANNER_SKIPS)->not->toBe([], 'The pin is empty, so the loop below holds no scope to anything.');
+
+    foreach (RepoTree::SCOPES as $scope => $declaration) {
+        expect(array_keys($declaration['skips']))->toBe(
+            SCANNER_SKIPS[$scope] ?? [],
+            'The scope "'.$scope.'" skips '.implode(', ', array_keys($declaration['skips']))
+            .'. A fragment listed there is refused by every guard reading the scope, so it is pinned here too.'
+        );
+    }
+});
 
 // The scopes above account for the tree git holds. This one accounts for what
 // sits inside it and git does not: a generated `bootstrap/cache/modules.php`

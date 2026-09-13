@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\View\Factory as ViewFactoryContract;
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\WalkCensus;
 
 // A composer bound to a view that does not exist never throws — it simply
 // never fires. Five of them named the deleted top-nav and sat inert for a
@@ -170,6 +171,14 @@ it('names a view that exists everywhere a view is named', function (): void {
     // pattern that stopped matching, or a walk that lost a root, reports the
     // same empty unresolved list a tree with no broken name reports.
     expect(count($references))->toBeGreaterThan(30, 'the scan found almost no view references at all — the patterns are wrong, not the tree.');
+
+    // One floor over both halves lets the larger cover for the smaller: with
+    // resources/views dropped from the template walk, a broken @include
+    // planted there went unreported and this count stayed above thirty.
+    expect(array_keys(WalkCensus::byRoot(viewReferenceBladeFiles())))->toBe(
+        ['Modules', 'resources'],
+        'The template walk covers '.implode(', ', array_keys(WalkCensus::byRoot(viewReferenceBladeFiles()))).' rather than Modules, resources.'
+    );
 
     /** @var ViewFactoryContract $factory */
     $factory = $this->app->make(ViewFactoryContract::class);

@@ -12,6 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Modules\Ledger\Models\Account;
+use Tests\Contracts\Support\WireCallableMethods;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-query-parameter-a-reader-can-retype
@@ -31,6 +32,35 @@ function tamperedUrlBindsAQueryParameter(string $source): bool
     $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $source) ?? $source;
 
     return preg_match('/#\[Url\b[^\n]*\]\s*public\s/', $stripped) === 1;
+}
+
+/**
+ * The same question the source walk answers, asked of the class rather than of
+ * the file. A narrowing of either walk shows up as a disagreement.
+ *
+ * @return list<string> repo-relative files of every Livewire component reflection finds a bound property on
+ */
+function tamperedUrlReflectedComponentFiles(): array
+{
+    $files = [];
+
+    foreach (WireCallableMethods::components() as $component) {
+        $reflection = new ReflectionClass($component);
+
+        foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+            if ($property->getAttributes(Url::class) === []) {
+                continue;
+            }
+
+            $files[] = str_replace(base_path().'/', '', (string) $reflection->getFileName());
+
+            break;
+        }
+    }
+
+    sort($files);
+
+    return array_values(array_unique($files));
 }
 
 /**
@@ -694,6 +724,19 @@ it('finds the components by walking the tree rather than from a list', function 
         count($resolved),
         implode("\n  ", $files),
     ));
+
+    // The floor above is worth one failure and no more: with `/Ledger/` beside
+    // `/tests/` in the walk it never moved, and both of that module's bound
+    // components — the transaction list among them — dropped out of every arm
+    // in this file with nothing going red. Reflection is the second reader,
+    // and the two lists have to be the same list.
+    expect($files)->toBe(tamperedUrlReflectedComponentFiles(), implode("\n  ", [
+        'The source scan and reflection disagree about which components bind a query parameter.',
+        'Whichever of the two stopped seeing one, every arm in this file is read off the scan,',
+        'so a component missing from it is a page nothing here drives at all.',
+        'The scan reads: '.implode(', ', $files),
+        'Reflection reads: '.implode(', ', tamperedUrlReflectedComponentFiles()),
+    ]));
 });
 
 // The discovery is what every arm above is read off, and it is a pattern over

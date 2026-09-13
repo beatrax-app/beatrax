@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
 use Tests\Contracts\Support\RepoTree;
+use Tests\Contracts\Support\WalkCensus;
 
 /**
  * @link ../../.docs/conventions/00-index.md
@@ -752,10 +753,17 @@ it('has no banned deferral or provenance tokens in comments (M5)', function (): 
 it('has no banned deferral or provenance tokens in Blade comments (M5)', function (): void {
     $files = commentPolicyBladeFiles();
 
-    // The floor sits well under the 279 templates this tree ships.
+    // The floor sits well under the 285 templates this tree ships, and stayed
+    // green with the resources/ root dropped and a banned token planted in one
+    // of its templates. The roots are named rather than counted.
     expect(count($files))->toBeGreaterThan(
         100,
         'The Blade walk opened almost nothing, so no template comment was read at all.'
+    );
+
+    expect(array_keys(WalkCensus::byRoot($files)))->toBe(
+        ['Modules', 'resources'],
+        'The Blade walk covers '.implode(', ', array_keys(WalkCensus::byRoot($files))).' rather than Modules, resources.'
     );
 
     $hits = [];

@@ -128,9 +128,23 @@ unshare_composer_metadata() {
     echo "    vendor/composer unhardlinked"
 }
 
+# The classmap comes across with vendor/ and describes the checkout it was
+# written in, not this one. A worktree on a commit where a file has moved or
+# gone inherits an entry pointing at a path it does not have, and the include
+# fails inside the autoloader — which reads as thirty-one broken tests, not as
+# a stale classmap. Done after the unshare, so it writes only here.
+redump_autoload() {
+    if (cd "$target" && composer dump-autoload --quiet 2>/dev/null); then
+        echo "    autoload rebuilt against this checkout"
+    else
+        echo "!!  composer dump-autoload failed in $target; the classmap still describes $main" >&2
+    fi
+}
+
 echo "==> bootstrapping"
 link_tree vendor
 unshare_composer_metadata
+redump_autoload
 copy_tree public/build
 
 if [[ -e $target/.env ]]; then

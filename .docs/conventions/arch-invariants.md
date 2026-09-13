@@ -259,6 +259,50 @@ precisely the failure the whole section is about. Beyond it, every walk asserts 
 floor on what it scanned — files, echoes, payload keys — so a scan that ran over
 nothing fails on that assertion rather than on the offender list it never built.
 
+### A floor does not notice a module going missing
+
+Every walk here asserts a floor on what it scanned, and that floor catches
+exactly one failure: a walk that read *nothing*. It says nothing about the walk
+that read almost everything. Fifteen guards were instrumented and then planted
+with one realistic narrowing each — `/Ledger/` added beside `/tests/` in a path
+filter, `.blade.php` mistyped, one root dropped from a two-root list, one more
+fragment in a `RepoTree` skip list. Thirteen of the fifteen stayed **green**, and
+green with a real violation planted in the region they had stopped reading: an
+unowned `withoutGlobalScope`, a second writer of the occurrence log, a dispatch
+inside a transaction, a replayer built from the retained device-key map, a file
+reading `ed25519SecretKeyHex`, a `role="progressbar"` with nothing to announce,
+a broken `@include`, a `TODO` in a template comment. Each guard's floor sat
+thousands under its real count and never moved.
+
+An exact pin does not save a walk from this either. `PRIVATE_KEY_HOLDERS` and
+`CONFIRMED_KEY_REPLAY_SITES` compare with `toBe()`, which catches a holder that
+disappears — and cannot catch one that *appears* in a module the walk stopped
+opening.
+
+The floor stays, because a scope that moves and reads nothing is real. Beside it
+goes a second reader of the same question, so a narrowed walk has something to
+disagree with:
+
+- **`WalkCensus::modulesMissedBy()`** for a walk over PHP: the modules the
+  filesystem holds source for, against the modules the walk reached. One module
+  reached zero times fails, whatever the total says.
+- **`WalkCensus::byRoot()`** for a walk over two roots: the root *names* are
+  pinned rather than their sum floored. A summed floor lets the larger half
+  cover for the smaller — `Modules` alone cleared a 150-template floor with
+  `resources/` unread — and a root that newly appears is a family of files
+  nobody decided about.
+- **Split the floor, never sum it.** `ToastEventNameArchTest` floored 6,828
+  backend files and 285 templates as one number against 2,000; the templates
+  now carry their own.
+
+`RepoTree`'s `skips` is where this costs the most: one more fragment there
+removes a subtree from all forty-nine guards reading that scope at once, and
+the root accounting above cannot see it — `covers` still names the root and the
+walk still reaches files in it. The scope floors are now joined by the module
+census, and the skip fragments are pinned in
+`AScannerAccountsForTheWholeTreeArchTest`, so a new refusal is a decision made
+in two places rather than a line nobody reviews.
+
 ## A declaration no autoloader reaches
 
 Composer builds its classmap by psr-4 rule: a class is reachable because the

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Modules\Community\Internal\Http\Livewire\SharedListSettingsPanel;
 use Tests\Contracts\Fixtures\Livewire\SyntheticUnreachableActionViolator;
+use Tests\Contracts\Support\WalkCensus;
 use Tests\Contracts\Support\WireCallableMethods;
 
 // An entry is justified only when the method must stay public AND must stay
@@ -70,6 +71,17 @@ it('reads the component tree, the methods on it, and the callers of them', funct
         50,
         'the walk resolved '.count(WireCallableMethods::components()).' Livewire components, which is too few to be this tree.'
     );
+
+    // The floor never moved when the component walk gained a `/Ledger/` clause
+    // beside its `/tests/` one, and a public method nothing reaches, planted on
+    // a component in that module, went unreported. Which modules hold a
+    // component is read off the filesystem rather than off the same walk.
+    $missed = WalkCensus::modulesMissedBy(
+        array_map(static fn (string $component): string => (string) (new ReflectionClass($component))->getFileName(), WireCallableMethods::components()),
+        under: '/Http/Livewire/',
+    );
+
+    expect($missed)->toBe([], 'the walk resolved no component at all in these modules, so every public method on one is judged by nobody: '.implode(', ', $missed));
 
     $invokable = 0;
 
