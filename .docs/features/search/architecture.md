@@ -58,11 +58,24 @@ What the module explicitly does NOT do:
   so a yen reader's `"12.50"` cleared the gate, failed the parse behind
   it, and the `?? 0` that caught the null searched for an amount of
   zero; a dinar's `amount:12.500-13.000` was truncated to `12.50`.
-  `MoneyInput::tryToMinor()` IS the gate for the bare-number branch, and
-  the token regex takes its fraction width from
-  `MoneyInput::decimalPlaces()` at the reader's base
+  `MoneyInput::tryToMinor()` IS the gate on **both** branches. Narrowing
+  the token's fraction to the reader's own currency left the rest of the
+  shape spelled a second time, and the copy did not know the group marks
+  `MoneyInput` accepts: `amount:1.234,56` — the spelling
+  `MoneyInput::formatMinor()` writes EUR 1,234.56 in for a Dutch reader —
+  matched as far as `1.23` and filtered at a thousandth of what was typed,
+  and `amount:12.500` was cut to `12.50` where the euro has no room for
+  the shape at all. `QueryParser` now takes the whole non-space run after
+  `amount:` and hands it to `Internal/Services/AmountToken`, which reads
+  `>`, `<`, a range and a bare figure and asks `MoneyInput::tryToMinor()`
+  for each side at the reader's base
   ([minor units](../ledger/minor-units-and-zero-decimal-currencies.md#the-box-has-to-invite-the-shape-it-accepts)).
-  `AYenReaderTypingAnAmountSearchesThatAmountTest` covers both.
+  A token naming no amount is **left in the text query** rather than
+  stripped: a stripped token the filter then ignores reads to the typist
+  exactly like a filter that worked, which is the rule `NO_SUCH_ID`
+  applies to an unresolvable `account:` or `category:`.
+  `AYenReaderTypingAnAmountSearchesThatAmountTest` covers the scale and
+  `AGroupedAmountTokenMeansTheFigureItIsWrittenAsTest` the group marks.
 + It never blocks a write on indexing failure being swallowed — the
   writer never catches; a failed FTS upsert rolls back the same
   import-chunk transaction that produced it, so the index and the
@@ -113,8 +126,10 @@ What the module explicitly does NOT do:
 + **Internal/Services/SearchTokenFilters** — resolves what `QueryParser`
   pulled out of the query into filter values: account and category names
   to ids (`NO_SUCH_ID` when a token matches nothing, so an unresolvable
-  token narrows the search rather than widening it to the whole history),
-  and an `amount:` token to its min/max pair at the reader's own scale.
+  token narrows the search rather than widening it to the whole history).
+  The `amount:` pair arrives already read by `AmountToken`, so nothing
+  here decides what a money string is; the open end of a `>` or a `<`
+  arrives null and leaves the chip's own value standing.
 + **Internal/Services/AmountBoundResolver** — reads the distinct
   `settled_currency` values the reader's ledger holds and restates the
   typed bound into each, answering an `AmountBoundRestriction` carrying
@@ -142,8 +157,13 @@ What the module explicitly does NOT do:
   statement nor a row —
   `Modules/Search/tests/Feature/APlaceholderCounterpartyIsFoundByTheReadersOwnWordTest.php`
   pins that at 1 statement / 601 rows over 1001 counterparties.
-+ **Internal/Services/DidYouMeanSuggester** — a single levenshtein-
-  based spelling suggestion when a query returns zero FTS results.
++ **Internal/Services/DidYouMeanSuggester** — a single edit-distance
+  spelling suggestion when a query returns zero FTS results. The
+  distance comes from `Core::EditDistance`, which counts characters
+  rather than the bytes `levenshtein()` counts, so an accented letter is
+  one edit against a threshold of two and not four. `Chains`'
+  `PaypalFundingResolver` reads the same primitive, because a comparison
+  spelled twice is one that comes to answer differently on one side.
 + **Internal/Services/PaletteSectionComposer** — composes
   `SearchQuery::palette()` + `EntityNameSearch::query()` into the
   `SearchResultsProvider` contract shape. `palette()` returns its hits
@@ -414,6 +434,7 @@ The read path (⌘K palette or `/transactions` search mode):
 ```
 User types a query
   → QueryParser::parse extracts account:/after:/before:/amount:/category: tokens
+       → amount: → AmountToken::bound, which asks MoneyInput::tryToMinor
   → SearchTokenFilters::merge folds those tokens into the SearchFilters
        → account: → resolveAccountNamesToIds (prefix LIKE on accounts.name)
        → category: → resolveCategoryNameToIds (prefix match in PHP, on the

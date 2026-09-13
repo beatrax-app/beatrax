@@ -9,7 +9,6 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Support\CategoryDisplayName;
-use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Search\Public\Dto\SearchFilters;
 
 // What the typist wrote as `account:`, `category:` and `amount:` resolved into
@@ -33,7 +32,7 @@ final readonly class SearchTokenFilters
     /**
      * @param  array<string, mixed>  $parsedFilters
      */
-    public function merge(User $user, SearchFilters $filters, array $parsedFilters, string $readerCurrency): SearchFilters
+    public function merge(User $user, SearchFilters $filters, array $parsedFilters): SearchFilters
     {
         $accounts = $filters->accounts;
         if (isset($parsedFilters['accounts']) && is_array($parsedFilters['accounts'])) {
@@ -63,10 +62,15 @@ final readonly class SearchTokenFilters
             $before = $parsedFilters['before'];
         }
 
+        // Already read as an amount by AmountToken, which asked MoneyInput. A
+        // side this token does not state -- the open end of a `>` or a `<` --
+        // arrives null and leaves the chip's own value standing.
         $amountMin = $filters->amountMin;
         $amountMax = $filters->amountMax;
-        if (isset($parsedFilters['amount']) && is_string($parsedFilters['amount'])) {
-            [$amountMin, $amountMax] = self::parseAmountToken($parsedFilters['amount'], $amountMin, $amountMax, $readerCurrency);
+        $bound = $parsedFilters['amount'] ?? null;
+        if (is_array($bound)) {
+            $amountMin = is_string($bound[0] ?? null) ? $bound[0] : $amountMin;
+            $amountMax = is_string($bound[1] ?? null) ? $bound[1] : $amountMax;
         }
 
         return new SearchFilters(
@@ -157,30 +161,6 @@ final readonly class SearchTokenFilters
     private static function startsWith(string $haystack, string $needle): bool
     {
         return $haystack !== '' && str_starts_with(mb_strtolower($haystack), $needle);
-    }
-
-    // Parses an amount: token into [min, max] decimal strings: >50
-    // (min), <50 (max), 50-100 (range), bare 50 (exact). Falls back to the
-    // existing values on an unrecognized token, and the fraction the two gated
-    // shapes accept is the reader's own money's rather than a fixed two.
-    /**
-     * @return array{0: ?string, 1: ?string}
-     */
-    private static function parseAmountToken(string $token, ?string $currentMin, ?string $currentMax, string $readerCurrency): array
-    {
-        $token = trim($token);
-        $normalize = static fn (string $v): string => str_replace(',', '.', $v);
-        $decimals = MoneyInput::decimalPlaces($readerCurrency);
-        $figure = '\d+'.($decimals === 0 ? '' : '(?:[.,]\d{1,'.$decimals.'})?');
-
-        return match (true) {
-            $token === '' => [$currentMin, $currentMax],
-            str_starts_with($token, '>') => [$normalize(substr($token, 1)), $currentMax],
-            str_starts_with($token, '<') => [$currentMin, $normalize(substr($token, 1))],
-            preg_match('/^('.$figure.')-('.$figure.')$/', $token, $m) === 1 => [$normalize($m[1]), $normalize($m[2])],
-            preg_match('/^'.$figure.'$/', $token) === 1 => [$normalize($token), $normalize($token)],
-            default => [$currentMin, $currentMax],
-        };
     }
 
     /**
