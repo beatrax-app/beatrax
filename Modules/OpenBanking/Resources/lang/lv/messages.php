@@ -171,5 +171,6 @@ return [
         'no_session_id' => 'Enable Banking neatgrieza sesijas id.',
         'bank_not_linked' => 'Šī banka šajā ierīcē nav pievienota. Pievieno to no jauna, lai sinhronizācija atsāktos.',
         'oauth_state_mismatch' => 'Šī savienojuma saite ir beigusies vai jau izmantota. Sāciet bankas savienošanu no jauna.',
+        'connection_not_saved' => 'Neizdevās saglabāt šo savienojumu diskā — pārbaudiet slepeno datu direktorijas atļaujas un mēģiniet vēlreiz.',
     ],
 ];

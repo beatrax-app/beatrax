@@ -168,5 +168,6 @@ return [
         'no_session_id' => 'Enable Banking non ha restituito un id di sessione.',
         'bank_not_linked' => 'Questa banca non è collegata su questo dispositivo. Ricollegala per riprendere la sincronizzazione.',
         'oauth_state_mismatch' => 'Questo link di connessione è scaduto o è già stato usato. Ricomincia il collegamento della tua banca.',
+        'connection_not_saved' => 'Impossibile salvare questa connessione su disco — controlla i permessi della cartella dei secret e riprova.',
     ],
 ];

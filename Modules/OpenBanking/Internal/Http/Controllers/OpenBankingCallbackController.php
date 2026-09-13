@@ -10,9 +10,9 @@ use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\OpenBanking\Internal\Actions\CompleteBankConsent;
-use Modules\OpenBanking\Internal\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Internal\OAuth\InvalidStateException;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
+use Modules\OpenBanking\Internal\Support\ReaderRefusal;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
@@ -57,22 +57,21 @@ final readonly class OpenBankingCallbackController
         return $this->backToSettings('open_banking_connected', $connectionId);
     }
 
-    // Most refusals in this flow build their message from Lang, so what they
-    // carry is already the reader's own words. The credentials one does not:
-    // it names the secrets file by absolute path, and this flash renders
-    // verbatim on the settings screen.
+    // This flash renders verbatim on the settings screen, so ReaderRefusal owns
+    // which refusals may speak for themselves. The rest are recorded here and
+    // answered on screen in the reader's own words.
     private function readerReason(RuntimeException $e): string
     {
-        if ($e instanceof OpenBankingCredentialsException) {
+        $refusal = ReaderRefusal::for($e);
+
+        if ($refusal->hidesDetail) {
             $this->logger->warning(
-                'OpenBankingCallbackController: the stored credentials could not be read.',
+                'OpenBankingCallbackController: a refusal with no detail a reader could act on.',
                 SafeExceptionContext::describe($e),
             );
-
-            return $e->readerMessage();
         }
 
-        return $e->getMessage();
+        return $refusal->message;
     }
 
     private function cancellationMessage(Request $request): ?string

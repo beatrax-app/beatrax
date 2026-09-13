@@ -168,5 +168,6 @@ return [
         'no_session_id' => 'Enable Banking nevrátilo identifikátor relace.',
         'bank_not_linked' => 'Tato banka není na tomto zařízení připojená. Připoj ji znovu, aby se synchronizace obnovila.',
         'oauth_state_mismatch' => 'Tento odkaz pro připojení vypršel nebo již byl použit. Začněte připojení banky znovu.',
+        'connection_not_saved' => 'Toto připojení se nepodařilo uložit na disk — zkontroluj oprávnění adresáře secrets a zkus to znovu.',
     ],
 ];

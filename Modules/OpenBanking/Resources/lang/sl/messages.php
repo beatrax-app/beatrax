@@ -168,5 +168,6 @@ return [
         'no_session_id' => 'Enable Banking ni vrnil ID-ja seje.',
         'bank_not_linked' => 'Ta banka na tej napravi ni povezana. Znova jo poveži, da se sinhronizacija nadaljuje.',
         'oauth_state_mismatch' => 'Ta povezava za povezovanje je potekla ali je bila že uporabljena. Znova začni povezovanje banke.',
+        'connection_not_saved' => 'Te povezave ni bilo mogoče shraniti na disk — preveri dovoljenja mape s skrivnostmi in poskusi znova.',
     ],
 ];

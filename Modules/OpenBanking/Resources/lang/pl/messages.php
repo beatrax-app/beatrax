@@ -168,5 +168,6 @@ return [
         'no_session_id' => 'Enable Banking nie zwróciło identyfikatora sesji.',
         'bank_not_linked' => 'Ten bank nie jest połączony na tym urządzeniu. Połącz go ponownie, aby wznowić synchronizację.',
         'oauth_state_mismatch' => 'Ten link połączenia wygasł lub został już użyty. Rozpocznij łączenie banku od nowa.',
+        'connection_not_saved' => 'Nie udało się zapisać tego połączenia na dysku — sprawdź uprawnienia katalogu z sekretami i spróbuj ponownie.',
     ],
 ];

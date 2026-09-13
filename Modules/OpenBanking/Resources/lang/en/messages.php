@@ -166,5 +166,6 @@ return [
         'no_session_id' => 'Enable Banking did not return a session id.',
         'bank_not_linked' => 'That bank is not linked on this device. Reconnect it to resume syncing.',
         'oauth_state_mismatch' => 'That connection link has expired or was already used. Start connecting your bank again.',
+        'connection_not_saved' => 'Could not save this connection to disk — check your secrets-directory permissions and try again.',
     ],
 ];

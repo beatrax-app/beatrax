@@ -168,5 +168,6 @@ return [
         'no_session_id' => 'Enable Banking returnerade inget sessions-id.',
         'bank_not_linked' => 'Den banken är inte ansluten på den här enheten. Anslut den igen för att återuppta synkroniseringen.',
         'oauth_state_mismatch' => 'Den här anslutningslänken har gått ut eller är redan använd. Börja om med att ansluta din bank.',
+        'connection_not_saved' => 'Den här anslutningen kunde inte sparas på disk — kontrollera behörigheterna för katalogen med hemligheter och försök igen.',
     ],
 ];

@@ -172,5 +172,6 @@ return [
         'no_session_id' => 'Enable Banking negrąžino seanso id.',
         'bank_not_linked' => 'Šis bankas šiame įrenginyje neprijungtas. Prijunk jį iš naujo, kad sinchronizavimas atsinaujintų.',
         'oauth_state_mismatch' => 'Ši prisijungimo nuoroda nebegalioja arba jau panaudota. Pradėkite banko prijungimą iš naujo.',
+        'connection_not_saved' => 'Nepavyko įrašyti šio ryšio į diską — patikrink paslapčių katalogo teises ir bandyk dar kartą.',
     ],
 ];
