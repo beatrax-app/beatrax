@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -426,4 +428,48 @@ it('names what is accounted for beside the rows a peer is still owed', function 
             '1 row a peer sent that no table here has (counterparties 1)',
             'Accounted for beside them: 1 row this device wrote and no longer has, with no tombstone behind them (counterparties 1)',
         );
+});
+
+// SQLite reads a double-quoted name matching no column as a string LITERAL, so
+// `self_retired_at IS NOT NULL` is always TRUE while the column is absent and
+// every peer device passes the self-written test. Measured against the live
+// desktop database before its migration ran: all 23 read as self, severity ok.
+it('refuses to classify while a column it reads is not on the table yet', function (): void {
+    $userId = (int) $this->user->id;
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
+
+    Schema::table('device_registry', fn (Blueprint $table) => $table->dropColumn('self_retired_at'));
+
+    expect(logHoldsHealthCheck()->severity())->toBe('warning')
+        ->and(logHoldsHealthCheck()->message())->toContain('cannot classify', 'device_registry', 'self_retired_at', 'run php artisan migrate');
+});
+
+// The positive control the line above needs: with the column there, the same
+// arrangement reads as the one thing it is -- a peer's row this device is owed.
+// Without it, a pass and a silence are the same output.
+it('classifies that same peer create once the column is there', function (): void {
+    $userId = (int) $this->user->id;
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
+
+    expect(logHoldsCauses($userId)['unplaced'])->toBe(['counterparties' => 1])
+        ->and(logHoldsCauses($userId)['removedHere'])->toBe([]);
+});
+
+// The same hazard on the other table, failing the opposite way: a literal never
+// equals `create_row`, so every terminal hold would read as a row still owed.
+it('refuses to classify while the quarantine cannot say which op a hold turned away', function (): void {
+    $userId = (int) $this->user->id;
+
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', 9105, logHoldsCounterparty('netflix', '2026-02-02 08:30:00'));
+    logHoldsHold($this->db, $userId, 9105, 'unplaceable_collision');
+
+    Schema::table('op_log_quarantine', fn (Blueprint $table) => $table->dropColumn('op_type'));
+
+    expect(logHoldsHealthCheck()->severity())->toBe('warning')
+        ->and(logHoldsHealthCheck()->message())->toContain('cannot classify', 'op_log_quarantine', 'op_type');
 });
