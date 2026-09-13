@@ -250,18 +250,9 @@ trait ManagesSplitEditor
 
         $this->recomputeRemaining($currentUser, $db, $readerCurrency);
 
-        // A leg that cannot be read contributes nothing to the sum above, so a
-        // split holding one reports a balanced total and then refuses. The leg
-        // is the cause and the total is the consequence, so it is named first.
-        if ($this->hasUnreadableLeg()) {
-            $this->splitError = Lang::get('ledger::detail.errors.amount_positive');
+        $this->splitError = $this->amountRefusal();
 
-            return;
-        }
-
-        if ($this->remainingMinor !== 0) {
-            $this->splitError = Lang::get('ledger::detail.errors.totals_must_match');
-
+        if ($this->splitError !== null) {
             return;
         }
 
@@ -297,6 +288,26 @@ trait ManagesSplitEditor
         } catch (InvalidArgumentException $e) {
             $this->splitError = $e->getMessage();
         }
+    }
+
+    // Both amount refusals in one body, in the order the reader caused them.
+    // Inline in saveSplit they were a fourth and fifth way out of a method the
+    // analyser already counted at three.
+    //
+    // A leg that cannot be read contributes nothing to the sum, so a split
+    // holding one reports a balanced total and then refuses. The leg is the
+    // cause and the total is its consequence, so it is named first.
+    private function amountRefusal(): ?string
+    {
+        if ($this->hasUnreadableLeg()) {
+            return Lang::get('ledger::detail.errors.amount_positive');
+        }
+
+        if ($this->remainingMinor !== 0) {
+            return Lang::get('ledger::detail.errors.totals_must_match');
+        }
+
+        return null;
     }
 
     // A magnitude, so a negative parses and is refused all the same: the sign
