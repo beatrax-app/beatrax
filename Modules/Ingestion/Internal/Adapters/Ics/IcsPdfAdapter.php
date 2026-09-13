@@ -30,7 +30,26 @@ final class IcsPdfAdapter implements SourceAdapter
     // the rows and on the totals alike. "Af" is owed to ICS, "Bij" is credit.
     private const string DIRECTION_OWED_TO_ICS = 'Af';
 
-    private const string AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(Af|Bij)';
+    // The layout reader keeps every pair of text runs at least one space
+    // apart, so a generator that draws 1.416,50 as two runs hands this adapter
+    // "1. 416,50". Raw bytes rather than \x{00A0} because these anchors run
+    // without /u, for the reason the linked section gives.
+    /**
+     * @link ../../../../../.docs/features/ingestion/ics-pdf-text-extraction.md#a-figure-a-run-boundary-split-in-two
+     */
+    private const string GROUP_SPACE = '(?: |\xc2\xa0|\xe2\x80\xaf)';
+
+    // ICS groups thousands with a period, and the run boundary can fall on
+    // either side of it or swallow it. A comma is never a group mark here: it
+    // is the decimal, and reading one as grouping would book a hundredth.
+    private const string GROUP_MARK = '(?:\.'.self::GROUP_SPACE.'|'.self::GROUP_SPACE.'\.?|\.)';
+
+    // Grouped first, the old class behind it: runs of exactly three digits are
+    // what makes a space part of the figure rather than the gap before it, and
+    // anything that is not grouped reads exactly as it did before.
+    private const string FIGURE = '(?:\d{1,3}(?:'.self::GROUP_MARK.'\d{3})+(?![\d])(?:,\d+)?|[\d.,]+)';
+
+    private const string AMOUNT_AF_BIJ_FRAGMENT = '€\s+('.self::FIGURE.')\s+(Af|Bij)';
 
     private const string TRAILING_COUNTRY_CODE_REGEX = '/\s+[A-Z]{2}$/';
 
@@ -195,7 +214,7 @@ final class IcsPdfAdapter implements SourceAdapter
         $direction = $dirMatch[1];
         $withoutDirection = trim(substr($primary, 0, strlen($primary) - strlen($dirMatch[0])));
 
-        if (preg_match('/(.+?)\s+([\d.,]+)$/', $withoutDirection, $amountMatch) !== 1) {
+        if (preg_match('/(.+?)\s+('.self::FIGURE.')$/', $withoutDirection, $amountMatch) !== 1) {
             throw new InvalidAmountException(sprintf(
                 'ICS transaction row missing settled amount: %s',
                 $primary,
@@ -204,19 +223,19 @@ final class IcsPdfAdapter implements SourceAdapter
         $rest = trim($amountMatch[1]);
         $settledRaw = $amountMatch[2];
         $settledMinor = self::signedByDirection(
-            $this->amounts->parse($settledRaw, IcsPdfHeaderProfile::STATEMENT_CURRENCY),
+            $this->parseFigure($settledRaw, IcsPdfHeaderProfile::STATEMENT_CURRENCY),
             $direction,
         );
 
         $nativeAmountMinor = null;
         $nativeCurrency = null;
-        if (preg_match('/(.+?)\s+([\d.,]+)\s+([A-Z]{3})$/', $rest, $fxMatch) === 1) {
+        if (preg_match('/(.+?)\s+('.self::FIGURE.')\s+([A-Z]{3})$/', $rest, $fxMatch) === 1) {
             $rest = trim($fxMatch[1]);
             // The foreign column is read at ITS currency's scale, not the
             // euro column's: a yen has no minor unit, and the fixed hundredth
             // refused the row outright rather than reading it wrong.
             $nativeAmountMinor = self::signedByDirection(
-                $this->amounts->parse($fxMatch[2], $fxMatch[3]),
+                $this->parseFigure($fxMatch[2], $fxMatch[3]),
                 $direction,
             );
             $nativeCurrency = $fxMatch[3];
@@ -401,6 +420,10 @@ final class IcsPdfAdapter implements SourceAdapter
         );
     }
 
+    // Anchored without /u: the pattern is ASCII plus a literal euro sign
+    // either way, while one ill-formed byte anywhere in the text layer made
+    // preg_match return false, which the `!== 1` below reads as a statement
+    // carrying no totals at all.
     /**
      * @return array{opening?: int, received?: int, charges?: int, closing?: int}
      */
@@ -415,7 +438,7 @@ final class IcsPdfAdapter implements SourceAdapter
             .$cell.'\s+'
             .$cell.'\s+'
             .$cell.'\s+'
-            .$cell.'/u';
+            .$cell.'/';
 
         if (preg_match($pattern, $text, $m) !== 1) {
             return [];
@@ -455,8 +478,8 @@ final class IcsPdfAdapter implements SourceAdapter
         $pattern = '/'.preg_quote(IcsPdfExtractionMap::SUMMARY_CREDIT_LIMIT, '/')
             .'\s+'.preg_quote(IcsPdfExtractionMap::SUMMARY_MIN_DUE, '/')
             .'[\s\S]*?'
-            .'€\s+([\d.,]+)\s+'
-            .'€\s+([\d.,]+)/u';
+            .'€\s+('.self::FIGURE.')\s+'
+            .'€\s+('.self::FIGURE.')/';
 
         if (preg_match($pattern, $text, $m) !== 1) {
             return [];
@@ -479,10 +502,19 @@ final class IcsPdfAdapter implements SourceAdapter
     private function safeParseAmount(string $raw): ?int
     {
         try {
-            return $this->amounts->parse($raw, IcsPdfHeaderProfile::STATEMENT_CURRENCY);
+            return $this->parseFigure($raw, IcsPdfHeaderProfile::STATEMENT_CURRENCY);
         } catch (InvalidAmountException) {
             return null;
         }
+    }
+
+    // The space inside a captured figure is the PDF reader's, not the issuer's:
+    // ICS writes one notation and IcsAmountParser is strict about it on
+    // purpose, because a looser parser reads a "6,06" that lost its comma as
+    // six hundred euros. So the layout artefact is undone here instead.
+    private function parseFigure(string $raw, ?string $currencyCode = null): int
+    {
+        return $this->amounts->parse(str_replace([' ', "\u{00A0}", "\u{202F}"], '', $raw), $currencyCode);
     }
 
     // The ledger stores what is owed as a negative balance, so the marker maps
