@@ -6,6 +6,7 @@ namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Throwable;
 
 // Lives in Public so Core's DoctorCommand reaches it without crossing into
@@ -22,25 +23,17 @@ final readonly class SplitSumHealthCheck
     // side of the equation can move on its own.
     private const int REPORT_AT_MOST = 20;
 
-    // The sum names the currency it counts with a where, and a leg group in a
-    // currency its transaction is not denominated in is caught beside it
-    // rather than added to it: minor units of two currencies are not a figure.
-    // Mirrors CategoryAttribution::PARENT_HOLDS_THE_AMOUNT, read the other way.
-    private const string LEGS_DISAGREE = <<<'SQL'
-        EXISTS (SELECT 1 FROM transaction_splits AS leg WHERE leg.transaction_id = transactions.id)
-        AND (
-            COALESCE((
-                SELECT SUM(leg.settled_amount_minor) FROM transaction_splits AS leg
-                 WHERE leg.transaction_id = transactions.id
-                   AND leg.settled_currency = transactions.settled_currency
-            ), 0) <> transactions.settled_amount_minor
-            OR EXISTS (
-                SELECT 1 FROM transaction_splits AS leg
-                 WHERE leg.transaction_id = transactions.id
-                   AND leg.settled_currency <> transactions.settled_currency
-            )
-        )
-        SQL;
+    // A split whose legs do not add up, asked of the same seam the two
+    // category roll-ups ask, so this probe and the surfaces it reports on can
+    // never disagree about which rows are broken.
+    /**
+     * @return literal-string
+     */
+    private static function legsDisagree(): string
+    {
+        return 'EXISTS (SELECT 1 FROM transaction_splits AS leg WHERE leg.transaction_id = transactions.id)'
+            .' AND NOT '.SplitLegs::addUpToTheParent('transactions.');
+    }
 
     public function __construct(private DatabaseManager $db) {}
 
@@ -109,7 +102,7 @@ final readonly class SplitSumHealthCheck
         }
 
         $rows = $connection->table('transactions')
-            ->whereRaw(self::LEGS_DISAGREE)
+            ->whereRaw(self::legsDisagree())
             ->orderBy('id')
             ->limit(self::REPORT_AT_MOST)
             ->get(['id']);
