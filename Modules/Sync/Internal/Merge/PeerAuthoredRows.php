@@ -6,6 +6,8 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
+use Modules\Core\Public\Support\SchemaShape;
 use Modules\Sync\Internal\OpLog\OpType;
 
 // What the durable log says a peer wrote, and which row here answers for it.
@@ -20,12 +22,24 @@ final readonly class PeerAuthoredRows
         private RowOwnership $ownership,
     ) {}
 
+    // Asked before the filter reads it. An absent self_retired_at is parsed as
+    // a string literal, which makes whereNull always false and answers "no
+    // peers wrote anything" -- a repair that then finds nothing to do, quietly.
     /**
      * @return list<string>
+     *
+     * @throws ColumnNotDeclaredException
      */
     public function devices(int $userId): array
     {
-        return $this->textColumn($this->db->connection()->table('device_registry')
+        $connection = $this->db->connection();
+        $missing = SchemaShape::missingColumns($connection, 'device_registry', ['self_retired_at']);
+
+        if ($missing !== []) {
+            throw ColumnNotDeclaredException::on('device_registry', $missing);
+        }
+
+        return $this->textColumn($connection->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', 0)
             ->whereNull('self_retired_at')
