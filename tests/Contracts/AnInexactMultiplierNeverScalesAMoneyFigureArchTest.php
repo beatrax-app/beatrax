@@ -18,6 +18,10 @@ use Tests\Contracts\Support\BackendSourceFiles;
 // have to. CrossCurrencyTotal::percentOf() takes a whole percent and answers
 // in integers.
 const INEXACT_MULTIPLIER_PINS = [
+    'Modules/Counterparties/Resources/views/livewire/profile-tabs/bank.blade.php' => [
+        'reason' => 'the quotient decides a bar width in percent and nothing else — the figure beside it is rendered exactly through Money::ofMinor, and the divisor is floored at 1 so the division is always defined',
+        'proves' => '/width: \{\{ \$pct \}\}%/',
+    ],
     'Modules/Recurring/Internal/Queries/RecurringSeriesProjector.php' => [
         'reason' => 'a float multiplier that only ever builds an ORDER BY key and its matching cursor, so the ordering is what it decides and no figure is stored or shown from it',
         'proves' => '/ORDER BY|orderBy/',
@@ -30,6 +34,12 @@ const INEXACT_MULTIPLIER_NAMES_MONEY = '/[Aa]mount|[Mm]inor|[Bb]alance|magnitude
 // Truncation back to an integer is what makes the double's error a stored cent
 // rather than an intermediate nobody keeps.
 const INEXACT_MULTIPLIER_TRUNCATES = '/\(int\)|intdiv/';
+
+// The third spelling: a quotient of two integers is a float in PHP unless it
+// divides evenly, and 2/100 is 0.02, which no double holds. Built at runtime it
+// carries no T_DNUMBER and names no const float, so both rules above walk past
+// it while the figure it scales is cast straight back to a stored one.
+const INEXACT_MULTIPLIER_RUNTIME_QUOTIENT = '#\*\s*\(\s*[^()]*/[^()]*\)|\(\s*[^()]*/[^()]*\)\s*\*#';
 
 /**
  * Every `const float` the tree declares, by name. A site referencing one from
@@ -119,6 +129,10 @@ function inexactMultiplierScalesMoney(array $statement, array $floatConstants): 
     }
 
     if ($statement['hasFloat']) {
+        return true;
+    }
+
+    if (PatternScan::matches(INEXACT_MULTIPLIER_RUNTIME_QUOTIENT, $statement['text'])) {
         return true;
     }
 

@@ -16,6 +16,7 @@ use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -469,7 +470,11 @@ final readonly class PaypalFundingResolver
      */
     private function bestFundingCandidate(stdClass $row, User $user, string $readableMerchant, int $settledMinor, string $settledCurrency, CarbonImmutable $postedAt): ?array
     {
-        $amountBand = (int) round($settledMinor * (self::AMOUNT_BAND_PERCENT / 100));
+        // percentOf, not $minor * ($percent / 100): int/int is a float in PHP
+        // (2/100 is 0.02, which no double holds exactly), and the product is cast
+        // straight back to a stored figure. Agrees with the old spelling over
+        // 4,025,716 magnitudes at 2%, so this swaps the arithmetic, not the band.
+        $amountBand = CrossCurrencyTotal::percentOf($settledMinor, self::AMOUNT_BAND_PERCENT);
 
         // `posted_at` is a DATE column, so both bounds are dates too: as
         // strings '2026-04-14' < '2026-04-14 00:00:00', which cut the window
