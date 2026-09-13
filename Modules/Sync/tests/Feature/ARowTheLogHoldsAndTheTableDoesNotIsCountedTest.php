@@ -21,21 +21,21 @@ uses(RefreshDatabase::class);
 // op_log_row_aliases and op_log_quarantine hold nothing for the table. Every
 // one of the fifteen ids IS in use — by a different counterparty.
 
-const HELD_LOCAL_DEVICE = 'the-mac-that-classified-first';
+const LOG_HOLDS_LOCAL_DEVICE = 'the-mac-that-classified-first';
 
-const HELD_PEER_DEVICE = 'the-phone-that-classified-first';
+const LOG_HOLDS_PEER_DEVICE = 'the-phone-that-classified-first';
 
-function heldUser(): User
+function logHoldsUser(): User
 {
     return User::query()->create([
-        'username' => 'held-'.bin2hex(random_bytes(4)),
+        'username' => 'logholds-'.bin2hex(random_bytes(4)),
         'password' => 'fixture-password-12chars',
         'period_start_day' => 1,
     ]);
 }
 
 /** @return array<string, mixed> */
-function heldCounterparty(string $slug, string $writtenAt): array
+function logHoldsCounterparty(string $slug, string $writtenAt): array
 {
     return [
         'type' => 'merchant',
@@ -49,9 +49,9 @@ function heldCounterparty(string $slug, string $writtenAt): array
     ];
 }
 
-function heldWriter(int $userId, string $deviceId): OpLogWriter
+function logHoldsWriter(int $userId, string $deviceId): OpLogWriter
 {
-    $keypair = $deviceId === HELD_PEER_DEVICE ? test()->peerKeypair : test()->localKeypair;
+    $keypair = $deviceId === LOG_HOLDS_PEER_DEVICE ? test()->peerKeypair : test()->localKeypair;
 
     /** @var OpLogWriter $writer */
     $writer = app(OpLogWriter::class, [
@@ -65,7 +65,7 @@ function heldWriter(int $userId, string $deviceId): OpLogWriter
 }
 
 /** @return array<string, int> */
-function heldCensus(int $userId): array
+function logHoldsCensus(int $userId): array
 {
     /** @var StrandedCreates $stranded */
     $stranded = app(StrandedCreates::class);
@@ -73,11 +73,11 @@ function heldCensus(int $userId): array
     return $stranded->census($userId)['stranded'];
 }
 
-function heldReplay(DatabaseManager $db, int $userId): void
+function logHoldsReplay(DatabaseManager $db, int $userId): void
 {
     $keys = [
-        HELD_PEER_DEVICE => bin2hex(sodium_crypto_sign_publickey(test()->peerKeypair)),
-        HELD_LOCAL_DEVICE => bin2hex(sodium_crypto_sign_publickey(test()->localKeypair)),
+        LOG_HOLDS_PEER_DEVICE => bin2hex(sodium_crypto_sign_publickey(test()->peerKeypair)),
+        LOG_HOLDS_LOCAL_DEVICE => bin2hex(sodium_crypto_sign_publickey(test()->localKeypair)),
     ];
 
     $entries = $db->connection()->table('op_log_entries')
@@ -104,7 +104,7 @@ function heldReplay(DatabaseManager $db, int $userId): void
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-09-10 22:48:52');
 
-    $this->user = heldUser();
+    $this->user = logHoldsUser();
     $this->peerKeypair = sodium_crypto_sign_keypair();
     $this->localKeypair = sodium_crypto_sign_keypair();
 
@@ -114,11 +114,11 @@ beforeEach(function (): void {
 
     $this->localId = (int) $db->connection()->table('counterparties')->insertGetId([
         'user_id' => (int) $this->user->id,
-        ...heldCounterparty('albert-heijn', '2026-08-01 18:12:03'),
+        ...logHoldsCounterparty('albert-heijn', '2026-08-01 18:12:03'),
     ]);
 
-    heldWriter((int) $this->user->id, HELD_LOCAL_DEVICE)
-        ->writeCreateRow('counterparties', $this->localId, heldCounterparty('albert-heijn', '2026-08-01 18:12:03'));
+    logHoldsWriter((int) $this->user->id, LOG_HOLDS_LOCAL_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('albert-heijn', '2026-08-01 18:12:03'));
 });
 
 afterEach(fn () => CarbonImmutable::setTestNow());
@@ -128,23 +128,23 @@ afterEach(fn () => CarbonImmutable::setTestNow());
 it('counts a create whose id is here holding a different row', function (): void {
     $userId = (int) $this->user->id;
 
-    heldWriter($userId, HELD_PEER_DEVICE)
-        ->writeCreateRow('counterparties', $this->localId, heldCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
 
     expect($this->db->connection()->table('counterparties')->where('id', $this->localId)->exists())->toBeTrue(
         'The id is free, so this is not the shape a primary-key check misses.',
     );
 
-    expect(heldCensus($userId))->toBe(['counterparties' => 1]);
+    expect(logHoldsCensus($userId))->toBe(['counterparties' => 1]);
 });
 
 it('counts a create whose id no row is at', function (): void {
     $userId = (int) $this->user->id;
 
-    heldWriter($userId, HELD_PEER_DEVICE)
-        ->writeCreateRow('counterparties', 9001, heldCounterparty('netflix', '2026-02-02 08:30:00'));
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', 9001, logHoldsCounterparty('netflix', '2026-02-02 08:30:00'));
 
-    expect(heldCensus($userId))->toBe(['counterparties' => 1]);
+    expect(logHoldsCensus($userId))->toBe(['counterparties' => 1]);
 });
 
 // The first legitimate absence: the row is here under an id this device minted,
@@ -152,13 +152,13 @@ it('counts a create whose id no row is at', function (): void {
 it('does not count a create the applier re-homed', function (): void {
     $userId = (int) $this->user->id;
 
-    heldWriter($userId, HELD_PEER_DEVICE)
-        ->writeCreateRow('counterparties', $this->localId, heldCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
 
-    heldReplay($this->db, $userId);
+    logHoldsReplay($this->db, $userId);
 
     expect($this->db->connection()->table('counterparties')->where('user_id', $userId)->count())->toBe(2)
-        ->and(heldCensus($userId))->toBe([]);
+        ->and(logHoldsCensus($userId))->toBe([]);
 });
 
 // The second: a row deliberately gone. The tombstone is the record of that, and
@@ -166,11 +166,11 @@ it('does not count a create the applier re-homed', function (): void {
 it('does not count a create a tombstone answers for', function (): void {
     $userId = (int) $this->user->id;
 
-    $writer = heldWriter($userId, HELD_PEER_DEVICE);
-    $writer->writeCreateRow('counterparties', 9002, heldCounterparty('hema', '2026-02-02 08:30:00'));
+    $writer = logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE);
+    $writer->writeCreateRow('counterparties', 9002, logHoldsCounterparty('hema', '2026-02-02 08:30:00'));
     $writer->writeDelete('counterparties', 9002);
 
-    expect(heldCensus($userId))->toBe([]);
+    expect(logHoldsCensus($userId))->toBe([]);
 });
 
 // The third: two devices that computed one id for one row. Nothing special is
@@ -179,10 +179,10 @@ it('does not count a create a tombstone answers for', function (): void {
 it('does not count two devices that minted one id for one row', function (): void {
     $userId = (int) $this->user->id;
 
-    heldWriter($userId, HELD_PEER_DEVICE)
-        ->writeCreateRow('counterparties', $this->localId, heldCounterparty('albert-heijn', '2026-08-01 19:45:00'));
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('albert-heijn', '2026-08-01 19:45:00'));
 
-    expect(heldCensus($userId))->toBe([]);
+    expect(logHoldsCensus($userId))->toBe([]);
 });
 
 // A natural key is not frozen at creation. Reading only the create's own value
@@ -190,20 +190,20 @@ it('does not count two devices that minted one id for one row', function (): voi
 it('does not count a row whose natural key was edited after it arrived', function (): void {
     $userId = (int) $this->user->id;
 
-    heldWriter($userId, HELD_PEER_DEVICE)
-        ->writeCreateRow('counterparties', $this->localId, heldCounterparty('albert-heijn', '2026-08-01 19:45:00'));
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('albert-heijn', '2026-08-01 19:45:00'));
 
     $this->db->connection()->table('counterparties')->where('id', $this->localId)->update(['slug' => 'ah-to-go']);
-    heldWriter($userId, HELD_PEER_DEVICE)->writeSet('counterparties', $this->localId, 'slug', 'ah-to-go');
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)->writeSet('counterparties', $this->localId, 'slug', 'ah-to-go');
 
-    expect(heldCensus($userId))->toBe([]);
+    expect(logHoldsCensus($userId))->toBe([]);
 });
 
 it('counts nothing on a log every create of which has its row', function (): void {
-    expect(heldCensus((int) $this->user->id))->toBe([]);
+    expect(logHoldsCensus((int) $this->user->id))->toBe([]);
 });
 
-function heldHealthCheck(): StrandedCreateHealthCheck
+function logHoldsHealthCheck(): StrandedCreateHealthCheck
 {
     /** @var StrandedCreateHealthCheck $check */
     $check = app(StrandedCreateHealthCheck::class);
@@ -217,12 +217,12 @@ function heldHealthCheck(): StrandedCreateHealthCheck
 it('names the count and the table and prints no value from the row', function (): void {
     $userId = (int) $this->user->id;
 
-    heldWriter($userId, HELD_PEER_DEVICE)
-        ->writeCreateRow('counterparties', $this->localId, heldCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
+    logHoldsWriter($userId, LOG_HOLDS_PEER_DEVICE)
+        ->writeCreateRow('counterparties', $this->localId, logHoldsCounterparty('kpn-mobiel', '2026-02-02 08:30:00'));
 
-    $message = heldHealthCheck()->message();
+    $message = logHoldsHealthCheck()->message();
 
-    expect(heldHealthCheck()->severity())->toBe('warning')
+    expect(logHoldsHealthCheck()->severity())->toBe('warning')
         ->and($message)->toContain('1 row the op log holds and no table has', 'counterparties 1')
         ->and($message)->not->toContain('kpn-mobiel')
         ->and($message)->not->toContain('Kpn-mobiel');
@@ -231,6 +231,6 @@ it('names the count and the table and prints no value from the row', function ()
 // A pass that reports silence is unreadable: one that stopped looking says the
 // same as one that looked at everything, so the row carries what it examined.
 it('says how many rows it checked when none of them is missing', function (): void {
-    expect(heldHealthCheck()->severity())->toBe('ok')
-        ->and(heldHealthCheck()->message())->toBe('1 row the op log claims, all of them here');
+    expect(logHoldsHealthCheck()->severity())->toBe('ok')
+        ->and(logHoldsHealthCheck()->message())->toBe('1 row the op log claims, all of them here');
 });
