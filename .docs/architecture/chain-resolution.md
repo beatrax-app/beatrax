@@ -106,7 +106,17 @@ first that matches:
    `counterparty_name`**, not `counterparty_normalized`: that column is a
    keyed one-way digest for an encrypted user, and two digests of one
    merchant spelled two ways are as far apart as two unrelated ones, which
-   would have taken every candidate below the 0.6 floor.
+   would have taken every candidate below the 0.6 floor. The distance is
+   counted in CHARACTERS, through `Core::EditDistance`, and not in the
+   bytes `levenshtein()` counts: the merchant term divides that distance
+   by a character length, so a name outside ASCII was measured two and
+   three bytes to the letter against a threshold stated in letters.
+   `FingerprintComposer::normalize()` strips diacritics but keeps every
+   `\p{L}`, so Greek, Cyrillic and CJK names reach the comparison whole —
+   and the same four-character difference that scores 0.636 as
+   "netflix"/"netflix int" scored 0.364 in Greek and was dropped.
+   `Modules/Chains/tests/Unit/Resolvers/AMerchantWrittenInAnotherScriptIsComparedTheSameWayTest.php`
+   pins the two scripts against each other.
 
 Every arm computes the same `evidence.signature_hash` —
 `sha256(counterparty_normalized|funding-account IBAN)`, over the value the

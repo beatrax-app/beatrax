@@ -16,6 +16,7 @@ use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\EditDistance;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\TransactionType;
@@ -531,7 +532,7 @@ final readonly class PaypalFundingResolver
                 continue;
             }
 
-            $merchantSim = $this->levenshteinSimilarity($readableMerchant, $candidateMerchant);
+            $merchantSim = EditDistance::similarity($readableMerchant, $candidateMerchant);
             if ($merchantSim < self::FUZZY_MIN_MERCHANT_SIMILARITY) {
                 continue;
             }
@@ -627,7 +628,7 @@ final readonly class PaypalFundingResolver
     // The bank's own spelling, normalised, so the similarity compares names
     // rather than digests. NULL — never '' — when the row carries no name or
     // this process holds no key for it: an empty string is a value, and
-    // levenshteinSimilarity('', '') is a perfect 1.0 rather than no answer.
+    // EditDistance::similarity('', '') is a perfect 1.0 rather than no answer.
     private function readableMerchant(stdClass $row, User $user): ?string
     {
         $stored = self::toString($row->counterparty_name ?? null);
@@ -646,17 +647,6 @@ final readonly class PaypalFundingResolver
         $normalized = $this->fingerprints->normalize($plain);
 
         return $normalized === '' ? null : $normalized;
-    }
-
-    private function levenshteinSimilarity(string $a, string $b): float
-    {
-        $maxLen = max(mb_strlen($a), mb_strlen($b));
-        if ($maxLen === 0) {
-            return 1.0;
-        }
-        $dist = levenshtein($a, $b);
-
-        return max(0.0, 1.0 - ($dist / $maxLen));
     }
 
     // ConfirmChainLink auto-promotes every remaining candidate once three
