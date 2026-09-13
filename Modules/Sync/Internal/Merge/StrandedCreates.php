@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Merge;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
+use Modules\Sync\Internal\Exceptions\CensusColumnMissingException;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineOutcome;
 
@@ -19,6 +20,16 @@ use Modules\Sync\Internal\OpLog\QuarantineOutcome;
  */
 final readonly class StrandedCreates
 {
+    // Every column this census names, and the reason it is written down. SQLite
+    // reads a double-quoted name matching no column as a string LITERAL, so a
+    // predicate on a column whose migration has not run is not an error: it is
+    // silently true, and `self_retired_at` absent passed every peer as self.
+    private const array REQUIRED_COLUMNS = [
+        'op_log_entries' => ['id', 'user_id', 'table_name', 'pk', 'device_id', 'op_type', 'field', 'value', 'hlc_l', 'hlc_c'],
+        'op_log_quarantine' => ['user_id', 'table_name', 'pk', 'device_id', 'op_type', 'reason'],
+        'device_registry' => ['user_id', 'device_id', 'is_self', 'self_retired_at'],
+    ];
+
     public function __construct(
         private DatabaseManager $db,
         private PeerRowAliases $aliases,
@@ -30,9 +41,13 @@ final readonly class StrandedCreates
     // would read the same whether one row or forty were missing.
     /**
      * @return array{checked: int, unplaced: array<string, int>, removedHere: array<string, int>, held: array<string, int>}
+     *
+     * @throws CensusColumnMissingException
      */
     public function census(int $userId): array
     {
+        $this->assertEveryColumnIsThere();
+
         $checked = 0;
         $causes = ['unplaced' => [], 'removedHere' => [], 'held' => []];
 
@@ -52,6 +67,25 @@ final readonly class StrandedCreates
             'removedHere' => $causes['removedHere'],
             'held' => $causes['held'],
         ];
+    }
+
+    // Refused rather than guessed. The window between a build landing and its
+    // migration running is an ordinary state, and in it every answer below is
+    // wrong in a direction nothing reports -- so the census declines to give one.
+    /**
+     * @throws CensusColumnMissingException
+     */
+    private function assertEveryColumnIsThere(): void
+    {
+        $schema = $this->db->connection()->getSchemaBuilder();
+
+        foreach (self::REQUIRED_COLUMNS as $table => $columns) {
+            $missing = array_values(array_diff($columns, $schema->getColumnListing($table)));
+
+            if ($missing !== []) {
+                throw CensusColumnMissingException::of($table, $missing);
+            }
+        }
     }
 
     /**
