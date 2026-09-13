@@ -176,6 +176,10 @@ it('draws that day identically whichever month is on screen', function (): void 
     expect(array_map(static fn ($e): string => $e->name, $inAugustGrid->entries))->toBe([GEDGE_NAME])
         ->and(array_map(static fn ($e): string => $e->name, $inSeptember->entries))->toBe([GEDGE_NAME])
         ->and($inAugustGrid->eodBalanceMinor)->toBe($inSeptember->eodBalanceMinor)
+        // Both balance figures, not one: the panel prints a start of day as
+        // well as an end, and the pair was compared on the end alone while the
+        // start read "—" on whichever grid the cell happened to open.
+        ->and($inAugustGrid->sodBalanceMinor)->toBe($inSeptember->sodBalanceMinor)
         ->and($inAugustGrid->isComputing)->toBe($inSeptember->isComputing);
 });
 
