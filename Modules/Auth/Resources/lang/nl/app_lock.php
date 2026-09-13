@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'Pincode moet :min tot :max cijfers zijn — alleen cijfers.',
     'error_pin_mismatch' => 'Pincodes komen niet overeen. Probeer het opnieuw.',
     'error_pin_required' => 'Voer je pincode in.',
-    'error_pin_incorrect' => 'Onjuiste pincode.',
     'error_account_password_required' => 'Voer je accountwachtwoord in.',
     'error_account_password' => 'Onjuist accountwachtwoord.',
     'change_pin_success' => 'Je encryptiesleutel is opnieuw beveiligd met je nieuwe pincode.',

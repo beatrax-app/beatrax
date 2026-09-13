@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Tavoite: :name',
         'category_goal' => 'Kategorian :name tavoite',
+        'schedule' => 'Ajastettu tapahtuma: :name',
         'schedule_untitled' => 'Nimetön ajastettu tapahtuma',
+        'saved_report' => 'Tallennettu raportti: :name',
         'transaction' => 'Tapahtuma: :name · :date · :amount',
         'transaction_unnamed' => 'Tapahtuma',
         'amount_update' => 'Tapahtuman summan päivitys',

@@ -65,7 +65,6 @@ return [
     'error_pin_digits' => 'PIN mora imeti :min do :max števk — samo številke.',
     'error_pin_mismatch' => 'PIN-a se ne ujemata. Poskusi znova.',
     'error_pin_required' => 'Vnesi svoj PIN.',
-    'error_pin_incorrect' => 'Napačen PIN.',
     'error_account_password_required' => 'Vnesi geslo svojega računa.',
     'error_account_password' => 'Napačno geslo računa.',
     'change_pin_success' => 'Tvoj šifrirni ključ je znova zavarovan z novim PIN-om.',

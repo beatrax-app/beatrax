@@ -272,6 +272,18 @@ final class PinVerificationService
         return $this->clock->now() < $until ? $until : null;
     }
 
+    // What the meter has left, from the class that keeps it. Every screen that
+    // names a remaining count reads it here, so the cap and the number shown
+    // beside it cannot drift apart.
+    public function remainingAttempts(int $userId): ?int
+    {
+        $row = $this->configRow($userId);
+
+        return $row === null
+            ? null
+            : max(0, self::HARD_CAP - $this->currentFailedAttempts($row));
+    }
+
     private function handleFailure(int $userId, int $currentAttempts): void
     {
         $newAttempts = $currentAttempts + 1;

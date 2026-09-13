@@ -65,7 +65,6 @@ return [
     'error_pin_digits' => 'PIN-kood peab olema :min–:max numbrit — ainult numbrid.',
     'error_pin_mismatch' => 'PIN-koodid ei kattu. Proovi uuesti.',
     'error_pin_required' => 'Sisesta oma PIN-kood.',
-    'error_pin_incorrect' => 'Vale PIN-kood.',
     'error_account_password_required' => 'Sisesta oma konto parool.',
     'error_account_password' => 'Vale konto parool.',
     'change_pin_success' => 'Sinu krüpteerimisvõti on uue PIN-koodiga uuesti kaitstud.',

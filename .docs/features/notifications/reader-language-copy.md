@@ -320,12 +320,24 @@ to `system` or `user`, which the seeder sets and `PromoteDiscoveredSender` never
 does, and which a create arriving over sync does not carry at all (it takes the
 column default, `user`).
 
-`AStoredSentenceIsReadBackOnlyWhereTheRowSaysWeWroteItArchTest` keeps the census:
-every `StoredCopy::read()` site names what outside the value proves the app wrote
-it. `migration_staging_unmapped_items.display_label` is the one still ungated —
-it has no such column, and `ActualParser` writes two labels straight off the
-reader's Actual file — and the baseline of ungated sites is a ratchet that may
-fall and may not rise.
+A column is not the only thing that can settle it. `migration_staging_unmapped_items`
+has no `source` of its own, and giving it one would be a schema change on a
+**synced** table to record the provenance of a single column's text — while
+leaving the copy defect in place, because a bare third-party string on the
+preview is the one item in that list with no sentence of ours around it. The
+module already had the other answer: `UnmappedItemReporter::transactionLabel()`
+carries a payee name as the `:name` **value** of a line of ours, and so do
+`label.goal` and `label.category_goal`. `ActualParser` was the only site that
+did not, and it now writes `label.schedule` and `label.saved_report` the same
+way. So the gate is the writer: every value that reaches that column is wrapped
+by `StoredCopy::of()` where it is written, and nothing third-party is ever
+stored raw.
+
+`AStoredSentenceIsReadBackOnlyWhereTheRowSaysWeWroteItArchTest` keeps both halves
+of the census: every `StoredCopy::read()` site names what outside the value
+proves the app wrote it, every write into that column is held to naming
+`StoredCopy::of()`, and the baseline of ungated sites is a ratchet that may fall
+and may not rise. It stands at zero.
 
 ### Packed in, or riding beside
 

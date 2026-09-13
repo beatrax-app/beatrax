@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Ціль: :name',
         'category_goal' => 'Ціль для :name',
+        'schedule' => 'Запланована транзакція: :name',
         'schedule_untitled' => 'Запланована транзакція без назви',
+        'saved_report' => 'Збережений звіт: :name',
         'transaction' => 'Транзакція: :name · :date · :amount',
         'transaction_unnamed' => 'Транзакція',
         'amount_update' => 'Оновлення суми транзакції',

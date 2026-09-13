@@ -141,7 +141,11 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
             ['rate', 'updated_at'],
         );
 
-        $status->clear($this->userId);
+        // Recorded rather than merely cleared, so the screen waiting on this job
+        // has an answer to read. It used to watch for the write itself, which is
+        // a max() over a column no index covers — one full scan of the rate
+        // table per poll, fifteen of them, on the settings screen.
+        $status->recordSuccess($this->userId);
     }
 
     // Laravel calls this as a bare `$command->failed($e)` with no container

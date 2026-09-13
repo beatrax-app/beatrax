@@ -225,9 +225,10 @@ which must hold:
    the first charge of every merchant the user went on to use again was
    disqualified by its own successors, and a full backfill produced zero
    `first_time` alerts over a dataset full of new payees. Same-day siblings
-   cannot be ordered by date, so the `id <` tie-break settles those — the same
-   convention `DuplicateChargeDetector`'s backward window uses, which is what
-   makes exactly one charge of a same-day pair the first one.
+   cannot be ordered by date, so `Internal\Support\BackwardOnly` settles those
+   — the same comparison `DuplicateChargeDetector`'s backward window uses,
+   which is what makes exactly one charge of a same-day pair the first one,
+   and the same one on both devices.
 
 2. the charge is at or above p95 of the user's *overall* same-direction,
    same-settled-currency distribution over the same 12-month window.
@@ -266,28 +267,39 @@ monthly repeats, which are not duplicates at all.
 
 Two properties make the window safe to leave that wide:
 
-- **It looks backward only, on the date.** A sibling qualifies when its
-  `posted_at` is strictly earlier than the anchor's; the `id <` tie-break
-  applies *only* to a sibling sharing the anchor's date, where the date
-  alone cannot order the pair. A genuine double-charge therefore fires
-  exactly once, on the later-dated charge, no matter which evaluation path
-  (reactive import, backfill, safety-net sweep) reaches the rows first, and
-  no matter what order they were inserted in. A symmetric window would open
-  two alerts for one incident, and an order-dependent one would open a
-  different number depending on the import.
+- **It looks backward only, on a key both devices compute.** A sibling
+  qualifies when it sorts strictly before the anchor under
+  `Internal\Support\BackwardOnly::COMPARISON` — the row-value spelling of
+  `Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS`. A genuine
+  double-charge therefore fires exactly once, on the later charge, no matter
+  which evaluation path (reactive import, backfill, safety-net sweep) reaches
+  the rows first, and no matter what order they were inserted in. A symmetric
+  window would open two alerts for one incident, and an order-dependent one
+  would open a different number depending on the import.
 
-  Applying `id <` to every row instead of only the same-day ones is not a
-  narrower version of the same rule, it is a different one: it asks the
-  sibling to be older *by insertion*. Many bank CSV exports are newest-first
+  Ordering by `posted_at` alone cannot do it, because the real case is a
+  double-tap the bank booked on one date. Ordering by `id` beneath it cannot
+  either, in two separate ways. Applying `id <` to *every* row asks the
+  sibling to be older **by insertion**: many bank CSV exports are newest-first
   and a backfilled older statement always is, so the earlier-dated charge
-  routinely carries the higher id — and then neither charge can see the
-  other, because the later one is excluded by the id and the earlier one is
-  outside the backward window. The pair produces no alert at all.
+  routinely carries the higher id, and then neither charge can see the other
+  and the pair produces no alert at all. Applying it to same-day rows only
+  fixed that, but left `id` deciding which rows were **candidates**, and
+  `transactions.id` is a per-device autoincrement: two devices called
+  different captures the duplicate and the pair held three alert rows for one
+  group. The measurement is in
+  [an ordering that picks](../../architecture/an-ordering-that-picks.md#the-duplicate-detector-and-why-it-was-not-a-clause-swap).
 
-  Among qualifying siblings the detector takes the NEAREST one
-  (`posted_at DESC, id DESC`). With three or more matches an unordered
-  `value('id')` left the series-membership test below reading whichever row
-  the scan happened to reach first.
+  What orders a same-day group instead is the rest of the dedup tuple —
+  `booked_at`, then the amount, currency and merchant, then
+  `occurrence_ordinal`, which is *which* capture of an identical tuple the row
+  is, and last the account's IBAN. Every one of those is a value both devices
+  hold.
+
+  Among qualifying siblings the detector takes the NEAREST one, ordering by
+  that same key. With three or more matches an unordered `value('id')` left
+  the series-membership test below reading whichever row the scan happened to
+  reach first.
 - **Both-on-a-series is excluded.** A weekly or fortnightly subscription
   falls inside seven days, so the detector resolves series membership for
   the candidate and the sibling through Recurring's

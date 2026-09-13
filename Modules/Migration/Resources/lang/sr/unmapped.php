@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Cilj: :name',
         'category_goal' => 'Cilj za :name',
+        'schedule' => 'Zakazana transakcija: :name',
         'schedule_untitled' => 'Neimenovana zakazana transakcija',
+        'saved_report' => 'Sačuvani izveštaj: :name',
         'transaction' => 'Transakcija: :name · :date · :amount',
         'transaction_unnamed' => 'Transakcija',
         'amount_update' => 'Ažuriranje iznosa transakcije',

@@ -73,6 +73,16 @@ function seedDesktopSelfDevice(int $userId): void
     DeviceIdentityTestHarness::place($userId);
 }
 
+function syncListenerFreePort(): int
+{
+    $probe = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($probe)->not->toBeFalse();
+    $name = (string) stream_socket_get_name($probe, false);
+    fclose($probe);
+
+    return (int) explode(':', $name)[1];
+}
+
 // The daemon used to start on every desktop launch. With no device identity
 // nothing could dial in, so the app bound a socket for a feature the user may
 // never turn on, and a crash-looping listener filled the log of an idle app.
@@ -99,6 +109,11 @@ it('starts the listener once a device identity exists', function (): void {
     ]);
 
     seedDesktopSelfDevice((int) $user->id);
+
+    // A port this run owns. Left at the configured one, the liveness dial lands
+    // on the developer's own running desktop and this case reads a branch from
+    // the machine it happens to be on.
+    config()->set('sync.port', syncListenerFreePort());
 
     $logger = syncListenerSpyLogger();
 

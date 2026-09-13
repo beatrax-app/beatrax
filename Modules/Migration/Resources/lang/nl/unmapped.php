@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Doel: :name',
         'category_goal' => 'Doel voor :name',
+        'schedule' => 'Geplande transactie: :name',
         'schedule_untitled' => 'Naamloze geplande transactie',
+        'saved_report' => 'Opgeslagen rapport: :name',
         'transaction' => 'Transactie: :name · :date · :amount',
         'transaction_unnamed' => 'Transactie',
         'amount_update' => 'Bijwerking van transactiebedrag',

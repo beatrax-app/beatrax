@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Mērķis: :name',
         'category_goal' => 'Mērķis kategorijai :name',
+        'schedule' => 'Plānots darījums: :name',
         'schedule_untitled' => 'Nenosaukts plānotais darījums',
+        'saved_report' => 'Saglabāta atskaite: :name',
         'transaction' => 'Darījums: :name · :date · :amount',
         'transaction_unnamed' => 'Darījums',
         'amount_update' => 'Darījuma summas atjauninājums',

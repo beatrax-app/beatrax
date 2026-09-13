@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'Codul PIN trebuie să aibă între :min și :max cifre — doar cifre.',
     'error_pin_mismatch' => 'Codurile PIN nu coincid. Încearcă din nou.',
     'error_pin_required' => 'Introdu codul PIN.',
-    'error_pin_incorrect' => 'Cod PIN incorect.',
     'error_account_password_required' => 'Introdu parola contului.',
     'error_account_password' => 'Parola contului este incorectă.',
     'change_pin_success' => 'Cheia ta de criptare a fost resecurizată cu noul cod PIN.',

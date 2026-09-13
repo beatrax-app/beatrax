@@ -211,6 +211,26 @@ nothing clips, nothing overflows, and every answer clears 44px at both widths.
 `Modules/Core/tests/Feature/AConfirmStripKeepsItsAnswersReadableOnAPhoneTest.php`
 holds all three, whichever tag the strip stands in for.
 
+## A proof that can be guessed has to cost a wrong answer
+
+Shape three above asks for a credential, and a credential that can be typed
+repeatedly with no penalty is a guessing surface rather than a proof. An
+already-signed-in reader is not evidence to the contrary: an unlocked session
+is exactly what somebody holding a borrowed device has, which is the case the
+question was added for.
+
+So an action that asks for the app-lock PIN meters it. Every one of them goes
+through `PinVerificationService`, which keeps one counter per account rather
+than per screen — the panel that takes a guess is not the one that has to
+notice it is the tenth ([why](../features/auth/every-pin-check-is-metered.md)).
+A screen that asks for the **account password** instead inherits the sign-in
+limiter for the same reason.
+
+The observable consequence a screen has to be written for: a metered refusal is
+not always a wrong answer. Inside a backoff window a correct PIN is refused
+too, so the copy says how long the wait is rather than calling the reader
+wrong.
+
 ## Related
 
 - [An icon-only action says its verb on touch](an-icon-only-action-says-its-verb-on-touch.md)

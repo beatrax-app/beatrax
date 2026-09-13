@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Goal: :name',
         'category_goal' => ':name goal',
+        'schedule' => 'Schedule: :name',
         'schedule_untitled' => 'Untitled schedule',
+        'saved_report' => 'Saved report: :name',
         'transaction' => 'Transaction: :name · :date · :amount',
         'transaction_unnamed' => 'Transaction',
         'amount_update' => 'Transaction amount update',

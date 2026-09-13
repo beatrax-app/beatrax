@@ -8212,6 +8212,85 @@ The scope is deliberately `Internal/Transport` and not the module. It is where
 the iteration count is chosen by the machine on the other end of the socket
 rather than by this one, which is what turns a per-item line into a flood.
 
+## A liveness dial reported as a failed handshake
+
+The desktop shell supervises `relay:serve` as a managed child process, and a
+persistent child outlives the Electron run that spawned it — so before starting
+one, the shell asks whether the port is already held. A bind test was tried and
+rejected: it raced a starting `relay:serve` for the very port it was taking, and
+the daemon that lost exited. The dial that replaced it opens TCP and closes.
+
+That dial closes **before any ClientHello**, and the relay serves TLS. Its own
+listener — `Amp\Http\Server\Driver\SocketClientFactory`, handed our PSR
+logger — has nothing else to call a peer that connects and says nothing, so it
+writes `TLS negotiation failed: Unknown error` at **warning**. On the shipped
+desktop that was **5318 warnings in 20 hours**, peaking at 815 in one hour,
+every one of them loopback-to-loopback on the relay port.
+
+The cost is not noise. A hostile or misconfigured peer that fails a handshake
+produces a warning in the same words, at the same level, in the same volume
+band, so nothing about it stands out; and a level that fires hundreds of times
+an hour is one the reader — and the next diagnostic written against the log —
+learns to skip.
+
+### Why the handshake became the only dial
+
+`RelayListenerProcess` already made a second connection right behind the first:
+`portSpeaksTls()`, which completes a handshake, because a relay started before
+its certificate material existed serves plaintext under an `https://` endpoint
+and has to be restarted. That dial answers the weaker question too — a
+handshake that completes proves the port is held — so the plain connect in
+front of it was asking something already answered.
+
+It now runs first, and the plain connect is reached only when the handshake did
+not complete. In that state either nothing is listening, which logs nothing
+because there is no listener, or a plaintext relay is, which has no TLS to
+fail. Both are silent, and both are about to be spawned or respawned anyway.
+
+The steady state pays **one** dial instead of two: measured against the running
+desktop, a loopback connect is 0.54 ms and a TLS 1.3 handshake 29.88 ms
+(medians of 30), so the check goes from 30.42 ms to 29.88 ms. Completing a
+handshake is the expensive half, but it was already being paid.
+
+### What a genuine failure still looks like
+
+Against the same amphp listener, the three shapes are distinct in the message,
+which is how the 5318 were attributed without guessing:
+
+| what the client did | what the listener logs |
+|---|---|
+| closed before the ClientHello (the old dial) | `TLS negotiation failed: Unknown error` |
+| sent a malformed ClientHello | `…: error:0A00009F:SSL routines::length mismatch` |
+| spoke plain HTTP to the TLS port | `…: error:0A00009C:SSL routines::http request` |
+
+A real negotiation failure carries an OpenSSL error code because something was
+negotiated. The probe's carried none, because nothing was. Nothing is filtered
+and nothing is downgraded — the logger handed to `relay:serve` is untouched, so
+every one of these still warns.
+
+`ALivenessDialIsNotAFailedHandshakeTest` drives the real `SocketClientFactory`
+in a second process and pins all three rows: the supervisor's check leaves no
+warning, a client that closes early still earns one, and a malformed ClientHello
+still earns one. The first case fails if the plain connect is put back in front.
+
+### Filtering the line was the wrong seam
+
+`relay:serve` builds its server with `SocketHttpServer::createForDirectAccess($this->logger)`,
+so the logger is ours to wrap. It is the wrong place three times over: the
+suppression would apply to every client rather than to our own dial, silencing
+the scanner the line exists to report; it would key on a vendor message string,
+so an amphp release that rewords it restores the flood silently; and it would
+leave the daemon reporting something other than what happened on its socket.
+The cause is a client that opens TCP to a TLS port and says nothing, and that
+client is ours.
+
+A liveness signal that is not a socket was considered and does not answer the
+question. `ChildProcess::get()` asks the Electron runtime's own registry, which
+is exactly what a persistent child adopted from a previous Electron run is
+missing from — the case the port check exists for — and neither it nor a pidfile
+can say whether what holds the port serves the certificate the pairing QR
+advertises.
+
 ## Related
 
 - [Writing an arch invariant](arch-invariants.md) — the mechanics every rule in

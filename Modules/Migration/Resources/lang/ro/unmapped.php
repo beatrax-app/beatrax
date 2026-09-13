@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Obiectiv: :name',
         'category_goal' => 'Obiectiv pentru :name',
+        'schedule' => 'Tranzacție programată: :name',
         'schedule_untitled' => 'Tranzacție programată fără nume',
+        'saved_report' => 'Raport salvat: :name',
         'transaction' => 'Tranzacție: :name · :date · :amount',
         'transaction_unnamed' => 'Tranzacție',
         'amount_update' => 'Actualizare a sumei tranzacției',
