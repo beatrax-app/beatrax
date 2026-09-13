@@ -165,12 +165,18 @@ Dutch puts the symbol first, `€ -23,45` — so nothing here needs its own
 formatting, only to stop discarding what the row already carries.
 
 `abs()` elsewhere in this module is **correct and must not be swept**:
-`CounterpartyIndexRow.php:41-42` and
-`counterparty-profile.blade.php:57` wrap 12-month totals and per-month
+`CounterpartyIndexRow.php:47-48` and
+`counterparty-profile.blade.php:58` wrap 12-month totals and per-month
 averages, where "total spent with this counterparty" as a magnitude is
-the intended presentation, and `counterparty-index.blade.php:198` sizes
+the intended presentation, and `counterparty-index.blade.php:265` sizes
 a chart bar, which cannot be negative. The rule is the distinction: an
 aggregate may be shown as a magnitude, a single transaction may not.
+
+A magnitude that nothing else reports the direction of is readable; a
+magnitude beside a colour that reports it is not, and the index phone
+list was the second of those. It keeps the `abs()` and says the
+direction in a word — [how, and why only that one
+rendering](architecture.md#the-phone-list-is-the-one-rendering-that-says-which-way-the-total-went).
 
 ## What the user does with it
 

@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-// A worktree missing any one of these three reports failures that look like
-// code: no vendor/ is no pest at all, no public/build/ is 22
-// ViteManifestNotFoundException failures across 4 files, and no .env is a
-// key:generate that throws on a file that is not there. The script is the only
-// place that knowledge lives now, so dropping a line from it silently brings
-// the whole class of phantom failure back.
+// A worktree missing any one of these reports failures that look like code: no
+// vendor/ is no pest at all, no public/build/ is 22 ViteManifestNotFoundException
+// failures across 4 files, no .env is a key:generate that throws on a file that
+// is not there, and no mobile-app/vendor is a docs-symbol rule that SKIPS.
+
+// The last one is the quietest and is why this file is no longer named for
+// three: a skip reads as a pass to everything that counts tests, so that rule
+// ran only in CI for as long as the script left the second Composer root out.
 
 /**
  * The script without its comment lines. The header explains what each of the
@@ -42,6 +44,7 @@ it('brings all three of the things a fresh worktree lacks', function (): void {
         'vendor' => 'link_tree vendor',
         'public/build' => 'copy_tree public/build',
         '.env' => 'cp "$main/.env"',
+        'mobile-app/vendor' => 'link_tree mobile-app/vendor',
     ];
 
     $missing = [];
@@ -78,8 +81,11 @@ it('gives each worktree its own vendor/composer, which composer rewrites in plac
     // carry — so deleting the call passed, and deleting the check passed.
     // Watched both do it.
     $arms = [
-        // The call, which the definition below it does not match.
-        'it is never called' => "\nunshare_composer_metadata\n",
+        // The calls, which the definition below them does not match: it reads
+        // `unshare_composer_metadata() {`, so a needle carrying the argument is
+        // unique to a call the way the bare name never was.
+        'the repo root is never unshared' => "\nunshare_composer_metadata vendor\n",
+        'the mobile root is never unshared' => 'unshare_composer_metadata mobile-app/vendor',
         // The copy that actually breaks the links.
         'it copies nothing' => 'cp -R "$shared" "$shared.unshared"',
         // The check that refuses to hand back a worktree still sharing either

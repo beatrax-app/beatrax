@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Startadgangskode',
     'initial_password_hint' => 'Skriv en adgangskode, som personen kan læse højt eller taste én gang. Den bliver skiftet ud ved første login.',
     'confirm_initial_password' => 'Bekræft startadgangskode',
+    'owner_password_label' => 'Din kontoadgangskode',
     'submit' => 'Angiv startadgangskode',
 
     'error_mismatch' => 'Adgangskoderne er ikke ens.',

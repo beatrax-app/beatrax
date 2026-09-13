@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Başlangıç parolası',
     'initial_password_hint' => 'Yüksek sesle okuyabileceği veya bir kez yazabileceği bir parola gir. İlk girişte bunu değiştirecek.',
     'confirm_initial_password' => 'Başlangıç parolasını doğrula',
+    'owner_password_label' => 'Hesap parolan',
     'submit' => 'Başlangıç parolasını belirle',
 
     'error_mismatch' => 'Parolalar eşleşmiyor.',

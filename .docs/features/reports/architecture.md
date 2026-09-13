@@ -38,7 +38,8 @@ module:
 
 - **Internal/Dto/** — `ReportDefinition` (the full user-composed recipe, the
   exact shape persisted as `saved_reports.definition` JSON), `ReportResultDto`
-  (the aggregator's output contract: rows, total, currency, the two
+  (the aggregator's output contract: rows, total, currency, a subtotal per
+  currency for the mode that converts none of them, the two
   FX-exclusion SETS, the headline's `ConversionDisclosure`, optional
   comparison rows), `ReportResultRow` (one grouped total, plus the
   `ConversionDisclosure` for rows that are figures of their own rather than
@@ -204,6 +205,27 @@ module:
   `exchange_rates` table once per row for a rate that could not have
   changed between them.
 
+  **A total the mode did not convert is one line per currency.** A total
+  spanning several currencies has two legal shapes — one converted figure
+  carrying its rate, or one line per currency — and `'original'` mode's
+  `totalMinor` is neither: it is the *headline* currency's subtotal, and
+  the page printed it alone over a table listing every currency's rows.
+  Measured: a two-row report of EUR 1,049.94 and JPY 1,000 headlined
+  "TOTAL SPEND €1,049.94" and footed its amount column with €1,049.94, so
+  a column a reader adds up did not come to its own total and nothing on
+  the page said why. The `ChartSeries` omission line
+  (`reports::builder.chart.other_currencies`) names what an AXIS could not
+  carry and is drawn only under a chart — the default visualisation is the
+  table, which drew none of it. `ReportResultDto::totalsByCurrency` now
+  carries each discovered currency's own subtotal (only those that
+  produced rows; a currency discovered and empty has no line to put under
+  no row), and `ReportResultDto::totalLines()` is what both the headline
+  block and the table foot render — headline currency first, since that is
+  the one `totalMinor`, `ChartSeries` and the comparison delta are all
+  denominated in. In `'base'` mode the field is empty and `totalLines()`
+  returns the single converted figure, so a converted report renders
+  exactly as it did.
+
   **The net-worth metric discloses per bucket, because it converted per
   bucket.** `NetWorthSeriesQuery` prices each account line at the rate in
   effect on its own bucket's day, so a sixty-bucket series holds sixty rate
@@ -327,14 +349,36 @@ module:
   [which kinds hold money](../ledger/architecture.md#accountkind--which-kinds-hold-money).
   **Scope limitation:** the most-recent point in this series is
   NOT guaranteed to equal the dashboard net-worth card's "today" figure.
-  Both now read `AccountBalanceQuery` as of a date, so the anchor is no
-  longer the difference — the remaining one is cleared status. The series
-  samples `clearedBalanceAsOf()`, which counts only cleared and reconciled
-  rows, because a historical point should not move as old manual entries
-  are confirmed; the card reads `currentBalanceAsOf()`, which counts every
-  row, because an uncleared entry is still money the reader has. An
-  account with pending rows therefore reads higher on the card than on the
-  series' last point, by exactly the uncleared amount.
+  Both read `AccountBalanceQuery` as of a date, so the anchor is not the
+  difference — but there are **two** differences left, not one, and the
+  gap is their sum rather than either alone.
+
+  1. **The day each one asks about.** The card asks for *today*
+     (`Clock::now()->startOfDay()`). A series point asks for its own
+     bucket's last day (`endExclusive->subDay()`), which for the bucket
+     the current period is still inside is a date in the FUTURE — a
+     `this_month` report read on 13 September samples 30 September, and
+     the ledger does carry rows dated after today, which
+     [the calendar's own window](../calendar/architecture.md) reads too.
+  2. **Which rows each one counts.** The card reads
+     `currentBalanceAsOf()`, which counts every row, because an uncleared
+     entry is still money the reader has. The series samples
+     `clearedBalanceAsOf()`, which counts only cleared and reconciled
+     ones. Note what that does and does not buy: a historical point DOES
+     move when an old entry is later confirmed — confirming it adds it to
+     every point at or after its posted day — so "a historical point does
+     not move" is not the property this choice has.
+
+  Neither difference has a fixed sign, so neither does the gap. Measured
+  on the shipped sample dataset in EUR on 2026-09-13: the card read
+  613574 and the `this_month` series point 623714, the card BELOW the
+  point by 10140. Decomposed at one date and one status at a time:
+  cleared-at-today 643743, current-at-today 613574 (the pending rows are
+  money going out, so dropping them raises the figure by 30169), and
+  cleared-at-2026-09-30 623714 (the future-dated rows take 20029 off it
+  again). `Modules/Reports/tests/Unit/TheNetWorthSeriesAndTheCardDifferInTwoPlacesTest.php`
+  pins both causes on a three-row ledger so this page cannot drift from
+  them again.
 
   The card previously sourced its balance from Forecasting's
   `BalanceAnchorResolver`. That resolver answers where a *projection*
@@ -493,6 +537,20 @@ module:
   `subDay()` conversion happens. `time_bucket` carries no group filter
   param (a time-bucket row has no category/account/counterparty id).
 
+  **Known gap: it carries no settled currency, so `'original'` mode gives
+  two rows one URL.** In that mode a group present in two currencies is two
+  rows, and `build()` keys on dimension + group key + period + definition —
+  none of which tells them apart. Measured on the shipped sample dataset,
+  `spend` by category over `this_year`: four pairs share one URL, and the
+  reader who clicks `Groceries ¥5,280` lands on the same list as
+  `Groceries €1,085.21` — one holding both, adding up to neither row.
+  Closing it needs a settled-currency FILTER on the transactions list, which
+  is not what `?currency=` there is: that parameter is the `CurrencyView`
+  display toggle (`eur_only` / `original`), not a predicate. Base mode is
+  unaffected, since a group is one row there and the list covering every
+  currency it counted is exactly right
+  (`TheDrilldownListAddsUpToTheRowItWasOpenedFromTest`).
+
   **The reader's own account/category/counterparty filters ride along.**
   Only the clicked row's group was ever emitted, so a report narrowed to
   one account and grouped by category opened a list carrying every
@@ -641,6 +699,17 @@ module:
   read query's own `LIMIT 3` is a second, independent enforcement point
   so a stray fourth pinned row (a data anomaly, a future write-path
   bug) can never render a 4th mini card.
+- **"Pinned" is both columns, everywhere.** `pinned` and `pin_order` are
+  written together and captured as two separate field ops, so a concurrent
+  unpin on a second device converges on a row carrying one of them and not
+  the other — the state `PinnedReportsRowTest` calls "a pin whose order
+  crossed it". `PinnedReportsQuery`, `TogglePin`'s cap and
+  `PinOrderCompactor` all require `pinned = true AND pin_order IS NOT NULL`.
+  `SavedReportsQuery` read the flag alone, so `/reports/library` headed
+  itself "2 of 3 pinned" over a dashboard drawing one card, offered to
+  unpin a card nobody could see, and still had two pins left in the cap.
+  It reads both columns now, and the row's own button follows the same
+  field.
 
 ## Data flow
 
@@ -658,7 +727,7 @@ ReportBuilder (Livewire, every control is a #[Url]-bound property)
                base/original mode
        -> compare=true? PeriodComparison::compare() joins the previous
           period's ReportResultDto by (group, currency)
-  -> ReportResultDto (rows, total, currency, FX-exclusion metadata,
+  -> ReportResultDto (rows, total(s) per currency, FX-exclusion metadata,
        the headline's disclosure; net-worth rows carry their bucket's)
   -> table/chart partials render; DrilldownUrlBuilder maps each row to
      a /transactions filter URL

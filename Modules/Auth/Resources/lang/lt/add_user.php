@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Pradinis slaptažodis',
     'initial_password_hint' => 'Įrašyk slaptažodį, kurį galima perskaityti balsu arba suvesti vieną kartą. Pirmą kartą prisijungęs naudotojas jį pakeis.',
     'confirm_initial_password' => 'Patvirtink pradinį slaptažodį',
+    'owner_password_label' => 'Tavo paskyros slaptažodis',
     'submit' => 'Nustatyti pradinį slaptažodį',
 
     'error_mismatch' => 'Slaptažodžiai nesutampa.',

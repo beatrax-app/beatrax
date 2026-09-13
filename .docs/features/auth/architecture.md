@@ -19,8 +19,9 @@ captured in [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview
 The module also owns the asymmetric "owner / partner" model. The first
 account created on a device is the owner: their `is_developer` flag is set
 true at signup. The owner adds a partner via `/settings/users/new`, picks
-the partner's initial password, and the partner is forced to change it on
-first sign-in via the `force_password_change_at_next_login` flag. The same
+the partner's initial password — at the cost of re-typing their own — and
+the partner is forced to change it on first sign-in via the
+`force_password_change_at_next_login` flag. The same
 owner can reset the partner's password, and regenerate their recovery
 sheet, from `/settings/users/{id}` — both at the cost of re-typing the
 owner's own account password, since either one outlives the partner's next
@@ -106,7 +107,14 @@ must keep that posture.
   [`Categorization`](../categorization/architecture.md)) run identically
   whether the install ceremony is the GUI signup or the
   `beatrax:install` console path.
-- `AddUserAction` — owner-creates-partner. Mints NO recovery codes: the
+- `AddUserAction` — owner-creates-partner. Takes the **owner's own**
+  account password as a fourth argument and checks it beside the ownership
+  test, because the two belong together: an account is durable access that
+  the owner's own later password change does not revoke, and nobody holds
+  it yet to notice it appear. The first account on an install is a
+  different act and takes no such proof — there is no owner then, which is
+  why `SignupAction` and the mobile bootstrap are not shaped like this.
+  Mints NO recovery codes: the
   owner is never shown a partner's sheet and the partner is not present,
   so ten issued here were ten working credentials no human held.
   `ChangePasswordPage` mints the sheet at the partner's forced first

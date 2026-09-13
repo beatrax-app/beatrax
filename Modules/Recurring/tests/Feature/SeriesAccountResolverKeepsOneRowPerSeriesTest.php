@@ -64,14 +64,14 @@ function sarSeries(User $user, string $name): RecurringSeries
     ]);
 }
 
-function seriesAccountTransaction(User $user, Account $account, ImportRun $run, string $ref): Transaction
+function seriesAccountTransaction(User $user, Account $account, ImportRun $run, string $ref, string $bookedAt = '2026-05-01 12:00:00'): Transaction
 {
     return Transaction::query()->create([
         'user_id' => $user->id,
         'account_id' => $account->id,
         'type' => 'expense',
         'posted_at' => '2026-05-01',
-        'booked_at' => '2026-05-01 12:00:00',
+        'booked_at' => $bookedAt,
         'value_date' => '2026-05-01',
         'amount_minor' => -1099,
         'currency' => 'EUR',
@@ -102,7 +102,7 @@ function sarOccurrence(User $user, RecurringSeries $series, Transaction $tx, str
 
 /**
  * The shape this test replaces: fetch every joined occurrence row ordered
- * `observed_at DESC, rso.id DESC`, then keep the first row seen per series.
+ * newest-charge-first, then keep the first row seen per series.
  *
  * @param  list<int>  $seriesIds
  * @return array<int, int>
@@ -114,8 +114,10 @@ function sarLegacyLatestOccurrence(DatabaseManager $db, array $seriesIds, User $
         ->where('rso.user_id', $user->id)
         ->where('t.user_id', $user->id)
         ->whereIn('rso.recurring_series_id', $seriesIds)
-        ->orderByDesc('rso.observed_at')
-        ->orderByDesc('rso.id')
+        ->orderByRaw(
+            'rso.observed_at desc, t.booked_at desc, '
+            .'rso.observed_amount_minor desc, t.occurrence_ordinal desc'
+        )
         ->get(['rso.recurring_series_id as series_id', 't.account_id as account_id']);
 
     $map = [];
@@ -168,14 +170,15 @@ function sarFixture(DatabaseManager $db): array
         sarOccurrence($user, $long, $tx, CarbonImmutable::parse('2023-01-01')->addMonthsNoOverflow($i)->toDateString());
     }
 
-    // Two occurrences share an observed_at. The ordering's secondary key is
-    // rso.id DESC, so the later-written row (Joint) is the answer.
+    // Two occurrences share an observed_at, and the one booked LATER in the
+    // day is written FIRST — so it holds the smaller occurrence id and the
+    // answer changes the moment the tie falls back to that id.
     $olderTx = seriesAccountTransaction($user, $current, $run, 'tied-old');
     sarOccurrence($user, $tied, $olderTx, '2026-03-15');
-    $tieLoserTx = seriesAccountTransaction($user, $savings, $run, 'tie-loser');
-    sarOccurrence($user, $tied, $tieLoserTx, '2026-04-15');
-    $tieWinnerTx = seriesAccountTransaction($user, $joint, $run, 'tie-winner');
+    $tieWinnerTx = seriesAccountTransaction($user, $joint, $run, 'tie-winner', '2026-05-01 18:00:00');
     sarOccurrence($user, $tied, $tieWinnerTx, '2026-04-15');
+    $tieLoserTx = seriesAccountTransaction($user, $savings, $run, 'tie-loser', '2026-05-01 06:00:00');
+    sarOccurrence($user, $tied, $tieLoserTx, '2026-04-15');
 
     // The newest leg points at a transaction another user owns, so the join's
     // ownership filter must drop it and fall back to the older owned leg.

@@ -15,8 +15,8 @@ module also reads.
 ## Composition, never a raw SELECT
 
 `PositionQuery::forUser()` builds a `PositionSummaryDto` purely by calling
-four other modules' Public seams, and every one of them is asked about the
-`$period` it was handed:
+five Public seams across four other modules. Four of the five are asked
+about the `$period` it was handed; the fifth, deliberately, is not:
 
 - `Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery` — the
   dashboard's own "this period at a glance" composer (`for()` /
@@ -35,6 +35,14 @@ four other modules' Public seams, and every one of them is asked about the
   projection for the tile horizon is pending or running. Without the last
   one a re-projection reported the superseded run's `None` as this
   moment's safety, and the digest's shortfall line said nothing about it.
+- `Modules\Forecasting\Public\Services\NetWorthQuery` — `forUser($user)`,
+  with **no** period. The roll-up answers "what do you hold now", so paging
+  the dashboard back a month must not restate it as what you held then. It
+  is the one seam here that takes no `$period`, and the reason is the whole
+  point of it. Its figure is not guaranteed to equal `/reports`' net-worth
+  series at its most recent point; that divergence, and the two causes of
+  it, are set out in
+  [the reports page](../reports/architecture.md).
 
 `summary` is byte-for-byte the same `DashboardSummary` value the dashboard's
 own composer would return for the same `(user, period)` — the equality

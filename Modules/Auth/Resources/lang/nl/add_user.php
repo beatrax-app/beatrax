@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Beginwachtwoord',
     'initial_password_hint' => 'Typ een wachtwoord dat je één keer kunt voorlezen of intypen. Bij de eerste keer inloggen vervangen ze het.',
     'confirm_initial_password' => 'Beginwachtwoord bevestigen',
+    'owner_password_label' => 'Je accountwachtwoord',
     'submit' => 'Beginwachtwoord instellen',
 
     'error_mismatch' => 'Wachtwoorden komen niet overeen.',

@@ -18,6 +18,7 @@ final class ReportResultDto extends Data
      * @param  array<string, int>  $otherMovementsByCurrency  settled currency => fees/adjustments/uncounted refunds over the same period and filters — money no metric counts, reported beside the total rather than folded into it. Keyed by currency because 'original' mode converts nothing, so a fee bucket outside the headline currency has nowhere else to be said.
      * @param  ?int  $previousTotalMinor  The previous period's own headline total, computed the same way this one is — never re-derived by summing rows, which mixes currencies and adds balances across buckets. Null when the previous window produced nothing and the join reads a missing counterpart as unknown rather than as zero.
      * @param  ?string  $previousCurrency  The currency $previousTotalMinor is denominated in; a delta is only meaningful when it equals $currency
+     * @param  array<string, int>  $totalsByCurrency  settled currency => that currency's own subtotal, for a mode that converted nothing and therefore has no one sum. Empty where every row is already denominated in $currency, which is every converted report.
      */
     public function __construct(
         public readonly array $rows,
@@ -30,7 +31,24 @@ final class ReportResultDto extends Data
         public readonly ?int $previousTotalMinor = null,
         public readonly ?string $previousCurrency = null,
         public readonly ?ConversionDisclosure $conversion = null,
+        public readonly array $totalsByCurrency = [],
     ) {}
+
+    // A total over rows nothing converted is one line per currency, never one
+    // of them standing for all: the table listed EUR 1,049.94 and JPY 1,000
+    // and footed the column with EUR 1,049.94. The headline leads, since it is
+    // the currency every delta beside it is denominated in.
+    /**
+     * @return array<string, int>
+     */
+    public function totalLines(): array
+    {
+        if ($this->totalsByCurrency === []) {
+            return [$this->currency => $this->totalMinor];
+        }
+
+        return [$this->currency => $this->totalsByCurrency[$this->currency] ?? $this->totalMinor] + $this->totalsByCurrency;
+    }
 
     public function hasExclusions(): bool
     {
