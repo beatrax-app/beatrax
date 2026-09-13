@@ -78,6 +78,12 @@ return [
         // keys. gitignore keeps them out of git; it does not bound a build.
         'storage/app',
 
+        // The other half of the line above: appPath() resolves into
+        // persisted_data/ on a phone, so that IS the durable root there, and
+        // neither list excluded it. Only a machine that has run the app holds
+        // the directory at all, which is the machine that builds releases.
+        'persisted_data',
+
         // Device-test and browser-automation output: screenshots of the running
         // application, page snapshots and console logs, all of them pictures of
         // a real ledger. 1.6 GB and 4,024 files on the machine this was found

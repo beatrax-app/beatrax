@@ -25,6 +25,12 @@ use SplFileInfo;
  */
 final class RepoTree
 {
+    // A checkout of this same repository at another commit, created by the
+    // agent tooling. Named once here because the scopes below skip it and the
+    // handful of guards that walk from the repository root have to skip it too:
+    // a walk that reaches it fails locally while CI, which has none, stays green.
+    public const string NESTED_WORKTREE = '/.claude/worktrees/';
+
     public const string EVERY_PHP_FILE = 'every PHP file in the repository';
 
     public const string PRODUCTION_PHP = 'the PHP that ships, the suite aside';
@@ -47,7 +53,7 @@ final class RepoTree
             'declines' => [],
             'skips' => [
                 '/storage/framework/' => 'Laravel\'s compiled Blade cache, generated under a covered root and never tracked. The Blade it is compiled from is walked as Blade, so reading the output too reports the same template twice and blames the compiler\'s own generated code for shapes the source never wrote',
-                '/.claude/worktrees/' => 'a checkout of this same repository at another commit, created by the agent tooling and excluded through .git/info/exclude. Its files are not this checkout\'s code: a walk that reaches them reports offences no reviewer here can fix, and one did — it failed this suite locally while CI, which has no such directory, stayed green. `.claude` itself stays covered because the hooks under it are tracked and ship',
+                self::NESTED_WORKTREE => 'a checkout of this same repository at another commit, created by the agent tooling and excluded through .git/info/exclude. Its files are not this checkout\'s code: a walk that reaches them reports offences no reviewer here can fix, and one did — it failed this suite locally while CI, which has no such directory, stayed green. `.claude` itself stays covered because the hooks under it are tracked and ship',
             ],
         ],
         self::PRODUCTION_PHP => [
@@ -58,7 +64,7 @@ final class RepoTree
             ],
             'skips' => [
                 '/storage/framework/' => 'Laravel\'s compiled Blade cache, generated under a covered root and never tracked. The Blade it is compiled from is walked as Blade, so reading the output too reports the same template twice and blames the compiler\'s own generated code for shapes the source never wrote',
-                '/.claude/worktrees/' => 'a checkout of this same repository at another commit, created by the agent tooling and excluded through .git/info/exclude. Its files are not this checkout\'s code: a walk that reaches them reports offences no reviewer here can fix, and one did — it failed this suite locally while CI, which has no such directory, stayed green. `.claude` itself stays covered because the hooks under it are tracked and ship',
+                self::NESTED_WORKTREE => 'a checkout of this same repository at another commit, created by the agent tooling and excluded through .git/info/exclude. Its files are not this checkout\'s code: a walk that reaches them reports offences no reviewer here can fix, and one did — it failed this suite locally while CI, which has no such directory, stayed green. `.claude` itself stays covered because the hooks under it are tracked and ship',
                 '/tests/' => 'the same refusal as the declined tests root, spelled as a fragment because a module keeps its own suite inside Modules/, which this scope covers',
                 '/Database/Migrations/' => 'a migration declares the schema and seeds the first rows, including the columns whose later mutation these rules restrict, so it reads as an offender for doing its job',
                 '/migrations/' => 'the same files under the shared database/ root, which spells the directory in lower case',
