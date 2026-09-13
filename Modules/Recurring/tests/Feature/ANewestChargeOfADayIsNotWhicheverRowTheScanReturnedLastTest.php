@@ -167,6 +167,42 @@ function ntbLatestIncomeMinor(bool $bonusFirst): int
     return $series->latest_amount_minor;
 }
 
+// The same two charges, written in the same order, with the two fingerprints
+// two paired devices give them. FingerprintComposer folds user_id and
+// account_id, both counted per device, so one IBAN is account 1 here and
+// account 2 there and the digests land in either order.
+function ntbLatestExpenseMinorByDigest(bool $subscriptionSortsLast): int
+{
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $suffix = $subscriptionSortsLast ? 'c' : 'd';
+    $user = ntbUser('ntb-digest-'.$suffix);
+    $account = ntbAccount($user, 'ntb-digest-'.$suffix);
+    $run = ntbRun($user, str_pad($suffix.'d', 64, '0'));
+
+    foreach (['2026-03-04', '2026-04-04'] as $i => $postedAt) {
+        ntbTx($db, $user, $account, $run, $postedAt, -1099, 'netflix', TransactionType::Expense, 'ntb-d-'.$suffix.$i);
+    }
+
+    // str_pad LEFT-pads with 'a', so a seed starting 'z' sorts last and a seed
+    // starting 'a' sorts first — the whole difference between the two runs.
+    $subscriptionSeed = $subscriptionSortsLast ? 'zsub-'.$suffix : 'asub-'.$suffix;
+    $giftCardSeed = $subscriptionSortsLast ? 'agift-'.$suffix : 'zgift-'.$suffix;
+
+    ntbTx($db, $user, $account, $run, '2026-05-04', -1299, 'netflix', TransactionType::Expense, $giftCardSeed);
+    ntbTx($db, $user, $account, $run, '2026-05-04', -1099, 'netflix', TransactionType::Expense, $subscriptionSeed);
+
+    app(ExpenseSeriesDetector::class)->detectForUser($user);
+
+    /** @var RecurringSeries $series */
+    $series = RecurringSeries::query()
+        ->where('user_id', $user->id)
+        ->where('direction', Direction::Expense->value)
+        ->firstOrFail();
+
+    return $series->latest_amount_minor;
+}
+
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-05-27 12:00:00');
 });
@@ -189,4 +225,11 @@ it('reports the same income amount whichever order the day\'s two payments were 
 
     expect($written)->toBe(ntbLatestIncomeMinor(false))
         ->and([350000, 420000])->toContain($written);
+});
+
+it('reports the same expense amount whichever order the two devices digests fall in', function (): void {
+    $subscriptionLast = ntbLatestExpenseMinorByDigest(true);
+
+    expect($subscriptionLast)->toBe(ntbLatestExpenseMinorByDigest(false))
+        ->and([-1099, -1299])->toContain($subscriptionLast);
 });

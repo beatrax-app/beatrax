@@ -101,7 +101,7 @@ final readonly class TransactionSeriesMembershipQuery
      */
     private function linkedSeriesIds(array $transactionIds, User $user): array
     {
-        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
             ->join(SeriesTables::SERIES, 's.id', '=', 'o.recurring_series_id')
             ->where('o.user_id', $user->id)
             ->whereIn('o.transaction_id', $transactionIds)
