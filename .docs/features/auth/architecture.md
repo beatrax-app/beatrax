@@ -75,9 +75,11 @@ into the auth corpus — beside the recovery-code value types:
   `ForcePasswordChangeMiddleware` (pushed onto the `auth` middleware
   group; redirects any authenticated user whose
   `force_password_change_at_next_login` is true to `/change-password`,
-  exempting only that page and `/logout` — and, on a Livewire update,
-  only the components that page is *for*, because `/change-password`
-  renders in `layouts.app` and the shell mounts nine others beside it),
+  exempting that page and the app-lock's own unlock surface — and, on a
+  Livewire update, only the components those pages are *for*, because
+  `/change-password` renders in `layouts.app` and the shell mounts nine
+  others beside it;
+  [the forced change cannot foreclose the unlock](#the-forced-change-cannot-foreclose-the-unlock)),
   `RequireDeveloperMiddleware` (gates the owner-only routes like
   `/settings/users/new`), `ForgetsSpentRecoveryCodes` (registered on
   the `web` group of *both* application roots; ends the one-time
@@ -769,6 +771,33 @@ own unlock screen back to the desktop/web `auth.lock` route). Biometric
 *enrollment* is deliberately absent from that list: enrollment requires
 the session data key, which a locked session never has, so exempting it
 would only widen the locked-session surface for no benefit.
+
+#### The forced change cannot foreclose the unlock
+
+Those exemptions are only half a rule while a second gate redirects on the same
+request. `ForcePasswordChangeMiddleware` exempted `/change-password` and
+`/logout` and nothing else, and the app lock runs ahead of it — so an account
+carrying `force_password_change_at_next_login` over an enabled lock had `/lock`
+answer with a redirect to `/change-password` and `/change-password` answer with
+a redirect to `/lock`. Every route in the application was one of those two, and
+the only control that still worked was sign out, which came back to the same
+pair on the next sign-in.
+
+It is not a corner. Both paths that set the flag from outside the account —
+`ManageUserPage::setPartnerPassword()` and `beatrax:reset-password` — stamp the
+recovery wrap stale in the same breath, and a sign-in whose password wrap no
+longer opens starts locked by design. Owner-resets-partner therefore *always*
+produced it where the partner had a lock, and the console escape hatch produced
+it for the reader it exists to rescue.
+
+`Internal/Lock/LockSurface` is the one declaration both gates read: the routes
+a locked session may reach because reaching them is how it stops being locked,
+and the two Livewire components whose pads spend the PIN — the route exemption
+without those renders the screen and refuses the only thing it is for.
+`AppLockMiddleware` composes its own list from it, adding the mobile pairing and
+setup routes it exempts for the unrelated `wire:poll` reason. The forced change
+still bites: the reader unlocks, and the next request they make redirects them
+to `/change-password` exactly as it always did.
 
 ### Engaging the lock requires an enabled lock
 

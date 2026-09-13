@@ -9,15 +9,23 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
+use Modules\Auth\Internal\Lock\LockSurface;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class ForcePasswordChangeMiddleware
 {
+    // The app lock is the outer gate, so a locked session cannot reach the one
+    // page this guard redirects to. Bounced off the unlock surface as well, it
+    // had nowhere left that answered anything but a redirect: /lock sent the
+    // reader here, here sent them back, and only sign-out ended it.
     /**
      * @var list<string>
      */
-    private const array ALLOWED_ROUTE_NAMES = ['auth.change-password', 'logout'];
+    private const array ALLOWED_ROUTE_NAMES = [
+        'auth.change-password',
+        ...LockSurface::ROUTE_NAMES,
+    ];
 
     // The one exempt page renders inside layouts.app, which mounts nine further
     // components beside the password form -- the ledger search endpoint, the
@@ -31,6 +39,9 @@ final readonly class ForcePasswordChangeMiddleware
         // Owns no action at all and polls on a developer's screen, so refusing
         // it withholds nothing and reloads the page every five seconds.
         'core.app-sidebar',
+        // The pads that spend a PIN. Exempting the lock route without these
+        // renders the screen and refuses the only thing it is for.
+        ...LockSurface::LIVEWIRE_COMPONENTS,
     ];
 
     private const string LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
