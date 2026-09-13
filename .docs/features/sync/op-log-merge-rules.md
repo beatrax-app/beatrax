@@ -272,12 +272,68 @@ is refused outright by `scopeToUser()` (`WHERE 1 = 0`) rather than written user-
 
 The reference list is **derived from the live foreign keys**, not hand-maintained: the
 hand-written version named eleven tables while the schema had twenty-three, and nothing
-failed to say so. Only two shapes cannot be derived and are listed explicitly — owner-scoped
+failed to say so. Three shapes cannot be derived and are listed explicitly — owner-scoped
 references with no foreign key (`transactions.counterparty_id`,
-`forecast_scenario_mutations.target_series_id`), and the polymorphic
-`migration_source_map.beatrax_id`, whose target table is named by a sibling column. For a
-single-field `SET` that carries no sibling, the type is read back from the row; with neither,
-the write is refused, because a target that cannot be resolved cannot be cleared either.
+`forecast_scenario_mutations.target_series_id`), the polymorphic
+`migration_source_map.beatrax_id`, whose target table is named by a sibling column, and the
+ids that live inside a JSON value, below. For a single-field `SET` that carries no sibling,
+the type is read back from the row; with neither, the write is refused, because a target that
+cannot be resolved cannot be cleared either.
+
+### References that live inside a JSON value
+
+A foreign key describes a column, and a JSON column is one opaque text value whatever it
+holds. So `saved_reports.definition` — which stores a report's account, category and
+counterparty filters as lists of raw ids — was invisible to every mechanism above: no
+constraint to derive, nothing `*_id`-shaped for the column walk to see, and
+`PeerRowAliases::translate()` reading only scalar columns.
+
+Nothing failed. The peer stored the numbers the other device minted, each naming a different
+row here, and a report's filters decide **which money the figure counts** — so one named
+report showed two figures on two devices and neither said anything. The calendar preferences
+are the same shape with a worse ending: `CalendarPage::sanitizeAccountIds()` drops ids it
+cannot resolve and `persistAccountPrefs()` writes the emptied selection back, so the reader's
+own choice is destroyed rather than merely misread.
+
+`CoveredTableOrder::JSON_PARENTS` declares them, beside `UNCONSTRAINED_PARENTS` and for the
+same reason — the schema cannot be asked. Each entry is a table, a column, and the paths
+inside the decoded value that name a covered row:
+
+| column | path | names |
+| --- | --- | --- |
+| `saved_reports.definition` | `accounts.*`, `categories.*`, `counterparties.*` | the three filter lists |
+| `user_preferences.calendar_entries_accounts` | `*` | the whole value is the list |
+| `user_preferences.calendar_balance_accounts` | `*` | the whole value is the list |
+| `transactions.auto_category_provenance` | `category_id`, `memory_id` | which rule or memory filed the row |
+| `transactions.enriched_from` | `*.import_run_id` | the run each enrichment came from |
+
+A path is dot-separated and `*` stands for every element of a list, so one notation covers a
+bare list of ids, a keyed list, and an id nested one element deep. `translate()` decodes the
+value, rewrites what each path reaches through the same alias map scalar references use, and
+hands the value back in the shape it arrived in — the stored text for a captured row, the
+array behind it for a live write.
+
+Three exclusions are deliberate, and each is derived rather than remembered:
+
+- **Device-local tables never travel**, so `rule_actions.payload` holds a `category_id` that
+  no peer ever receives.
+- **A sealed column is ciphertext by then.** The applier re-seals a sensitive column while
+  building the payload and `translate()` runs afterwards, so `notifications.params` and the
+  rest of `SensitiveFieldRegistry::columns()` cannot be rewritten by this mechanism at all.
+- **`auto_category_provenance.rule_id` is not declared.** `categorization_rules` is
+  device-local, so no create for one ever arrives, no alias can exist, and declaring the path
+  would read as coverage where none is possible.
+
+A JSON parent also joins the insertion order: the alias a rewrite reads is recorded when the
+parent's own create lands, so a parent written afterwards is a parent whose id could not be
+rewritten. `AnIdInsideAJsonValueIsTranslatedTooArchTest` is the guard — every text column on a
+covered table is either declared here or written down as carrying no row id, and every
+declared path has to name a covered, user-scoped table that declares a natural key a re-home
+can alias against.
+
+Rows **already stored** still hold the ids the other device minted; this translates arrivals
+from here on. Repairing them means reading each stored value back through
+`op_log_row_aliases`, which is a migration, not a merge rule.
 
 `user_id` in a create payload is **ignored, not compared**. It is the origin device's
 autoincrement, so rejecting a mismatch quarantined every peer row. The payload's `user_id` is
