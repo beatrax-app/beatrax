@@ -24,9 +24,13 @@ final readonly class ShippedBundleContents
     // so the file is read rather than judged by its name.
     private const array KEY_TEXT_EXTENSIONS = ['pem', 'key'];
 
-    // Every PEM private-key header ends this way, whatever algorithm or
-    // encryption precedes it: RSA, EC, OPENSSH and ENCRYPTED all match.
-    private const string PRIVATE_KEY_MARKER = 'PRIVATE KEY-----';
+    // A whole PEM block, not a header: an opening line AND a closing one, with
+    // the algorithm between them free to be RSA, EC, OPENSSH or ENCRYPTED. The
+    // header alone is what source code that reasons ABOUT keys carries, and
+    // three such files shipped inside the bundle this reads.
+    private const string PRIVATE_KEY_OPENS = '/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/';
+
+    private const string PRIVATE_KEY_CLOSES = '/-----END [A-Z0-9 ]*PRIVATE KEY-----/';
 
     // A file holding a ledger. The phone runs every migration on first launch
     // and ships no database at all, so any of these is the builder's own.
@@ -108,8 +112,8 @@ final readonly class ShippedBundleContents
 
     // A private key, wherever it travels and whatever it is called. Read from
     // the bytes rather than the name, so `id_rsa` is caught and the 151 public
-    // root certificates the PHP runtime needs for TLS are not: a list of
-    // certificates anyone can download is not a secret this artifact leaked.
+    // root certificates the PHP runtime needs for TLS are not. A key pasted
+    // into source is still refused: it carries both halves of the block.
     private function carriesKeyMaterial(string $extension, ?string $text): bool
     {
         if (in_array($extension, self::KEY_CONTAINER_EXTENSIONS, true)) {
@@ -122,7 +126,8 @@ final readonly class ShippedBundleContents
             return in_array($extension, self::KEY_TEXT_EXTENSIONS, true);
         }
 
-        return str_contains($text, self::PRIVATE_KEY_MARKER);
+        return preg_match(self::PRIVATE_KEY_OPENS, $text) === 1
+            && preg_match(self::PRIVATE_KEY_CLOSES, $text) === 1;
     }
 
     // Null for a file this cannot read as text, which is the answer the callers
