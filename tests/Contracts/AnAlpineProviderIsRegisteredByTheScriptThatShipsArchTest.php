@@ -234,35 +234,214 @@ function alpineRegistersInScript(string $name, string $script, string $kinds = '
     );
 }
 
+// The events a listener is added for too late. `alpine:init` is dispatched BY
+// `Alpine.start()`, and `livewire.js` calls `Livewire.start()` — and through it
+// `Alpine.start()` — from a `DOMContentLoaded` listener it adds while the body
+// is still being parsed, so a listener a deferred module adds for that same
+// event runs after every element on the page has already been initialised.
+// `livewire:init` is deliberately absent: Livewire dispatches it on the way
+// INTO `start()`, ahead of Alpine, so a registration made from it is in time.
+const ALPINE_LATE_LISTENER_PATTERN = '/addEventListener\s*\(\s*[\'"`](?:alpine:init|alpine:initialized|DOMContentLoaded|load|livewire:initialized|livewire:navigated)[\'"`]/';
+
+// After one of these a `/` opens a regular-expression literal; after anything
+// else — an identifier, a digit, a closing bracket — it is division. Reading a
+// regex as division is how `s.replace(/[)]/g, '')` inside a listener closes the
+// listener early and everything written after it reports as eager.
+const JS_REGEX_MAY_FOLLOW = "(,=:[!&|?{};+-*%~^<>\n\r\t ";
+
 /**
- * Whether $script hands its providers to Alpine only from an `alpine:init`
- * listener. That event is dispatched once, by `Alpine.start()`. `wire:navigate`
- * re-executes a page's body scripts on arrival and never restarts Alpine, so a
- * listener added then is waiting for something that has already happened —
- * every registration behind it is simply never made, and the once-guard these
- * blocks carry means there is no second attempt.
+ * The offset of the `)` closing the argument list that opens at $open.
  *
- * Measured by position rather than by scope: a registration written before the
- * listener is one the eager path reaches, which is the shape
- * `resources/js/app.js` uses and the shape this asks for.
+ * Strings, template literals, comments and regular-expression literals are
+ * stepped over whole, because a `)` inside any of them closes nothing. A scanner
+ * that miscounts here does not fail loudly: it ends the listener early, and
+ * every registration after that point reads as one the eager path reaches.
  */
-function alpineRegistersOnlyOnInit(string $script): bool
+function jsCallEndsAt(string $script, int $open): int
 {
-    $listener = strpos($script, 'alpine:init');
+    $length = strlen($script);
+    $depth = 0;
+    $previous = '';
 
-    if ($listener === false) {
-        return false;
-    }
+    for ($at = $open; $at < $length; $at++) {
+        $opaque = jsOpaqueEndsAt($script, $at, $previous);
 
-    $registrations = PatternScan::allWithOffsets(ALPINE_REGISTRATION_PATTERN, $script)[0];
+        if ($opaque !== null) {
+            $at = $opaque;
+            $previous = $script[$at];
 
-    foreach ($registrations as $registration) {
-        if ($registration[1] < $listener) {
-            return false;
+            continue;
+        }
+
+        if ($script[$at] === '(') {
+            $depth++;
+        } elseif ($script[$at] === ')') {
+            $depth--;
+
+            if ($depth === 0) {
+                return $at;
+            }
+        }
+
+        if (trim($script[$at]) !== '') {
+            $previous = $script[$at];
         }
     }
 
-    return $registrations !== [];
+    throw new RuntimeException('unbalanced call opened at offset '.$open.', so the listener it belongs to has no end this rule can read');
+}
+
+/**
+ * The last offset of the string, comment or regex literal starting at $at, or
+ * null where $at starts none of them. $previous is the last character that was
+ * not whitespace, which is the whole of what tells a regex from a division.
+ */
+function jsOpaqueEndsAt(string $script, int $at, string $previous): ?int
+{
+    $length = strlen($script);
+    $char = $script[$at];
+    $next = $at + 1 < $length ? $script[$at + 1] : '';
+
+    if ($char === '/' && $next === '/') {
+        $end = strpos($script, "\n", $at);
+
+        return $end === false ? $length - 1 : $end;
+    }
+
+    if ($char === '/' && $next === '*') {
+        $end = strpos($script, '*/', $at + 2);
+
+        return $end === false ? $length - 1 : $end + 1;
+    }
+
+    if ($char === '/' && ($previous === '' || str_contains(JS_REGEX_MAY_FOLLOW, $previous))) {
+        return jsRegexEndsAt($script, $at);
+    }
+
+    if ($char === "'" || $char === '"' || $char === '`') {
+        return jsQuotedEndsAt($script, $at, $char);
+    }
+
+    return null;
+}
+
+function jsQuotedEndsAt(string $script, int $at, string $quote): int
+{
+    $length = strlen($script);
+
+    for ($cursor = $at + 1; $cursor < $length; $cursor++) {
+        if ($script[$cursor] === '\\') {
+            $cursor++;
+
+            continue;
+        }
+
+        if ($script[$cursor] === $quote) {
+            return $cursor;
+        }
+    }
+
+    throw new RuntimeException('unterminated '.$quote.' literal at offset '.$at);
+}
+
+// A `/` inside a character class closes nothing, which is why the class is
+// tracked rather than the delimiter alone.
+function jsRegexEndsAt(string $script, int $at): int
+{
+    $length = strlen($script);
+    $inClass = false;
+
+    for ($cursor = $at + 1; $cursor < $length; $cursor++) {
+        $char = $script[$cursor];
+
+        if ($char === '\\') {
+            $cursor++;
+
+            continue;
+        }
+
+        if ($char === "\n") {
+            break;
+        }
+
+        if ($char === '[') {
+            $inClass = true;
+        } elseif ($char === ']') {
+            $inClass = false;
+        } elseif ($char === '/' && ! $inClass) {
+            return $cursor;
+        }
+    }
+
+    throw new RuntimeException('unterminated regular-expression literal at offset '.$at);
+}
+
+/**
+ * Every span of $script that is the argument list of a listener for one of the
+ * events above — which is to say every region of the file that does not run
+ * until after Alpine has initialised the page.
+ *
+ * @return list<array{int, int}>
+ */
+function alpineLateListenerSpans(string $script): array
+{
+    $spans = [];
+
+    foreach (PatternScan::allWithOffsets(ALPINE_LATE_LISTENER_PATTERN, $script)[0] as $listener) {
+        $open = strpos($script, '(', $listener[1]);
+
+        if ($open === false) {
+            continue;
+        }
+
+        $spans[] = [$open, jsCallEndsAt($script, $open)];
+    }
+
+    return $spans;
+}
+
+/**
+ * The providers $script hands to Alpine only from inside one of those spans.
+ * `wire:navigate` re-executes a page's body scripts on arrival and never
+ * restarts Alpine, so a listener added then waits for something that has already
+ * happened — and the once-guards these blocks carry mean there is no second
+ * attempt.
+ *
+ * Asked per NAME rather than per file. A script with one registration at the top
+ * and a second one behind a listener makes the second one nowhere, and a verdict
+ * about the file as a whole calls that clean because the first one was in time.
+ *
+ * @return list<string>
+ */
+function alpineRegistrationsMadeTooLate(string $script): array
+{
+    $spans = alpineLateListenerSpans($script);
+    $eager = [];
+    $late = [];
+
+    foreach (PatternScan::setsWithOffsets(ALPINE_REGISTRATION_PATTERN, $script) as $match) {
+        $at = $match[0][1];
+        $within = false;
+
+        foreach ($spans as [$from, $to]) {
+            if ($at > $from && $at < $to) {
+                $within = true;
+
+                break;
+            }
+        }
+
+        if ($within) {
+            $late[] = $match[1][0];
+        } else {
+            $eager[] = $match[1][0];
+        }
+    }
+
+    $names = array_values(array_unique(array_diff($late, $eager)));
+    sort($names);
+
+    return $names;
 }
 
 /**
@@ -450,11 +629,17 @@ it('has every provider a script of its own registers reachable without a second 
         .'defect would pass again.'
     );
 
-    $late = [];
+    $scripts = [];
 
     foreach ($registered as $site) {
-        if (alpineRegistersOnlyOnInit($site['script'])) {
-            $late[] = $site['where'].' → '.$site['name'];
+        $scripts[$site['where']] = $site['script'];
+    }
+
+    $late = [];
+
+    foreach ($scripts as $where => $script) {
+        foreach (alpineRegistrationsMadeTooLate($script) as $name) {
+            $late[] = $where.' → '.$name;
         }
     }
 
@@ -462,13 +647,15 @@ it('has every provider a script of its own registers reachable without a second 
 
     expect($late)->toBe(
         [],
-        "These are registered from an `alpine:init` listener and nowhere else. Alpine dispatches that event\n".
-        "once, from Alpine.start(); wire:navigate re-runs a page's body scripts on arrival and never restarts\n".
-        "Alpine, so the first reader to reach the page through a navigate link registers a listener for\n".
-        "something that has already happened. The x-data then binds an empty scope — one expression error, a\n".
-        "200, and every method absent; a store binds nothing at all and every expression reading it is\n".
-        "undefined. Register eagerly off `window.Alpine` and keep the listener as the fallback for the page\n".
-        "that loads before Alpine exists, the way resources/js/app.js and resources/js/lock.js do.\n  ".implode("\n  ", $late),
+        "These are registered from inside a listener for an event that has already fired, and from no other\n".
+        "path. Alpine.start() dispatches `alpine:init` itself and is called from the `DOMContentLoaded`\n".
+        "listener livewire.js adds while the body is still parsing, so `alpine:init`, `DOMContentLoaded`,\n".
+        "`load`, `livewire:navigated` and `livewire:initialized` are all of them too late for a script that\n".
+        "runs deferred; wire:navigate then re-runs a page's body scripts on arrival without restarting\n".
+        "Alpine at all. The x-data binds an empty scope — one expression error, a 200, and every method\n".
+        "absent; a store binds nothing and every expression reading it is undefined. Register eagerly off\n".
+        "`window.Alpine` and keep the listener as the fallback for the page that loads before Alpine\n".
+        "exists, the way resources/js/app.js and resources/js/lock.js do.\n  ".implode("\n  ", $late),
     );
 });
 
@@ -484,17 +671,64 @@ it('reads a front-end module and a template <script> as the same kind of registr
 });
 
 it('reads a registration made too late to happen, and leaves an eager one alone', function (): void {
-    expect(alpineRegistersOnlyOnInit("document.addEventListener('alpine:init', () => { Alpine.data('x', () => ({})); });"))
-        ->toBeTrue('the listener is the only path, so nothing registers on a wire:navigate arrival');
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => { Alpine.data('x', () => ({})); });"))
+        ->toBe(['x'], 'the listener is the only path, so nothing registers on a wire:navigate arrival');
 
-    expect(alpineRegistersOnlyOnInit("const r = (a) => a.data('x', f); if (window.Alpine) { r(window.Alpine); } else { document.addEventListener('alpine:init', () => r(window.Alpine), { once: true }); }"))
-        ->toBeFalse('the eager branch registers before the listener is ever mentioned');
+    expect(alpineRegistrationsMadeTooLate("const r = (a) => a.data('x', f); if (window.Alpine) { r(window.Alpine); } else { document.addEventListener('alpine:init', () => r(window.Alpine), { once: true }); }"))
+        ->toBe([], 'the eager branch registers outside every listener');
 
-    expect(alpineRegistersOnlyOnInit("Alpine.data('x', () => ({}));"))
-        ->toBeFalse('a registration at the top level of the script waits for nothing');
+    expect(alpineRegistrationsMadeTooLate("Alpine.data('x', () => ({}));"))
+        ->toBe([], 'a registration at the top level of the script waits for nothing');
 
-    expect(alpineRegistersOnlyOnInit("document.addEventListener('alpine:init', () => window.beatraxBoot());"))
-        ->toBeFalse('a listener that registers no provider is not this rule\'s business');
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => window.beatraxBoot());"))
+        ->toBe([], "a listener that registers no provider is not this rule's business");
+});
+
+// The half that shipped past the rule this replaced, which asked only whether
+// the file said `alpine:init`. Every event here fires at or after Alpine.start()
+// and every one of them was invisible: a provider registered from DOMContentLoaded
+// binds an empty scope on the FIRST page load, before any navigation is involved.
+it('reads every event that has already fired by the time Alpine initialises', function (): void {
+    $late = static fn (string $event): array => alpineRegistrationsMadeTooLate(
+        "document.addEventListener('".$event."', () => { Alpine.data('x', f); });"
+    );
+
+    expect($late('DOMContentLoaded'))->toBe(['x'], 'livewire.js adds its own listener for this while the body parses, so Alpine has started before a deferred module is heard');
+    expect($late('load'))->toBe(['x'], 'later still than DOMContentLoaded');
+    expect($late('alpine:initialized'))->toBe(['x'], 'dispatched after Alpine.start() has walked the tree');
+    expect($late('livewire:navigated'))->toBe(['x'], 'an arrival, which is the one moment Alpine is certainly not restarting');
+    expect($late('livewire:initialized'))->toBe(['x'], 'dispatched on the way out of Livewire.start(), after Alpine.start()');
+
+    expect($late('livewire:init'))->toBe([], 'dispatched on the way INTO Livewire.start(), ahead of Alpine, so this one is in time');
+    expect($late('click'))->toBe([], 'an ordinary handler says nothing about when the script ran');
+});
+
+it('asks the question of each name, not of the file', function (): void {
+    expect(alpineRegistrationsMadeTooLate("Alpine.data('a', f); document.addEventListener('alpine:init', () => { Alpine.data('b', g); });"))
+        ->toBe(['b'], 'the eager `a` says nothing about `b`, which is registered nowhere a navigated arrival reaches');
+
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => { Alpine.data('a', f); }); Alpine.data('a', f);"))
+        ->toBe([], 'the same name registered eagerly as well is registered, and the listener is then a second attempt at nothing');
+});
+
+// A scanner that reads a `)` inside a literal as the end of the listener stops
+// covering the rest of it, and every registration written after that point
+// reports as eager. Both shapes are in this repository's own front end.
+it('steps over a literal that carries a bracket rather than closing on it', function (): void {
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => { const s = ') )'; Alpine.data('x', f); });"))
+        ->toBe(['x'], 'the bracket is inside a string');
+
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => { v.replace(/[)]/g, ''); Alpine.data('x', f); });"))
+        ->toBe(['x'], 'the bracket is inside a regular-expression literal');
+
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => { /* ) */ Alpine.data('x', f); });"))
+        ->toBe(['x'], 'the bracket is inside a block comment');
+
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => { const t = `a ) b`; Alpine.data('x', f); });"))
+        ->toBe(['x'], 'the bracket is inside a template literal');
+
+    expect(alpineRegistrationsMadeTooLate("document.addEventListener('alpine:init', () => { const n = (a + b) / 2; }); Alpine.data('x', f);"))
+        ->toBe([], 'a division is not a regular-expression literal, and reading it as one would swallow the registration after it');
 });
 
 it('reads the shapes an x-data uses to name a provider, and leaves a literal alone', function (): void {
