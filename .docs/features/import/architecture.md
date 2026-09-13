@@ -1079,7 +1079,12 @@ under that root, and `PUT …?upload=1` writes the request body to
 whichever path it names. Nothing in the product mints such a URL: the
 `Storage` facade is used zero times under `Modules/`.
 
-The published config sets `serve => false` and declares one disk.
+The published config sets `serve => false` and declares one disk, rooted
+through `UserDataPathService` the way `config/database.php` and
+`config/logging.php` are. `CoreServiceProvider` sets the same value
+again at registration, which is not redundant: `config:cache` freezes
+whatever the config file computed on the machine that cached it, and the
+provider's runtime `set()` is what corrects it.
 `AnUploadedArtifactLandsWhereTheDataLivesArchTest` pins both halves —
 that no configured disk says `serve => true`, and that the router holds
 no route the framework minted for a disk — because the config key and

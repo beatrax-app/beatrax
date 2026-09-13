@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Services\UserDataPathService;
+
 // Published for one key. Without this file the framework's own default stands,
 // and it sets `serve => true` on the local disk: FilesystemServiceProvider then
 // registers GET and PUT on /storage/{path} with where('path', '.*'), inside
@@ -23,16 +25,17 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
-    // One disk. `root` is the framework's own default and is overridden at
-    // registration by CoreServiceProvider, which points it at the writable data
-    // directory the path service answers with -- the same directory on a
-    // desktop, a different one on a phone, where storage_path() names the
-    // bundle copy an app update replaces.
+    // One disk, rooted through the path authority like database.php and
+    // logging.php: the framework's own default here is storage_path(), which on
+    // a phone names the bundle copy an app update replaces. CoreServiceProvider
+    // sets the same value again at registration, and that is not redundant --
+    // `config:cache` freezes whatever this file computed on the machine that
+    // cached it, and the provider's runtime set() is what corrects it.
     'disks' => [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
+            'root' => UserDataPathService::appPath('private'),
             'serve' => false,
             'throw' => false,
             'report' => false,
