@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Hädaabifond',
     'goal_japan_trip' => 'Jaapani reis',
     'goal_replace_laptop' => 'Sülearvuti vahetus',
-    'goal_winter_tyres' => 'Talverehvid',
+    'goal_winter_tires' => 'Talverehvid',
     'goal_ryokan_stay' => 'Ööbimine ryokanis',
     'goal_shinkansen_pass' => 'Shinkanseni pilet',
     'pot_emergency_fund' => 'Hädaabifond',

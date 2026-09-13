@@ -12,7 +12,7 @@ Practical recipes for exercising the `Community` module in isolation.
   `SharedBrandSupportLookupTest` (per-country resolution),
   `TheSameBrandAnsweredTwoWaysTest` (a country-less lookup refuses a
   brand two countries answer differently),
-  `TheSupportEntryItsNeighbourOverwroteTest` (two entries under one name
+  `TheSupportEntryItsNeighborOverwroteTest` (two entries under one name
   in one file both survive the load), and
   `TheCancellationMailToldToCcAStrangerTest` (a recipient carrying a
   second address never becomes a `mailto:`). `BundledCorpusIntegrityTest`
@@ -220,7 +220,7 @@ and the assertion — see
   survive.** The bucket holds a list and the lookup filters on type;
   the shipped corpus is held collision-free by
   `BundledCorpusIntegrityTest`.
-  (`tests/Unit/TheSupportEntryItsNeighbourOverwroteTest.php`)
+  (`tests/Unit/TheSupportEntryItsNeighborOverwroteTest.php`)
 - **The settings panel applies the toggle change atomically.**
   Switching the share-corpus toggle off persists in one write; the
   triage CTA disappears on the next render.

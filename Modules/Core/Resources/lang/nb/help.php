@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Database:',
-        'artefacts_imports' => 'Importerte kontoutskrifter:',
-        'artefacts_mail' => 'Skannet e-post:',
-        'artefacts_drop' => 'Overvåket mappe:',
+        'artifacts_imports' => 'Importerte kontoutskrifter:',
+        'artifacts_mail' => 'Skannet e-post:',
+        'artifacts_drop' => 'Overvåket mappe:',
         'backups' => 'Sikkerhetskopier:',
         'secrets' => 'Påloggingsdetaljer for tilkoblinger:',
         'logs' => 'Logger:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopier stien til databasen til utklippstavlen',
-        'artefacts_imports' => 'Kopier stien til importerte kontoutskrifter til utklippstavlen',
-        'artefacts_mail' => 'Kopier stien til skannet e-post til utklippstavlen',
-        'artefacts_drop' => 'Kopier stien til den overvåkede mappen til utklippstavlen',
+        'artifacts_imports' => 'Kopier stien til importerte kontoutskrifter til utklippstavlen',
+        'artifacts_mail' => 'Kopier stien til skannet e-post til utklippstavlen',
+        'artifacts_drop' => 'Kopier stien til den overvåkede mappen til utklippstavlen',
         'backups' => 'Kopier stien til sikkerhetskopier til utklippstavlen',
         'secrets' => 'Kopier stien til påloggingsdetaljer for tilkoblinger til utklippstavlen',
         'logs' => 'Kopier stien til logger til utklippstavlen',
     ],
 
-    'artefacts_heading' => 'Kildedokumentene dine ligger ikke i sikkerhetskopien',
-    'artefacts_body' => 'En sikkerhetskopi inneholder databasen og ingenting annet. Kontoutskriftene du importerte, e-posten skanneren hentet inn og kvitteringene du la i den overvåkede mappen blir liggende der de er, i de tre mappene ovenfor. Å legge en sikkerhetskopi et trygt sted kopierer dem ikke, så et fullstendig arkiv betyr at du må ta med disse mappene også — eller bruke Eksporter alt nedenfor, som pakker dem sammen med sikkerhetskopien for deg.',
+    'artifacts_heading' => 'Kildedokumentene dine ligger ikke i sikkerhetskopien',
+    'artifacts_body' => 'En sikkerhetskopi inneholder databasen og ingenting annet. Kontoutskriftene du importerte, e-posten skanneren hentet inn og kvitteringene du la i den overvåkede mappen blir liggende der de er, i de tre mappene ovenfor. Å legge en sikkerhetskopi et trygt sted kopierer dem ikke, så et fullstendig arkiv betyr at du må ta med disse mappene også — eller bruke Eksporter alt nedenfor, som pakker dem sammen med sikkerhetskopien for deg.',
 
     'export_heading' => 'Eksporter alt',
     'export_body' => 'Ett arkiv med en kryptert kopi av databasen din og hvert kildedokument du har gitt Beatrax. Pakk det ut hvor du vil, og dokumentene ligger der akkurat som før, i mappene de kom fra.',

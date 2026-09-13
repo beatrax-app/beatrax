@@ -133,10 +133,10 @@ it('keeps a leg on this readers parent whatever the copy says', function (): voi
     $parent = lbwTransaction($this->db, $reader);
 
     $correct = lbwLeg($this->db, $reader, $parent, $this->categoryId);
-    $mislabelled = lbwLeg($this->db, $other, $parent, $this->categoryId);
+    $mislabeled = lbwLeg($this->db, $other, $parent, $this->categoryId);
     $ownerless = lbwLeg($this->db, null, $parent, $this->categoryId);
 
-    expect(lbwOwnedLegIds($this->db, $reader))->toBe([$correct, $mislabelled, $ownerless]);
+    expect(lbwOwnedLegIds($this->db, $reader))->toBe([$correct, $mislabeled, $ownerless]);
 });
 
 // The correlation is aliased, because a caller may already have `transactions`

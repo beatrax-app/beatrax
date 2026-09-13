@@ -31,8 +31,8 @@ it('leaves no controller carrying work an action should own', function (): void 
     $offenders = [];
 
     foreach ($files as $path) {
-        foreach (ControllerShape::offences((string) file_get_contents($path)) as $offence) {
-            $offenders[] = str_replace(base_path().'/', '', $path).' — '.$offence;
+        foreach (ControllerShape::offenses((string) file_get_contents($path)) as $offense) {
+            $offenders[] = str_replace(base_path().'/', '', $path).' — '.$offense;
         }
     }
 
@@ -78,7 +78,7 @@ it('leaves no controller carrying work an action should own', function (): void 
 // and the last is a controller that breaks none.
 it('reports each of the four shapes it names, and stays quiet on a thin one', function (): void {
     $reaching = '<?php use Illuminate\Database\DatabaseManager; class C { public function __invoke(): void { $this->db->connection(); } }';
-    $modelled = '<?php use Modules\Core\Models\User; class C { public function __invoke(User $u): void {} }';
+    $modeled = '<?php use Modules\Core\Models\User; class C { public function __invoke(User $u): void {} }';
 
     $long = '<?php class C { public function __invoke(): void { ';
     for ($i = 0; $i <= ControllerShape::MAX_STATEMENTS; $i++) {
@@ -101,12 +101,12 @@ it('reports each of the four shapes it names, and stays quiet on a thin one', fu
     $thin = '<?php class C { public function __construct(private A $a) {} '
         .'public function __invoke(R $r): X { return new X(($this->a)($r->input())); } }';
 
-    expect(ControllerShape::offences($reaching))->toBe(['names Illuminate\\Database\\']);
-    expect(ControllerShape::offences($modelled))->toBe(['names an Eloquent model under Modules\\<X>\\Models\\']);
-    expect(ControllerShape::offences($long))->toBe(['__invoke() runs 13 statements (at most 12)']);
-    expect(ControllerShape::offences($branchy))->toBe(['__invoke() scores 7 on cognitive complexity (at most 6)']);
-    expect(ControllerShape::offences($sprawling))->toBe(['C declares 8 methods besides its constructor (at most 7)']);
-    expect(ControllerShape::offences($thin))->toBe([]);
+    expect(ControllerShape::offenses($reaching))->toBe(['names Illuminate\\Database\\']);
+    expect(ControllerShape::offenses($modeled))->toBe(['names an Eloquent model under Modules\\<X>\\Models\\']);
+    expect(ControllerShape::offenses($long))->toBe(['__invoke() runs 13 statements (at most 12)']);
+    expect(ControllerShape::offenses($branchy))->toBe(['__invoke() scores 7 on cognitive complexity (at most 6)']);
+    expect(ControllerShape::offenses($sprawling))->toBe(['C declares 8 methods besides its constructor (at most 7)']);
+    expect(ControllerShape::offenses($thin))->toBe([]);
 });
 
 // The two readings a size rule gets wrong on the shapes this tree actually

@@ -12,7 +12,7 @@ return [
     'section_planning' => 'ΣΧΕΔΙΑΣΜΟΣ',
     'section_insights' => 'ΑΝΑΛΥΣΕΙΣ',
     'section_ingestion' => 'ΕΙΣΑΓΩΓΗ ΔΕΔΟΜΕΝΩΝ',
-    'section_organise' => 'ΟΡΓΑΝΩΣΗ',
+    'section_organize' => 'ΟΡΓΑΝΩΣΗ',
     'section_settings' => 'ΡΥΘΜΙΣΕΙΣ',
 
     'nav' => [

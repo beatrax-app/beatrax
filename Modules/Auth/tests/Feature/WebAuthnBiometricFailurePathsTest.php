@@ -245,7 +245,7 @@ it('verifyAndRelease returns false when the assertion omits a rawId entirely', f
 
     $session->put(WebAuthnBiometricService::REQUEST_CHALLENGE_SESSION, base64_encode(random_bytes(32)));
 
-    // No rawId key -> normaliseAssertionRawId(null) short-circuits to ''.
+    // No rawId key -> normalizeAssertionRawId(null) short-circuits to ''.
     $result = $service->verifyAndRelease($user->id, ['type' => 'public-key'], $session);
 
     expect($result)->toBeFalse();

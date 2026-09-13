@@ -29,7 +29,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->onScreen = recurringSeriesForToleranceLock($this->user, 'On screen');
-    $this->neighbour = recurringSeriesForToleranceLock($this->user, 'Neighbour');
+    $this->neighbor = recurringSeriesForToleranceLock($this->user, 'Neighbour');
 });
 
 function recurringSeriesForToleranceLock(User $user, string $name): RecurringSeries
@@ -67,11 +67,11 @@ it('refuses a payload that moves the tolerance write onto a second series', func
     LivewireRoundTrip::tamper(
         $this,
         seriesDetailSnapshot($this->onScreen->id),
-        ['seriesId' => $this->neighbour->id],
+        ['seriesId' => $this->neighbor->id],
         [['path' => '', 'method' => 'editVarianceTolerance', 'params' => [50]]],
     )->assertForbidden();
 
-    expect(toleranceOf($this->neighbour->id))->toBe(25)
+    expect(toleranceOf($this->neighbor->id))->toBe(25)
         ->and(toleranceOf($this->onScreen->id))->toBe(25);
 });
 
@@ -84,5 +84,5 @@ it('still writes the tolerance of the series the address bar names', function ()
     )->assertOk();
 
     expect(toleranceOf($this->onScreen->id))->toBe(50)
-        ->and(toleranceOf($this->neighbour->id))->toBe(25);
+        ->and(toleranceOf($this->neighbor->id))->toBe(25);
 });

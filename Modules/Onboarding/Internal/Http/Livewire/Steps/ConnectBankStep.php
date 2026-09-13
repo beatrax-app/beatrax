@@ -134,7 +134,7 @@ final class ConnectBankStep extends Component
         }
 
         $user = $currentUser->user();
-        $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->selectedFormat));
+        $originalFilename = UploadFilename::sanitize($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->selectedFormat));
 
         $formatHint = $this->formatHint();
 

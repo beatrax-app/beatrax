@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Príjmy spolu:',
 
     'empty' => 'Za :year nie sú žiadne daňovo označené transakcie.',
-    'uncategorised' => 'Bez kategórie',
+    'uncategorized' => 'Bez kategórie',
 
     'col_date' => 'Dátum',
     'col_counterparty' => 'Protistrana',

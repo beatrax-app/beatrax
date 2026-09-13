@@ -28,7 +28,7 @@ final class PinnedReportsRow extends Component
 
     private const int DONUT_HEIGHT = 240;
 
-    private const string AXIS_LABEL_COLOUR = '#64748B';
+    private const string AXIS_LABEL_COLOR = '#64748B';
 
     public function render(
         CurrentUser $currentUser,
@@ -139,7 +139,7 @@ final class PinnedReportsRow extends Component
                     'rotate' => 0,
                     'hideOverlappingLabels' => true,
                     'trim' => true,
-                    'style' => ['fontSize' => '11px', 'colors' => self::AXIS_LABEL_COLOUR],
+                    'style' => ['fontSize' => '11px', 'colors' => self::AXIS_LABEL_COLOR],
                 ],
                 'axisTicks' => ['show' => false],
                 'axisBorder' => ['show' => false],
@@ -204,7 +204,7 @@ final class PinnedReportsRow extends Component
                 'position' => 'bottom',
                 'fontSize' => '11px',
                 'itemMargin' => ['horizontal' => 6, 'vertical' => 2],
-                'labels' => ['colors' => self::AXIS_LABEL_COLOUR],
+                'labels' => ['colors' => self::AXIS_LABEL_COLOR],
             ],
             'tooltip' => ['enabled' => true],
         ];

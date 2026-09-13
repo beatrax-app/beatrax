@@ -19,8 +19,8 @@
     // booked_at is a DATETIME and posted_at a DATE, so the two are compared as
     // days: a same-day pair differs by the time-of-day the importer bolts on to
     // keep fingerprints apart, and that is not a second date to show.
-    $postedDay = SafeDate::normalisedDayOrNull((string) $transaction->posted_at);
-    $bookedDay = SafeDate::normalisedDayOrNull((string) $transaction->booked_at);
+    $postedDay = SafeDate::normalizedDayOrNull((string) $transaction->posted_at);
+    $bookedDay = SafeDate::normalizedDayOrNull((string) $transaction->booked_at);
 @endphp
 
 <div>

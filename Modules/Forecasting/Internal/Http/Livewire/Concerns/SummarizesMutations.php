@@ -15,16 +15,16 @@ use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
-trait SummarisesMutations
+trait SummarizesMutations
 {
     private function summaryFor(string $kind, ScenarioMutationPayload $payload): string
     {
         return match (true) {
             $payload instanceof CancelSeriesPayload => Lang::get('forecasting::scenario.summary.cancel', ['name' => $this->resolveSeriesName($payload->seriesId)]),
-            $payload instanceof AddOneOffPayload => $this->summariseOneOff($payload),
-            $payload instanceof AddRecurringPayload => $this->summariseRecurring($payload),
-            $payload instanceof ChangeSeriesAmountPayload => $this->summariseChangeAmount($payload),
-            $payload instanceof ShiftSeriesDatePayload => $this->summariseShiftDate($payload),
+            $payload instanceof AddOneOffPayload => $this->summarizeOneOff($payload),
+            $payload instanceof AddRecurringPayload => $this->summarizeRecurring($payload),
+            $payload instanceof ChangeSeriesAmountPayload => $this->summarizeChangeAmount($payload),
+            $payload instanceof ShiftSeriesDatePayload => $this->summarizeShiftDate($payload),
             default => $kind,
         };
     }
@@ -55,7 +55,7 @@ trait SummarisesMutations
         return Lang::get('forecasting::scenario.summary.series_fallback', ['id' => $seriesId]);
     }
 
-    private function summariseOneOff(AddOneOffPayload $payload): string
+    private function summarizeOneOff(AddOneOffPayload $payload): string
     {
         $sign = $payload->direction === Direction::Income->value ? '+' : '−';
         $amount = MoneyInput::formatAbsMinor($payload->amountMinor, $payload->currency);
@@ -67,7 +67,7 @@ trait SummarisesMutations
         ]);
     }
 
-    private function summariseRecurring(AddRecurringPayload $payload): string
+    private function summarizeRecurring(AddRecurringPayload $payload): string
     {
         $sign = $payload->direction === Direction::Income->value ? '+' : '−';
         $amount = MoneyInput::formatAbsMinor($payload->amountMinor, $payload->currency);
@@ -80,7 +80,7 @@ trait SummarisesMutations
         ]);
     }
 
-    private function summariseChangeAmount(ChangeSeriesAmountPayload $payload): string
+    private function summarizeChangeAmount(ChangeSeriesAmountPayload $payload): string
     {
         $amount = MoneyInput::formatMinor($payload->newAmountMinor, $this->seriesCurrency($payload->seriesId));
 
@@ -90,7 +90,7 @@ trait SummarisesMutations
         ]);
     }
 
-    private function summariseShiftDate(ShiftSeriesDatePayload $payload): string
+    private function summarizeShiftDate(ShiftSeriesDatePayload $payload): string
     {
         $scope = $payload->scope === ShiftScope::AllSubsequent->value
             ? Lang::get('forecasting::scenario.summary.scope_all')

@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Database:',
-        'artefacts_imports' => 'Imported statements:',
-        'artefacts_mail' => 'Scanned mail:',
-        'artefacts_drop' => 'Watched drop folder:',
+        'artifacts_imports' => 'Imported statements:',
+        'artifacts_mail' => 'Scanned mail:',
+        'artifacts_drop' => 'Watched drop folder:',
         'backups' => 'Backups:',
         'secrets' => 'Connector credentials:',
         'logs' => 'Logs:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Copy database path to clipboard',
-        'artefacts_imports' => 'Copy imported statements path to clipboard',
-        'artefacts_mail' => 'Copy scanned mail path to clipboard',
-        'artefacts_drop' => 'Copy watched drop folder path to clipboard',
+        'artifacts_imports' => 'Copy imported statements path to clipboard',
+        'artifacts_mail' => 'Copy scanned mail path to clipboard',
+        'artifacts_drop' => 'Copy watched drop folder path to clipboard',
         'backups' => 'Copy backups path to clipboard',
         'secrets' => 'Copy connector credentials path to clipboard',
         'logs' => 'Copy logs path to clipboard',
     ],
 
-    'artefacts_heading' => 'Your source documents are not inside the backup',
-    'artefacts_body' => 'A backup holds the database and nothing else. The statements you imported, the mail the scanner pulled in and the receipts you dropped in the watched folder stay where they are, in the three folders listed above. Copying a backup somewhere safe does not copy them, so a full archive means taking those folders too — or using Export everything below, which bundles them with the backup for you.',
+    'artifacts_heading' => 'Your source documents are not inside the backup',
+    'artifacts_body' => 'A backup holds the database and nothing else. The statements you imported, the mail the scanner pulled in and the receipts you dropped in the watched folder stay where they are, in the three folders listed above. Copying a backup somewhere safe does not copy them, so a full archive means taking those folders too — or using Export everything below, which bundles them with the backup for you.',
 
     'export_heading' => 'Export everything',
     'export_body' => 'One archive holding an encrypted copy of your database and every source document you gave Beatrax. Unzip it anywhere and your documents are inside as they always were, in the folders they came from.',

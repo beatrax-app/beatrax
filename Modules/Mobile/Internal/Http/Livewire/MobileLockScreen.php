@@ -179,7 +179,7 @@ final class MobileLockScreen extends Component
             $gateway->unlockWithRecoveredKey($currentUser->id(), $result->dataKey, $session);
             $this->redirectToIntendedUrl($session, $urls);
         } elseif ($result->status === BiometricRecoverResult::MISSING) {
-            $this->coldStartEnrolmentIsGone($gateway, $currentUser->id());
+            $this->coldStartEnrollmentIsGone($gateway, $currentUser->id());
         }
 
         // Every other outcome changes no state: the PIN pad completes the
@@ -193,7 +193,7 @@ final class MobileLockScreen extends Component
     /**
      * @link ../../../../../.docs/design/cold-start-biometric-unlock.md
      */
-    private function coldStartEnrolmentIsGone(MobileLockGateway $gateway, int $userId): void
+    private function coldStartEnrollmentIsGone(MobileLockGateway $gateway, int $userId): void
     {
         $gateway->markColdStartEnrolled($userId, false);
 

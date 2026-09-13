@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Această contraparte nu este încă etichetată',
-        'not_labelled_body' => 'Etichetarea necunoscutelor ajută tabloul de bord să afișeze totaluri lunare corecte și lanțuri de finanțare.',
+        'not_labeled_heading' => 'Această contraparte nu este încă etichetată',
+        'not_labeled_body' => 'Etichetarea necunoscutelor ajută tabloul de bord să afișeze totaluri lunare corecte și lanțuri de finanțare.',
         'label_cta' => 'Etichetează această contraparte',
     ],
 

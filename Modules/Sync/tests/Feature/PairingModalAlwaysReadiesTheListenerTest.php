@@ -25,7 +25,7 @@ uses(RefreshDatabase::class);
 // The protection it gave is real and is kept — it moved to the only seam that
 // knows which identity the running daemon holds, and so can tell a restart that
 // changes something from one that destroys a ceremony for nothing:
-// Modules/Desktop/tests/Feature/SyncListenerIsCredentialledOnUnlockTest.php.
+// Modules/Desktop/tests/Feature/SyncListenerIsCredentialedOnUnlockTest.php.
 
 function listenerModalUser(string $username): User
 {

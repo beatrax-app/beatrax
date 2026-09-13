@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLANLAMA',
     'section_insights' => 'ANALİZLER',
     'section_ingestion' => 'VERİ GİRİŞİ',
-    'section_organise' => 'DÜZENLEME',
+    'section_organize' => 'DÜZENLEME',
     'section_settings' => 'AYARLAR',
 
     'nav' => [

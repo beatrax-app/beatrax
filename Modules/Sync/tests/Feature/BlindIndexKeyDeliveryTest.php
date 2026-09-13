@@ -158,7 +158,7 @@ function bikDeliverOutcome(User $user, Session $session, DeviceIdentityDto $self
 // nothing, then import. Every row written after that is keyed at write time and
 // so is never convertible — which is why the sweep marker cannot answer whether
 // this device holds keyed rows.
-function bikEnrolThenImport(User $user, Session $session): string
+function bikEnrollThenImport(User $user, Session $session): string
 {
     app(EncryptionMigrationService::class)->migrate($user, $session);
 
@@ -415,7 +415,7 @@ it('refuses a peer key on a device that enrolled empty and imported afterwards',
     /** @var Session $session */
     $session = app(Session::class);
 
-    $localKeyHex = bikEnrolThenImport($user, $session);
+    $localKeyHex = bikEnrollThenImport($user, $session);
 
     /** @var BlindIndexCodec $codec */
     $codec = app(BlindIndexCodec::class);
@@ -435,7 +435,7 @@ it('refuses, and does not half-resolve, when both devices already hold keyed row
     /** @var Session $session */
     $session = app(Session::class);
 
-    $localKeyHex = bikEnrolThenImport($user, $session);
+    $localKeyHex = bikEnrollThenImport($user, $session);
 
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
     bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true);
@@ -491,7 +491,7 @@ it('refuses a blind-index wrap whose keyed flag was flipped in transit', functio
     /** @var Session $session */
     $session = app(Session::class);
 
-    $localKeyHex = bikEnrolThenImport($user, $session);
+    $localKeyHex = bikEnrollThenImport($user, $session);
 
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
 
@@ -676,7 +676,7 @@ it('keeps the peer wrap when both devices hold keyed rows, rather than retiring 
     /** @var Session $session */
     $session = app(Session::class);
 
-    $localKeyHex = bikEnrolThenImport($user, $session);
+    $localKeyHex = bikEnrollThenImport($user, $session);
 
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
     $outcome = bikDeliverOutcome($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true);
@@ -695,7 +695,7 @@ it('reports a divergence neither side can resolve once, not on every sync pass',
     /** @var Session $session */
     $session = app(Session::class);
 
-    bikEnrolThenImport($user, $session);
+    bikEnrollThenImport($user, $session);
 
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
 
@@ -721,7 +721,7 @@ it('takes the divergence report down once the peer sends the key this device hol
     /** @var Session $session */
     $session = app(Session::class);
 
-    $localKeyHex = bikEnrolThenImport($user, $session);
+    $localKeyHex = bikEnrollThenImport($user, $session);
 
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
     bikDeliver($user, $session, $self, $senderId, $senderSecretHex, $peerKeyHex, senderKeyed: true);
@@ -743,7 +743,7 @@ it('still reports the divergence, and still returns an outcome, when the alert r
     /** @var Session $session */
     $session = app(Session::class);
 
-    bikEnrolThenImport($user, $session);
+    bikEnrollThenImport($user, $session);
     [$self, $senderId, $senderSecretHex, $peerKeyHex] = bikInboundWrapParts($user, $session);
 
     Schema::drop('system_alerts');

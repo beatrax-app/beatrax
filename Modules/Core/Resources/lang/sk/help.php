@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Databáza:',
-        'artefacts_imports' => 'Naimportované výpisy:',
-        'artefacts_mail' => 'Načítaná pošta:',
-        'artefacts_drop' => 'Sledovaný priečinok:',
+        'artifacts_imports' => 'Naimportované výpisy:',
+        'artifacts_mail' => 'Načítaná pošta:',
+        'artifacts_drop' => 'Sledovaný priečinok:',
         'backups' => 'Zálohy:',
         'secrets' => 'Prihlasovacie údaje prepojení:',
         'logs' => 'Záznamy:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Skopírovať cestu k databáze do schránky',
-        'artefacts_imports' => 'Skopírovať cestu k naimportovaným výpisom do schránky',
-        'artefacts_mail' => 'Skopírovať cestu k načítanej pošte do schránky',
-        'artefacts_drop' => 'Skopírovať cestu k sledovanému priečinku do schránky',
+        'artifacts_imports' => 'Skopírovať cestu k naimportovaným výpisom do schránky',
+        'artifacts_mail' => 'Skopírovať cestu k načítanej pošte do schránky',
+        'artifacts_drop' => 'Skopírovať cestu k sledovanému priečinku do schránky',
         'backups' => 'Skopírovať cestu k zálohám do schránky',
         'secrets' => 'Skopírovať cestu k prihlasovacím údajom prepojení do schránky',
         'logs' => 'Skopírovať cestu k záznamom do schránky',
     ],
 
-    'artefacts_heading' => 'Tvoje zdrojové dokumenty v zálohe nie sú',
-    'artefacts_body' => 'Záloha obsahuje databázu a nič viac. Výpisy, ktoré si naimportoval, pošta, ktorú stiahol skener, aj bločky, ktoré si vložil do sledovaného priečinka, ostávajú tam, kde sú — v troch priečinkoch uvedených vyššie. Odloženie zálohy na bezpečné miesto ich neskopíruje, takže úplný archív znamená vziať aj tieto priečinky — alebo použiť Exportovať všetko nižšie, ktoré ich zabalí spolu so zálohou.',
+    'artifacts_heading' => 'Tvoje zdrojové dokumenty v zálohe nie sú',
+    'artifacts_body' => 'Záloha obsahuje databázu a nič viac. Výpisy, ktoré si naimportoval, pošta, ktorú stiahol skener, aj bločky, ktoré si vložil do sledovaného priečinka, ostávajú tam, kde sú — v troch priečinkoch uvedených vyššie. Odloženie zálohy na bezpečné miesto ich neskopíruje, takže úplný archív znamená vziať aj tieto priečinky — alebo použiť Exportovať všetko nižšie, ktoré ich zabalí spolu so zálohou.',
 
     'export_heading' => 'Exportovať všetko',
     'export_body' => 'Jeden archív so zašifrovanou kópiou tvojej databázy a s každým zdrojovým dokumentom, ktorý si Beatraxu dal. Rozbaľ ho kdekoľvek a dokumenty v ňom nájdeš presne také, aké boli, v priečinkoch, z ktorých pochádzajú.',

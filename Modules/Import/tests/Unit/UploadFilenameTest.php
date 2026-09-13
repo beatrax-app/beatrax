@@ -7,28 +7,28 @@ use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 
 it('folds every path-traversal character out of the stem', function (): void {
-    expect(UploadFilename::sanitise('../../etc/passwd.csv', '.csv'))->toBe('passwd.csv');
+    expect(UploadFilename::sanitize('../../etc/passwd.csv', '.csv'))->toBe('passwd.csv');
 });
 
 it('collapses a run of unsafe characters into one underscore', function (): void {
-    expect(UploadFilename::sanitise('my  weird&&&name.csv', '.csv'))->toBe('my_weird_name.csv');
+    expect(UploadFilename::sanitize('my  weird&&&name.csv', '.csv'))->toBe('my_weird_name.csv');
 });
 
 it('folds an all-unsafe stem to a single underscore rather than to the fallback', function (): void {
-    expect(UploadFilename::sanitise('€€€.csv', '.csv'))->toBe('_.csv');
+    expect(UploadFilename::sanitize('€€€.csv', '.csv'))->toBe('_.csv');
 });
 
 it('falls back to "upload" only when the stem is empty', function (): void {
-    expect(UploadFilename::sanitise('.csv', '.csv'))->toBe('upload.csv');
-    expect(UploadFilename::sanitise('', '.csv'))->toBe('upload.csv');
+    expect(UploadFilename::sanitize('.csv', '.csv'))->toBe('upload.csv');
+    expect(UploadFilename::sanitize('', '.csv'))->toBe('upload.csv');
 });
 
 it('takes the extension from the declared format, not from the uploaded name', function (): void {
-    expect(UploadFilename::sanitise('statement.csv', '.xml'))->toBe('statement.xml');
+    expect(UploadFilename::sanitize('statement.csv', '.xml'))->toBe('statement.xml');
 });
 
 it('keeps hyphens and underscores, which are already filesystem-safe', function (): void {
-    expect(UploadFilename::sanitise('asn-2025_01.csv', '.csv'))->toBe('asn-2025_01.csv');
+    expect(UploadFilename::sanitize('asn-2025_01.csv', '.csv'))->toBe('asn-2025_01.csv');
 });
 
 it('maps every upload format the wizard accepts to its stored extension', function (): void {

@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Buffert',
     'goal_japan_trip' => 'Japanresa',
     'goal_replace_laptop' => 'Byta ut laptopen',
-    'goal_winter_tyres' => 'Vinterdäck',
+    'goal_winter_tires' => 'Vinterdäck',
     'goal_ryokan_stay' => 'Vistelse på ryokan',
     'goal_shinkansen_pass' => 'Shinkansen-kort',
     'pot_emergency_fund' => 'Buffert',

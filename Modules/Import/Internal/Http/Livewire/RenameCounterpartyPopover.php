@@ -109,7 +109,7 @@ final class RenameCounterpartyPopover extends Component
                 // error bag would strand the user on a form already saved.
             } catch (InvalidArgumentException) {
                 // A duplicate rule, or a stale/tampered categoryHint failing
-                // NormalisesRuleInput::assertReferentVisible(). Either way the
+                // NormalizesRuleInput::assertReferentVisible(). Either way the
                 // alias itself already persisted, so the popover closes calmly.
             }
         }

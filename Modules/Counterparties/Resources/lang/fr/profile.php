@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Ce tiers n\'est pas encore étiqueté',
-        'not_labelled_body' => 'Étiqueter les inconnus aide le tableau de bord à afficher des totaux mensuels et des chaînes de financement exacts.',
+        'not_labeled_heading' => 'Ce tiers n\'est pas encore étiqueté',
+        'not_labeled_body' => 'Étiqueter les inconnus aide le tableau de bord à afficher des totaux mensuels et des chaînes de financement exacts.',
         'label_cta' => 'Étiqueter ce tiers',
     ],
 

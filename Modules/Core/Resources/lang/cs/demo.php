@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Rezervní fond',
     'goal_japan_trip' => 'Cesta do Japonska',
     'goal_replace_laptop' => 'Výměna notebooku',
-    'goal_winter_tyres' => 'Zimní pneumatiky',
+    'goal_winter_tires' => 'Zimní pneumatiky',
     'goal_ryokan_stay' => 'Pobyt v ryokanu',
     'goal_shinkansen_pass' => 'Jízdenka na šinkansen',
     'pot_emergency_fund' => 'Rezervní fond',

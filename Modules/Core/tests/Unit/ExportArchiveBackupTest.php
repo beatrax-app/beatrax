@@ -77,7 +77,7 @@ it('lifts a stored entry without asking zlib for anything', function (): void {
 it('refuses an archive whose first entry is not named as a backup', function (): void {
     /** @var string $dir */
     $dir = $this->dir;
-    $archive = handRolledArchive($dir, 'artefacts/artefacts_imports/statement.csv', 'date,amount');
+    $archive = handRolledArchive($dir, 'artifacts/artifacts_imports/statement.csv', 'date,amount');
 
     expect(fn () => liftedContents($archive, $dir))
         ->toThrow(BackupFormatException::class, 'holds no Beatrax backup');

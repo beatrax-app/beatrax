@@ -12,7 +12,7 @@ return [
     'section_planning' => 'TERVEZÉS',
     'section_insights' => 'ELEMZÉSEK',
     'section_ingestion' => 'ADATBEVITEL',
-    'section_organise' => 'RENDEZÉS',
+    'section_organize' => 'RENDEZÉS',
     'section_settings' => 'BEÁLLÍTÁSOK',
 
     'nav' => [

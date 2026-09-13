@@ -85,7 +85,7 @@ final class SonarCognitiveComplexity
      *
      * @return array{total:int,functions:list<array{name:string,line:int,value:int}>}
      */
-    public static function analyse(string $source): array
+    public static function analyze(string $source): array
     {
         $reader = new self($source);
         $reader->statements(0, $reader->size, 0);

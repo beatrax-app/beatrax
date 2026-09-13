@@ -36,7 +36,7 @@ function residueUser(): User
     ]);
 }
 
-function residueEnrol(User $user): Session
+function residueEnroll(User $user): Session
 {
     /** @var Session $session */
     $session = app(Session::class);
@@ -91,7 +91,7 @@ function residueRow(User $user, string $id): stdClass
 // what remains really is history rather than a leak still in progress.
 it('refuses a background write into a registered column now, which is why the residue is finite', function (): void {
     $user = residueUser();
-    residueEnrol($user);
+    residueEnroll($user);
 
     /** @var Session $worker */
     $worker = app(Session::class);
@@ -110,7 +110,7 @@ it('refuses a background write into a registered column now, which is why the re
 
 it('seals a row a locked background writer left in the clear, on the next unlocked request', function (): void {
     $user = residueUser();
-    $session = residueEnrol($user);
+    $session = residueEnroll($user);
     residueWriteInTheClear($user, str_repeat('b', 64));
     residuePredatesTheMarker($user);
 
@@ -134,7 +134,7 @@ it('seals a row a locked background writer left in the clear, on the next unlock
 // the work and a crash between them replays it.
 it('leaves an already sealed value byte-identical on a second pass', function (): void {
     $user = residueUser();
-    $session = residueEnrol($user);
+    $session = residueEnroll($user);
     residueWriteInTheClear($user, str_repeat('c', 64));
     residuePredatesTheMarker($user);
 
@@ -153,7 +153,7 @@ it('leaves an already sealed value byte-identical on a second pass', function ()
 // reachable can only make things worse, and this one does nothing at all.
 it('does not touch the row when the session holds no key', function (): void {
     $user = residueUser();
-    residueEnrol($user);
+    residueEnroll($user);
     residueWriteInTheClear($user, str_repeat('d', 64));
     residuePredatesTheMarker($user);
 
@@ -199,7 +199,7 @@ function residueQueriesAgainstSweptTables(Closure $pass): array
  */
 it('sweeps again on its own, with no registry change to announce the residue', function (): void {
     $user = residueUser();
-    $session = residueEnrol($user);
+    $session = residueEnroll($user);
     residueWriteInTheClear($user, str_repeat('e', 64));
 
     /** @var SealedLedgerRecovery $recovery */
@@ -224,7 +224,7 @@ it('sweeps again on its own, with no registry change to announce the residue', f
 // a silent cost in its place.
 it('reads no row of a swept table on a clean enrolled install', function (): void {
     $user = residueUser();
-    $session = residueEnrol($user);
+    $session = residueEnroll($user);
 
     /** @var SealedLedgerRecovery $recovery */
     $recovery = app(SealedLedgerRecovery::class);
@@ -241,7 +241,7 @@ it('reads no row of a swept table on a clean enrolled install', function (): voi
 // which is the recurring full scan the digest gate was built to stop.
 it('stamps the pass it just ran, so the window opens once and not per request', function (): void {
     $user = residueUser();
-    $session = residueEnrol($user);
+    $session = residueEnroll($user);
     residueWriteInTheClear($user, str_repeat('f', 64));
 
     /** @var SealedLedgerRecovery $recovery */

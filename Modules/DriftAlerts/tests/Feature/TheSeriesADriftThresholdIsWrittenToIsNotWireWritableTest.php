@@ -28,7 +28,7 @@ beforeEach(function (): void {
     $this->db = $db;
 
     $this->onScreen = DriftAlertFixture::alert($this->user)->recurring_series_id;
-    $this->neighbour = DriftAlertFixture::alert($this->user)->recurring_series_id;
+    $this->neighbor = DriftAlertFixture::alert($this->user)->recurring_series_id;
 });
 
 afterEach(function (): void {
@@ -60,13 +60,13 @@ it('refuses a payload that moves the save onto a second series', function (): vo
     $response = LivewireRoundTrip::tamper(
         $this,
         driftThresholdEditorSnapshot($this->onScreen),
-        ['recurringSeriesId' => $this->neighbour],
+        ['recurringSeriesId' => $this->neighbor],
         [['path' => '', 'method' => 'save', 'params' => [50]]],
     );
 
     $response->assertForbidden();
 
-    expect(driftThresholdOf($this->neighbour))->toBeNull()
+    expect(driftThresholdOf($this->neighbor))->toBeNull()
         ->and(driftThresholdOf($this->onScreen))->toBeNull();
 });
 
@@ -79,5 +79,5 @@ it('still writes the threshold of the series the editor was mounted for', functi
     )->assertOk();
 
     expect(driftThresholdOf($this->onScreen))->toBe(50)
-        ->and(driftThresholdOf($this->neighbour))->toBeNull();
+        ->and(driftThresholdOf($this->neighbor))->toBeNull();
 });

@@ -2027,7 +2027,7 @@ var(--color-border-faint)` is invalid at computed-value time when the token does
 not exist, which throws away the whole shorthand, so two table rules had been
 drawing no border and a pressed emoji-action no background.
 
-`EveryColourVariableNamesATokenThatExistsArchTest` compares the declared set
+`EveryColorVariableNamesATokenThatExistsArchTest` compares the declared set
 against the referenced set. It found `--color-border-faint`, `--color-danger`
 and `--color-primary` on its first run, none of which the contrast sweep could
 have surfaced, because a rule that renders nothing has nothing to measure.
@@ -2049,7 +2049,7 @@ The fix has a shape worth keeping. Fixing the light value alone moved nine nodes
 *below* the floor at night, because a class list carrying `text-slate-400` with
 no `dark:` sibling was relying on one colour being tolerable in both themes.
 A light-mode contrast fix needs its dark half in the same breath, which is what
-the third assertion in `AMutedTextColourStaysAboveTheContrastFloorArchTest`
+the third assertion in `AMutedTextColorStaysAboveTheContrastFloorArchTest`
 pins. The other two pin the pairings that fail by construction rather than by
 route: slate-400 on any light surface, and slate-500 on an element that also
 carries slate-100.
@@ -2232,7 +2232,7 @@ sheet and a batch banner are all closed on the routes a probe walks.
 The pairing needs no browser, because a background and a text colour **declared
 in the same block** are known to apply together: an inline style wins the
 cascade outright, and a rule that sets both sets both on whatever it matches.
-`ColourPairs` reads every such block — inline `style` attributes, a style a
+`ColorPairs` reads every such block — inline `style` attributes, a style a
 template holds in a PHP variable, and every rule in `app.css` — and measures
 the pair in both themes. It found `.srch-sheet-apply`, `.srch-filter-badge` and
 the batch-tag button, all near-white on `--color-blue`, all fine in light and
@@ -2241,7 +2241,7 @@ the batch-tag button, all near-white on `--color-blue`, all fine in light and
 **Resolve the value; never read the text of it.** `.srch-sheet-apply` wrote
 `color: oklch(99% 0 0)`. A regex taking 99, 0 and 0 for channels calls that
 pair 5.40:1 and passes it; converted through Oklab it is 2.47:1 and fails. The
-verdict flips, not merely the number. `ThemeColour` does the conversion in PHP
+verdict flips, not merely the number. `ThemeColor` does the conversion in PHP
 — `oklch`, `oklab`, `hsl`, `color-mix`, `#rgba` and `var()` with its fallback
 chain — which is what lets the guard run in the suite instead of behind a
 headless browser. Gradient stops are resolved the same way, so the avatar ramp
@@ -5876,7 +5876,7 @@ framework's own `date_format` rule — and they did not all agree.
 **Normalising is still right, but only for a machine.** A MIME `Date:` header
 and a stored timestamp whose time half is an artefact have no `Y-m-d` shape to
 check, so the lenient reader survives under a name that says what it does:
-`SafeDate::normalisedDayOrNull()`. Renaming it is the load-bearing half of the
+`SafeDate::normalizedDayOrNull()`. Renaming it is the load-bearing half of the
 split — every existing caller now has to state that normalising is what it
 wanted, and a reviewer can see at the call site which question was asked.
 
@@ -5920,7 +5920,7 @@ the moment the file names the seam.
 
 ### The guards
 
-`tests/Contracts/ADateFromOutsideIsRefusedNotNormalisedArchTest.php` walks the
+`tests/Contracts/ADateFromOutsideIsRefusedNotNormalizedArchTest.php` walks the
 Blade tree for every `<x-core::date-input>` — stripping Blade comments first,
 because the goals modal explains the component inside one — and requires each
 bound property to name the file that refuses it, with a pattern re-run against

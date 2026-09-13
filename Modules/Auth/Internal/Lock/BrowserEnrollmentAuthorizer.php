@@ -13,7 +13,7 @@ use Illuminate\Contracts\Session\Session;
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
  */
-final readonly class BrowserEnrolmentAuthoriser
+final readonly class BrowserEnrollmentAuthorizer
 {
     public function __construct(
         private PinVerificationService $verifier,
@@ -24,7 +24,7 @@ final readonly class BrowserEnrolmentAuthoriser
     // the wrap happens a round trip later, and a copy parked in the session
     // meanwhile would be a second durable one of exactly the thing being
     // protected. What survives the gap is the proof, which is not a secret.
-    public function authorise(int $userId, string $pin, Session $session): bool
+    public function authorize(int $userId, string $pin, Session $session): bool
     {
         $dataKey = $pin === '' ? null : $this->verifier->verify($userId, $pin, $session)->dataKey;
 

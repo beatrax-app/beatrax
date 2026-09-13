@@ -7,7 +7,7 @@ namespace Modules\Categorization\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
-use Modules\Categorization\Public\Actions\Concerns\NormalisesRuleInput;
+use Modules\Categorization\Public\Actions\Concerns\NormalizesRuleInput;
 use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -15,7 +15,7 @@ use Modules\Core\Public\Support\QueryFailure;
 
 final readonly class CreateCategorizationRule
 {
-    use NormalisesRuleInput;
+    use NormalizesRuleInput;
 
     public function __construct(
         private DatabaseManager $db,

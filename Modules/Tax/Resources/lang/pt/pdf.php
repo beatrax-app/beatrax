@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Total de rendimentos:',
 
     'empty' => 'Não há transações etiquetadas para impostos em :year.',
-    'uncategorised' => 'Sem categoria',
+    'uncategorized' => 'Sem categoria',
 
     'col_date' => 'Data',
     'col_counterparty' => 'Contraparte',

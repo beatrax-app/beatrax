@@ -22,7 +22,7 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 // anywhere is enough to have a total the message marked with nothing replaced
 // by a figure that is not it, at a currency it never named.
 
-function labelledTotalEml(string $sender, string $contentType, string $body): string
+function labeledTotalEml(string $sender, string $contentType, string $body): string
 {
     return sprintf("From: %s\r\n", $sender)
         ."To: kaarthouder@example.test\r\n"
@@ -36,23 +36,23 @@ function labelledTotalEml(string $sender, string $contentType, string $body): st
         .$body;
 }
 
-function labelledTotalPaypal(): PaypalReceiptMatcher
+function labeledTotalPaypal(): PaypalReceiptMatcher
 {
     return new PaypalReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 }
 
-function labelledTotalIcs(): IcsReceiptMatcher
+function labeledTotalIcs(): IcsReceiptMatcher
 {
     return new IcsReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 }
 
-function labelledTotalGooglePlay(): GooglePlayReceiptMatcher
+function labeledTotalGooglePlay(): GooglePlayReceiptMatcher
 {
     return new GooglePlayReceiptMatcher(new EmlMimeReader, new ReceiptBodyText);
 }
 
 it('books the PayPal total and not the subtotal printed above it', function (): void {
-    $outcome = labelledTotalPaypal()->match(labelledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
+    $outcome = labeledTotalPaypal()->match(labeledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
         'Aan: Etsy NL',
         'Subtotaal: EUR 10,74',
         'Verzendkosten: EUR 2,25',
@@ -66,7 +66,7 @@ it('books the PayPal total and not the subtotal printed above it', function (): 
 });
 
 it('does not read an English Subtotal as the PayPal total', function (): void {
-    $outcome = labelledTotalPaypal()->match(labelledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
+    $outcome = labeledTotalPaypal()->match(labeledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
         'Merchant: Etsy LLC',
         'Subtotal: EUR 10,74',
         'Total: EUR 12,99',
@@ -79,7 +79,7 @@ it('does not read an English Subtotal as the PayPal total', function (): void {
 });
 
 it('books the PayPal total in its own currency and not an item price quoted in another', function (): void {
-    $outcome = labelledTotalPaypal()->match(labelledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
+    $outcome = labeledTotalPaypal()->match(labeledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
         'Merchant: Etsy LLC',
         'Item price: $ 5.00 USD',
         'Bedrag: EUR 12,99',
@@ -92,7 +92,7 @@ it('books the PayPal total in its own currency and not an item price quoted in a
 });
 
 it('still records an unmarked PayPal total as a miss when another line is denominated', function (): void {
-    $outcome = labelledTotalPaypal()->match(labelledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
+    $outcome = labeledTotalPaypal()->match(labeledTotalEml('service@paypal.com', 'text/plain', implode("\n", [
         'Aan: Nintendo',
         'Je PayPal-saldo: EUR 0,00',
         'Bedrag: 1250',
@@ -105,7 +105,7 @@ it('still records an unmarked PayPal total as a miss when another line is denomi
 });
 
 it('books the ICS charge and not the spending limit printed above it', function (): void {
-    $outcome = labelledTotalIcs()->match(labelledTotalEml('noreply@ics.nl', 'text/plain', implode("\n", [
+    $outcome = labeledTotalIcs()->match(labeledTotalEml('noreply@ics.nl', 'text/plain', implode("\n", [
         'Uw bestedingslimiet is EUR 2.500,00',
         'Verkoper: AMAZON.COM',
         'Bedrag: EUR 46,20 Af',
@@ -124,7 +124,7 @@ it('reads an ICS table whose cells carry no whitespace between them', function (
         .'<tr><td>Referentienummer:</td><td>XYZ123</td></tr>'
         .'</table></body></html>';
 
-    $outcome = labelledTotalIcs()->match(labelledTotalEml('noreply@ics.nl', 'text/html', $html));
+    $outcome = labeledTotalIcs()->match(labeledTotalEml('noreply@ics.nl', 'text/html', $html));
 
     expect($outcome->kind)->toBe(MatchOutcomeKind::Parsed)
         ->and($outcome->parsed?->amountMinor)->toBe(-4620)
@@ -132,7 +132,7 @@ it('reads an ICS table whose cells carry no whitespace between them', function (
 });
 
 it('books the Google Play total and not the tax line printed above it', function (): void {
-    $outcome = labelledTotalGooglePlay()->match(labelledTotalEml('googleplay-noreply@google.com', 'text/plain', implode("\n", [
+    $outcome = labeledTotalGooglePlay()->match(labeledTotalEml('googleplay-noreply@google.com', 'text/plain', implode("\n", [
         'Order Number: GPA.1234-5678-9012-34567',
         'Item: Spotify Premium',
         'Tax: $1.00 USD',
@@ -145,7 +145,7 @@ it('books the Google Play total and not the tax line printed above it', function
 });
 
 it('takes the Google Play settled leg off the total line rather than the first bracket in the body', function (): void {
-    $outcome = labelledTotalGooglePlay()->match(labelledTotalEml('googleplay-noreply@google.com', 'text/plain', implode("\n", [
+    $outcome = labeledTotalGooglePlay()->match(labeledTotalEml('googleplay-noreply@google.com', 'text/plain', implode("\n", [
         'Order Number: GPA.1234-5678-9012-34567',
         'Item: Spotify Premium',
         'Price: $11.99 USD (€11,14 EUR)',

@@ -91,37 +91,37 @@ function purposeStringSource(): ?string
  */
 function purposeStringsByLocale(string $directory): array
 {
-    $localised = [];
+    $localized = [];
 
     foreach (glob($directory.'/*/purpose-strings.php') ?: [] as $file) {
         /** @var array<string, string> $strings */
         $strings = require $file;
 
-        $localised[basename(dirname($file))] = $strings;
+        $localized[basename(dirname($file))] = $strings;
     }
 
-    return $localised;
+    return $localized;
 }
 
 $ios = beatraxScaffoldPath('ios/NativePHP.xcodeproj/project.pbxproj');
 
 if ($ios === null) {
-    fwrite(STDOUT, "nativephp_ios_purpose_string_localisations: no iOS scaffold yet — skipping.\n");
+    fwrite(STDOUT, "nativephp_ios_purpose_string_localizations: no iOS scaffold yet — skipping.\n");
     exit(0);
 }
 
 $source = purposeStringSource();
 
 if ($source === null) {
-    fwrite(STDERR, 'nativephp_ios_purpose_string_localisations: no'.PURPOSE_STRING_SOURCE." reachable from this tree.\n");
+    fwrite(STDERR, 'nativephp_ios_purpose_string_localizations: no'.PURPOSE_STRING_SOURCE." reachable from this tree.\n");
     fwrite(STDERR, "Without it every permission prompt falls back to English; copy Modules/ in beside scripts/.\n");
     exit(1);
 }
 
-$localised = purposeStringsByLocale($source);
+$localized = purposeStringsByLocale($source);
 
-if ($localised === []) {
-    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: %s holds no locale at all.\n", $source));
+if ($localized === []) {
+    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localizations: %s holds no locale at all.\n", $source));
     exit(1);
 }
 
@@ -132,7 +132,7 @@ $pbxproj = (string) file_get_contents($ios);
 // those silently would be worse than stopping here.
 if (! str_contains($pbxproj, 'isa = PBXFileSystemSynchronizedRootGroup;')
     || preg_match('#PBXFileSystemSynchronizedRootGroup;\s*(?:exceptions = \([^)]*\);\s*)?path = NativePHP;#s', $pbxproj) !== 1) {
-    fwrite(STDERR, "nativephp_ios_purpose_string_localisations: the NativePHP folder is no longer a synchronized root group.\n");
+    fwrite(STDERR, "nativephp_ios_purpose_string_localizations: the NativePHP folder is no longer a synchronized root group.\n");
     fwrite(STDERR, "The .lproj folders would not be copied into the app bundle; add them to the Resources build phase by hand.\n");
     exit(1);
 }
@@ -140,17 +140,17 @@ if (! str_contains($pbxproj, 'isa = PBXFileSystemSynchronizedRootGroup;')
 $group = dirname($ios, 2).'/NativePHP';
 
 if (! is_dir($group)) {
-    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: %s does not exist.\n", $group));
+    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localizations: %s does not exist.\n", $group));
     exit(1);
 }
 
 $written = 0;
 
-foreach ($localised as $locale => $strings) {
+foreach ($localized as $locale => $strings) {
     $directory = $group.'/'.$locale.'.lproj';
 
     if (! is_dir($directory) && ! mkdir($directory, 0o755, true) && ! is_dir($directory)) {
-        fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: could not create %s.\n", $directory));
+        fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localizations: could not create %s.\n", $directory));
         exit(1);
     }
 
@@ -162,7 +162,7 @@ foreach ($localised as $locale => $strings) {
     }
 
     if (file_put_contents($target, $contents) === false) {
-        fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: could not write %s.\n", $target));
+        fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localizations: could not write %s.\n", $target));
         exit(1);
     }
 
@@ -174,24 +174,24 @@ foreach ($localised as $locale => $strings) {
 $base = $group.'/'.PURPOSE_STRING_BASE_LOCALE.'.lproj/InfoPlist.strings';
 
 if (! is_file($base)) {
-    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localisations: %s was not written.\n", $base));
+    fwrite(STDERR, sprintf("nativephp_ios_purpose_string_localizations: %s was not written.\n", $base));
     exit(1);
 }
 
 $landed = count(glob($group.'/*.lproj/InfoPlist.strings') ?: []);
 
-if ($landed !== count($localised)) {
+if ($landed !== count($localized)) {
     fwrite(STDERR, sprintf(
-        "nativephp_ios_purpose_string_localisations: %d of %d locales landed in %s.\n",
+        "nativephp_ios_purpose_string_localizations: %d of %d locales landed in %s.\n",
         $landed,
-        count($localised),
+        count($localized),
         $group,
     ));
     exit(1);
 }
 
 fwrite(STDOUT, $written === 0
-    ? "nativephp_ios_purpose_string_localisations: already applied.\n"
-    : sprintf("nativephp_ios_purpose_string_localisations: wrote purpose strings for %s locale(s).\n", $written));
+    ? "nativephp_ios_purpose_string_localizations: already applied.\n"
+    : sprintf("nativephp_ios_purpose_string_localizations: wrote purpose strings for %s locale(s).\n", $written));
 
 exit(0);

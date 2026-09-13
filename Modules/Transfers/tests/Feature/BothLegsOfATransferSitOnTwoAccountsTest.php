@@ -87,15 +87,15 @@ it('refuses a counter-leg sitting on the firing leg\'s own account when the IBAN
         'settled_amount_minor' => -5000,
         'counterparty_iban' => 'NL57ASNB0123456789',
     ]);
-    $neighbour = twoAccountsTx($this->user, $bank, $this->run, [
+    $neighbor = twoAccountsTx($this->user, $bank, $this->run, [
         'type' => TransactionType::TransferIn->value,
         'amount_minor' => 5000,
         'settled_amount_minor' => 5000,
     ]);
 
     expect($this->pairer->pairOne($firing, $this->user))
-        ->toBeNull('paired with row '.$neighbour->id.', which sits on account '.$bank->id.' too');
-    expect($neighbour->refresh()->pair_transaction_id)->toBeNull();
+        ->toBeNull('paired with row '.$neighbor->id.', which sits on account '.$bank->id.' too');
+    expect($neighbor->refresh()->pair_transaction_id)->toBeNull();
 });
 
 it('refuses a counter-leg sitting on the firing leg\'s own account when the alias bridge resolved back to it', function (): void {
@@ -130,15 +130,15 @@ it('refuses a counter-leg sitting on the firing leg\'s own account when the alia
         'settled_amount_minor' => 12345,
         'counterparty_iban' => 'NL08ABNA0526650664',
     ]);
-    $neighbour = twoAccountsTx($this->user, $firstCard, $this->run, [
+    $neighbor = twoAccountsTx($this->user, $firstCard, $this->run, [
         'type' => TransactionType::TransferOut->value,
         'amount_minor' => -12345,
         'settled_amount_minor' => -12345,
     ]);
 
     expect($this->pairer->pairOne($firing, $this->user))
-        ->toBeNull('paired with row '.$neighbour->id.', which sits on account '.$firstCard->id.' too');
-    expect($neighbour->refresh()->pair_transaction_id)->toBeNull();
+        ->toBeNull('paired with row '.$neighbor->id.', which sits on account '.$firstCard->id.' too');
+    expect($neighbor->refresh()->pair_transaction_id)->toBeNull();
 });
 
 it('still pairs across two accounts once the same-account partner is refused', function (): void {

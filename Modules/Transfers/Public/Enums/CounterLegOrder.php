@@ -10,7 +10,7 @@ namespace Modules\Transfers\Public\Enums;
 // caller's bound, like the window and the direction beside it.
 enum CounterLegOrder
 {
-    case NearestToCentre;
+    case NearestToCenter;
 
     case EarliestBooked;
 }

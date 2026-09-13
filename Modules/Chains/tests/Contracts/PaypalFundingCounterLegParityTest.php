@@ -173,7 +173,7 @@ it('links the counter-leg id PairLookup returns, tie-break included', function (
             unpairedOnly: false,
             excludeTransactionId: null,
         ),
-        new CounterLegWindow(CarbonImmutable::parse($paypalTx->booked_at), CounterLegWindow::DEFAULT_DAYS, CounterLegOrder::NearestToCentre),
+        new CounterLegWindow(CarbonImmutable::parse($paypalTx->booked_at), CounterLegWindow::DEFAULT_DAYS, CounterLegOrder::NearestToCenter),
         $this->user,
     );
 

@@ -107,12 +107,12 @@ final class ZipExtractor
 
     private function escapesExtractionScope(string $entryName): bool
     {
-        $normalised = str_replace('\\', '/', $entryName);
-        if (str_starts_with($normalised, '/') || preg_match('#^[A-Za-z]:#', $normalised) === 1) {
+        $normalized = str_replace('\\', '/', $entryName);
+        if (str_starts_with($normalized, '/') || preg_match('#^[A-Za-z]:#', $normalized) === 1) {
             return true;
         }
 
-        $segments = explode('/', $normalised);
+        $segments = explode('/', $normalized);
 
         return in_array('..', $segments, true);
     }

@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Ieņēmumi kopā:',
 
     'empty' => 'Par :year. gadu nav nodokļiem atzīmētu darījumu.',
-    'uncategorised' => 'Bez kategorijas',
+    'uncategorized' => 'Bez kategorijas',
 
     'col_date' => 'Datums',
     'col_counterparty' => 'Darījuma partneris',

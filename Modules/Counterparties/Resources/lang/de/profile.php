@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Dieser Zahlungspartner ist noch nicht gekennzeichnet',
-        'not_labelled_body' => 'Unbekannte zu kennzeichnen hilft dem Dashboard, genaue Monatssummen und Finanzierungsketten anzuzeigen.',
+        'not_labeled_heading' => 'Dieser Zahlungspartner ist noch nicht gekennzeichnet',
+        'not_labeled_body' => 'Unbekannte zu kennzeichnen hilft dem Dashboard, genaue Monatssummen und Finanzierungsketten anzuzeigen.',
         'label_cta' => 'Diesen Zahlungspartner kennzeichnen',
     ],
 

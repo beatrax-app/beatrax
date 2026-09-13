@@ -99,7 +99,7 @@ That placement was not available at first, and the obstacle is worth naming beca
 easy to re-create. `MobileColdStartVault` took `MobileLockGateway` whole — for two
 single-column reads of `cold_start_biometric_enrolled` — and the gateway is built from the
 provisioner, so a provisioner that named the vault back closed a loop the container answered
-by recursing until the process ran out of memory. `ColdStartEnrolmentFlag`
+by recursing until the process ran out of memory. `ColdStartEnrollmentFlag`
 (`Auth/Public/Services/`) is that column and nothing else, and is what the vault takes now;
 the gateway keeps `markColdStartEnrolled()` and `isColdStartEnrolled()` and delegates to the
 same collaborator, so nothing that called it had to change.

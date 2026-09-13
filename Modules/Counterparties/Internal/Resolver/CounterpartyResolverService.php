@@ -104,7 +104,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
 
     private function resolveSelfAccount(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
-        $iban = $this->normaliseIban($tx->counterpartyIban);
+        $iban = $this->normalizeIban($tx->counterpartyIban);
         if ($iban === null) {
             return null;
         }
@@ -135,7 +135,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
         User $user,
         int $userId,
     ): ?CounterpartyResolutionDto {
-        $iban = $this->normaliseIban($tx->counterpartyIban);
+        $iban = $this->normalizeIban($tx->counterpartyIban);
         if ($iban === null) {
             return null;
         }
@@ -196,7 +196,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
             userId: $userId,
             type: CounterpartyType::Merchant->value,
             displayName: $namedInFile === '' ? $merchantName : $namedInFile,
-            iban: $this->normaliseIban($tx->counterpartyIban),
+            iban: $this->normalizeIban($tx->counterpartyIban),
             merchantName: $merchantName,
             metadata: [],
         );
@@ -204,7 +204,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
 
     private function resolvePersonal(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
-        $iban = $this->normaliseIban($tx->counterpartyIban);
+        $iban = $this->normalizeIban($tx->counterpartyIban);
         $name = $tx->counterpartyName;
 
         // The null checks stay here rather than moving into the predicate so
@@ -328,7 +328,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
                 userId: $userId,
                 type: $type,
                 displayName: $displayName,
-                iban: $this->normaliseIban($tx->counterpartyIban),
+                iban: $this->normalizeIban($tx->counterpartyIban),
                 merchantName: null,
                 metadata: $metadata,
                 defaultName: $defaultName,
@@ -340,7 +340,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
 
     private function resolveUnknown(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
-        $iban = $this->normaliseIban($tx->counterpartyIban);
+        $iban = $this->normalizeIban($tx->counterpartyIban);
         $name = $tx->counterpartyName;
         $description = $tx->description;
 
@@ -527,7 +527,7 @@ final readonly class CounterpartyResolverService implements CounterpartyResolver
         ));
     }
 
-    private function normaliseIban(?string $iban): ?string
+    private function normalizeIban(?string $iban): ?string
     {
         if ($iban === null) {
             return null;

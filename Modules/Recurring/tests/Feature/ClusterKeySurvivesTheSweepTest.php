@@ -93,14 +93,14 @@ it('composes a swept cluster_key exactly as ClusterKeyComposer would', function 
 })->with([
     'income payer IBAN' => [Direction::Income->value, 'NL22INGB0006543210'],
     'expense merchant key' => [Direction::Expense->value, 'spotify ab'],
-    // CounterpartyKeyBackfill carries its own copy of normalisePart() and that
+    // CounterpartyKeyBackfill carries its own copy of normalizePart() and that
     // copy is ASCII-only, so these two pin the claim the copy relies on: the
     // sweep keys the counterparty before it composes, and a keyed value is hex.
     'expense merchant key in Cyrillic' => [Direction::Expense->value, 'мосэнерго'],
     'expense merchant key with an ampersand' => [Direction::Expense->value, 'a&b'],
 ]);
 
-// A digest is 64 characters and normalisePart() caps a part at 60, so the
+// A digest is 64 characters and normalizePart() caps a part at 60, so the
 // composed key carries 240 of its 256 bits. Pinned because the sweep and the
 // detector have to truncate identically, not because the truncation is wanted.
 it('carries the counterparty digest into cluster_key, truncated the way the composer truncates', function (): void {

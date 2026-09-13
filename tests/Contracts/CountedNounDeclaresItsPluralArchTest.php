@@ -78,7 +78,7 @@ function countedNounStrings(array $translations, string $prefix = ''): array
 }
 
 /** @return string|null the offending fragment, or null when the line is clean */
-function countedNounOffence(string $line): ?string
+function countedNounOffense(string $line): ?string
 {
     $matches = PatternScan::sets('/:([a-zA-Z_][a-zA-Z0-9_]*)((?:\s+[A-Za-z][\w\'\/-]*){1,3})/', $line);
 
@@ -153,9 +153,9 @@ it('declares a plural before it puts a count next to a noun', function (): void 
                 continue;
             }
 
-            $offence = countedNounOffence($line);
-            if ($offence !== null) {
-                $offenders[] = $relative.' ['.$path.'] — "'.$offence.'"';
+            $offense = countedNounOffense($line);
+            if ($offense !== null) {
+                $offenders[] = $relative.' ['.$path.'] — "'.$offense.'"';
             }
         }
     }
@@ -194,7 +194,7 @@ it('declares a plural before it puts a count next to a noun', function (): void 
 });
 
 it('reads every pluralised line through Lang::choice', function (): void {
-    $pluralised = [];
+    $pluralized = [];
     $namespaces = array_flip(countedNounNamespaces());
     expect($namespaces)->not->toBeEmpty('No module translation namespace was found, so this rule checked nothing.');
 
@@ -212,12 +212,12 @@ it('reads every pluralised line through Lang::choice', function (): void {
         $group = basename($file, '.php');
         foreach (countedNounStrings($translations) as $path => $line) {
             if (str_contains($line, '|')) {
-                $pluralised[$namespaces[$module].'::'.$group.'.'.$path] = true;
+                $pluralized[$namespaces[$module].'::'.$group.'.'.$path] = true;
             }
         }
     }
 
-    expect($pluralised)->not->toBeEmpty('No pluralised line was found, so this rule checked nothing.');
+    expect($pluralized)->not->toBeEmpty('No pluralised line was found, so this rule checked nothing.');
 
     $offenders = [];
 
@@ -226,7 +226,7 @@ it('reads every pluralised line through Lang::choice', function (): void {
         $matches = PatternScan::all("/(?:Lang::get|__|@lang|trans)\(\s*'([^']+)'/", $source);
 
         foreach ($matches[1] as $key) {
-            if (array_key_exists($key, $pluralised)) {
+            if (array_key_exists($key, $pluralized)) {
                 $offenders[] = $file->getRelativePathname().' — '.$key;
             }
         }
@@ -681,14 +681,14 @@ it('never sets a browser-rendered number beside a line that has no form to choos
 // must not trip each of them are asserted here rather than assumed, so a pattern
 // that stopped matching fails on the probe instead of reporting a clean tree.
 it('reads a counted noun where there is one, and leaves the rewords alone', function (): void {
-    expect(countedNounOffence(':count errors were skipped'))->toBe(':count errors were skipped');
-    expect(countedNounOffence('Imported :total transactions'))->toBe(':total transactions');
+    expect(countedNounOffense(':count errors were skipped'))->toBe(':count errors were skipped');
+    expect(countedNounOffense('Imported :total transactions'))->toBe(':total transactions');
 
-    expect(countedNounOffence('Between :min and :max characters'))->toBeNull();
-    expect(countedNounOffence(':name dips to zero this period'))->toBeNull();
-    expect(countedNounOffence(':count selected'))->toBeNull();
-    expect(countedNounOffence('Files selected: :count'))->toBeNull();
-    expect(countedNounOffence(':count row imported'))->toBeNull();
+    expect(countedNounOffense('Between :min and :max characters'))->toBeNull();
+    expect(countedNounOffense(':name dips to zero this period'))->toBeNull();
+    expect(countedNounOffense(':count selected'))->toBeNull();
+    expect(countedNounOffense('Files selected: :count'))->toBeNull();
+    expect(countedNounOffense(':count row imported'))->toBeNull();
 
     expect(countedNounReadsAsPlural('rows'))->toBeTrue();
     expect(countedNounReadsAsPlural('status'))->toBeFalse();

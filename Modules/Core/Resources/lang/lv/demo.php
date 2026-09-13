@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Rezerves fonds',
     'goal_japan_trip' => 'Ceļojums uz Japānu',
     'goal_replace_laptop' => 'Klēpjdatora nomaiņa',
-    'goal_winter_tyres' => 'Ziemas riepas',
+    'goal_winter_tires' => 'Ziemas riepas',
     'goal_ryokan_stay' => 'Nakšņošana ryokanā',
     'goal_shinkansen_pass' => 'Shinkansen caurlaide',
     'pot_emergency_fund' => 'Rezerves fonds',

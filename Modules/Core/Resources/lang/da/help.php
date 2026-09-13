@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Database:',
-        'artefacts_imports' => 'Importerede kontoudtog:',
-        'artefacts_mail' => 'Scannet post:',
-        'artefacts_drop' => 'Overvåget mappe:',
+        'artifacts_imports' => 'Importerede kontoudtog:',
+        'artifacts_mail' => 'Scannet post:',
+        'artifacts_drop' => 'Overvåget mappe:',
         'backups' => 'Sikkerhedskopier:',
         'secrets' => 'Loginoplysninger til forbindelser:',
         'logs' => 'Logfiler:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopiér stien til databasen til udklipsholderen',
-        'artefacts_imports' => 'Kopiér stien til importerede kontoudtog til udklipsholderen',
-        'artefacts_mail' => 'Kopiér stien til scannet post til udklipsholderen',
-        'artefacts_drop' => 'Kopiér stien til den overvågede mappe til udklipsholderen',
+        'artifacts_imports' => 'Kopiér stien til importerede kontoudtog til udklipsholderen',
+        'artifacts_mail' => 'Kopiér stien til scannet post til udklipsholderen',
+        'artifacts_drop' => 'Kopiér stien til den overvågede mappe til udklipsholderen',
         'backups' => 'Kopiér stien til sikkerhedskopier til udklipsholderen',
         'secrets' => 'Kopiér stien til loginoplysninger til forbindelser til udklipsholderen',
         'logs' => 'Kopiér stien til logfiler til udklipsholderen',
     ],
 
-    'artefacts_heading' => 'Dine kildedokumenter ligger ikke i sikkerhedskopien',
-    'artefacts_body' => 'En sikkerhedskopi indeholder databasen og intet andet. De kontoudtog, du har importeret, den post, scanneren hentede ind, og de kvitteringer, du lagde i den overvågede mappe, bliver liggende, hvor de er, i de tre mapper ovenfor. At lægge en sikkerhedskopi et sikkert sted kopierer dem ikke, så et fuldt arkiv betyder, at du også tager de mapper med — eller bruger Eksportér alt nedenfor, som pakker dem sammen med sikkerhedskopien for dig.',
+    'artifacts_heading' => 'Dine kildedokumenter ligger ikke i sikkerhedskopien',
+    'artifacts_body' => 'En sikkerhedskopi indeholder databasen og intet andet. De kontoudtog, du har importeret, den post, scanneren hentede ind, og de kvitteringer, du lagde i den overvågede mappe, bliver liggende, hvor de er, i de tre mapper ovenfor. At lægge en sikkerhedskopi et sikkert sted kopierer dem ikke, så et fuldt arkiv betyder, at du også tager de mapper med — eller bruger Eksportér alt nedenfor, som pakker dem sammen med sikkerhedskopien for dig.',
 
     'export_heading' => 'Eksportér alt',
     'export_body' => 'Ét arkiv med en krypteret kopi af din database og hvert kildedokument, du har givet Beatrax. Pak det ud hvor som helst, og dine dokumenter ligger derinde, som de altid har været, i de mapper, de kom fra.',

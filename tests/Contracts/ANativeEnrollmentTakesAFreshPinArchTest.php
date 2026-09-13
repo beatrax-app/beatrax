@@ -37,23 +37,43 @@ use Tests\Contracts\Support\SonarSourceFiles;
 // into the action and spent in the method that writes; that is weaker than the
 // enroll() rule and is written down here rather than left to be discovered.
 
-const NATIVE_ENROLMENT_FILE_FLOOR = 1_000;
+const NATIVE_ENROLLMENT_FILE_FLOOR = 1_000;
 
-const NATIVE_ENROLMENT_IMPLEMENTATION_FLOOR = 3;
+const NATIVE_ENROLLMENT_IMPLEMENTATION_FLOOR = 3;
 
 /** The contract whose implementations are allowed to reach the platform directly. */
-const NATIVE_ENROLMENT_VAULT_CONTRACT = 'ColdStartVault';
+const NATIVE_ENROLLMENT_VAULT_CONTRACT = 'ColdStartVault';
 
 /** The other durable wrap: the WebAuthn credential row, written by this call. */
-const NATIVE_ENROLMENT_BROWSER_VERB = 'completeenrollment';
+const NATIVE_ENROLLMENT_BROWSER_VERB = 'completeenrollment';
 
 /** What spending a fresh PIN leaves behind for a ceremony that has to travel. */
-const NATIVE_ENROLMENT_PROOF = 'FreshPinProof';
+const NATIVE_ENROLLMENT_PROOF = 'FreshPinProof';
 
-function nativeEnrolmentIsVaultImplementation(string $source): bool
+/**
+ * Callers that spell `->enroll(` and never reach the contract: they hand their
+ * own `$pin` to the enroller below, which is the funnel. This is the routing
+ * the one-funnel rule asks for in its own failure message, so counting one as
+ * a second funnel would report the fix as the defect.
+ *
+ * This site was outside the guard entirely until the tree settled on one
+ * spelling of the word. The reader has always looked for `->enroll(` and the
+ * method here was `->enrol(`, so the call was read by nobody — the split
+ * dialect was quietly subtracting a subject from a security rule.
+ *
+ * @var list<string> repo-relative paths
+ */
+const NATIVE_ENROLLMENT_ROUTES_THROUGH_THE_ENROLLER = [
+    'Modules/Auth/Public/Http/Livewire/Concerns/ManagesBiometricEnrollment.php',
+];
+
+/** The funnel those callers route through, which has to stay one of the checked ones. */
+const NATIVE_ENROLLMENT_ENROLLER = 'Modules/Auth/Internal/Lock/ColdStartEnroller.php';
+
+function nativeEnrollmentIsVaultImplementation(string $source): bool
 {
     return preg_match(
-        '/\bimplements\b[^{;]*\b'.NATIVE_ENROLMENT_VAULT_CONTRACT.'\b/',
+        '/\bimplements\b[^{;]*\b'.NATIVE_ENROLLMENT_VAULT_CONTRACT.'\b/',
         $source
     ) === 1;
 }
@@ -64,7 +84,7 @@ function nativeEnrolmentIsVaultImplementation(string $source): bool
  * @param  list<array{0:int|null,1:string,2:int}>  $tokens
  * @return list<array{index:int,line:int}>
  */
-function nativeEnrolmentCalls(array $tokens): array
+function nativeEnrollmentCalls(array $tokens): array
 {
     $calls = [];
 
@@ -98,7 +118,7 @@ function nativeEnrolmentCalls(array $tokens): array
  * @param  array<int,int>  $brackets
  * @return array{name:string,paramOpen:int,paramClose:int,open:int,close:int}|null
  */
-function nativeEnrolmentEnclosingFunction(array $tokens, array $brackets, int $index): ?array
+function nativeEnrollmentEnclosingFunction(array $tokens, array $brackets, int $index): ?array
 {
     $count = count($tokens);
     $best = null;
@@ -144,7 +164,7 @@ function nativeEnrolmentEnclosingFunction(array $tokens, array $brackets, int $i
 /**
  * @param  list<array{0:int|null,1:string,2:int}>  $tokens
  */
-function nativeEnrolmentDeclaresPin(array $tokens, int $from, int $to): bool
+function nativeEnrollmentDeclaresPin(array $tokens, int $from, int $to): bool
 {
     for ($i = $from; $i < $to; $i++) {
         if ($tokens[$i][0] === T_VARIABLE && strtolower($tokens[$i][1]) === '$pin') {
@@ -162,7 +182,7 @@ function nativeEnrolmentDeclaresPin(array $tokens, int $from, int $to): bool
  * @param  list<array{0:int|null,1:string,2:int}>  $tokens
  * @param  array<int,int>  $brackets
  */
-function nativeEnrolmentPinVerification(array $tokens, array $brackets, int $from, int $to): ?int
+function nativeEnrollmentPinVerification(array $tokens, array $brackets, int $from, int $to): ?int
 {
     for ($i = $from; $i < $to; $i++) {
         if ($tokens[$i][0] !== T_STRING || strtolower($tokens[$i][1]) !== 'verify') {
@@ -176,7 +196,7 @@ function nativeEnrolmentPinVerification(array $tokens, array $brackets, int $fro
 
         $close = $brackets[$i + 1] ?? $i + 1;
 
-        if (nativeEnrolmentDeclaresPin($tokens, $i + 1, $close)) {
+        if (nativeEnrollmentDeclaresPin($tokens, $i + 1, $close)) {
             return $i;
         }
     }
@@ -187,7 +207,7 @@ function nativeEnrolmentPinVerification(array $tokens, array $brackets, int $fro
 /**
  * @param  list<array{0:int|null,1:string,2:int}>  $tokens
  */
-function nativeEnrolmentZeroesTheKey(array $tokens, int $from, int $to): bool
+function nativeEnrollmentZeroesTheKey(array $tokens, int $from, int $to): bool
 {
     for ($i = $from; $i < $to; $i++) {
         if ($tokens[$i][0] === T_STRING && strtolower($tokens[$i][1]) === 'sodium_memzero') {
@@ -203,15 +223,15 @@ function nativeEnrolmentZeroesTheKey(array $tokens, int $from, int $to): bool
  *
  * @return list<string>
  */
-function nativeEnrolmentFaultsIn(string $path, string $source): array
+function nativeEnrollmentFaultsIn(string $path, string $source): array
 {
     $tokens = SonarSourceFiles::tokens($source);
     $brackets = SonarSourceFiles::brackets($tokens);
     $faults = [];
 
-    foreach (nativeEnrolmentCalls($tokens) as $call) {
+    foreach (nativeEnrollmentCalls($tokens) as $call) {
         $where = $path.':'.$call['line'];
-        $function = nativeEnrolmentEnclosingFunction($tokens, $brackets, $call['index']);
+        $function = nativeEnrollmentEnclosingFunction($tokens, $brackets, $call['index']);
 
         if ($function === null) {
             $faults[] = $where.' — arms the vault outside any function, where no PIN can gate it';
@@ -221,13 +241,13 @@ function nativeEnrolmentFaultsIn(string $path, string $source): array
 
         $named = $where.' — '.$function['name'].'()';
 
-        if (! nativeEnrolmentDeclaresPin($tokens, $function['paramOpen'], $function['paramClose'])) {
+        if (! nativeEnrollmentDeclaresPin($tokens, $function['paramOpen'], $function['paramClose'])) {
             $faults[] = $named.' takes no $pin, so it arms the vault on whatever key it can already reach';
 
             continue;
         }
 
-        $verified = nativeEnrolmentPinVerification($tokens, $brackets, $function['open'], $call['index']);
+        $verified = nativeEnrollmentPinVerification($tokens, $brackets, $function['open'], $call['index']);
 
         if ($verified === null) {
             $faults[] = $named.' reaches the vault without verifying its $pin first';
@@ -235,7 +255,7 @@ function nativeEnrolmentFaultsIn(string $path, string $source): array
             continue;
         }
 
-        if (! nativeEnrolmentZeroesTheKey($tokens, $call['index'], $function['close'])) {
+        if (! nativeEnrollmentZeroesTheKey($tokens, $call['index'], $function['close'])) {
             $faults[] = $named.' leaves the released data key in memory after wrapping it';
         }
     }
@@ -249,7 +269,7 @@ function nativeEnrolmentFaultsIn(string $path, string $source): array
  * @param  list<array{0:int|null,1:string,2:int}>  $tokens
  * @return list<int>
  */
-function nativeEnrolmentBrowserCalls(array $tokens): array
+function nativeEnrollmentBrowserCalls(array $tokens): array
 {
     $lines = [];
 
@@ -261,7 +281,7 @@ function nativeEnrolmentBrowserCalls(array $tokens): array
         $name = $tokens[$index + 1] ?? null;
         $paren = $tokens[$index + 2] ?? null;
 
-        if ($name === null || $name[0] !== T_STRING || strtolower($name[1]) !== NATIVE_ENROLMENT_BROWSER_VERB) {
+        if ($name === null || $name[0] !== T_STRING || strtolower($name[1]) !== NATIVE_ENROLLMENT_BROWSER_VERB) {
             continue;
         }
         if ($paren === null || $paren[0] !== null || $paren[1] !== '(') {
@@ -279,21 +299,22 @@ function nativeEnrolmentBrowserCalls(array $tokens): array
  * one. Minting is not spending -- the screen that takes the PIN mints, and a
  * file that only minted would be arming itself.
  */
-function nativeEnrolmentSpendsAProof(string $source): bool
+function nativeEnrollmentSpendsAProof(string $source): bool
 {
-    return str_contains($source, NATIVE_ENROLMENT_PROOF) && preg_match('/->consume\(/', $source) === 1;
+    return str_contains($source, NATIVE_ENROLLMENT_PROOF) && preg_match('/->consume\(/', $source) === 1;
 }
 
 it('arms the OS vault from exactly one place, and that place spends a PIN to do it', function (): void {
     $files = SonarSourceFiles::all();
 
     expect(count($files))->toBeGreaterThan(
-        NATIVE_ENROLMENT_FILE_FLOOR,
+        NATIVE_ENROLLMENT_FILE_FLOOR,
         'The walk opened '.count($files).' production files, which is what a reader that stopped reading looks like.',
     );
 
     $implementations = [];
     $delegations = 0;
+    $routed = 0;
     $funnels = [];
     $faults = [];
 
@@ -301,7 +322,7 @@ it('arms the OS vault from exactly one place, and that place spends a PIN to do 
         $source = (string) file_get_contents($path);
         $relative = str_replace(base_path().'/', '', $path);
 
-        if (nativeEnrolmentIsVaultImplementation($source)) {
+        if (nativeEnrollmentIsVaultImplementation($source)) {
             $implementations[] = $relative;
         }
 
@@ -312,19 +333,38 @@ it('arms the OS vault from exactly one place, and that place spends a PIN to do 
         // An implementation is the platform's own side of the contract: it is
         // where the key finally lands, and it is reached only through whatever
         // gate stands in front of the contract.
-        if (nativeEnrolmentIsVaultImplementation($source)) {
+        if (nativeEnrollmentIsVaultImplementation($source)) {
             $delegations++;
 
             continue;
         }
 
+        if (in_array($relative, NATIVE_ENROLLMENT_ROUTES_THROUGH_THE_ENROLLER, true)) {
+            $routed++;
+
+            continue;
+        }
+
         $funnels[] = $relative;
-        $faults = array_merge($faults, nativeEnrolmentFaultsIn($relative, $source));
+        $faults = array_merge($faults, nativeEnrollmentFaultsIn($relative, $source));
     }
 
+    // in_array rather than toContain: that matcher reads every argument as
+    // another needle, so a message passed there is asserted rather than shown.
+    expect(in_array(NATIVE_ENROLLMENT_ENROLLER, $funnels, true))->toBeTrue(
+        NATIVE_ENROLLMENT_ENROLLER.' is no longer read as a funnel, so the gate every caller in '
+        .'NATIVE_ENROLLMENT_ROUTES_THROUGH_THE_ENROLLER routes through is checked by nobody.',
+    );
+
+    expect($routed)->toBe(
+        count(NATIVE_ENROLLMENT_ROUTES_THROUGH_THE_ENROLLER),
+        'A path named as routing through the enroller no longer spells the call, so it is being '
+        .'excused without being read. Remove it from the list, or spell it the way this reader looks for.',
+    );
+
     expect(count($implementations))->toBeGreaterThanOrEqual(
-        NATIVE_ENROLMENT_IMPLEMENTATION_FLOOR,
-        'Found '.count($implementations).' implementations of '.NATIVE_ENROLMENT_VAULT_CONTRACT
+        NATIVE_ENROLLMENT_IMPLEMENTATION_FLOOR,
+        'Found '.count($implementations).' implementations of '.NATIVE_ENROLLMENT_VAULT_CONTRACT
         .'; the platform-detection half of this guard read nothing, so its verdict on the rest means nothing.',
     );
 
@@ -368,7 +408,7 @@ it('reads a caller that arms the vault with no PIN, and passes one that spends a
         }
         PHP;
 
-    expect(nativeEnrolmentFaultsIn('Settings.php', $ungated))->toBe(
+    expect(nativeEnrollmentFaultsIn('Settings.php', $ungated))->toBe(
         ['Settings.php:7 — enrolNatively() takes no $pin, so it arms the vault on whatever key it can already reach'],
         'a session-held key is the shape the whole guard exists to refuse',
     );
@@ -384,7 +424,7 @@ it('reads a caller that arms the vault with no PIN, and passes one that spends a
         }
         PHP;
 
-    expect(nativeEnrolmentFaultsIn('Settings.php', $unverified))->toBe(
+    expect(nativeEnrollmentFaultsIn('Settings.php', $unverified))->toBe(
         ['Settings.php:6 — enrol() reaches the vault without verifying its $pin first'],
         'accepting a PIN and never checking it is a box, not a gate',
     );
@@ -402,7 +442,7 @@ it('reads a caller that arms the vault with no PIN, and passes one that spends a
         }
         PHP;
 
-    expect(nativeEnrolmentFaultsIn('Enroller.php', $unzeroed))->toBe(
+    expect(nativeEnrollmentFaultsIn('Enroller.php', $unzeroed))->toBe(
         ['Enroller.php:8 — enrol() leaves the released data key in memory after wrapping it'],
         'the key is unwrapped for exactly as long as it takes to wrap it again',
     );
@@ -427,10 +467,10 @@ it('reads a caller that arms the vault with no PIN, and passes one that spends a
         }
         PHP;
 
-    expect(nativeEnrolmentFaultsIn('Enroller.php', $gated))->toBe([]);
+    expect(nativeEnrollmentFaultsIn('Enroller.php', $gated))->toBe([]);
 
-    expect(nativeEnrolmentIsVaultImplementation('<?php final class V implements ColdStartVault {}'))->toBeTrue();
-    expect(nativeEnrolmentIsVaultImplementation('<?php final class V { public function f(ColdStartVault $v) {} }'))->toBeFalse(
+    expect(nativeEnrollmentIsVaultImplementation('<?php final class V implements ColdStartVault {}'))->toBeTrue();
+    expect(nativeEnrollmentIsVaultImplementation('<?php final class V { public function f(ColdStartVault $v) {} }'))->toBeFalse(
         'naming the contract in a signature is using it, not being it',
     );
 });
@@ -439,7 +479,7 @@ it('writes the other durable wrap from exactly one place, and that place spends 
     $files = SonarSourceFiles::all();
 
     expect(count($files))->toBeGreaterThan(
-        NATIVE_ENROLMENT_FILE_FLOOR,
+        NATIVE_ENROLLMENT_FILE_FLOOR,
         'The walk opened '.count($files).' production files, which is what a reader that stopped reading looks like.',
     );
 
@@ -456,11 +496,11 @@ it('writes the other durable wrap from exactly one place, and that place spends 
         $relative = str_replace(base_path().'/', '', $path);
         $callers[] = $relative;
 
-        if (nativeEnrolmentSpendsAProof($source)) {
+        if (nativeEnrollmentSpendsAProof($source)) {
             continue;
         }
 
-        foreach (nativeEnrolmentBrowserCalls(SonarSourceFiles::tokens($source)) as $line) {
+        foreach (nativeEnrollmentBrowserCalls(SonarSourceFiles::tokens($source)) as $line) {
             $unproven[] = $relative.':'.$line;
         }
     }
@@ -502,10 +542,10 @@ it('reads a browser enrolment that spends no proof, and passes one that does', f
         }
         PHP;
 
-    expect(nativeEnrolmentSpendsAProof($ungated))->toBeFalse(
+    expect(nativeEnrollmentSpendsAProof($ungated))->toBeFalse(
         'an unlocked session is not a proof that the enrolment was asked for',
     );
-    expect(nativeEnrolmentBrowserCalls(SonarSourceFiles::tokens($ungated)))->toBe([8]);
+    expect(nativeEnrollmentBrowserCalls(SonarSourceFiles::tokens($ungated)))->toBe([8]);
 
     $minted = <<<'PHP'
         <?php
@@ -520,7 +560,7 @@ it('reads a browser enrolment that spends no proof, and passes one that does', f
         }
         PHP;
 
-    expect(nativeEnrolmentSpendsAProof($minted))->toBeFalse(
+    expect(nativeEnrollmentSpendsAProof($minted))->toBeFalse(
         'the screen that takes the PIN mints the proof; a file that only mints is arming itself',
     );
 
@@ -543,5 +583,5 @@ it('reads a browser enrolment that spends no proof, and passes one that does', f
         }
         PHP;
 
-    expect(nativeEnrolmentSpendsAProof($proven))->toBeTrue();
+    expect(nativeEnrollmentSpendsAProof($proven))->toBeTrue();
 });

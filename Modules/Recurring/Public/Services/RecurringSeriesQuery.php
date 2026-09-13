@@ -120,7 +120,7 @@ final readonly class RecurringSeriesQuery
      */
     public function statesForSeriesIds(array $seriesIds, User $user): array
     {
-        $unique = SeriesIds::normalise($seriesIds);
+        $unique = SeriesIds::normalize($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -146,7 +146,7 @@ final readonly class RecurringSeriesQuery
      */
     public function displayNamesForSeriesIds(array $seriesIds, User $user): array
     {
-        $unique = SeriesIds::normalise($seriesIds);
+        $unique = SeriesIds::normalize($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -176,7 +176,7 @@ final readonly class RecurringSeriesQuery
      */
     public function forSeriesIds(array $seriesIds, User $user): array
     {
-        $unique = SeriesIds::normalise($seriesIds);
+        $unique = SeriesIds::normalize($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -202,7 +202,7 @@ final readonly class RecurringSeriesQuery
      */
     public function driftThresholdsForSeriesIds(array $seriesIds, User $user): array
     {
-        $unique = SeriesIds::normalise($seriesIds);
+        $unique = SeriesIds::normalize($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -254,7 +254,7 @@ final readonly class RecurringSeriesQuery
      */
     public function counterpartyIdsForSeriesIds(array $seriesIds, User $user): array
     {
-        $unique = SeriesIds::normalise($seriesIds);
+        $unique = SeriesIds::normalize($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -338,7 +338,7 @@ final readonly class RecurringSeriesQuery
      */
     public function accountIdsForSeriesIds(array $seriesIds, User $user): array
     {
-        $unique = SeriesIds::normalise($seriesIds);
+        $unique = SeriesIds::normalize($seriesIds);
         if ($unique === []) {
             return [];
         }
