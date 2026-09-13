@@ -139,12 +139,12 @@ for one request is finished by the requests after it, in the same capture order,
 and [the argument for why nothing is lost or doubled](../mobile/a-tail-the-reader-waits-for.md)
 is on its own page.
 
-## Why a device that never enabled sync defers nothing
+## Why a reader who never enabled sync defers nothing
 
 `OpCaptureSinkFactory` asks `DeviceSyncStanding`, which reads the key-file and
 the `device_registry` self row together. Neither alone. `NeverEnabled` — no
-key-file and no self row — means this install has never switched sync on: it
-owes no peer anything, and switching sync on captures the whole database in one
+key-file and no self row — means this reader has never switched sync on: they
+owe no peer anything, and switching sync on captures their whole database in one
 walk. Those mutations are discarded exactly as before, and `SyncOffOpSink` says
 so at debug level. Deferring them instead would fill a table on every install
 that only ever runs on one machine.
@@ -163,6 +163,48 @@ for the repair the reader is offered.
 
 That leaves the four states that DO defer: no authenticated user (a console),
 `Locked`, `Unreadable`, and a self row whose key-file never travelled.
+
+### The standing is the reader's, not the install's
+
+Both halves of the standing are keyed on a user: the key-file is
+`sync/identity/{user_id}.enc` and `DeviceRegistryService::localDeviceId()` takes
+a user id. So two members of one household on one machine can hold two different
+standings, and on a shared desktop they usually do — one has paired a phone, the
+other has never opened the sync screen.
+
+Every write the second member makes therefore goes to `SyncOffOpSink` on a
+device that is, by any other reading, fully synced. That is correct, and it is
+also the single most convincing false positive this seam produces. Measured on a
+live desktop: `recurring_series` held 399 ops and `notifications` 275, and
+alongside them six series rows, fourteen occurrence rows and five notifications
+with **no op at all** — every one of them the second reader's, written by the
+same midnight pass that captured the first reader's rows one second earlier.
+
+Three reads tell it apart from a lost write, in this order:
+
+1. **Whose row is it?** `select user_id from <table> where id = …`. A row owned
+   by a reader other than the one whose ops you counted is not missing anything.
+2. **Has that reader ever paired?** `select count(*) from device_registry where
+   user_id = …`, plus `sync/identity/{that id}.enc` under the app data path.
+   Neither present is `NeverEnabled`, and `NeverEnabled` owes nothing.
+3. **What did the sink say?** The `SyncOffOpSink` debug line carries `user_id`
+   beside `table` and `pk`. It used to carry only the last two and to blame
+   "this device", which is the wrong subject for a per-reader decision and sent
+   one investigation looking for a capture defect that was not there.
+
+Nothing is lost by any of this. When that reader does enable sync, the pre-sync
+walk covers every table in `MergeRulesRegistry` — these three among them — and
+announces the rows that were written while they owed nobody.
+
+### A `system_alerts` row with no owner is a fourth answer again
+
+`system_alerts` is two tables wearing one name, and only one of them travels.
+`SystemAlertWriter::raiseOnceSystemWide()` writes `user_id` null and dispatches
+nothing: the row is about the machine that noticed — a corrupt backup is that
+laptop's — and the peer raises its own copy from its own probes under its own
+id. So a machine-local alert has no op for the same reason it has no owner, and
+counting ops per pk over that table finds a hole in it on every healthy install.
+`raiseForUser()` and `raiseDerivedForUser()` are the two that do announce.
 
 ## A fourth state: signed, and not sealable
 
