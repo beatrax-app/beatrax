@@ -558,7 +558,14 @@ jobs:
                   # into it. The strip script edits the app manifest and runs
                   # before that merge, so what it can prove and what actually
                   # ships are two different questions.
-                  "$aapt2" dump permissions "$APK_PATH" > "$RUNNER_TEMP/permissions.txt"
+                  #
+                  # xmltree rather than `dump permissions`: only this one prints
+                  # protectionLevel, and the level is the whole difference
+                  # between a permission the app asks of the world and one it
+                  # locks its own receivers with. androidx.core mints one of
+                  # the latter, and it is not a line this product can allow by
+                  # naming a consumer, because its consumer is the shell.
+                  "$aapt2" dump xmltree "$APK_PATH" --file AndroidManifest.xml > "$RUNNER_TEMP/permissions.txt"
                   cat "$RUNNER_TEMP/permissions.txt"
 
             - name: Refuse a permission this product makes no use for
