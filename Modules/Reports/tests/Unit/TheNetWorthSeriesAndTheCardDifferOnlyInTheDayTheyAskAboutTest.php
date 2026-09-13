@@ -15,12 +15,11 @@ use Modules\Reports\Internal\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
-// The sampled series and the dashboard card answer the same question with two
-// different numbers, and the divergence has to be written down accurately or it
-// cannot be reasoned about. It is TWO differences, not one: the card asks for
-// TODAY and the series for its bucket's last day, and the card counts every row
-// while the series counts only the cleared ones. This is the case the page in
-// .docs/features/reports/architecture.md describes.
+// The sampled series and the dashboard card answer the same question, and they
+// now answer it the same way: both read currentBalanceAsOf(). One difference is
+// left, and it is the DATE -- the card asks for today, a series point for its
+// bucket's last day. Asked about one day they agree exactly. This is the case
+// the page in .docs/features/reports/architecture.md describes.
 beforeEach(function (): void {
     CarbonImmutable::setTestNow('2026-08-15 09:00:00');
 });
@@ -98,20 +97,29 @@ function nwdLedger(): array
     nwdMovement($user, $account, -25_000, '2026-08-06', ClearedStatus::Uncleared->value);
     nwdMovement($user, $account, -5_000, '2026-08-20', ClearedStatus::Cleared->value);
 
+    return [
+        'card' => app(NetWorthQuery::class)->forUser($user)->totalMinor,
+        'monthPoint' => nwdLastPoint($user, '2026-09-01'),
+        'todayPoint' => nwdLastPoint($user, '2026-08-16'),
+    ];
+}
+
+// The last bucket's endExclusive is clamped to the period's, so asking for a
+// range that ends tomorrow makes the final point's own day today -- the one
+// day on which nothing but the row set can separate it from the card.
+function nwdLastPoint(User $user, string $endExclusive): int
+{
     $points = app(NetWorthSeriesQuery::class)->forUser(
         $user,
         new Period(
             start: CarbonImmutable::parse('2026-08-01'),
-            endExclusive: CarbonImmutable::parse('2026-09-01'),
+            endExclusive: CarbonImmutable::parse($endExclusive),
             label: 'Aug 2026',
         ),
         ReportGranularity::Monthly,
     );
 
-    return [
-        'card' => app(NetWorthQuery::class)->forUser($user)->totalMinor,
-        'point' => $points[count($points) - 1]->totalMinor,
-    ];
+    return $points[count($points) - 1]->totalMinor;
 }
 
 it('reads the card as of today, counting a row nobody has confirmed yet', function (): void {
@@ -120,18 +128,26 @@ it('reads the card as of today, counting a row nobody has confirmed yet', functi
     expect(nwdLedger()['card'])->toBe(-35_000);
 });
 
-it('reads the series point as of the bucket last day, counting only confirmed rows', function (): void {
-    // -10,000 confirmed plus the -5,000 the bucket's own last day has reached;
-    // the -25,000 pending row is not in it.
-    expect(nwdLedger()['point'])->toBe(-15_000);
-});
-
-it('differs from the card by neither the pending amount nor in one direction', function (): void {
+it('agrees with the card to the cent on a point whose own day is today', function (): void {
+    // The uncleared -25,000 is money the reader has spent, and the line drawn
+    // above the card may not disown it. Sampling cleared rows only read
+    // -10,000 here, so the chart sat 25,000 above the figure beside it.
     $figures = nwdLedger();
 
-    // The pending row is -25,000 and the gap is -20,000, because the two
-    // sample dates disagree as well; and the card reads BELOW the point here,
-    // which is what a pending row that is money going out does to it.
-    expect($figures['card'] - $figures['point'])->toBe(-20_000)
-        ->and($figures['card'])->toBeLessThan($figures['point']);
+    expect($figures['todayPoint'])->toBe(-35_000)
+        ->and($figures['todayPoint'])->toBe($figures['card']);
+});
+
+it('counts every row the bucket last day has reached, pending ones included', function (): void {
+    // All three, because the 31st has reached the row dated the 20th.
+    expect(nwdLedger()['monthPoint'])->toBe(-40_000);
+});
+
+it('differs from the card by the rows between the two dates and by nothing else', function (): void {
+    $figures = nwdLedger();
+
+    // The whole gap is the -5,000 the bucket's last day has reached and today
+    // has not. The pending -25,000 is on both sides now, so it cancels.
+    expect($figures['card'] - $figures['monthPoint'])->toBe(5_000)
+        ->and($figures['monthPoint'])->toBe($figures['todayPoint'] - 5_000);
 });
