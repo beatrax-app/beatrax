@@ -182,13 +182,14 @@ if (cd "$target" && vendor/bin/pest tests/Contracts/BoundaryArchTest.php >/dev/n
 else
     # Named first because it is the usual cause and it does not look like one:
     # the worktree is created on origin/main while vendor/ is hardlinked from a
-    # main checkout that may be older, so its autoloader describes a tree that
-    # is no longer there. Watched it fail with a psr-4 root renamed on main.
+    # main checkout that may be older. The bootstrap above rebuilt the classmap,
+    # which is the half a dump-autoload can repair; what it cannot repair is the
+    # installed package set, which is still the older checkout's.
     behind=$(git -C "$main" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
     if [[ ${behind:-0} -gt 0 ]]; then
         echo "!!  $main is $behind commit(s) behind origin/main, and this worktree was" >&2
-        echo "!!  created on origin/main. Its vendor/ came from there, so the autoloader" >&2
-        echo "!!  does not match this tree. Fix that first:" >&2
+        echo "!!  created on origin/main. Its vendor/ came from there, so the packages" >&2
+        echo "!!  installed there are not this tree's. Fix that first:" >&2
         echo "!!    git -C $main pull --ff-only && (cd $main && composer install)" >&2
     fi
     echo "!!  the control file did not pass. Do not trust a failure in this worktree" >&2
