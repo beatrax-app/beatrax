@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Järjestelmähälytykset',
 
+    'severity' => [
+        'critical' => 'Kriittinen',
+        'warning' => 'Varoitus',
+    ],
+
     'actions' => [
         'download_and_install' => 'Lataa ja asenna',
         'download_and_install_aria' => 'Lataa ja asenna — merkitsee järjestelmähälytyksen #:id ratkaistuksi',

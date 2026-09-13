@@ -32,6 +32,20 @@
             autocomplete="new-password"
         />
 
+        {{-- Last, and after the two boxes above rather than beside them: those
+             two describe the account being made, this one says who is making
+             it. An owner session carries the authority on its own, which is
+             what this asks the reader to supply in person. --}}
+        <x-core::form-field
+            field-id="add-user-owner-password"
+            name="ownerPassword"
+            type="password"
+            :label="Lang::get('auth::add_user.owner_password_label')"
+            wire:model="ownerPassword"
+            autocomplete="current-password"
+            data-testid="add-user-owner-password"
+        />
+
         @if ($flashMessage !== '')
             <p class="text-sm text-slate-700 dark:text-slate-300">{{ $flashMessage }}</p>
         @endif

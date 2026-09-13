@@ -405,6 +405,21 @@ memoising per boot: the drawer holds the app's single sidebar mount, so a memo
 collapsed nothing and instead froze the count for exactly the second render the
 recount is.
 
+### Unread is a name, not only a dot
+
+Which rows the reader has already seen is the one state this screen is
+navigated by, and it was drawn twice and announced never: a blue dot
+carrying `aria-hidden`, and a `font-semibold` title. Weight is not
+announced, and a hidden graphic is not read, so the whole distinction
+stopped at the eye — and stopped again for a reader who cannot separate
+blue from the surface behind it.
+
+The dot is now a `role="img"` graphic named
+`notifications::inbox.tabs.unread` — the word the tab strip overhead
+already uses, so no locale learns a second term for one idea, and no new
+string was written. A read row draws no dot and carries no name: absence
+means "already seen" rather than the other state.
+
 The Settings
 "Notifications" section (`NotificationsSettingsSection`) is the ~9-control
 preferences form plus a read-only "Other devices" panel, bounds-checking

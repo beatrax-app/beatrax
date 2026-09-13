@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Initial password',
     'initial_password_hint' => 'Type a password they can read aloud or type once. They will replace it on first login.',
     'confirm_initial_password' => 'Confirm initial password',
+    'owner_password_label' => 'Your account password',
     'submit' => 'Set initial password',
 
     'error_mismatch' => 'Passwords do not match.',

@@ -288,6 +288,13 @@
     @else
         {{-- List view: desktop table + phone card-list-item degradation --}}
         @foreach ($rows as $row)
+            @php
+                $flowWord = match (true) {
+                    $row->total12mMinor > 0 => Lang::get('core::dashboard.in'),
+                    $row->total12mMinor < 0 => Lang::get('core::dashboard.out'),
+                    default => null,
+                };
+            @endphp
             {{-- phone-only: .card-list-item renders each row as a tidy two-line card.
                  A box holding a link, for the reason the cards above are: the row
                  keeps the class, so its padding, rule and the .primary/.secondary
@@ -310,8 +317,16 @@
                             <x-counterparties::type-chip :type="$row->type" />
                         </span>
                     </div>
+                    {{-- The total is a magnitude here as it is on the cards and in the
+                         table, so an emerald tint was the only thing on this row saying
+                         which way it went — nothing at all to a reader who hears the row
+                         or cannot separate the two colours. The words are the ones the
+                         flow tiles already use, so no locale learns a new one. --}}
                     <div style="flex: 0 0 auto; text-align: right;">
-                        <span class="amount" style="{{ $row->total12mMinor > 0 ? 'color: var(--color-emerald)' : '' }}">{{ $row->total12mFormatted }}</span>
+                        <span class="amount{{ $row->total12mMinor > 0 ? ' positive' : '' }}">{{ $row->total12mFormatted }}</span>
+                        @if ($flowWord !== null)
+                            <span class="secondary">{{ $flowWord }}</span>
+                        @endif
                     </div>
                 </a>
                 <x-core::fx-disclosure

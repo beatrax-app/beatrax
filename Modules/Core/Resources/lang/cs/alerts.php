@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Systémová upozornění',
 
+    'severity' => [
+        'critical' => 'Kritické',
+        'warning' => 'Varování',
+    ],
+
     'actions' => [
         'download_and_install' => 'Stáhnout a nainstalovat',
         'download_and_install_aria' => 'Stáhnout a nainstalovat — označí systémové upozornění #:id jako vyřešené',

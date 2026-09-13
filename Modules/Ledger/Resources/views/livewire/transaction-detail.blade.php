@@ -609,7 +609,7 @@
                             size="sm"
                             class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
                             x-bind:disabled="!selectedCp"
-                            x-on:click="$wire.reassignCounterparty(Number(selectedCp))"
+                            x-on:click="$wire.reassignCounterparty(selectedCp)"
                             data-testid="counterparty-reassign-button"
                         >
                             {{ Lang::get('ledger::detail.reassign.submit') }}
@@ -676,7 +676,7 @@
                                 size="sm"
                                 class="shadow-sm disabled:cursor-not-allowed disabled:bg-slate-300"
                                 x-bind:disabled="!selectedGoal"
-                                x-on:click="$wire.attributeToGoal(Number(selectedGoal)); selectedGoal = ''"
+                                x-on:click="$wire.attributeToGoal(selectedGoal); selectedGoal = ''"
                                 data-testid="goal-attribution-submit"
                             >
                                 {{ Lang::get('ledger::detail.goal.submit') }}

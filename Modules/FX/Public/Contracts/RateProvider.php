@@ -16,6 +16,11 @@ interface RateProvider
     // bundled fallback at 0.
     public function priority(): int;
 
+    // Whether a failure here can be an outage worth waiting out. False for a
+    // provider reading something already on the device: its failures are not
+    // transient, and the chain rests on it exactly when the online ones fail.
+    public function reachesTheNetwork(): bool;
+
     /**
      * @return array{date: string, rates: array<string, string>}
      *                                                           `date`  — ISO 8601 date string (YYYY-MM-DD) for the rate set.

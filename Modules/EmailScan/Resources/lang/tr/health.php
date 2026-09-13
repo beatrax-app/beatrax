@@ -8,5 +8,7 @@ return [
     'not_scanned_yet' => 'henüz taranmadı',
     'not_scanned_yet_phone' => 'bu telefonda taranmadı',
     'last_scanned' => 'son tarama',
+    'out_of_date' => 'güncel değil',
+    'not_scanned_here' => 'bu cihazda taranmıyor',
     'more' => '+:count daha',
 ];

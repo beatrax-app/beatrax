@@ -517,10 +517,10 @@ final class MergeRulesRegistry
             // `state` and `resolver` move after insert (confirm/reject and the
             // auto-promote sweep); the resolvers insert rather than rewrite.
 
-            // The `id` is DERIVED, from the (user_id, from_transaction_id,
-            // to_transaction_id, kind) tuple ChainLinkInsertHelper already
-            // dedupes on. The table has no UNIQUE of its own, so that helper
-            // was the only statement of what makes a link the same link.
+            // The `id` is MINTED by ChainLinkInsertHelper, not derived. What
+            // makes a link the same link is the (user_id, from_transaction_id,
+            // to_transaction_id, kind) tuple that helper dedupes on; the table
+            // has no UNIQUE, so the helper is the only statement of it.
             'chain_links' => [
                 'state' => ['nullable' => false],
                 'resolver' => ['nullable' => false],
@@ -570,7 +570,7 @@ final class MergeRulesRegistry
             // AFTER recurring_series. Append-only detector output, written with
             // insertOrIgnore and never updated, so it declares no mergeable
             // field: the (series, transaction) UNIQUE is the same idempotency
-            // seam on the peer, and the `id` is derived from that same pair.
+            // seam on the peer. The `id` is MINTED, not derived from it.
             'recurring_series_occurrences' => [
                 '_delete_wins' => true,
                 '_create_required' => [
@@ -595,8 +595,9 @@ final class MergeRulesRegistry
             // — only the review columns move afterwards, each through the
             // state machine, so whoever acted on the alert last wins.
 
-            // The `id` is derived from the (recurring_series_id,
-            // latest_occurrence_id) its own UNIQUE names; neither ever moves.
+            // The `id` is MINTED by DriftEvaluator, not derived. What makes
+            // two devices one row is the (recurring_series_id,
+            // latest_occurrence_id) UNIQUE, and neither of those ever moves.
             'drift_alerts' => [
                 'state' => ['nullable' => false],
                 'snoozed_until' => ['nullable' => true],
@@ -623,10 +624,10 @@ final class MergeRulesRegistry
             // `dismissed_as` rides along with the dismissal transition, so it
             // merges the same way the state it explains does.
 
-            // Unlike the tables around it this one's `id` is DERIVED, from the
-            // (user_id, transaction_id) its own UNIQUE names, so both devices
-            // compute the same number for the same charge. It stays out of
-            // `_create_required`: the applier seeds it from the op's own pk.
+            // The `id` is MINTED by AnomalyEvaluator. A migration derived it
+            // once, which is what makes "derived" look checked here; what makes
+            // two devices one row is anomaly_alerts_uniq, not the id. It stays
+            // out of `_create_required`: the applier seeds it from the op's pk.
             'anomaly_alerts' => [
                 'state' => ['nullable' => false],
                 'dismissed_as' => ['nullable' => true],

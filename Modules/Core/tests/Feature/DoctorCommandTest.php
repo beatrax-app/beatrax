@@ -121,3 +121,10 @@ it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggr
         putenv('NATIVEPHP_STORAGE_PATH');
     }
 });
+
+// The row this command exists to carry for the merge: a create the durable op
+// log holds whose row is in no table is reported nowhere else on a console.
+it('prints the row counting what the op log holds and the tables do not', function (): void {
+    $this->artisan('beatrax:doctor')
+        ->expectsOutputToContain('rows the log still holds');
+});

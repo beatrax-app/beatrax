@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\EditDistance;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // Suggests one "did you mean" word (edit distance <= 2, no spellfix1 in
@@ -146,7 +147,7 @@ final readonly class DidYouMeanSuggester
                 continue;
             }
 
-            $dist = self::editDistance($targetWord, $word);
+            $dist = EditDistance::between($targetWord, $word);
             if ($dist < $bestDist || ($dist === $bestDist && $freq > $bestFreq)) {
                 $bestDist = $dist;
                 $bestFreq = $freq;
@@ -155,42 +156,5 @@ final readonly class DidYouMeanSuggester
         }
 
         return $bestDist <= 2 ? $bestWord : null;
-    }
-
-    // levenshtein() counts bytes, so an accented character costs two edits
-    // and the threshold above tightens the more accents a language has:
-    // "eleve" sat four from its two-accent spelling, not two, and was never
-    // offered. Single-byte pairs still take the C implementation.
-    private static function editDistance(string $a, string $b): int
-    {
-        if (strlen($a) === mb_strlen($a) && strlen($b) === mb_strlen($b)) {
-            return levenshtein($a, $b);
-        }
-
-        return self::codePointDistance(mb_str_split($a), mb_str_split($b));
-    }
-
-    /**
-     * @param  list<string>  $a
-     * @param  list<string>  $b
-     */
-    private static function codePointDistance(array $a, array $b): int
-    {
-        $width = count($b);
-        $previous = range(0, $width);
-
-        foreach ($a as $i => $aChar) {
-            $current = [$i + 1];
-            foreach ($b as $j => $bChar) {
-                $current[] = min(
-                    $previous[$j + 1] + 1,
-                    $current[$j] + 1,
-                    $previous[$j] + ($aChar === $bChar ? 0 : 1),
-                );
-            }
-            $previous = $current;
-        }
-
-        return $previous[$width];
     }
 }

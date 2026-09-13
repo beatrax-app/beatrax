@@ -10,6 +10,7 @@ return [
     'initial_password' => 'Startpassord',
     'initial_password_hint' => 'Skriv et passord som personen kan lese opp eller taste inn én gang. Det byttes ut ved første innlogging.',
     'confirm_initial_password' => 'Bekreft startpassord',
+    'owner_password_label' => 'Kontopassordet ditt',
     'submit' => 'Angi startpassord',
 
     'error_mismatch' => 'Passordene er ikke like.',

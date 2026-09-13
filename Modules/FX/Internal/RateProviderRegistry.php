@@ -37,7 +37,13 @@ final readonly class RateProviderRegistry
         $lastException = null;
 
         foreach ($this->providers as $provider) {
-            if ($this->isCircuitOpen($provider->key())) {
+            // The circuit waits out a network outage. A provider that reaches
+            // no network has none to wait out, and the chain rests on it at
+            // exactly the moment the online ones are failing, so its failures
+            // are neither counted nor held against it.
+            $breakable = $provider->reachesTheNetwork();
+
+            if ($breakable && $this->isCircuitOpen($provider->key())) {
                 continue;
             }
 
@@ -47,7 +53,9 @@ final readonly class RateProviderRegistry
 
                 return array_merge($result, ['provider' => $provider->key()]);
             } catch (RateFetchException $e) {
-                $this->recordFailure($provider->key());
+                if ($breakable) {
+                    $this->recordFailure($provider->key());
+                }
                 $lastException = $e;
             }
         }

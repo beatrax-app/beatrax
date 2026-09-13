@@ -369,6 +369,32 @@ a two-way tie in that tally is settled by whichever description the
 query returned first. Both halves reach the reader — as a suggested
 name, and as a confidence band.
 
+## The phone list is the one rendering that says which way the total went
+
+The figure is a magnitude at all four index renderings and on the profile
+hero, and that is deliberate — [the exception, and why it is
+one](triage-suggestions.md#the-recent-transactions-list-and-why-its-amounts-are-signed).
+The phone list is the only one of the five that also reports direction,
+and it reported it in emerald and in nothing else: `abs()` had already
+taken the sign off, so a total received and a total paid printed the same
+characters. A reader who hears the row, and a reader who cannot separate
+the two colours, were told money owed and money received alike.
+
+The row now carries the word beside the amount —
+`core::dashboard.in` / `core::dashboard.out`, the pair the dashboard flow
+tiles already use, so no locale learns a second term for the same idea —
+and the emerald moved off an inline `style` onto
+`.card-list-item .amount.positive`, which `app.css` already defined.
+Colour reinforces the word instead of carrying the meaning by itself,
+which is the rule `Resources/views/components/type-chip.blade.php` states
+for this surface. A total of exactly zero points neither way and gets no
+word: absence has to mean "no direction", not "the other direction".
+
+The cards, the desktop table and the profile hero report no direction at
+all, before or after this. Giving them one would be a signed aggregate
+where the product has chosen a magnitude, which is a different question
+from making an existing signal perceivable.
+
 ## What the index toolbar offers
 
 A search box at both widths, a sort readout, and the Cards / List

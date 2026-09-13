@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
+use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
 use Modules\Auth\Internal\Services\AccountOwner;
 use Modules\Auth\Public\Contracts\PasswordPolicy;
 use Modules\Auth\Public\Support\Username;
@@ -26,9 +27,13 @@ final readonly class AddUserAction
         private Hasher $hasher,
         private AccountOwner $owner,
         private Dispatcher $events,
+        private AppLockCredentialRejections $rejections,
     ) {}
 
-    public function __invoke(User $caller, string $usernameInput, string $password): User
+    // The proof lives here rather than on the page because this is where the
+    // authority is decided, and the two belong together: splitting them is the
+    // seam that left the owner's other two writes into a household ungated.
+    public function __invoke(User $caller, string $usernameInput, string $password, string $callerPassword): User
     {
         if (! $this->owner->isOwner($caller)) {
             throw new NotFoundHttpException;
@@ -46,6 +51,15 @@ final readonly class AddUserAction
             throw ValidationException::withMessages([
                 'password' => Lang::get('auth::add_user.error_min_length'),
             ]);
+        }
+
+        // Shape before proof, the order every credential form here takes: a
+        // password spent on a form that was going to be refused anyway is one
+        // the reader has to type again for nothing.
+        $rejection = $this->rejections->accountPassword($callerPassword, $caller->password);
+
+        if ($rejection !== null) {
+            throw ValidationException::withMessages(['ownerPassword' => $rejection]);
         }
 
         // No recovery sheet here: codes issued now are credentials nobody

@@ -237,8 +237,8 @@ final readonly class DriftAlertQuery
         return $this->materialize($user, $query->get());
     }
 
-    // The id is derived from the alert's own columns, so it sorts in hash
-    // order, not insertion order — paging on `id < cursor` alone would skip and
+    // The id is MINTED — random_int, not a fold of the alert's columns — so it
+    // sorts in no order at all, and paging on `id < cursor` alone would skip and
     // repeat rows at random. detected_at leads; id only breaks ties.
 
     // Scoped to the reader: unscoped, another household member's row would

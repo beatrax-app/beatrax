@@ -85,7 +85,9 @@ final class TransactionsList extends Component
     public string $filterAmountDir = AmountDirection::Both->value;
 
     // A direction alone cannot reconstruct a report figure: a fee and a
-    // transfer out are both negative, and neither is counted as spend.
+    // transfer out are both negative, and neither is counted as spend. The type
+    // stays mixed because that is what the address bar can put here;
+    // normalizeFilters() narrows it before the query or the view reads it.
     /** @var list<mixed> Query-string supplied, so the element type is whatever arrived. */
     #[Url(as: 'type', except: [])]
     public array $filterTypes = [];
@@ -248,11 +250,11 @@ final class TransactionsList extends Component
         $this->filterAccounts = TransactionFilterInputs::positiveIds($this->filterAccounts);
         $this->filterCategories = TransactionFilterInputs::positiveIds($this->filterCategories);
         $this->filterCounterparties = TransactionFilterInputs::positiveIds($this->filterCounterparties);
+        $this->filterTypes = $this->knownTypes();
         $this->filterAfter = TransactionFilterInputs::supportedDay($this->filterAfter);
         $this->filterBefore = TransactionFilterInputs::supportedDay($this->filterBefore);
     }
 
-    // ?before=2026 is not a wider filter, it is a string the DATE comparison
     // Captures $fullHistory on entry so clearSearch() can restore the view
     // the user was in, rather than whatever the search happened to span.
     private function renderSearch(
@@ -356,7 +358,9 @@ final class TransactionsList extends Component
     }
 
     // A URL parameter, so an unknown value is dropped rather than passed into
-    // a whereIn that would then narrow to nothing on a typo.
+    // a whereIn that would then narrow to nothing on a typo. Read onto the
+    // property rather than only on the way to the query: a chip counting a word
+    // the matcher discards says the list is narrowed when it is not.
     /**
      * @return list<string>
      */
@@ -482,6 +486,9 @@ final class TransactionsList extends Component
             $count++;
         }
         if ($this->filterAmountMin !== '' || $this->filterAmountMax !== '' || $this->filterAmountDir !== AmountDirection::Both->value) {
+            $count++;
+        }
+        if ($this->filterTypes !== []) {
             $count++;
         }
 
