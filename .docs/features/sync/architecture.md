@@ -1492,7 +1492,10 @@ tomorrow is reported and skipped rather than repointed in silence.
 
 - A column `field_provenance` marks as the reader's own. Silently overwriting a
   correction is worse than leaving the row wrong, because the wrong row is
-  visible and the lost correction is not.
+  visible and the lost correction is not. The repair does not stamp one either,
+  which is the one place it departs from the picker it borrows: `manual` means
+  the reader chose this counterparty, and a later rule re-apply skips what it
+  marks. A repair restoring what the peer always meant has made no such choice.
 - A reconciled row, and a counterparty belonging to another reader — both are
   `ReassignCounterparty`'s own refusals, inherited rather than restated.
 - Anything under verdict `Unplaceable` or `Unspoken`.
