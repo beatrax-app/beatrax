@@ -38,6 +38,51 @@ install and on upgrade; it is the table's second writer. The rows carry
 Opting into online fetching still layers fresher rows on top; nothing about the
 consent gate changes.
 
+## How old the file may be when a build is cut
+
+The staleness mark tells a reader the figures are old. It does not tell them
+by how much, and until `RefuseToShipStaleBundledRates` there was nothing in the
+tree that read this file's own date at all: it shipped dated `2026-06-05` for a
+hundred days, thirty-three times past `RateFreshness::STALE_DAYS_THRESHOLD`,
+and every cross-currency roll-up on a stock install was priced at June rates.
+
+`BundledSnapshot::SHIP_WITHIN_DAYS = 90` is the bound, and the listener throws
+out of `native:build`, `native:package` and `mobile:package-android` when the
+snapshot is past it, unreadable, or carries a date that is not a `Y-m-d` day.
+`native:run` is deliberately **not** in that list — a developer iterating
+locally sees the same staleness mark a reader does, and blocking the loop on a
+network fetch would buy nothing.
+
+Ninety days is the ECB's own reading of how far back a rate is still recent:
+`eurofxref-hist-90d.xml` is the short-history feed it publishes beside the
+daily one. The cost of the bound was measured against the feed rather than
+assumed — comparing the shipped file to the day it was replaced:
+
+| Age of the snapshot | Median pair has moved | Worst pair has moved |
+|--------------------:|----------------------:|---------------------:|
+| 30 days | 0.54% | 4.86% (KRW) |
+| 60 days | 1.46% | 8.81% (KRW) |
+| 90 days | 1.24% | 11.44% (KRW) |
+| 100 days, as shipped | 5.29% | 31.35% (TRY) |
+
+So the bound trades a median error of roughly a percent for a release that is
+never blocked by a gap shorter than a quarter — longer than any gap between
+tags this repo has actually had.
+
+`scripts/refresh_bundled_rates.php` is the other half, and the refusal names
+it: it reads the ECB daily feed, writes this file, and prints what changed.
+
+### A currency the feed stopped quoting
+
+The refresh script never shrinks the currency set on its own. Bulgaria's euro
+entry took `BGN` out of the ECB's daily feed, so a straight copy would have
+dropped it — and with it a currency `currencies` is seeded with, both pickers
+offer, and `currency-names.json` names in twenty-six languages. The script
+carries such a code forward at the figure it already held and names it on
+stdout, because removing one is a product decision rather than a consequence
+of running a script. `BGN` is the one code in this file the daily feed does
+not price.
+
 ## The snapshot decides which currencies can be chosen
 
 The thirty codes it quotes, plus the euro it quotes them against, are exactly

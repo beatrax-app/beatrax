@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\FX\Providers;
 
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Core\Public\Support\RegistersScheduledCommands;
+use Modules\FX\Internal\Build\BundledSnapshot;
 use Modules\FX\Internal\Console\RefreshFxRatesCommand;
+use Modules\FX\Internal\Listeners\RefuseToShipStaleBundledRates;
 use Modules\FX\Internal\Providers\BundledSnapshotProvider;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Internal\Providers\FrankfurterRateProvider;
@@ -65,6 +69,15 @@ final class FXServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(ExchangeRateService::class);
+
+        $this->app->singleton(
+            BundledSnapshot::class,
+            static function (Application $app): BundledSnapshot {
+                $provider = $app->make(BundledSnapshotProvider::class);
+
+                return new BundledSnapshot($provider, $provider->path());
+            },
+        );
     }
 
     public function boot(): void
@@ -72,5 +85,11 @@ final class FXServiceProvider extends ServiceProvider
         $this->loadModuleResources('fx');
 
         $this->registerScheduledCommands([RefreshFxRatesCommand::class]);
+
+        // A build that stops beats one that ships rates nobody measured: with
+        // online fetching off by default this file is not the fallback, it is
+        // what prices every cross-currency roll-up on a stock install.
+        $this->app->make(Dispatcher::class)
+            ->listen(CommandStarting::class, RefuseToShipStaleBundledRates::class);
     }
 }

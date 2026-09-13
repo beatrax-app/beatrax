@@ -11,13 +11,14 @@ use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\FX\Public\Support\BundledRates;
 use Modules\Ledger\Public\Enums\Currency;
 
-// The bundled snapshot ships dated 2026-06-05 and quotes EUR/JPY at 159.10,
-// which is a euro-per-yen rate of 0.00628536. On 2026-09-12 that snapshot is
-// ninety-nine days old, and it is the rate a fresh install converts at for as
-// long as online fetching stays off — which is the default. Planting a
-// ¥480,000 expense moved a dashboard tile from EUR 2,101.82 to EUR 5,118.79
-// and the tile named neither the rate, nor the snapshot, nor the ninety-nine
-// days, because ConvertedTotal carried none of the three.
+// The bundled snapshot ships dated 2026-09-11 and quotes EUR/JPY at 178.56,
+// which is a euro-per-yen rate of 0.00560036. Ninety-nine days later that is
+// the rate a fresh install still converts at, for as long as online fetching
+// stays off — which is the default. Planting a ¥480,000 expense moved a
+// dashboard tile and the tile named neither the rate, nor the snapshot, nor
+// the ninety-nine days, because ConvertedTotal carried none of the three.
+// Every figure below is the shipped snapshot's, so refreshing that file with
+// scripts/refresh_bundled_rates.php moves them and they are re-derived.
 
 // Named for this file: a bare crossRate() is already owned by another case in
 // this module's suite, and two files in one Pest namespace cannot both declare
@@ -41,7 +42,7 @@ if (! function_exists('crossRateToday')) {
     }
 }
 
-beforeEach(fn () => CarbonImmutable::setTestNow('2026-09-12 09:00:00'));
+beforeEach(fn () => CarbonImmutable::setTestNow('2026-12-19 09:00:00'));
 
 afterEach(fn () => CarbonImmutable::setTestNow(null));
 
@@ -51,7 +52,7 @@ it('carries the rate, its source and its as-of date into the figure they made', 
         Currency::Eur->value,
     );
 
-    expect($total->minor)->toBe(511_879)
+    expect($total->minor)->toBe(478_999)
         ->and($total->isPartial())->toBeFalse();
 
     $used = $total->rates->usedFor(Currency::Jpy->value);
@@ -59,9 +60,9 @@ it('carries the rate, its source and its as-of date into the figure they made', 
     expect($used)->not->toBeNull()
         ->and($used->from)->toBe(Currency::Jpy->value)
         ->and($used->to)->toBe(Currency::Eur->value)
-        ->and($used->rate)->toBe('0.00628536')
+        ->and($used->rate)->toBe('0.00560036')
         ->and($used->source)->toBe(BundledRates::SOURCE)
-        ->and($used->asOf?->toDateString())->toBe('2026-06-05')
+        ->and($used->asOf?->toDateString())->toBe('2026-09-11')
         ->and($used->isStale)->toBeTrue()
         ->and($used->ageInDaysAt(CarbonImmutable::now()))->toBe(99);
 });
@@ -78,7 +79,7 @@ it('separates a snapshot ninety-nine days old from a rate fetched this morning',
         ->and($bundled->isStale())->toBeTrue()
         ->and($bundled->sourceLabel())->toBe(Lang::get('core::fx.source_bundled'));
 
-    crossRateToday(Currency::Jpy->value, '159.10000000');
+    crossRateToday(Currency::Jpy->value, '178.56000000');
 
     $fresh = app(CrossCurrencyTotal::class)->of([Currency::Jpy->value => 480_000], Currency::Eur->value)->disclosure();
 
@@ -98,7 +99,7 @@ it('names the oldest leg, so one fresh pair cannot date a figure the other half 
     ], Currency::Eur->value)->disclosure();
 
     expect($disclosure->rates)->toHaveCount(2)
-        ->and($disclosure->asOf()?->toDateString())->toBe('2026-06-05')
+        ->and($disclosure->asOf()?->toDateString())->toBe('2026-09-11')
         ->and($disclosure->source())->toBe(BundledRates::SOURCE)
         ->and($disclosure->isStale())->toBeTrue();
 });

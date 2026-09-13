@@ -21,6 +21,14 @@ $rrhSeed = static function (string $date, string $quote, string $rate, string $s
     ]);
 };
 
+// The migration seeds the bundled snapshot into this table, and convertToBase()
+// takes the newest rate_date there is. A precedence case is about one pair on
+// ONE day, so it clears the shipped rows and states its own world rather than
+// planting a date that has to stay later than whatever the snapshot is dated.
+$rrhOnlyPlantedRows = static function (): void {
+    DB::table('exchange_rates')->where('source', 'bundled')->delete();
+};
+
 // The plan of the statement the service actually ran, rather than one rebuilt
 // beside it: a rebuilt copy stops describing the read the moment it drifts.
 $rrhPlanOf = static function (DatabaseManager $db, callable $run): string {
@@ -71,9 +79,10 @@ it('resolves the rate in effect on a date without a subquery per row of the tabl
 // falls through on failure, and the unique index is keyed by source. Which of
 // them supplies the rate, and which one the figure names as its source, was
 // decided by a tie neither ORDER BY broke.
-it('prices one pair and one day from the later of two providers, not from whichever arrives last', function () use ($rrhSeed): void {
+it('prices one pair and one day from the later of two providers, not from whichever arrives last', function () use ($rrhSeed, $rrhOnlyPlantedRows): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
+    $rrhOnlyPlantedRows();
 
     $rrhSeed('2026-07-01', 'USD', '1.1000', 'ecb');
     $rrhSeed('2026-07-01', 'USD', '1.2000', 'frankfurter');
@@ -85,9 +94,10 @@ it('prices one pair and one day from the later of two providers, not from whiche
         ->and($result->asOf?->toDateString())->toBe('2026-07-01');
 });
 
-it('prices it from the other provider when that one wrote last', function () use ($rrhSeed): void {
+it('prices it from the other provider when that one wrote last', function () use ($rrhSeed, $rrhOnlyPlantedRows): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
+    $rrhOnlyPlantedRows();
 
     $rrhSeed('2026-07-01', 'USD', '1.2000', 'frankfurter');
     $rrhSeed('2026-07-01', 'USD', '1.1000', 'ecb');
@@ -103,9 +113,10 @@ it('prices it from the other provider when that one wrote last', function () use
 // app, so a live feed's row for the same pair and day outranks it however late
 // the snapshot was written. The source class decides first; the id only breaks
 // what is left.
-it('keeps a live provider ahead of the bundled snapshot written after it', function () use ($rrhSeed): void {
+it('keeps a live provider ahead of the bundled snapshot written after it', function () use ($rrhSeed, $rrhOnlyPlantedRows): void {
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
+    $rrhOnlyPlantedRows();
 
     $rrhSeed('2026-07-01', 'USD', '1.1000', 'ecb');
     $rrhSeed('2026-07-01', 'USD', '9.9000', 'bundled');

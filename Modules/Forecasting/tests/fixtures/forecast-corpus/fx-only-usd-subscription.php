@@ -40,35 +40,35 @@ return [
     ],
     // No rate on the series row: production never wrote one, so the pipeline
     // resolves USD->EUR from exchange_rates at fold time. The figures below
-    // are the bundled snapshot's EUR 1 = USD 1.1359 read the other way round,
-    // 0.88035919, applied to each of the three bounds before the band is taken.
+    // are the bundled snapshot's EUR 1 = USD 1.1592 read the other way round,
+    // 0.86266391, applied to each of the three bounds before the band is taken.
     'expected' => [
         'projection' => [
             [
                 'horizon_days' => 30,
                 'account_id' => 1,
                 'date' => '2026-05-18',
-                'low_minor' => 148891,
-                'point_minor' => 148944,
-                'high_minor' => 148997,
+                'low_minor' => 148914,
+                'point_minor' => 148966,
+                'high_minor' => 149018,
                 'currency' => 'EUR',
             ],
             [
                 'horizon_days' => 60,
                 'account_id' => 1,
                 'date' => '2026-06-18',
-                'low_minor' => 147835,
-                'point_minor' => 147888,
-                'high_minor' => 147941,
+                'low_minor' => 147880,
+                'point_minor' => 147932,
+                'high_minor' => 147984,
                 'currency' => 'EUR',
             ],
             [
                 'horizon_days' => 90,
                 'account_id' => 1,
                 'date' => '2026-07-18',
-                'low_minor' => 146779,
-                'point_minor' => 146832,
-                'high_minor' => 146885,
+                'low_minor' => 146846,
+                'point_minor' => 146898,
+                'high_minor' => 146950,
                 'currency' => 'EUR',
             ],
         ],
