@@ -12,6 +12,7 @@ use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\AmountDirection;
 use Modules\Ledger\Public\Services\CategoryAncestry;
+use Modules\Ledger\Public\Support\SplitLegs;
 use Modules\Reports\Internal\Dto\ReportResultRow;
 use stdClass;
 
@@ -49,10 +50,7 @@ final readonly class CategorySpendQuery
         // rows at all, or its legs do not sum to its settled_amount_minor.
         // Uncategorized rows land here under the sentinel key.
         $unsplit = $connection->table('transactions as t')
-            // One parenthesized group: AND binds tighter than OR, so unbracketed
-            // the NOT EXISTS half would match every unsplit transaction for every
-            // user and period rather than this query's scope.
-            ->whereRaw('(NOT EXISTS (SELECT 1 FROM transaction_splits AS ts WHERE ts.transaction_id = t.id) OR COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor)')
+            ->whereRaw(SplitLegs::parentHoldsTheAmount('t.'))
             ->where('t.user_id', $user->id)
             ->where('t.settled_currency', $currency)
             ->whereRaw(...$counted)
@@ -85,7 +83,7 @@ final readonly class CategorySpendQuery
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
             // Legs count only when they sum to the parent; a broken split falls
             // back to the parent above, so the branches never double-count.
-            ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
+            ->whereRaw(SplitLegs::addUpToTheParent('t.'))
             ->when($filters->accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.account_id', $filters->accountIds))
             ->when($filters->categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('ts.category_id', $filters->categoryIds))
             ->when($filters->counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('t.counterparty_id', $filters->counterpartyIds))

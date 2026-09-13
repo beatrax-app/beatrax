@@ -1437,6 +1437,22 @@ attributing partial legs. The legs branch mirrors this with the
 opposite sense: legs are only attributed when the split is internally
 consistent, so the two branches never double-count nor drop spend.
 
+**And it is asked in the parent's own currency.** `SplitLegs::addUpToTheParent()`
+is the one place that question is written, and both branches plus
+`Reports`' `CategorySpendQuery`, `CategoryAttribution` and the
+`SplitSumHealthCheck` probe ask it there. The sum counts only the legs
+denominated in the parent's `settled_currency`, and a leg denominated
+elsewhere makes the split broken on its own — because minor units of two
+currencies are not a figure, and a sum across them is the addition
+`B10-R4` refuses. `SaveTransactionSplit` writes every leg in its parent's
+currency, so no local path produces one; the applier is a second writer
+and a peer's `SET` on `settled_currency` is not gated. While the
+predicate added across currencies, a EUR 50.00 charge carrying one USD
+leg of 5000 read as balanced: `forUserAndPeriodByCurrency()` answered
+`{Travel|USD: 5000}` in place of `{Rent|EUR: 5000}`, and the report
+builder — whose passes are each scoped to one currency — answered no rows
+at all for a charge that is in the ledger.
+
 Every method it exposes is keyed by currency, and none of them takes a
 reporting currency to filter on. `forUserAndPeriodByCurrency()` groups by
 `(category_id, currency)` for one period; `forUserAndSpanByCurrencyPerDay()`

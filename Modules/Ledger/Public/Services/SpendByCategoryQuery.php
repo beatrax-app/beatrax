@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\MoneyFlow;
+use Modules\Ledger\Public\Support\SplitLegs;
 
 /**
  * @link ../../../../.docs/features/ledger/architecture.md#spendbycategoryquery--the-split-aware-spend-read-model
@@ -36,7 +37,7 @@ final readonly class SpendByCategoryQuery
         // Unsplit + broken-split parents (see the linked architecture
         // page for the three-case predicate this correlated subquery covers).
         $unsplitQuery = $connection->table(self::TRANSACTIONS_ALIAS)
-            ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
+            ->whereRaw('NOT '.SplitLegs::addUpToTheParent('t.'))
             ->where('t.user_id', $userId)
             ->whereRaw($spendWhen, $spendBindings)
             ->where('t.posted_at', '>=', $period->start->toDateString())
@@ -66,7 +67,7 @@ final readonly class SpendByCategoryQuery
             ->where('t.posted_at', '<', $period->endExclusive->toDateString())
             // Only attribute legs when the split is internally
             // consistent; broken splits fall back to the parent above.
-            ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
+            ->whereRaw(SplitLegs::addUpToTheParent('t.'))
             ->groupBy('ts.category_id', 'ts.settled_currency')
             ->get(['ts.category_id', 'ts.settled_currency', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
 
@@ -92,7 +93,7 @@ final readonly class SpendByCategoryQuery
         [$spendWhen, $spendBindings] = MoneyFlow::Spend->predicate('t.');
 
         $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
-            ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
+            ->whereRaw('NOT '.SplitLegs::addUpToTheParent('t.'))
             ->where('t.user_id', $userId)
             ->whereRaw($spendWhen, $spendBindings)
             ->where('t.posted_at', '>=', $span->start->toDateString())
@@ -113,7 +114,7 @@ final readonly class SpendByCategoryQuery
             ->whereRaw($spendWhen, $spendBindings)
             ->where('t.posted_at', '>=', $span->start->toDateString())
             ->where('t.posted_at', '<', $span->endExclusive->toDateString())
-            ->whereRaw('(SELECT SUM(ts2.settled_amount_minor) FROM transaction_splits AS ts2 WHERE ts2.transaction_id = ts.transaction_id) = t.settled_amount_minor')
+            ->whereRaw(SplitLegs::addUpToTheParent('t.'))
             ->groupBy('t.posted_at', 'ts.category_id', 'ts.settled_currency')
             ->get(['t.posted_at', 'ts.category_id', 'ts.settled_currency', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
 
