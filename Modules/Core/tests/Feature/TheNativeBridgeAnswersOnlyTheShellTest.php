@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\Helpers\ShellBridge;
 
 uses(RefreshDatabase::class);
@@ -25,6 +26,40 @@ it('does not answer the booted or cookie routes either', function (): void {
 
     $this->post('/_native/api/booted')->assertNotFound();
     $this->get('/_native/api/cookie')->assertNotFound();
+});
+
+// Named routes miss the ones only the other Composer root registers. The
+// desktop root has booted/events/cookie; the mobile root has events and `call`,
+// which nothing above reaches. Whatever this deployment registered, all of it
+// closes.
+it('closes every _native route this deployment registers, whichever root that is', function (): void {
+    config()->set('nativephp-internal.secret', null);
+
+    $bridge = [];
+    foreach (Route::getRoutes() as $route) {
+        if (! str_starts_with($route->uri(), '_native')) {
+            continue;
+        }
+
+        foreach ($route->methods() as $method) {
+            if (in_array($method, ['GET', 'POST'], true)) {
+                $bridge[] = [$method, $route->uri()];
+            }
+        }
+    }
+
+    expect($bridge)->not->toBeEmpty('No _native route was registered at all, so nothing below was asked.');
+
+    $answered = [];
+    foreach ($bridge as [$method, $uri]) {
+        $status = $this->call($method, '/'.$uri)->status();
+
+        if ($status !== 404) {
+            $answered[] = $method.' /'.$uri.' -> '.$status;
+        }
+    }
+
+    expect($answered)->toBe([], "These answered something other than 404:\n  ".implode("\n  ", $answered));
 });
 
 // The positive control. Without it a guard that refused every path in the app
