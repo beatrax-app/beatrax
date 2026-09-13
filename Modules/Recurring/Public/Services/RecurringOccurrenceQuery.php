@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Internal\Support\NewestOccurrenceFirst;
 use Modules\Recurring\Internal\Support\SeriesIds;
 use Modules\Recurring\Internal\Support\SeriesTables;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
@@ -23,6 +24,16 @@ use stdClass;
 final readonly class RecurringOccurrenceQuery
 {
     use CoercesScalars;
+
+    /** @var list<string> */
+    private const array OCCURRENCE_COLUMNS = [
+        'o.id',
+        'o.recurring_series_id',
+        'o.transaction_id',
+        'o.observed_at',
+        'o.observed_amount_minor',
+        'o.observed_currency',
+    ];
 
     public function __construct(
         private DatabaseManager $db,
@@ -80,12 +91,12 @@ final readonly class RecurringOccurrenceQuery
             return [];
         }
 
-        $rows = $this->db->connection()->table('recurring_series_occurrences')
-            ->where('recurring_series_id', $seriesId)
-            ->where('user_id', $user->id)
-            ->orderByDesc('observed_at')
-            ->orderByDesc('id')
-            ->get();
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+            ->where('o.recurring_series_id', $seriesId)
+            ->where('o.user_id', $user->id)
+            ->orderByRaw(NewestOccurrenceFirst::SQL)
+            ->get(self::OCCURRENCE_COLUMNS);
 
         return self::toOccurrenceDtos($rows);
     }
@@ -127,15 +138,15 @@ final readonly class RecurringOccurrenceQuery
             return [];
         }
 
-        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
-            ->join('recurring_series as s', 's.id', '=', 'o.recurring_series_id')
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+            ->join(SeriesTables::SERIES, 's.id', '=', 'o.recurring_series_id')
+            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
             ->where('o.user_id', $user->id)
             ->where('s.user_id', $user->id)
-            ->orderByDesc('o.observed_at')
-            ->orderByDesc('o.id')
+            ->orderByRaw(NewestOccurrenceFirst::SQL)
             ->limit($limit)
-            ->get(['o.id', 'o.recurring_series_id', 'o.transaction_id', 'o.observed_at', 'o.observed_amount_minor', 'o.observed_currency']);
+            ->get(self::OCCURRENCE_COLUMNS);
 
         return self::toOccurrenceDtos($rows);
     }
@@ -175,17 +186,16 @@ final readonly class RecurringOccurrenceQuery
         }
 
         $effectiveLimit = max(1, $maxPoints);
-        $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
-            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'rso.transaction_id')
-            ->where('rso.recurring_series_id', $seriesId)
-            ->where('rso.user_id', $user->id)
-            ->orderByDesc('rso.observed_at')
-            ->orderByDesc('rso.id')
+        $rows = $this->db->connection()->table(SeriesTables::OCCURRENCES)
+            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+            ->where('o.recurring_series_id', $seriesId)
+            ->where('o.user_id', $user->id)
+            ->orderByRaw(NewestOccurrenceFirst::SQL)
             ->limit($effectiveLimit)
             ->get([
-                'rso.observed_at',
-                'rso.observed_amount_minor',
-                'rso.observed_currency',
+                'o.observed_at',
+                'o.observed_amount_minor',
+                'o.observed_currency',
                 't.settled_amount_minor as settled_amount_minor',
                 't.settled_currency as settled_currency',
             ]);

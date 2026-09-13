@@ -17,6 +17,8 @@ use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Internal\Support\MonthlyEquivalent;
+use Modules\Recurring\Internal\Support\NewestOccurrenceFirst;
+use Modules\Recurring\Internal\Support\SeriesTables;
 use Modules\Recurring\Public\Dto\MonthlyEquivalentTotals;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
@@ -258,15 +260,15 @@ final readonly class FixedPaymentsViewQuery
         }
 
         $rowsFromJoin = $this->db->connection()
-            ->table('recurring_series_occurrences as rso')
-            ->join('chain_links as cl', 'cl.from_transaction_id', '=', 'rso.transaction_id')
-            ->where('rso.user_id', $user->id)
+            ->table('recurring_series_occurrences as o')
+            ->join('chain_links as cl', 'cl.from_transaction_id', '=', 'o.transaction_id')
+            ->leftJoin(SeriesTables::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
+            ->where('o.user_id', $user->id)
             ->where('cl.user_id', $user->id)
             ->whereIn('cl.state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
-            ->whereIn('rso.recurring_series_id', $needsFallback)
-            ->orderByDesc('rso.observed_at')
-            ->orderByDesc('rso.id')
-            ->get(['rso.recurring_series_id', 'cl.id as chain_link_id']);
+            ->whereIn('o.recurring_series_id', $needsFallback)
+            ->orderByRaw(NewestOccurrenceFirst::SQL)
+            ->get(['o.recurring_series_id', 'cl.id as chain_link_id']);
 
         $map = [];
         foreach ($rowsFromJoin as $candidate) {

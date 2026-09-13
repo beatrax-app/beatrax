@@ -97,19 +97,92 @@ charges, same cluster, two different answers. The income side had it too:
 €3 500 salary against a €4 200 bonus paid the same day, 350000 or 420000
 depending on nothing but write order.
 
-The sort now carries two more terms, and both are values every device
+The sort now carries three more terms, and each is a value every device
 computes alike rather than counts for itself:
 
 | Term | Why |
 | --- | --- |
 | `posted_at` | The day, as before. |
 | `booked_at` | A `DATETIME`, so it carries the time of day the bank filed the charge — a meaningful answer where the two rows really did arrive in an order. |
-| `fingerprint` | `UNIQUE (user_id, fingerprint)`, and composed from the tuple rather than minted, so it is a total order and the peer computes the same one. |
+| `amount_minor` | The charge itself. Two rows of one minute are almost always two different amounts, and the amount is what the cluster is read for. |
+| `occurrence_ordinal` | Counted over the rows of one statement file in the order that file lists them, so it parts even two rows agreeing in every other column — and both devices import the same file. |
 
 An autoincrement id would have settled the tie too, and would have
 settled it differently on each device: `transactions.id` is counted per
 device, so the same two charges rank one way here and the other way
-there. That is the whole reason the third term is the fingerprint.
+there.
+
+**The fingerprint is not a way out of that, which is what the first pass
+at this got wrong.** `FingerprintComposer::occurrenceGroupOf()` folds
+`user_id` and `account_id` into the digest, and `account_id` is counted
+per device — one IBAN is account 1 here and account 2 there, which is
+why `RederiveFingerprintOnMergedRows` recomputes the digest after
+`PeerRowAliases::translate()` rewrites that column on an arriving row.
+Composed is not the same property as agreed. Held constant over 1 600
+same-day pairs, changing only the account id from 1 to 2 flipped the
+order of the two digests **804 times** — a coin toss, which is exactly
+what a 256-bit hash of a differing input should do. The four terms above
+name no column a device counts for itself, so they are the same order on
+both.
+
+### Which occurrence is the newest
+
+`recurring_series_occurrences` has the same problem one table over, and
+worse. `OccurrenceWriter` gives each row a `DeviceMintedRowId`, which is
+`random_int(1, PHP_INT_MAX)` — deliberately so, because the row's own
+identity columns name a `transaction_id` each device counts for itself,
+and `rec_occ_uniq` is what makes two devices one row. Measured on the
+live desktop database, the 58 occurrence ids run from
+566396734396667474 to 9020120641491708740.
+
+`observed_at` is a `DATE`, so two charges of one day tie under it, and
+every read of the log settled that tie on `id DESC`: a random number
+here, a different random number there. Five reads did it —
+`occurrencesForSeries`, `latestOccurrencesForSeries`,
+`amountTrendForSeries`, `SeriesAccountResolver`'s `row_number()`
+window, and `FixedPaymentsViewQuery`'s funding-chain fallback — so a
+same-day pair could give the series detail page one order, the trend
+chart another, the account resolver a third account, and
+[drift alerts](../drift-alerts/drift-detection.md) a movement of the
+opposite sign.
+
+They now share one clause, `Internal\Support\NewestOccurrenceFirst::SQL`,
+which reaches the occurrence's charge for the same four terms the
+detectors sort on:
+
+```
+o.observed_at desc, t.booked_at desc,
+o.observed_amount_minor desc, t.occurrence_ordinal desc
+```
+
+The join to `transactions` is a `LEFT JOIN` on the primary key, so an
+occurrence whose charge has gone still comes back, as it did before.
+
+Two more ids in this module are **not** this shape, and the distinction
+is the whole point:
+
+| Column | Kind | Safe as a tie-break? |
+| --- | --- | --- |
+| `recurring_series.id` | `DerivedSeriesId` → `DerivedRowId::for()`, a SHA-256 fold of `(user_id, direction, cluster_counterparty_key, latest_currency)` | **Yes.** Arbitrary — it sorts in hash order, never insertion order — but every device computes the same number, which is what a tie-break needs. `RecurringSeriesProjector`, `RecurringSeriesQuery::allApprovedForUser`, `FixedPaymentsViewQuery` and both detectors' ascending-id index walks keep it. |
+| `recurring_series_occurrences.id`, `transactions.id`, `accounts.id` | minted or autoincrement | **No.** Each device holds its own number for the same logical row. |
+
+`accounts` has the same trap in
+`SeriesAccountResolver::firstAccountId()`, which picks the
+alphabetically-first account for a series with no occurrence yet. Two
+accounts can share a name — a second current account at one bank, a
+second PayPal, both present on the live install — and `name, id` parted
+them by a per-device number. The second term is now `iban`: it carries
+`UNIQUE (user_id, iban)`, it is never sealed (too narrow to hold
+`base64(nonce || ciphertext)`, and matched by equality in eleven raw
+predicates), and it is what the account *is* rather than what this
+device happened to call it.
+
+`MerchantDisplayName::fromTransactions()` had it too, and it is the most
+visible: it reads the bank's string off the newest transaction carrying
+a normalised name, so `posted_at DESC, id DESC` let one device label a
+series `ALBERT HEIJN 1234` and its peer `Albert Heijn`. It now sorts on
+`posted_at, booked_at, amount_minor, occurrence_ordinal`, the same
+content key.
 
 ## The numbers
 
