@@ -7,6 +7,7 @@ namespace Modules\OpenBanking\Internal\Tls;
 use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\OwnerOnlyPath;
+use Modules\Core\Public\Support\TlsKeyPair;
 
 final readonly class LoopbackTlsCertificate
 {
@@ -29,7 +30,10 @@ final readonly class LoopbackTlsCertificate
         $certPath = $this->directory.'/'.self::CERT_FILE;
         $keyPath = $this->directory.'/'.self::KEY_FILE;
 
-        if (! $regenerate && is_file($certPath) && is_file($keyPath) && $this->stillValid($certPath)) {
+        // The key is checked against the certificate, not merely counted: a
+        // pair that does not match binds a listener the operator is told is
+        // ready and that then resets every connection it accepts.
+        if (! $regenerate && $this->stillValid($certPath) && TlsKeyPair::opensCertificate($certPath, $keyPath)) {
             return ['cert' => $certPath, 'key' => $keyPath];
         }
 

@@ -54,10 +54,11 @@ final readonly class RelayListenerProcess
         }
 
         // A relay already up is only correct if it speaks what the endpoint
-        // advertises. One started before the material existed answers in plaintext,
-        // and being persistent it survives the relaunch that would have fixed it.
+        // advertises, and the probe measures whether a handshake completes, not
+        // why it did not: plaintext from one started before the material existed,
+        // nothing at all from one whose key does not open its certificate.
         if ($endpoint !== null && str_starts_with($endpoint, 'https://') && ! $this->portSpeaksTls()) {
-            $this->logger->info('relay listener: running relay is plaintext but the endpoint is https; restarting it.');
+            $this->logger->info('relay listener: the running relay completes no TLS handshake but the endpoint is https; restarting it.');
 
             $this->respawn();
         }

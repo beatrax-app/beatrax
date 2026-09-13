@@ -357,6 +357,39 @@ polling flow through unchanged. This is a local single-user dev tool only;
 the certificate carries no trust beyond "the developer clicked through it
 once."
 
+What the listener commits to, none of which the bind itself would enforce:
+
+- **Loopback only.** It binds `tls://127.0.0.1:PORT`, never `0.0.0.0`. The
+  relay is the listener that deliberately faces the LAN; this one never does.
+- **A stated TLS floor.** The context carries
+  `crypto_method => STREAM_CRYPTO_METHOD_TLSv1_2_SERVER | ..._TLSv1_3_SERVER`.
+  A bare `tls://` offers every version the linked OpenSSL permits, which makes
+  the floor a property of the build rather than of the application —
+  `relay:serve` states the same floor through Amp's `ServerTlsContext` default.
+- **Peer verification off, deliberately.** `verify_peer` /
+  `verify_peer_name` / `allow_self_signed` are a server-side statement that no
+  client certificate is asked for. The browser is the party doing the deciding
+  here, and it decides against the fingerprint the command prints.
+- **Ports refused outside 1–65535.** `stream_socket_server()` takes the low
+  sixteen bits rather than refusing a port that does not fit: `--port=99999`
+  bound `127.0.0.1:34463` while the command announced
+  `https://127.0.0.1:99999`, so the browser was sent somewhere nothing was
+  listening. `relay:serve` and `sync:serve` already refused this by name.
+- **`--port` is announced as the drift it is.** The default front port is read
+  back from the registered redirect URI so the two cannot drift; `--port`
+  overrides the listener and not the URI. The ready banner printed both without
+  comment, so `--port 9443` against a redirect URI on 8000 handed the operator a
+  callback address nothing was serving. It now says which port each one names.
+- **Material reused only when the key opens the certificate.**
+  `LoopbackTlsCertificate::ensure()` counted `key.pem` with `is_file()` and
+  validated only the certificate. A `tls://` bind reads neither half — it
+  succeeds with a missing certificate and a garbage key, errno 0 — so a
+  mismatched pair produced a listener the operator was told was ready and that
+  reset every connection it accepted, with nothing in any log naming the
+  certificate. The check is
+  `Modules\Core\Public\Support\TlsKeyPair::opensCertificate()`, shared with
+  the relay's `RelayTlsMaterial`.
+
 ## Public surface
 
 The module's entire `Public/` directory is one file:
