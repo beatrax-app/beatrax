@@ -250,9 +250,11 @@ trait ManagesSplitEditor
 
         $this->recomputeRemaining($currentUser, $db, $readerCurrency);
 
-        $this->splitError = $this->amountRefusal();
+        $refusal = $this->amountRefusal();
 
-        if ($this->splitError !== null) {
+        if ($refusal !== null) {
+            $this->splitError = $refusal;
+
             return;
         }
 
@@ -290,10 +292,6 @@ trait ManagesSplitEditor
         }
     }
 
-    // Both amount refusals in one body, in the order the reader caused them.
-    // Inline in saveSplit they were a fourth and fifth way out of a method the
-    // analyser already counted at three.
-    //
     // A leg that cannot be read contributes nothing to the sum, so a split
     // holding one reports a balanced total and then refuses. The leg is the
     // cause and the total is its consequence, so it is named first.
