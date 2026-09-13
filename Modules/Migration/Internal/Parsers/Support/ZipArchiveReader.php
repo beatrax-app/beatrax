@@ -115,24 +115,35 @@ final class ZipArchiveReader implements ArchiveReader
             return ExtractionTarget::directory($directory, $stat['name']);
         }
 
+        // Ahead of the target file, so an entry the extension will not hand a
+        // stream for leaves nothing on disk to be cleaned up after.
         $in = $zip->getStreamIndex($index);
         if ($in === false) {
             return false;
         }
 
         try {
-            $out = ExtractionTarget::open($directory, $stat['name']);
-            if ($out === false) {
-                return false;
-            }
-
-            try {
-                return $this->streamEntryInto($stat, $in, $out);
-            } finally {
-                fclose($out);
-            }
+            return $this->streamEntryInto($in, $stat, $directory);
         } finally {
             fclose($in);
+        }
+    }
+
+    /**
+     * @param  resource  $in
+     * @param  EntryStat  $stat
+     */
+    private function streamEntryInto($in, array $stat, string $directory): bool
+    {
+        $out = ExtractionTarget::open($directory, $stat['name']);
+        if ($out === false) {
+            return false;
+        }
+
+        try {
+            return $this->copyVerified($in, $out, $stat);
+        } finally {
+            fclose($out);
         }
     }
 
@@ -140,11 +151,11 @@ final class ZipArchiveReader implements ArchiveReader
     // here instead: a stream hands back a truncated download's bytes without a
     // word — 720 of them, measured, off an entry whose payload was edited.
     /**
-     * @param  EntryStat  $stat
      * @param  resource  $in
      * @param  resource  $out
+     * @param  EntryStat  $stat
      */
-    private function streamEntryInto(array $stat, $in, $out): bool
+    private function copyVerified($in, $out, array $stat): bool
     {
         $arriving = new EntryAsDeclared($stat['name'], $stat['size'], $stat['crc']);
 

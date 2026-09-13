@@ -187,6 +187,20 @@ it('refuses an encrypted entry through the ext-zip reader rather than writing an
     $zip->setEncryptionName('Register.csv', ZipArchive::EM_AES_256, 'not the reader\'s to know');
     $zip->close();
 
+    $reader = new ZipArchiveReader;
+    $out = lyingArchiveExtractionDirectory();
+    $reader->open($path);
+
+    try {
+        expect($reader->extractTo($out))->toBeFalse();
+        expect(lyingArchiveBytesUnder($out))->toBe(0);
+        expect((array) glob($out.'/*'))->toBe([], 'The stream is asked for before the target file, so a refused entry leaves no file behind.');
+    } finally {
+        $reader->close();
+        array_map('unlink', (array) glob($out.'/*'));
+        @rmdir($out);
+    }
+
     $extractor = new ZipExtractor(readers: new ArchiveReaderFactory(zipExtensionAvailable: true));
 
     try {
