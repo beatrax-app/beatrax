@@ -22,6 +22,12 @@ use Throwable;
 
 final readonly class GenericCsvAdapter implements SourceAdapter
 {
+    // league/csv maps a record onto the header by offset, so a row carrying
+    // more cells than the header names loses the surplus and one carrying
+    // fewer reads those columns as empty — both without a word. A column past
+    // the header's last is filled only by a row that ran past it.
+    private const string RAN_PAST_THE_HEADER = "\0beyond-the-header";
+
     public function __construct(
         private CsvPreset $preset,
         private GenericCsvAmountParser $amounts,
@@ -51,8 +57,9 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         try {
             // getHeader() throws on duplicate column names; surface that as a
             // user-facing sniff message instead of a raw 500.
-            $normMap = $this->buildHeaderMap($reader->getHeader());
-            $records = $reader->getRecords();
+            $header = $reader->getHeader();
+            $normMap = $this->buildHeaderMap($header);
+            $records = $reader->getRecords([...array_map(strval(...), $header), self::RAN_PAST_THE_HEADER]);
         } catch (SyntaxError $e) {
             throw new SniffMismatchException(sprintf(
                 'The %s CSV could not be read (it may have duplicate or malformed column headers).',
@@ -63,6 +70,13 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         $index = 0;
         foreach ($records as $record) {
             /** @var array<string, string|null> $record */
+            $ranPast = ($record[self::RAN_PAST_THE_HEADER] ?? null) !== null;
+            unset($record[self::RAN_PAST_THE_HEADER]);
+
+            if (self::carriesData($record)) {
+                $this->refuseARowThatIsNotTheHeadersWidth($record, $ranPast, $index);
+            }
+
             if ($this->rejectedByState($record, $normMap)) {
                 continue;
             }
@@ -140,15 +154,56 @@ final readonly class GenericCsvAdapter implements SourceAdapter
      */
     private function refuseAnUndatedRowThatCarriesData(array $record, int $index): void
     {
-        foreach ($record as $value) {
-            if (is_string($value) && trim($value) !== '') {
+        if (self::carriesData($record)) {
+            throw new InvalidAmountException(sprintf(
+                "Row %d: the '%s' column is empty, and the row is not.",
+                $index,
+                $this->preset->dateHeader,
+            ));
+        }
+    }
+
+    // A row that does not line up with the header is refused rather than read
+    // through it: one cell of an unescaped delimiter shifts every column after
+    // it, and the amount then comes off whichever column landed there.
+    /**
+     * @param  array<string, string|null>  $record
+     */
+    private function refuseARowThatIsNotTheHeadersWidth(array $record, bool $ranPastTheHeader, int $index): void
+    {
+        if ($ranPastTheHeader) {
+            throw new InvalidAmountException(sprintf(
+                'Row %d carries more cells than the %d columns the header names.',
+                $index,
+                count($record),
+            ));
+        }
+
+        foreach ($record as $column => $value) {
+            if ($value === null) {
                 throw new InvalidAmountException(sprintf(
-                    "Row %d: the '%s' column is empty, and the row is not.",
+                    "Row %d stops before the '%s' column the header names.",
                     $index,
-                    $this->preset->dateHeader,
+                    $column,
                 ));
             }
         }
+    }
+
+    // A trailing blank line, or a filler row a bank's export writes between
+    // sections: nothing to read and nothing to refuse.
+    /**
+     * @param  array<string, string|null>  $record
+     */
+    private static function carriesData(array $record): bool
+    {
+        foreach ($record as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -250,7 +305,10 @@ final readonly class GenericCsvAdapter implements SourceAdapter
     private function currency(array $record, array $normMap): string
     {
         if ($this->preset->currencyHeader !== null) {
-            $fromRow = trim($this->cell($record, $normMap, $this->preset->currencyHeader));
+            // Upper-cased because ISO 4217 is and the currency table's lookup
+            // is: a row spelling its currency 'jpy' found no entry, fell back
+            // to the repo-wide two decimals and booked a hundred times the yen.
+            $fromRow = mb_strtoupper(trim($this->cell($record, $normMap, $this->preset->currencyHeader)));
             if ($fromRow !== '') {
                 return $fromRow;
             }

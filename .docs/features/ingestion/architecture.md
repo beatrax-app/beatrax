@@ -677,20 +677,39 @@ and is not covered by these four.
 adding a preset, not a class. Columns are matched by a *normalised*
 header name (lower-cased, whitespace stripped) so minor spelling
 differences (`Naam / Omschrijving` vs `Naam/Omschrijving`) still
-resolve. `GenericCsvAmountParser` handles the cross-bank zoo of amount
-spellings: `-1.234,56` (comma decimal, dot thousands), `1,234.56` (dot
-decimal, comma thousands), `1234.56`, `-12,34`, a leading `+`,
-parenthesised negatives `(12,34)`, and stray currency symbols /
-non-breaking spaces — at the row currency's own minor-unit count, per
-the section above. Spaces
-and non-breaking spaces are removed wherever they sit in the cell, not
-only at the ends, because a plain space is the thousands separator in
-several EU exports (`1 234,50`); `GenericCsvAmountParserTest` pins the
-non-breaking-space form. What survives that has to be digits around at
-most one decimal separator, so a cell that is not an amount still raises
-`InvalidAmountException`. The cost of the rule is real and accepted: a
-`12 34` produced by two cells running together parses as `1234.00`
-rather than failing loudly.
+resolve. `GenericCsvAmountParser` reads the figure in **the one notation
+the preset declares**, and refuses anything else: digits either ungrouped
+or grouped in threes by the separator the decimal one is not, an optional
+leading sign, parenthesised negatives `(12,34)`, and a currency glyph off
+`Money::SYMBOLS`. Spaces and non-breaking spaces are removed wherever they
+sit in the cell, not only at the ends, because a plain space is the
+thousands separator in several EU exports (`1 234,50`);
+`GenericCsvAmountParserTest` pins the non-breaking-space form. The cost of
+that one rule is real and accepted: a `12 34` produced by two cells running
+together parses as `1234.00` rather than failing loudly.
+
+The strictness is the point, because the loose reading was a hundredfold
+error rather than a refusal. Stripping whatever was not a digit or the
+preset's decimal separator meant a file in the *other* dialect still
+parsed — ING's own export dialog offers the reader a choice of decimal
+separator, and a period-decimal ING file read through the comma-decimal
+preset lost its period as a thousands separator: `23.45` booked as
+€2,345.00. The mirror cost a thousandth: `1.234,56` through a
+period-decimal preset became `1.23456` and rounded to €1.23. A separator
+that groups nothing is now the signature of the wrong dialect and is
+refused. The same strip discarded any glyph carrying a sign — U+2212 MINUS
+SIGN, an en or em dash, a fullwidth hyphen-minus — so `−12.50` was booked
+as a **credit** of 12.50. Those five glyphs are normalised to a
+hyphen-minus before the shape check; a marker the parser cannot place
+(`12.50-`, `12.50DR`) is refused rather than guessed at, which is the rule
+`BankAmountParser`, `PaypalAmountParser` and `IcsAmountParser` have always
+followed.
+
+A row's own currency code is upper-cased before it is used, in both CSV
+adapters. The currency table's lookup is case-sensitive, so `jpy` found no
+entry, fell back to the repo-wide two decimals, and booked a hundred times
+the yen — the same failure the paragraph above describes, reached by the
+code's spelling rather than by the figure's.
 
 Native vs settled, and the fee that pays for the distinction: Revolut's
 export ships a `Fee` column, and the two amounts it implies are different
@@ -727,6 +746,25 @@ line an export ends on, and raises for anything else, naming the column.
 parser it has no way around. See [a statement that did not check its own
 arithmetic](a-statement-that-did-not-check-its-own-arithmetic.md) for the
 formats that can notice a gap and did not.
+
+A row that is not the header's width is refused for the same reason.
+`league/csv` combines a record onto the header **by offset**: a surplus
+cell is dropped and a missing one becomes `null`, both without a word, and
+both are what a single unescaped delimiter inside a description produces —
+one comma in `REWE, Berlin` shifts every column after it, so the amount
+comes off whichever column landed on the amount's offset. The adapter hands
+`getRecords()` a header one column longer than the file's; that sentinel is
+filled only by a row that ran past the header, and a `null` in any real
+column is a row that stopped short. A row whose every cell is empty still
+skips, because that is the blank line an export ends on.
+
+A date is read at the width its format declares. PHP's `Y` matches one to
+four digits and raises no parse warning for the short reading, so
+`26-05-01` under a `Y-m-d` preset was booked in the year 26.
+`SafeDate::fromFormatOrNull()` now refuses a year before 1000, which is
+exactly the reading a four-digit `Y` came up short on; MT940's sliding
+window is a two-digit year a format declares as two digits (`ymd`) and is
+untouched.
 
 ### HeaderSniffer
 

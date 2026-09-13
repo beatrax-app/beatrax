@@ -60,8 +60,10 @@ final readonly class PositionalCsvAdapter implements SourceAdapter
             $row = $this->normalizeRow($record);
 
             // Resolved before the amount, not after: the row's own currency is
-            // what says how many minor units one major unit holds.
-            $currency = $row[$this->preset->currencyColumn];
+            // what says how many minor units one major unit holds. Upper-cased
+            // because the currency table's lookup is: a 'jpy' found no entry
+            // and fell back to a hundred times the yen.
+            $currency = mb_strtoupper(trim($row[$this->preset->currencyColumn]));
             if ($currency === '') {
                 $currency = Currency::Eur->value;
             }
