@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN має містити від :min до :max цифр — лише цифри.',
     'error_pin_mismatch' => 'PIN-коди не збігаються. Спробуй ще раз.',
     'error_pin_required' => 'Введи свій PIN.',
-    'error_pin_incorrect' => 'Неправильний PIN.',
     'error_account_password_required' => 'Введи пароль свого облікового запису.',
     'error_account_password' => 'Неправильний пароль облікового запису.',
     'change_pin_success' => 'Твій ключ шифрування повторно захищено новим PIN.',

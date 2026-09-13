@@ -417,10 +417,11 @@ security-sensitive it is:
 | Forgot PIN → reset | Account password |
 | Idle-timeout preset | Nothing — explicitly exempted; it only narrows the auto-lock window, never touches key material |
 
-`AppLockProvisioner::verifyPin()` is side-effect-free by design so the
-de-enroll confirmation can check the PIN without accidentally mutating
-`failed_attempts`/backoff state, which is scoped to lock-screen unlock
-attempts only.
+Each of those PINs is checked by `PinVerificationService`, the same verifier
+the lock screen goes through, so a guess made from an unlocked settings screen
+spends the same meter. `AppLockProvisioner::verifyPin()` — the side-effect-free
+check these panels used to take — no longer exists
+([why](every-pin-check-is-metered.md)).
 
 ### Session custody (`LockStateManager`)
 
@@ -519,7 +520,9 @@ On a wrong PIN, `failed_attempts` increments; crossing a threshold sets an
 escalating `locked_until` backoff window (30s, 60s, then 300s and beyond)
 that short-circuits further attempts without deriving anything at all;
 reaching the hard cap signs the session out entirely and emits a
-`SystemAlert`. `AppLockProvisioner::primeSessionAfterLogin()` clears
+`SystemAlert`. That applies wherever the code was typed: the settings panels
+go through this verifier too, so the cap ends a borrowed session rather than
+merely refusing the panel in front of it. `AppLockProvisioner::primeSessionAfterLogin()` clears
 `failed_attempts` and `locked_until` whenever it runs — the lock screen's
 own copy sends a reader who has forgotten the PIN to sign back in with the
 account password, so arriving there IS that credential being proved.
@@ -716,16 +719,19 @@ action takes the code as an argument, so setting, changing, resetting,
 disabling, enrolling and de-enrolling all put nothing in the snapshot
 ([why](../../architecture/livewire-snapshot-secrets.md#the-app-lock-code-is-not-on-that-list-and-the-argument-is-why)).
 
-Three refusals reach the reader, and `LockScreen::refusalMessage()` is the
-one place they are told apart. An active backoff window is checked *before*
-the PIN itself, so even a correct PIN submitted during the window must not
-be reported as "incorrect": that one reads "too many attempts, try again in
-Ns". An unlock a PIN change outran reads `lock_screen.error_pin_changed` —
-the PIN for this device changed mid-unlock, enter the current one. Only the
-third, a PIN this row genuinely refuses, spent an attempt, so it is the
-only one that may say "incorrect PIN, N attempts remaining". The count is
-read from `failed_attempts`, which the other two did not move, so naming it
-on either of them contradicts itself on screen. The biometric prompt is
+Three refusals reach the reader. Two of them belong to every screen that
+meters a PIN and live in `AppLockCredentialRejections::refusedPin()`; the
+third is the lock screen's own, and `LockScreen::refusalMessage()` is where
+they meet. An active backoff window is checked *before* the PIN itself, so
+even a correct PIN submitted during the window must not be reported as
+"incorrect": that one reads "too many attempts, try again in Ns". An unlock a
+PIN change outran reads `lock_screen.error_pin_changed` — the PIN for this
+device changed mid-unlock, enter the current one. Only the third, a PIN this
+row genuinely refuses, spent an attempt, so it is the only one that may say
+"incorrect PIN, N attempts remaining". The count is read from
+`failed_attempts` through `PinVerificationService::remainingAttempts()`, which
+the other two did not move, so naming it on either of them contradicts itself
+on screen. The biometric prompt is
 dispatched only on an explicit button tap, never on render, so the
 browser's native biometric UI never auto-fires.
 

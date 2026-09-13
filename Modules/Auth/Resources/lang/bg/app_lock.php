@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'ПИН кодът трябва да е от :min до :max цифри — само цифри.',
     'error_pin_mismatch' => 'ПИН кодовете не съвпадат. Опитай отново.',
     'error_pin_required' => 'Въведи ПИН кода си.',
-    'error_pin_incorrect' => 'Грешен ПИН код.',
     'error_account_password_required' => 'Въведи паролата за профила си.',
     'error_account_password' => 'Грешна парола за профила.',
     'change_pin_success' => 'Ключът ти за криптиране беше защитен наново с новия ПИН код.',
