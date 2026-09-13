@@ -295,9 +295,9 @@ are the same shape with a worse ending: `CalendarPage::sanitizeAccountIds()` dro
 cannot resolve and `persistAccountPrefs()` writes the emptied selection back, so the reader's
 own choice is destroyed rather than merely misread.
 
-`CoveredTableOrder::JSON_PARENTS` declares them, beside `UNCONSTRAINED_PARENTS` and for the
-same reason — the schema cannot be asked. Each entry is a table, a column, and the paths
-inside the decoded value that name a covered row:
+`JsonRowReferences` declares them, for the same reason `UNCONSTRAINED_PARENTS` exists — the
+schema cannot be asked. Each entry is a table, a column, and the paths inside the decoded
+value that name a row:
 
 | column | path | names |
 | --- | --- | --- |
@@ -331,9 +331,37 @@ covered table is either declared here or written down as carrying no row id, and
 declared path has to name a covered, user-scoped table that declares a natural key a re-home
 can alias against.
 
-Rows **already stored** still hold the ids the other device minted; this translates arrivals
-from here on. Repairing them means reading each stored value back through
-`op_log_row_aliases`, which is a migration, not a merge rule.
+#### The other reader of the same declaration
+
+A peer's id is not the only way one of these ids stops naming the row it meant. Folding two
+counterparties deletes the absorbed row, and `MergeCounterparties` repoints every column that
+names it — `transactions.counterparty_id`, `anomaly_suppression_rules.counterparty_id`, and
+the polymorphic `migration_source_map.beatrax_id`. All three were found because a column
+called `counterparty_id` is greppable. The id inside `saved_reports.definition` is not, so it
+was left naming a row that no longer exists.
+
+That is worse than a stale label. `ReportAggregator` passes the list straight to the query as
+`counterpartyIds`, so the filter **restricts**: the report still runs, still prints a figure,
+and the figure now excludes every transaction the fold just moved onto the survivor.
+
+So the fold repoints through `JsonRowReferences::sitesNaming()` rather than through a list of
+its own — one declaration, two readers, and a site added for the merge layer's sake cannot be
+missed by the fold. Counterparty merge is the only live trigger: no product path deletes an
+`accounts` or a `categories` row, and `Auth\DeleteAccountSection` removes the *user*, not a
+ledger account.
+
+Both failures are the same shape, and the shape is narrow rather than growing. Where a
+reference is a scalar column this tree already tracks it exhaustively:
+`DependentRowCascade` classifies **63 of 63** foreign keys in the live schema as owned (47) or
+deliberately not owned (16), with nothing unclassified and no stale entry, and
+`DeleteTransaction` even hand-handles `search_body`, which has no foreign key at all. The
+only references nothing could track are the ones inside a JSON value, which is exactly the
+set declared here.
+
+Rows **already stored** still hold the ids the other device minted, or the id of a
+counterparty a fold removed before this landed; both are translated from here on but neither
+is repaired. Repairing them means reading each stored value back through `op_log_row_aliases`
+or the fold's provenance, which is a migration, not a merge rule.
 
 `user_id` in a create payload is **ignored, not compared**. It is the origin device's
 autoincrement, so rejecting a mismatch quarantined every peer row. The payload's `user_id` is

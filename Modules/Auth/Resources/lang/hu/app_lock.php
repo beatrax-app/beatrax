@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'A PIN-kódnak :min–:max számjegyből kell állnia — csak számok.',
     'error_pin_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
     'error_pin_required' => 'Add meg a PIN-kódodat.',
-    'error_pin_incorrect' => 'Hibás PIN-kód.',
     'error_account_password_required' => 'Add meg a fiókod jelszavát.',
     'error_account_password' => 'Hibás fiókjelszó.',
     'change_pin_success' => 'A titkosítási kulcsodat az új PIN-kód védi mostantól.',

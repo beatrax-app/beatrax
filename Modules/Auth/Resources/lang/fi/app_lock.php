@@ -65,7 +65,6 @@ return [
     'error_pin_digits' => 'PIN-koodissa on oltava :min–:max numeroa — vain numeroita.',
     'error_pin_mismatch' => 'PIN-koodit eivät täsmää. Yritä uudelleen.',
     'error_pin_required' => 'Anna PIN-koodisi.',
-    'error_pin_incorrect' => 'Väärä PIN-koodi.',
     'error_account_password_required' => 'Anna tilisi salasana.',
     'error_account_password' => 'Väärä tilin salasana.',
     'change_pin_success' => 'Salausavaimesi on suojattu uudelleen uudella PIN-koodillasi.',
