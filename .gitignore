@@ -25,6 +25,12 @@
 # Re-included as a directory so the paypal negation further down can reach
 # through it; git cannot re-include a path under an excluded parent.
 !/storage/app/dev-imports/
+
+# Device-walk captures: screenshots of a real ledger on a real handset, plus
+# the logcat beside them. Evidence for a walk, never source, and this is a
+# public repository. 63 files were committed and have been removed from every
+# branch; the blobs stay fetchable by SHA until GitHub collects them.
+/.docs/evidence/
 /storage/framework/cache/*
 !/storage/framework/cache/.gitignore
 /storage/framework/sessions/*
