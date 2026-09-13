@@ -9,6 +9,7 @@ use Generator;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\CopyLine;
+use Modules\Core\Public\Support\CopyParam;
 use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Core\Public\Support\StoredCopy;
@@ -117,7 +118,7 @@ final readonly class ActualParser implements ParsesMigrationSource
             $unmapped->push(new UnmappedItemDto(
                 itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['id'],
-                displayLabel: $named ?? StoredCopy::of(CopyLine::of('migration::unmapped.label.schedule_untitled')),
+                displayLabel: StoredCopy::of(self::nameLine('migration::unmapped.label.schedule', $named, 'migration::unmapped.label.schedule_untitled')),
                 reason: StoredCopy::of(CopyLine::of('migration::unmapped.reason.schedule_unsupported')),
             ));
         }
@@ -126,7 +127,7 @@ final readonly class ActualParser implements ParsesMigrationSource
             $unmapped->push(new UnmappedItemDto(
                 itemType: UnmappedItemType::Extra->value,
                 sourceExternalId: $row['id'],
-                displayLabel: $row['name'],
+                displayLabel: StoredCopy::of(self::nameLine('migration::unmapped.label.saved_report', $row['name'], 'migration::unmapped.value.none')),
                 reason: StoredCopy::of(CopyLine::of('migration::unmapped.reason.saved_report_unsupported')),
             ));
         }
@@ -273,6 +274,20 @@ final readonly class ActualParser implements ParsesMigrationSource
         }
 
         return $goals;
+    }
+
+    // A name out of the reader's Actual file is a VALUE inside our own line,
+    // never the line itself. The preview tells our words from theirs by the
+    // value's first bytes, so a schedule named `{"@copy":…}` had it speak a
+    // shipped Beatrax sentence of the file's choosing.
+    /**
+     * @link ../../../../.docs/features/notifications/reader-language-copy.md
+     */
+    private static function nameLine(string $key, ?string $named, string $unnamedKey): CopyLine
+    {
+        return $named === null || trim($named) === ''
+            ? CopyLine::of($key, ['name' => CopyParam::line($unnamedKey)])
+            : CopyLine::of($key, ['name' => $named]);
     }
 
     private function parseBudgetMonth(int $yyyymm): CarbonImmutable

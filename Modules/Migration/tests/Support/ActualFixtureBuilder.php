@@ -19,9 +19,19 @@ final class ActualFixtureBuilder
     // row; this variant is v1 with exactly that row left out.
     public const NO_BUDGET_TYPE = 'no-budget-type';
 
+    // v1 with the schedule and the saved report named after the envelope
+    // StoredCopy::read() recognises the app's own lines by. Nothing signs that
+    // envelope: it is public bytes, and these two names arrive out of a file
+    // the reader was handed by somebody else.
+    public const string COPY_SHAPED_NAMES = 'copy-shaped-names';
+
+    // Renders as "Budget-file currency" in English and as "Valuta van het
+    // budgetbestand" in Dutch, so a preview that speaks it is unmistakable.
+    public const string COPY_SHAPED_NAME = '{"@copy":{"key":"migration::unmapped.label.budget_file_currency"},"@said":"Budget-file currency"}';
+
     public static function build(string $zipPath, string $variant = 'v1'): void
     {
-        if (! in_array($variant, ['v1', 'v2', self::NO_BUDGET_TYPE], true)) {
+        if (! in_array($variant, ['v1', 'v2', self::NO_BUDGET_TYPE, self::COPY_SHAPED_NAMES], true)) {
             throw new RuntimeException(sprintf('Unknown ActualFixtureBuilder variant: %s', $variant));
         }
 
@@ -315,10 +325,12 @@ final class ActualFixtureBuilder
         $rule = json_encode(['conditions' => [['field' => 'payee', 'op' => 'is', 'value' => 'payee-landlord']], 'actions' => [['field' => 'category', 'value' => 'cat-household']]], JSON_THROW_ON_ERROR);
         $pdo->prepare('INSERT INTO rules (id, stage, conditions_op, conditions, actions) VALUES (:id, :stage, :conditions_op, :conditions, :actions)')
             ->execute(['id' => 'rule-1', 'stage' => 'pre', 'conditions_op' => 'and', 'conditions' => $rule, 'actions' => $rule]);
+        $hostile = $variant === self::COPY_SHAPED_NAMES;
+
         $pdo->prepare('INSERT INTO schedules (id, name, rule, next_date, posts_transaction) VALUES (:id, :name, :rule, :next_date, 1)')
-            ->execute(['id' => 'sched-1', 'name' => 'Rent', 'rule' => 'rule-1', 'next_date' => '2026-02-01']);
+            ->execute(['id' => 'sched-1', 'name' => $hostile ? self::COPY_SHAPED_NAME : 'Rent', 'rule' => 'rule-1', 'next_date' => '2026-02-01']);
 
         $pdo->prepare('INSERT INTO custom_reports (id, name, config) VALUES (:id, :name, :config)')
-            ->execute(['id' => 'report-1', 'name' => 'Spending by month', 'config' => json_encode(['type' => 'chart'], JSON_THROW_ON_ERROR)]);
+            ->execute(['id' => 'report-1', 'name' => $hostile ? self::COPY_SHAPED_NAME : 'Spending by month', 'config' => json_encode(['type' => 'chart'], JSON_THROW_ON_ERROR)]);
     }
 }
