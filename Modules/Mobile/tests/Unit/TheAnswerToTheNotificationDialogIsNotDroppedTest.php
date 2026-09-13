@@ -134,25 +134,28 @@ it('fails loudly when the callback it rewrites has moved', function (): void {
         ->and($result['stderr'])->toContain('expected 1');
 });
 
+// InstallsAndroid copies resources/androidstudio/ onto nativephp/android/, so
+// the generated activity IS this file plus the patches applied above, and the
+// `android/` segment above belongs to the copy's destination, not its source.
+// Asking for it here found nothing in every job, and read as a missing build.
+const NOTIFICATION_ACTIVITY_SHIPPED = 'vendor/nativephp/mobile/resources/androidstudio/app/src/main/java/com/nativephp/mobile/ui/MainActivity.kt';
+
 // The fixture is written by hand, so on its own it only proves the patch
 // rewrites text this file invented. This ties the anchor to the activity the
 // build actually generates.
 it('anchors on text the shipped activity really carries', function (): void {
-    $relative = 'vendor/nativephp/mobile/resources/androidstudio/'.NOTIFICATION_ACTIVITY_RELATIVE;
     $upstream = null;
 
-    foreach ([base_path($relative), base_path('mobile-app/'.$relative)] as $candidate) {
+    foreach ([base_path(NOTIFICATION_ACTIVITY_SHIPPED), base_path('mobile-app/'.NOTIFICATION_ACTIVITY_SHIPPED)] as $candidate) {
         if (is_file($candidate)) {
             $upstream = (string) file_get_contents($candidate);
+
+            break;
         }
     }
 
     if ($upstream === null) {
-        test()->markTestSkipped(
-            'vendor/nativephp/mobile/resources/androidstudio/'.NOTIFICATION_ACTIVITY_RELATIVE.' is not present '
-            .'under either Composer root, so this anchor is answered in no job at all. It reported a pass '
-            .'instead of saying so; .github/test-skip-budget.json records where it stands.',
-        );
+        test()->markTestSkipped('nativephp/mobile is not installed under either Composer root, so there is no shipped activity to anchor against.');
     }
 
     expect(substr_count($upstream, NOTIFICATION_CALLBACK_ANCHOR))->toBe(1);

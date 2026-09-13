@@ -156,13 +156,15 @@ it('gives every pinned skip a job that runs it, or says why no job can', functio
 
     expect($wrong)->toBe([], "A pinned skip names the job that RUNS it and pins zero skips there, or it names no job at all and says which artefact is missing and what would produce it. The job named here is the one .github/scripts/skip-budget.py then holds to the claim. Offenders:\n  ".implode("\n  ", $wrong));
 
-    // Kept small on purpose. A gate no job answers is still a gate nobody is
-    // holding, and the list growing is the signal that the pipeline, not the
-    // budget, is what needs the change.
-    expect(count($nowhere))->toBeLessThanOrEqual(
-        2,
-        'These tests run in no job at all: '.implode(', ', $nowhere).'. Each is a rule nothing enforces. '
-        .'Give the pipeline a way to answer them rather than recording more of them.',
+    // Zero, because the two that sat here needed no pipeline change at all:
+    // both read files nativephp/mobile ships, and both were asking at a path
+    // that does not exist. A gate no job answers is a gate nobody is holding,
+    // and every one recorded so far turned out to be reachable.
+    expect($nowhere)->toBe(
+        [],
+        'These tests run in no job at all: '.implode(', ', $nowhere).'. Each is a rule nothing enforces, '
+        .'counted in the same line as a passing one. Before recording another, check that the artefact is '
+        .'really unreachable — the last two were not. Raising this ceiling is the argument to have first.',
     );
 });
 
