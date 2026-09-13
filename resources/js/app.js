@@ -176,6 +176,31 @@ window.beatraxLocalizeChart = function (options) {
 };
 
 /*
+ * Wires beatraxFitAxisLabels onto a chart's own mounted/updated events.
+ *
+ * Wrapped rather than replaced: the drilldown charts and the aria-name helper
+ * already listen for both, and an assignment here would take their handlers
+ * with it. A frame is waited for because ApexCharts raises `mounted` while the
+ * axis group is still being laid out, and a box read then is the box of an
+ * element that has not settled.
+ */
+function beatraxFitChartLabels(options) {
+    options.chart = options.chart || {};
+    const events = Object.assign({}, options.chart.events || {});
+
+    const wrap = (existing) => function (chartContext, ...rest) {
+        window.requestAnimationFrame(() => window.beatraxFitAxisLabels(chartContext));
+        if (typeof existing === 'function') {
+            existing.call(this, chartContext, ...rest);
+        }
+    };
+
+    events.mounted = wrap(events.mounted);
+    events.updated = wrap(events.updated);
+    options.chart.events = events;
+}
+
+/*
  * ApexCharts writes its own accessible name onto the <svg> it renders —
  * "donut chart with 14 data series" — in English, whatever the page
  * language is. There is no option for it, so the name is replaced on mount
@@ -217,6 +242,94 @@ function beatraxNameChart(options) {
     options.chart.events = events;
 }
 
+/*
+ * Hide an x-axis label that would print on top of its neighbour, and pull an
+ * outermost one back inside the plot.
+ *
+ * ApexCharts already offers `xaxis.labels.hideOverlappingLabels`, and its test
+ * is wrong for labels of unequal width: AxesUtils#checkForOverflowingLabels
+ * compares the distance between two label CENTRES against the PREVIOUS label's
+ * whole width, and never looks at the width of the label it is deciding about.
+ * A narrow label followed by a wide one therefore passes — measured on a pinned
+ * report grouped by counterparty, `Lidl` printed over `Domino's Pizza` by 26px
+ * at 1440, and `ANA` over `Yamada Denki` by 19px at 390. The same chart on
+ * /reports overlapped `Kappabashi Dougu` and `ANA` by 85px.
+ *
+ * Run after the chart has drawn, where the boxes are facts rather than
+ * estimates from a font the axis has not measured, and re-run on every update
+ * because the widths are a property of the data and of the viewport.
+ */
+window.beatraxFitAxisLabels = function (chartContext) {
+    const el = chartContext?.el || chartContext?.w?.globals?.dom?.baseEl;
+    const svg = el?.querySelector('svg');
+    if (!svg) {
+        return;
+    }
+
+    const texts = Array.from(el.querySelectorAll('.apexcharts-xaxis-texts-g text'));
+    if (texts.length === 0) {
+        return;
+    }
+
+    // Every pass starts from what the chart drew: a label hidden while the
+    // window was narrow has to come back when it is widened again.
+    texts.forEach((text) => {
+        if (text.dataset.beatraxFitted !== undefined) {
+            delete text.dataset.beatraxFitted;
+            text.style.removeProperty('display');
+            text.style.removeProperty('transform');
+        }
+    });
+
+    // Ordered by the tick each label belongs to, which is its CENTRE: sorting
+    // by left edge puts a wide label before the narrow one drawn to its left,
+    // and the pass then keeps the wide one and drops the first tick on the axis.
+    const drawn = texts
+        .filter((text) => (text.textContent || '').trim() !== '')
+        .map((text) => ({ text, box: text.getBoundingClientRect() }))
+        .filter((entry) => entry.box.width > 0)
+        .sort((a, b) => (a.box.left + a.box.right) - (b.box.left + b.box.right));
+
+    const plot = svg.getBoundingClientRect();
+
+    // The first tick lost its leading glyph at both widths — `Vesteda` drew as
+    // `'esteda` — because a centred label on the leftmost category reaches past
+    // the plot and the SVG clips it. Nudged in rather than dropped: it names a
+    // bar the reader can see.
+    drawn.forEach((entry) => {
+        const overshoot = Math.max(plot.left - entry.box.left, 0) - Math.max(entry.box.right - plot.right, 0);
+        if (overshoot === 0) {
+            return;
+        }
+
+        // Rounded away from the edge, never towards it: a half-pixel rounded
+        // the wrong way leaves the glyph's first column outside the plot, which
+        // is the state this is here to end.
+        entry.text.dataset.beatraxFitted = '';
+        entry.text.style.transform = `translateX(${Math.sign(overshoot) * Math.ceil(Math.abs(overshoot))}px)`;
+        entry.box = entry.text.getBoundingClientRect();
+    });
+
+    // Left to right, keeping the first of any colliding pair: hiding the later
+    // one keeps the axis reading in the order the bars do.
+    const GAP = 6;
+    let lastKeptRight = -Infinity;
+
+    drawn.forEach((entry) => {
+        if (entry.box.left < lastKeptRight + GAP) {
+            // display, not visibility: a hidden label that still has a box is a
+            // label the next reader measuring this axis cannot tell from a
+            // drawn one, and this defect was found by measuring.
+            entry.text.dataset.beatraxFitted = '';
+            entry.text.style.display = 'none';
+
+            return;
+        }
+
+        lastKeptRight = entry.box.right;
+    });
+};
+
 // Adjust ApexCharts options for the active theme so chart lines,
 // grid lines, and axis labels stay legible when `<html class="dark">`
 // flips the page into dark mode. Server-rendered options bake in
@@ -229,6 +342,7 @@ window.beatraxApplyChartTheme = function (options) {
     }
 
     window.beatraxLocalizeChart(options);
+    beatraxFitChartLabels(options);
 
     const isDark = document.documentElement.classList.contains('dark');
     if (!isDark) {

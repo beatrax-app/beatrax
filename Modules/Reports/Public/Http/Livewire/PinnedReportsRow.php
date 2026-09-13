@@ -132,13 +132,18 @@ final class PinnedReportsRow extends Component
             // name nothing, and hover is unavailable on a phone. Ticks and
             // border stay off — the labels carry the meaning, the furniture
             // does not.
+            //
+            // A label is complete or it is gone. Trimming at this card's width
+            // rendered five months of history as "Apr 2…", which reads as a day
+            // of the month; and ApexCharts' own overlap test is wrong for
+            // labels of unequal width, so beatraxFitAxisLabels decides instead.
             'xaxis' => [
                 'categories' => $categories,
                 'labels' => [
                     'show' => true,
                     'rotate' => 0,
-                    'hideOverlappingLabels' => true,
-                    'trim' => true,
+                    'hideOverlappingLabels' => false,
+                    'trim' => false,
                     'style' => ['fontSize' => '11px', 'colors' => self::AXIS_LABEL_COLOR],
                 ],
                 'axisTicks' => ['show' => false],

@@ -275,8 +275,10 @@ it('drops the empty buckets before the first real one but keeps the empty ones b
 // The mini card is ~267px wide, and ApexCharts trims every tick that will not
 // fit: five months of history rendered as "Apr 2…", "May 2…", which reads as a
 // day rather than a year. Whether the ticks then FIT is a browser measurement
-// this test cannot make — it pins the option that stops the truncation, so the
-// axis cannot silently go back to eliding.
+// this test cannot make — it pins the options that stop the truncation and hand
+// the fitting to beatraxFitAxisLabels, so the axis cannot silently go back to
+// eliding or to ApexCharts' own overlap test, which is wrong for labels of
+// unequal width and printed `Lidl` over `Domino's Pizza`.
 it('tells ApexCharts not to truncate the axis ticks it draws', function (): void {
     $user = prrUser();
     test()->actingAs($user);
@@ -300,10 +302,10 @@ it('tells ApexCharts not to truncate the axis ticks it draws', function (): void
     $saved = app(SaveReport::class)->save($user, $definition, 'Monthly net position');
     app(TogglePin::class)->toggle($user, $saved->id);
 
-    $html = Livewire::test(PinnedReportsRow::class)->html();
+    $labels = prrChartOptions(Livewire::test(PinnedReportsRow::class)->html())['xaxis']['labels'];
 
-    expect($html)->toContain('trim: false')
-        ->toContain('hideOverlappingLabels: true');
+    expect($labels['trim'])->toBeFalse()
+        ->and($labels['hideOverlappingLabels'])->toBeFalse();
 });
 
 // This component has no action and no #[On] today, so nothing re-renders it and
