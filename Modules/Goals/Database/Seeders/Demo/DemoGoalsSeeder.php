@@ -32,7 +32,7 @@ final class DemoGoalsSeeder
         ['nameKey' => 'goal_emergency_fund', 'amount' => '5000,00', 'currency' => null, 'monthsOut' => 18, 'startedDaysAgo' => 80, 'complete' => false, 'fundedBy' => null],
         ['nameKey' => 'goal_japan_trip', 'amount' => '4500,00', 'currency' => null, 'monthsOut' => 14, 'startedDaysAgo' => 62, 'complete' => false, 'fundedBy' => null],
         ['nameKey' => 'goal_replace_laptop', 'amount' => '1800,00', 'currency' => null, 'monthsOut' => 8, 'startedDaysAgo' => 45, 'complete' => false, 'fundedBy' => null],
-        ['nameKey' => 'goal_winter_tyres', 'amount' => '600,00', 'currency' => null, 'monthsOut' => 3, 'startedDaysAgo' => 30, 'complete' => true, 'fundedBy' => ['type' => 'transfer_in', 'amountMinor' => 10000, 'currency' => Currency::Eur->value]],
+        ['nameKey' => 'goal_winter_tires', 'amount' => '600,00', 'currency' => null, 'monthsOut' => 3, 'startedDaysAgo' => 30, 'complete' => true, 'fundedBy' => ['type' => 'transfer_in', 'amountMinor' => 10000, 'currency' => Currency::Eur->value]],
         ['nameKey' => 'goal_ryokan_stay', 'amount' => '480000', 'currency' => Currency::Jpy->value, 'monthsOut' => 6, 'startedDaysAgo' => 40, 'complete' => false, 'fundedBy' => null],
         ['nameKey' => 'goal_shinkansen_pass', 'amount' => '200000', 'currency' => Currency::Jpy->value, 'monthsOut' => 4, 'startedDaysAgo' => 25, 'complete' => false, 'fundedBy' => ['type' => 'transfer_in', 'amountMinor' => 150000, 'currency' => Currency::Jpy->value]],
     ];

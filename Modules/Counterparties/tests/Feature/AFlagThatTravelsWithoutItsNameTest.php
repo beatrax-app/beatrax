@@ -83,9 +83,9 @@ beforeEach(function (): void {
     /** @var Session $session */
     $session = $this->app->make(Session::class);
     $this->session = $session;
-    /** @var LabelCounterparty $labeller */
-    $labeller = $this->app->make(LabelCounterparty::class);
-    $this->labeller = $labeller;
+    /** @var LabelCounterparty $labeler */
+    $labeler = $this->app->make(LabelCounterparty::class);
+    $this->labeler = $labeler;
 });
 
 it('sends the name beside the flag that says whose words it is', function (): void {
@@ -93,7 +93,7 @@ it('sends the name beside the flag that says whose words it is', function (): vo
 
     ftwForget();
 
-    $this->labeller->ignore($row, (int) $this->user->id, $this->session);
+    $this->labeler->ignore($row, (int) $this->user->id, $this->session);
 
     $fields = ftwAnnouncedFields();
 
@@ -111,7 +111,7 @@ it('clears the flag with a key it still sends, not by dropping it', function ():
 
     ftwForget();
 
-    $this->labeller->label(
+    $this->labeler->label(
         $row,
         (int) $this->user->id,
         CounterpartyType::Unknown,
@@ -136,7 +136,7 @@ it('sends the blob alone for a row that carries no such flag', function (): void
 
     ftwForget();
 
-    $this->labeller->ignore($row, (int) $this->user->id, $this->session);
+    $this->labeler->ignore($row, (int) $this->user->id, $this->session);
 
     $fields = ftwAnnouncedFields();
 
@@ -151,7 +151,7 @@ it('leaves a peers rename readable once both fields land', function (): void {
 
     ftwForget();
 
-    $this->labeller->ignore($row, (int) $this->user->id, $this->session);
+    $this->labeler->ignore($row, (int) $this->user->id, $this->session);
 
     $arrived = ftwAnnouncedFields();
 

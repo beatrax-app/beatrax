@@ -1077,13 +1077,13 @@ the blob before the method was called, so a gate that returns without consuming
 parks a live data key that a later dispatch of the same event can claim.
 
 Enrollment is PIN-rooted, and there is one way in on every platform:
-`Modules\Auth\Internal\Lock\ColdStartEnroller::enrol()` re-verifies the PIN to
+`Modules\Auth\Internal\Lock\ColdStartEnroller::enroll()` re-verifies the PIN to
 obtain the live data key, wraps it into the enclave through `ColdStartVault`,
 zeroes the released key, and records the enrollment flag — every failure path
 (vault unavailable, empty or wrong PIN, native store failure) leaves nothing
 enrolled. It is the only caller of `ColdStartVault::enroll()` outside the vault
 implementations themselves, which is what
-`tests/Contracts/ANativeEnrolmentTakesAFreshPinArchTest.php` holds in place: the
+`tests/Contracts/ANativeEnrollmentTakesAFreshPinArchTest.php` holds in place: the
 key it stores comes out of the PIN, never out of the session, so no arrangement
 of callers arms the vault without one. Its two callers are the app-lock settings
 section, whose Enroll button opens a PIN confirmation before it reaches the

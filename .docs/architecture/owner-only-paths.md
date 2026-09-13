@@ -66,7 +66,7 @@ that fails to parse is logged with the name of the file, and a bank names a
 statement for the account it covers: `ING_NL91ABNA0417164300_2026.csv` is an
 IBAN written out in full, in a file at `0644`, kept for fourteen days.
 
-`UploadFilename::sanitise()` looks like it would have stopped that and does
+`UploadFilename::sanitize()` looks like it would have stopped that and does
 not. It folds away every character outside `[A-Za-z0-9_-]` because the result
 is concatenated into a filesystem path — it is **path-traversal defence, not
 redaction**, and an IBAN survives it byte for byte. The two halves of the fix

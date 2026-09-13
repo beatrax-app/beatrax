@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Den här motparten är inte märkt ännu',
-        'not_labelled_body' => 'Att märka okända motparter hjälper översikten att visa korrekta månadssummor och finansieringskedjor.',
+        'not_labeled_heading' => 'Den här motparten är inte märkt ännu',
+        'not_labeled_body' => 'Att märka okända motparter hjälper översikten att visa korrekta månadssummor och finansieringskedjor.',
         'label_cta' => 'Märk den här motparten',
     ],
 

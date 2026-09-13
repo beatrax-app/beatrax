@@ -13,7 +13,7 @@ use Modules\Core\Public\Support\PatternScan;
 /**
  * @link ../../../.docs/conventions/invariants-from-shipped-failures.md#a-pair-of-colours-declared-together-is-measurable-without-a-browser
  */
-final class ThemeColour
+final class ThemeColor
 {
     public const FLOOR = 4.5;
 
@@ -82,14 +82,14 @@ final class ThemeColour
      * @param  array{0: float, 1: float, 2: float, 3: float}  $ground
      * @return array{0: float, 1: float, 2: float, 3: float}
      */
-    public static function over(array $colour, array $ground): array
+    public static function over(array $color, array $ground): array
     {
-        $a = $colour[3];
+        $a = $color[3];
 
         return [
-            $colour[0] * $a + $ground[0] * (1 - $a),
-            $colour[1] * $a + $ground[1] * (1 - $a),
-            $colour[2] * $a + $ground[2] * (1 - $a),
+            $color[0] * $a + $ground[0] * (1 - $a),
+            $color[1] * $a + $ground[1] * (1 - $a),
+            $color[2] * $a + $ground[2] * (1 - $a),
             1.0,
         ];
     }
@@ -182,7 +182,7 @@ final class ThemeColour
         }
 
         $weights = [];
-        $colours = [];
+        $colors = [];
 
         foreach ($parts as $part) {
             $percent = null;
@@ -192,12 +192,12 @@ final class ThemeColour
                 $part = $share[1];
             }
 
-            $colour = self::resolve(trim($part), $theme, $depth + 1);
-            if ($colour === null) {
+            $color = self::resolve(trim($part), $theme, $depth + 1);
+            if ($color === null) {
                 return null;
             }
 
-            $colours[] = $colour;
+            $colors[] = $color;
             $weights[] = $percent;
         }
 
@@ -208,7 +208,7 @@ final class ThemeColour
 
         $mixed = [0.0, 0.0, 0.0, 0.0];
         for ($channel = 0; $channel < 4; $channel++) {
-            $mixed[$channel] = $colours[0][$channel] * $first + $colours[1][$channel] * $second;
+            $mixed[$channel] = $colors[0][$channel] * $first + $colors[1][$channel] * $second;
         }
 
         return $mixed;
@@ -387,13 +387,13 @@ final class ThemeColour
     /**
      * @param  array{0: float, 1: float, 2: float, 3: float}  $colour
      */
-    private static function luminance(array $colour): float
+    private static function luminance(array $color): float
     {
         $weights = [0.2126, 0.7152, 0.0722];
         $total = 0.0;
 
         for ($channel = 0; $channel < 3; $channel++) {
-            $value = max(0.0, min(1.0, $colour[$channel] / 255));
+            $value = max(0.0, min(1.0, $color[$channel] / 255));
             $linear = $value <= 0.04045 ? $value / 12.92 : (($value + 0.055) / 1.055) ** 2.4;
             $total += $weights[$channel] * $linear;
         }

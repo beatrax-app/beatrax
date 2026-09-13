@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Bu karşı taraf henüz etiketlenmedi',
-        'not_labelled_body' => 'Bilinmeyenleri etiketlemek, panelin doğru aylık toplamları ve finansman zincirlerini göstermesine yardımcı olur.',
+        'not_labeled_heading' => 'Bu karşı taraf henüz etiketlenmedi',
+        'not_labeled_body' => 'Bilinmeyenleri etiketlemek, panelin doğru aylık toplamları ve finansman zincirlerini göstermesine yardımcı olur.',
         'label_cta' => 'Bu karşı tarafı etiketle',
     ],
 

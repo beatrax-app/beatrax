@@ -352,7 +352,7 @@ function seedTamperedUrlUser(string $marker): array
 
 beforeEach(function (): void {
     $this->tamperReader = seedTamperedUrlUser('Reader');
-    $this->tamperNeighbour = seedTamperedUrlUser('Neighbour');
+    $this->tamperNeighbor = seedTamperedUrlUser('Neighbour');
 
     test()->actingAs(User::query()->findOrFail($this->tamperReader['userId']));
 });
@@ -501,15 +501,15 @@ it('renders every component that binds a query parameter, whatever the parameter
 // their data. Every id below is a real row of the neighbour's, so a component
 // that scopes by user renders none of it and one that forgets renders the name.
 it('answers with none of a neighbouring reader\'s rows when a parameter names one', function (): void {
-    $neighbour = $this->tamperNeighbour;
-    $marker = $neighbour['marker'];
+    $neighbor = $this->tamperNeighbor;
+    $marker = $neighbor['marker'];
 
     $named = [
-        'account id' => $neighbour['accountId'],
-        'category id' => $neighbour['categoryId'],
-        'counterparty id' => $neighbour['counterpartyId'],
-        'scenario id' => $neighbour['scenarioId'],
-        'user id' => $neighbour['userId'],
+        'account id' => $neighbor['accountId'],
+        'category id' => $neighbor['categoryId'],
+        'counterparty id' => $neighbor['counterpartyId'],
+        'scenario id' => $neighbor['scenarioId'],
+        'user id' => $neighbor['userId'],
     ];
 
     $leaks = [];

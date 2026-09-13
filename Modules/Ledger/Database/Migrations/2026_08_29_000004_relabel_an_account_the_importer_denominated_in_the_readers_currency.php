@@ -26,7 +26,7 @@ return new class extends ModuleMigration
         // keep the currency they were booked in. The one figure that WOULD
         // change meaning is a reader-typed opening balance, so an account
         // carrying one is left for /settings, where the relabel is shown first.
-        foreach ($this->accountsWorthRelabelling($connection) as $row) {
+        foreach ($this->accountsWorthRelabeling($connection) as $row) {
             $settled = $this->theOneSettledCurrency($connection, $row['id']);
 
             if ($settled === null || $settled === $row['currency']) {
@@ -46,7 +46,7 @@ return new class extends ModuleMigration
     /**
      * @return list<array{id: int, currency: string}>
      */
-    private function accountsWorthRelabelling(Connection $connection): array
+    private function accountsWorthRelabeling(Connection $connection): array
     {
         $rows = [];
         $columns = ['id', 'default_currency', 'opening_balance_minor'];

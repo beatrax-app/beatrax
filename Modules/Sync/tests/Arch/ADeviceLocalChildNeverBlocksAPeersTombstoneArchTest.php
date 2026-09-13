@@ -26,15 +26,15 @@ function tombstoneBlockerTablesThatTravel(): array
     /** @var list<string> $neverOnTheWire */
     $neverOnTheWire = $reflected->getConstant('DEVICE_LOCAL_TABLES');
 
-    $travelling = [];
+    $traveling = [];
 
     foreach (array_keys(app(MergeRulesRegistry::class)->rules()) as $table) {
         if (! in_array((string) $table, $neverOnTheWire, true)) {
-            $travelling[] = (string) $table;
+            $traveling[] = (string) $table;
         }
     }
 
-    return $travelling;
+    return $traveling;
 }
 
 /**
@@ -74,9 +74,9 @@ function tombstoneBlockerForeignKeys(): array
  * @param  list<string>  $travelling
  * @return list<array{child: string, column: string, parent: string}>
  */
-function tombstoneBlockerEdges(array $keys, array $travelling): array
+function tombstoneBlockerEdges(array $keys, array $traveling): array
 {
-    $reachable = $travelling;
+    $reachable = $traveling;
     $edges = [];
     $seen = [];
 
@@ -84,7 +84,7 @@ function tombstoneBlockerEdges(array $keys, array $travelling): array
         $next = [];
 
         foreach ($keys as $key) {
-            if (in_array($key['child'], $travelling, true) || ! in_array($key['parent'], $reachable, true)) {
+            if (in_array($key['child'], $traveling, true) || ! in_array($key['parent'], $reachable, true)) {
                 continue;
             }
 
@@ -105,13 +105,13 @@ function tombstoneBlockerEdges(array $keys, array $travelling): array
 }
 
 it('classifies every device-local row a peer tombstone would have to clear', function (): void {
-    $travelling = tombstoneBlockerTablesThatTravel();
+    $traveling = tombstoneBlockerTablesThatTravel();
     $keys = tombstoneBlockerForeignKeys();
-    $edges = tombstoneBlockerEdges($keys, $travelling);
+    $edges = tombstoneBlockerEdges($keys, $traveling);
 
     // The denominators, before any verdict is read off them: a walk narrowed
     // to nothing reports a clean tree, which is a green light nobody earned.
-    expect(count($travelling))->toBeGreaterThanOrEqual(30)
+    expect(count($traveling))->toBeGreaterThanOrEqual(30)
         ->and(count($keys))->toBeGreaterThanOrEqual(40)
         ->and(count($edges))->toBeGreaterThanOrEqual(12);
 

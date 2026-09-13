@@ -6,7 +6,7 @@ namespace Modules\Auth\Internal\Lock;
 
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Contracts\ColdStartVault;
-use Modules\Auth\Public\Services\ColdStartEnrolmentFlag;
+use Modules\Auth\Public\Services\ColdStartEnrollmentFlag;
 
 // The only way to arm the OS vault. What it stores is a durable wrap of the
 // data key that biometrics alone can open afterwards, so the price of creating
@@ -19,15 +19,15 @@ final readonly class ColdStartEnroller
     public function __construct(
         private PinVerificationService $verifier,
         private ColdStartVault $vault,
-        private ColdStartEnrolmentFlag $enrolment,
+        private ColdStartEnrollmentFlag $enrollment,
     ) {}
 
     // The key comes out of the PIN rather than out of the session, so there is
     // no arrangement of callers that arms the vault without one.
-    public function enrol(int $userId, string $pin, Session $session): ColdStartEnrolmentResult
+    public function enroll(int $userId, string $pin, Session $session): ColdStartEnrollmentResult
     {
         if (! $this->vault->isAvailable()) {
-            return ColdStartEnrolmentResult::VaultRefused;
+            return ColdStartEnrollmentResult::VaultRefused;
         }
 
         // The empty box is refused here rather than at the hasher, which raises
@@ -36,7 +36,7 @@ final readonly class ColdStartEnroller
         $dataKey = $pin === '' ? null : $this->verifier->verify($userId, $pin, $session)->dataKey;
 
         if ($dataKey === null) {
-            return ColdStartEnrolmentResult::PinRejected;
+            return ColdStartEnrollmentResult::PinRejected;
         }
 
         $stored = $this->vault->enroll($userId, $dataKey);
@@ -46,9 +46,9 @@ final readonly class ColdStartEnroller
         // unlock on the flag as well as the entry, and a desktop enrolment that
         // set only the entry was an unlock nothing ever offered.
         if ($stored) {
-            $this->enrolment->mark($userId, true);
+            $this->enrollment->mark($userId, true);
         }
 
-        return $stored ? ColdStartEnrolmentResult::Enrolled : ColdStartEnrolmentResult::VaultRefused;
+        return $stored ? ColdStartEnrollmentResult::Enrolled : ColdStartEnrollmentResult::VaultRefused;
     }
 }

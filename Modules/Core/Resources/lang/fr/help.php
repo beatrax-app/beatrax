@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Base de données :',
-        'artefacts_imports' => 'Relevés importés :',
-        'artefacts_mail' => 'Courriels analysés :',
-        'artefacts_drop' => 'Dossier de dépôt surveillé :',
+        'artifacts_imports' => 'Relevés importés :',
+        'artifacts_mail' => 'Courriels analysés :',
+        'artifacts_drop' => 'Dossier de dépôt surveillé :',
         'backups' => 'Sauvegardes :',
         'secrets' => 'Identifiants des connecteurs :',
         'logs' => 'Journaux :',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Copier le chemin de la base de données dans le presse-papiers',
-        'artefacts_imports' => 'Copier le chemin des relevés importés dans le presse-papiers',
-        'artefacts_mail' => 'Copier le chemin des courriels analysés dans le presse-papiers',
-        'artefacts_drop' => 'Copier le chemin du dossier de dépôt surveillé dans le presse-papiers',
+        'artifacts_imports' => 'Copier le chemin des relevés importés dans le presse-papiers',
+        'artifacts_mail' => 'Copier le chemin des courriels analysés dans le presse-papiers',
+        'artifacts_drop' => 'Copier le chemin du dossier de dépôt surveillé dans le presse-papiers',
         'backups' => 'Copier le chemin des sauvegardes dans le presse-papiers',
         'secrets' => 'Copier le chemin des identifiants des connecteurs dans le presse-papiers',
         'logs' => 'Copier le chemin des journaux dans le presse-papiers',
     ],
 
-    'artefacts_heading' => 'Tes documents sources ne sont pas dans la sauvegarde',
-    'artefacts_body' => 'Une sauvegarde contient la base de données et rien d\'autre. Les relevés que tu as importés, les courriels récupérés par l\'analyseur et les reçus déposés dans le dossier surveillé restent où ils sont, dans les trois dossiers listés ci-dessus. Mettre une sauvegarde à l\'abri ne les copie pas : une archive complète suppose d\'emporter ces dossiers aussi — ou d\'utiliser Tout exporter ci-dessous, qui les empaquette avec la sauvegarde.',
+    'artifacts_heading' => 'Tes documents sources ne sont pas dans la sauvegarde',
+    'artifacts_body' => 'Une sauvegarde contient la base de données et rien d\'autre. Les relevés que tu as importés, les courriels récupérés par l\'analyseur et les reçus déposés dans le dossier surveillé restent où ils sont, dans les trois dossiers listés ci-dessus. Mettre une sauvegarde à l\'abri ne les copie pas : une archive complète suppose d\'emporter ces dossiers aussi — ou d\'utiliser Tout exporter ci-dessous, qui les empaquette avec la sauvegarde.',
 
     'export_heading' => 'Tout exporter',
     'export_body' => 'Une seule archive contenant une copie chiffrée de ta base de données et chaque document source que tu as confié à Beatrax. Décompresse-la où tu veux : tes documents s\'y trouvent tels qu\'ils ont toujours été, dans les dossiers dont ils viennent.',

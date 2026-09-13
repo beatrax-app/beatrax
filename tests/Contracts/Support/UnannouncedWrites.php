@@ -30,7 +30,7 @@ final class UnannouncedWrites
      *
      * @return list<string>
      */
-    public static function travellingTables(MergeRulesRegistry $registry): array
+    public static function travelingTables(MergeRulesRegistry $registry): array
     {
         /** @var list<string> $deviceLocal */
         $deviceLocal = (new ReflectionClass(OpLogBackfiller::class))->getConstant('DEVICE_LOCAL_TABLES');

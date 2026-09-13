@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Tulot yhteensä:',
 
     'empty' => 'Vuodelle :year ei ole verotunnisteella merkittyjä tapahtumia.',
-    'uncategorised' => 'Luokittelematon',
+    'uncategorized' => 'Luokittelematon',
 
     'col_date' => 'Päivä',
     'col_counterparty' => 'Vastapuoli',

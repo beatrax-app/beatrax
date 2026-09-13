@@ -94,8 +94,8 @@ final class NewMigration extends Component
     {
         return [
             'file.max' => Lang::get('migration::new.errors.file_too_large'),
-            'file.extensions' => $this->unrecognisedExportMessage(),
-            'file.mimes' => $this->unrecognisedExportMessage(),
+            'file.extensions' => $this->unrecognizedExportMessage(),
+            'file.mimes' => $this->unrecognizedExportMessage(),
         ];
     }
 
@@ -132,7 +132,7 @@ final class NewMigration extends Component
 
         $user = $currentUser->user();
         $tmp = $this->file->getRealPath();
-        $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), '.zip');
+        $originalFilename = UploadFilename::sanitize($this->file->getClientOriginalName(), '.zip');
 
         try {
             try {
@@ -183,17 +183,17 @@ final class NewMigration extends Component
     {
         return match (true) {
             $e instanceof ArchiveReaderUnavailableException => Lang::get('migration::new.errors.archive_reader_unavailable'),
-            $e instanceof UnrecognizedMigrationFileException => $this->unrecognisedExportMessage(),
+            $e instanceof UnrecognizedMigrationFileException => $this->unrecognizedExportMessage(),
             default => Lang::get('migration::new.errors.internal_detail', [
                 'code' => SafeExceptionContext::shortName($e),
             ]),
         };
     }
 
-    private function unrecognisedExportMessage(): string
+    private function unrecognizedExportMessage(): string
     {
         // One fixed line shared by the validation messages and the banner when
         // the export itself is unreadable, never the raw exception message.
-        return Lang::get('migration::new.errors.unrecognised');
+        return Lang::get('migration::new.errors.unrecognized');
     }
 }

@@ -29,7 +29,7 @@ it('seeds a pot-less demo goal whose progress comes from attributed transactions
     $user = User::query()->where('username', 'demo-1')->firstOrFail();
     $this->actingAs($user);
 
-    $tyres = Goal::query()
+    $tires = Goal::query()
         ->withoutGlobalScopes()
         ->where('user_id', $user->id)
         ->where('name', 'Winter tyres')
@@ -37,7 +37,7 @@ it('seeds a pot-less demo goal whose progress comes from attributed transactions
 
     $attributions = DB::table('goal_contributions')
         ->where('user_id', $user->id)
-        ->where('goal_id', $tyres->id)
+        ->where('goal_id', $tires->id)
         ->count();
 
     expect($attributions)->toBeGreaterThan(0);

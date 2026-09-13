@@ -2,7 +2,7 @@
 @use('Modules\Core\Public\Support\HostTimezone')
 @use('Modules\Core\Public\Support\Lang')
 @use('Modules\Core\Internal\Support\TimezoneOptions')
-@props(['selected', 'labelled' => false, 'selectClass' => '', 'fieldId' => 'timezone-select'])
+@props(['selected', 'labeled' => false, 'selectClass' => '', 'fieldId' => 'timezone-select'])
 {{--
     Every zone identifier the platform knows, grouped by region, plus the
     sentinel for "whatever machine this is". The sentinel names the detected
@@ -15,7 +15,7 @@
     like they had chosen the zone they happen to be sitting in, and clearing it
     again would then be impossible.
 --}}
-@unless ($labelled)
+@unless ($labeled)
     <label class="sr-only" for="{{ $fieldId }}">{{ Lang::get('core::settings.timezone.label') }}</label>
 @endunless
 <select

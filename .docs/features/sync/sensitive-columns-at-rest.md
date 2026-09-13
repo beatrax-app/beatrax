@@ -1674,7 +1674,7 @@ but the default path, writing `secret || wrapped_key` into the SQLite file with 
 function as its shield.
 
 There is now a third gate, and it is structural: `WebAuthnBiometricController` refuses the
-creation challenge and `EnrolBiometricCredential` refuses the enrolment itself, both unless the
+creation challenge and `EnrollBiometricCredential` refuses the enrolment itself, both unless the
 bound `SecretShield` reports `protectsAtRest()`. The two answer with the same payload, because the
 controller maps every enrolment outcome through one place. That is a capability on the contract rather than a platform test, so it covers
 every route into enrolment however it is reached, and it fails closed on a shield that only *looks*

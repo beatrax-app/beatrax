@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Einnahmen gesamt:',
 
     'empty' => 'Keine steuerlich markierten Transaktionen für :year.',
-    'uncategorised' => 'Ohne Kategorie',
+    'uncategorized' => 'Ohne Kategorie',
 
     'col_date' => 'Datum',
     'col_counterparty' => 'Zahlungspartner',

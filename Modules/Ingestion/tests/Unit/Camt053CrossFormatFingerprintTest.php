@@ -30,11 +30,11 @@ beforeEach(function (): void {
 function liftToCanonical(SourceTransactionDto $dto, FingerprintComposer $fp): CanonicalTransaction
 {
     $rawName = $dto->counterpartyName;
-    $normalised = $rawName === null || trim($rawName) === ''
+    $normalized = $rawName === null || trim($rawName) === ''
         ? '_no_counterparty'
         : $fp->normalize($rawName);
-    if ($normalised === '') {
-        $normalised = '_no_counterparty';
+    if ($normalized === '') {
+        $normalized = '_no_counterparty';
     }
 
     return new CanonicalTransaction(
@@ -50,7 +50,7 @@ function liftToCanonical(SourceTransactionDto $dto, FingerprintComposer $fp): Ca
         settledCurrency: $dto->currency,
         counterpartyName: $dto->counterpartyName,
         counterpartyIban: $dto->counterpartyIban,
-        counterpartyNormalized: $normalised,
+        counterpartyNormalized: $normalized,
         normalizationVersion: $fp->version(),
         description: $dto->description,
         categoryId: null,

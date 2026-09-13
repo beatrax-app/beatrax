@@ -39,7 +39,7 @@ final readonly class RecurringOccurrenceQuery
      */
     public function latestObservedAtForSeriesIds(array $seriesIds, User $user): array
     {
-        $unique = SeriesIds::normalise($seriesIds);
+        $unique = SeriesIds::normalize($seriesIds);
         if ($unique === []) {
             return [];
         }

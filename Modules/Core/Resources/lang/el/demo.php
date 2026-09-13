@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Αποθεματικό έκτακτης ανάγκης',
     'goal_japan_trip' => 'Ταξίδι στην Ιαπωνία',
     'goal_replace_laptop' => 'Αντικατάσταση του φορητού',
-    'goal_winter_tyres' => 'Χειμερινά ελαστικά',
+    'goal_winter_tires' => 'Χειμερινά ελαστικά',
     'goal_ryokan_stay' => 'Διαμονή σε ryokan',
     'goal_shinkansen_pass' => 'Κάρτα Shinkansen',
     'pot_emergency_fund' => 'Αποθεματικό έκτακτης ανάγκης',

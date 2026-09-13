@@ -73,7 +73,7 @@ final readonly class PairLookup
         }
 
         $ordered = match ($window->order) {
-            CounterLegOrder::NearestToCentre => $query->orderByRaw(
+            CounterLegOrder::NearestToCenter => $query->orderByRaw(
                 'ABS(julianday(booked_at) - julianday(?))',
                 [$window->bookedAt->toDateTimeString()],
             ),

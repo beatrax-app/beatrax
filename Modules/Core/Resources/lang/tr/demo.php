@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Acil durum fonu',
     'goal_japan_trip' => 'Japonya seyahati',
     'goal_replace_laptop' => 'Dizüstü bilgisayarı yenile',
-    'goal_winter_tyres' => 'Kış lastikleri',
+    'goal_winter_tires' => 'Kış lastikleri',
     'goal_ryokan_stay' => 'Ryokan konaklaması',
     'goal_shinkansen_pass' => 'Shinkansen kartı',
     'pot_emergency_fund' => 'Acil durum fonu',

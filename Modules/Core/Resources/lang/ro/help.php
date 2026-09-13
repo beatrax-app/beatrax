@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Baza de date:',
-        'artefacts_imports' => 'Extrase importate:',
-        'artefacts_mail' => 'E-mailuri scanate:',
-        'artefacts_drop' => 'Folder supravegheat:',
+        'artifacts_imports' => 'Extrase importate:',
+        'artifacts_mail' => 'E-mailuri scanate:',
+        'artifacts_drop' => 'Folder supravegheat:',
         'backups' => 'Copii de rezervă:',
         'secrets' => 'Credențialele conexiunilor:',
         'logs' => 'Jurnale:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Copiază în clipboard calea bazei de date',
-        'artefacts_imports' => 'Copiază în clipboard calea extraselor importate',
-        'artefacts_mail' => 'Copiază în clipboard calea e-mailurilor scanate',
-        'artefacts_drop' => 'Copiază în clipboard calea folderului supravegheat',
+        'artifacts_imports' => 'Copiază în clipboard calea extraselor importate',
+        'artifacts_mail' => 'Copiază în clipboard calea e-mailurilor scanate',
+        'artifacts_drop' => 'Copiază în clipboard calea folderului supravegheat',
         'backups' => 'Copiază în clipboard calea copiilor de rezervă',
         'secrets' => 'Copiază în clipboard calea credențialelor conexiunilor',
         'logs' => 'Copiază în clipboard calea jurnalelor',
     ],
 
-    'artefacts_heading' => 'Documentele tale sursă nu se află în copia de rezervă',
-    'artefacts_body' => 'O copie de rezervă conține baza de date și nimic altceva. Extrasele pe care le-ai importat, e-mailurile aduse de scaner și bonurile lăsate în folderul supravegheat rămân acolo unde sunt, în cele trei foldere de mai sus. Punerea copiei de rezervă la loc sigur nu le copiază, așa că o arhivă completă înseamnă să iei cu tine și acele foldere — sau să folosești Exportă tot de mai jos, care le împachetează împreună cu copia de rezervă.',
+    'artifacts_heading' => 'Documentele tale sursă nu se află în copia de rezervă',
+    'artifacts_body' => 'O copie de rezervă conține baza de date și nimic altceva. Extrasele pe care le-ai importat, e-mailurile aduse de scaner și bonurile lăsate în folderul supravegheat rămân acolo unde sunt, în cele trei foldere de mai sus. Punerea copiei de rezervă la loc sigur nu le copiază, așa că o arhivă completă înseamnă să iei cu tine și acele foldere — sau să folosești Exportă tot de mai jos, care le împachetează împreună cu copia de rezervă.',
 
     'export_heading' => 'Exportă tot',
     'export_body' => 'O singură arhivă cu o copie criptată a bazei tale de date și fiecare document sursă pe care i l-ai dat lui Beatrax. Dezarhiveaz-o oriunde, iar documentele sunt înăuntru așa cum au fost mereu, în folderele din care au venit.',

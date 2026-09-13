@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Tietokanta:',
-        'artefacts_imports' => 'Tuodut tiliotteet:',
-        'artefacts_mail' => 'Luettu sähköposti:',
-        'artefacts_drop' => 'Valvottu kansio:',
+        'artifacts_imports' => 'Tuodut tiliotteet:',
+        'artifacts_mail' => 'Luettu sähköposti:',
+        'artifacts_drop' => 'Valvottu kansio:',
         'backups' => 'Varmuuskopiot:',
         'secrets' => 'Liitäntöjen tunnukset:',
         'logs' => 'Lokit:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopioi tietokannan polku leikepöydälle',
-        'artefacts_imports' => 'Kopioi tuotujen tiliotteiden polku leikepöydälle',
-        'artefacts_mail' => 'Kopioi luetun sähköpostin polku leikepöydälle',
-        'artefacts_drop' => 'Kopioi valvotun kansion polku leikepöydälle',
+        'artifacts_imports' => 'Kopioi tuotujen tiliotteiden polku leikepöydälle',
+        'artifacts_mail' => 'Kopioi luetun sähköpostin polku leikepöydälle',
+        'artifacts_drop' => 'Kopioi valvotun kansion polku leikepöydälle',
         'backups' => 'Kopioi varmuuskopioiden polku leikepöydälle',
         'secrets' => 'Kopioi liitäntöjen tunnusten polku leikepöydälle',
         'logs' => 'Kopioi lokien polku leikepöydälle',
     ],
 
-    'artefacts_heading' => 'Lähdeasiakirjasi eivät ole varmuuskopion sisällä',
-    'artefacts_body' => 'Varmuuskopio sisältää tietokannan eikä mitään muuta. Tuomasi tiliotteet, skannerin hakema sähköposti ja valvottuun kansioon pudottamasi kuitit jäävät sinne, missä ovatkin, kolmeen yllä lueteltuun kansioon. Varmuuskopion siirtäminen turvaan ei kopioi niitä, joten täydellinen arkisto tarkoittaa myös noiden kansioiden mukaan ottamista — tai alla olevan Vie kaikki -toiminnon käyttöä, joka niputtaa ne varmuuskopion kanssa puolestasi.',
+    'artifacts_heading' => 'Lähdeasiakirjasi eivät ole varmuuskopion sisällä',
+    'artifacts_body' => 'Varmuuskopio sisältää tietokannan eikä mitään muuta. Tuomasi tiliotteet, skannerin hakema sähköposti ja valvottuun kansioon pudottamasi kuitit jäävät sinne, missä ovatkin, kolmeen yllä lueteltuun kansioon. Varmuuskopion siirtäminen turvaan ei kopioi niitä, joten täydellinen arkisto tarkoittaa myös noiden kansioiden mukaan ottamista — tai alla olevan Vie kaikki -toiminnon käyttöä, joka niputtaa ne varmuuskopion kanssa puolestasi.',
 
     'export_heading' => 'Vie kaikki',
     'export_body' => 'Yksi arkisto, jossa on salattu kopio tietokannastasi ja jokainen lähdeasiakirja, jonka olet Beatraxille antanut. Pura se minne haluat, ja asiakirjasi ovat siellä sellaisina kuin ne aina olivat, niissä kansioissa, joista ne tulivat.',

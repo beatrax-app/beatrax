@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Questa controparte non è ancora etichettata',
-        'not_labelled_body' => 'Etichettare le sconosciute aiuta la dashboard a mostrare totali mensili e catene di finanziamento accurati.',
+        'not_labeled_heading' => 'Questa controparte non è ancora etichettata',
+        'not_labeled_body' => 'Etichettare le sconosciute aiuta la dashboard a mostrare totali mensili e catene di finanziamento accurati.',
         'label_cta' => 'Etichetta questa controparte',
     ],
 

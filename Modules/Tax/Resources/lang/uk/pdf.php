@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Разом доходу:',
 
     'empty' => 'Немає транзакцій з податковими позначками за :year.',
-    'uncategorised' => 'Без категорії',
+    'uncategorized' => 'Без категорії',
 
     'col_date' => 'Дата',
     'col_counterparty' => 'Контрагент',

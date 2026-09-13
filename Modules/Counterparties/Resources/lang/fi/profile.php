@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Tätä vastapuolta ei ole vielä merkitty',
-        'not_labelled_body' => 'Tuntemattomien merkitseminen auttaa yleisnäkymää näyttämään tarkat kuukausisummat ja rahoitusketjut.',
+        'not_labeled_heading' => 'Tätä vastapuolta ei ole vielä merkitty',
+        'not_labeled_body' => 'Tuntemattomien merkitseminen auttaa yleisnäkymää näyttämään tarkat kuukausisummat ja rahoitusketjut.',
         'label_cta' => 'Merkitse tämä vastapuoli',
     ],
 

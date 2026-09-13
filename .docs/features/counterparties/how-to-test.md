@@ -198,7 +198,7 @@ and the assertion — see
   takes the decided row out of `remaining`, so incrementing as well
   stepped past the row behind it — labelling the first of three
   offered the third.
-  (`tests/Feature/LabellingOneUnknownOffersTheNextOneNotTheOneAfterItTest.php`)
+  (`tests/Feature/LabelingOneUnknownOffersTheNextOneNotTheOneAfterItTest.php`)
 - **The card draws one primary, on one edge.** Exactly one solid
   button per card — the accept when a suggestion is on screen, the
   save otherwise — and every control is a full-width block on the

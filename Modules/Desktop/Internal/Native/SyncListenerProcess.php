@@ -24,7 +24,7 @@ final readonly class SyncListenerProcess
     // daemon are separate processes, so nothing in memory can answer this on the
     // next unlock — and the store outlives the app as well, which is why every
     // start rewrites it rather than only the ones that carried an identity.
-    private const string CREDENTIALLED_DEVICE_KEY = 'sync-listener:credentialled-device';
+    private const string CREDENTIALED_DEVICE_KEY = 'sync-listener:credentialled-device';
 
     public function __construct(
         private DeviceRegistryService $devices,
@@ -77,13 +77,13 @@ final readonly class SyncListenerProcess
     {
         $offered = $environment[SyncDaemonIdentity::ENV_DEVICE] ?? null;
         $carried = $this->start($environment);
-        $credentialled = $offered !== null && $offered !== '' && $carried === $offered;
+        $credentialed = $offered !== null && $offered !== '' && $carried === $offered;
 
         // Written before the early return below, which is the boot start's: that
         // start replaces the listener with a keyless daemon, and a key left on
         // disk by a previous run of the app otherwise answers the next unlock
         // for a daemon that exited with it.
-        $this->rememberDevice($credentialled ? $offered : null);
+        $this->rememberDevice($credentialed ? $offered : null);
 
         // Boot hands nothing over on purpose — the identity is sealed until the
         // app is unlocked — so there is no claim to check and none to make.
@@ -91,7 +91,7 @@ final readonly class SyncListenerProcess
             return;
         }
 
-        if ($credentialled) {
+        if ($credentialed) {
             $this->logger->info('sync listener: running with the device credentials it was handed.');
 
             return;
@@ -163,17 +163,17 @@ final readonly class SyncListenerProcess
     private function rememberDevice(?string $deviceId): void
     {
         if ($deviceId === null || $deviceId === '') {
-            $this->cache?->forget(self::CREDENTIALLED_DEVICE_KEY);
+            $this->cache?->forget(self::CREDENTIALED_DEVICE_KEY);
 
             return;
         }
 
-        $this->cache?->forever(self::CREDENTIALLED_DEVICE_KEY, $deviceId);
+        $this->cache?->forever(self::CREDENTIALED_DEVICE_KEY, $deviceId);
     }
 
     private function rememberedDevice(): ?string
     {
-        $remembered = $this->cache?->get(self::CREDENTIALLED_DEVICE_KEY);
+        $remembered = $this->cache?->get(self::CREDENTIALED_DEVICE_KEY);
 
         return is_string($remembered) && $remembered !== '' ? $remembered : null;
     }

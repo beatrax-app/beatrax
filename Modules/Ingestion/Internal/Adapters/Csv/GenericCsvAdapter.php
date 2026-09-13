@@ -120,15 +120,15 @@ final readonly class GenericCsvAdapter implements SourceAdapter
     {
         $map = [];
         foreach ($header as $cell) {
-            $map[$this->normalise($cell)] = $cell;
+            $map[$this->normalize($cell)] = $cell;
         }
 
         return $map;
     }
 
-    private function normalise(string $header): string
+    private function normalize(string $header): string
     {
-        return CsvPreset::normaliseHeader($header);
+        return CsvPreset::normalizeHeader($header);
     }
 
     // The sibling positional reader refuses an undated row through parseDate(),
@@ -303,7 +303,7 @@ final readonly class GenericCsvAdapter implements SourceAdapter
      */
     private function cell(array $record, array $normMap, string $header): string
     {
-        $actual = $normMap[$this->normalise($header)] ?? null;
+        $actual = $normMap[$this->normalize($header)] ?? null;
         if ($actual === null || ! array_key_exists($actual, $record)) {
             throw new InvalidAmountException(sprintf("Missing expected column '%s'.", $header));
         }
@@ -321,7 +321,7 @@ final readonly class GenericCsvAdapter implements SourceAdapter
         if ($header === null) {
             return null;
         }
-        $actual = $normMap[$this->normalise($header)] ?? null;
+        $actual = $normMap[$this->normalize($header)] ?? null;
         if ($actual === null) {
             return null;
         }

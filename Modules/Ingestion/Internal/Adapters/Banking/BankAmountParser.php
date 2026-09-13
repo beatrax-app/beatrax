@@ -45,20 +45,20 @@ final class BankAmountParser
     public function parseMt940Minor(string $raw, ?string $currencyCode = null): int
     {
         $decimals = CurrencyScale::decimals($currencyCode);
-        $normalised = str_replace(',', '.', trim($raw));
+        $normalized = str_replace(',', '.', trim($raw));
 
-        $separator = strpos($normalised, '.');
+        $separator = strpos($normalized, '.');
         if ($separator === false) {
-            $normalised .= $decimals === 0 ? '' : '.'.str_repeat('0', $decimals);
+            $normalized .= $decimals === 0 ? '' : '.'.str_repeat('0', $decimals);
         } elseif ($decimals > 0) {
             // str_pad never truncates, so a fraction wider than the currency
             // holds survives to be refused rather than silently rounded away.
-            $normalised = substr($normalised, 0, $separator)
-                .'.'.str_pad(substr($normalised, $separator + 1), $decimals, '0');
-        } elseif (substr($normalised, $separator + 1) === '') {
-            $normalised = substr($normalised, 0, $separator);
+            $normalized = substr($normalized, 0, $separator)
+                .'.'.str_pad(substr($normalized, $separator + 1), $decimals, '0');
+        } elseif (substr($normalized, $separator + 1) === '') {
+            $normalized = substr($normalized, 0, $separator);
         }
 
-        return $this->parseMinor($normalised, $currencyCode);
+        return $this->parseMinor($normalized, $currencyCode);
     }
 }

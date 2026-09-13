@@ -150,13 +150,13 @@ final class SqlPanelPage extends Component
     {
         $mapped = [];
         foreach ($rows as $row) {
-            $normalised = [];
+            $normalized = [];
             foreach (get_object_vars($row) as $key => $value) {
                 if (is_string($key)) {
-                    $normalised[$key] = $value;
+                    $normalized[$key] = $value;
                 }
             }
-            $mapped[] = $normalised;
+            $mapped[] = $normalized;
         }
 
         return $mapped;

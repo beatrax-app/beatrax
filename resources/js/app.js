@@ -110,7 +110,7 @@ function closeOpenDialogs() {
  * The month names come from the browser's own Intl for <html lang>, not from
  * a table baked in here, so a new interface language needs no change.
  */
-window.beatraxLocaliseChart = function (options) {
+window.beatraxLocalizeChart = function (options) {
     const tag = document.documentElement.lang || 'en';
     const months = [];
     const shortMonths = [];
@@ -228,7 +228,7 @@ window.beatraxApplyChartTheme = function (options) {
         return options;
     }
 
-    window.beatraxLocaliseChart(options);
+    window.beatraxLocalizeChart(options);
 
     const isDark = document.documentElement.classList.contains('dark');
     if (!isDark) {

@@ -31,7 +31,7 @@ function backlogUser(): User
     ]);
 }
 
-function backlogEnrol(User $user): Session
+function backlogEnroll(User $user): Session
 {
     /** @var Session $session */
     $session = app(Session::class);
@@ -69,7 +69,7 @@ function backlogCurrentEpoch(User $user): int
 
 it('says nothing when there is nothing waiting', function (): void {
     $user = backlogUser();
-    backlogEnrol($user);
+    backlogEnroll($user);
 
     Livewire::actingAs($user)->test(DevicesAndSyncSettingsSection::class)
         ->assertSet('syncBacklog', SyncBacklogState::None->value)
@@ -78,7 +78,7 @@ it('says nothing when there is nothing waiting', function (): void {
 
 it('tells the reader data is waiting when this device can decode it', function (): void {
     $user = backlogUser();
-    backlogEnrol($user);
+    backlogEnroll($user);
     backlogQuarantine($user, backlogCurrentEpoch($user));
 
     Livewire::actingAs($user)->test(DevicesAndSyncSettingsSection::class)
@@ -90,7 +90,7 @@ it('tells the reader data is waiting when this device can decode it', function (
 // waiting produces a key this device was never sent.
 it('does not promise a wait will end when the key is the thing that is missing', function (): void {
     $user = backlogUser();
-    backlogEnrol($user);
+    backlogEnroll($user);
     backlogQuarantine($user, backlogCurrentEpoch($user) + 1);
 
     Livewire::actingAs($user)->test(DevicesAndSyncSettingsSection::class)

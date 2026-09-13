@@ -371,7 +371,7 @@ final readonly class OpLogEntryApplier
                     return null;
                 }
 
-                $resolved = $this->suppliedDates->normalise($table, $field, $resolved);
+                $resolved = $this->suppliedDates->normalize($table, $field, $resolved);
 
                 $payload[$field] = $this->projector->reencryptForProjection($table, $field, $resolved, $userId);
             } catch (\Throwable $e) {
@@ -468,7 +468,7 @@ final readonly class OpLogEntryApplier
                 return;
             }
 
-            $columnValue = $this->suppliedDates->normalise($table, $field, $columnValue);
+            $columnValue = $this->suppliedDates->normalize($table, $field, $columnValue);
 
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $batch->userId);
 

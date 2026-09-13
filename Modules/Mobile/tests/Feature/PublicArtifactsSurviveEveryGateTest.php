@@ -14,14 +14,14 @@ use Symfony\Component\HttpFoundation\Response;
 uses(RefreshDatabase::class);
 
 /** @return list<string> the route names every mobile gate must let through */
-function publicArtefactRouteNames(): array
+function publicArtifactRouteNames(): array
 {
     return ['site.webmanifest', 'pwa.icon', 'app.icon', 'app.splash'];
 }
 
 // Driven through the middleware rather than grepped out of its source: a route
 // name sitting in a comment or an unread constant satisfies a grep just as well.
-function artefactRequestNamed(string $routeName): Request
+function artifactRequestNamed(string $routeName): Request
 {
     $request = Request::create('/icon.png', 'GET');
 
@@ -51,10 +51,10 @@ it('lets the public artefacts past the import gate while a setup is unfinished',
 
     $gate = app(MobileEnsureImportCompleted::class);
 
-    foreach (publicArtefactRouteNames() as $name) {
+    foreach (publicArtifactRouteNames() as $name) {
         $reached = false;
         $response = $gate->handle(
-            artefactRequestNamed($name),
+            artifactRequestNamed($name),
             function () use (&$reached): Response {
                 $reached = true;
 
@@ -80,7 +80,7 @@ it('redirects an ordinary route in that same state', function (): void {
 
     // Without this the test above would pass on a gate that never redirects.
     $response = app(MobileEnsureImportCompleted::class)->handle(
-        artefactRequestNamed('dashboard'),
+        artifactRequestNamed('dashboard'),
         static fn (): Response => new Response('page', 200),
     );
 
@@ -90,9 +90,9 @@ it('redirects an ordinary route in that same state', function (): void {
 it('lets them past the database-ready gate too', function (): void {
     $gate = app(MobileEnsureDatabaseReady::class);
 
-    foreach (publicArtefactRouteNames() as $name) {
+    foreach (publicArtifactRouteNames() as $name) {
         $reached = false;
-        $gate->handle(artefactRequestNamed($name), function () use (&$reached): Response {
+        $gate->handle(artifactRequestNamed($name), function () use (&$reached): Response {
             $reached = true;
 
             return new Response('PNG', 200, ['Content-Type' => 'image/png']);

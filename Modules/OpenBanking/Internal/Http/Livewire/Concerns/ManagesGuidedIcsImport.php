@@ -63,7 +63,7 @@ trait ManagesGuidedIcsImport
 
         $user = $currentUser->user();
         $tmp = $this->icsStatement->getRealPath();
-        $originalFilename = self::sanitiseIcsFilename($this->icsStatement->getClientOriginalName());
+        $originalFilename = self::sanitizeIcsFilename($this->icsStatement->getClientOriginalName());
 
         try {
             $result = $importer->runFromUpload($tmp, self::ICS_SOURCE_FORMAT, $user, $originalFilename);
@@ -82,7 +82,7 @@ trait ManagesGuidedIcsImport
         $this->redirectRoute('imports.preview', ['id' => $result->importRunId], navigate: false);
     }
 
-    private static function sanitiseIcsFilename(string $original): string
+    private static function sanitizeIcsFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);
         $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);

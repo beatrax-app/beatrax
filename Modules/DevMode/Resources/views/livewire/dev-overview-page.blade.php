@@ -187,7 +187,7 @@
                                  one-line list shows as tags; stripped before Blade
                                  escapes what is left. --}}
                             <span>{{ strip_tags(StoredCopy::readFromParams($alert->metadata, $alert->message)) }}</span>
-                            @if (OAuthAlertKind::promptsReauthorisation($alert->kind))
+                            @if (OAuthAlertKind::promptsReauthorization($alert->kind))
                                 <a href="{{ Destination::Email->url() }}" class="text-blue-600 hover:underline text-xs">
                                     {{ Lang::get('dev::overview.reauth') }}
                                 </a>

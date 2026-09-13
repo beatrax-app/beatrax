@@ -82,7 +82,7 @@ final class CounterpartyTriage extends Component
     public function acceptSuggestion(
         CurrentUser $currentUser,
         CounterpartyTriageQueue $queue,
-        LabelCounterparty $labeller,
+        LabelCounterparty $labeler,
         Session $session,
     ): void {
         $current = $this->resolveCurrent($currentUser, $queue);
@@ -97,7 +97,7 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        $labeller->label(
+        $labeler->label(
             $current,
             $currentUser->id(),
             CounterpartyType::Merchant,
@@ -112,7 +112,7 @@ final class CounterpartyTriage extends Component
     public function markIgnored(
         CurrentUser $currentUser,
         CounterpartyTriageQueue $queue,
-        LabelCounterparty $labeller,
+        LabelCounterparty $labeler,
         Session $session,
     ): void {
         $current = $this->resolveCurrent($currentUser, $queue);
@@ -120,7 +120,7 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        $labeller->ignore($current, $currentUser->id(), $session);
+        $labeler->ignore($current, $currentUser->id(), $session);
 
         $this->recordDecision($current, $currentUser, $queue);
     }
@@ -132,7 +132,7 @@ final class CounterpartyTriage extends Component
     public function manualLabel(
         CurrentUser $currentUser,
         CounterpartyTriageQueue $queue,
-        LabelCounterparty $labeller,
+        LabelCounterparty $labeler,
         Session $session,
         ?string $name = null,
         ?string $type = null,
@@ -143,7 +143,7 @@ final class CounterpartyTriage extends Component
         }
 
         $name = trim($name ?? $this->draftName);
-        $labelled = CounterpartyType::tryFrom($type ?? $this->draftType);
+        $labeled = CounterpartyType::tryFrom($type ?? $this->draftType);
 
         // Said rather than swallowed: a blank name made the one button that
         // records a decision do nothing at all, with no line on the screen to
@@ -155,7 +155,7 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        if ($labelled === null || ! in_array($labelled, self::MANUAL_LABEL_TYPES, true)) {
+        if ($labeled === null || ! in_array($labeled, self::MANUAL_LABEL_TYPES, true)) {
             return;
         }
 
@@ -163,12 +163,12 @@ final class CounterpartyTriage extends Component
 
         // merchant_name is the column merchant_aliases.friendly_name anchors
         // against, so only a merchant earns one.
-        $labeller->label(
+        $labeler->label(
             $current,
             $currentUser->id(),
-            $labelled,
+            $labeled,
             $name,
-            $labelled === CounterpartyType::Merchant ? $name : null,
+            $labeled === CounterpartyType::Merchant ? $name : null,
             $session,
         );
 

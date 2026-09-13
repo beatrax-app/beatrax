@@ -58,7 +58,7 @@
       "runs_in": "quality shard",
       "why": "Gated on a routable LAN address. A GitHub-hosted runner has a default route and a private address on it."
     },
-    "Modules/Desktop/tests/Feature/SyncListenerIsCredentialledOnUnlockTest.php": {
+    "Modules/Desktop/tests/Feature/SyncListenerIsCredentialedOnUnlockTest.php": {
       "markers": 1,
       "skipped": {
         "quality shard": 0
@@ -225,7 +225,7 @@
       "runs_in": "mobile-app quality",
       "why": "Same gate and the same replacement: the shipped WebView client, present in both roots the pipeline builds."
     },
-    "Modules/Mobile/tests/Unit/Identity/BiometricEnrolmentSaysWhyItWasRefusedTest.php": {
+    "Modules/Mobile/tests/Unit/Identity/BiometricEnrollmentSaysWhyItWasRefusedTest.php": {
       "markers": 2,
       "skipped": {
         "quality shard": 5,

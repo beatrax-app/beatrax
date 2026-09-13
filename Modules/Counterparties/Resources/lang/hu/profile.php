@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Ez a partner még nincs felcímkézve',
-        'not_labelled_body' => 'Az ismeretlenek felcímkézése segít abban, hogy az irányítópult pontos havi összegeket és fedezeti láncokat mutasson.',
+        'not_labeled_heading' => 'Ez a partner még nincs felcímkézve',
+        'not_labeled_body' => 'Az ismeretlenek felcímkézése segít abban, hogy az irányítópult pontos havi összegeket és fedezeti láncokat mutasson.',
         'label_cta' => 'Címkézd fel ezt a partnert',
     ],
 
