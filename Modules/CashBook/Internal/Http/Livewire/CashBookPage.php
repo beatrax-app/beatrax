@@ -17,7 +17,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
-use Modules\Core\Models\User;
+use Modules\CashBook\Internal\Services\ManualEntryAnchors;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -30,9 +30,7 @@ use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Public\Enums\SyntheticSourceFormat;
-use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Direction;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\Support\CategoryPathName;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -111,13 +109,13 @@ final class CashBookPage extends Component
         RecordManualTransaction $record,
         DatabaseManager $db,
         Translator $translator,
-        BaseCurrency $baseCurrency,
+        ManualEntryAnchors $anchors,
         LoggerInterface $logger,
     ): void {
         $this->error = '';
 
         $user = $currentUser->user();
-        $currency = $this->entryCurrency($db, $baseCurrency, $user);
+        $currency = $anchors->currencyForUser($user);
 
         $amountMinor = MoneyInput::tryToPositiveMinor($this->amount, $currency);
         if ($amountMinor === null) {
@@ -260,7 +258,7 @@ final class CashBookPage extends Component
         TaxTagQuery $taxTagQuery,
         SensitiveColumnCodec $codec,
         Session $session,
-        BaseCurrency $baseCurrency,
+        ManualEntryAnchors $anchors,
     ): View {
         $user = $currentUser->user();
         $connection = $db->connection();
@@ -339,7 +337,7 @@ final class CashBookPage extends Component
             'entries' => $entries,
             'categories' => $categories,
             'taxState' => $taxState,
-            'entryCurrency' => $this->entryCurrency($db, $baseCurrency, $user),
+            'entryCurrency' => $anchors->currencyForUser($user),
         ]);
 
         $view->extends('layouts.app', ['title' => Lang::get('cashbook::cash-book.page_title').Brand::TITLE_SUFFIX]);
@@ -357,22 +355,6 @@ final class CashBookPage extends Component
             ->where('t.source_format', SyntheticSourceFormat::Manual->value)
             ->orderByDesc('t.posted_at')
             ->orderByDesc('t.id');
-    }
-
-    // The amount field is typed in the cash account's own denomination, and the
-    // reader can relabel that account like any other, so the label names what
-    // the entry will actually be booked in — and the parser reads it at that
-    // currency's scale, which is not a hundredth everywhere.
-    private function entryCurrency(DatabaseManager $db, BaseCurrency $baseCurrency, User $user): string
-    {
-        $cashCurrency = $db->connection()->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('kind', AccountKind::Cash->value)
-            ->value('default_currency');
-
-        return is_string($cashCurrency) && $cashCurrency !== ''
-            ? $cashCurrency
-            : $baseCurrency->forUser($user);
     }
 
     // An amount the parser could not read is not an amount that is too small.
