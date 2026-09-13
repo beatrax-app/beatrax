@@ -1290,6 +1290,18 @@ row says this side confirmed — read from the row, not from the screen's
 rendered here as it is on the desktop: the words are re-derived from what the
 row now binds and `pairing.errors.safety_number_changed` says why.
 
+The confirm step has two writers of one line, and they are not equals. The
+poll's re-emit reports whether its frame went out, which on every success is
+the empty string; a refused tap reports that the keys behind the six words on
+screen are no longer the ones the row binds. Both used to write
+`flashMessage` directly, so the rebind warning lived under one poll interval —
+the reader saw it, the next three-second tick wiped it, and the words
+underneath had silently changed. `MobilePairingScan::$safetyNumberChanged` is
+set by the refusal and cleared only by the next tap, and every delivery notice
+now goes through `ConfirmsAcrossTheLock::reportFrameSend()`, which declines to
+write while that flag stands. The poll still retires its own line: a reader who
+unlocks stops being told the identity is locked on the very next tick.
+
 **Typed codes.** A word-code carries the token alone, so before seeding,
 `submitCode()` asks `PairingGateway::discoverInitiatorOnLan()` for the public
 identity the code cannot carry: it browses `_beatrax-sync._tcp` and fetches
@@ -1412,7 +1424,29 @@ catch-up exchange reusing the existing `PeerCatchUpExchanger` and
 `SyncSession` classes verbatim (so the mobile peer's receive path is
 byte-identical to the desktop's), then closes in a `finally` — this class
 never persists the connection and contains no listener/server/daemon
-code. Immediately after catch-up, it additionally drains any pending GDK
+code. `syncOnce()` owns the dial and the connection; `runExchange()` takes an
+already-open one, which is what makes a whole initiator-side exchange drivable
+without a loopback socket. Three rules hold on every ending of it, each
+mirroring what `SyncWebSocketHandler` already does on the responder side:
+
+- **Nothing thrown by the exchange leaves the client.** amphp raises
+  `WebsocketClosedException` from the *send*, not the read, so a desktop that
+  hangs up is first heard from on the next frame out. Uncaught, that reached
+  past `syncOnce()` and `MobileSyncTriggerService::attempt()` — which catches
+  only `LanSyncException` — and took the relay leg, the epoch inbox drain and
+  the held-entry recovery pass down with a tick that was only dialling one
+  desktop. A broken exchange is now `NotSecured`, with the class in the log.
+- **The session row is closed on every ending once the peer was admitted.**
+  Only `close()` writes the state an `active` row leaves to, and it used to run
+  on the happy path alone. A refused gate keeps its `failed` row instead:
+  closing that one would erase the single value that says *verification*.
+- **A peer that never sent its `CATCH_UP_COMPLETE` is not a completed sync.**
+  A clean `null` read means the peer closed the socket, which is exactly what
+  the responder does when its own catch-up throws. Answered as `Synced`, the
+  phone put "everything is up to date" under a tick in which the desktop said
+  nothing at all about what it holds; `runCatchUp()` now answers whether the
+  peer reached its own end of the sequence and a `false` is `NotReached`,
+  which the one bounded retry above then re-drives. Immediately after catch-up, it additionally drains any pending GDK
 epoch-wrap frames the desktop pushes over the same still-open,
 already-authenticated Noise session, bounded by a short idle timeout and
 a maximum frame count, and routes each through the `GdkEpochDeliveryGateway`

@@ -28,6 +28,7 @@ use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 use Modules\Sync\Public\Transport\ProtocolTimings;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 use function Amp\Websocket\Client\connect;
 
@@ -61,22 +62,45 @@ final readonly class LanSyncClient
             return LanDialOutcome::NotReached;
         }
 
-        return $this->runExchange($host, $port, $identity, $session, $peerStaticHex);
+        try {
+            $connection = connect(
+                sprintf('ws://%s:%s/', $host, $port),
+                new TimeoutCancellation(ProtocolTimings::SYNC_DIAL_SECONDS),
+            );
+        } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {
+            // The first LAN connect per install can hit the iOS Local Network
+            // Privacy gate, which reads as a clean timeout or refusal before
+            // the OS grants access. Retryable, never a thrown fatal.
+            $this->logger?->info('LanSyncClient: LAN dial did not complete (retryable).', [
+                'reason' => $e::class,
+            ]);
+
+            return LanDialOutcome::NotReached;
+        }
+
+        try {
+            return $this->runExchange($connection, $identity, $session, $peerStaticHex);
+        } finally {
+            $connection->close();
+        }
     }
 
-    private function runExchange(
-        string $host,
-        int $port,
+    /**
+     * @internal Public so a whole exchange is testable without a live amphp
+     *           dial. The dial itself stays in syncOnce().
+     *
+     * @throws LanSyncException when this device's own gate refuses the peer.
+     */
+    public function runExchange(
+        WebsocketConnection $connection,
         DeviceIdentityDto $identity,
         Session $session,
         string $peerStaticHex,
     ): LanDialOutcome {
-        $uri = sprintf('ws://%s:%s/', $host, $port);
-        $connection = null;
+        $syncSession = null;
+        $admitted = false;
 
         try {
-            $connection = connect($uri, new TimeoutCancellation(ProtocolTimings::SYNC_DIAL_SECONDS));
-
             $noiseSession = $this->performHandshake($connection, $identity, $peerStaticHex);
 
             [$syncSession, $deviceKeys] = $this->buildSyncSession($identity);
@@ -96,25 +120,44 @@ final readonly class LanSyncClient
             // an empty keyring and quarantined it, with no replay path.
             $this->exchangeGdkEpochWraps($connection, $syncSession, $identity, $session);
 
-            $this->runCatchUp($connection, $syncSession, $identity->userId, $identity->deviceId, $deviceKeys);
-
-            $syncSession->close();
-
-            return LanDialOutcome::Synced;
+            // A peer that closed before its own CATCH_UP_COMPLETE told this
+            // device nothing about what it holds, and calling that Synced put
+            // "everything is up to date" under a tick that exchanged nothing.
+            $outcome = $this->runCatchUp($connection, $syncSession, $identity->userId, $identity->deviceId, $deviceKeys)
+                ? LanDialOutcome::Synced
+                : LanDialOutcome::NotReached;
         } catch (LanSyncException $e) {
-            return $this->readRefusal($e, $identity);
+            $outcome = $this->readRefusal($e, $identity);
         } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {
-            // The first LAN connect per install can hit the iOS Local Network
-            // Privacy gate, which reads as a clean timeout or refusal before
-            // the OS grants access. Retryable, never a thrown fatal.
-            $this->logger?->info('LanSyncClient: LAN dial did not complete (retryable).', [
+            // A stall or a hang-up mid-exchange, which the same OS gate can
+            // produce on the first LAN connect an install ever makes.
+            // Retryable, never a thrown fatal.
+            $this->logger?->info('LanSyncClient: LAN exchange did not complete (retryable).', [
                 'reason' => $e::class,
             ]);
 
-            return LanDialOutcome::NotReached;
+            $outcome = LanDialOutcome::NotReached;
+        } catch (Throwable $e) {
+            // The responder wraps its own exchange the same way. A peer that
+            // hangs up mid-frame throws WebsocketClosedException, which reached
+            // past syncOnce() and took the relay leg, the epoch inbox drain and
+            // the held-entry recovery down with one desktop's dial.
+            $this->logger?->warning('LanSyncClient: the exchange broke after the peer answered.', [
+                'reason' => $e::class,
+            ]);
+
+            $outcome = LanDialOutcome::NotSecured;
         } finally {
-            $connection?->close();
+            // The row an admitted session opened says `active` until close()
+            // writes what it leaves to, and nothing else ever does. Left on a
+            // failed ending, the phone went on reporting an exchange as under
+            // way for as long as a reader kept looking at the screen.
+            if ($admitted) {
+                $syncSession?->close();
+            }
         }
+
+        return $outcome;
     }
 
     // Every refusal here reached the peer: the WebSocket was open and the Noise
@@ -152,7 +195,7 @@ final readonly class LanSyncClient
                 ['type' => GdkEpochDeliveryGateway::MSG_PEER_REVOKED],
                 JSON_THROW_ON_ERROR,
             )));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->logger?->info('LanSyncClient: could not tell the peer it was revoked.', [
                 'reason' => $e::class,
             ]);
@@ -251,6 +294,9 @@ final readonly class LanSyncClient
     /**
      * @param  array<string, string>  $deviceKeys  Connect-time confirmed
      *                                             Ed25519 key snapshot.
+     * @return bool Whether the peer carried the exchange through to its own
+     *              CATCH_UP_COMPLETE. A false is a peer that hung up part way,
+     *              which is the one thing a null read here can mean.
      */
     private function runCatchUp(
         WebsocketConnection $connection,
@@ -258,7 +304,7 @@ final readonly class LanSyncClient
         int $userId,
         string $localDeviceId,
         array $deviceKeys,
-    ): void {
+    ): bool {
         // Named, not defaulted: the watermark is per peer, and the empty id an
         // unnamed caller passes reads back as (0, 0) — the phone then asked
         // this peer for its whole history on every connect.
@@ -267,7 +313,7 @@ final readonly class LanSyncClient
 
         $respMsg = $this->receiveWithTimeout($connection, 'catch-up response');
         if ($respMsg === null) {
-            return;
+            return false;
         }
 
         $resp = $this->catchUp->parseControlMessage($syncSession->decrypt($respMsg->buffer()));
@@ -291,7 +337,7 @@ final readonly class LanSyncClient
 
         $peerReqMsg = $this->receiveWithTimeout($connection, 'catch-up request');
         if ($peerReqMsg === null) {
-            return;
+            return false;
         }
 
         $peerReq = $this->catchUp->parseControlMessage($syncSession->decrypt($peerReqMsg->buffer()));
@@ -313,6 +359,8 @@ final readonly class LanSyncClient
         $connection->sendBinary($syncSession->encrypt(
             json_encode($this->catchUp->buildComplete(), JSON_THROW_ON_ERROR)
         ));
+
+        return $peerCompleteMsg !== null;
     }
 
     // A wrap reaches the delivery gateway only from inside this still-open,

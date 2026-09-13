@@ -43,6 +43,16 @@ trait ConfirmsAcrossTheLock
         };
     }
 
+    // A refusal of the reader's own tap outranks a delivery notice, and the
+    // poll writes one of those every three seconds. Cleared here only because
+    // the send is what owns retiring its own line once an unlock retires it.
+    private function reportFrameSend(string $notice): void
+    {
+        if (! $this->safetyNumberChanged) {
+            $this->flashMessage = $notice;
+        }
+    }
+
     // The fingerprint of the six words the human actually compared, kept
     // because the tap outlives the unlock and the row may not: re-deriving on
     // the way back binds the confirmation to whatever the row says then, which
@@ -120,12 +130,14 @@ trait ConfirmsAcrossTheLock
         // responder that rebinds stalls a ceremony unseen.
         if ($state === null) {
             $this->awaitingPeer = false;
+            $this->safetyNumberChanged = true;
             $this->safetyWords = $gateway->safetyWordsFor((int) $this->pairingTokenId, $userId);
             $this->flashMessage = Lang::get('mobile::pairing.errors.safety_number_changed');
 
             return null;
         }
 
+        $this->safetyNumberChanged = false;
         $this->awaitingPeer = $state !== PairingGateway::STATE_CONFIRMED;
 
         return $state;
