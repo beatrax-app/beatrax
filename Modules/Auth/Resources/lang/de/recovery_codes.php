@@ -22,6 +22,7 @@ return [
         'heading' => 'Wiederherstellungscodes',
         'body' => 'Wiederherstellungscodes sind der einzige Weg zurück in dein Konto, wenn du dein Passwort vergisst.',
         'warning' => 'Sie werden gehasht gespeichert und können nicht erneut angezeigt werden. Ein neuer Satz setzt den alten sofort außer Kraft.',
+        'password_label' => 'Kontopasswort',
         'regenerate' => 'Neue Codes erzeugen',
         'regenerate_confirm' => 'Einen neuen Satz Wiederherstellungscodes erzeugen? Der Satz, den du jetzt hast, funktioniert ab dem Moment nicht mehr, in dem der neue entsteht, und er lässt sich nicht noch einmal anzeigen — eine ausgedruckte oder abgeschriebene Kopie wird damit wertlos. Sichere die neuen Codes, bevor du diese Seite verlässt.',
     ],
