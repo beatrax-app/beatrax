@@ -76,6 +76,15 @@ it('keeps two significant digits, the way the short form does', function (): voi
 // is not the one on every machine: Ubuntu's and macOS's disagree about Italian
 // today. Each entry records both answers and which one ships, so the guard
 // passes wherever it runs without going quiet about the other twenty-five.
+// What CLDR shortens $magnitude to in $code, or null where it gives that locale
+// no short form and the figure is written out — which is never "1" and letters.
+function compactFormFromCldr(string $code, int $magnitude): ?string
+{
+    $rendered = (string) (new NumberFormatter($code, NumberFormatter::DECIMAL_COMPACT_SHORT))->format($magnitude);
+
+    return preg_match('/^1(\D*)$/u', $rendered, $matches) === 1 ? $matches[1] : null;
+}
+
 const COMPACT_FORMS_CLDR_MOVED = [
     'it' => [
         1000 => ['K', null],
@@ -90,14 +99,8 @@ it('abbreviates a thousand and a million the way CLDR abbreviates them', functio
     $wrong = [];
 
     foreach (Locale::cases() as $locale) {
-        $short = new NumberFormatter($locale->value, NumberFormatter::DECIMAL_COMPACT_SHORT);
-
         foreach ([1000 => $locale->compactThousands(), 1000000 => $locale->compactMillions()] as $magnitude => $transcribed) {
-            $rendered = (string) $short->format($magnitude);
-
-            // A locale CLDR gives no short form at this magnitude renders the
-            // figure itself, which is never "1" followed by letters.
-            $cldr = preg_match('/^1(\D*)$/u', $rendered, $matches) === 1 ? $matches[1] : null;
+            $cldr = compactFormFromCldr($locale->value, $magnitude);
 
             if ($transcribed === $cldr) {
                 continue;
@@ -129,11 +132,8 @@ it('keeps no record of a moved short form that CLDR no longer gives', function (
     $stale = [];
 
     foreach (COMPACT_FORMS_CLDR_MOVED as $code => $magnitudes) {
-        $short = new NumberFormatter($code, NumberFormatter::DECIMAL_COMPACT_SHORT);
-
         foreach ($magnitudes as $magnitude => $answers) {
-            $rendered = (string) $short->format($magnitude);
-            $cldr = preg_match('/^1(\D*)$/u', $rendered, $matches) === 1 ? $matches[1] : null;
+            $cldr = compactFormFromCldr($code, $magnitude);
 
             if (! in_array($cldr, $answers, true)) {
                 $stale[] = $code.' at '.$magnitude.': this ICU says '.var_export($cldr, true)

@@ -70,6 +70,11 @@ enum Locale: string
     // here; it matches config/app.php's fallback_locale so the two never differ.
     public const string DEFAULT = self::En->value;
 
+    // The space CLDR puts between a figure and what follows it — a group mark,
+    // a currency symbol, a percent sign, a shortened thousand. It is no-break
+    // in every one of them so the two halves cannot land on separate lines.
+    private const string NBSP = "\u{00A0}";
+
     // The endonym shown in the switcher — each language named in itself, so
     // a Dutch-only reader still recognises their own option.
     public function label(): string
@@ -113,7 +118,7 @@ enum Locale: string
             self::En => ',',
             self::Fr => "\u{202F}",
             self::Bg, self::Cs, self::Et, self::Fi, self::Hu, self::Lt,
-            self::Lv, self::Nb, self::Pl, self::Sk, self::Sv, self::Uk => "\u{00A0}",
+            self::Lv, self::Nb, self::Pl, self::Sk, self::Sv, self::Uk => self::NBSP,
             self::Da, self::De, self::El, self::Es, self::Hr, self::It,
             self::Nl, self::Pt, self::Ro, self::Sl, self::Sr, self::Tr => '.',
         };
@@ -142,7 +147,7 @@ enum Locale: string
     // every other locale keeps a non-breaking space between the two.
     public function symbolGap(): string
     {
-        return $this === self::En || $this === self::Tr ? '' : "\u{00A0}";
+        return $this === self::En || $this === self::Tr ? '' : self::NBSP;
     }
 
     // Dutch is the only shipped locale whose negative pattern keeps the symbol
@@ -162,32 +167,25 @@ enum Locale: string
     public function compactThousands(): ?string
     {
         return match ($this) {
-            self::Cs => "\u{00A0}tis.",
-            self::Da => "\u{00A0}t",
+            self::Cs, self::Hr, self::Sk, self::Sl => self::NBSP.'tis.',
+            self::Da => self::NBSP.'t',
             self::De => null,
-            self::Et => "\u{00A0}tuh",
-            self::En => 'K',
-            self::Es => "\u{00A0}mil",
-            self::Fr => "\u{00A0}k",
-            self::Hr => "\u{00A0}tis.",
-            self::It => 'K',
-            self::Lv => "\u{00A0}t\u{016B}kst.",
-            self::Lt => "\u{00A0}t\u{016B}kst.",
-            self::Hu => "\u{00A0}E",
-            self::Nl => 'K',
+            self::Et => self::NBSP.'tuh',
+            self::En, self::It, self::Nl => 'K',
+            self::Es, self::Pt => self::NBSP.'mil',
+            self::Fr => self::NBSP.'k',
+            self::Lv, self::Lt => self::NBSP."t\u{016B}kst.",
+            self::Hu => self::NBSP.'E',
             self::Nb => 'k',
-            self::Pl => "\u{00A0}tys.",
-            self::Pt => "\u{00A0}mil",
-            self::Ro => "\u{00A0}K",
-            self::Sk => "\u{00A0}tis.",
-            self::Sl => "\u{00A0}tis.",
-            self::Sr => "\u{00A0}\u{0445}\u{0438}\u{0459}.",
-            self::Fi => "\u{00A0}t.",
-            self::Sv => "\u{00A0}tn",
-            self::Tr => "\u{00A0}B",
-            self::El => "\u{00A0}\u{03C7}\u{03B9}\u{03BB}.",
-            self::Bg => "\u{00A0}\u{0445}\u{0438}\u{043B}.",
-            self::Uk => "\u{00A0}\u{0442}\u{0438}\u{0441}.",
+            self::Pl => self::NBSP.'tys.',
+            self::Ro => self::NBSP.'K',
+            self::Sr => self::NBSP."\u{0445}\u{0438}\u{0459}.",
+            self::Fi => self::NBSP.'t.',
+            self::Sv => self::NBSP.'tn',
+            self::Tr => self::NBSP.'B',
+            self::El => self::NBSP."\u{03C7}\u{03B9}\u{03BB}.",
+            self::Bg => self::NBSP."\u{0445}\u{0438}\u{043B}.",
+            self::Uk => self::NBSP."\u{0442}\u{0438}\u{0441}.",
         };
     }
 
@@ -196,32 +194,23 @@ enum Locale: string
     public function compactMillions(): string
     {
         return match ($this) {
-            self::Cs => "\u{00A0}mil.",
-            self::Da => "\u{00A0}mio.",
-            self::De => "\u{00A0}Mio.",
-            self::Et => "\u{00A0}mln",
+            self::Cs, self::Hr, self::Ro, self::Sk => self::NBSP.'mil.',
+            self::Da, self::Sl => self::NBSP.'mio.',
+            self::De => self::NBSP.'Mio.',
+            self::Et, self::Pl => self::NBSP.'mln',
             self::En => 'M',
-            self::Es => "\u{00A0}M",
-            self::Fr => "\u{00A0}M",
-            self::Hr => "\u{00A0}mil.",
-            self::It => "\u{00A0}Mln",
-            self::Lv => "\u{00A0}milj.",
-            self::Lt => "\u{00A0}mln.",
-            self::Hu => "\u{00A0}M",
-            self::Nl => "\u{00A0}mln.",
-            self::Nb => "\u{00A0}mill.",
-            self::Pl => "\u{00A0}mln",
-            self::Pt => "\u{00A0}mi",
-            self::Ro => "\u{00A0}mil.",
-            self::Sk => "\u{00A0}mil.",
-            self::Sl => "\u{00A0}mio.",
-            self::Sr => "\u{00A0}\u{043C}\u{0438}\u{043B}.",
-            self::Fi => "\u{00A0}milj.",
-            self::Sv => "\u{00A0}mn",
-            self::Tr => "\u{00A0}Mn",
-            self::El => "\u{00A0}\u{03B5}\u{03BA}.",
-            self::Bg => "\u{00A0}\u{043C}\u{043B}\u{043D}.",
-            self::Uk => "\u{00A0}\u{043C}\u{043B}\u{043D}",
+            self::Es, self::Fr, self::Hu => self::NBSP.'M',
+            self::It => self::NBSP.'Mln',
+            self::Lv, self::Fi => self::NBSP.'milj.',
+            self::Lt, self::Nl => self::NBSP.'mln.',
+            self::Nb => self::NBSP.'mill.',
+            self::Pt => self::NBSP.'mi',
+            self::Sr => self::NBSP."\u{043C}\u{0438}\u{043B}.",
+            self::Sv => self::NBSP.'mn',
+            self::Tr => self::NBSP.'Mn',
+            self::El => self::NBSP."\u{03B5}\u{03BA}.",
+            self::Bg => self::NBSP."\u{043C}\u{043B}\u{043D}.",
+            self::Uk => self::NBSP."\u{043C}\u{043B}\u{043D}",
         };
     }
 
@@ -242,7 +231,7 @@ enum Locale: string
     {
         return match ($this) {
             self::Cs, self::Da, self::De, self::Es, self::Fi, self::Fr, self::Hr,
-            self::Lt, self::Nb, self::Ro, self::Sk, self::Sl, self::Sv => "\u{00A0}",
+            self::Lt, self::Nb, self::Ro, self::Sk, self::Sl, self::Sv => self::NBSP,
             self::Bg, self::El, self::En, self::Et, self::Hu, self::It, self::Lv,
             self::Nl, self::Pl, self::Pt, self::Sr, self::Tr, self::Uk => '',
         };
