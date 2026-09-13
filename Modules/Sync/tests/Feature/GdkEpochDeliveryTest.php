@@ -615,7 +615,7 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
     expect($loaded->keyFor($selfMinted->epochId))->toBe($localKeyHex, 'a used local epoch key must survive a colliding delivery');
 });
 
-it('rejects a GDK_EPOCH_WRAP whose sender is not a confirmed device and does not append (F1)', function (): void {
+it('rejects a GDK_EPOCH_WRAP whose sender is not a confirmed device and does not append', function (): void {
     $user = deliveryUser('delivery-unconfirmed-sender-user');
 
     /** @var Session $session */
@@ -650,7 +650,7 @@ it('rejects a GDK_EPOCH_WRAP whose sender is not a confirmed device and does not
     expect($loaded->keyFor(21))->toBeNull('a wrap from an unconfirmed/unknown sender must never be appended');
 });
 
-it('rejects a GDK_EPOCH_WRAP from a confirmed sender whose signature is corrupted and does not append (F1)', function (): void {
+it('rejects a GDK_EPOCH_WRAP from a confirmed sender whose signature is corrupted and does not append', function (): void {
     $user = deliveryUser('delivery-corrupt-sig-user');
 
     /** @var Session $session */

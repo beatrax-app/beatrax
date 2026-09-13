@@ -144,5 +144,10 @@ it('does not turn a repair that cannot run into a restore that failed', function
     $db = app(DatabaseManager::class);
     $db->connection()->getSchemaBuilder()->drop('oauth_secrets');
 
-    expect(fn () => event(new DatabaseRestored('/tmp/pre-restore.sqlite')))->not->toThrow(Throwable::class);
+    $responses = event(new DatabaseRestored('/tmp/pre-restore.sqlite'));
+
+    // One response, and it is the listener's own: an empty array would mean
+    // nothing ran and this proved nothing, and anything short of a return
+    // would have left the dispatcher with no response to collect.
+    expect($responses)->toBe([null]);
 });

@@ -35,7 +35,7 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow();
 });
 
-it('admits the initiator (desktop) into the phone-simulated local registry after both-confirm (G1 + G2)', function (): void {
+it('admits the initiator (desktop) into the phone-simulated local registry after both-confirm', function (): void {
     $user = crossDeviceUser('cross-device-admission');
 
     /** @var PairingTokenService $service */

@@ -299,7 +299,7 @@ it('happy path: a normal blob with valid dids still delivers and drains', functi
     expect(base64_decode((string) $drainResult['body']['blobs'][0]['blob'], true))->toBe($blob);
 });
 
-it('throttles a burst of deliveries from one source IP with 429 rate_limited (L13)', function (): void {
+it('throttles a burst of deliveries from one source IP with 429 rate_limited', function (): void {
     $recipientDid = 'device-flood-victim';
     $flooderIp = '203.0.113.7';
 
@@ -332,7 +332,7 @@ it('throttles a burst of deliveries from one source IP with 429 rate_limited (L1
 // authorization check, so an unauthenticated caller could still spend a query
 // per request. Only deliver was throttled, which is the endpoint that needs it
 // least — it at least writes the thing the caller asked for.
-it('throttles an unauthenticated burst against drain, not just deliver (L13)', function (): void {
+it('throttles an unauthenticated burst against drain, not just deliver', function (): void {
     $flooderIp = '203.0.113.9';
 
     $drain = fn (string $ip): array => dispatchRelayLimitsRequest(
@@ -353,7 +353,7 @@ it('throttles an unauthenticated burst against drain, not just deliver (L13)', f
     expect($drain('198.51.100.29')['status'])->toBe(401);
 });
 
-it('throttles an unauthenticated burst against confirm (L13)', function (): void {
+it('throttles an unauthenticated burst against confirm', function (): void {
     $flooderIp = '203.0.113.11';
 
     $confirm = fn (string $ip): array => dispatchRelayLimitsRequest(

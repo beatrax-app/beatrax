@@ -37,10 +37,44 @@ it('round-trips a key through store()/read() on the fallback path', function ():
     expect($custodian->read($custodian->store($raw)))->toBe($raw);
 });
 
-it('forget() is a safe no-op off-device', function (): void {
-    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1), new NullLogger);
+// Off-device store() is pass-through, so the handle IS the key and there is no
+// slot to delete. Recording the native calls is what says so: a delete attempt
+// here would reach a facade this toolchain does not have.
+it('forget() reaches no native call off-device and leaves the handle readable', function (): void {
+    $custodian = new class(secureStorageCurrentUser(1), new NullLogger) extends SecureStorageKeyCustodian
+    {
+        /** @var list<string> */
+        public array $nativeCalls = [];
 
-    expect(fn () => $custodian->forget('beatrax.session.data_key.1'))->not->toThrow(Throwable::class);
+        protected function nativeSet(string $key, string $value): bool
+        {
+            $this->nativeCalls[] = 'set';
+
+            return false;
+        }
+
+        protected function nativeGet(string $key): ?string
+        {
+            $this->nativeCalls[] = 'get';
+
+            return null;
+        }
+
+        protected function nativeDelete(string $key): bool
+        {
+            $this->nativeCalls[] = 'delete';
+
+            return false;
+        }
+    };
+
+    $raw = random_bytes(32);
+    $handle = $custodian->store($raw);
+
+    $custodian->forget($handle);
+
+    expect($custodian->nativeCalls)->toBe([])
+        ->and($custodian->read($handle))->toBe($raw);
 });
 
 it('stores the key under a per-user slot and returns the slot name as the handle', function (): void {

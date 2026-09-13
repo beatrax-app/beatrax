@@ -28,8 +28,6 @@ use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 
 /**
  * @link ../../../../.docs/architecture/ingestion-pipeline.md#confirm-bounded-recorder-and-post-commit-dispatch
- */
-/**
  * @link ../../../../.docs/architecture/measuring-write-cost.md
  */
 final readonly class ConfirmImport implements ConfirmsImports
