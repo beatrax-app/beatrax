@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Support\SampleData;
+namespace Database\Seeders;
 
 use Closure;
 use Illuminate\Contracts\Console\Kernel;
@@ -32,6 +32,7 @@ use Modules\Ledger\Database\Seeders\Demo\DemoAccountsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransactionSplitsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransactionsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransferPairsSeeder;
+use Modules\Ledger\Database\Seeders\Demo\DemoUsersSeeder;
 use Modules\Ledger\Models\Account;
 use Modules\Notifications\Database\Seeders\Demo\DemoNotificationsSeeder;
 use Modules\Onboarding\Database\Seeders\Demo\DemoWizardProgressSeeder;
@@ -46,7 +47,7 @@ use Modules\Tax\Database\Seeders\Demo\DemoTaxTagsSeeder;
 // control over the reader's own. Two seeders write the install's own state
 // rather than its ledger and are reached only by the first.
 /**
- * @link ../../../.docs/features/core/architecture.md
+ * @link ../../.docs/features/core/architecture.md
  */
 final readonly class SampleDatasetSeeder implements SampleDataLoader
 {
@@ -57,6 +58,7 @@ final readonly class SampleDatasetSeeder implements SampleDataLoader
     public const string READER_PERSONA = 'demo-1';
 
     public function __construct(
+        private DemoUsersSeeder $users,
         private CurrenciesSeeder $currencies,
         private DefaultCategoryTreeSeeder $categories,
         private DemoUserPreferencesSeeder $userPreferences,
@@ -88,6 +90,26 @@ final readonly class SampleDatasetSeeder implements SampleDataLoader
         private DemoNotificationsSeeder $notifications,
         private Kernel $console,
     ) {}
+
+    // The two invented personas, seeded only by `demo:seed`: the in-application
+    // control runs the dataset over the reader's own account and must not mint
+    // users beside it. Reached through this class because a cross-module import
+    // is legal at the application root and nowhere inside `Modules/`.
+    /**
+     * @return array<string, User>
+     */
+    public function seedPersonas(): array
+    {
+        return $this->users->run();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function personaUsernames(): array
+    {
+        return DemoUsersSeeder::usernames();
+    }
 
     /**
      * @return array<string, int>

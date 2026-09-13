@@ -17,7 +17,7 @@ function replicatedColumnCorpus(): array
     $registry = base_path(REPLICATED_COLUMN_REGISTRY);
     $sources = [];
 
-    foreach (['Modules', 'app'] as $root) {
+    foreach (['Modules'] as $root) {
         $walk = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path($root)));
 
         foreach ($walk as $file) {

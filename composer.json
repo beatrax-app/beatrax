@@ -106,15 +106,14 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/",
             "Modules\\Auth\\": "Modules/Auth/",
             "Modules\\": "Modules/",
-            "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {
         "psr-4": {
+            "Beatrax\\Tooling\\PhpStan\\": "tools/PhpStan/",
             "Tests\\": "tests/",
             "Modules\\Anomaly\\Tests\\": "Modules/Anomaly/tests/",
             "Modules\\Auth\\Tests\\": "Modules/Auth/tests/",
@@ -151,7 +150,10 @@
             "Modules\\Notifications\\Tests\\": "Modules/Notifications/tests/",
             "Modules\\Position\\Tests\\": "Modules/Position/tests/",
             "Modules\\OpenBanking\\Tests\\": "Modules/OpenBanking/tests/"
-        }
+        },
+        "exclude-from-classmap": [
+            "tools/PhpStan/Rules/Fixtures/"
+        ]
     },
     "scripts": {
         "pre-autoload-dump": [
@@ -193,7 +195,8 @@
             "npx concurrently -k -c \"#93c5fd,#c4b5fd\" \"php artisan native:run --no-interaction\" \"npm run dev\" --names=app,vite"
         ],
         "post-update-cmd": [
-            "@php artisan native:install --force --quiet --publish"
+            "@php artisan native:install --force --quiet --publish",
+            "@php scripts/nativephp_forget_published_provider.php"
         ]
     },
     "scripts-descriptions": {

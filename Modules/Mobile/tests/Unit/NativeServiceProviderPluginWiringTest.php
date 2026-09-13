@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Providers\NativeServiceProvider;
 use Beatrax\BiometricVault\BiometricVaultServiceProvider;
+use Modules\Mobile\Providers\NativeServiceProvider;
 use Native\Mobile\Providers\BiometricsServiceProvider;
 use Native\Mobile\Providers\NetworkServiceProvider;
 use Native\Mobile\Providers\ScannerServiceProvider;
@@ -20,7 +20,7 @@ use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 it('registers NativeServiceProvider in the mobile provider manifest (mobile-app/bootstrap/providers.php)', function (): void {
     $manifest = (string) file_get_contents(base_path('mobile-app/bootstrap/providers.php'));
 
-    expect($manifest)->toContain('use App\Providers\NativeServiceProvider;');
+    expect($manifest)->toContain('use Modules\Mobile\Providers\NativeServiceProvider;');
     expect($manifest)->toContain('NativeServiceProvider::class');
     // Both manifest paths resolve relative to the repo root. Run from the
     // mobile-app root they resolve to mobile-app/mobile-app/… instead, describing
@@ -51,7 +51,7 @@ it('NativeServiceProvider::plugins() lists all 8 registered NativePHP mobile plu
 });
 
 it('NativeServiceProvider.php source references the 8 plugin FQCNs verbatim (belt-and-suspenders on the compiled-build source)', function (): void {
-    $source = (string) file_get_contents(base_path('app/Providers/NativeServiceProvider.php'));
+    $source = (string) file_get_contents(base_path('Modules/Mobile/Providers/NativeServiceProvider.php'));
 
     foreach ([
         'Native\Mobile\Providers\BiometricsServiceProvider',

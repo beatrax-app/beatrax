@@ -34,7 +34,7 @@ function euroLiteralSources(): array
     // view or a root seeder is the same frozen currency in front of the same
     // reader. A walk reading two roots while claiming the tree is what the
     // exemption sweep this file came out of exists to refuse.
-    foreach (['Modules', 'app', 'resources', 'routes', 'config', 'database'] as $root) {
+    foreach (['Modules', 'resources', 'routes', 'config', 'database'] as $root) {
         $absolute = base_path($root);
 
         if (is_dir($absolute)) {

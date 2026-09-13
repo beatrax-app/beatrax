@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Fixtures\Camt053Rebaser;
-use App\Fixtures\MonthShift;
-use App\Fixtures\Mt940Rebaser;
-use App\Fixtures\PresetCsvRebaser;
 use Carbon\CarbonImmutable;
+use Modules\DevMode\Internal\Fixtures\Camt053Rebaser;
+use Modules\DevMode\Internal\Fixtures\MonthShift;
+use Modules\DevMode\Internal\Fixtures\Mt940Rebaser;
+use Modules\DevMode\Internal\Fixtures\PresetCsvRebaser;
 
 $fixtures = __DIR__.'/../fixtures/';
 

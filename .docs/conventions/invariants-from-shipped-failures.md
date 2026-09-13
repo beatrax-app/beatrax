@@ -514,9 +514,11 @@ go green is to move the code.
 
 Three carve-outs are deliberate. `moneyphp/money` is not a second money library
 by choice — `genkgo/camt` returns its objects, so the CAMT adapter unwraps them
-to minor units in the same file it parses in. `bootstrap/` and `app/Providers/`
-are the application's composition root, whose whole job is naming the packages
-the container assembles. And `Native\Desktop` already has a tighter, reviewed
+to minor units in the same file it parses in. `bootstrap/` and the module
+providers are the application's composition root, whose whole job is naming the
+packages the container assembles — and they are carved out by NAME, one file at
+a time, never by directory: naming the two directories excused eleven files to
+buy one. And `Native\Desktop` already has a tighter, reviewed
 rule in `BoundaryArchTest`; two rules over one namespace would drift apart, so
 this one defers, and an assertion at the foot of the file fails if that rule
 ever disappears.

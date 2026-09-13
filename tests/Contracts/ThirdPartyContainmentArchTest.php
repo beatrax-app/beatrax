@@ -66,8 +66,8 @@ function thirdPartySeams(): array
         'Monolog' => ['Modules/DevMode/Internal/Logging'],
         'Native\Mobile' => ['Modules/Mobile/Internal'],
         'NativePHP' => ['Modules/Mobile/Internal'],
-        'PhpParser' => ['app/PhpStan'],
-        'PHPStan' => ['app/PhpStan'],
+        'PhpParser' => ['tools/PhpStan'],
+        'PHPStan' => ['tools/PhpStan'],
         'Ramsey\Uuid' => ['Modules/Sync/Internal/Identity'],
         // Same seam as Amp, and for the same reason: the event loop is what a
         // long-running daemon schedules on, and DaemonTicker is the one place
@@ -232,10 +232,10 @@ function thirdPartyOwnerOf(string $namespace): string
     return '';
 }
 
-/** @return string the module a repo-relative path belongs to, or 'app' outside Modules/ */
+/** @return string the module a repo-relative path belongs to, or 'root' outside Modules/ */
 function thirdPartyModuleOf(string $relativePath): string
 {
-    return preg_match('#^Modules/([^/]+)/#', $relativePath, $m) === 1 ? $m[1] : 'app';
+    return preg_match('#^Modules/([^/]+)/#', $relativePath, $m) === 1 ? $m[1] : 'root';
 }
 
 // Wiring is not domain code: a provider binds a package into the container and
@@ -258,9 +258,27 @@ function thirdPartyIsModuleEntrypoint(string $relativePath): bool
 function thirdPartyCompositionRoots(): array
 {
     return [
-        'app/Providers/NativeServiceProvider.php' => [
+        'Modules/Mobile/Providers/NativeServiceProvider.php' => [
             'reason' => 'NativePHP\'s published plugin-registration stub: its plugins() return type names the mobile plugin provider classes verbatim per the vendor contract, and those packages install only under mobile-app/vendor',
             'proves' => '/function plugins\(\)/',
+        ],
+        // These three do not CALL the package, they ARE it: PHPStan scanFiles
+        // declarations standing in for signatures the repo-root toolchain can
+        // never autoload, because nativephp/desktop conflicts with
+        // nativephp/mobile and the packages install only under mobile-app/vendor.
+        // `proves` asks for the namespace DECLARATION, which our own code
+        // never carries — an import would not match it.
+        'tools/phpstan-stubs/native-mobile-edge.php' => [
+            'reason' => 'a PHPStan scanFiles stub declaring the nativephp/mobile edge surface, not code that calls it',
+            'proves' => '/^namespace Native\\\\Mobile\\\\Edge;/m',
+        ],
+        'tools/phpstan-stubs/native-mobile-scanner.php' => [
+            'reason' => 'a PHPStan scanFiles stub declaring the nativephp/mobile-scanner surface, not code that calls it',
+            'proves' => '/^namespace Native\\\\Mobile\\\\Facades;/m',
+        ],
+        'tools/phpstan-stubs/native-mobile-local-notifications.php' => [
+            'reason' => 'a PHPStan scanFiles stub declaring the nativephp/mobile-local-notifications facade, not code that calls it',
+            'proves' => '/^namespace NativePHP\\\\LocalNotifications\\\\Facades;/m',
         ],
     ];
 }
@@ -282,7 +300,7 @@ it('reaches every third-party package through a seam of ours', function (): void
     // reports — with nothing else in the output looking wrong.
     expect(count($installed))->toBeGreaterThan(50, 'almost no package namespaces were read out of the composer manifest — the read is broken, not the install.');
 
-    foreach (['app', 'Modules', 'bootstrap', 'routes'] as $root) {
+    foreach (['Modules', 'tools', 'database/seeders', 'bootstrap', 'routes'] as $root) {
         foreach (thirdPartySourceFiles($root, wantTests: false) as $file) {
             $walked++;
 
@@ -364,7 +382,7 @@ it('declares no seam that does not exist or is not used', function (): void {
     $installed = thirdPartyInstalledPrefixes();
     $used = [];
 
-    foreach (['app', 'Modules', 'bootstrap', 'routes'] as $root) {
+    foreach (['Modules', 'tools', 'database/seeders', 'bootstrap', 'routes'] as $root) {
         foreach (thirdPartySourceFiles($root, wantTests: false) as $file) {
             foreach (thirdPartyPrefixesIn($file, $installed) as $namespace) {
                 $owner = thirdPartyOwnerOf($namespace);
@@ -512,7 +530,7 @@ it('declares no runtime-layer namespace that nothing in this repository names', 
     // reached only from a test: Mockery by seven, Nwidart by the one that
     // asserts the phone's module wiring. A production-only count would read
     // both as excusing nothing and delete two correct entries.
-    foreach ([['app', false], ['Modules', false], ['bootstrap', false], ['routes', false], ['Modules', true]] as [$root, $wantTests]) {
+    foreach ([['Modules', false], ['tools', false], ['database/seeders', false], ['bootstrap', false], ['routes', false], ['Modules', true]] as [$root, $wantTests]) {
         foreach (thirdPartySourceFiles($root, wantTests: $wantTests) as $file) {
             foreach (thirdPartyPrefixesIn($file, $installed) as $namespace) {
                 $owner = thirdPartyOwnerOf($namespace);

@@ -4,7 +4,7 @@ parameters:
     # the BadPageLayoutFixture proves nothing below it.
     level: 5
     paths:
-        - app/PhpStan/Rules/Fixtures
+        - tools/PhpStan/Rules/Fixtures
     reportUnmatchedIgnoredErrors: false
     ignoreErrors:
         - '#has invalid type Modules\\Ledger\\Internal\\Casts\\MoneyMinorCast#'
@@ -19,10 +19,10 @@ parameters:
         - '#interface Illuminate\\Contracts\\Database\\Eloquent\\Builder is not generic#'
 
 rules:
-    - App\PhpStan\Rules\BoundaryRule
+    - Beatrax\Tooling\PhpStan\Rules\BoundaryRule
 
 services:
     -
-        class: App\PhpStan\Reflection\PageLayoutMacrosExtension
+        class: Beatrax\Tooling\PhpStan\Reflection\PageLayoutMacrosExtension
         tags:
             - phpstan.broker.methodsClassReflectionExtension

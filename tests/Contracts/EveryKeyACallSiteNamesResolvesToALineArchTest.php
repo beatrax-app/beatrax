@@ -25,7 +25,7 @@ function callSiteKeySourceFiles(): array
     $root = callSiteKeyRepoRoot();
 
     $files = [];
-    foreach (['Modules', 'app', 'resources', 'routes', 'config', 'database'] as $dir) {
+    foreach (['Modules', 'resources', 'routes', 'config', 'database'] as $dir) {
         if (! is_dir($root.'/'.$dir)) {
             continue;
         }

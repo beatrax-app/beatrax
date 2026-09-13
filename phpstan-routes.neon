@@ -24,4 +24,4 @@ parameters:
             - Modules/*/Providers/*
 
 rules:
-    - App\PhpStan\Rules\BoundaryRule
+    - Beatrax\Tooling\PhpStan\Rules\BoundaryRule

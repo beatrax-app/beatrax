@@ -16,7 +16,7 @@ use Modules\Core\Public\Support\PatternScan;
 /** @return list<string> absolute paths to every in-scope PHP source file */
 function routeQueryConcatFiles(): array
 {
-    $roots = ['Modules', 'app', 'resources', 'routes', 'tests'];
+    $roots = ['Modules', 'resources', 'routes', 'tests'];
     $files = [];
     foreach ($roots as $root) {
         $path = base_path($root);

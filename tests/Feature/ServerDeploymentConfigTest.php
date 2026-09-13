@@ -107,7 +107,7 @@ it('offers no server database in any .env an operator copies', function (): void
 });
 
 it('names no withdrawn engine in the command that writes an operator\'s .env', function (): void {
-    $source = (string) file_get_contents(base_path('app/Console/Commands/SetupCommand.php'));
+    $source = (string) file_get_contents(base_path('Modules/DevMode/Internal/Console/SetupCommand.php'));
     $offenders = [];
 
     // String literals only. A comment explaining why the option is gone is

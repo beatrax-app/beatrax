@@ -17,6 +17,18 @@ SQLite in write-ahead journal mode.
 The spec page is
 [`30-repos/beatrax.md`](https://github.com/beatrax-app/spec/blob/main/30-repos/beatrax.md).
 
+**There is no `app/`.** Laravel's default application directory does not exist
+here and nothing autoloads `App\` — every class lives in the module that owns
+it. The one thing still called `App\Models\User` is a `class_alias` onto
+`Modules\Core\Models\User`, registered by `CoreServiceProvider` because
+`config/auth.php` and the framework's notification routing expect that name. The
+rest went where it belonged: PHPStan rules to `tools/PhpStan/`
+(`Beatrax\Tooling\PhpStan\`, dev-only), developer commands and statement-fixture
+rebasers to `Modules/DevMode/`, the two published provider stubs to the modules
+that register them, and the sample-data composition root to `database/seeders/`
+— the one place naming thirty modules' seeders is legal, since `BoundaryRule`
+only governs importers under `Modules/`.
+
 ## The one rule you cannot break here
 
 **A module's `Internal\` namespace is private.** The cross-module surface is
@@ -24,7 +36,7 @@ The spec page is
 are a deliberate shared read-seam other modules may use directly. Nothing else
 crosses.
 
-Enforced twice, so it cannot be argued around: `App\PhpStan\Rules\BoundaryRule`
+Enforced twice, so it cannot be argued around: `Beatrax\Tooling\PhpStan\Rules\BoundaryRule`
 at static-analysis time, and `pinnedCrossModuleInternalImports` in
 `tests/Contracts/BoundaryArchTest.php`, which pins every crossing that exists in
 production and in tests. A Blade view mounting a neighbour's Livewire component
@@ -81,6 +93,13 @@ Two things are shared between worktrees and will bite you:
   somewhere and copy it back.
 - **`git checkout -- <file>` reverts to the index**, so it destroys uncommitted
   work rather than undoing only the thing you planted.
+- **`vendor/composer/` must be each worktree's own.** `cp -al` shares file
+  inodes and composer rewrites those files in place, so one worktree's
+  `composer dump-autoload` hands its classmap to every sibling — six of them,
+  the main checkout included, once failed static analysis with
+  `Class "App\PhpStan\..." not found` for a rename none of them had made.
+  `bin/worktree.sh` unshares that one directory and refuses to finish if it is
+  still shared; if you build a worktree by hand, do the same.
 
 ## Code standards (enforced)
 

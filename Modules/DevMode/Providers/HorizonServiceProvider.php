@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Providers;
+namespace Modules\DevMode\Providers;
 
 use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Http\Request;

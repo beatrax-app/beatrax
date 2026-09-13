@@ -30,7 +30,7 @@ const PROJECT_LINKS_ANY_ORG_PATTERN = '#github\.com[/:]([A-Za-z0-9._-]+)/beatrax
 // Every root holding first-party source of the kinds below. lang/ is here
 // because the twenty-six locale files that shipped the wrong org are lang
 // files, and a rule written after that failure walked past them.
-const PROJECT_LINKS_ROOTS = ['.claude', 'Modules', 'app', 'bootstrap', 'config', 'database', 'lang', 'public', 'resources', 'routes', 'scripts', 'tools'];
+const PROJECT_LINKS_ROOTS = ['.claude', 'Modules', 'bootstrap', 'config', 'database', 'lang', 'public', 'resources', 'routes', 'scripts', 'tools'];
 
 const PROJECT_LINKS_EXTENSIONS = ['php', 'js', 'mjs', 'json', 'yml', 'yaml'];
 

@@ -221,7 +221,17 @@ it('runs every patch script from some chain, or names why it does not', function
     // them would invoke the build behaviour under test.
     $invoked = [];
 
-    foreach ([$directory.'/nativephp_patch_all.php', dirname($directory).'/config/nativephp.php'] as $chain) {
+    // composer.json is the third chain: `post-update-cmd` runs the script that
+    // deletes the provider `native:install` republishes, and it is the only
+    // place that one is named. Left out, a script that runs on every
+    // `composer update` read as an orphan nothing invokes.
+    $chains = [
+        $directory.'/nativephp_patch_all.php',
+        dirname($directory).'/config/nativephp.php',
+        dirname($directory).'/composer.json',
+    ];
+
+    foreach ($chains as $chain) {
         if (! is_file($chain)) {
             continue;
         }

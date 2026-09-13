@@ -49,7 +49,7 @@ function passwordWriteKeyPattern(): string
  */
 function filesWritingANewPasswordHash(): array
 {
-    $roots = [base_path('Modules'), base_path('app')];
+    $roots = [base_path('Modules')];
     $hits = [];
 
     foreach ($roots as $root) {

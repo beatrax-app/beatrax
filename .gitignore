@@ -67,10 +67,15 @@ yarn-error.log
 # Modules/Ingestion/tests/fixtures/ics/ics-sample-1.txt and the redacted
 # PayPal CSV under Modules/Ingestion/tests/fixtures/paypal/paypal-sample-1.csv
 # ARE committed; the raw .pdf / .csv lives here on the user's machine only.
-/local/*
-!/local/paypal/
-/local/paypal/*
-!/local/paypal/.gitkeep
+#
+# Under storage/app/ rather than at the repository root, because both shells
+# already exclude storage/app from a build and .gitignore does not bound one.
+# Outside storage/app/private, which is the `local` disk's root: this is a
+# developer's manual drop, not a directory the application enumerates.
+/storage/app/dev-imports/*
+!/storage/app/dev-imports/paypal/
+/storage/app/dev-imports/paypal/*
+!/storage/app/dev-imports/paypal/.gitkeep
 
 # Module activation state — COMMITTED (not ignored): nwidart's FileActivator
 # reads this at boot, and Tax's provider gates route registration on

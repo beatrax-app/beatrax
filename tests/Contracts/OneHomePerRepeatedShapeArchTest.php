@@ -48,7 +48,7 @@ it('flattens a parsed date to its day through SafeDate and nowhere else', functi
     $offenders = [];
     $walked = 0;
 
-    foreach ([base_path('Modules'), base_path('app')] as $root) {
+    foreach ([base_path('Modules')] as $root) {
         if (! is_dir($root)) {
             continue;
         }
@@ -129,7 +129,7 @@ it('spells the snooze windows once, in the enum that owns them', function (): vo
     $offenders = [];
     $walked = 0;
 
-    foreach ([base_path('Modules'), base_path('app'), base_path('resources')] as $root) {
+    foreach ([base_path('Modules'), base_path('resources')] as $root) {
         if (! is_dir($root)) {
             continue;
         }
@@ -181,7 +181,7 @@ it('spells the brand title suffix once, in the class that owns it', function ():
     $offenders = [];
     $walked = 0;
 
-    foreach ([base_path('Modules'), base_path('app'), base_path('resources')] as $root) {
+    foreach ([base_path('Modules'), base_path('resources')] as $root) {
         if (! is_dir($root)) {
             continue;
         }

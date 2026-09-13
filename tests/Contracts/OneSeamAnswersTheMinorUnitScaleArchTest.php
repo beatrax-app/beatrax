@@ -28,7 +28,7 @@ function minorUnitScaleSources(): array
     // Every root that ships PHP or Blade. "Exactly once" is a claim about the
     // whole application, and a view or a release script turning a scale into a
     // decimal count is the same second reader as a service doing it.
-    foreach (['Modules', 'app', 'database', 'config', 'routes', 'resources', 'bootstrap', 'lang', 'scripts'] as $directory) {
+    foreach (['Modules', 'database', 'config', 'routes', 'resources', 'bootstrap', 'lang', 'scripts'] as $directory) {
         if (! is_dir($root.'/'.$directory)) {
             continue;
         }

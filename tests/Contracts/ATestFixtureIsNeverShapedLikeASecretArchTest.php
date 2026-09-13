@@ -36,7 +36,7 @@ function secretGateTestRoots(): array
  */
 function secretGateRepositoryRoots(): array
 {
-    return ['app', 'bootstrap', 'config', 'database', 'lang', 'Modules', 'resources', 'routes', 'scripts', 'tests'];
+    return ['bootstrap', 'config', 'database', 'lang', 'Modules', 'resources', 'routes', 'scripts', 'tests'];
 }
 
 /** @return array<string, string> absolute path => path relative to the repository root */

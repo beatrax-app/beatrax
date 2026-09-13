@@ -33,7 +33,7 @@ it('sets the busy timeout in exactly the two places that open their own PDO', fu
     // a scheduler script or a bootstrap file opening its own PDO would lower the
     // timeout for the process just as effectively, and the old walk could not
     // see one.
-    foreach (['Modules', 'app', 'bootstrap', 'config', 'database', 'routes', 'scripts'] as $root) {
+    foreach (['Modules', 'bootstrap', 'config', 'database', 'routes', 'scripts'] as $root) {
         $directory = base_path($root);
 
         if (! is_dir($directory)) {

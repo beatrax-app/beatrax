@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Providers;
+namespace Modules\Mobile\Providers;
 
 use Beatrax\BiometricVault\BiometricVaultServiceProvider;
 use Illuminate\Support\ServiceProvider;

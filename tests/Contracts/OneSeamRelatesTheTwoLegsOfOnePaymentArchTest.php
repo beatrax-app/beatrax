@@ -24,7 +24,7 @@ function settledLegSeamSources(): array
     // Every root that ships PHP or Blade. "Exactly one place" is a claim about
     // the application, and the narrower five could not see a view, a bootstrap
     // file or a release script deriving the rate for itself.
-    foreach (['Modules', 'app', 'database', 'config', 'routes', 'resources', 'bootstrap', 'lang', 'scripts'] as $directory) {
+    foreach (['Modules', 'database', 'config', 'routes', 'resources', 'bootstrap', 'lang', 'scripts'] as $directory) {
         if (! is_dir($root.'/'.$directory)) {
             continue;
         }

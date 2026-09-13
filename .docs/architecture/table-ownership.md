@@ -1,7 +1,7 @@
 # Table ownership
 
 Module boundaries here are enforced in one dimension: the `use` statement.
-`App\PhpStan\Rules\BoundaryRule` and the `arch(...)` rules in
+`Beatrax\Tooling\PhpStan\Rules\BoundaryRule` and the `arch(...)` rules in
 `tests/Contracts/BoundaryArchTest.php` both police who imports whom.
 
 The database is the other dimension, and it is much wider. Modules reach across

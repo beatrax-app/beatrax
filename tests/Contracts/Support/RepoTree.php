@@ -43,7 +43,7 @@ final class RepoTree
     public const array SCOPES = [
         self::EVERY_PHP_FILE => [
             'extension' => '.php',
-            'covers' => ['.claude', 'app', 'bootstrap', 'config', 'database', 'lang', 'mobile-app', 'Modules', 'public', 'resources', 'routes', 'scripts', 'tests', 'tools'],
+            'covers' => ['.claude', 'bootstrap', 'config', 'database', 'lang', 'mobile-app', 'Modules', 'public', 'resources', 'routes', 'scripts', 'tests', 'tools'],
             'declines' => [],
             'skips' => [
                 '/storage/framework/' => 'Laravel\'s compiled Blade cache, generated under a covered root and never tracked. The Blade it is compiled from is walked as Blade, so reading the output too reports the same template twice and blames the compiler\'s own generated code for shapes the source never wrote',
@@ -52,7 +52,7 @@ final class RepoTree
         ],
         self::PRODUCTION_PHP => [
             'extension' => '.php',
-            'covers' => ['.claude', 'app', 'bootstrap', 'config', 'database', 'lang', 'mobile-app', 'Modules', 'public', 'resources', 'routes', 'scripts', 'tools'],
+            'covers' => ['.claude', 'bootstrap', 'config', 'database', 'lang', 'mobile-app', 'Modules', 'public', 'resources', 'routes', 'scripts', 'tools'],
             'declines' => [
                 'tests' => 'the suite asserts about production code, and its doubles name the forbidden shapes on purpose, so a rule about shipped behaviour reads its own fixtures as offenders',
             ],
@@ -74,14 +74,14 @@ final class RepoTree
         ],
         self::RUNTIME_DOMAIN_PHP => [
             'extension' => '.php',
-            'covers' => ['app', 'Modules'],
+            'covers' => ['Modules'],
             'declines' => [
                 '.claude' => 'editor hooks, which run against this tree and are not part of it',
                 'bootstrap' => 'the application assembling itself, never a domain write',
                 'config' => 'configuration arrays',
                 'database' => 'the shared migrations and seeders: schema and reference data, which is how those rows are meant to arrive',
                 'lang' => 'translation arrays',
-                'mobile-app' => 'its Modules/ and app/ are symlinks to the two roots already walked',
+                'mobile-app' => 'its Modules/ and tools/ are symlinks to the roots already walked',
                 'public' => 'the built front end',
                 'resources' => 'Blade views and assets',
                 'routes' => 'the application assembling itself',

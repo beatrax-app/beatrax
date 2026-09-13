@@ -1757,7 +1757,7 @@ design. `Modules\Desktop\Providers\DesktopServiceProvider` is not registered:
 the Desktop module ships no `module.json`, so it is not nwidart-discovered and
 this hardcoded manifest is the only lever that keeps it — and its hard dependency
 on the `nativephp/desktop` package, absent from this root's `vendor/` — out of
-the mobile shell. `App\Providers\NativeServiceProvider` *is* registered here and
+the mobile shell. `Modules\Mobile\Providers\NativeServiceProvider` *is* registered here and
 not on the desktop root, because it carries the NativePHP **mobile** plugin list.
 The Mobile module itself is absent from both manifests: it ships a `module.json`
 and loads from `modules_statuses.json`, as do Sync, Reports, Search, Tax,

@@ -13,7 +13,7 @@ function userScopeShippedFiles(): array
 {
     $files = [];
 
-    foreach (['Modules', 'app'] as $root) {
+    foreach (['Modules'] as $root) {
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator(base_path($root), FilesystemIterator::SKIP_DOTS),
         );

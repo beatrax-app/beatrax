@@ -100,13 +100,22 @@ const DOCS_SYMBOLS_NAMING_NO_CLASS_BY_DESIGN = [
     'WebResourceResponse',
 ];
 
-// Both roots' classmaps. The shard jobs install only this one, so the mobile
-// root's vocabulary is missing there and every NativePHP mobile class a page
-// names would read as invented.
-/** @var list<string> */
+// Both roots' classmaps, each with one class only that root's vendor tree can
+// supply. The shard jobs install only this one, so the mobile root's vocabulary
+// is missing there and every NativePHP mobile class a page names would read as
+// invented.
+//
+// The sentinel is not decoration. A `composer dump-autoload` run in a root
+// whose packages are NOT installed writes a complete, valid, syntactically
+// perfect classmap holding only the first-party classes it could see — 314 KB
+// against the real 1.8 MB. `is_file()` says yes to it, the 1,500-name floor is
+// met by the other root on its own, and the rule then reports eighteen real
+// NativePHP classes as invented. Measured in a worktree, where mobile-app/vendor
+// is never installed and one stray dump produced exactly that file.
+/** @var array<string, string> classmap path => a class only that root can hold */
 const DOCS_SYMBOLS_CLASSMAPS = [
-    'vendor/composer/autoload_classmap.php',
-    'mobile-app/vendor/composer/autoload_classmap.php',
+    'vendor/composer/autoload_classmap.php' => 'Illuminate\\Foundation\\Application',
+    'mobile-app/vendor/composer/autoload_classmap.php' => 'Native\\Mobile\\Facades\\Biometrics',
 ];
 
 /** @return list<string> */
@@ -114,9 +123,20 @@ function docsSymbolsUnreadableRoots(): array
 {
     $missing = [];
 
-    foreach (DOCS_SYMBOLS_CLASSMAPS as $classmap) {
-        if (! is_file(base_path($classmap))) {
+    foreach (DOCS_SYMBOLS_CLASSMAPS as $classmap => $sentinel) {
+        $path = base_path($classmap);
+
+        if (! is_file($path)) {
             $missing[] = $classmap;
+
+            continue;
+        }
+
+        /** @var array<string, string> $entries */
+        $entries = require $path;
+
+        if (! array_key_exists($sentinel, $entries)) {
+            $missing[] = $classmap.' (present, but holds no '.$sentinel.', so its vendor tree is not installed)';
         }
     }
 
@@ -138,7 +158,7 @@ function docsSymbolsResolvableNames(): array
         $names[$short] = true;
     }
 
-    foreach (DOCS_SYMBOLS_CLASSMAPS as $classmap) {
+    foreach (array_keys(DOCS_SYMBOLS_CLASSMAPS) as $classmap) {
         $path = base_path($classmap);
         if (! is_file($path)) {
             continue;

@@ -293,7 +293,7 @@ it('has exactly one place that builds the op-log AD', function (): void {
     $walked = 0;
     $sawCanonical = false;
 
-    foreach (['Modules', 'app'] as $tree) {
+    foreach (['Modules'] as $tree) {
         $files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($root.'/'.$tree, RecursiveDirectoryIterator::SKIP_DOTS),
         );

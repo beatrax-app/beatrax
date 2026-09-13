@@ -12,7 +12,7 @@ use Modules\Core\Public\Support\PatternScan;
 /** @return list<string> roots an arch guard enumerates, so a file appearing in one races it */
 function guardedSourceRoots(): array
 {
-    return ['Modules', 'app', 'resources', 'routes', 'config', 'lang', 'database', 'bootstrap', 'scripts', 'mobile-app'];
+    return ['Modules', 'resources', 'routes', 'config', 'lang', 'database', 'bootstrap', 'scripts', 'mobile-app'];
 }
 
 /** @return array<string, string> absolute path => path relative to $root */

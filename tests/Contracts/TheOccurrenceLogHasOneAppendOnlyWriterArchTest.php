@@ -11,7 +11,7 @@ function occurrenceLogScannedSources(): array
 {
     $sources = [];
 
-    foreach ([base_path('Modules'), base_path('app')] as $root) {
+    foreach ([base_path('Modules')] as $root) {
         $walk = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
 
         foreach ($walk as $file) {

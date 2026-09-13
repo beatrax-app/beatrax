@@ -33,7 +33,7 @@ function sonarEmptyBodyFiles(): array
 {
     $files = [];
 
-    foreach (['app', 'Modules', 'config', 'routes', 'database'] as $root) {
+    foreach (['Modules', 'config', 'routes', 'database'] as $root) {
         $path = base_path($root);
 
         if (is_dir($path)) {

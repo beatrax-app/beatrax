@@ -541,7 +541,7 @@ the page it sits on rather than the scan underneath it.
 ## The guard
 
 `tests/Contracts/BoundedReadArchTest.php` tokenises every file under `Modules/`
-and `app/` and reports a fluent chain that names a growing table and ends in
+and reports a fluent chain that names a growing table and ends in
 `->get()` or `->pluck()` with nothing in the chain that bounds it. `cursor` and
 the `lazy*` family are not in the bounds list because they are not bounds — they
 are the fix, and a chain ending in one hands PHP a row at a time.

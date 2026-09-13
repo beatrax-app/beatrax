@@ -28,7 +28,7 @@ final class BackendSourceFiles
     {
         $files = [];
 
-        foreach ([base_path('Modules'), base_path('app')] as $root) {
+        foreach ([base_path('Modules')] as $root) {
             if (! is_dir($root)) {
                 continue;
             }
