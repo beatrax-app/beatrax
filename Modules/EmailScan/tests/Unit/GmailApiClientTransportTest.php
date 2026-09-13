@@ -18,6 +18,7 @@ use Modules\EmailScan\Internal\Clients\GmailInboxResources;
 use Modules\EmailScan\Internal\Clients\GmailRawDecodeException;
 use Modules\EmailScan\Internal\Clients\MessageUnavailableException;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
+use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
@@ -499,4 +500,118 @@ it('keeps the whole exclude list when it comfortably fits', function (): void {
     parse_str((string) parse_url($sent, PHP_URL_QUERY), $query);
 
     expect((string) ($query['q'] ?? ''))->toBe('subject:("invoice") -from:(paypal.com OR @ics.nl)');
+});
+
+// The SDK's getters are declared string/int and hand back the field, which is
+// null until the provider fills it. Read straight through, a format=raw
+// response carrying no payload became a TypeError from strlen() — outside
+// every per-message catch list, so it stalled the cursor on that one id.
+it('reports a raw response carrying no payload as a decode failure, not a crash', function (array $payload): void {
+    $client = ($this->makeClient)([gmailJson($payload)]);
+
+    expect(fn () => $client->getRawMessage(1, 'm1'))
+        ->toThrow(GmailRawDecodeException::class, 'no raw payload');
+})->with([
+    'no raw key' => [['id' => 'm1']],
+    'an empty raw' => [['id' => 'm1', 'raw' => '']],
+]);
+
+// sizeEstimate is the provider's word for the size and the encoded length is
+// ours; a response carrying only the second still has to be measured.
+it('measures a message by its encoded length when Gmail states no size', function (): void {
+    $raw = "From: billing@shop.example\r\nSubject: Receipt\r\n\r\nBody";
+    $client = ($this->makeClient)([
+        gmailJson(['id' => 'm1', 'raw' => rtrim(strtr(base64_encode($raw), '+/', '-_'), '=')]),
+    ]);
+
+    expect($client->getRawMessage(1, 'm1'))->toBe($raw);
+});
+
+// users.messages.list carries no historyId, so this call is the only baseline
+// an inbox backfilled before it existed can adopt — and until now no test ran
+// it against the transport at all.
+it('reads the mailbox watermark off users.getProfile', function (): void {
+    $client = ($this->makeClient)([
+        gmailJson(['emailAddress' => 'owner@shop.example', 'historyId' => '998877']),
+    ]);
+
+    expect($client->currentHistoryId(1))->toBe('998877');
+});
+
+// The same guard the history walk's own historyId already goes through. Left
+// off here, a watermark the SDK handed back as anything but a string was a
+// TypeError on the return, and IncrementalScanJob's only recovery for an inbox
+// with no cursor is exactly this call.
+it('reports no watermark rather than crashing when getProfile answers with something else', function (string $body): void {
+    $client = ($this->makeClient)([
+        new Response(200, ['Content-Type' => 'application/json'], $body),
+    ]);
+
+    expect($client->currentHistoryId(1))->toBeNull();
+})->with([
+    'no historyId at all' => ['{"emailAddress":"owner@shop.example"}'],
+    'an empty historyId' => ['{"emailAddress":"owner@shop.example","historyId":""}'],
+    'an unquoted historyId' => ['{"emailAddress":"owner@shop.example","historyId":998877}'],
+]);
+
+// Google does not rotate refresh tokens single-use, so the stored one is
+// written back unchanged — but the access token it minted has to be persisted
+// or every call in the hour after this one refreshes again.
+it('mints a fresh access token before the call when the stored one has expired', function (): void {
+    $secrets = new class extends OAuthSecretsRepository
+    {
+        /** @var list<array{string, ?string}> */
+        public array $rotations = [];
+
+        public function __construct() {}
+
+        public function loadInbox(int $inboxId): ?InboxCredentials
+        {
+            return new InboxCredentials(
+                inboxId: $inboxId,
+                provider: 'gmail',
+                refreshToken: 'stored-refresh',
+                scope: 'https://www.googleapis.com/auth/gmail.readonly',
+                expiresAt: (new DateTimeImmutable)->setTimestamp(time() - 60),
+                accessToken: 'stale-access-token',
+            );
+        }
+
+        public function rotateRefreshToken(int $inboxId, string $newRefreshToken, ?string $newAccessToken, ?DateTimeImmutable $expiresAt): void
+        {
+            $this->rotations[] = [$newRefreshToken, $newAccessToken];
+        }
+    };
+
+    $oauth = new class extends GoogleOAuthProvider
+    {
+        public function __construct() {}
+
+        public function refreshAccessToken(string $refreshToken): AccessTokenWithEmail
+        {
+            return new AccessTokenWithEmail(
+                accessToken: 'reminted-access-token',
+                refreshToken: null,
+                expiresAt: (new DateTimeImmutable)->setTimestamp(time() + 3600),
+                scope: 'https://www.googleapis.com/auth/gmail.readonly',
+                email: '',
+            );
+        }
+    };
+
+    $client = new GmailApiClient(new GmailInboxResources(
+        $secrets,
+        $oauth,
+        $this->clock,
+        $this->createStub(EventsDispatcher::class),
+        $this->createStub(DatabaseManager::class),
+        new GuzzleClient(['handler' => HandlerStack::create(new MockHandler([
+            gmailJson(['emailAddress' => 'owner@shop.example', 'historyId' => '4242']),
+        ]))]),
+    ));
+
+    // The SDK attaches the bearer inside a client of its own that wraps this
+    // handler, so what the refresh produced is read off the write it made.
+    expect($client->currentHistoryId(1))->toBe('4242')
+        ->and($secrets->rotations)->toBe([['stored-refresh', 'reminted-access-token']]);
 });

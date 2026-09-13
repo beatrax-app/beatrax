@@ -880,6 +880,16 @@ written under a mutable id would stop matching, and the next scan would
 re-fetch and re-store the whole mailbox under new ids. That is a
 migration, not a header.
 
+A `format=raw` response carrying no `raw` field at all is a third way in.
+The Google SDK's getters are declared `string`/`int` and hand back the
+model field, which is `null` until the response fills it, so that one
+reached `strlen()` and became a `TypeError` — a class no per-message
+catch list names, which is exactly the freeze this paragraph exists to
+prevent. It is typed as `GmailRawDecodeException` now, which the lists
+already skip and record. Graph's half of the same shape is an empty 200
+on `/me/messages/{id}/$value`; that one is
+[a transport failure, not a message](provider-transport-hardening.md#a-body-that-is-not-a-message).
+
 **The same holds for the backfill window, and for the same reason.**
 `BackfillInboxJob::storeOrSkip` skips exactly the three failures that
 are permanent for one id — oversized, unavailable, undecodable — and
@@ -1034,7 +1044,13 @@ not, and that one fell through to a retryable `OAuthExchangeFailed`. `MicrosoftO
 reads Microsoft Graph's `/me` response, preferring `mail` and falling
 back to `userPrincipalName` — for consumer Outlook.com accounts `mail`
 is often null and `userPrincipalName` holds the routable address, while
-work/school accounts typically have both fields match.
+work/school accounts typically have both fields match. It stamps a
+nominal hour's life on the token it synthesises from the bare access
+string, the way `GmailInboxResources` does on its Google client:
+`Azure::request()` asks `hasExpired()` before every call and league's
+`AccessToken` throws outright where no expiry was ever set, so without
+it the method answered "Microsoft Graph /me read failed" for every
+input it was ever given while its Google sibling worked.
 
 `OAuthStateRepository` is per-flow random OAuth state stored in the
 Laravel session. `issueState()` generates a 64-character hex token (32

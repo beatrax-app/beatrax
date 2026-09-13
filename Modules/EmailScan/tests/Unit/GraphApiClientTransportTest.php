@@ -19,6 +19,7 @@ use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Modules\EmailScan\Internal\Exceptions\UnsafeProviderRequestException;
+use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -512,4 +513,173 @@ it('still sends the composed query on a first-page call', function (): void {
     $client->deltaPage(1, null, new DateTimeImmutable('2026-01-01T00:00:00Z'));
 
     expect(($this->recorded)()[0])->toContain('%24filter=receivedDateTime%20ge%202026-01-01T00%3A00%3A00Z');
+});
+
+// A body that fails to decode already raised; a body that decodes to something
+// that is not a Graph object read back as an empty final page, so the walk
+// wrote no message, kept its cursor, and IncrementalScanJob landed the inbox on
+// idle with last_scan_at advanced. "Nothing arrived" and "nothing was answered"
+// are the one distinction the reader needs from this screen.
+it('refuses a 200 whose body decodes to something that is not a Graph object', function (string $body): void {
+    $client = ($this->makeClient)([
+        new Response(200, ['Content-Type' => 'application/json'], $body),
+    ]);
+
+    expect(fn () => $client->deltaPage(1, 'https://graph.microsoft.com/v1.0/me/messages/delta?%24deltatoken=T0'))
+        ->toThrow(RuntimeException::class, 'not an object');
+})->with([
+    'a JSON null' => ['null'],
+    'a bare string' => ['"just a string"'],
+    'a number' => ['123'],
+    'a boolean' => ['true'],
+]);
+
+// $value hands back RFC 822 bytes, and no RFC 822 message is zero of them.
+// Returned as a message it was written as an empty .eml plus a `fetched` row,
+// and InboxScanContext::alreadyIndexed() answers true on that id from then on
+// — so the receipt is never fetched again and the walk reported success.
+it('refuses an empty body where a raw message was asked for', function (): void {
+    $client = ($this->makeClient)([
+        new Response(200, ['Content-Type' => 'message/rfc822'], ''),
+    ]);
+
+    expect(fn () => $client->getRawMessage(1, 'AAA-BBB_CCC'))
+        ->toThrow(RuntimeException::class, 'empty body');
+});
+
+// Every Graph call goes out behind this, and until now no test had ever run
+// it: the stored access token was always minted fresh enough to be reused.
+it('mints a fresh access token before the call when the stored one has expired', function (): void {
+    $secrets = new class extends OAuthSecretsRepository
+    {
+        /** @var list<array{string, ?string}> */
+        public array $rotations = [];
+
+        public function __construct() {}
+
+        public function loadInbox(int $inboxId): ?InboxCredentials
+        {
+            return new InboxCredentials(
+                inboxId: $inboxId,
+                provider: 'microsoft',
+                refreshToken: 'stored-refresh',
+                scope: 'Mail.Read offline_access User.Read',
+                expiresAt: (new DateTimeImmutable)->setTimestamp(time() - 60),
+                accessToken: 'stale-access-token',
+            );
+        }
+
+        public function rotateRefreshToken(int $inboxId, string $newRefreshToken, ?string $newAccessToken, ?DateTimeImmutable $expiresAt): void
+        {
+            $this->rotations[] = [$newRefreshToken, $newAccessToken];
+        }
+    };
+
+    $oauth = new class extends MicrosoftOAuthProvider
+    {
+        public function __construct() {}
+
+        public function refreshAccessToken(string $refreshToken): AccessTokenWithEmail
+        {
+            return new AccessTokenWithEmail(
+                accessToken: 'rotated-access-token',
+                refreshToken: 'rotated-refresh',
+                expiresAt: (new DateTimeImmutable)->setTimestamp(time() + 3600),
+                scope: 'Mail.Read',
+                email: '',
+            );
+        }
+    };
+
+    $transactions = [];
+    $stack = HandlerStack::create(new MockHandler([graphJson(['value' => []])]));
+    $stack->push(Middleware::history($transactions));
+
+    $client = new GraphApiClient(
+        $secrets,
+        $oauth,
+        $this->clock,
+        $this->createStub(EventsDispatcher::class),
+        $this->createStub(DatabaseManager::class),
+        new GraphErrorMapper($this->clock),
+        new GuzzleClient(['handler' => $stack]),
+    );
+
+    $client->deltaPage(1, null);
+
+    // Microsoft rotates refresh tokens single-use, so the one that came back
+    // has to be persisted or the refresh after this one is refused.
+    expect($transactions[0]['request']->getHeaderLine('Authorization'))->toBe('Bearer rotated-access-token')
+        ->and($secrets->rotations)->toBe([['rotated-refresh', 'rotated-access-token']]);
+});
+
+// The nextLink half of this was pinned; the composed first page never was, so
+// nothing held $search, $top or $select to what Graph is actually sent.
+it('composes the discovery search on the first page', function (): void {
+    $client = ($this->makeRecordingClient)([graphJson(['value' => []])]);
+
+    $client->listDiscoveryCandidatesPaged(1, ['receipt', 'factuur'], [], null);
+
+    expect(urldecode(($this->recorded)()[0]))
+        ->toBe('https://graph.microsoft.com/v1.0/me/messages?$search="subject:("receipt" OR "factuur")"'
+            .'&$top=100&$select=id,from,subject,receivedDateTime');
+});
+
+it('asks for nothing at all when discovery has no keywords', function (): void {
+    $client = ($this->makeClient)([]);
+
+    expect($client->listDiscoveryCandidatesPaged(1, [], ['@ics.nl'], null))
+        ->toBe(['messages' => [], 'nextLink' => null]);
+});
+
+// Graph rejects a "not from/..." predicate alongside $search, so the exclude
+// list is the client's to apply. A message with no readable from-address is
+// kept: the list can only ever remove a sender already known.
+it('drops an already-known sender from a discovery page and keeps an unreadable one', function (): void {
+    $client = ($this->makeClient)([
+        graphJson(['value' => [
+            ['id' => 'KNOWN-DOMAIN', 'from' => ['emailAddress' => ['address' => 'NoReply@ICS.nl']]],
+            ['id' => 'KNOWN-ADDRESS', 'from' => ['emailAddress' => ['address' => 'billing@paypal.com']]],
+            ['id' => 'NO-SENDER'],
+            ['id' => 'NEW', 'from' => ['emailAddress' => ['address' => 'shop@example.test']]],
+        ]]),
+    ]);
+
+    $page = $client->listDiscoveryCandidatesPaged(1, ['receipt'], ['@ics.nl', 'paypal.com'], null);
+
+    expect(array_column($page['messages'], 'id'))->toBe(['NO-SENDER', 'NEW']);
+});
+
+// A collection page always carries `value`; these are the shapes a gateway in
+// front of Graph can put in its place, and none of them may become a message.
+it('reads a page whose value key is absent or not a list as carrying no messages', function (string $body, ?string $expectedDelta): void {
+    $client = ($this->makeClient)([
+        new Response(200, ['Content-Type' => 'application/json'], $body),
+    ]);
+
+    $page = $client->deltaPage(1, 'https://graph.microsoft.com/v1.0/me/messages/delta?%24deltatoken=T0');
+
+    expect($page['messages'])->toBe([])
+        ->and($page['deltaLink'])->toBe($expectedDelta);
+})->with([
+    'no value key at all' => ['{"@odata.deltaLink":"https://graph.microsoft.com/v1.0/d?x=1"}', 'https://graph.microsoft.com/v1.0/d?x=1'],
+    'value is a string' => ['{"value":"oops"}', null],
+    'value holds scalars' => ['{"value":[1,2,3]}', null],
+]);
+
+// A delta entry that carries an id and nothing else still has to answer the
+// shape the walk indexes into, or the allow-list read crashes the tick.
+it('fills the message shape a delta entry left out', function (): void {
+    $client = ($this->makeClient)([
+        graphJson(['value' => [['id' => 'A']]]),
+    ]);
+
+    $page = $client->deltaPage(1, 'https://graph.microsoft.com/v1.0/me/messages/delta?%24deltatoken=T0');
+
+    expect($page['messages'][0])->toBe([
+        'id' => 'A',
+        'from' => ['emailAddress' => ['address' => '', 'name' => null]],
+        'subject' => null,
+        'receivedDateTime' => '',
+    ]);
 });
