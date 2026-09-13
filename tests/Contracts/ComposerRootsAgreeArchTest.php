@@ -178,3 +178,118 @@ it('creates the SQLite file owner-only from both Composer roots', function (): v
         );
     }
 });
+
+// The constraints agreeing is not the locks agreeing. laravel/framework is
+// `^13.0` in both roots and still resolved to 13.23.0 here and 13.24.0 there —
+// two framework versions under one Modules/ tree, which the comparison above
+// cannot see because it reads composer.json. This one reads what was actually
+// installed.
+/**
+ * @return array<string, string> package => version, for one lock section
+ */
+function composerRootLockedVersions(string $relativePath, string $section): array
+{
+    $raw = (string) file_get_contents(base_path($relativePath));
+    /** @var array{packages?: list<array{name: string, version: string}>, packages-dev?: list<array{name: string, version: string}>} $lock */
+    $lock = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+
+    $versions = [];
+    foreach ($lock[$section] ?? [] as $package) {
+        $versions[$package['name']] = $package['version'];
+    }
+
+    return $versions;
+}
+
+/**
+ * @param  array<string, string>  $root
+ * @param  array<string, string>  $mobile
+ * @return array<string, string> package => a description of the disagreement
+ */
+function composerRootLockDrift(array $root, array $mobile): array
+{
+    $drift = [];
+    foreach (array_intersect_key($root, $mobile) as $package => $version) {
+        if ($mobile[$package] !== $version) {
+            $drift[$package] = sprintf('root %s vs mobile-app %s', $version, $mobile[$package]);
+        }
+    }
+
+    return $drift;
+}
+
+it('resolves every shared runtime dependency to the same version in both Composer roots', function (): void {
+    $root = composerRootLockedVersions('composer.lock', 'packages');
+    $mobile = composerRootLockedVersions('mobile-app/composer.lock', 'packages');
+
+    // Read before the comparison, and against both locks separately: a reader
+    // that found the wrong section name returns an empty array, and two empty
+    // arrays share nothing, disagree about nothing, and report a clean pair.
+    expect(count($root))->toBeGreaterThan(100, 'composer.lock yielded almost no runtime packages, so the lock reader has stopped matching.');
+    expect(count($mobile))->toBeGreaterThan(100, 'mobile-app/composer.lock yielded almost no runtime packages, so the lock reader has stopped matching.');
+    expect(count(array_intersect_key($root, $mobile)))->toBeGreaterThan(100, 'The two locks share almost no runtime package, so this rule compared nothing at all.');
+
+    $drift = composerRootLockDrift($root, $mobile);
+
+    expect($drift)->toBe([], implode("\n  ", [
+        'These runtime libraries resolved to different versions in the two Composer roots:',
+        ...array_map(static fn (string $package): string => $package.': '.$drift[$package], array_keys($drift)),
+        '',
+        'Modules/ is one tree read from both roots, and mobile-app/vendor is what ships',
+        'inside the phone build. A shared library at two versions is code written against',
+        'one and shipped against the other. Run the same `composer update <package>` in',
+        'both roots rather than pinning one of them back.',
+    ]));
+});
+
+// The test tree is the one place the two roots are knowingly apart: the mobile
+// root is on Pest 4 and this one on Pest 5, so every package that major drags
+// with it differs. The set is pinned rather than waved through, so a
+// twenty-eighth name is a failure rather than a thing nobody notices.
+it('keeps the two roots apart on exactly the packages the Pest major divides', function (): void {
+    $pinnedPestMajorDivergence = [
+        'brianium/paratest',
+        'myclabs/deep-copy',
+        'pestphp/pest',
+        'pestphp/pest-plugin',
+        'pestphp/pest-plugin-arch',
+        'pestphp/pest-plugin-laravel',
+        'pestphp/pest-plugin-mutate',
+        'pestphp/pest-plugin-profanity',
+        'phpunit/php-code-coverage',
+        'phpunit/php-file-iterator',
+        'phpunit/php-invoker',
+        'phpunit/php-text-template',
+        'phpunit/php-timer',
+        'phpunit/phpunit',
+        'sebastian/cli-parser',
+        'sebastian/comparator',
+        'sebastian/complexity',
+        'sebastian/diff',
+        'sebastian/environment',
+        'sebastian/exporter',
+        'sebastian/global-state',
+        'sebastian/lines-of-code',
+        'sebastian/object-enumerator',
+        'sebastian/object-reflector',
+        'sebastian/recursion-context',
+        'sebastian/type',
+        'sebastian/version',
+    ];
+
+    $root = composerRootLockedVersions('composer.lock', 'packages-dev');
+    $mobile = composerRootLockedVersions('mobile-app/composer.lock', 'packages-dev');
+
+    expect(count(array_intersect_key($root, $mobile)))->toBeGreaterThan(20, 'The two locks share almost no dev package, so this rule compared nothing at all.');
+
+    $drifted = array_keys(composerRootLockDrift($root, $mobile));
+    sort($drifted);
+
+    expect($drifted)->toBe($pinnedPestMajorDivergence, implode("\n  ", [
+        'The dev packages that differ between the two Composer roots are not the set pinned here.',
+        'A name that appeared: a dev dependency drifted for some reason other than the Pest major,',
+        'and the same test file can now behave differently in the two roots.',
+        'A name that went: the divergence is closing — take it out of the list.',
+        'An empty list means mobile-app is on Pest 5 too, and this rule can go.',
+    ]));
+});
