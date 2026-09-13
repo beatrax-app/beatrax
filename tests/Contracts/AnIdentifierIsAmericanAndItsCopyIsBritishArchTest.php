@@ -102,7 +102,7 @@ const AMERICAN_ISE_WORDS = [
     'improvise', 'improvised', 'improvises', 'improvising',
     'incise', 'incised', 'incises', 'incising',
     'merchandise', 'merchandised', 'merchandises', 'merchandising',
-    'pairwise', 'paradise', 'precise', 'premise', 'premised', 'premises',
+    'otherwise', 'pairwise', 'paradise', 'precise', 'premise', 'premised', 'premises',
     'promise', 'promised', 'promises', 'promising',
     'revise', 'revised', 'revises', 'revising',
     'supervise', 'supervised', 'supervises', 'supervising',
@@ -115,6 +115,20 @@ const AMERICAN_OUR_WORDS = [
     'bonjour', 'contour', 'contours', 'detour', 'detours', 'devour', 'devoured', 'devours',
     'flour', 'four', 'glamour', 'hour', 'hours', 'pour', 'poured', 'pouring', 'pours',
     'tour', 'toured', 'touring', 'tours', 'velour', 'your', 'yours',
+];
+
+// A Pest file declares no class, so the walk below — which reads DECLARED
+// identifiers — finds no name for it, while Pest resolves its test class from
+// the PATH. These four carry a British word in that name and predate the reach;
+// each sits in a module this change does not touch.
+//
+// The words are exact in both directions: a fifth file fails, and an entry that
+// stops matching fails too, so the list cannot rot into a blanket exemption.
+const BRITISH_TEST_PATH_NAMES = [
+    'Modules/Core/tests/Feature/AnAlertSaysHowSevereItIsWithoutColourTest.php' => ['colour'],
+    'Modules/Counterparties/tests/Feature/ATwelveMonthTotalSaysWhichWayItWentWithoutColourTest.php' => ['colour'],
+    'Modules/EmailScan/tests/Feature/AnInboxLineSaysWhichHealthItIsInWithoutColourTest.php' => ['colour'],
+    'tests/Feature/AnonymisedFixtureSweepTest.php' => ['anonymised'],
 ];
 
 // Symbols this repository did not declare. Renaming one does not rename the
@@ -233,6 +247,45 @@ it('spells every name the machine resolves the way American English does', funct
         'Rename the symbol and its references. If the word is a vendor\'s own, add its namespace to '
         .'FOREIGN_SYMBOL_PREFIXES; if American English really spells it this way, add the word to '
         .'AMERICAN_ISE_WORDS or AMERICAN_OUR_WORDS.',
+    ]));
+});
+
+// The reach the walk above cannot have. Its subject is the file NAME rather
+// than the tokens inside it, because that is the whole of what Pest turns into
+// a class — `…ItDialledTest.php` resolves to a class spelling `dialled` while
+// every identifier inside the file is clean.
+it('spells a test file name the way American English does, since Pest resolves a class from it', function (): void {
+    $offenders = [];
+    $walked = 0;
+
+    foreach (RepoTree::files(RepoTree::EVERY_PHP_FILE) as $path) {
+        $file = str_replace(RepoTree::root().'/', '', $path);
+        $name = basename($file, '.php');
+
+        if (! str_ends_with($name, 'Test')) {
+            continue;
+        }
+
+        $walked++;
+
+        $found = array_keys(britishWordsIn($name));
+        $allowed = BRITISH_TEST_PATH_NAMES[$file] ?? [];
+        sort($found);
+        sort($allowed);
+
+        if ($found !== $allowed) {
+            $offenders[] = $file.'  found ['.implode(', ', $found).'] , allowed ['.implode(', ', $allowed).']';
+        }
+    }
+
+    expect($walked)->toBeGreaterThan(1_000, 'the walk opened almost no test file, so the clean answer below is an empty scan.');
+
+    expect($offenders)->toBe([], implode("\n  ", [
+        'A test file name is a class name here: Pest derives one from the path, so a British word in '
+        .'it is a British identifier the token walk cannot see. Rename the file, and its pin in '
+        .'BoundaryArchTest if it has one. An entry in BRITISH_TEST_PATH_NAMES that no longer matches '
+        .'is listed here too and should simply be removed:',
+        ...$offenders,
     ]));
 });
 

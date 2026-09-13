@@ -12,6 +12,7 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
+use Modules\Mobile\Internal\Sync\PeerDial;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 
@@ -77,7 +78,7 @@ it('dials the local network before it opens the relay', function (): void {
         return Http::response(['blobs' => []], 200);
     });
 
-    app(MobileSyncTriggerService::class)->attempt($userId, $session, '127.0.0.1', 8765);
+    app(MobileSyncTriggerService::class)->attempt($userId, $session, new PeerDial('desktop-peer', '127.0.0.1', 8765));
 
     expect($order)->toBe(
         ['lan', 'relay'],
@@ -96,7 +97,7 @@ it('still drains the relay on the same tick, because the relay is a fallback in 
         return Http::response(['blobs' => []], 200);
     });
 
-    app(MobileSyncTriggerService::class)->attempt($userId, $session, '127.0.0.1', 8765);
+    app(MobileSyncTriggerService::class)->attempt($userId, $session, new PeerDial('desktop-peer', '127.0.0.1', 8765));
 
     expect($drained)->toBeTrue(
         'a tick that reached the LAN leg must still read the mailbox, or a wrap from a device that is not the LAN peer is never read',
