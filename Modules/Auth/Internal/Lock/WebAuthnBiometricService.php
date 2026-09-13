@@ -54,7 +54,6 @@ final readonly class WebAuthnBiometricService
      */
     public function creationOptions(int $userId, string $username, Session $session): array
     {
-        $rpId = $this->rpId();
         $challenge = random_bytes(32);
 
         // excludeCredentials makes the browser reject a re-enrol of the same
@@ -78,28 +77,7 @@ final readonly class WebAuthnBiometricService
             );
         }
 
-        $options = PublicKeyCredentialCreationOptions::create(
-            rp: PublicKeyCredentialRpEntity::create('Beatrax', $rpId),
-            user: PublicKeyCredentialUserEntity::create(
-                $username,
-                (string) $userId,
-                $username,
-            ),
-            challenge: $challenge,
-            pubKeyCredParams: [
-                PublicKeyCredentialParameters::createPk(-7),   // ES256
-                PublicKeyCredentialParameters::createPk(-257), // RS256
-            ],
-            // A null residentKey serialises as an explicit null the browser
-            // rejects ("Ignoring unknown publicKey.authenticatorSelection
-            // .residentKey value"); the account is always known here anyway.
-            authenticatorSelection: new AuthenticatorSelectionCriteria(
-                authenticatorAttachment: 'platform',
-                userVerification: 'required',
-                residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_DISCOURAGED,
-            ),
-            excludeCredentials: $excludeCredentials,
-        );
+        $options = $this->creationOptionsFor($userId, $username, $challenge, $excludeCredentials);
 
         $session->put(self::CREATION_CHALLENGE_SESSION, base64_encode($challenge));
 
@@ -139,19 +117,7 @@ final readonly class WebAuthnBiometricService
             throw BiometricEnrollmentException::unexpectedAttestationResponse();
         }
 
-        $creationOptions = PublicKeyCredentialCreationOptions::create(
-            rp: PublicKeyCredentialRpEntity::create('Beatrax', $this->rpId()),
-            user: PublicKeyCredentialUserEntity::create(
-                $username,
-                (string) $userId,
-                $username,
-            ),
-            challenge: $challenge,
-            pubKeyCredParams: [
-                PublicKeyCredentialParameters::createPk(-7),
-                PublicKeyCredentialParameters::createPk(-257),
-            ],
-        );
+        $creationOptions = $this->creationOptionsFor($userId, $username, $challenge);
 
         $factory = new CeremonyStepManagerFactory;
         $factory->setAllowedOrigins([$this->origin()]);
@@ -201,7 +167,6 @@ final readonly class WebAuthnBiometricService
      */
     public function requestOptions(int $userId, Session $session): array
     {
-        $rpId = $this->rpId();
         $challenge = random_bytes(32);
 
         $credentials = $this->store->findForUser($userId);
@@ -227,12 +192,7 @@ final readonly class WebAuthnBiometricService
             }
         }
 
-        $options = PublicKeyCredentialRequestOptions::create(
-            challenge: $challenge,
-            rpId: $rpId,
-            allowCredentials: $allowCredentials,
-            userVerification: 'required',
-        );
+        $options = $this->requestOptionsFor($challenge, $allowCredentials);
 
         $session->put(self::REQUEST_CHALLENGE_SESSION, base64_encode($challenge));
 
@@ -345,11 +305,7 @@ final readonly class WebAuthnBiometricService
         string $challenge,
         int $userId,
     ): CredentialRecord {
-        $requestOptions = PublicKeyCredentialRequestOptions::create(
-            challenge: $challenge,
-            rpId: $this->rpId(),
-            userVerification: 'required',
-        );
+        $requestOptions = $this->requestOptionsFor($challenge);
 
         $factory = new CeremonyStepManagerFactory;
         $factory->setAllowedOrigins([$this->origin()]);
@@ -418,6 +374,56 @@ final readonly class WebAuthnBiometricService
         }
 
         return '';
+    }
+
+    // One builder for both ends of the ceremony because the validator reads
+    // the requirements off the options handed to check(), not off the ones the
+    // browser was issued: a rebuilt copy missing authenticatorSelection made
+    // CheckUserVerification return early and accept an unverified attestation.
+    /**
+     * @param  list<PublicKeyCredentialDescriptor>  $excludeCredentials
+     */
+    private function creationOptionsFor(
+        int $userId,
+        string $username,
+        string $challenge,
+        array $excludeCredentials = [],
+    ): PublicKeyCredentialCreationOptions {
+        return PublicKeyCredentialCreationOptions::create(
+            rp: PublicKeyCredentialRpEntity::create('Beatrax', $this->rpId()),
+            user: PublicKeyCredentialUserEntity::create(
+                $username,
+                (string) $userId,
+                $username,
+            ),
+            challenge: $challenge,
+            pubKeyCredParams: [
+                PublicKeyCredentialParameters::createPk(-7),   // ES256
+                PublicKeyCredentialParameters::createPk(-257), // RS256
+            ],
+            // A null residentKey serialises as an explicit null the browser
+            // rejects ("Ignoring unknown publicKey.authenticatorSelection
+            // .residentKey value"); the account is always known here anyway.
+            authenticatorSelection: new AuthenticatorSelectionCriteria(
+                authenticatorAttachment: 'platform',
+                userVerification: 'required',
+                residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_DISCOURAGED,
+            ),
+            excludeCredentials: $excludeCredentials,
+        );
+    }
+
+    /**
+     * @param  list<PublicKeyCredentialDescriptor>  $allowCredentials
+     */
+    private function requestOptionsFor(string $challenge, array $allowCredentials = []): PublicKeyCredentialRequestOptions
+    {
+        return PublicKeyCredentialRequestOptions::create(
+            challenge: $challenge,
+            rpId: $this->rpId(),
+            allowCredentials: $allowCredentials,
+            userVerification: 'required',
+        );
     }
 
     private function rpId(): string
