@@ -11,7 +11,7 @@ return [
     'remember' => 'Zůstat přihlášen na tomto zařízení',
     'submit' => 'Přihlásit se',
     'lost_password' => 'Ztracené heslo? Použij záložní kód.',
-    'throttled_recovery' => 'Nebo zadej záložní kód a přihlas se hned. Kód se označí jako použitý.',
+    'throttled_recovery' => 'Nebo zadej záložní kód a zkus to hned znovu. Kód se označí jako použitý.',
 
     'error_invalid' => 'Uživatelské jméno nebo heslo není správné.',
     'error_throttled' => 'Příliš mnoho pokusů — zkus to znovu za :wait.',

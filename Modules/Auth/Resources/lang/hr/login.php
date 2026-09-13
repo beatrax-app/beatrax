@@ -11,7 +11,7 @@ return [
     'remember' => 'Ostani prijavljen na ovom uređaju',
     'submit' => 'Prijavi se',
     'lost_password' => 'Izgubio si lozinku? Upotrijebi kod za oporavak.',
-    'throttled_recovery' => 'Ili unesi kod za oporavak da se odmah prijaviš. Kod će biti označen kao iskorišten.',
+    'throttled_recovery' => 'Ili unesi kod za oporavak da odmah pokušaš ponovno. Kod će biti označen kao iskorišten.',
 
     'error_invalid' => 'Korisničko ime ili lozinka nisu točni.',
     'error_throttled' => 'Previše pokušaja — pokušaj ponovno za :wait.',

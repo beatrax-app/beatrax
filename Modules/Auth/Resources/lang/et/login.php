@@ -11,7 +11,7 @@ return [
     'remember' => 'Hoia mind selles seadmes sisse logituna',
     'submit' => 'Logi sisse',
     'lost_password' => 'Kaotasid parooli? Kasuta taastekoodi.',
-    'throttled_recovery' => 'Või sisesta taastekood, et kohe sisse logida. Kood märgitakse kasutatuks.',
+    'throttled_recovery' => 'Või sisesta taastekood, et kohe uuesti proovida. Kood märgitakse kasutatuks.',
 
     'error_invalid' => 'Kasutajanimi või parool on vale.',
     'error_throttled' => 'Liiga palju katseid — proovi uuesti :wait pärast.',

@@ -11,7 +11,7 @@ return [
     'remember' => 'Håll mig inloggad på den här enheten',
     'submit' => 'Logga in',
     'lost_password' => 'Har du tappat bort ditt lösenord? Använd en återställningskod.',
-    'throttled_recovery' => 'Eller ange en återställningskod för att logga in nu. Koden markeras som använd.',
+    'throttled_recovery' => 'Eller ange en återställningskod för att försöka igen nu. Koden markeras som använd.',
 
     'error_invalid' => 'Användarnamnet eller lösenordet är fel.',
     'error_throttled' => 'För många försök — försök igen om :wait.',

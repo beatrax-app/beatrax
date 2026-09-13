@@ -278,6 +278,19 @@ same row lock, same audit row, same equalised ten hashes, same nothing returned
 for an unknown username as for a wrong code — and on a match clears both meters.
 The code is consumed doing it, exactly as one spent on a reset is.
 
+**The code is spent whether or not the password that followed it was right.** It
+has to be: it is judged before the password is read, which is the whole point of
+the order above, so nothing at the moment it is consumed knows yet whether the
+attempt it bought will succeed. What the screen may therefore promise is another
+attempt and not a sign-in, which is what
+`auth::login.throttled_recovery` says. A reader who mistypes twice has spent two
+of ten; a reader who has run out has the reset page and the command on the
+machine, which is what the sheet was always the first of three paths for.
+
+The shared meter is deliberate and is not a simplification waiting to happen. A
+counter each would be two allowances over one sheet, and the sheet is what is
+being guessed — not the screen it is typed into.
+
 This is the shape the app-lock already had. There, the account password clears
 the PIN meter on the way through `AppLockProvisioner::primeSessionAfterLogin()`;
 here, a recovery code clears the sign-in meter. In both, the credential above

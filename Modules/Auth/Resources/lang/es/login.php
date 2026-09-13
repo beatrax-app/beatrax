@@ -11,7 +11,7 @@ return [
     'remember' => 'Mantener la sesión iniciada en este dispositivo',
     'submit' => 'Iniciar sesión',
     'lost_password' => '¿Has perdido la contraseña? Usa un código de recuperación.',
-    'throttled_recovery' => 'O escribe un código de recuperación para iniciar sesión ahora. El código quedará marcado como usado.',
+    'throttled_recovery' => 'O escribe un código de recuperación para volver a probar ahora. El código quedará marcado como usado.',
 
     'error_invalid' => 'El nombre de usuario o la contraseña no son correctos.',
     'error_throttled' => 'Demasiados intentos — vuelve a probar en :wait.',

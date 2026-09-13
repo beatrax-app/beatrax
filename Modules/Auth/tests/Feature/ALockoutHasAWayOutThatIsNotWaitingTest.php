@@ -104,6 +104,24 @@ it('spends the code that opened the meter', function (): void {
         ->toThrow(SignInThrottled::class);
 });
 
+it('spends the code even where the password that followed it was wrong', function (): void {
+    $codes = escapeSignUpOwner();
+
+    escapeSpendTheMeter(ESCAPE_OWNER);
+
+    expect(escapeLoginAction()(ESCAPE_OWNER, 'still-not-the-password', false, $codes[0]))->toBeFalse();
+
+    // Spent before the password is read, because reading the password first is
+    // the reordering this path exists to avoid. What the screen may promise is
+    // therefore another attempt, never a sign-in.
+    expect(UserRecoveryCode::query()->whereNotNull('used_at')->count())->toBe(1);
+
+    /** @var RateLimiter $limiter */
+    $limiter = app(RateLimiter::class);
+
+    expect($limiter->attempts('auth.sign-in:'.ESCAPE_OWNER))->toBe(1);
+});
+
 it('escalates a wrong code rather than clearing the meter', function (): void {
     escapeSignUpOwner();
 

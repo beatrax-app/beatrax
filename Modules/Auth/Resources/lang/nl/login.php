@@ -11,7 +11,7 @@ return [
     'remember' => 'Op dit apparaat ingelogd blijven',
     'submit' => 'Inloggen',
     'lost_password' => 'Wachtwoord kwijt? Gebruik een herstelcode.',
-    'throttled_recovery' => 'Of typ een herstelcode om nu in te loggen. De code wordt als gebruikt gemarkeerd.',
+    'throttled_recovery' => 'Of typ een herstelcode om het meteen opnieuw te proberen. De code wordt als gebruikt gemarkeerd.',
 
     'error_invalid' => 'Gebruikersnaam of wachtwoord is onjuist.',
     'error_throttled' => 'Te veel pogingen — probeer het over :wait opnieuw.',

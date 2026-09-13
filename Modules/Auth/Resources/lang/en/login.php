@@ -11,7 +11,7 @@ return [
     'remember' => 'Stay signed in on this device',
     'submit' => 'Sign in',
     'lost_password' => 'Lost your password? Use a recovery code.',
-    'throttled_recovery' => 'Or enter a recovery code to sign in now. The code will be marked used.',
+    'throttled_recovery' => 'Or enter a recovery code to try again now. The code will be marked used.',
 
     'error_invalid' => 'Username or password is incorrect.',
     'error_throttled' => 'Too many attempts — try again in :wait.',

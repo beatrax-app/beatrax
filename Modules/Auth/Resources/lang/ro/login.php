@@ -11,7 +11,7 @@ return [
     'remember' => 'Rămâi autentificat pe acest dispozitiv',
     'submit' => 'Autentifică-te',
     'lost_password' => 'Ți-ai pierdut parola? Folosește un cod de recuperare.',
-    'throttled_recovery' => 'Sau scrie un cod de recuperare ca să te autentifici acum. Codul va fi marcat ca folosit.',
+    'throttled_recovery' => 'Sau scrie un cod de recuperare ca să încerci din nou acum. Codul va fi marcat ca folosit.',
 
     'error_invalid' => 'Numele de utilizator sau parola este incorect.',
     'error_throttled' => 'Prea multe încercări — încearcă din nou peste :wait.',
