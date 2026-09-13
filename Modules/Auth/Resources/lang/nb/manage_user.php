@@ -7,6 +7,8 @@ return [
     'heading' => 'Administrer :name',
     'subtitle' => 'Se, tilbakestill eller generer nye koder for denne brukeren.',
 
+    'owner_password_label' => 'Kontopassordet ditt',
+
     'set_password' => [
         'heading' => 'Angi nytt passord for denne brukeren',
         'description' => 'Ved neste innlogging blir brukeren bedt om å velge et passord.',

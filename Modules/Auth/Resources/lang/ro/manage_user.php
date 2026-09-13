@@ -7,6 +7,8 @@ return [
     'heading' => 'Gestionează :name',
     'subtitle' => 'Vezi, resetează sau regenerează codurile acestui utilizator.',
 
+    'owner_password_label' => 'Parola contului tău',
+
     'set_password' => [
         'heading' => 'Setează o parolă nouă pentru acest utilizator',
         'description' => 'La următoarea autentificare i se va cere să aleagă o parolă.',

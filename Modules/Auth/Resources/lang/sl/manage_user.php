@@ -7,6 +7,8 @@ return [
     'heading' => 'Upravljanje: :name',
     'subtitle' => 'Preglej, ponastavi ali znova ustvari kode tega uporabnika.',
 
+    'owner_password_label' => 'Geslo tvojega računa',
+
     'set_password' => [
         'heading' => 'Nastavi novo geslo za tega uporabnika',
         'description' => 'Ob naslednji prijavi bo pozvan, da izbere geslo.',

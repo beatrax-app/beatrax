@@ -69,7 +69,13 @@ final readonly class ExpenseSeriesDetector implements SeriesDetector
             // fixed-payments card rendered a +EUR 10.99/month subscription.
             ->whereIn('type', [TransactionType::Expense->value, TransactionType::Fee->value])
             ->where('posted_at', '>=', $since)
+            // posted_at is a DATE, so two charges of one merchant on one day tie
+            // and the cluster's last row — its latest amount — was whichever the
+            // scan returned last. booked_at carries the time of day; the
+            // fingerprint is unique per row and every device computes it alike.
             ->orderBy('posted_at')
+            ->orderBy('booked_at')
+            ->orderBy('fingerprint')
             ->get();
 
         $groups = [];

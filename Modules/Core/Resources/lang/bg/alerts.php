@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Системни сигнали',
 
+    'severity' => [
+        'critical' => 'Критично',
+        'warning' => 'Предупреждение',
+    ],
+
     'actions' => [
         'download_and_install' => 'Изтегли и инсталирай',
         'download_and_install_aria' => 'Изтегли и инсталирай — отбелязва системния сигнал #:id като решен',

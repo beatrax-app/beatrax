@@ -7,6 +7,8 @@ return [
     'heading' => 'Yönet: :name',
     'subtitle' => 'Bu kullanıcının kodlarını görüntüle, sıfırla veya yeniden oluştur.',
 
+    'owner_password_label' => 'Hesap parolan',
+
     'set_password' => [
         'heading' => 'Bu kullanıcı için yeni parola belirle',
         'description' => 'Sonraki girişinde bir parola seçmesi istenecek.',

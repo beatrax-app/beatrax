@@ -8,5 +8,7 @@ return [
     'not_scanned_yet' => 'ikke skannet ennå',
     'not_scanned_yet_phone' => 'ikke skannet på denne telefonen',
     'last_scanned' => 'sist skannet',
+    'out_of_date' => 'utdatert',
+    'not_scanned_here' => 'skannes ikke på denne enheten',
     'more' => '+:count til',
 ];

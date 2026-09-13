@@ -19,14 +19,26 @@ newest rate published on or before that date, not one keyed to it.
   with the app (`Modules/FX/Resources/rates-snapshot.json`), always
   available and never making a network request.
 
-Each provider's failure count is persisted in the Laravel cache under
-`fx.circuit.{key}.failures`. A provider with three or more cached
+Each **online** provider's failure count is persisted in the Laravel cache
+under `fx.circuit.{key}.failures`. A provider with three or more cached
 failures is skipped (circuit open) for six hours; the first failure in a
 window anchors the six-hour TTL, and subsequent failures within that
 window increment the counter without resetting the TTL — otherwise a
 provider that fails more often than once per six hours would slide its
 window forever and the circuit would never auto-heal once the outage
 ends. A success resets the counter.
+
+The breaker applies to a provider that **reaches the network**, and to no
+other. `RateProvider::reachesTheNetwork()` says which, rather than the
+registry keying on a name: the bundled snapshot reads a file already on the
+device, so a failure there is a broken or missing file and not an outage
+anything can wait out. Counting three of them took the offline fallback out of
+the chain for six hours at exactly the moment the two feeds were failing —
+which is the one moment it exists for — and the fallback is what
+[B10-R9](https://github.com/beatrax-app/spec/blob/main/10-functional/features/b-ledger/b10-multi-currency.md)
+rests conversion-without-a-network on. `resetCircuit()` still runs for every
+provider, so a key left behind by an older build is cleared by the next
+success.
 
 The key is provider-global while the jobs that write it are per user, so the
 create is an atomic `add()` rather than a read followed by a write: two

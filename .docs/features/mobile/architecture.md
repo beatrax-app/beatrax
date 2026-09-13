@@ -1262,6 +1262,25 @@ envelope to recover the same raw token a word-code decodes to, and hands
 it unmodified to the same `PairingGateway::acceptToken()` validation the
 word-code path uses.
 
+### What the native scanner reports
+
+`nativephp/mobile-scanner` documents `ScannerCancelled` as firing "when the
+scanner is closed without scanning a code or when permission is denied". Only
+the second half is emitted. Each shell dispatches the event from exactly one
+site — Android's `cameraPermissionLauncher` denial branch in
+`ScannerCoordinator.kt`, iOS's `showPermissionDenied()` in
+`ScannerViewController.swift` — and both set `reason` to `permission_denied`.
+Closing the scanner unscanned (`closeTapped` → `dismiss`, `viewWillDisappear`)
+dispatches nothing.
+
+That is why `onScannerCancelled()` routes straight to `cameraDenied()` and
+reads none of its three arguments: there is one thing the event can mean. A
+reader who opens the scanner and backs out is not stranded by the silence —
+the component never left the `scan` step, which still offers both the retry and
+the "I'd rather type it" arm. The amber `cameraUnavailableNotice` is therefore
+only ever shown to someone the OS actually refused, which is the one case where
+the word-code fallback is not a preference but the only way through.
+
 Those step names are spelled once, in the Sync module's public
 `PairingWizardStep` enum this page shares with the desktop modal. `$step` and
 `$entryStep` stay `string` properties for the reason the modal's own section in

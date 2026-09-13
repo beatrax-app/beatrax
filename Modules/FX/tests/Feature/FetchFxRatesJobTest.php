@@ -50,6 +50,11 @@ function makeFakeRateProvider(string $key, int $priority, array $rates): RatePro
             return $this->p;
         }
 
+        public function reachesTheNetwork(): bool
+        {
+            return true;
+        }
+
         public function fetch(): array
         {
             return $this->result;
@@ -197,6 +202,11 @@ describe('FetchFxRatesJob', function (): void {
             public function priority(): int
             {
                 return 999;
+            }
+
+            public function reachesTheNetwork(): bool
+            {
+                return true;
             }
 
             public function fetch(): array

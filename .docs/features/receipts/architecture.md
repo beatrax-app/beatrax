@@ -206,7 +206,9 @@ What the module explicitly does NOT do:
   4. If no matcher claims it: `dispatch` returns
      `MatchOutcomeDto::unmatched()` and `RecordReceipt` stamps
      the `file_imports` row `status = unmatched`, leaving
-     `matcher_key` NULL. Nothing is logged and nothing throws.
+     `matcher_key` NULL — see [a withholding is not a
+     miss](#a-withholding-is-not-a-miss) for the case that is
+     not this one. Nothing is logged and nothing throws.
   5. If the same bytes were recorded before, the row is left as it
      stands and the matcher's outcome is returned anyway. Silence
      there left a file the drop-folder scan had taken unconfirmable
@@ -297,6 +299,40 @@ one `CapturedReceipt` per message — sender, subject, the message's own
 to report on the drop afterwards. Nothing joins `file_imports` to the
 import run that wrote it, so a caller that does not collect them as they
 go cannot find them again.
+
+## A withholding is not a miss
+
+`unmatched` covers two answers that are not the same answer. One is the
+one [A5](https://github.com/beatrax-app/spec/blob/main/10-functional/features/a-ingestion/a5-receipt-matching.md)
+describes: no registered sender recognised the message, so nothing read
+it and nothing is wrong. The other is a matcher that DID claim the
+message and then declined to book it — `unmarked_total`,
+`ics_direction_unstated`, `paypal_direction_unstated`,
+`ics_euro_leg_unstated`, `invalid_date_header` — every one of which is a
+deliberate refusal to guess, taken because guessing wrong costs the
+reader money.
+
+The registry already tells them apart: `MatchOutcomeDto::fromMatcher()`
+stamps the answering matcher's `key()` onto whatever that matcher
+returned, skipped and unmatched outcomes included, and only a message no
+matcher claimed comes back with the key null. Both write sites then
+dropped it — `RecordReceipt` and `ProcessFetchedInboxMessagesJob` wrote
+`matcher_key` on the parsed arm alone — so the two answers landed as one
+row: `status = unmatched`, `matcher_key = NULL`.
+
+The key is written on every outcome now. `unmatched` with a key names the
+sender that read the bytes and would not book them; `unmatched` with none
+is the miss A5 means, and the `(user_id, matcher_key)` index is what
+finds the first kind when that sender learns to read more of its own
+format. This is a column the row already had and a value the outcome
+already carried; nothing about which messages are booked has changed.
+
+What is still not told apart is a matcher that could not be RUN.
+`ProcessFetchedInboxMessagesJob` marks a message `unmatched` when its
+blob is missing or too large to read whole, which is a failure wearing
+the same status as an answer, and `RecordReceipt` returns
+`unmatched('persist_failed')` where the `file_imports` row it needs does
+not exist to be stamped. Neither has a column to say so.
 
 ## Reading a receipt at the currency it names
 

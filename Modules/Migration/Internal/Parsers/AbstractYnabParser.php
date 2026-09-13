@@ -45,6 +45,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private const string IDENTITY_SEPARATOR = "\x1f";
 
+    private const string REGISTER_DATE_SHAPE = '/^\d{1,2}\/\d{1,2}\/\d{4}$/';
+
     public function __construct(
         private readonly AmountStringParser $amounts,
         private readonly YnabCsvColumnMap $columnMap,
@@ -308,11 +310,13 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         return $assignments;
     }
 
-    // Null is "the export has no figure here" — a blank cell, or one this
-    // parser cannot read. Zero is a figure, and stays one.
+    // Null is "the export has no figure here", which only an absent cell is.
+    // Zero is a figure and stays one; a cell that will not read is refused,
+    // since staging nothing for it drops that month from the reader's budget
+    // with nothing anywhere saying so.
     private function parseBudgetedMinor(string $raw, string $currency): ?int
     {
-        return $this->amounts->parseSigned($raw, $currency);
+        return $this->amounts->requireSignedMinorOrNull($raw, YnabCsvColumnMap::BUDGET_FILE, 'Budgeted', $currency);
     }
 
     private function parseBudgetMonth(string $value): CarbonImmutable
@@ -374,7 +378,10 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         $outflow = $this->amounts->requireMinor($row['Outflow'] ?? '', YnabCsvColumnMap::REGISTER_FILE, 'Outflow', $currency);
         $inflow = $this->amounts->requireMinor($row['Inflow'] ?? '', YnabCsvColumnMap::REGISTER_FILE, 'Inflow', $currency);
 
-        return $inflow > 0 ? $inflow : -$outflow;
+        // A register row's figure is its inflow less its outflow. Reading the
+        // inflow alone whenever it is set discarded the outflow of any row
+        // carrying both, which is the one shape that loses money silently.
+        return $inflow - $outflow;
     }
 
     /**
@@ -489,9 +496,16 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         );
     }
 
+    // createFromFormat()'s 'Y' takes two digits as readily as four and warns
+    // about neither, so '01/15/26' booked itself in the year 26 and every
+    // other check downstream agreed. The year is a shape, and this is the only
+    // place it can be seen.
     private function parseRegisterDate(string $value): CarbonImmutable
     {
-        $parsed = SafeDate::fromFormatOrNull('!m/d/Y', $value);
+        $parsed = preg_match(self::REGISTER_DATE_SHAPE, $value) === 1
+            ? SafeDate::fromFormatOrNull('!m/d/Y', $value)
+            : null;
+
         if (! $parsed instanceof CarbonImmutable) {
             throw UnrecognizedMigrationFileException::cell(YnabCsvColumnMap::REGISTER_FILE, 'Date', $value, 'expected m/d/Y');
         }

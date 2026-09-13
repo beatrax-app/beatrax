@@ -15,8 +15,12 @@
 
     A critical row is announced assertively (`role="alert"`, which
     interrupts the reader); a warning or informational row is a polite
-    live region instead, so it waits for a pause. That difference is the
-    only thing severity changes about the wrapper's semantics.
+    live region instead, so it waits for a pause.
+
+    The banner also names the severity in a word, because the tone was
+    the only thing that reported it: the row body is written the same
+    way whatever the severity is, so rose and amber were what separated
+    an unredacted-token alert from a backup that is a day late.
 
     Row content is factored into `partials/system-alert-body`, which in
     turn includes `partials/system-alert-message` and
@@ -58,6 +62,14 @@
                 SystemAlertSeverity::Warning->value => 'warning',
                 default => 'neutral',
             };
+            // An informational row reports no severity, so it gets no word:
+            // absence has to read as "nothing is wrong here" rather than as
+            // the severity below the one that is named.
+            $severityWord = match ($alert->severity) {
+                SystemAlertSeverity::Critical->value => Lang::get('core::alerts.severity.critical'),
+                SystemAlertSeverity::Warning->value => Lang::get('core::alerts.severity.warning'),
+                default => null,
+            };
         @endphp
         <x-core::alert
             :tone="$tone"
@@ -65,6 +77,9 @@
             :aria-live="$isCritical ? false : 'polite'"
             :aria-atomic="$isCritical ? false : 'true'"
         >
+            @if ($severityWord !== null)
+                <p class="text-xs font-semibold uppercase tracking-wide">{{ $severityWord }}</p>
+            @endif
             @include('core::livewire.partials.system-alert-body', ['alert' => $alert])
         </x-core::alert>
     @endforeach

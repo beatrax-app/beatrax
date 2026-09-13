@@ -71,7 +71,7 @@ final readonly class OpCaptureSinkFactory
         $standing = $this->container->make(DeviceSyncStandingReader::class)->forUser($userId);
 
         if (! $standing->owesAPeerItsWrites()) {
-            return new SyncOffOpSink($this->log);
+            return new SyncOffOpSink($this->log, $userId);
         }
 
         return new DeferredOpCaptureSink($userId, $this->container->make(DeferredOpCaptures::class));

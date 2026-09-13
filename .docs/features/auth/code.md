@@ -99,7 +99,13 @@ domain model uses.
     username existed).
   - `RegenerateRecoveryCodesAction` — invalidates the target user's unused
     codes and issues ten fresh ones. Two call paths: a user regenerates
-    their own; the owner regenerates a partner's.
+    their own; the owner regenerates a partner's. It checks no credential
+    itself, because the third caller is `RegenerateRecoveryCodesCommand`,
+    whose proof is access to the machine. Every in-app surface takes the
+    signed-in reader's own account password: `RecoveryCodesSection` for their
+    own sheet, `ManageUserPage` for a partner's. Owner-only is an authority,
+    not a proof — it is a property of the session, so a session in the wrong
+    hands carries it.
   - `DeleteAccountAction` — the account leaves this device. Re-checks the
     password, promotes the oldest survivor if the last administrator is the
     one leaving, then purges rows, files, keyring and session. The rows go
@@ -183,7 +189,10 @@ the cross-module "a user just appeared" surface.
   `developer`; gates the owner-only routes.
 - `Internal/Http/Livewire/ManageUserPage` — owner-resets-partner. Writes
   the partner row inline with `force_password_change_at_next_login = true`
-  so the partner picks their own password on next sign-in.
+  so the partner picks their own password on next sign-in. Both writes on
+  it — the password and the recovery sheet — take the **owner's own**
+  account password through `AppLockCredentialRejections`, because what each
+  hands out survives the partner changing their own password.
 - `Internal/Console/ResetPasswordCommand` — the `beatrax:reset-password`
   CLI escape hatch. The user's last-resort recovery path when every
   recovery code is lost. See [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).

@@ -7,6 +7,8 @@ return [
     'heading' => 'Pārvaldīt :name',
     'subtitle' => 'Skatiet, atiestatiet vai ģenerējiet no jauna šī lietotāja kodus.',
 
+    'owner_password_label' => 'Jūsu konta parole',
+
     'set_password' => [
         'heading' => 'Iestatīt šim lietotājam jaunu paroli',
         'description' => 'Nākamajā pieteikšanās reizē viņam tiks lūgts izvēlēties paroli.',
