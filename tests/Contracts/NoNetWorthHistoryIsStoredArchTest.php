@@ -185,8 +185,9 @@ it('samples each point from the balances as of its own date', function (): void 
 
     // The sampler earns its exemption by still doing the sampling. When it
     // stops calling the balance seam, the pinned table below has outlived the
-    // reason it was granted.
-    expect(PatternScan::matches('/clearedBalanceAsOf\s*\(/', $source))->toBeTrue(
+    // reason it was granted. Either spelling is that seam: which rows a point
+    // counts is the sampler's to choose, and this guard is not the place it is.
+    expect(PatternScan::matches('/(?:cleared|current)BalanceAsOf\s*\(/', $source))->toBeTrue(
         NET_WORTH_SAMPLER_PATH.' no longer calls the balance-as-of seam, so it is no longer sampling and '
         .'the table it is allowed to read is allowed for a reason that has stopped reading.'
     );
