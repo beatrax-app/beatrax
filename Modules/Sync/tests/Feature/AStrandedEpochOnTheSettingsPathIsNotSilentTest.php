@@ -195,3 +195,27 @@ it('still tells a rolled-back reader that nothing changed, because nothing did',
         ->assertSee(Lang::get('sync::devices.encryption_failed_body'))
         ->assertDontSee(Lang::get('mobile::pairing.encryption_incomplete'));
 });
+
+// assertSee(Lang::get($key)) passes on a key that resolves to nothing, because
+// the blade and the assertion degrade to the same string together. Key
+// existence is owned tree-wide by EveryKeyACallSiteNamesResolvesToALineArchTest;
+// this reads what the branch actually rendered.
+it('renders the stranded ending with no unresolved translation key', function (): void {
+    $user = settingsStrandedUser('settings-stranded-keys');
+    test()->actingAs($user);
+
+    app()->instance(EncryptionMigrationService::class, settingsStrandedMigrationService(
+        new StrandedEncryptionEpochException(SETTINGS_STRANDED_MESSAGE),
+    ));
+
+    $html = Livewire::test(DevicesAndSyncSettingsSection::class)
+        ->set('showEncryptionModal', true)
+        ->call('enableEncryption')
+        ->assertSet('encryptionStep', EncryptionSetupStep::Stranded->value)
+        ->html();
+
+    expect((bool) preg_match_all('/\b[a-z][a-z_]*::[a-z][a-z_]*(?:\.[a-z][a-z_]*)+/', $html, $found))
+        ->toBeFalse('The modal rendered a translation key instead of a sentence: '.implode(', ', $found[0] ?? []));
+
+    expect($html)->toContain(Lang::get('core::help.tip.close'));
+});

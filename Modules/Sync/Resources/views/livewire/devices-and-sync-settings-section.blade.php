@@ -597,7 +597,7 @@
                             wire:click="closeEncryptionModal"
                             data-testid="encryption-stranded-close"
                         >
-                            {{ Lang::get('core::help.close') }}
+                            {{ Lang::get('core::help.tip.close') }}
                         </x-core::secondary-button>
                     </div>
                 @else
