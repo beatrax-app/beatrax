@@ -115,8 +115,24 @@ here pins out a permission the merge has to contribute. The merged result is a
 fact about an artefact:
 
 ```bash
-aapt2 dump permissions app-release.apk
+aapt2 dump xmltree app-release.apk --file AndroidManifest.xml
 ```
+
+`xmltree` rather than `dump permissions`, because only that form prints
+`protectionLevel`, and the level is the whole difference between a permission
+the app asks of the world and one it locks its own components with. The merged
+manifest carries one of the latter:
+
+```
+com.beatrax.mobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION  protectionLevel=0x2
+```
+
+`androidx.core` contributes it, declaring and requesting it in the app's own
+package so that a receiver registered at runtime is not world-reachable on API
+33 and up. `0x2` is plain `signature`: only an app signed with the same key can
+hold it, so it grants nothing outward, and there is no product code to name as
+its consumer because the consumer is the Android shell. It appears in the
+request list and is not a capability the submission has to justify.
 
 ## Notes for review
 
