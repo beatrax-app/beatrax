@@ -28,11 +28,19 @@ function storedUpload(): string
     return (string) $disk->get($files[0]);
 }
 
+// Signed relative and re-absolutised, which is what Livewire's own
+// GenerateSignedUploadUrl does: FileUploadController verifies with
+// hasValidRelativeSignature(), so an absolutely-signed URL is a 401.
+function encodedUploadUrl(): string
+{
+    return URL::to(URL::temporarySignedRoute('livewire.upload-file', now()->addMinutes(5), absolute: false));
+}
+
 /** @param  array<int, array<string, mixed>>  $files */
 function postEncoded(array $files): TestResponse
 {
     return test()->postJson(
-        URL::temporarySignedRoute('livewire.upload-file', now()->addMinutes(5)),
+        encodedUploadUrl(),
         [EncodedUploadTransport::FIELD => EncodedUploadTransport::MARKER, 'files' => $files],
     );
 }
@@ -228,7 +236,7 @@ it('states the same upload maximum as the client and both native shells', functi
 
 it('leaves an ordinary multipart upload alone', function (): void {
     $response = test()->post(
-        URL::temporarySignedRoute('livewire.upload-file', now()->addMinutes(5)),
+        encodedUploadUrl(),
         ['files' => [UploadedFile::fake()->createWithContent('asn.csv', 'date,amount')]],
     );
 
