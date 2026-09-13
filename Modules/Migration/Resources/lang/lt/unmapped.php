@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Tikslas: :name',
         'category_goal' => 'Kategorijos :name tikslas',
+        'schedule' => 'Suplanuota operacija: :name',
         'schedule_untitled' => 'Suplanuota operacija be pavadinimo',
+        'saved_report' => 'Išsaugota ataskaita: :name',
         'transaction' => 'Operacija: :name · :date · :amount',
         'transaction_unnamed' => 'Operacija',
         'amount_update' => 'Operacijos sumos atnaujinimas',

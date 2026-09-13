@@ -26,8 +26,25 @@ const STORED_COPY_READS = [
     ],
     'Modules/Migration/Internal/Pipeline/PreviewSummaryBuilder.php' => [
         'reads' => 4,
-        'why' => 'KNOWN UNGATED. migration_staging_unmapped_items carries no column saying who wrote display_label, and ActualParser writes two of them straight off the reader\'s Actual file — a schedule name and a custom-report name. A file naming a report with the envelope prints a shipped migration line on the preview instead.',
+        'why' => 'Gated on the writer, not on a column: every value that reaches migration_staging_unmapped_items.display_label is wrapped by StoredCopy::of() at the site that writes it, pinned below, so nothing third-party is ever stored raw. ActualParser was the exception — a schedule name and a saved-report name went in straight off the reader\'s file — and now rides as the :name value of a line of ours.',
     ],
+];
+
+// The claim the Migration entry above makes, held to the tree. `display_label`
+// is the column, and the guard keys on it rather than on `reason` because
+// PreviewSummaryBuilder builds its OUTPUT rows under a 'reason' key too; the
+// two are written side by side at every insert, and the DTO half is covered by
+// the named argument.
+const STORED_COPY_WRITE_PATTERNS = [
+    '/^\s*displayLabel:\s*(.+)$/m',
+    '/^\s*reason:\s*(.+)$/m',
+    "/^\s*'display_label'\s*=>\s*(.+)$/m",
+];
+
+// StagingWriter forwards a DTO field that was wrapped where the DTO was built,
+// which is the one site whose expression cannot name StoredCopy itself.
+const STORED_COPY_WRITE_FORWARDERS = [
+    'Modules/Migration/Internal/Pipeline/StagingWriter.php' => ['$u->displayLabel,', '$u->reason,'],
 ];
 
 /**
@@ -91,6 +108,53 @@ it('holds each weighed site to the count it was weighed at', function (): void {
     ]));
 });
 
+it('wraps every sentence written into the migration preview\'s own column', function (): void {
+    $offenders = [];
+    $checked = 0;
+
+    foreach (RepoTree::files(RepoTree::PRODUCTION_PHP) as $path) {
+        $relative = str_replace(base_path().'/', '', $path);
+
+        if (! str_starts_with($relative, 'Modules/Migration/')) {
+            continue;
+        }
+
+        $source = (string) file_get_contents($path);
+
+        foreach (STORED_COPY_WRITE_PATTERNS as $pattern) {
+            foreach (PatternScan::sets($pattern, $source) as $set) {
+                $expression = trim($set[1]);
+                $checked++;
+
+                if (str_starts_with($expression, 'StoredCopy::of(')) {
+                    continue;
+                }
+
+                if (in_array($expression, STORED_COPY_WRITE_FORWARDERS[$relative] ?? [], true)) {
+                    continue;
+                }
+
+                $offenders[] = $relative.'  '.$expression;
+            }
+        }
+    }
+
+    sort($offenders);
+
+    expect($checked)->toBeGreaterThan(
+        10,
+        'The scan found almost no write into the unmapped-items columns, so the verdict below is about a tree nobody opened.',
+    );
+
+    expect($offenders)->toBe([], implode("\n  ", [
+        'These put a value into a column PreviewSummaryBuilder reads back through StoredCopy::read(), which',
+        'decides whether the app wrote it by the value\'s first bytes. Anything stored raw there lets whoever',
+        'wrote the imported file choose a shipped Beatrax sentence. Wrap it: a name out of the file is the',
+        ':name value of a line of ours, never the line itself.',
+        ...$offenders,
+    ]));
+});
+
 // The sites nothing outside the value gates are a baseline, not a licence.
 // The count may fall. It may not rise.
 it('does not let the ungated baseline grow', function (): void {
@@ -99,10 +163,10 @@ it('does not let the ungated baseline grow', function (): void {
         static fn (array $entry): bool => str_contains($entry['why'], 'KNOWN UNGATED'),
     ));
 
-    expect(count($ungated))->toBe(1, implode("\n  ", [
-        'One file still reads a stored sentence back with nothing but the value\'s first bytes deciding',
-        'whether the app wrote it. Delete a line here when one is fixed; a second is a new way for somebody',
-        'else to choose a sentence the app speaks in its own voice.',
+    expect(count($ungated))->toBe(0, implode("\n  ", [
+        'A file reads a stored sentence back with nothing but the value\'s first bytes deciding whether the',
+        'app wrote it. The baseline is empty and stays empty: each of these is a way for somebody else to',
+        'choose a sentence the app speaks in its own voice, in the reader\'s own language.',
         ...$ungated,
     ]));
 });

@@ -6,7 +6,9 @@ return [
     'label' => [
         'goal' => 'Цел: :name',
         'category_goal' => 'Цел на категорията :name',
+        'schedule' => 'Планирана транзакция: :name',
         'schedule_untitled' => 'Планирана транзакция без име',
+        'saved_report' => 'Запазен отчет: :name',
         'transaction' => 'Транзакция: :name · :date · :amount',
         'transaction_unnamed' => 'Транзакция',
         'amount_update' => 'Актуализация на сумата на транзакцията',
