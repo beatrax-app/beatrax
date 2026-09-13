@@ -63,15 +63,16 @@ every page boundary.
 
 ## The known-divergent baseline
 
-Four reads pick a row out of a tie on a per-device id today. They are a
-baseline, not a licence: the count in the guard may fall, and may not rise.
+Three reads, in two files, pick a row out of a tie on a per-device id today.
+They are a baseline, not a licence: the count in the guard may fall, and may
+not rise. Neither is a clause swap — in both the id is doing work somewhere
+other than the ORDER BY, so swapping the clause would turn the guard green
+while the defect kept firing.
 
 | Read | Why it is not fixed with a clause swap |
 | --- | --- |
 | `Anomaly\Internal\Detectors\DuplicateChargeDetector` | The id is load-bearing in the `WHERE` as well — `posted_at = anchor AND id < $thisId` is what makes a same-day pair backward-only — so the candidate **set** already differs between devices and reordering alone would be cosmetic. Of three identical same-day charges, device A alerts on the second and third and device B on the first and third; `anomaly_alerts.id` is `DerivedRowId::for(user_id, transaction_id)`, so the two file different alert rows for one duplicate. |
 | `Chains\Internal\Resolvers\PaypalFundingResolver` (two arms) | Both order by nearness in time **first** and end on the id, and both cut at 20. The alias arm stops at the first two rows whose IBAN matches; the fuzzy arm keeps the first candidate at a tied score (`> $bestScore`). `ChainLinkInsertHelper` derives the link id. Fixing needs a distance-primary clause with a device-stable tail, which `NewestTransactionFirst` does not spell. |
-| `Recurring\Internal\Queries\SeriesAccountResolver` | A `row_number()` window over `observed_at` then `rso.id`, read at rank 1, decides which account a series is filed under. The tie-break is a minted id, and the device-stable tail has to come from the joined transaction. |
-| `Recurring\Public\Services\RecurringOccurrenceQuery` (two reads) | `latestOccurrencesForSeries()` feeds `DriftEvaluator`, which writes a derived alert id; `amountTrendForSeries()` cuts the chart at `maxPoints`. One of the two does not join `transactions` today, so the fix is a query change rather than a clause change. |
 
 ## The picks that were fixed
 
@@ -94,3 +95,22 @@ prints. All five end on the shared clause now.
 - `Ledger\Public\Services\SplitSumHealthCheck` — a diagnostic that reports at
   most N ids of rows whose legs disagree with their parent. The ids it prints
   **are** this device's ids; that is what the reader is handed.
+
+## Recurring's occurrences, which are already fixed
+
+`Recurring` ended the same three reads on
+`Internal\Support\NewestOccurrenceFirst::SQL` —
+`o.observed_at desc, t.booked_at desc, o.observed_amount_minor desc,
+t.occurrence_ordinal desc` — reaching the charge through the joined
+transaction, because nothing on the occurrence row itself is device-stable
+past `observed_at`.
+
+Both its table and its clause sit behind class constants
+(`SeriesTables::OCCURRENCES`, `NewestOccurrenceFirst::SQL`), which is the shape
+a scanner goes quietly blind on: an unresolved constant makes the read
+invisible, and an invisible read reports as "allows N, **found 0**" — exactly
+what a *fixed* read reports. The guard therefore names those three reads and
+the column they end on rather than counting them, so the two cannot be
+confused. Blinding the constant reader reds that control and the clause control
+while every allow-list assertion stays green, which is what makes the control
+worth its lines.
