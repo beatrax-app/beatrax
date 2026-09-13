@@ -36,6 +36,14 @@ final readonly class ManualEntryAnchors
     // on eight screens that would print it verbatim.
     private const string UNTRANSLATED = 'Cash';
 
+    // Which row, for a match that could reach more than one. Ordered on the
+    // column that IS the row rather than on `id`: unique(user_id, iban) and
+    // unique(user_id, sha256) are facts both devices hold, while `id` is a
+    // number each device counts for itself and agrees with nobody on.
+    private const string ACCOUNT_IDENTITY = 'iban';
+
+    private const string RUN_IDENTITY = 'sha256';
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -51,16 +59,20 @@ final readonly class ManualEntryAnchors
     {
         $now = $this->clock->now()->toDateTimeString();
 
-        $accountId = $this->findOrCreate('accounts', ['user_id' => $user->id, 'kind' => AccountKind::Cash->value], [
+        $accountId = $this->findOrCreate('accounts', self::cashAccountMatch($user->id), [
             'user_id' => $user->id,
             'name' => self::readersWord(),
             'slug' => $this->accountSlugs->resolveUnique($user->id, self::SLUG_SEED),
             'kind' => AccountKind::Cash->value,
             'iban' => self::ownIban($user->id),
-            'default_currency' => $this->baseCurrency->code(),
+            // The OWNER's currency rather than the ambient reader's. This is a
+            // stored column every later entry is booked in, not a figure being
+            // displayed, and code() answers with the install default wherever
+            // there is no reader — which the demo seeder's console run is.
+            'default_currency' => $this->baseCurrency->forUser($user),
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ], self::ACCOUNT_IDENTITY);
 
         if ($accountId !== null) {
             $this->relabelIfItIsTheAppsOwn($accountId, $user->id);
@@ -82,7 +94,7 @@ final readonly class ManualEntryAnchors
             'status' => 'confirmed',
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ], self::RUN_IDENTITY);
     }
 
     // The reader can relabel the cash account in /settings like any other, and
@@ -96,7 +108,18 @@ final readonly class ManualEntryAnchors
             ->where('user_id', $user->id)
             ->value('default_currency');
 
-        return is_string($currency) && $currency !== '' ? $currency : $this->baseCurrency->code();
+        return is_string($currency) && $currency !== '' ? $currency : $this->baseCurrency->forUser($user);
+    }
+
+    // The currency the amount box is labelled and parsed in, for a caller
+    // holding no account id. It has to be the one the entry will be booked in,
+    // so it resolves the cash account the way the write does rather than
+    // asking a second where(kind = cash) that could answer with another row.
+    public function currencyForUser(User $user): string
+    {
+        $accountId = $this->existingId('accounts', self::cashAccountMatch($user->id), self::ACCOUNT_IDENTITY);
+
+        return $accountId === null ? $this->baseCurrency->forUser($user) : $this->currencyFor($accountId, $user);
     }
 
     // The name is data, so it froze in whatever language the first entry was
@@ -115,6 +138,16 @@ final readonly class ManualEntryAnchors
             ->where('iban', self::ownIban($userId))
             ->where('name', '!=', $word)
             ->update(['name' => $word]);
+    }
+
+    // One spelling of "the reader's cash account", so the page's question and
+    // the write's question cannot come apart.
+    /**
+     * @return array<string, mixed>
+     */
+    private static function cashAccountMatch(int $userId): array
+    {
+        return ['user_id' => $userId, 'kind' => AccountKind::Cash->value];
     }
 
     // The IBAN this action writes and nothing else does, which is what says an
@@ -138,6 +171,17 @@ final readonly class ManualEntryAnchors
         return $word === $key ? self::UNTRANSLATED : $word;
     }
 
+    // The one read behind every "which row does this match already have".
+    /**
+     * @param  array<string, mixed>  $match
+     */
+    private function existingId(string $table, array $match, string $order): ?int
+    {
+        $id = $this->db->connection()->table($table)->where($match)->orderBy($order)->value('id');
+
+        return is_numeric($id) ? (int) $id : null;
+    }
+
     // The id is read back by the match, never taken from insertGetId():
     // lastInsertId() is per connection and not per table, and the sidebar's
     // own listener writes a `cache` row from inside this INSERT's event.
@@ -147,30 +191,25 @@ final readonly class ManualEntryAnchors
      *
      * @link ../../../../.docs/features/core/an-id-read-after-an-insert.md
      */
-    private function findOrCreate(string $table, array $match, array $attributes): ?int
+    private function findOrCreate(string $table, array $match, array $attributes, string $order): ?int
     {
-        $connection = $this->db->connection();
-        $find = static fn (): mixed => $connection->table($table)->where($match)->value('id');
-
-        $existing = $find();
-        if (is_numeric($existing)) {
-            return (int) $existing;
+        $existing = $this->existingId($table, $match, $order);
+        if ($existing !== null) {
+            return $existing;
         }
 
         try {
-            $connection->table($table)->insert($attributes);
+            $this->db->connection()->table($table)->insert($attributes);
         } catch (QueryException $e) {
             // Re-selects on a unique violation, so two adds racing to create
             // the singleton cash account never surface as a 500.
-            $raced = $find();
-            if (is_numeric($raced)) {
-                return (int) $raced;
+            $raced = $this->existingId($table, $match, $order);
+            if ($raced !== null) {
+                return $raced;
             }
             throw $e;
         }
 
-        $created = $find();
-
-        return is_numeric($created) ? (int) $created : null;
+        return $this->existingId($table, $match, $order);
     }
 }

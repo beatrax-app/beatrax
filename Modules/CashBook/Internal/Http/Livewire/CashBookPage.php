@@ -17,7 +17,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
-use Modules\Core\Models\User;
+use Modules\CashBook\Internal\Services\ManualEntryAnchors;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -30,11 +30,10 @@ use Modules\Core\Public\Support\LocaleCollator;
 use Modules\Core\Public\Support\SafeDate;
 use Modules\Core\Public\Support\SafeExceptionContext;
 use Modules\Import\Public\Enums\SyntheticSourceFormat;
-use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Enums\Direction;
-use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Ledger\Public\Support\CategoryPathName;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -111,13 +110,13 @@ final class CashBookPage extends Component
         RecordManualTransaction $record,
         DatabaseManager $db,
         Translator $translator,
-        BaseCurrency $baseCurrency,
+        ManualEntryAnchors $anchors,
         LoggerInterface $logger,
     ): void {
         $this->error = '';
 
         $user = $currentUser->user();
-        $currency = $this->entryCurrency($db, $baseCurrency, $user);
+        $currency = $anchors->currencyForUser($user);
 
         $amountMinor = MoneyInput::tryToPositiveMinor($this->amount, $currency);
         if ($amountMinor === null) {
@@ -260,7 +259,7 @@ final class CashBookPage extends Component
         TaxTagQuery $taxTagQuery,
         SensitiveColumnCodec $codec,
         Session $session,
-        BaseCurrency $baseCurrency,
+        ManualEntryAnchors $anchors,
     ): View {
         $user = $currentUser->user();
         $connection = $db->connection();
@@ -339,7 +338,7 @@ final class CashBookPage extends Component
             'entries' => $entries,
             'categories' => $categories,
             'taxState' => $taxState,
-            'entryCurrency' => $this->entryCurrency($db, $baseCurrency, $user),
+            'entryCurrency' => $anchors->currencyForUser($user),
         ]);
 
         $view->extends('layouts.app', ['title' => Lang::get('cashbook::cash-book.page_title').Brand::TITLE_SUFFIX]);
@@ -347,32 +346,19 @@ final class CashBookPage extends Component
         return $view;
     }
 
+    // The 25-row page makes this order decide WHICH entries the reader is
+    // shown, not merely their sequence, and `t.id` is counted per device — so
+    // six coffees typed on one day filled page one differently on the phone.
     private function manualEntriesQuery(Connection $connection, int $userId): Builder
     {
         $query = $connection->table('transactions as t')
-            ->leftJoin('categories as c', 'c.id', '=', 't.category_id');
+            ->leftJoin('categories as c', 'c.id', '=', 't.category_id')
+            ->join('accounts as '.NewestTransactionFirst::ACCOUNT, NewestTransactionFirst::ACCOUNT.'.id', '=', 't.account_id');
 
         return CategoryPathName::joinParent($query, $userId, 'c', 'cp')
             ->where('t.user_id', $userId)
             ->where('t.source_format', SyntheticSourceFormat::Manual->value)
-            ->orderByDesc('t.posted_at')
-            ->orderByDesc('t.id');
-    }
-
-    // The amount field is typed in the cash account's own denomination, and the
-    // reader can relabel that account like any other, so the label names what
-    // the entry will actually be booked in — and the parser reads it at that
-    // currency's scale, which is not a hundredth everywhere.
-    private function entryCurrency(DatabaseManager $db, BaseCurrency $baseCurrency, User $user): string
-    {
-        $cashCurrency = $db->connection()->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('kind', AccountKind::Cash->value)
-            ->value('default_currency');
-
-        return is_string($cashCurrency) && $cashCurrency !== ''
-            ? $cashCurrency
-            : $baseCurrency->forUser($user);
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS);
     }
 
     // An amount the parser could not read is not an amount that is too small.
