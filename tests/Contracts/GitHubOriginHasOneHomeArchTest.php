@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * @link ../../.docs/conventions/00-index.md
@@ -58,6 +59,12 @@ function projectLinksScannedFiles(): array
         foreach ($iterator as $file) {
             $path = $file->getPathname();
             if (! $file->isFile() || $file->isLink() || ! in_array(strtolower($file->getExtension()), PROJECT_LINKS_EXTENSIONS, true)) {
+                continue;
+            }
+            // A second checkout of this repository at another commit, which is
+            // not this checkout's code: .claude is walked for the tracked hooks
+            // under it, and the worktrees under it come along for the ride.
+            if (str_contains($path, RepoTree::NESTED_WORKTREE)) {
                 continue;
             }
 

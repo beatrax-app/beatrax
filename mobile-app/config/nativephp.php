@@ -272,6 +272,12 @@ return [
         // gitignore keeps them out of git; it does not bound a build.
         'storage/app',
 
+        // The other half of the line above: appPath() resolves into
+        // persisted_data/ on a phone, so that IS the durable root there, and
+        // neither list excluded it. Only a machine that has run the app holds
+        // the directory at all, which is the machine that builds releases.
+        'persisted_data',
+
         // The Android release signing keystore. release.yml decodes it from a
         // repository secret into credentials/ and only then runs the packager,
         // so it is present in the tree at the moment the bundle is copied. The
