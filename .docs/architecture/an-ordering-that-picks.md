@@ -93,6 +93,26 @@ only *within* one account: a merchant charged from two of them can still tie,
 and the clause is better rather than total. It ends on `occurrence_ordinal`
 rather than on an id, so this rule does not name it.
 
+### What the duplicate detector's divergence looks like
+
+Three identical charges the bank booked on one day, numbered in statement order
+by one device and in another order by its peer. Running the detector's own
+predicate — `posted_at < anchor OR (posted_at = anchor AND id < $thisId)`, then
+`ORDER BY posted_at DESC, id DESC` taken at one row — over both:
+
+| evaluating | device A sibling | A | device B sibling | B |
+| --- | --- | --- | --- | --- |
+| X | — none — | silent | Y | **ALERT** |
+| Y | X | **ALERT** | — none — | silent |
+| Z | Y | **ALERT** | X | **ALERT** |
+
+Each device raises two alerts, which is what "exactly one alert per pair" is
+supposed to give. But they are not the same two: A files them against Y and Z,
+B against X and Z, and Z's sibling differs as well. `anomaly_alerts.id` is
+derived from `(user_id, transaction_id)`, so the pair holds **three** distinct
+alert rows for one duplicate group. Changing only the `ORDER BY` would not move
+this: the `id <` in the WHERE is what makes the candidate sets differ.
+
 ## The picks that are allowed to end on an id
 
 - `Ledger\Internal\Services\CounterpartyKeyProvenance` — a probe. It asks
