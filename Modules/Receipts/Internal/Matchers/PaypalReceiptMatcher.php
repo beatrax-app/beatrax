@@ -46,7 +46,7 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
     // not among them: neither is what left the wallet.
     private const string TOTAL_LABELS = 'Transactiebedrag|Totaalbedrag|Bedrag|Totaal|Amount|Total';
 
-    private const string USD_FIGURE = '\$\s*([0-9.,]+)\s*USD';
+    private const string USD_FIGURE = '\$'.ReceiptBodyText::SPACING.'('.ReceiptBodyText::FIGURE.')'.ReceiptBodyText::SPACING.'USD';
 
     private const string MERCHANT_REGEX = '/(?:Aan|Merchant|To|Paid to):\s*(.+)/i';
 
@@ -83,7 +83,9 @@ final readonly class PaypalReceiptMatcher implements SenderMatcher
     // amount, both of which PayPal has been observed emitting.
     private static function settledConversionRegex(): string
     {
-        return '/Conversion to ([A-Z]{3}):?\s*(?:(?:'.ReceiptBodyText::currencyMarkers().')\s*|[A-Z]{3}\s+)?([0-9.,]+)/i';
+        return '/Conversion to ([A-Z]{3}):?'.ReceiptBodyText::SPACING
+            .'(?:(?:'.ReceiptBodyText::currencyMarkers().')'.ReceiptBodyText::SPACING.'|[A-Z]{3}\s+)?'
+            .'('.ReceiptBodyText::FIGURE.')/i';
     }
 
     public function key(): string

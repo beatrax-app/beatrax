@@ -44,7 +44,7 @@
             id="buffer-input-{{ $accountId }}"
             type="text"
             inputmode="{{ MoneyInput::decimalPlaces($currency) === 0 ? 'numeric' : 'decimal' }}"
-            pattern="[0-9.,]+"
+            pattern="[0-9.,\u00A0\u202F ]+"
             wire:model="bufferInput"
             aria-describedby="buffer-help-{{ $accountId }}"
             class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
