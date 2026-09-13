@@ -33,6 +33,11 @@ final class DeviceRegistryQueries
 
     private const string RETIREMENT_SEAM = 'stillADevice';
 
+    // `table(...)` and `from(...)` are the two ways a query builder is opened
+    // on a name. A model-backed read never spells the table at all, so it was
+    // never collected here and nothing is lost by requiring one of these.
+    private const string OPENED_ON_THE_TABLE = "/\\b(?:table|from)\\(\\s*['\"]device_registry['\"]/";
+
     /**
      * @return list<array{path: string, function: string, statement: string, decides: bool}>
      */
@@ -74,6 +79,10 @@ final class DeviceRegistryQueries
 
             $statement = self::statementAround($text, $index);
 
+            if (! self::isAQuerySite($statement)) {
+                continue;
+            }
+
             $found[] = [
                 'path' => $path,
                 'function' => self::functionAround($tokens, $text, $index),
@@ -83,6 +92,15 @@ final class DeviceRegistryQueries
         }
 
         return $found;
+    }
+
+    // The name has to be the argument a BUILDER was opened on, not merely a
+    // string somewhere in the statement. A refusal, a log line or a schema
+    // question names this table too, and reading those as undecided queries
+    // makes asking the question the thing the rule refuses.
+    private static function isAQuerySite(string $statement): bool
+    {
+        return PatternScan::matches(self::OPENED_ON_THE_TABLE, $statement);
     }
 
     // Three spellings of one decision. The marker itself is the direct answer;

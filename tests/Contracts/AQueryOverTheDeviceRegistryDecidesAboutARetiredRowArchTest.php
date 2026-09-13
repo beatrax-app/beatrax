@@ -19,7 +19,10 @@ use Tests\Contracts\Support\DeviceRegistryQueries;
 // @link ../../.docs/features/sync/device-identity-key-files.md#what-the-repair-retires-and-what-it-must-not
 
 // A scan that matched nothing reports exactly what a clean tree reports, and
-// this one walks a table named across three modules. Measured at 55.
+// this one walks a table named across three modules. Measured at 55 sites a
+// query builder is opened on -- a mention of the name in a refusal, a log line
+// or a hasTable() guard is not one, and counting those made asking whether the
+// retirement column exists look like a query that had not decided about it.
 const RETIRED_ROW_QUERY_FLOOR = 50;
 
 // The set the stamp must never narrow. A rebuild admits an op on a confirmed
@@ -51,8 +54,8 @@ const RETIRED_ROW_VERIFIES_HISTORY_HERE = [
         'reason' => 'the name beside a vouched-for key, read for exactly the ids deviceKeys() already admitted. Narrowing it composes an offer with no name and drops it',
     ],
     'Modules/Auth/Public/Actions/PurgeUserDataAction.php::deviceIdsOf' => [
-        'queries' => 2,
-        'reason' => 'account deletion, which is the one sweep that must reach every id this account ever held: relay_mailbox is addressed by device id, and a row skipped here is a row nothing later can name',
+        'queries' => 1,
+        'reason' => 'account deletion, which is the one sweep that must reach every id this account ever held: relay_mailbox is addressed by device id, and a row skipped here is a row nothing later can name. Was 2 while the scan counted the hasTable() guard above it, which opens no builder and decides nothing',
     ],
 ];
 
