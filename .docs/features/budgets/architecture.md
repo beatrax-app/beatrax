@@ -208,7 +208,11 @@ in [moving the budget month](moving-the-budget-month.md#the-key-is-inside-the-id
 period inside **one** transaction and dispatches its collected events
 after that single commit, rather than opening a transaction and an event
 per category: a copy that stopped half way left a partially-assigned month
-indistinguishable from a deliberate one. Each source row is **converted**
+indistinguishable from a deliberate one. It re-validates every source row
+through `canBudget()` and refuses the whole month when one of them fails, so
+the grid reports that refusal the way the cell's own edit reports it — it
+used to be the only `EnvelopeWriter` refusal the page let out as an error
+page, over a month whose other twenty envelopes were fine. Each source row is **converted**
 out of the currency it was written in and into the reader's base currency
 on the way, because the reader's base currency can have changed since the
 source month: handing the raw minor units on and stamping the new code
@@ -330,6 +334,7 @@ signed amount and says so instead of picking a direction —
 `envelope_moves.kind` has no CHECK and a peer on a newer version writes its
 own spelling straight through the op log
 ([a peer may be on a newer version](../sync/a-peer-may-be-on-a-newer-version.md)).
+
 All service
 collaborators arrive as method parameters (no constructor injection,
 project-wide rule for Livewire `Component` subclasses); every action
@@ -339,6 +344,15 @@ property is always re-validated through `Ledger`'s
 `SafeDate::dayOrNull()` — a strict `Y-m-d` round-trip — and answers with
 the current period when it fails, so a malformed value comes back as a
 period rather than reaching `CarbonImmutable::parse()` uncaught.
+
+A render with nobody signed in draws the same empty grid rather than
+throwing, and it now resolves every figure it needs without the guard:
+`PeriodQuery::current()` reads its start day off `CurrentUser` and
+`BaseCurrency::code()` its currency, and both throw where there is nobody to
+read — which is the one case that branch exists for. The heading comes from
+`containingForDay()` at `PeriodQuery::MIN_START_DAY`, and the view is *handed*
+the currency (`installDefault()` here, `code()` when there is a reader) rather
+than asking for it, which is what keeps the last guard read out of the branch.
 
 The page renders the period `CarryoverQuery::boundedPeriodFor()` hands back,
 never the one its anchor resolved to. The fold clamps a target outside

@@ -15,6 +15,7 @@ use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\IdReadBackFailedException;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
@@ -224,6 +225,14 @@ final class BudgetsPage extends Component
         $selected = $resolved->period;
         try {
             $writer->copyFromPeriod($currentUser->user(), $periods->previous($selected), $selected);
+        } catch (InvalidArgumentException $e) {
+            // The same refusal setAssigned() already reports. copyFromPeriod()
+            // applies the whole month in one transaction, so one source row
+            // naming a category that is no longer budgetable took the other
+            // twenty down with it and left the reader an error page.
+            $this->toast($e->getMessage());
+
+            return;
         } catch (IdReadBackFailedException) {
             $this->toast(Lang::get('core::errors.not_saved'));
 
@@ -308,15 +317,22 @@ final class BudgetsPage extends Component
         CarryoverQuery $carryover,
         EnvelopeBalanceQuery $balances,
         PeriodQuery $periods,
+        BaseCurrency $baseCurrency,
+        Clock $clock,
         DatabaseManager $db,
         ViewFactory $views,
     ): View {
         if (! $currentUser->isAuthenticated()) {
+            // Every figure this branch hands the view is resolved without the
+            // guard. current() reads its start day off the guard and code()
+            // its currency, and both throw where there is nobody to read —
+            // which is the one case this branch exists to draw.
             $view = $views->make('budgets::livewire.budgets-page', [
                 'rows' => [],
                 'toBudgetMinor' => 0,
                 'overspentCount' => 0,
-                'period' => $periods->current(),
+                'period' => $periods->containingForDay(PeriodQuery::MIN_START_DAY, $clock->now()),
+                'currency' => $baseCurrency->installDefault(),
                 'canGoPrevious' => false,
                 'canGoNext' => false,
                 'showCopyBanner' => false,
@@ -385,6 +401,7 @@ final class BudgetsPage extends Component
             'toBudgetMinor' => $toBudgetMinor,
             'overspentCount' => $overspentCount,
             'period' => $selected,
+            'currency' => $baseCurrency->code(),
             'canGoPrevious' => $canGoPrevious,
             'canGoNext' => $canGoNext,
             'showCopyBanner' => $showCopyBanner,
