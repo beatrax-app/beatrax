@@ -6,6 +6,8 @@ namespace Modules\Sync\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
+use Modules\Core\Public\Support\SchemaShape;
 use Modules\Sync\Internal\Identity\DeviceIdentityFile;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
@@ -262,6 +264,15 @@ final readonly class DeviceRegistryService
      */
     public function stillADevice(Builder $query): Builder
     {
+        $missing = SchemaShape::missingColumns($this->db->connection(), 'device_registry', ['self_retired_at']);
+
+        // The seam refuses for every reader at once. An absent column makes
+        // this clause false for every row rather than raising, so each caller
+        // would otherwise be handed an empty device list as a real answer.
+        if ($missing !== []) {
+            throw ColumnNotDeclaredException::on('device_registry', $missing);
+        }
+
         return $query->whereNull('self_retired_at');
     }
 
