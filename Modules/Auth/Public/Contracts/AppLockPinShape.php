@@ -14,9 +14,13 @@ final class AppLockPinShape
 
     public const int MAXIMUM_LENGTH = 10;
 
+    // The D is load-bearing: PCRE's `$` forgives one trailing newline, so
+    // without it "246810\n" was a well-formed PIN the pad can never spell
+    // back — the lockout this class exists to refuse, reached by a crafted
+    // submission rather than a lettered one.
     public static function isWellFormed(string $pin): bool
     {
-        return preg_match('/^[0-9]{'.self::MINIMUM_LENGTH.','.self::MAXIMUM_LENGTH.'}$/', $pin) === 1;
+        return preg_match('/^[0-9]{'.self::MINIMUM_LENGTH.','.self::MAXIMUM_LENGTH.'}$/D', $pin) === 1;
     }
 
     // Told apart from the rest so the reader who typed four digits is not
