@@ -36,7 +36,7 @@ return [
 
     'success_heading' => 'Eszköz párosítva',
     'success_body' => 'Ez az eszköz mostantól megbízható. Az adataid szinkronizálódnak, amint csatlakozol.',
-    'encryption_incomplete' => 'Az eszköz párosítva van, de a rajta tárolt adatok titkosítása nem fejeződött be. Az adatok tárolása még nem titkosított.',
+    'encryption_incomplete' => 'Az ezen az eszközön tárolt adatok titkosítása nem fejeződött be. Az adatok tárolása még nem titkosított.',
     'done' => 'Kész',
 
     'errors' => [

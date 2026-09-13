@@ -36,7 +36,7 @@ return [
 
     'success_heading' => 'Enheten er paret',
     'success_body' => 'Denne enheten er nå betrodd. Dataene dine synkroniseres så snart du kobler til.',
-    'encryption_incomplete' => 'Enheten er sammenkoblet, men krypteringen av dataene som er lagret på den, ble ikke fullført. Dataene lagres ennå ikke kryptert.',
+    'encryption_incomplete' => 'Krypteringen av dataene som er lagret på denne enheten, ble ikke fullført. Dataene lagres ennå ikke kryptert.',
     'done' => 'Ferdig',
 
     'errors' => [
