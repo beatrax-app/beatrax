@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Search\Internal\Services;
 
 use Modules\Core\Public\Support\PatternScan;
-use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 // Parses typed token syntax (account:/after:/before:/amount:/category:)
 // out of the raw query string; tokens are stripped first, and the
@@ -39,17 +38,14 @@ final class QueryParser
             $remainder = PatternScan::replace('/\bbefore:\S+/i', '', $remainder);
         }
 
-        // A bound written past the fraction this token's regex allowed was
-        // truncated, not refused: `amount:12.500-13.000` reached the filter as
-        // `12.50`, which is a hundredth of the dinar the reader typed.
-        $decimals = MoneyInput::decimalPlaces($readerCurrency);
-        $figure = '\d+'.($decimals === 0 ? '' : '(?:[.,]\d{1,'.$decimals.'})?');
-        $amountMatch = PatternScan::first(
-            '/\bamount:([<>]?'.$figure.'(?:-'.$figure.')?)/i',
-            $remainder,
-        );
-        if ($amountMatch !== []) {
-            $filters['amount'] = $amountMatch[1];
+        // The whole run, read by AmountToken rather than gated by a figure
+        // shape spelled a second time here. A token naming no amount stays in
+        // the text: stripping one the filter then ignores reads to the typist
+        // exactly like a filter that worked.
+        $amountMatch = PatternScan::first('/\bamount:(\S+)/i', $remainder);
+        $amountBound = $amountMatch === [] ? null : AmountToken::bound($amountMatch[1], $readerCurrency);
+        if ($amountBound !== null) {
+            $filters['amount'] = $amountBound;
             $remainder = PatternScan::replace('/\bamount:\S+/i', '', $remainder);
         }
 

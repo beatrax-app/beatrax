@@ -26,6 +26,11 @@ final readonly class FrankfurterRateProvider implements RateProvider
         return 100;
     }
 
+    public function reachesTheNetwork(): bool
+    {
+        return true;
+    }
+
     /**
      * @return array{date: string, rates: array<string, string>}
      *
