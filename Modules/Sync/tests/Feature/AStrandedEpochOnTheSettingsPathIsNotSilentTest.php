@@ -10,6 +10,7 @@ use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
+use Modules\Core\Public\Support\PatternScan;
 use Modules\Sync\Internal\Crypto\EncryptionSetupStep;
 use Modules\Sync\Public\Http\Livewire\DevicesAndSyncSettingsSection;
 use Psr\Log\AbstractLogger;
@@ -214,8 +215,12 @@ it('renders the stranded ending with no unresolved translation key', function ()
         ->assertSet('encryptionStep', EncryptionSetupStep::Stranded->value)
         ->html();
 
-    expect((bool) preg_match_all('/\b[a-z][a-z_]*::[a-z][a-z_]*(?:\.[a-z][a-z_]*)+/', $html, $found))
-        ->toBeFalse('The modal rendered a translation key instead of a sentence: '.implode(', ', $found[0] ?? []));
+    // PatternScan, not preg_match_all: a scan that never ran leaves the same
+    // empty array as one that found nothing, and this assertion reads absence
+    // as a pass.
+    $found = PatternScan::all('/\b[a-z][a-z_]*::[a-z][a-z_]*(?:\.[a-z][a-z_]*)+/', $html)[0];
+
+    expect($found)->toBe([], 'The modal rendered a translation key instead of a sentence: '.implode(', ', $found));
 
     expect($html)->toContain(Lang::get('core::help.tip.close'));
 });
