@@ -241,6 +241,29 @@ reader](reader-language-copy.md)). Titles and bodies live in the
 `NotificationCopyRenderer`, so the OS banner and the inbox take the same
 sentence from the same key.
 
+## One reader's failure is one reader's
+
+Three scheduled commands in this module walk every user — `budgets:emit-nudges`
+hourly, `notifications:daily-triggers` once per local day, `notifications:prune`
+daily. Each one used to walk them in a bare `lazyById()->each()`, so the first
+throw ended the walk: every reader after the one it hit got nothing, on every
+tick, and the only record was the scheduler noting that the command failed.
+Which reader, and that the rest were never reached, was nowhere.
+
+`PerUserPass::each()` is the walk now. It catches per reader, logs that one with
+its id through `SafeExceptionContext` (never the exception's message — a
+`QueryException` carries the bindings), and carries on to the next. It returns
+the count, and `NotificationPassOutcome::line()` says it out loud, because a
+pass that threw for somebody is not the same answer as a pass with nothing to
+send them and the emitted/deferred tallies cannot tell those apart.
+
+It does not replace `EmitDailyNotificationTriggersCommand::attempt()`, and
+neither covers the other: `attempt()` isolates one of the three triggers from
+the other two **for one reader**, and the walk isolates one reader from every
+reader after them. The two lines that sit outside `attempt()` — the keyless
+check and this device's own preference read — are exactly where the daily pass
+died, and both are inside the walk.
+
 ## Retention
 
 `PruneNotificationsJob` runs a per-user daily sweep deleting rows older
