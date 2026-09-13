@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Premješteno iz :category',
         'moved_to' => 'Premješteno u :category',
         'moved_unreadable' => 'Premješteno s :category novijom verzijom Beatraxa',
+        'truncated' => 'Posljednje promjene: :shown od :count',
         'undo' => 'Poništi',
     ],
 

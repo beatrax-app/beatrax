@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Mutat din :category',
         'moved_to' => 'Mutat în :category',
         'moved_unreadable' => 'Mutat cu :category de o versiune mai nouă a Beatrax',
+        'truncated' => 'Mișcări recente: :shown din :count',
         'undo' => 'Anulează acțiunea',
     ],
 

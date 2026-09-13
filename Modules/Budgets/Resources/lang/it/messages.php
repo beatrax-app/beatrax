@@ -70,6 +70,7 @@ return [
         'moved_from' => 'Spostato da :category',
         'moved_to' => 'Spostato in :category',
         'moved_unreadable' => 'Spostato con :category da una versione più recente di Beatrax',
+        'truncated' => 'Movimenti recenti: :shown su :count',
         'undo' => 'Annulla',
     ],
 

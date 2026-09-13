@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Переміщено з категорії: :category',
         'moved_to' => 'Переміщено в категорію: :category',
         'moved_unreadable' => 'Переміщено з категорією: :category новішою версією Beatrax',
+        'truncated' => 'Останні рухи: :shown з :count',
         'undo' => 'Скасувати',
     ],
 

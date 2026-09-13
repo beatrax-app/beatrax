@@ -208,7 +208,11 @@ in [moving the budget month](moving-the-budget-month.md#the-key-is-inside-the-id
 period inside **one** transaction and dispatches its collected events
 after that single commit, rather than opening a transaction and an event
 per category: a copy that stopped half way left a partially-assigned month
-indistinguishable from a deliberate one. Each source row is **converted**
+indistinguishable from a deliberate one. It re-validates every source row
+through `canBudget()` and refuses the whole month when one of them fails, so
+the grid reports that refusal the way the cell's own edit reports it — it
+used to be the only `EnvelopeWriter` refusal the page let out as an error
+page, over a month whose other twenty envelopes were fine. Each source row is **converted**
 out of the currency it was written in and into the reader's base currency
 on the way, because the reader's base currency can have changed since the
 source month: handing the raw minor units on and stamping the new code
@@ -279,7 +283,9 @@ stayed green had the writer started storing the datetime form.
   categories in one query to avoid an N+1 on every grid render, each row
   converted into the reader's base currency the way the fold nets it —
   a line left in its stored units read `+EUR 500.00` beside a moved column
-  reading `EUR 440.18`, off one rate the fold had already applied),
+  reading `EUR 440.18`, off one rate the fold had already applied, plus
+  `moveCountsForCategories()`, the real number of moves behind each `Moved`
+  figure),
   `EnvelopeProgressQuery` (the fold reduced to one progress row per
   envelope that has something to report, which is what `Position`
   composes its budget status from), `BudgetProgressQuery` (the
@@ -330,6 +336,19 @@ signed amount and says so instead of picking a direction —
 `envelope_moves.kind` has no CHECK and a peer on a newer version writes its
 own spelling straight through the op log
 ([a peer may be on a newer version](../sync/a-peer-may-be-on-a-newer-version.md)).
+
+The list stops at ten lines and the `Moved` term above it does not, so the
+two only add up while the envelope made ten moves or fewer: eleven printed
+ten lines summing to `-EUR 62.00` under a column reading `-EUR 66.00`, with
+nothing on the page saying a line was missing.
+`EnvelopeBalanceQuery::moveCountsForCategories()` carries the real total —
+one grouped statement for the whole grid, never one per envelope, and
+counted the way the fold sums rather than the way the list filters, since
+the fold counts a move whoever owns its counterpart category and the list
+leaves that one out. `history.truncated` closes the list whenever the two
+disagree, which is the line the pots card already draws under its own
+([`Pots` — architecture](../pots/architecture.md)).
+
 All service
 collaborators arrive as method parameters (no constructor injection,
 project-wide rule for Livewire `Component` subclasses); every action
@@ -339,6 +358,15 @@ property is always re-validated through `Ledger`'s
 `SafeDate::dayOrNull()` — a strict `Y-m-d` round-trip — and answers with
 the current period when it fails, so a malformed value comes back as a
 period rather than reaching `CarbonImmutable::parse()` uncaught.
+
+A render with nobody signed in draws the same empty grid rather than
+throwing, and it now resolves every figure it needs without the guard:
+`PeriodQuery::current()` reads its start day off `CurrentUser` and
+`BaseCurrency::code()` its currency, and both throw where there is nobody to
+read — which is the one case that branch exists for. The heading comes from
+`containingForDay()` at `PeriodQuery::MIN_START_DAY`, and the view is *handed*
+the currency (`installDefault()` here, `code()` when there is a reader) rather
+than asking for it, which is what keeps the last guard read out of the branch.
 
 The page renders the period `CarryoverQuery::boundedPeriodFor()` hands back,
 never the one its anchor resolved to. The fold clamps a target outside

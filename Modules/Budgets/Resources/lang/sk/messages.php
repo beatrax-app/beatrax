@@ -74,6 +74,7 @@ return [
         'moved_from' => 'Presunuté z kategórie: :category',
         'moved_to' => 'Presunuté do kategórie: :category',
         'moved_unreadable' => 'Presunuté s kategóriou: :category novšou verziou aplikácie Beatrax',
+        'truncated' => 'Posledné pohyby: :shown z :count',
         'undo' => 'Späť',
     ],
 
