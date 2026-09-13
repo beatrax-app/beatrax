@@ -41,6 +41,7 @@ it('hands regenerated codes to the share sheet instead of a link that drops them
 
     $page = Livewire::actingAs(manageUserOwnerAndPartner())
         ->test(ManageUserPage::class, ['username' => 'codes-partner'])
+        ->set('ownerPassword', 'fixture-password-12chars')
         ->call('regenerateCodes');
 
     $codes = $page->instance()->regeneratedCodes;
@@ -58,6 +59,7 @@ it('keeps the plain link where the WebView saves what it is handed', function ()
 
     $html = Livewire::actingAs(manageUserOwnerAndPartner())
         ->test(ManageUserPage::class, ['username' => 'codes-partner'])
+        ->set('ownerPassword', 'fixture-password-12chars')
         ->call('regenerateCodes')
         ->html();
 
@@ -70,6 +72,7 @@ it('offers the action rather than the link where the shell drops downloads', fun
 
     $html = Livewire::actingAs(manageUserOwnerAndPartner())
         ->test(ManageUserPage::class, ['username' => 'codes-partner'])
+        ->set('ownerPassword', 'fixture-password-12chars')
         ->call('regenerateCodes')
         ->html();
 

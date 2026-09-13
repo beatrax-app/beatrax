@@ -168,6 +168,7 @@ it('severs the partner sessions and remember token when the owner sets their pas
 
     Livewire::actingAs($owner)->test(ManageUserPage::class, ['username' => 'severs-partner'])
         ->set('newPartnerPassword', 'severs-brand-new-pw')
+        ->set('ownerPassword', 'severs-password-1')
         ->call('setPartnerPassword');
 
     expect(DB::table('sessions')->where('user_id', $partner->id)->count())->toBe(0);

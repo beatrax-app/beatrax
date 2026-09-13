@@ -130,6 +130,7 @@ it('sets a new partner password, flags a forced change and severs what the partn
 
     Livewire::actingAs($owner)->test(ManageUserPage::class, ['username' => 'partner'])
         ->set('newPartnerPassword', 'partner-new-password-1')
+        ->set('ownerPassword', 'owner-password-12chars')
         ->call('setPartnerPassword');
 
     $fresh = $partner->fresh();
@@ -155,6 +156,7 @@ it('regenerates the partner codes from the manage page and displays them inline'
     ]);
 
     $component = Livewire::actingAs($owner)->test(ManageUserPage::class, ['username' => 'partner'])
+        ->set('ownerPassword', 'owner-password-12chars')
         ->call('regenerateCodes');
 
     $component->assertSeeText('Download as .txt');

@@ -7,6 +7,8 @@ return [
     'heading' => 'Správa: :name',
     'subtitle' => 'Zobraz, resetuj alebo znova vygeneruj kódy tohto používateľa.',
 
+    'owner_password_label' => 'Tvoje heslo k účtu',
+
     'set_password' => [
         'heading' => 'Nastav tomuto používateľovi nové heslo',
         'description' => 'Pri ďalšom prihlásení sa zobrazí výzva na voľbu hesla.',
