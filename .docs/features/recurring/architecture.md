@@ -336,6 +336,14 @@ spans — and clustering by IBAN first (falling back to
 `User::DEFAULT_RECURRING_INCOME_MIN_AMOUNT_MINOR`, €2000) so small refunds and
 cashbacks never pollute the income-series surface.
 
+Both scans order on `(posted_at, booked_at, fingerprint)`, not on
+`posted_at` alone. The column is a `DATE`, the cluster's **last** row is
+what `latest_amount_minor` is read off, and with no second term that row
+was whichever the index returned last — so a merchant's two charges on one
+day gave the series two different amounts depending on the order they were
+written in. See [which row of a day is the
+latest](series-detection.md#which-row-of-a-day-is-the-latest).
+
 Both detectors share the same per-cluster pipeline: run
 `ClusterAmountFilter` (drop rows whose sign disagrees with the cluster's,
 then rows outside ±25% of the cluster median absolute amount, tolerance

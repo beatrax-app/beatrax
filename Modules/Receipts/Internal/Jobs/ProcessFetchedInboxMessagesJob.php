@@ -159,16 +159,19 @@ final class ProcessFetchedInboxMessagesJob implements ShouldBeUniqueUntilProcess
         Clock $clock,
         ReceiptLedgerBridge $bridge,
     ): array {
+        // The key rides on every outcome the registry stamped, so the row says
+        // which sender read the message even where it withheld it; only the
+        // bridge is conditional on a parse.
         $update = [
             'updated_at' => $clock->now()->toDateTimeString(),
             'status' => $outcome->kind->toInboxStatus()->value,
+            'matcher_key' => $outcome->matcherKey,
         ];
 
         if ($outcome->kind !== MatchOutcomeKind::Parsed || $outcome->parsed === null) {
             return [$update, $importRunId];
         }
 
-        $update['matcher_key'] = $outcome->matcherKey;
         $importRunId = $bridge->bridge($outcome->parsed, $user, $importRunId, SourceFormat::Eml);
 
         return [$update, $importRunId];
