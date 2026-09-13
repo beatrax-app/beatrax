@@ -1723,6 +1723,15 @@ now, and so does this query — it takes buckets rather than a period
 because the fold has already batched a whole walk's worth of them and
 must not go back to the database per month.
 
+It carries a `ConversionDisclosure` rather than the rate set and the
+left-out codes side by side, and answers for **one key** as well as for
+the whole: `conversionFor()` narrows both halves to that row — the rates
+of the currencies it actually held, and of the codes no rate reached only
+the ones it holds a non-zero bucket in. Narrowing that at each call site
+instead is how a batched read shared by two dozen envelopes came to
+disclose every other envelope's rates, and how a badge and the rate line
+under it came to name different codes.
+
 A currency the rate table cannot reach yields `null` and is left out
 rather than counted at one to one, which is the same choice the tile
 above these rows makes about it — and, like the tile, the figure that

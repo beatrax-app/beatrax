@@ -436,43 +436,27 @@ final readonly class CarryoverQuery
         return $buckets;
     }
 
-    // The codes the rate table could not reach, never their minor units added
-    // together: XPF 1,000 of spend against an ARS 10.00 return cancelled as
-    // bare integers and darkened the badge over about EUR 8 left out. Read off
-    // the buckets, not a difference of totals, which reports rounding as unpriced.
+    // The whole month's spend converted per currency and spread back over the
+    // envelopes, which is the seam the dashboard's category card reads through.
+    // Converted envelope by envelope instead, one rent row came out a yen above
+    // the figure that card printed for the same month.
     /**
      * @param  array<int, array<string, int>>  $buckets
      * @return array<int, array{spent: int, unconverted: list<string>, conversion: ConversionDisclosure}>
      */
     private function spendFromBuckets(array $buckets, string $currency, RateSet $rates): array
     {
-        // The whole month's spend converted per currency and spread back over
-        // the envelopes, which is the seam the dashboard's category card reads
-        // through. Converted envelope by envelope instead, one rent row came
-        // out a yen above the figure that card printed for the same month.
         $converted = ConvertedBuckets::of($this->fx, $buckets, $currency, $rates);
 
         $spend = [];
-        foreach ($buckets as $categoryId => $byCurrency) {
-            // A bucket that nets to nought is money the total is not missing,
-            // whichever currency it was in.
-            $unreached = [];
-            foreach ($converted->unconverted as $code) {
-                if (($byCurrency[$code] ?? 0) !== 0) {
-                    $unreached[] = $code;
-                }
-            }
-
+        foreach (array_keys($buckets) as $categoryId) {
             $spend[$categoryId] = [
                 'spent' => $converted->minorByKey[$categoryId] ?? 0,
-                'unconverted' => $unreached,
-                // Narrowed to this envelope's own codes, and carrying
-                // $unreached rather than the whole month's, so the line beside
-                // the figure names the same codes the badge above it does.
-                'conversion' => ConversionDisclosure::of(
-                    $converted->rates->only(array_keys($byCurrency)),
-                    $unreached,
-                ),
+                // Both halves narrowed to this envelope by the conversion
+                // itself, so the codes the badge names and the codes the line
+                // beside the figure names cannot come apart.
+                'unconverted' => $converted->unconvertedFor($categoryId),
+                'conversion' => $converted->conversionFor($categoryId),
             ];
         }
 

@@ -115,7 +115,10 @@ second time, and a yen reader read one rent envelope at JPY 198,875 on
 this grid beside JPY 198,874 on the card, off the same stored euro rows.
 The month's assignments and moves are grouped the same way, for the same
 reason: they are the parts of one converted whole, and the grid prints
-every part of it. See
+every part of it. `EnvelopeRow::$unconvertedSpentCurrencies` and
+`$spentConversion` both come off that one conversion narrowed to the row,
+so the amber badge and the rate line under it cannot name different
+codes. See
 [conversion is grouped by currency, not by category](../ledger/architecture.md#conversion-is-grouped-by-currency-not-by-category).
 
 `CarryoverQuery` is bound as a request-lifetime singleton so the grid, the
