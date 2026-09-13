@@ -40,6 +40,9 @@ Modules/Counterparties/
 │   │   └── CounterpartySlugResolver.php
 │   ├── Pipeline/
 │   │   └── ResolveCounterpartyStage.php
+│   ├── Support/
+│   │   ├── NewestTransactionFirst.php
+│   │   └── RollingTwelveMonths.php
 │   └── Http/Livewire/
 │       ├── CounterpartyIndex.php
 │       ├── CounterpartyProfile.php
@@ -183,6 +186,11 @@ Modules/Counterparties/
 - `Internal/Pipeline/ResolveCounterpartyStage` — pipeline glue. Calls
   the resolver, stamps `counterpartyId` via `withCounterpartyId()`,
   no-ops on `null` or `self_account` DTOs. Emits no events of its own.
+- `Internal/Support/NewestTransactionFirst::ACROSS_ACCOUNTS` — the one
+  ORDER BY both transaction reads in this module use. `transactions.id`
+  is a per-device autoincrement, so the charge it called newest was a
+  different charge on the peer; see
+  [which charge is the newest](architecture.md#which-charge-is-the-newest).
 - `Internal/Http/Livewire/CounterpartyIndex` — `/counterparties`.
   Per-type chip filter + search; persists view preference via
   `user_preferences.counterparty_index_view`.

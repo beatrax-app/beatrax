@@ -90,10 +90,10 @@ it('survives a skip, which is the same movement under another name', function ()
 // for a counterparty that already has one.
 it('drops the draft of a counterparty the reader has finished with', function (): void {
     $user = draftTriageUser('triage-draft-cleared');
-    draftTriageUnknown($user->id, 'mystery-cleared-1', 'NL12RABO0000000401');
-    // The queue reads updated_at then id descending, so the row inserted last
-    // is the one the cursor starts on.
-    $head = draftTriageUnknown($user->id, 'mystery-cleared-2', 'NL12RABO0000000402');
+    // Both rows are written in one second, so updated_at ties and the slug
+    // settles it — the first slug alphabetically is where the cursor starts.
+    $head = draftTriageUnknown($user->id, 'mystery-cleared-1', 'NL12RABO0000000401');
+    draftTriageUnknown($user->id, 'mystery-cleared-2', 'NL12RABO0000000402');
 
     $component = Livewire::actingAs($user)->test(CounterpartyTriage::class)
         ->set('draftName', 'Corner Bakery')

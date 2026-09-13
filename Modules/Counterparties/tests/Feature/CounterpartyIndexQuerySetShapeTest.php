@@ -58,7 +58,7 @@ function cisqRun(DatabaseManager $db, int $userId): int
     ]);
 }
 
-function cisqTx(DatabaseManager $db, int $userId, int $accountId, int $cpId, string $postedAt, int $minor, string $description): void
+function cisqTx(DatabaseManager $db, int $userId, int $accountId, int $cpId, string $postedAt, int $minor, string $description, string $bookedTime = '00:00:00'): void
 {
     $db->connection()->table('transactions')->insert([
         'user_id' => $userId,
@@ -67,7 +67,7 @@ function cisqTx(DatabaseManager $db, int $userId, int $accountId, int $cpId, str
         'counterparty_id' => $cpId,
         'fingerprint' => hash('sha256', 'cisq-'.bin2hex(random_bytes(8))),
         'posted_at' => $postedAt,
-        'booked_at' => $postedAt.' 00:00:00',
+        'booked_at' => $postedAt.' '.$bookedTime,
         'value_date' => $postedAt,
         'amount_minor' => $minor,
         'currency' => 'EUR',
@@ -101,9 +101,12 @@ beforeEach(function (): void {
     $this->charlie = cisqCounterparty($db, $userId, 'charlie', 'Charlie');
     $this->delta = cisqCounterparty($db, $userId, 'delta', 'Delta');
 
-    // Two on one date: the recent line has to resolve the tie on id, newest last.
-    cisqTx($db, $userId, $account, $this->alpha, '2026-05-10', -1000, 'ALPHA EARLIER');
-    cisqTx($db, $userId, $account, $this->alpha, '2026-05-10', -2000, 'ALPHA LATER');
+    // Two on one date, and posted_at is a DATE so it cannot tell them apart.
+    // What can is the time the bank booked them, which both devices read off
+    // the same statement. The later charge is inserted FIRST, so it holds the
+    // LOWER id and an ordering ending on the id answers with the other one.
+    cisqTx($db, $userId, $account, $this->alpha, '2026-05-10', -2000, 'ALPHA LATER', '17:20:00');
+    cisqTx($db, $userId, $account, $this->alpha, '2026-05-10', -1000, 'ALPHA EARLIER', '09:05:00');
     cisqTx($db, $userId, $account, $this->bravo, '2026-04-02', -3000, 'BRAVO ONE');
     cisqTx($db, $userId, $account, $this->delta, '2024-02-02', -50000, 'DELTA OLD');
 });
@@ -157,7 +160,7 @@ it('still shows a recent line for activity older than the twelve-month total win
         ->and($delta->recentLine)->toEndWith('· DELTA OLD');
 });
 
-it('breaks a same-date recent line on the newer id', function (): void {
+it('breaks a same-date recent line on the time the bank booked it, not on the newer id', function (): void {
     $alpha = cisqBySlug(app(CounterpartyIndexQuery::class)->forUser($this->user), 'alpha');
 
     expect($alpha->recentLine)->toEndWith('· ALPHA LATER');

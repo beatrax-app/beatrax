@@ -13,6 +13,7 @@ use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Transfers\Internal\Support\EarliestLegFirst;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use Modules\Transfers\Public\Enums\CounterLegOrder;
 use Modules\Transfers\Public\Services\PairLookup;
@@ -142,19 +143,24 @@ final readonly class TransferPairer implements PairsTransferLegs
     {
         $connection = $this->db->connection();
 
-        // The sweep order decides which orphan asks first, and pairOne()
-        // persists that answer — the reason counterLegOnAccount() and the
-        // reverse arm both end on id. Orphans routinely share a booked_at
-        // (ASN books every row at 12:00:00), leaving the winner to SQLite.
+        // The sweep is greedy: the first orphan to ask claims a contested leg
+        // and pairOne() persists that claim. Orphans routinely share a
+        // booked_at (ASN books every row at 12:00:00), so ordering the queue
+        // on the id handed each device a different claimant.
         /** @var list<int<1, max>> $candidateIds */
         $candidateIds = $connection
             ->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereIn('type', TransactionType::transferValues())
-            ->whereNull('pair_transaction_id')
-            ->orderBy('booked_at')
-            ->orderBy('id')
-            ->pluck('id')
+            ->join(
+                'accounts as '.EarliestLegFirst::ACCOUNT,
+                EarliestLegFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $user->id)
+            ->whereIn('transactions.type', TransactionType::transferValues())
+            ->whereNull('transactions.pair_transaction_id')
+            ->orderByRaw(EarliestLegFirst::ACROSS_ACCOUNTS)
+            ->pluck('transactions.id')
             ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
             ->filter(static fn (int $id): bool => $id > 0)
             ->values()
@@ -208,21 +214,26 @@ final readonly class TransferPairer implements PairsTransferLegs
         // and matched in PHP.
         $candidates = $connection
             ->table('transactions')
-            ->where('user_id', $userId)
-            ->where('account_id', '!=', $tx->account_id)
-            ->where('amount_minor', -$tx->amount_minor)
-            ->where('currency', $tx->currency)
-            ->whereBetween('booked_at', [$windowStart, $windowEnd])
-            ->whereNull('pair_transaction_id')
-            ->whereIn('type', TransactionType::transferValues())
-            ->where('id', '!=', $tx->id)
-            // Two legs of one transfer routinely book on the same day, and the
-            // first row that decrypts to a match is the one written into
-            // pair_transaction_id. Ordering on booked_at alone left which of
-            // them that is to the engine, and it persists the answer.
-            ->orderBy('booked_at')
-            ->orderBy('id')
-            ->get(['id', 'counterparty_iban']);
+            ->join(
+                'accounts as '.EarliestLegFirst::ACCOUNT,
+                EarliestLegFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $userId)
+            ->where('transactions.account_id', '!=', $tx->account_id)
+            ->where('transactions.amount_minor', -$tx->amount_minor)
+            ->where('transactions.currency', $tx->currency)
+            ->whereBetween('transactions.booked_at', [$windowStart, $windowEnd])
+            ->whereNull('transactions.pair_transaction_id')
+            ->whereIn('transactions.type', TransactionType::transferValues())
+            ->where('transactions.id', '!=', $tx->id)
+            // matchDecryptedCandidate answers with the FIRST row that decrypts
+            // to a match, so this order is the pair. Two legs of one transfer
+            // routinely book on the same day, and the id that used to settle
+            // that day is a number each device counts for itself.
+            ->orderByRaw(EarliestLegFirst::ACROSS_ACCOUNTS)
+            ->get(['transactions.id', 'transactions.counterparty_iban']);
 
         $match = $this->matchDecryptedCandidate($candidates, $candidateIbans, $userId);
 

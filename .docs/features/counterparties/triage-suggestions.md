@@ -26,7 +26,10 @@ from one of ten, and the UI says so in different words.
 `forUser(User $user, ?int $queueFirstId = null)` reads
 `counterparties` rows for this user with `type = 'unknown'`, minus the
 ones the reader marked ignored, ordered by `updated_at` descending then
-`id` descending, capped at `SCAN_LIMIT = 200`. The ignore exclusion is
+`slug` ascending, capped at `SCAN_LIMIT = 200`. The second term used to
+be `id`, which is counted per device, and the cap makes that term decide
+membership — see
+[which charge is the newest](architecture.md#the-triage-queues-own-tie-break). The ignore exclusion is
 `LabelCounterparty::excludeIgnored()` — a SQL predicate on
 `metadata->ignored`, applied before the cap so a dismissed row does not
 spend one of the 200 slots.

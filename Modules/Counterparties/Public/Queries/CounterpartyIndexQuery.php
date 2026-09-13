@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter;
+use Modules\Counterparties\Internal\Support\NewestTransactionFirst;
 use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
@@ -237,9 +238,10 @@ final readonly class CounterpartyIndexQuery
         return $buckets;
     }
 
-    // Ranked in SQL rather than one ->first() per counterparty. The window's
-    // ORDER BY is the tie-break the per-row query used, so a counterparty with
-    // two transactions on one date still resolves to the same row.
+    // Ranked in SQL rather than one ->first() per counterparty, and the rank
+    // decides which row's description and counterparty_name the index shows.
+    // Two charges on one date used to be parted by the id, which is counted
+    // per device, so the two devices labelled the same counterparty differently.
     /**
      * @return array<int, stdClass>
      */
@@ -248,9 +250,19 @@ final readonly class CounterpartyIndexQuery
         $connection = $this->db->connection();
 
         $ranked = $connection->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereNotNull('counterparty_id')
-            ->selectRaw('counterparty_id, posted_at, description, counterparty_name, ROW_NUMBER() OVER (PARTITION BY counterparty_id ORDER BY posted_at DESC, id DESC) as rn');
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $user->id)
+            ->whereNotNull('transactions.counterparty_id')
+            ->selectRaw(
+                'counterparty_id, posted_at, description, counterparty_name, '
+                .'ROW_NUMBER() OVER (PARTITION BY counterparty_id ORDER BY '
+                .NewestTransactionFirst::ACROSS_ACCOUNTS.') as rn'
+            );
 
         /** @var iterable<stdClass> $rows */
         $rows = $connection->query()
