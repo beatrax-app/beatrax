@@ -80,9 +80,16 @@ function callSiteKeyExecutableSource(string $source, bool $isBlade): string
 const CALL_SITE_KEY_TRANSLATION_CALLS = 'Lang::get|Lang::choice|Lang::group|trans_choice|trans|__';
 
 // A scan that goes blind reports a clean tree, which is the one failure a guard
-// must not have. The floor sits well under the 3,420 keys the product spells
-// out today, and well over anything a pattern that stopped matching would leave.
-const CALL_SITE_KEY_SCAN_FLOOR = 1000;
+// must not have. One combined floor could not see that: measured at 2,916 Blade
+// and 640 PHP keys, the Blade half could lose 86% of its matches and the total
+// would still clear 1,000. Each half is held near its own count instead.
+const CALL_SITE_KEY_BLADE_FLOOR = 2600;
+
+const CALL_SITE_KEY_PHP_FLOOR = 560;
+
+const CALL_SITE_KEY_FILE_FLOOR = 2600;
+
+const CALL_SITE_KEY_PREFIX_FLOOR = 30;
 
 /**
  * @return list<string>
@@ -194,10 +201,11 @@ it('has a line behind every key a translation call spells out', function (): voi
 
     $files = callSiteKeySourceFiles();
 
-    // The floor sits far under the 2,700 files this walk opens.
+    // Held near the 2,920 files this walk opens, not far under them.
     expect(count($files))->toBeGreaterThan(
-        800,
-        'The call-site walk opened almost nothing, so no key was read at all.'
+        CALL_SITE_KEY_FILE_FLOOR,
+        'The call-site walk opened '.count($files).' files, under the '
+        .CALL_SITE_KEY_FILE_FLOOR.' it reaches today, so part of the tree went unread.'
     );
 
     $counted = ['blade' => 0, 'php' => 0];
@@ -220,12 +228,15 @@ it('has a line behind every key a translation call spells out', function (): voi
 
     // Both halves of the scan, because Blade reaches the tokeniser only after
     // its own compiler and a break there would empty that side alone.
-    expect($counted['blade'])->toBeGreaterThan(0, 'No Blade template spelled a key, so the compiler half of the scan read nothing.')
-        ->and($counted['php'])->toBeGreaterThan(0, 'No PHP file spelled a key, so the tokeniser half of the scan read nothing.')
-        ->and($counted['blade'] + $counted['php'])->toBeGreaterThan(
-            CALL_SITE_KEY_SCAN_FLOOR,
-            'Fewer than '.CALL_SITE_KEY_SCAN_FLOOR.' keys were read across both halves, so the pattern has stopped matching.'
-        );
+    expect($counted['blade'])->toBeGreaterThan(
+        CALL_SITE_KEY_BLADE_FLOOR,
+        'The compiler half read '.$counted['blade'].' keys, under the '.CALL_SITE_KEY_BLADE_FLOOR
+        .' it reads today, so the Blade pattern has stopped matching.'
+    )->and($counted['php'])->toBeGreaterThan(
+        CALL_SITE_KEY_PHP_FLOOR,
+        'The tokeniser half read '.$counted['php'].' keys, under the '.CALL_SITE_KEY_PHP_FLOOR
+        .' it reads today, so the PHP pattern has stopped matching.'
+    );
 
     $unresolved = array_values(array_unique($unresolved));
     sort($unresolved);
@@ -245,8 +256,9 @@ it('reaches a line through every prefix a translation call builds a key on', fun
     $files = callSiteKeySourceFiles();
 
     expect(count($files))->toBeGreaterThan(
-        800,
-        'The call-site walk opened almost nothing, so no prefix was read at all.'
+        CALL_SITE_KEY_FILE_FLOOR,
+        'The call-site walk opened '.count($files).' files, under the '
+        .CALL_SITE_KEY_FILE_FLOOR.' it reaches today, so part of the tree went unread.'
     );
 
     $unreachable = [];
@@ -280,12 +292,13 @@ it('reaches a line through every prefix a translation call builds a key on', fun
     $unreachable = array_values(array_unique($unreachable));
     sort($unreachable);
 
-    // A prefix is the rarer shape and the one no literal names, so the floor
-    // is low on purpose — but a scan that found none of them is a scan that
-    // stopped, not a tree that spells every key out.
+    // A prefix is the rarer shape and the one no literal names. The floor is a
+    // small number because the count is small — 36 today — not because it may
+    // sit far under it: at 5 the scan could lose seven of every eight and pass.
     expect($prefixes)->toBeGreaterThan(
-        5,
-        'No call site builds a key on a prefix at all, so this rule checked nothing.'
+        CALL_SITE_KEY_PREFIX_FLOOR,
+        'The scan found '.$prefixes.' built prefixes, under the '.CALL_SITE_KEY_PREFIX_FLOOR
+        .' it finds today, so the prefix pattern has stopped matching.'
     );
 
     expect($unreachable)->toBe([], implode("\n", [
