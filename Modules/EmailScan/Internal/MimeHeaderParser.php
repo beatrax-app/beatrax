@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal;
 
 use DateTimeImmutable;
+use Modules\Core\Public\Support\Instant;
 use Throwable;
 use ZBateson\MailMimeParser\Header\AddressHeader;
 use ZBateson\MailMimeParser\Header\DateHeader;
@@ -45,7 +46,11 @@ final class MimeHeaderParser
         if ($dateHeader instanceof DateHeader) {
             try {
                 $immutable = $dateHeader->getDateTimeImmutable();
-                if ($immutable !== null) {
+                // The header is the sender's, and a date the storage frame
+                // cannot hold is as unusable as one that will not parse. Let
+                // out of the walk it was neither: the store threw, the cursor
+                // stayed put, and every later tick met the same message.
+                if ($immutable !== null && Instant::storesAsAppLocal($immutable)) {
                     $internalDate = $immutable;
                 }
             } catch (Throwable) {
