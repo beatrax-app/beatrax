@@ -130,9 +130,9 @@ final readonly class AnomalyAlertQuery
         return $this->materialize($user, $query->get());
     }
 
-    // The id is derived from the alert's own columns, so it sorts in hash order,
-    // not insertion order — paging on `id < cursor` alone would skip and repeat
-    // rows at random. detected_at leads; id only breaks ties within a timestamp.
+    // The id is MINTED — random_int, not a fold of the alert's columns — so it
+    // sorts in no order at all, and paging on `id < cursor` alone would skip and
+    // repeat rows at random. detected_at leads; id only breaks ties within one.
     private function applyCursor(Builder $query, ?string $cursorDetectedAt, ?int $cursorId): void
     {
         if ($cursorDetectedAt === null || $cursorId === null) {
