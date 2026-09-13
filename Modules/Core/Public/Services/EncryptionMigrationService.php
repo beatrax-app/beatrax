@@ -164,7 +164,8 @@ class EncryptionMigrationService
 
         // Past the commit: a failure here must NOT restore plaintext, which
         // would leave a committed epoch sitting over plaintext rows. Finalize
-        // the staged keyring instead; a re-entry via migrate() can recover.
+        // the staged keyring instead; a failure at this rename is terminal for
+        // this install until somebody puts the file back.
         try {
             $support->finalizeStagedEpoch();
         } catch (Throwable $e) {
@@ -172,9 +173,10 @@ class EncryptionMigrationService
 
             throw new StrandedEncryptionEpochException(
                 sprintf('Keyring finalize failed after commit for user %s: `current_epoch` is ', $userId)
-                .'committed but the keyring file is not yet in place. The staged key file was '
-                .'preserved for retry — re-run migrate() to reconcile. Plaintext was NOT restored '
-                .'(that would corrupt the committed epoch).',
+                .'committed but the keyring file is not yet in place. The staged .tmp beside the '
+                .'keyring path is the only copy of that epoch key and is kept, but nothing on the '
+                .'re-entry path renames it: the file must be finalized/restored before sensitive '
+                .'writes resume. Plaintext was NOT restored (that would corrupt the committed epoch).',
                 0,
                 $e,
             );

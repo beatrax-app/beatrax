@@ -62,9 +62,37 @@ four have passed, on both backends. `NativeZipReaderTest` pins that by extractin
 the committed fixtures through both readers and comparing the results
 byte-for-byte, and by driving each guard through the built-in one.
 
-`NativeZipReader` verifies each entry's CRC32 and its inflated length against
-what the entry's own header declares. `ZipArchive` does this for free; a reader
-that skipped it would turn a truncated download into silently short CSVs.
+## The size cap counts a number the archive chose
+
+Three of those four guards read something the reader can verify. The fourth adds
+up `ArchiveEntry::uncompressedSize`, which is a field in the archive's own
+central directory, and nothing held the extraction to the number it had counted.
+
+Measured on a 10,313-byte archive whose entry declares one byte of content and
+carries ten megabytes of it: the cap added up **1** against its 200MB ceiling,
+`ZipArchive::extractTo()` wrote all **10,485,760** bytes and returned `true`, and
+the built-in reader wrote the same ten megabytes before raising its
+after-the-fact length mismatch. The ceiling is on an upload the reader controls
+the ratio of, so the only thing bounding what lands on the disk was the disk.
+
+`EntryAsDeclared` is the ledger both readers now keep as the bytes arrive: it
+counts them, hashes them, and refuses the moment an entry passes the size its
+own index entry declared. That makes the cap a statement about the extraction
+rather than about the archive's opinion of itself.
+
+Sizing the read from what the entry still owes is the other half. Deflate
+expands by at most 1032:1, so one 256KB read of a hostile stream inflates to
+**257.6MB** in a single string — bounding the disk while a phone holds a quarter
+of a gigabyte of it would be a different way to lose. The built-in reader reads
+`max(4096, outstanding / 1032)` bytes at a time, so a header claiming one byte
+buys 4KB of input and at most 4.2MB of expansion before it is refused.
+
+`ZipArchiveReader` walks entry by entry through `getStreamIndex()` for the same
+reason; `extractTo()` takes a directory and hands back a boolean, and there is
+no seam in it to stop at. Its CRC32 check comes with that: the extension checked
+it inside `extractTo()`, and a stream hands back a truncated download's bytes
+without a word — 720 of them, measured, off an entry whose payload was edited.
+`EntryAsDeclared::sealed()` is where both readers check it now.
 
 ## What the built-in reader refuses, and why that is a different sentence
 
