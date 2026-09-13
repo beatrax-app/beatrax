@@ -349,6 +349,15 @@ native `[popover]` holding a line per pair, and the `core::money.not_converted`
 clause. A surface that names what it left out without naming what it
 converted at fails `AConvertedFigureNamesTheRateThatMadeItArchTest`.
 
+The trigger says whether the rate behind it is stale, twice over, because it
+used to say so in amber and nothing else. The marker fills its ring in — an
+amber ring against the neutral one is 1.51:1 apart in light and 1.45:1 in dark
+with the hue taken away, and the amber tint inside it 1.11:1 and 1.21:1, so in
+greyscale the two states were the same circle. The trigger's accessible name
+takes the `staleNote()` sentence on the end of "Rate details", which is the
+only reading a screen reader gets: the marker is `aria-hidden`, and the note
+itself lives inside a popover nobody has opened yet.
+
 The rate itself is printed at the column's own eight places
 (`Rate::exact()`), not at the three significant digits `Rate::forDisplay()`
 keeps for a rate read at a glance: a reader who opened the panel came to
