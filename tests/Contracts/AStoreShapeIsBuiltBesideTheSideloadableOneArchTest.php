@@ -85,3 +85,46 @@ it('builds the store shape in every workflow that builds the sideloadable one', 
 
     expect($missing)->toBe([], implode("\n", $missing));
 });
+
+// The store bundle is a second native:package run, and every one of those
+// calls prepareAndroidBuild(), whose cleanGradleCache() removes
+// nativephp/android/app/build whole. An APK left where Gradle wrote it is gone
+// before anything reads it, and upload-artifact errors only if EVERY path missed.
+it('copies the sideloadable APK out of the directory the store build deletes', function (): void {
+    $workflows = storeShapeWorkflows();
+
+    if ($workflows === []) {
+        test()->markTestSkipped('Both Composer roots run this file and only one has the workflows beside it.');
+    }
+
+    $missing = [];
+    $judged = 0;
+
+    foreach ($workflows as $name => $body) {
+        if (! str_contains($body, 'mobile:package-android --build-type=release')) {
+            continue;
+        }
+
+        $judged++;
+
+        $stagedAt = strpos($body, 'android-artifacts/');
+        $bundleAt = strpos($body, 'mobile:package-android --build-type=bundle');
+
+        if ($stagedAt === false || ! str_contains($body, 'APK_PATH=android-artifacts/')) {
+            $missing[] = $name.': reads and uploads the APK where Gradle left it, which the store-bundle build deletes';
+
+            continue;
+        }
+
+        if ($bundleAt !== false && $stagedAt > $bundleAt) {
+            $missing[] = $name.': copies the APK aside only after the build that has already deleted it';
+        }
+    }
+
+    expect($judged)->toBeGreaterThanOrEqual(
+        2,
+        'no workflow was found building the sideloadable APK, so this rule judged nothing',
+    );
+
+    expect($missing)->toBe([], implode("\n", $missing));
+});

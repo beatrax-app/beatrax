@@ -33,6 +33,16 @@ function bundleRefusals(string $path): array
     return app(ShippedBundleContents::class)->refusals($path);
 }
 
+function bundlePrivateKeyPem(): string
+{
+    return "-----BEGIN PRIVATE KEY-----\nMIIBVQIBADANBgkqhkiG9w0BAQEFAA==\n-----END PRIVATE KEY-----\n";
+}
+
+function bundleCertificateOnlyPem(): string
+{
+    return "-----BEGIN CERTIFICATE-----\nMIIDdTCCAl2gAwIBAgILBAAAAAABFUtaw5Q=\n-----END CERTIFICATE-----\n";
+}
+
 afterEach(function (): void {
     foreach ((array) glob(sys_get_temp_dir().'/bundle-fixture-*') as $leftover) {
         if (is_string($leftover) && is_file($leftover)) {
@@ -51,7 +61,9 @@ it('accepts an artifact carrying none of the three', function (): void {
     expect(bundleRefusals($path))->toBe([]);
 });
 
-it('refuses key material by whatever name it travels under', function (string $name): void {
+it('refuses a key container by the name it travels under', function (string $name): void {
+    // Holding a key is the whole purpose of these three, so nothing is gained
+    // by opening one, and a format this cannot parse would be read as empty.
     $path = bundleArchive(['assets/'.$name => 'not really a key']);
 
     expect(bundleRefusals($path))->toHaveCount(1)
@@ -60,8 +72,36 @@ it('refuses key material by whatever name it travels under', function (string $n
     'a keystore' => 'app-release-key.jks',
     'a PKCS#12 bundle' => 'dist.p12',
     'an Apple provisioning profile' => 'beatrax.mobileprovision',
-    'a private key' => 'signing.pem',
 ]);
+
+it('refuses a private key wherever it travels and whatever it is called', function (string $name): void {
+    $path = bundleArchive(['assets/'.$name => bundlePrivateKeyPem()]);
+
+    expect(bundleRefusals($path))->toHaveCount(1)
+        ->and(bundleRefusals($path)[0])->toContain('key material');
+})->with([
+    'a key on its own' => 'localhost.key.pem',
+    'a certificate with the key appended' => 'localhost.pem',
+    'a name no extension list covers' => 'id_rsa',
+    'a name that claims to be something else' => 'notes.txt',
+]);
+
+// A signed release APK carried amphp's three TLS fixtures, and this is the
+// half that is not a leak: assets/cacert.pem is 151 public root certificates
+// the PHP runtime verifies TLS against. Refusing it by extension would refuse
+// every Android artifact this repository is able to build.
+it('accepts a certificate a reader could download, which is not a secret', function (): void {
+    $path = bundleArchive(['assets/cacert.pem' => bundleCertificateOnlyPem()]);
+
+    expect(bundleRefusals($path))->toBe([]);
+});
+
+it('refuses a PEM it could not read, because unread is not shown to be clean', function (): void {
+    $path = bundleArchive(['assets/opaque.pem' => "\0\0\0not text at all"]);
+
+    expect(bundleRefusals($path))->toHaveCount(1)
+        ->and(bundleRefusals($path)[0])->toContain('key material');
+});
 
 it('refuses a database, because the phone migrates and ships none', function (): void {
     $path = bundleArchive(['assets/app/database/database.sqlite' => 'SQLite format 3']);

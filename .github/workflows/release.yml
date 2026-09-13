@@ -911,7 +911,14 @@ jobs:
                       exit 1
                   fi
                   echo "signed by the expected release key"
-                  echo "APK_PATH=$apk" >> "$GITHUB_ENV"
+
+                  # Copied out of app/build before the store bundle is built: every
+                  # native:package run calls prepareAndroidBuild(), whose
+                  # cleanGradleCache() removes that directory whole, so the second
+                  # build deletes the APK this one just verified.
+                  mkdir -p android-artifacts
+                  cp "$apk" android-artifacts/
+                  echo "APK_PATH=android-artifacts/$(basename "$apk")" >> "$GITHUB_ENV"
 
             - name: Build and sign the store bundle
               working-directory: mobile-app
@@ -968,7 +975,12 @@ jobs:
                       exit 1
                   fi
                   echo "store bundle signed by the expected release key"
-                  echo "AAB_PATH=$aab" >> "$GITHUB_ENV"
+
+                  # Beside the APK, so the two paths read for what they must not carry
+                  # and the two paths uploaded are the same two files.
+                  mkdir -p android-artifacts
+                  cp "$aab" android-artifacts/
+                  echo "AAB_PATH=android-artifacts/$(basename "$aab")" >> "$GITHUB_ENV"
 
             - name: Read the built artifacts for anything they must not carry
               working-directory: mobile-app
