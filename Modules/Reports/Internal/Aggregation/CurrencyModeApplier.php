@@ -71,7 +71,7 @@ final readonly class CurrencyModeApplier
             ->whereNotNull('settled_currency')
             ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('account_id', $accountIds))
             ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => self::whereCategoryOnParentOrLeg($q, $categoryIds))
-            ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('counterparty_id', $counterpartyIds))
+            ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('transactions.counterparty_id', $counterpartyIds))
             ->distinct()
             ->orderBy('settled_currency')
             ->pluck('settled_currency');

@@ -71,9 +71,9 @@ final readonly class ClearHalfPairsOnMergedRows
     {
         $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
-            ->whereNotNull('pair_transaction_id')
+            ->whereNotNull('transactions.pair_transaction_id')
             ->where(static function (Builder $query) use ($batch): void {
-                $query->whereIn('id', $batch)->orWhereIn('pair_transaction_id', $batch);
+                $query->whereIn('id', $batch)->orWhereIn('transactions.pair_transaction_id', $batch);
             })
             ->select(['id', 'pair_transaction_id'])
             ->chunkById(self::CHUNK, function (Collection $legs) use ($userId, &$dangling): void {

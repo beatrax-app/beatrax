@@ -10,6 +10,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // rows already out there came from, so it carries its own.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'no-op-carries-it: only rows with a null user_id are touched, and every capture is scoped to one user, so no op names them on any device.';
+
     private const DEFAULT_NAMES = [
         'income' => 'Income',
         'income-salary' => 'Salary',

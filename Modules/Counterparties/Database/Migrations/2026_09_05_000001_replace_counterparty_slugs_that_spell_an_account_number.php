@@ -17,6 +17,8 @@ use Modules\Counterparties\Internal\Resolver\CounterpartySlugResolver;
 // of the stored slug answers the question without a key.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the walk is per user in id order over rows both devices hold under the same ids, and the replacement comes from CounterpartySlugResolver::OPAQUE_BASE through the shared UniqueSlug walk, so both rename the same row to the same slug.';
+
     public function up(): void
     {
         if (! $this->schema()->hasTable('counterparties')) {

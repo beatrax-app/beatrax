@@ -8,6 +8,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'the-replay-cannot-land: the folded duplicate goes beside the unique(user_id, from_transaction_id, to_transaction_id, kind) added below it, which refuses the create the log would replay, and the series repointed off it lands on the survivor every device picks by the same lowest id.';
+
     private const string INDEX = 'chain_links_pair_uq';
 
     // (user, from, to, kind) is what both write paths have always dedupe on,

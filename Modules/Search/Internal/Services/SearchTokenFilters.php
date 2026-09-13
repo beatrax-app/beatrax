@@ -151,7 +151,7 @@ final readonly class SearchTokenFilters
                 LikeNeedle::startsWith($match, 'name', $name);
                 if ($slugs !== []) {
                     $match->orWhere(function (Builder $translated) use ($slugs): void {
-                        $translated->where('name_is_default', true)->whereIn('slug', $slugs);
+                        $translated->where('categories.name_is_default', true)->whereIn('slug', $slugs);
                     });
                 }
             });

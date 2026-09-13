@@ -122,8 +122,8 @@ final readonly class AccountStartingBalanceQuery
             ->where('user_id', $user->id)
             ->whereIn('id', $accountIds)
             ->where(static function (Builder $either): void {
-                $either->whereNotNull('opening_balance_minor')
-                    ->orWhereNotNull('starting_balance_minor');
+                $either->whereNotNull('accounts.opening_balance_minor')
+                    ->orWhereNotNull('accounts.starting_balance_minor');
             })
             ->groupBy('default_currency')
             ->selectRaw('default_currency, SUM('.self::EFFECTIVE_MINOR_SQL.') as sum_minor')

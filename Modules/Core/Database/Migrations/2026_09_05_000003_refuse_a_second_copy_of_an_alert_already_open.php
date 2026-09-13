@@ -7,6 +7,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'no-op-carries-it: the only column the trigger writes is dedup_key, and acknowledged_at is the one column the registry carries for system_alerts.';
+
     public function up(): void
     {
         $this->schema()->table('system_alerts', static function (Blueprint $table): void {

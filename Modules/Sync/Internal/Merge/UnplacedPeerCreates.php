@@ -37,7 +37,7 @@ final readonly class UnplacedPeerCreates
             ->where('device_id', $deviceId)
             ->where('table_name', $table)
             ->where('pk', (string) $pk)
-            ->where('op_type', OpType::CreateRow->value)
+            ->where('op_log_quarantine.op_type', OpType::CreateRow->value)
             ->exists();
     }
 }

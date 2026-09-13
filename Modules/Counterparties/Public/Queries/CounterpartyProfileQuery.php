@@ -63,7 +63,7 @@ final readonly class CounterpartyProfileQuery
         // two figures, not one integer.
         $buckets = $connection->table('transactions')
             ->where('user_id', $user->id)
-            ->where('counterparty_id', $cpId)
+            ->where('transactions.counterparty_id', $cpId)
             ->whereIn('type', TransactionType::externalMovementValues())
             ->whereBetween('posted_at', [$cutoffDate, $endDate])
             ->groupBy('settled_currency')
@@ -72,7 +72,7 @@ final readonly class CounterpartyProfileQuery
 
         $lifetimeTotals = $connection->table('transactions')
             ->where('user_id', $user->id)
-            ->where('counterparty_id', $cpId)
+            ->where('transactions.counterparty_id', $cpId)
             ->selectRaw('MIN(posted_at) as first_seen, MAX(posted_at) as last_seen, COUNT(*) as cnt')
             ->first();
 
@@ -441,7 +441,7 @@ final readonly class CounterpartyProfileQuery
 
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $cp->user_id)
-            ->where('counterparty_id', $cp->id)
+            ->where('transactions.counterparty_id', $cp->id)
             ->whereIn('type', TransactionType::externalMovementValues())
             ->selectRaw("CAST(strftime('%Y', posted_at) AS INTEGER) as year, settled_currency, COALESCE(SUM(settled_amount_minor), 0) as total_minor")
             ->groupBy('year', 'settled_currency')

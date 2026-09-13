@@ -20,6 +20,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // they have synced, so both compute the same survivor.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'the-replay-cannot-land: the losing baselines go beside the unique(migration_source_map_id, field_name) added below them, which refuses the create the log would replay -- the row returns as an alias onto the survivor rather than as the duplicate it was.';
+
     private const string INDEX = 'migration_import_baseline_map_field_unique';
 
     public function up(): void

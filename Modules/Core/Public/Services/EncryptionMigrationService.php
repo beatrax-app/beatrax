@@ -203,7 +203,7 @@ class EncryptionMigrationService
     ): void {
         $connection->table('op_log_entries')
             ->where('user_id', $userId)
-            ->whereNull('gdk_epoch')
+            ->whereNull('op_log_entries.gdk_epoch')
             ->whereNotNull('value')
             ->orderBy('id')
             ->chunkById(self::CHUNK_SIZE, function ($rows) use ($connection, $userId, $support, $total, &$processed): void {
@@ -315,7 +315,7 @@ class EncryptionMigrationService
     {
         $opLog = $connection->table('op_log_entries')
             ->where('user_id', $userId)
-            ->whereNull('gdk_epoch')
+            ->whereNull('op_log_entries.gdk_epoch')
             ->whereNotNull('value')
             ->count();
 

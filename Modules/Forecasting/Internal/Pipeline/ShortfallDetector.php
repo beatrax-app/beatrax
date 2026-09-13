@@ -141,7 +141,7 @@ final readonly class ShortfallDetector
             $delete = $this->db->connection()->table('forecast_shortfall_windows')
                 ->where('user_id', $user->id)
                 ->where('account_id', $accountId)
-                ->where('horizon_days', $horizonDays);
+                ->where('forecast_shortfall_windows.horizon_days', $horizonDays);
             if ($scenarioId === null) {
                 $delete->whereNull('scenario_id');
             } else {

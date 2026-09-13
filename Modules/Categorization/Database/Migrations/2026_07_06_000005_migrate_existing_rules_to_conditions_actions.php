@@ -11,6 +11,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // pre-migration rather than half-normalised.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'no-op-carries-it: categorization_rules, rule_conditions and rule_actions are the three tables on OpLogBackfiller::DEVICE_LOCAL_TABLES, so no op is emitted for any of them on any device.';
+
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());

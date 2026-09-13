@@ -10,6 +10,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // guard on the allowed value set.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'no-op-carries-it: payment_type is added by this migration and the registry does not carry it for transactions, so the NULL filled here travels in no Set.';
+
     public function up(): void
     {
         $schema = $this->schema();

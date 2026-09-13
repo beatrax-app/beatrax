@@ -12,6 +12,8 @@ use Modules\Core\Public\Support\DerivedRowId;
 // without exchanging a message.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the new id is DerivedRowId::for over user_id and email_pattern, the pair the unique index on this table identifies a row by, so both devices land on the same number without exchanging one.';
+
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());

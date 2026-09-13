@@ -1725,8 +1725,33 @@ than failing. Anything else raises `RebuildWouldLoseRowsException` and rolls the
 whole transaction back, reporting the missing counts per table beside the
 refusals that caused them.
 
+The alias arm needs **both** halves of the alias row, and for a while it read
+neither. `accountedFor()` matched on `remote_id` alone, so a peer's alias for
+ITS row 4218 answered for this device's deleted row 4218 — the table is
+peer-scoped and the scoping was dropped — and it never resolved `local_id`, so
+an alias whose local twin never landed still counted as a row that came back.
+`PeerRowAliases::localFor()`, the only other reader, always did both. An alias
+now accounts for a pk only when its `device_id` authored a `create_row` for that
+pk and its `local_id` names a row present after the replay.
+
 The command still cannot rebuild that install. It now says so, and changes
 nothing, instead of depending on a foreign key to notice for it.
+
+#### A row that came back is not a row that was restored
+
+The check is one-sided, and the other side had a defect of its own. A rebuild
+deletes only the rows the log names a create for and then replays every create,
+so a row that was deleted **without a tombstone** is re-inserted — and because
+`verifyRestored()` counts loss and has no word for gain, the resurrection passed
+its own verification. Two data migrations over `anomaly_alerts` deleted that
+way, arguing no tombstone was needed because the peer's copy of the alert was
+correct there. On the measured install that is not true of the rows in question:
+7 of the 9 `anomaly_alerts` create pks naming no live row carry a `create_row`
+from **both** devices, so the two copies are one row to the log's addressing.
+
+They announce now, through
+[`KeylessTombstone`](a-mutation-a-keyless-process-cannot-sign.md#a-data-migration-is-the-same-wall-with-a-delete-on-the-other-side),
+which is the migration-shaped answer to the same wall the scheduler hits.
 
 ### Capture listener (`Internal\Listeners\SyncCaptureListener`)
 

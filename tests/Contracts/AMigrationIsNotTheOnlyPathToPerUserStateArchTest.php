@@ -277,7 +277,10 @@ function perUserSweepGates(array $paths): array
                 continue;
             }
 
-            $matches = PatternScan::all('/\b(?:or)?[Ww]hereNull\(\s*\'(\w+)\'/', $statement);
+            // The table may be named in front of the column -- naming it is what
+            // makes an absent column raise instead of answering -- and the gate
+            // is the same gate either way, so only the column is captured.
+            $matches = PatternScan::all('/\b(?:or)?[Ww]hereNull\(\s*\'(?:users\.)?(\w+)\'/', $statement);
 
             foreach ($matches[1] as $column) {
                 $gates[$column][] = $relative;

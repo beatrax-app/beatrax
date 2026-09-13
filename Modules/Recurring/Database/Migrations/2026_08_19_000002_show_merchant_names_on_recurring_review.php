@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Schema;
 // detector sweep would revisit. `merchants` is plaintext, so no key is needed.
 return new class extends Migration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: detected_name is replaced by the merchants row whose normalized_name it matches, and the registry carries both merchants.name and merchants.normalized_name, so either device matches the same row.';
+
     // One correlated statement, not one UPDATE per merchant: this runs at
     // launch-time migration on a phone, where every round trip is a synchronous
     // call on the path between tapping the icon and seeing anything.

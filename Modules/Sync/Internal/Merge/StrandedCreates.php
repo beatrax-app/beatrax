@@ -168,7 +168,7 @@ final readonly class StrandedCreates
             ->whereIn('device_id', $authors)
             ->where(static fn (Builder $row): Builder => $row
                 ->where('is_self', 1)
-                ->orWhereNotNull('self_retired_at'))
+                ->orWhereNotNull('device_registry.self_retired_at'))
             ->exists();
     }
 
@@ -186,7 +186,7 @@ final readonly class StrandedCreates
             ->where('table_name', $table)
             ->where('pk', $pk)
             ->whereIn('device_id', $authors)
-            ->where('op_type', OpType::CreateRow->value)
+            ->where('op_log_quarantine.op_type', OpType::CreateRow->value)
             ->whereIn('reason', QuarantineOutcome::terminalReasonValues())
             ->exists();
     }

@@ -14,6 +14,8 @@ use Modules\Core\Database\Support\ModuleMigration;
  */
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: every shipped bundle pinned the one zone written here, so each device holding the same account row from before the change fills the same NULL with the same value.';
+
     // The only value any shipped bundle carried. An install that already holds
     // an account wrote its rows in this frame, whatever machine it runs on now.
     private const string THE_ZONE_EVERY_BUNDLE_PINNED = 'Europe/Amsterdam';

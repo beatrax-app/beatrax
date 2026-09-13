@@ -46,8 +46,8 @@ final readonly class UntagTransaction
             ->where('transaction_id', $transactionId)
             ->when(
                 $transactionSplitId === null,
-                static fn (QueryBuilder $q) => $q->whereNull('transaction_split_id'),
-                static fn (QueryBuilder $q) => $q->where('transaction_split_id', $transactionSplitId),
+                static fn (QueryBuilder $q) => $q->whereNull('tax_transaction_tags.transaction_split_id'),
+                static fn (QueryBuilder $q) => $q->where('tax_transaction_tags.transaction_split_id', $transactionSplitId),
             )
             ->value('id');
 
@@ -57,8 +57,8 @@ final readonly class UntagTransaction
             ->where('transaction_id', $transactionId)
             ->when(
                 $transactionSplitId === null,
-                static fn (QueryBuilder $q) => $q->whereNull('transaction_split_id'),
-                static fn (QueryBuilder $q) => $q->where('transaction_split_id', $transactionSplitId),
+                static fn (QueryBuilder $q) => $q->whereNull('tax_transaction_tags.transaction_split_id'),
+                static fn (QueryBuilder $q) => $q->where('tax_transaction_tags.transaction_split_id', $transactionSplitId),
             )
             ->delete();
 

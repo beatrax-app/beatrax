@@ -2763,6 +2763,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Auth\\Internal\\Http\\Livewire\\SignupPage',
         'tests/Contracts/SecretsInLivewireSnapshotTest.php -> Modules\\Mobile\\Internal\\Http\\Livewire\\MobileImportBootstrap',
         'tests/Contracts/SelectOnlyValidatorContractTest.php -> Modules\\DevMode\\Internal\\Sql\\SelectOnlyValidator',
+        'tests/Contracts/Support/MigrationRowWrites.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
         'tests/Contracts/Support/SyncedColumnWrites.php -> Modules\\Sync\\Internal\\OpLog\\OpLogBackfiller',
         'tests/Contracts/Support/UnannouncedWrites.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',

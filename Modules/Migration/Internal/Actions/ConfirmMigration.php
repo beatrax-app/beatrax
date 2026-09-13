@@ -127,7 +127,7 @@ final readonly class ConfirmMigration
             ->where('user_id', $user->id)
             ->where('migration_run_id', $migrationRunId)
             ->where('item_type', UnmappedItemType::Conflict->value)
-            ->whereNotNull('entity_type')
+            ->whereNotNull('migration_staging_unmapped_items.entity_type')
             ->get(['entity_type', 'source_external_id', 'field_name', 'local_value', 'source_value', 'resolution']);
 
         $conflicts = [];

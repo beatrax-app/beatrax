@@ -443,7 +443,7 @@ final class BudgetsPage extends Component
         $rows = $db->connection()
             ->table('envelope_settings')
             ->where('user_id', $userId)
-            ->whereNotNull('threshold_percent')
+            ->whereNotNull('envelope_settings.threshold_percent')
             ->get(['category_id', 'threshold_percent']);
 
         $map = [];

@@ -11,6 +11,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 // that already carry it. Plaintext JSON, so it needs no key and no unlock.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: one key is removed from the metadata JSON on the row, so a device holding that row removes the same key and reaches the same value.';
+
     private const string LEAKED_KEY = 'institution_iban';
 
     public function up(): void

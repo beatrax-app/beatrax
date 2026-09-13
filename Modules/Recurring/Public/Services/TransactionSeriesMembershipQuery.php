@@ -223,7 +223,7 @@ final readonly class TransactionSeriesMembershipQuery
         $rows = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
             ->where('direction', Direction::Income->value)
-            ->whereIn('cluster_counterparty_key', array_values(array_unique($keys)))
+            ->whereIn('recurring_series.cluster_counterparty_key', array_values(array_unique($keys)))
             ->whereIn('state', RecurringSeriesState::projectableValues())
             ->orderBy('id')
             ->get(['id', 'cluster_counterparty_key', 'latest_currency']);

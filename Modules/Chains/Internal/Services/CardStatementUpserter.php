@@ -167,7 +167,7 @@ final readonly class CardStatementUpserter implements UpsertsCardStatements
                 ->where('account_id', $statement['account_id'])
                 ->where('period_start', $statement['period_start'])
                 ->where('period_end', $statement['period_end'])
-                ->whereNull('due_date')
+                ->whereNull('card_statements.due_date')
                 ->update(['due_date' => $statement['due_date']]);
         }
     }

@@ -19,6 +19,8 @@ use Modules\Ledger\Public\Services\PeriodQuery;
  */
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the id restored is EnvelopeMoveId::for(move_group_id, kind, period_start), and all three of those columns travelled inside the create for the row, so every device re-derives the same number for it.';
+
     public function up(): void
     {
         /** @var PeriodQuery $periods */

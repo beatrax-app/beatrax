@@ -21,6 +21,8 @@ use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 // keeps rendering verbatim in every language.
 return new class extends Migration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: the flag is set only where the stored name still equals what corpus_key seeds for the country_code on the row, read from the same shipped corpus on both devices.';
+
     public function up(): void
     {
         Schema::table('tax_deduction_categories', static function (Blueprint $table): void {

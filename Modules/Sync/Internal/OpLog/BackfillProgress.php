@@ -95,7 +95,7 @@ final readonly class BackfillProgress
         return $connection->table('sync_backfill_state')
             ->where('user_id', $userId)
             ->whereNull('completed_at')
-            ->where('failed_slices', '<', self::MAX_FAILED_SLICES)
+            ->where('sync_backfill_state.failed_slices', '<', self::MAX_FAILED_SLICES)
             ->exists();
     }
 

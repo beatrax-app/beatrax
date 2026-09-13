@@ -30,6 +30,8 @@ final class OpLogRebuilder
 
     private readonly PersistedOpLogEntries $persistedEntries;
 
+    private readonly RestoredRowCensus $restored;
+
     // Keyed by userId, true = lock held. Non-static because readonly classes
     // cannot have static properties; each instance tracks its own lock,
     // equivalent to a process-level guard in single-user SQLite.
@@ -57,6 +59,7 @@ final class OpLogRebuilder
         private readonly ?SearchIndexRepairContract $searchRepairs = null,
     ) {
         $this->persistedEntries = $persistedEntries ?? new PersistedOpLogEntries($db);
+        $this->restored = new RestoredRowCensus($db);
         // Built here when absent rather than left null. The container leaves
         // this optional parameter unresolved, and the null fallback was plain
         // registry order — which lists import_runs before transactions, so
@@ -308,7 +311,7 @@ final class OpLogRebuilder
         $missing = [];
 
         foreach ($removed as $table => $pks) {
-            $gone = array_values(array_diff($pks, $this->accountedFor($table, $pks, $userId)));
+            $gone = array_values(array_diff($pks, $this->restored->accountedFor($table, $pks, $userId)));
 
             if ($gone !== []) {
                 $missing[$table] = count($gone);
@@ -320,34 +323,6 @@ final class OpLogRebuilder
         }
 
         throw new RebuildWouldLoseRowsException($missing, $this->quarantinedSince($userId, $quarantineMark));
-    }
-
-    // Present again, aliased to a row stored under another id, or tombstoned
-    // by the log — a delete the log carries is the replay working, not a row
-    // it failed to bring back.
-    /**
-     * @param  list<int>  $pks
-     * @return list<int>
-     */
-    private function accountedFor(string $table, array $pks, int $userId): array
-    {
-        $present = self::asIds($this->db->connection()->table($table)->whereIn('id', $pks)->pluck('id'));
-
-        $aliased = self::asIds($this->db->connection()->table('op_log_row_aliases')
-            ->where('user_id', $userId)
-            ->where('table_name', $table)
-            ->whereIn('remote_id', array_map(static fn (int $pk): string => (string) $pk, $pks))
-            ->pluck('remote_id'));
-
-        $tombstoned = self::asIds($this->db->connection()->table('op_log_entries')
-            ->where('user_id', $userId)
-            ->where('table_name', $table)
-            ->where('op_type', OpType::DeleteTombstone->value)
-            ->whereIn('pk', array_map(static fn (int $pk): string => (string) $pk, $pks))
-            ->distinct()
-            ->pluck('pk'));
-
-        return [...$present, ...$aliased, ...$tombstoned];
     }
 
     private function quarantineMark(int $userId): int

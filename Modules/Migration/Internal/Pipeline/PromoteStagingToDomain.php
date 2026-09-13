@@ -124,7 +124,7 @@ final class PromoteStagingToDomain
     {
         return $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
-            ->whereNotNull('pair_transaction_id')
+            ->whereNotNull('transactions.pair_transaction_id')
             ->count();
     }
 

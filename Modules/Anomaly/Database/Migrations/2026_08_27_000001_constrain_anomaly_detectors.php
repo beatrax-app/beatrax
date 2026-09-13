@@ -8,6 +8,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'the-replay-cannot-land: the suppression rules dropped here name a detector no build has, and the BEFORE INSERT trigger installed after them refuses the create the log would replay; reasons and baseline_amount_minor, the two anomaly_alerts columns rewritten beside it, are carried by no op either.';
+
     // Re-runnable: every CREATE TRIGGER is preceded by its DROP, so the repair
     // half can be exercised against a database this has already migrated.
     public function up(): void

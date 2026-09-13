@@ -13,6 +13,8 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 // 2026_09_10_000010; these rows are the ones promoted before it did.
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'same-on-every-device: booked_at, the ordinal and the fingerprint are recomputed from posted_at and the offset already stored on the row, so a device holding that row rewrites it the same way.';
+
     private const string PROMOTED = 'migration_%';
 
     public function up(): void

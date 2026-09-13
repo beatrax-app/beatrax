@@ -21,6 +21,8 @@ use Modules\Ledger\Public\Services\PeriodQuery;
  */
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'the-device-answers-for-itself: a stranded assignment merging into a genesis row of another currency is priced through exchange_rates, which the registry does not carry, so each device sums that pair from the rates it happens to hold.';
+
     public function up(): void
     {
         /** @var PeriodQuery $periods */

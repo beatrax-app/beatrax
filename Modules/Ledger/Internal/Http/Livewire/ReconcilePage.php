@@ -280,8 +280,8 @@ final class ReconcilePage extends Component
             ->where('id', $accountId)
             ->where('user_id', $userId)
             ->where(static function (Builder $either): void {
-                $either->whereNotNull('starting_balance_minor')
-                    ->orWhereNotNull('opening_balance_minor');
+                $either->whereNotNull('accounts.starting_balance_minor')
+                    ->orWhereNotNull('accounts.opening_balance_minor');
             })
             ->exists();
     }

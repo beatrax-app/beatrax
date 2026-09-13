@@ -110,8 +110,8 @@ final readonly class BackfillStartingBalanceFromStatementSummaries implements An
             $unanchored = $connection->table('accounts')
                 ->where('id', $accountId)
                 ->where('user_id', $pick['user_id'])
-                ->whereNull('starting_balance_minor')
-                ->whereNull('starting_balance_date')
+                ->whereNull('accounts.starting_balance_minor')
+                ->whereNull('accounts.starting_balance_date')
                 ->exists();
 
             if (! $unanchored) {

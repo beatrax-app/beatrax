@@ -27,7 +27,7 @@ final readonly class PairLookup
             ->table('transactions')
             ->where('id', $txId)
             ->where('user_id', $user->id)
-            ->whereNotNull('pair_transaction_id')
+            ->whereNotNull('transactions.pair_transaction_id')
             ->exists();
     }
 
@@ -67,7 +67,7 @@ final readonly class PairLookup
             $query->where('currency', $match->currency);
         }
         if ($match->unpairedOnly) {
-            $query->whereNull('pair_transaction_id');
+            $query->whereNull('transactions.pair_transaction_id');
         }
         if ($match->excludeTransactionId !== null) {
             $query->where('id', '!=', $match->excludeTransactionId);

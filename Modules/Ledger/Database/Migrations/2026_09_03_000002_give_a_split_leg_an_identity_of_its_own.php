@@ -7,6 +7,8 @@ use Modules\Core\Database\Support\ModuleMigration;
 
 return new class extends ModuleMigration
 {
+    private const string DOES_NOT_ANNOUNCE = 'no-op-carries-it: split_uuid is added by this migration and the registry does not carry it for transaction_splits, so the legacy value travels in no Set.';
+
     public function up(): void
     {
         // transaction_splits declared no identity but its autoincrement, and
