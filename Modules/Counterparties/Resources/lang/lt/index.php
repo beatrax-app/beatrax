@@ -37,7 +37,6 @@ return [
     'label_this' => 'Pažymėti šią kitą šalį',
 
     'stat_12mo' => '12 mėn.',
-    'stat_net_received' => 'Grynosios gautos lėšos',
     'stat_avg_mo' => 'Vid. per mėn.',
     'sparkline_aria' => '12 mėnesių veiklos kreivė',
 

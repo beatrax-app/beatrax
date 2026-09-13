@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Redaguoti rodomą pavadinimą',
 
-    'hero_net_received' => 'Grynosios gautos lėšos',
     'hero_12mo_total' => '12 mėnesių suma',
     'hero_transactions' => 'Operacijos',
     'hero_first_seen' => 'Pirmą kartą matyta',

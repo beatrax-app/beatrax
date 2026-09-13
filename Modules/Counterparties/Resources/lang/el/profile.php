@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Επεξεργασία εμφανιζόμενου ονόματος',
 
-    'hero_net_received' => 'Καθαρά έσοδα',
     'hero_12mo_total' => 'Σύνολο 12 μηνών',
     'hero_transactions' => 'Συναλλαγές',
     'hero_first_seen' => 'Πρώτη εμφάνιση',

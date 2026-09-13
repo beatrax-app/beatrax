@@ -37,7 +37,6 @@ return [
     'label_this' => 'Címkézd fel ezt a partnert',
 
     'stat_12mo' => '12 hó',
-    'stat_net_received' => 'Nettó bevétel',
     'stat_avg_mo' => 'Átlag / hó',
     'sparkline_aria' => '12 havi tevékenység grafikonja',
 

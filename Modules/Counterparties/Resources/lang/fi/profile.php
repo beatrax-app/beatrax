@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Muokkaa näyttönimeä',
 
-    'hero_net_received' => 'Netto saatu',
     'hero_12mo_total' => '12 kuukauden summa',
     'hero_transactions' => 'Tapahtumat',
     'hero_first_seen' => 'Ensimmäinen havainto',

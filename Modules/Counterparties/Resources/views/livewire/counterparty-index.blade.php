@@ -24,6 +24,16 @@
 @php
     $totalEntities = $counts[CounterpartyTypeFilter::All->value] ?? 0;
     $unknownCount = $counts[CounterpartyTypeFilter::Unknown->value] ?? 0;
+
+    // Every total on this page is drawn as a magnitude, so a word is the only
+    // thing that can say which way it went — and a total of exactly zero went
+    // neither way and gets none. The pair is the dashboard flow tiles', so no
+    // locale learns a second term for an idea it already has a word for.
+    $flowWord = static fn (int $minor): ?string => match (true) {
+        $minor > 0 => Lang::get('core::dashboard.in'),
+        $minor < 0 => Lang::get('core::dashboard.out'),
+        default => null,
+    };
 @endphp
 
 <div class="space-y-8">
@@ -170,6 +180,8 @@
                 @php
                     $isUnknown = $row->type === CounterpartyType::Unknown->value;
                     $isSelf = $row->type === CounterpartyType::SelfAccount->value;
+                    $statLabel = ($row->type === CounterpartyType::Personal->value ? $flowWord($row->total12mMinor) : null)
+                        ?? Lang::get('counterparties::index.stat_12mo');
                 @endphp
                 @if ($isSelf)
                     <a
@@ -246,9 +258,7 @@
                             <div class="cp-stats">
                                 <div class="cp-stat">
                                     <span class="value">{{ $row->total12mFormatted }}</span>
-                                    <span class="label">
-                                        @if ($row->type === CounterpartyType::Personal->value){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
-                                    </span>
+                                    <span class="label">{{ $statLabel }}</span>
                                 </div>
                                 <div class="cp-stat">
                                     <span class="value" style="font-size: var(--text-sm);">{{ $row->avgPerMonthFormatted }}</span>
@@ -289,11 +299,7 @@
         {{-- List view: desktop table + phone card-list-item degradation --}}
         @foreach ($rows as $row)
             @php
-                $flowWord = match (true) {
-                    $row->total12mMinor > 0 => Lang::get('core::dashboard.in'),
-                    $row->total12mMinor < 0 => Lang::get('core::dashboard.out'),
-                    default => null,
-                };
+                $rowFlowWord = $flowWord($row->total12mMinor);
             @endphp
             {{-- phone-only: .card-list-item renders each row as a tidy two-line card.
                  A box holding a link, for the reason the cards above are: the row
@@ -320,12 +326,11 @@
                     {{-- The total is a magnitude here as it is on the cards and in the
                          table, so an emerald tint was the only thing on this row saying
                          which way it went — nothing at all to a reader who hears the row
-                         or cannot separate the two colours. The words are the ones the
-                         flow tiles already use, so no locale learns a new one. --}}
+                         or cannot separate the two colours. --}}
                     <div style="flex: 0 0 auto; text-align: right;">
                         <span class="amount{{ $row->total12mMinor > 0 ? ' positive' : '' }}">{{ $row->total12mFormatted }}</span>
-                        @if ($flowWord !== null)
-                            <span class="secondary">{{ $flowWord }}</span>
+                        @if ($rowFlowWord !== null)
+                            <span class="secondary">{{ $rowFlowWord }}</span>
                         @endif
                     </div>
                 </a>

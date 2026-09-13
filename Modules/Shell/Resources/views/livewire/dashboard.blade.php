@@ -168,6 +168,7 @@
                 <x-core::fx-disclosure
                     :disclosure="$summary->conversion"
                     id="glance-in"
+                    :online-rates="$fxOnlineEnabled"
                     :label="Lang::get('core::dashboard.in')"
                     class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
                 />
@@ -180,6 +181,7 @@
                 <x-core::fx-disclosure
                     :disclosure="$summary->conversion"
                     id="glance-out"
+                    :online-rates="$fxOnlineEnabled"
                     :label="Lang::get('core::dashboard.out')"
                     class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
                 />
@@ -195,6 +197,7 @@
                 <x-core::fx-disclosure
                     :disclosure="$summary->conversion"
                     id="glance-net"
+                    :online-rates="$fxOnlineEnabled"
                     :label="Lang::get('core::dashboard.net')"
                     class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
                 />
@@ -339,6 +342,7 @@
                     <x-core::fx-disclosure
                         :disclosure="$summary->topCategories->conversion"
                         id="top-spending"
+                        :online-rates="$fxOnlineEnabled"
                         :label="Lang::get('core::dashboard.top_spending')"
                         class="mt-1 block text-xs text-slate-500 dark:text-slate-400"
                     />
