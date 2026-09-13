@@ -28,6 +28,10 @@ const INTRODUCED_KEY_CALL_SITES = [
     // and it grants nothing further: a rebuild sends nothing and asks for
     // nothing.
     'Modules/Sync/Commands/SyncRebuildCommand.php',
+    // And the same map for the same reason, one command over: the repair
+    // replays creates the durable log already holds, so the grant it reads is
+    // signature verification and the grant it uses is signature verification.
+    'Modules/Sync/Commands/SyncRepairStrandedCreatesCommand.php',
     'Modules/Sync/Providers/SyncServiceProvider.php',
     'Modules/Sync/Internal/Transport/SyncWebSocketHandler.php',
     'Modules/Sync/Internal/Transport/IntroductionOffers.php',
