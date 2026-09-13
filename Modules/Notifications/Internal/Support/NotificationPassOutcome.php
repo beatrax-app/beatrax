@@ -15,7 +15,12 @@ use Modules\Core\Public\Support\CountedUsers;
  */
 final class NotificationPassOutcome
 {
-    public static function line(string $pass, int $emitted, int $deferred): string
+    public static function line(string $pass, int $emitted, int $deferred, int $failed = 0): string
+    {
+        return self::emitted($pass, $emitted, $deferred).self::failed($failed);
+    }
+
+    private static function emitted(string $pass, int $emitted, int $deferred): string
     {
         if ($deferred === 0) {
             return sprintf('%s: emitted for %s.', $pass, CountedUsers::of($emitted));
@@ -27,5 +32,15 @@ final class NotificationPassOutcome
             CountedUsers::of($emitted),
             CountedUsers::of($deferred),
         );
+    }
+
+    // The count a reader of this line most needs and the one it never carried:
+    // a pass that threw for somebody is not the same answer as a pass with
+    // nothing to send them, and the tallies above cannot tell them apart.
+    private static function failed(int $failed): string
+    {
+        return $failed === 0
+            ? ''
+            : sprintf(' Could not finish for %s — each one is logged.', CountedUsers::of($failed));
     }
 }

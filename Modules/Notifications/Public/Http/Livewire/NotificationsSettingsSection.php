@@ -162,7 +162,10 @@ final class NotificationsSettingsSection extends Component
         return Lang::get('notifications::settings.other_devices.summary_line', [
             'reminders' => $onOff($dto->remindersEnabled),
             'nudges' => $onOff($dto->budgetNudgesEnabled),
-            'digest' => $dto->digestCadence->value,
+            // The same key the cadence select above renders its options
+            // from: the enum's own value is the stored spelling, and it read
+            // "overzicht weekly" beside three Dutch words.
+            'digest' => Lang::get('notifications::settings.digest.'.$dto->digestCadence->value),
             'savings' => $onOff($dto->savingsPromptsEnabled),
         ]);
     }

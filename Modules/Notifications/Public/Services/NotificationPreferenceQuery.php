@@ -79,8 +79,10 @@ final readonly class NotificationPreferenceQuery
         return $row instanceof stdClass ? $row : null;
     }
 
-    // A device with a registry row but no preference row is omitted —
-    // there is nothing to show for it yet.
+    // The registry decides which devices this panel has, not the preference
+    // table: removing a device leaves its row here standing, and excluding only
+    // this device listed the removed one for ever — nameless, since the registry
+    // stops answering for it, under a heading that says these are your devices.
     /**
      * @return array<int, NotificationPreferencesDto>
      */
@@ -90,7 +92,7 @@ final readonly class NotificationPreferenceQuery
 
         $rows = $this->db->connection()->table('notification_preferences')
             ->where('user_id', $user->id)
-            ->whereNotIn('device_id', array_unique([$this->deviceKey($user->id), self::UNPAIRED_DEVICE_ID]))
+            ->whereIn('device_id', array_keys($names))
             ->get();
 
         $result = [];
