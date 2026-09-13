@@ -210,7 +210,7 @@ final readonly class PaypalFundingResolver
         $iban = $parsed === null ? null : $this->extractIbanFromEventRow($parsed['row']);
         $accountId = $iban === null ? null : $this->signatureKey->accountIdForIban($iban, $user);
 
-        if ($parsed === null || $accountId === null || $iban === null) {
+        if ($parsed === null || $iban === null || $accountId === null) {
             return null;
         }
 
