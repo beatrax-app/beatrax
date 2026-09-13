@@ -142,7 +142,7 @@ final class UntranslatedParentIds
 
         return $peerParent === []
             ? $this->withoutACreate($parentTable, $peerValue, $userId)
-            : $this->againstTheCreate($parentTable, $peerValue, $peerParent, $userId);
+            : $this->againstTheCreate($parentTable, $peerValue, $peerParent);
     }
 
     // The peer never announced the row its number names. A row this reader does
@@ -181,10 +181,14 @@ final class UntranslatedParentIds
     // the way a re-home matches them. A payload nothing can be found by is
     // refused rather than guessed, and one nothing here holds is the create
     // `sync:repair-stranded-creates` has still to take again.
+
+    // Takes no user: the match runs over a unique index, and every index usable
+    // here carries user_id, read from the peer's own payload. The reader is
+    // already named by the key, so passing one in would be a second answer.
     /**
      * @param  array<string, mixed>  $peerParent
      */
-    private function againstTheCreate(string $parentTable, string $peerValue, array $peerParent, int $userId): ParentIdJudgment
+    private function againstTheCreate(string $parentTable, string $peerValue, array $peerParent): ParentIdJudgment
     {
         if (! $this->aliases->naturalKeyIdentifies($parentTable, $peerParent)) {
             return ParentIdJudgment::unspoken(sprintf('the peer\'s create for %s %s carries no natural key', $parentTable, $peerValue));
