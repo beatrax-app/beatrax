@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategoriat',
 
-        'categories_empty_html' => 'Ei vielä kategorioita — luokittelemattomat tapahtumat näkyvät osiossa <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Luokittelu</a>.',
+        'categories_empty_html' => 'Ei vielä kategorioita — luokittelemattomat tapahtumat näkyvät osiossa <a href=":url" style="color: var(--color-text); text-decoration: underline;">Luokittelu</a>.',
         'no_recurring' => 'Toistuvia kaavoja ei havaittu.',
         'per_month_suffix' => '/kk',
         'funding_chain' => 'Rahoitusketju',

@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategorijos',
 
-        'categories_empty_html' => 'Kol kas kategorijų nėra — operacijos be kategorijos rodomos skiltyje <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorijų priskyrimas</a>.',
+        'categories_empty_html' => 'Kol kas kategorijų nėra — operacijos be kategorijos rodomos skiltyje <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorijų priskyrimas</a>.',
         'no_recurring' => 'Pasikartojančių modelių neaptikta.',
         'per_month_suffix' => '/mėn.',
         'funding_chain' => 'Finansavimo grandinė',

@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Categorii',
 
-        'categories_empty_html' => 'Nicio categorie deocamdată — tranzacțiile necategorizate apar în <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Categorisire</a>.',
+        'categories_empty_html' => 'Nicio categorie deocamdată — tranzacțiile necategorizate apar în <a href=":url" style="color: var(--color-text); text-decoration: underline;">Categorisire</a>.',
         'no_recurring' => 'Niciun tipar recurent detectat.',
         'per_month_suffix' => '/lună',
         'funding_chain' => 'Lanț de finanțare',

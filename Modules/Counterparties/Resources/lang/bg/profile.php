@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Категории',
 
-        'categories_empty_html' => 'Още няма категории — некатегоризираните транзакции се появяват в <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Категоризиране</a>.',
+        'categories_empty_html' => 'Още няма категории — некатегоризираните транзакции се появяват в <a href=":url" style="color: var(--color-text); text-decoration: underline;">Категоризиране</a>.',
         'no_recurring' => 'Не са открити повтарящи се модели.',
         'per_month_suffix' => '/мес.',
         'funding_chain' => 'Верига на финансиране',

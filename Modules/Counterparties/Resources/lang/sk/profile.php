@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategórie',
 
-        'categories_empty_html' => 'Zatiaľ žiadne kategórie — nezaradené transakcie nájdeš v sekcii <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorizácia</a>.',
+        'categories_empty_html' => 'Zatiaľ žiadne kategórie — nezaradené transakcie nájdeš v sekcii <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorizácia</a>.',
         'no_recurring' => 'Nezistili sa žiadne opakované vzory.',
         'per_month_suffix' => '/mes.',
         'funding_chain' => 'Finančný reťazec',

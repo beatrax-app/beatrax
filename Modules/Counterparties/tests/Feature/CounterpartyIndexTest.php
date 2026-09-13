@@ -89,7 +89,7 @@ it('Test 4: empty state renders the verbatim heading and CTA', function (): void
     $component->assertSee('Import a statement →', escape: false);
 });
 
-it('Test 5: self_account row routes to /accounts/{slug}', function (): void {
+it('sends a self-account row to the profile every other type goes to', function (): void {
     $user = cpIndexUser('cp-index-self');
     // The resolver short-circuits before writing a self_account row, so this
     // one goes in directly — a legacy import could still have left one behind.
@@ -98,7 +98,12 @@ it('Test 5: self_account row routes to /accounts/{slug}', function (): void {
     $component = Livewire::actingAs($user)->test(CounterpartyIndex::class);
 
     $html = (string) $component->html();
-    expect($html)->toContain('/accounts/asn-fixture');
+
+    // The card used to link to /accounts/{slug}, which matches no registered
+    // route and never has. CounterpartyProfile already renders a SelfAccount
+    // tab for this slug, so the profile route is where it was always going.
+    expect($html)->toContain(route('counterparties.profile', ['slug' => 'asn-fixture']));
+    expect($html)->not->toContain('/accounts/asn-fixture');
 });
 
 it('Test 6: cross-user isolation — user A never sees user B counterparties', function (): void {

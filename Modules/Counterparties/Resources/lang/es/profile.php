@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Categorías',
 
-        'categories_empty_html' => 'Aún no hay categorías — las transacciones sin categoría aparecen en <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Categorización</a>.',
+        'categories_empty_html' => 'Aún no hay categorías — las transacciones sin categoría aparecen en <a href=":url" style="color: var(--color-text); text-decoration: underline;">Categorización</a>.',
         'no_recurring' => 'No se han detectado patrones recurrentes.',
         'per_month_suffix' => '/mes',
         'funding_chain' => 'Cadena de financiación',
