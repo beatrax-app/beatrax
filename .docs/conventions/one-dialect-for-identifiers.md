@@ -88,8 +88,8 @@ and splits them into words. Three properties matter:
 
 A Pest file **declares no class** — Pest derives the test class from the file's
 *path*. So the walk above, which reads declared identifiers, finds no name for
-it at all, and `ThePhoneOffersTheKeyOfTheDesktopItDialledTest.php` resolved to a
-class spelling `dialled` while every identifier inside the file was clean. The
+it at all, and a file whose name ended `…ItDialled` + `Test.php` resolved to a
+class spelling `dialled` while every identifier inside that file was clean. The
 silence read exactly like coverage.
 
 A second reader takes the file name itself as the identifier. Measured across
