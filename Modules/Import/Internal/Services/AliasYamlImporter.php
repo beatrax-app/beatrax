@@ -121,6 +121,7 @@ final readonly class AliasYamlImporter
             $existingRow = $existing[$entry->pattern] ?? null;
             if ($existingRow === null) {
                 $new[] = $entry;
+                $existing[$entry->pattern] = self::asExisting($entry);
 
                 continue;
             }
@@ -203,6 +204,7 @@ final readonly class AliasYamlImporter
                     'updated_at' => $now,
                 ]);
                 $changed++;
+                $existing[$entry->pattern] = self::asExisting($entry);
 
                 // The user's own work, uploaded on the settings page, so
                 // it travels with them.
@@ -268,6 +270,21 @@ final readonly class AliasYamlImporter
         }
 
         return [$changed, $captured];
+    }
+
+    // A file may name one pattern twice, and the second mention is a conflict
+    // with the first rather than a second row: the table's unique
+    // (user_id, pattern) refused the repeat, and the whole import rolled back
+    // having shown the reader a diff that called both of them new.
+    /**
+     * @return array{friendly_name: string, generalized_pattern: string}
+     */
+    private static function asExisting(CorpusEntryDto $entry): array
+    {
+        return [
+            'friendly_name' => $entry->name,
+            'generalized_pattern' => $entry->generalizedPattern,
+        ];
     }
 
     /**
