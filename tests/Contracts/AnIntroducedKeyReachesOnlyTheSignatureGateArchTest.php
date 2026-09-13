@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\WalkCensus;
 
 // A key a peer relayed and the reader confirmed grants signature verification
 // and nothing else. That is not a thing to remember: this pins the two doors it
@@ -115,6 +116,13 @@ it('lets nothing but the registry and its own service read a relayed key', funct
     $sources = introducedKeySources();
 
     expect($sources)->not->toBeEmpty('The walk read no production file at all, so the reader list below would be empty whatever the tree holds.');
+
+    // "Not empty" is a floor of one, and the pin below catches a reader that
+    // disappears rather than one that appears somewhere the walk stopped
+    // opening: `/Ledger/` beside `/tests/` hid a fourth reader of the table.
+    $missed = WalkCensus::modulesMissedBy($sources);
+
+    expect($missed)->toBe([], 'the walk reached no file at all in these modules, so a reader of device_introductions in one of them would never join the pin: '.implode(', ', $missed));
 
     $readers = [];
 

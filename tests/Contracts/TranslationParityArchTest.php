@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Translation\MessageSelector;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\WalkCensus;
 
 // Parity is on key paths, not values: a translation intentionally identical to
 // English (a proper noun, a symbol) still passes. Placeholders are checked too —
@@ -154,6 +155,13 @@ it('ships every en translation key in every supported locale, per module lang fi
     // stopped matching, or an enum that stopped listing, empties every loop
     // below it and reports parity over a comparison nobody made.
     expect(count($enFiles))->toBeGreaterThan(50, 'the en lang glob matched almost nothing — the pattern is wrong, not the tree.');
+
+    // Sized against 154 files, so it does not move when the glob stops
+    // matching one module: which modules ship English copy is read per
+    // directory rather than off the same pattern.
+    $missed = WalkCensus::modulesMissedBy($enFiles, '.php', '/Resources/lang/en/');
+
+    expect($missed)->toBe([], 'these modules ship Resources/lang/en files the glob matched none of, so their keys are compared against no locale at all: '.implode(', ', $missed));
     expect(count(translationParityTargetLocales()))->toBeGreaterThan(5, 'the Locale enum lists almost no locales — parity is being asserted against nearly nothing.');
 
     $compared = 0;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Modules\Core\Public\Support\MarkupElement;
 use Modules\Core\Public\Support\MarkupSource;
 use Tests\Contracts\Support\MarkupAttribute;
+use Tests\Contracts\Support\WalkCensus;
 
 // A control that takes an ARIA role has to carry the state the native element
 // would have supplied for free: a <progress> reports its value unasked, a div
@@ -81,6 +82,10 @@ const ARIA_COMPLETENESS_TEMPLATE_FLOOR = 150;
 
 const ARIA_COMPLETENESS_WIDGET_FLOOR = 40;
 
+// Both roots ship templates a reader is shown, and the floors above are sized
+// against the pair: Modules alone clears them with resources/ unread.
+const ARIA_COMPLETENESS_ROOTS = ['Modules', 'resources'];
+
 // This stands in for Web:S6819, switched off for Blade in
 // sonar-project.properties: that rule asks only whether a native element exists
 // for the role, and its answer was wrong for all 57 remaining findings — an
@@ -133,6 +138,16 @@ it('gives every ARIA-roled widget the state its native element would have carrie
         ARIA_COMPLETENESS_WIDGET_FLOOR,
         'The lexer found '.$widgets.' roled widgets in '.$templates
         .' templates, which is what a reader that stopped recognising a tag looks like: no widget found is none to judge.'
+    );
+
+    // Neither floor moves when the walk drops the eleven templates under
+    // resources/, and an unnamed role planted in one of them went unreported.
+    // The roots are named rather than counted: one that disappears fails here,
+    // and one that appears is a family of templates nobody decided about.
+    expect(array_keys(WalkCensus::byRoot(ariaCompletenessBladeFiles())))->toBe(
+        ARIA_COMPLETENESS_ROOTS,
+        'The template walk covers '.implode(', ', array_keys(WalkCensus::byRoot(ariaCompletenessBladeFiles())))
+        .' rather than '.implode(', ', ARIA_COMPLETENESS_ROOTS).'.'
     );
 
     expect($offenders)->toBe([], "An ARIA role must carry the state its native element implies. Offenders:\n  ".implode("\n  ", $offenders));

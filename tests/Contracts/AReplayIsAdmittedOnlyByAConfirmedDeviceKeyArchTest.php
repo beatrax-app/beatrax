@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\WalkCensus;
 
 // The map an OpLogReplayer is constructed with is the whole admission gate for
 // a peer's entries: an entry whose signing device is absent from it is
@@ -83,6 +84,14 @@ it('builds every shipped replayer from the confirmed-only device-key map', funct
         'The walk opened '.count($sources).' files of the two shipped roots, so a clean answer here is a walk '
         .'that read almost nothing.'
     );
+
+    // The pin below catches a replay site that disappears. It cannot catch one
+    // that appears in a module the walk stopped opening: `/Ledger/` beside
+    // `/tests/` hid a replayer built from the retained map and this count never
+    // moved.
+    $missed = WalkCensus::modulesMissedBy($sources);
+
+    expect($missed)->toBe([], 'the walk reached no file at all in these modules, so a new replayer in one of them would never join the pin: '.implode(', ', $missed));
 
     $sites = [];
     $wide = [];

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\BladePhpSource;
+use Tests\Contracts\Support\WalkCensus;
 
 /**
  * @link ../../.docs/conventions/invariants-from-shipped-failures.md#a-dropped-user-scope-with-no-owner-named
@@ -134,11 +135,17 @@ function userScopeUnownedDrops(string $file, string $source): array
 it('re-asserts the owner wherever it drops the user scope', function (): void {
     $files = userScopeShippedFiles();
 
-    // 6,688 shipped files today, 24 of them dropping the scope. Both floored
+    // 7,084 shipped files today, 24 of them dropping the scope. Both floored
     // far under, and both read before the verdict: a walk that lost a root and
     // a `withoutGlobalScope` renamed out from under this scan produce the same
     // empty offender list a tree that names its owner everywhere produces.
     expect(count($files))->toBeGreaterThan(2000, 'the shipped-file walk read almost nothing — the roots are wrong, not the tree.');
+
+    // The floor above is worth one failure and no more: with `/Ledger/` added
+    // to the skip beside `/tests/` it never moved, and an unowned scope drop
+    // planted in that module went unreported. The census is a second reader of
+    // which modules exist, so a narrowed walk has something to disagree with.
+    expect(WalkCensus::modulesMissedBy($files))->toBe([], 'the walk reached no file at all in these modules, so every scope drop in them was judged by nobody: '.implode(', ', WalkCensus::modulesMissedBy($files)));
 
     $sites = 0;
     $offenders = [];

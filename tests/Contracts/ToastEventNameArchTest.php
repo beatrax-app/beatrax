@@ -163,8 +163,8 @@ function toastDeclaresTheTrait(array $tokens): bool
     return false;
 }
 
-/** @return list<string> backend PHP plus every Blade template */
-function toastScannedFiles(): array
+/** @return list<string> every Blade template the two roots ship */
+function toastScannedBlades(): array
 {
     $blades = [];
 
@@ -185,16 +185,25 @@ function toastScannedFiles(): array
 
     sort($blades);
 
-    return [...BackendSourceFiles::all(), ...$blades];
+    return $blades;
+}
+
+/** @return list<string> backend PHP plus every Blade template */
+function toastScannedFiles(): array
+{
+    return [...BackendSourceFiles::all(), ...toastScannedBlades()];
 }
 
 it('dispatches every toast under the one name the hosts listen for', function (): void {
     $files = toastScannedFiles();
 
-    // 6,471 backend files and 279 templates today. Floored well under both: a
-    // walk that lost a root reports the same empty offender list a clean tree
-    // reports, and nothing else here would look wrong.
-    expect(count($files))->toBeGreaterThan(2000, 'the walk read almost nothing — the roots are wrong, not the tree.');
+    // 6,828 backend files and 285 templates today, floored separately. One
+    // floor over the sum let the larger half cover for the smaller: with the
+    // template suffix mistyped every markup dispatch went unread and the count
+    // stayed in the six thousands.
+    expect(count($files) - count(toastScannedBlades()))->toBeGreaterThan(2000, 'the backend half of the walk read almost nothing — the roots are wrong, not the tree.');
+
+    expect(count(toastScannedBlades()))->toBeGreaterThan(150, 'the template half of the walk read almost nothing, so no dispatch written in markup was read at all.');
 
     expect(toastDispatchesByAnotherName($files))->toBe(
         [],
