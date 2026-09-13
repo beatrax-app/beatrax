@@ -37,7 +37,11 @@
                 <span style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}</span>
                 {{-- Tax badge on counterparty transaction rows. --}}
                 <x-tax::tax-badge :transaction="$txRowArr" :showAlways="false" />
-                <span style="white-space: nowrap;">{{ Money::ofMinor(abs($amount), $currency)->format() }}</span>
+                {{-- Signed, like the triage list and unlike the 12-month
+                     aggregates above it: this is one transaction, and an abs()
+                     made a charge and the refund that reversed it read
+                     identically down the whole column. --}}
+                <span style="white-space: nowrap;">{{ Money::ofMinor($amount, $currency)->format() }}</span>
             </li>
         @endforeach
     </ul>
