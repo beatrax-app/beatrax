@@ -38,7 +38,8 @@ module:
 
 - **Internal/Dto/** — `ReportDefinition` (the full user-composed recipe, the
   exact shape persisted as `saved_reports.definition` JSON), `ReportResultDto`
-  (the aggregator's output contract: rows, total, currency, the two
+  (the aggregator's output contract: rows, total, currency, a subtotal per
+  currency for the mode that converts none of them, the two
   FX-exclusion SETS, the headline's `ConversionDisclosure`, optional
   comparison rows), `ReportResultRow` (one grouped total, plus the
   `ConversionDisclosure` for rows that are figures of their own rather than
@@ -203,6 +204,27 @@ module:
   one currency it was asked for, so converting per row read the whole
   `exchange_rates` table once per row for a rate that could not have
   changed between them.
+
+  **A total the mode did not convert is one line per currency.** A total
+  spanning several currencies has two legal shapes — one converted figure
+  carrying its rate, or one line per currency — and `'original'` mode's
+  `totalMinor` is neither: it is the *headline* currency's subtotal, and
+  the page printed it alone over a table listing every currency's rows.
+  Measured: a two-row report of EUR 1,049.94 and JPY 1,000 headlined
+  "TOTAL SPEND €1,049.94" and footed its amount column with €1,049.94, so
+  a column a reader adds up did not come to its own total and nothing on
+  the page said why. The `ChartSeries` omission line
+  (`reports::builder.chart.other_currencies`) names what an AXIS could not
+  carry and is drawn only under a chart — the default visualisation is the
+  table, which drew none of it. `ReportResultDto::totalsByCurrency` now
+  carries each discovered currency's own subtotal (only those that
+  produced rows; a currency discovered and empty has no line to put under
+  no row), and `ReportResultDto::totalLines()` is what both the headline
+  block and the table foot render — headline currency first, since that is
+  the one `totalMinor`, `ChartSeries` and the comparison delta are all
+  denominated in. In `'base'` mode the field is empty and `totalLines()`
+  returns the single converted figure, so a converted report renders
+  exactly as it did.
 
   **The net-worth metric discloses per bucket, because it converted per
   bucket.** `NetWorthSeriesQuery` prices each account line at the rate in
@@ -658,7 +680,7 @@ ReportBuilder (Livewire, every control is a #[Url]-bound property)
                base/original mode
        -> compare=true? PeriodComparison::compare() joins the previous
           period's ReportResultDto by (group, currency)
-  -> ReportResultDto (rows, total, currency, FX-exclusion metadata,
+  -> ReportResultDto (rows, total(s) per currency, FX-exclusion metadata,
        the headline's disclosure; net-worth rows carry their bucket's)
   -> table/chart partials render; DrilldownUrlBuilder maps each row to
      a /transactions filter URL

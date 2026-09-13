@@ -246,6 +246,11 @@ final readonly class CurrencyModeApplier
         $resultRows = [];
         /** @var array<string, int> $totalsByCurrency */
         $totalsByCurrency = [];
+        // The subset that produced rows, which is what the page foots its
+        // table with: a currency discovered but carrying nothing in this
+        // window would otherwise print a total line under no row of its own.
+        /** @var array<string, int> $totalsOfCurrenciesWithRows */
+        $totalsOfCurrenciesWithRows = [];
         /** @var array<string, true> $excludedCurrencies */
         $excludedCurrencies = self::excludedSet($otherMovements);
 
@@ -264,6 +269,9 @@ final readonly class CurrencyModeApplier
                 $currencyTotal += $row->amountMinor;
             }
             $totalsByCurrency[$currency] = ($totalsByCurrency[$currency] ?? 0) + $currencyTotal;
+            if ($rows !== []) {
+                $totalsOfCurrenciesWithRows[$currency] = $totalsByCurrency[$currency];
+            }
         }
 
         $headline = $this->headlineCurrency($user, $totalsByCurrency);
@@ -285,6 +293,10 @@ final readonly class CurrencyModeApplier
                 RateSet::empty($headline),
                 self::sortedCodes($excludedCurrencies),
             ),
+            // Every currency's own subtotal, because this mode converted none
+            // of them into the headline's and one figure cannot answer for the
+            // rest -- the page renders a line each.
+            totalsByCurrency: $totalsOfCurrenciesWithRows,
         );
     }
 
