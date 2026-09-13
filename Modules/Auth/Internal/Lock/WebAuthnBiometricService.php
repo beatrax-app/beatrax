@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
-use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Exceptions\BiometricChallengeException;
 use Modules\Auth\Internal\Exceptions\BiometricEnrollmentException;
@@ -18,25 +17,15 @@ use Webauthn\AuthenticatorAssertionResponse;
 use Webauthn\AuthenticatorAssertionResponseValidator;
 use Webauthn\AuthenticatorAttestationResponse;
 use Webauthn\AuthenticatorAttestationResponseValidator;
-use Webauthn\AuthenticatorSelectionCriteria;
 use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
 use Webauthn\CredentialRecord;
 use Webauthn\Denormalizer\WebauthnSerializerFactory;
 use Webauthn\PublicKeyCredential;
-use Webauthn\PublicKeyCredentialCreationOptions;
 use Webauthn\PublicKeyCredentialDescriptor;
-use Webauthn\PublicKeyCredentialParameters;
-use Webauthn\PublicKeyCredentialRequestOptions;
-use Webauthn\PublicKeyCredentialRpEntity;
-use Webauthn\PublicKeyCredentialUserEntity;
 use Webauthn\TrustPath\EmptyTrustPath;
 
-// rpId is the host portion of APP_URL, and the full origin is validated
-// separately: both must be, or a same-rpId attacker page passes.
 final readonly class WebAuthnBiometricService
 {
-    private const string LOCALHOST_ORIGIN = 'http://localhost';
-
     public const string CREATION_CHALLENGE_SESSION = 'beatrax_webauthn_creation_challenge';
 
     public const string REQUEST_CHALLENGE_SESSION = 'beatrax_webauthn_request_challenge';
@@ -45,7 +34,7 @@ final readonly class WebAuthnBiometricService
         private BiometricDeviceStore $store,
         private AppLockKeyWrap $keyWrap,
         private LockStateManager $lockState,
-        private ConfigRepository $config,
+        private WebAuthnCeremonyOptions $options,
         private SecretShield $shield,
     ) {}
 
@@ -77,7 +66,7 @@ final readonly class WebAuthnBiometricService
             );
         }
 
-        $options = $this->creationOptionsFor($userId, $username, $challenge, $excludeCredentials);
+        $options = $this->options->creation($userId, $username, $challenge, $excludeCredentials);
 
         $session->put(self::CREATION_CHALLENGE_SESSION, base64_encode($challenge));
 
@@ -117,10 +106,10 @@ final readonly class WebAuthnBiometricService
             throw BiometricEnrollmentException::unexpectedAttestationResponse();
         }
 
-        $creationOptions = $this->creationOptionsFor($userId, $username, $challenge);
+        $creationOptions = $this->options->creation($userId, $username, $challenge);
 
         $factory = new CeremonyStepManagerFactory;
-        $factory->setAllowedOrigins([$this->origin()]);
+        $factory->setAllowedOrigins([$this->options->origin()]);
 
         $validator = AuthenticatorAttestationResponseValidator::create(
             $factory->creationCeremony()
@@ -129,7 +118,7 @@ final readonly class WebAuthnBiometricService
         $credentialRecord = $validator->check(
             $attestationResponse,
             $creationOptions,
-            $this->rpId(),
+            $this->options->rpId(),
         );
 
         $secret = random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
@@ -192,7 +181,7 @@ final readonly class WebAuthnBiometricService
             }
         }
 
-        $options = $this->requestOptionsFor($challenge, $allowCredentials);
+        $options = $this->options->request($challenge, $allowCredentials);
 
         $session->put(self::REQUEST_CHALLENGE_SESSION, base64_encode($challenge));
 
@@ -305,10 +294,10 @@ final readonly class WebAuthnBiometricService
         string $challenge,
         int $userId,
     ): CredentialRecord {
-        $requestOptions = $this->requestOptionsFor($challenge);
+        $requestOptions = $this->options->request($challenge);
 
         $factory = new CeremonyStepManagerFactory;
-        $factory->setAllowedOrigins([$this->origin()]);
+        $factory->setAllowedOrigins([$this->options->origin()]);
 
         $validator = AuthenticatorAssertionResponseValidator::create(
             $factory->requestCeremony()
@@ -318,7 +307,7 @@ final readonly class WebAuthnBiometricService
             $credentialRecord,
             $assertionResponse,
             $requestOptions,
-            $this->rpId(),
+            $this->options->rpId(),
             (string) $userId,
         );
     }
@@ -374,75 +363,6 @@ final readonly class WebAuthnBiometricService
         }
 
         return '';
-    }
-
-    // One builder for both ends of the ceremony because the validator reads
-    // the requirements off the options handed to check(), not off the ones the
-    // browser was issued: a rebuilt copy missing authenticatorSelection made
-    // CheckUserVerification return early and accept an unverified attestation.
-    /**
-     * @param  list<PublicKeyCredentialDescriptor>  $excludeCredentials
-     */
-    private function creationOptionsFor(
-        int $userId,
-        string $username,
-        string $challenge,
-        array $excludeCredentials = [],
-    ): PublicKeyCredentialCreationOptions {
-        return PublicKeyCredentialCreationOptions::create(
-            rp: PublicKeyCredentialRpEntity::create('Beatrax', $this->rpId()),
-            user: PublicKeyCredentialUserEntity::create(
-                $username,
-                (string) $userId,
-                $username,
-            ),
-            challenge: $challenge,
-            pubKeyCredParams: [
-                PublicKeyCredentialParameters::createPk(-7),   // ES256
-                PublicKeyCredentialParameters::createPk(-257), // RS256
-            ],
-            // A null residentKey serialises as an explicit null the browser
-            // rejects ("Ignoring unknown publicKey.authenticatorSelection
-            // .residentKey value"); the account is always known here anyway.
-            authenticatorSelection: new AuthenticatorSelectionCriteria(
-                authenticatorAttachment: 'platform',
-                userVerification: 'required',
-                residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_DISCOURAGED,
-            ),
-            excludeCredentials: $excludeCredentials,
-        );
-    }
-
-    /**
-     * @param  list<PublicKeyCredentialDescriptor>  $allowCredentials
-     */
-    private function requestOptionsFor(string $challenge, array $allowCredentials = []): PublicKeyCredentialRequestOptions
-    {
-        return PublicKeyCredentialRequestOptions::create(
-            challenge: $challenge,
-            rpId: $this->rpId(),
-            allowCredentials: $allowCredentials,
-            userVerification: 'required',
-        );
-    }
-
-    private function rpId(): string
-    {
-        $url = $this->config->get('app.url', self::LOCALHOST_ORIGIN);
-        if (! is_string($url)) {
-            return 'localhost';
-        }
-
-        $host = parse_url($url, PHP_URL_HOST);
-
-        return is_string($host) ? $host : 'localhost';
-    }
-
-    private function origin(): string
-    {
-        $url = $this->config->get('app.url', self::LOCALHOST_ORIGIN);
-
-        return is_string($url) ? $url : self::LOCALHOST_ORIGIN;
     }
 
     private function consumeCreationChallenge(Session $session): string

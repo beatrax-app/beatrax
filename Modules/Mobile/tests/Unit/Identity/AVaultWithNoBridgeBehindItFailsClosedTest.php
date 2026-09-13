@@ -73,7 +73,7 @@ it('reads a bridge that is not there as a device that cannot store', function ()
     expect($log->lines[0][2]['reason'] ?? null)->toBe('unreadable');
 });
 
-it('refuses to enrol and says the native side gave no reason', function (): void {
+it('refuses to enrol and writes down what it was refused for', function (): void {
     $log = recordingLog();
 
     expect(bridgelessVault($log)->enroll(7, str_repeat("\x01", 32)))->toBeFalse();
@@ -81,10 +81,13 @@ it('refuses to enrol and says the native side gave no reason', function (): void
     expect($log->lines)->toHaveCount(1);
     expect($log->lines[0][0])->toBe('warning');
     expect($log->lines[0][1])->toContain('refused to store');
-    expect($log->lines[0][2]['reason'] ?? null)->toBe('the native side gave none');
+    // The wording is the composer root's: only the mobile-app root autoloads
+    // the plugin, and its bridge names its own silence rather than leaving
+    // none. A refusal carries a reason either way, which is the guarantee.
+    expect($log->lines[0][2]['reason'] ?? null)->toBeString()->not->toBeEmpty();
 });
 
-it('calls a bridge that never answered a failure, never nothing enrolled', function (): void {
+it('reads a bridge that never answered as a failure, never as nothing enrolled', function (): void {
     $log = recordingLog();
 
     // MISSING here would take the lock screen down the branch that marks the
@@ -107,7 +110,48 @@ it('reports the entry as still held when the removal cannot be made', function (
     expect($log->lines)->toHaveCount(1);
     expect($log->lines[0][0])->toBe('warning');
     expect($log->lines[0][1])->toContain('refused to remove');
+    expect($log->lines[0][2]['reason'] ?? null)->toBeString()->not->toBeEmpty();
+});
+
+// Pinned rather than left to the bridge, so the fallback wording is the same
+// answer in both composer roots.
+it('names the silence when the native side gave no reason at all', function (): void {
+    $log = recordingLog();
+
+    $vault = new class(app(BiometricKeyBlobCodec::class), $log) extends BiometricKeyVault
+    {
+        protected function runtimeAvailable(): bool
+        {
+            return true;
+        }
+
+        protected function platformCanStore(): bool
+        {
+            return true;
+        }
+
+        protected function vaultSet(string $key, string $value): bool
+        {
+            return false;
+        }
+
+        protected function vaultDelete(string $key): bool
+        {
+            return false;
+        }
+
+        protected function lastNativeError(): ?string
+        {
+            return null;
+        }
+    };
+
+    expect($vault->enroll(7, str_repeat("\x01", 32)))->toBeFalse();
+    expect($vault->clear(7))->toBeFalse();
+
+    expect($log->lines)->toHaveCount(2);
     expect($log->lines[0][2]['reason'] ?? null)->toBe('the native side gave none');
+    expect($log->lines[1][2]['reason'] ?? null)->toBe('the native side gave none');
 });
 
 it('reports nothing left to clear where there is nowhere to hold a key', function (): void {
@@ -117,7 +161,7 @@ it('reports nothing left to clear where there is nowhere to hold a key', functio
     expect($log->lines)->toBe([]);
 });
 
-it('stands a ceremony down without reaching for a bridge that is not there', function (): void {
+it('stands a ceremony down without reporting a refusal', function (): void {
     $log = recordingLog();
 
     $vault = bridgelessVault($log);

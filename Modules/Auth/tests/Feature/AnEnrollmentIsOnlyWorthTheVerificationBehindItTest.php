@@ -14,9 +14,9 @@ use Modules\Auth\Tests\Support\VirtualAuthenticator;
 use Modules\Core\Models\User;
 use Webauthn\Exception\AuthenticatorResponseVerificationException;
 
-const ENROLMENT_RP_ID = 'beatrax.test';
+const ENROLLMENT_RP_ID = 'beatrax.test';
 
-const ENROLMENT_ORIGIN = 'https://beatrax.test';
+const ENROLLMENT_ORIGIN = 'https://beatrax.test';
 
 function enrollingUser(string $username): User
 {
@@ -59,7 +59,7 @@ it('stores a credential whose wrapped blob gives the data key back', function ()
     $service->completeEnrollment(
         $user->id,
         $user->username,
-        $authenticator->attestation(ENROLMENT_RP_ID, ENROLMENT_ORIGIN, $challenge),
+        $authenticator->attestation(ENROLLMENT_RP_ID, ENROLLMENT_ORIGIN, $challenge),
         $dataKey,
         'Virtual Device',
         BiometricDeviceStore::PLATFORM_WEBAUTHN,
@@ -104,8 +104,8 @@ it('refuses an attestation the authenticator never verified the user for', funct
         $user->id,
         $user->username,
         $authenticator->attestation(
-            ENROLMENT_RP_ID,
-            ENROLMENT_ORIGIN,
+            ENROLLMENT_RP_ID,
+            ENROLLMENT_ORIGIN,
             $challenge,
             flags: VirtualAuthenticator::FLAG_USER_PRESENT | VirtualAuthenticator::FLAG_ATTESTED_CREDENTIAL_DATA,
         ),
@@ -135,7 +135,7 @@ it('refuses an attestation collected at another origin', function (): void {
     $call = fn () => $service->completeEnrollment(
         $user->id,
         $user->username,
-        $authenticator->attestation(ENROLMENT_RP_ID, 'https://beatrax.test.evil.example', $challenge),
+        $authenticator->attestation(ENROLLMENT_RP_ID, 'https://beatrax.test.evil.example', $challenge),
         random_bytes(32),
         'Virtual Device',
         BiometricDeviceStore::PLATFORM_WEBAUTHN,

@@ -596,10 +596,11 @@ given. `completeEnrollment()` rebuilt the creation options without the
 found the user-verified bit was never checked at enrollment: an
 attestation carrying User Present but not User Verified — a tap with no
 biometric behind it — enrolled a credential and wrapped the data key
-under it. Both ends now build their options through one private builder
-(`creationOptionsFor()` / `requestOptionsFor()`), so the requirement
-cannot be issued to the browser and dropped from the copy that is
-verified. Assertions always carried it and were never affected.
+under it. Both ends of both ceremonies now build their options through
+`WebAuthnCeremonyOptions`, which also owns the `rpId` and origin reading,
+so a requirement cannot be issued to the browser and dropped from the
+copy that is verified. Assertions always carried it and were never
+affected.
 
 Each enrolled device gets its own random 32-byte "biometric wrap secret";
 the data key is wrapped under that per-device secret (not under the PIN
